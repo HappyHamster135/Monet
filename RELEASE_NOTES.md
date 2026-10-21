@@ -6,9 +6,23 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.6.1-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.6.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.6.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.6.2-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.6.2-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.6.2-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.6.2: more of Monet, everywhere
+
+- **Apps from Flathub look like Monet.** GTK apps (Flathub's and the
+  system's) use Monet's paper and ink, lily for choices and the sun for the
+  button that goes ahead, and turn to Smoke after dark with the rest of
+  Monet. A gtk.css you wrote yourself is left alone.
+- **Store.** Discover is called Store in the dock and the app menu, and no
+  longer pops up about updates: those stay in Settings, when you ask.
+- **More in Settings:** Mouse & Keyboard, Power & Sleep, Notifications,
+  Date & Time, Accounts and Default Apps, each with its swatch from the
+  paintings. They open the matching page in KDE's settings.
+
+Updating: sign out and in again after the update.
 
 ### Fixed in 0.6.1
 

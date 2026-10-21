@@ -38,6 +38,25 @@ PlasmaCore.Dialog {
           words: "display screen brightness night light monitor resolution scale size" },
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
           words: "sound volume speakers headphones microphone mic audio output" },
+        // Opened in KDE's settings (kde), each with a painting's swatch.
+        { id: "input", name: i18n("Mouse & Keyboard"), kde: "input", swatch: "bluetooth",
+          glyph: "M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM12 3v5",
+          words: "mouse keyboard touchpad pointer speed layout typing repeat" },
+        { id: "power", name: i18n("Power & Sleep"), kde: "power", swatch: "light",
+          glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
+          words: "power sleep suspend screen off energy battery lid shutdown" },
+        { id: "notifications", name: i18n("Notifications"), kde: "notifications", swatch: "sound",
+          glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
+          words: "notifications alerts do not disturb popups badges" },
+        { id: "datetime", name: i18n("Date & Time"), kde: "datetime", swatch: "updates",
+          glyph: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2",
+          words: "date time clock time zone 24-hour format" },
+        { id: "users", name: i18n("Accounts"), kde: "users", swatch: "about",
+          glyph: "M8 8a4 4 0 1 0 8 0a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0",
+          words: "accounts users password picture people login sign in" },
+        { id: "apps", name: i18n("Default Apps"), kde: "apps", swatch: "display",
+          glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+          words: "default apps browser email player open with" },
         { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true,
           words: "windows games play anti-cheat steam restart boot doctor check" },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
@@ -873,7 +892,7 @@ PlasmaCore.Dialog {
                         id: navItem
                         readonly property bool current: sheet.page === modelData.id
                         Layout.fillWidth: true
-                        Layout.preferredHeight: visible ? 40 : 0
+                        Layout.preferredHeight: visible ? 34 : 0
                         visible: side.matches(modelData)
                         radius: 12
                         color: current ? (look.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.55))
@@ -882,8 +901,8 @@ PlasmaCore.Dialog {
                         border.width: activeFocus ? 2 : 0
                         border.color: look.lily
                         activeFocusOnTab: true
-                        Keys.onSpacePressed: sheet.page = modelData.id
-                        Keys.onReturnPressed: sheet.page = modelData.id
+                        Keys.onSpacePressed: sheet.go(modelData)
+                        Keys.onReturnPressed: sheet.go(modelData)
 
                         RowLayout {
                             anchors.fill: parent
@@ -896,7 +915,7 @@ PlasmaCore.Dialog {
                                 Layout.preferredHeight: 28
                                 Image {
                                     anchors.fill: parent
-                                    source: sheet.art + "swatch-" + modelData.id + ".png"
+                                    source: sheet.art + "swatch-" + (modelData.swatch || modelData.id) + ".png"
                                     sourceSize: Qt.size(56, 56)
                                     smooth: true
                                 }
@@ -928,11 +947,11 @@ PlasmaCore.Dialog {
                             }
                         }
                         HoverHandler { id: navHover }
-                        TapHandler { onTapped: sheet.page = modelData.id }
+                        TapHandler { onTapped: sheet.go(modelData) }
                         Accessible.role: Accessible.PageTab
                         Accessible.name: modelData.name
                         Accessible.selected: current
-                        Accessible.onPressAction: sheet.page = modelData.id
+                        Accessible.onPressAction: sheet.go(modelData)
                     }
                 }
 
@@ -1048,6 +1067,14 @@ PlasmaCore.Dialog {
                 Accessible.onPressAction: sheet.visible = false
             }
         }
+    }
+
+    // A page of Monet's own, or one KDE's settings show (then this stays put).
+    function go(entry) {
+        if (entry.kde)
+            ask("kde " + entry.kde)
+        else
+            page = entry.id
     }
 
     function kdePage() {

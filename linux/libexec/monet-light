@@ -10,6 +10,7 @@
 set -u
 
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+DATADIR="@DATADIR@"
 CHOICE="$CONFIG/monet/light"
 # Same hours as the wallpaper: dawn and midday are light, dusk and night dark.
 DAY_FROM=5
@@ -107,6 +108,19 @@ apply() {
     local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
     if [ -f "$profile" ] && [ "$(kreadconfig6 --file "$profile" --group Appearance --key ColorScheme 2>/dev/null)" != "${kvantum%Solid}" ]; then
         kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "${kvantum%Solid}"
+    fi
+
+    # GTK apps (Flatpak ones too: monet-look lets them read these) in the
+    # same light. A gtk.css someone wrote themselves is left alone.
+    local gtk=light
+    case "$kvantum" in *Dark*) gtk=dark ;; esac
+    if [ -f "$DATADIR/monet/gtk/$gtk.css" ]; then
+        for dir in "$CONFIG/gtk-3.0" "$CONFIG/gtk-4.0"; do
+            if [ ! -s "$dir/gtk.css" ] || head -1 "$dir/gtk.css" | grep -q '^/\* Monet:'; then
+                cmp -s "$DATADIR/monet/gtk/$gtk.css" "$dir/gtk.css" ||
+                    { mkdir -p "$dir" && cp "$DATADIR/monet/gtk/$gtk.css" "$dir/gtk.css"; }
+            fi
+        done
     fi
 }
 

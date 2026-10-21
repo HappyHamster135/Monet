@@ -1,0 +1,44 @@
+/* Monet: GTK apps in Monet's colors (Mist, by day). Written by monet-light; a
+   gtk.css without this first line is yours, and Monet leaves it alone. */
+
+@define-color accent_color #2A6A5F;
+@define-color accent_bg_color #357F72;
+@define-color accent_fg_color #FFFFFF;
+@define-color destructive_color #C2401F;
+@define-color destructive_bg_color #D4462A;
+@define-color destructive_fg_color #FFFFFF;
+@define-color success_color #2A6A5F;
+@define-color warning_color #E39B3D;
+@define-color error_color #C2401F;
+@define-color window_bg_color #FBFAF7;
+@define-color window_fg_color #1C1B19;
+@define-color view_bg_color #FFFFFF;
+@define-color view_fg_color #1C1B19;
+@define-color headerbar_bg_color #FBFAF7;
+@define-color headerbar_fg_color #1C1B19;
+@define-color headerbar_border_color #1C1B19;
+@define-color headerbar_backdrop_color #FBFAF7;
+@define-color sidebar_bg_color #F1EEE8;
+@define-color sidebar_fg_color #1C1B19;
+@define-color card_bg_color #FFFFFF;
+@define-color card_fg_color #1C1B19;
+@define-color dialog_bg_color #FBFAF7;
+@define-color dialog_fg_color #1C1B19;
+@define-color popover_bg_color #FFFFFF;
+@define-color popover_fg_color #1C1B19;
+@define-color theme_bg_color #FBFAF7;
+@define-color theme_fg_color #1C1B19;
+@define-color theme_base_color #FFFFFF;
+@define-color theme_text_color #1C1B19;
+@define-color theme_selected_bg_color #357F72;
+@define-color theme_selected_fg_color #FFFFFF;
+
+/* The button that goes ahead is the sun, as everywhere in Monet. */
+button.suggested-action {
+    background-color: #F2552C;
+    color: #FFFFFF;
+}
+
+button.suggested-action:hover {
+    background-color: #FF6A42;
+}

@@ -415,9 +415,14 @@ class MonetSettings(unittest.TestCase):
 
     def test_every_page_has_its_picture(self):
         qml = (self.QUICK / "MonetSettings.qml").read_text()
-        pages = re.findall(r'\{ id: "(\w+)", name:', qml)
+        entries = re.findall(r'\{ id: "(\w+)", name: [^,]+,( kde: "(\w+)", swatch: "(\w+)",)?', qml)
+        pages = [e[0] for e in entries if not e[2]]
         self.assertEqual(tuple(pages), quick_helper().PAGES)
         art = SHARE / "monet/settings"
+        # Entries that open KDE's own page: one the helper knows, a swatch that's there.
+        for _, _, kde, swatch in (e for e in entries if e[2]):
+            self.assertIn(kde, quick_helper().KDE_PAGES)
+            self.assertTrue((art / f"swatch-{swatch}.png").is_file(), swatch)
         for page in pages:
             self.assertTrue((art / f"swatch-{page}.png").is_file(), page)
             self.assertIn(f"{page}: {page}Page", qml)

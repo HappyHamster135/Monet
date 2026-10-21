@@ -93,6 +93,21 @@ if [ -f "$DATADIR/konsole/Monet.profile" ]; then
     kw --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
 fi
 
+# GTK apps from Flathub read Monet's colors (monet-light writes them).
+flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro 2>/dev/null || :
+
+# The store is called Store, and doesn't pop up about updates: those are in
+# Monet Settings, when you ask.
+if [ -f /usr/share/applications/org.kde.discover.desktop ]; then
+    mkdir -p "$DATA/applications"
+    sed -e '/^Name\[/d' -e '/^GenericName/d' -e '/^Comment\[/d' \
+        -e '0,/^Name=/s/^Name=.*/Name=Store/' -e 's/^Comment=.*/Comment=Apps and games for Monet/' \
+        /usr/share/applications/org.kde.discover.desktop > "$DATA/applications/org.kde.discover.desktop"
+fi
+mkdir -p "$CONFIG/autostart"
+printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
+kw --file PlasmaDiscoverUpdates --group Global --key UseUnattendedUpdates false
+
 # Files: big painted folders with previews, on paper; a calm sidebar.
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96

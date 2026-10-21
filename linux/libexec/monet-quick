@@ -53,6 +53,12 @@ KDE_PAGES = {
     "display": "kcm_kscreen",
     "sound": "kcm_pulseaudio",
     "about": "kcm_about-distro",
+    "input": "kcm_mouse",
+    "power": "kcm_powerdevilprofilesconfig",
+    "notifications": "kcm_notifications",
+    "datetime": "kcm_clock",
+    "users": "kcm_users",
+    "apps": "kcm_componentchooser",
     "all": "",
 }
 

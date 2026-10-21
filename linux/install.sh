@@ -139,12 +139,14 @@ fi
 
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
-rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures" "$DATADIR/monet/settings"
+rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures" "$DATADIR/monet/settings" \
+    "$DATADIR/monet/gtk"
 install -d "$DATADIR/monet"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
 cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
 # Pictures for Monet Settings, cut from the paintings.
 cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
+cp -r "$SRC/share/monet/gtk" "$DATADIR/monet/gtk"
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
 if [ -d "$SRC/windows" ]; then
