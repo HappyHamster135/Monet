@@ -1,0 +1,11 @@
+[package]
+name = "monet"
+description = "Monet Switch: play Windows games from Monet with one click"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+monet-core = { path = "../monet-core" }
+serde_json.workspace = true
+libc = "0.2"

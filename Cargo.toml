@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/monet-core", "crates/monet", "crates/monet-bridge"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/HappyHamster135/Monet"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
