@@ -382,6 +382,7 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     if entries.iter().any(|e| e.number == req.return_to && !e.is_windows()) {
         state.monet_entry = Some(req.return_to);
         state.save();
+        repair_boot_order(efi, state);
     }
     let Some(id) = req.game else {
         log("opened Windows from Monet");
