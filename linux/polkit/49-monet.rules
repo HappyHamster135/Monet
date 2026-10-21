@@ -1,0 +1,9 @@
+// Monet: switching to Windows is one click, like restarting.
+// Allows the signed-in user to run Monet's helper as root without a password.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.policykit.exec" &&
+        @PROGRAMS@.indexOf(action.lookup("program")) >= 0 &&
+        subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

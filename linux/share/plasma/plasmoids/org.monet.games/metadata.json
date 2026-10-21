@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Utilities",
+        "Description": "Play Windows games with one click",
+        "Icon": "monet-windows",
+        "Id": "org.monet.games",
+        "License": "GPL-3.0-or-later",
+        "Name": "Windows Games",
+        "Version": "0.1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

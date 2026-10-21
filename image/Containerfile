@@ -1,0 +1,17 @@
+# Monet OS: Bazzite (KDE Plasma, NVIDIA open drivers for RTX 20-series and
+# newer) with Monet built in.
+#
+#   podman build -f image/Containerfile -t monet .
+
+FROM docker.io/library/rust:1 AS build
+WORKDIR /src
+COPY . .
+RUN rustup target add x86_64-unknown-linux-musl \
+ && cargo build --release -p monet --target x86_64-unknown-linux-musl \
+ && tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out
+
+FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
+COPY --from=build /out /tmp/monet
+RUN /tmp/monet/install.sh --image \
+ && rm -rf /tmp/monet \
+ && ostree container commit

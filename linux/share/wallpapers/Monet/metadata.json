@@ -1,0 +1,8 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Id": "Monet",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet"
+    }
+}

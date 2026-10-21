@@ -1,0 +1,107 @@
+name: Build
+
+# Every push is built and tested. On the default branch, a new version in
+# VERSION is published as a GitHub release automatically.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust
+        run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - name: Tests
+        run: cargo test --workspace
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Shell scripts
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session tools/package.sh; do bash -n "$f"; done
+
+  linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust
+        run: rustup toolchain install stable --profile minimal --target x86_64-unknown-linux-musl && rustup default stable
+      - name: Build
+        run: cargo build --release -p monet --target x86_64-unknown-linux-musl
+      - name: Package
+        run: |
+          VERSION=$(cat VERSION)
+          tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet "dist/monet-$VERSION-linux"
+          tar -C dist -czf "dist/Monet-$VERSION-Linux.tar.gz" "monet-$VERSION-linux"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*.tar.gz
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust
+        run: rustup toolchain install stable --profile minimal --component clippy; rustup default stable
+      - name: Build
+        run: cargo build --release -p monet-bridge
+      - name: Lint
+        run: cargo clippy -p monet-bridge -- -D warnings
+      - name: Check PowerShell scripts
+        shell: pwsh
+        run: ./tools/check-powershell.ps1
+      - name: Package
+        shell: bash
+        run: |
+          VERSION=$(cat VERSION)
+          tools/package.sh windows target/release/monet-bridge.exe "dist/Monet for Windows"
+          pwsh -NoProfile -Command "Compress-Archive -Path 'dist/Monet for Windows' -DestinationPath 'dist/Monet-$VERSION-Windows.zip'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.zip
+
+  release:
+    needs: [linux, windows]
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for a new version
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+            echo "v$VERSION is already released."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.version.outputs.new == 'true'
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd dist && sha256sum * > SHA256SUMS.txt && cd ..
+          gh release create "v$VERSION" dist/* \
+            --title "Monet $VERSION" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease \
+            --target "$GITHUB_SHA"

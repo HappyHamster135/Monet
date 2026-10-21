@@ -1,53 +1,73 @@
-# Monet
+<p align="center">
+  <img src="branding/monet-512.png" width="128" alt="Monet">
+</p>
 
-**Linux for everything. Windows only for the games that need it.**
+<h1 align="center">Monet</h1>
 
-Monet is a planned desktop operating system built on Linux, with a simple, calm
-design. Most games run on Monet directly through Proton. For the games that
-don't, mainly ones with kernel-level anti-cheat such as Valorant or Call of
-Duty, Monet keeps a small, stripped-down copy of Windows in the background and
-switches to it with one click, in seconds.
+<p align="center"><b>Linux for everything. Windows only for the games that need it.</b></p>
 
-> Status: **planning**. Nothing is built yet. See [PLAN.md](PLAN.md) for the full plan.
+<p align="center"><img src="branding/wallpaper-preview.jpg" width="720" alt="The Monet wallpaper"></p>
 
-## The idea in one picture
+Monet is a calm, simple desktop built on Linux. Most games run on it directly.
+For the few that don't, mostly ones with anti-cheat like Valorant or Call of
+Duty, press **Play** and Monet restarts in Windows, starts the game, and comes
+back when you're done.
+
+## Get it
+
+**[Download Monet 0.1](https://github.com/HappyHamster135/Monet/releases)** ·
+**[Install guide](docs/INSTALL.md)**
+
+Monet 0.1 is a preview for Bazzite with an NVIDIA RTX 20-series or newer GPU.
+
+## How it works
 
 ```
- ┌──────────────────────── Monet (Linux) ────────────────────────┐
- │  Browsing, work, media, and most games (Proton)               │
- │                                                               │
- │  Monet Games:  [ Elden Ring  ▶ Play ]                         │
- │                [ Valorant    ▶ Play on Windows ]  ──┐         │
- └─────────────────────────────────────────────────────│─────────┘
-                                                       │ ~15–25 s
- ┌──────────── Windows "game mode" (hidden) ───────────▼─────────┐
- │  Minimal Windows, resumes from hibernation, game starts       │
- │  automatically. Quit the game → back to Monet.                │
- └───────────────────────────────────────────────────────────────┘
+ Monet                                 Windows
+ ─────                                 ───────
+ Press Play on Valorant
+   → leaves a note for Windows
+   → restarts in Windows      ───────▶ Windows wakes up (hibernated, so it's fast)
+                                       Monet Bridge starts Valorant
+                                       You play
+                                       You quit
+   Monet starts  ◀─────────────────── "Back to Monet in 15 seconds"
 ```
 
-## Main parts
+The note is a small UEFI variable that both systems can read, so no shared
+drive is needed. Windows hibernates instead of shutting down, so it resumes in
+seconds with the anti-cheat already running.
 
-| Part | What it does |
+## What's inside
+
+| Folder | What |
 |---|---|
-| **Monet OS** | The Linux system: image-based, auto-updating, simple design |
-| **Monet Setup** | A Windows-like installer that also sets up Windows for games |
-| **Monet Switch** | One-click switching between Monet and Windows |
-| **Monet Bridge** | Small Windows service that launches the game and returns to Monet |
-| **Monet Games** | One game library for Steam, Epic, and GOG, which picks the right system for each game |
-| **Windows Game Profile** | The safe list of what Monet removes from Windows and what it keeps |
+| `crates/monet-core` | Shared Rust code: boot entries, the note, the games list |
+| `crates/monet` | `monet` for Linux: Play, Windows, doctor, games |
+| `crates/monet-bridge` | `monet-bridge.exe` for Windows: start the game, return to Monet |
+| `linux/` | Installer, panel widget, wallpaper, services |
+| `windows/` | Installer, uninstaller, optional Game Profile |
+| `image/` | Monet OS image: Bazzite with Monet built in |
+| `docs/` | [Install](docs/INSTALL.md) · [Design](docs/DESIGN.md) · [Testing](docs/TESTING.md) |
+
+The full plan is in [PLAN.md](PLAN.md).
+
+## Build
+
+```sh
+cargo test --workspace
+cargo build --release -p monet --target x86_64-unknown-linux-musl   # Linux
+cargo build --release -p monet-bridge                                # on Windows
+```
+
+Pushing a new version number in `VERSION` builds both and publishes a release.
 
 ## Principles
 
-- **Simple by default.** Good defaults instead of settings. No terminal needed.
-- **Honest about limits.** Monet never tries to bypass or fool anti-cheat. It
-  uses real Windows for the games that need it.
-- **Legal.** Monet never ships Windows. It downloads the official image from
-  Microsoft, and the user provides their own license.
-- **Performance first.** KDE Plasma, a gaming-tuned kernel, and all Monet code
-  written in Rust.
-- **Built from proven parts.** Fedora Atomic, Universal Blue, Proton, and Mesa. Our
-  work goes into the experience, not into reinventing them.
+- **Simple by default.** Good defaults instead of settings.
+- **Performance first.** KDE Plasma, a gaming-tuned kernel, and Rust everywhere.
+- **Honest about limits.** Monet never tries to bypass anti-cheat. It uses real Windows.
+- **Legal.** Monet never ships Windows. You use your own copy and license.
 
 ## License
 

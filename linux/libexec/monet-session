@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Runs at every sign-in. Keeps Windows games in the app menu, and gives the
+# desktop the Monet look the first time.
+
+BINDIR="@BINDIR@"
+DATADIR="@DATADIR@"
+
+"$BINDIR/monet" shortcuts 2>/dev/null
+
+marker="${XDG_CONFIG_HOME:-$HOME/.config}/monet/look-0.1"
+[ -e "$marker" ] && exit 0
+
+# Plasma needs a moment after sign-in before it accepts changes.
+sleep 4
+
+wallpaper="$DATADIR/wallpapers/Monet"
+if command -v plasma-apply-wallpaperimage >/dev/null; then
+    plasma-apply-wallpaperimage "$wallpaper" >/dev/null 2>&1 ||
+        plasma-apply-wallpaperimage "$wallpaper/contents/images/3840x2160.jpg" >/dev/null 2>&1
+fi
+
+# Monet blue as the accent color.
+if command -v kwriteconfig6 >/dev/null; then
+    kwriteconfig6 --file kdeglobals --group General --key AccentColor "61,111,182"
+    kwriteconfig6 --file kdeglobals --group General --key accentColorFromWallpaper "false"
+fi
+
+# Add the "Windows Games" widget to the panel, next to the system tray.
+qdbus_cmd=""
+for c in qdbus6 qdbus-qt6 qdbus; do
+    command -v "$c" >/dev/null && { qdbus_cmd="$c"; break; }
+done
+if [ -n "$qdbus_cmd" ]; then
+    "$qdbus_cmd" org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
+        var p = panels()[0];
+        if (p) {
+            var has = p.widgets().some(function (w) { return w.type == "org.monet.games"; });
+            if (!has) {
+                var tray = p.widgets("org.kde.plasma.systemtray")[0];
+                var w = p.addWidget("org.monet.games");
+                if (tray && w) { w.index = tray.index; }
+            }
+        }' >/dev/null 2>&1
+fi
+
+mkdir -p "$(dirname "$marker")" && touch "$marker"

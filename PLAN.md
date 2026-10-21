@@ -180,7 +180,7 @@ simple design is built on top through theming and locked-down settings.
 | Desktop | **KDE Plasma 6** | Best gaming desktop on Linux: low-latency tearing in fullscreen, mature VRR and HDR, solid NVIDIA support. Its *Kiosk* system can hide advanced settings, which gives us the simple design. |
 | Game Mode session | **Gamescope** (SteamOS-style fullscreen session) | Lowest overhead for controller and TV play, built-in frame limiting and FSR upscaling. Switch between Desktop and Game Mode with one click. |
 | Monet apps (Linux) | **Rust core + Qt 6 / QML (Kirigami) UI** via CXX-Qt | Fast, native on KDE, easy to style |
-| Monet Bridge (Windows) | **Rust** Windows service + small tray app | Tiny and fast, and it shares the handoff code with the Linux side |
+| Monet Bridge (Windows) | **Rust** program run by scheduled tasks at sign-in | Tiny and fast, and it shares the handoff code with the Linux side. Not a Windows service: services can't start games on the user's desktop. |
 | Gaming stack | Proton + Proton-GE/CachyOS builds, DXVK, VKD3D-Proton, latest Mesa, NVIDIA open kernel modules | Proven, maintained by others, always the latest versions |
 | Windows install | Official ISO + `autounattend.xml` | No redistribution, fully supported by Microsoft |
 | License | **GPL-3.0-or-later** | Anyone can use Monet, including other distros, but modified versions must stay open |
@@ -222,12 +222,40 @@ kernel instead, which is where most of the gaming benefit comes from.
 | CPU / board | Any x86-64 PC that meets Windows 11 requirements (TPM 2.0, Secure Boot) | Needed for Windows anti-cheat anyway |
 | Storage | NVMe SSD | Fast boot and switching. HDDs not supported for the system. |
 
+**Development machines**
+
+| Machine | GPU | What it means for Monet |
+|---|---|---|
+| Laptop | NVIDIA RTX 2080 (Turing) | Oldest supported generation. Hybrid graphics: games must run on the NVIDIA GPU, not the built-in one. Battery and lid behavior matter. |
+| Desktop | NVIDIA RTX 5080 (Blackwell) | Only works with NVIDIA's open kernel modules (driver 570+). Bazzite's `nvidia-open` image covers both machines. |
+
 ---
 
 ## 5. Roadmap
 
 Each phase ends with something that works on its own. The riskiest ideas are
 tested first.
+
+### Status: v0.1 (preview)
+
+v0.1 delivers Phase 1 as an add-on for **Bazzite** (`bazzite-nvidia-open`), so
+it works on both development machines with Secure Boot right away:
+
+- `monet` (Rust, Linux): Play on Windows, open Windows, `doctor`, games list,
+  app-menu shortcuts. Elevates through a polkit rule, so no password prompts.
+- `monet-bridge` (Rust, Windows): starts the game as the normal user, waits
+  for it to close, offers to return, hibernates, and repairs the boot order.
+- The handoff is a UEFI variable (`MonetLaunch`). The games list travels on the
+  EFI partition, which Windows mounts only while writing it.
+- A Plasma panel widget (QML) and the Monet look (wallpaper, accent color).
+- `image/Containerfile`: the first Monet OS image, Bazzite with Monet built in.
+
+Built and unit-tested, **not yet tested on real hardware**. That is Phase 0
+below, with the checklist in [docs/TESTING.md](docs/TESTING.md).
+
+The CachyOS kernel (section 4.1) is not in v0.1. Bazzite's kernel already
+carries most gaming patches and is signed for Secure Boot. Switching kernels
+waits for the Phase 2 benchmarks.
 
 ### Phase 0: Prove it (research and prototypes)
 Goal: show that the core ideas work on real hardware before building anything polished.
@@ -248,11 +276,12 @@ Goal: show that the core ideas work on real hardware before building anything po
 ### Phase 1: Monet Switch MVP
 Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
 
-- [ ] `monet-switch` CLI + background service (Linux)
-- [ ] Monet Bridge Windows service: read the request, launch, wait, return, hibernate
-- [ ] Launch support for Steam (`steam://rungameid/<id>`), Riot, Battle.net, and Epic
-- [ ] Simple tray / popup UI on both sides
-- [ ] Safety: if anything fails, fall back to a normal boot. Never strand the user.
+- [x] `monet` CLI + games sync service (Linux), v0.1
+- [x] Monet Bridge: read the request, launch, wait, return, hibernate, v0.1
+- [x] Launch support for Steam, Epic, and Riot, v0.1. Battle.net through custom entries for now
+- [x] Panel widget (Linux) and "Back to Monet" shortcut (Windows), v0.1
+- [x] Safety: a normal power-on always starts Monet; a failed switch leaves the boot order untouched
+- [ ] All of the above confirmed on the laptop (RTX 2080) and desktop (RTX 5080)
 
 **Exit:** a non-technical tester can play Valorant from Linux with one click.
 
@@ -323,13 +352,15 @@ Every release of Monet Switch and the Game Profile must pass on Windows game mod
 | Decision | Choice | Why |
 |---|---|---|
 | Desktop | **KDE Plasma 6 (Wayland)** | Best gaming performance and features (see section 4) |
-| Base | **Fedora Atomic** (Universal Blue) + **CachyOS-patched kernel** | Rollback-safe updates, plus the kernel where most gaming gains come from (see 4.1) |
+| Base | **Bazzite** for v0.1; **Fedora Atomic** (Universal Blue) + **CachyOS-patched kernel** to be benchmarked in Phase 2 | Bazzite works today on NVIDIA with Secure Boot. The CachyOS kernel only goes in if it measurably helps (see 4.1) |
 | Language | **Rust** everywhere | Native speed like C/C++, memory-safe, one codebase for Linux and Windows |
-| UI | **Qt 6 / QML (Kirigami)** via CXX-Qt | Fast, GPU-rendered, native on KDE |
+| UI | **Qt 6 / QML (Kirigami)**. v0.1 is a QML panel widget that calls the Rust CLI; a full app via CXX-Qt comes with Monet Games | Fast, GPU-rendered, native on KDE |
 | License | **GPL-3.0-or-later** | Keeps Monet and its forks open source. Same family as Linux and KDE |
 | First beta hardware | See section 4.2 | Best-supported GPUs on Linux. TPM 2.0 is required by Windows 11 and Vanguard |
 | Hibernation fallback | **Hibernate by default.** A per-game "needs full boot" flag in Monet's compatibility data, set from testing | Fastest switch for most games, safe for the exceptions |
 
+| Branding | Sun-over-water logo, Monet Blue accent, impressionist wallpaper. See [docs/DESIGN.md](docs/DESIGN.md) | Apple's simplicity, our own look |
+
 ### Still open
 
-- [ ] **Branding:** logo, color palette, typeface (our own, not Apple's)
+- [ ] **Typeface:** move from the system font to Inter

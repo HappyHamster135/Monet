@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Windows
+GenericName=Restart in Windows
+Comment=Restart in Windows for games that need it
+Exec=@BINDIR@/monet windows --confirm
+Icon=monet-windows
+Categories=Game;System;
+Keywords=windows;restart;reboot;anticheat;games;

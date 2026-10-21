@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: sync the list of Windows games
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=@BINDIR@/monet helper sync
+StateDirectory=monet
+StateDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
