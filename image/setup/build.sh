@@ -44,11 +44,16 @@ cp "$REPO"/linux/share/fonts/monet/*.ttf "$REPO"/image/installer/product/usr/sha
 cp "$REPO"/image/installer/product/usr/share/fonts/monet/OFL-*.txt "$ROOT/usr/share/fonts/monet/"
 echo monet-setup > "$ROOT/etc/hostname"
 sed -i 's/^SELINUX=.*/SELINUX=permissive/' "$ROOT/etc/selinux/config"
+# Settled, so systemd's first-boot questions never stop the start on a console.
+echo LANG=en_US.UTF-8 > "$ROOT/etc/locale.conf"
+echo KEYMAP=us > "$ROOT/etc/vconsole.conf"
+ln -sf ../usr/share/zoneinfo/UTC "$ROOT/etc/localtime"
 
 for fs in proc sys dev; do mount --rbind "/$fs" "$ROOT/$fs"; done
 trap 'for fs in dev sys proc; do umount -R "$ROOT/$fs" 2>/dev/null || :; done' EXIT
 chroot "$ROOT" systemctl enable monet-setup.service NetworkManager.service
 chroot "$ROOT" systemctl set-default multi-user.target
+chroot "$ROOT" systemctl mask systemd-firstboot.service
 chroot "$ROOT" fc-cache -f >/dev/null
 chroot "$ROOT" plymouth-set-default-theme monet
 KVER=$(ls "$ROOT/lib/modules" | sort -V | tail -1)
@@ -70,7 +75,8 @@ mmd -i "$W/efiboot.img" ::/EFI ::/EFI/BOOT
 mcopy -i "$W/efiboot.img" "$ISO"/EFI/BOOT/* ::/EFI/BOOT/
 
 echo "== Squashing"
-rm -rf "$ROOT"/var/cache/dnf/* "$ROOT"/var/log/dnf* "$ROOT"/boot/initramfs-* "$ROOT"/boot/efi/EFI
+rm -rf "$ROOT"/var/cache/dnf/* "$ROOT"/var/log/dnf* "$ROOT"/boot/efi/EFI \
+       "$ROOT"/boot/initramfs-* "$ROOT"/boot/vmlinuz-* "$ROOT"/boot/loader "$ROOT"/boot/System.map-*
 mksquashfs "$ROOT" "$ISO/LiveOS/squashfs.img" -comp xz -Xbcj x86 -b 1M -noappend -quiet
 
 echo "== $OUT"
