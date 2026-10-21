@@ -147,6 +147,9 @@ def installer_art():
     draw.text(((256 - text_w) / 2, 128), "Monet", font=font, fill=(255, 255, 255, 255))
     canvas.save(INSTALLER / "sidebar-logo.png", optimize=True)
 
+    # The mark alone, for pages on paper (the download screen), also at 2x.
+    raster(sun_outline(), 192).save(INSTALLER / "monet-mark.png", optimize=True)
+
     # The welcome and progress pages: the harbor at dawn along the bottom,
     # rising out of the page's paper.
     w, h = 1600, 520

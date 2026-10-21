@@ -40,9 +40,9 @@ terminal-font: "Monet Text Regular 20"
     selected_item_font = "Monet Strong Regular 20"
     selected_item_color = "#1C1B19"
     selected_item_pixmap_style = "select_*.png"
-    item_height = 52
+    item_height = 36
     item_padding = 20
-    item_spacing = 8
+    item_spacing = 20
     icon_width = 0
     icon_height = 0
     item_icon_space = 0

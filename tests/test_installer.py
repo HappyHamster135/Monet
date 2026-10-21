@@ -54,6 +54,19 @@ submenu 'Troubleshooting -->' {
 """
 
 
+def pre_install():
+    """The kickstart's %pre-install functions and settings, without running it."""
+    import ast
+    ks = (ROOT / "image/monet.ks").read_text()
+    code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1).replace("@IMAGE@", "ghcr.io/x/monet:latest")
+    tree = ast.parse(code)
+    keep = [n for n in tree.body if isinstance(n, (ast.Import, ast.FunctionDef))
+            or (isinstance(n, ast.Assign) and all(isinstance(t, (ast.Name, ast.Tuple)) for t in n.targets))]
+    ns = {"print": lambda *a, **k: None}
+    exec(compile(ast.Module(body=keep, type_ignores=[]), "pre-install", "exec"), ns)
+    return ns
+
+
 class StartMenu(unittest.TestCase):
     def test_entries(self):
         out = patch_grub.patch(GRUB)
@@ -98,6 +111,24 @@ class BootMenu(unittest.TestCase):
         loaded = {self.pf2_name(self.GRUB / Path(f).name) for f in re.findall(r"loadfont (\S+)", patch_grub.THEME)}
         for font in set(re.findall(r'font\s*[:=]\s*"([^"]+)"', theme)):
             self.assertIn(font, loaded)
+
+    def test_highlight_stays_between_its_neighbours(self):
+        # GRUB draws the highlight's border outside the line: above and below
+        # it, it may take at most the gap between lines.
+        from PIL import Image
+        theme = (self.GRUB / "theme.txt").read_text()
+        spacing = int(re.search(r"item_spacing = (\d+)", theme).group(1))
+        style = re.search(r'selected_item_pixmap_style = "([^"]+)"', theme).group(1)
+        pads = sum(Image.open(self.GRUB / style.replace("*", side)).height for side in ("n", "s"))
+        self.assertGreaterEqual(spacing, pads)
+
+    def test_text_layer_gets_a_small_font(self):
+        # GRUB's text layer needs 40 columns; the 56px title doesn't fit them,
+        # and with no name given it takes the newest font.
+        files = re.findall(r"loadfont (\S+)", patch_grub.THEME)
+        named = re.search(r'set gfxterm_font="([^"]+)"', patch_grub.THEME).group(1)
+        self.assertEqual(named, self.pf2_name(self.GRUB / Path(files[-1]).name))
+        self.assertLessEqual(int(named.rsplit(" ", 1)[1]), 24)
 
 
 class DiskPlan(unittest.TestCase):
@@ -175,6 +206,75 @@ class DiskPlan(unittest.TestCase):
         post = ks.split("%post --log=/var/log/monet-install.log", 1)[1]
         self.assertIn("echo waiting > /var/lib/monet/windows-setup", post)
         self.assertNotIn("monet-prepare-windows", post)
+
+    def test_download_restarts_when_it_stops_moving(self):
+        ns = pre_install()
+        clock = types.SimpleNamespace(now=0.0)
+        ns["time"] = types.SimpleNamespace(time=lambda: clock.now,
+                                           sleep=lambda n: setattr(clock, "now", clock.now + n))
+        killed = []
+
+        class Stuck:
+            returncode = None
+            def poll(self):
+                return None
+            def kill(self):
+                killed.append(clock.now)
+            def wait(self):
+                pass
+
+        ns["subprocess"] = types.SimpleNamespace(Popen=lambda *a, **k: Stuck(), STDOUT=-2)
+        ns["received"] = lambda: 1000
+        ns["written"] = lambda root: 5000
+        ns["tell"] = lambda **status: None
+        self.assertFalse(ns["pull"]("/mnt/sysimage", 5 * 10**9, 0, None))
+        self.assertTrue(killed)
+        self.assertLessEqual(killed[0], ns["STALL"] + 10)
+
+    def test_download_reports_progress(self):
+        ns = pre_install()
+        clock = types.SimpleNamespace(now=0.0)
+        ns["time"] = types.SimpleNamespace(time=lambda: clock.now,
+                                           sleep=lambda n: setattr(clock, "now", clock.now + n))
+
+        class Moving:
+            returncode = None
+            def poll(self):
+                self.returncode = 0 if clock.now > 60 else None
+                return self.returncode
+
+        told = []
+        ns["subprocess"] = types.SimpleNamespace(Popen=lambda *a, **k: Moving(), STDOUT=-2)
+        ns["received"] = lambda: int(clock.now * 10**7)
+        ns["written"] = lambda root: int(clock.now * 2 * 10**7)
+        ns["tell"] = lambda **status: told.append(status)
+        self.assertTrue(ns["pull"]("/mnt/sysimage", 5 * 10**9, 0, None))
+        last = told[-1]
+        self.assertEqual(last["total"], 5 * 10**9)
+        self.assertGreater(last["got"], 5 * 10**8)
+        self.assertGreater(last["eta"], 0)
+
+    def test_download_window(self):
+        gi = types.ModuleType("gi")
+        gi.require_version = lambda *a: None
+        gi.repository = types.SimpleNamespace(Gdk=None, GdkPixbuf=None, GLib=None,
+                                              Gtk=types.SimpleNamespace(Window=object))
+        saved = {k: sys.modules.get(k) for k in ("gi", "gi.repository")}
+        sys.modules.update({"gi": gi, "gi.repository": gi.repository})
+        try:
+            window = load("image/installer/product/usr/libexec/monet-download", "monet_download")
+        finally:
+            for k, v in saved.items():
+                if v is None:
+                    sys.modules.pop(k, None)
+                else:
+                    sys.modules[k] = v
+        line, fraction = window.describe({"got": 2_140_000_000, "total": 5_710_000_000, "eta": 372})
+        self.assertEqual(line, "2.1 of 5.7 GB · about 6 minutes left")
+        self.assertAlmostEqual(fraction, 0.375, places=2)
+        self.assertEqual(window.describe({"got": 3 * 10**8, "total": 0})[0], "0.3 GB so far")
+        self.assertEqual(window.describe({"got": 10**9, "total": 10**9, "note": "Picking up"})[0], "Picking up")
+        self.assertLess(window.describe({"got": 10**9, "total": 10**9})[1], 1)
 
     def test_keep_asks(self):
         self.assertEqual(self.plan("inst.stage2=hd:LABEL=X monet.keep"), "")
@@ -274,15 +374,21 @@ class InstallerLook(unittest.TestCase):
                      "#anaconda-spoke-window-done", "AnacondaStandaloneWindow .background", "AnacondaSpokeSelector"):
             self.assertIn(part, css)
 
-    def test_installer_reads_in_inter_and_fraunces(self):
+    def test_fonts_ship_without_replacing_cantarell(self):
         fonts = self.PRODUCT / "usr/share/fonts/monet"
         for name in ("Inter-Regular.otf", "Inter-SemiBold.otf", "Inter-Bold.otf",
                      "Fraunces72ptSuperSoft-Light.ttf", "OFL-Inter.txt", "OFL-Fraunces.txt"):
             self.assertTrue((fonts / name).is_file(), name)
-        alias = (self.PRODUCT / "etc/fonts/conf.d/00-monet.conf").read_text()
-        xml.dom.minidom.parseString(alias)
-        self.assertIn("<string>Cantarell</string>", alias)
-        self.assertIn("<string>Inter</string>", alias)
+        # Anaconda's screens are laid out for Cantarell at fixed sizes; Inter in
+        # its place is wider and pushed labels and buttons out of their boxes.
+        self.assertFalse((self.PRODUCT / "etc/fonts/conf.d/00-monet.conf").exists())
+
+    def test_buttons_keep_anacondas_sizes(self):
+        css = (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text()
+        for rule in re.findall(r"([^{}]+)\{([^}]*)\}", css):
+            if "button" in rule[0] or "entry" in rule[0] or "done" in rule[0]:
+                for prop in ("padding", "min-height", "min-width", "font-size"):
+                    self.assertNotIn(prop + ":", rule[1], rule[0].strip())
 
     def test_artwork_present(self):
         from_css = re.findall(r'url\("(/[^"]+)"\)', (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text())

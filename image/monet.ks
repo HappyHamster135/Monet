@@ -157,26 +157,132 @@ for attempt in range(6):
         sys.exit(1)
     time.sleep(5 * 2 ** attempt)
 
-# 3. Download Monet into the new system now, trying again if the connection
-# drops halfway. Best effort: if this can't finish, the installer downloads
-# it once more itself, as it always did.
+# 3. Download Monet into the new system now, with its progress on screen (the
+# installer itself only says "Running pre-installation scripts"). A download
+# that stops moving for a few minutes is started again; it keeps the pieces it
+# already has. Best effort: if this can't finish, the installer downloads it
+# once more itself, as it always did.
+STALL = 240        # seconds without a byte downloaded or written
+STATUS = "/tmp/monet-download.json"
+
+def image_size():
+    """Monet's download size: the compressed layers in its manifest."""
+    try:
+        with urllib.request.urlopen(f"https://{registry}/token?scope=repository:{repo}:pull", timeout=30) as r:
+            token = json.load(r)["token"]
+        def manifest(ref):
+            request = urllib.request.Request(f"https://{registry}/v2/{repo}/manifests/{ref}",
+                                             headers={"Authorization": f"Bearer {token}", "Accept": accept})
+            with urllib.request.urlopen(request, timeout=30) as r:
+                return json.load(r)
+        m = manifest(tag)
+        if "manifests" in m:
+            m = manifest(next(x["digest"] for x in m["manifests"]
+                              if x.get("platform", {}).get("architecture") == "amd64"))
+        return sum(layer["size"] for layer in m["layers"])
+    except Exception as e:
+        print(f"Monet: size unknown ({e})", flush=True)
+        return 0
+
+def received():
+    """Bytes received on every network connection so far."""
+    total = 0
+    try:
+        for line in open("/proc/net/dev").read().splitlines()[2:]:
+            name, data = line.split(":", 1)
+            if name.strip() != "lo":
+                total += int(data.split()[0])
+    except (OSError, ValueError, IndexError):
+        pass
+    return total
+
+def written(path):
+    st = os.statvfs(path)
+    return (st.f_blocks - st.f_bfree) * st.f_frsize
+
+def display_env():
+    """The installer's screen, from the nearest parent that has one."""
+    pid = os.getpid()
+    for _ in range(12):
+        try:
+            env = dict(item.split("=", 1) for item in
+                       open(f"/proc/{pid}/environ", "rb").read().decode(errors="replace").split("\0") if "=" in item)
+            pid = int(open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[1])
+        except (OSError, ValueError, IndexError):
+            break
+        if env.get("WAYLAND_DISPLAY") or env.get("DISPLAY"):
+            return {k: env[k] for k in ("WAYLAND_DISPLAY", "DISPLAY", "XDG_RUNTIME_DIR", "XAUTHORITY") if k in env}
+    return {}
+
+def tell(**status):
+    try:
+        with open(STATUS + ".new", "w") as f:
+            json.dump(status, f)
+        os.replace(STATUS + ".new", STATUS)
+    except OSError:
+        pass
+
+def show_window():
+    if not os.path.exists("/usr/libexec/monet-download"):
+        return None
+    try:
+        return subprocess.Popen(["/usr/bin/python3", "/usr/libexec/monet-download", STATUS],
+                                env=dict(os.environ, **display_env()), stdout=subprocess.DEVNULL,
+                                stderr=open("/tmp/monet-download-window.log", "w"))
+    except OSError:
+        return None
+
+def pull(root, total, start, log):
+    """One try: True when done; False when it failed or stopped moving."""
+    env = dict(os.environ, LC_ALL="C.UTF-8")
+    proc = subprocess.Popen(["ostree", "container", "image", "pull", f"{root}/ostree/repo",
+                             f"ostree-unverified-registry:{image}"], stdout=log, stderr=subprocess.STDOUT, env=env)
+    seen = (received(), written(root))
+    moved = time.time()
+    rates = []
+    while proc.poll() is None:
+        time.sleep(3)
+        now = (received(), written(root))
+        if now[0] - seen[0] > 256 * 1024 or now[1] - seen[1] > 1024 * 1024:
+            seen, moved = now, time.time()
+        elif time.time() - moved > STALL:
+            print("Monet: the download stopped moving; starting it again", flush=True)
+            proc.kill()
+            proc.wait()
+            return False
+        got = max(0, now[0] - start)
+        rates = (rates + [(time.time(), got)])[-20:]
+        speed = (rates[-1][1] - rates[0][1]) / max(1, rates[-1][0] - rates[0][0])
+        eta = (total - got) / speed if total and speed > 0 and got < total else None
+        tell(got=got, total=total, eta=eta)
+    return proc.returncode == 0
+
 root = next((r for r in ("/mnt/sysimage", "/mnt/sysroot") if os.path.ismount(r)), None)
 if root:
-    env = dict(os.environ, LC_ALL="C.UTF-8")
+    window = None
     try:
         subprocess.run(["ostree", "admin", f"--sysroot={root}", "init-fs", root], check=True, timeout=120)
-        for attempt in range(5):
-            pull = subprocess.run(["ostree", "container", "image", "pull", f"{root}/ostree/repo",
-                                   f"ostree-unverified-registry:{image}"],
-                                  capture_output=True, text=True, timeout=3 * 3600, env=env)
-            if pull.returncode == 0:
-                say("Monet is downloaded")
-                break
-            reason = (pull.stderr or pull.stdout).strip().splitlines()
-            print(f"Monet: the download stopped ({reason[-1] if reason else pull.returncode}); trying again", flush=True)
-            time.sleep(15 * (attempt + 1))
+        total = image_size()
+        start = received()
+        tell(got=0, total=total)
+        window = show_window()
+        with open("/tmp/monet-download.log", "a") as log:
+            for attempt in range(8):
+                if pull(root, total, start, log):
+                    say("Monet is downloaded")
+                    break
+                tell(got=max(0, received() - start), total=total,
+                     note="The connection dropped. Picking up where it stopped…")
+                time.sleep(min(10 * (attempt + 1), 60))
     except Exception as e:
         print(f"Monet: couldn't download ahead ({e}); the installer will", flush=True)
+    finally:
+        tell(done=True)
+        if window:
+            try:
+                window.wait(timeout=5)
+            except Exception:
+                window.kill()
 %end
 
 ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification

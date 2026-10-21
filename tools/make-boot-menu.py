@@ -88,7 +88,9 @@ def main():
     mark = branding().raster(branding().sun_outline(), 64)
     mark.save(OUT / "mark.png", optimize=True)
     nine("menu", 120, 120, 22, (20, 22, 36, 150))
-    nine("select", 60, 60, 14, (251, 250, 247, 246))
+    # GRUB draws this box outside the line it highlights (corner size above
+    # and below), so theme.txt spaces lines by at least twice the corner.
+    nine("select", 40, 40, 10, (251, 250, 247, 246))
     fonts()
     for f in sorted(OUT.glob("*.pf2")):
         print(f"{f.name}: {pf2_name(f)}")

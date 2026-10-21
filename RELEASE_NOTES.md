@@ -6,9 +6,27 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.6.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.6.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.6.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.6.1-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.6.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.6.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### Fixed in 0.6.1
+
+- **The download shows itself.** Monet is a 5.7 GB download, and the installer
+  only said "Running pre-installation scripts" the whole time, so it looked
+  stuck. Now a Monet page covers it: how much is downloaded, how long is
+  left, and a note that it picks up again if the connection drops.
+- **A download that stops moving starts again by itself** after four minutes,
+  keeping what it already has. Before, a stalled connection could hang there
+  for hours.
+- **Everything fits again.** 0.6 swapped the installer's font for a wider one
+  and made its buttons roomier, but its screens are laid out for its own font
+  and sizes, so labels and buttons spilled out of their boxes. The installer
+  keeps Monet's colors and painting and its own font and sizes.
+- **The painted start menu shows** on PCs without Secure Boot (GRUB gave up
+  on it because the big title font was too wide for its text layer). With
+  Secure Boot on, GRUB doesn't accept fonts from the stick, so the plain
+  menu shows; Monet Setup, coming next, skips the menu altogether.
 
 ### New in 0.6: Monet's own installer
 

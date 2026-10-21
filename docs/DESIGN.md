@@ -174,14 +174,22 @@ wording are fixed:
 - **Start menu** (GRUB theme, `image/installer/grub`): the dawn painting,
   Monet's mark and name in Fraunces, the choices on smoked glass and the
   chosen one on paper. Made by `tools/make-boot-menu.py`; loaded by
-  `tools/patch-grub.py`, and skipped (plain menu) if anything is missing.
+  `tools/patch-grub.py`, and skipped (plain menu) if anything is missing,
+  and with Secure Boot on, where GRUB refuses fonts from the stick. GRUB
+  draws the highlight's border outside its line, so lines are spaced by at
+  least twice its corner.
 - **Installer pages** (`monet.css`, loaded from Anaconda's `conf.d`): the
   painting down the side with the mark, paper pages, Fraunces page titles,
-  Inter everywhere else (a fontconfig alias turns Anaconda's Cantarell into
-  Inter), lily choices, the sun for Begin Installation and Continue, ink for
-  Done, and the harbor rising along the foot of the welcome and progress
-  pages. `tests/test_installer.py` parses it with GTK 3, because Anaconda
+  lily choices, the sun for Begin Installation and Continue, ink for Done,
+  and the harbor rising along the foot of the welcome and progress pages.
+  Colors and shapes only: Anaconda's screens are laid out for Cantarell at
+  its own sizes, and changing either spills labels and buttons out of their
+  boxes. `tests/test_installer.py` parses it with GTK 3, because Anaconda
   drops the whole stylesheet on any error.
+- **The download** (`/usr/libexec/monet-download`, from the kickstart's
+  `%pre-install`): a Monet page over the installer while Monet's 5.7 GB come
+  down, with how much and how long; a download that stops moving for four
+  minutes starts again, keeping what it has.
 
 ## Not Apple
 

@@ -1,0 +1,137 @@
+#!/usr/bin/python3
+"""The screen the installer shows while it downloads Monet.
+
+    monet-download STATUS.json
+
+The kickstart's %pre-install downloads Monet (several GB) while the installer
+itself only says "Running pre-installation scripts". This window covers it
+with what is actually happening, and closes when STATUS.json says "done",
+disappears, or the download script is gone. Best effort: if it can't open,
+the download goes on regardless.
+"""
+
+import json
+import os
+import sys
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
+
+PIXMAPS = "/usr/share/anaconda/pixmaps"
+CSS = b"""
+window { background-color: #FBFAF7; background-image: url("%s/monet-page.png");
+         background-size: 100%% auto; background-position: 50%% 100%%; background-repeat: no-repeat; }
+.title { font-family: "Fraunces 72pt SuperSoft", "Fraunces", serif; font-weight: 300; font-size: 44px; color: #1C1B19; }
+.line { font-family: "Inter", sans-serif; font-size: 16px; color: #1C1B19; }
+.note { font-family: "Inter", sans-serif; font-size: 13px; color: #6B6862; }
+progressbar trough { background-image: none; background-color: rgba(28, 27, 25, 0.08); border: none;
+                     border-radius: 4px; min-height: 8px; }
+progressbar progress { background-image: none; background-color: #357F72; border: none;
+                       border-radius: 4px; min-height: 8px; }
+""" % PIXMAPS.encode()
+
+
+def gb(n):
+    return f"{n / 1e9:.1f}"
+
+
+def describe(status):
+    """The two lines under the title, from the download script's status."""
+    got, total, eta = status.get("got", 0), status.get("total") or 0, status.get("eta")
+    if status.get("note"):
+        line = status["note"]
+    elif total:
+        line = f"{gb(min(got, total))} of {gb(total)} GB"
+        if eta and eta > 0:
+            minutes = max(1, round(eta / 60))
+            line += " · about 1 minute left" if minutes == 1 else f" · about {minutes} minutes left"
+    else:
+        line = f"{gb(got)} GB so far"
+    fraction = min(got / total, 0.99) if total else None
+    return line, fraction
+
+
+class Window(Gtk.Window):
+    def __init__(self, path):
+        super().__init__(title="Downloading Monet")
+        self.path, self.parent_pid, self.missing = path, os.getppid(), 0
+        self.set_decorated(False)
+        display = Gdk.Display.get_default()
+        monitor = display.get_primary_monitor() or display.get_monitor(0)
+        if monitor:
+            area = monitor.get_geometry()
+            self.set_default_size(area.width, area.height)
+        self.fullscreen()
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(self.get_screen(), provider,
+                                                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, halign=Gtk.Align.CENTER,
+                      valign=Gtk.Align.CENTER, margin_bottom=160)
+        box.set_size_request(560, -1)
+        try:
+            mark = GdkPixbuf.Pixbuf.new_from_file_at_size(f"{PIXMAPS}/monet-mark.png", 72, 72)
+            logo = Gtk.Image.new_from_pixbuf(mark)
+            logo.set_halign(Gtk.Align.START)
+            logo.set_margin_bottom(6)
+            box.pack_start(logo, False, False, 0)
+        except GLib.Error:
+            pass
+        self.title = Gtk.Label(label="Downloading Monet", xalign=0)
+        self.title.get_style_context().add_class("title")
+        self.line = Gtk.Label(label="Starting the download", xalign=0)
+        self.line.get_style_context().add_class("line")
+        self.bar = Gtk.ProgressBar()
+        note = Gtk.Label(xalign=0, wrap=True, max_width_chars=60,
+                         label="The longest part of the install. If the connection drops, "
+                               "Monet picks up where it stopped.")
+        note.get_style_context().add_class("note")
+        for widget in (self.title, self.line, self.bar, note):
+            box.pack_start(widget, False, False, 0)
+        self.add(box)
+        GLib.timeout_add(1000, self.tick)
+        GLib.timeout_add(150, self.pulse)
+        self.fraction = None
+        self.tick()
+
+    def pulse(self):
+        if self.fraction is None:
+            self.bar.pulse()
+        return True
+
+    def tick(self):
+        try:
+            with open(self.path) as f:
+                status = json.load(f)
+            self.missing = 0
+        except (OSError, ValueError):
+            status = None
+            self.missing += 1
+        gone = os.getppid() != self.parent_pid
+        if gone or self.missing > 10 or (status or {}).get("done"):
+            Gtk.main_quit()
+            return False
+        if status:
+            line, self.fraction = describe(status)
+            self.line.set_text(line)
+            if self.fraction is not None:
+                self.bar.set_fraction(self.fraction)
+        return True
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    window = Window(sys.argv[1])
+    window.connect("destroy", Gtk.main_quit)
+    window.show_all()
+    window.present()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

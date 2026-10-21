@@ -278,9 +278,12 @@ v0.5.1 adds Monet Settings (one glass sheet in front of KDE's System
 Settings), painted folders and app icons, Files on paper with glass edges,
 and switches for the Hours, the placard and glass.
 
+v0.6.1 shows the download (a Monet page over the installer, restarted when
+it stalls), puts Anaconda's own font and sizes back so everything fits, and
+fixes the start menu's theme on PCs without Secure Boot.
+
 v0.6 gives the installer Monet's look from the USB stick's start menu on
-(a GRUB theme, Anaconda's stylesheet loaded from conf.d, Inter through a
-fontconfig alias), makes it sturdier (Wi-Fi wait, retried checks, Monet
+(a GRUB theme, Anaconda's stylesheet loaded from conf.d), makes it sturdier (Wi-Fi wait, retried checks, Monet
 downloaded ahead with retries, a fixed USB-stick guard), and moves the
 Windows download to after the first sign-in.
 

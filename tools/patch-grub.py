@@ -19,12 +19,17 @@ ERASE = "Install Monet and Windows (erases this PC)"
 KEEP = "Install Monet next to my Windows"
 MORE = "More options"
 THEME_DIR = "($root)/EFI/BOOT/monet"
+# The text font loads last and is named: GRUB's text layer otherwise takes the
+# newest font, and the 56px title is too wide for its 40 columns, which drops
+# the whole theme ("glyphs too large to fit on screen"). With Secure Boot on,
+# GRUB refuses fonts from the stick, so the plain menu shows instead.
 THEME = f"""
 # Monet's start menu: the harbor at dawn, the choices on smoked glass.
-if loadfont {THEME_DIR}/text-20.pf2 ; then
-  loadfont {THEME_DIR}/text-14.pf2
+if loadfont {THEME_DIR}/title-56.pf2 ; then
   loadfont {THEME_DIR}/strong-20.pf2
-  loadfont {THEME_DIR}/title-56.pf2
+  loadfont {THEME_DIR}/text-14.pf2
+  loadfont {THEME_DIR}/text-20.pf2
+  set gfxterm_font="Monet Text Regular 20"
   insmod all_video
   insmod gfxterm
   insmod gfxmenu

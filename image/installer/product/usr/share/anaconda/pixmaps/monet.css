@@ -1,7 +1,11 @@
 /* Monet's installer look. The dawn painting runs down the side; every page is
    paper, with words in ink; choices are lily green; and the button that goes
-   ahead is the sun. Titles are set in Fraunces. Everything else is Inter:
-   Monet's fontconfig file turns the installer's Cantarell into Inter.
+   ahead is the sun. Page titles are set in Fraunces.
+
+   Only colors and shapes change: the installer's screens are laid out for its
+   own font (Cantarell) at its own sizes, so no rule here changes a font size,
+   padding or minimum size of anything inside them. (0.6 swapped in Inter and
+   roomier buttons, and labels and buttons no longer fit their boxes.)
 
    Anaconda drops the whole file if any of it doesn't parse, so it is checked
    with GTK 3 by tests/test_installer.py. */
@@ -74,14 +78,11 @@ AnacondaStandaloneWindow #nav-box {
 
 #anaconda-name-label {
     font-family: "Fraunces 72pt SuperSoft", "Fraunces", serif;
-    font-weight: 300;
-    font-size: 22px;
+    font-weight: 400;
     color: @monet_ink;
 }
 
 #anaconda-distro-label {
-    font-weight: 600;
-    font-size: 11px;
     color: @monet_dim;
 }
 
@@ -101,14 +102,11 @@ AnacondaSpokeSelector:hover {
 }
 
 #anaconda-spoke-selector-title {
-    font-weight: 600;
-    font-size: 15px;
     color: @monet_ink;
 }
 
 #anaconda-spoke-selector-status {
     font-style: normal;
-    font-size: 12px;
     color: @monet_dim;
 }
 
@@ -155,10 +153,7 @@ button.suggested-action {
     background-image: none;
     background-color: @monet_sun;
     border-color: @monet_sun;
-    border-radius: 20px;
     color: #FFFFFF;
-    font-weight: 600;
-    padding: 6px 20px;
 }
 
 button.suggested-action:hover {
@@ -189,9 +184,7 @@ button.suggested-action:disabled label {
     background-image: none;
     background-color: @monet_ink;
     border-color: @monet_ink;
-    border-radius: 20px;
     color: #FFFFFF;
-    padding: 4px 18px;
 }
 
 #anaconda-spoke-window-done:hover {
@@ -220,7 +213,6 @@ entry {
     border-radius: 10px;
     box-shadow: none;
     color: @monet_ink;
-    min-height: 32px;
 }
 
 entry:focus {

@@ -10,7 +10,7 @@
         "Id": "monet-solid",
         "License": "GPL-3.0-or-later",
         "Name": "Monet (solid)",
-        "Version": "0.6.0"
+        "Version": "0.6.1"
     },
     "X-Plasma-API": "5.0"
 }
