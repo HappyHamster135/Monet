@@ -18,7 +18,7 @@ Windows downloads in the background while you use it.
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.6.0-Installer.iso** from the
+1. Download **Monet-0.6.1-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -28,9 +28,10 @@ Windows downloads in the background while you use it.
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.6.0**).
-2. Monet's start menu opens over the harbor at dawn. **Install Monet and
-   Windows** is already selected. Press **Enter** (or wait ten seconds).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.6.1**).
+2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
+   on: then it's plain text). **Install Monet and Windows** is already
+   selected. Press **Enter** (or wait ten seconds).
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
 5. Click **User Creation** and enter your name and a password.
@@ -39,9 +40,10 @@ Windows downloads in the background while you use it.
 The disk is already set up for you: about two thirds for Monet, one third
 for Windows.
 
-Monet downloads itself while it installs, and keeps trying if the connection
-drops for a moment. If there's no internet at all, the installer says so
-instead of "unknown error".
+Monet downloads itself while it installs (5.7 GB): a Monet page shows how
+much is down and how long is left. If the connection drops, it picks up where
+it stopped. If there's no internet at all, the installer says so instead of
+"unknown error".
 
 7. Click **Reboot** and take out the USB stick.
 
@@ -154,5 +156,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.6.0-Linux.tar.gz** and run `./monet-0.6.0-linux/install.sh`,
+Download **Monet-0.6.1-Linux.tar.gz** and run `./monet-0.6.1-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.
