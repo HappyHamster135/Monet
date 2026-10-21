@@ -80,23 +80,43 @@ jobs:
           sed -i -e "s|@VERSION@|$VERSION|" -e "s|@UUID@|$(date -u +%Y%m%d%H%M).x86_64|" product/.buildstamp
 
           # 1. Monet's start menu and look, 2. Monet's kickstart. mkksiso goes
-          # last: it rebuilds the EFI boot image from the edited menu (that
-          # copy is what PCs actually boot) and adds the media checksum.
-          docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
+          # last: it rebuilds the EFI boot image from the edited menu and
+          # /EFI/BOOT (that copy is what PCs actually boot), renames the stick
+          # and adds the media checksum.
+          docker run --rm --privileged -v "$PWD:/work" -w /work -e VERSION="$VERSION" "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
             dnf -y -q install lorax xorriso isomd5sum mtools python3 cpio
-            xorriso -osirrox on -indev netinst.iso -extract /EFI/BOOT/grub.cfg efi.cfg -extract /boot/grub2/grub.cfg bios.cfg
+            OLD=\$(xorriso -indev netinst.iso -pvd_info 2>/dev/null | sed -n 's/^Volume Id *: *//p' | tr -d \"'\" | xargs)
+            NEW=Monet-\$VERSION
+            test -n \"\$OLD\"
+            echo \"Volume label: \$OLD -> \$NEW\"
+            xorriso -osirrox on -indev netinst.iso -extract /EFI/BOOT/grub.cfg efi.cfg -extract /boot/grub2/grub.cfg bios.cfg \
+              -extract /images/pxeboot/initrd.img initrd.img
+            # The menus find the stick by its label: Monet's from now on.
+            sed -i \"s|\$OLD|\$NEW|g\" efi.cfg bios.cfg
             python3 tools/patch-grub.py efi.cfg bios.cfg
             (cd product && find . | cpio --quiet -c -o | gzip -9) > product.img
+            # Early boot says Monet too: the initrd's own .buildstamp, overridden
+            # by a small archive appended to it.
+            rm -rf stamp && mkdir stamp && cp product/.buildstamp stamp/.buildstamp
+            (cd stamp && echo .buildstamp | cpio --quiet -o -H newc) > stamp.cpio
+            cat initrd.img stamp.cpio > initrd-monet.img
             xorriso -indev netinst.iso -outdev branded.iso -boot_image any replay \
               -update efi.cfg /EFI/BOOT/grub.cfg -update efi.cfg /EFI/BOOT/BOOT.conf \
-              -update bios.cfg /boot/grub2/grub.cfg -map product.img /images/product.img
-            mkksiso --ks monet.ks branded.iso Monet-$VERSION-Installer.iso
-            checkisomd5 Monet-$VERSION-Installer.iso
+              -update bios.cfg /boot/grub2/grub.cfg -map product.img /images/product.img \
+              -update initrd-monet.img /images/pxeboot/initrd.img -map image/installer/grub /EFI/BOOT/monet
+            mkksiso -V \"\$NEW\" --ks monet.ks branded.iso Monet-\$VERSION-Installer.iso
+            checkisomd5 Monet-\$VERSION-Installer.iso
             # Check the menu in both places, especially the (hidden) EFI boot image.
             rm -rf bootimgs && mkdir bootimgs
-            xorriso -osirrox on -indev Monet-$VERSION-Installer.iso \
-              -extract /EFI/BOOT/grub.cfg check.cfg -extract_boot_images bootimgs/
+            xorriso -osirrox on -indev Monet-\$VERSION-Installer.iso \
+              -extract /EFI/BOOT/grub.cfg check.cfg -extract /EFI/BOOT/monet/theme.txt check-theme.txt \
+              -extract /images/pxeboot/initrd.img check-initrd.img -extract_boot_images bootimgs/
             grep -q 'Install Monet and Windows' check.cfg
+            grep -q \"search .*'\$NEW'\" check.cfg
+            grep -q 'monet/theme.txt' check.cfg
+            grep -q 'boot_menu' check-theme.txt
+            xorriso -indev Monet-\$VERSION-Installer.iso -pvd_info 2>/dev/null | grep -q \"\$NEW\"
+            cmp -s <(tail -c \$(stat -c %s stamp.cpio) check-initrd.img) stamp.cpio
             for img in bootimgs/*uefi*; do
               if mtype -i \"\$img\" ::/EFI/BOOT/grub.cfg > efiboot.cfg 2>/dev/null; then
                 if grep -q menuentry efiboot.cfg && ! grep -q 'Install Monet and Windows' efiboot.cfg; then

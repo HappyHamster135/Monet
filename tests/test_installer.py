@@ -8,6 +8,7 @@ import importlib.machinery
 import importlib.util
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -64,6 +65,39 @@ class StartMenu(unittest.TestCase):
         erase = out.split(f"'{patch_grub.ERASE}'")[1].split("}")[0]
         self.assertNotIn("monet.keep", erase)
         self.assertNotIn("Fedora 44'", out)
+        self.assertIn("submenu 'More options'", out)
+        self.assertIn("set timeout=10", out)
+        # Monet's own entries keep the open-source NVIDIA driver off.
+        self.assertIn("nouveau.modeset=0", erase)
+        self.assertIn("nouveau.modeset=0", keep)
+        # The theme is loaded after the search line that sets $root.
+        self.assertLess(out.index("search --no-floppy"), out.index("set theme="))
+        self.assertLess(out.index("set theme="), out.index("menuentry"))
+
+
+class BootMenu(unittest.TestCase):
+    GRUB = ROOT / "image/installer/grub"
+
+    @staticmethod
+    def pf2_name(path):
+        data = path.read_bytes()
+        i = data.index(b"NAME")
+        n = int.from_bytes(data[i + 4:i + 8], "big")
+        return data[i + 8:i + 8 + n].rstrip(b"\0").decode()
+
+    def test_theme_has_its_pictures(self):
+        theme = (self.GRUB / "theme.txt").read_text()
+        for name in re.findall(r'(?:desktop-image|file)\s*[:=]\s*"([^"]+)"', theme):
+            self.assertTrue((self.GRUB / name).is_file(), name)
+        for style in re.findall(r'pixmap_style\s*=\s*"([^"]+)"', theme):
+            for piece in ("nw", "n", "ne", "w", "c", "e", "sw", "s", "se"):
+                self.assertTrue((self.GRUB / style.replace("*", piece)).is_file(), style + " " + piece)
+
+    def test_theme_fonts_are_loaded(self):
+        theme = (self.GRUB / "theme.txt").read_text()
+        loaded = {self.pf2_name(self.GRUB / Path(f).name) for f in re.findall(r"loadfont (\S+)", patch_grub.THEME)}
+        for font in set(re.findall(r'font\s*[:=]\s*"([^"]+)"', theme)):
+            self.assertIn(font, loaded)
 
 
 class DiskPlan(unittest.TestCase):
@@ -78,7 +112,7 @@ class DiskPlan(unittest.TestCase):
         {"name": "zram0", "path": "/dev/zram0", "size": 8 * 10**9, "type": "disk", "rm": False, "ro": False},
     ]
 
-    def plan(self, cmdline, devices=None):
+    def plan(self, cmdline, devices=None, media="/dev/sda1"):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
         written = {}
@@ -93,7 +127,7 @@ class DiskPlan(unittest.TestCase):
 
         fake = types.ModuleType("subprocess")
         fake.run = lambda cmd, **kw: types.SimpleNamespace(
-            stdout=json.dumps({"blockdevices": devices}) if cmd[0] == "lsblk" else "/dev/sda1\n")
+            stdout=json.dumps({"blockdevices": devices}) if cmd[0] == "lsblk" else media + "\n")
 
         def fake_open(path, mode="r", *a, **k):
             return io.StringIO(cmdline) if path == "/proc/cmdline" else Sink(path)
@@ -114,10 +148,33 @@ class DiskPlan(unittest.TestCase):
         self.assertGreater(total - size, 100 * 1024, "room left for Windows")
         self.assertGreater(size, 64 * 1024)
 
+    def test_never_the_stick_even_when_it_looks_internal(self):
+        # A USB-to-SATA drive or card reader may not say "usb"; the stick is
+        # still found from the installer's own label.
+        devices = [
+            {"name": "sdc", "path": "/dev/sdc", "size": 4 * 10**12, "type": "disk", "rm": "0", "ro": "0", "tran": "sata"},
+            {"name": "sdc1", "path": "/dev/sdc1", "size": 10**9, "type": "part", "rm": "0", "ro": "0", "pkname": "sdc"},
+            {"name": "nvme0n1", "path": "/dev/nvme0n1", "size": 500 * 10**9, "type": "disk", "rm": "0", "ro": "0",
+             "tran": "nvme"},
+        ]
+        plan = self.plan("inst.stage2=hd:LABEL=MONET-0.6 quiet", devices=devices, media="/dev/sdc1")
+        self.assertIn("ignoredisk --only-use=nvme0n1", plan)
+
     def test_download_check_compiles(self):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
         compile(code.replace("@IMAGE@", "ghcr.io/example/monet:latest"), "pre-install", "exec")
+
+    def test_monet_is_downloaded_with_retries(self):
+        ks = (ROOT / "image/monet.ks").read_text()
+        code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
+        self.assertIn("nm-online", code)
+        self.assertIn('"container", "image", "pull"', code)
+        self.assertIn("for attempt in range(", code)
+        # Windows waits for the first sign-in instead of the end of the install.
+        post = ks.split("%post --log=/var/log/monet-install.log", 1)[1]
+        self.assertIn("echo waiting > /var/lib/monet/windows-setup", post)
+        self.assertNotIn("monet-prepare-windows", post)
 
     def test_keep_asks(self):
         self.assertEqual(self.plan("inst.stage2=hd:LABEL=X monet.keep"), "")
@@ -187,14 +244,45 @@ class InstallerLook(unittest.TestCase):
         self.assertEqual(stamp["Main"]["Product"], "Monet")
         self.assertIn("@VERSION@", stamp["Main"]["Version"])
 
-    def test_product_config_inherits_fedora(self):
+    def test_config_is_where_anaconda_reads_it(self):
+        # Anaconda reads conf.d (after Fedora's profile); product.d never.
         import configparser
+        self.assertFalse((self.PRODUCT / "etc/anaconda/product.d").exists())
         conf = configparser.ConfigParser()
-        conf.read(self.PRODUCT / "etc/anaconda/product.d/monet.conf")
-        self.assertEqual(conf["Product"]["product_name"], "Monet")
-        self.assertEqual(conf["Base Product"]["product_name"], "Fedora")
+        conf.read(self.PRODUCT / "etc/anaconda/conf.d/90-monet.conf")
         stylesheet = conf["User Interface"]["custom_stylesheet"]
         self.assertTrue((self.PRODUCT / stylesheet.lstrip("/")).is_file())
+        self.assertIn("PasswordSpoke", conf["User Interface"]["hidden_spokes"].split())
+
+    def test_stylesheet_parses_in_gtk3(self):
+        # Anaconda loads it with an error check: one bad line and none of it
+        # applies. Checked with the GTK 3 Python bindings when they're there.
+        css = self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css"
+        probe = "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk"
+        candidates = [sys.executable, "/usr/bin/python3", shutil.which("python3")]
+        python = next((c for c in candidates if c and subprocess.run([c, "-c", probe], capture_output=True).returncode == 0), None)
+        if python is None:
+            self.skipTest("GTK 3 Python bindings aren't installed")
+        check = subprocess.run([python, "-c", "import sys, gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; "
+                                "Gtk.CssProvider().load_from_path(sys.argv[1])", str(css)],
+                               capture_output=True, text=True, env={**os.environ, "DISPLAY": ""})
+        self.assertEqual(check.returncode, 0, check.stderr)
+
+    def test_stylesheet_targets_anaconda(self):
+        css = (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text()
+        for part in (".logo-sidebar", ".logo", "#nav-box", "#anaconda-name-label", "button.suggested-action",
+                     "#anaconda-spoke-window-done", "AnacondaStandaloneWindow .background", "AnacondaSpokeSelector"):
+            self.assertIn(part, css)
+
+    def test_installer_reads_in_inter_and_fraunces(self):
+        fonts = self.PRODUCT / "usr/share/fonts/monet"
+        for name in ("Inter-Regular.otf", "Inter-SemiBold.otf", "Inter-Bold.otf",
+                     "Fraunces72ptSuperSoft-Light.ttf", "OFL-Inter.txt", "OFL-Fraunces.txt"):
+            self.assertTrue((fonts / name).is_file(), name)
+        alias = (self.PRODUCT / "etc/fonts/conf.d/00-monet.conf").read_text()
+        xml.dom.minidom.parseString(alias)
+        self.assertIn("<string>Cantarell</string>", alias)
+        self.assertIn("<string>Inter</string>", alias)
 
     def test_artwork_present(self):
         from_css = re.findall(r'url\("(/[^"]+)"\)', (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text())

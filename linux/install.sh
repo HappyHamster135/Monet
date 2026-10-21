@@ -164,12 +164,32 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service
     systemctl --global enable monet-light.timer monet-light-sync.path
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Monet"/' /usr/lib/os-release
-    # The sign-in screen: the harbor at night.
+    # Monet's name, mark and links where the system describes itself (KDE's
+    # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
+    # which its tools rely on.
+    os_release=/usr/lib/os-release
+    sed -i -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Monet"/' \
+        -e '/^LOGO=/d' -e '/^HOME_URL=/d' -e '/^SUPPORT_URL=/d' -e '/^BUG_REPORT_URL=/d' -e '/^DEFAULT_HOSTNAME=/d' \
+        "$os_release"
+    cat >> "$os_release" <<OSR
+LOGO=monet
+HOME_URL="https://github.com/HappyHamster135/Monet"
+SUPPORT_URL="https://github.com/HappyHamster135/Monet/blob/HEAD/docs/INSTALL.md"
+BUG_REPORT_URL="https://github.com/HappyHamster135/Monet/issues"
+DEFAULT_HOSTNAME="monet"
+OSR
+    # The PC's boot menu names Monet's entry from the text before "release".
+    if grep -q " release " /etc/system-release 2>/dev/null; then
+        release="$(sed 's/^.* release /Monet release /' /etc/system-release)"
+        rm -f /etc/system-release
+        echo "$release" > /etc/system-release
+    fi
+    # The sign-in screen: the harbor at night, and Monet's mark.
     for theme in /usr/share/sddm/themes/breeze /usr/share/sddm/themes/01-breeze-fedora; do
         [ -d "$theme" ] || continue
-        printf '[General]\nbackground=%s\ntype=image\n' \
-            "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" > "$theme/theme.conf.user"
+        printf '[General]\nbackground=%s\ntype=image\nshowlogo=shown\nlogo=%s\n' \
+            "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" \
+            "$DATADIR/icons/hicolor/scalable/apps/monet.svg" > "$theme/theme.conf.user"
     done
 else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \

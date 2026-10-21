@@ -1499,6 +1499,8 @@ PlasmaCore.Dialog {
                                 : sheet.asking && sheet.asking.id ? i18n("Play %1?", sheet.asking.name)
                                 : sheet.asking ? i18n("Restart in Windows?")
                                 : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
+                                : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Getting Windows ready")
+                                : sheet.pc.setup === "pending" ? i18n("Windows is ready to install")
                                 : sheet.pc.windows === "Ready" ? i18n("Windows is ready")
                                 : (sheet.pc.windows || "") === "" ? i18n("Windows")
                                 : i18n("Windows isn't ready")
@@ -1512,6 +1514,8 @@ PlasmaCore.Dialog {
                             text: sheet.switching ? i18n("Your PC restarts in a moment.")
                                 : sheet.switchProblem !== "" ? sheet.switchProblem
                                 : !sheet.asking && (sheet.pc.notice || "") !== "" ? sheet.pc.notice
+                                : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts.")
+                                : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
                                 : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
                                 : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
                                 : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
@@ -1530,12 +1534,15 @@ PlasmaCore.Dialog {
                     Pill {
                         tone: look
                         kind: "sun"
-                        visible: !sheet.switching
+                        visible: !sheet.switching && sheet.pc.setup !== "waiting" && sheet.pc.setup !== "preparing"
                         text: sheet.asking && sheet.asking.id ? i18n("Restart & Play")
                             : sheet.asking ? i18n("Restart")
+                            : sheet.pc.setup === "pending" ? i18n("Restart and install")
                             : i18n("Restart in Windows")
                         onClicked: {
-                            if (sheet.asking) {
+                            if (sheet.pc.setup === "pending" && !sheet.asking) {
+                                sheet.ask("restart")
+                            } else if (sheet.asking) {
                                 sheet.restart()
                             } else {
                                 sheet.switchProblem = ""

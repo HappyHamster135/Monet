@@ -6,9 +6,32 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.5.2-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.5.2-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.5.2-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.6.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.6.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.6.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.6: Monet's own installer
+
+- **Monet from the first second.** The USB stick is called Monet, and its
+  start menu is the harbor at dawn with the choices on smoked glass. The
+  installer says "Loading Monet", and its pages are Monet's paper and ink:
+  Inter for reading, Fraunces for titles, lily for your choices and the sun
+  for the button that goes ahead, with the harbor rising along the bottom of
+  the welcome and progress pages. (Before, only the side picture was Monet's;
+  the rest of its look never loaded.)
+- **Fewer "unknown error"s.** The installer waits for Wi-Fi, checks Monet can
+  be downloaded (trying a few times), and downloads it in a way that picks up
+  again when the connection drops, instead of failing on the first hiccup.
+  It never mistakes the USB stick for the PC's disk, even when the stick
+  doesn't say it's USB, and it waits for every disk to show up first.
+- **A shorter install.** Windows no longer downloads at the end of the
+  install, where 7 GB looked like the installer had stopped. It downloads
+  after your first sign-in, with its progress showing, and Monet asks before
+  restarting to install it.
+- **Monet's name everywhere.** The PC's boot menu, KDE's About page, the
+  sign-in screen (with Monet's mark) and the PC's network name say Monet.
+- **A personal touch.** The placard on the desktop greets you by name:
+  good morning, good evening, and "still up?" after midnight.
 
 ### Fixed in 0.5.2
 
@@ -128,6 +151,8 @@ new look by itself.
 ### Good to know
 
 - **Preview.** Not tested on real hardware yet.
+- The installer's wording ("Installation Summary", "Begin Installation") is
+  Fedora's own and can't be changed; everything around it is Monet's.
 - "Install Monet and Windows" **erases the PC**.
 - Windows activates by itself if the PC came with Windows. Otherwise it runs
   unactivated (small watermark).

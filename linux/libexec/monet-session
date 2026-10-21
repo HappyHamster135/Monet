@@ -17,6 +17,14 @@ if [ -n "$notice" ] && command -v notify-send >/dev/null; then
     fi
 fi
 
+# "Monet and Windows": Windows downloads after the first sign-in, with its
+# progress showing, then Monet asks before restarting to install it. In its
+# own unit, so it keeps going after this script ends.
+if [ "$(cat /var/lib/monet/windows-setup 2>/dev/null)" = waiting ] && command -v systemd-run >/dev/null; then
+    systemd-run --user --quiet --collect --unit=monet-windows-first-run --on-active=30 \
+        "$BINDIR/monet" windows --first-run >/dev/null 2>&1 || true
+fi
+
 # Mist or smoke, for the time it is now.
 "$LIBEXECDIR/monet-light" apply 2>/dev/null
 

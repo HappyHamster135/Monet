@@ -346,6 +346,7 @@ def about():
         "storage": f"{disk.free // 10**9} GB free of {disk.total // 10**9} GB",
         "windows": windows.group(1).strip() if windows else "",
         "notice": read_text(Path("/var/lib/monet/switch-notice")),
+        "setup": read_text(Path("/var/lib/monet/windows-setup")),
     }
 
 

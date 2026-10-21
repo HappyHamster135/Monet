@@ -76,6 +76,7 @@ fn main() -> ExitCode {
         }
         ["games"] => list_games(json),
         ["play", id] => switch(Some(id), confirm),
+        ["windows"] if args.iter().any(|a| a == "--first-run") => first_run_windows(),
         ["windows"] => switch(None, confirm),
         ["doctor"] => doctor(),
         ["make-default"] => elevate(&["helper", "make-default"]),
@@ -281,7 +282,7 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
         if !confirm {
             return Err("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up.".into());
         }
-        return finish_windows_setup(confirm);
+        return finish_windows_setup(true);
     }
     // Otherwise the helper finds Windows, or makes it a boot entry if the
     // PC lost it, and says so if it can't.
@@ -362,6 +363,7 @@ fn doctor() -> Res<()> {
         Some(Outcome::NotFound) => bad("Windows wasn't found when Monet looked for it."),
         Some(Outcome::NoPayload) => warn("This copy of Monet doesn't include the Windows files."),
         Some(Outcome::Pending) => warn("Windows installs itself at the next restart."),
+        Some(Outcome::Waiting) => warn("Windows downloads and gets ready after you sign in to Monet."),
         Some(Outcome::Preparing) => warn("Windows is being downloaded and prepared."),
         Some(Outcome::DownloadFailed) => {
             bad("Windows couldn't be downloaded. Choose Windows in the app menu to try again.")
@@ -660,7 +662,28 @@ fn helper_prepare_windows(iso: Option<String>) -> Res<()> {
 
 /// When Monet's own Windows install didn't finish: try again, from a file
 /// in Downloads if there is one, then restart into the Windows install.
-fn finish_windows_setup(confirm: bool) -> Res<()> {
+/// "Monet and Windows": right after the first sign-in, Windows downloads with
+/// its progress showing, then Monet asks to restart and install it. (The
+/// installer used to do this silently at its very end.)
+fn first_run_windows() -> Res<()> {
+    if windows_setup_status() != Some(Outcome::Waiting) {
+        return Ok(());
+    }
+    let _ = Command::new("notify-send")
+        .args([
+            "--app-name=Monet",
+            "--icon=monet-windows",
+            "Getting Windows ready for your games",
+            "Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts.",
+        ])
+        .status();
+    finish_windows_setup(false)
+}
+
+/// Downloads Windows and gets it ready to install itself, showing progress.
+/// `ask_first`: ask before starting (the app menu); after the first sign-in
+/// it was already chosen in the installer. Restarting is always asked.
+fn finish_windows_setup(ask_first: bool) -> Res<()> {
     let iso = downloaded_windows_iso();
     let question = match &iso {
         Some(p) => format!(
@@ -671,7 +694,7 @@ fn finish_windows_setup(confirm: bool) -> Res<()> {
                  This takes about 30 minutes."
             .to_string(),
     };
-    if confirm && !ask("Set up Windows?", &question, "Set Up") {
+    if ask_first && !ask("Set up Windows?", &question, "Set Up") {
         return Ok(());
     }
     let mut args = vec!["helper".to_string(), "prepare-windows".to_string()];
@@ -688,7 +711,7 @@ fn finish_windows_setup(confirm: bool) -> Res<()> {
     let ok = show_progress_while(&mut child);
     match windows_setup_status() {
         Some(Outcome::Pending) if ok => {
-            if !confirm || ask("Windows is ready", "Restart now to install Windows?", "Restart") {
+            if ask("Windows is ready", "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet.", "Restart") {
                 let _ = Command::new("systemctl").arg("reboot").status();
             }
             Ok(())
@@ -696,7 +719,7 @@ fn finish_windows_setup(confirm: bool) -> Res<()> {
         Some(Outcome::DownloadFailed) => {
             let text = "Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page \
                         (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again.";
-            if !confirm || ask("Download Windows", text, "Open Microsoft's Page") {
+            if ask("Download Windows", text, "Open Microsoft's Page") {
                 let _ = Command::new("xdg-open").arg("https://www.microsoft.com/software-download/windows11").status();
             }
             Ok(())

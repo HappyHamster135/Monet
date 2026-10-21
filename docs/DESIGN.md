@@ -166,6 +166,23 @@ animations turned off in System Settings, Monet's widgets fade or cut.
   the sun sets: the screen fades to night and the sun sinks into the water.
 - **Lock screen and sign-in:** the same painting, in the same light.
 
+## The installer
+
+Fedora's installer (Anaconda), dressed as Monet, since its screens and
+wording are fixed:
+
+- **Start menu** (GRUB theme, `image/installer/grub`): the dawn painting,
+  Monet's mark and name in Fraunces, the choices on smoked glass and the
+  chosen one on paper. Made by `tools/make-boot-menu.py`; loaded by
+  `tools/patch-grub.py`, and skipped (plain menu) if anything is missing.
+- **Installer pages** (`monet.css`, loaded from Anaconda's `conf.d`): the
+  painting down the side with the mark, paper pages, Fraunces page titles,
+  Inter everywhere else (a fontconfig alias turns Anaconda's Cantarell into
+  Inter), lily choices, the sun for Begin Installation and Continue, ink for
+  Done, and the harbor rising along the foot of the welcome and progress
+  pages. `tests/test_installer.py` parses it with GTK 3, because Anaconda
+  drops the whole stylesheet on any error.
+
 ## Not Apple
 
 Monet takes Apple's simplicity, not its look: no menu bar, no dock, no traffic

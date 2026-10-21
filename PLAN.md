@@ -278,6 +278,12 @@ v0.5.1 adds Monet Settings (one glass sheet in front of KDE's System
 Settings), painted folders and app icons, Files on paper with glass edges,
 and switches for the Hours, the placard and glass.
 
+v0.6 gives the installer Monet's look from the USB stick's start menu on
+(a GRUB theme, Anaconda's stylesheet loaded from conf.d, Inter through a
+fontconfig alias), makes it sturdier (Wi-Fi wait, retried checks, Monet
+downloaded ahead with retries, a fixed USB-stick guard), and moves the
+Windows download to after the first sign-in.
+
 v0.5.2 makes the switch reliable on PCs with leftover boot entries (choose a
 Windows entry that can start, add one if missing, verify, log, and check the
 result at the next start), makes updates manual, adds the Monet Smoke global

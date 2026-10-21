@@ -29,6 +29,8 @@ pub enum Outcome {
     Hibernated,
     /// This copy of Monet doesn't include the Windows files.
     NoPayload,
+    /// "Monet and Windows": Windows downloads after the first sign-in.
+    Waiting,
     /// "Monet and Windows": Windows is downloading and getting ready.
     Preparing,
     /// "Monet and Windows": Windows installs itself at the next restart.
@@ -50,6 +52,7 @@ impl Outcome {
             Outcome::BitLocker => "bitlocker",
             Outcome::Hibernated => "hibernated",
             Outcome::NoPayload => "no-payload",
+            Outcome::Waiting => "waiting",
             Outcome::Preparing => "preparing",
             Outcome::Pending => "pending",
             Outcome::DownloadFailed => "download-failed",
@@ -66,6 +69,7 @@ impl Outcome {
             Outcome::BitLocker,
             Outcome::Hibernated,
             Outcome::NoPayload,
+            Outcome::Waiting,
             Outcome::Preparing,
             Outcome::Pending,
             Outcome::DownloadFailed,
@@ -86,7 +90,7 @@ impl Outcome {
     pub fn is_fresh_install(self) -> bool {
         matches!(
             self,
-            Outcome::Preparing | Outcome::Pending | Outcome::DownloadFailed | Outcome::NoSpace | Outcome::Failed
+            Outcome::Waiting | Outcome::Preparing | Outcome::Pending | Outcome::DownloadFailed | Outcome::NoSpace | Outcome::Failed
         )
     }
 }
@@ -348,7 +352,7 @@ mod tests {
 
     #[test]
     fn status_codes_round_trip() {
-        for o in [Outcome::Staged, Outcome::BitLocker, Outcome::Hibernated, Outcome::NoPayload, Outcome::DownloadFailed] {
+        for o in [Outcome::Staged, Outcome::BitLocker, Outcome::Hibernated, Outcome::NoPayload, Outcome::Waiting, Outcome::DownloadFailed] {
             assert_eq!(Outcome::from_code(o.code()), Some(o));
         }
         assert_eq!(Outcome::from_code("staged\n"), Some(Outcome::Staged));

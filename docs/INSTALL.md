@@ -9,15 +9,16 @@ You need:
 - A USB stick of 2 GB or more (it will be erased)
 - Internet (Wi-Fi is fine)
 
-**Everything on the PC is erased.** About an hour, mostly downloading.
+**Everything on the PC is erased.** About 20 minutes to install Monet, then
+Windows downloads in the background while you use it.
 
-> **Monet 0.5 is a preview** and hasn't been tested on real hardware yet.
+> **Monet 0.6 is a preview** and hasn't been tested on real hardware yet.
 
 ---
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.5.2-Installer.iso** from the
+1. Download **Monet-0.6.0-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -27,8 +28,9 @@ You need:
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick.
-2. **Install Monet and Windows** is already selected. Press **Enter**.
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.6.0**).
+2. Monet's start menu opens over the harbor at dawn. **Install Monet and
+   Windows** is already selected. Press **Enter** (or wait ten seconds).
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
 5. Click **User Creation** and enter your name and a password.
@@ -37,23 +39,28 @@ You need:
 The disk is already set up for you: about two thirds for Monet, one third
 for Windows.
 
-At the end, Monet downloads Windows 11 from Microsoft. The progress bar
-stands still for a while. That's normal.
+Monet downloads itself while it installs, and keeps trying if the connection
+drops for a moment. If there's no internet at all, the installer says so
+instead of "unknown error".
 
 7. Click **Reboot** and take out the USB stick.
 
-## 3. Let it finish (about 15 minutes)
+## 3. First start
 
-Windows now installs itself, with a few restarts. No need to touch anything.
-Monet answers all of Windows' setup questions, and sets up Monet Bridge and
-the Game Profile.
-
-Then Monet starts. **Once**, a blue screen asks to trust the NVIDIA driver,
-which anti-cheat games need:
+**Once**, a blue screen asks to trust the NVIDIA driver, which anti-cheat
+games need:
 
 **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**
 
-Sign in to Monet. Done.
+Sign in to Monet. It greets you by name.
+
+## 4. Windows gets ready (about 30 minutes, in the background)
+
+Right after you sign in, Monet starts downloading Windows 11 from Microsoft
+and shows its progress. Keep using your PC. When it's ready, Monet asks to
+restart: Windows then installs itself (about 10 minutes, a few restarts, no
+questions), sets up Monet Bridge and the Game Profile, and comes back to
+Monet. Done.
 
 ---
 
@@ -147,5 +154,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.5.2-Linux.tar.gz** and run `./monet-0.5.2-linux/install.sh`,
+Download **Monet-0.6.0-Linux.tar.gz** and run `./monet-0.6.0-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

@@ -1,12 +1,13 @@
 /*
- * Placard: the card next to a painting in a museum. It shows the time in
- * Fraunces, the date, and which light the wallpaper is in.
+ * Placard: the card next to a painting in a museum. It greets you by name,
+ * shows the time in Fraunces, the date, and which light the wallpaper is in.
  */
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
+import org.kde.coreaddons as KCoreAddons
 
 PlasmoidItem {
     id: root
@@ -21,6 +22,19 @@ PlasmoidItem {
     readonly property bool ink: light === "midday"
     readonly property color textColor: ink ? "#13202E" : "#FFFFFF"
     readonly property color shadowColor: ink ? "#B0FFFFFF" : "#9914102A"
+
+    KCoreAddons.KUser {
+        id: user
+    }
+    readonly property string firstName: (user.fullName || "").trim().split(" ")[0] || user.loginName
+    readonly property string greeting: {
+        const h = now.getHours()
+        return h < 5 ? i18nc("greeting late at night, %1 is a first name", "Still up, %1?", firstName)
+            : h < 12 ? i18nc("%1 is a first name", "Good morning, %1.", firstName)
+            : h < 17 ? i18nc("%1 is a first name", "Good afternoon, %1.", firstName)
+            : h < 22 ? i18nc("%1 is a first name", "Good evening, %1.", firstName)
+            : i18nc("%1 is a first name", "Good night, %1.", firstName)
+    }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     preferredRepresentation: fullRepresentation
@@ -53,6 +67,16 @@ PlasmoidItem {
                 shadowColor: root.shadowColor
                 shadowBlur: 0.9
                 shadowVerticalOffset: 2
+            }
+
+            Text {
+                visible: root.firstName !== ""
+                text: root.greeting
+                color: root.textColor
+                font.family: "Fraunces 72pt SuperSoft"
+                font.italic: true
+                font.pixelSize: 26
+                Layout.bottomMargin: 6
             }
 
             Text {

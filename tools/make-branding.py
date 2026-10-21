@@ -135,22 +135,26 @@ def installer_art():
     dawn.crop((sun_x - width // 2, 0, sun_x + width // 2, H)).resize((500, 1600), Image.LANCZOS) \
         .save(INSTALLER / "sidebar-bg.png", optimize=True)
 
-    # Top bar: the harbor's blue-grey mist, so white titles stay readable.
-    top = np.array(rgb("#4A5873"), dtype=np.float32)
-    bottom = np.array(rgb("#36425A"), dtype=np.float32)
-    rows = np.linspace(0, 1, 64)[:, None] * (bottom - top) + top
-    Image.fromarray(np.repeat(rows[:, None, :], 1920, axis=1).astype(np.uint8)) \
-        .save(INSTALLER / "topbar-bg.png", optimize=True)
-
     # Logo: the mark with "Monet" set in Fraunces beneath it, on transparent.
-    mark = raster(sun_outline(), 104)
-    canvas = Image.new("RGBA", (240, 190), (0, 0, 0, 0))
-    canvas.alpha_composite(mark, ((240 - 104) // 2, 0))
+    # Drawn at twice the size it's shown (monet.css scales it to 128 x 104),
+    # so it stays sharp on high-resolution screens and fits the narrow side.
+    mark = raster(sun_outline(), 132)
+    canvas = Image.new("RGBA", (256, 208), (0, 0, 0, 0))
+    canvas.alpha_composite(mark, ((256 - 132) // 2, 0))
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.truetype(str(FONTS / "Fraunces72ptSuperSoft-Regular.ttf"), 46)
+    font = ImageFont.truetype(str(FONTS / "Fraunces72ptSuperSoft-Light.ttf"), 60)
     text_w = draw.textlength("Monet", font=font)
-    draw.text(((240 - text_w) / 2, 118), "Monet", font=font, fill=(255, 255, 255, 255))
+    draw.text(((256 - text_w) / 2, 128), "Monet", font=font, fill=(255, 255, 255, 255))
     canvas.save(INSTALLER / "sidebar-logo.png", optimize=True)
+
+    # The welcome and progress pages: the harbor at dawn along the bottom,
+    # rising out of the page's paper.
+    w, h = 1600, 520
+    strip = dawn.crop((0, int(H * 0.40), W, int(H * 0.40) + W * h // w)).resize((w, h), Image.LANCZOS).convert("RGBA")
+    fade = np.clip((np.arange(h, dtype=np.float32) / h - 0.05) / 0.55, 0, 1) ** 1.6
+    alpha = Image.fromarray(np.repeat((fade * 255).astype(np.uint8)[:, None], w, axis=1), "L")
+    strip.putalpha(alpha)
+    strip.save(INSTALLER / "monet-page.png", optimize=True)
 
 
 def main():

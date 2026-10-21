@@ -1,0 +1,73 @@
+# Monet's USB start menu: the harbor at dawn, Monet's name in Fraunces, and
+# the choices on smoked glass, the chosen one on paper. Images and fonts come
+# from tools/make-boot-menu.py; tools/patch-grub.py loads this theme.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "crop"
+desktop-color: "#2A2F45"
+message-font: "Monet Text Regular 20"
+message-color: "#FFFFFF"
+terminal-font: "Monet Text Regular 20"
+
++ image {
+    left = 9%
+    top = 50%-218
+    width = 64
+    height = 64
+    file = "mark.png"
+}
+
++ label {
+    left = 9%+84
+    top = 50%-222
+    width = 600
+    height = 72
+    text = "Monet"
+    font = "Monet Title Regular 56"
+    color = "#FFFFFF"
+    align = "left"
+}
+
++ boot_menu {
+    left = 9%
+    top = 50%-120
+    width = 680
+    height = 300
+    menu_pixmap_style = "menu_*.png"
+    item_font = "Monet Text Regular 20"
+    item_color = "#EEEBF3"
+    selected_item_font = "Monet Strong Regular 20"
+    selected_item_color = "#1C1B19"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 52
+    item_padding = 20
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
++ label {
+    id = "__timeout__"
+    left = 9%+4
+    top = 50%+196
+    width = 680
+    height = 24
+    text = "Starting in %d seconds"
+    font = "Monet Text Regular 14"
+    color = "#E4E1EA"
+    align = "left"
+}
+
++ label {
+    left = 9%+4
+    top = 50%+222
+    width = 680
+    height = 24
+    text = "Use ↑ and ↓ to choose, Enter to start"
+    font = "Monet Text Regular 14"
+    color = "#C9C6D2"
+    align = "left"
+}

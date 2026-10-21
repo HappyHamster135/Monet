@@ -1,14 +1,30 @@
-/* Monet's installer look: the dawn painting down the side, the harbor's
-   blue-grey mist across the top, and the sun for the button that goes ahead. */
+/* Monet's installer look. The dawn painting runs down the side; every page is
+   paper, with words in ink; choices are lily green; and the button that goes
+   ahead is the sun. Titles are set in Fraunces. Everything else is Inter:
+   Monet's fontconfig file turns the installer's Cantarell into Inter.
 
-@define-color monet-sun #F2552C;
-@define-color monet-sun-hover #FF6A42;
-@define-color monet-mist #4A5873;
-@define-color monet-lily #357F72;
+   Anaconda drops the whole file if any of it doesn't parse, so it is checked
+   with GTK 3 by tests/test_installer.py. */
+
+@define-color monet_paper #FBFAF7;
+@define-color monet_paper_deep #F1EEE8;
+@define-color monet_ink #1C1B19;
+@define-color monet_dim #6B6862;
+@define-color monet_line rgba(28, 27, 25, 0.10);
+@define-color monet_line_strong rgba(28, 27, 25, 0.18);
+@define-color monet_sun #F2552C;
+@define-color monet_sun_hover #FF6A42;
+@define-color monet_sun_deep #D4462A;
+@define-color monet_lily #357F72;
+@define-color monet_lily_hover #3F9483;
+@define-color monet_lily_soft rgba(53, 127, 114, 0.14);
+@define-color monet_mist #4A5873;
+
+/* The side: the painting, Monet's mark and name, and a soft dusk at the foot. */
 
 .logo-sidebar {
     background-image: url("/usr/share/anaconda/pixmaps/sidebar-bg.png");
-    background-color: @monet-mist;
+    background-color: @monet_mist;
     background-size: cover;
     background-position: 50% 50%;
     background-repeat: no-repeat;
@@ -16,36 +32,316 @@
 
 .logo {
     background-image: url("/usr/share/anaconda/pixmaps/sidebar-logo.png");
-    background-position: 50% 24px;
+    background-size: 128px 104px;
+    background-position: 50% 40px;
     background-repeat: no-repeat;
     background-color: transparent;
 }
 
+.product-logo {
+    background-image: linear-gradient(to bottom, alpha(@monet_ink, 0) 70%, alpha(@monet_ink, 0.28));
+    background-color: transparent;
+}
+
+/* Pages are paper. */
+
+.background,
+AnacondaHubWindow,
+AnacondaSpokeWindow,
+AnacondaStandaloneWindow {
+    background-color: @monet_paper;
+    color: @monet_ink;
+}
+
+/* The welcome and progress pages: the harbor at dawn along the bottom. */
+AnacondaStandaloneWindow .background {
+    background-image: url("/usr/share/anaconda/pixmaps/monet-page.png");
+    background-size: 100% auto;
+    background-position: 50% 100%;
+    background-repeat: no-repeat;
+}
+
+/* The bar along the top: paper, a hairline, and the page's name in Fraunces. */
+
+AnacondaHubWindow #nav-box,
 AnacondaSpokeWindow #nav-box,
-AnacondaHubWindow #nav-box {
-    background-image: url("/usr/share/anaconda/pixmaps/topbar-bg.png");
-    background-color: @monet-mist;
-    background-repeat: repeat-x;
-    color: white;
+AnacondaStandaloneWindow #nav-box {
+    background-image: none;
+    background-color: @monet_paper;
+    color: @monet_ink;
+    border-bottom: 1px solid @monet_line;
+}
+
+#anaconda-name-label {
+    font-family: "Fraunces 72pt SuperSoft", "Fraunces", serif;
+    font-weight: 300;
+    font-size: 22px;
+    color: @monet_ink;
+}
+
+#anaconda-distro-label {
+    font-weight: 600;
+    font-size: 11px;
+    color: @monet_dim;
+}
+
+#anaconda-beta-label {
+    color: @monet_sun_deep;
+}
+
+/* The summary's choices: plain on the page, a paper tile under the pointer. */
+
+AnacondaSpokeSelector {
+    background-color: transparent;
+    border-radius: 12px;
+}
+
+AnacondaSpokeSelector:hover {
+    background-color: @monet_paper_deep;
+}
+
+#anaconda-spoke-selector-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: @monet_ink;
+}
+
+#anaconda-spoke-selector-status {
+    font-style: normal;
+    font-size: 12px;
+    color: @monet_dim;
+}
+
+#anaconda-spoke-selector-status:indeterminate {
+    color: @monet_sun_deep;
+}
+
+#anaconda-spoke-selector-status:disabled:indeterminate {
+    color: inherit;
+}
+
+/* Buttons: soft paper pills; the sun goes ahead; Done is ink. */
+
+button {
+    background-image: none;
+    background-color: @monet_paper_deep;
+    border: 1px solid @monet_line;
+    border-radius: 10px;
+    box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    color: @monet_ink;
+}
+
+button:hover {
+    background-image: none;
+    background-color: #E9E5DD;
+}
+
+button:active,
+button:checked {
+    background-image: none;
+    background-color: #DEDAD1;
+    box-shadow: none;
+}
+
+button:disabled {
+    background-image: none;
+    background-color: @monet_paper_deep;
+    color: alpha(@monet_ink, 0.38);
 }
 
 button.suggested-action {
     background-image: none;
-    background-color: @monet-sun;
-    border-color: @monet-sun;
-    border-radius: 18px;
-    color: white;
+    background-color: @monet_sun;
+    border-color: @monet_sun;
+    border-radius: 20px;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 6px 20px;
 }
 
 button.suggested-action:hover {
     background-image: none;
-    background-color: @monet-sun-hover;
-    border-color: @monet-sun-hover;
-    color: white;
+    background-color: @monet_sun_hover;
+    border-color: @monet_sun_hover;
 }
 
-checkbutton check:checked,
-radiobutton radio:checked {
-    background-color: @monet-lily;
-    border-color: @monet-lily;
+button.suggested-action:active {
+    background-image: none;
+    background-color: @monet_sun_deep;
+    border-color: @monet_sun_deep;
+}
+
+button.suggested-action:disabled {
+    background-image: none;
+    background-color: alpha(@monet_sun, 0.35);
+    border-color: transparent;
+    color: #FFFFFF;
+}
+
+button.suggested-action label,
+button.suggested-action:disabled label {
+    color: #FFFFFF;
+}
+
+#anaconda-spoke-window-done {
+    background-image: none;
+    background-color: @monet_ink;
+    border-color: @monet_ink;
+    border-radius: 20px;
+    color: #FFFFFF;
+    padding: 4px 18px;
+}
+
+#anaconda-spoke-window-done:hover {
+    background-image: none;
+    background-color: #3A3833;
+    border-color: #3A3833;
+}
+
+#anaconda-spoke-window-done label {
+    color: #FFFFFF;
+}
+
+button.destructive-action {
+    background-image: none;
+    background-color: @monet_sun_deep;
+    border-color: @monet_sun_deep;
+    color: #FFFFFF;
+}
+
+/* Text boxes. */
+
+entry {
+    background-image: none;
+    background-color: #FFFFFF;
+    border: 1px solid @monet_line_strong;
+    border-radius: 10px;
+    box-shadow: none;
+    color: @monet_ink;
+    min-height: 32px;
+}
+
+entry:focus {
+    border-color: @monet_lily;
+    box-shadow: inset 0 0 0 1px @monet_lily;
+}
+
+entry selection {
+    background-color: @monet_lily;
+    color: #FFFFFF;
+}
+
+/* Choices are lily. */
+
+check:checked,
+radio:checked,
+check:indeterminate,
+radio:indeterminate {
+    background-image: none;
+    background-color: @monet_lily;
+    border-color: @monet_lily;
+    color: #FFFFFF;
+}
+
+switch:checked {
+    background-image: none;
+    background-color: @monet_lily;
+    border-color: @monet_lily;
+}
+
+treeview.view:selected,
+treeview.view:selected:focus,
+row:selected,
+iconview:selected,
+flowboxchild:selected {
+    background-color: @monet_lily;
+    color: #FFFFFF;
+}
+
+treeview.view {
+    background-color: #FFFFFF;
+}
+
+scrolledwindow {
+    border-radius: 10px;
+}
+
+*:link,
+label link {
+    color: @monet_lily;
+}
+
+/* Progress: a lily line on paper. */
+
+progressbar trough {
+    background-image: none;
+    background-color: alpha(@monet_ink, 0.08);
+    border: none;
+    border-radius: 6px;
+    min-height: 8px;
+}
+
+progressbar progress {
+    background-image: none;
+    background-color: @monet_lily;
+    border: none;
+    border-radius: 6px;
+    min-height: 8px;
+}
+
+spinner {
+    color: @monet_lily;
+}
+
+levelbar.discrete trough block.filled.low {
+    background: @monet_sun_deep;
+    border-color: @monet_sun_deep;
+}
+
+levelbar.discrete trough block.filled.medium {
+    background: #E39B3D;
+    border-color: #E39B3D;
+}
+
+levelbar.discrete trough block.filled.full,
+levelbar.discrete trough block.filled.high {
+    background: @monet_lily;
+    border-color: @monet_lily;
+}
+
+/* Notes at the foot of a page: warm paper instead of yellow and red. */
+
+infobar.info box,
+infobar.question box {
+    background-color: @monet_paper_deep;
+}
+
+infobar.warning box {
+    background-color: #FBE7CF;
+}
+
+infobar.error box {
+    background-color: #F7D6CC;
+}
+
+infobar.info label,
+infobar.question label,
+infobar.warning label,
+infobar.error label {
+    color: @monet_ink;
+}
+
+/* The keyboard layout chip in the top bar. */
+
+AnacondaLayoutIndicator {
+    background-color: #FFFFFF;
+    color: @monet_ink;
+    border-radius: 8px;
+}
+
+scrollbar slider {
+    background-color: alpha(@monet_ink, 0.25);
+    border-radius: 8px;
 }
