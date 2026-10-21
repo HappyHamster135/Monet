@@ -72,6 +72,9 @@ open("/tmp/monet-storage.ks", "w").write(plan)
 
 %include /tmp/monet-storage.ks
 
+# The person installing becomes the administrator; root stays locked.
+rootpw --lock
+
 %pre-install --interpreter=/usr/bin/python3 --erroronfail --log=/tmp/monet-check.log
 # Before Monet is downloaded: check that it can be, and say why if not,
 # instead of the installer's "unknown error".

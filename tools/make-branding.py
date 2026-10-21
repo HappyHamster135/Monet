@@ -132,12 +132,47 @@ def logo(size):
     return img.resize((size, size), Image.LANCZOS)
 
 
+INSTALLER = ROOT / "image" / "installer" / "product" / "usr" / "share" / "anaconda" / "pixmaps"
+WORDMARK_FONT = "/usr/share/fonts/opentype/inter/InterDisplay-SemiBold.otf"
+
+
+def installer_art(light):
+    """Artwork for Monet's installer (replaces Fedora's in Anaconda)."""
+    from PIL import ImageFont
+
+    INSTALLER.mkdir(parents=True, exist_ok=True)
+
+    # Sidebar: a tall slice of the wallpaper around the sun and its reflection.
+    sun_x = int(W * 0.62)
+    width = H * 500 // 1600
+    light.crop((sun_x - width // 2, 0, sun_x + width // 2, H)).resize((500, 1600), Image.LANCZOS) \
+        .save(INSTALLER / "sidebar-bg.png", optimize=True)
+
+    # Top bar: deep water blue, so white titles stay readable.
+    bar = vertical([(0, "#3D6FB6"), (1, "#2E4A7E")], 64)
+    Image.fromarray(np.repeat(bar[:, None, :], 1920, axis=1).astype(np.uint8)) \
+        .save(INSTALLER / "topbar-bg.png", optimize=True)
+
+    # Logo: the mark with "Monet" beneath it, white, on transparent.
+    mark = logo(112)
+    canvas = Image.new("RGBA", (240, 190), (0, 0, 0, 0))
+    canvas.alpha_composite(mark, ((240 - 112) // 2, 0))
+    draw = ImageDraw.Draw(canvas)
+    font = ImageFont.truetype(WORDMARK_FONT, 40)
+    text_w = draw.textlength("Monet", font=font)
+    draw.text(((240 - text_w) / 2, 128), "Monet", font=font, fill=(255, 255, 255, 255))
+    canvas.save(INSTALLER / "sidebar-logo.png", optimize=True)
+
+
 def main():
     for dark, folder in [(False, "images"), (True, "images_dark")]:
         path = WALL / folder / f"{W}x{H}.jpg"
         path.parent.mkdir(parents=True, exist_ok=True)
         wallpaper(dark).save(path, quality=88, optimize=True, progressive=True)
         print("wrote", path.relative_to(ROOT))
+
+    installer_art(wallpaper(False))
+    print("wrote image/installer/product/usr/share/anaconda/pixmaps")
 
     big = logo(512)
     big.save(OUT / "monet-512.png")

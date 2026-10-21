@@ -11,13 +11,13 @@ You need:
 
 **Everything on the PC is erased.** About an hour, mostly downloading.
 
-> **Monet 0.3 is a preview** and hasn't been tested on real hardware yet.
+> **Monet 0.4 is a preview** and hasn't been tested on real hardware yet.
 
 ---
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.3.1-Installer.iso** from the
+1. Download **Monet-0.4.0-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -118,5 +118,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.3.1-Linux.tar.gz** and run `./monet-0.3.1-linux/install.sh`,
+Download **Monet-0.4.0-Linux.tar.gz** and run `./monet-0.4.0-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

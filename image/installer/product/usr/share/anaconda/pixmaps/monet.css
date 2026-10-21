@@ -1,0 +1,35 @@
+/* Monet's installer look: sunrise sidebar, deep-water top bar, Monet blue. */
+
+@define-color monet-blue #3D6FB6;
+@define-color monet-water #2E4A7E;
+
+.logo-sidebar {
+    background-image: url("/usr/share/anaconda/pixmaps/sidebar-bg.png");
+    background-color: @monet-water;
+    background-size: cover;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+}
+
+.logo {
+    background-image: url("/usr/share/anaconda/pixmaps/sidebar-logo.png");
+    background-position: 50% 24px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+AnacondaSpokeWindow #nav-box,
+AnacondaHubWindow #nav-box {
+    background-image: url("/usr/share/anaconda/pixmaps/topbar-bg.png");
+    background-color: @monet-water;
+    background-repeat: repeat-x;
+    color: white;
+}
+
+button.suggested-action,
+button.suggested-action:hover {
+    background-image: none;
+    background-color: @monet-blue;
+    border-color: @monet-water;
+    color: white;
+}

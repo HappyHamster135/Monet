@@ -341,7 +341,8 @@ Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
 - [x] Windows half set up from Monet automatically (one UAC click), v0.2
 - [x] "Install Monet and Windows": fresh, unattended, games-only Windows, v0.3
 - [ ] "Monet Setup" for Windows: makes the USB stick, or installs without one
-- [ ] Branded installer for the Linux part
+- [x] Branded installer (Monet name, artwork, start menu, fewer screens), v0.4
+- [ ] Monet Setup: our own installer app (Wi-Fi, your name, Install)
 - [ ] First-boot wizard
 - [ ] Windows ISO download, partitioning, temporary setup partition, unattended install
 - [ ] Final Game Profile applied and verified automatically

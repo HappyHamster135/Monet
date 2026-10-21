@@ -6,9 +6,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.3.1-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.3.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.3.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.4.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.4.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.4.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.4
+
+- **Monet's own installer look.** The installer says Monet instead of Fedora,
+  with Monet's sunrise artwork, logo and colors.
+- **Monet's start menu on every PC.** The USB stick's menu now shows "Install
+  Monet and Windows" (selected) and "Install Monet next to my Windows". Before,
+  most PCs still showed Fedora's menu, with "Test this media" selected.
+- **One screen less.** No root password screen: the person installing is the
+  administrator.
 
 ### Fixed in 0.3.1
 
@@ -37,6 +47,5 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - "Install Monet and Windows" **erases the PC**.
 - Windows activates by itself if the PC came with Windows. Otherwise it runs
   unactivated (small watermark).
-- The installer screens still say Fedora. Monet uses Fedora's installer for now.
 - One blue screen at the first start can't be skipped: it's how the PC's
   firmware confirms the NVIDIA driver may run with Secure Boot on.

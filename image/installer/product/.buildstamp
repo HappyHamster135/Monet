@@ -1,0 +1,6 @@
+[Main]
+Product=Monet
+Version=@VERSION@
+BugURL=https://github.com/HappyHamster135/Monet/issues
+IsFinal=True
+UUID=@UUID@

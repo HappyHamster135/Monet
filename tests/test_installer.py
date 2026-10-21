@@ -154,6 +154,32 @@ class PrepareWindows(unittest.TestCase):
             prepare.run = original
 
 
+class InstallerLook(unittest.TestCase):
+    PRODUCT = ROOT / "image/installer/product"
+
+    def test_buildstamp_names_monet(self):
+        import configparser
+        stamp = configparser.ConfigParser()
+        stamp.read(self.PRODUCT / ".buildstamp")
+        self.assertEqual(stamp["Main"]["Product"], "Monet")
+        self.assertIn("@VERSION@", stamp["Main"]["Version"])
+
+    def test_product_config_inherits_fedora(self):
+        import configparser
+        conf = configparser.ConfigParser()
+        conf.read(self.PRODUCT / "etc/anaconda/product.d/monet.conf")
+        self.assertEqual(conf["Product"]["product_name"], "Monet")
+        self.assertEqual(conf["Base Product"]["product_name"], "Fedora")
+        stylesheet = conf["User Interface"]["custom_stylesheet"]
+        self.assertTrue((self.PRODUCT / stylesheet.lstrip("/")).is_file())
+
+    def test_artwork_present(self):
+        from_css = re.findall(r'url\("(/[^"]+)"\)', (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text())
+        self.assertTrue(from_css)
+        for path in from_css:
+            self.assertTrue((self.PRODUCT / path.lstrip("/")).is_file(), path)
+
+
 class WindowsScripts(unittest.TestCase):
     def test_batch_files_use_crlf_in_checkouts(self):
         attributes = (ROOT / ".gitattributes").read_text()

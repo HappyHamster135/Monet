@@ -74,18 +74,34 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           sed "s|@IMAGE@|$IMAGE:latest|" image/monet.ks > monet.ks
-          # Add Monet's kickstart, then turn the start menu into Monet's.
+
+          # Monet's look for the installer, loaded automatically from /images/product.img.
+          rm -rf product && cp -r image/installer/product product
+          sed -i -e "s|@VERSION@|$VERSION|" -e "s|@UUID@|$(date -u +%Y%m%d%H%M).x86_64|" product/.buildstamp
+
+          # 1. Monet's start menu and look, 2. Monet's kickstart. mkksiso goes
+          # last: it rebuilds the EFI boot image from the edited menu (that
+          # copy is what PCs actually boot) and adds the media checksum.
           docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
-            dnf -y -q install lorax xorriso isomd5sum mtools python3
-            mkksiso --ks monet.ks netinst.iso stage.iso
-            xorriso -osirrox on -indev stage.iso -extract /EFI/BOOT/grub.cfg efi.cfg -extract /boot/grub2/grub.cfg bios.cfg
+            dnf -y -q install lorax xorriso isomd5sum mtools python3 cpio
+            xorriso -osirrox on -indev netinst.iso -extract /EFI/BOOT/grub.cfg efi.cfg -extract /boot/grub2/grub.cfg bios.cfg
             python3 tools/patch-grub.py efi.cfg bios.cfg
-            xorriso -indev stage.iso -outdev Monet-$VERSION-Installer.iso -boot_image any replay \
-              -update efi.cfg /EFI/BOOT/grub.cfg -update efi.cfg /EFI/BOOT/BOOT.conf -update bios.cfg /boot/grub2/grub.cfg
-            # Rewriting the ISO drops its checksum; add it back for \"Test this media\".
-            implantisomd5 --force Monet-$VERSION-Installer.iso
+            (cd product && find . | cpio --quiet -c -o | gzip -9) > product.img
+            xorriso -indev netinst.iso -outdev branded.iso -boot_image any replay \
+              -update efi.cfg /EFI/BOOT/grub.cfg -update efi.cfg /EFI/BOOT/BOOT.conf \
+              -update bios.cfg /boot/grub2/grub.cfg -map product.img /images/product.img
+            mkksiso --ks monet.ks branded.iso Monet-$VERSION-Installer.iso
             checkisomd5 Monet-$VERSION-Installer.iso
-            rm stage.iso
+            # Check the menu in both places, especially the EFI boot image.
+            xorriso -osirrox on -indev Monet-$VERSION-Installer.iso \
+              -extract /EFI/BOOT/grub.cfg check.cfg -extract /images/efiboot.img efiboot.img
+            grep -q 'Install Monet and Windows' check.cfg
+            mtype -i efiboot.img ::/EFI/BOOT/grub.cfg > efiboot.cfg
+            if grep -q menuentry efiboot.cfg && ! grep -q 'Install Monet and Windows' efiboot.cfg; then
+              echo 'The EFI boot image still has the old menu' >&2
+              exit 1
+            fi
+            rm branded.iso efiboot.img
           "
           sudo chown "$(id -u)" "Monet-$VERSION-Installer.iso"
           ls -lh "Monet-$VERSION-Installer.iso"
