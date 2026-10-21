@@ -218,6 +218,7 @@ ApplicationWindow {
         Column {
             property bool ready: true
             property bool busy: false
+            function leave() { return !setup.applyKeyboard() }
             spacing: px(22)
             Title { text: "Hello"; big: true; topPadding: px(40) }
             Body { text: "Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards." }

@@ -58,6 +58,7 @@ class Setup(QObject):
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
         self._restore()
+        self._started_with = self._keyboard
         if DEMO:
             self._demo()
         else:
@@ -126,18 +127,25 @@ class Setup(QObject):
 
     @Slot(int)
     def setKeyboard(self, index):
-        if index == self._keyboard:
-            return
-        self._keyboard = index
-        self.changed.emit()
-        if DEMO:
-            return
-        # The screen's keyboard is set when the window starts: save where we
-        # are and start again with the new one (monet-setup-session does).
-        _, layout, variant = system.KEYBOARDS[index]
-        self._save(step=0)
-        Path("/run/monet-setup/keyboard").write_text(f"{layout} {variant}".strip())
-        QGuiApplication.exit(3)
+        if index != self._keyboard:
+            self._keyboard = index
+            self.changed.emit()
+
+    @Slot(result=bool)
+    def applyKeyboard(self):
+        """Leaving Hello: the screen's keyboard is set when the window starts,
+        so a new one means starting again with it (monet-setup-session does),
+        on the next step. True when that's happening."""
+        if DEMO or self._keyboard == self._started_with:
+            return False
+        _, layout, variant = system.KEYBOARDS[self._keyboard]
+        self._save(step=1)
+        try:
+            Path("/run/monet-setup/keyboard").write_text(f"{layout} {variant}".strip())
+        except OSError:
+            return False
+        QTimer.singleShot(0, lambda: QGuiApplication.exit(3))
+        return True
 
     # -- Wi-Fi --
     @Property("QVariant", notify=wifiChanged)
