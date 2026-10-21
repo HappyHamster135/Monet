@@ -6,9 +6,34 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.5.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.5.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.5.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.5.1-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.5.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.5.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.5.1: Settings and Files
+
+- **Monet Settings.** One glass sheet with the settings you actually change:
+  Light & Wallpaper, Wi-Fi, Bluetooth, Display, Sound, Windows & Games,
+  Updates and About. The pages sit on paper so they're easy to read, and each
+  is marked with a swatch cut from the paintings. Open it from Settings in the
+  dock or the app menu, or All Settings in Quick Settings. Everything else is
+  one click away under **More settings in KDE**.
+- **Painted folders and icons.** Folders are cut from the paintings (Home and
+  Documents in dawn light, Downloads at night, Pictures, Music and Videos at
+  dusk), with a small white mark for what's inside. Files, Terminal,
+  Settings, Store, System Monitor and Trash are painted marks with nothing
+  behind them, instead of icons on tiles.
+- **Files** keeps its glass at the edges only: your files sit on paper, with
+  a soft Lily selection, bigger icons and previews.
+- **New switches** in Settings → Light & Wallpaper: keep one painting all day
+  instead of following the hours, hide the placard, or turn glass off for
+  solid panels and windows.
+- **Window titles** are set in Fraunces, like the clock.
+- **Windows & Games** in Settings shows whether Windows is ready, plays a game
+  from its cover, and checks that everything is set up.
+
+Updating from 0.5: restart after the update. Your panels stay as they are,
+and Settings in the dock opens Monet Settings.
 
 ### New in 0.5: Impression
 

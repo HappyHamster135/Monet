@@ -191,28 +191,30 @@ def frame_svg(radius, margin, blur, drop, strength, glass):
     return sheet.svg()
 
 
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
-    for name, spec in FRAMES.items():
+def write_style(out, ident, name, description, solid=False):
+    out.mkdir(parents=True, exist_ok=True)
+    for frame, spec in FRAMES.items():
+        if solid:
+            spec = dict(spec, glass=0.96)
         svg = frame_svg(**spec)
         for folder in ("", "translucent/"):
-            path = OUT / f"{folder}{name}.svg"
+            path = out / f"{folder}{frame}.svg"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(svg)
-    (OUT / "metadata.json").write_text(json.dumps({
+    (out / "metadata.json").write_text(json.dumps({
         "KPlugin": {
             "Authors": [{"Name": "Monet"}],
-            "Description": "Glass islands and popovers over the painting",
+            "Description": description,
             "EnabledByDefault": True,
-            "Id": "monet",
+            "Id": ident,
             "License": "GPL-3.0-or-later",
-            "Name": "Monet",
-            "Version": "0.5.0",
+            "Name": name,
+            "Version": "0.5.1",
         },
         "X-Plasma-API": "5.0",
     }, indent=4) + "\n")
     # The frosted look: blur plus a little extra color and contrast.
-    (OUT / "plasmarc").write_text("""[ContrastEffect]
+    (out / "plasmarc").write_text("""[ContrastEffect]
 enabled=true
 contrast=0.18
 intensity=1.05
@@ -224,7 +226,13 @@ enabled=true
 [BlurBehindEffect]
 enabled=true
 """)
-    print("wrote", OUT.relative_to(ROOT))
+    print("wrote", out.relative_to(ROOT))
+
+
+def main():
+    write_style(OUT, "monet", "Monet", "Glass islands and popovers over the painting")
+    write_style(OUT.parent / "monet-solid", "monet-solid", "Monet (solid)",
+                "Monet's islands and popovers without the glass", solid=True)
 
 
 if __name__ == "__main__":

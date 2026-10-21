@@ -84,27 +84,57 @@ color, so the glass carries the painting's light instead of looking grey.
 | Where | How |
 |---|---|
 | Islands, popovers, tooltips | Plasma style `monet` (`tools/make-plasma-style.py`), radius 22 / 20 / 12, soft shadow that sits lower than the glass |
-| App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): see-through windows and lists, rounded controls, Lily selection |
+| App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection |
+| Monet Settings | The Plasma style's dialog glass around a solid paper page |
 | Title bars | The color scheme's alpha (Breeze) |
 | Terminal | Konsole color schemes with opacity and blur |
 
-System Settings and other apps written in QML keep solid backgrounds (they
-draw their own), in Monet's colors.
+Glass is for edges; anything you read sits on paper (or smoke). Turning
+**Glass** off in Settings switches to `monet-solid` and the `MonetSolid` /
+`MonetDarkSolid` app themes: the same shapes and colors, without the
+see-through.
+
+KDE's System Settings and other apps written in QML keep solid backgrounds
+(they draw their own), in Monet's colors. That's why Monet has its own
+Settings in front of it.
 
 ## Type
 
 - **Fraunces** (SuperSoft, 72pt optical size; SIL OFL, shipped in
-  `linux/share/fonts/monet`) for moments: the clock, titles, greetings.
+  `linux/share/fonts/monet`) for moments: the clock, titles, greetings,
+  window titles.
 - **Inter** for everything you read and click. Regular and semibold.
 
 ## Icons
 
 - **Monet**: the sun and three strokes of its reflection. No container.
 - **Windows Games**: the same, with the sun turned into a play button.
-- Monet's own apps (Files, Terminal, Settings, Store, System Monitor, Trash)
-  are pebbles glazed in the paintings' colors with a white line drawing
-  (`Monet` icon theme, `tools/make-icons.py`). Other apps keep their icons;
-  everything else is Breeze.
+- **Monet's own apps** (Files, Terminal, Settings, Store, System Monitor,
+  Trash) are painted marks with no tile or circle behind them: brushed shapes
+  in the paintings' colors that stand on the glass by themselves.
+- **Folders** are cut from the paintings: the front of each folder is a piece
+  of one of the Hours (Home and the plain folder at dawn, Desktop at midday,
+  Pictures, Music and Videos at dusk, Downloads and Games at night), with a
+  small white mark for what's inside. Documents is paper with lines of ink.
+- Everything is in the `Monet` icon theme (`tools/make-icons.py`). Other apps
+  keep their icons; anything else is Breeze.
+
+## Apps
+
+**Files** (Dolphin with the Monet app style): glass title, toolbar and
+sidebar; the files on paper; folders big enough to see their paintings
+(80 px, previews on); a soft Lily wash for the selection instead of a solid
+block.
+
+**Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
+glass sheet, about 1000 × 660. On the glass: the name in Fraunces, search,
+and eight pages, each marked by a swatch cut from the paintings with a white
+glyph. On the paper: the page, in rounded cards with switches (Lily when on),
+and the sun only for Restart in Windows. The `monet-quick` helper does the
+work. Settings in the dock and the app menu runs `monet-quick open [page]`,
+which rings Quick Settings to open the sheet; without Quick Settings it opens
+KDE's System Settings instead. Pictures come from `make-icons.py` into
+`linux/share/monet/settings`.
 
 ## Motion
 

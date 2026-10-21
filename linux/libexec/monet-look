@@ -14,6 +14,10 @@ DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 has() { command -v "$1" >/dev/null 2>&1; }
 kw() { kwriteconfig6 "$@" 2>/dev/null; }
+# Like kw, but leaves a setting someone already chose alone.
+kw_default() { # kw_default <file> <group> <key> <value>
+    [ -n "$(kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null)" ] || kw --file "$1" --group "$2" --key "$3" "$4"
+}
 
 # The global theme: islands, painting, placard, colors, Plasma style, icons.
 if has plasma-apply-lookandfeel; then
@@ -36,6 +40,10 @@ if fc-list : family 2>/dev/null | grep -qx "Inter"; then
     kw --file kdeglobals --group General --key toolBarFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
     kw --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
     kw --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
+fi
+# Window titles in Fraunces, like the placard and Monet Settings.
+if fc-list : family 2>/dev/null | grep -qx "Fraunces 72pt SuperSoft"; then
+    kw --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 fi
 
 # Motion: a touch quicker than KDE's default, so things feel light.
@@ -66,7 +74,10 @@ if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/
     if [ ! -d /usr/share/Kvantum/Monet ] && [ -d "$DATADIR/Kvantum/Monet" ]; then
         # Kvantum only looks in /usr/share and in your own settings.
         mkdir -p "$CONFIG/Kvantum"
-        cp -r "$DATADIR/Kvantum/Monet" "$DATADIR/Kvantum/MonetDark" "$CONFIG/Kvantum/"
+        for theme in Monet MonetDark MonetSolid MonetDarkSolid; do
+            rm -rf "${CONFIG:?}/Kvantum/$theme"
+            cp -r "$DATADIR/Kvantum/$theme" "$CONFIG/Kvantum/"
+        done
     fi
     kw --file kdeglobals --group KDE --key widgetStyle kvantum
 fi
@@ -77,6 +88,26 @@ if [ -f "$DATADIR/konsole/Monet.profile" ]; then
     [ -f "$DATA/konsole/Monet.profile" ] || cp "$DATADIR/konsole/Monet.profile" "$DATA/konsole/Monet.profile"
     kw --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
 fi
+
+# Files: big painted folders with previews, on paper; a calm sidebar.
+kw_default dolphinrc IconsMode IconSize 80
+kw_default dolphinrc IconsMode PreviewSize 96
+kw_default dolphinrc PlacesPanel IconSize 22
+kw_default dolphinrc General ShowZoomSlider false
+
+# Settings in the dock opens Monet Settings, not KDE's (kept panels too).
+busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s '
+panels().forEach(function (panel) {
+    panel.widgets("org.kde.plasma.icontasks").forEach(function (tasks) {
+        tasks.currentConfigGroup = ["General"];
+        var launchers = String(tasks.readConfig("launchers", "")).split(",");
+        var i = launchers.indexOf("applications:systemsettings.desktop");
+        if (i >= 0) {
+            launchers[i] = "applications:monet-settings.desktop";
+            tasks.writeConfig("launchers", launchers);
+        }
+    });
+});' >/dev/null 2>&1
 
 # The lock screen shows the same painting, in the same light.
 kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours

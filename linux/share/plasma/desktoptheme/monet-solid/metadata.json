@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Description": "Monet's islands and popovers without the glass",
+        "EnabledByDefault": true,
+        "Id": "monet-solid",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet (solid)",
+        "Version": "0.5.1"
+    },
+    "X-Plasma-API": "5.0"
+}

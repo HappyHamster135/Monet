@@ -51,7 +51,7 @@ tasks.writeConfig("launchers", [
     "applications:steam.desktop",
     "applications:org.kde.konsole.desktop",
     "applications:org.kde.discover.desktop",
-    "applications:systemsettings.desktop"
+    "applications:monet-settings.desktop"
 ])
 tasks.writeConfig("showOnlyCurrentDesktop", false)
 tasks.writeConfig("indicateAudioStreams", true)

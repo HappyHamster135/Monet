@@ -1,161 +1,448 @@
-#!/usr/bin/env bash
-# Quick settings for Monet's clock island. The widget only draws; this does.
-#
-#   monet-quick status                 everything at once, as JSON
-#   monet-quick wifi on|off
-#   monet-quick bluetooth on|off
-#   monet-quick night on|off           Night Light
-#   monet-quick quiet on|off           Do not disturb
-#   monet-quick volume 0-100
-#   monet-quick brightness 0-100
-#   monet-quick light hours|mist|smoke
-set -u
+#!/usr/bin/env python3
+"""Quick Settings and Monet Settings: the widgets only draw; this does the work.
 
-LIBEXECDIR="@LIBEXECDIR@"
-CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+    monet-quick status                   everything Quick Settings shows, as JSON
+    monet-quick wifi on|off
+    monet-quick wifi-list                networks nearby, as JSON
+    monet-quick wifi-join NAME [KEY]     NAME and KEY in base64 (they come from people)
+    monet-quick bluetooth on|off
+    monet-quick bt-list                  paired devices, as JSON
+    monet-quick bt-connect|bt-disconnect ADDRESS
+    monet-quick night on|off             Night Light
+    monet-quick quiet on|off             Do not disturb
+    monet-quick volume 0-100
+    monet-quick mic 0-100
+    monet-quick outputs                  speakers and headphones, as JSON
+    monet-quick output ID
+    monet-quick brightness 0-100
+    monet-quick light hours|mist|smoke
+    monet-quick prefs                    the Light & Wallpaper switches, as JSON
+    monet-quick pref hours|placard|glass on|off
+    monet-quick about                    this PC, as JSON
+    monet-quick doctor | update          run `monet doctor` or `monet update`
+    monet-quick kde PAGE                 open a page of KDE's System Settings
+    monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
+                                         sound, windows, updates or about)
+    monet-quick listen                   wait until someone asks to open Monet Settings
+"""
 
-has() { command -v "$1" >/dev/null 2>&1; }
+import base64
+import json
+import os
+import re
+import select
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 
-json_bool() { if [ "$1" = 1 ]; then printf true; else printf false; fi; }
+BINDIR = "@BINDIR@"
+LIBEXECDIR = "@LIBEXECDIR@"
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+PREFS = CONFIG / "monet" / "prefs.json"
+RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
+FIFO = RUNTIME / "monet-settings"
+PAGES = ("light", "wifi", "bluetooth", "display", "sound", "windows", "updates", "about")
 
-wifi_state() {
-    has nmcli || { printf null; return; }
-    case "$(nmcli radio wifi 2>/dev/null)" in
-        enabled) printf true ;;
-        disabled) printf false ;;
-        *) printf null ;;
-    esac
+# Pages of KDE's System Settings that Monet Settings links to.
+KDE_PAGES = {
+    "wifi": "kcm_networkmanagement",
+    "bluetooth": "kcm_bluetooth",
+    "display": "kcm_kscreen",
+    "sound": "kcm_pulseaudio",
+    "about": "kcm_about-distro",
+    "all": "",
 }
 
-wifi_name() {
-    has nmcli || return
-    nmcli -t -f NAME,TYPE connection show --active 2>/dev/null |
-        awk -F: '$2 == "802-11-wireless" { print $1; exit }'
-}
 
-bluetooth_state() {
-    has bluetoothctl || { printf null; return; }
-    local out
-    out="$(timeout 3 bluetoothctl show 2>/dev/null)" || { printf null; return; }
-    case "$out" in
-        *"Powered: yes"*) printf true ;;
-        *"Powered: no"*) printf false ;;
-        *) printf null ;;
-    esac
-}
+def run(*args, timeout=10):
+    """Runs a program and returns what it printed, or None if it couldn't run."""
+    if not shutil.which(args[0]):
+        return None
+    try:
+        out = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return out.stdout if out.returncode == 0 else None
 
-night_state() {
-    [ "$(kreadconfig6 --file kwinrc --group NightColor --key Active --default false 2>/dev/null)" = true ] &&
-        printf true || printf false
-}
 
-quiet_state() {
-    local until
-    until="$(kreadconfig6 --file plasmanotifyrc --group DoNotDisturb --key Until 2>/dev/null)"
-    [ -n "$until" ] && printf true || printf false
-}
+def ok(*args, timeout=30):
+    return run(*args, timeout=timeout) is not None
 
-volume_state() {
-    has wpctl || { printf null; return; }
-    wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null |
-        awk '/Volume:/ { printf "%d", $2 * 100 + 0.5; found = 1 } END { if (!found) printf "null" }'
-}
 
-# Screen brightness through Plasma: the newer per-display service first.
-brightness_state() {
-    local now max
-    now="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
-        org.kde.ScreenBrightness.Display Brightness 2>/dev/null | awk '{ print $2 }')"
-    max="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
-        org.kde.ScreenBrightness.Display MaxBrightness 2>/dev/null | awk '{ print $2 }')"
-    if [ -z "$now" ] || [ -z "$max" ]; then
-        local path=/org/kde/Solid/PowerManagement/Actions/BrightnessControl
-        local iface=org.kde.Solid.PowerManagement.Actions.BrightnessControl
-        now="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightness 2>/dev/null | awk '{ print $2 }')"
-        max="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightnessMax 2>/dev/null | awk '{ print $2 }')"
-    fi
-    if [ -n "$now" ] && [ -n "$max" ] && [ "$max" -gt 0 ] 2>/dev/null; then
-        printf %d $(( (now * 100 + max / 2) / max ))
-    else
-        printf null
-    fi
-}
+def emit(value):
+    print(json.dumps(value))
 
-set_brightness() {
-    local percent="$1" max
-    max="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
-        org.kde.ScreenBrightness.Display MaxBrightness 2>/dev/null | awk '{ print $2 }')"
-    if [ -n "$max" ]; then
-        busctl --user call org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
-            org.kde.ScreenBrightness.Display SetBrightness iu $(( max * percent / 100 )) 0 >/dev/null 2>&1 && return
-    fi
-    local path=/org/kde/Solid/PowerManagement/Actions/BrightnessControl
-    local iface=org.kde.Solid.PowerManagement.Actions.BrightnessControl
-    max="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightnessMax 2>/dev/null | awk '{ print $2 }')"
-    [ -n "$max" ] && busctl --user call org.kde.Solid.PowerManagement $path $iface setBrightness i $(( max * percent / 100 )) >/dev/null 2>&1
-}
 
-battery_state() {
-    local bat
-    for bat in /sys/class/power_supply/BAT*; do
-        [ -r "$bat/capacity" ] || continue
-        printf '%s,"charging":%s' "$(cat "$bat/capacity")" "$([ "$(cat "$bat/status" 2>/dev/null)" = Charging ] && printf true || printf false)"
+def unb64(text):
+    return base64.b64decode(text.encode()).decode("utf-8", "replace")
+
+
+# Wi-Fi ---------------------------------------------------------------------
+
+def nmcli_fields(line):
+    """Splits a line of `nmcli -t` output, where a literal ':' is written '\\:'."""
+    fields, cur, escaped = [], "", False
+    for ch in line:
+        if escaped:
+            cur += ch
+            escaped = False
+        elif ch == "\\":
+            escaped = True
+        elif ch == ":":
+            fields.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    fields.append(cur)
+    return fields
+
+
+def wifi_state():
+    out = run("nmcli", "radio", "wifi")
+    return {"enabled": True, "disabled": False}.get((out or "").strip())
+
+
+def wifi_name():
+    out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active") or ""
+    for line in out.splitlines():
+        fields = nmcli_fields(line)
+        if len(fields) >= 2 and fields[1] == "802-11-wireless":
+            return fields[0]
+    return ""
+
+
+def wifi_list(listing):
+    """Networks from `nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list`, strongest first."""
+    nets = {}
+    for line in listing.splitlines():
+        fields = nmcli_fields(line)
+        if len(fields) < 4 or not fields[1]:
+            continue
+        active, ssid, signal, security = fields[0] == "*", fields[1], fields[2], fields[3]
+        strength = int(signal) if signal.isdigit() else 0
+        old = nets.get(ssid)
+        if old is None or active or strength > old["signal"]:
+            nets[ssid] = {"name": ssid, "signal": strength, "secure": security not in ("", "--"),
+                          "active": active or bool(old and old["active"])}
+    return sorted(nets.values(), key=lambda n: (not n["active"], -n["signal"]))
+
+
+# Bluetooth -----------------------------------------------------------------
+
+def bluetooth_state():
+    out = run("bluetoothctl", "show", timeout=3)
+    if out is None or "Powered:" not in out:
+        return None
+    return "Powered: yes" in out
+
+
+def bt_list():
+    out = run("bluetoothctl", "devices", "Paired", timeout=5) or ""
+    devices = []
+    for line in out.splitlines():
+        parts = line.split(" ", 2)
+        if len(parts) == 3 and parts[0] == "Device":
+            info = run("bluetoothctl", "info", parts[1], timeout=3) or ""
+            devices.append({"address": parts[1], "name": parts[2], "connected": "Connected: yes" in info})
+    return devices
+
+
+# Sound ---------------------------------------------------------------------
+
+def volume(target):
+    out = run("wpctl", "get-volume", target)
+    match = re.search(r"Volume:\s*([0-9.]+)", out or "")
+    return round(float(match.group(1)) * 100) if match else None
+
+
+def sinks(status):
+    """Speakers and headphones from `wpctl status`: id, name, and which one plays."""
+    found, inside = [], False
+    for raw in status.splitlines():
+        line = raw.strip(" │├└─\t")
+        if line.endswith("Sinks:"):
+            inside = True
+            continue
+        if inside:
+            if not line or line.endswith(":"):
+                break
+            match = re.match(r"(\*)?\s*(\d+)\.\s+(.+?)\s*(\[vol:.*\])?$", line)
+            if match:
+                found.append({"id": int(match.group(2)), "name": match.group(3), "default": bool(match.group(1))})
+    return found
+
+
+# Screen --------------------------------------------------------------------
+
+def busctl(*args):
+    return run("busctl", "--user", *args, timeout=5)
+
+
+def brightness_state():
+    disp = ("org.kde.ScreenBrightness", "/org/kde/ScreenBrightness/display0", "org.kde.ScreenBrightness.Display")
+    now = busctl("get-property", *disp, "Brightness")
+    top = busctl("get-property", *disp, "MaxBrightness")
+    if not now or not top:
+        old = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+               "org.kde.Solid.PowerManagement.Actions.BrightnessControl")
+        now = busctl("call", *old, "brightness")
+        top = busctl("call", *old, "brightnessMax")
+    try:
+        now, top = int(now.split()[1]), int(top.split()[1])
+    except (AttributeError, IndexError, ValueError):
+        return None
+    return round(now * 100 / top) if top > 0 else None
+
+
+def set_brightness(percent):
+    disp = ("org.kde.ScreenBrightness", "/org/kde/ScreenBrightness/display0", "org.kde.ScreenBrightness.Display")
+    top = busctl("get-property", *disp, "MaxBrightness")
+    if top:
+        value = int(top.split()[1]) * percent // 100
+        if busctl("call", *disp, "SetBrightness", "iu", str(value), "0") is not None:
+            return
+    old = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+           "org.kde.Solid.PowerManagement.Actions.BrightnessControl")
+    top = busctl("call", *old, "brightnessMax")
+    if top:
+        busctl("call", *old, "setBrightness", "i", str(int(top.split()[1]) * percent // 100))
+
+
+# Monet's own switches ------------------------------------------------------
+
+def kread(file, group, key, default=""):
+    out = run("kreadconfig6", "--file", file, "--group", group, "--key", key, "--default", default)
+    return (out or default).strip()
+
+
+def light_state():
+    try:
+        mode = (CONFIG / "monet" / "light").read_text().strip()
+    except OSError:
+        mode = ""
+    return mode if mode in ("mist", "smoke") else "hours"
+
+
+def prefs():
+    try:
+        saved = json.loads(PREFS.read_text())
+    except (OSError, ValueError):
+        saved = {}
+    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": saved.get("glass", True)}
+
+
+def save_prefs(values):
+    PREFS.parent.mkdir(parents=True, exist_ok=True)
+    PREFS.write_text(json.dumps(values))
+
+
+def painting_now():
+    hour = int(run("date", "+%H") or "12")
+    return "dawn" if 5 <= hour < 10 else "day" if 10 <= hour < 17 else "dusk" if 17 <= hour < 21 else "night"
+
+
+def plasma_script(script):
+    return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
+
+
+def set_painting(name):
+    plasma_script(
+        'desktops().forEach(function (d) {'
+        '  if (d.wallpaperPlugin !== "org.monet.hours") return;'
+        '  d.currentConfigGroup = ["Wallpaper", "org.monet.hours", "General"];'
+        f'  d.writeConfig("Painting", "{name}");'
+        '  d.reloadConfig();'
+        '})')
+
+
+def set_placard(show):
+    if show:
+        plasma_script(
+            'desktops().forEach(function (d) {'
+            '  if (d.widgets("org.monet.placard").length === 0)'
+            '    d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12);'
+            '})')
+    else:
+        plasma_script(
+            'desktops().forEach(function (d) {'
+            '  d.widgets("org.monet.placard").forEach(function (w) { w.remove(); });'
+            '})')
+
+
+# About this PC -------------------------------------------------------------
+
+def about():
+    def first(path, key):
+        try:
+            for line in Path(path).read_text().splitlines():
+                if line.startswith(key):
+                    return line.split(":", 1)[1].strip()
+        except OSError:
+            pass
+        return ""
+
+    gpus = []
+    for line in (run("lspci", "-mm") or "").splitlines():
+        if '"VGA compatible controller"' in line or '"3D controller"' in line:
+            fields = re.findall(r'"([^"]*)"', line)
+            if len(fields) >= 3:
+                vendor = fields[1].split()[0].replace("Advanced", "AMD")
+                model = re.search(r"\[(.+)\]", fields[2])
+                gpus.append(f"{vendor} {model.group(1) if model else fields[2]}")
+    mem = first("/proc/meminfo", "MemTotal")
+    memory = f"{round(int(mem.split()[0]) / 1024 / 1024)} GB" if mem else ""
+    disk = shutil.disk_usage(Path.home())
+    status = run(f"{BINDIR}/monet") or ""
+    windows = re.search(r"Windows\s+(.+)", status)
+    version = (run(f"{BINDIR}/monet", "version") or "").split()
+    return {
+        "monet": version[-1] if version else "",
+        "processor": re.sub(r"\s+", " ", first("/proc/cpuinfo", "model name")),
+        "graphics": ", ".join(gpus),
+        "memory": memory,
+        "storage": f"{disk.free // 10**9} GB free of {disk.total // 10**9} GB",
+        "windows": windows.group(1).strip() if windows else "",
+    }
+
+
+# Opening Monet Settings ----------------------------------------------------
+
+def listen():
+    """Waits (up to an hour) for `monet-quick open`, then prints what was asked.
+
+    Quick Settings runs this and opens Monet Settings when it returns. If
+    Quick Settings goes away (Plasma restarts), this stops listening too.
+    """
+    if not FIFO.is_fifo():
+        FIFO.unlink(missing_ok=True)
+        os.mkfifo(FIFO, 0o600)
+    parent = os.getppid()
+    fd = os.open(FIFO, os.O_RDONLY | os.O_NONBLOCK)
+    try:
+        for _ in range(3600):
+            ready, _, _ = select.select([fd], [], [], 1)
+            if os.getppid() != parent:
+                return
+            if not ready:
+                continue
+            words = os.read(fd, 256).decode("utf-8", "replace").split()
+            if words:
+                print(" ".join(words[:2]))
+                return
+            # Someone opened the doorbell and left without a word: listen afresh.
+            os.close(fd)
+            fd = os.open(FIFO, os.O_RDONLY | os.O_NONBLOCK)
+    finally:
+        os.close(fd)
+
+
+def open_settings(page):
+    """Asks Quick Settings to open Monet Settings, or opens KDE's if nobody listens."""
+    try:
+        fd = os.open(FIFO, os.O_WRONLY | os.O_NONBLOCK) if FIFO.is_fifo() else None
+    except OSError:
+        fd = None
+    if fd is not None:
+        with os.fdopen(fd, "w") as bell:
+            bell.write(f"open {page}".strip() + "\n")
         return
-    done
-    printf 'null,"charging":false'
-}
+    # Quick Settings isn't on the panel: open KDE's System Settings instead.
+    page = KDE_PAGES.get(page, "")
+    os.execvp("systemsettings", ["systemsettings"] + ([page] if page else []))
 
-light_state() {
-    local mode
-    mode="$(cat "$CONFIG/monet/light" 2>/dev/null)"
-    case "$mode" in mist|smoke) printf %s "$mode" ;; *) printf hours ;; esac
-}
 
-escape() { sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+def status():
+    battery = None
+    charging = False
+    for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
+        try:
+            battery = int((bat / "capacity").read_text())
+            charging = (bat / "status").read_text().strip() == "Charging"
+            break
+        except (OSError, ValueError):
+            continue
+    return {
+        "wifi": wifi_state(), "network": wifi_name(), "bluetooth": bluetooth_state(),
+        "night": kread("kwinrc", "NightColor", "Active", "false") == "true",
+        "quiet": bool(kread("plasmanotifyrc", "DoNotDisturb", "Until")),
+        "volume": volume("@DEFAULT_AUDIO_SINK@"), "mic": volume("@DEFAULT_AUDIO_SOURCE@"),
+        "brightness": brightness_state(),
+        "battery": battery, "charging": charging, "light": light_state(),
+    }
 
-reconfigure_kwin() {
-    busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
-}
 
-case "${1:-status}" in
-    status)
-        printf '{"wifi":%s,"network":"%s","bluetooth":%s,"night":%s,"quiet":%s,"volume":%s,"brightness":%s,"battery":%s,"light":"%s"}\n' \
-            "$(wifi_state)" "$(wifi_name | escape)" "$(bluetooth_state)" "$(night_state)" "$(quiet_state)" \
-            "$(volume_state)" "$(brightness_state)" "$(battery_state)" "$(light_state)"
-        ;;
-    wifi)
-        nmcli radio wifi "${2:?on or off}"
-        ;;
-    bluetooth)
-        timeout 5 bluetoothctl power "${2:?on or off}" >/dev/null
-        ;;
-    night)
-        kwriteconfig6 --file kwinrc --group NightColor --key Active "$([ "${2:-}" = on ] && echo true || echo false)"
-        reconfigure_kwin
-        ;;
-    quiet)
-        if [ "${2:-}" = on ]; then
-            kwriteconfig6 --notify --file plasmanotifyrc --group DoNotDisturb --key Until "2099,12,31,23,59,0"
-        else
-            kwriteconfig6 --notify --file plasmanotifyrc --group DoNotDisturb --key Until --delete
-        fi
-        ;;
-    volume)
-        level="${2:?0-100}"
-        [ "$level" -gt 100 ] && level=100
-        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 2>/dev/null
-        wpctl set-volume @DEFAULT_AUDIO_SINK@ "$level%"
-        ;;
-    brightness)
-        level="${2:?0-100}"
-        [ "$level" -lt 1 ] && level=1
-        set_brightness "$level"
-        ;;
-    light)
-        exec "$LIBEXECDIR/monet-light" set "${2:?hours, mist or smoke}"
-        ;;
-    *)
-        sed -n '2,12p' "$0"
-        exit 1
-        ;;
-esac
+def main(argv):
+    cmd, args = (argv[0] if argv else "status"), argv[1:]
+    on = bool(args) and args[0] == "on"
+    if cmd == "status":
+        emit(status())
+    elif cmd == "wifi":
+        run("nmcli", "radio", "wifi", "on" if on else "off")
+    elif cmd == "wifi-list":
+        emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or ""))
+    elif cmd == "wifi-join" and args:
+        command = ["nmcli", "device", "wifi", "connect", unb64(args[0])]
+        if len(args) > 1 and args[1]:
+            command += ["password", unb64(args[1])]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        emit({"ok": result.returncode == 0, "message": (result.stdout or result.stderr).strip()})
+    elif cmd == "bluetooth":
+        run("bluetoothctl", "power", "on" if on else "off", timeout=5)
+    elif cmd == "bt-list":
+        emit(bt_list())
+    elif cmd in ("bt-connect", "bt-disconnect") and args and re.fullmatch(r"[0-9A-Fa-f:]{17}", args[0]):
+        run("bluetoothctl", cmd[3:], args[0], timeout=20)
+    elif cmd == "night":
+        run("kwriteconfig6", "--file", "kwinrc", "--group", "NightColor", "--key", "Active", "true" if on else "false")
+        busctl("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "reconfigure")
+    elif cmd == "quiet":
+        if on:
+            run("kwriteconfig6", "--notify", "--file", "plasmanotifyrc", "--group", "DoNotDisturb", "--key", "Until", "2099,12,31,23,59,0")
+        else:
+            run("kwriteconfig6", "--notify", "--file", "plasmanotifyrc", "--group", "DoNotDisturb", "--key", "Until", "--delete")
+    elif cmd in ("volume", "mic") and args and args[0].isdigit():
+        target = "@DEFAULT_AUDIO_SINK@" if cmd == "volume" else "@DEFAULT_AUDIO_SOURCE@"
+        run("wpctl", "set-mute", target, "0")
+        run("wpctl", "set-volume", target, f"{min(int(args[0]), 100)}%")
+    elif cmd == "outputs":
+        emit(sinks(run("wpctl", "status") or ""))
+    elif cmd == "output" and args and args[0].isdigit():
+        run("wpctl", "set-default", args[0])
+    elif cmd == "brightness" and args and args[0].isdigit():
+        set_brightness(max(1, min(int(args[0]), 100)))
+    elif cmd == "light" and args and args[0] in ("hours", "mist", "smoke"):
+        os.execv(f"{LIBEXECDIR}/monet-light", ["monet-light", "set", args[0]])
+    elif cmd == "prefs":
+        emit(prefs())
+    elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass"):
+        values = prefs()
+        values[args[0]] = args[1] == "on"
+        save_prefs(values)
+        if args[0] == "hours":
+            set_painting("hours" if values["hours"] else painting_now())
+        elif args[0] == "placard":
+            set_placard(values["placard"])
+        else:
+            run(f"{LIBEXECDIR}/monet-light", "apply", timeout=30)
+    elif cmd == "about":
+        emit(about())
+    elif cmd in ("doctor", "update"):
+        result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=1800)
+        emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
+    elif cmd == "kde" and args and args[0] in KDE_PAGES:
+        page = KDE_PAGES[args[0]]
+        subprocess.Popen(["systemsettings"] + ([page] if page else []), start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "open" and (not args or args[0] in PAGES):
+        open_settings(args[0] if args else "")
+    elif cmd == "listen":
+        listen()
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

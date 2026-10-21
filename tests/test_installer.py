@@ -19,6 +19,8 @@ import xml.dom.minidom
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# No __pycache__ beside the helpers we load: the Linux package copies libexec/.
+sys.dont_write_bytecode = True
 
 
 def load(path, name):

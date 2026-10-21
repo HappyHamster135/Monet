@@ -1,8 +1,8 @@
 [Icon Theme]
 Name=Monet
-Comment=Monet's own apps as painted pebbles, Breeze for everything else
+Comment=Painted marks for Monet's own apps, painted folders, Breeze for everything else
 Inherits=breeze,hicolor
-Example=system-file-manager
+Example=folder
 DisplayDepth=32
 Directories=apps/scalable,places/scalable
 

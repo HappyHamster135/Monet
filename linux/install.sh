@@ -89,23 +89,26 @@ install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalabl
 install -D -m 644 "$SRC/icons/monet-quick-symbolic.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-quick-symbolic.svg"
 tree "$SRC/share/icons/Monet" "$DATADIR/icons/Monet"
 put 644 "$SRC/share/applications/monet-windows.desktop" "$DATADIR/applications/monet-windows.desktop"
+put 644 "$SRC/share/applications/monet-settings.desktop" "$DATADIR/applications/monet-settings.desktop"
 
 # The look: paintings, the Plasma style and global theme, Monet's widgets,
 # colors, the glass app style, the terminal's colors and the fonts.
 tree "$SRC/share/wallpapers/Monet" "$DATADIR/wallpapers/Monet"
 tree "$SRC/share/plasma/wallpapers/org.monet.hours" "$DATADIR/plasma/wallpapers/org.monet.hours"
 tree "$SRC/share/plasma/desktoptheme/monet" "$DATADIR/plasma/desktoptheme/monet"
+tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/monet-solid"
 tree "$SRC/share/plasma/look-and-feel/org.monet.desktop" "$DATADIR/plasma/look-and-feel/org.monet.desktop"
 for applet in org.monet.games org.monet.quick org.monet.placard; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 fill "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/main.qml" \
-    "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/main.qml
+    "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/*.qml
 install -d "$DATADIR/color-schemes" "$DATADIR/konsole"
 install -m 644 "$SRC"/share/color-schemes/*.colors "$DATADIR/color-schemes/"
 install -m 644 "$SRC"/share/konsole/* "$DATADIR/konsole/"
-tree "$SRC/share/Kvantum/Monet" "$DATADIR/Kvantum/Monet"
-tree "$SRC/share/Kvantum/MonetDark" "$DATADIR/Kvantum/MonetDark"
+for theme in Monet MonetDark MonetSolid MonetDarkSolid; do
+    tree "$SRC/share/Kvantum/$theme" "$DATADIR/Kvantum/$theme"
+done
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
 
@@ -116,10 +119,12 @@ put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
-rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures"
+rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures" "$DATADIR/monet/settings"
 install -d "$DATADIR/monet"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
 cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
+# Pictures for Monet Settings, cut from the paintings.
+cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
 if [ -d "$SRC/windows" ]; then

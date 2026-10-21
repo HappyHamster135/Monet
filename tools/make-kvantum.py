@@ -45,9 +45,12 @@ class Palette:
     track: str
     knob: str
     window_color: str      # opaque stand-ins for the Qt palette
-    base_color: str
+    base_color: str        # behind files and lists: solid, like paper
     alt_base_color: str
     button_color: str
+    selection: str         # a soft Lily wash, with dark text on it
+    selection_text: str
+    see_through: bool = True
 
 
 MIST = Palette(
@@ -60,7 +63,8 @@ MIST = Palette(
     menu="#F8F7F4EB", tooltip="#1C1B19EB",
     scroll="#00000040", scroll_hover="#00000073",
     track="#0000001F", knob="#FFFFFF",
-    window_color="#F3F1EC", base_color="#FFFFFF66", alt_base_color="#FFFFFF40", button_color="#F7F5F1",
+    window_color="#F3F1EC", base_color="#FBFAF7", alt_base_color="#F5F3EF", button_color="#F7F5F1",
+    selection="#D3E1DC", selection_text="#1F5249",
 )
 
 SMOKE = Palette(
@@ -73,8 +77,16 @@ SMOKE = Palette(
     menu="#262523EB", tooltip="#F3F1ECEB",
     scroll="#FFFFFF47", scroll_hover="#FFFFFF80",
     track="#FFFFFF24", knob="#F3F1EC",
-    window_color="#242321", base_color="#0000002E", alt_base_color="#FFFFFF0A", button_color="#33312E",
+    window_color="#242321", base_color="#1F1E1C", alt_base_color="#252422", button_color="#33312E",
+    selection="#293F39", selection_text="#CFF0E8",
 )
+
+
+def solid(p: Palette, name):
+    """The same style without glass: for slower PCs, or people who prefer it."""
+    from dataclasses import replace
+    return replace(p, name=name, see_through=False,
+                   glass_top=p.window_color + "FF", glass_bottom=p.window_color + "FF")
 
 
 def rgba(color):
@@ -249,8 +261,9 @@ def theme_svg(p: Palette):
     # Lists and icon views: rounded highlights, Lily for the selection.
     s.frame("itemview-normal", 6, fill=None)
     s.frame("itemview-focused", 6, fill=p.hover)
-    s.frame("itemview-pressed", 6, fill=LILY + "D9")
-    s.frame("itemview-toggled", 6, fill=LILY + "E6")
+    wash = (LILY_LIGHT + "38") if p.dark else (LILY + "33")
+    s.frame("itemview-pressed", 6, fill=wash)
+    s.frame("itemview-toggled", 6, fill=wash)
 
     # Menus, the menu bar and tooltips.
     s.frame("menu-normal", 10, fill=p.menu, border=p.line)
@@ -387,9 +400,9 @@ progressbar_thickness=6
 menubar_mouse_tracking=true
 toolbutton_style=0
 click_behavior=0
-translucent_windows=true
-blurring=true
-popup_blurring=true
+translucent_windows={see_through}
+blurring={see_through}
+popup_blurring={see_through}
 opaque=kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,smplayer,smplayer2,avidemux,avidemux2_qt4,avidemux3_qt4,avidemux3_qt5,kamoso,QtCreator,VirtualBox,VirtualBoxVM,trojita,dragon,digikam,lyx,obs,haruna,mpv,krita,blender,steam
 vertical_spin_indicators=false
 fill_rubberband=false
@@ -435,8 +448,8 @@ light.color={light}
 mid.light.color={midlight}
 dark.color={darkc}
 mid.color={mid}
-highlight.color={lily}
-inactive.highlight.color={lily}
+highlight.color={selection}
+inactive.highlight.color={selection}
 tooltip.base.color={tooltipbase}
 text.color={text}
 inactive.text.color={text}
@@ -445,17 +458,17 @@ inactive.window.text.color={text}
 button.text.color={text}
 disabled.text.color={disabled}
 tooltip.text.color={tooltiptext}
-highlight.text.color=#FFFFFF
-inactive.highlight.text.color=#FFFFFF
+highlight.text.color={selection_text}
+inactive.highlight.text.color={selection_text}
 link.color={link}
 link.visited.color=#8E7CC3
 progress.indicator.text.color={text}
 
 [Hacks]
 transparent_ktitle_label=true
-transparent_dolphin_view=true
+transparent_dolphin_view=false
 transparent_pcmanfm_sidepane=true
-transparent_pcmanfm_view=true
+transparent_pcmanfm_view=false
 blur_translucent=true
 transparent_menutitle=true
 respect_darkness=true
@@ -671,8 +684,8 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=4
 text.margin.right=4
-text.toggle.color=#FFFFFF
-text.press.color=#FFFFFF
+text.toggle.color={selection_text}
+text.press.color={selection_text}
 min_height=+0.5font
 
 [Splitter]
@@ -811,12 +824,13 @@ def kvconfig(p: Palette):
         darkc="#B9B4AB" if not p.dark else "#141312", mid="#D6D2CB" if not p.dark else "#2C2A28",
         tooltipbase=rgba(p.tooltip)[0], tooltiptext="#F3F1EC" if not p.dark else "#1C1B19",
         disabled="#A39D94" if not p.dark else "#6B665E", link=LILY if not p.dark else LILY_LIGHT,
+        selection=p.selection, selection_text=p.selection_text, see_through=str(p.see_through).lower(),
     )
     return GENERAL.format(**fill) + SECTIONS.format(**fill)
 
 
 def main():
-    for p in (MIST, SMOKE):
+    for p in (MIST, SMOKE, solid(MIST, "MonetSolid"), solid(SMOKE, "MonetDarkSolid")):
         folder = OUT / p.name
         folder.mkdir(parents=True, exist_ok=True)
         (folder / f"{p.name}.svg").write_text(theme_svg(p))

@@ -1,30 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Monet icon: settings. A pebble glazed like the paintings, a white line drawing on top. -->
-  <defs>
-    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0" stop-color="#A9B1C2"/>
-      <stop offset="1" stop-color="#5D6577"/>
-    </linearGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
-    </linearGradient>
-    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
-  </defs>
-  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
-  <g clip-path="url(#pebble)">
-    <path d="M23.7 21.7 Q64 16.7 111.7 15.7" stroke="#FFFFFF" stroke-opacity="0.116" stroke-width="11.1" stroke-linecap="round" fill="none"/>
-    <path d="M7.5 39.4 Q64 35.1 101.8 33.4" stroke="#FFFFFF" stroke-opacity="0.105" stroke-width="10.1" stroke-linecap="round" fill="none"/>
-    <path d="M29.1 63.1 Q64 58.5 114.8 57.1" stroke="#FFFFFF" stroke-opacity="0.066" stroke-width="13.3" stroke-linecap="round" fill="none"/>
-    <path d="M23.2 77.6 Q64 72.2 110.1 71.6" stroke="#FFFFFF" stroke-opacity="0.033" stroke-width="9.8" stroke-linecap="round" fill="none"/>
-    <path d="M15.2 102.1 Q64 97.8 119.8 96.1" stroke="#FFFFFF" stroke-opacity="0.051" stroke-width="12.7" stroke-linecap="round" fill="none"/>
-    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
-  </g>
-  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
-  <path d="M38 52 h52 M38 76 h52 M54 44 v16 M76 68 v16" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Monet icon: Settings. Three brushed rails with painted knobs. -->
+  <defs><linearGradient id="g1" x1="0.3" y1="0.0" x2="0.7" y2="1.0"><stop offset="0" stop-color="#A8A196"/><stop offset="1" stop-color="#6C665D"/></linearGradient><linearGradient id="g2" x1="0.3" y1="0.0" x2="0.7" y2="1.0"><stop offset="0" stop-color="#7CD3C0"/><stop offset="1" stop-color="#2E7D70"/></linearGradient><linearGradient id="g3" x1="0.3" y1="0.0" x2="0.7" y2="1.0"><stop offset="0" stop-color="#B5A3EB"/><stop offset="1" stop-color="#5A4A9C"/></linearGradient><linearGradient id="g4" x1="0.3" y1="0.0" x2="0.7" y2="1.0"><stop offset="0" stop-color="#F3D8AE"/><stop offset="1" stop-color="#C08A52"/></linearGradient></defs>
+  <path d="M14.00,34.00 L17.57,31.30 L21.14,30.51 L24.71,30.00 L28.29,29.64 L31.86,29.38 L35.43,29.19 L39.00,29.05 L42.57,28.96 L46.14,28.91 L49.71,28.88 L53.29,28.88 L56.86,28.91 L60.43,28.95 L64.00,29.00 L67.57,29.06 L71.14,29.13 L74.71,29.22 L78.29,29.33 L81.86,29.46 L85.43,29.61 L89.00,29.79 L92.57,30.00 L96.14,30.24 L99.71,30.54 L103.29,30.90 L106.86,31.35 L110.43,32.00 L114.00,34.00 L114.00,34.00 L110.43,36.00 L106.86,36.65 L103.29,37.10 L99.71,37.46 L96.14,37.76 L92.57,38.00 L89.00,38.21 L85.43,38.39 L81.86,38.54 L78.29,38.67 L74.71,38.78 L71.14,38.87 L67.57,38.94 L64.00,39.00 L60.43,39.05 L56.86,39.09 L53.29,39.12 L49.71,39.12 L46.14,39.09 L42.57,39.04 L39.00,38.95 L35.43,38.81 L31.86,38.62 L28.29,38.36 L24.71,38.00 L21.14,37.49 L17.57,36.70 L14.00,34.00 Z" fill="url(#g1)" opacity="1.0"/>
+  <path d="M14.00,64.00 L17.57,61.30 L21.14,60.51 L24.71,60.00 L28.29,59.64 L31.86,59.38 L35.43,59.19 L39.00,59.05 L42.57,58.96 L46.14,58.91 L49.71,58.88 L53.29,58.88 L56.86,58.91 L60.43,58.95 L64.00,59.00 L67.57,59.06 L71.14,59.13 L74.71,59.22 L78.29,59.33 L81.86,59.46 L85.43,59.61 L89.00,59.79 L92.57,60.00 L96.14,60.24 L99.71,60.54 L103.29,60.90 L106.86,61.35 L110.43,62.00 L114.00,64.00 L114.00,64.00 L110.43,66.00 L106.86,66.65 L103.29,67.10 L99.71,67.46 L96.14,67.76 L92.57,68.00 L89.00,68.21 L85.43,68.39 L81.86,68.54 L78.29,68.67 L74.71,68.78 L71.14,68.87 L67.57,68.94 L64.00,69.00 L60.43,69.05 L56.86,69.09 L53.29,69.12 L49.71,69.12 L46.14,69.09 L42.57,69.04 L39.00,68.95 L35.43,68.81 L31.86,68.62 L28.29,68.36 L24.71,68.00 L21.14,67.49 L17.57,66.70 L14.00,64.00 Z" fill="url(#g1)" opacity="1.0"/>
+  <path d="M14.00,94.00 L17.57,91.30 L21.14,90.51 L24.71,90.00 L28.29,89.64 L31.86,89.38 L35.43,89.19 L39.00,89.05 L42.57,88.96 L46.14,88.91 L49.71,88.88 L53.29,88.88 L56.86,88.91 L60.43,88.95 L64.00,89.00 L67.57,89.06 L71.14,89.13 L74.71,89.22 L78.29,89.33 L81.86,89.46 L85.43,89.61 L89.00,89.79 L92.57,90.00 L96.14,90.24 L99.71,90.54 L103.29,90.90 L106.86,91.35 L110.43,92.00 L114.00,94.00 L114.00,94.00 L110.43,96.00 L106.86,96.65 L103.29,97.10 L99.71,97.46 L96.14,97.76 L92.57,98.00 L89.00,98.21 L85.43,98.39 L81.86,98.54 L78.29,98.67 L74.71,98.78 L71.14,98.87 L67.57,98.94 L64.00,99.00 L60.43,99.05 L56.86,99.09 L53.29,99.12 L49.71,99.12 L46.14,99.09 L42.57,99.04 L39.00,98.95 L35.43,98.81 L31.86,98.62 L28.29,98.36 L24.71,98.00 L21.14,97.49 L17.57,96.70 L14.00,94.00 Z" fill="url(#g1)" opacity="1.0"/>
+  <circle cx="42" cy="35.8" r="14" fill="#000000" opacity="0.18"/>
+  <circle cx="42" cy="34" r="14" fill="url(#g2)"/>
+  <path d="M34,29 A10 10 0 0 1 46,24" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="86" cy="65.8" r="14" fill="#000000" opacity="0.18"/>
+  <circle cx="86" cy="64" r="14" fill="url(#g3)"/>
+  <path d="M78,59 A10 10 0 0 1 90,54" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="58" cy="95.8" r="14" fill="#000000" opacity="0.18"/>
+  <circle cx="58" cy="94" r="14" fill="url(#g4)"/>
+  <path d="M50,89 A10 10 0 0 1 62,84" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
 </svg>

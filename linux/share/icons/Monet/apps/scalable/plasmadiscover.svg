@@ -1,30 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Monet icon: store. A pebble glazed like the paintings, a white line drawing on top. -->
-  <defs>
-    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0" stop-color="#A897E0"/>
-      <stop offset="1" stop-color="#5A4A9C"/>
-    </linearGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
-    </linearGradient>
-    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
-  </defs>
-  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
-  <g clip-path="url(#pebble)">
-    <path d="M14.2 27.2 Q64 19.8 98.0 21.2" stroke="#FFFFFF" stroke-opacity="0.080" stroke-width="12.6" stroke-linecap="round" fill="none"/>
-    <path d="M6.0 43.1 Q64 34.8 109.2 37.1" stroke="#FFFFFF" stroke-opacity="0.120" stroke-width="12.7" stroke-linecap="round" fill="none"/>
-    <path d="M25.0 66.6 Q64 58.7 103.1 60.6" stroke="#FFFFFF" stroke-opacity="0.037" stroke-width="9.7" stroke-linecap="round" fill="none"/>
-    <path d="M10.7 78.0 Q64 72.3 115.2 72.0" stroke="#FFFFFF" stroke-opacity="0.068" stroke-width="12.8" stroke-linecap="round" fill="none"/>
-    <path d="M29.6 96.6 Q64 88.5 109.9 90.6" stroke="#FFFFFF" stroke-opacity="0.057" stroke-width="12.9" stroke-linecap="round" fill="none"/>
-    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
-  </g>
-  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
-  <path d="M42 54 h44 l-4 34 a5 5 0 0 1 -5 4 h-26 a5 5 0 0 1 -5 -4 Z M52 56 v-6 a12 12 0 0 1 24 0 v6" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Monet icon: Store. A painted bag. -->
+  <defs><linearGradient id="g1" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#C9B9F2"/><stop offset="1" stop-color="#5A4A9C"/></linearGradient></defs>
+  <path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="#000000" opacity="0.16" transform="translate(0 2)"/>
+  <path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="url(#g1)"/>
+  <path d="M32.39,69.87 L33.35,67.71 L34.77,66.79 L36.24,66.05 L37.75,65.39 L39.28,64.78 L40.82,64.20 L42.36,63.65 L43.92,63.11 L45.47,62.59 L47.03,62.07 L48.59,61.56 L50.16,61.04 L51.72,60.53 L53.27,60.01 L54.83,59.48 L56.38,58.95 L57.94,58.41 L59.49,57.87 L61.04,57.33 L62.60,56.80 L64.15,56.27 L65.71,55.74 L67.27,55.23 L68.84,54.74 L70.42,54.27 L72.02,53.86 L73.66,53.56 L75.61,54.13 L75.61,54.13 L74.61,56.19 L73.28,57.34 L71.91,58.36 L70.50,59.29 L69.07,60.18 L67.63,61.01 L66.17,61.81 L64.70,62.58 L63.22,63.31 L61.73,64.02 L60.23,64.69 L58.72,65.35 L57.20,65.98 L55.67,66.59 L54.14,67.18 L52.59,67.75 L51.04,68.29 L49.48,68.81 L47.91,69.29 L46.33,69.74 L44.73,70.16 L43.12,70.53 L41.49,70.86 L39.84,71.12 L38.16,71.31 L36.43,71.38 L34.64,71.26 L32.39,69.87 Z" fill="#ffffff" opacity="0.26"/>
+  <path d="M59.21,90.84 L59.96,88.73 L61.17,87.87 L62.43,87.18 L63.73,86.57 L65.05,86.02 L66.39,85.50 L67.73,85.01 L69.07,84.54 L70.43,84.08 L71.78,83.62 L73.14,83.18 L74.50,82.73 L75.86,82.29 L77.21,81.84 L78.57,81.38 L79.92,80.93 L81.27,80.47 L82.63,80.01 L83.98,79.55 L85.34,79.10 L86.70,78.65 L88.06,78.22 L89.42,77.79 L90.80,77.39 L92.18,77.02 L93.58,76.70 L95.03,76.49 L96.79,77.16 L96.79,77.16 L95.99,79.12 L94.85,80.18 L93.67,81.10 L92.45,81.94 L91.22,82.74 L89.97,83.48 L88.71,84.20 L87.44,84.88 L86.16,85.53 L84.87,86.15 L83.56,86.75 L82.25,87.33 L80.93,87.88 L79.61,88.42 L78.28,88.93 L76.94,89.43 L75.59,89.91 L74.23,90.36 L72.87,90.78 L71.49,91.17 L70.10,91.52 L68.69,91.83 L67.26,92.10 L65.82,92.30 L64.35,92.43 L62.83,92.46 L61.25,92.28 L59.21,90.84 Z" fill="#ffffff" opacity="0.18"/>
+  <path d="M47 50 V40 A17 17 0 0 1 81 40 V50" fill="none" stroke="#3E3175" stroke-width="8" stroke-linecap="round"/>
 </svg>

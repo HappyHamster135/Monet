@@ -26,7 +26,9 @@ jobs:
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Shell scripts
-        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-quick tools/package.sh; do bash -n "$f"; done
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light tools/package.sh; do bash -n "$f"; done
+      - name: Python helpers
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick tools/*.py
       - name: Installer tests
         run: python3 -m unittest discover -s tests -v
 

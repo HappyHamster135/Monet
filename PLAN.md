@@ -274,6 +274,10 @@ v0.5 gives Monet its own look, "Impression" (see [docs/DESIGN.md](docs/DESIGN.md
 - Slay the Spire is always listed, for testing: Windows installs it from Steam
   the first time and then starts it
 
+v0.5.1 adds Monet Settings (one glass sheet in front of KDE's System
+Settings), painted folders and app icons, Files on paper with glass edges,
+and switches for the Hours, the placard and glass.
+
 ### Status: v0.3 (preview)
 
 v0.3 makes the installer do everything. The USB stick's default choice,

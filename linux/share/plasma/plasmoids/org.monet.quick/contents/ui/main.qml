@@ -2,9 +2,13 @@
  * Quick Settings: Wi-Fi, Bluetooth, Night Light, Do not disturb, sound,
  * brightness and Monet's light, in the clock island. The `monet-quick`
  * helper does the work; this draws it.
+ *
+ * It also owns Monet Settings (MonetSettings.qml), which opens from here or
+ * from Settings in the app menu (`monet-quick open` rings the doorbell below).
  */
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
@@ -74,6 +78,39 @@ PlasmoidItem {
         info = next
         run(command + (on ? " on" : " off"))
     }
+
+    MonetSettings {
+        id: settings
+        helper: root.helper
+        speed: root.speed
+        area: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
+    }
+
+    // Waits for `monet-quick open [PAGE]`, opens Settings, and waits again.
+    property double armed: 0
+    P5Support.DataSource {
+        id: doorbell
+        engine: "executable"
+        connectedSources: []
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            const asked = (data["stdout"] || "").trim().split(" ")
+            if (asked[0] === "open") {
+                settings.open(asked[1] || "")
+            }
+            // If listening fails straight away, don't spin: try again later.
+            rearm.interval = asked[0] === "" && Date.now() - root.armed < 5000 ? 30000 : 100
+            rearm.start()
+        }
+    }
+    Timer {
+        id: rearm
+        onTriggered: {
+            root.armed = Date.now()
+            doorbell.connectSource(root.helper + " listen")
+        }
+    }
+    Component.onCompleted: rearm.start()
 
     Timer {
         interval: 3000
@@ -328,7 +365,7 @@ PlasmoidItem {
                     text: i18n("All Settings")
                     onClicked: {
                         root.expanded = false
-                        runner.connectSource("systemsettings")
+                        settings.open("")
                     }
                 }
             }

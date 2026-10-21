@@ -1,9 +1,12 @@
-"""Draws Monet's icon theme: the system's own apps as painted pebbles.
+"""Draws Monet's icon theme: painted marks for Monet's own apps, painted folders.
 
-Each icon is a round pebble glazed in a color from the paintings, with a few
-brushstrokes of light across it and a white line drawing on top. Apps that
-bring their own icon (Firefox, Steam, games) keep it; everything else comes
-from Breeze.
+Monet's icons are made the way its logo is: a few confident brushstrokes,
+glazed in the paintings' colors, with no circle or tile around them. Folders
+are small canvases, each glazed in the light of one painting, so Pictures,
+Downloads and Music are told apart by color as much as by their mark.
+
+Apps that bring their own icon (Firefox, Steam, games) keep it; everything
+else comes from Breeze.
 
 Run from the repository root:  python3 tools/make-icons.py
 Also writes the brush texture Monet uses for game covers without artwork.
@@ -19,73 +22,217 @@ ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "linux" / "share" / "icons" / "Monet"
 TEXTURES = ROOT / "linux" / "share" / "monet" / "textures"
 
-# Glyphs drawn with round 7-unit lines on a 128 grid.
-GLYPHS = {
-    "folder": "M38 50 a6 6 0 0 1 6 -6 h14 l7 7 h20 a6 6 0 0 1 6 6 v24 a6 6 0 0 1 -6 6 h-41 a6 6 0 0 1 -6 -6 Z",
-    "terminal": "M40 50 l14 13 l-14 13 M62 80 h26",
-    "sliders": "M38 52 h52 M38 76 h52 M54 44 v16 M76 68 v16",
-    "bag": "M42 54 h44 l-4 34 a5 5 0 0 1 -5 4 h-26 a5 5 0 0 1 -5 -4 Z M52 56 v-6 a12 12 0 0 1 24 0 v6",
-    "pulse": "M36 66 h14 l7 -16 l12 30 l8 -18 h15",
-    "bin": "M44 50 h40 M58 50 v-6 h12 v6 M48 50 l3 36 a5 5 0 0 0 5 4 h16 a5 5 0 0 0 5 -4 l3 -36",
-    "bin-full": "M44 50 h40 M58 50 v-6 h12 v6 M48 50 l3 36 a5 5 0 0 0 5 4 h16 a5 5 0 0 0 5 -4 l3 -36 M58 60 v20 M70 60 v20",
-}
 
-# name: (top color, bottom color, glyph, file names it stands for)
+class Icon:
+    """One 128 x 128 SVG, built up from gradients and painted shapes."""
+
+    def __init__(self, comment):
+        self.comment = comment
+        self.defs = []
+        self.body = []
+        self.ids = 0
+
+    def gradient(self, top, bottom, x1=0.3, y1=0.0, x2=0.7, y2=1.0):
+        self.ids += 1
+        gid = f"g{self.ids}"
+        self.defs.append(f'<linearGradient id="{gid}" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}">'
+                         f'<stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>')
+        return f"url(#{gid})"
+
+    def add(self, shape):
+        self.body.append(shape)
+
+    def svg(self):
+        return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">\n'
+                f"  <!-- {self.comment} -->\n"
+                f"  <defs>{''.join(self.defs)}</defs>\n  " + "\n  ".join(self.body) + "\n</svg>\n")
+
+
+def dab_points(cx, cy, length, width, angle=0.0, bend=0.0, taper=0.16, steps=28):
+    """Outline of a brushstroke: rounded ends, heavier where the brush landed."""
+    a = math.radians(angle)
+    ca, sa = math.cos(a), math.sin(a)
+    top, bottom = [], []
+    for i in range(steps + 1):
+        t = -1 + 2 * i / steps
+        half = width / 2 * max(0.0, 1 - abs(t) ** 2.4) ** (1 / 2.4) * (1 - taper * t)
+        off = bend * (1 - t * t) * length * 0.1
+        for sign, side in ((-1, top), (1, bottom)):
+            px, py = t * length / 2, off + sign * half
+            side.append((cx + px * ca - py * sa, cy + px * sa + py * ca))
+    return top + bottom[::-1]
+
+
+def path(points):
+    return "M" + " L".join(f"{x:.2f},{y:.2f}" for x, y in points) + " Z"
+
+
+def dab(icon, cx, cy, length, width, fill, angle=0.0, bend=0.0, opacity=1.0, shine=True):
+    """A brushstroke with a lighter bristle mark along its upper side."""
+    icon.add(f'<path d="{path(dab_points(cx, cy, length, width, angle, bend))}" fill="{fill}" opacity="{opacity}"/>')
+    if shine and width >= 6:
+        a = math.radians(angle)
+        ox, oy = math.sin(a) * width * 0.2, -math.cos(a) * width * 0.2
+        icon.add(f'<path d="{path(dab_points(cx + ox, cy + oy, length * 0.72, width * 0.22, angle, bend))}" '
+                 f'fill="#ffffff" opacity="{0.28 * opacity:.2f}"/>')
+
+
+def rounded(x0, y0, x1, y1, r):
+    return (f"M{x0 + r},{y0} H{x1 - r} A{r},{r} 0 0 1 {x1},{y0 + r} V{y1 - r} A{r},{r} 0 0 1 {x1 - r},{y1} "
+            f"H{x0 + r} A{r},{r} 0 0 1 {x0},{y1 - r} V{y0 + r} A{r},{r} 0 0 1 {x0 + r},{y0} Z")
+
+
+def line_mark(icon, d, color="#ffffff", width=7.0, shadow=True):
+    """A drawn mark on top of a canvas: round ends, a soft shadow below."""
+    if shadow:
+        icon.add(f'<path d="{d}" fill="none" stroke="#000000" stroke-opacity="0.22" stroke-width="{width}" '
+                 f'stroke-linecap="round" stroke-linejoin="round" transform="translate(0 1.6)"/>')
+    icon.add(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round"/>')
+
+
+# Folders: which painting each one's front is cut from (painting, crop box in
+# the 3840 x 2160 original), the color of its back, and the mark drawn on it.
+HOURS = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents" / "hours"
+FOLDERS = {
+    "folder": ("dawn", (2080, 1260, 2980, 1843), "#2E4A63", None),
+    "user-home": ("dawn", (2183, 538, 3083, 1121), "#6E5878", "M46 78 L64 62 L82 78 M52 73 V92 H76 V73"),
+    "user-desktop": ("day", (300, 90, 1200, 673), "#3E6680", "M44 64 H84 V86 H44 Z M58 96 H70"),
+    "folder-documents": (None, None, "#A3947A", "M48 64 H80 M48 75 H80 M48 86 H68"),
+    "folder-download": ("night", (560, 230, 1460, 813), "#141C38", "M64 58 V88 M52 77 L64 89 L76 77"),
+    "folder-pictures": ("dusk", (870, 700, 1770, 1283), "#5B3F6E", "M45 62 H83 V92 H45 Z M48 89 L58 78 L66 86 L72 80 L81 89"),
+    "folder-music": ("dusk", (2240, 80, 3140, 663), "#3E3470", "M58 88 V60 L80 56 V82 M58 88 a6 6 0 1 1 -0.1 0 M80 82 a6 6 0 1 1 -0.1 0"),
+    "folder-videos": ("dusk", (880, 1240, 1780, 1823), "#4A2448", "play"),
+    "folder-games": ("night", (2700, 980, 3600, 1563), "#0E1430", "M48 70 H80 a10 10 0 0 1 0 20 H48 a10 10 0 0 1 0 -20 Z M54 80 H62 M58 76 V84 M74 78 h.1 M78 82 h.1"),
+}
+FRONT = (10, 40, 118, 110, 11)  # x0, y0, x1, y1, corner radius on the 128 grid
+
+
+def canvas_image(painting, crop):
+    """The folder's front as a small rounded PNG: a piece of a painting, or paper."""
+    import base64
+    import io
+    x0, y0, x1, y1, r = FRONT
+    w, h, k = (x1 - x0) * 2, (y1 - y0) * 2, 2
+    if painting:
+        from PIL import ImageEnhance
+        img = Image.open(HOURS / f"{painting}.jpg").convert("RGB").crop(crop).resize((w, h), Image.LANCZOS)
+        # Small pieces of a painting look muddy; give them back some color.
+        img = ImageEnhance.Contrast(ImageEnhance.Color(img).enhance(1.3)).enhance(1.12)
+    else:
+        # Documents are paper: cream, with a few strokes of the brush.
+        img = Image.new("RGB", (w, h), (247, 242, 232))
+        tex = Image.open(TEXTURES / "brush.png").resize((w * 2, h * 2)).crop((0, 0, w, h))
+        shade = Image.new("RGB", (w, h), (214, 202, 180))
+        img = Image.composite(shade, img, tex.getchannel("A").point(lambda v: min(255, v * 2)))
+    arr = np.asarray(img).astype(np.float32)
+    # A little light from above, a little shade below: it reads as a sheet.
+    ramp = np.linspace(1.10, 0.86, h)[:, None, None]
+    arr = np.clip(arr * ramp, 0, 255)
+    img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
+    mask = Image.new("L", (w * 4, h * 4), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w * 4 - 1, h * 4 - 1], radius=r * k * 4, fill=255)
+    img.putalpha(mask.resize((w, h), Image.LANCZOS))
+    buf = io.BytesIO()
+    img.quantize(colors=128, method=Image.Quantize.FASTOCTREE).save(buf, "PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def folder_icon(name, painting, crop, back, mark):
+    icon = Icon(f"Monet folder: {name}. Its front is cut from one of Monet's paintings.")
+    icon.add(f'<path d="M14 30 a8 8 0 0 1 8 -8 H46 a8 8 0 0 1 6.5 3.4 L57 32 H106 a8 8 0 0 1 8 8 V100 H14 Z" fill="{back}"/>')
+    x0, y0, x1, y1, _ = FRONT
+    icon.add(f'<path d="{rounded(x0, y0 + 2, x1, y1 + 2, 11)}" fill="#000000" opacity="0.2"/>')
+    icon.add(f'<image x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" '
+             f'href="data:image/png;base64,{canvas_image(painting, crop)}"/>')
+    icon.add(f'<path d="M21 41.2 H107" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round"/>')
+    ink = "#4A4540" if painting is None else "#ffffff"
+    if mark == "play":
+        icon.add('<path d="M57 59 Q57 55 60.5 57 L80 69 Q83 71 80 73 L60.5 85 Q57 87 57 83 Z" fill="#000000" opacity="0.22" transform="translate(0 1.6)"/>')
+        icon.add('<path d="M57 59 Q57 55 60.5 57 L80 69 Q83 71 80 73 L60.5 85 Q57 87 57 83 Z" fill="#ffffff"/>')
+    elif mark:
+        line_mark(icon, mark, color=ink, width=6.5, shadow=ink == "#ffffff")
+    return icon.svg()
+
+
+def settings_icon():
+    icon = Icon("Monet icon: Settings. Three brushed rails with painted knobs.")
+    rail = icon.gradient("#A8A196", "#6C665D")
+    for y in (34, 64, 94):
+        dab(icon, 64, y, 100, 10, rail, shine=False)
+    for cx, cy, top, bottom in ((42, 34, "#7CD3C0", "#2E7D70"), (86, 64, "#B5A3EB", "#5A4A9C"), (58, 94, "#F3D8AE", "#C08A52")):
+        fill = icon.gradient(top, bottom)
+        icon.add(f'<circle cx="{cx}" cy="{cy + 1.8}" r="14" fill="#000000" opacity="0.18"/>')
+        icon.add(f'<circle cx="{cx}" cy="{cy}" r="14" fill="{fill}"/>')
+        icon.add(f'<path d="M{cx - 8},{cy - 5} A10 10 0 0 1 {cx + 4},{cy - 10}" fill="none" stroke="#ffffff" '
+                 f'stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>')
+    return icon.svg()
+
+
+def terminal_icon():
+    icon = Icon("Monet icon: Terminal. A night canvas with a prompt.")
+    night = icon.gradient("#3A4775", "#141B2E", 0.2, 0, 0.8, 1)
+    icon.defs.append(f'<clipPath id="canvas"><path d="{rounded(12, 18, 116, 110, 18)}"/></clipPath>')
+    icon.add(f'<path d="{rounded(12, 18, 116, 110, 18)}" fill="{night}"/>')
+    strokes = "".join(
+        f'<path d="{path(dab_points(cx, cy, length, 7, a, 0.3))}" fill="#9FB4E8" opacity="{o}"/>'
+        for cx, cy, length, a, o in ((46, 34, 60, -3, 0.16), (90, 46, 44, 2, 0.12), (40, 100, 56, 2, 0.12), (92, 96, 40, -2, 0.1)))
+    icon.add('<g clip-path="url(#canvas)">' + strokes + "</g>")
+    icon.add('<path d="M23 19.5 H105" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.6" stroke-linecap="round"/>')
+    line_mark(icon, "M36 50 L52 64 L36 78", color="#F3ECD8", width=8.5, shadow=False)
+    dab(icon, 76, 80, 30, 9, "#7CD3C0", shine=False)
+    return icon.svg()
+
+
+def store_icon():
+    icon = Icon("Monet icon: Store. A painted bag.")
+    body = icon.gradient("#C9B9F2", "#5A4A9C", 0.2, 0, 0.8, 1)
+    icon.add('<path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="#000000" opacity="0.16" transform="translate(0 2)"/>')
+    icon.add(f'<path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="{body}"/>')
+    for cx, cy, length, o in ((54, 62, 46, 0.26), (78, 84, 40, 0.18)):
+        icon.add(f'<path d="{path(dab_points(cx, cy, length, 7, -20, 0.3))}" fill="#ffffff" opacity="{o}"/>')
+    icon.add('<path d="M47 50 V40 A17 17 0 0 1 81 40 V50" fill="none" stroke="#3E3175" stroke-width="8" stroke-linecap="round"/>')
+    return icon.svg()
+
+
+def monitor_icon():
+    icon = Icon("Monet icon: System Monitor. One brushstroke of a pulse.")
+    dab(icon, 64, 66, 108, 8, "#5C88D0", opacity=0.22, shine=False)
+    line = icon.gradient("#8DB2EE", "#2B4A86", 0, 0, 1, 1)
+    icon.add(f'<path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="#000000" stroke-opacity="0.16" '
+             f'stroke-width="12" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2)"/>')
+    icon.add(f'<path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="{line}" stroke-width="12" '
+             f'stroke-linecap="round" stroke-linejoin="round"/>')
+    icon.add('<path d="M20 64.5 H36 M51 42 L60 80" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2.5" stroke-linecap="round"/>')
+    return icon.svg()
+
+
+def trash_icon(full):
+    icon = Icon("Monet icon: Trash" + (", with something in it" if full else "") + ". A woven basket.")
+    body = icon.gradient("#D9D1C3", "#8C867C", 0.2, 0, 0.8, 1)
+    icon.add('<path d="M30 44 H98 L91 108 Q90 114 84 114 H44 Q38 114 37 108 Z" fill="#000000" opacity="0.16" transform="translate(0 2)"/>')
+    icon.add(f'<path d="M30 44 H98 L91 108 Q90 114 84 114 H44 Q38 114 37 108 Z" fill="{body}"/>')
+    for x, top in ((50, 52), (64, 52), (78, 52)):
+        dab(icon, x, 82, 50, 6, "#6C665D", angle=90, opacity=0.45, shine=False)
+    if full:
+        # A sheet of paper sticking out under the lid.
+        icon.add('<g transform="rotate(-14 66 34)"><rect x="48" y="12" width="38" height="40" rx="4" fill="#FBF7EE"/>'
+                 '<path d="M55 22 H79 M55 30 H79 M55 38 H71" stroke="#C9BFAC" stroke-width="3" stroke-linecap="round"/></g>')
+    lid = icon.gradient("#8C867C", "#5A554D")
+    dab(icon, 64, 42 if not full else 41, 84, 11, lid, angle=0 if not full else -4)
+    return icon.svg()
+
+
 ICONS = {
-    "files": ("#4DB4A0", "#1F6A5E", "folder", ["apps/system-file-manager", "apps/org.kde.dolphin"]),
-    "terminal": ("#3E4456", "#171A24", "terminal", ["apps/utilities-terminal", "apps/org.kde.konsole"]),
-    "settings": ("#A9B1C2", "#5D6577", "sliders", ["apps/preferences-system", "apps/systemsettings"]),
-    "store": ("#A897E0", "#5A4A9C", "bag", ["apps/plasmadiscover", "apps/org.kde.discover"]),
-    "monitor": ("#5C88D0", "#294985", "pulse", ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor"]),
-    "trash": ("#B9B3A9", "#6C665D", "bin", ["places/user-trash"]),
-    "trash-full": ("#B9B3A9", "#6C665D", "bin-full", ["places/user-trash-full"]),
+    "files": (lambda: folder_icon("folder", *FOLDERS["folder"]), ["apps/system-file-manager", "apps/org.kde.dolphin"]),
+    "settings": (settings_icon, ["apps/preferences-system", "apps/systemsettings", "apps/monet-settings"]),
+    "terminal": (terminal_icon, ["apps/utilities-terminal", "apps/org.kde.konsole"]),
+    "store": (store_icon, ["apps/plasmadiscover", "apps/org.kde.discover"]),
+    "monitor": (monitor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor"]),
+    "trash": (lambda: trash_icon(False), ["places/user-trash"]),
+    "trash-full": (lambda: trash_icon(True), ["places/user-trash-full"]),
 }
-
-
-def brush_marks(seed):
-    """A few diagonal strokes of light across the pebble, different for each icon."""
-    rng = np.random.default_rng(seed)
-    marks = []
-    for i in range(5):
-        y = 24 + i * 19 + rng.uniform(-5, 5)
-        x0, x1 = rng.uniform(4, 30), rng.uniform(96, 124)
-        w = rng.uniform(7, 14)
-        a = rng.uniform(0.05, 0.12) if i < 2 else rng.uniform(0.03, 0.07)
-        dy = rng.uniform(-10, -4)
-        marks.append(f'<path d="M{x0:.1f} {y:.1f} Q64 {y + dy:.1f} {x1:.1f} {y - 6:.1f}" stroke="#FFFFFF" '
-                     f'stroke-opacity="{a:.3f}" stroke-width="{w:.1f}" stroke-linecap="round" fill="none"/>')
-    return "\n    ".join(marks)
-
-
-def icon_svg(name, top, bottom, glyph):
-    seed = sum(map(ord, name))
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Monet icon: {name}. A pebble glazed like the paintings, a white line drawing on top. -->
-  <defs>
-    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0" stop-color="{top}"/>
-      <stop offset="1" stop-color="{bottom}"/>
-    </linearGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
-    </linearGradient>
-    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
-  </defs>
-  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
-  <g clip-path="url(#pebble)">
-    {brush_marks(seed)}
-    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
-  </g>
-  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
-  <path d="{GLYPHS[glyph]}" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-"""
+for name, spec in FOLDERS.items():
+    ICONS[name] = ((lambda n=name, s=spec: folder_icon(n, *s)), [f"places/{name}"])
 
 
 def brush_texture(path, w=640, h=320, seed=4):
@@ -100,15 +247,7 @@ def brush_texture(path, w=640, h=320, seed=4):
             length = rng.uniform(90, 260)
             width = rng.uniform(16, 40)
             angle = rng.normal(-0.12, 0.08)
-            pts = []
-            for i in range(17):
-                t = -1 + i / 8
-                half = width / 2 * max(0.0, 1 - abs(t) ** 2.4) ** (1 / 2.4)
-                pts.append((t * length / 2, half))
-            pts += [(px, -py) for px, py in reversed(pts)]
-            ca, sa = math.cos(angle), math.sin(angle)
-            poly = [(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in pts]
-            d.polygon(poly, fill=int(rng.uniform(10, 60)))
+            d.polygon(dab_points(x, y, length, width, math.degrees(angle), 0, 0.1), fill=int(rng.uniform(10, 60)))
             x += length * rng.uniform(0.5, 0.9)
         y += rng.uniform(14, 26)
     alpha = big.filter(ImageFilter.GaussianBlur(1.6)).resize((w, h), Image.LANCZOS)
@@ -117,18 +256,80 @@ def brush_texture(path, w=640, h=320, seed=4):
     img.save(path, optimize=True)
 
 
+# Monet Settings: a small piece of a painting behind each section's mark.
+SETTINGS = ROOT / "linux" / "share" / "monet" / "settings"
+SWATCHES = {
+    "light": ("dawn", (2160, 360, 2600, 800)),
+    "wifi": ("day", (500, 200, 940, 640)),
+    "bluetooth": ("night", (800, 260, 1240, 700)),
+    "display": ("day", (2900, 120, 3340, 560)),
+    "sound": ("dusk", (2600, 300, 3040, 740)),
+    "windows": ("night", (2900, 1050, 3340, 1490)),
+    "updates": ("dawn", (900, 1500, 1340, 1940)),
+    "about": ("dusk", (1090, 800, 1530, 1240)),
+}
+
+
+def rounded_png(img, radius, path):
+    w, h = img.size
+    mask = Image.new("L", (w * 4, h * 4), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w * 4 - 1, h * 4 - 1], radius=radius * 4, fill=255)
+    out = img.convert("RGBA")
+    out.putalpha(mask.resize((w, h), Image.LANCZOS))
+    out.save(path, optimize=True)
+
+
+def settings_art():
+    from PIL import ImageEnhance
+    SETTINGS.mkdir(parents=True, exist_ok=True)
+    paint = {n: Image.open(HOURS / f"{n}.jpg").convert("RGB") for n in ("dawn", "day", "dusk", "night")}
+    for name, (painting, box) in SWATCHES.items():
+        img = paint[painting].crop(box).resize((56, 56), Image.LANCZOS)
+        img = ImageEnhance.Color(img).enhance(1.25)
+        rounded_png(img, 16, SETTINGS / f"swatch-{name}.png")
+    # Previews for Light: the four hours side by side, mist, and smoke.
+    w, h = 480, 236
+    strip = Image.new("RGB", (w, h))
+    for i, (name, cx) in enumerate((("dawn", 0.62), ("day", 0.7), ("dusk", 0.35), ("night", 0.28))):
+        src = paint[name]
+        cw = src.height * (w / 4) / h
+        x0 = int(src.width * cx - cw / 2)
+        strip.paste(src.crop((x0, 0, int(x0 + cw), src.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
+    rounded_png(strip, 24, SETTINGS / "light-hours.png")
+    for name, painting, cx, glass in (("mist", "dawn", 0.62, (255, 255, 255, 140)), ("smoke", "night", 0.28, (30, 30, 40, 115))):
+        src = paint[painting]
+        # As wide a piece as the painting allows, at the preview's proportions.
+        cw = min(src.width, src.height * w / h)
+        ch = cw * h / w
+        x0 = max(0, min(src.width - cw, src.width * cx - cw / 2))
+        y0 = max(0, min(src.height - ch, src.height * 0.32 - ch / 2))
+        img = src.crop((int(x0), int(y0), int(x0 + cw), int(y0 + ch))).resize((w, h), Image.LANCZOS).convert("RGBA")
+        chip = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        ImageDraw.Draw(chip).rounded_rectangle([44, h - 80, w - 44, h - 30], radius=20, fill=glass)
+        img.alpha_composite(chip)
+        rounded_png(img.convert("RGB"), 24, SETTINGS / f"light-{name}.png")
+    banner = paint["dusk"].crop((0, 520, 3840, 1672)).resize((1200, 360), Image.LANCZOS)
+    banner.save(SETTINGS / "about.jpg", quality=86, optimize=True, progressive=True)
+
+
 def main():
-    for name, (top, bottom, glyph, files) in ICONS.items():
-        svg = icon_svg(name, top, bottom, glyph)
+    settings_art()
+    TEXTURES.mkdir(parents=True, exist_ok=True)
+    brush_texture(TEXTURES / "brush.png")
+    for old in THEME.glob("*/scalable/*.svg"):
+        old.unlink()
+    for name, (draw, files) in ICONS.items():
+        svg = draw()
         for f in files:
-            out = THEME / f"{f.split('/')[0]}" / "scalable" / f"{f.split('/')[1]}.svg"
+            context, ident = f.split("/")
+            out = THEME / context / "scalable" / f"{ident}.svg"
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(svg)
     (THEME / "index.theme").write_text("""[Icon Theme]
 Name=Monet
-Comment=Monet's own apps as painted pebbles, Breeze for everything else
+Comment=Painted marks for Monet's own apps, painted folders, Breeze for everything else
 Inherits=breeze,hicolor
-Example=system-file-manager
+Example=folder
 DisplayDepth=32
 Directories=apps/scalable,places/scalable
 
@@ -146,10 +347,7 @@ MaxSize=512
 Context=Places
 Type=Scalable
 """)
-    print("wrote", THEME.relative_to(ROOT))
-    TEXTURES.mkdir(parents=True, exist_ok=True)
-    brush_texture(TEXTURES / "brush.png")
-    print("wrote", (TEXTURES / "brush.png").relative_to(ROOT))
+    print("wrote", THEME.relative_to(ROOT), "and", (TEXTURES / "brush.png").relative_to(ROOT))
 
 
 if __name__ == "__main__":

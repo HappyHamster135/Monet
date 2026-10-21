@@ -24,7 +24,16 @@ WallpaperItem {
     property int current: 0
     property real progress: 0
 
+    // Monet Settings can keep one painting instead (The Hours switched off).
+    readonly property string fixed: root.configuration.Painting || "hours"
+    onFixedChanged: update()
+
     function update() {
+        const pinned = hours.findIndex(h => h.name === fixed)
+        if (pinned >= 0) {
+            show(pinned, pinned, 0)
+            return
+        }
         const now = new Date()
         const minute = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
         // The light whose start is the latest one before now.

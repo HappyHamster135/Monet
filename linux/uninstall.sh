@@ -30,13 +30,15 @@ done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
-rm -f "$PREFIX/share/applications/monet-windows.desktop"
+rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
 rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colorscheme "$PREFIX"/share/konsole/MonetDark.colorscheme
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
     "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
-    "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" \
-    "$PREFIX/share/icons/Monet" "$PREFIX/share/Kvantum/Monet" "$PREFIX/share/Kvantum/MonetDark" \
+    "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
+    "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/icons/Monet" \
+    "$PREFIX/share/Kvantum/Monet" "$PREFIX/share/Kvantum/MonetDark" \
+    "$PREFIX/share/Kvantum/MonetSolid" "$PREFIX/share/Kvantum/MonetDarkSolid" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."

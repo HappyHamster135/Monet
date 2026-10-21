@@ -67,17 +67,17 @@ no_inactiveness=false
 [GeneralColors]
 window.color=#242321
 inactive.window.color=#242321
-base.color=#0000002E
-inactive.base.color=#0000002E
-alt.base.color=#FFFFFF0A
-inactive.alt.base.color=#FFFFFF0A
+base.color=#1F1E1C
+inactive.base.color=#1F1E1C
+alt.base.color=#252422
+inactive.alt.base.color=#252422
 button.color=#33312E
 light.color=#45423E
 mid.light.color=#3B3935
 dark.color=#141312
 mid.color=#2C2A28
-highlight.color=#357F72
-inactive.highlight.color=#357F72
+highlight.color=#293F39
+inactive.highlight.color=#293F39
 tooltip.base.color=#F3F1EC
 text.color=#EFECE6
 inactive.text.color=#EFECE6
@@ -86,17 +86,17 @@ inactive.window.text.color=#EFECE6
 button.text.color=#EFECE6
 disabled.text.color=#6B665E
 tooltip.text.color=#1C1B19
-highlight.text.color=#FFFFFF
-inactive.highlight.text.color=#FFFFFF
+highlight.text.color=#CFF0E8
+inactive.highlight.text.color=#CFF0E8
 link.color=#4DB4A0
 link.visited.color=#8E7CC3
 progress.indicator.text.color=#EFECE6
 
 [Hacks]
 transparent_ktitle_label=true
-transparent_dolphin_view=true
+transparent_dolphin_view=false
 transparent_pcmanfm_sidepane=true
-transparent_pcmanfm_view=true
+transparent_pcmanfm_view=false
 blur_translucent=true
 transparent_menutitle=true
 respect_darkness=true
@@ -310,8 +310,8 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=4
 text.margin.right=4
-text.toggle.color=#FFFFFF
-text.press.color=#FFFFFF
+text.toggle.color=#CFF0E8
+text.press.color=#CFF0E8
 min_height=+0.5font
 
 [Splitter]

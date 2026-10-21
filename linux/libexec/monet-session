@@ -21,10 +21,15 @@ fi
 "$LIBEXECDIR/monet-light" apply 2>/dev/null
 
 # Monet's look, once per account (and again when the look changes).
-marker="${XDG_CONFIG_HOME:-$HOME/.config}/monet/look-0.5"
-[ -e "$marker" ] && exit 0
+looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
+[ -e "$looks/look-0.5" ] && [ -e "$looks/look-0.5.1" ] && exit 0
 
 # Plasma needs a moment after sign-in before it accepts changes.
 sleep 4
-"$LIBEXECDIR/monet-look"
-mkdir -p "$(dirname "$marker")" && touch "$marker"
+if [ -e "$looks/look-0.5" ]; then
+    # 0.5.1 (Monet Settings, painted folders, Files): freshen, keep the panels.
+    "$LIBEXECDIR/monet-look" --keep
+else
+    "$LIBEXECDIR/monet-look"
+fi
+mkdir -p "$looks" && touch "$looks/look-0.5" "$looks/look-0.5.1"

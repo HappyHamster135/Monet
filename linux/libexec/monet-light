@@ -37,13 +37,22 @@ now() {
     fi
 }
 
+# Glass can be turned off in Monet Settings (Light & Wallpaper).
+glass() {
+    grep -q '"glass": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
+}
+
 apply() {
-    local light scheme kvantum current
+    local light scheme kvantum style current
     light="$(now)"
     if [ "$light" = mist ]; then
         scheme=MonetLight kvantum=Monet
     else
         scheme=MonetDark kvantum=MonetDark
+    fi
+    style=monet
+    if [ "$(glass)" = off ]; then
+        kvantum="${kvantum}Solid" style=monet-solid
     fi
 
     # Only change what's Monet's: someone who picked their own colors keeps them.
@@ -56,10 +65,19 @@ apply() {
             ;;
     esac
 
+    current="$(kreadconfig6 --file plasmarc --group Theme --key name 2>/dev/null)"
+    case "$current" in
+        ""|monet|monet-solid)
+            if [ "$current" != "$style" ] && command -v plasma-apply-desktoptheme >/dev/null; then
+                plasma-apply-desktoptheme "$style" >/dev/null 2>&1
+            fi
+            ;;
+    esac
+
     local kvconfig="$CONFIG/Kvantum/kvantum.kvconfig"
     current="$(kreadconfig6 --file "$kvconfig" --group General --key theme 2>/dev/null)"
     case "$current" in
-        ""|Monet|MonetDark)
+        ""|Monet|MonetDark|MonetSolid|MonetDarkSolid)
             mkdir -p "$CONFIG/Kvantum"
             kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum"
             ;;
@@ -67,7 +85,7 @@ apply() {
 
     local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
     if [ -f "$profile" ]; then
-        kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "$kvantum"
+        kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "${kvantum%Solid}"
     fi
 }
 

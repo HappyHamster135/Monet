@@ -1,0 +1,26 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+GenericName=Monet Settings
+Comment=Light and wallpaper, Wi-Fi, Bluetooth, display, sound, Windows and updates
+Exec=@LIBEXECDIR@/monet-quick open
+Icon=monet-settings
+Categories=Settings;System;
+Keywords=settings;preferences;wifi;bluetooth;display;sound;wallpaper;dark;light;update;
+Actions=wifi;bluetooth;display;sound;
+
+[Desktop Action wifi]
+Name=Wi-Fi
+Exec=@LIBEXECDIR@/monet-quick open wifi
+
+[Desktop Action bluetooth]
+Name=Bluetooth
+Exec=@LIBEXECDIR@/monet-quick open bluetooth
+
+[Desktop Action display]
+Name=Display
+Exec=@LIBEXECDIR@/monet-quick open display
+
+[Desktop Action sound]
+Name=Sound
+Exec=@LIBEXECDIR@/monet-quick open sound

@@ -1,30 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Monet icon: monitor. A pebble glazed like the paintings, a white line drawing on top. -->
-  <defs>
-    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0" stop-color="#5C88D0"/>
-      <stop offset="1" stop-color="#294985"/>
-    </linearGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
-    </linearGradient>
-    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
-  </defs>
-  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
-  <g clip-path="url(#pebble)">
-    <path d="M19.3 19.8 Q64 13.2 121.3 13.8" stroke="#FFFFFF" stroke-opacity="0.109" stroke-width="11.1" stroke-linecap="round" fill="none"/>
-    <path d="M9.5 42.1 Q64 34.9 104.2 36.1" stroke="#FFFFFF" stroke-opacity="0.100" stroke-width="12.2" stroke-linecap="round" fill="none"/>
-    <path d="M12.6 62.8 Q64 52.8 104.8 56.8" stroke="#FFFFFF" stroke-opacity="0.045" stroke-width="12.8" stroke-linecap="round" fill="none"/>
-    <path d="M4.6 81.6 Q64 72.3 103.1 75.6" stroke="#FFFFFF" stroke-opacity="0.043" stroke-width="10.6" stroke-linecap="round" fill="none"/>
-    <path d="M14.6 100.2 Q64 91.8 118.6 94.2" stroke="#FFFFFF" stroke-opacity="0.057" stroke-width="7.7" stroke-linecap="round" fill="none"/>
-    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
-  </g>
-  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
-  <path d="M36 66 h14 l7 -16 l12 30 l8 -18 h15" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Monet icon: System Monitor. One brushstroke of a pulse. -->
+  <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8DB2EE"/><stop offset="1" stop-color="#2B4A86"/></linearGradient></defs>
+  <path d="M10.00,66.00 L13.86,63.84 L17.71,63.21 L21.57,62.80 L25.43,62.52 L29.29,62.30 L33.14,62.15 L37.00,62.04 L40.86,61.97 L44.71,61.92 L48.57,61.90 L52.43,61.91 L56.29,61.92 L60.14,61.96 L64.00,62.00 L67.86,62.05 L71.71,62.11 L75.57,62.18 L79.43,62.26 L83.29,62.36 L87.14,62.49 L91.00,62.63 L94.86,62.80 L98.71,62.99 L102.57,63.23 L106.43,63.52 L110.29,63.88 L114.14,64.40 L118.00,66.00 L118.00,66.00 L114.14,67.60 L110.29,68.12 L106.43,68.48 L102.57,68.77 L98.71,69.01 L94.86,69.20 L91.00,69.37 L87.14,69.51 L83.29,69.64 L79.43,69.74 L75.57,69.82 L71.71,69.89 L67.86,69.95 L64.00,70.00 L60.14,70.04 L56.29,70.08 L52.43,70.09 L48.57,70.10 L44.71,70.08 L40.86,70.03 L37.00,69.96 L33.14,69.85 L29.29,69.70 L25.43,69.48 L21.57,69.20 L17.71,68.79 L13.86,68.16 L10.00,66.00 Z" fill="#5C88D0" opacity="0.22"/>
+  <path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="#000000" stroke-opacity="0.16" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2)"/>
+  <path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="url(#g1)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 64.5 H36 M51 42 L60 80" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2.5" stroke-linecap="round"/>
 </svg>
