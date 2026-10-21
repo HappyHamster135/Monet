@@ -33,6 +33,8 @@ const INK: u32 = 0x00191B1C;
 const DIM: u32 = 0x00626B6B;
 
 static MAIN: AtomicIsize = AtomicIsize::new(0);
+// One paper brush for the window and its labels (a new one per repaint leaked).
+static PAPER_BRUSH: AtomicIsize = AtomicIsize::new(0);
 static CONTROLS: Mutex<Vec<isize>> = Mutex::new(Vec::new()); // title, text, sticks, bar, status, make, close
 static NEWS: Mutex<News> = Mutex::new(News { text: String::new(), fraction: 0.0, finished: None, busy: false });
 static STICKS: Mutex<Vec<(u32, String)>> = Mutex::new(Vec::new());
@@ -48,8 +50,11 @@ fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(Some(0)).collect()
 }
 
+/// A control by its place in CONTROLS, or none while they're still being made:
+/// Windows asks about a label's colors as soon as it gets its font, before the
+/// list is filled in (indexing the empty list there ended the program).
 fn control(i: usize) -> HWND {
-    CONTROLS.lock().unwrap()[i] as HWND
+    CONTROLS.lock().unwrap().get(i).copied().unwrap_or(0) as HWND
 }
 
 fn tell(text: String, fraction: f64) {
@@ -71,6 +76,11 @@ fn finish(result: Result<(), String>) {
 }
 
 pub fn run() {
+    // Say what went wrong instead of vanishing: there's no console to print to.
+    std::panic::set_hook(Box::new(|info| {
+        let text = wide(&format!("Make a Monet USB stick stopped unexpectedly.\n\n{info}"));
+        unsafe { MessageBoxW(null_mut(), text.as_ptr(), w!("Make a Monet USB stick"), MB_OK | MB_ICONERROR) };
+    }));
     unsafe {
         let icc = INITCOMMONCONTROLSEX {
             dwSize: size_of::<INITCOMMONCONTROLSEX>() as u32,
@@ -78,6 +88,8 @@ pub fn run() {
         };
         InitCommonControlsEx(&icc);
         let instance = GetModuleHandleW(null());
+        let paper = CreateSolidBrush(PAPER);
+        PAPER_BRUSH.store(paper as isize, Ordering::SeqCst);
         let class = w!("MonetUsb");
         let wc = WNDCLASSW {
             style: CS_HREDRAW | CS_VREDRAW,
@@ -87,7 +99,7 @@ pub fn run() {
             hInstance: instance,
             hIcon: LoadIconW(instance, 1 as PCWSTR),
             hCursor: LoadCursorW(null_mut(), IDC_ARROW),
-            hbrBackground: CreateSolidBrush(PAPER),
+            hbrBackground: paper,
             lpszMenuName: null(),
             lpszClassName: class,
         };
@@ -98,7 +110,8 @@ pub fn run() {
         let style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
         AdjustWindowRect(&mut frame, style, 0);
         let title = wide("Make a Monet USB stick");
-        let hwnd = CreateWindowExW(0, class, title.as_ptr(), style | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+        // Shown once its controls are all there, so it paints them right the first time.
+        let hwnd = CreateWindowExW(0, class, title.as_ptr(), style, CW_USEDEFAULT, CW_USEDEFAULT,
                                    frame.right - frame.left, frame.bottom - frame.top, null_mut(), null_mut(),
                                    instance, null());
         MAIN.store(hwnd as isize, Ordering::SeqCst);
@@ -129,6 +142,7 @@ pub fn run() {
         SendMessageW(controls[3] as HWND, PBM_SETRANGE32, 0, 1000);
         *CONTROLS.lock().unwrap() = controls;
         refresh_sticks();
+        ShowWindow(hwnd, SW_SHOW);
 
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
@@ -288,7 +302,7 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
             let hdc = wparam as HDC;
             SetBkMode(hdc, TRANSPARENT as i32);
             SetTextColor(hdc, if lparam as HWND == control(0) { INK } else { DIM });
-            CreateSolidBrush(PAPER) as LRESULT
+            PAPER_BRUSH.load(Ordering::SeqCst) as LRESULT
         }
         WM_CLOSE => {
             if NEWS.lock().unwrap().busy {
