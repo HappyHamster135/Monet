@@ -115,11 +115,11 @@ class BootMenu(unittest.TestCase):
     def test_highlight_stays_between_its_neighbours(self):
         # GRUB draws the highlight's border outside the line: above and below
         # it, it may take at most the gap between lines.
-        from PIL import Image
         theme = (self.GRUB / "theme.txt").read_text()
         spacing = int(re.search(r"item_spacing = (\d+)", theme).group(1))
         style = re.search(r'selected_item_pixmap_style = "([^"]+)"', theme).group(1)
-        pads = sum(Image.open(self.GRUB / style.replace("*", side)).height for side in ("n", "s"))
+        # A PNG's height: bytes 20-24 of its header.
+        pads = sum(int.from_bytes((self.GRUB / style.replace("*", side)).read_bytes()[20:24], "big") for side in ("n", "s"))
         self.assertGreaterEqual(spacing, pads)
 
     def test_text_layer_gets_a_small_font(self):
