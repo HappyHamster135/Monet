@@ -109,8 +109,10 @@ fn parse_device_path(mut data: &[u8]) -> (Option<String>, Option<String>) {
             (DP_TYPE_END, _) => break,
             (DP_TYPE_MEDIA, DP_SUBTYPE_FILE_PATH) => {
                 let units: Vec<u16> = body
-                    .chunks_exact(2)
-                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|c| u16::from_le_bytes(*c))
                     .take_while(|u| *u != 0)
                     .collect();
                 let part = String::from_utf16_lossy(&units);

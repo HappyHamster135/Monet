@@ -72,7 +72,7 @@ pub fn read_u16_list(data: &[u8]) -> Result<Vec<u16>> {
     if !data.len().is_multiple_of(2) {
         return Err(EfiError::Invalid("odd-length list of 16-bit values".into()));
     }
-    Ok(data.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect())
+    Ok(data.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect())
 }
 
 pub fn write_u16_list(values: &[u16]) -> Vec<u8> {

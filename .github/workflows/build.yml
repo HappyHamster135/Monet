@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rust
-        run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - name: Rust (version from rust-toolchain.toml)
+        run: rustup toolchain install
       - name: Tests
         run: cargo test --workspace
       - name: Lint
@@ -32,8 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rust
-        run: rustup toolchain install stable --profile minimal --target x86_64-unknown-linux-musl && rustup default stable
+      - name: Rust (version from rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
       - name: Build
         run: cargo build --release -p monet --target x86_64-unknown-linux-musl
       - name: Package
@@ -51,8 +51,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rust
-        run: rustup toolchain install stable --profile minimal --component clippy; rustup default stable
+      - name: Rust (version from rust-toolchain.toml)
+        run: rustup toolchain install
       - name: Build
         run: cargo build --release -p monet-bridge
       - name: Lint
