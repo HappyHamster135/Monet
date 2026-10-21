@@ -191,6 +191,33 @@ wording are fixed:
   down, with how much and how long; a download that stops moving for four
   minutes starts again, keeping what it has.
 
+## Monet Setup
+
+Monet's own installer (`setup/`), replacing Fedora's: a small live Fedora
+(`image/setup`) that starts straight into it, with no menu and Fedora's signed
+shim, GRUB and kernel, so it starts with Secure Boot on.
+
+- **The look** is the design board's: the dawn harbor filling the screen, the
+  steps on a sheet of frosted glass (the painting blurred in advance by
+  `tools/make-setup-art.py` and drawn once with a Canvas, so it needs no
+  graphics card: Qt Quick runs in software, in cage), Fraunces titles, Inter
+  for reading, ink for Continue and the sun for Erase & Install. Laid out on
+  a 1440 x 900 grid and scaled to the screen.
+- **The steps:** Hello (language and keyboard), Wi-Fi (skipped with a cable),
+  who's using this PC, Ready (Monet and Windows, or next to my Windows, and
+  the disk), installing, All set. Anything that can't go ahead says why on
+  the page, in a sentence.
+- **Installing** (`monet_setup/install.py`, its own process reporting JSON
+  lines): partitions (EFI, boot, Monet's btrfs with `root` and `download`
+  subvolumes, Windows' share left free), downloads Monet with skopeo into
+  `download` (kept across tries; restarted when it stalls), installs it
+  with `bootc install to-filesystem`, sets up the person, language, keyboard,
+  time zone, Wi-Fi and Windows' waiting state, imports Universal Blue's
+  driver key, and names the firmware entry "Monet".
+- **Tested in CI** (`tools/vm-test.py`): QEMU with Secure Boot on installs
+  Monet on a blank disk through the real screens and starts it; the
+  screenshots are kept in the registry (`tools/ci-screens.py`).
+
 ## Not Apple
 
 Monet takes Apple's simplicity, not its look: no menu bar, no dock, no traffic

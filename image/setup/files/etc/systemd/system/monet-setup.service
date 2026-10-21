@@ -1,0 +1,25 @@
+[Unit]
+Description=Monet Setup
+After=systemd-user-sessions.service plymouth-quit-wait.service NetworkManager.service
+Wants=NetworkManager.service
+Conflicts=getty@tty1.service
+
+[Service]
+ExecStart=/usr/libexec/monet-setup-session
+Restart=always
+RestartSec=2
+User=root
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+Environment=XDG_SESSION_TYPE=wayland
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+#!/bin/bash
+# Runs Monet Setup full screen in cage, a kiosk with nothing else on screen.
+# The keyboard is fixed when cage starts, so choosing another one in Setup
+# (it exits with 3 and leaves the layout in /run/monet-setup/keyboard) starts
+# cage again with it; Setup reopens where it was.
+mkdir -p /run/monet-setup
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/0}
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+export QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export MONET_IMAGE=${MONET_IMAGE:-$(cat /usr/share/monet-setup/IMAGE 2>/dev/null)}
+# No graphics driver with 3D (NVIDIA without nouveau, or nomodeset): draw in software.
+ls /dev/dri/renderD* >/dev/null 2>&1 || export WLR_RENDERER=pixman
+export WLR_NO_HARDWARE_CURSORS=1
+
+while true; do
+    read -r layout variant < /run/monet-setup/keyboard 2>/dev/null || { layout=us; variant=; }
+    XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant cage -s -- /usr/bin/monet-setup
+    code=$?
+    [ "$code" = 3 ] && continue
+    sleep 1
+done

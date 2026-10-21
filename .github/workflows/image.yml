@@ -147,6 +147,64 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: iso
+          name: release-iso
           path: Monet-*-Installer.iso
+          compression-level: 0
+
+  # Monet Setup: Monet's own installer, on a small live Fedora (image/setup).
+  # It's released only after it has installed Monet in a VM (setup-vm).
+  setup:
+    needs: image
+    if: github.event_name != 'schedule'
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Monet Setup's USB stick
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+          FEDORA: ${{ needs.image.outputs.fedora }}
+        run: |
+          VERSION=$(cat VERSION)
+          docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA" \
+            image/setup/build.sh "$VERSION" "$IMAGE:latest" "/work/Monet-$VERSION-Setup.iso"
+          sudo chown "$(id -u)" Monet-*-Setup.iso
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-candidate
+          path: Monet-*-Setup.iso
+          compression-level: 0
+
+  setup-vm:
+    needs: setup
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: setup-candidate
+      - name: A virtual machine with Secure Boot
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          sudo apt-get update -q && sudo apt-get install -y -q qemu-system-x86 ovmf qemu-utils python3-pil
+      - name: Install Monet with Monet Setup
+        run: python3 tools/vm-test.py Monet-*-Setup.iso screens --install
+      - name: Keep the screenshots
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/ci-screens.py push screens "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet:ci-screens" || :
+          tail -c 20000 vm-work/serial.log || :
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: setup-screens
+          path: screens
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-setup
+          path: Monet-*-Setup.iso
           compression-level: 0

@@ -1,0 +1,61 @@
+# The live system Monet Setup runs in: Fedora's kernel, firmware for Wi-Fi
+# and graphics, a kiosk (cage), Qt for Python, and the tools that install.
+
+# Starting up
+kernel
+kernel-modules
+kernel-modules-extra
+dracut
+dracut-live
+systemd
+systemd-udev
+plymouth
+plymouth-plugin-script
+plymouth-scripts
+shim-x64
+grub2-efi-x64
+glibc-langpack-en
+kbd
+selinux-policy-targeted
+policycoreutils
+
+# Hardware
+linux-firmware
+iwlwifi-mvm-firmware
+iwlwifi-dvm-firmware
+realtek-firmware
+atheros-firmware
+brcmfmac-firmware
+mt7xxx-firmware
+amd-gpu-firmware
+intel-gpu-firmware
+nvidia-gpu-firmware
+
+# Network
+NetworkManager
+NetworkManager-wifi
+wpa_supplicant
+
+# The screen
+cage
+xkeyboard-config
+mesa-dri-drivers
+mesa-libEGL
+mesa-libgbm
+python3-pyside6
+qt6-qtdeclarative
+qt6-qtwayland
+qt6-qtsvg
+
+# Installing
+bootc
+bootupd
+skopeo
+ostree
+btrfs-progs
+dosfstools
+e2fsprogs
+gdisk
+util-linux
+efibootmgr
+mokutil

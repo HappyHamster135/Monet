@@ -1,0 +1,21 @@
+// The dawn painting, filling the screen, and Monet's sun breathing over it.
+painting = Image("painting.png");
+scale = Math.Max(Window.GetWidth() / painting.GetWidth(), Window.GetHeight() / painting.GetHeight());
+filled = painting.Scale(painting.GetWidth() * scale, painting.GetHeight() * scale);
+back = Sprite(filled);
+back.SetX(Window.GetX() + (Window.GetWidth() - filled.GetWidth()) / 2);
+back.SetY(Window.GetY() + (Window.GetHeight() - filled.GetHeight()) / 2);
+back.SetZ(-10);
+
+mark = Image("mark.png");
+sun = Sprite(mark);
+sun.SetX(Window.GetX() + (Window.GetWidth() - mark.GetWidth()) / 2);
+sun.SetY(Window.GetY() + Window.GetHeight() * 0.78 - mark.GetHeight() / 2);
+sun.SetZ(10);
+
+t = 0;
+fun refresh() {
+    t++;
+    sun.SetOpacity(0.55 + 0.45 * Math.Abs(Math.Sin(t / 40)));
+}
+Plymouth.SetRefreshFunction(refresh);

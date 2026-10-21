@@ -26,9 +26,9 @@ jobs:
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Shell scripts
-        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light tools/package.sh; do bash -n "$f"; done
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light tools/package.sh image/setup/build.sh image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick tools/*.py
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick tools/*.py setup/monet-setup setup/monet_setup/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
@@ -56,7 +56,7 @@ jobs:
           tar -C dist -czf "dist/Monet-$VERSION-Linux.tar.gz" "monet-$VERSION-linux"
       - uses: actions/upload-artifact@v4
         with:
-          name: linux
+          name: release-linux
           path: dist/*.tar.gz
 
   windows:
@@ -81,7 +81,7 @@ jobs:
           pwsh -NoProfile -Command "Compress-Archive -Path 'dist/Monet for Windows' -DestinationPath 'dist/Monet-$VERSION-Windows.zip'"
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: release-windows
           path: dist/*.zip
 
   check:
@@ -118,9 +118,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Only what's meant for people: test screenshots and builds that
+      # didn't pass their tests have other names.
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: release-*
           merge-multiple: true
       - name: Publish release
         env:

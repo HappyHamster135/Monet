@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parent.parent
 # No __pycache__ beside the helpers we load: the Linux package copies libexec/.
 sys.dont_write_bytecode = True
 SHARE = ROOT / "linux" / "share"
+
+
+def qml_files():
+    """Every QML file: Plasma's pieces and Monet Setup's screens."""
+    return list(PLASMA.rglob("*.qml")) + list((ROOT / "setup/qml").rglob("*.qml"))
 PLASMA = SHARE / "plasma"
 
 
@@ -73,7 +78,7 @@ class PlasmaPackages(unittest.TestCase):
 
     def test_inline_components_do_not_reach_outside(self):
         # QML inline components can't see the ids of the file around them.
-        for qml in PLASMA.rglob("*.qml"):
+        for qml in qml_files():
             text = qml.read_text()
             components = []
             for match in re.finditer(r"\n([ \t]*)component (\w+): ", text):
@@ -91,7 +96,7 @@ class PlasmaPackages(unittest.TestCase):
 
     def test_ids_do_not_hide_properties(self):
         # An id wins over a property of the same name, silently.
-        for qml in PLASMA.rglob("*.qml"):
+        for qml in qml_files():
             text = qml.read_text()
             ids = set(re.findall(r"\bid: (\w+)", text))
             props = set(re.findall(r"property [\w<>]+ (\w+)", text))
@@ -99,13 +104,13 @@ class PlasmaPackages(unittest.TestCase):
 
     def test_pixel_sizes_are_whole(self):
         # font.pixelSize is an int: 12.5 stops the whole file from loading.
-        for qml in PLASMA.rglob("*.qml"):
+        for qml in qml_files():
             for line in re.findall(r"pixelSize: ([^\n]*)", qml.read_text()):
                 if "Math." not in line:
                     self.assertNotRegex(line, r"\b\d+\.\d", f"{qml.name}: pixelSize: {line}")
 
     def test_qml_avoids_reserved_names(self):
-        for qml in PLASMA.rglob("*.qml"):
+        for qml in qml_files():
             text = qml.read_text()
             self.assertNotRegex(text, r"property \w+ (state|on)\b", qml.name)
 
