@@ -72,6 +72,41 @@ open("/tmp/monet-storage.ks", "w").write(plan)
 
 %include /tmp/monet-storage.ks
 
+%pre-install --interpreter=/usr/bin/python3 --erroronfail --log=/tmp/monet-check.log
+# Before Monet is downloaded: check that it can be, and say why if not,
+# instead of the installer's "unknown error".
+import json, sys, urllib.error, urllib.request
+
+image = "@IMAGE@"
+registry, rest = image.split("/", 1)
+repo, tag = rest.rsplit(":", 1)
+accept = ", ".join([
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.oci.image.manifest.v1+json",
+    "application/vnd.docker.distribution.manifest.v2+json",
+])
+try:
+    try:
+        with urllib.request.urlopen(f"https://{registry}/token?scope=repository:{repo}:pull", timeout=30) as r:
+            token = json.load(r)["token"]
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise PermissionError("access denied") from None
+        raise
+    request = urllib.request.Request(f"https://{registry}/v2/{repo}/manifests/{tag}", method="HEAD",
+                                     headers={"Authorization": f"Bearer {token}", "Accept": accept})
+    urllib.request.urlopen(request, timeout=30).close()
+    print(f"MONET: {image} can be downloaded")
+except (PermissionError, urllib.error.HTTPError) as e:
+    print(f"MONET: {image} can't be downloaded ({e}).")
+    print("MONET: The Monet package on GitHub isn't public. Make it public in its Package settings, then try again.")
+    sys.exit(1)
+except (urllib.error.URLError, OSError) as e:
+    print(f"MONET: No internet connection ({e}).")
+    print("MONET: Connect to Wi-Fi in Network & Host Name, then try again.")
+    sys.exit(1)
+%end
+
 ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification
 
 %post --erroronfail

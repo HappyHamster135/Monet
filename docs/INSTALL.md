@@ -17,7 +17,7 @@ You need:
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.3.0-Installer.iso** from the
+1. Download **Monet-0.3.1-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -70,6 +70,14 @@ Sign in to Monet. Done.
 
 Open **Konsole** and run `monet doctor`. It says what's wrong and what to do.
 
+**"The Monet package on GitHub isn't public".** The installer can't download
+Monet. Make the package public (GitHub → your profile → **Packages** →
+**monet** → **Package settings** → **Change visibility** → **Public**), then
+start the installer again.
+
+**"Test this media" fails.** Use the first menu entry instead; the test is
+optional.
+
 **Windows didn't install.** Choose **Windows** in the app menu. Monet
 offers to try again.
 
@@ -110,5 +118,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.3.0-Linux.tar.gz** and run `./monet-0.3.0-linux/install.sh`,
+Download **Monet-0.3.1-Linux.tar.gz** and run `./monet-0.3.1-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

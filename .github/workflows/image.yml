@@ -82,6 +82,9 @@ jobs:
             python3 tools/patch-grub.py efi.cfg bios.cfg
             xorriso -indev stage.iso -outdev Monet-$VERSION-Installer.iso -boot_image any replay \
               -update efi.cfg /EFI/BOOT/grub.cfg -update efi.cfg /EFI/BOOT/BOOT.conf -update bios.cfg /boot/grub2/grub.cfg
+            # Rewriting the ISO drops its checksum; add it back for \"Test this media\".
+            implantisomd5 --force Monet-$VERSION-Installer.iso
+            checkisomd5 Monet-$VERSION-Installer.iso
             rm stage.iso
           "
           sudo chown "$(id -u)" "Monet-$VERSION-Installer.iso"

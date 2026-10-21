@@ -112,6 +112,11 @@ class DiskPlan(unittest.TestCase):
         self.assertGreater(total - size, 100 * 1024, "room left for Windows")
         self.assertGreater(size, 64 * 1024)
 
+    def test_download_check_compiles(self):
+        ks = (ROOT / "image/monet.ks").read_text()
+        code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
+        compile(code.replace("@IMAGE@", "ghcr.io/example/monet:latest"), "pre-install", "exec")
+
     def test_keep_asks(self):
         self.assertEqual(self.plan("inst.stage2=hd:LABEL=X monet.keep"), "")
 
