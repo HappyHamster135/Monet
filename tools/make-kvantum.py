@@ -254,8 +254,11 @@ def theme_svg(p: Palette):
 
     # Menus, the menu bar and tooltips.
     s.frame("menu-normal", 10, fill=p.menu, border=p.line)
-    s.frame("menuitem-normal", 6, fill=None)
-    s.frame("menuitem-focused", 6, fill=LILY + "E6")
+    s.frame("menuitem-normal", 5, fill=None)
+    # Kvantum draws the highlighted menu item as "pressed".
+    s.frame("menuitem-focused", 5, fill=LILY + "E6")
+    s.frame("menuitem-pressed", 5, fill=LILY + "E6")
+    s.frame("menuitem-toggled", 5, fill=LILY + "E6")
     s.frame("menubaritem-normal", 6, fill=None)
     s.frame("menubaritem-focused", 6, fill=p.hover)
     s.frame("menubaritem-pressed", 6, fill=p.button)
@@ -712,14 +715,16 @@ frame.element=menuitem
 interior.element=menuitem
 indicator.element=arrow
 text.focus.color=#FFFFFF
-text.margin.top=3
-text.margin.bottom=3
-text.margin.left=6
-text.margin.right=6
-frame.top=6
-frame.bottom=6
-frame.left=6
-frame.right=6
+text.press.color=#FFFFFF
+text.toggle.color=#FFFFFF
+text.margin.top=0
+text.margin.bottom=0
+text.margin.left=5
+text.margin.right=5
+frame.top=5
+frame.bottom=5
+frame.left=5
+frame.right=5
 
 [MenuBarItem]
 inherits=PanelButtonCommand
