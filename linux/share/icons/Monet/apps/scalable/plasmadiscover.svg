@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Monet icon: store. A pebble glazed like the paintings, a white line drawing on top. -->
+  <defs>
+    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#A897E0"/>
+      <stop offset="1" stop-color="#5A4A9C"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
+  <g clip-path="url(#pebble)">
+    <path d="M14.2 27.2 Q64 19.8 98.0 21.2" stroke="#FFFFFF" stroke-opacity="0.080" stroke-width="12.6" stroke-linecap="round" fill="none"/>
+    <path d="M6.0 43.1 Q64 34.8 109.2 37.1" stroke="#FFFFFF" stroke-opacity="0.120" stroke-width="12.7" stroke-linecap="round" fill="none"/>
+    <path d="M25.0 66.6 Q64 58.7 103.1 60.6" stroke="#FFFFFF" stroke-opacity="0.037" stroke-width="9.7" stroke-linecap="round" fill="none"/>
+    <path d="M10.7 78.0 Q64 72.3 115.2 72.0" stroke="#FFFFFF" stroke-opacity="0.068" stroke-width="12.8" stroke-linecap="round" fill="none"/>
+    <path d="M29.6 96.6 Q64 88.5 109.9 90.6" stroke="#FFFFFF" stroke-opacity="0.057" stroke-width="12.9" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
+  </g>
+  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <path d="M42 54 h44 l-4 34 a5 5 0 0 1 -5 4 h-26 a5 5 0 0 1 -5 -4 Z M52 56 v-6 a12 12 0 0 1 24 0 v6" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

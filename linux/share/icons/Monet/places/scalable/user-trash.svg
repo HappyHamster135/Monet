@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Monet icon: trash. A pebble glazed like the paintings, a white line drawing on top. -->
+  <defs>
+    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#B9B3A9"/>
+      <stop offset="1" stop-color="#6C665D"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
+  <g clip-path="url(#pebble)">
+    <path d="M17.3 26.6 Q64 22.6 106.3 20.6" stroke="#FFFFFF" stroke-opacity="0.100" stroke-width="10.6" stroke-linecap="round" fill="none"/>
+    <path d="M15.6 40.8 Q64 32.5 123.5 34.8" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="13.2" stroke-linecap="round" fill="none"/>
+    <path d="M7.9 57.4 Q64 49.5 115.7 51.4" stroke="#FFFFFF" stroke-opacity="0.066" stroke-width="12.6" stroke-linecap="round" fill="none"/>
+    <path d="M19.1 85.9 Q64 81.1 96.1 79.9" stroke="#FFFFFF" stroke-opacity="0.033" stroke-width="7.5" stroke-linecap="round" fill="none"/>
+    <path d="M10.8 96.2 Q64 86.9 111.2 90.2" stroke="#FFFFFF" stroke-opacity="0.061" stroke-width="12.3" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
+  </g>
+  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <path d="M44 50 h40 M58 50 v-6 h12 v6 M48 50 l3 36 a5 5 0 0 0 5 4 h16 a5 5 0 0 0 5 -4 l3 -36" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,6 +1,7 @@
 {
     "KPlugin": {
         "Authors": [{ "Name": "Monet" }],
+        "Description": "Impression: a harbor at dawn, and at night in dark mode",
         "Id": "Monet",
         "License": "GPL-3.0-or-later",
         "Name": "Monet"

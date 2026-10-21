@@ -1,0 +1,21 @@
+[Icon Theme]
+Name=Monet
+Comment=Monet's own apps as painted pebbles, Breeze for everything else
+Inherits=breeze,hicolor
+Example=system-file-manager
+DisplayDepth=32
+Directories=apps/scalable,places/scalable
+
+[apps/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Applications
+Type=Scalable
+
+[places/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Places
+Type=Scalable

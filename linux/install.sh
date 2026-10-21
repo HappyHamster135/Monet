@@ -24,8 +24,10 @@ DATADIR="$PREFIX/share"
 LIBEXECDIR="$PREFIX/libexec"
 if [ "$IMAGE" = 1 ]; then
     UNITDIR=/usr/lib/systemd/system
+    USERUNITDIR=/usr/lib/systemd/user
 else
     UNITDIR=/etc/systemd/system
+    USERUNITDIR=/etc/systemd/user
 fi
 
 # Run the system part as root, then finish in the user's own session.
@@ -40,7 +42,7 @@ if [ "$(id -u)" -ne 0 ]; then
     disown || true
     cat <<EOF
 
-Monet is installed.
+Monet is installed. In a moment your desktop changes to Monet's look.
 
 Next, open the app menu and choose "Windows". The first time Windows
 starts, click Yes to finish setting up. Your PC then comes back to Monet,
@@ -61,32 +63,65 @@ put() { # put <mode> <source> <destination>, filling in paths
     mv -f "$3.tmp" "$3"
 }
 
+# Copies a folder of Monet's into place, replacing what was there.
+tree() { # tree <source folder> <destination folder>
+    rm -rf "$2"
+    install -d "$(dirname "$2")"
+    cp -r "$1" "$2"
+    chmod -R u=rwX,go=rX "$2"
+}
+
+# Fills in paths in files that were copied as they are.
+fill() {
+    for f in "$@"; do
+        sed -i -e "s|@BINDIR@|$BINDIR|g" -e "s|@DATADIR@|$DATADIR|g" -e "s|@LIBEXECDIR@|$LIBEXECDIR|g" "$f"
+    done
+}
+
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-put 755 "$SRC/libexec/monet-session" "$LIBEXECDIR/monet-session"
+for tool in monet-session monet-look monet-light monet-quick; do
+    put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
+done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
+install -D -m 644 "$SRC/icons/monet-quick-symbolic.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-quick-symbolic.svg"
+tree "$SRC/share/icons/Monet" "$DATADIR/icons/Monet"
 put 644 "$SRC/share/applications/monet-windows.desktop" "$DATADIR/applications/monet-windows.desktop"
 
-applet="$DATADIR/plasma/plasmoids/org.monet.games"
-rm -rf "$applet"
-put 644 "$SRC/share/plasma/plasmoids/org.monet.games/metadata.json" "$applet/metadata.json"
-put 644 "$SRC/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml" "$applet/contents/ui/main.qml"
-
-rm -rf "$DATADIR/wallpapers/Monet"
-install -d "$DATADIR/wallpapers"
-cp -r "$SRC/share/wallpapers/Monet" "$DATADIR/wallpapers/Monet"
-chmod -R u=rwX,go=rX "$DATADIR/wallpapers/Monet"
+# The look: paintings, the Plasma style and global theme, Monet's widgets,
+# colors, the glass app style, the terminal's colors and the fonts.
+tree "$SRC/share/wallpapers/Monet" "$DATADIR/wallpapers/Monet"
+tree "$SRC/share/plasma/wallpapers/org.monet.hours" "$DATADIR/plasma/wallpapers/org.monet.hours"
+tree "$SRC/share/plasma/desktoptheme/monet" "$DATADIR/plasma/desktoptheme/monet"
+tree "$SRC/share/plasma/look-and-feel/org.monet.desktop" "$DATADIR/plasma/look-and-feel/org.monet.desktop"
+for applet in org.monet.games org.monet.quick org.monet.placard; do
+    tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
+done
+fill "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/main.qml" \
+    "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/main.qml
+install -d "$DATADIR/color-schemes" "$DATADIR/konsole"
+install -m 644 "$SRC"/share/color-schemes/*.colors "$DATADIR/color-schemes/"
+install -m 644 "$SRC"/share/konsole/* "$DATADIR/konsole/"
+tree "$SRC/share/Kvantum/Monet" "$DATADIR/Kvantum/Monet"
+tree "$SRC/share/Kvantum/MonetDark" "$DATADIR/Kvantum/MonetDark"
+tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
+command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
+put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.service"
+put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
-rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe"
+rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures"
 install -d "$DATADIR/monet"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
+cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
+# Windows games Monet always lists, even before Windows has found them.
+install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
 if [ -d "$SRC/windows" ]; then
     cp -r "$SRC/windows" "$DATADIR/monet/windows"
 fi
@@ -103,12 +138,20 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service
+    systemctl --global enable monet-light.timer
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Monet"/' /usr/lib/os-release
+    # The sign-in screen: the harbor at night.
+    for theme in /usr/share/sddm/themes/breeze /usr/share/sddm/themes/01-breeze-fedora; do
+        [ -d "$theme" ] || continue
+        printf '[General]\nbackground=%s\ntype=image\n' \
+            "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" > "$theme/theme.conf.user"
+    done
 else
-    command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR/monet-session" "$DATADIR/monet" \
+    command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
         "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
     systemctl daemon-reload
     for unit in monet-sync.service monet-windows-setup.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
+    systemctl --global enable monet-light.timer >/dev/null 2>&1 || true
 fi

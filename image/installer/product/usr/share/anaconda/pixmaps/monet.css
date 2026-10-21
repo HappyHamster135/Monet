@@ -1,11 +1,14 @@
-/* Monet's installer look: sunrise sidebar, deep-water top bar, Monet blue. */
+/* Monet's installer look: the dawn painting down the side, the harbor's
+   blue-grey mist across the top, and the sun for the button that goes ahead. */
 
-@define-color monet-blue #3D6FB6;
-@define-color monet-water #2E4A7E;
+@define-color monet-sun #F2552C;
+@define-color monet-sun-hover #FF6A42;
+@define-color monet-mist #4A5873;
+@define-color monet-lily #357F72;
 
 .logo-sidebar {
     background-image: url("/usr/share/anaconda/pixmaps/sidebar-bg.png");
-    background-color: @monet-water;
+    background-color: @monet-mist;
     background-size: cover;
     background-position: 50% 50%;
     background-repeat: no-repeat;
@@ -21,15 +24,28 @@
 AnacondaSpokeWindow #nav-box,
 AnacondaHubWindow #nav-box {
     background-image: url("/usr/share/anaconda/pixmaps/topbar-bg.png");
-    background-color: @monet-water;
+    background-color: @monet-mist;
     background-repeat: repeat-x;
     color: white;
 }
 
-button.suggested-action,
+button.suggested-action {
+    background-image: none;
+    background-color: @monet-sun;
+    border-color: @monet-sun;
+    border-radius: 18px;
+    color: white;
+}
+
 button.suggested-action:hover {
     background-image: none;
-    background-color: @monet-blue;
-    border-color: @monet-water;
+    background-color: @monet-sun-hover;
+    border-color: @monet-sun-hover;
     color: white;
+}
+
+checkbutton check:checked,
+radiobutton radio:checked {
+    background-color: @monet-lily;
+    border-color: @monet-lily;
 }

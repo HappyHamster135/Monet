@@ -144,6 +144,27 @@ class PrepareWindows(unittest.TestCase):
         self.assertNotRegex(out.split("-->", 1)[1], r"@[A-Z]+@")
         self.assertIn("PreventDeviceEncryption", out)
 
+    def test_wifi_profiles_for_windows(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "home.nmconnection").write_text(
+                "[connection]\nid=Home\ntype=wifi\n[wifi]\nssid=Home & Co\n[wifi-security]\nkey-mgmt=wpa-psk\npsk=p<ss\n")
+            Path(d, "work.nmconnection").write_text(
+                "[connection]\nid=Work\ntype=wifi\n[wifi]\nssid=Work\n[wifi-security]\nkey-mgmt=wpa-eap\n")
+            Path(d, "cafe.nmconnection").write_text("[connection]\nid=Cafe\ntype=wifi\n[wifi]\nssid=Cafe\n")
+            original = prepare.WIFI_DIRS
+            prepare.WIFI_DIRS = (Path(d),)
+            try:
+                profiles = prepare.wifi_profiles()
+            finally:
+                prepare.WIFI_DIRS = original
+        self.assertEqual(len(profiles), 2, "enterprise Wi-Fi is skipped")
+        for xml_text in profiles:
+            xml.dom.minidom.parseString(xml_text.encode())
+        home = next(p for p in profiles if "Home" in p)
+        self.assertIn("<keyMaterial>p&lt;ss</keyMaterial>", home)
+        self.assertIn("<name>Home &amp; Co</name>", home)
+        self.assertIn("<authentication>open</authentication>", next(p for p in profiles if "Cafe" in p))
+
     def test_free_space_parsing(self):
         sample = "  Start        End    Sectors   Size\n 2048     4095     2048     1M\n800000 1953525134 1952725135 931.1G\n"
         original = prepare.run

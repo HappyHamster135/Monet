@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "System Information",
+        "Description": "Wi-Fi, Bluetooth, sound, brightness and Monet's light in one place",
+        "Icon": "monet-quick",
+        "Id": "org.monet.quick",
+        "License": "GPL-3.0-or-later",
+        "Name": "Quick Settings",
+        "Version": "0.5.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

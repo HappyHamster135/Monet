@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# Quick settings for Monet's clock island. The widget only draws; this does.
+#
+#   monet-quick status                 everything at once, as JSON
+#   monet-quick wifi on|off
+#   monet-quick bluetooth on|off
+#   monet-quick night on|off           Night Light
+#   monet-quick quiet on|off           Do not disturb
+#   monet-quick volume 0-100
+#   monet-quick brightness 0-100
+#   monet-quick light hours|mist|smoke
+set -u
+
+LIBEXECDIR="@LIBEXECDIR@"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+has() { command -v "$1" >/dev/null 2>&1; }
+
+json_bool() { if [ "$1" = 1 ]; then printf true; else printf false; fi; }
+
+wifi_state() {
+    has nmcli || { printf null; return; }
+    case "$(nmcli radio wifi 2>/dev/null)" in
+        enabled) printf true ;;
+        disabled) printf false ;;
+        *) printf null ;;
+    esac
+}
+
+wifi_name() {
+    has nmcli || return
+    nmcli -t -f NAME,TYPE connection show --active 2>/dev/null |
+        awk -F: '$2 == "802-11-wireless" { print $1; exit }'
+}
+
+bluetooth_state() {
+    has bluetoothctl || { printf null; return; }
+    local out
+    out="$(timeout 3 bluetoothctl show 2>/dev/null)" || { printf null; return; }
+    case "$out" in
+        *"Powered: yes"*) printf true ;;
+        *"Powered: no"*) printf false ;;
+        *) printf null ;;
+    esac
+}
+
+night_state() {
+    [ "$(kreadconfig6 --file kwinrc --group NightColor --key Active --default false 2>/dev/null)" = true ] &&
+        printf true || printf false
+}
+
+quiet_state() {
+    local until
+    until="$(kreadconfig6 --file plasmanotifyrc --group DoNotDisturb --key Until 2>/dev/null)"
+    [ -n "$until" ] && printf true || printf false
+}
+
+volume_state() {
+    has wpctl || { printf null; return; }
+    wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null |
+        awk '/Volume:/ { printf "%d", $2 * 100 + 0.5; found = 1 } END { if (!found) printf "null" }'
+}
+
+# Screen brightness through Plasma: the newer per-display service first.
+brightness_state() {
+    local now max
+    now="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
+        org.kde.ScreenBrightness.Display Brightness 2>/dev/null | awk '{ print $2 }')"
+    max="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
+        org.kde.ScreenBrightness.Display MaxBrightness 2>/dev/null | awk '{ print $2 }')"
+    if [ -z "$now" ] || [ -z "$max" ]; then
+        local path=/org/kde/Solid/PowerManagement/Actions/BrightnessControl
+        local iface=org.kde.Solid.PowerManagement.Actions.BrightnessControl
+        now="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightness 2>/dev/null | awk '{ print $2 }')"
+        max="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightnessMax 2>/dev/null | awk '{ print $2 }')"
+    fi
+    if [ -n "$now" ] && [ -n "$max" ] && [ "$max" -gt 0 ] 2>/dev/null; then
+        printf %d $(( (now * 100 + max / 2) / max ))
+    else
+        printf null
+    fi
+}
+
+set_brightness() {
+    local percent="$1" max
+    max="$(busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
+        org.kde.ScreenBrightness.Display MaxBrightness 2>/dev/null | awk '{ print $2 }')"
+    if [ -n "$max" ]; then
+        busctl --user call org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 \
+            org.kde.ScreenBrightness.Display SetBrightness iu $(( max * percent / 100 )) 0 >/dev/null 2>&1 && return
+    fi
+    local path=/org/kde/Solid/PowerManagement/Actions/BrightnessControl
+    local iface=org.kde.Solid.PowerManagement.Actions.BrightnessControl
+    max="$(busctl --user call org.kde.Solid.PowerManagement $path $iface brightnessMax 2>/dev/null | awk '{ print $2 }')"
+    [ -n "$max" ] && busctl --user call org.kde.Solid.PowerManagement $path $iface setBrightness i $(( max * percent / 100 )) >/dev/null 2>&1
+}
+
+battery_state() {
+    local bat
+    for bat in /sys/class/power_supply/BAT*; do
+        [ -r "$bat/capacity" ] || continue
+        printf '%s,"charging":%s' "$(cat "$bat/capacity")" "$([ "$(cat "$bat/status" 2>/dev/null)" = Charging ] && printf true || printf false)"
+        return
+    done
+    printf 'null,"charging":false'
+}
+
+light_state() {
+    local mode
+    mode="$(cat "$CONFIG/monet/light" 2>/dev/null)"
+    case "$mode" in mist|smoke) printf %s "$mode" ;; *) printf hours ;; esac
+}
+
+escape() { sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+
+reconfigure_kwin() {
+    busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
+}
+
+case "${1:-status}" in
+    status)
+        printf '{"wifi":%s,"network":"%s","bluetooth":%s,"night":%s,"quiet":%s,"volume":%s,"brightness":%s,"battery":%s,"light":"%s"}\n' \
+            "$(wifi_state)" "$(wifi_name | escape)" "$(bluetooth_state)" "$(night_state)" "$(quiet_state)" \
+            "$(volume_state)" "$(brightness_state)" "$(battery_state)" "$(light_state)"
+        ;;
+    wifi)
+        nmcli radio wifi "${2:?on or off}"
+        ;;
+    bluetooth)
+        timeout 5 bluetoothctl power "${2:?on or off}" >/dev/null
+        ;;
+    night)
+        kwriteconfig6 --file kwinrc --group NightColor --key Active "$([ "${2:-}" = on ] && echo true || echo false)"
+        reconfigure_kwin
+        ;;
+    quiet)
+        if [ "${2:-}" = on ]; then
+            kwriteconfig6 --notify --file plasmanotifyrc --group DoNotDisturb --key Until "2099,12,31,23,59,0"
+        else
+            kwriteconfig6 --notify --file plasmanotifyrc --group DoNotDisturb --key Until --delete
+        fi
+        ;;
+    volume)
+        level="${2:?0-100}"
+        [ "$level" -gt 100 ] && level=100
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 2>/dev/null
+        wpctl set-volume @DEFAULT_AUDIO_SINK@ "$level%"
+        ;;
+    brightness)
+        level="${2:?0-100}"
+        [ "$level" -lt 1 ] && level=1
+        set_brightness "$level"
+        ;;
+    light)
+        exec "$LIBEXECDIR/monet-light" set "${2:?hours, mist or smoke}"
+        ;;
+    *)
+        sed -n '2,12p' "$0"
+        exit 1
+        ;;
+esac

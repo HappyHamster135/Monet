@@ -1,184 +1,175 @@
-"""Renders Monet's raster branding: wallpapers, the Windows icon file, and PNG logos.
+"""Draws Monet's marks and the installer artwork.
 
-Run from the repository root:  python3 tools/make-branding.py
+The mark is the sun over water from "Impression, soleil levant": a disc and
+three brushstrokes of its reflection. "Play on Windows" is the same mark with
+the sun turned into a play button.
+
+Run from the repository root, after tools/make-paintings.py:
+    python3 tools/make-branding.py
 Needs Pillow and NumPy.
 """
 
+import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "branding"
-WALL = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents"
-W, H = 3840, 2160
-HORIZON = 0.58
+HOURS = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents" / "hours"
+FONTS = ROOT / "linux" / "share" / "fonts" / "monet"
+INSTALLER = ROOT / "image" / "installer" / "product" / "usr" / "share" / "anaconda" / "pixmaps"
+
+SUN = "#F2552C"
+# Reflection strokes: center x, center y, length, thickness, opacity (128-unit grid).
+DABS = [(64, 85, 76, 10, 0.9), (61, 99, 54, 8, 0.66), (66, 111, 30, 6.5, 0.42)]
 
 
-def hex_rgb(h):
+def stroke(cx, cy, length, width, steps=24):
+    """A brushstroke: rounded ends, a little heavier where the brush landed."""
+    top, bottom = [], []
+    for i in range(steps + 1):
+        t = -1 + 2 * i / steps
+        half = width / 2 * max(0.0, 1 - abs(t) ** 2.4) ** (1 / 2.4) * (1 - 0.18 * t)
+        x = cx + t * length / 2
+        bend = (1 - t * t) * 1.2
+        top.append((x, cy - half + bend))
+        bottom.append((x, cy + half + bend))
+    return top + bottom[::-1]
+
+
+def sun_outline(cx=64, cy=44, r=27, steps=96):
+    """The disc, its edge a touch uneven like a painted one."""
+    pts = []
+    for i in range(steps):
+        a = 2 * math.pi * i / steps
+        rr = r * (1 + 0.006 * math.sin(3 * a + 0.4) + 0.004 * math.sin(7 * a + 1.3))
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    return pts
+
+
+def play_outline(corner=10.0, steps=12):
+    """A play triangle with rounded corners, sitting where the sun would."""
+    tri = [(45.0, 16.0), (45.0, 72.0), (92.0, 44.0)]
+    pts = []
+    n = len(tri)
+    for i in range(n):
+        px, py = tri[i - 1]
+        vx, vy = tri[i]
+        nx, ny = tri[(i + 1) % n]
+        # Cut the corner: a curve from a point on the incoming edge to one on
+        # the outgoing edge, pulled toward the corner itself.
+        dp = math.hypot(px - vx, py - vy)
+        dn = math.hypot(nx - vx, ny - vy)
+        ax, ay = vx + (px - vx) / dp * corner, vy + (py - vy) / dp * corner
+        bx, by = vx + (nx - vx) / dn * corner, vy + (ny - vy) / dn * corner
+        for k in range(steps + 1):
+            u = k / steps
+            pts.append(((1 - u) ** 2 * ax + 2 * (1 - u) * u * vx + u * u * bx,
+                        (1 - u) ** 2 * ay + 2 * (1 - u) * u * vy + u * u * by))
+    return pts
+
+
+def path(points):
+    return "M" + " L".join(f"{x:.2f},{y:.2f}" for x, y in points) + " Z"
+
+
+def svg(head, comment):
+    dabs = "\n".join(
+        f'  <path d="{path(stroke(x, y, l, w))}" fill="{SUN}" opacity="{o}"/>' for x, y, l, w, o in DABS
+    )
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- {comment} -->
+  <defs>
+    <radialGradient id="light" cx="0.4" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#FF8456"/>
+      <stop offset="0.55" stop-color="{SUN}"/>
+      <stop offset="1" stop-color="#D93E1B"/>
+    </radialGradient>
+  </defs>
+  <path d="{path(head)}" fill="url(#light)"/>
+{dabs}
+</svg>
+"""
+
+
+def rgb(h):
     h = h.lstrip("#")
-    return np.array([int(h[i : i + 2], 16) for i in (0, 2, 4)], dtype=np.float32)
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
-def vertical(stops, height):
-    """Linear gradient through (position, color) stops, one row per pixel."""
-    pos = np.array([p for p, _ in stops])
-    cols = np.stack([hex_rgb(c) for _, c in stops])
-    t = np.linspace(0, 1, height)
-    return np.stack([np.interp(t, pos, cols[:, i]) for i in range(3)], axis=1)
+def raster(head, size):
+    """The mark as a transparent PNG, drawn large and scaled down for smooth edges."""
+    big = size * 4
+    k = big / 128
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
 
+    # The sun's light: a radial gradient clipped to the disc.
+    yy, xx = np.mgrid[0:big, 0:big].astype(np.float32) / k
+    d = np.clip(np.hypot(xx - 0.4 * 128 * 0.5 - 38, yy - 0.32 * 128 * 0.5 - 26) / 60, 0, 1)
+    stops = [(0, rgb("#FF8456")), (0.55, rgb(SUN)), (1, rgb("#D93E1B"))]
+    col = np.stack([np.interp(d, [s for s, _ in stops], [c[i] for _, c in stops]) for i in range(3)], axis=-1)
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).polygon([(x * k, y * k) for x, y in head], fill=255)
+    disc = Image.fromarray(col.astype(np.uint8)).convert("RGBA")
+    disc.putalpha(mask)
+    img = Image.alpha_composite(img, disc)
 
-def soft_blur(layer, radius):
-    """Gaussian blur for RGBA without dark fringes (blurs premultiplied color)."""
-    arr = np.asarray(layer).astype(np.float32) / 255
-    alpha = arr[..., 3:4]
-    premul = Image.fromarray(((arr[..., :3] * alpha) * 255).astype(np.uint8))
-    a = Image.fromarray((alpha[..., 0] * 255).astype(np.uint8))
-    premul = np.asarray(premul.filter(ImageFilter.GaussianBlur(radius))).astype(np.float32) / 255
-    a = np.asarray(a.filter(ImageFilter.GaussianBlur(radius))).astype(np.float32)[..., None] / 255
-    rgb = np.where(a > 1e-4, premul / np.maximum(a, 1e-4), 0)
-    out = np.concatenate([np.clip(rgb, 0, 1), a], axis=2)
-    return Image.fromarray((out * 255).astype(np.uint8), "RGBA")
-
-
-def wallpaper(dark, seed=7):
-    rng = np.random.default_rng(seed)
-    if dark:
-        sky = [(0.0, "#141B2E"), (0.7, "#2C3352"), (1.0, "#6B4A55")]
-        water = [(0.0, "#22304F"), (1.0, "#0C1222")]
-        sun, glow_strength = hex_rgb("#E07A3A"), 0.55
-    else:
-        sky = [(0.0, "#9DB3DF"), (0.65, "#D9C3D6"), (1.0, "#F4CDB8")]
-        water = [(0.0, "#7E98CB"), (1.0, "#2E4A7E")]
-        sun, glow_strength = hex_rgb("#F28A3C"), 0.8
-
-    hz = int(H * HORIZON)
-    rows = np.concatenate([vertical(sky, hz), vertical(water, H - hz)])
-    img = np.repeat(rows[:, None, :], W, axis=1)
-
-    # Soft glow around the sun.
-    sx, sy, r = W * 0.62, hz - H * 0.13, H * 0.075
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    d = np.sqrt((xx - sx) ** 2 + ((yy - sy) * 1.15) ** 2)
-    glow = np.exp(-((d / (r * 4.5)) ** 2)) * glow_strength
-    img = img * (1 - glow[..., None] * 0.6) + sun * glow[..., None] * 0.6
-    base = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
-
-    # Impressionist strokes: short horizontal dabs on the water, brighter
-    # under the sun as its reflection.
-    strokes = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(strokes)
-    for _ in range(2600):
-        y = rng.uniform(hz + 8, H)
-        depth = (y - hz) / (H - hz)
-        x = rng.normal(sx, W * (0.05 + 0.25 * depth)) if rng.random() < 0.45 else rng.uniform(0, W)
-        length = rng.uniform(60, 260) * (0.5 + depth)
-        thick = rng.uniform(4, 12) * (0.6 + depth)
-        near_sun = np.exp(-(((x - sx) / (W * 0.08 + depth * W * 0.1)) ** 2))
-        if rng.random() < near_sun:
-            color = tuple(int(c) for c in sun) + (int(rng.uniform(70, 150)),)
-        else:
-            tint = hex_rgb("#C9D6F0" if not dark else "#4A5A86") + rng.normal(0, 12, 3)
-            color = tuple(int(np.clip(c, 0, 255)) for c in tint) + (int(rng.uniform(25, 70)),)
-        draw.rounded_rectangle([x - length / 2, y - thick / 2, x + length / 2, y + thick / 2], radius=thick / 2, fill=color)
-    for _ in range(500):
-        # Lighter dabs in the sky.
-        y = rng.uniform(0, hz - 20)
-        x = rng.uniform(0, W)
-        length, thick = rng.uniform(80, 300), rng.uniform(6, 16)
-        tint = hex_rgb("#FFFFFF" if not dark else "#5E6A95") + rng.normal(0, 10, 3)
-        color = tuple(int(np.clip(c, 0, 255)) for c in tint) + (int(rng.uniform(10, 26)),)
-        draw.rounded_rectangle([x - length / 2, y - thick / 2, x + length / 2, y + thick / 2], radius=thick / 2, fill=color)
-    strokes = soft_blur(strokes, 2.5)
-    base = Image.alpha_composite(base.convert("RGBA"), strokes)
-
-    # The sun itself.
-    disc = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(disc).ellipse([sx - r, sy - r, sx + r, sy + r], fill=tuple(int(c) for c in sun) + (235,))
-    base = Image.alpha_composite(base, soft_blur(disc, 3))
-
-    # A little grain keeps the gradients from banding.
-    arr = np.asarray(base.convert("RGB")).astype(np.float32)
-    arr += rng.normal(0, 2.2, arr.shape)
-    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
-
-
-def rounded_gradient(size, top, bottom, split=None, top2=None, bottom2=None):
-    s = size * 4
-    rows = vertical([(0, top), (1, bottom)], s)
-    if split is not None:
-        cut = int(s * split)
-        rows = np.concatenate([vertical([(0, top), (1, bottom)], cut), vertical([(0, top2), (1, bottom2)], s - cut)])
-    img = Image.fromarray(np.repeat(rows[:, None, :], s, axis=1).astype(np.uint8)).convert("RGBA")
-    mask = Image.new("L", (s, s), 0)
-    m = int(s * 4 / 128)
-    ImageDraw.Draw(mask).rounded_rectangle([m, m, s - m, s - m], radius=int(s * 28 / 128), fill=255)
-    img.putalpha(mask)
-    return img
-
-
-def logo(size):
-    """Raster version of branding/monet.svg."""
-    img = rounded_gradient(size, "#9DB3DF", "#F1C7B8", 0.55, "#6F8CC4", "#2E4A7E")
-    s = img.width / 128
-    d = ImageDraw.Draw(img)
-    orange = (242, 138, 60)
-    d.ellipse([(64 - 15) * s, (52 - 15) * s, (64 + 15) * s, (52 + 15) * s], fill=orange + (255,))
-    for x, y, w, h, a in [(42, 80, 44, 5, 230), (49, 92, 30, 4, 180), (56, 102, 16, 3, 128)]:
-        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        ImageDraw.Draw(overlay).rounded_rectangle([x * s, y * s, (x + w) * s, (y + h) * s], radius=h / 2 * s, fill=orange + (a,))
-        img = Image.alpha_composite(img, overlay)
+    for x, y, l, w, o in DABS:
+        layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+        ImageDraw.Draw(layer).polygon([(px * k, py * k) for px, py in stroke(x, y, l, w)], fill=rgb(SUN) + (int(o * 255),))
+        img = Image.alpha_composite(img, layer)
     return img.resize((size, size), Image.LANCZOS)
 
 
-INSTALLER = ROOT / "image" / "installer" / "product" / "usr" / "share" / "anaconda" / "pixmaps"
-WORDMARK_FONT = "/usr/share/fonts/opentype/inter/InterDisplay-SemiBold.otf"
-
-
-def installer_art(light):
+def installer_art():
     """Artwork for Monet's installer (replaces Fedora's in Anaconda)."""
-    from PIL import ImageFont
-
     INSTALLER.mkdir(parents=True, exist_ok=True)
+    dawn = Image.open(HOURS / "dawn.jpg").convert("RGB")
+    W, H = dawn.size
 
-    # Sidebar: a tall slice of the wallpaper around the sun and its reflection.
+    # Sidebar: a tall slice of the dawn painting through the sun and its reflection.
     sun_x = int(W * 0.62)
     width = H * 500 // 1600
-    light.crop((sun_x - width // 2, 0, sun_x + width // 2, H)).resize((500, 1600), Image.LANCZOS) \
+    dawn.crop((sun_x - width // 2, 0, sun_x + width // 2, H)).resize((500, 1600), Image.LANCZOS) \
         .save(INSTALLER / "sidebar-bg.png", optimize=True)
 
-    # Top bar: deep water blue, so white titles stay readable.
-    bar = vertical([(0, "#3D6FB6"), (1, "#2E4A7E")], 64)
-    Image.fromarray(np.repeat(bar[:, None, :], 1920, axis=1).astype(np.uint8)) \
+    # Top bar: the harbor's blue-grey mist, so white titles stay readable.
+    top = np.array(rgb("#4A5873"), dtype=np.float32)
+    bottom = np.array(rgb("#36425A"), dtype=np.float32)
+    rows = np.linspace(0, 1, 64)[:, None] * (bottom - top) + top
+    Image.fromarray(np.repeat(rows[:, None, :], 1920, axis=1).astype(np.uint8)) \
         .save(INSTALLER / "topbar-bg.png", optimize=True)
 
-    # Logo: the mark with "Monet" beneath it, white, on transparent.
-    mark = logo(112)
+    # Logo: the mark with "Monet" set in Fraunces beneath it, on transparent.
+    mark = raster(sun_outline(), 104)
     canvas = Image.new("RGBA", (240, 190), (0, 0, 0, 0))
-    canvas.alpha_composite(mark, ((240 - 112) // 2, 0))
+    canvas.alpha_composite(mark, ((240 - 104) // 2, 0))
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.truetype(WORDMARK_FONT, 40)
+    font = ImageFont.truetype(str(FONTS / "Fraunces72ptSuperSoft-Regular.ttf"), 46)
     text_w = draw.textlength("Monet", font=font)
-    draw.text(((240 - text_w) / 2, 128), "Monet", font=font, fill=(255, 255, 255, 255))
+    draw.text(((240 - text_w) / 2, 118), "Monet", font=font, fill=(255, 255, 255, 255))
     canvas.save(INSTALLER / "sidebar-logo.png", optimize=True)
 
 
 def main():
-    for dark, folder in [(False, "images"), (True, "images_dark")]:
-        path = WALL / folder / f"{W}x{H}.jpg"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        wallpaper(dark).save(path, quality=88, optimize=True, progressive=True)
-        print("wrote", path.relative_to(ROOT))
+    (OUT / "monet.svg").write_text(svg(sun_outline(), 'Monet: the sun over water, after "Impression, soleil levant" (1872).'))
+    (OUT / "monet-windows.svg").write_text(svg(play_outline(), "Play on Windows: Monet's sun, turned into a play button."))
+    print("wrote branding/monet.svg, branding/monet-windows.svg")
 
-    installer_art(wallpaper(False))
+    big = raster(sun_outline(), 512)
+    big.save(OUT / "monet-512.png")
+    raster(play_outline(), 512).save(OUT / "monet-windows-512.png")
+    big.save(ROOT / "windows" / "monet.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    print("wrote branding/monet-512.png, windows/monet.ico")
+
+    installer_art()
     print("wrote image/installer/product/usr/share/anaconda/pixmaps")
 
-    big = logo(512)
-    big.save(OUT / "monet-512.png")
-    big.save(ROOT / "windows" / "monet.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    wallpaper(False).resize((1280, 720), Image.LANCZOS).save(OUT / "wallpaper-preview.jpg", quality=85)
-    print("wrote branding/monet-512.png, windows/monet.ico, branding/wallpaper-preview.jpg")
+    Image.open(HOURS / "dawn.jpg").convert("RGB").resize((1280, 720), Image.LANCZOS) \
+        .save(OUT / "wallpaper-preview.jpg", quality=86)
+    print("wrote branding/wallpaper-preview.jpg")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" width="22" height="22">
+  <!-- Quick settings: two sliders. Plasma recolors it to match the panel. -->
+  <defs>
+    <style type="text/css" id="current-color-scheme">.ColorScheme-Text { color:#232629; }</style>
+  </defs>
+  <g class="ColorScheme-Text" fill="currentColor">
+    <rect x="3" y="6" width="16" height="2" rx="1"/>
+    <rect x="3" y="14" width="16" height="2" rx="1"/>
+    <circle cx="8" cy="7" r="3"/>
+    <circle cx="14" cy="15" r="3"/>
+  </g>
+</svg>

@@ -6,9 +6,10 @@
 
 <p align="center"><b>Linux for everything. Windows only for the games that need it.</b></p>
 
-<p align="center"><img src="branding/wallpaper-preview.jpg" width="720" alt="The Monet wallpaper"></p>
+<p align="center"><img src="branding/wallpaper-preview.jpg" width="720" alt="The Monet wallpaper: a painted harbor at dawn, an orange sun over the water"></p>
 
-Monet is a calm, simple desktop built on Linux. Most games run on it directly.
+Monet is a calm, simple desktop built on Linux. The desktop is a painting that
+changes light through the day, under glass. Most games run on it directly.
 For the few that don't, mostly ones with anti-cheat like Valorant or Call of
 Duty, press **Play** and Monet restarts in Windows, starts the game, and comes
 back when you're done.
@@ -49,9 +50,10 @@ seconds with the anti-cheat already running.
 | `crates/monet-core` | Shared Rust code: boot entries, the note, the games list |
 | `crates/monet` | `monet` for Linux: Play, Windows, doctor, games |
 | `crates/monet-bridge` | `monet-bridge.exe` for Windows: start the game, return to Monet |
-| `linux/` | Installer, panel widget, wallpaper, services |
+| `linux/` | Installer, the look (paintings, Plasma style, widgets, glass app style), services |
 | `windows/` | Installer, uninstaller, optional Game Profile |
 | `image/` | Monet OS image (Bazzite with Monet built in) and the installer's kickstart |
+| `tools/` | Packaging, and the generators for the paintings, icons and glass |
 | `docs/` | [Install](docs/INSTALL.md) · [Design](docs/DESIGN.md) · [Testing](docs/TESTING.md) |
 
 The full plan is in [PLAN.md](PLAN.md).

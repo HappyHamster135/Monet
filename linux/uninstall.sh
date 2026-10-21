@@ -8,6 +8,10 @@ if [ "$(id -u)" -ne 0 ]; then
     # Remove this user's game shortcuts and settings, then the system part.
     rm -f "$HOME"/.local/share/applications/monet-game-*.desktop
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/monet"
+    systemctl --user disable --now monet-light.timer >/dev/null 2>&1 || true
+    # Hand the desktop back to Breeze.
+    command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Breeze
     echo "Removing Monet. You may be asked for your password."
     exec sudo "$0" "$@"
 fi
@@ -16,10 +20,23 @@ systemctl disable --now monet-sync.service monet-windows-setup.service >/dev/nul
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service
 systemctl daemon-reload
 
+systemctl --global disable monet-light.timer >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
-rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-session" "$PREFIX/libexec/monet-prepare-windows"
-rm -f "$PREFIX/share/icons/hicolor/scalable/apps/monet.svg" "$PREFIX/share/icons/hicolor/scalable/apps/monet-windows.svg"
+rm -f "$PREFIX/bin/monet"
+for tool in monet-session monet-look monet-light monet-quick monet-prepare-windows; do
+    rm -f "$PREFIX/libexec/$tool"
+done
+for icon in monet monet-windows monet-quick-symbolic; do
+    rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
+done
 rm -f "$PREFIX/share/applications/monet-windows.desktop"
-rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet
+rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
+rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colorscheme "$PREFIX"/share/konsole/MonetDark.colorscheme
+rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
+    "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" \
+    "$PREFIX/share/icons/Monet" "$PREFIX/share/Kvantum/Monet" "$PREFIX/share/Kvantum/MonetDark" \
+    "$PREFIX/share/fonts/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."

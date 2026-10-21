@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Description": "Glass islands and popovers over the painting",
+        "EnabledByDefault": true,
+        "Id": "monet",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet",
+        "Version": "0.5.0"
+    },
+    "X-Plasma-API": "5.0"
+}

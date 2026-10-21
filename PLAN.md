@@ -257,6 +257,23 @@ The CachyOS kernel (section 4.1) is not in v0.1. Bazzite's kernel already
 carries most gaming patches and is signed for Secure Boot. Switching kernels
 waits for the Phase 2 benchmarks.
 
+### Status: v0.5 (preview)
+
+v0.5 gives Monet its own look, "Impression" (see [docs/DESIGN.md](docs/DESIGN.md)):
+
+- **The Hours**: a generated impressionist harbor in four lights, as a Plasma
+  wallpaper plugin that drifts between them through the day
+- three glass islands instead of a panel; a placard with the time
+- glass everywhere: a generated Plasma style, Kvantum themes for app windows,
+  see-through title bars, glass Konsole; mist by day, smoke after dark
+- the Monet icon theme, Fraunces and Inter, a sunrise splash, the night
+  painting at sign-in and on the lock screen
+- Windows Games as a gallery with covers and a sunset when you play; Quick
+  Settings with Wi-Fi, Bluetooth, Night Light, sound, brightness and the light
+- `monet update`, and Wi-Fi from the installer carried into Windows
+- Slay the Spire is always listed, for testing: Windows installs it from Steam
+  the first time and then starts it
+
 ### Status: v0.3 (preview)
 
 v0.3 makes the installer do everything. The USB stick's default choice,

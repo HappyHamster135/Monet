@@ -122,6 +122,14 @@ if [ -f /etc/pki/akmods/certs/akmods-ublue.der ]; then
 fi
 %end
 
+%post --nochroot
+# Keep the Wi-Fi networks used during the install, so Windows can use them
+# too. monet-prepare-windows turns them into Windows profiles, then deletes them.
+mkdir -p "$ANA_INSTALL_PATH/var/lib/monet/wifi"
+cp /etc/NetworkManager/system-connections/*.nmconnection "$ANA_INSTALL_PATH/var/lib/monet/wifi/" 2>/dev/null || :
+chmod -R go-rwx "$ANA_INSTALL_PATH/var/lib/monet/wifi"
+%end
+
 %post --log=/var/log/monet-install.log
 # "Install Monet and Windows": download Windows and get it ready to install
 # itself at the next restart. This is the long, quiet part at the end of the

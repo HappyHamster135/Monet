@@ -6,9 +6,39 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.4.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.4.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.4.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.5.0-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.5.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.5.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.5: Impression
+
+Monet has its own look now, after Claude Monet's *Impression, soleil levant*.
+
+- **The Hours.** The wallpaper is one painted harbor in four lights: dawn,
+  midday, dusk and night. It drifts from one to the next as the day goes.
+- **Glass.** The bar is three glass islands along the bottom, and panels,
+  popovers, title bars, the terminal and app windows like Files are
+  see-through, with the painting blurred behind them. Mist while it's light
+  out, smoke after dark. Choose Hours, Mist or Smoke in Quick Settings.
+- **A placard** on the desktop with the time, the date and the painting's name.
+- **Windows Games** is a gallery of covers. Play asks once, then the screen
+  fades to night as the sun sets, and the PC restarts in Windows.
+- **Quick Settings** in the clock island: Wi-Fi, Bluetooth, Night Light,
+  Do Not Disturb, sound, brightness and the light.
+- **New icons and fonts:** the sun mark, painted pebbles for Monet's own apps,
+  Fraunces for the clock and titles, Inter for reading.
+- **A sunrise** when Monet starts, and the night harbor at sign-in.
+- **The installer** uses the dawn painting and the sun for its main button.
+
+Also new:
+
+- **`monet update`** gets the newest Monet right away (it also updates by itself).
+- **Wi-Fi carries over:** the network you used while installing works in Windows too.
+- **For testing:** Slay the Spire is always in Windows Games. The first time,
+  Windows installs it from Steam (sign in to Steam once), then starts it.
+
+Updating from 0.4: restart after the update and your desktop changes to the
+new look by itself.
 
 ### New in 0.4
 

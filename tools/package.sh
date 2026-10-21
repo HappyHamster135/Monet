@@ -19,9 +19,9 @@ case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
         mkdir -p "$OUT/icons"
-        cp "$ROOT/branding/monet.svg" "$ROOT/branding/monet-windows.svg" "$OUT/icons/"
+        cp "$ROOT/branding/monet.svg" "$ROOT/branding/monet-windows.svg" "$ROOT/branding/monet-quick-symbolic.svg" "$OUT/icons/"
         install -m 755 "$BIN" "$OUT/monet"
-        chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT/libexec/monet-session" "$OUT/libexec/monet-prepare-windows"
+        chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT"/libexec/*
         if [ -n "$BRIDGE" ]; then
             "$0" windows "$BRIDGE" "$OUT/windows" >/dev/null
         fi

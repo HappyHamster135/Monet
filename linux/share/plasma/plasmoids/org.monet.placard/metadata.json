@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Date and Time",
+        "Description": "The time, the date and the painting's name, like the card next to a painting",
+        "Icon": "monet",
+        "Id": "org.monet.placard",
+        "License": "GPL-3.0-or-later",
+        "Name": "Placard",
+        "Version": "0.5.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

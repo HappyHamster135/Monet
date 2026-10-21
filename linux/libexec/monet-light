@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Monet's light: mist while it's light out, smoke after dark.
+#
+#   monet-light                       apply the chosen light (at sign-in, and when the hour turns)
+#   monet-light set hours|mist|smoke  choose: follow the hours, or keep one
+#
+# Panels and KDE apps change right away. Apps that use the glass app style
+# (Files, Kate, ...) change the next time they open.
+set -u
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+CHOICE="$CONFIG/monet/light"
+# Same hours as the wallpaper: dawn and midday are light, dusk and night dark.
+DAY_FROM=5
+DAY_UNTIL=17
+
+choice() {
+    case "$(cat "$CHOICE" 2>/dev/null)" in
+        mist) echo mist ;;
+        smoke) echo smoke ;;
+        *) echo hours ;;
+    esac
+}
+
+now() {
+    local chosen hour
+    chosen="$(choice)"
+    if [ "$chosen" != hours ]; then
+        echo "$chosen"
+        return
+    fi
+    hour=$((10#$(date +%H)))
+    if [ "$hour" -ge "$DAY_FROM" ] && [ "$hour" -lt "$DAY_UNTIL" ]; then
+        echo mist
+    else
+        echo smoke
+    fi
+}
+
+apply() {
+    local light scheme kvantum current
+    light="$(now)"
+    if [ "$light" = mist ]; then
+        scheme=MonetLight kvantum=Monet
+    else
+        scheme=MonetDark kvantum=MonetDark
+    fi
+
+    # Only change what's Monet's: someone who picked their own colors keeps them.
+    current="$(kreadconfig6 --file kdeglobals --group General --key ColorScheme 2>/dev/null)"
+    case "$current" in
+        ""|MonetLight|MonetDark)
+            if [ "$current" != "$scheme" ] && command -v plasma-apply-colorscheme >/dev/null; then
+                plasma-apply-colorscheme "$scheme" >/dev/null 2>&1
+            fi
+            ;;
+    esac
+
+    local kvconfig="$CONFIG/Kvantum/kvantum.kvconfig"
+    current="$(kreadconfig6 --file "$kvconfig" --group General --key theme 2>/dev/null)"
+    case "$current" in
+        ""|Monet|MonetDark)
+            mkdir -p "$CONFIG/Kvantum"
+            kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum"
+            ;;
+    esac
+
+    local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
+    if [ -f "$profile" ]; then
+        kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "$kvantum"
+    fi
+}
+
+case "${1:-apply}" in
+    apply)
+        apply
+        ;;
+    set)
+        case "${2:-}" in
+            hours|mist|smoke) ;;
+            *) echo "Choose hours, mist or smoke." >&2; exit 1 ;;
+        esac
+        mkdir -p "$(dirname "$CHOICE")"
+        echo "$2" > "$CHOICE"
+        apply
+        ;;
+    get)
+        echo "$(choice) $(now)"
+        ;;
+    *)
+        sed -n '2,8p' "$0"
+        exit 1
+        ;;
+esac

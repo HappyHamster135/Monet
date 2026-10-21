@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Monet icon: terminal. A pebble glazed like the paintings, a white line drawing on top. -->
+  <defs>
+    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#3E4456"/>
+      <stop offset="1" stop-color="#171A24"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
+  <g clip-path="url(#pebble)">
+    <path d="M28.0 27.4 Q64 18.7 121.1 21.4" stroke="#FFFFFF" stroke-opacity="0.093" stroke-width="9.6" stroke-linecap="round" fill="none"/>
+    <path d="M22.5 38.9 Q64 29.3 96.3 32.9" stroke="#FFFFFF" stroke-opacity="0.053" stroke-width="10.0" stroke-linecap="round" fill="none"/>
+    <path d="M12.7 65.0 Q64 60.5 107.7 59.0" stroke="#FFFFFF" stroke-opacity="0.067" stroke-width="12.0" stroke-linecap="round" fill="none"/>
+    <path d="M26.0 82.3 Q64 76.6 113.8 76.3" stroke="#FFFFFF" stroke-opacity="0.033" stroke-width="7.6" stroke-linecap="round" fill="none"/>
+    <path d="M9.0 102.5 Q64 94.4 121.6 96.5" stroke="#FFFFFF" stroke-opacity="0.042" stroke-width="11.9" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
+  </g>
+  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <path d="M40 50 l14 13 l-14 13 M62 80 h26" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

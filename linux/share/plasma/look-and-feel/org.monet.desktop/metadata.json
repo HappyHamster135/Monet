@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Description": "Calm glass, a top bar and a floating dock",
+        "Id": "org.monet.desktop",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet",
+        "Version": "0.5.0"
+    },
+    "X-Plasma-APIVersion": "2"
+}

@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Gives this account Monet's look: the painting, the glass islands, the glass
+# app style, Monet's icons and fonts, and how things move. monet-session runs
+# it once, at the first sign-in after the look changes.
+#
+#   monet-look           apply everything, including a fresh panel layout
+#   monet-look --keep    apply everything but keep the panels as they are
+set -u
+
+DATADIR="@DATADIR@"
+LIBEXECDIR="@LIBEXECDIR@"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+
+has() { command -v "$1" >/dev/null 2>&1; }
+kw() { kwriteconfig6 "$@" 2>/dev/null; }
+
+# The global theme: islands, painting, placard, colors, Plasma style, icons.
+if has plasma-apply-lookandfeel; then
+    if [ "${1:-}" = --keep ]; then
+        plasma-apply-lookandfeel --apply org.monet.desktop >/dev/null 2>&1
+    else
+        plasma-apply-lookandfeel --apply org.monet.desktop --resetLayout >/dev/null 2>&1
+    fi
+fi
+
+# Lily, Monet's accent, instead of one picked from the wallpaper.
+kw --file kdeglobals --group General --key AccentColor "53,127,114"
+kw --file kdeglobals --group General --key accentColorFromWallpaper false
+kw --file kdeglobals --group Icons --key Theme Monet
+
+# Inter for reading; Fraunces is used by Monet's own pieces.
+if fc-list : family 2>/dev/null | grep -qx "Inter"; then
+    kw --file kdeglobals --group General --key font "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kw --file kdeglobals --group General --key menuFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kw --file kdeglobals --group General --key toolBarFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kw --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kw --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
+fi
+
+# Motion: a touch quicker than KDE's default, so things feel light.
+kw --file kdeglobals --group KDE --key AnimationDurationFactor 0.8
+
+# Glass: blur with a little grain and color behind panels, popovers and
+# see-through windows; windows scale gently in and out.
+kw --file kwinrc --group Plugins --key blurEnabled true
+kw --file kwinrc --group Plugins --key contrastEnabled true
+kw --file kwinrc --group Plugins --key scaleEnabled true
+kw --file kwinrc --group Plugins --key glideEnabled false
+kw --file kwinrc --group Plugins --key fadeEnabled false
+kw --file kwinrc --group Effect-blur --key BlurStrength 12
+kw --file kwinrc --group Effect-blur --key NoiseStrength 3
+
+# Window title bars: glass (from the color scheme), title in the middle,
+# buttons on the right.
+kw --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+kw --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
+kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
+kw --file breezerc --group Windeco --key TitleAlignment AlignCenterFullWidth
+kw --file breezerc --group Windeco --key DrawBackgroundGradient false
+kw --file breezerc --group Windeco --key DrawBorderOnMaximizedWindows false
+
+# The glass app style for Qt apps, when Kvantum is installed.
+if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so >/dev/null 2>&1; then
+    if [ ! -d /usr/share/Kvantum/Monet ] && [ -d "$DATADIR/Kvantum/Monet" ]; then
+        # Kvantum only looks in /usr/share and in your own settings.
+        mkdir -p "$CONFIG/Kvantum"
+        cp -r "$DATADIR/Kvantum/Monet" "$DATADIR/Kvantum/MonetDark" "$CONFIG/Kvantum/"
+    fi
+    kw --file kdeglobals --group KDE --key widgetStyle kvantum
+fi
+
+# The terminal: glass too.
+if [ -f "$DATADIR/konsole/Monet.profile" ]; then
+    mkdir -p "$DATA/konsole"
+    [ -f "$DATA/konsole/Monet.profile" ] || cp "$DATADIR/konsole/Monet.profile" "$DATA/konsole/Monet.profile"
+    kw --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
+fi
+
+# The lock screen shows the same painting, in the same light.
+kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours
+
+# Mist or smoke, depending on the time, and keep it that way.
+"$LIBEXECDIR/monet-light" apply
+has systemctl && systemctl --user enable --now monet-light.timer >/dev/null 2>&1
+
+busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
+exit 0

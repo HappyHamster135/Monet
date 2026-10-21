@@ -71,8 +71,8 @@
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
           <Order>1</Order>
-          <Description>Install Monet Bridge and the Game Profile</Description>
-          <CommandLine>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\Monet\Setup\Install-Monet.ps1 -FromMonet -GameProfile -RemoveApps</CommandLine>
+          <Description>Install Monet Bridge, the Game Profile and Steam</Description>
+          <CommandLine>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\Monet\Setup\Install-Monet.ps1 -FromMonet -GameProfile -RemoveApps -InstallSteam</CommandLine>
         </SynchronousCommand>
       </FirstLogonCommands>
     </component>

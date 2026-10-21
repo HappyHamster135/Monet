@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Monet icon: trash-full. A pebble glazed like the paintings, a white line drawing on top. -->
+  <defs>
+    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#B9B3A9"/>
+      <stop offset="1" stop-color="#6C665D"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
+  <g clip-path="url(#pebble)">
+    <path d="M19.5 20.7 Q64 13.7 101.4 14.7" stroke="#FFFFFF" stroke-opacity="0.090" stroke-width="7.2" stroke-linecap="round" fill="none"/>
+    <path d="M8.5 42.3 Q64 35.0 115.4 36.3" stroke="#FFFFFF" stroke-opacity="0.104" stroke-width="9.9" stroke-linecap="round" fill="none"/>
+    <path d="M6.5 66.4 Q64 61.1 115.5 60.4" stroke="#FFFFFF" stroke-opacity="0.046" stroke-width="8.8" stroke-linecap="round" fill="none"/>
+    <path d="M12.4 81.5 Q64 72.0 103.1 75.5" stroke="#FFFFFF" stroke-opacity="0.032" stroke-width="8.2" stroke-linecap="round" fill="none"/>
+    <path d="M23.1 100.2 Q64 93.1 118.1 94.2" stroke="#FFFFFF" stroke-opacity="0.051" stroke-width="9.1" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
+  </g>
+  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <path d="M44 50 h40 M58 50 v-6 h12 v6 M48 50 l3 36 a5 5 0 0 0 5 4 h16 a5 5 0 0 0 5 -4 l3 -36 M58 60 v20 M70 60 v20" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

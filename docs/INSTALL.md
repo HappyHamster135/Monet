@@ -11,13 +11,13 @@ You need:
 
 **Everything on the PC is erased.** About an hour, mostly downloading.
 
-> **Monet 0.4 is a preview** and hasn't been tested on real hardware yet.
+> **Monet 0.5 is a preview** and hasn't been tested on real hardware yet.
 
 ---
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.4.0-Installer.iso** from the
+1. Download **Monet-0.5.0-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -103,6 +103,27 @@ __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRA
 
 ---
 
+## Keeping Monet up to date
+
+Monet updates itself. A new version downloads in the background, and you get
+it the next time you restart. Nothing to do.
+
+To get it right away, open a terminal and run:
+
+```sh
+monet update
+```
+
+then restart. If a new version ever misbehaves, choose the previous one in the
+start menu that appears while the PC starts, or run `sudo bootc rollback` and
+restart.
+
+The first time you start a version with a new look, Monet sets up your
+desktop again (the panels, the painting, the colors). Your files and apps
+aren't touched.
+
+---
+
 ## Keep your current Windows instead
 
 On the USB stick's start menu, choose **Install Monet next to my Windows**.
@@ -118,5 +139,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.4.0-Linux.tar.gz** and run `./monet-0.4.0-linux/install.sh`,
+Download **Monet-0.5.0-Linux.tar.gz** and run `./monet-0.5.0-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use monet_core::boot::{self, BootEntry};
 use monet_core::efi::{EfiError, EfiVars, GLOBAL_GUID, LAUNCH_VAR, MONET_GUID};
-use monet_core::games::{self, GameList};
+use monet_core::games::{self, Game, GameList};
 use monet_core::request::{self, LaunchRequest};
 
 use efivarfs::EfiVarFs;
@@ -28,6 +28,7 @@ Usage:
   monet windows             Restart in Windows
   monet games [--json]      List Windows games
   monet doctor              Check that everything is set up
+  monet update              Download the newest Monet (it starts at the next restart)
   monet make-default        Start Monet by default when the PC turns on
   monet shortcuts           Add Windows games to the app menu
 
@@ -74,6 +75,8 @@ fn main() -> ExitCode {
         ["windows"] => switch(None, confirm),
         ["doctor"] => doctor(),
         ["make-default"] => elevate(&["helper", "make-default"]),
+        ["update"] => elevate(&["helper", "update"]),
+        ["helper", "update"] => helper_update(),
         ["shortcuts"] => shortcuts(),
         ["helper", "switch"] => helper_switch(option_value(&args, "--game")),
         ["helper", "sync"] => helper_sync(),
@@ -117,8 +120,36 @@ fn games_cache() -> PathBuf {
     state_dir().join("games.json")
 }
 
+/// The games Monet Bridge found in Windows.
 fn load_games() -> Option<GameList> {
     GameList::parse(&fs::read(games_cache()).ok()?).ok()
+}
+
+/// Games Monet always offers on Windows, even before Windows has them:
+/// `share/monet/windows-games.json` (comes with Monet) and
+/// `~/.config/monet/windows-games.json` (your own), both in the games-list format.
+fn extra_games() -> Vec<Game> {
+    let mut files: Vec<PathBuf> = windows_setup::share_dir().map(|d| d.join("windows-games.json")).into_iter().collect();
+    if let Some(home) = std::env::var_os("HOME") {
+        files.push(PathBuf::from(home).join(".config/monet/windows-games.json"));
+    }
+    files
+        .iter()
+        .filter_map(|f| GameList::parse(&fs::read(f).ok()?).ok())
+        .flat_map(|l| l.games)
+        .collect()
+}
+
+/// Everything that plays on Windows: what Windows has, plus the extras.
+fn all_games() -> GameList {
+    let mut list = load_games().unwrap_or_default();
+    for game in extra_games() {
+        if list.find(&game.id).is_none() {
+            list.games.push(game);
+        }
+    }
+    list.games.sort_by_key(|g| g.name.to_lowercase());
+    list
 }
 
 fn windows_setup_status() -> Option<Outcome> {
@@ -198,7 +229,7 @@ fn status() -> Res<()> {
 }
 
 fn list_games(json: bool) -> Res<()> {
-    let list = load_games().unwrap_or_default();
+    let list = all_games();
     if json {
         println!("{}", serde_json::to_string(&list.games).map_err(|e| e.to_string())?);
         return Ok(());
@@ -230,7 +261,7 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
     }
 
     if confirm {
-        let name = game.and_then(|id| load_games()?.find(id).map(|g| g.name.clone()));
+        let name = game.and_then(|id| all_games().find(id).map(|g| g.name.clone()));
         let title = match (&name, game) {
             (Some(name), _) => format!("Play {name} on Windows?"),
             (None, Some(_)) => "Play on Windows?".to_string(),
@@ -345,7 +376,7 @@ fn shortcuts() -> Res<()> {
     let dir = PathBuf::from(home).join(".local/share/applications");
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let list = load_games().unwrap_or_default();
+    let list = all_games();
 
     let mut wanted = Vec::new();
     for game in &list.games {
@@ -592,6 +623,24 @@ fn show_progress_while(child: &mut std::process::Child) -> bool {
             }
         }
         std::thread::sleep(std::time::Duration::from_secs(2));
+    }
+}
+
+/// Downloads the newest Monet image; it's used from the next restart.
+fn helper_update() -> Res<()> {
+    require_root()?;
+    println!("Checking for a new version of Monet…");
+    let status = if has("bootc") {
+        Command::new("bootc").arg("upgrade").status()
+    } else {
+        Command::new("rpm-ostree").arg("upgrade").status()
+    }
+    .map_err(|e| e.to_string())?;
+    if status.success() {
+        println!("Done. Restart your PC to use the newest Monet.");
+        Ok(())
+    } else {
+        Err("The update didn't finish. Check your internet connection and try again.".into())
     }
 }
 

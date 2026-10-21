@@ -392,6 +392,50 @@ def pick_edition(images):
     return images[0]
 
 
+WIFI_DIRS = (Path("/etc/NetworkManager/system-connections"), STATE / "wifi")
+
+
+def wifi_profiles():
+    """Wi-Fi networks Monet knows (from the installer or NetworkManager), as
+    Windows WLAN profiles, so Windows is online without asking."""
+    import configparser
+
+    profiles = {}
+    for folder in WIFI_DIRS:
+        for path in sorted(folder.glob("*.nmconnection")) if folder.is_dir() else []:
+            conf = configparser.ConfigParser(interpolation=None)
+            try:
+                conf.read(path)
+            except configparser.Error:
+                continue
+            if conf.get("connection", "type", fallback="") not in ("wifi", "802-11-wireless"):
+                continue
+            ssid = conf.get("wifi", "ssid", fallback="")
+            if not ssid or ssid in profiles:
+                continue
+            mgmt = conf.get("wifi-security", "key-mgmt", fallback="")
+            psk = conf.get("wifi-security", "psk", fallback="")
+            if mgmt in ("wpa-psk", "sae") and psk:
+                auth = "WPA3SAE" if mgmt == "sae" else "WPA2PSK"
+                security = (f"<authEncryption><authentication>{auth}</authentication><encryption>AES</encryption>"
+                            f"<useOneX>false</useOneX></authEncryption><sharedKey><keyType>passPhrase</keyType>"
+                            f"<protected>false</protected><keyMaterial>{escape(psk)}</keyMaterial></sharedKey>")
+            elif not mgmt:
+                security = ("<authEncryption><authentication>open</authentication><encryption>none</encryption>"
+                            "<useOneX>false</useOneX></authEncryption>")
+            else:
+                continue  # enterprise networks need more than a password
+            hidden = "<nonBroadcast>true</nonBroadcast>" if conf.getboolean("wifi", "hidden", fallback=False) else ""
+            profiles[ssid] = (
+                '<?xml version="1.0"?>\n'
+                '<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">'
+                f"<name>{escape(ssid)}</name><SSIDConfig><SSID><name>{escape(ssid)}</name></SSID>{hidden}</SSIDConfig>"
+                "<connectionType>ESS</connectionType><connectionMode>auto</connectionMode>"
+                f"<MSM><security>{security}</security></MSM></WLANProfile>\n"
+            )
+    return list(profiles.values())
+
+
 def fill(template, values):
     text = template
     for key, value in values.items():
@@ -448,6 +492,12 @@ def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
             }
             (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))
             shutil.copytree(SHARE / "windows", monet / "bridge", dirs_exist_ok=True, copy_function=shutil.copyfile)
+            profiles = wifi_profiles()
+            if profiles:
+                (monet / "bridge" / "wifi").mkdir(exist_ok=True)
+                for i, xml in enumerate(profiles):
+                    (monet / "bridge" / "wifi" / f"wifi{i}.xml").write_text(xml)
+                log(f"carried {len(profiles)} Wi-Fi network(s) over to Windows")
             log(f"staged {name} for {values['USER']} ({ui_lang}, {keyboard}, {timezone})")
         finally:
             run("sync", check=False)
@@ -528,6 +578,7 @@ def main():
     finally:
         if downloaded and iso and iso.exists() and STATUS.read_text() == "pending":
             iso.unlink(missing_ok=True)
+        shutil.rmtree(STATE / "wifi", ignore_errors=True)
 
 
 if __name__ == "__main__":

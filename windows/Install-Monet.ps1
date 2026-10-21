@@ -18,6 +18,9 @@
 .PARAMETER RemoveApps
     With -GameProfile: also remove preinstalled apps games never need.
 
+.PARAMETER InstallSteam
+    Install Steam if it isn't there yet (used when Monet installed Windows).
+
 .PARAMETER FromMonet
     Used when Monet prepared or installed Windows and this runs once at
     sign-in. Cleans up Monet's setup files and goes back to Monet.
@@ -25,6 +28,7 @@
 param(
     [switch]$GameProfile,
     [switch]$RemoveApps,
+    [switch]$InstallSteam,
     [switch]$FromMonet
 )
 
@@ -37,6 +41,7 @@ if (-not $isAdmin) {
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
     if ($GameProfile) { $argList += '-GameProfile' }
     if ($RemoveApps) { $argList += '-RemoveApps' }
+    if ($InstallSteam) { $argList += '-InstallSteam' }
     if ($FromMonet) { $argList += '-FromMonet' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
@@ -76,6 +81,16 @@ $icon = Join-Path $installDir 'monet.ico'
 Get-ScheduledTask -TaskPath '\Monet\' -ErrorAction SilentlyContinue | Stop-ScheduledTask -ErrorAction SilentlyContinue
 Get-Process monet-bridge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
+
+# 0. Wi-Fi from Monet, so Windows is online right away.
+$wifi = Join-Path $source 'wifi'
+if (Test-Path $wifi) {
+    Say '  Connecting to Wi-Fi'
+    foreach ($wlan in Get-ChildItem -Path $wifi -Filter *.xml) {
+        & netsh.exe wlan add profile filename="$($wlan.FullName)" user=all | Out-Null
+    }
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $wifi
+}
 
 # 1. Program files
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
@@ -136,7 +151,29 @@ foreach ($folder in $startMenu, $desktop) {
     $link.Save()
 }
 
-# 6. Listed in Settings > Apps, so it can be removed like any other app.
+# 6. Steam, for a Windows that Monet installed.
+$steamExe = Join-Path ${env:ProgramFiles(x86)} 'Steam\steam.exe'
+if ($InstallSteam -and -not (Test-Path $steamExe)) {
+    Say '  Installing Steam'
+    $setup = Join-Path $env:TEMP 'SteamSetup.exe'
+    $url = 'https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe'
+    for ($try = 1; $try -le 10 -and -not (Test-Path $setup); $try++) {
+        try {
+            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $setup -ErrorAction Stop
+        } catch {
+            Remove-Item -Force -ErrorAction SilentlyContinue $setup
+            Start-Sleep -Seconds 15   # Wi-Fi may still be connecting
+        }
+    }
+    if (Test-Path $setup) {
+        Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+        Remove-Item -Force -ErrorAction SilentlyContinue $setup
+    } else {
+        Say "  Steam couldn't be downloaded. Install it from store.steampowered.com."
+    }
+}
+
+# 7. Listed in Settings > Apps, so it can be removed like any other app.
 $uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Monet'
 New-Item -Path $uninstallKey -Force | Out-Null
 $uninstaller = Join-Path $installDir 'Uninstall-Monet.ps1'
@@ -157,7 +194,7 @@ if ($GameProfile) {
     & (Join-Path $installDir 'GameProfile.ps1') -NoPause -RemoveApps:$RemoveApps
 }
 
-# 7. Start the agent now, so the games list reaches Monet right away.
+# 8. Start the agent now, so the games list reaches Monet right away.
 Start-ScheduledTask -TaskPath '\Monet\' -TaskName 'Agent'
 
 if ($FromMonet) {

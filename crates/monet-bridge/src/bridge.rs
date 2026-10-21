@@ -391,7 +391,11 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     };
 
     let found = scan();
-    let Some(game) = found.iter().find(|g| g.id == id) else {
+    let known = found.iter().find(|g| g.id == id);
+    // A Steam game Windows doesn't have yet: Steam offers to install it,
+    // and Monet waits for it to start.
+    let steam_appid = id.strip_prefix("steam:").map(str::to_string);
+    if known.is_none() && steam_appid.is_none() {
         log(&format!("game {id} not found"));
         let answer = win::ask_with_timeout(
             "Monet couldn't find this game in Windows. It may have been uninstalled.\n\nClick OK to go back to Monet, or Cancel to stay in Windows.",
@@ -403,23 +407,42 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
             }
         }
         return;
-    };
-    log(&format!("starting {} ({id})", game.name));
+    }
+    let name = known.map(|g| g.name.clone()).unwrap_or_else(|| id.clone());
+    log(&format!("starting {name} ({id})"));
 
     let pending = Pending { game: id.clone(), created: now() };
     let _ = fs::write(pending_path(), serde_json::to_vec(&pending).unwrap_or_default());
     if !win::run_hidden("schtasks", &["/run", "/tn", "\\Monet\\Launch"]) {
         log("launch task missing; starting the game directly");
-        launch(game);
+        match (known, &steam_appid) {
+            (Some(game), _) => {
+                launch(game);
+            }
+            (None, Some(appid)) => {
+                win::open_uri(&format!("steam://rungameid/{appid}"));
+            }
+            (None, None) => {}
+        }
     }
 
-    let Some(dir) = &game.dir else { return };
-    if !wait_for_game(dir) {
+    let dir = match (known.and_then(|g| g.dir.clone()), &steam_appid) {
+        (Some(dir), _) => dir,
+        (None, Some(_)) => match wait_for_steam_install(&id) {
+            Some(dir) => dir,
+            None => {
+                log(&format!("{name} wasn't installed; staying in Windows"));
+                return;
+            }
+        },
+        (None, None) => return,
+    };
+    if !wait_for_game(&dir) {
         log("the game didn't start; staying in Windows");
         return;
     }
     let _ = fs::remove_file(pending_path());
-    log(&format!("{} closed", game.name));
+    log(&format!("{name} closed"));
 
     let text = format!(
         "Going back to Monet in {RETURN_COUNTDOWN_SECS} seconds.\n\nClick Cancel to stay in Windows."
@@ -458,12 +481,31 @@ fn launch_pending() -> Res<()> {
         return Err("the pending game is too old".into());
     }
     let found = scan();
-    let game = found.iter().find(|g| g.id == pending.game).ok_or("game not found")?;
-    if launch(game) {
-        Ok(())
-    } else {
-        Err(format!("couldn't start {}", game.name))
+    match found.iter().find(|g| g.id == pending.game) {
+        Some(game) if launch(game) => Ok(()),
+        Some(game) => Err(format!("couldn't start {}", game.name)),
+        // Not installed yet: Steam asks to install it, then starts it.
+        None => match pending.game.strip_prefix("steam:") {
+            Some(appid) if win::open_uri(&format!("steam://rungameid/{appid}")) => Ok(()),
+            _ => Err("game not found".into()),
+        },
     }
+}
+
+/// How long to wait for Steam to download a game that wasn't installed.
+const INSTALL_TIMEOUT: Duration = Duration::from_secs(3 * 60 * 60);
+
+/// Waits until Steam has installed the game, then returns its folder.
+fn wait_for_steam_install(id: &str) -> Option<PathBuf> {
+    log(&format!("waiting for Steam to install {id}"));
+    let started = Instant::now();
+    while started.elapsed() < INSTALL_TIMEOUT {
+        if let Some(dir) = scan_steam().into_iter().find(|g| g.id == id).and_then(|g| g.dir) {
+            return Some(dir);
+        }
+        sleep(Duration::from_secs(10));
+    }
+    None
 }
 
 /// Helper programs that live in game folders but don't mean the game runs.

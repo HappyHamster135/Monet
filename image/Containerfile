@@ -19,8 +19,10 @@ RUN rustup toolchain install \
 
 FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
 # Tools for installing Windows from Monet: splitting Windows' install image
-# (wimlib), formatting its partition (ntfsprogs), and boot entries.
+# (wimlib), formatting its partition (ntfsprogs), and boot entries. Then the
+# look: Kvantum draws Monet's glass app windows, Inter is the reading font.
 RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
+ && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts \
  && dnf5 clean all
 COPY --from=build /out /tmp/monet
 RUN /tmp/monet/install.sh --image \

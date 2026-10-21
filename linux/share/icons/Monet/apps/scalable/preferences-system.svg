@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Monet icon: settings. A pebble glazed like the paintings, a white line drawing on top. -->
+  <defs>
+    <linearGradient id="glaze" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#A9B1C2"/>
+      <stop offset="1" stop-color="#5D6577"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.95" r="0.6">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="pebble"><circle cx="64" cy="64" r="56"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#glaze)"/>
+  <g clip-path="url(#pebble)">
+    <path d="M23.7 21.7 Q64 16.7 111.7 15.7" stroke="#FFFFFF" stroke-opacity="0.116" stroke-width="11.1" stroke-linecap="round" fill="none"/>
+    <path d="M7.5 39.4 Q64 35.1 101.8 33.4" stroke="#FFFFFF" stroke-opacity="0.105" stroke-width="10.1" stroke-linecap="round" fill="none"/>
+    <path d="M29.1 63.1 Q64 58.5 114.8 57.1" stroke="#FFFFFF" stroke-opacity="0.066" stroke-width="13.3" stroke-linecap="round" fill="none"/>
+    <path d="M23.2 77.6 Q64 72.2 110.1 71.6" stroke="#FFFFFF" stroke-opacity="0.033" stroke-width="9.8" stroke-linecap="round" fill="none"/>
+    <path d="M15.2 102.1 Q64 97.8 119.8 96.1" stroke="#FFFFFF" stroke-opacity="0.051" stroke-width="12.7" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="56" fill="url(#shade)"/>
+  </g>
+  <circle cx="64" cy="64" r="55.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+  <path d="M38 52 h52 M38 76 h52 M54 44 v16 M76 68 v16" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

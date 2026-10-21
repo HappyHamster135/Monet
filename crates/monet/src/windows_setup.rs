@@ -111,6 +111,15 @@ pub fn libexec_dir() -> Option<PathBuf> {
         .find(|d| d.join("monet-prepare-windows").is_file())
 }
 
+/// Monet's shared data folder (`share/monet`).
+pub fn share_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let from_exe = exe.parent()?.parent()?.join("share/monet");
+    [from_exe, PathBuf::from("/usr/share/monet"), PathBuf::from("/usr/local/share/monet")]
+        .into_iter()
+        .find(|d| d.is_dir())
+}
+
 /// Where this copy of Monet keeps the Windows files.
 pub fn payload_dir() -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
