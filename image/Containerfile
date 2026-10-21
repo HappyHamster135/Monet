@@ -18,6 +18,10 @@ RUN rustup toolchain install \
         target/x86_64-pc-windows-gnu/release/monet-bridge.exe
 
 FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
+# Tools for installing Windows from Monet: splitting Windows' install image
+# (wimlib), formatting its partition (ntfsprogs), and boot entries.
+RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
+ && dnf5 clean all
 COPY --from=build /out /tmp/monet
 RUN /tmp/monet/install.sh --image \
  && rm -rf /tmp/monet \

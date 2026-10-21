@@ -63,6 +63,7 @@ put() { # put <mode> <source> <destination>, filling in paths
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
 put 755 "$SRC/libexec/monet-session" "$LIBEXECDIR/monet-session"
+install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
@@ -81,13 +82,15 @@ chmod -R u=rwX,go=rX "$DATADIR/wallpapers/Monet"
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
 
-# The Windows half, which Monet copies into Windows by itself.
+# The Windows half, which Monet copies into Windows by itself, and the
+# scripts Monet uses to install a fresh Windows.
+rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe"
+install -d "$DATADIR/monet"
+cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
 if [ -d "$SRC/windows" ]; then
-    rm -rf "$DATADIR/monet/windows"
-    install -d "$DATADIR/monet"
     cp -r "$SRC/windows" "$DATADIR/monet/windows"
-    chmod -R u=rwX,go=rX "$DATADIR/monet"
 fi
+chmod -R u=rwX,go=rX "$DATADIR/monet"
 put 644 "$SRC/autostart/monet-session.desktop" /etc/xdg/autostart/monet-session.desktop
 
 # Allow one-click switching without a password. /usr/local is a link to

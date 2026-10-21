@@ -44,7 +44,7 @@ fn main() -> ExitCode {
     let mut words = Vec::new();
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
-        if arg == "--game" {
+        if arg == "--game" || arg == "--iso" {
             iter.next();
         } else if !arg.starts_with("--") {
             words.push(arg.as_str());
@@ -79,6 +79,7 @@ fn main() -> ExitCode {
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
         ["helper", "stage-windows"] => helper_stage_windows().map(|_| ()),
+        ["helper", "prepare-windows"] => helper_prepare_windows(option_value(&args, "--iso")),
         ["setup-notice"] => {
             if let Some(message) = setup_notice() {
                 println!("{message}");
@@ -135,6 +136,9 @@ fn save_windows_setup_status(outcome: Outcome) {
 /// A one-line message when the user needs to do something to finish setup.
 fn setup_notice() -> Option<&'static str> {
     match windows_setup_status()? {
+        Outcome::DownloadFailed | Outcome::Failed | Outcome::NoSpace => {
+            Some("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up.")
+        }
         Outcome::BitLocker => Some(
             "Windows is encrypted with BitLocker, so Monet can't set it up for you. \
              In Windows, open Monet for Windows and run Install Monet.",
@@ -218,7 +222,12 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
     }
     // Check before asking anything, so problems show up right away.
     let efi = efi()?;
-    find_windows(&efi)?;
+    if find_windows(&efi).is_err() {
+        if windows_setup_status().is_some_and(Outcome::is_fresh_install) {
+            return finish_windows_setup(confirm);
+        }
+        find_windows(&efi)?;
+    }
 
     if confirm {
         let name = game.and_then(|id| load_games()?.find(id).map(|g| g.name.clone()));
@@ -282,6 +291,15 @@ fn doctor() -> Res<()> {
         Some(Outcome::Staged) => warn("Windows is ready. Open Windows once to finish setting up."),
         Some(Outcome::NotFound) => bad("Windows wasn't found when Monet looked for it."),
         Some(Outcome::NoPayload) => warn("This copy of Monet doesn't include the Windows files."),
+        Some(Outcome::Pending) => warn("Windows installs itself at the next restart."),
+        Some(Outcome::Preparing) => warn("Windows is being downloaded and prepared."),
+        Some(Outcome::DownloadFailed) => {
+            bad("Windows couldn't be downloaded. Choose Windows in the app menu to try again.")
+        }
+        Some(Outcome::NoSpace) => bad("There isn't enough free space on the disk for Windows."),
+        Some(Outcome::Failed) => {
+            bad("Windows couldn't be prepared. See /var/log/monet-windows.log, or choose Windows to try again.")
+        }
         Some(_) => warn(setup_notice().unwrap_or("Windows isn't set up yet.")),
         None => warn("Windows hasn't been set up yet. It happens at the next restart."),
     }
@@ -426,6 +444,7 @@ fn helper_sync() -> Res<()> {
     fs::write(&tmp, list.to_json()).map_err(|e| e.to_string())?;
     fs::rename(&tmp, games_cache()).map_err(|e| e.to_string())?;
     save_windows_setup_status(Outcome::Installed);
+    remove_setup_boot_entry();
     println!("Synced {} Windows games.", list.games.len());
     Ok(())
 }
@@ -436,7 +455,11 @@ fn helper_stage_windows() -> Res<Outcome> {
         return Ok(done);
     }
     let outcome = windows_setup::stage(windows_setup::payload_dir().as_deref())?;
-    save_windows_setup_status(outcome);
+    // Before Monet's own Windows install has run, its partition is empty.
+    let fresh = windows_setup_status().is_some_and(Outcome::is_fresh_install);
+    if !(fresh && outcome == Outcome::NotFound) {
+        save_windows_setup_status(outcome);
+    }
     println!(
         "{}",
         match outcome {
@@ -445,9 +468,131 @@ fn helper_stage_windows() -> Res<Outcome> {
             Outcome::NotFound => "Windows wasn't found on this PC.",
             Outcome::NoPayload => "This copy of Monet doesn't include the Windows files.",
             Outcome::BitLocker | Outcome::Hibernated => setup_notice().unwrap_or_default(),
+            _ => "",
         }
     );
     Ok(outcome)
+}
+
+/// Removes the one-time "Monet Windows Setup" boot entry after Windows is in.
+fn remove_setup_boot_entry() {
+    let Ok(mut efi) = EfiVarFs::open() else { return };
+    let entries = boot::list_entries(&efi).unwrap_or_default();
+    for entry in entries.iter().filter(|e| e.option.description == "Monet Windows Setup") {
+        let mut order = boot::boot_order(&efi).unwrap_or_default();
+        order.retain(|n| *n != entry.number);
+        let _ = efi.set(GLOBAL_GUID, "BootOrder", &monet_core::efi::write_u16_list(&order), monet_core::efi::ATTR_DEFAULT);
+        let _ = efi.delete(GLOBAL_GUID, &monet_core::efi::boot_var_name(entry.number));
+    }
+}
+
+/// Runs the Windows download and setup (the "Monet and Windows" install).
+fn helper_prepare_windows(iso: Option<String>) -> Res<()> {
+    require_root()?;
+    let script = windows_setup::libexec_dir()
+        .map(|d| d.join("monet-prepare-windows"))
+        .filter(|p| p.is_file())
+        .ok_or("This copy of Monet can't install Windows by itself.")?;
+    let mut cmd = Command::new(script);
+    if let Some(iso) = iso {
+        cmd.args(["--iso", &iso]);
+    }
+    let status = cmd.status().map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(String::new())
+    }
+}
+
+/// When Monet's own Windows install didn't finish: try again, from a file
+/// in Downloads if there is one, then restart into the Windows install.
+fn finish_windows_setup(confirm: bool) -> Res<()> {
+    let iso = downloaded_windows_iso();
+    let question = match &iso {
+        Some(p) => format!(
+            "Monet can install Windows from {}. Your PC restarts and Windows installs itself.",
+            p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+        ),
+        None => "Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. \
+                 This takes about 30 minutes."
+            .to_string(),
+    };
+    if confirm && !ask("Set up Windows?", &question, "Set Up") {
+        return Ok(());
+    }
+    let mut args = vec!["helper".to_string(), "prepare-windows".to_string()];
+    if let Some(p) = &iso {
+        args.extend(["--iso".to_string(), p.display().to_string()]);
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let mut child = if is_root() {
+        Command::new(&exe).args(&args).spawn()
+    } else {
+        Command::new("pkexec").arg(&exe).args(&args).spawn()
+    }
+    .map_err(|e| e.to_string())?;
+    let ok = show_progress_while(&mut child);
+    match windows_setup_status() {
+        Some(Outcome::Pending) if ok => {
+            if !confirm || ask("Windows is ready", "Restart now to install Windows?", "Restart") {
+                let _ = Command::new("systemctl").arg("reboot").status();
+            }
+            Ok(())
+        }
+        Some(Outcome::DownloadFailed) => {
+            let text = "Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page \
+                        (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again.";
+            if !confirm || ask("Download Windows", text, "Open Microsoft's Page") {
+                let _ = Command::new("xdg-open").arg("https://www.microsoft.com/software-download/windows11").status();
+            }
+            Ok(())
+        }
+        _ => Err("Windows couldn't be prepared. Details are in /var/log/monet-windows.log.".into()),
+    }
+}
+
+/// A Windows 11 ISO the user downloaded, newest first.
+fn downloaded_windows_iso() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let dir = PathBuf::from(home).join("Downloads");
+    let mut isos: Vec<_> = fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| {
+            let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+            name.ends_with(".iso") && name.contains("win")
+        })
+        .collect();
+    isos.sort_by_key(|p| std::cmp::Reverse(fs::metadata(p).and_then(|m| m.modified()).ok()));
+    isos.into_iter().next()
+}
+
+/// Shows a progress dialog fed by the setup script until it finishes.
+fn show_progress_while(child: &mut std::process::Child) -> bool {
+    let dialog = Command::new("kdialog")
+        .args(["--title", "Monet", "--progressbar", "Getting Windows ready", "100"])
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).split_whitespace().map(String::from).collect::<Vec<_>>())
+        .filter(|parts| parts.len() == 2);
+    let qdbus = ["qdbus6", "qdbus-qt6", "qdbus"].into_iter().find(|c| has(c));
+    loop {
+        if let Ok(Some(status)) = child.try_wait() {
+            if let (Some(d), Some(q)) = (&dialog, qdbus) {
+                let _ = Command::new(q).args([&d[0], &d[1], "close"]).status();
+            }
+            return status.success();
+        }
+        if let (Some(d), Some(q), Ok(text)) = (&dialog, qdbus, fs::read_to_string("/run/monet/windows-progress")) {
+            if let Some((pct, label)) = text.trim().split_once('\t') {
+                let _ = Command::new(q).args([&d[0], &d[1], "Set", "", "value", pct]).status();
+                let _ = Command::new(q).args([&d[0], &d[1], "setLabelText", label]).status();
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    }
 }
 
 fn helper_make_default() -> Res<()> {

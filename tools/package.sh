@@ -21,7 +21,7 @@ case "$KIND" in
         mkdir -p "$OUT/icons"
         cp "$ROOT/branding/monet.svg" "$ROOT/branding/monet-windows.svg" "$OUT/icons/"
         install -m 755 "$BIN" "$OUT/monet"
-        chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT/libexec/monet-session"
+        chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT/libexec/monet-session" "$OUT/libexec/monet-prepare-windows"
         if [ -n "$BRIDGE" ]; then
             "$0" windows "$BRIDGE" "$OUT/windows" >/dev/null
         fi

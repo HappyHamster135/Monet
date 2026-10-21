@@ -257,6 +257,29 @@ The CachyOS kernel (section 4.1) is not in v0.1. Bazzite's kernel already
 carries most gaming patches and is signed for Secure Boot. Switching kernels
 waits for the Phase 2 benchmarks.
 
+### Status: v0.3 (preview)
+
+v0.3 makes the installer do everything. The USB stick's default choice,
+**Install Monet and Windows**, erases the PC and:
+
+- plans the disk itself (the internal disk, about one third for Windows)
+- installs Monet, then downloads Windows 11 from Microsoft (same API as a
+  browser) in Monet's language, and stages it on a temporary setup partition
+- boots that partition once, where Monet's own script replaces the Setup
+  wizard: DISM applies Windows, `bcdboot` adds it to the shared EFI partition
+- answers every first-start question with an answer file: local account
+  with the user's name and no password, no Microsoft account, no BitLocker
+  (`PreventDeviceEncryption`), UTC hardware clock, Monet Bridge and the Game
+  Profile installed on first sign-in
+- removes the setup partition and gives its space to Windows, makes Monet the
+  default again, and returns to Monet
+
+**Install Monet next to my Windows** keeps the v0.2 behavior.
+
+Known limits: PCs with Intel VMD/RST storage may need a driver Windows
+Setup's environment lacks; Microsoft can block automatic downloads (Monet
+then asks for a downloaded ISO); the MOK confirmation screen can't be skipped.
+
 ### Status: v0.2 (preview)
 
 v0.2 brings Phase 3's core early: **one download, one USB stick.**
@@ -316,6 +339,7 @@ Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
 ### Phase 3: Monet Setup
 - [x] One-download installer ISO (network install of the Monet OS image), v0.2
 - [x] Windows half set up from Monet automatically (one UAC click), v0.2
+- [x] "Install Monet and Windows": fresh, unattended, games-only Windows, v0.3
 - [ ] "Monet Setup" for Windows: makes the USB stick, or installs without one
 - [ ] Branded installer for the Linux part
 - [ ] First-boot wizard

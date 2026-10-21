@@ -18,12 +18,17 @@ impl BootEntry {
 
     /// An entry that loads a non-Windows loader from disk (shim, GRUB,
     /// systemd-boot, ...). Firmware entries such as USB or network boot have
-    /// no file path and are never picked.
+    /// no file path, and the removable-media fallback path
+    /// (`\EFI\BOOT\BOOTX64.EFI`, used by USB sticks and Monet's Windows
+    /// setup partition) is skipped too.
     pub fn is_other_os(&self) -> bool {
         match self.option.file_path.as_deref() {
             Some(path) => {
                 let path = path.to_ascii_lowercase();
-                !self.is_windows() && path.ends_with(".efi") && !path.contains("\\microsoft\\")
+                !self.is_windows()
+                    && path.ends_with(".efi")
+                    && !path.contains("\\microsoft\\")
+                    && !path.ends_with("\\efi\\boot\\bootx64.efi")
             }
             None => false,
         }
@@ -126,6 +131,7 @@ pub mod testing {
         add_entry(&mut efi, 0x0003, "Fedora", Some("\\EFI\\fedora\\shimx64.efi"));
         add_entry(&mut efi, 0x0010, "UEFI: PXE IPv4", None);
         add_entry(&mut efi, 0x0011, "Linux Firmware Updater", Some("\\EFI\\fedora\\fwupdx64.efi"));
+        add_entry(&mut efi, 0x0012, "Monet Windows Setup", Some("\\EFI\\BOOT\\BOOTX64.EFI"));
         efi.set(GLOBAL_GUID, "BootOrder", &efi::write_u16_list(&[3, 0, 0x10]), ATTR_DEFAULT)
             .unwrap();
         efi.set(GLOBAL_GUID, "BootCurrent", &3u16.to_le_bytes(), ATTR_DEFAULT).unwrap();
@@ -142,12 +148,13 @@ mod tests {
     fn finds_windows_and_current() {
         let efi = dual_boot();
         let entries = list_entries(&efi).unwrap();
-        assert_eq!(entries.iter().map(|e| e.number).collect::<Vec<_>>(), vec![3, 0, 0x10, 0x11]);
+        assert_eq!(entries.iter().map(|e| e.number).collect::<Vec<_>>(), vec![3, 0, 0x10, 0x11, 0x12]);
         assert_eq!(find_windows(&entries).unwrap().number, 0);
         assert_eq!(boot_current(&efi).unwrap(), 3);
         assert!(entries[0].is_other_os());
         assert!(!entries[1].is_other_os());
         assert!(!entries[2].is_other_os());
+        assert!(!entries[4].is_other_os(), "the setup partition is never Monet");
     }
 
     #[test]

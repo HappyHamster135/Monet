@@ -1,0 +1,534 @@
+#!/usr/bin/env python3
+"""Gets a fresh Windows 11 ready to install itself, for "Install Monet and Windows".
+
+Runs once at the end of the Monet installer, inside the new system. If it
+can't finish (no internet, Microsoft blocks the download), Monet still
+works, and choosing Windows in the app menu runs it again.
+
+1. Splits the free space the installer left at the end of the disk into a
+   Windows partition and a small setup partition.
+2. Downloads Windows 11 from Microsoft, in the same language as Monet.
+3. Copies Windows Setup to the setup partition, with Monet's own install
+   script in place of the Setup wizard and an answer file that skips all of
+   Windows' first-start questions and installs Monet Bridge.
+4. Starts the setup partition once, at the next restart.
+
+    monet-prepare-windows [--iso FILE]
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+import uuid
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+STATE = Path("/var/lib/monet")
+STATUS = STATE / "windows-setup"
+PROGRESS = Path("/run/monet/windows-progress")
+WORK = Path("/var/tmp/monet-windows")
+LOG = Path("/var/log/monet-windows.log")
+MOUNT = Path("/run/monet")
+
+WINDOWS_LABEL = "Monet Windows"
+SETUP_LABEL = "Monet Setup"
+BOOT_ENTRY = "Monet Windows Setup"
+BASIC_DATA = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+SETUP_MIB = 8 * 1024
+MIN_WINDOWS_MIB = 64 * 1024
+
+MS_PAGE = "https://www.microsoft.com/en-us/software-download/windows11"
+MS_API = "https://www.microsoft.com/software-download-connector/api"
+MS_PROFILE = "606624d44113"
+USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+
+SHARE = next(
+    (p for p in (Path(sys.argv[0]).resolve().parent.parent / "share/monet", Path("/usr/share/monet"),
+                 Path("/usr/local/share/monet")) if (p / "winpe").is_dir()),
+    Path("/usr/share/monet"),
+)
+
+
+class Stop(Exception):
+    """A problem with a status code and a message for the user."""
+
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+
+
+def log(message):
+    line = time.strftime("%Y-%m-%d %H:%M:%S ") + message
+    print(line, flush=True)
+    try:
+        with LOG.open("a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def set_status(code):
+    STATE.mkdir(parents=True, exist_ok=True)
+    STATUS.write_text(code)
+
+
+def progress(percent, text):
+    try:
+        PROGRESS.parent.mkdir(parents=True, exist_ok=True)
+        PROGRESS.write_text(f"{int(percent)}\t{text}\n")
+    except OSError:
+        pass
+    log(f"[{int(percent)}%] {text}")
+
+
+def run(*cmd, check=True, capture=False, stdin=None):
+    log("$ " + " ".join(str(c) for c in cmd))
+    result = subprocess.run([str(c) for c in cmd], input=stdin, text=True,
+                            stdout=subprocess.PIPE if capture else None, stderr=subprocess.PIPE)
+    if check and result.returncode != 0:
+        raise Stop("failed", f"{cmd[0]} failed: {result.stderr.strip()[:300]}")
+    return result.stdout if capture else result.returncode == 0
+
+
+# ----------------------------------------------------------------- this PC
+
+def lsblk(*args):
+    return json.loads(run("lsblk", "-J", "-b", *args, capture=True))["blockdevices"]
+
+
+def root_disk():
+    """The disk Monet is installed on."""
+    source = subprocess.run(["findmnt", "-no", "SOURCE", "/"], capture_output=True, text=True).stdout.strip()
+    source = re.sub(r"\[.*\]$", "", source)
+    if not source.startswith("/dev/"):
+        # Inside the installer, / may not show up as a mount; the installer
+        # labels Monet's file system "monet".
+        source = run("blkid", "-L", "monet", capture=True).strip()
+    disk = run("lsblk", "-no", "PKNAME", source, capture=True).strip().splitlines()
+    if not disk or not disk[-1]:
+        raise Stop("failed", f"couldn't find the disk of {source}")
+    return "/dev/" + disk[-1].strip()
+
+
+def partitions(disk):
+    return lsblk("-o", "PATH,PARTLABEL,PARTN,SIZE,FSTYPE", disk)[0].get("children", [])
+
+
+def find_partition(disk, label):
+    return next((p for p in partitions(disk) if p.get("partlabel") == label), None)
+
+
+def sector_size(disk):
+    return int(run("blockdev", "--getss", disk, capture=True))
+
+
+def largest_free(disk):
+    """(start, sectors) of the largest free area, from `sfdisk -F`."""
+    best = (0, 0)
+    for line in run("sfdisk", "-F", "-q", disk, capture=True).splitlines():
+        fields = line.split()
+        if len(fields) >= 3 and fields[0].isdigit():
+            start, end = int(fields[0]), int(fields[1])
+            if end - start + 1 > best[1]:
+                best = (start, end - start + 1)
+    return best
+
+
+def make_partitions(disk):
+    """Creates the Windows and setup partitions in the free space at the end."""
+    win, setup = find_partition(disk, WINDOWS_LABEL), find_partition(disk, SETUP_LABEL)
+    if win and setup:
+        return win["path"], setup["path"], setup["partn"]
+
+    mib = 1024 * 1024 // sector_size(disk)
+    free_start, free_sectors = largest_free(disk)
+    start = -(-free_start // mib) * mib
+    usable = (free_start + free_sectors - start) // mib * mib
+    setup_sectors = SETUP_MIB * mib
+    win_sectors = usable - setup_sectors - mib
+    if win_sectors < MIN_WINDOWS_MIB * mib:
+        raise Stop("no-space", "there isn't enough free space on the disk for Windows")
+
+    layout = (
+        f'start={start}, size={win_sectors}, type={BASIC_DATA}, name="{WINDOWS_LABEL}"\n'
+        f'start={start + win_sectors}, size={setup_sectors}, type={BASIC_DATA}, name="{SETUP_LABEL}"\n'
+    )
+    progress(2, "Making room for Windows")
+    run("sfdisk", "--append", "--no-reread", "--no-tell-kernel", disk, stdin=layout)
+    run("partx", "-a", disk, check=False)
+    run("udevadm", "settle", check=False)
+    time.sleep(1)
+
+    win, setup = find_partition(disk, WINDOWS_LABEL), find_partition(disk, SETUP_LABEL)
+    if not (win and setup):
+        raise Stop("failed", "the new partitions didn't show up")
+    run("mkfs.ntfs", "-Q", "-F", "-L", "MONETWIN", win["path"], capture=True)
+    run("mkfs.vfat", "-F", "32", "-n", "MONETSETUP", setup["path"], capture=True)
+    return win["path"], setup["path"], setup["partn"]
+
+
+def first_user():
+    """(name, full name) of the person who set up Monet."""
+    for line in Path("/etc/passwd").read_text().splitlines():
+        fields = line.split(":")
+        if len(fields) >= 7 and fields[2].isdigit() and 1000 <= int(fields[2]) < 60000:
+            full = fields[4].split(",")[0] or fields[0]
+            return fields[0], full
+    return "Player", "Player"
+
+
+def windows_name(name):
+    """Windows user names: at most 20 characters, no special characters."""
+    clean = re.sub(r'["/\\\[\]:;|=,+*?<>@ ]', "", name)[:20]
+    return clean or "Player"
+
+
+# ------------------------------------------------------- language and region
+
+# Monet's language -> (Microsoft's ISO language name, Windows language tag).
+LANGUAGES = {
+    "en_US": ("English", "en-US"), "en": ("English International", "en-GB"),
+    "sv": ("Swedish", "sv-SE"), "de": ("German", "de-DE"), "fr_CA": ("French Canadian", "fr-CA"),
+    "fr": ("French", "fr-FR"), "es_MX": ("Spanish (Mexico)", "es-MX"), "es": ("Spanish", "es-ES"),
+    "it": ("Italian", "it-IT"), "nb": ("Norwegian", "nb-NO"), "no": ("Norwegian", "nb-NO"),
+    "da": ("Danish", "da-DK"), "fi": ("Finnish", "fi-FI"), "nl": ("Dutch", "nl-NL"),
+    "pl": ("Polish", "pl-PL"), "pt_BR": ("Brazilian Portuguese", "pt-BR"), "pt": ("Portuguese", "pt-PT"),
+    "ja": ("Japanese", "ja-JP"), "ko": ("Korean", "ko-KR"), "zh_CN": ("Chinese Simplified", "zh-CN"),
+    "zh_TW": ("Chinese Traditional", "zh-TW"), "tr": ("Turkish", "tr-TR"), "cs": ("Czech", "cs-CZ"),
+    "hu": ("Hungarian", "hu-HU"), "el": ("Greek", "el-GR"), "uk": ("Ukrainian", "uk-UA"),
+    "ro": ("Romanian", "ro-RO"), "et": ("Estonian", "et-EE"), "lv": ("Latvian", "lv-LV"),
+    "lt": ("Lithuanian", "lt-LT"), "sk": ("Slovak", "sk-SK"), "sl": ("Slovenian", "sl-SI"),
+    "hr": ("Croatian", "hr-HR"), "bg": ("Bulgarian", "bg-BG"),
+}
+
+# Keyboard layout -> Windows input language.
+KEYBOARDS = {
+    "us": "en-US", "gb": "en-GB", "uk": "en-GB", "ie": "en-IE", "se": "sv-SE", "de": "de-DE",
+    "fr": "fr-FR", "es": "es-ES", "latam": "es-MX", "it": "it-IT", "no": "nb-NO", "dk": "da-DK",
+    "fi": "fi-FI", "nl": "nl-NL", "be": "fr-BE", "ch": "de-CH", "pl": "pl-PL", "pt": "pt-PT",
+    "br": "pt-BR", "ca": "fr-CA", "jp": "ja-JP", "kr": "ko-KR", "cz": "cs-CZ", "hu": "hu-HU",
+    "gr": "el-GR", "ua": "uk-UA", "ro": "ro-RO", "tr": "tr-TR", "ee": "et-EE", "lv": "lv-LV",
+    "lt": "lt-LT", "sk": "sk-SK", "si": "sl-SI", "hr": "hr-HR", "is": "is-IS",
+}
+
+# Time zone -> Windows time zone (the common ones; Windows corrects the rest
+# once it can use location).
+TIMEZONES = {
+    "Europe/London": "GMT Standard Time", "Europe/Dublin": "GMT Standard Time", "Europe/Lisbon": "GMT Standard Time",
+    "Europe/Stockholm": "W. Europe Standard Time", "Europe/Oslo": "W. Europe Standard Time",
+    "Europe/Berlin": "W. Europe Standard Time", "Europe/Amsterdam": "W. Europe Standard Time",
+    "Europe/Vienna": "W. Europe Standard Time", "Europe/Rome": "W. Europe Standard Time",
+    "Europe/Zurich": "W. Europe Standard Time", "Europe/Paris": "Romance Standard Time",
+    "Europe/Brussels": "Romance Standard Time", "Europe/Madrid": "Romance Standard Time",
+    "Europe/Copenhagen": "Romance Standard Time", "Europe/Warsaw": "Central European Standard Time",
+    "Europe/Zagreb": "Central European Standard Time", "Europe/Prague": "Central Europe Standard Time",
+    "Europe/Budapest": "Central Europe Standard Time", "Europe/Belgrade": "Central Europe Standard Time",
+    "Europe/Bratislava": "Central Europe Standard Time", "Europe/Ljubljana": "Central Europe Standard Time",
+    "Europe/Helsinki": "FLE Standard Time", "Europe/Kyiv": "FLE Standard Time", "Europe/Kiev": "FLE Standard Time",
+    "Europe/Riga": "FLE Standard Time", "Europe/Tallinn": "FLE Standard Time", "Europe/Vilnius": "FLE Standard Time",
+    "Europe/Sofia": "FLE Standard Time", "Europe/Athens": "GTB Standard Time", "Europe/Bucharest": "GTB Standard Time",
+    "Europe/Istanbul": "Turkey Standard Time", "Europe/Moscow": "Russian Standard Time",
+    "America/New_York": "Eastern Standard Time", "America/Toronto": "Eastern Standard Time",
+    "America/Detroit": "Eastern Standard Time", "America/Chicago": "Central Standard Time",
+    "America/Winnipeg": "Central Standard Time", "America/Denver": "Mountain Standard Time",
+    "America/Edmonton": "Mountain Standard Time", "America/Phoenix": "US Mountain Standard Time",
+    "America/Los_Angeles": "Pacific Standard Time", "America/Vancouver": "Pacific Standard Time",
+    "America/Anchorage": "Alaskan Standard Time", "Pacific/Honolulu": "Hawaiian Standard Time",
+    "America/Mexico_City": "Central Standard Time (Mexico)", "America/Sao_Paulo": "E. South America Standard Time",
+    "America/Argentina/Buenos_Aires": "Argentina Standard Time", "Asia/Tokyo": "Tokyo Standard Time",
+    "Asia/Seoul": "Korea Standard Time", "Asia/Shanghai": "China Standard Time",
+    "Asia/Hong_Kong": "China Standard Time", "Asia/Taipei": "Taipei Standard Time",
+    "Asia/Singapore": "Singapore Standard Time", "Asia/Kolkata": "India Standard Time",
+    "Asia/Dubai": "Arabian Standard Time", "Asia/Jerusalem": "Israel Standard Time",
+    "Australia/Sydney": "AUS Eastern Standard Time", "Australia/Melbourne": "AUS Eastern Standard Time",
+    "Australia/Brisbane": "E. Australia Standard Time", "Australia/Perth": "W. Australia Standard Time",
+    "Pacific/Auckland": "New Zealand Standard Time", "UTC": "UTC", "Etc/UTC": "UTC",
+}
+
+
+def read_conf(path, key):
+    try:
+        for line in Path(path).read_text().splitlines():
+            if line.strip().startswith(key + "="):
+                return line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return ""
+
+
+def region():
+    """Language, keyboard and time zone, taken from Monet's settings."""
+    lang = read_conf("/etc/locale.conf", "LANG").split(".")[0] or "en_US"
+    ms_lang, ui = LANGUAGES.get(lang) or LANGUAGES.get(lang.split("_")[0]) or LANGUAGES["en_US"]
+    locale = lang.replace("_", "-") if "_" in lang else ui
+
+    layout = ""
+    try:
+        text = Path("/etc/X11/xorg.conf.d/00-keyboard.conf").read_text()
+        match = re.search(r'XkbLayout"\s+"([^",]+)', text)
+        layout = match.group(1) if match else ""
+    except OSError:
+        pass
+    layout = layout or read_conf("/etc/vconsole.conf", "KEYMAP").split("-")[0]
+    keyboard = KEYBOARDS.get(layout, locale)
+
+    try:
+        zone = os.readlink("/etc/localtime").split("zoneinfo/", 1)[1]
+    except (OSError, IndexError):
+        zone = "UTC"
+    return ms_lang, ui, locale, keyboard, TIMEZONES.get(zone, "UTC")
+
+
+# ------------------------------------------------------- downloading Windows
+
+def http(url, method="GET", referer=None, limit=200_000):
+    headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
+    if referer:
+        headers["Referer"] = referer
+    data = b"" if method == "POST" else None
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return response.read(limit).decode("utf-8", "replace")
+
+
+def windows_download_link(ms_lang):
+    """Asks Microsoft's download page for a Windows 11 ISO link, the same way
+    a web browser does."""
+    page = http(MS_PAGE, limit=1_000_000)
+    edition = re.search(r'<option value="(\d+)">Windows', page)
+    if not edition:
+        raise Stop("download-failed", "Microsoft's download page has changed")
+    session = str(uuid.uuid4())
+    http(f"https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id={session}")
+
+    def api(name, query):
+        url = f"{MS_API}/{name}?profile={MS_PROFILE}&{query}&friendlyFileName=undefined&Locale=en-US&sessionID={session}"
+        for method in ("GET", "POST"):
+            try:
+                return json.loads(http(url, method=method, referer=MS_PAGE))
+            except urllib.error.HTTPError as e:
+                if e.code not in (405, 411):
+                    raise
+        raise Stop("download-failed", "Microsoft's download service didn't answer")
+
+    skus = api("getskuinformationbyproductedition", f"ProductEditionId={edition.group(1)}&SKU=undefined").get("Skus", [])
+    pick = next((s for s in skus if s.get("Language", "").lower() == ms_lang.lower()), None)
+    pick = pick or next((s for s in skus if s.get("Language", "").lower() == "english"), None)
+    if not pick:
+        raise Stop("download-failed", "Microsoft didn't offer a Windows language")
+
+    links = api("GetProductDownloadLinksBySku", f"productEditionId=undefined&SKU={pick['Id']}")
+    if "Sentinel" in json.dumps(links) or links.get("Errors"):
+        raise Stop("download-failed", "Microsoft blocked the automatic download")
+    uris = [o.get("Uri", "") for o in links.get("ProductDownloadOptions", [])]
+    uri = next((u for u in uris if "x64" in u), None)
+    if not uri:
+        raise Stop("download-failed", "Microsoft didn't offer a 64-bit Windows")
+    return uri, pick.get("Language", "English")
+
+
+def download(url, target):
+    """Downloads with progress, resuming after dropped connections."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    for attempt in range(8):
+        have = target.stat().st_size if target.exists() else 0
+        headers = {"User-Agent": USER_AGENT}
+        if have:
+            headers["Range"] = f"bytes={have}-"
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as r:
+                total = have + int(r.headers.get("Content-Length", 0))
+                if have and r.status != 206:
+                    have, total = 0, int(r.headers.get("Content-Length", 0))
+                with target.open("ab" if have else "wb") as f:
+                    done, last = have, 0
+                    while chunk := r.read(4 * 1024 * 1024):
+                        f.write(chunk)
+                        done += len(chunk)
+                        if total and time.time() - last > 5:
+                            last = time.time()
+                            progress(5 + 60 * done / total, f"Downloading Windows ({done >> 30} of {total >> 30} GB)")
+            if not total or done >= total:
+                return
+            log("download ended early, resuming")
+        except urllib.error.HTTPError as e:
+            if e.code == 416:  # already complete
+                return
+            log(f"download interrupted: {e}")
+            time.sleep(5 * (attempt + 1))
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
+            log(f"download interrupted: {e}")
+            time.sleep(5 * (attempt + 1))
+    raise Stop("download-failed", "the Windows download kept failing")
+
+
+# ------------------------------------------------------- staging Windows Setup
+
+def wim_images(path):
+    """[(index, name)] of the editions in a WIM/ESD file."""
+    images, index = [], None
+    for line in run("wimlib-imagex", "info", path, capture=True).splitlines():
+        if line.startswith("Index:"):
+            index = int(line.split(":", 1)[1])
+        elif line.startswith("Name:") and index is not None:
+            images.append((index, line.split(":", 1)[1].strip()))
+    return images
+
+
+def pick_edition(images):
+    """Home if the PC came with Windows (its key is in the firmware and most
+    laptops ship Home, so it activates by itself), else Pro."""
+    want = "Home" if Path("/sys/firmware/acpi/tables/MSDM").exists() else "Pro"
+    for wanted in (f"Windows 11 {want}", "Windows 11 Pro", "Windows 11 Home"):
+        for index, name in images:
+            if name == wanted:
+                return index, name
+    return images[0]
+
+
+def fill(template, values):
+    text = template
+    for key, value in values.items():
+        text = text.replace(f"@{key}@", escape(value))
+    return text
+
+
+def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
+    iso_dir, setup_dir = MOUNT / "iso", MOUNT / "setup"
+    for d in (iso_dir, setup_dir):
+        d.mkdir(parents=True, exist_ok=True)
+        run("umount", d, check=False, capture=True)
+    run("mount", "-o", "loop,ro", iso, iso_dir)
+    try:
+        # "quiet": FAT has no permissions; don't fail when copying them.
+        run("mount", "-o", "quiet", setup_dev, setup_dir)
+        try:
+            progress(68, "Copying Windows Setup")
+            for item in setup_dir.iterdir():
+                shutil.rmtree(item) if item.is_dir() else item.unlink()
+            skip = {"install.wim", "install.esd", "install.swm"}
+            shutil.copytree(iso_dir, setup_dir, dirs_exist_ok=True, copy_function=shutil.copyfile,
+                            ignore=lambda d, names: [n for n in names if n.lower() in skip])
+
+            source = next((iso_dir / "sources" / n for n in ("install.wim", "install.esd")
+                           if (iso_dir / "sources" / n).exists()), None)
+            if not source:
+                raise Stop("failed", "the Windows download has no install image")
+            index, name = pick_edition(wim_images(source))
+            progress(72, f"Preparing {name}")
+            single = WORK / "windows.wim"
+            single.unlink(missing_ok=True)
+            run("wimlib-imagex", "export", source, index, single, "--compress=LZX", capture=True)
+            progress(85, "Preparing Windows Setup")
+            run("wimlib-imagex", "split", single, setup_dir / "sources" / "install.swm", "3800", capture=True)
+            single.unlink(missing_ok=True)
+
+            # Run Monet's install script instead of the Setup wizard.
+            winpe = SHARE / "winpe"
+            commands = (
+                "delete --force /Windows/System32/winpeshl.ini\n"
+                f"add {winpe / 'winpeshl.ini'} /Windows/System32/winpeshl.ini\n"
+                f"add {winpe / 'monet-start.cmd'} /monet-start.cmd\n"
+            )
+            run("wimlib-imagex", "update", setup_dir / "sources" / "boot.wim", "2", stdin=commands, capture=True)
+
+            monet = setup_dir / "monet"
+            monet.mkdir(exist_ok=True)
+            shutil.copyfile(winpe / "deploy.cmd", monet / "deploy.cmd")
+            user, full = first_user()
+            values = {
+                "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": "MONET-GAMES",
+                "TIMEZONE": timezone, "UILANG": ui_lang, "LOCALE": locale, "INPUT": keyboard,
+            }
+            (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))
+            shutil.copytree(SHARE / "windows", monet / "bridge", dirs_exist_ok=True, copy_function=shutil.copyfile)
+            log(f"staged {name} for {values['USER']} ({ui_lang}, {keyboard}, {timezone})")
+        finally:
+            run("sync", check=False)
+            run("umount", setup_dir, check=False)
+    finally:
+        run("umount", iso_dir, check=False)
+
+
+def boot_setup_once(disk, partn):
+    """Adds a boot entry for the setup partition, last in the boot order, and
+    starts it on the next restart only."""
+    def entries():
+        out = run("efibootmgr", capture=True)
+        found = re.findall(r"^Boot([0-9A-Fa-f]{4})\*?\s+(.*?)(?:\t|\s{2,}|$)", out, re.M)
+        order = re.search(r"^BootOrder:\s*(\S+)", out, re.M)
+        return found, (order.group(1).split(",") if order else [])
+
+    found, _ = entries()
+    for number, label in found:
+        if label.strip() == BOOT_ENTRY:
+            run("efibootmgr", "-q", "-b", number, "-B", check=False)
+
+    run("efibootmgr", "-q", "-c", "-d", disk, "-p", partn, "-L", BOOT_ENTRY, "-l", "\\EFI\\BOOT\\BOOTX64.EFI")
+    found, order = entries()
+    number = next((n for n, label in found if label.strip() == BOOT_ENTRY), None)
+    if not number:
+        raise Stop("failed", "the setup boot entry wasn't created")
+    order = [n for n in order if n.upper() != number.upper()] + [number]
+    run("efibootmgr", "-q", "-o", ",".join(order))
+    run("efibootmgr", "-q", "-n", number)
+
+
+# ----------------------------------------------------------------- main
+
+def main():
+    args = sys.argv[1:]
+    iso = Path(args[args.index("--iso") + 1]) if "--iso" in args else None
+    if os.geteuid() != 0:
+        print("monet-prepare-windows needs to run as root.", file=sys.stderr)
+        return 1
+    if not Path("/sys/firmware/efi").is_dir():
+        print("This PC didn't start in UEFI mode.", file=sys.stderr)
+        return 1
+
+    set_status("preparing")
+    progress(0, "Getting Windows ready")
+    downloaded = False
+    try:
+        disk = root_disk()
+        win_dev, setup_dev, partn = make_partitions(disk)
+        ms_lang, ui, locale, keyboard, timezone = region()
+
+        if iso is None:
+            if shutil.disk_usage("/var/tmp").free < 16 * 1024**3:
+                raise Stop("no-space", "there isn't enough free space to download Windows")
+            progress(4, "Asking Microsoft for Windows 11")
+            url, got = windows_download_link(ms_lang)
+            if got.lower() != ms_lang.lower():
+                ui = "en-US"
+            iso = WORK / "windows.iso"
+            downloaded = True
+            download(url, iso)
+        stage(iso, setup_dev, ui, locale, keyboard, timezone)
+        progress(97, "Getting ready to restart")
+        boot_setup_once(disk, partn)
+        set_status("pending")
+        progress(100, "Windows installs itself at the next restart")
+        return 0
+    except Stop as e:
+        log(f"stopped: {e}")
+        set_status(e.status)
+        progress(0, str(e))
+        return 2
+    except Exception as e:  # never break the Monet install
+        log(f"failed: {e!r}")
+        set_status("failed")
+        return 3
+    finally:
+        if downloaded and iso and iso.exists() and STATUS.read_text() == "pending":
+            iso.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

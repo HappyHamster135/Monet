@@ -563,6 +563,14 @@ fn go_back(efi: &mut FirmwareVars, state: &State, found: &[WinGame]) -> Res<()> 
     }
     let entries = boot::list_entries(efi).map_err(|e| e.to_string())?;
     let target = return_target(&entries, state).ok_or("Monet's boot entry wasn't found")?;
+    if state.monet_entry != Some(target) {
+        // First trip back (for example right after Monet installed Windows):
+        // remember Monet, and make it the default again.
+        let mut learned = State::load();
+        learned.monet_entry = Some(target);
+        learned.save();
+        repair_boot_order(efi, &learned);
+    }
     boot::set_boot_next(efi, target).map_err(|e| format!("couldn't set Monet to start next: {e}"))?;
     log(&format!("returning to Monet (Boot{target:04X})"));
 

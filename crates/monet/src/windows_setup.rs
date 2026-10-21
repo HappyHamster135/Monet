@@ -29,6 +29,16 @@ pub enum Outcome {
     Hibernated,
     /// This copy of Monet doesn't include the Windows files.
     NoPayload,
+    /// "Monet and Windows": Windows is downloading and getting ready.
+    Preparing,
+    /// "Monet and Windows": Windows installs itself at the next restart.
+    Pending,
+    /// "Monet and Windows": Microsoft's download didn't work.
+    DownloadFailed,
+    /// "Monet and Windows": there wasn't room on the disk.
+    NoSpace,
+    /// "Monet and Windows": something else went wrong; see the log.
+    Failed,
 }
 
 impl Outcome {
@@ -40,6 +50,11 @@ impl Outcome {
             Outcome::BitLocker => "bitlocker",
             Outcome::Hibernated => "hibernated",
             Outcome::NoPayload => "no-payload",
+            Outcome::Preparing => "preparing",
+            Outcome::Pending => "pending",
+            Outcome::DownloadFailed => "download-failed",
+            Outcome::NoSpace => "no-space",
+            Outcome::Failed => "failed",
         }
     }
 
@@ -51,6 +66,11 @@ impl Outcome {
             Outcome::BitLocker,
             Outcome::Hibernated,
             Outcome::NoPayload,
+            Outcome::Preparing,
+            Outcome::Pending,
+            Outcome::DownloadFailed,
+            Outcome::NoSpace,
+            Outcome::Failed,
         ]
         .into_iter()
         .find(|o| o.code() == code.trim())
@@ -59,6 +79,15 @@ impl Outcome {
     /// True when nothing more needs to happen on the Linux side.
     pub fn is_done(self) -> bool {
         matches!(self, Outcome::Staged | Outcome::Installed)
+    }
+
+    /// True for the "Monet and Windows" states, where Monet installs Windows
+    /// itself instead of preparing an existing one.
+    pub fn is_fresh_install(self) -> bool {
+        matches!(
+            self,
+            Outcome::Preparing | Outcome::Pending | Outcome::DownloadFailed | Outcome::NoSpace | Outcome::Failed
+        )
     }
 }
 
@@ -72,6 +101,15 @@ const PAYLOAD: &[&str] = &[
     "GameProfile.ps1",
     "monet.ico",
 ];
+
+/// Where this copy of Monet keeps its helper scripts.
+pub fn libexec_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let from_exe = exe.parent()?.parent()?.join("libexec");
+    [from_exe, PathBuf::from("/usr/libexec"), PathBuf::from("/usr/local/libexec")]
+        .into_iter()
+        .find(|d| d.join("monet-prepare-windows").is_file())
+}
 
 /// Where this copy of Monet keeps the Windows files.
 pub fn payload_dir() -> Option<PathBuf> {
@@ -301,7 +339,7 @@ mod tests {
 
     #[test]
     fn status_codes_round_trip() {
-        for o in [Outcome::Staged, Outcome::BitLocker, Outcome::Hibernated, Outcome::NoPayload] {
+        for o in [Outcome::Staged, Outcome::BitLocker, Outcome::Hibernated, Outcome::NoPayload, Outcome::DownloadFailed] {
             assert_eq!(Outcome::from_code(o.code()), Some(o));
         }
         assert_eq!(Outcome::from_code("staged\n"), Some(Outcome::Staged));

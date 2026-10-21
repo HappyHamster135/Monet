@@ -15,12 +15,16 @@
 .PARAMETER GameProfile
     Also apply the safe performance settings from GameProfile.ps1.
 
+.PARAMETER RemoveApps
+    With -GameProfile: also remove preinstalled apps games never need.
+
 .PARAMETER FromMonet
-    Used when Monet prepared Windows and this runs once at sign-in. Removes
-    the setup files afterwards and goes back to Monet.
+    Used when Monet prepared or installed Windows and this runs once at
+    sign-in. Cleans up Monet's setup files and goes back to Monet.
 #>
 param(
     [switch]$GameProfile,
+    [switch]$RemoveApps,
     [switch]$FromMonet
 )
 
@@ -32,6 +36,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.P
 if (-not $isAdmin) {
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
     if ($GameProfile) { $argList += '-GameProfile' }
+    if ($RemoveApps) { $argList += '-RemoveApps' }
     if ($FromMonet) { $argList += '-FromMonet' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
@@ -148,7 +153,8 @@ Set-ItemProperty -Path $uninstallKey -Name NoModify -Value 1 -Type DWord
 Set-ItemProperty -Path $uninstallKey -Name NoRepair -Value 1 -Type DWord
 
 if ($GameProfile) {
-    & (Join-Path $installDir 'GameProfile.ps1') -NoPause
+    Say '  Applying the Game Profile'
+    & (Join-Path $installDir 'GameProfile.ps1') -NoPause -RemoveApps:$RemoveApps
 }
 
 # 7. Start the agent now, so the games list reaches Monet right away.
@@ -159,6 +165,17 @@ if ($FromMonet) {
     $startup = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\StartUp\Finish Monet setup.cmd'
     Remove-Item -Force -ErrorAction SilentlyContinue $startup
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $dataDir 'Setup')
+
+    # After Monet installed Windows: give the setup partition's space to C:.
+    $setupVolume = Get-Volume -FileSystemLabel 'MONETSETUP' -ErrorAction SilentlyContinue
+    if ($setupVolume) {
+        Say '  Cleaning up the Windows installer'
+        Get-Partition -Volume $setupVolume | Remove-Partition -Confirm:$false -ErrorAction SilentlyContinue
+        $max = (Get-PartitionSupportedSize -DriveLetter C).SizeMax
+        if ($max -gt (Get-Partition -DriveLetter C).Size) {
+            Resize-Partition -DriveLetter C -Size $max -ErrorAction SilentlyContinue
+        }
+    }
     Start-Process -FilePath $exe -ArgumentList 'finish-setup'
     exit 0
 }

@@ -74,10 +74,33 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           sed "s|@IMAGE@|$IMAGE:latest|" image/monet.ks > monet.ks
-          docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA_ISO" \
-            bash -c "dnf -y -q install lorax xorriso isomd5sum mtools && mkksiso --ks monet.ks netinst.iso Monet-$VERSION-Installer.iso"
+          # Add Monet's kickstart, then turn the start menu into Monet's.
+          docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
+            dnf -y -q install lorax xorriso isomd5sum mtools python3
+            mkksiso --ks monet.ks netinst.iso stage.iso
+            xorriso -osirrox on -indev stage.iso -extract /EFI/BOOT/grub.cfg efi.cfg -extract /boot/grub2/grub.cfg bios.cfg
+            python3 tools/patch-grub.py efi.cfg bios.cfg
+            xorriso -indev stage.iso -outdev Monet-$VERSION-Installer.iso -boot_image any replay \
+              -update efi.cfg /EFI/BOOT/grub.cfg -update efi.cfg /EFI/BOOT/BOOT.conf -update bios.cfg /boot/grub2/grub.cfg
+            rm stage.iso
+          "
           sudo chown "$(id -u)" "Monet-$VERSION-Installer.iso"
           ls -lh "Monet-$VERSION-Installer.iso"
+      - name: Check that Microsoft's Windows download still answers
+        # Informational: Microsoft often blocks data centers, so a failure
+        # here doesn't mean it fails at home.
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import importlib.machinery, importlib.util
+          loader = importlib.machinery.SourceFileLoader("pw", "linux/libexec/monet-prepare-windows")
+          spec = importlib.util.spec_from_loader("pw", loader)
+          pw = importlib.util.module_from_spec(spec)
+          loader.exec_module(pw)
+          pw.LOG = pw.Path("/tmp/pw.log")
+          uri, lang = pw.windows_download_link("English")
+          print("Microsoft offered:", lang, uri.split("?")[0])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: iso

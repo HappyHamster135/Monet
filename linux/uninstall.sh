@@ -17,7 +17,7 @@ rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-s
 systemctl daemon-reload
 
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
-rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-session"
+rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-session" "$PREFIX/libexec/monet-prepare-windows"
 rm -f "$PREFIX/share/icons/hicolor/scalable/apps/monet.svg" "$PREFIX/share/icons/hicolor/scalable/apps/monet-windows.svg"
 rm -f "$PREFIX/share/applications/monet-windows.desktop"
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet
