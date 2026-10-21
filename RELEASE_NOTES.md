@@ -6,9 +6,18 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.6.2-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.6.2-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.6.2-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.6.3-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.6.3-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.6.3-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.6.3: Monet's own switches
+
+- **No more blue switches.** Apps that drew the usual blue toggles (Bazaar,
+  Flatseal, Bottles and other GTK apps) now use Monet's: a pill that turns
+  lily green when on, with a white knob. Checkboxes, radio buttons, sliders
+  and progress bars match, in Mist and in Smoke.
+- **Store is Bazaar when Bazzite has it**, otherwise Discover, and the dock's
+  store button opens it.
 
 ### New in 0.6.2: more of Monet, everywhere
 

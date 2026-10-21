@@ -96,13 +96,24 @@ fi
 # GTK apps from Flathub read Monet's colors (monet-light writes them).
 flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro 2>/dev/null || :
 
-# The store is called Store, and doesn't pop up about updates: those are in
-# Monet Settings, when you ask.
-if [ -f /usr/share/applications/org.kde.discover.desktop ]; then
+# The store is called Store: Bazaar (Bazzite's) when it's there, otherwise
+# Discover. It doesn't pop up about updates: those are in Monet Settings,
+# when you ask.
+store=""
+for f in /var/lib/flatpak/exports/share/applications/io.github.kolunmi.Bazaar.desktop \
+         "$DATA/flatpak/exports/share/applications/io.github.kolunmi.Bazaar.desktop" \
+         /usr/share/applications/io.github.kolunmi.Bazaar.desktop /usr/share/applications/org.kde.discover.desktop; do
+    [ -f "$f" ] && { store=$f; break; }
+done
+if [ -n "$store" ]; then
     mkdir -p "$DATA/applications"
     sed -e '/^Name\[/d' -e '/^GenericName/d' -e '/^Comment\[/d' \
         -e '0,/^Name=/s/^Name=.*/Name=Store/' -e 's/^Comment=.*/Comment=Apps and games for Monet/' \
-        /usr/share/applications/org.kde.discover.desktop > "$DATA/applications/org.kde.discover.desktop"
+        "$store" > "$DATA/applications/$(basename "$store")"
+    if [ "$(basename "$store")" != org.kde.discover.desktop ] && [ -f /usr/share/applications/org.kde.discover.desktop ]; then
+        printf '[Desktop Entry]\nType=Application\nName=Discover\nNoDisplay=true\n' \
+            > "$DATA/applications/org.kde.discover.desktop"
+    fi
 fi
 mkdir -p "$CONFIG/autostart"
 printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
@@ -114,19 +125,24 @@ kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22
 kw_default dolphinrc General ShowZoomSlider false
 
-# Settings in the dock opens Monet Settings, not KDE's (kept panels too).
-busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s '
+# Settings in the dock opens Monet Settings, not KDE's, and the store button
+# opens the Store (kept panels too).
+busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS' | sed "s|STORE|$(basename "${store:-}")|g"
 panels().forEach(function (panel) {
     panel.widgets("org.kde.plasma.icontasks").forEach(function (tasks) {
         tasks.currentConfigGroup = ["General"];
         var launchers = String(tasks.readConfig("launchers", "")).split(",");
         var i = launchers.indexOf("applications:systemsettings.desktop");
-        if (i >= 0) {
+        if (i >= 0)
             launchers[i] = "applications:monet-settings.desktop";
-            tasks.writeConfig("launchers", launchers);
-        }
+        var store = launchers.indexOf("applications:org.kde.discover.desktop");
+        if (store >= 0 && "STORE" !== "org.kde.discover.desktop" && "STORE" !== "")
+            launchers[store] = "applications:STORE";
+        tasks.writeConfig("launchers", launchers);
     });
-});' >/dev/null 2>&1
+});
+JS
+)" >/dev/null 2>&1
 
 # The lock screen shows the same painting, in the same light.
 kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours

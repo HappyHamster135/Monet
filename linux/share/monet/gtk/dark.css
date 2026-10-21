@@ -42,3 +42,113 @@ button.suggested-action {
 button.suggested-action:hover {
     background-color: #FF6A42;
 }
+
+/* Monet's switches: a pill that turns lily, with a white knob. And checks,
+   radios, sliders and progress in lily, instead of the usual blue. */
+switch {
+    background-color: alpha(#FFFFFF, 0.18);
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: none;
+    padding: 2px;
+    color: transparent;
+}
+
+switch:hover {
+    background-color: alpha(#FFFFFF, 0.26);
+}
+
+switch:checked {
+    background-color: #357F72;
+}
+
+switch:checked:hover {
+    background-color: #3F9483;
+}
+
+switch slider {
+    background-color: #FFFFFF;
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px alpha(#000000, 0.28);
+    min-width: 20px;
+    min-height: 20px;
+    margin: 0;
+}
+
+switch image {
+    color: transparent;
+}
+
+switch:disabled {
+    opacity: 0.5;
+}
+
+check,
+radio {
+    background-color: #2A2B37;
+    background-image: none;
+    border: 1px solid alpha(#FFFFFF, 0.25);
+    box-shadow: none;
+}
+
+check {
+    border-radius: 6px;
+}
+
+radio {
+    border-radius: 999px;
+}
+
+check:checked,
+check:indeterminate,
+radio:checked {
+    background-color: #357F72;
+    border-color: #357F72;
+    color: #FFFFFF;
+}
+
+scale trough {
+    border-radius: 999px;
+    background-color: alpha(#FFFFFF, 0.18);
+    background-image: none;
+    border: none;
+}
+
+scale.horizontal trough {
+    min-height: 4px;
+}
+
+scale.vertical trough {
+    min-width: 4px;
+}
+
+scale highlight {
+    border-radius: 999px;
+}
+
+scale highlight,
+progressbar progress,
+levelbar block.filled {
+    background-color: #357F72;
+    background-image: none;
+    border-color: #357F72;
+}
+
+scale slider {
+    background-color: #FFFFFF;
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px alpha(#000000, 0.28);
+}
+
+row:selected,
+treeview.view:selected,
+flowboxchild:selected {
+    background-color: alpha(#357F72, 0.22);
+    color: #ECE9F2;
+}
+

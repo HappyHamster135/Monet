@@ -363,10 +363,12 @@ class InstallerLook(unittest.TestCase):
         python = next((c for c in candidates if c and subprocess.run([c, "-c", probe], capture_output=True).returncode == 0), None)
         if python is None:
             self.skipTest("GTK 3 Python bindings aren't installed")
-        check = subprocess.run([python, "-c", "import sys, gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; "
-                                "Gtk.CssProvider().load_from_path(sys.argv[1])", str(css)],
-                               capture_output=True, text=True, env={**os.environ, "DISPLAY": ""})
-        self.assertEqual(check.returncode, 0, check.stderr)
+        # Monet's colors for GTK apps on the desktop too (light and dark).
+        for path in [css] + sorted((ROOT / "linux/share/monet/gtk").glob("*.css")):
+            check = subprocess.run([python, "-c", "import sys, gi; gi.require_version('Gtk', '3.0'); "
+                                    "from gi.repository import Gtk; Gtk.CssProvider().load_from_path(sys.argv[1])",
+                                    str(path)], capture_output=True, text=True, env={**os.environ, "DISPLAY": ""})
+            self.assertEqual(check.returncode, 0, f"{path.name}: {check.stderr}")
 
     def test_stylesheet_targets_anaconda(self):
         css = (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text()
