@@ -1,0 +1,282 @@
+# Monet: Project Plan
+
+## 1. Vision
+
+A desktop OS that is as easy to set up as Windows, as calm to use as macOS, and
+plays every PC game:
+
+- **Linux (Monet)** for everything: browsing, work, media, and every game that runs
+  through Proton.
+- **A hidden, minimal Windows** used only for games Linux can't run, mostly
+  games with kernel-level anti-cheat.
+- **Switching takes seconds and one click.** The user thinks in terms of games,
+  not operating systems.
+
+### What makes Monet different
+
+Existing gaming distros (SteamOS, Bazzite, ChimeraOS, Nobara, CachyOS) are
+good at running games *on Linux*, but they leave anti-cheat games unsolved.
+Monet's unique parts are:
+
+1. **"Play on Windows"**: anti-cheat games get a button that switches to
+   Windows, starts the game, and returns to Monet when you quit.
+2. **Windows as a game console**: Monet installs and strips Windows itself, so
+   the user never has to deal with Windows setup, ads, or clutter.
+3. **Fast switching**: Windows hibernates instead of shutting down, so it
+   resumes in seconds with the anti-cheat already loaded.
+4. **A simple, opinionated design** inspired by Apple's simplicity, with its
+   own visual identity.
+
+### Non-goals
+
+- ❌ Bypassing, spoofing, or emulating anti-cheat. We use real Windows.
+- ❌ Running Windows in a VM for anti-cheat games. Vanguard and Ricochet block VMs.
+- ❌ Distributing Windows or a modified Windows ISO.
+- ❌ Writing our own kernel, Wine, or drivers.
+
+---
+
+## 2. Name check: "Monet"
+
+- No existing operating system called "Monet" turned up in a search.
+- "MONET" is a trademark in a few unrelated software areas (contact-center
+  scheduling, content rating). Trademarks are tied to a field, so an OS is
+  probably fine, but **run a proper search** (USPTO, EUIPO, class 9 and 42)
+  before a public launch.
+- Android 12's color system was codenamed "Monet". That was an internal
+  codename, not a product, so it isn't a conflict.
+- Bonus: Claude Monet's paintings are in the public domain. Museums such as the
+  Art Institute of Chicago publish CC0 images of them, so they can serve as
+  default wallpapers, and releases can be named after paintings ("Water
+  Lilies", "Impression", "Haystacks").
+
+**Decision: keep "Monet."**
+
+---
+
+## 3. How it works
+
+### 3.1 Disk layout
+
+```
+┌──────┬──────────────────────────┬─────┬────────────────────────┐
+│ EFI  │ Monet (Linux, btrfs)     │ MSR │ Windows (NTFS)         │
+│ 1 GB │ rest of the disk         │16 MB│ user picks, ≥ 64 GB    │
+└──────┴──────────────────────────┴─────┴────────────────────────┘
+```
+
+- One shared EFI partition holds Monet's bootloader (shim + GRUB, signed for
+  Secure Boot) and Windows Boot Manager.
+- **Monet is the default boot entry.** Turning the PC on always lands in Monet.
+  Windows boots only when asked to.
+- Monet **never mounts Windows partitions read-write**, because writing to a
+  hibernated Windows disk corrupts it. At most it mounts them read-only.
+- Setup asks one question about space: *"How much space for Windows games?"*
+  (a slider).
+
+### 3.2 The switch: "Play on Windows"
+
+```
+Monet                                   Windows (game mode)
+─────                                   ───────────────────
+User clicks "Play on Windows: Valorant"
+ │
+ ├─ write launch request to an EFI variable
+ │    MonetLaunch = { store: "riot", game: "valorant" }
+ ├─ set one-time boot: BootNext = Windows
+ └─ reboot ─────────────────────────────▶ Windows resumes from hibernation (~5–10 s)
+                                          │
+                                          ├─ Monet Bridge reads + clears MonetLaunch
+                                          ├─ launches the game
+                                          ├─ waits for the game to exit
+                                          ├─ "Back to Monet in 10 s"  [Stay] [Go now]
+                                          ├─ set one-time boot: Monet
+                                          └─ hibernate ───────────────┐
+ Monet cold-boots (~10 s) ◀────────────────────────────────────────────┘
+```
+
+**Why an EFI variable for the handoff?** It's a few bytes in firmware memory
+that both systems can read and write: Linux through `efivarfs`, Windows through
+`GetFirmwareEnvironmentVariable`. No shared disk means no risk of corruption.
+It's written only once per switch, so wear on the firmware chip is negligible.
+
+**Why does only Windows hibernate?** Secure Boot must stay on for Windows
+anti-cheat. On Linux, Secure Boot turns on kernel "lockdown", which blocks
+hibernation. So Windows resumes from hibernation, and Monet does a fast cold
+boot instead.
+
+**Target times**
+
+| Switch | Target |
+|---|---|
+| Click "Play on Windows" → game launching | < 30 s |
+| Quit game → Monet desktop | < 20 s |
+
+### 3.3 Windows Game Profile (the stripped-down Windows)
+
+Applied during an unattended install of the **official** Windows ISO. Every
+item is a reviewed entry in a list, not an ad-hoc script.
+
+| Remove / disable | Keep (never remove) |
+|---|---|
+| Preinstalled apps, ads, "suggestions" | Windows Update |
+| OneDrive, Copilot, Widgets, Teams | Defender / Windows Security |
+| Search indexing, most startup items | TPM, Secure Boot, VBS components |
+| Fast Startup (we use full hibernation) | WebView2 (launchers need it) |
+| Lock screen, login screen (auto-login to a local account) | DirectX and VC++ runtimes |
+| Telemetry, as far as official settings allow | Gaming Services / Xbox app (for Game Pass) |
+
+Goals: **< 25 GB disk use**, fast resume, nothing on screen except the game.
+
+Every profile change must pass the anti-cheat test list (section 6) before it ships.
+
+### 3.4 Setup flow
+
+The approach: **install Monet first, then let Monet install Windows.** This
+avoids writing a whole installer from scratch, makes Windows optional, and
+keeps Windows from taking over the bootloader.
+
+1. **Monet installer** (USB): language, disk, account, Windows-games space. Done.
+2. **First boot**: a short welcome, then *"Set up Windows for anti-cheat
+   games?"* [Set up] [Skip, I can do this later]
+3. If the user chooses Set up, Monet:
+   1. downloads the official Windows 11 ISO from Microsoft,
+   2. creates the Windows partitions in the space set aside for them,
+   3. copies Windows Setup to a temporary partition along with an
+      `autounattend.xml` answer file (local account, Game Profile, Monet Bridge),
+   4. reboots into Windows Setup, which runs with **no screens to click through**,
+   5. on Windows' first login, Monet Bridge puts Monet back as the default
+      boot entry, hibernates Windows, and returns to Monet,
+   6. Monet deletes the temporary partition.
+4. The user sees one progress screen: *"Setting up Windows for games… (about
+   20 minutes)"*.
+
+**License:** Windows runs unactivated, with a watermark and limited
+personalization, which matters little for a games-only system. Setup offers to
+enter a key and explains this plainly.
+
+### 3.5 Monet Games (the game hub)
+
+- One library for **Steam**, **Epic / GOG** (through Heroic or Legendary), and
+  other launchers.
+- Each game gets a badge: **Plays on Monet** · **Plays on Windows** · **Not supported**.
+- Compatibility data comes from public sources: AreWeAntiCheatYet (anti-cheat
+  status) and ProtonDB (how well each game runs).
+- **Installing a Windows-only game:** v1 switches to Windows and installs it
+  there. Downloading Windows games from Monet is a later research item, since it
+  needs safe access to the Windows disk.
+
+---
+
+## 4. Technology choices
+
+| Area | Choice | Why |
+|---|---|---|
+| Base OS | **Fedora Atomic** via **Universal Blue** (bootc images) | Same base as Bazzite. Image-based updates with rollback. Builds on GitHub Actions. |
+| Desktop | **GNOME** (recommended) | Closest to Apple's simplicity out of the box. Recent versions support VRR and HDR. KDE is the alternative if gaming features fall behind. |
+| Monet apps (Linux) | **Rust + GTK4 / libadwaita** | Native look, matches GNOME's design guidelines |
+| Monet Bridge (Windows) | **Rust** Windows service + small tray app | Same language as the Linux side, so the handoff format is shared code |
+| Gaming stack | Proton (+ Proton-GE), DXVK, VKD3D-Proton, Mesa, NVIDIA open kernel modules | Proven, maintained by others |
+| Windows install | Official ISO + `autounattend.xml` | No redistribution, fully supported by Microsoft |
+
+---
+
+## 5. Roadmap
+
+Each phase ends with something that works on its own. The riskiest ideas are
+tested first.
+
+### Phase 0: Prove it (research and prototypes)
+Goal: show that the core ideas work on real hardware before building anything polished.
+
+- [ ] Test PC: Fedora Atomic + Windows 11 dual boot, **Secure Boot on**
+- [ ] Manual switch with `efibootmgr --bootnext` (Linux) and
+      `bcdedit /set {fwbootmgr} bootsequence` (Windows); measure the time
+- [ ] Hibernate Windows → boot Linux → resume Windows: does **Valorant,
+      Call of Duty, Fortnite, or a FACEIT game** still work after resuming?
+- [ ] Hand off data with an EFI variable, written from Linux and read from Windows
+- [ ] Unattended Windows install from an `autounattend.xml` with a local account
+      (check this against the current Windows 11 build)
+- [ ] First draft of the Game Profile, followed by the anti-cheat test list
+- [ ] Check BitLocker / device encryption behavior with BootNext switching
+
+**Exit:** the switch works by hand, the anti-cheat games run, and the times are measured.
+
+### Phase 1: Monet Switch MVP
+Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
+
+- [ ] `monet-switch` CLI + background service (Linux)
+- [ ] Monet Bridge Windows service: read the request, launch, wait, return, hibernate
+- [ ] Launch support for Steam (`steam://rungameid/<id>`), Riot, Battle.net, and Epic
+- [ ] Simple tray / popup UI on both sides
+- [ ] Safety: if anything fails, fall back to a normal boot. Never strand the user.
+
+**Exit:** a non-technical tester can play Valorant from Linux with one click.
+
+### Phase 2: Monet OS image
+- [ ] Universal Blue custom image repo, built by GitHub Actions
+- [ ] Preinstalled gaming stack, codecs, and NVIDIA image variant
+- [ ] Monet Switch included
+- [ ] Design layer: theme, icons, fonts, Monet wallpapers, simplified settings
+- [ ] Secure Boot works out of the box (signed kernel, enrolled MOK key for NVIDIA)
+
+**Exit:** a bootable Monet image that people can rebase to or install.
+
+### Phase 3: Monet Setup
+- [ ] Branded installer for the Linux part
+- [ ] First-boot wizard
+- [ ] Windows ISO download, partitioning, temporary setup partition, unattended install
+- [ ] Final Game Profile applied and verified automatically
+- [ ] Recovery: "Repair Windows game mode" and "Remove Windows" options
+
+**Exit:** USB to working Monet and Windows game mode with only a few questions answered.
+
+### Phase 4: Monet Games
+- [ ] Unified library (Steam first, then Heroic for Epic/GOG)
+- [ ] Compatibility badges from AreWeAntiCheatYet and ProtonDB
+- [ ] "Play" vs "Play on Windows" chosen automatically
+- [ ] Installing Windows-only games through Windows
+
+### Phase 5: Beta
+- [ ] Hardware test matrix (AMD, Intel, and NVIDIA GPUs; several motherboard vendors)
+- [ ] Public beta, feedback, bug fixing
+- [ ] Documentation and website
+
+---
+
+## 6. Anti-cheat test list
+
+Every release of Monet Switch and the Game Profile must pass on Windows game mode:
+
+| Game | Anti-cheat | Why it's on the list |
+|---|---|---|
+| Valorant / League of Legends | Riot Vanguard | Strictest: needs TPM 2.0, Secure Boot, and a driver loaded at boot |
+| Call of Duty | Ricochet | Kernel-level, blocks VMs |
+| Fortnite | EasyAntiCheat (Windows-only setup) | Very popular |
+| Counter-Strike 2 via FACEIT | FACEIT AC | Kernel-level, strict |
+| Apex Legends | EasyAntiCheat | Linux support was removed in 2024 |
+
+---
+
+## 7. Risks
+
+| Risk | Impact | Plan |
+|---|---|---|
+| Anti-cheat breaks after hibernation | Switching gets slower | Fall back to a full Windows boot for those games (tracked per game) |
+| Windows Update overwrites the boot order or bootloader | User lands in Windows | Monet Bridge checks and repairs the boot order on every Windows boot |
+| BitLocker asks for a recovery key | Scary for users | Test in Phase 0. Save the recovery key in Monet, or turn off device encryption in the profile |
+| Microsoft changes how unattended installs or local accounts work | Setup breaks | Pin a tested Windows build. Re-test the setup on every new Windows release |
+| Stripping Windows breaks a game | Game won't run | Conservative profile + anti-cheat test list + per-game "restore component" fixes |
+| Wide hardware variety | Bugs on unusual PCs | Start with a small supported-hardware list and grow it |
+| Too much work for a small team | Project stalls | Reuse Universal Blue/Bazzite work. Ship Monet Switch alone first (Phase 1) |
+| Anti-cheat vendors flag Monet Bridge | Bans or blocks | Bridge only launches games and never touches game processes. Talk to vendors before the beta |
+
+---
+
+## 8. Open decisions
+
+- [ ] **Desktop:** GNOME (recommended) or KDE Plasma
+- [ ] **License** for Monet's own code: GPL-3.0 or Apache-2.0
+- [ ] **Supported hardware** for the first beta
+- [ ] **Hibernation fallback:** per-game setting, or automatic detection
+- [ ] **Branding:** logo, color palette, typeface (our own, not Apple's)
