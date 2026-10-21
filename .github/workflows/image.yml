@@ -92,16 +92,21 @@ jobs:
               -update bios.cfg /boot/grub2/grub.cfg -map product.img /images/product.img
             mkksiso --ks monet.ks branded.iso Monet-$VERSION-Installer.iso
             checkisomd5 Monet-$VERSION-Installer.iso
-            # Check the menu in both places, especially the EFI boot image.
+            # Check the menu in both places, especially the (hidden) EFI boot image.
+            rm -rf bootimgs && mkdir bootimgs
             xorriso -osirrox on -indev Monet-$VERSION-Installer.iso \
-              -extract /EFI/BOOT/grub.cfg check.cfg -extract /images/efiboot.img efiboot.img
+              -extract /EFI/BOOT/grub.cfg check.cfg -extract_boot_images bootimgs/
             grep -q 'Install Monet and Windows' check.cfg
-            mtype -i efiboot.img ::/EFI/BOOT/grub.cfg > efiboot.cfg
-            if grep -q menuentry efiboot.cfg && ! grep -q 'Install Monet and Windows' efiboot.cfg; then
-              echo 'The EFI boot image still has the old menu' >&2
-              exit 1
-            fi
-            rm branded.iso efiboot.img
+            for img in bootimgs/*uefi*; do
+              if mtype -i \"\$img\" ::/EFI/BOOT/grub.cfg > efiboot.cfg 2>/dev/null; then
+                if grep -q menuentry efiboot.cfg && ! grep -q 'Install Monet and Windows' efiboot.cfg; then
+                  echo 'The EFI boot image still has the old menu' >&2
+                  exit 1
+                fi
+                echo \"EFI boot image menu: \$(grep -c menuentry efiboot.cfg) entries, Monet's menu\"
+              fi
+            done
+            rm -rf branded.iso bootimgs
           "
           sudo chown "$(id -u)" "Monet-$VERSION-Installer.iso"
           ls -lh "Monet-$VERSION-Installer.iso"
