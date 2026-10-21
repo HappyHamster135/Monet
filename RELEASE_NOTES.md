@@ -6,10 +6,46 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.6.4-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
-| Monet-0.6.4-Installer.iso | The USB stick's image, for writing it yourself (on Linux or a Mac). |
-| Monet-0.6.4-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.6.4-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.7.0-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
+| Monet-0.7.0-Installer.iso | The USB stick's image, for writing it yourself (on Linux or a Mac). |
+| Monet-0.7.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.7.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.7: Monet all the way through
+
+- **Quick Settings and Monet Settings open.** In 0.6.4 they didn't load at
+  all ("Sorry! There was an error loading Quick Settings"). Now they do,
+  and Settings → Windows & Games → Check Monet works again.
+- **Make-USB-Stick.exe opens.** It closed right after asking for
+  administrator rights. Now its window shows, and if something ever goes
+  wrong it says what, instead of disappearing.
+- **The bar is Monet's everywhere.** Running apps get a small dab of sun
+  under them: longer for the window you're in, faint when it's minimized.
+  The app menu, search, notifications, the popovers, the lock screen and
+  Alt+Tab use Monet's buttons, switches, sliders and highlights instead of
+  KDE's. When a window touches the islands they turn solid but stay
+  Monet's, instead of becoming plain KDE panels.
+- **Menus float.** Right-click menus and tooltips in apps like Files and
+  Terminal cast a soft shadow, have dividers between groups again and a
+  lily highlight.
+- **The Store and other Flathub apps in Monet's colors.** Paper or smoke,
+  lily for choices, the sun for the button that goes ahead. Before, newer
+  apps like the Store kept their own grey and blue, older ones lost KDE's
+  colors, and dark mode was bluish. The Store's icon in the dock is
+  Monet's painted bag.
+- **Settings is clearer.** Each page shows its painting and how things
+  stand ("Connected to Harbor"), the list glides to the page you're on,
+  pages that open KDE's settings are marked ↗, Bluetooth devices show what
+  they are, secured networks show a lock, and updates show they're
+  working. Everything fits again: "More settings in KDE" had slipped off
+  the bottom.
+- **Terminal** has a thin cursor, more room around the text, and its menu
+  behind a button instead of a menu bar.
+- **Window shadows** are softer and wider, in ink instead of black.
+
+Updating from 0.6: Settings → Updates didn't open in 0.6.4, so open
+Terminal and run `monet update`, then restart. The new look arrives when
+you sign in; your panels stay as they are.
 
 ### New in 0.6.4: make the USB stick with one click
 

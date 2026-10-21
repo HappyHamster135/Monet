@@ -20,7 +20,7 @@ Windows downloads in the background while you use it.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.6.4-Make-USB-Stick.exe** from the
+1. Download **Monet-0.7.0-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -32,14 +32,14 @@ On a Windows PC (this one, or any other):
 3. It downloads Monet, writes the stick and checks it (about 10-20 minutes),
    then says it's ready.
 
-On Linux or a Mac, download **Monet-0.6.4-Installer.iso** and write it with
+On Linux or a Mac, download **Monet-0.7.0-Installer.iso** and write it with
 your disk tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.6.4**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.7.0**).
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
    on: then it's plain text). **Install Monet and Windows** is already
    selected. Press **Enter** (or wait ten seconds).
@@ -167,5 +167,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.6.4-Linux.tar.gz** and run `./monet-0.6.4-linux/install.sh`,
+Download **Monet-0.7.0-Linux.tar.gz** and run `./monet-0.7.0-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.
