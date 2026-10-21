@@ -1,14 +1,21 @@
 # Monet OS: Bazzite (KDE Plasma, NVIDIA open drivers for RTX 20-series and
-# newer) with Monet built in.
+# newer) with Monet built in, including the Windows half that Monet copies
+# into Windows by itself.
 #
 #   podman build -f image/Containerfile -t monet .
 
 FROM docker.io/library/rust:1 AS build
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends mingw-w64 \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
-RUN rustup target add x86_64-unknown-linux-musl \
+RUN rustup toolchain install \
+ && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu \
  && cargo build --release -p monet --target x86_64-unknown-linux-musl \
- && tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out
+ && cargo build --release -p monet-bridge --target x86_64-pc-windows-gnu \
+ && tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out \
+        target/x86_64-pc-windows-gnu/release/monet-bridge.exe
 
 FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
 COPY --from=build /out /tmp/monet

@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Assembles the downloadable folders for a release.
 #
-#   tools/package.sh linux   <monet binary>        <output dir>
+#   tools/package.sh linux   <monet binary>        <output dir> [<monet-bridge.exe>]
 #   tools/package.sh windows <monet-bridge.exe>    <output dir>
+#
+# With a monet-bridge.exe, the Linux package also carries the Windows files,
+# so Monet can set up Windows by itself.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KIND="$1" BIN="$2" OUT="$3"
+KIND="$1" BIN="$2" OUT="$3" BRIDGE="${4:-}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -19,9 +22,13 @@ case "$KIND" in
         cp "$ROOT/branding/monet.svg" "$ROOT/branding/monet-windows.svg" "$OUT/icons/"
         install -m 755 "$BIN" "$OUT/monet"
         chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT/libexec/monet-session"
+        if [ -n "$BRIDGE" ]; then
+            "$0" windows "$BRIDGE" "$OUT/windows" >/dev/null
+        fi
         ;;
     windows)
         cp "$ROOT"/windows/*.ps1 "$ROOT"/windows/*.cmd "$ROOT/windows/monet.ico" "$OUT/"
+        sed -i "s/@VERSION@/$(cat "$ROOT/VERSION")/" "$OUT/Install-Monet.ps1"
         cp "$BIN" "$OUT/monet-bridge.exe"
         ;;
     *)

@@ -1,7 +1,8 @@
 name: Build
 
 # Every push is built and tested. On the default branch, a new version in
-# VERSION is published as a GitHub release automatically.
+# VERSION is published as a GitHub release automatically, together with the
+# Monet OS image and its installer ISO.
 on:
   push:
   pull_request:
@@ -33,13 +34,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rust (version from rust-toolchain.toml)
-        run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
+        run: |
+          sudo apt-get install -y -q mingw-w64 >/dev/null
+          rustup toolchain install && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu
       - name: Build
-        run: cargo build --release -p monet --target x86_64-unknown-linux-musl
+        run: |
+          cargo build --release -p monet --target x86_64-unknown-linux-musl
+          cargo build --release -p monet-bridge --target x86_64-pc-windows-gnu
       - name: Package
         run: |
           VERSION=$(cat VERSION)
-          tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet "dist/monet-$VERSION-linux"
+          tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet "dist/monet-$VERSION-linux" \
+            target/x86_64-pc-windows-gnu/release/monet-bridge.exe
           tar -C dist -czf "dist/Monet-$VERSION-Linux.tar.gz" "monet-$VERSION-linux"
       - uses: actions/upload-artifact@v4
         with:
@@ -71,10 +77,12 @@ jobs:
           name: windows
           path: dist/*.zip
 
-  release:
-    needs: [linux, windows]
+  check:
     if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      new: ${{ steps.version.outputs.new }}
     steps:
       - uses: actions/checkout@v4
       - name: Check for a new version
@@ -88,16 +96,29 @@ jobs:
           else
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
+
+  os:
+    needs: [test, check]
+    if: needs.check.outputs.new == 'true'
+    uses: ./.github/workflows/image.yml
+    permissions:
+      contents: read
+      packages: write
+
+  release:
+    needs: [check, linux, windows, os]
+    if: needs.check.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        if: steps.version.outputs.new == 'true'
         with:
           path: dist
           merge-multiple: true
       - name: Publish release
-        if: steps.version.outputs.new == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.check.outputs.version }}
         run: |
           cd dist && sha256sum * > SHA256SUMS.txt && cd ..
           gh release create "v$VERSION" dist/* \

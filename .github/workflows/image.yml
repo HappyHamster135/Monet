@@ -1,9 +1,15 @@
-name: Monet OS image
+name: Monet OS
 
-# Builds the full Monet OS image (Bazzite with Monet built in) and pushes it
-# to GitHub Packages. Started by hand from the Actions tab.
+# Builds the Monet OS image (Bazzite with Monet built in), pushes it to
+# GitHub Packages, and builds the installer ISO that installs it.
+#
+# Runs as part of every release, weekly to pick up Bazzite updates, and by
+# hand from the Actions tab.
 on:
+  workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
 
 permissions:
   contents: read
@@ -12,6 +18,9 @@ permissions:
 jobs:
   image:
     runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+      fedora: ${{ steps.build.outputs.fedora }}
     steps:
       - name: Make room (the base image is large)
         run: |
@@ -20,12 +29,57 @@ jobs:
           df -h /
       - uses: actions/checkout@v4
       - name: Build
+        id: build
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"
-          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
-          podman build -f image/Containerfile -t "$IMAGE:latest" -t "$IMAGE:$(cat VERSION)" .
+          VERSION=$(cat VERSION)
+          sudo podman build -f image/Containerfile -t "$IMAGE:latest" -t "$IMAGE:$VERSION" .
+          FEDORA=$(sudo podman run --rm --entrypoint rpm "$IMAGE:latest" -E %fedora)
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
+          echo "Built $IMAGE $VERSION on Fedora $FEDORA"
       - name: Push
+        env:
+          IMAGE: ${{ steps.build.outputs.image }}
         run: |
-          echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          podman push "$IMAGE:latest"
-          podman push "$IMAGE:$(cat VERSION)"
+          echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sudo podman push "$IMAGE:latest"
+          sudo podman push "$IMAGE:$(cat VERSION)"
+
+  iso:
+    needs: image
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the Fedora network installer
+        env:
+          FEDORA: ${{ needs.image.outputs.fedora }}
+        run: |
+          for F in "$FEDORA" $((FEDORA - 1)); do
+            BASE="https://dl.fedoraproject.org/pub/fedora/linux/releases/$F/Everything/x86_64/iso/"
+            NAME=$(curl -fsSL "$BASE" | grep -o "Fedora-Everything-netinst-x86_64-$F-[0-9.]*\.iso" | head -1 || true)
+            if [ -n "$NAME" ]; then
+              echo "Using $NAME"
+              curl -fL --retry 3 -o netinst.iso "$BASE$NAME"
+              echo "FEDORA_ISO=$F" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "No Fedora network installer found" >&2
+          exit 1
+      - name: Build the Monet installer
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+        run: |
+          VERSION=$(cat VERSION)
+          sed "s|@IMAGE@|$IMAGE:latest|" image/monet.ks > monet.ks
+          docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA_ISO" \
+            bash -c "dnf -y -q install lorax xorriso isomd5sum mtools && mkksiso --ks monet.ks netinst.iso Monet-$VERSION-Installer.iso"
+          sudo chown "$(id -u)" "Monet-$VERSION-Installer.iso"
+          ls -lh "Monet-$VERSION-Installer.iso"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iso
+          path: Monet-*-Installer.iso
+          compression-level: 0

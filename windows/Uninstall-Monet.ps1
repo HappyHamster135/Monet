@@ -29,6 +29,8 @@ $desktop = [Environment]::GetFolderPath('CommonDesktopDirectory')
 Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $startMenu 'Back to Monet.lnk'), (Join-Path $desktop 'Back to Monet.lnk')
 
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $env:ProgramFiles 'Monet'), (Join-Path $env:ProgramData 'Monet')
+Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\StartUp\Finish Monet setup.cmd')
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Monet'
 
 Write-Host ''
 Write-Host 'Monet Bridge is removed.' -ForegroundColor Green

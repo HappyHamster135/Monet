@@ -43,6 +43,7 @@ pub fn main() -> ExitCode {
         "agent" => agent(),
         "launch-pending" => launch_pending(),
         "back" => back(),
+        "finish-setup" => finish_setup(),
         "scan" => {
             let list: Vec<_> = scan().iter().map(|g| g.summary()).collect();
             println!("{}", serde_json::to_string_pretty(&list).unwrap_or_default());
@@ -585,6 +586,17 @@ fn back() -> Res<()> {
     let mut efi = FirmwareVars;
     let state = State::load();
     go_back(&mut efi, &state, &scan())
+}
+
+/// Shown once, right after Monet set up Windows by itself.
+fn finish_setup() -> Res<()> {
+    let text = format!(
+        "Windows is ready for Monet.\n\nGoing back to Monet in {RETURN_COUNTDOWN_SECS} seconds. Click Cancel to stay in Windows."
+    );
+    match win::ask_with_timeout(&text, RETURN_COUNTDOWN_SECS) {
+        Answer::No => Ok(()),
+        Answer::Yes | Answer::TimedOut => back(),
+    }
 }
 
 fn status() -> Res<()> {

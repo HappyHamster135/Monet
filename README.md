@@ -15,10 +15,13 @@ back when you're done.
 
 ## Get it
 
-**[Download Monet 0.1](https://github.com/HappyHamster135/Monet/releases)** ·
-**[Install guide](docs/INSTALL.md)**
+1. Download **Monet-Installer.iso** from the [latest release](https://github.com/HappyHamster135/Monet/releases).
+2. Write it to a USB stick with [Fedora Media Writer](https://fedoraproject.org/workstation/download).
+3. Boot from it and install Monet next to Windows.
 
-Monet 0.1 is a preview for Bazzite with an NVIDIA RTX 20-series or newer GPU.
+Monet sets up Windows by itself. The **[install guide](docs/INSTALL.md)** has every step.
+
+Monet is a preview for PCs with an NVIDIA RTX 20-series or newer GPU.
 
 ## How it works
 
@@ -47,7 +50,7 @@ seconds with the anti-cheat already running.
 | `crates/monet-bridge` | `monet-bridge.exe` for Windows: start the game, return to Monet |
 | `linux/` | Installer, panel widget, wallpaper, services |
 | `windows/` | Installer, uninstaller, optional Game Profile |
-| `image/` | Monet OS image: Bazzite with Monet built in |
+| `image/` | Monet OS image (Bazzite with Monet built in) and the installer's kickstart |
 | `docs/` | [Install](docs/INSTALL.md) · [Design](docs/DESIGN.md) · [Testing](docs/TESTING.md) |
 
 The full plan is in [PLAN.md](PLAN.md).
@@ -60,7 +63,8 @@ cargo build --release -p monet --target x86_64-unknown-linux-musl   # Linux
 cargo build --release -p monet-bridge                                # on Windows
 ```
 
-Pushing a new version number in `VERSION` builds both and publishes a release.
+Pushing a new version number in `VERSION` builds everything (the apps, the
+Monet OS image, and the installer ISO) and publishes a release.
 
 ## Principles
 

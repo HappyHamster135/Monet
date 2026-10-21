@@ -2,6 +2,7 @@
 
 mod efivarfs;
 mod esp;
+mod windows_setup;
 
 use std::fs;
 use std::io::IsTerminal;
@@ -16,6 +17,7 @@ use monet_core::games::{self, GameList};
 use monet_core::request::{self, LaunchRequest};
 
 use efivarfs::EfiVarFs;
+use windows_setup::Outcome;
 
 const HELP: &str = "\
 Monet: play Windows games with one click.
@@ -76,6 +78,13 @@ fn main() -> ExitCode {
         ["helper", "switch"] => helper_switch(option_value(&args, "--game")),
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
+        ["helper", "stage-windows"] => helper_stage_windows().map(|_| ()),
+        ["setup-notice"] => {
+            if let Some(message) = setup_notice() {
+                println!("{message}");
+            }
+            Ok(())
+        }
         _ => Err("Unknown command. Run `monet help` to see what Monet can do.".to_string()),
     };
 
@@ -109,6 +118,32 @@ fn games_cache() -> PathBuf {
 
 fn load_games() -> Option<GameList> {
     GameList::parse(&fs::read(games_cache()).ok()?).ok()
+}
+
+fn windows_setup_status() -> Option<Outcome> {
+    if load_games().is_some_and(|l| !l.games.is_empty()) {
+        return Some(Outcome::Installed);
+    }
+    Outcome::from_code(&fs::read_to_string(state_dir().join(windows_setup::STATUS_FILE)).ok()?)
+}
+
+fn save_windows_setup_status(outcome: Outcome) {
+    let _ = fs::create_dir_all(state_dir());
+    let _ = fs::write(state_dir().join(windows_setup::STATUS_FILE), outcome.code());
+}
+
+/// A one-line message when the user needs to do something to finish setup.
+fn setup_notice() -> Option<&'static str> {
+    match windows_setup_status()? {
+        Outcome::BitLocker => Some(
+            "Windows is encrypted with BitLocker, so Monet can't set it up for you. \
+             In Windows, open Monet for Windows and run Install Monet.",
+        ),
+        Outcome::Hibernated => {
+            Some("Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest.")
+        }
+        _ => None,
+    }
 }
 
 fn efi() -> Res<EfiVarFs> {
@@ -242,11 +277,20 @@ fn doctor() -> Res<()> {
         warn("A Windows game launch is still waiting. It is ignored after 6 hours.");
     }
 
+    match windows_setup_status() {
+        Some(Outcome::Installed) => ok("Monet Bridge is installed in Windows"),
+        Some(Outcome::Staged) => warn("Windows is ready. Open Windows once to finish setting up."),
+        Some(Outcome::NotFound) => bad("Windows wasn't found when Monet looked for it."),
+        Some(Outcome::NoPayload) => warn("This copy of Monet doesn't include the Windows files."),
+        Some(_) => warn(setup_notice().unwrap_or("Windows isn't set up yet.")),
+        None => warn("Windows hasn't been set up yet. It happens at the next restart."),
+    }
+
     match load_games() {
         Some(list) if !list.games.is_empty() => {
             ok(&format!("{} Windows games, updated {}", list.games.len(), ago(list.updated)))
         }
-        _ => warn("No Windows games yet. Install Monet Bridge in Windows and start Windows once."),
+        _ => warn("No Windows games yet. They show up after Windows has started once with Monet Bridge."),
     }
 
     let enabled = Command::new("systemctl")
@@ -340,6 +384,10 @@ fn require_root() -> Res<()> {
 
 fn helper_switch(game: Option<String>) -> Res<()> {
     require_root()?;
+    // Windows is shut down right now, the safest moment to prepare it.
+    if !windows_setup_status().is_some_and(Outcome::is_done) {
+        let _ = helper_stage_windows();
+    }
     let mut efi = efi()?;
     let windows = find_windows(&efi)?;
     let current = boot::boot_current(&efi)
@@ -377,8 +425,29 @@ fn helper_sync() -> Res<()> {
     let tmp = dir.join(".games.json.tmp");
     fs::write(&tmp, list.to_json()).map_err(|e| e.to_string())?;
     fs::rename(&tmp, games_cache()).map_err(|e| e.to_string())?;
+    save_windows_setup_status(Outcome::Installed);
     println!("Synced {} Windows games.", list.games.len());
     Ok(())
+}
+
+fn helper_stage_windows() -> Res<Outcome> {
+    require_root()?;
+    if let Some(done) = windows_setup_status().filter(|o| o.is_done()) {
+        return Ok(done);
+    }
+    let outcome = windows_setup::stage(windows_setup::payload_dir().as_deref())?;
+    save_windows_setup_status(outcome);
+    println!(
+        "{}",
+        match outcome {
+            Outcome::Staged => "Windows is ready. Monet Bridge installs the next time Windows starts.",
+            Outcome::Installed => "Monet Bridge is already installed in Windows.",
+            Outcome::NotFound => "Windows wasn't found on this PC.",
+            Outcome::NoPayload => "This copy of Monet doesn't include the Windows files.",
+            Outcome::BitLocker | Outcome::Hibernated => setup_notice().unwrap_or_default(),
+        }
+    );
+    Ok(outcome)
 }
 
 fn helper_make_default() -> Res<()> {

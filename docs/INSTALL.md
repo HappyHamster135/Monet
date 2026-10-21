@@ -1,113 +1,109 @@
 # Install Monet
 
-About 45 minutes. You need a USB stick (16 GB or larger) and a Windows 11 PC.
+One download, one USB stick, about 30 minutes. Monet installs next to
+Windows, and Windows stays as it is.
 
-Written for a laptop with an NVIDIA RTX 2080. It works the same way on a desktop
-with an RTX 5080.
+You need:
 
-> **Monet 0.1 is a preview.** It hasn't been tested on real hardware yet.
+- A Windows 11 PC with an NVIDIA RTX 20-series or newer GPU
+- A USB stick of 2 GB or more (it will be erased)
+- Internet (Wi-Fi is fine). Monet downloads while it installs.
+
+> **Monet 0.2 is a preview.** It hasn't been tested on real hardware yet.
 > Back up anything important first.
 
 ---
 
-## 1. Get Windows ready
+## 1. Get Windows ready (5 minutes)
 
 1. **Back up** your files.
 2. **Save your BitLocker recovery key.** Go to
    [aka.ms/myrecoverykey](https://aka.ms/myrecoverykey) and write it down.
-   Windows may ask for it once after Linux is installed.
+   Windows may ask for it once.
 3. **Make room for Monet.** Right-click Start → **Disk Management** →
-   right-click **C:** → **Shrink Volume**. Shrink by at least **150 GB**
+   right-click **C:** → **Shrink Volume** → shrink by at least **150 GB**
    (153600 MB).
-4. **Turn off Fast Startup.** Open **Control Panel** → **Power Options** →
-   **Choose what the power buttons do** → **Change settings that are currently
+4. **Turn off Fast Startup.** Control Panel → **Power Options** → **Choose
+   what the power buttons do** → **Change settings that are currently
    unavailable** → untick **Turn on fast startup**.
 
-## 2. Install Bazzite
+## 2. Make the USB stick (5 minutes)
 
-Monet 0.1 runs on top of [Bazzite](https://bazzite.gg), a gaming version of
-Linux with the NVIDIA drivers built in.
+1. Download **Monet-0.2.0-Installer.iso** from the
+   [Monet release](https://github.com/HappyHamster135/Monet/releases).
+2. Download and open [Fedora Media Writer](https://fedoraproject.org/workstation/download).
+   Choose **Select .iso file**, pick the Monet installer, choose your USB
+   stick, and click **Write**.
 
-1. On [bazzite.gg](https://bazzite.gg), pick **Laptop** (or Desktop) →
-   **NVIDIA** → **RTX 16xx series and newer** → **KDE Plasma**. Download the ISO.
-2. Write it to the USB stick with
-   [Fedora Media Writer](https://fedoraproject.org/workstation/download) or
-   [balenaEtcher](https://etcher.balena.io).
-3. Restart with the USB stick plugged in and open the boot menu. The key
+## 3. Install Monet (20 minutes)
+
+1. Restart with the USB stick plugged in and open the boot menu. The key
    depends on the brand: **F12** (Dell, Lenovo, Acer, Gigabyte), **F9** (HP),
    **Esc** or **F8** (ASUS), **F11** (MSI). Choose the USB stick.
-4. In the installer, choose the **free space** for Bazzite.
-   **Don't erase the Windows partitions.**
-5. After the first restart, you'll see a blue screen called **MOK management**.
-   This lets Bazzite start with Secure Boot on, which Windows anti-cheat needs:
-   **Enroll MOK** → **Continue** → **Yes** → type the password
-   **`universalblue`** → **Reboot**.
+2. Choose **Install** and your language.
+3. **Network:** on a laptop, open **Network & Host Name** and connect to
+   Wi-Fi.
+4. **Installation Destination:** choose your disk and keep **Automatic**.
+   Monet uses the free space from step 1. **Windows isn't touched.**
+5. **User Creation:** your name and password.
+6. Click **Begin Installation**, then **Reboot** when it's done.
 
-## 3. Install Monet
+## 4. First start (2 minutes)
 
-1. In Bazzite, open the latest
-   [Monet release](https://github.com/HappyHamster135/Monet/releases)
-   (sign in to GitHub first) and download **Monet-0.1.0-Linux.tar.gz**.
-2. Open **Konsole** and run:
+1. A blue screen appears once, called **MOK management**. It lets the NVIDIA
+   driver run with Secure Boot on, which anti-cheat needs:
+   **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**.
+2. Monet starts. Sign in.
 
-   ```sh
-   cd ~/Downloads
-   tar xzf Monet-0.1.0-Linux.tar.gz
-   ./monet-0.1.0-linux/install.sh
-   ```
-
-3. Type your password when asked. The Monet wallpaper and a **Windows Games**
-   button in the panel appear.
-
-## 4. Set up Windows
+## 5. Connect Windows (1 click)
 
 1. Open the app menu and choose **Windows**, then **Restart**.
-2. In Windows, download **Monet-0.1.0-Windows.zip** from the same release page
-   and extract it.
-3. Open the **Monet for Windows** folder and double-click **Install Monet**.
-   Click **Yes** when Windows asks for permission.
-4. Optional: right-click **GameProfile.ps1** → **Run with PowerShell** for
-   faster, quieter gaming. It doesn't remove anything unless you ask it to.
-5. Double-click **Back to Monet** on the desktop.
+2. When Windows has signed in, click **Yes** once, then wait a few seconds.
+3. Your PC goes back to Monet by itself, and your Windows games appear in the
+   **Windows Games** button in the panel.
 
-## 5. Play
-
-Click **Windows Games** in the panel and press **Play**. Your PC restarts in
-Windows and starts the game. When you quit, it comes back to Monet.
-
-Windows games also show up in the app menu, so you can search for them.
+That's it. Press **Play** on any Windows game to start it. When you quit,
+your PC comes back to Monet.
 
 ---
 
 ## If something isn't right
 
-Run this in Konsole. It checks everything and says what to fix:
+Open **Konsole** and run:
 
 ```sh
 monet doctor
 ```
 
-**The PC starts Windows instead of Monet.** Run `monet make-default`.
-Monet Bridge also fixes this automatically each time Windows starts.
+It checks everything and says what to fix.
 
-**The clock is wrong in Windows.** Windows and Linux read the PC's clock
-differently. Fix it once, in Windows, in an administrator terminal:
+**Windows is encrypted with BitLocker.** Monet can't set up an encrypted
+Windows by itself. In Windows, download **Monet-0.2.0-Windows.zip** from the
+release page, extract it, and double-click **Install Monet**.
+
+**"Windows is asleep".** Open Windows from Monet, choose **Restart** in
+Windows, and Monet finishes the setup the next time it starts.
+
+**The PC starts Windows instead of Monet.** Run `monet make-default`. Monet
+Bridge also fixes this automatically each time Windows starts.
+
+**The clock is wrong in Windows.** Run this once in Windows, in an
+administrator terminal:
 
 ```powershell
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\TimeZoneInformation" /v RealTimeIsUniversal /t REG_QWORD /d 1 /f
 ```
 
-**A Linux game runs slowly on the laptop.** It may be using the built-in
-graphics instead of the RTX 2080. In Steam, right-click the game →
-**Properties** → **Launch Options**:
+**A Linux game runs slowly on a laptop.** It may be using the built-in
+graphics. In Steam, right-click the game → **Properties** → **Launch
+Options**:
 
 ```
 __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia %command%
 ```
 
-**A game is missing from the list.** Monet finds Steam, Epic, and Riot games.
-For others (Battle.net, EA, Ubisoft), add them in
-`C:\ProgramData\Monet\custom-games.json` in Windows:
+**A game is missing.** Monet finds Steam, Epic, and Riot games. Add others
+(Battle.net, EA, Ubisoft) in `C:\ProgramData\Monet\custom-games.json`:
 
 ```json
 [
@@ -117,11 +113,28 @@ For others (Battle.net, EA, Ubisoft), add them in
 ```
 
 **Don't open the Windows drive from Monet.** Between games, Windows is
-hibernated, not shut down. Changing its files from Linux can damage them.
+hibernated. Changing its files from Linux can damage them.
 
 ---
 
+## Already using Bazzite?
+
+You don't need the USB stick. Download **Monet-0.2.0-Linux.tar.gz** and run:
+
+```sh
+tar xzf Monet-0.2.0-Linux.tar.gz
+./monet-0.2.0-linux/install.sh
+```
+
+Or switch the whole system to Monet OS:
+
+```sh
+sudo bootc switch ghcr.io/happyhamster135/monet:latest
+```
+
 ## Remove Monet
 
-- In Windows: run **Uninstall Monet** from the Monet for Windows folder.
-- In Monet: run `./monet-0.1.0-linux/uninstall.sh`.
+- In Windows: **Settings** → **Apps** → **Installed apps** → **Monet Bridge**
+  → **Uninstall**.
+- In Monet: run `./monet-0.2.0-linux/uninstall.sh`, or remove the Monet
+  partitions from Windows' Disk Management.

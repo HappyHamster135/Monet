@@ -42,10 +42,9 @@ if [ "$(id -u)" -ne 0 ]; then
 
 Monet is installed.
 
-Next, set up Windows:
-  1. Open the app menu and choose "Windows".
-  2. In Windows, download Monet for Windows and double-click "Install Monet".
-  3. Start a game from the Windows Games widget in the panel.
+Next, open the app menu and choose "Windows". The first time Windows
+starts, click Yes to finish setting up. Your PC then comes back to Monet,
+and your Windows games show up in the Windows Games button in the panel.
 
 EOF
     exit 0
@@ -80,6 +79,15 @@ cp -r "$SRC/share/wallpapers/Monet" "$DATADIR/wallpapers/Monet"
 chmod -R u=rwX,go=rX "$DATADIR/wallpapers/Monet"
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
+put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
+
+# The Windows half, which Monet copies into Windows by itself.
+if [ -d "$SRC/windows" ]; then
+    rm -rf "$DATADIR/monet/windows"
+    install -d "$DATADIR/monet"
+    cp -r "$SRC/windows" "$DATADIR/monet/windows"
+    chmod -R u=rwX,go=rX "$DATADIR/monet"
+fi
 put 644 "$SRC/autostart/monet-session.desktop" /etc/xdg/autostart/monet-session.desktop
 
 # Allow one-click switching without a password. /usr/local is a link to
@@ -91,10 +99,13 @@ sed -e "s|@PROGRAMS@|$programs|" "$SRC/polkit/49-monet.rules" > /etc/polkit-1/ru
 chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
-    systemctl enable monet-sync.service
+    systemctl enable monet-sync.service monet-windows-setup.service
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Monet"/' /usr/lib/os-release
 else
-    command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR/monet-session" "$UNITDIR/monet-sync.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
+    command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR/monet-session" "$DATADIR/monet" \
+        "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
     systemctl daemon-reload
-    systemctl enable --now monet-sync.service >/dev/null 2>&1 || systemctl enable monet-sync.service
+    for unit in monet-sync.service monet-windows-setup.service; do
+        systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
+    done
 fi

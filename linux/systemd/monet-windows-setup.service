@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: prepare Windows so Monet Bridge installs itself
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=@BINDIR@/monet helper stage-windows
+StateDirectory=monet
+StateDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

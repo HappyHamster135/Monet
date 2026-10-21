@@ -14,9 +14,14 @@
 
 .PARAMETER GameProfile
     Also apply the safe performance settings from GameProfile.ps1.
+
+.PARAMETER FromMonet
+    Used when Monet prepared Windows and this runs once at sign-in. Removes
+    the setup files afterwards and goes back to Monet.
 #>
 param(
-    [switch]$GameProfile
+    [switch]$GameProfile,
+    [switch]$FromMonet
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +32,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.P
 if (-not $isAdmin) {
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
     if ($GameProfile) { $argList += '-GameProfile' }
+    if ($FromMonet) { $argList += '-FromMonet' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
 }
@@ -45,7 +51,11 @@ trap {
 }
 
 Say ''
-Say 'Installing Monet Bridge...'
+if ($FromMonet) {
+    Say 'Finishing Monet setup. This takes a few seconds...'
+} else {
+    Say 'Installing Monet Bridge...'
+}
 
 if ($env:firmware_type -and $env:firmware_type -ne 'UEFI') {
     throw 'This PC started in legacy BIOS mode. Monet needs UEFI.'
@@ -121,12 +131,37 @@ foreach ($folder in $startMenu, $desktop) {
     $link.Save()
 }
 
+# 6. Listed in Settings > Apps, so it can be removed like any other app.
+$uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Monet'
+New-Item -Path $uninstallKey -Force | Out-Null
+$uninstaller = Join-Path $installDir 'Uninstall-Monet.ps1'
+$values = @{
+    DisplayName     = 'Monet Bridge'
+    DisplayVersion  = '@VERSION@'
+    Publisher       = 'Monet'
+    DisplayIcon     = $icon
+    InstallLocation = $installDir
+    UninstallString = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$uninstaller`""
+}
+foreach ($name in $values.Keys) { Set-ItemProperty -Path $uninstallKey -Name $name -Value $values[$name] }
+Set-ItemProperty -Path $uninstallKey -Name NoModify -Value 1 -Type DWord
+Set-ItemProperty -Path $uninstallKey -Name NoRepair -Value 1 -Type DWord
+
 if ($GameProfile) {
     & (Join-Path $installDir 'GameProfile.ps1') -NoPause
 }
 
-# 6. Start the agent now, so the games list reaches Monet right away.
+# 7. Start the agent now, so the games list reaches Monet right away.
 Start-ScheduledTask -TaskPath '\Monet\' -TaskName 'Agent'
+
+if ($FromMonet) {
+    # Setup ran once from the Startup folder; remove it and head back.
+    $startup = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\StartUp\Finish Monet setup.cmd'
+    Remove-Item -Force -ErrorAction SilentlyContinue $startup
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $dataDir 'Setup')
+    Start-Process -FilePath $exe -ArgumentList 'finish-setup'
+    exit 0
+}
 
 Say ''
 Write-Host 'Monet Bridge is installed.' -ForegroundColor Green

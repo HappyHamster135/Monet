@@ -257,6 +257,23 @@ The CachyOS kernel (section 4.1) is not in v0.1. Bazzite's kernel already
 carries most gaming patches and is signed for Secure Boot. Switching kernels
 waits for the Phase 2 benchmarks.
 
+### Status: v0.2 (preview)
+
+v0.2 brings Phase 3's core early: **one download, one USB stick.**
+
+- `Monet-Installer.iso` (about 1 GB) is Fedora's network installer with a
+  Monet kickstart. It installs the Monet OS image from GitHub Packages, so it
+  stays under GitHub's 2 GB release limit. A full offline ISO would be about 7 GB.
+- Monet prepares Windows by itself: at startup it copies Monet Bridge into
+  `C:\ProgramData\Monet\Setup` and adds a one-time Startup script. The
+  first time Windows starts, one UAC "Yes" installs Bridge, and the PC goes
+  back to Monet. It never writes to a hibernated or BitLocker-encrypted Windows.
+- The Monet OS image is rebuilt weekly to pick up Bazzite updates.
+
+Still to do for a fully Windows-like setup: Monet branding in the installer
+(it still says Fedora), a Windows app that makes the USB stick (or installs
+without one), and BitLocker support for the automatic Windows setup.
+
 ### Phase 0: Prove it (research and prototypes)
 Goal: show that the core ideas work on real hardware before building anything polished.
 
@@ -297,6 +314,9 @@ Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
 **Exit:** a bootable Monet image that people can rebase to or install.
 
 ### Phase 3: Monet Setup
+- [x] One-download installer ISO (network install of the Monet OS image), v0.2
+- [x] Windows half set up from Monet automatically (one UAC click), v0.2
+- [ ] "Monet Setup" for Windows: makes the USB stick, or installs without one
 - [ ] Branded installer for the Linux part
 - [ ] First-boot wizard
 - [ ] Windows ISO download, partitioning, temporary setup partition, unattended install

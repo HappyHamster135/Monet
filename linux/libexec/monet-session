@@ -7,6 +7,16 @@ DATADIR="@DATADIR@"
 
 "$BINDIR/monet" shortcuts 2>/dev/null
 
+# If Monet couldn't prepare Windows by itself, say once what to do.
+notice="$("$BINDIR/monet" setup-notice 2>/dev/null)"
+if [ -n "$notice" ] && command -v notify-send >/dev/null; then
+    seen="${XDG_CONFIG_HOME:-$HOME/.config}/monet/notice-$(printf '%s' "$notice" | cksum | cut -d' ' -f1)"
+    if [ ! -e "$seen" ]; then
+        notify-send --app-name=Monet --icon=monet "Finish setting up Windows" "$notice"
+        mkdir -p "$(dirname "$seen")" && touch "$seen"
+    fi
+fi
+
 marker="${XDG_CONFIG_HOME:-$HOME/.config}/monet/look-0.1"
 [ -e "$marker" ] && exit 0
 
