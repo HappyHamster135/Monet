@@ -83,7 +83,8 @@ PlasmoidItem {
         id: settings
         helper: root.helper
         speed: root.speed
-        area: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
+        // The screen this panel is on.
+        area: Qt.rect(root.Screen.virtualX, root.Screen.virtualY, root.Screen.width, root.Screen.height)
     }
 
     // Waits for `monet-quick open [PAGE]`, opens Settings, and waits again.

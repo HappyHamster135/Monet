@@ -322,6 +322,13 @@ class Scripts(unittest.TestCase):
         self.assertFalse(nets[2]["secure"])
         self.assertFalse(nets[3]["secure"])
 
+    def test_text_from_people_reaches_nmcli_as_is(self):
+        # Monet Settings sends network names and passwords as hex of their UTF-8.
+        self.assertEqual(quick_helper().unhex("436166c3a92024287266292027e2988027"), "Café $(rf) '☀'")
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text()
+        self.assertIn('"wifi-join " + hex(name)', qml)
+        self.assertNotIn("Qt.btoa", qml)
+
     def test_quick_reads_wpctl(self):
         status = """PipeWire 'pipewire-0' [1.2.7, monet@pc, cookie:1]
  └─ Clients:

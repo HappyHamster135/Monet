@@ -118,7 +118,7 @@ PlasmaCore.Dialog {
         waiting[command] = then || null
         asker.connectSource(command)
     }
-    // Arguments are fixed words, numbers, or base64; never raw text from people.
+    // Arguments are fixed words, numbers, or hex; never raw text from people.
     function ask(args, then) {
         call(helper + " " + args, then)
     }
@@ -215,9 +215,20 @@ PlasmaCore.Dialog {
         }
     }
 
+    // Text from people (network names, passwords) goes to the helper as the
+    // hex of its UTF-8 bytes, so the shell never sees it.
+    function hex(text) {
+        const bytes = unescape(encodeURIComponent(text))
+        let out = ""
+        for (let i = 0; i < bytes.length; i++) {
+            out += bytes.charCodeAt(i).toString(16).padStart(2, "0")
+        }
+        return out
+    }
+
     function join(name, key) {
         joinState = "joining"
-        ask("wifi-join " + Qt.btoa(name) + (key ? " " + Qt.btoa(key) : ""), out => {
+        ask("wifi-join " + hex(name) + (key ? " " + hex(key) : ""), out => {
             const result = sheet.json(out, { ok: false })
             if (result.ok) {
                 sheet.joining = ""

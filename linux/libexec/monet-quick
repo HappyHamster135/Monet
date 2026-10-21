@@ -4,7 +4,7 @@
     monet-quick status                   everything Quick Settings shows, as JSON
     monet-quick wifi on|off
     monet-quick wifi-list                networks nearby, as JSON
-    monet-quick wifi-join NAME [KEY]     NAME and KEY in base64 (they come from people)
+    monet-quick wifi-join NAME [KEY]     NAME and KEY as hex of their UTF-8 (they come from people)
     monet-quick bluetooth on|off
     monet-quick bt-list                  paired devices, as JSON
     monet-quick bt-connect|bt-disconnect ADDRESS
@@ -26,7 +26,6 @@
     monet-quick listen                   wait until someone asks to open Monet Settings
 """
 
-import base64
 import json
 import os
 import re
@@ -74,8 +73,8 @@ def emit(value):
     print(json.dumps(value))
 
 
-def unb64(text):
-    return base64.b64decode(text.encode()).decode("utf-8", "replace")
+def unhex(text):
+    return bytes.fromhex(text).decode("utf-8", "replace")
 
 
 # Wi-Fi ---------------------------------------------------------------------
@@ -382,9 +381,9 @@ def main(argv):
     elif cmd == "wifi-list":
         emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or ""))
     elif cmd == "wifi-join" and args:
-        command = ["nmcli", "device", "wifi", "connect", unb64(args[0])]
+        command = ["nmcli", "device", "wifi", "connect", unhex(args[0])]
         if len(args) > 1 and args[1]:
-            command += ["password", unb64(args[1])]
+            command += ["password", unhex(args[1])]
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         emit({"ok": result.returncode == 0, "message": (result.stdout or result.stderr).strip()})
     elif cmd == "bluetooth":
