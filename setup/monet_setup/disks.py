@@ -45,13 +45,17 @@ def lsblk():
 
 
 def live_media(devices):
-    """Disks that hold the running USB stick (anything mounted under
-    /run/initramfs/live, or labelled like the stick)."""
+    """Disks that hold the running USB stick: anything mounted under
+    /run/initramfs/live, or carrying the stick's labels ("Monet-0.7.0" and
+    its EFI partition's MONETEFI). Not Monet's own partitions on a PC that
+    already has Monet (monet, MONETWIN, MONETSETUP): that disk can be used."""
     found = set()
     for disk in devices:
         for part in [disk] + disk.get("children", []):
             points = [p for p in (part.get("mountpoints") or []) if p]
-            if any(p.startswith("/run/initramfs/live") for p in points) or (part.get("label") or "").startswith("MONET"):
+            label = part.get("label") or ""
+            if any(p.startswith("/run/initramfs/live") for p in points) or label.startswith("Monet-") \
+                    or label == "MONETEFI":
                 found.add(disk["name"])
     return found
 

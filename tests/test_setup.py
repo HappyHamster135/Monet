@@ -47,6 +47,17 @@ class Disks(unittest.TestCase):
         inside = dict(STICK, tran="sata", rm=False)
         self.assertEqual([d["name"] for d in disks.disks([inside, NVME])], ["nvme0n1"])
 
+    def test_never_the_stick_by_its_labels_alone(self):
+        stick = disk("sdc", 16 * GB, tran="sata", children=[part("sdc1", label="Monet-0.7.0"),
+                                                            part("sdc2", label="MONETEFI")])
+        self.assertEqual([d["name"] for d in disks.disks([stick, NVME])], ["nvme0n1"])
+
+    def test_a_pc_that_has_monet_can_get_it_again(self):
+        again = disk("nvme1n1", 1000 * GB, children=[part("nvme1n1p3", label="monet", fstype="btrfs"),
+                                                     part("nvme1n1p4", label="MONETWIN", fstype="ntfs"),
+                                                     part("nvme1n1p5", label="MONETSETUP", fstype="vfat")])
+        self.assertEqual([d["name"] for d in disks.disks([STICK, again])], ["nvme1n1"])
+
     def test_usb_disks_only_when_nothing_else(self):
         usb = disk("sdb", 500 * GB, tran="usb")
         self.assertEqual([d["name"] for d in disks.disks([STICK, usb])], ["sdb"])
