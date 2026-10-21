@@ -1,4 +1,5 @@
 // The dawn painting, filling the screen, and Monet's sun breathing over it.
+// Used by Monet Setup and by Monet itself while it starts.
 painting = Image("painting.png");
 scale = Math.Max(Window.GetWidth() / painting.GetWidth(), Window.GetHeight() / painting.GetHeight());
 filled = painting.Scale(painting.GetWidth() * scale, painting.GetHeight() * scale);
@@ -19,3 +20,40 @@ fun refresh() {
     sun.SetOpacity(0.55 + 0.45 * Math.Abs(Math.Sin(t / 40)));
 }
 Plymouth.SetRefreshFunction(refresh);
+
+// A line of white text, centered at height y (a fraction of the screen).
+fun line(text, y, font, alpha) {
+    image = Image.Text(text, 1, 1, 1, alpha, font);
+    sprite = Sprite(image);
+    sprite.SetX(Window.GetX() + (Window.GetWidth() - image.GetWidth()) / 2);
+    sprite.SetY(Window.GetY() + Window.GetHeight() * y);
+    sprite.SetZ(20);
+    return sprite;
+}
+
+// An encrypted disk asks for its password: the question, and a dot per letter typed.
+fun password(prompt, bullets) {
+    global.question = line(prompt, 0.58, "Sans 16", 1);
+    dots = "";
+    for (i = 0; i < bullets; i++)
+        dots = dots + "•";
+    global.typed = line(dots + " ", 0.63, "Sans 24", 1);
+}
+Plymouth.SetDisplayPasswordFunction(password);
+
+fun question(prompt, entry) {
+    global.question = line(prompt, 0.58, "Sans 16", 1);
+    global.typed = line(entry + " ", 0.63, "Sans 18", 1);
+}
+Plymouth.SetDisplayQuestionFunction(question);
+
+fun normal() {
+    global.question = NULL;
+    global.typed = NULL;
+}
+Plymouth.SetDisplayNormalFunction(normal);
+
+fun message(text) {
+    global.note = line(text, 0.9, "Sans 12", 0.85);
+}
+Plymouth.SetMessageFunction(message);

@@ -617,7 +617,305 @@ def line_svg():
     return sheet.svg()
 
 
+# Status icons ----------------------------------------------------------------
+# What the bar shows for sound, the network, the battery and the rest: glyphs
+# written with a brush (fuller in the middle, round at the ends) instead of
+# Breeze's ruled lines. One color, so Plasma tints them like any symbol; an
+# element left out here falls back to the icon theme. Drawn on a 22 grid.
+
+NEG = 'class="ColorScheme-NegativeText" fill="currentColor"'
+WARN = 'class="ColorScheme-NeutralText" fill="currentColor"'
+GOOD = 'class="ColorScheme-PositiveText" fill="currentColor"'
+DIM = paint(INK, 0.3)
+
+
+def catmull(points, steps=8):
+    """A smooth line through points."""
+    if len(points) < 3:
+        (x0, y0), (x1, y1) = points
+        return [(x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps) for i in range(steps + 1)]
+    pts = [points[0]] + list(points) + [points[-1]]
+    out = []
+    for i in range(1, len(pts) - 2):
+        p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
+        for k in range(steps):
+            t = k / steps
+            out.append(tuple(0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t * t
+                                    + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t ** 3) for j in (0, 1)))
+    out.append(points[-1])
+    return out
+
+
+def brush(points, width, taper=0.4, smooth=True):
+    """A brushstroke along points: fuller in the middle, round at the ends."""
+    pts = catmull(points) if smooth else [p for a, b in zip(points, points[1:]) for p in catmull([a, b], 6)[:-1]] + [points[-1]]
+    n = len(pts)
+    left, right = [], []
+    for i, (x, y) in enumerate(pts):
+        w = width / 2 * (1 - taper + taper * math.sin(math.pi * i / (n - 1)))
+        (ax, ay), (bx, by) = pts[max(0, i - 1)], pts[min(n - 1, i + 1)]
+        length = math.hypot(bx - ax, by - ay) or 1
+        nx, ny = -(by - ay) / length, (bx - ax) / length
+        left.append((x + nx * w, y + ny * w))
+        right.append((x - nx * w, y - ny * w))
+
+    def cap(p, a, b):
+        cx, cy = p
+        r = math.hypot(a[0] - cx, a[1] - cy)
+        start = math.atan2(a[1] - cy, a[0] - cx)
+        end = math.atan2(b[1] - cy, b[0] - cx)
+        sweep = (end - start) % (2 * math.pi) or 2 * math.pi
+        if sweep > math.pi * 1.01:
+            sweep -= 2 * math.pi
+        return [(cx + r * math.cos(start + sweep * k / 8), cy + r * math.sin(start + sweep * k / 8)) for k in range(1, 8)]
+
+    return left + cap(pts[-1], left[-1], right[-1]) + right[::-1] + cap(pts[0], right[0], left[0])
+
+
+def arc(cx, cy, r, a0, a1, width, taper=0.4):
+    pts = [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * k / 12)), cy + r * math.sin(math.radians(a0 + (a1 - a0) * k / 12)))
+           for k in range(13)]
+    return brush(pts, width, taper)
+
+
+def glyphs(sheet, items, size=22):
+    """items: name -> [(paint, outline), ...]."""
+    for name, parts in items.items():
+        sheet.element(name, size, size, lambda x, y, parts=parts: "".join(
+            f'<path d="{outline(pts, x, y)}" {how}/>' for how, pts in parts))
+
+
+# Shared marks.
+def crescent(cx, cy, r, bx, by, br, steps=40):
+    """A disc with another bitten out of it: the outer arc, then the bite's arc back."""
+    d = math.hypot(bx - cx, by - cy)
+    a = (r * r - br * br + d * d) / (2 * d)
+    h = math.sqrt(max(r * r - a * a, 0))
+    ux, uy = (bx - cx) / d, (by - cy) / d
+    px, py = cx + a * ux, cy + a * uy
+    p1, p2 = (px - h * uy, py + h * ux), (px + h * uy, py - h * ux)
+    a1, a2 = (math.atan2(p[1] - cy, p[0] - cx) for p in (p1, p2))
+    b1, b2 = (math.atan2(p[1] - by, p[0] - bx) for p in (p1, p2))
+    away = (a2 - a1) % (2 * math.pi)  # the long way round the outer circle, away from the bite
+    outer = [(cx + r * math.cos(a1 + away * k / steps), cy + r * math.sin(a1 + away * k / steps)) for k in range(steps + 1)]
+    back = (b1 - b2) % (2 * math.pi)
+    if back > math.pi:
+        back -= 2 * math.pi
+    inner = [(bx + br * math.cos(b2 + back * k / steps), by + br * math.sin(b2 + back * k / steps)) for k in range(steps + 1)]
+    return outer + inner
+
+
+def padlock(x, y, s=1.0):
+    return [(INK, rounded(x - 3 * s, y - 1 * s, x + 3 * s, y + 3.4 * s, 0.8 * s)),
+            (INK, arc(x, y - 1.2 * s, 1.9 * s, 180, 360, 1.1 * s, 0))]
+
+
+def badge(x, y, how=WARN):
+    return [(how, brush([(x, y - 3.4), (x, y - 0.4)], 1.5, 0.2)), (how, disc(x, y + 1.6, 0.85, 16))]
+
+
+def slash(how=INK):
+    return [(how, brush([(4.5, 17.5), (17.5, 4.5)], 1.8, 0.3))]
+
+
+def speaker():
+    return [(INK, [(3, 8.6), (6.4, 8.6), (10.6, 4.8), (11.2, 5.2), (11.2, 16.8), (10.6, 17.2), (6.4, 13.4), (3, 13.4)])]
+
+
+def waves(n, how=INK):
+    return [(how if i < n else DIM, arc(10.2, 11, r, -48, 48, 1.7)) for i, r in enumerate((4.4, 7.2, 10.0))]
+
+
+def audio_svg():
+    sheet = Sheet()
+    glyphs(sheet, {
+        "audio-volume-muted": speaker() + [(INK, brush([(14, 8.5), (19, 13.5)], 1.7, 0.3)), (INK, brush([(19, 8.5), (14, 13.5)], 1.7, 0.3))],
+        "audio-volume-low": speaker() + waves(1),
+        "audio-volume-medium": speaker() + waves(2),
+        "audio-volume-high": speaker() + waves(3),
+        "audio-volume-high-warning": speaker() + waves(3, WARN),
+        "audio-volume-high-danger": speaker() + waves(3, NEG),
+    })
+    return sheet.svg()
+
+
+def fan(level, how=INK):
+    """Wi-Fi: a dot and three arcs, lit up to the signal's level (0 to 4)."""
+    parts = [(how if level >= 1 else DIM, disc(11, 17.2, 1.5, 20))]
+    for i, r in enumerate((4.6, 8.4, 12.2)):
+        parts.append((how if level >= i + 2 else DIM, arc(11, 18.4, r, -136, -44, 1.8)))
+    return parts
+
+
+def plug(how=INK):
+    return [(how, rounded(6.5, 6, 15.5, 12.5, 2)), (how, brush([(9, 6), (9, 2.8)], 1.5, 0.1)), (how, brush([(13, 6), (13, 2.8)], 1.5, 0.1)),
+            (how, brush([(11, 12.5), (11, 15.5), (13, 18.5)], 1.6, 0.2))]
+
+
+def rune(how=INK):
+    return [(how, brush([(6.8, 7.2), (14.6, 14.4), (11, 18), (11, 4), (14.6, 7.6), (6.8, 14.8)], 1.6, 0.15, smooth=False))]
+
+
+def network_svg():
+    sheet = Sheet()
+    items = {}
+    for pct, level in ((100, 4), (80, 3.5), (60, 3), (40, 2), (20, 1), (0, 0)):
+        base = fan(level if level != 3.5 else 4)
+        if pct == 80:  # three arcs, the outer one fainter
+            base[-1] = (paint(INK, 0.6), base[-1][1])
+        items[f"network-wireless-{pct}"] = base
+        items[f"network-wireless-{pct}-locked"] = base + padlock(17.5, 16.5, 0.9)
+        items[f"network-wireless-{pct}-limited"] = base + badge(18.5, 15.5)
+        items[f"network-wireless-connected-{pct:02d}" if pct == 0 else f"network-wireless-connected-{pct}"] = base
+    items.update({
+        "network-wireless-available": fan(4, DIM),
+        "network-wireless-on": fan(4),
+        "network-wireless-off": fan(4, DIM) + slash(),
+        "network-wireless-disconnected": fan(4, DIM) + slash(),
+        "network-unavailable": fan(4, DIM) + slash(NEG),
+        "network-wired": plug(),
+        "network-wired-activated": plug(),
+        "network-wired-available": plug(DIM),
+        "network-wired-activated-limited": plug() + badge(18.5, 15.5),
+        "network-wired-activated-locked": plug() + padlock(17.5, 16.5, 0.9),
+        "network-bluetooth": rune(DIM),
+        "network-bluetooth-activated": rune(),
+        "network-bluetooth-activated-locked": rune() + padlock(17.5, 16.5, 0.9),
+        "network-vpn": padlock(11, 11, 1.7),
+    })
+    plane = [(INK, [(11, 2.5), (12.4, 4), (12.4, 8.6), (19, 12.4), (19, 14), (12.4, 12), (12.4, 16.4), (14.6, 18.2), (14.6, 19.4),
+                    (11, 18.4), (7.4, 19.4), (7.4, 18.2), (9.6, 16.4), (9.6, 12), (3, 14), (3, 12.4), (9.6, 8.6), (9.6, 4)])]
+    for name in ("network-flightmode-on", "flightmode-on"):
+        items[name] = plane
+    for name in ("network-flightmode-off", "flightmode-off"):
+        items[name] = [(DIM, plane[0][1])] + slash()
+    glyphs(sheet, items)
+    return sheet.svg()
+
+
+def bell(how=INK):
+    return [(how, [(11, 3.4), (13.6, 4.4), (15.6, 7.6), (16, 12.6), (18.2, 15.6), (3.8, 15.6), (6, 12.6), (6.4, 7.6), (8.4, 4.4)]),
+            (how, disc(11, 17.8, 1.7, 20))]
+
+
+def notification_svg():
+    sheet = Sheet()
+    glyphs(sheet, {
+        "notification-inactive": bell(),
+        "notification-empty": bell(DIM),
+        "notification-active": bell() + [(LILY, disc(17, 5, 3.2, 24))],
+        "notification-disabled": bell(DIM) + slash(),
+        "notification-progress-inactive": bell() + [(DIM, arc(11, 11, 10, -90, 270, 1.4, 0))],
+        "notification-progress-active": bell() + [(LILY, arc(11, 11, 10, -90, 120, 1.6, 0.2))],
+    })
+    return sheet.svg()
+
+
+def preferences_svg():
+    sheet = Sheet()
+    screen = [(INK, rounded(3, 4, 19, 15, 2)), (INK, rounded(8, 17.2, 14, 18.8, 0.8))]
+    glyphs(sheet, {
+        "preferences-system-bluetooth": rune(),
+        "preferences-system-bluetooth-activated": rune(LILY),
+        "preferences-system-bluetooth-inactive": rune(DIM),
+        "preferences-system-bluetooth-battery": rune() + [(INK, rounded(14.5, 14, 20, 18.5, 1))],
+        "preferences-desktop-notification": bell(),
+        "preferences-desktop-display-randr": screen,
+    })
+    return sheet.svg()
+
+
+def battery_svg():
+    """The battery applet lays a Fill over the Battery, then AcAdapter when it's plugged in."""
+    sheet = Sheet()
+    outline_ = [(INK, rounded(2.5, 6.5, 18, 15.5, 2.2)), (INK, rounded(18, 9, 20, 13, 0.8))]
+    shell = [(INK, rounded(2.5, 6.5, 18, 15.5, 2.2) + [(2.5, 6.5)] + rounded(3.9, 7.9, 16.6, 14.1, 1.2)[::-1] + [(3.9, 7.9)]),
+             (INK, rounded(18, 9, 20, 13, 0.8))]
+    items = {"Battery": shell, "Unavailable": shell + [(INK, brush([(7.5, 9), (12.5, 13)], 1.4, 0.2)), (INK, brush([(12.5, 9), (7.5, 13)], 1.4, 0.2))]}
+    for pct in range(0, 101, 10):
+        width = 11.4 * pct / 100
+        how = NEG if pct <= 10 else WARN if pct <= 20 else INK
+        items[f"Fill{pct}"] = [(how, rounded(5, 9, 5 + max(width, 0.01), 13, 0.8))] if pct else []
+    items["AcAdapter"] = [(GOOD, [(12, 4), (7, 12), (10.4, 12), (9.4, 18), (14.6, 9.6), (11.2, 9.6), (12.6, 4)])]
+    items["battery-ups"] = outline_[1:] + shell[:1] + [(INK, rounded(5, 9, 14, 13, 0.8))]
+    items["profile-powersave"] = [(INK, brush([(5, 17), (9, 10), (16, 5)], 1.8, 0.3)), (INK, [(16, 5), (16.5, 12), (12, 17), (6, 17.5), (8, 12)])]
+    items["profile-performance"] = [(INK, [(12.6, 2.8), (6, 12.4), (10.6, 12.4), (9.2, 19.2), (16, 9.2), (11.4, 9.2)])]
+    glyphs(sheet, {k: v for k, v in items.items() if v} | {"Fill0": [(NEG, rounded(5, 9, 5.01, 13, 0))]})
+    return sheet.svg()
+
+
+def system_svg():
+    """Sleep, restart, shut down, leave: the moon, the sun coming round, the sun setting."""
+    sheet = Sheet()
+    moon = [(INK, crescent(11, 11.5, 8, 14.6, 8.4, 6.8))]
+    setting = [(INK, [(11 + 6 * math.cos(math.radians(a)), 12 + 6 * math.sin(math.radians(a))) for a in range(180, 361, 15)]),
+               (INK, brush([(3, 14.6), (19, 14.6)], 1.6, 0.3)), (INK, brush([(6.5, 17.6), (15.5, 17.6)], 1.4, 0.3)),
+               (INK, brush([(9, 20.2), (13, 20.2)], 1.2, 0.3))]
+    circle_arrow = [(INK, arc(11, 11, 7, -60, 230, 1.8, 0.25)), (INK, [(14.2, 1.8), (18.8, 6.8), (12.6, 7.6)])]
+    head = lambda x, y, s=1.0: [(INK, disc(x, y - 4 * s, 2.8 * s, 24)), (INK, arc(x, y + 5 * s, 5 * s, 200, 340, 2.2 * s, 0.1))]  # noqa: E731
+    door = [(INK, brush([(9, 3.5), (4, 3.5), (4, 18.5), (9, 18.5)], 1.7, 0.1, smooth=False)),
+            (INK, brush([(8, 11), (17, 11)], 1.7, 0.2)), (INK, brush([(14, 7.5), (17.8, 11), (14, 14.5)], 1.7, 0.2, smooth=False))]
+    lock = padlock(11, 11.5, 2.0)
+    glass = [(INK, arc(9.5, 9.5, 5.4, 0, 360, 1.7, 0)), (INK, brush([(13.4, 13.4), (18.5, 18.5)], 2.2, 0.2))]
+    items = {
+        "system-suspend": moon, "system-suspend-hibernate": moon + [(INK, disc(17, 5, 1.2, 12))],
+        "system-shutdown": setting, "system-reboot": circle_arrow, "system-log-out": door,
+        "system-lock-screen": lock, "system-switch-user": head(8.5, 10, 0.85) + head(14.5, 12, 0.85),
+        "system-users": head(8.5, 10, 0.85) + head(14.5, 12, 0.85), "system-user-list": head(11, 10),
+        "system-user-prompt": head(11, 10), "system-search": glass,
+        "system-save-session": [(INK, rounded(4, 4, 18, 18, 2)), (paint(INK, 0.0), [])],
+    }
+    glyphs(sheet, {k: [p for p in v if p[1]] for k, v in items.items()})
+    return sheet.svg()
+
+
+def media_svg():
+    sheet = Sheet()
+    play = [(INK, [(6.5, 4.5), (17.5, 11), (6.5, 17.5)])]
+    pause = [(INK, brush([(7.5, 5), (7.5, 17)], 3.2, 0.15)), (INK, brush([(14.5, 5), (14.5, 17)], 3.2, 0.15))]
+    stop = [(INK, rounded(5.5, 5.5, 16.5, 16.5, 2.2))]
+    skip = lambda d: [(INK, [(4 + d * 0, 5), (13, 11), (4, 17)] if d > 0 else [(18, 5), (9, 11), (18, 17)]),  # noqa: E731
+                      (INK, brush([(16.5, 5), (16.5, 17)] if d > 0 else [(5.5, 5), (5.5, 17)], 2.2, 0.1))]
+    seek = lambda d: [(INK, [(3, 5), (11, 11), (3, 17)] if d > 0 else [(19, 5), (11, 11), (19, 17)]),  # noqa: E731
+                      (INK, [(11, 5), (19, 11), (11, 17)] if d > 0 else [(11, 5), (3, 11), (11, 17)])]
+    glyphs(sheet, {
+        "media-playback-start": play, "media-playback-playing": play, "media-playback-pause": pause,
+        "media-playback-paused": pause, "media-playback-stop": stop, "media-playback-stopped": stop,
+        "media-record": [(NEG, disc(11, 11, 6, 32))], "media-eject": [(INK, [(11, 4), (18, 12), (4, 12)]), (INK, rounded(4, 14.5, 18, 17.5, 1))],
+        "media-skip-forward": skip(1), "media-skip-backward": skip(-1),
+        "media-seek-forward": seek(1), "media-seek-backward": seek(-1),
+    })
+    return sheet.svg()
+
+
+def klipper_svg():
+    """The clipboard: a board with its clip and two lines on it."""
+    sheet = Sheet()
+    board = rounded(4.5, 4.5, 17.5, 20, 2.4) + [(4.5, 4.5)] + rounded(6.1, 6.1, 15.9, 18.4, 1.2)[::-1] + [(6.1, 6.1)]
+    glyphs(sheet, {"klipper": [(INK, board), (INK, rounded(8, 2.4, 14, 6.8, 1.2)), (INK, brush([(8.2, 11), (13.8, 11)], 1.5, 0.2)),
+                               (INK, brush([(8.2, 14.6), (12.4, 14.6)], 1.5, 0.2))]})
+    return sheet.svg()
+
+
+def device_svg():
+    """Drives plugged in: a tube of paint, like the drives' icons."""
+    sheet = Sheet()
+    tube = [(INK, [(6.6, 19.6), (15.4, 19.6), (15.4, 18), (14.4, 8.6), (12.8, 6.8), (9.2, 6.8), (7.6, 8.6), (6.6, 18)]),
+            (INK, rounded(9.2, 2.4, 12.8, 6, 0.8)), (LILY, rounded(8.4, 11, 13.6, 15, 1))]
+    glyphs(sheet, {"device-notifier": tube})
+    return sheet.svg()
+
+
 CONTROLS = {
+    "icons/klipper": klipper_svg,
+    "icons/device": device_svg,
+    "icons/audio": audio_svg,
+    "icons/network": network_svg,
+    "icons/notification": notification_svg,
+    "icons/preferences": preferences_svg,
+    "icons/battery": battery_svg,
+    "icons/system": system_svg,
+    "icons/media": media_svg,
     "widgets/tasks": tasks_svg,
     "widgets/viewitem": viewitem_svg,
     "widgets/listitem": listitem_svg,

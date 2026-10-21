@@ -1,16 +1,37 @@
 [Icon Theme]
 Name=Monet
-Comment=Painted marks for Monet's own apps, painted folders, Breeze for everything else
+Comment=Small oil paintings for Monet's apps, folders and menu, Breeze for everything else
 Inherits=breeze,hicolor
 Example=folder
 DisplayDepth=32
-Directories=apps/scalable,places/scalable
+Directories=apps/scalable,categories/scalable,devices/scalable,mimetypes/scalable,places/scalable
 
 [apps/scalable]
 Size=48
 MinSize=16
 MaxSize=512
 Context=Applications
+Type=Scalable
+
+[categories/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Categories
+Type=Scalable
+
+[devices/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Devices
+Type=Scalable
+
+[mimetypes/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=MimeTypes
 Type=Scalable
 
 [places/scalable]

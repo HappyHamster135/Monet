@@ -36,6 +36,7 @@ kw --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.de
 kw --file kdeglobals --group General --key AccentColor "53,127,114"
 kw --file kdeglobals --group General --key accentColorFromWallpaper false
 kw --file kdeglobals --group Icons --key Theme Monet
+kw --file kcminputrc --group Mouse --key cursorTheme Monet-cursors
 
 # Inter for reading; Fraunces is used by Monet's own pieces.
 if fc-list : family 2>/dev/null | grep -qx "Inter"; then
@@ -63,19 +64,13 @@ kw --file kwinrc --group Plugins --key fadeEnabled false
 kw --file kwinrc --group Effect-blur --key BlurStrength 12
 kw --file kwinrc --group Effect-blur --key NoiseStrength 3
 
-# Window title bars: glass (from the color scheme), title in the middle,
-# buttons on the right.
-kw --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
-kw --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+# Window frames: Monet's own (tools/make-decoration.py), a glass title bar
+# with the title in the middle and three dabs of paint on the right, and a
+# soft ink shadow. monet-light picks the one for mist or smoke.
+kw --file kwinrc --group org.kde.kdecoration2 --key library org.kde.kwin.aurorae
+kw --file kwinrc --group org.kde.kdecoration2 --key theme __aurorae__svg__Monet
 kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
 kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
-kw --file breezerc --group Windeco --key TitleAlignment AlignCenterFullWidth
-kw --file breezerc --group Windeco --key DrawBackgroundGradient false
-kw --file breezerc --group Windeco --key DrawBorderOnMaximizedWindows false
-# Windows cast a wide, soft shadow in ink, not black, like the islands do.
-kw --file breezerc --group Common --key ShadowSize ShadowVeryLarge
-kw --file breezerc --group Common --key ShadowStrength 180
-kw --file breezerc --group Common --key ShadowColor "28,27,25"
 
 # The glass app style for Qt apps, when Kvantum is installed.
 if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so >/dev/null 2>&1; then

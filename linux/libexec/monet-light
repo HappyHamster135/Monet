@@ -105,6 +105,20 @@ apply() {
             ;;
     esac
 
+    # Window frames, mist or smoke, glass or solid.
+    local frame=__aurorae__svg__Monet
+    [ "$light" = smoke ] && frame="${frame}Smoke"
+    [ "$style" = monet-solid ] && frame="${frame}Solid"
+    current="$(kreadconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme 2>/dev/null)"
+    case "$current" in
+        __aurorae__svg__Monet*)
+            if [ "$current" != "$frame" ]; then
+                kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme "$frame"
+                busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
+            fi
+            ;;
+    esac
+
     local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
     if [ -f "$profile" ] && [ "$(kreadconfig6 --file "$profile" --group Appearance --key ColorScheme 2>/dev/null)" != "${kvantum%Solid}" ]; then
         kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "${kvantum%Solid}"

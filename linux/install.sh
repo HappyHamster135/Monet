@@ -88,6 +88,14 @@ install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/m
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
 install -D -m 644 "$SRC/icons/monet-quick-symbolic.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-quick-symbolic.svg"
 tree "$SRC/share/icons/Monet" "$DATADIR/icons/Monet"
+tree "$SRC/share/icons/Monet-cursors" "$DATADIR/icons/Monet-cursors"
+# The other names programs ask for, linked to the paintings and cursors drawn for them.
+while read -r link target; do
+    ln -sfn "$target" "$DATADIR/icons/Monet/$link"
+done < "$SRC/share/icons/Monet/aliases"
+while read -r alias name; do
+    ln -sfn "$name" "$DATADIR/icons/Monet-cursors/cursors/$alias"
+done < "$SRC/share/icons/Monet-cursors/aliases"
 put 644 "$SRC/share/applications/monet-windows.desktop" "$DATADIR/applications/monet-windows.desktop"
 put 644 "$SRC/share/applications/monet-settings.desktop" "$DATADIR/applications/monet-settings.desktop"
 
@@ -110,6 +118,10 @@ install -m 644 "$SRC"/share/color-schemes/*.colors "$DATADIR/color-schemes/"
 install -m 644 "$SRC"/share/konsole/* "$DATADIR/konsole/"
 for theme in Monet MonetDark MonetSolid MonetDarkSolid; do
     tree "$SRC/share/Kvantum/$theme" "$DATADIR/Kvantum/$theme"
+done
+# Window frames: glass title bars with dabs of paint for buttons.
+for theme in Monet MonetSolid MonetSmoke MonetSmokeSolid; do
+    tree "$SRC/share/aurorae/themes/$theme" "$DATADIR/aurorae/themes/$theme"
 done
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
@@ -193,6 +205,22 @@ OSR
             "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" \
             "$DATADIR/icons/hicolor/scalable/apps/monet.svg" > "$theme/theme.conf.user"
     done
+    # Its fields and buttons are Monet's too: SDDM draws them with the Plasma
+    # style and colors in its own home, which starts out with KDE's defaults.
+    # Filled in at boot, only where nothing is there yet.
+    install -d "$DATADIR/monet/sddm"
+    printf '[Theme]\nname=monet\n' > "$DATADIR/monet/sddm/plasmarc"
+    printf '[General]\nColorScheme=MonetDark\nfont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1\n\n[Icons]\nTheme=Monet\n' \
+        > "$DATADIR/monet/sddm/kdeglobals"
+    install -d /usr/lib/tmpfiles.d
+    cat > /usr/lib/tmpfiles.d/monet-sddm.conf <<TMP
+d /var/lib/sddm/.config 0755 sddm sddm -
+C /var/lib/sddm/.config/plasmarc - - - - $DATADIR/monet/sddm/plasmarc
+C /var/lib/sddm/.config/kdeglobals - - - - $DATADIR/monet/sddm/kdeglobals
+TMP
+    # And its pointer.
+    install -d /usr/lib/sddm/sddm.conf.d
+    printf '[Theme]\nCursorTheme=Monet-cursors\n' > /usr/lib/sddm/sddm.conf.d/monet-cursors.conf
 else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
         "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true

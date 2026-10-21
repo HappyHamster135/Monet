@@ -31,14 +31,33 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **The Store and other Flathub apps in Monet's colors.** Paper or smoke,
   lily for choices, the sun for the button that goes ahead. Before, newer
   apps like the Store kept their own grey and blue, older ones lost KDE's
-  colors, and dark mode was bluish. The Store's icon in the dock is
-  Monet's painted bag.
+  colors, and dark mode was bluish.
 - **Settings is clearer.** Each page shows its painting and how things
   stand ("Connected to Harbor"), the list glides to the page you're on,
   pages that open KDE's settings are marked ↗, Bluetooth devices show what
   they are, secured networks show a lock, and updates show they're
   working. Everything fits again: "More settings in KDE" had slipped off
   the bottom.
+- **Every icon is a small oil painting,** in short strokes the way Monet
+  painted, with violet shadows and warm light. Settings is a painter's
+  palette, Terminal a night canvas on an easel, System Monitor the harbor's
+  masts at sunset, the Store a market bouquet, Trash a garden pot. KDE's
+  apps (Gwenview, Okular, Kate, Ark, Spectacle, ...) and the app menu's
+  categories get paintings too.
+- **Files and drives are painted.** Text, code, pictures, music, films,
+  PDFs, spreadsheets, programs and archives each have their own painted
+  sheet; disks are a paint box, USB sticks a tube of paint.
+- **Monet's own window frames.** Title bars are the same glass as the
+  window. The buttons are signs brushed in ink, and a dab of paint swells
+  up under the one you point at: lily, ochre, or the sun to close.
+- **Monet's pointer:** ink with a paper edge, and Monet's sun breathing
+  over its reflection while something works.
+- **The bar's signs** for sound, Wi-Fi, battery, notifications, the
+  clipboard, drives and power are brushed in ink. Sleep is the moon, shut
+  down the setting sun.
+- **Starting and signing in are Monet's.** The boot screen is the harbor at
+  dawn (and asks for a disk password there), and the sign-in screen has
+  Monet's fields, buttons, colors and pointer.
 - **Terminal** has a thin cursor, more room around the text, and its menu
   behind a button instead of a menu bar.
 - **Window shadows** are softer and wider, in ink instead of black.

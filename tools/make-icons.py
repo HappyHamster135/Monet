@@ -1,57 +1,854 @@
-"""Draws Monet's icon theme: painted marks for Monet's own apps, painted folders.
+"""Paints Monet's icon theme: every icon a small oil painting, the way Monet
+painted. Short strokes of unmixed color laid side by side, shadows in violet
+and blue rather than grey, light in warm cream, and the paint thick enough to
+catch the light from the top left.
 
-Monet's icons are made the way its logo is: a few confident brushstrokes,
-glazed in the paintings' colors, with no circle or tile around them. Folders
-are small canvases, each glazed in the light of one painting, so Pictures,
-Downloads and Music are told apart by color as much as by their mark.
+Each motif comes from Monet's world, not from a computer's: a palette for
+Settings, a night canvas on an easel for Terminal, the harbor's masts rising
+like a graph against the sunset for System Monitor, a market bouquet for the
+Store, a garden pot from Giverny for Trash, folders cut from the paintings.
+Apps that bring their own brand (Firefox, Steam, games) keep their icon; KDE's
+apps get a Monet motif; everything else comes from Breeze.
 
-Apps that bring their own icon (Firefox, Steam, games) keep it; everything
-else comes from Breeze.
+Icons are painted at 512 x 512 and kept as 256 x 256 images inside SVGs.
 
 Run from the repository root:  python3 tools/make-icons.py
-Also writes the brush texture Monet uses for game covers without artwork.
+Also writes the brush texture Monet uses for game covers without artwork,
+and the pictures in Monet Settings.
 """
 
+import base64
+import colorsys
+import importlib.util
+import io
 import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "linux" / "share" / "icons" / "Monet"
 TEXTURES = ROOT / "linux" / "share" / "monet" / "textures"
+HOURS = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents" / "hours"
+
+N = 512          # the painting's size: four times the 128 grid the motifs are laid out on
+S = N / 128
+LIGHT = (-0.55, -0.83)  # light from the top left
 
 
-class Icon:
-    """One 128 x 128 SVG, built up from gradients and painted shapes."""
+# The painter ------------------------------------------------------------------
 
-    def __init__(self, comment):
-        self.comment = comment
-        self.defs = []
-        self.body = []
-        self.ids = 0
+def hexrgb(h):
+    h = h.lstrip("#")
+    return np.array([int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)], np.float32)
 
-    def gradient(self, top, bottom, x1=0.3, y1=0.0, x2=0.7, y2=1.0):
-        self.ids += 1
-        gid = f"g{self.ids}"
-        self.defs.append(f'<linearGradient id="{gid}" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}">'
-                         f'<stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>')
-        return f"url(#{gid})"
 
-    def add(self, shape):
-        self.body.append(shape)
+def blur(a, radius):
+    img = Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8), "L")
+    return np.asarray(img.filter(ImageFilter.GaussianBlur(radius))).astype(np.float32) / 255
 
-    def fit(self, cx, cy, scale):
-        """Scales the drawing around (cx, cy) and centers it, so every icon
-        sits on the same grid: about 0.8 of the canvas along its long side."""
-        self.body = [f'<g transform="translate(64 64) scale({scale}) translate({-cx} {-cy})">'] + self.body + ["</g>"]
 
-    def svg(self):
-        return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">\n'
-                f"  <!-- {self.comment} -->\n"
-                f"  <defs>{''.join(self.defs)}</defs>\n  " + "\n  ".join(self.body) + "\n</svg>\n")
+def shape(draw):
+    """A mask drawn at twice the painting's size, then shrunk, for soft edges."""
+    big = Image.new("L", (N * 2, N * 2), 0)
+    draw(ImageDraw.Draw(big), 2 * S)
+    return np.asarray(big.resize((N, N), Image.LANCZOS)).astype(np.float32) / 255
 
+
+def poly(points):
+    return shape(lambda d, k: d.polygon([(x * k, y * k) for x, y in points], fill=255))
+
+
+def circle(cx, cy, r):
+    return shape(lambda d, k: d.ellipse([(cx - r) * k, (cy - r) * k, (cx + r) * k, (cy + r) * k], fill=255))
+
+
+def box(x0, y0, x1, y1, r=0):
+    return shape(lambda d, k: d.rounded_rectangle([x0 * k, y0 * k, x1 * k, y1 * k], radius=r * k, fill=255))
+
+
+def band(points, width):
+    """A thick line with round ends and joints."""
+    def draw(d, k):
+        d.line([(x * k, y * k) for x, y in points], width=int(width * k), fill=255, joint="curve")
+        for x, y in points:
+            d.ellipse([(x - width / 2) * k, (y - width / 2) * k, (x + width / 2) * k, (y + width / 2) * k], fill=255)
+    return shape(draw)
+
+
+def ellipse(cx, cy, rx, ry, angle=0.0, steps=90):
+    a = math.radians(angle)
+    return [(cx + rx * math.cos(t) * math.cos(a) - ry * math.sin(t) * math.sin(a),
+             cy + rx * math.cos(t) * math.sin(a) + ry * math.sin(t) * math.cos(a))
+            for t in (2 * math.pi * i / steps for i in range(steps))]
+
+
+def cut(a, *others):
+    for o in others:
+        a = a - o
+    return np.clip(a, 0, 1)
+
+
+def join(*masks):
+    return np.clip(sum(masks), 0, 1)
+
+
+def vary(rgb, rng, amount):
+    """Broken color: each stroke a little off in hue and strength, like unmixed paint."""
+    h, l, s = colorsys.rgb_to_hls(*[float(c) for c in rgb])
+    h = (h + rng.normal(0, amount * 0.5)) % 1
+    l = min(1, max(0, l + rng.normal(0, amount * 0.6)))
+    s = min(1, max(0, s + rng.normal(0, amount * 1.8)))
+    return np.array(colorsys.hls_to_rgb(h, l, s), np.float32)
+
+
+def lighting(x, y):
+    """Where the light falls: +1 toward the top left, -1 in shade."""
+    v = np.asarray((64 - np.asarray(x)) / 64 * 0.35 + (64 - np.asarray(y)) / 64)
+    return v[..., None] if np.ndim(v) else v
+
+
+def lit(top, bottom, y0=0, y1=128, warm="#FFE2B0", cool="#4A4A9A", light=0.22, shade=0.28):
+    """Local color: top to bottom, warmed where the light falls and cooled,
+    not darkened, in shade, the way Monet painted shadows."""
+    t, b, w, c = hexrgb(top), hexrgb(bottom), hexrgb(warm), hexrgb(cool)
+
+    def at(x, y):
+        k = np.clip((np.asarray(y) - y0) / (y1 - y0), 0, 1)
+        k = k[..., None] if np.ndim(k) else k
+        base = t * (1 - k) + b * k
+        lv = lighting(x, y)
+        wk, ck = np.clip(lv, 0, 1) * light, np.clip(-lv, 0, 1) * shade
+        return base * (1 - wk - ck) + w * wk + c * ck
+    return at
+
+
+def sampled(img, frame, light=0.18, warm="#FFE6B8", cool="#3C3E86"):
+    """Colors taken from a painting laid over frame (x0, y0, x1, y1), lit like the rest."""
+    arr = np.asarray(img).astype(np.float32) / 255
+    h, w = arr.shape[:2]
+    x0, y0, x1, y1 = frame
+    wc, cc = hexrgb(warm), hexrgb(cool)
+
+    def at(x, y):
+        xi = np.clip(((np.asarray(x) - x0) / (x1 - x0) * (w - 1)).astype(int), 0, w - 1)
+        yi = np.clip(((np.asarray(y) - y0) / (y1 - y0) * (h - 1)).astype(int), 0, h - 1)
+        lv = lighting(x, y)
+        wk, ck = np.clip(lv, 0, 1) * light, np.clip(-lv, 0, 1) * light
+        return arr[yi, xi] * (1 - wk - ck) + wc * wk + cc * ck
+    return at
+
+
+def one(color):
+    c = hexrgb(color)
+    return lambda x, y: c
+
+
+def painting(name, crop, color=1.35):
+    """A piece of one of the Hours, its color brought back up (small pieces look muddy)."""
+    img = Image.open(HOURS / f"{name}.jpg").convert("RGB").crop(crop)
+    return ImageEnhance.Contrast(ImageEnhance.Color(img).enhance(color)).enhance(1.1)
+
+
+def flat(degrees):
+    a = math.radians(degrees)
+    return lambda x, y: a
+
+
+def around(cx, cy):
+    """Strokes that follow a round form."""
+    return lambda x, y: math.atan2(y - cy, x - cx) + math.pi / 2
+
+
+def outward(cx, cy):
+    """Strokes that spread from a center, like petals."""
+    return lambda x, y: math.atan2(y - cy, x - cx)
+
+
+class Canvas:
+    """One small oil painting: color, coverage and the paint's relief."""
+
+    def __init__(self, seed):
+        self.rgb = np.zeros((N, N, 3), np.float32)
+        self.alpha = np.zeros((N, N), np.float32)
+        self.height = np.zeros((N, N), np.float32)
+        self.rng = np.random.default_rng(seed)
+
+    def ground(self, mask, color_at):
+        """The first, thin layer, so no canvas shows between the strokes."""
+        ys, xs = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
+        a = mask[..., None]
+        self.rgb = self.rgb * (1 - a) + color_at(xs / S, ys / S) * a
+        self.alpha = self.alpha + mask * (1 - self.alpha)
+        self.height = self.height * (1 - mask) + mask * 0.25
+
+    def dab(self, cx, cy, length, width, angle, color, clip, opacity=1.0, thick=1.0, dry=0.6):
+        """One stroke of a loaded brush: heavier where it lands, streaked by the
+        bristles, breaking up as the paint runs out."""
+        r = length / 2 + width
+        x0, x1 = max(0, int(cx - r)), min(N, int(cx + r) + 2)
+        y0, y1 = max(0, int(cy - r)), min(N, int(cy + r) + 2)
+        if x0 >= x1 or y0 >= y1:
+            return
+        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32) + 0.5
+        dx, dy = xs - cx, ys - cy
+        ca, sa = math.cos(angle), math.sin(angle)
+        u, v = dx * ca + dy * sa, -dx * sa + dy * ca
+        t = u / (length / 2)
+        half = width / 2 * np.clip(1 - np.abs(t) ** 2.2, 0, 1) ** (1 / 2.2) * (1 - 0.2 * t)
+        # Antialiased, and fading where the stroke is thinner than a pixel (no needles at the tips).
+        a = np.clip(half - np.abs(v) + 0.7, 0, 1) * np.clip(half * 1.5, 0, 1)
+        p1, p2 = self.rng.uniform(0, 6.3, 2)
+        f1, f2 = self.rng.uniform(9, 15), self.rng.uniform(20, 31)
+        w = v / max(width / 2, 1)
+        bristle = 0.8 + 0.13 * np.sin(w * f1 + p1) + 0.07 * np.sin(w * f2 + p2)
+        tail = 1 - dry * np.clip((t - 0.25) / 0.75, 0, 1) ** 1.5 * (0.5 + 0.5 * np.sin(w * f2 * 1.7 + p1))
+        a = a * np.clip(bristle, 0, 1) * np.clip(tail, 0, 1) * opacity * clip[y0:y1, x0:x1]
+        here = (slice(y0, y1), slice(x0, x1))
+        self.rgb[here] = self.rgb[here] * (1 - a[..., None]) + color * a[..., None]
+        self.alpha[here] = self.alpha[here] + a * (1 - self.alpha[here])
+        # Paint piles where the brush lands and along the stroke's edges.
+        ridge = (0.7 + 0.3 * bristle) * (1 + 0.5 * np.clip(-t, 0, 1)) * (0.75 + 0.25 * np.clip(np.abs(v) / np.maximum(half, 1e-3), 0, 1))
+        self.height[here] = self.height[here] * (1 - 0.7 * a) + a * thick * ridge
+
+    def paint(self, mask, color_at, size, flow, layers=3, jitter=0.05, wander=0.3, accents=(), accent_rate=0.07,
+              opacity=1.0, thick=1.0, ground=True):
+        """Paints an area: a thin ground, then strokes over it, coarse to fine.
+        size is the stroke width on the 128 grid; flow(x, y) their direction;
+        accents, the odd stroke of another color (Monet's broken color)."""
+        if ground:
+            self.ground(mask * opacity, color_at)
+        clip = np.clip(mask * 1.04, 0, 1)
+        ys, xs = np.nonzero(mask > 0.5)
+        if len(xs) == 0:
+            return
+        bx0, bx1, by0, by1 = xs.min(), xs.max(), ys.min(), ys.max()
+        for layer in range(layers):
+            s = size * S * (1.2 - 0.3 * layer)
+            step = s * 0.78
+            gy, gx = np.mgrid[by0:by1 + 1:step, bx0:bx1 + 1:step]
+            pts = np.stack([gx.ravel(), gy.ravel()], 1) + self.rng.uniform(-step / 2, step / 2, (gx.size, 2))
+            self.rng.shuffle(pts)
+            for px, py in pts:
+                if mask[int(min(N - 1, max(0, py))), int(min(N - 1, max(0, px)))] < 0.5:
+                    continue
+                col = vary(color_at(np.float32(px / S), np.float32(py / S)), self.rng, jitter)
+                if accents and self.rng.random() < accent_rate:
+                    col = vary(hexrgb(self.rng.choice(accents)), self.rng, jitter)
+                ang = flow(px / S, py / S) + self.rng.normal(0, wander)
+                self.dab(px, py, s * self.rng.uniform(1.8, 3.0), s * self.rng.uniform(0.6, 0.9), ang, col, clip,
+                         opacity=opacity * self.rng.uniform(0.78, 1.0), thick=thick)
+
+    def mark(self, points, width, color, clip=None, thick=1.8):
+        """A mark drawn with the brush along a line: a glyph, a mast, a handle."""
+        clip = np.ones((N, N), np.float32) if clip is None else clip
+        c = hexrgb(color) if isinstance(color, str) else color
+        for (ax, ay), (bx, by) in zip(points, points[1:]):
+            ax, ay, bx, by = ax * S, ay * S, bx * S, by * S
+            seg = math.hypot(bx - ax, by - ay)
+            ang = math.atan2(by - ay, bx - ax)
+            n = max(1, int(seg / (width * S * 0.9)))
+            for k in range(n):
+                f = (k + 0.5) / n
+                self.dab(ax + (bx - ax) * f, ay + (by - ay) * f, seg / n * 1.9 + width * S * 0.6, width * S, ang,
+                         vary(c, self.rng, 0.04), clip, thick=thick, dry=0.25)
+        for x, y in points[1:-1]:  # the brush turning a corner
+            self.dab(x * S, y * S, width * S * 1.05, width * S, 0, vary(c, self.rng, 0.04), clip, thick=thick, dry=0)
+
+    def finish(self, relief=1.3, shadow=0.2, size=256):
+        """Lights the relief, adds a soft shadow below, and shrinks it to size."""
+        h = blur(np.clip(self.height / 2, 0, 1), 2.2) * 2
+        gy, gx = np.gradient(h)
+        lit_side = np.clip(-(gx * LIGHT[0] + gy * LIGHT[1]) * relief * S, -0.35, 0.35)
+        rgb = self.rgb * (1 + lit_side[..., None] * 0.55)
+        rgb = rgb + (np.clip(lit_side - 0.14, 0, 1) * 0.55)[..., None] * np.array([1.0, 0.96, 0.88], np.float32)
+        ys, xs = np.mgrid[0:N, 0:N].astype(np.float32)
+        rgb = np.clip(rgb * (1 + (np.sin(xs * 1.9) * np.sin(ys * 1.9) * 0.006)[..., None]), 0, 1)  # canvas weave
+        under = np.roll(blur(self.alpha, 2.2 * S), int(1.6 * S), 0) * shadow
+        a = self.alpha + under * (1 - self.alpha)
+        rgb = rgb * self.alpha[..., None] / np.maximum(a, 1e-4)[..., None]
+        img = Image.fromarray((np.concatenate([np.clip(rgb, 0, 1), a[..., None]], 2) * 255).astype(np.uint8), "RGBA")
+        return img.convert("RGBa").resize((size, size), Image.LANCZOS).convert("RGBA")
+
+
+# The motifs -------------------------------------------------------------------
+
+FIRE = ["#FFC46B", "#FF7A4A", "#D9361A", "#FF8FA0", "#F2552C"]
+WOOD = dict(top="#B07A4C", bottom="#6A4528", cool="#3A2A4A", light=0.2, shade=0.25)
+
+
+def wood(**kw):
+    return lit(**dict(WOOD, **kw))
+
+
+def branding():
+    spec = importlib.util.spec_from_file_location("make_branding", Path(__file__).with_name("make-branding.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def reflection(c):
+    """The sun's reflection: Monet's mark, three strokes on the water."""
+    mb = branding()
+    for cx, cy, length, width, opacity in mb.DABS:
+        m = poly(mb.stroke(cx, cy, length, width))
+        c.paint(m, lit("#FF7A45", "#E2471F", y0=80, y1=116, light=0.15, shade=0.2), 4.4, flat(0), layers=2,
+                wander=0.08, accents=FIRE, accent_rate=0.22, opacity=min(1, opacity + 0.04), thick=1.2)
+
+
+def sun_icon():
+    c = Canvas(11)
+    c.paint(poly(branding().sun_outline()), lit("#FF9A5E", "#E5401C", y0=17, y1=71, light=0.3, shade=0.12, cool="#B8305A"),
+            6.4, around(64, 44), layers=3, wander=0.18, accents=FIRE, accent_rate=0.16, thick=1.3)
+    reflection(c)
+    return c.finish()
+
+
+def play_icon():
+    c = Canvas(12)
+    c.paint(poly(branding().play_outline()), lit("#FF9A5E", "#E5401C", y0=16, y1=72, light=0.3, shade=0.12, cool="#B8305A"),
+            6.0, flat(-30), layers=3, wander=0.2, accents=FIRE, accent_rate=0.16, thick=1.3)
+    reflection(c)
+    return c.finish()
+
+
+def palette_icon():
+    """Settings: the painter's palette, with dabs of the Hours' colors."""
+    c = Canvas(21)
+    board = cut(poly(ellipse(62, 66, 52, 40, -14, 120)), circle(82, 84, 7.5), circle(108, 88, 15))
+    c.paint(board, wood(top="#D7A06A", bottom="#8A5531", cool="#5B3A5E", light=0.26, shade=0.3), 7.0, flat(-14),
+            wander=0.12, accents=["#E6B880", "#B07040", "#9C6A4A"], accent_rate=0.2, thick=0.9)
+    for x, y, r, col, acc in ((36, 56, 9.5, "#F2552C", ["#FFB070", "#D9361A"]), (52, 40, 8.5, "#F6E7C8", ["#FFFFFF", "#E8D2A8"]),
+                              (72, 36, 8.5, "#5C88D0", ["#93C6EA", "#2F5A9E"]), (92, 46, 8.5, "#9C7BC0", ["#C9B5EE", "#6A4C96"]),
+                              (42, 80, 8, "#3F9A89", ["#7CD3C0", "#2A6A5F"])):
+        blob = poly(ellipse(x, y, r, r * 0.86, c.rng.uniform(0, 180), 40))
+        c.paint(blob, lit(col, col, light=0.3, shade=0.18), 3.8, around(x, y), wander=0.5, accents=acc,
+                accent_rate=0.3, thick=2.4)
+    return c.finish()
+
+
+def easel_icon():
+    """Terminal: a night canvas on an easel, with the prompt painted on it."""
+    c = Canvas(31)
+    for (a, b), w in ((((44, 70), (30, 120)), 6.5), (((84, 70), (98, 120)), 6.5), (((64, 60), (64, 118)), 4.5)):
+        c.paint(band((a, b), w), wood(), 2.4, flat(math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))), layers=2, wander=0.05)
+    night = box(18, 12, 110, 80, 5)
+    c.paint(night, lit("#3A4A82", "#141A33", y0=12, y1=80, light=0.12, shade=0.15, warm="#7E8FD0"), 6.4, flat(0),
+            wander=0.08, accents=["#9FB4E8", "#5A4A9C", "#2A3566"], accent_rate=0.14)
+    for i, (x, y, length) in enumerate(((88, 58, 16), (90, 64, 12), (87, 70, 8))):  # the moon on the water
+        c.dab(x * S, y * S, length * S, 2.6 * S, 0, hexrgb("#E8E2C4"), night, opacity=0.8 - 0.18 * i, thick=1.3)
+    c.paint(box(20, 78, 108, 86, 3), wood(), 2.2, flat(0), layers=2, wander=0.04, thick=1.1)
+    c.mark([(36, 30), (50, 44), (36, 58)], 7.0, "#F3ECD8", night)
+    c.mark([(60, 58), (80, 58)], 6.6, "#7CD3C0", night)
+    return c.finish()
+
+
+def harbor_icon():
+    """System Monitor: the harbor at sunset, its masts rising like a graph."""
+    c = Canvas(41)
+    frame = box(12, 16, 116, 112, 16)
+    water = np.clip(frame * box(0, 74, 128, 128), 0, 1)
+    sky = lit("#8A6FA8", "#F09A6A", y0=16, y1=74, light=0.08, shade=0.1)
+    c.ground(frame, sky)
+    c.paint(cut(frame, water), sky, 6.0, flat(0), layers=2, wander=0.12, accents=["#F6B590", "#C49ACB", "#FFD08A"],
+            accent_rate=0.18, thick=0.9, ground=False)
+    c.paint(water, lit("#5A5E96", "#2C3462", y0=74, y1=112, light=0.1, shade=0.15), 5.4, flat(0), wander=0.06,
+            accents=["#7A86C6", "#3A4478", "#E58A62"], accent_rate=0.12, thick=0.9)
+    c.paint(circle(36, 60, 9), lit("#FF9A5E", "#E5401C", y0=51, y1=69), 2.4, around(36, 60), layers=2, wander=0.2,
+            accents=FIRE, accent_rate=0.2, thick=1.6)
+    for i, (y, length) in enumerate(((80, 16), (88, 11), (96, 7))):
+        c.dab(36 * S, y * S, length * S, 3.0 * S, 0, hexrgb("#F2552C"), frame, opacity=0.9 - 0.2 * i, thick=1.2)
+    for x, top in ((58, 60), (72, 48), (86, 54), (100, 34)):
+        c.mark([(x, 74), (x, top)], 3.4, "#2A2338", frame, thick=1.4)
+        c.dab((x - 1) * S, 76 * S, 13 * S, 4.2 * S, 0, hexrgb("#2A2338"), frame, thick=1.4)
+    return c.finish()
+
+
+def bouquet_icon():
+    """Store: a market bouquet in a paper cone."""
+    c = Canvas(51)
+    leaves = lit("#5E9A5A", "#2F5E3E", light=0.2, shade=0.25)
+    for a, b in (((40, 62), (24, 40)), ((88, 60), (104, 42)), ((64, 58), (62, 22))):
+        c.paint(band((a, b), 7), leaves, 2.2, flat(math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))), layers=2, wander=0.1)
+    for x, y, r, col, acc in ((42, 44, 14, "#E0452E", ["#FF7A5A", "#B82A1E"]), (66, 32, 14, "#E88AAE", ["#FFC0D4", "#C0587E"]),
+                              (88, 44, 14, "#A988D6", ["#D2BEF2", "#7A5AB0"]), (54, 56, 12, "#F2B84B", ["#FFE08A", "#D08A28"]),
+                              (76, 56, 12, "#F6EEE0", ["#FFFFFF", "#E0D2C0"])):
+        m = poly(ellipse(x, y, r, r * 0.92, c.rng.uniform(0, 180), 48))
+        c.paint(m, lit(col, col, light=0.28, shade=0.22), 3.6, outward(x, y), wander=0.35, accents=acc,
+                accent_rate=0.3, thick=1.9)
+        c.dab(x * S, y * S, 4 * S, 3 * S, 0.5, vary(hexrgb("#3A2A1A"), c.rng, 0.05), m, opacity=0.5, thick=1.2)
+    cone = poly([(34, 62), (94, 62), (66, 118), (60, 118)])
+    c.paint(cone, lit("#F1E2C0", "#C2A373", y0=62, y1=118, light=0.22, shade=0.25, cool="#8A7AA0"), 5.6, flat(62),
+            wander=0.1, accents=["#FBF4E4", "#D8BF92"], accent_rate=0.18)
+    c.mark([(46, 80), (84, 80)], 3.2, "#C0583A", cone, thick=1.5)  # the ribbon
+    return c.finish()
+
+
+def pot_icon(full):
+    """Trash: a terracotta pot from the garden at Giverny; crumpled sketches when full."""
+    c = Canvas(61 + full)
+    if full:
+        for x, y, r, tint in ((50, 40, 13, "#E88AAE"), (74, 36, 14, "#5C88D0"), (62, 46, 12, "#F2B84B")):
+            m = poly(ellipse(x, y, r, r * 0.88, c.rng.uniform(0, 180), 14))
+            c.paint(m, lit("#FBF6EA", "#D6CAB4", y0=y - r, y1=y + r, cool="#9A8CB8"), 2.6, around(x, y), layers=2,
+                    wander=0.9, accents=["#FFFFFF", "#CFC2A8", tint], accent_rate=0.22, thick=1.4)
+    body = poly([(30, 56), (98, 56), (88, 110), (84, 114), (44, 114), (40, 110)])
+    c.paint(body, lit("#E58A5E", "#9A4A2E", y0=44, y1=114, light=0.24, shade=0.32, cool="#5E3A6A"), 6.0, flat(90),
+            wander=0.1, accents=["#F2A47A", "#B8583A", "#C9708E"], accent_rate=0.14)
+    c.paint(box(24, 44, 104, 58, 5), lit("#F0A272", "#B05A36", y0=44, y1=58, light=0.28, shade=0.25, cool="#6A3A5A"),
+            4.6, flat(0), layers=2, wander=0.06, thick=1.4)
+    # The shadow side in violet, the way Monet painted shade.
+    c.paint(poly([(74, 58), (96, 58), (87, 110), (78, 112)]), lit("#8A4E5E", "#5E3A5E", y0=58, y1=112), 2.6, flat(92),
+            layers=2, wander=0.1, opacity=0.35, thick=0.8, ground=False)
+    return c.finish()
+
+
+def frame_icon():
+    """Gwenview: a small painting in a gilt frame, as in a museum."""
+    c = Canvas(71)
+    outer, inner = box(14, 20, 114, 108, 4), box(27, 33, 101, 95, 2)
+    gilt = lit("#E8C068", "#9A6A24", y0=20, y1=108, light=0.3, shade=0.3, cool="#6A4A3A")
+    c.paint(cut(outer, inner), gilt, 3.4, lambda x, y: 0 if min(y - 20, 108 - y) < min(x - 14, 114 - x) else math.pi / 2,
+            wander=0.06, accents=["#FFE7A0", "#B88A3A"], accent_rate=0.25, thick=1.5)
+    c.paint(inner, sampled(painting("dawn", (1900, 300, 3100, 1300)), (27, 33, 101, 95)), 4.2, flat(0), wander=0.12,
+            jitter=0.04)
+    c.mark([(28, 34), (100, 34)], 1.6, "#5A3A1A", outer, thick=0.6)
+    return c.finish()
+
+
+def book_icon():
+    """Okular: an open book, its pages written in ink."""
+    c = Canvas(81)
+    cover = poly([(12, 34), (64, 44), (116, 34), (116, 102), (64, 112), (12, 102)])
+    c.paint(cover, lit("#3F9A89", "#245A50", y0=34, y1=112, light=0.2, shade=0.25), 4.0, flat(0), layers=2, wander=0.1)
+    paper = lit("#FBF5E6", "#DCCFB4", y0=30, y1=106, light=0.18, shade=0.22, cool="#9A8CB8")
+    for page, tilt in ((poly([(16, 30), (62, 38), (62, 104), (16, 96)]), 10), (poly([(66, 38), (112, 30), (112, 96), (66, 104)]), -10)):
+        c.paint(page, paper, 5.0, flat(tilt), layers=2, wander=0.08, accents=["#FFFFFF", "#E8DCC4"], accent_rate=0.15)
+    for i in range(5):
+        y = 46 + i * 10
+        c.mark([(22, y), (56, y + 6)], 2.4, "#4A4A7A", None, thick=0.7)
+        if i < 4:
+            c.mark([(72, y + 6), (106, y)], 2.4, "#4A4A7A", None, thick=0.7)
+    c.paint(poly([(60, 38), (68, 38), (68, 106), (60, 106)]), lit("#B8AACC", "#7A6A9A"), 2.0, flat(90), layers=1,
+            opacity=0.5, ground=False)
+    return c.finish()
+
+
+def abacus_icon():
+    """KCalc: a wooden abacus with beads in the Hours' colors."""
+    c = Canvas(91)
+    frame = cut(box(16, 22, 112, 106, 6), box(24, 30, 104, 98, 3))
+    c.paint(frame, wood(), 3.6, lambda x, y: 0 if (y < 30 or y > 98) else math.pi / 2, wander=0.05, thick=1.3)
+    for row, (y, col) in enumerate(zip((40, 56, 72, 88), ("#F2552C", "#5C88D0", "#9C7BC0", "#3F9A89"))):
+        c.mark([(24, y), (104, y)], 2.0, "#4A3A2A", None, thick=0.6)
+        left = (3, 2, 4, 1)[row]
+        for k in range(5):
+            x = 34 + k * 11.5 if k < left else 104 - (5 - k) * 11.5 + 6
+            bead = poly(ellipse(x, y, 5.6, 6.2, 0, 32))
+            c.paint(bead, lit(col, col, light=0.35, shade=0.22), 2.2, around(x, y), layers=2, wander=0.3, thick=1.8)
+    return c.finish()
+
+
+def curtain_icon():
+    """Haruna: a little stage, red curtains drawn back from the evening light."""
+    c = Canvas(101)
+    stage = box(14, 18, 114, 110, 10)
+    c.paint(stage, sampled(painting("dusk", (900, 600, 2100, 1500)), (14, 18, 114, 110)), 5.0, flat(0), wander=0.1)
+    velvet = lit("#C43A30", "#5E1428", y0=18, y1=110, light=0.24, shade=0.3, cool="#3A1A4A")
+    c.paint(poly([(14, 18), (44, 18), (36, 64), (30, 110), (14, 110)]) * stage, velvet, 3.4, flat(95), wander=0.08,
+            accents=["#E8604A", "#7A1A2A"], accent_rate=0.2, thick=1.3)
+    c.paint(poly([(84, 18), (114, 18), (114, 110), (98, 110), (92, 64)]) * stage, velvet, 3.4, flat(85), wander=0.08,
+            accents=["#E8604A", "#7A1A2A"], accent_rate=0.2, thick=1.3)
+    c.paint(box(14, 18, 114, 30, 6) * stage, lit("#E8C068", "#9A6A24"), 2.6, flat(0), layers=2, wander=0.05, thick=1.4)
+    c.paint(poly([(56, 52), (56, 84), (82, 68)]), one("#FBF6EA"), 2.6, flat(0), layers=2, wander=0.3, thick=2.0)
+    return c.finish()
+
+
+def sunflower_icon():
+    """Filelight: a sunflower, its petals and seeds rings around the middle."""
+    c = Canvas(111)
+    for a, b in (((64, 92), (64, 122)), ((64, 108), (88, 98))):
+        c.paint(band((a, b), 6), lit("#5E9A5A", "#2F5E3E"), 2.2, flat(math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))),
+                layers=2, wander=0.1)
+    petals = poly(ellipse(64, 56, 46, 44, 0, 24))
+    c.paint(cut(petals, circle(64, 56, 16)), lit("#FFD15A", "#E08A1E", y0=12, y1=100, light=0.3, shade=0.25, cool="#C0602A"),
+            4.2, outward(64, 56), wander=0.25, accents=["#FFE89A", "#F2B84B", "#D9731A"], accent_rate=0.25, thick=1.6)
+    c.paint(circle(64, 56, 18), lit("#7A4A24", "#3A2214", y0=38, y1=74, light=0.25, shade=0.2), 2.2, around(64, 56),
+            wander=0.6, accents=["#A86A34", "#2A1A10", "#C49A5A"], accent_rate=0.3, thick=2.0)
+    return c.finish()
+
+
+def letter_icon():
+    """Kate: a letter in ink, a feather quill across it."""
+    c = Canvas(121)
+    sheet = poly([(26, 18), (98, 12), (104, 108), (32, 114)])
+    c.paint(sheet, lit("#FBF5E6", "#DCCFB4", y0=12, y1=114, cool="#9A8CB8"), 5.0, flat(-4), layers=2, wander=0.08)
+    for i in range(6):
+        y = 34 + i * 12
+        c.mark([(36, y + 1), (88 - (18 if i == 5 else 0), y - 3)], 2.6, "#3E4A86", sheet, thick=0.7)
+    quill = poly([(108, 14), (114, 22), (60, 92), (56, 90)])
+    c.paint(quill, lit("#9FD3C4", "#3F9A89"), 2.4, flat(126), layers=2, wander=0.15, accents=["#E6F4EE"], accent_rate=0.3)
+    c.mark([(58, 90), (50, 102)], 2.6, "#2A2338", None)
+    return c.finish()
+
+
+def chest_icon():
+    """Ark: a wooden chest with iron bands, to keep things in."""
+    c = Canvas(131)
+    c.paint(box(18, 50, 110, 106, 6), wood(top="#B8824E", bottom="#6A4226"), 4.4, flat(0), wander=0.06)
+    c.paint(box(18, 30, 110, 54, 10), wood(top="#C8925C", bottom="#8A5A34"), 4.0, flat(0), wander=0.06)
+    for x in (34, 94):
+        c.mark([(x, 30), (x, 106)], 5.0, "#4A4250", None, thick=1.2)
+    c.paint(box(56, 46, 72, 64, 3), lit("#F0C870", "#A6742A"), 2.0, around(64, 55), layers=2, thick=1.6)
+    return c.finish()
+
+
+def camera_icon():
+    """Spectacle: an old box camera."""
+    c = Canvas(141)
+    c.paint(box(48, 28, 80, 42, 4), lit("#4A4258", "#2A2436"), 2.6, flat(0), layers=2)
+    c.paint(box(16, 38, 112, 102, 12), lit("#5A5068", "#2A2436", y0=38, y1=102, light=0.2, shade=0.2, cool="#1A1A3A"), 5.0,
+            flat(0), wander=0.08, accents=["#6A6080", "#3A3448"], accent_rate=0.2)
+    c.paint(box(16, 52, 112, 60), lit("#C49A5A", "#8A6430"), 2.2, flat(0), layers=1, opacity=0.8, ground=False)
+    c.paint(circle(64, 72, 22), lit("#E8C068", "#9A6A24"), 2.4, around(64, 72), layers=2, thick=1.5)
+    c.paint(circle(64, 72, 16), lit("#5A7AC0", "#1A2450", y0=56, y1=88, light=0.3, shade=0.2), 2.6, around(64, 72),
+            wander=0.3, accents=["#9FB4E8", "#C49ACB"], accent_rate=0.25, thick=1.4)
+    c.dab(58 * S, 66 * S, 7 * S, 4 * S, -0.6, hexrgb("#F3ECD8"), np.ones((N, N), np.float32), opacity=0.85, thick=1.8)
+    return c.finish()
+
+
+def sailboat_icon():
+    """Internet: a sailboat setting out over the water."""
+    c = Canvas(151)
+    c.paint(poly(ellipse(64, 100, 52, 13, 0, 60)), lit("#6A86C6", "#2C3C78", y0=86, y1=114), 4.0, flat(0), layers=2,
+            wander=0.06, accents=["#9FB4E8", "#F2B84B"], accent_rate=0.12)
+    c.paint(poly([(30, 86), (98, 86), (88, 98), (40, 98)]), wood(), 3.0, flat(0), layers=2, wander=0.05, thick=1.3)
+    c.mark([(64, 86), (64, 14)], 3.0, "#4A3A2A", None, thick=1.2)
+    c.paint(poly([(68, 18), (100, 80), (68, 80)]), lit("#FBF5E6", "#D6C8B0", y0=18, y1=80, cool="#9A8CB8"), 4.2, flat(70),
+            wander=0.12, thick=1.2)
+    c.paint(poly([(60, 28), (60, 80), (30, 80)]), lit("#F6B590", "#E2603A", y0=28, y1=80), 3.8, flat(110), wander=0.12, thick=1.2)
+    return c.finish()
+
+
+def brushes_icon():
+    """Utilities: brushes standing in a glass jar."""
+    c = Canvas(161)
+    for (a, b), tip in ((((50, 70), (34, 16)), "#F2552C"), (((64, 70), (66, 10)), "#5C88D0"), (((78, 70), (96, 18)), "#3F9A89")):
+        c.mark([a, b], 4.4, "#B07A4C", None, thick=1.2)
+        c.paint(poly(ellipse(b[0], b[1], 5.2, 8.5, math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])) + 90, 30)),
+                one(tip), 2.0, flat(90), layers=2, wander=0.2, thick=2.0)
+    jar = box(32, 58, 96, 114, 12)
+    c.paint(jar, lit("#BFD6E8", "#6A8AB0", y0=58, y1=114, light=0.3, shade=0.25), 4.0, flat(90), wander=0.1,
+            accents=["#FFFFFF", "#9FB4E8"], accent_rate=0.2, opacity=0.82)
+    c.mark([(42, 66), (42, 100)], 3.0, "#FFFFFF", jar, thick=1.0)  # light on the glass
+    return c.finish()
+
+
+# Files and drives -------------------------------------------------------------
+# Every kind of file is a sheet of paper with something painted on it; drives
+# are what a painter carries colors in.
+
+INKS = ["#3E4A86", "#2A2338"]
+PAPER = dict(top="#FBF5E6", bottom="#DCCFB4", cool="#9A8CB8")
+
+
+def paper(seed):
+    """A sheet with its corner folded over."""
+    c = Canvas(seed)
+    page = poly([(26, 10), (82, 10), (102, 30), (102, 118), (26, 118)])
+    c.paint(page, lit(y0=10, y1=118, **PAPER), 5.0, flat(-3), layers=2, wander=0.08, accents=["#FFFFFF", "#E8DCC4"],
+            accent_rate=0.15)
+    c.paint(poly([(82, 10), (82, 30), (102, 30)]), lit("#E6DAC2", "#B8A8B4", y0=10, y1=30, cool="#7A6A9A"), 2.4, flat(45),
+            layers=2, wander=0.1, thick=1.5)
+    return c, page
+
+
+def lines(c, page, rows, x0=38, x1=90, y0=46, gap=11, color=INKS[0]):
+    for i in range(rows):
+        end = x1 - (16 if i == rows - 1 else (6 if i % 3 == 1 else 0))
+        c.mark([(x0, y0 + i * gap + 0.6), (end, y0 + i * gap - 0.6)], 2.6, color, page, thick=0.7)
+
+
+def text_icon():
+    """Text: a sheet written in ink."""
+    c, page = paper(201)
+    lines(c, page, 7, y0=36)
+    return c.finish()
+
+
+def code_icon():
+    """Code and scripts: lines in three inks, indented."""
+    c, page = paper(202)
+    for i, (indent, length, color) in enumerate(((0, 22, "#C0583A"), (8, 34, "#3F9A89"), (16, 26, "#3E4A86"),
+                                                  (16, 30, "#3E4A86"), (8, 14, "#3F9A89"), (0, 10, "#C0583A"),
+                                                  (0, 28, "#3E4A86"))):
+        y = 36 + i * 11
+        c.mark([(38 + indent, y), (38 + indent + length, y)], 2.8, color, page, thick=0.8)
+    return c.finish()
+
+
+def image_icon():
+    """Pictures: a small painting on the sheet."""
+    c, page = paper(203)
+    inner = box(34, 40, 94, 96, 2)
+    c.paint(inner, sampled(painting("dawn", (1700, 650, 2900, 1550)), (34, 40, 94, 96)), 3.6, flat(0), wander=0.12,
+            jitter=0.04)
+    return c.finish()
+
+
+def audio_icon():
+    """Music: a note on the sheet."""
+    c, page = paper(204)
+    c.mark([(56, 90), (56, 46), (84, 40), (84, 82)], 5.2, INKS[1], page, thick=2.0)
+    for x, y in ((50, 92), (78, 84)):
+        c.paint(poly(ellipse(x, y, 8, 6.4, -20, 30)), one("#C0583A"), 2.4, around(x, y), layers=2, wander=0.4,
+                jitter=0.03, thick=2.2)
+    return c.finish()
+
+
+def video_icon():
+    """Films: an evening scene with the play sign over it."""
+    c, page = paper(205)
+    inner = box(34, 40, 94, 96, 2)
+    c.paint(inner, sampled(painting("dusk", (900, 600, 2100, 1500)), (34, 40, 94, 96)), 3.6, flat(0), wander=0.12)
+    c.paint(poly([(56, 56), (56, 82), (78, 69)]), one("#FBF6EA"), 2.4, flat(0), layers=2, wander=0.3, thick=2.0)
+    return c.finish()
+
+
+def pdf_icon():
+    """PDF and books: a written page sealed in vermilion wax."""
+    c, page = paper(206)
+    lines(c, page, 5, y0=36, x1=88)
+    seal = poly(ellipse(78, 96, 13, 12.4, 10, 36))
+    c.paint(seal, lit("#E8603A", "#A82A1A", y0=84, y1=108, light=0.3, shade=0.25, cool="#6A1A3A"), 2.6, around(78, 96),
+            wander=0.4, accents=FIRE, accent_rate=0.2, thick=2.4)
+    c.paint(circle(78, 96, 6), lit("#B83A22", "#8A2214"), 1.8, around(78, 96), layers=1, wander=0.5, thick=0.6, ground=False)
+    return c.finish()
+
+
+def sheet_icon():
+    """Spreadsheets: a grid ruled in lily."""
+    c, page = paper(207)
+    for y in (40, 54, 68, 82, 96):
+        c.mark([(36, y), (92, y)], 2.2, "#3F9A89", page, thick=0.7)
+    for x in (36, 56, 74, 92):
+        c.mark([(x, 40), (x, 96)], 2.2, "#3F9A89", page, thick=0.7)
+    c.paint(box(38, 42, 54, 52), one("#9FD3C4"), 2.0, flat(0), layers=1, opacity=0.8, ground=False)
+    return c.finish()
+
+
+def slides_icon():
+    """Presentations: three dabs standing like bars on a line."""
+    c, page = paper(208)
+    c.mark([(36, 98), (92, 98)], 2.6, INKS[0], page, thick=0.8)
+    for x, top, color in ((44, 70, "#5C88D0"), (62, 52, "#F2B84B"), (80, 40, "#F2552C")):
+        c.paint(box(x - 6, top, x + 6, 94, 3), lit(color, color, light=0.3, shade=0.22), 2.6, flat(90), layers=2,
+                wander=0.15, thick=1.8)
+    return c.finish()
+
+
+def program_icon():
+    """Programs (Windows games too): the sheet with Monet's play sign."""
+    c, page = paper(209)
+    c.paint(poly([(46, 44), (46, 96), (90, 70)]), lit("#FF9A5E", "#E5401C", y0=44, y1=96, light=0.3, shade=0.12,
+                                                      cool="#B8305A"),
+            3.4, flat(-30), layers=2, wander=0.2, accents=FIRE, accent_rate=0.16, thick=1.6)
+    return c.finish()
+
+
+def paintbox_icon():
+    """Drives: a painter's box, its colors in a row."""
+    c = Canvas(211)
+    c.paint(box(10, 30, 118, 104, 9), wood(top="#B8824E", bottom="#6A4226"), 4.6, flat(0), wander=0.06)
+    tray = box(18, 38, 110, 88, 5)
+    c.paint(tray, lit("#5A3E2E", "#3A2620", y0=38, y1=88, light=0.1, shade=0.15), 3.6, flat(0), layers=2, wander=0.06,
+            thick=0.7)
+    for x, col, acc in ((32, "#F2552C", FIRE), (51, "#F2B84B", ["#FFE08A"]), (70, "#3F9A89", ["#7CD3C0"]),
+                        (89, "#5C88D0", ["#93C6EA"])):
+        blob = poly(ellipse(x + 3, 62, 8.5, 13, c.rng.uniform(-10, 10), 36))
+        c.paint(blob, lit(col, col, light=0.3, shade=0.2), 3.0, around(x + 3, 62), wander=0.5, accents=acc, accent_rate=0.25,
+                thick=2.4)
+    c.paint(circle(98, 96, 4), lit("#F0C870", "#A6742A"), 1.8, around(98, 96), layers=1, thick=1.4)  # the clasp
+    return c.finish()
+
+
+def tube_icon():
+    """USB sticks and memory cards: a tube of paint to carry along."""
+    c = Canvas(212)
+    a, b = (36, 92), (80, 48)
+    body = band((a, b), 30)
+    c.paint(body, lit("#E4E0EC", "#8E88A8", y0=30, y1=110, light=0.34, shade=0.3, cool="#5A5288"), 4.0, flat(-45),
+            wander=0.08, accents=["#FFFFFF", "#B8B0D0"], accent_rate=0.2, thick=1.2)
+    c.paint(band(((54, 74), (64, 64)), 31) * body, lit("#F2552C", "#C0381E", light=0.25, shade=0.2), 3.0, flat(-45),
+            layers=2, wander=0.12, accents=FIRE, accent_rate=0.15, thick=1.3)  # the label
+    c.paint(band(((18, 98), (30, 110)), 9), lit("#C8C2D8", "#7A7298"), 2.0, flat(45), layers=2, thick=1.0)  # crimped end
+    c.paint(band(((84, 44), (98, 30)), 18), lit("#3A3448", "#1A1626"), 2.4, flat(-45), layers=2, thick=1.4)  # the cap
+    return c.finish()
+
+
+def disc_icon():
+    """Discs and disc images: the light of the Hours in rings."""
+    c = Canvas(213)
+    disc = cut(circle(64, 64, 52), circle(64, 64, 9))
+    c.paint(disc, sampled(painting("dusk", (1100, 300, 2300, 1500)), (12, 12, 116, 116), light=0.25), 4.4, around(64, 64),
+            wander=0.12, accents=["#FFE2B0", "#C9B5EE", "#93C6EA"], accent_rate=0.2, thick=1.1)
+    c.paint(cut(circle(64, 64, 18), circle(64, 64, 9)), lit("#E8E4F0", "#A8A0C0", y0=46, y1=82), 2.0, around(64, 64),
+            layers=2, wander=0.2, thick=1.0)
+    return c.finish()
+
+
+# Folders: which painting each one's front is cut from (painting, crop box in
+# the 3840 x 2160 original), the color of its back, and its mark: lines the
+# brush follows, "dot:x,y" for a round dab, or "fill:" for a shape painted solid.
+FOLDERS = {
+    "folder": ("dawn", (2080, 1260, 2980, 1843), "#2E4A63", []),
+    "user-home": ("dawn", (2183, 538, 3083, 1121), "#6E5878", [[(46, 78), (64, 62), (82, 78)], [(52, 73), (52, 92), (76, 92), (76, 73)]]),
+    "user-desktop": ("day", (300, 90, 1200, 673), "#3E6680", [[(44, 64), (84, 64), (84, 86), (44, 86), (44, 64)], [(58, 96), (70, 96)]]),
+    "folder-documents": (None, None, "#A3947A", [[(48, 64), (80, 64)], [(48, 75), (80, 75)], [(48, 86), (68, 86)]]),
+    "folder-download": ("night", (560, 230, 1460, 813), "#141C38", [[(64, 58), (64, 88)], [(52, 77), (64, 89), (76, 77)]]),
+    "folder-pictures": ("dusk", (870, 700, 1770, 1283), "#5B3F6E",
+                        [[(45, 62), (83, 62), (83, 92), (45, 92), (45, 62)], [(49, 88), (58, 78), (66, 86), (72, 80), (79, 88)]]),
+    "folder-music": ("dusk", (2240, 80, 3140, 663), "#3E3470", [[(58, 86), (58, 60), (80, 56), (80, 80)], "dot:54,88", "dot:76,82"]),
+    "folder-videos": ("dusk", (880, 1240, 1780, 1823), "#4A2448", ["fill:57,58:57,86:83,72"]),
+    "folder-games": ("night", (2700, 980, 3600, 1563), "#0E1430",
+                     [[(52, 68), (76, 68), (82, 72), (84, 80), (82, 88), (76, 92), (52, 92), (46, 88), (44, 80), (46, 72), (52, 68)],
+                      [(52, 80), (60, 80)], [(56, 76), (56, 84)], "dot:72,78", "dot:77,83"]),
+}
+
+
+def folder_icon(name, source, crop, back, mark):
+    """A folder: its back in one color, its front repainted from a piece of the Hours."""
+    c = Canvas(sum(map(ord, name)))
+    c.paint(join(box(14, 22, 56, 44, 8), box(14, 30, 114, 100, 8)), lit(back, back, light=0.18, shade=0.2), 6.0, flat(0),
+            layers=2, wander=0.08, thick=0.8)
+    front = box(10, 40, 118, 110, 11)
+    if source:
+        c.paint(front, sampled(painting(source, crop), (10, 40, 118, 110)), 5.6, flat(0), wander=0.1, jitter=0.035)
+        ink = "#FBF7EE"
+    else:  # Documents is paper.
+        c.paint(front, lit("#FBF4E6", "#D9CCB2", y0=40, y1=110, cool="#9A8CB0"), 5.6, flat(0), wander=0.1,
+                accents=["#FFFFFF", "#E8DCC4"], accent_rate=0.15)
+        ink = "#4A4540"
+    c.mark([(20, 42), (108, 42)], 1.8, "#FFFFFF", front, thick=0.6)
+    for part in mark:
+        if isinstance(part, str) and part.startswith("dot:"):
+            x, y = (float(v) for v in part[4:].split(","))
+            c.paint(poly(ellipse(x, y, 6.2, 5.2, -20, 30)), one(ink), 2.4, around(x, y), layers=2, wander=0.4, jitter=0.03,
+                    thick=2.2)
+        elif isinstance(part, str):
+            pts = [tuple(float(v) for v in p.split(",")) for p in part[5:].split(":")]
+            c.paint(poly(pts), one(ink), 2.6, flat(0), layers=2, wander=0.3, jitter=0.03, thick=2.2)
+        else:
+            c.mark(part, 6.4, ink, None, thick=2.2)
+    return c.finish()
+
+
+# Which painting each icon name gets. Several names share one painting.
+ICONS = {
+    "monet": (sun_icon, ["apps/monet"]),
+    "monet-windows": (play_icon, ["apps/monet-windows", "categories/applications-games"]),
+    "files": (lambda: folder_icon("folder", *FOLDERS["folder"]), ["apps/system-file-manager", "apps/org.kde.dolphin", "places/folder"]),
+    "settings": (palette_icon, ["apps/preferences-system", "apps/systemsettings", "apps/monet-settings",
+                                "categories/applications-graphics", "categories/preferences-system"]),
+    "terminal": (easel_icon, ["apps/utilities-terminal", "apps/org.kde.konsole", "categories/applications-development"]),
+    # Store is Bazaar when Bazzite has it, otherwise Discover: the same bouquet either way.
+    "store": (bouquet_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar"]),
+    "monitor": (harbor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor", "categories/applications-system"]),
+    "trash": (lambda: pot_icon(False), ["places/user-trash"]),
+    "trash-full": (lambda: pot_icon(True), ["places/user-trash-full"]),
+    # KDE's apps that Bazzite brings (Flatpaks) or might.
+    "pictures": (frame_icon, ["apps/org.kde.gwenview", "apps/gwenview"]),
+    "documents": (book_icon, ["apps/org.kde.okular", "apps/okular", "categories/applications-office", "categories/applications-education"]),
+    "calculator": (abacus_icon, ["apps/org.kde.kcalc", "apps/accessories-calculator"]),
+    "player": (curtain_icon, ["apps/org.kde.haruna", "apps/haruna", "categories/applications-multimedia"]),
+    "disk": (sunflower_icon, ["apps/org.kde.filelight", "apps/filelight", "categories/applications-science"]),
+    "editor": (letter_icon, ["apps/org.kde.kate", "apps/kate", "apps/org.kde.kwrite", "apps/kwrite", "apps/accessories-text-editor"]),
+    "archives": (chest_icon, ["apps/org.kde.ark", "apps/ark", "apps/utilities-file-archiver"]),
+    "camera": (camera_icon, ["apps/org.kde.spectacle", "apps/spectacle"]),
+    "internet": (sailboat_icon, ["categories/applications-internet"]),
+    "utilities": (brushes_icon, ["categories/applications-utilities"]),
+}
+for name, spec in FOLDERS.items():
+    if name != "folder":
+        ICONS[name] = ((lambda n=name, s=spec: folder_icon(n, *s)), [f"places/{name}"])
+
+# Files and drives: one painting, under a name, and the many names that ask
+# for it, linked by install.sh (Breeze has an icon for nearly every exact
+# type, and those come before the generic one).
+OFFICE = "application-vnd.openxmlformats-officedocument"
+OPEN = "application-vnd.oasis.opendocument"
+FILES = {
+    "text": (text_icon, "mimetypes/text-x-generic", [
+        "text-plain", "text-markdown", "text-x-readme", "text-x-log", "text-rtf", "application-rtf", "x-office-document",
+        f"{OPEN}.text", f"{OFFICE}.wordprocessingml.document", "application-msword", "application-x-zerosize", "unknown",
+        "application-octet-stream"]),
+    "code": (code_icon, "mimetypes/text-x-script", [
+        "application-x-shellscript", "text-x-python", "text-x-python3", "application-json", "text-html", "text-css",
+        "application-javascript", "text-javascript", "text-x-csrc", "text-x-chdr", "text-x-c++src", "text-x-c++hdr",
+        "text-rust", "text-x-rust", "application-xml", "text-xml", "text-x-makefile", "text-x-cmake", "application-x-yaml",
+        "application-toml", "application-x-desktop", "text-x-java", "text-x-go", "application-x-php", "text-x-qml"]),
+    "image": (image_icon, "mimetypes/image-x-generic", [
+        "image-png", "image-jpeg", "image-gif", "image-webp", "image-bmp", "image-tiff", "image-svg+xml", "image-avif",
+        "image-heif", "image-jxl", "image-x-xcf", "image-vnd.microsoft.icon", "image-x-icon"]),
+    "audio": (audio_icon, "mimetypes/audio-x-generic", [
+        "audio-mpeg", "audio-x-wav", "audio-wav", "audio-flac", "audio-x-flac", "audio-ogg", "audio-x-vorbis+ogg",
+        "audio-x-opus+ogg", "audio-mp4", "audio-aac", "audio-x-m4a", "audio-x-mpegurl", "audio-x-ms-wma"]),
+    "video": (video_icon, "mimetypes/video-x-generic", [
+        "video-mp4", "video-x-matroska", "video-webm", "video-quicktime", "video-x-msvideo", "video-mpeg", "video-x-flv",
+        "video-ogg", "video-x-ms-wmv"]),
+    "pdf": (pdf_icon, "mimetypes/application-pdf", ["application-epub+zip", "application-postscript", "application-x-cbz"]),
+    "sheet": (sheet_icon, "mimetypes/x-office-spreadsheet", [
+        f"{OPEN}.spreadsheet", f"{OFFICE}.spreadsheetml.sheet", "application-vnd.ms-excel", "text-csv"]),
+    "slides": (slides_icon, "mimetypes/x-office-presentation", [
+        f"{OPEN}.presentation", f"{OFFICE}.presentationml.presentation", "application-vnd.ms-powerpoint"]),
+    "program": (program_icon, "mimetypes/application-x-executable", [
+        "application-x-ms-dos-executable", "application-x-msdownload", "application-x-msi", "application-x-ms-shortcut",
+        "application-x-sharedlib", "application-x-pie-executable", "application-vnd.appimage", "application-x-appimage"]),
+    "package": (chest_icon, "mimetypes/package-x-generic", [
+        "application-zip", "application-x-tar", "application-x-compressed-tar", "application-x-bzip-compressed-tar",
+        "application-x-xz-compressed-tar", "application-x-zstd-compressed-tar", "application-x-7z-compressed",
+        "application-x-rar", "application-vnd.rar", "application-gzip", "application-x-gzip", "application-x-xz",
+        "application-zstd", "application-x-rpm", "application-x-deb", "application-vnd.debian.binary-package",
+        "application-vnd.flatpak", "application-vnd.flatpak.ref", "application-vnd.flatpak.repo", "application-x-archive"]),
+    "drive": (paintbox_icon, "devices/drive-harddisk", [
+        "drive-harddisk-solidstate", "drive-harddisk-root", "drive-harddisk-system", "drive-harddisk-windows",
+        "drive-harddisk-encrypted", "drive-multidisk", "computer", "computer-laptop"]),
+    "stick": (tube_icon, "devices/drive-removable-media-usb", [
+        "drive-removable-media", "drive-removable-media-usb-pendrive", "media-removable", "media-flash",
+        "media-flash-sd-mmc", "media-flash-memory-stick"]),
+    "disc": (disc_icon, "devices/media-optical", [
+        "drive-optical", "media-optical-dvd", "media-optical-cd", "media-optical-data", "media-optical-audio",
+        "mimetypes/application-x-cd-image", "mimetypes/application-x-iso9660-image"]),
+}
+# Folders asked for by their type, not their place.
+LINKS = {"mimetypes/inode-directory": "places/folder"}
+
+
+def links():
+    """'<link> <target>' lines, the target relative to the link."""
+    pairs = dict(LINKS)
+    for _, main, names in FILES.values():
+        for name in names:
+            pairs[name if "/" in name else f"{main.split('/')[0]}/{name}"] = main
+    out = []
+    for link, target in pairs.items():
+        (lc, ln), (tc, tn) = link.split("/"), target.split("/")
+        out.append(f"{lc}/scalable/{ln}.svg {tn if lc == tc else f'../../{tc}/scalable/{tn}'}.svg")
+    return "".join(line + "\n" for line in out)
+
+
+def svg(img, comment):
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    data = base64.b64encode(buf.getvalue()).decode()
+    return ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128">\n'
+            f"  <!-- {comment} Painted by tools/make-icons.py. -->\n"
+            f'  <image width="128" height="128" xlink:href="data:image/png;base64,{data}"/>\n</svg>\n')
+
+
+# Textures and Monet Settings' pictures --------------------------------------------
 
 def dab_points(cx, cy, length, width, angle=0.0, bend=0.0, taper=0.16, steps=28):
     """Outline of a brushstroke: rounded ends, heavier where the brush landed."""
@@ -66,178 +863,6 @@ def dab_points(cx, cy, length, width, angle=0.0, bend=0.0, taper=0.16, steps=28)
             px, py = t * length / 2, off + sign * half
             side.append((cx + px * ca - py * sa, cy + px * sa + py * ca))
     return top + bottom[::-1]
-
-
-def path(points):
-    return "M" + " L".join(f"{x:.2f},{y:.2f}" for x, y in points) + " Z"
-
-
-def dab(icon, cx, cy, length, width, fill, angle=0.0, bend=0.0, opacity=1.0, shine=True):
-    """A brushstroke with a lighter bristle mark along its upper side."""
-    icon.add(f'<path d="{path(dab_points(cx, cy, length, width, angle, bend))}" fill="{fill}" opacity="{opacity}"/>')
-    if shine and width >= 6:
-        a = math.radians(angle)
-        ox, oy = math.sin(a) * width * 0.2, -math.cos(a) * width * 0.2
-        icon.add(f'<path d="{path(dab_points(cx + ox, cy + oy, length * 0.72, width * 0.22, angle, bend))}" '
-                 f'fill="#ffffff" opacity="{0.28 * opacity:.2f}"/>')
-
-
-def rounded(x0, y0, x1, y1, r):
-    return (f"M{x0 + r},{y0} H{x1 - r} A{r},{r} 0 0 1 {x1},{y0 + r} V{y1 - r} A{r},{r} 0 0 1 {x1 - r},{y1} "
-            f"H{x0 + r} A{r},{r} 0 0 1 {x0},{y1 - r} V{y0 + r} A{r},{r} 0 0 1 {x0 + r},{y0} Z")
-
-
-def line_mark(icon, d, color="#ffffff", width=7.0, shadow=True):
-    """A drawn mark on top of a canvas: round ends, a soft shadow below."""
-    if shadow:
-        icon.add(f'<path d="{d}" fill="none" stroke="#000000" stroke-opacity="0.22" stroke-width="{width}" '
-                 f'stroke-linecap="round" stroke-linejoin="round" transform="translate(0 1.6)"/>')
-    icon.add(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round"/>')
-
-
-# Folders: which painting each one's front is cut from (painting, crop box in
-# the 3840 x 2160 original), the color of its back, and the mark drawn on it.
-HOURS = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents" / "hours"
-FOLDERS = {
-    "folder": ("dawn", (2080, 1260, 2980, 1843), "#2E4A63", None),
-    "user-home": ("dawn", (2183, 538, 3083, 1121), "#6E5878", "M46 78 L64 62 L82 78 M52 73 V92 H76 V73"),
-    "user-desktop": ("day", (300, 90, 1200, 673), "#3E6680", "M44 64 H84 V86 H44 Z M58 96 H70"),
-    "folder-documents": (None, None, "#A3947A", "M48 64 H80 M48 75 H80 M48 86 H68"),
-    "folder-download": ("night", (560, 230, 1460, 813), "#141C38", "M64 58 V88 M52 77 L64 89 L76 77"),
-    "folder-pictures": ("dusk", (870, 700, 1770, 1283), "#5B3F6E", "M45 62 H83 V92 H45 Z M48 89 L58 78 L66 86 L72 80 L81 89"),
-    "folder-music": ("dusk", (2240, 80, 3140, 663), "#3E3470", "M58 88 V60 L80 56 V82 M58 88 a6 6 0 1 1 -0.1 0 M80 82 a6 6 0 1 1 -0.1 0"),
-    "folder-videos": ("dusk", (880, 1240, 1780, 1823), "#4A2448", "play"),
-    "folder-games": ("night", (2700, 980, 3600, 1563), "#0E1430", "M48 70 H80 a10 10 0 0 1 0 20 H48 a10 10 0 0 1 0 -20 Z M54 80 H62 M58 76 V84 M74 78 h.1 M78 82 h.1"),
-}
-FRONT = (10, 40, 118, 110, 11)  # x0, y0, x1, y1, corner radius on the 128 grid
-
-
-def canvas_image(painting, crop):
-    """The folder's front as a small rounded PNG: a piece of a painting, or paper."""
-    import base64
-    import io
-    x0, y0, x1, y1, r = FRONT
-    w, h, k = (x1 - x0) * 2, (y1 - y0) * 2, 2
-    if painting:
-        from PIL import ImageEnhance
-        img = Image.open(HOURS / f"{painting}.jpg").convert("RGB").crop(crop).resize((w, h), Image.LANCZOS)
-        # Small pieces of a painting look muddy; give them back some color.
-        img = ImageEnhance.Contrast(ImageEnhance.Color(img).enhance(1.3)).enhance(1.12)
-    else:
-        # Documents are paper: cream, with a few strokes of the brush.
-        img = Image.new("RGB", (w, h), (247, 242, 232))
-        tex = Image.open(TEXTURES / "brush.png").resize((w * 2, h * 2)).crop((0, 0, w, h))
-        shade = Image.new("RGB", (w, h), (214, 202, 180))
-        img = Image.composite(shade, img, tex.getchannel("A").point(lambda v: min(255, v * 2)))
-    arr = np.asarray(img).astype(np.float32)
-    # A little light from above, a little shade below: it reads as a sheet.
-    ramp = np.linspace(1.10, 0.86, h)[:, None, None]
-    arr = np.clip(arr * ramp, 0, 255)
-    img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
-    mask = Image.new("L", (w * 4, h * 4), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w * 4 - 1, h * 4 - 1], radius=r * k * 4, fill=255)
-    img.putalpha(mask.resize((w, h), Image.LANCZOS))
-    buf = io.BytesIO()
-    img.quantize(colors=128, method=Image.Quantize.FASTOCTREE).save(buf, "PNG", optimize=True)
-    return base64.b64encode(buf.getvalue()).decode()
-
-
-def folder_icon(name, painting, crop, back, mark):
-    icon = Icon(f"Monet folder: {name}. Its front is cut from one of Monet's paintings.")
-    icon.add(f'<path d="M14 30 a8 8 0 0 1 8 -8 H46 a8 8 0 0 1 6.5 3.4 L57 32 H106 a8 8 0 0 1 8 8 V100 H14 Z" fill="{back}"/>')
-    x0, y0, x1, y1, _ = FRONT
-    icon.add(f'<path d="{rounded(x0, y0 + 2, x1, y1 + 2, 11)}" fill="#000000" opacity="0.2"/>')
-    icon.add(f'<image x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" '
-             f'href="data:image/png;base64,{canvas_image(painting, crop)}"/>')
-    icon.add(f'<path d="M21 41.2 H107" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round"/>')
-    ink = "#4A4540" if painting is None else "#ffffff"
-    if mark == "play":
-        icon.add('<path d="M57 59 Q57 55 60.5 57 L80 69 Q83 71 80 73 L60.5 85 Q57 87 57 83 Z" fill="#000000" opacity="0.22" transform="translate(0 1.6)"/>')
-        icon.add('<path d="M57 59 Q57 55 60.5 57 L80 69 Q83 71 80 73 L60.5 85 Q57 87 57 83 Z" fill="#ffffff"/>')
-    elif mark:
-        line_mark(icon, mark, color=ink, width=6.5, shadow=ink == "#ffffff")
-    return icon.svg()
-
-
-def settings_icon():
-    icon = Icon("Monet icon: Settings. Three thick brushstrokes in dawn, midday and dusk, with white knobs.")
-    for y, x, top, bottom in ((34, 40, "#F6B590", "#D2603F"), (64, 86, "#93C6EA", "#356FA8"), (94, 54, "#C0AEEE", "#5A4A9C")):
-        dab(icon, 64, y + 1.8, 104, 26, "#000000", opacity=0.14, shine=False)
-        dab(icon, 64, y, 104, 26, icon.gradient(top, bottom), bend=0.12)
-        icon.add(f'<circle cx="{x}" cy="{y + 1.8}" r="15" fill="#000000" opacity="0.22"/>')
-        icon.add(f'<circle cx="{x}" cy="{y}" r="15" fill="#FFFFFF"/>')
-        icon.add(f'<circle cx="{x}" cy="{y}" r="6" fill="{bottom}" opacity="0.85"/>')
-    return icon.svg()
-
-
-def terminal_icon():
-    icon = Icon("Monet icon: Terminal. A night canvas with a prompt.")
-    night = icon.gradient("#3A4775", "#141B2E", 0.2, 0, 0.8, 1)
-    icon.defs.append(f'<clipPath id="canvas"><path d="{rounded(12, 18, 116, 110, 18)}"/></clipPath>')
-    icon.add(f'<path d="{rounded(12, 18, 116, 110, 18)}" fill="{night}"/>')
-    strokes = "".join(
-        f'<path d="{path(dab_points(cx, cy, length, 7, a, 0.3))}" fill="#9FB4E8" opacity="{o}"/>'
-        for cx, cy, length, a, o in ((46, 34, 60, -3, 0.16), (90, 46, 44, 2, 0.12), (40, 100, 56, 2, 0.12), (92, 96, 40, -2, 0.1)))
-    icon.add('<g clip-path="url(#canvas)">' + strokes + "</g>")
-    icon.add('<path d="M23 19.5 H105" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.6" stroke-linecap="round"/>')
-    line_mark(icon, "M36 50 L52 64 L36 78", color="#F3ECD8", width=8.5, shadow=False)
-    dab(icon, 76, 80, 30, 9, "#7CD3C0", shine=False)
-    return icon.svg()
-
-
-def store_icon():
-    icon = Icon("Monet icon: Store. A painted bag.")
-    body = icon.gradient("#C9B9F2", "#5A4A9C", 0.2, 0, 0.8, 1)
-    icon.add('<path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="#000000" opacity="0.16" transform="translate(0 2)"/>')
-    icon.add(f'<path d="M28 46 Q29 40 35 40 H93 Q99 40 100 46 L106 102 Q107 112 97 112 H31 Q21 112 22 102 Z" fill="{body}"/>')
-    for cx, cy, length, o in ((54, 62, 46, 0.26), (78, 84, 40, 0.18)):
-        icon.add(f'<path d="{path(dab_points(cx, cy, length, 7, -20, 0.3))}" fill="#ffffff" opacity="{o}"/>')
-    icon.add('<path d="M47 50 V40 A17 17 0 0 1 81 40 V50" fill="none" stroke="#3E3175" stroke-width="8" stroke-linecap="round"/>')
-    icon.fit(64, 68, 1.16)
-    return icon.svg()
-
-
-def monitor_icon():
-    icon = Icon("Monet icon: System Monitor. Four painted bars, rising.")
-    for x, length, top, bottom in ((24, 50, "#7CD3C0", "#2E7D70"), (50, 80, "#93C6EA", "#356FA8"),
-                                   (76, 62, "#C0AEEE", "#5A4A9C"), (102, 96, "#F6B590", "#D2603F")):
-        cy = 108 - length / 2
-        dab(icon, x + 1.6, cy + 1.6, length, 25, "#000000", angle=90, opacity=0.14, shine=False)
-        dab(icon, x, cy, length, 25, icon.gradient(top, bottom), angle=90)
-    dab(icon, 63, 114, 110, 7, "#8C867C", shine=False)
-    return icon.svg()
-
-
-def trash_icon(full):
-    icon = Icon("Monet icon: Trash" + (", with something in it" if full else "") + ". A woven basket.")
-    body = icon.gradient("#D9D1C3", "#8C867C", 0.2, 0, 0.8, 1)
-    icon.add('<path d="M30 44 H98 L91 108 Q90 114 84 114 H44 Q38 114 37 108 Z" fill="#000000" opacity="0.16" transform="translate(0 2)"/>')
-    icon.add(f'<path d="M30 44 H98 L91 108 Q90 114 84 114 H44 Q38 114 37 108 Z" fill="{body}"/>')
-    for x, top in ((50, 52), (64, 52), (78, 52)):
-        dab(icon, x, 82, 50, 6, "#6C665D", angle=90, opacity=0.45, shine=False)
-    if full:
-        # A sheet of paper sticking out under the lid.
-        icon.add('<g transform="rotate(-12 66 40)"><rect x="50" y="26" width="34" height="34" rx="4" fill="#FBF7EE"/>'
-                 '<path d="M56 34 H78 M56 41 H72" stroke="#C9BFAC" stroke-width="3" stroke-linecap="round"/></g>')
-    lid = icon.gradient("#8C867C", "#5A554D")
-    dab(icon, 64, 42 if not full else 41, 84, 11, lid, angle=0 if not full else -4)
-    # The same place and size whether it's empty or full, so it doesn't jump.
-    icon.fit(64, 76, 1.2)
-    return icon.svg()
-
-
-ICONS = {
-    "files": (lambda: folder_icon("folder", *FOLDERS["folder"]), ["apps/system-file-manager", "apps/org.kde.dolphin"]),
-    "settings": (settings_icon, ["apps/preferences-system", "apps/systemsettings", "apps/monet-settings"]),
-    "terminal": (terminal_icon, ["apps/utilities-terminal", "apps/org.kde.konsole"]),
-    # Store is Bazaar when Bazzite has it, otherwise Discover: the same bag either way.
-    "store": (store_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar"]),
-    "monitor": (monitor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor"]),
-    "trash": (lambda: trash_icon(False), ["places/user-trash"]),
-    "trash-full": (lambda: trash_icon(True), ["places/user-trash-full"]),
-}
-for name, spec in FOLDERS.items():
-    ICONS[name] = ((lambda n=name, s=spec: folder_icon(n, *s)), [f"places/{name}"])
 
 
 def brush_texture(path, w=640, h=320, seed=4):
@@ -317,26 +942,13 @@ def settings_art():
     banner.save(SETTINGS / "about.jpg", quality=86, optimize=True, progressive=True)
 
 
-def main():
-    settings_art()
-    TEXTURES.mkdir(parents=True, exist_ok=True)
-    brush_texture(TEXTURES / "brush.png")
-    for old in THEME.glob("*/scalable/*.svg"):
-        old.unlink()
-    for name, (draw, files) in ICONS.items():
-        svg = draw()
-        for f in files:
-            context, ident = f.split("/")
-            out = THEME / context / "scalable" / f"{ident}.svg"
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(svg)
-    (THEME / "index.theme").write_text("""[Icon Theme]
+INDEX = """[Icon Theme]
 Name=Monet
-Comment=Painted marks for Monet's own apps, painted folders, Breeze for everything else
+Comment=Small oil paintings for Monet's apps, folders and menu, Breeze for everything else
 Inherits=breeze,hicolor
 Example=folder
 DisplayDepth=32
-Directories=apps/scalable,places/scalable
+Directories=apps/scalable,categories/scalable,devices/scalable,mimetypes/scalable,places/scalable
 
 [apps/scalable]
 Size=48
@@ -345,13 +957,53 @@ MaxSize=512
 Context=Applications
 Type=Scalable
 
+[categories/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Categories
+Type=Scalable
+
+[devices/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=Devices
+Type=Scalable
+
+[mimetypes/scalable]
+Size=48
+MinSize=16
+MaxSize=512
+Context=MimeTypes
+Type=Scalable
+
 [places/scalable]
 Size=48
 MinSize=16
 MaxSize=512
 Context=Places
 Type=Scalable
-""")
+"""
+
+
+def main():
+    settings_art()
+    TEXTURES.mkdir(parents=True, exist_ok=True)
+    brush_texture(TEXTURES / "brush.png")
+    for old in THEME.glob("*/scalable/*.svg"):
+        old.unlink()
+    paintings = {name: (paint, files) for name, (paint, files) in ICONS.items()}
+    paintings.update({name: (paint, [main]) for name, (paint, main, _) in FILES.items()})
+    for name, (paint, files) in paintings.items():
+        text = svg(paint(), f"Monet icon: {(paint.__doc__ or name).splitlines()[0].rstrip('.')}.")
+        for f in files:
+            out = THEME / f.split("/")[0] / "scalable" / f"{f.split('/')[1]}.svg"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(text)
+        print("painted", name)
+    (THEME / "index.theme").write_text(INDEX)
+    (THEME / "aliases").write_text(links())
     print("wrote", THEME.relative_to(ROOT), "and", (TEXTURES / "brush.png").relative_to(ROOT))
 
 

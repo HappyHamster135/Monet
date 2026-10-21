@@ -194,6 +194,23 @@ class PlasmaStyle(unittest.TestCase):
                 for element in elements:
                     self.assertIn(element, ids, f"{style.name} {name}: {element}")
 
+    def test_tray_icons_are_monets(self):
+        # The bar's sound, network, battery and power signs, brushed in ink.
+        need = {
+            "audio": ["audio-volume-muted", "audio-volume-low", "audio-volume-medium", "audio-volume-high"],
+            "network": [f"network-wireless-{n}" for n in (0, 20, 40, 60, 80, 100)] + ["network-wired", "network-vpn"],
+            "battery": ["Battery", "Unavailable", "AcAdapter"] + [f"Fill{n}" for n in range(0, 101, 10)],
+            "notification": ["notification-inactive", "notification-active", "notification-disabled"],
+            "system": ["system-suspend", "system-shutdown", "system-reboot", "system-log-out", "system-lock-screen"],
+            "media": ["media-playback-start", "media-playback-pause", "media-skip-forward", "media-skip-backward"],
+            "preferences": ["preferences-system-bluetooth", "preferences-desktop-notification"],
+        }
+        for style in self.STYLES:
+            for name, elements in need.items():
+                ids = element_ids((style / f"icons/{name}.svg").read_text())
+                for element in elements:
+                    self.assertIn(element, ids, f"{style.name} icons/{name}: {element}")
+
     def test_check_boxes_fit_the_button_frame(self):
         # Plasma draws a check box as the button frame at 16 x 16: corners
         # larger than 8 would overlap and cut notches into it.
@@ -465,6 +482,24 @@ class Light(unittest.TestCase):
         subprocess.run(["bash", str(light), "apply"], env=noon.env, check=True, timeout=30)
         self.assertIn("Mist", sheet.read_text().splitlines()[0])
 
+    def test_window_frames_follow_the_light(self):
+        kde = FakeKDE(self.tmp.name, hour=21)
+        kde.light("apply")
+        frame = "kwinrc|org.kde.kdecoration2|theme"
+        kde.set(frame, "__aurorae__svg__Monet")
+        kde.light("apply")
+        self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmoke")
+        # Without glass, the solid frame.
+        prefs = Path(self.tmp.name) / "config/monet/prefs.json"
+        prefs.parent.mkdir(parents=True, exist_ok=True)
+        prefs.write_text('{"glass": false}')
+        kde.light("apply")
+        self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmokeSolid")
+        # Someone else's frame is theirs.
+        kde.set(frame, "__aurorae__svg__Sweet")
+        kde.light("apply")
+        self.assertEqual(kde.settings()[frame], "__aurorae__svg__Sweet")
+
     def test_other_themes_are_left_alone(self):
         kde = FakeKDE(self.tmp.name, hour=12)
         kde.light("apply")
@@ -484,7 +519,8 @@ class GlobalThemes(unittest.TestCase):
     def test_mist_and_smoke_differ_only_in_colors(self):
         mist = (self.LNF / "org.monet.desktop/contents/defaults").read_text()
         smoke = (self.LNF / "org.monet.smoke.desktop/contents/defaults").read_text()
-        self.assertEqual(smoke, mist.replace("ColorScheme=MonetLight", "ColorScheme=MonetDark"))
+        self.assertEqual(smoke, mist.replace("ColorScheme=MonetLight", "ColorScheme=MonetDark")
+                         .replace("theme=__aurorae__svg__Monet\n", "theme=__aurorae__svg__MonetSmoke\n"))
         self.assertIn("ColorScheme=MonetDark", smoke)
         layout = "contents/layouts/org.kde.plasma.desktop-layout.js"
         self.assertEqual((self.LNF / "org.monet.desktop" / layout).read_text(),
@@ -540,19 +576,159 @@ class Icons(unittest.TestCase):
     def test_painted_folders_and_apps(self):
         places = ("folder", "user-home", "user-desktop", "folder-documents", "folder-download", "folder-pictures",
                   "folder-music", "folder-videos", "folder-games", "user-trash", "user-trash-full")
-        # Store is Bazaar on Bazzite: the dock's bag is Monet's either way.
-        apps = ("monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover",
-                "io.github.kolunmi.Bazaar")
-        for context, names in (("places", places), ("apps", apps)):
+        # Store is Bazaar on Bazzite: the market bouquet is Monet's either way.
+        apps = ("monet", "monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover",
+                "io.github.kolunmi.Bazaar", "org.kde.plasma-systemmonitor", "org.kde.gwenview", "org.kde.okular",
+                "org.kde.kate", "org.kde.ark", "org.kde.spectacle", "org.kde.haruna", "org.kde.kcalc")
+        categories = ("applications-games", "applications-graphics", "applications-internet", "applications-multimedia",
+                      "applications-office", "applications-system", "applications-utilities")
+        for context, names in (("places", places), ("apps", apps), ("categories", categories)):
             for name in names:
                 svg = self.THEME / context / "scalable" / f"{name}.svg"
                 self.assertEqual(ET.parse(svg).getroot().tag, "{http://www.w3.org/2000/svg}svg", name)
+                # Each one a painting, kept as a picture inside the SVG.
+                self.assertIn("data:image/png;base64,", svg.read_text(), name)
+
+    def test_files_and_drives_are_painted_under_every_name(self):
+        # Breeze has an icon for nearly every exact type, found before the
+        # generic one: install.sh links each name to its painting.
+        links = {}
+        for line in (self.THEME / "aliases").read_text().splitlines():
+            link, target = line.split()
+            self.assertFalse((self.THEME / link).exists(), link)
+            self.assertTrue((self.THEME / link).parent.joinpath(target).resolve().is_file(), line)
+            links[link] = target
+        for name in ("mimetypes/scalable/inode-directory.svg", "mimetypes/scalable/image-png.svg",
+                     "mimetypes/scalable/text-plain.svg", "mimetypes/scalable/application-zip.svg",
+                     "mimetypes/scalable/application-x-msdownload.svg", "devices/scalable/drive-removable-media.svg"):
+            self.assertIn(name, links)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('done < "$SRC/share/icons/Monet/aliases"', install)
 
     def test_theme_lists_its_folders(self):
         theme = (self.THEME / "index.theme").read_text()
-        for folder in (p.parent.relative_to(self.THEME) for p in self.THEME.rglob("*.svg")):
+        for folder in (p.parent.relative_to(self.THEME).as_posix() for p in self.THEME.rglob("*.svg")):
             self.assertIn(f"[{folder}]", theme)
 
+
+
+class WindowFrames(unittest.TestCase):
+    """Monet's title bars (tools/make-decoration.py), one per light."""
+    THEMES = SHARE / "aurorae/themes"
+    NAMES = ("Monet", "MonetSolid", "MonetSmoke", "MonetSmokeSolid")
+    PIECES = PlasmaStyle.PIECES
+
+    def test_every_light_has_a_complete_frame(self):
+        for name in self.NAMES:
+            theme = self.THEMES / name
+            meta = configparser.ConfigParser(interpolation=None)
+            meta.read_string((theme / "metadata.desktop").read_text())
+            self.assertEqual(meta["Desktop Entry"]["X-KDE-PluginInfo-Name"], name)
+            rc = configparser.ConfigParser(interpolation=None)
+            rc.read_string((theme / f"{name}rc").read_text())
+            layout = rc["Layout"]
+            # The frame's top row is drawn for a title bar this high.
+            self.assertEqual(int(layout["TitleEdgeTop"]) + int(layout["TitleHeight"]) + int(layout["TitleEdgeBottom"]), 36)
+            ids = element_ids((theme / "decoration.svg").read_text())
+            for prefix in ("decoration", "decoration-inactive", "mask", "decoration-maximized",
+                           "decoration-maximized-inactive", "mask-maximized"):
+                for piece in self.PIECES:
+                    self.assertIn(f"{prefix}-{piece}", ids, f"{name}: {prefix}-{piece}")
+            for button in ("minimize", "maximize", "restore", "close"):
+                ids = element_ids((theme / f"{button}.svg").read_text())
+                for state in ("active", "hover", "pressed", "inactive", "hover-inactive", "deactivated"):
+                    self.assertIn(state, ids, f"{name} {button}: {state}")
+
+    def test_frames_have_no_strokes(self):
+        for svg in self.THEMES.rglob("*.svg"):
+            ET.parse(svg)
+            self.assertNotIn("stroke", svg.read_text(), svg)
+
+    def test_frames_in_use_exist(self):
+        used = set(re.findall(r"__aurorae__svg__(\w+)", (ROOT / "linux/libexec/monet-look").read_text()))
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            used |= set(re.findall(r"__aurorae__svg__(\w+)", (PLASMA / "look-and-feel" / theme / "contents/defaults").read_text()))
+        self.assertEqual(used, {"Monet", "MonetSmoke"})
+        light = (ROOT / "linux/libexec/monet-light").read_text()
+        self.assertIn('frame="${frame}Smoke"', light)
+        self.assertIn('frame="${frame}Solid"', light)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("for theme in " + " ".join(self.NAMES) + "; do", install)
+        for name in self.NAMES:
+            self.assertTrue((self.THEMES / name).is_dir(), name)
+
+
+class Cursors(unittest.TestCase):
+    THEME = SHARE / "icons/Monet-cursors"
+
+    def read(self, name):
+        import struct
+        data = (self.THEME / "cursors" / name).read_bytes()
+        magic, header, _, count = struct.unpack_from("<4sIII", data)
+        self.assertEqual((magic, header), (b"Xcur", 16), name)
+        sizes = set()
+        for i in range(count):
+            kind, size, pos = struct.unpack_from("<III", data, 16 + 12 * i)
+            chunk = struct.unpack_from("<IIIIIIIII", data, pos)
+            self.assertEqual(chunk[:3], (36, kind, size), name)
+            width, height, x, y = chunk[4:8]
+            self.assertEqual((width, height), (size, size), name)
+            self.assertTrue(x < width and y < height, name)
+            self.assertEqual(len(data[pos + 36:pos + 36 + width * height * 4]), width * height * 4, name)
+            sizes.add(size)
+        return sizes, count
+
+    def test_cursors_are_drawn_at_every_size(self):
+        for path in (self.THEME / "cursors").iterdir():
+            sizes, _ = self.read(path.name)
+            self.assertEqual(sizes, {24, 32, 48, 64}, path.name)
+        # The sun breathes while something works: frames at each size.
+        self.assertGreater(self.read("wait")[1], 4 * 4)
+
+    def test_every_alias_has_its_cursor(self):
+        drawn = {p.name for p in (self.THEME / "cursors").iterdir()}
+        aliases = []
+        for line in (self.THEME / "aliases").read_text().splitlines():
+            alias, name = line.split()
+            self.assertIn(name, drawn, alias)
+            self.assertNotIn(alias, drawn)
+            aliases.append(alias)
+        for name in ("left_ptr", "hand2", "xterm", "watch", "left_ptr_watch", "size_hor", "size_ver", "fleur"):
+            self.assertIn(name, aliases)
+
+    def test_cursors_are_in_use(self):
+        index = configparser.ConfigParser(interpolation=None)
+        index.read_string((self.THEME / "index.theme").read_text())
+        self.assertEqual(index["Icon Theme"]["Inherits"], "breeze_cursors")
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            self.assertIn("cursorTheme=Monet-cursors", (PLASMA / "look-and-feel" / theme / "contents/defaults").read_text())
+        self.assertIn("cursorTheme Monet-cursors", (ROOT / "linux/libexec/monet-look").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('done < "$SRC/share/icons/Monet-cursors/aliases"', install)
+        self.assertIn("CursorTheme=Monet-cursors", install)
+
+
+class StartAndSignIn(unittest.TestCase):
+    PLYMOUTH = ROOT / "image/setup/files/usr/share/plymouth/themes/monet"
+
+    def test_boot_screen_asks_for_a_disk_password(self):
+        script = (self.PLYMOUTH / "monet.script").read_text()
+        for hook in ("SetDisplayPasswordFunction", "SetDisplayQuestionFunction", "SetDisplayNormalFunction",
+                     "SetMessageFunction", "SetRefreshFunction"):
+            self.assertIn(f"Plymouth.{hook}(", script)
+        for picture in re.findall(r'Image\("([^"]+)"\)', script):
+            self.assertTrue((self.PLYMOUTH / picture).is_file(), picture)
+
+    def test_monet_boots_with_its_own_screen(self):
+        containerfile = (ROOT / "image/Containerfile").read_text()
+        self.assertIn("plymouth-set-default-theme monet", containerfile)
+        self.assertIn("dracut", containerfile)
+
+    def test_sign_in_screen_is_monets(self):
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("name=monet", install)
+        self.assertIn("ColorScheme=MonetDark", install)
+        self.assertIn("/usr/lib/tmpfiles.d/monet-sddm.conf", install)
 
 class MonetSettings(unittest.TestCase):
     QUICK = PLASMA / "plasmoids/org.monet.quick/contents/ui"

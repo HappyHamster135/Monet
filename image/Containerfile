@@ -25,6 +25,14 @@ RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
  && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts \
  && dnf5 clean all
 COPY --from=build /out /tmp/monet
+# Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the
+# sun breathing, instead of Bazzite's. It lives in the initramfs, so that's
+# rebuilt the way Bazzite builds it.
+COPY image/setup/files/usr/share/plymouth/themes/monet /usr/share/plymouth/themes/monet
 RUN /tmp/monet/install.sh --image \
  && rm -rf /tmp/monet \
+ && plymouth-set-default-theme monet \
+ && kernel="$(dnf5 repoquery --installed --queryformat='%{evr}.%{arch}' kernel)" \
+ && dracut --no-hostonly --kver "$kernel" --reproducible --zstd --add ostree --add fido2 -f "/usr/lib/modules/$kernel/initramfs.img" \
+ && chmod 0600 "/usr/lib/modules/$kernel/initramfs.img" \
  && ostree container commit

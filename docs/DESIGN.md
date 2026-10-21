@@ -69,7 +69,7 @@ The placard sits on the painting, top left.
 | Ink | `#1C1B19` | Text on light |
 
 Color schemes: `MonetLight` and `MonetDark`. Their title-bar color has an
-alpha value, so Breeze draws see-through title bars and KWin blurs behind them.
+alpha value, for apps that draw their own title bars.
 
 ## Glass
 
@@ -88,7 +88,7 @@ color, so the glass carries the painting's light instead of looking grey.
 | App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection. Menus and tooltips cast a soft shadow, blur with rounded corners, part groups with a hairline and highlight the item in lily, inset from the edge |
 | GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables |
 | Monet Settings | The Plasma style's dialog glass around a solid paper page |
-| Title bars | The color scheme's alpha (Breeze); a wide, soft shadow in ink instead of black |
+| Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
 
 Two global themes carry this into KDE's settings: **Monet Mist** and
@@ -117,19 +117,54 @@ Settings in front of it.
 
 - **Monet**: the sun and three strokes of its reflection. No container.
 - **Windows Games**: the same, with the sun turned into a play button.
-- **Monet's own apps** (Files, Terminal, Settings, Store, System Monitor,
-  Trash) are painted marks with no tile or circle behind them: brushed shapes
-  in the paintings' colors that stand on the glass by themselves.
+- **Every icon is a small oil painting** (`tools/make-icons.py`): short
+  strokes of unmixed color side by side, shadows in violet and blue instead
+  of grey, light in warm cream, and paint thick enough to catch the light
+  from the top left. No tile or circle behind them.
+- **Motifs from Monet's world, not a computer's:** a painter's palette for
+  Settings, a night canvas on an easel for Terminal, the harbor's masts
+  rising like a graph for System Monitor, a market bouquet for the Store, a
+  garden pot from Giverny for Trash. KDE's apps too: a gilt frame
+  (pictures), an open book (documents), an abacus, a little stage (videos),
+  a sunflower (disk usage), a letter and quill (text), a chest (archives),
+  a box camera (screenshots). The app menu's categories as well.
 - **Folders** are cut from the paintings: the front of each folder is a piece
   of one of the Hours (Home and the plain folder at dawn, Desktop at midday,
   Pictures, Music and Videos at dusk, Downloads and Games at night), with a
   small white mark for what's inside. Documents is paper with lines of ink.
-- **One grid.** Every icon fills about 0.8 of its canvas along its long side
-  and about the same area (thin drawings get thicker strokes, not just a
-  bigger scale), centered, so the dock reads evenly next to round icons
-  like Firefox and Steam. `Icon.fit()` in the generator does the placing.
-- Everything is in the `Monet` icon theme (`tools/make-icons.py`). Other apps
-  keep their icons; anything else is Breeze.
+- **Files** are sheets of paper with something painted on them: lines of
+  ink for text, three inks for code, a piece of dawn for pictures, a note
+  for music, dusk with the play sign for films, a wax seal for PDFs, a lily
+  grid for spreadsheets, the play sign for programs; archives are the chest.
+  **Drives** are what a painter carries colors in: a paint box for disks, a
+  tube of paint for USB sticks, a disc for discs. Breeze has an icon for
+  nearly every exact file type, found before the generic one, so `aliases`
+  lists the names and `install.sh` links them to the paintings.
+- **The bar's signs** (sound, network, battery, power, clipboard, drives) are
+  brushed in ink in the Plasma style's `icons/`, tapering like a brush, and
+  recolor with the light. Sleep is the moon, shut down the setting sun.
+- **One grid.** Every motif is laid out on a 128 grid and fills about 0.8 of
+  it along its long side, centered, so the dock reads evenly next to round
+  icons like Firefox and Steam. Painted at 512 px, kept at 256 inside SVGs.
+- Everything is in the `Monet` icon theme (`tools/make-icons.py`). Apps with
+  their own brand (Firefox, Steam, games) keep their icons; toolbar icons
+  inside apps are Breeze's, in Monet's colors.
+
+## Pointer
+
+`Monet-cursors` (`tools/make-cursors.py`): ink with a paper edge and a soft
+shadow, at 24 to 64 px. While something works, Monet's sun breathes over its
+rippling reflection, as at start. Resize, move, text, hand and the rest in
+the same ink; anything not drawn falls back to Breeze.
+
+## Starting and signing in
+
+- **Boot screen** (Plymouth `monet`, the same as Monet Setup's): the harbor
+  at dawn with the sun breathing. A disk password is asked for on it, in a
+  line of white with a dot per letter. Built into the image's initramfs.
+- **Sign-in** (SDDM): the harbor at night and Monet's mark, with Monet's
+  fields, buttons and colors (its home gets Monet's Plasma style and colors
+  at boot) and Monet's pointer.
 
 ## Apps
 
@@ -240,7 +275,9 @@ Everything is generated, so it can be changed and rendered again:
 python3 tools/make-paintings.py   # The Hours (4K)
 python3 tools/make-branding.py    # marks, Windows icon, installer art
 python3 tools/make-icons.py       # icon theme, brush texture
+python3 tools/make-cursors.py     # pointer
 python3 tools/make-plasma-style.py
+python3 tools/make-decoration.py  # window frames (after make-icons.py's painter)
 python3 tools/make-kvantum.py
 python3 tools/make-gtk.py
 ```
