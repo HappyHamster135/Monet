@@ -121,12 +121,13 @@ item is a reviewed entry in a list, not an ad-hoc script.
 |---|---|
 | Preinstalled apps, ads, "suggestions" | Windows Update |
 | OneDrive, Copilot, Widgets, Teams | Defender / Windows Security |
-| Search indexing, most startup items | TPM, Secure Boot, VBS components |
+| Search indexing, most startup items | TPM, Secure Boot, VBS components (Memory Integrity off by default, see 4.1) |
 | Fast Startup (we use full hibernation) | WebView2 (launchers need it) |
 | Lock screen, login screen (auto-login to a local account) | DirectX and VC++ runtimes |
 | Telemetry, as far as official settings allow | Gaming Services / Xbox app (for Game Pass) |
 
 Goals: **< 25 GB disk use**, fast resume, nothing on screen except the game.
+Performance settings for Windows are listed in section 4.1.
 
 Every profile change must pass the anti-cheat test list (section 6) before it ships.
 
@@ -170,14 +171,56 @@ enter a key and explains this plainly.
 
 ## 4. Technology choices
 
+Rule: **when performance and convenience conflict, performance wins.** The
+simple design is built on top through theming and locked-down settings.
+
 | Area | Choice | Why |
 |---|---|---|
-| Base OS | **Fedora Atomic** via **Universal Blue** (bootc images) | Same base as Bazzite. Image-based updates with rollback. Builds on GitHub Actions. |
-| Desktop | **GNOME** (recommended) | Closest to Apple's simplicity out of the box. Recent versions support VRR and HDR. KDE is the alternative if gaming features fall behind. |
-| Monet apps (Linux) | **Rust + GTK4 / libadwaita** | Native look, matches GNOME's design guidelines |
-| Monet Bridge (Windows) | **Rust** Windows service + small tray app | Same language as the Linux side, so the handoff format is shared code |
-| Gaming stack | Proton (+ Proton-GE), DXVK, VKD3D-Proton, Mesa, NVIDIA open kernel modules | Proven, maintained by others |
+| Base OS | **Fedora Atomic** via **Universal Blue** (bootc images) | Same base as Bazzite. Image-based updates with rollback. Builds on GitHub Actions. Speed comes from the kernel and gaming stack, not the base (see 4.1). |
+| Desktop | **KDE Plasma 6** | Best gaming desktop on Linux: low-latency tearing in fullscreen, mature VRR and HDR, solid NVIDIA support. Its *Kiosk* system can hide advanced settings, which gives us the simple design. |
+| Game Mode session | **Gamescope** (SteamOS-style fullscreen session) | Lowest overhead for controller and TV play, built-in frame limiting and FSR upscaling. Switch between Desktop and Game Mode with one click. |
+| Monet apps (Linux) | **Rust core + Qt 6 / QML (Kirigami) UI** via CXX-Qt | Fast, native on KDE, easy to style |
+| Monet Bridge (Windows) | **Rust** Windows service + small tray app | Tiny and fast, and it shares the handoff code with the Linux side |
+| Gaming stack | Proton + Proton-GE/CachyOS builds, DXVK, VKD3D-Proton, latest Mesa, NVIDIA open kernel modules | Proven, maintained by others, always the latest versions |
 | Windows install | Official ISO + `autounattend.xml` | No redistribution, fully supported by Microsoft |
+| License | **GPL-3.0-or-later** | Anyone can use Monet, including other distros, but modified versions must stay open |
+
+### 4.1 Performance tuning
+
+**Linux side**
+
+| Tuning | What it does |
+|---|---|
+| **Performance kernel** (CachyOS-patched, signed for Secure Boot) | Lower latency and better CPU scheduling under gaming load |
+| **sched_ext scheduler** (`scx_lavd`, developed with Valve's funding for gaming) | Prioritizes the game's threads, so fewer stutters when other apps run |
+| **NTSYNC** (kernel 6.14+) | Native Windows-style thread syncing for Wine/Proton. Faster and more accurate than esync/fsync. |
+| **GameMode** + automatic performance power profile while gaming | Full CPU/GPU clocks during games, power saving otherwise |
+| **Shader pre-caching** (Steam) + Mesa shader cache kept across updates | Less stutter the first time you play |
+| **zram** swap, tuned `vm` settings | Smooth even when RAM is full, without slow disk swapping |
+| Lean startup: only needed services, fast firmware boot | Faster cold boot, which matters because Monet cold-boots on every switch back |
+
+**Considered and rejected:** basing Monet on CachyOS (Arch packages compiled for
+newer CPUs). Its extra gains mostly show up in CPU-heavy tasks, not GPU-bound
+games, and it gives up Fedora Atomic's rollback updates. We take CachyOS's
+kernel instead, which is where most of the gaming benefit comes from.
+
+**Windows side** (part of the Game Profile)
+
+| Tuning | What it does |
+|---|---|
+| High-performance power plan | No CPU downclocking while gaming |
+| Hardware-accelerated GPU scheduling + Windows Game Mode on | Lower latency |
+| **Memory Integrity (HVCI) off by default** | Recovers a few percent of FPS (Microsoft itself says gamers can turn it off). Turned on automatically for any game that requires it. |
+| No background apps, indexing, or startup items | All CPU and RAM go to the game |
+| Full hibernation file (`hiberfile /type full`) | Required for fast resume |
+
+### 4.2 First supported hardware
+
+| Part | Supported in the first beta | Why |
+|---|---|---|
+| GPU | **AMD Radeon RX 6000 and newer** (best experience), **NVIDIA RTX 20-series and newer** | AMD's open Mesa drivers are the fastest on Linux. NVIDIA RTX 20+ supports the open kernel modules. Intel Arc comes later. |
+| CPU / board | Any x86-64 PC that meets Windows 11 requirements (TPM 2.0, Secure Boot) | Needed for Windows anti-cheat anyway |
+| Storage | NVMe SSD | Fast boot and switching. HDDs not supported for the system. |
 
 ---
 
@@ -214,11 +257,13 @@ Goal: one-click switching on any existing Fedora/Bazzite + Windows dual boot.
 **Exit:** a non-technical tester can play Valorant from Linux with one click.
 
 ### Phase 2: Monet OS image
-- [ ] Universal Blue custom image repo, built by GitHub Actions
-- [ ] Preinstalled gaming stack, codecs, and NVIDIA image variant
+- [ ] Universal Blue custom image (Fedora Atomic + KDE Plasma) with the CachyOS-patched kernel, built by GitHub Actions
+- [ ] AMD/Intel image + NVIDIA image variant
 - [ ] Monet Switch included
-- [ ] Design layer: theme, icons, fonts, Monet wallpapers, simplified settings
-- [ ] Secure Boot works out of the box (signed kernel, enrolled MOK key for NVIDIA)
+- [ ] Performance tuning from section 4.1, each one benchmarked against stock Bazzite
+- [ ] Gamescope "Game Mode" session at login
+- [ ] Design layer: Plasma theme, icons, fonts, Monet wallpapers, simplified settings
+- [ ] Secure Boot works out of the box (signed kernel, enrolled MOK key)
 
 **Exit:** a bootable Monet image that people can rebase to or install.
 
@@ -273,10 +318,18 @@ Every release of Monet Switch and the Game Profile must pass on Windows game mod
 
 ---
 
-## 8. Open decisions
+## 8. Decisions
 
-- [ ] **Desktop:** GNOME (recommended) or KDE Plasma
-- [ ] **License** for Monet's own code: GPL-3.0 or Apache-2.0
-- [ ] **Supported hardware** for the first beta
-- [ ] **Hibernation fallback:** per-game setting, or automatic detection
+| Decision | Choice | Why |
+|---|---|---|
+| Desktop | **KDE Plasma 6 (Wayland)** | Best gaming performance and features (see section 4) |
+| Base | **Fedora Atomic** (Universal Blue) + **CachyOS-patched kernel** | Rollback-safe updates, plus the kernel where most gaming gains come from (see 4.1) |
+| Language | **Rust** everywhere | Native speed like C/C++, memory-safe, one codebase for Linux and Windows |
+| UI | **Qt 6 / QML (Kirigami)** via CXX-Qt | Fast, GPU-rendered, native on KDE |
+| License | **GPL-3.0-or-later** | Keeps Monet and its forks open source. Same family as Linux and KDE |
+| First beta hardware | See section 4.2 | Best-supported GPUs on Linux. TPM 2.0 is required by Windows 11 and Vanguard |
+| Hibernation fallback | **Hibernate by default.** A per-game "needs full boot" flag in Monet's compatibility data, set from testing | Fastest switch for most games, safe for the exceptions |
+
+### Still open
+
 - [ ] **Branding:** logo, color palette, typeface (our own, not Apple's)

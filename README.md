@@ -44,5 +44,11 @@ switches to it with one click, in seconds.
   uses real Windows for the games that need it.
 - **Legal.** Monet never ships Windows. It downloads the official image from
   Microsoft, and the user provides their own license.
+- **Performance first.** KDE Plasma, a gaming-tuned kernel, and all Monet code
+  written in Rust.
 - **Built from proven parts.** Fedora Atomic, Universal Blue, Proton, and Mesa. Our
   work goes into the experience, not into reinventing them.
+
+## License
+
+[GPL-3.0-or-later](LICENSE)
