@@ -1,12 +1,16 @@
 {
     "KPackageStructure": "Plasma/LookAndFeel",
     "KPlugin": {
-        "Authors": [{ "Name": "Monet" }],
-        "Description": "Calm glass, a top bar and a floating dock",
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Description": "The Hours under glass, in the light of day",
         "Id": "org.monet.desktop",
         "License": "GPL-3.0-or-later",
-        "Name": "Monet",
-        "Version": "0.5.1"
+        "Name": "Monet Mist",
+        "Version": "0.5.2"
     },
     "X-Plasma-APIVersion": "2"
 }

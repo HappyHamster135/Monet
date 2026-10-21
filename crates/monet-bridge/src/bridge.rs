@@ -138,6 +138,11 @@ fn pending_path() -> PathBuf {
     data_dir().join("pending.json")
 }
 
+/// When Monet last sent the PC here on purpose (a game, or just Windows).
+fn asked_path() -> PathBuf {
+    data_dir().join("asked")
+}
+
 // ------------------------------------------------------------- games
 
 enum Launch {
@@ -379,6 +384,7 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
         log("ignored an old request");
         return;
     }
+    let _ = fs::write(asked_path(), now().to_string());
     let entries = boot::list_entries(efi).unwrap_or_default();
     if entries.iter().any(|e| e.number == req.return_to && !e.is_windows()) {
         state.monet_entry = Some(req.return_to);
@@ -638,8 +644,25 @@ fn back() -> Res<()> {
     go_back(&mut efi, &state, &scan())
 }
 
+/// True when Monet sent the PC to Windows on purpose in the last few minutes:
+/// a request still waiting in the firmware, or one the agent just took.
+fn sent_on_purpose() -> bool {
+    let waiting = win::enable_firmware_access() && request::peek(&FirmwareVars).is_some();
+    let recent = fs::read_to_string(asked_path())
+        .ok()
+        .and_then(|t| t.trim().parse::<u64>().ok())
+        .is_some_and(|t| now().saturating_sub(t) < 15 * 60);
+    waiting || recent
+}
+
 /// Shown once, right after Monet set up Windows by itself.
 fn finish_setup() -> Res<()> {
+    // Someone pressed Play (or Restart in Windows) while Windows was still
+    // setting up: stay for the game instead of going straight back.
+    if sent_on_purpose() {
+        log("setup finished during a trip from Monet; staying in Windows");
+        return Ok(());
+    }
     let text = format!(
         "Windows is ready for Monet.\n\nGoing back to Monet in {RETURN_COUNTDOWN_SECS} seconds. Click Cancel to stay in Windows."
     );

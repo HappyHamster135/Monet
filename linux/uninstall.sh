@@ -8,7 +8,7 @@ if [ "$(id -u)" -ne 0 ]; then
     # Remove this user's game shortcuts and settings, then the system part.
     rm -f "$HOME"/.local/share/applications/monet-game-*.desktop
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-    systemctl --user disable --now monet-light.timer >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
     # Hand the desktop back to Breeze.
     command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Breeze
@@ -20,8 +20,13 @@ systemctl disable --now monet-sync.service monet-windows-setup.service >/dev/nul
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service
 systemctl daemon-reload
 
-systemctl --global disable monet-light.timer >/dev/null 2>&1 || true
-rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer
+systemctl --global disable monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
+    /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path
+# Background updates come back the way Bazzite has them.
+systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
+    flatpak-system-update.timer >/dev/null 2>&1 || true
+systemctl --global unmask flatpak-user-update.timer >/dev/null 2>&1 || true
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
 rm -f "$PREFIX/bin/monet"
 for tool in monet-session monet-look monet-light monet-quick monet-prepare-windows; do
@@ -36,7 +41,8 @@ rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colors
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
     "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
-    "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/icons/Monet" \
+    "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/plasma/look-and-feel/org.monet.smoke.desktop" \
+    "$PREFIX/share/icons/Monet" \
     "$PREFIX/share/Kvantum/Monet" "$PREFIX/share/Kvantum/MonetDark" \
     "$PREFIX/share/Kvantum/MonetSolid" "$PREFIX/share/Kvantum/MonetDarkSolid" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet

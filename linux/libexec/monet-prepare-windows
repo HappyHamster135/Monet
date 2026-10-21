@@ -140,10 +140,20 @@ def largest_free(disk):
     return best
 
 
+def has_windows(path):
+    """True if a whole Windows is on the NTFS partition at path."""
+    out = subprocess.run(["ntfsls", "-p", "/Windows/System32", path], capture_output=True, text=True)
+    return out.returncode == 0 and "winload.efi" in out.stdout.lower()
+
+
 def make_partitions(disk):
     """Creates the Windows and setup partitions in the free space at the end."""
     win, setup = find_partition(disk, WINDOWS_LABEL), find_partition(disk, SETUP_LABEL)
     if win and setup:
+        # A try that stopped halfway renamed Windows' partition; name it
+        # again so the installer finds it. A finished Windows is left alone.
+        if not has_windows(win["path"]):
+            run("ntfslabel", win["path"], "MONETWIN", check=False)
         return win["path"], setup["path"], setup["partn"]
 
     mib = 1024 * 1024 // sector_size(disk)

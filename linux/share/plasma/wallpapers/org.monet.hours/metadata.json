@@ -7,7 +7,7 @@
         "Id": "org.monet.hours",
         "License": "GPL-3.0-or-later",
         "Name": "The Hours",
-        "Version": "0.5.1"
+        "Version": "0.5.2"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

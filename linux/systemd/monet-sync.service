@@ -4,6 +4,8 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
+# First: if a trip to Windows just came back without Windows, find out why.
+ExecStart=-@BINDIR@/monet helper check-switch
 ExecStart=@BINDIR@/monet helper sync
 StateDirectory=monet
 StateDirectoryMode=0755

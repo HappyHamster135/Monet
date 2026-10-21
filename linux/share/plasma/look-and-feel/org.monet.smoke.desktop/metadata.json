@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Description": "The Hours under glass, after dark",
+        "Id": "org.monet.smoke.desktop",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet Smoke",
+        "Version": "0.5.2"
+    },
+    "X-Plasma-APIVersion": "2"
+}

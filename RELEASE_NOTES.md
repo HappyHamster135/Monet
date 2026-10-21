@@ -6,9 +6,38 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.5.1-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.5.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.5.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.5.2-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
+| Monet-0.5.2-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.5.2-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### Fixed in 0.5.2
+
+- **Play goes to Windows.** Many PCs keep their old Windows boot entry after
+  the disk is wiped, and Monet picked that one, so the PC came straight back
+  to Monet. Monet now only starts a Windows entry whose partition is really
+  there, and makes one if the PC has none. A Windows that's still finishing
+  its own setup goes first for the trip, so its own restarts don't land in
+  Monet. Monet checks that the switch was saved before restarting, always
+  restarts through the PC's firmware, and the first trip after Windows set
+  itself up no longer turns straight back before the game starts.
+- **If a trip doesn't reach Windows,** Monet says why at the next sign-in
+  (and in Settings → Windows & Games), and tries another way next time.
+  Every trip is logged in `/var/lib/monet/switch.log`.
+- **Dark mode keeps Monet's look.** KDE's Light and Dark choices now pick
+  Monet Mist and the new **Monet Smoke**, instead of Breeze. Choosing a Monet
+  theme in KDE's settings no longer resets the glass or the painting. If dark
+  mode already broke your desktop, it's mended at the next sign-in.
+- **Updates only when you ask.** Monet no longer updates in the background.
+  Settings → Updates checks, installs Monet and app updates when you say so,
+  then offers a restart.
+- **Icons in step.** Settings, System Monitor, Store and Trash are redrawn on
+  the same grid as Files and Terminal, so the dock reads evenly.
+- **Smoother light changes.** Hours, Mist and Smoke switch once, right after
+  the toggle moves, instead of stuttering it.
+
+Sleep works normally on Monet. What Monet can't do is hibernate (Secure
+Boot's lockdown blocks it), which is why Windows is the one that hibernates
+to switch fast.
 
 ### New in 0.5.1: Settings and Files
 

@@ -67,8 +67,10 @@ PlasmaCore.Dialog {
     property string switchProblem: ""
     property string doctorReport: ""
     property bool checkingDoctor: false
-    // Updates: "", "checking", "done" or "failed", and what Monet said.
+    // Updates: "", "checking", "none", "available", "installing", "done" or
+    // "failed"; what the check found; and what Monet said.
     property string updateState: ""
+    property var updateFound: ({})
     property string updateMessage: ""
 
     title: i18n("Settings")
@@ -290,14 +292,54 @@ PlasmaCore.Dialog {
         }).join("<br>")
     }
 
+    // Monet never updates by itself: first look, then install if asked.
     function checkUpdates() {
         updateState = "checking"
+        ask("update-check", out => {
+            const found = sheet.json(out, { ok: false })
+            sheet.updateFound = found
+            sheet.updateMessage = found.message || ""
+            sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
+        })
+    }
+
+    function installUpdates() {
+        updateState = "installing"
         ask("update", out => {
             const result = sheet.json(out, { ok: false, message: "" })
             const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
             sheet.updateMessage = lines.length > 0 ? lines[lines.length - 1] : ""
             sheet.updateState = result.ok ? "done" : "failed"
         })
+    }
+
+    function updateTitle() {
+        const found = updateFound
+        if (updateState === "available" && found.system) {
+            return found.version ? i18n("Monet %1 is ready", found.version) : i18n("A new Monet is ready")
+        }
+        if (updateState === "available") {
+            return i18np("%1 app update is ready", "%1 app updates are ready", found.apps || 0)
+        }
+        if (updateState === "done") {
+            return updateFound.system ? i18n("Restart to finish") : i18n("Your apps are up to date")
+        }
+        return pc.monet ? i18n("Monet %1", pc.monet) : i18n("Monet")
+    }
+
+    function updateDetail() {
+        const found = updateFound
+        switch (updateState) {
+        case "checking": return i18n("Looking for updates…")
+        case "none": return i18n("Monet and your apps are up to date.")
+        case "available":
+            return found.system && found.apps > 0 ? i18np("And %1 app update. Install when you're ready.", "And %1 app updates. Install when you're ready.", found.apps || 0)
+                : i18n("Install when you're ready.")
+        case "installing": return i18n("Downloading and installing. You can keep using your PC.")
+        case "done": return updateFound.system ? i18n("The new Monet starts the next time you restart.") : i18n("Everything is installed.")
+        case "failed": return updateMessage || i18n("Monet couldn't look for updates. Check your internet connection and try again.")
+        default: return i18n("Monet only updates when you ask it to.")
+        }
     }
 
     function glaze(name) {
@@ -1456,6 +1498,7 @@ PlasmaCore.Dialog {
                                 : sheet.switchProblem !== "" ? i18n("Couldn't open Windows")
                                 : sheet.asking && sheet.asking.id ? i18n("Play %1?", sheet.asking.name)
                                 : sheet.asking ? i18n("Restart in Windows?")
+                                : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
                                 : sheet.pc.windows === "Ready" ? i18n("Windows is ready")
                                 : (sheet.pc.windows || "") === "" ? i18n("Windows")
                                 : i18n("Windows isn't ready")
@@ -1468,6 +1511,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             text: sheet.switching ? i18n("Your PC restarts in a moment.")
                                 : sheet.switchProblem !== "" ? sheet.switchProblem
+                                : !sheet.asking && (sheet.pc.notice || "") !== "" ? sheet.pc.notice
                                 : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
                                 : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
                                 : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
@@ -1587,17 +1631,15 @@ PlasmaCore.Dialog {
                         spacing: 3
                         Text {
                             Layout.fillWidth: true
-                            text: sheet.pc.monet ? i18n("Monet %1", sheet.pc.monet) : i18n("Monet")
+                            text: sheet.updateTitle()
                             color: look.ink
                             font.pixelSize: 15
                             font.weight: Font.DemiBold
+                            wrapMode: Text.Wrap
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: sheet.updateState === "checking" ? i18n("Looking for a new version…")
-                                : sheet.updateState !== "" && sheet.updateMessage !== "" ? sheet.updateMessage
-                                : sheet.updateState === "failed" ? i18n("The update didn't finish. Check your internet connection and try again.")
-                                : i18n("Updates download by themselves.")
+                            text: sheet.updateDetail()
                             color: sheet.updateState === "failed" ? "#E0603A" : look.dim
                             font.pixelSize: 13
                             wrapMode: Text.Wrap
@@ -1605,15 +1647,30 @@ PlasmaCore.Dialog {
                     }
                     Pill {
                         tone: look
-                        text: sheet.updateState === "checking" ? i18n("Checking…") : i18n("Check now")
-                        enabledPill: sheet.updateState !== "checking"
-                        onClicked: sheet.checkUpdates()
+                        kind: sheet.updateState === "available" || (sheet.updateState === "done" && sheet.updateFound.system) ? "lily" : "plain"
+                        visible: !(sheet.updateState === "done" && !sheet.updateFound.system)
+                        text: sheet.updateState === "checking" ? i18n("Checking…")
+                            : sheet.updateState === "installing" ? i18n("Installing…")
+                            : sheet.updateState === "available" ? i18n("Install")
+                            : sheet.updateState === "done" ? i18n("Restart now")
+                            : sheet.updateState === "failed" ? i18n("Try again")
+                            : i18n("Check for updates")
+                        enabledPill: sheet.updateState !== "checking" && sheet.updateState !== "installing"
+                        onClicked: {
+                            if (sheet.updateState === "available") {
+                                sheet.installUpdates()
+                            } else if (sheet.updateState === "done") {
+                                sheet.ask("restart")
+                            } else {
+                                sheet.checkUpdates()
+                            }
+                        }
                     }
                 }
             }
             Text {
                 Layout.fillWidth: true
-                text: i18n("Monet updates by itself in the background. The new version starts the next time you restart, and the one before stays in the start menu, just in case.")
+                text: i18n("Monet never updates by itself. When you install an update, the new version starts the next time you restart, and the one before stays in the start menu, just in case.")
                 color: look.dim
                 font.pixelSize: 14
                 lineHeight: 1.3

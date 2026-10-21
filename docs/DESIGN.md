@@ -89,6 +89,12 @@ color, so the glass carries the painting's light instead of looking grey.
 | Title bars | The color scheme's alpha (Breeze) |
 | Terminal | Konsole color schemes with opacity and blur |
 
+Two global themes carry this into KDE's settings: **Monet Mist** and
+**Monet Smoke** (`org.monet.desktop`, `org.monet.smoke.desktop`), KDE's
+Light and Dark. They differ only in colors and never set the app style or
+the wallpaper, so choosing one keeps the glass and The Hours. Picking Light
+or Dark in KDE's settings keeps Mist or Smoke (`monet-light sync`).
+
 Glass is for edges; anything you read sits on paper (or smoke). Turning
 **Glass** off in Settings switches to `monet-solid` and the `MonetSolid` /
 `MonetDarkSolid` app themes: the same shapes and colors, without the
@@ -116,6 +122,10 @@ Settings in front of it.
   of one of the Hours (Home and the plain folder at dawn, Desktop at midday,
   Pictures, Music and Videos at dusk, Downloads and Games at night), with a
   small white mark for what's inside. Documents is paper with lines of ink.
+- **One grid.** Every icon fills about 0.8 of its canvas along its long side
+  and about the same area (thin drawings get thicker strokes, not just a
+  bigger scale), centered, so the dock reads evenly next to round icons
+  like Firefox and Steam. `Icon.fit()` in the generator does the placing.
 - Everything is in the `Monet` icon theme (`tools/make-icons.py`). Other apps
   keep their icons; anything else is Breeze.
 

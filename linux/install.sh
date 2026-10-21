@@ -97,7 +97,9 @@ tree "$SRC/share/wallpapers/Monet" "$DATADIR/wallpapers/Monet"
 tree "$SRC/share/plasma/wallpapers/org.monet.hours" "$DATADIR/plasma/wallpapers/org.monet.hours"
 tree "$SRC/share/plasma/desktoptheme/monet" "$DATADIR/plasma/desktoptheme/monet"
 tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/monet-solid"
-tree "$SRC/share/plasma/look-and-feel/org.monet.desktop" "$DATADIR/plasma/look-and-feel/org.monet.desktop"
+for theme in org.monet.desktop org.monet.smoke.desktop; do
+    tree "$SRC/share/plasma/look-and-feel/$theme" "$DATADIR/plasma/look-and-feel/$theme"
+done
 for applet in org.monet.games org.monet.quick org.monet.placard; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
@@ -116,6 +118,24 @@ put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
 put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.service"
 put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
+put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"
+put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
+
+# Updates happen only when you ask for them, in Settings → Updates: no
+# background updates of Monet or its apps. Masked, because Bazzite turns some
+# of these on from /usr, where disabling can't reach.
+for unit in uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
+    flatpak-system-update.timer; do
+    systemctl mask "$unit" >/dev/null 2>&1 || true
+done
+systemctl --global mask flatpak-user-update.timer >/dev/null 2>&1 || true
+if [ -f /etc/rpm-ostreed.conf ]; then
+    if grep -q '^#\?AutomaticUpdatePolicy=' /etc/rpm-ostreed.conf; then
+        sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=none/' /etc/rpm-ostreed.conf
+    else
+        sed -i '/^\[Daemon\]/a AutomaticUpdatePolicy=none' /etc/rpm-ostreed.conf
+    fi
+fi
 
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
@@ -143,7 +163,7 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service
-    systemctl --global enable monet-light.timer
+    systemctl --global enable monet-light.timer monet-light-sync.path
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Monet"/' /usr/lib/os-release
     # The sign-in screen: the harbor at night.
     for theme in /usr/share/sddm/themes/breeze /usr/share/sddm/themes/01-breeze-fedora; do
@@ -158,5 +178,5 @@ else
     for unit in monet-sync.service monet-windows-setup.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-light.timer >/dev/null 2>&1 || true
+    systemctl --global enable monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
 fi

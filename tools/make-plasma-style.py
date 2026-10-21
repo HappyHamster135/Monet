@@ -209,7 +209,7 @@ def write_style(out, ident, name, description, solid=False):
             "Id": ident,
             "License": "GPL-3.0-or-later",
             "Name": name,
-            "Version": "0.5.1",
+            "Version": "0.5.2",
         },
         "X-Plasma-API": "5.0",
     }, indent=4) + "\n")

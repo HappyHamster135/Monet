@@ -42,6 +42,11 @@ class Icon:
     def add(self, shape):
         self.body.append(shape)
 
+    def fit(self, cx, cy, scale):
+        """Scales the drawing around (cx, cy) and centers it, so every icon
+        sits on the same grid: about 0.8 of the canvas along its long side."""
+        self.body = [f'<g transform="translate(64 64) scale({scale}) translate({-cx} {-cy})">'] + self.body + ["</g>"]
+
     def svg(self):
         return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">\n'
                 f"  <!-- {self.comment} -->\n"
@@ -155,16 +160,13 @@ def folder_icon(name, painting, crop, back, mark):
 
 
 def settings_icon():
-    icon = Icon("Monet icon: Settings. Three brushed rails with painted knobs.")
-    rail = icon.gradient("#A8A196", "#6C665D")
-    for y in (34, 64, 94):
-        dab(icon, 64, y, 100, 10, rail, shine=False)
-    for cx, cy, top, bottom in ((42, 34, "#7CD3C0", "#2E7D70"), (86, 64, "#B5A3EB", "#5A4A9C"), (58, 94, "#F3D8AE", "#C08A52")):
-        fill = icon.gradient(top, bottom)
-        icon.add(f'<circle cx="{cx}" cy="{cy + 1.8}" r="14" fill="#000000" opacity="0.18"/>')
-        icon.add(f'<circle cx="{cx}" cy="{cy}" r="14" fill="{fill}"/>')
-        icon.add(f'<path d="M{cx - 8},{cy - 5} A10 10 0 0 1 {cx + 4},{cy - 10}" fill="none" stroke="#ffffff" '
-                 f'stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>')
+    icon = Icon("Monet icon: Settings. Three thick brushstrokes in dawn, midday and dusk, with white knobs.")
+    for y, x, top, bottom in ((34, 40, "#F6B590", "#D2603F"), (64, 86, "#93C6EA", "#356FA8"), (94, 54, "#C0AEEE", "#5A4A9C")):
+        dab(icon, 64, y + 1.8, 104, 26, "#000000", opacity=0.14, shine=False)
+        dab(icon, 64, y, 104, 26, icon.gradient(top, bottom), bend=0.12)
+        icon.add(f'<circle cx="{x}" cy="{y + 1.8}" r="15" fill="#000000" opacity="0.22"/>')
+        icon.add(f'<circle cx="{x}" cy="{y}" r="15" fill="#FFFFFF"/>')
+        icon.add(f'<circle cx="{x}" cy="{y}" r="6" fill="{bottom}" opacity="0.85"/>')
     return icon.svg()
 
 
@@ -191,18 +193,18 @@ def store_icon():
     for cx, cy, length, o in ((54, 62, 46, 0.26), (78, 84, 40, 0.18)):
         icon.add(f'<path d="{path(dab_points(cx, cy, length, 7, -20, 0.3))}" fill="#ffffff" opacity="{o}"/>')
     icon.add('<path d="M47 50 V40 A17 17 0 0 1 81 40 V50" fill="none" stroke="#3E3175" stroke-width="8" stroke-linecap="round"/>')
+    icon.fit(64, 68, 1.16)
     return icon.svg()
 
 
 def monitor_icon():
-    icon = Icon("Monet icon: System Monitor. One brushstroke of a pulse.")
-    dab(icon, 64, 66, 108, 8, "#5C88D0", opacity=0.22, shine=False)
-    line = icon.gradient("#8DB2EE", "#2B4A86", 0, 0, 1, 1)
-    icon.add(f'<path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="#000000" stroke-opacity="0.16" '
-             f'stroke-width="12" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2)"/>')
-    icon.add(f'<path d="M14 68 H38 L49 38 L63 96 L76 50 L84 68 H114" fill="none" stroke="{line}" stroke-width="12" '
-             f'stroke-linecap="round" stroke-linejoin="round"/>')
-    icon.add('<path d="M20 64.5 H36 M51 42 L60 80" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2.5" stroke-linecap="round"/>')
+    icon = Icon("Monet icon: System Monitor. Four painted bars, rising.")
+    for x, length, top, bottom in ((24, 50, "#7CD3C0", "#2E7D70"), (50, 80, "#93C6EA", "#356FA8"),
+                                   (76, 62, "#C0AEEE", "#5A4A9C"), (102, 96, "#F6B590", "#D2603F")):
+        cy = 108 - length / 2
+        dab(icon, x + 1.6, cy + 1.6, length, 25, "#000000", angle=90, opacity=0.14, shine=False)
+        dab(icon, x, cy, length, 25, icon.gradient(top, bottom), angle=90)
+    dab(icon, 63, 114, 110, 7, "#8C867C", shine=False)
     return icon.svg()
 
 
@@ -215,10 +217,12 @@ def trash_icon(full):
         dab(icon, x, 82, 50, 6, "#6C665D", angle=90, opacity=0.45, shine=False)
     if full:
         # A sheet of paper sticking out under the lid.
-        icon.add('<g transform="rotate(-14 66 34)"><rect x="48" y="12" width="38" height="40" rx="4" fill="#FBF7EE"/>'
-                 '<path d="M55 22 H79 M55 30 H79 M55 38 H71" stroke="#C9BFAC" stroke-width="3" stroke-linecap="round"/></g>')
+        icon.add('<g transform="rotate(-12 66 40)"><rect x="50" y="26" width="34" height="34" rx="4" fill="#FBF7EE"/>'
+                 '<path d="M56 34 H78 M56 41 H72" stroke="#C9BFAC" stroke-width="3" stroke-linecap="round"/></g>')
     lid = icon.gradient("#8C867C", "#5A554D")
     dab(icon, 64, 42 if not full else 41, 84, 11, lid, angle=0 if not full else -4)
+    # The same place and size whether it's empty or full, so it doesn't jump.
+    icon.fit(64, 76, 1.2)
     return icon.svg()
 
 

@@ -68,22 +68,13 @@ fn read_list(root: &Path) -> Option<GameList> {
     GameList::parse(&data).ok()
 }
 
-/// Finds the newest games list on any EFI partition. Needs root to mount
-/// partitions that are not mounted yet; they are mounted read-only and
-/// unmounted again right away.
-pub fn find_games_list() -> Option<GameList> {
-    let mut best: Option<GameList> = None;
-    let mut keep = |list: GameList| {
-        if best.as_ref().is_none_or(|b| list.updated > b.updated) {
-            best = Some(list);
-        }
-    };
-
+/// Calls `visit` with the root folder and device of every EFI partition:
+/// mounted ones where they are, the others mounted read-only for the call
+/// and unmounted right after (that needs root).
+fn each_esp(mut visit: impl FnMut(&Path, &str)) {
     let mounted = mounted_esps();
-    for (mount_point, _) in &mounted {
-        if let Some(list) = read_list(mount_point) {
-            keep(list);
-        }
+    for (mount_point, device) in &mounted {
+        visit(mount_point, device);
     }
 
     for (i, device) in esp_devices().iter().enumerate() {
@@ -102,14 +93,48 @@ pub fn find_games_list() -> Option<GameList> {
             .map(|s| s.success())
             .unwrap_or(false);
         if mounted_ok {
-            if let Some(list) = read_list(&target) {
-                keep(list);
-            }
+            visit(&target, device);
             let _ = Command::new("umount").arg(&target).status();
         }
         let _ = fs::remove_dir(&target);
     }
+}
+
+/// Finds the newest games list on any EFI partition.
+pub fn find_games_list() -> Option<GameList> {
+    let mut best: Option<GameList> = None;
+    each_esp(|root, _| {
+        if let Some(list) = read_list(root) {
+            if best.as_ref().is_none_or(|b| list.updated > b.updated) {
+                best = Some(list);
+            }
+        }
+    });
     best
+}
+
+/// Windows' boot manager on an EFI partition (FAT doesn't care about case).
+pub const WINDOWS_LOADER: &str = "EFI/Microsoft/Boot/bootmgfw.efi";
+
+/// The device of an EFI partition that has Windows' boot manager on it.
+pub fn find_windows_loader() -> Option<String> {
+    let mut found = None;
+    each_esp(|root, device| {
+        if found.is_none() && root.join(WINDOWS_LOADER).is_file() {
+            found = Some(device.to_string());
+        }
+    });
+    found
+}
+
+/// The disk and partition number of a partition device, from sysfs:
+/// `/dev/nvme0n1p1` is partition 1 of `/dev/nvme0n1`.
+pub fn disk_and_partition(device: &str) -> Option<(String, u32)> {
+    let name = Path::new(device).file_name()?.to_str()?;
+    let sys = fs::canonicalize(format!("/sys/class/block/{name}")).ok()?;
+    let number = fs::read_to_string(sys.join("partition")).ok()?.trim().parse().ok()?;
+    let disk = sys.parent()?.file_name()?.to_str()?;
+    Some((format!("/dev/{disk}"), number))
 }
 
 #[cfg(test)]

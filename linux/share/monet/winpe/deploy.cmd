@@ -16,7 +16,10 @@ for %%d in (C D E F G H I J K L M N O P Q R S T U V W Y Z) do (
 )
 if not defined TARGET goto fail
 
-rem The partition was formatted empty by Monet, so Windows goes straight on.
+rem Monet made this partition for Windows; empty it first, in case an earlier
+rem try stopped halfway.
+format %TARGET%: /fs:ntfs /q /y /v:MONETWIN >nul
+if errorlevel 1 goto fail
 dism /apply-image /imagefile:%SETUP%:\sources\install.swm /swmfile:%SETUP%:\sources\install*.swm /index:1 /applydir:%TARGET%:\
 if errorlevel 1 goto fail
 label %TARGET%: Windows

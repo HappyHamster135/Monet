@@ -84,12 +84,37 @@ pub fn set_boot_next(efi: &mut dyn EfiVars, number: u16) -> Result<()> {
     efi.set(GLOBAL_GUID, "BootNext", &number.to_le_bytes(), ATTR_DEFAULT)
 }
 
-/// The Windows Boot Manager entry, preferring active entries.
-pub fn find_windows(entries: &[BootEntry]) -> Option<&BootEntry> {
+/// Whether the firmware can start an entry, as far as Monet can tell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reach {
+    /// Its partition is there.
+    Yes,
+    /// Its partition is gone (the disk was wiped or replaced), or starting
+    /// it failed before. The firmware skips it and starts Monet instead.
+    No,
+    /// The entry doesn't say which partition it's on.
+    Unknown,
+}
+
+/// The Windows Boot Manager entry to start. Many PCs keep old entries after
+/// a disk is wiped; those can't start, so they're skipped. Of the rest, a
+/// checked entry beats an unchecked one, an active one an inactive one, and
+/// then the earliest in `BootOrder` wins.
+pub fn find_windows<'a>(
+    entries: &'a [BootEntry],
+    order: &[u16],
+    reach: impl Fn(&BootEntry) -> Reach,
+) -> Option<&'a BootEntry> {
     entries
         .iter()
         .filter(|e| e.is_windows())
-        .max_by_key(|e| e.option.is_active())
+        .map(|e| (e, reach(e)))
+        .filter(|(_, r)| *r != Reach::No)
+        .min_by_key(|(e, r)| {
+            let position = order.iter().position(|n| *n == e.number).unwrap_or(usize::MAX);
+            (*r != Reach::Yes, !e.option.is_active(), position)
+        })
+        .map(|(e, _)| e)
 }
 
 /// Puts `number` first in `BootOrder`. Returns true if anything changed.
@@ -149,12 +174,55 @@ mod tests {
         let efi = dual_boot();
         let entries = list_entries(&efi).unwrap();
         assert_eq!(entries.iter().map(|e| e.number).collect::<Vec<_>>(), vec![3, 0, 0x10, 0x11, 0x12]);
-        assert_eq!(find_windows(&entries).unwrap().number, 0);
+        assert_eq!(find_windows(&entries, &[3, 0, 0x10], |_| Reach::Unknown).unwrap().number, 0);
         assert_eq!(boot_current(&efi).unwrap(), 3);
         assert!(entries[0].is_other_os());
         assert!(!entries[1].is_other_os());
         assert!(!entries[2].is_other_os());
         assert!(!entries[4].is_other_os(), "the setup partition is never Monet");
+    }
+
+    /// A PC that came with Windows, wiped by Monet's installer: the factory
+    /// entry (Boot0000) still exists, but its partition is gone.
+    fn wiped() -> (Vec<BootEntry>, Vec<u16>) {
+        use crate::load_option::LOAD_OPTION_ACTIVE;
+        let entry = |number, active: bool, guid: &str| BootEntry {
+            number,
+            option: LoadOption {
+                attributes: if active { LOAD_OPTION_ACTIVE } else { 0 },
+                description: "Windows Boot Manager".into(),
+                file_path: Some("\\EFI\\Microsoft\\Boot\\bootmgfw.efi".into()),
+                partition_guid: Some(guid.into()),
+            },
+        };
+        let entries = vec![entry(0x0000, true, "old"), entry(0x0004, true, "new"), entry(0x0007, false, "new")];
+        (entries, vec![1, 4, 0])
+    }
+
+    #[test]
+    fn skips_windows_entries_that_cant_start() {
+        let (entries, order) = wiped();
+        let reach = |e: &BootEntry| {
+            if e.option.partition_guid.as_deref() == Some("new") { Reach::Yes } else { Reach::No }
+        };
+        assert_eq!(find_windows(&entries, &order, reach).unwrap().number, 4);
+        // Even when the stale entry is first in the boot order.
+        assert_eq!(find_windows(&entries, &[0, 1, 4], reach).unwrap().number, 4);
+        // Or not in it at all.
+        assert_eq!(find_windows(&entries, &[1, 4], reach).unwrap().number, 4);
+        // Nothing that can start: no Windows at all, rather than a dead one.
+        assert!(find_windows(&entries, &order, |_| Reach::No).is_none());
+    }
+
+    #[test]
+    fn prefers_checked_active_and_early_entries() {
+        let (entries, _) = wiped();
+        // Unchecked entries lose to a checked one.
+        let reach = |e: &BootEntry| if e.number == 7 { Reach::Yes } else { Reach::Unknown };
+        assert_eq!(find_windows(&entries, &[0, 4, 7], reach).unwrap().number, 7);
+        // All unchecked: the first active one in the boot order.
+        assert_eq!(find_windows(&entries, &[7, 4, 0], |_| Reach::Unknown).unwrap().number, 4);
+        assert_eq!(find_windows(&entries, &[0, 4, 7], |_| Reach::Unknown).unwrap().number, 0);
     }
 
     #[test]

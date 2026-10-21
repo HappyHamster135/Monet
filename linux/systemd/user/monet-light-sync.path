@@ -1,0 +1,9 @@
+[Unit]
+Description=Notice Light or Dark being picked in KDE's settings
+
+[Path]
+PathChanged=%h/.config/kdeglobals
+Unit=monet-light-sync.service
+
+[Install]
+WantedBy=default.target

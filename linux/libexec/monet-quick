@@ -19,7 +19,10 @@
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
     monet-quick pref hours|placard|glass on|off
     monet-quick about                    this PC, as JSON
-    monet-quick doctor | update          run `monet doctor` or `monet update`
+    monet-quick doctor                   run `monet doctor`
+    monet-quick update-check             is there a newer Monet, or app updates? as JSON
+    monet-quick update                   install them (Monet never updates by itself)
+    monet-quick restart                  ask to restart, the way the app menu does
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
                                          sound, windows, updates or about)
@@ -241,6 +244,39 @@ def painting_now():
     return "dawn" if 5 <= hour < 10 else "day" if 10 <= hour < 17 else "dusk" if 17 <= hour < 21 else "night"
 
 
+def set_light(mode):
+    """Saves the choice at once; the colors change a moment later, in the
+    background, so the switch's own animation stays smooth while every
+    window repaints (monet-light makes quick taps take turns)."""
+    path = CONFIG / "monet" / "light"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(mode + "\n")
+    subprocess.Popen(["sh", "-c", 'sleep 0.3; exec nice -n 5 "$0" apply', f"{LIBEXECDIR}/monet-light"],
+                     start_new_session=True, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def update_check():
+    """What `monet update --check --json` found, plus whether it worked."""
+    result = subprocess.run([f"{BINDIR}/monet", "update", "--check", "--json"],
+                            capture_output=True, text=True, timeout=300)
+    for line in reversed(result.stdout.splitlines()):
+        try:
+            found = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(found, dict):
+            return dict(found, ok=True)
+    message = (result.stderr or result.stdout).strip().splitlines()
+    return {"ok": False, "message": message[-1] if message else ""}
+
+
+def restart():
+    """KDE's own restart question, so open apps can save first."""
+    if busctl("call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptReboot") is None:
+        run("systemctl", "reboot")
+
+
 def plasma_script(script):
     return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
 
@@ -270,6 +306,13 @@ def set_placard(show):
 
 
 # About this PC -------------------------------------------------------------
+
+def read_text(path):
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return ""
+
 
 def about():
     def first(path, key):
@@ -302,6 +345,7 @@ def about():
         "memory": memory,
         "storage": f"{disk.free // 10**9} GB free of {disk.total // 10**9} GB",
         "windows": windows.group(1).strip() if windows else "",
+        "notice": read_text(Path("/var/lib/monet/switch-notice")),
     }
 
 
@@ -411,7 +455,7 @@ def main(argv):
     elif cmd == "brightness" and args and args[0].isdigit():
         set_brightness(max(1, min(int(args[0]), 100)))
     elif cmd == "light" and args and args[0] in ("hours", "mist", "smoke"):
-        os.execv(f"{LIBEXECDIR}/monet-light", ["monet-light", "set", args[0]])
+        set_light(args[0])
     elif cmd == "prefs":
         emit(prefs())
     elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass"):
@@ -427,8 +471,12 @@ def main(argv):
     elif cmd == "about":
         emit(about())
     elif cmd in ("doctor", "update"):
-        result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=1800)
+        result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=3600)
         emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
+    elif cmd == "update-check":
+        emit(update_check())
+    elif cmd == "restart":
+        restart()
     elif cmd == "kde" and args and args[0] in KDE_PAGES:
         page = KDE_PAGES[args[0]]
         subprocess.Popen(["systemsettings"] + ([page] if page else []), start_new_session=True,

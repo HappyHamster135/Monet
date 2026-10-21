@@ -3,6 +3,7 @@
 #
 #   monet-light                       apply the chosen light (at sign-in, and when the hour turns)
 #   monet-light set hours|mist|smoke  choose: follow the hours, or keep one
+#   monet-light sync                  KDE's Light or Dark was picked: keep Mist or Smoke
 #
 # Panels and KDE apps change right away. Apps that use the glass app style
 # (Files, Kate, ...) change the next time they open.
@@ -13,6 +14,9 @@ CHOICE="$CONFIG/monet/light"
 # Same hours as the wallpaper: dawn and midday are light, dusk and night dark.
 DAY_FROM=5
 DAY_UNTIL=17
+# KDE's global themes for Monet's two lights (its Light and Dark buttons).
+MIST_THEME=org.monet.desktop
+SMOKE_THEME=org.monet.smoke.desktop
 
 choice() {
     case "$(cat "$CHOICE" 2>/dev/null)" in
@@ -42,18 +46,33 @@ glass() {
     grep -q '"glass": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
 }
 
+# One change at a time: quick hours-mist-smoke taps repaint once each, in
+# order, and sync waits until a change in progress has finished.
+lock() {
+    exec 9>"${XDG_RUNTIME_DIR:-/tmp}/monet-light.lock"
+    flock 9
+}
+
 apply() {
-    local light scheme kvantum style current
+    local light scheme kvantum style theme current
     light="$(now)"
     if [ "$light" = mist ]; then
-        scheme=MonetLight kvantum=Monet
+        scheme=MonetLight kvantum=Monet theme=$MIST_THEME
     else
-        scheme=MonetDark kvantum=MonetDark
+        scheme=MonetDark kvantum=MonetDark theme=$SMOKE_THEME
     fi
     style=monet
     if [ "$(glass)" = off ]; then
         kvantum="${kvantum}Solid" style=monet-solid
     fi
+
+    # KDE's settings show Light or Dark to match (first, so sync sees it).
+    current="$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null)"
+    case "$current" in
+        ""|"$MIST_THEME"|"$SMOKE_THEME")
+            [ "$current" = "$theme" ] || kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage "$theme"
+            ;;
+    esac
 
     # Only change what's Monet's: someone who picked their own colors keeps them.
     current="$(kreadconfig6 --file kdeglobals --group General --key ColorScheme 2>/dev/null)"
@@ -78,19 +97,38 @@ apply() {
     current="$(kreadconfig6 --file "$kvconfig" --group General --key theme 2>/dev/null)"
     case "$current" in
         ""|Monet|MonetDark|MonetSolid|MonetDarkSolid)
-            mkdir -p "$CONFIG/Kvantum"
-            kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum"
+            if [ "$current" != "$kvantum" ]; then
+                mkdir -p "$CONFIG/Kvantum"
+                kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum"
+            fi
             ;;
     esac
 
     local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
-    if [ -f "$profile" ]; then
+    if [ -f "$profile" ] && [ "$(kreadconfig6 --file "$profile" --group Appearance --key ColorScheme 2>/dev/null)" != "${kvantum%Solid}" ]; then
         kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "${kvantum%Solid}"
     fi
 }
 
+# Someone picked Light or Dark in KDE's settings (or a Monet global theme):
+# that's a choice of Mist or Smoke, so keep it instead of following the hours.
+sync() {
+    local picked
+    case "$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null)" in
+        "$MIST_THEME") picked=mist ;;
+        "$SMOKE_THEME") picked=smoke ;;
+        *) return 0 ;;
+    esac
+    # Monet set it itself a moment ago: nothing was picked.
+    [ "$picked" = "$(now)" ] && return 0
+    mkdir -p "$(dirname "$CHOICE")"
+    echo "$picked" > "$CHOICE"
+    apply
+}
+
 case "${1:-apply}" in
     apply)
+        lock
         apply
         ;;
     set)
@@ -98,15 +136,20 @@ case "${1:-apply}" in
             hours|mist|smoke) ;;
             *) echo "Choose hours, mist or smoke." >&2; exit 1 ;;
         esac
+        lock
         mkdir -p "$(dirname "$CHOICE")"
         echo "$2" > "$CHOICE"
         apply
+        ;;
+    sync)
+        lock
+        sync
         ;;
     get)
         echo "$(choice) $(now)"
         ;;
     *)
-        sed -n '2,8p' "$0"
+        sed -n '2,9p' "$0"
         exit 1
         ;;
 esac

@@ -227,6 +227,158 @@ class Paintings(unittest.TestCase):
         self.assertIn("05,17:00:00", (ROOT / "linux/systemd/user/monet-light.timer").read_text())
 
 
+class FakeKDE:
+    """kreadconfig6, kwriteconfig6 and the plasma-apply tools, keeping
+    settings in one JSON file, so monet-light can run without Plasma."""
+
+    TOOL = """#!/usr/bin/env python3
+import json, os, sys
+store = os.path.join(os.environ["FAKE_KDE"], "settings.json")
+try:
+    data = json.load(open(store))
+except (OSError, ValueError):
+    data = {}
+name, args = os.path.basename(sys.argv[0]), sys.argv[1:]
+def opt(flag, default=""):
+    return args[args.index(flag) + 1] if flag in args else default
+if name == "plasma-apply-colorscheme":
+    data["kdeglobals|General|ColorScheme"] = args[0]
+elif name == "plasma-apply-desktoptheme":
+    data["plasmarc|Theme|name"] = args[0]
+else:
+    key = "|".join((os.path.basename(opt("--file")), opt("--group"), opt("--key")))
+    if name == "kreadconfig6":
+        print(data.get(key, opt("--default")))
+        sys.exit(0)
+    data[key] = [a for a in args if not a.startswith("--") and a not in (opt("--file"), opt("--group"), opt("--key"))][-1]
+json.dump(data, open(store, "w"))
+"""
+
+    def __init__(self, tmp, hour):
+        self.dir = Path(tmp)
+        bin_ = self.dir / "bin"
+        bin_.mkdir()
+        for tool in ("kreadconfig6", "kwriteconfig6", "plasma-apply-colorscheme", "plasma-apply-desktoptheme"):
+            (bin_ / tool).write_text(self.TOOL)
+            (bin_ / tool).chmod(0o755)
+        (bin_ / "date").write_text(f"#!/bin/sh\necho {hour:02d}\n")
+        (bin_ / "date").chmod(0o755)
+        self.env = {"PATH": f"{bin_}:/usr/bin:/bin", "HOME": str(self.dir), "FAKE_KDE": str(self.dir),
+                    "XDG_CONFIG_HOME": str(self.dir / "config"), "XDG_RUNTIME_DIR": str(self.dir)}
+
+    def light(self, *args):
+        subprocess.run(["bash", str(ROOT / "linux/libexec/monet-light"), *args], env=self.env, check=True, timeout=30)
+
+    def settings(self):
+        return json.loads((self.dir / "settings.json").read_text())
+
+    def set(self, key, value):
+        data = self.settings()
+        data[key] = value
+        (self.dir / "settings.json").write_text(json.dumps(data))
+
+    def choice(self):
+        path = self.dir / "config/monet/light"
+        return path.read_text().strip() if path.exists() else "hours"
+
+
+class Light(unittest.TestCase):
+    LNF = "kdeglobals|KDE|LookAndFeelPackage"
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_hours_follow_the_time_and_kde_shows_it(self):
+        kde = FakeKDE(self.tmp.name, hour=12)
+        kde.light("apply")
+        s = kde.settings()
+        self.assertEqual(s["kdeglobals|General|ColorScheme"], "MonetLight")
+        self.assertEqual(s[self.LNF], "org.monet.desktop")
+        self.assertEqual(s["kvantum.kvconfig|General|theme"], "Monet")
+        (Path(self.tmp.name) / "night").mkdir()
+        night = FakeKDE(Path(self.tmp.name) / "night", hour=21)
+        night.light("apply")
+        self.assertEqual(night.settings()["kdeglobals|General|ColorScheme"], "MonetDark")
+        self.assertEqual(night.settings()[self.LNF], "org.monet.smoke.desktop")
+
+    def test_kde_dark_button_keeps_smoke(self):
+        kde = FakeKDE(self.tmp.name, hour=12)
+        kde.light("apply")
+        # Monet's own change isn't a choice.
+        kde.light("sync")
+        self.assertEqual(kde.choice(), "hours")
+        # Someone picks Dark in KDE's settings at midday.
+        kde.set(self.LNF, "org.monet.smoke.desktop")
+        kde.set("kdeglobals|General|ColorScheme", "MonetDark")
+        kde.light("sync")
+        self.assertEqual(kde.choice(), "smoke")
+        self.assertEqual(kde.settings()["kvantum.kvconfig|General|theme"], "MonetDark")
+
+    def test_other_themes_are_left_alone(self):
+        kde = FakeKDE(self.tmp.name, hour=12)
+        kde.light("apply")
+        kde.set(self.LNF, "org.kde.breezedark.desktop")
+        kde.set("kdeglobals|General|ColorScheme", "BreezeDark")
+        kde.light("sync")
+        kde.light("apply")
+        s = kde.settings()
+        self.assertEqual(kde.choice(), "hours")
+        self.assertEqual(s[self.LNF], "org.kde.breezedark.desktop")
+        self.assertEqual(s["kdeglobals|General|ColorScheme"], "BreezeDark")
+
+
+class GlobalThemes(unittest.TestCase):
+    LNF = PLASMA / "look-and-feel"
+
+    def test_mist_and_smoke_differ_only_in_colors(self):
+        mist = (self.LNF / "org.monet.desktop/contents/defaults").read_text()
+        smoke = (self.LNF / "org.monet.smoke.desktop/contents/defaults").read_text()
+        self.assertEqual(smoke, mist.replace("ColorScheme=MonetLight", "ColorScheme=MonetDark"))
+        self.assertIn("ColorScheme=MonetDark", smoke)
+        layout = "contents/layouts/org.kde.plasma.desktop-layout.js"
+        self.assertEqual((self.LNF / "org.monet.desktop" / layout).read_text(),
+                         (self.LNF / "org.monet.smoke.desktop" / layout).read_text())
+
+    def test_applying_from_kde_keeps_glass_and_the_hours(self):
+        # A theme applied from KDE's settings must not put Breeze's app style
+        # back or swap The Hours for a still picture.
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            defaults = (self.LNF / theme / "contents/defaults").read_text()
+            self.assertNotIn("widgetStyle", defaults)
+            self.assertNotIn("[Wallpaper]", defaults)
+
+    def test_kde_light_and_dark_are_monet(self):
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn("DefaultLightLookAndFeel org.monet.desktop", look)
+        self.assertIn("DefaultDarkLookAndFeel org.monet.smoke.desktop", look)
+        self.assertIn("monet-light-sync.path", look)
+        path = (ROOT / "linux/systemd/user/monet-light-sync.path").read_text()
+        self.assertIn("PathChanged=%h/.config/kdeglobals", path)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("org.monet.smoke.desktop", install)
+        self.assertIn("monet-light-sync.path", install)
+
+
+class Updates(unittest.TestCase):
+    def test_nothing_updates_by_itself(self):
+        install = (ROOT / "linux/install.sh").read_text()
+        for unit in ("uupd.timer", "rpm-ostreed-automatic.timer", "bootc-fetch-apply-updates.timer"):
+            self.assertIn(unit, install)
+        self.assertIn('systemctl mask "$unit"', install)
+        self.assertIn("AutomaticUpdatePolicy=none", install)
+
+    def test_settings_checks_before_installing(self):
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text()
+        self.assertIn('ask("update-check"', qml)
+        self.assertIn('ask("update"', qml)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('"update", "--check", "--json"', quick)
+
+
 class Fonts(unittest.TestCase):
     def test_fraunces_with_license(self):
         fonts = SHARE / "fonts/monet"
@@ -349,6 +501,20 @@ Audio
             {"id": 56, "name": "Speakers", "default": True},
             {"id": 60, "name": "Monitor (HDMI)", "default": False},
         ])
+
+    def test_trips_to_windows_are_checked_at_startup(self):
+        unit = (ROOT / "linux/systemd/monet-sync.service").read_text()
+        check, sync = unit.index("helper check-switch"), unit.index("helper sync")
+        self.assertLess(check, sync)
+        # A failed check never stops the games list from syncing.
+        self.assertIn("ExecStart=-@BINDIR@/monet helper check-switch", unit)
+
+    def test_windows_setup_can_be_tried_again(self):
+        deploy = (SHARE / "monet/winpe/deploy.cmd").read_text()
+        self.assertLess(deploy.index("format %TARGET%:"), deploy.index("dism /apply-image"))
+        prepare = (ROOT / "linux/libexec/monet-prepare-windows").read_text()
+        self.assertIn('run("ntfslabel", win["path"], "MONETWIN"', prepare)
+        self.assertIn("if not has_windows(win[\"path\"])", prepare)
 
     def test_slay_the_spire_is_listed_for_testing(self):
         games = json.loads((SHARE / "monet/windows-games.json").read_text())

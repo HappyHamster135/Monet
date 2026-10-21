@@ -28,6 +28,10 @@ if has plasma-apply-lookandfeel; then
     fi
 fi
 
+# KDE's Light and Dark buttons pick Monet Mist and Monet Smoke, not Breeze.
+kw --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.monet.desktop
+kw --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.desktop
+
 # Lily, Monet's accent, instead of one picked from the wallpaper.
 kw --file kdeglobals --group General --key AccentColor "53,127,114"
 kw --file kdeglobals --group General --key accentColorFromWallpaper false
@@ -114,7 +118,7 @@ kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours
 
 # Mist or smoke, depending on the time, and keep it that way.
 "$LIBEXECDIR/monet-light" apply
-has systemctl && systemctl --user enable --now monet-light.timer >/dev/null 2>&1
+has systemctl && systemctl --user enable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1
 
 busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
 exit 0

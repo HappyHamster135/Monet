@@ -7,14 +7,8 @@ ColorScheme=MonetLight
 [kdeglobals][Icons]
 Theme=Monet
 
-[kdeglobals][KDE]
-widgetStyle=Breeze
-
 [plasmarc][Theme]
 name=monet
-
-[Wallpaper]
-Image=Monet
 
 [kwinrc][WindowSwitcher]
 LayoutName=org.kde.breeze.desktop

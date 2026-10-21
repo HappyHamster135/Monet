@@ -1,0 +1,6 @@
+[Unit]
+Description=Keep Monet's light in step with KDE's Light or Dark
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-light sync

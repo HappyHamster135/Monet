@@ -278,6 +278,11 @@ v0.5.1 adds Monet Settings (one glass sheet in front of KDE's System
 Settings), painted folders and app icons, Files on paper with glass edges,
 and switches for the Hours, the placard and glass.
 
+v0.5.2 makes the switch reliable on PCs with leftover boot entries (choose a
+Windows entry that can start, add one if missing, verify, log, and check the
+result at the next start), makes updates manual, adds the Monet Smoke global
+theme for KDE's Dark mode, and evens out the icons.
+
 ### Status: v0.3 (preview)
 
 v0.3 makes the installer do everything. The USB stick's default choice,

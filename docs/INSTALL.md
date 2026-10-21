@@ -17,7 +17,7 @@ You need:
 
 ## 1. Make the USB stick
 
-1. Download **Monet-0.5.1-Installer.iso** from the
+1. Download **Monet-0.5.2-Installer.iso** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases).
 2. Open [Fedora Media Writer](https://fedoraproject.org/workstation/download),
    choose **Select .iso file**, pick the Monet installer and your USB stick,
@@ -105,22 +105,30 @@ __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRA
 
 ## Keeping Monet up to date
 
-Monet updates itself. A new version downloads in the background, and you get
-it the next time you restart. Nothing to do.
+Monet never updates by itself. When you want to, open **Settings → Updates**
+and choose **Check for updates**. If there's something new, choose
+**Install** (it updates Monet and your apps), then **Restart now**.
 
-To get it right away, open a terminal and run:
+From a terminal, the same is:
 
 ```sh
-monet update
+monet update --check   # only look
+monet update           # install, then restart
 ```
 
-then restart. If a new version ever misbehaves, choose the previous one in the
-start menu that appears while the PC starts, or run `sudo bootc rollback` and
-restart.
+If a new version ever misbehaves, choose the previous one in the start menu
+that appears while the PC starts, or run `sudo bootc rollback` and restart.
 
-The first time you start a version with a new look, Monet sets up your
-desktop again (the panels, the painting, the colors). Your files and apps
-aren't touched.
+The first time you start a version with a new look, Monet freshens your
+desktop (the painting, the colors, the glass) and keeps your panels. Your
+files and apps aren't touched.
+
+### If Play goes back to Monet
+
+Monet writes down every trip to Windows in `/var/lib/monet/switch.log`, and
+`monet doctor` lists the PC's Windows boot entries. If a trip comes back
+without reaching Windows, Monet says why at the next sign-in and tries
+another way the next time.
 
 ---
 
@@ -139,5 +147,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.5.1-Linux.tar.gz** and run `./monet-0.5.1-linux/install.sh`,
+Download **Monet-0.5.2-Linux.tar.gz** and run `./monet-0.5.2-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

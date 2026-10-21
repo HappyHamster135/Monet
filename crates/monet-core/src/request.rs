@@ -66,6 +66,11 @@ pub fn write(efi: &mut dyn EfiVars, request: &LaunchRequest) -> Result<()> {
     efi.set(MONET_GUID, LAUNCH_VAR, &request.encode(), ATTR_DEFAULT)
 }
 
+/// The pending request, left in place.
+pub fn peek(efi: &dyn EfiVars) -> Option<LaunchRequest> {
+    LaunchRequest::decode(&efi.get(MONET_GUID, LAUNCH_VAR).ok()?).ok()
+}
+
 /// Reads and removes the pending request, if there is one.
 pub fn take(efi: &mut dyn EfiVars) -> Result<Option<LaunchRequest>> {
     let data = match efi.get(MONET_GUID, LAUNCH_VAR) {
@@ -99,8 +104,11 @@ mod tests {
         let req = LaunchRequest::new(Some("steam:730".into()), 3, 1000).unwrap();
         write(&mut efi, &req).unwrap();
         assert!(req.encode().len() < 100);
+        // Looking leaves it for Monet Bridge's agent.
+        assert_eq!(peek(&efi), Some(req.clone()));
         assert_eq!(take(&mut efi).unwrap(), Some(req));
         assert_eq!(take(&mut efi).unwrap(), None);
+        assert_eq!(peek(&efi), None);
     }
 
     #[test]
