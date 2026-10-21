@@ -109,6 +109,16 @@ class PlasmaPackages(unittest.TestCase):
                 if "Math." not in line:
                     self.assertNotRegex(line, r"\b\d+\.\d", f"{qml.name}: pixelSize: {line}")
 
+    def test_dialogs_keep_their_helpers_in_main_item(self):
+        # Plasma's Dialog hands everything declared inside it to mainItem, an
+        # Item: a Timer or DataSource there stops the whole widget loading.
+        for qml in qml_files():
+            text = qml.read_text()
+            if not re.search(r"(?m)^PlasmaCore\.Dialog \{", text):
+                continue
+            inside = re.findall(r"(?m)^    ([A-Z][\w.]*) \{$", text)
+            self.assertEqual(inside, [], f"{qml.name}: move {inside} into mainItem")
+
     def test_qml_avoids_reserved_names(self):
         for qml in qml_files():
             text = qml.read_text()

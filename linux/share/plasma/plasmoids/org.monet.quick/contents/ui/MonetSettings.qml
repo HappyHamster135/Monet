@@ -121,20 +121,6 @@ PlasmaCore.Dialog {
 
     property var waiting: ({})
 
-    P5Support.DataSource {
-        id: asker
-        engine: "executable"
-        connectedSources: []
-        onNewData: (source, data) => {
-            disconnectSource(source)
-            const then = sheet.waiting[source]
-            delete sheet.waiting[source]
-            if (then) {
-                then(data["stdout"] || "", data["exit code"], data["stderr"] || "")
-            }
-        }
-    }
-
     function call(command, then) {
         waiting[command] = then || null
         asker.connectSource(command)
@@ -176,18 +162,6 @@ PlasmaCore.Dialog {
         }
     }
 
-    Timer {
-        interval: 4000
-        repeat: true
-        running: sheet.visible
-        onTriggered: {
-            sheet.refresh()
-            if (sheet.page === "bluetooth" && sheet.busyDevice === "") {
-                sheet.ask("bt-list", out => sheet.devices = sheet.json(out, sheet.devices))
-            }
-        }
-    }
-
     function flip(key, command) {
         const on = info[key] !== true
         const next = Object.assign({}, info)
@@ -197,11 +171,6 @@ PlasmaCore.Dialog {
         if (key === "wifi" && on) {
             rescan.restart()
         }
-    }
-    Timer {
-        id: rescan
-        interval: 4000
-        onTriggered: sheet.ask("wifi-list", out => sheet.nets = sheet.json(out, []))
     }
 
     function pref(key) {
@@ -224,16 +193,6 @@ PlasmaCore.Dialog {
     function queue(what, value) {
         pending[what] = Math.round(value)
         flush.start()
-    }
-    Timer {
-        id: flush
-        interval: 120
-        onTriggered: {
-            for (const what in sheet.pending) {
-                sheet.ask(what + " " + sheet.pending[what])
-            }
-            sheet.pending = {}
-        }
     }
 
     // Text from people (network names, passwords) goes to the helper as the
@@ -369,22 +328,6 @@ PlasmaCore.Dialog {
             h = (Math.imul(h, 31) + name.charCodeAt(i)) >>> 0
         }
         return glazes[h % glazes.length]
-    }
-
-    // Colors ----------------------------------------------------------------
-
-    QtObject {
-        id: look
-        readonly property bool dark: frame.dark
-        readonly property color ink: dark ? "#F1EEE8" : "#1C1B19"
-        readonly property color dim: dark ? Qt.rgba(0.945, 0.933, 0.91, 0.62) : Qt.rgba(0.11, 0.106, 0.098, 0.6)
-        readonly property color wash: dark ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(0.11, 0.106, 0.098, 0.035)
-        readonly property color wash2: dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0.11, 0.106, 0.098, 0.07)
-        readonly property color press: dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0.11, 0.106, 0.098, 0.11)
-        readonly property color line: dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(0.11, 0.106, 0.098, 0.08)
-        readonly property color paper: dark ? Qt.rgba(0.122, 0.118, 0.11, 0.94) : Qt.rgba(0.984, 0.98, 0.969, 0.95)
-        readonly property color lily: dark ? "#4DB4A0" : "#357F72"
-        readonly property real speed: sheet.speed
     }
 
     // Pieces ----------------------------------------------------------------
@@ -1147,6 +1090,845 @@ PlasmaCore.Dialog {
                 Accessible.onPressAction: sheet.visible = false
             }
         }
+
+        // Not drawn: the helper, timers, colors and the pages. They live in
+        // here because a Dialog hands everything inside it to mainItem.
+
+        P5Support.DataSource {
+            id: asker
+            engine: "executable"
+            connectedSources: []
+            onNewData: (source, data) => {
+                disconnectSource(source)
+                const then = sheet.waiting[source]
+                delete sheet.waiting[source]
+                if (then) {
+                    then(data["stdout"] || "", data["exit code"], data["stderr"] || "")
+                }
+            }
+        }
+
+        Timer {
+            interval: 4000
+            repeat: true
+            running: sheet.visible
+            onTriggered: {
+                sheet.refresh()
+                if (sheet.page === "bluetooth" && sheet.busyDevice === "") {
+                    sheet.ask("bt-list", out => sheet.devices = sheet.json(out, sheet.devices))
+                }
+            }
+        }
+
+        Timer {
+            id: rescan
+            interval: 4000
+            onTriggered: sheet.ask("wifi-list", out => sheet.nets = sheet.json(out, []))
+        }
+
+        Timer {
+            id: flush
+            interval: 120
+            onTriggered: {
+                for (const what in sheet.pending) {
+                    sheet.ask(what + " " + sheet.pending[what])
+                }
+                sheet.pending = {}
+            }
+        }
+
+        // Colors ----------------------------------------------------------------
+        QtObject {
+            id: look
+            readonly property bool dark: frame.dark
+            readonly property color ink: dark ? "#F1EEE8" : "#1C1B19"
+            readonly property color dim: dark ? Qt.rgba(0.945, 0.933, 0.91, 0.62) : Qt.rgba(0.11, 0.106, 0.098, 0.6)
+            readonly property color wash: dark ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(0.11, 0.106, 0.098, 0.035)
+            readonly property color wash2: dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0.11, 0.106, 0.098, 0.07)
+            readonly property color press: dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0.11, 0.106, 0.098, 0.11)
+            readonly property color line: dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(0.11, 0.106, 0.098, 0.08)
+            readonly property color paper: dark ? Qt.rgba(0.122, 0.118, 0.11, 0.94) : Qt.rgba(0.984, 0.98, 0.969, 0.95)
+            readonly property color lily: dark ? "#4DB4A0" : "#357F72"
+            readonly property real speed: sheet.speed
+        }
+
+        // Pages -----------------------------------------------------------------
+        Component {
+            id: lightPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("light")
+                    art: sheet.art
+                    text: i18n("Light & Wallpaper")
+                    detail: i18n("How Monet looks, and when it changes.")
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Repeater {
+                        model: [
+                            ["hours", i18n("Follow the hours"), i18n("Mist by day, smoke after dark")],
+                            ["mist", i18n("Mist"), i18n("Always light")],
+                            ["smoke", i18n("Smoke"), i18n("Always dark")]
+                        ]
+                        Rectangle {
+                            id: choice
+                            readonly property bool picked: (sheet.info.light || "hours") === modelData[0]
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            implicitHeight: choiceColumn.implicitHeight + 20
+                            radius: 18
+                            color: picked ? Qt.rgba(0.302, 0.706, 0.627, 0.1) : choiceHover.hovered ? look.wash2 : look.wash
+                            border.width: picked || activeFocus ? 2 : 1
+                            border.color: picked || activeFocus ? look.lily : look.line
+                            scale: choiceTap.pressed ? 0.98 : 1
+                            activeFocusOnTab: true
+                            Keys.onSpacePressed: sheet.chooseLight(modelData[0])
+                            Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
+                            Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
+                            ColumnLayout {
+                                id: choiceColumn
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.margins: 10
+                                spacing: 3
+                                Image {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: Math.round(width * 236 / 480)
+                                    Layout.bottomMargin: 7
+                                    source: sheet.art + "light-" + modelData[0] + ".png"
+                                    smooth: true
+                                    mipmap: true
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: 4
+                                    text: modelData[1]
+                                    color: look.ink
+                                    font.pixelSize: 14
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: 4
+                                    text: modelData[2]
+                                    color: look.dim
+                                    font.pixelSize: 13
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            HoverHandler { id: choiceHover }
+                            TapHandler {
+                                id: choiceTap
+                                onTapped: sheet.chooseLight(modelData[0])
+                            }
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.name: modelData[1]
+                            Accessible.checked: picked
+                            Accessible.onPressAction: sheet.chooseLight(modelData[0])
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: [
+                            ["hours", i18n("The Hours"), i18n("The painting drifts from dawn to night as the day goes")],
+                            ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
+                            ["glass", i18n("Glass"), i18n("See the painting through panels and windows")]
+                        ]
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            tappable: true
+                            title: modelData[1]
+                            detail: modelData[2]
+                            onTapped: sheet.pref(modelData[0])
+                            Switch {
+                                tone: look
+                                active: sheet.prefs[modelData[0]] !== false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Component {
+            id: wifiPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("wifi")
+                    art: sheet.art
+                    text: i18n("Wi-Fi")
+                    detail: sheet.info.wifi === true
+                        ? ((sheet.info.network || "") !== "" ? i18n("Connected to %1", sheet.info.network) : i18n("Not connected"))
+                        : sheet.info.wifi === false ? i18n("Off") : ""
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: typeof sheet.info.wifi === "boolean"
+                        title: i18n("Wi-Fi")
+                        detail: typeof sheet.info.wifi === "boolean" ? "" : i18n("This PC has no Wi-Fi")
+                        onTapped: sheet.flip("wifi", "wifi")
+                        Switch {
+                            tone: look
+                            visible: typeof sheet.info.wifi === "boolean"
+                            active: sheet.info.wifi === true
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    visible: sheet.info.wifi === true && (sheet.info.network || "") !== ""
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: sheet.info.network || ""
+                        detail: i18n("Connected")
+                        lead: Check {
+                            tone: look
+                            active: true
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: sheet.info.wifi === true
+                    text: (sheet.info.network || "") !== "" ? i18n("Other networks") : i18n("Networks")
+                }
+                Card {
+                    tone: look
+                    visible: sheet.info.wifi === true
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: sheet.nets.filter(n => !n.active).length === 0
+                        strong: false
+                        title: i18n("Looking for networks…")
+                    }
+                    Repeater {
+                        model: sheet.nets.filter(n => !n.active)
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            SettingRow {
+                                tone: look
+                                divider: index > 0
+                                tappable: true
+                                strong: false
+                                title: modelData.name
+                                lead: Bars {
+                                    tone: look
+                                    level: modelData.signal > 66 ? 3 : modelData.signal > 33 ? 2 : 1
+                                }
+                                onTapped: {
+                                    sheet.joinState = ""
+                                    if (modelData.secure) {
+                                        sheet.joining = sheet.joining === modelData.name ? "" : modelData.name
+                                    } else {
+                                        sheet.joining = modelData.name
+                                        sheet.join(modelData.name, "")
+                                    }
+                                }
+                                Row {
+                                    readonly property bool busy: sheet.joining === modelData.name && sheet.joinState === "joining"
+                                    spacing: 6
+                                    Text {
+                                        visible: parent.busy
+                                        text: i18n("Joining…")
+                                        color: look.dim
+                                        font.pixelSize: 13
+                                    }
+                                    // A lock for networks that ask for a password.
+                                    Glyph {
+                                        visible: modelData.secure && !parent.busy
+                                        width: 15
+                                        height: 15
+                                        path: "M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6z"
+                                        color: look.dim
+                                    }
+                                    Accessible.role: Accessible.StaticText
+                                    Accessible.name: modelData.secure ? i18n("Secured") : i18n("Open")
+                                }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 18
+                                Layout.rightMargin: 18
+                                Layout.bottomMargin: 14
+                                visible: sheet.joining === modelData.name && modelData.secure
+                                spacing: 8
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 38
+                                    radius: 12
+                                    color: look.dark ? Qt.rgba(0, 0, 0, 0.28) : Qt.rgba(1, 1, 1, 0.9)
+                                    border.width: password.activeFocus ? 2 : 1
+                                    border.color: password.activeFocus ? look.lily : look.line
+                                    TextInput {
+                                        id: password
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 12
+                                        anchors.rightMargin: 12
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        echoMode: TextInput.Password
+                                        color: look.ink
+                                        font.pixelSize: 14
+                                        clip: true
+                                        Accessible.role: Accessible.EditableText
+                                        Accessible.name: i18n("Password for %1", modelData.name)
+                                        onVisibleChanged: if (visible) forceActiveFocus()
+                                        onAccepted: sheet.join(modelData.name, text)
+                                        Text {
+                                            anchors.fill: parent
+                                            verticalAlignment: Text.AlignVCenter
+                                            visible: password.text === ""
+                                            text: sheet.joinState === "failed" ? i18n("That didn't work. Check the password.") : i18n("Password")
+                                            color: sheet.joinState === "failed" ? "#E0603A" : look.dim
+                                            font.pixelSize: 14
+                                        }
+                                    }
+                                }
+                                Pill {
+                                    tone: look
+                                    text: i18n("Cancel")
+                                    onClicked: sheet.joining = ""
+                                }
+                                Pill {
+                                    tone: look
+                                    kind: "lily"
+                                    text: sheet.joinState === "joining" ? i18n("Joining…") : i18n("Join")
+                                    enabledPill: sheet.joinState !== "joining"
+                                    onClicked: sheet.join(modelData.name, password.text)
+                                }
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More Wi-Fi settings…")
+                    onClicked: sheet.ask("kde wifi")
+                }
+            }
+        }
+
+        Component {
+            id: bluetoothPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    readonly property int connected: sheet.devices.filter(d => d.connected).length
+                    tone: look
+                    entry: sheet.entry("bluetooth")
+                    art: sheet.art
+                    text: i18n("Bluetooth")
+                    detail: sheet.info.bluetooth === true
+                        ? (connected > 0 ? i18np("%1 device connected", "%1 devices connected", connected) : i18n("On"))
+                        : sheet.info.bluetooth === false ? i18n("Off") : ""
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: typeof sheet.info.bluetooth === "boolean"
+                        title: i18n("Bluetooth")
+                        detail: typeof sheet.info.bluetooth === "boolean" ? "" : i18n("This PC has no Bluetooth")
+                        onTapped: sheet.flip("bluetooth", "bluetooth")
+                        Switch {
+                            tone: look
+                            visible: typeof sheet.info.bluetooth === "boolean"
+                            active: sheet.info.bluetooth === true
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    visible: sheet.info.bluetooth === true
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: sheet.devices.length === 0
+                        strong: false
+                        title: i18n("No devices yet")
+                        detail: i18n("Pair headphones, a controller or a mouse to see them here.")
+                    }
+                    Repeater {
+                        model: sheet.devices
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: modelData.connected ? i18n("Connected") : i18n("Not connected")
+                            // What it is, in a lily chip while it's connected (like Quick Settings).
+                            lead: Rectangle {
+                                width: 34
+                                height: 34
+                                radius: 17
+                                color: modelData.connected ? look.lily : look.wash2
+                                Behavior on color { ColorAnimation { duration: Math.round(180 * look.speed) } }
+                                Glyph {
+                                    anchors.centerIn: parent
+                                    width: 18
+                                    height: 18
+                                    path: sheet.deviceGlyph(modelData.icon || "")
+                                    color: modelData.connected ? "#FFFFFF" : look.ink
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                text: sheet.busyDevice === modelData.address ? (modelData.connected ? i18n("Disconnecting…") : i18n("Connecting…"))
+                                    : modelData.connected ? i18n("Disconnect") : i18n("Connect")
+                                enabledPill: sheet.busyDevice === ""
+                                onClicked: sheet.connectDevice(modelData)
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    visible: sheet.info.bluetooth === true
+                    text: i18n("Pair a new device…")
+                    onClicked: sheet.ask("kde bluetooth")
+                }
+            }
+        }
+
+        Component {
+            id: displayPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("display")
+                    art: sheet.art
+                    text: i18n("Display")
+                    detail: i18n("Brightness, and warmer colors at night.")
+                }
+                Card {
+                    tone: look
+                    SliderRow {
+                        tone: look
+                        divider: false
+                        visible: typeof sheet.info.brightness === "number"
+                        title: i18n("Brightness")
+                        from: 1
+                        value: sheet.info.brightness || 50
+                        onHeld: down => sheet.dragging = down
+                        onMoved: value => sheet.queue("brightness", value)
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: typeof sheet.info.brightness === "number"
+                        tappable: true
+                        title: i18n("Night Light")
+                        detail: i18n("Warmer colors from sunset to sunrise, easier on the eyes")
+                        onTapped: sheet.flip("night", "night")
+                        Switch {
+                            tone: look
+                            active: sheet.info.night === true
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("Arrange displays and size…")
+                    onClicked: sheet.ask("kde display")
+                }
+            }
+        }
+
+        Component {
+            id: soundPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    readonly property string playing: (sheet.outputs.find(o => o.default) || {}).name || ""
+                    tone: look
+                    entry: sheet.entry("sound")
+                    art: sheet.art
+                    text: i18n("Sound")
+                    detail: playing !== "" ? i18n("Playing through %1", playing) : ""
+                }
+                Card {
+                    tone: look
+                    SliderRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Volume")
+                        value: sheet.info.volume || 0
+                        onHeld: down => sheet.dragging = down
+                        onMoved: value => sheet.queue("volume", value)
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: sheet.outputs.length > 0
+                    text: i18n("Play sound through")
+                }
+                Card {
+                    tone: look
+                    visible: sheet.outputs.length > 0
+                    Repeater {
+                        model: sheet.outputs
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            tappable: true
+                            strong: false
+                            title: modelData.name
+                            onTapped: sheet.pickOutput(modelData)
+                            lead: Glyph {
+                                width: 18
+                                height: 18
+                                path: sheet.outputGlyph(modelData.name)
+                                color: look.ink
+                                opacity: modelData.default === true ? 1 : 0.6
+                            }
+                            Check {
+                                tone: look
+                                active: modelData.default === true
+                            }
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    visible: typeof sheet.info.mic === "number"
+                    SliderRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Microphone")
+                        value: sheet.info.mic || 0
+                        onHeld: down => sheet.dragging = down
+                        onMoved: value => sheet.queue("mic", value)
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More sound settings…")
+                    onClicked: sheet.ask("kde sound")
+                }
+            }
+        }
+
+        Component {
+            id: windowsPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("windows")
+                    art: sheet.art
+                    text: i18n("Windows & Games")
+                    detail: i18n("Games that need Windows, a restart away.")
+                }
+                Card {
+                    tone: look
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 18
+                        spacing: 18
+                        Kirigami.Icon {
+                            Layout.preferredWidth: 56
+                            Layout.preferredHeight: 56
+                            source: "monet-windows"
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.switching ? i18n("Restarting in Windows…")
+                                    : sheet.switchProblem !== "" ? i18n("Couldn't open Windows")
+                                    : sheet.asking && sheet.asking.id ? i18n("Play %1?", sheet.asking.name)
+                                    : sheet.asking ? i18n("Restart in Windows?")
+                                    : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
+                                    : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Getting Windows ready")
+                                    : sheet.pc.setup === "pending" ? i18n("Windows is ready to install")
+                                    : sheet.pc.windows === "Ready" ? i18n("Windows is ready")
+                                    : (sheet.pc.windows || "") === "" ? i18n("Windows")
+                                    : i18n("Windows isn't ready")
+                                color: look.ink
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.switching ? i18n("Your PC restarts in a moment.")
+                                    : sheet.switchProblem !== "" ? sheet.switchProblem
+                                    : !sheet.asking && (sheet.pc.notice || "") !== "" ? sheet.pc.notice
+                                    : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts.")
+                                    : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
+                                    : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
+                                    : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
+                                    : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
+                                    : i18n("Windows: %1. Check Monet below to see what's missing.", sheet.pc.windows)
+                                color: look.dim
+                                font.pixelSize: 13
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Pill {
+                            tone: look
+                            visible: sheet.asking !== null
+                            text: i18n("Cancel")
+                            onClicked: sheet.asking = null
+                        }
+                        Pill {
+                            tone: look
+                            kind: "sun"
+                            visible: !sheet.switching && sheet.pc.setup !== "waiting" && sheet.pc.setup !== "preparing"
+                            text: sheet.asking && sheet.asking.id ? i18n("Restart & Play")
+                                : sheet.asking ? i18n("Restart")
+                                : sheet.pc.setup === "pending" ? i18n("Restart and install")
+                                : i18n("Restart in Windows")
+                            onClicked: {
+                                if (sheet.pc.setup === "pending" && !sheet.asking) {
+                                    sheet.ask("restart")
+                                } else if (sheet.asking) {
+                                    sheet.restart()
+                                } else {
+                                    sheet.switchProblem = ""
+                                    sheet.asking = ({})
+                                }
+                            }
+                        }
+                    }
+                }
+                GridLayout {
+                    Layout.fillWidth: true
+                    visible: sheet.games.length > 0
+                    columns: 4
+                    columnSpacing: 12
+                    rowSpacing: 12
+                    Repeater {
+                        model: sheet.games.slice(0, 8)
+                        Cover {
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            Layout.preferredHeight: implicitHeight
+                            name: modelData.name
+                            artwork: modelData.id.indexOf("steam:") === 0
+                                ? "https://cdn.cloudflare.steamstatic.com/steam/apps/" + modelData.id.slice(6) + "/header.jpg" : ""
+                            glaze: sheet.glaze(modelData.name)
+                            onPicked: {
+                                sheet.switchProblem = ""
+                                sheet.asking = modelData
+                            }
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: sheet.games.length === 0
+                    text: i18n("Your Windows games show up here once Windows has started with Monet Bridge.")
+                    color: look.dim
+                    font.pixelSize: 14
+                    wrapMode: Text.Wrap
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Check Monet")
+                        detail: i18n("See that Windows, Secure Boot and switching are all set up")
+                        Pill {
+                            tone: look
+                            text: sheet.checkingDoctor ? i18n("Checking…") : i18n("Check")
+                            enabledPill: !sheet.checkingDoctor
+                            onClicked: sheet.checkMonet()
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 18
+                        Layout.rightMargin: 18
+                        Layout.bottomMargin: 16
+                        visible: sheet.doctorReport !== ""
+                        textFormat: Text.StyledText
+                        text: sheet.report(sheet.doctorReport)
+                        color: look.ink
+                        font.pixelSize: 13
+                        lineHeight: 1.35
+                        wrapMode: Text.Wrap
+                    }
+                }
+            }
+        }
+
+        Component {
+            id: updatesPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("updates")
+                    art: sheet.art
+                    text: i18n("Updates")
+                    detail: i18n("Only when you ask.")
+                }
+                Card {
+                    tone: look
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 18
+                        Kirigami.Icon {
+                            Layout.preferredWidth: 56
+                            Layout.preferredHeight: 56
+                            source: "monet"
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.updateTitle()
+                                color: look.ink
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.updateDetail()
+                                color: sheet.updateState === "failed" ? "#E0603A" : look.dim
+                                font.pixelSize: 13
+                                wrapMode: Text.Wrap
+                            }
+                            // Still working: there's no number to show, so it just moves.
+                            PlasmaComponents.ProgressBar {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 6
+                                visible: sheet.updateState === "checking" || sheet.updateState === "installing"
+                                indeterminate: true
+                            }
+                        }
+                        Pill {
+                            tone: look
+                            kind: sheet.updateState === "available" || (sheet.updateState === "done" && sheet.updateFound.system) ? "lily" : "plain"
+                            visible: !(sheet.updateState === "done" && !sheet.updateFound.system)
+                            text: sheet.updateState === "checking" ? i18n("Checking…")
+                                : sheet.updateState === "installing" ? i18n("Installing…")
+                                : sheet.updateState === "available" ? i18n("Install")
+                                : sheet.updateState === "done" ? i18n("Restart now")
+                                : sheet.updateState === "failed" ? i18n("Try again")
+                                : i18n("Check for updates")
+                            enabledPill: sheet.updateState !== "checking" && sheet.updateState !== "installing"
+                            onClicked: {
+                                if (sheet.updateState === "available") {
+                                    sheet.installUpdates()
+                                } else if (sheet.updateState === "done") {
+                                    sheet.ask("restart")
+                                } else {
+                                    sheet.checkUpdates()
+                                }
+                            }
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: i18n("Monet never updates by itself. When you install an update, the new version starts the next time you restart, and the one before stays in the start menu, just in case.")
+                    color: look.dim
+                    font.pixelSize: 14
+                    lineHeight: 1.3
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        Component {
+            id: aboutPage
+            ColumnLayout {
+                spacing: 20
+                Rounded {
+                    id: banner
+                    Layout.fillWidth: true
+                    // Clear of the close button.
+                    Layout.topMargin: 22
+                    Layout.preferredHeight: Math.round(width * 360 / 1200)
+                    radius: 18
+                    Image {
+                        anchors.fill: parent
+                        source: sheet.art + "about.jpg"
+                        fillMode: Image.PreserveAspectCrop
+                        smooth: true
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        gradient: Gradient {
+                            GradientStop { position: 0.4; color: "transparent" }
+                            GradientStop { position: 1; color: Qt.rgba(0.05, 0.03, 0.1, 0.45) }
+                        }
+                    }
+                    Column {
+                        anchors.left: parent.left
+                        anchors.bottom: parent.bottom
+                        anchors.leftMargin: 24
+                        anchors.bottomMargin: 18
+                        spacing: 4
+                        Text {
+                            text: "Monet"
+                            color: "#FFFFFF"
+                            font.family: "Fraunces 72pt SuperSoft"
+                            font.weight: Font.Light
+                            font.pixelSize: 48
+                            font.letterSpacing: -1.2
+                        }
+                        Text {
+                            text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.monet) : i18n("Impression")
+                            color: "#E6FFFFFF"
+                            font.pixelSize: 14
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: [
+                            [i18n("Graphics"), sheet.pc.graphics],
+                            [i18n("Processor"), sheet.pc.processor],
+                            [i18n("Memory"), sheet.pc.memory],
+                            [i18n("Storage"), sheet.pc.storage],
+                            [i18n("Windows"), sheet.pc.windows === "Ready" ? i18n("Ready for games") : sheet.pc.windows]
+                        ].filter(r => r[1])
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            strong: false
+                            title: modelData[0]
+                            Text {
+                                width: Math.min(implicitWidth, 380)
+                                text: modelData[1]
+                                color: look.ink
+                                font.pixelSize: 14
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More about this PC…")
+                    onClicked: sheet.ask("kde about")
+                }
+            }
+        }
     }
 
     // A page of Monet's own, or one KDE's settings show (then this stays put).
@@ -1189,784 +1971,5 @@ PlasmaCore.Dialog {
         if (/hdmi|displayport|monitor|tv/i.test(name))
             return entry("display").glyph
         return entry("sound").glyph
-    }
-
-    // Pages -----------------------------------------------------------------
-
-    Component {
-        id: lightPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                tone: look
-                entry: sheet.entry("light")
-                art: sheet.art
-                text: i18n("Light & Wallpaper")
-                detail: i18n("How Monet looks, and when it changes.")
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-                Repeater {
-                    model: [
-                        ["hours", i18n("Follow the hours"), i18n("Mist by day, smoke after dark")],
-                        ["mist", i18n("Mist"), i18n("Always light")],
-                        ["smoke", i18n("Smoke"), i18n("Always dark")]
-                    ]
-                    Rectangle {
-                        id: choice
-                        readonly property bool picked: (sheet.info.light || "hours") === modelData[0]
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        implicitHeight: choiceColumn.implicitHeight + 20
-                        radius: 18
-                        color: picked ? Qt.rgba(0.302, 0.706, 0.627, 0.1) : choiceHover.hovered ? look.wash2 : look.wash
-                        border.width: picked || activeFocus ? 2 : 1
-                        border.color: picked || activeFocus ? look.lily : look.line
-                        scale: choiceTap.pressed ? 0.98 : 1
-                        activeFocusOnTab: true
-                        Keys.onSpacePressed: sheet.chooseLight(modelData[0])
-                        Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
-                        Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
-                        ColumnLayout {
-                            id: choiceColumn
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.margins: 10
-                            spacing: 3
-                            Image {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: Math.round(width * 236 / 480)
-                                Layout.bottomMargin: 7
-                                source: sheet.art + "light-" + modelData[0] + ".png"
-                                smooth: true
-                                mipmap: true
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 4
-                                text: modelData[1]
-                                color: look.ink
-                                font.pixelSize: 14
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 4
-                                text: modelData[2]
-                                color: look.dim
-                                font.pixelSize: 13
-                                elide: Text.ElideRight
-                            }
-                        }
-                        HoverHandler { id: choiceHover }
-                        TapHandler {
-                            id: choiceTap
-                            onTapped: sheet.chooseLight(modelData[0])
-                        }
-                        Accessible.role: Accessible.RadioButton
-                        Accessible.name: modelData[1]
-                        Accessible.checked: picked
-                        Accessible.onPressAction: sheet.chooseLight(modelData[0])
-                    }
-                }
-            }
-            Card {
-                tone: look
-                Repeater {
-                    model: [
-                        ["hours", i18n("The Hours"), i18n("The painting drifts from dawn to night as the day goes")],
-                        ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
-                        ["glass", i18n("Glass"), i18n("See the painting through panels and windows")]
-                    ]
-                    SettingRow {
-                        tone: look
-                        divider: index > 0
-                        tappable: true
-                        title: modelData[1]
-                        detail: modelData[2]
-                        onTapped: sheet.pref(modelData[0])
-                        Switch {
-                            tone: look
-                            active: sheet.prefs[modelData[0]] !== false
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: wifiPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                tone: look
-                entry: sheet.entry("wifi")
-                art: sheet.art
-                text: i18n("Wi-Fi")
-                detail: sheet.info.wifi === true
-                    ? ((sheet.info.network || "") !== "" ? i18n("Connected to %1", sheet.info.network) : i18n("Not connected"))
-                    : sheet.info.wifi === false ? i18n("Off") : ""
-            }
-            Card {
-                tone: look
-                SettingRow {
-                    tone: look
-                    divider: false
-                    tappable: typeof sheet.info.wifi === "boolean"
-                    title: i18n("Wi-Fi")
-                    detail: typeof sheet.info.wifi === "boolean" ? "" : i18n("This PC has no Wi-Fi")
-                    onTapped: sheet.flip("wifi", "wifi")
-                    Switch {
-                        tone: look
-                        visible: typeof sheet.info.wifi === "boolean"
-                        active: sheet.info.wifi === true
-                    }
-                }
-            }
-            Card {
-                tone: look
-                visible: sheet.info.wifi === true && (sheet.info.network || "") !== ""
-                SettingRow {
-                    tone: look
-                    divider: false
-                    title: sheet.info.network || ""
-                    detail: i18n("Connected")
-                    lead: Check {
-                        tone: look
-                        active: true
-                    }
-                }
-            }
-            Caption {
-                tone: look
-                visible: sheet.info.wifi === true
-                text: (sheet.info.network || "") !== "" ? i18n("Other networks") : i18n("Networks")
-            }
-            Card {
-                tone: look
-                visible: sheet.info.wifi === true
-                SettingRow {
-                    tone: look
-                    divider: false
-                    visible: sheet.nets.filter(n => !n.active).length === 0
-                    strong: false
-                    title: i18n("Looking for networks…")
-                }
-                Repeater {
-                    model: sheet.nets.filter(n => !n.active)
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        SettingRow {
-                            tone: look
-                            divider: index > 0
-                            tappable: true
-                            strong: false
-                            title: modelData.name
-                            lead: Bars {
-                                tone: look
-                                level: modelData.signal > 66 ? 3 : modelData.signal > 33 ? 2 : 1
-                            }
-                            onTapped: {
-                                sheet.joinState = ""
-                                if (modelData.secure) {
-                                    sheet.joining = sheet.joining === modelData.name ? "" : modelData.name
-                                } else {
-                                    sheet.joining = modelData.name
-                                    sheet.join(modelData.name, "")
-                                }
-                            }
-                            Row {
-                                readonly property bool busy: sheet.joining === modelData.name && sheet.joinState === "joining"
-                                spacing: 6
-                                Text {
-                                    visible: parent.busy
-                                    text: i18n("Joining…")
-                                    color: look.dim
-                                    font.pixelSize: 13
-                                }
-                                // A lock for networks that ask for a password.
-                                Glyph {
-                                    visible: modelData.secure && !parent.busy
-                                    width: 15
-                                    height: 15
-                                    path: "M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6z"
-                                    color: look.dim
-                                }
-                                Accessible.role: Accessible.StaticText
-                                Accessible.name: modelData.secure ? i18n("Secured") : i18n("Open")
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 18
-                            Layout.rightMargin: 18
-                            Layout.bottomMargin: 14
-                            visible: sheet.joining === modelData.name && modelData.secure
-                            spacing: 8
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 38
-                                radius: 12
-                                color: look.dark ? Qt.rgba(0, 0, 0, 0.28) : Qt.rgba(1, 1, 1, 0.9)
-                                border.width: password.activeFocus ? 2 : 1
-                                border.color: password.activeFocus ? look.lily : look.line
-                                TextInput {
-                                    id: password
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 12
-                                    anchors.rightMargin: 12
-                                    verticalAlignment: TextInput.AlignVCenter
-                                    echoMode: TextInput.Password
-                                    color: look.ink
-                                    font.pixelSize: 14
-                                    clip: true
-                                    Accessible.role: Accessible.EditableText
-                                    Accessible.name: i18n("Password for %1", modelData.name)
-                                    onVisibleChanged: if (visible) forceActiveFocus()
-                                    onAccepted: sheet.join(modelData.name, text)
-                                    Text {
-                                        anchors.fill: parent
-                                        verticalAlignment: Text.AlignVCenter
-                                        visible: password.text === ""
-                                        text: sheet.joinState === "failed" ? i18n("That didn't work. Check the password.") : i18n("Password")
-                                        color: sheet.joinState === "failed" ? "#E0603A" : look.dim
-                                        font.pixelSize: 14
-                                    }
-                                }
-                            }
-                            Pill {
-                                tone: look
-                                text: i18n("Cancel")
-                                onClicked: sheet.joining = ""
-                            }
-                            Pill {
-                                tone: look
-                                kind: "lily"
-                                text: sheet.joinState === "joining" ? i18n("Joining…") : i18n("Join")
-                                enabledPill: sheet.joinState !== "joining"
-                                onClicked: sheet.join(modelData.name, password.text)
-                            }
-                        }
-                    }
-                }
-            }
-            Pill {
-                tone: look
-                text: i18n("More Wi-Fi settings…")
-                onClicked: sheet.ask("kde wifi")
-            }
-        }
-    }
-
-    Component {
-        id: bluetoothPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                readonly property int connected: sheet.devices.filter(d => d.connected).length
-                tone: look
-                entry: sheet.entry("bluetooth")
-                art: sheet.art
-                text: i18n("Bluetooth")
-                detail: sheet.info.bluetooth === true
-                    ? (connected > 0 ? i18np("%1 device connected", "%1 devices connected", connected) : i18n("On"))
-                    : sheet.info.bluetooth === false ? i18n("Off") : ""
-            }
-            Card {
-                tone: look
-                SettingRow {
-                    tone: look
-                    divider: false
-                    tappable: typeof sheet.info.bluetooth === "boolean"
-                    title: i18n("Bluetooth")
-                    detail: typeof sheet.info.bluetooth === "boolean" ? "" : i18n("This PC has no Bluetooth")
-                    onTapped: sheet.flip("bluetooth", "bluetooth")
-                    Switch {
-                        tone: look
-                        visible: typeof sheet.info.bluetooth === "boolean"
-                        active: sheet.info.bluetooth === true
-                    }
-                }
-            }
-            Card {
-                tone: look
-                visible: sheet.info.bluetooth === true
-                SettingRow {
-                    tone: look
-                    divider: false
-                    visible: sheet.devices.length === 0
-                    strong: false
-                    title: i18n("No devices yet")
-                    detail: i18n("Pair headphones, a controller or a mouse to see them here.")
-                }
-                Repeater {
-                    model: sheet.devices
-                    SettingRow {
-                        tone: look
-                        divider: index > 0
-                        title: modelData.name
-                        detail: modelData.connected ? i18n("Connected") : i18n("Not connected")
-                        // What it is, in a lily chip while it's connected (like Quick Settings).
-                        lead: Rectangle {
-                            width: 34
-                            height: 34
-                            radius: 17
-                            color: modelData.connected ? look.lily : look.wash2
-                            Behavior on color { ColorAnimation { duration: Math.round(180 * look.speed) } }
-                            Glyph {
-                                anchors.centerIn: parent
-                                width: 18
-                                height: 18
-                                path: sheet.deviceGlyph(modelData.icon || "")
-                                color: modelData.connected ? "#FFFFFF" : look.ink
-                            }
-                        }
-                        Pill {
-                            tone: look
-                            text: sheet.busyDevice === modelData.address ? (modelData.connected ? i18n("Disconnecting…") : i18n("Connecting…"))
-                                : modelData.connected ? i18n("Disconnect") : i18n("Connect")
-                            enabledPill: sheet.busyDevice === ""
-                            onClicked: sheet.connectDevice(modelData)
-                        }
-                    }
-                }
-            }
-            Pill {
-                tone: look
-                visible: sheet.info.bluetooth === true
-                text: i18n("Pair a new device…")
-                onClicked: sheet.ask("kde bluetooth")
-            }
-        }
-    }
-
-    Component {
-        id: displayPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                tone: look
-                entry: sheet.entry("display")
-                art: sheet.art
-                text: i18n("Display")
-                detail: i18n("Brightness, and warmer colors at night.")
-            }
-            Card {
-                tone: look
-                SliderRow {
-                    tone: look
-                    divider: false
-                    visible: typeof sheet.info.brightness === "number"
-                    title: i18n("Brightness")
-                    from: 1
-                    value: sheet.info.brightness || 50
-                    onHeld: down => sheet.dragging = down
-                    onMoved: value => sheet.queue("brightness", value)
-                }
-                SettingRow {
-                    tone: look
-                    divider: typeof sheet.info.brightness === "number"
-                    tappable: true
-                    title: i18n("Night Light")
-                    detail: i18n("Warmer colors from sunset to sunrise, easier on the eyes")
-                    onTapped: sheet.flip("night", "night")
-                    Switch {
-                        tone: look
-                        active: sheet.info.night === true
-                    }
-                }
-            }
-            Pill {
-                tone: look
-                text: i18n("Arrange displays and size…")
-                onClicked: sheet.ask("kde display")
-            }
-        }
-    }
-
-    Component {
-        id: soundPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                readonly property string playing: (sheet.outputs.find(o => o.default) || {}).name || ""
-                tone: look
-                entry: sheet.entry("sound")
-                art: sheet.art
-                text: i18n("Sound")
-                detail: playing !== "" ? i18n("Playing through %1", playing) : ""
-            }
-            Card {
-                tone: look
-                SliderRow {
-                    tone: look
-                    divider: false
-                    title: i18n("Volume")
-                    value: sheet.info.volume || 0
-                    onHeld: down => sheet.dragging = down
-                    onMoved: value => sheet.queue("volume", value)
-                }
-            }
-            Caption {
-                tone: look
-                visible: sheet.outputs.length > 0
-                text: i18n("Play sound through")
-            }
-            Card {
-                tone: look
-                visible: sheet.outputs.length > 0
-                Repeater {
-                    model: sheet.outputs
-                    SettingRow {
-                        tone: look
-                        divider: index > 0
-                        tappable: true
-                        strong: false
-                        title: modelData.name
-                        onTapped: sheet.pickOutput(modelData)
-                        lead: Glyph {
-                            width: 18
-                            height: 18
-                            path: sheet.outputGlyph(modelData.name)
-                            color: look.ink
-                            opacity: modelData.default === true ? 1 : 0.6
-                        }
-                        Check {
-                            tone: look
-                            active: modelData.default === true
-                        }
-                    }
-                }
-            }
-            Card {
-                tone: look
-                visible: typeof sheet.info.mic === "number"
-                SliderRow {
-                    tone: look
-                    divider: false
-                    title: i18n("Microphone")
-                    value: sheet.info.mic || 0
-                    onHeld: down => sheet.dragging = down
-                    onMoved: value => sheet.queue("mic", value)
-                }
-            }
-            Pill {
-                tone: look
-                text: i18n("More sound settings…")
-                onClicked: sheet.ask("kde sound")
-            }
-        }
-    }
-
-    Component {
-        id: windowsPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                tone: look
-                entry: sheet.entry("windows")
-                art: sheet.art
-                text: i18n("Windows & Games")
-                detail: i18n("Games that need Windows, a restart away.")
-            }
-            Card {
-                tone: look
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: 18
-                    spacing: 18
-                    Kirigami.Icon {
-                        Layout.preferredWidth: 56
-                        Layout.preferredHeight: 56
-                        source: "monet-windows"
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
-                        Text {
-                            Layout.fillWidth: true
-                            text: sheet.switching ? i18n("Restarting in Windows…")
-                                : sheet.switchProblem !== "" ? i18n("Couldn't open Windows")
-                                : sheet.asking && sheet.asking.id ? i18n("Play %1?", sheet.asking.name)
-                                : sheet.asking ? i18n("Restart in Windows?")
-                                : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
-                                : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Getting Windows ready")
-                                : sheet.pc.setup === "pending" ? i18n("Windows is ready to install")
-                                : sheet.pc.windows === "Ready" ? i18n("Windows is ready")
-                                : (sheet.pc.windows || "") === "" ? i18n("Windows")
-                                : i18n("Windows isn't ready")
-                            color: look.ink
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
-                            wrapMode: Text.Wrap
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: sheet.switching ? i18n("Your PC restarts in a moment.")
-                                : sheet.switchProblem !== "" ? sheet.switchProblem
-                                : !sheet.asking && (sheet.pc.notice || "") !== "" ? sheet.pc.notice
-                                : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts.")
-                                : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
-                                : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
-                                : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
-                                : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
-                                : i18n("Windows: %1. Check Monet below to see what's missing.", sheet.pc.windows)
-                            color: look.dim
-                            font.pixelSize: 13
-                            wrapMode: Text.Wrap
-                        }
-                    }
-                    Pill {
-                        tone: look
-                        visible: sheet.asking !== null
-                        text: i18n("Cancel")
-                        onClicked: sheet.asking = null
-                    }
-                    Pill {
-                        tone: look
-                        kind: "sun"
-                        visible: !sheet.switching && sheet.pc.setup !== "waiting" && sheet.pc.setup !== "preparing"
-                        text: sheet.asking && sheet.asking.id ? i18n("Restart & Play")
-                            : sheet.asking ? i18n("Restart")
-                            : sheet.pc.setup === "pending" ? i18n("Restart and install")
-                            : i18n("Restart in Windows")
-                        onClicked: {
-                            if (sheet.pc.setup === "pending" && !sheet.asking) {
-                                sheet.ask("restart")
-                            } else if (sheet.asking) {
-                                sheet.restart()
-                            } else {
-                                sheet.switchProblem = ""
-                                sheet.asking = ({})
-                            }
-                        }
-                    }
-                }
-            }
-            GridLayout {
-                Layout.fillWidth: true
-                visible: sheet.games.length > 0
-                columns: 4
-                columnSpacing: 12
-                rowSpacing: 12
-                Repeater {
-                    model: sheet.games.slice(0, 8)
-                    Cover {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        Layout.preferredHeight: implicitHeight
-                        name: modelData.name
-                        artwork: modelData.id.indexOf("steam:") === 0
-                            ? "https://cdn.cloudflare.steamstatic.com/steam/apps/" + modelData.id.slice(6) + "/header.jpg" : ""
-                        glaze: sheet.glaze(modelData.name)
-                        onPicked: {
-                            sheet.switchProblem = ""
-                            sheet.asking = modelData
-                        }
-                    }
-                }
-            }
-            Text {
-                Layout.fillWidth: true
-                visible: sheet.games.length === 0
-                text: i18n("Your Windows games show up here once Windows has started with Monet Bridge.")
-                color: look.dim
-                font.pixelSize: 14
-                wrapMode: Text.Wrap
-            }
-            Card {
-                tone: look
-                SettingRow {
-                    tone: look
-                    divider: false
-                    title: i18n("Check Monet")
-                    detail: i18n("See that Windows, Secure Boot and switching are all set up")
-                    Pill {
-                        tone: look
-                        text: sheet.checkingDoctor ? i18n("Checking…") : i18n("Check")
-                        enabledPill: !sheet.checkingDoctor
-                        onClicked: sheet.checkMonet()
-                    }
-                }
-                Text {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 18
-                    Layout.rightMargin: 18
-                    Layout.bottomMargin: 16
-                    visible: sheet.doctorReport !== ""
-                    textFormat: Text.StyledText
-                    text: sheet.report(sheet.doctorReport)
-                    color: look.ink
-                    font.pixelSize: 13
-                    lineHeight: 1.35
-                    wrapMode: Text.Wrap
-                }
-            }
-        }
-    }
-
-    Component {
-        id: updatesPage
-        ColumnLayout {
-            spacing: 20
-            PageTitle {
-                tone: look
-                entry: sheet.entry("updates")
-                art: sheet.art
-                text: i18n("Updates")
-                detail: i18n("Only when you ask.")
-            }
-            Card {
-                tone: look
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: 20
-                    spacing: 18
-                    Kirigami.Icon {
-                        Layout.preferredWidth: 56
-                        Layout.preferredHeight: 56
-                        source: "monet"
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
-                        Text {
-                            Layout.fillWidth: true
-                            text: sheet.updateTitle()
-                            color: look.ink
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
-                            wrapMode: Text.Wrap
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: sheet.updateDetail()
-                            color: sheet.updateState === "failed" ? "#E0603A" : look.dim
-                            font.pixelSize: 13
-                            wrapMode: Text.Wrap
-                        }
-                        // Still working: there's no number to show, so it just moves.
-                        PlasmaComponents.ProgressBar {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 6
-                            visible: sheet.updateState === "checking" || sheet.updateState === "installing"
-                            indeterminate: true
-                        }
-                    }
-                    Pill {
-                        tone: look
-                        kind: sheet.updateState === "available" || (sheet.updateState === "done" && sheet.updateFound.system) ? "lily" : "plain"
-                        visible: !(sheet.updateState === "done" && !sheet.updateFound.system)
-                        text: sheet.updateState === "checking" ? i18n("Checking…")
-                            : sheet.updateState === "installing" ? i18n("Installing…")
-                            : sheet.updateState === "available" ? i18n("Install")
-                            : sheet.updateState === "done" ? i18n("Restart now")
-                            : sheet.updateState === "failed" ? i18n("Try again")
-                            : i18n("Check for updates")
-                        enabledPill: sheet.updateState !== "checking" && sheet.updateState !== "installing"
-                        onClicked: {
-                            if (sheet.updateState === "available") {
-                                sheet.installUpdates()
-                            } else if (sheet.updateState === "done") {
-                                sheet.ask("restart")
-                            } else {
-                                sheet.checkUpdates()
-                            }
-                        }
-                    }
-                }
-            }
-            Text {
-                Layout.fillWidth: true
-                text: i18n("Monet never updates by itself. When you install an update, the new version starts the next time you restart, and the one before stays in the start menu, just in case.")
-                color: look.dim
-                font.pixelSize: 14
-                lineHeight: 1.3
-                wrapMode: Text.Wrap
-            }
-        }
-    }
-
-    Component {
-        id: aboutPage
-        ColumnLayout {
-            spacing: 20
-            Rounded {
-                id: banner
-                Layout.fillWidth: true
-                // Clear of the close button.
-                Layout.topMargin: 22
-                Layout.preferredHeight: Math.round(width * 360 / 1200)
-                radius: 18
-                Image {
-                    anchors.fill: parent
-                    source: sheet.art + "about.jpg"
-                    fillMode: Image.PreserveAspectCrop
-                    smooth: true
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    gradient: Gradient {
-                        GradientStop { position: 0.4; color: "transparent" }
-                        GradientStop { position: 1; color: Qt.rgba(0.05, 0.03, 0.1, 0.45) }
-                    }
-                }
-                Column {
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    anchors.leftMargin: 24
-                    anchors.bottomMargin: 18
-                    spacing: 4
-                    Text {
-                        text: "Monet"
-                        color: "#FFFFFF"
-                        font.family: "Fraunces 72pt SuperSoft"
-                        font.weight: Font.Light
-                        font.pixelSize: 48
-                        font.letterSpacing: -1.2
-                    }
-                    Text {
-                        text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.monet) : i18n("Impression")
-                        color: "#E6FFFFFF"
-                        font.pixelSize: 14
-                    }
-                }
-            }
-            Card {
-                tone: look
-                Repeater {
-                    model: [
-                        [i18n("Graphics"), sheet.pc.graphics],
-                        [i18n("Processor"), sheet.pc.processor],
-                        [i18n("Memory"), sheet.pc.memory],
-                        [i18n("Storage"), sheet.pc.storage],
-                        [i18n("Windows"), sheet.pc.windows === "Ready" ? i18n("Ready for games") : sheet.pc.windows]
-                    ].filter(r => r[1])
-                    SettingRow {
-                        tone: look
-                        divider: index > 0
-                        strong: false
-                        title: modelData[0]
-                        Text {
-                            width: Math.min(implicitWidth, 380)
-                            text: modelData[1]
-                            color: look.ink
-                            font.pixelSize: 14
-                            elide: Text.ElideRight
-                        }
-                    }
-                }
-            }
-            Pill {
-                tone: look
-                text: i18n("More about this PC…")
-                onClicked: sheet.ask("kde about")
-            }
-        }
     }
 }
