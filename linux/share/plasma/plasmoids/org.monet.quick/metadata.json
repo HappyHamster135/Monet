@@ -8,7 +8,7 @@
         "Id": "org.monet.quick",
         "License": "GPL-3.0-or-later",
         "Name": "Quick Settings",
-        "Version": "0.6.3"
+        "Version": "0.6.4"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

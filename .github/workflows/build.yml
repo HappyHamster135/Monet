@@ -48,16 +48,23 @@ jobs:
         run: |
           cargo build --release -p monet --target x86_64-unknown-linux-musl
           cargo build --release -p monet-bridge --target x86_64-pc-windows-gnu
+          cargo build --release -p monet-usb --target x86_64-pc-windows-gnu
       - name: Package
         run: |
           VERSION=$(cat VERSION)
           tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet "dist/monet-$VERSION-linux" \
             target/x86_64-pc-windows-gnu/release/monet-bridge.exe
           tar -C dist -czf "dist/Monet-$VERSION-Linux.tar.gz" "monet-$VERSION-linux"
+      - name: Make a Monet USB stick (Windows)
+        run: cp target/x86_64-pc-windows-gnu/release/monet-usb.exe "dist/Monet-$(cat VERSION)-Make-USB-Stick.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: release-linux
           path: dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-usb
+          path: dist/*.exe
 
   windows:
     needs: test

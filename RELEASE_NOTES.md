@@ -6,9 +6,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.6.3-Installer.iso** | **Start here.** Write it to a USB stick and boot from it. |
-| Monet-0.6.3-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.6.3-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.6.4-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
+| Monet-0.6.4-Installer.iso | The USB stick's image, for writing it yourself (on Linux or a Mac). |
+| Monet-0.6.4-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.6.4-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.6.4: make the USB stick with one click
+
+- **Monet-0.6.4-Make-USB-Stick.exe.** On Windows, double-click it, choose the
+  USB stick, and it does the rest: downloads Monet (picking up where it
+  stopped if the connection drops), writes the stick and checks it. Only
+  USB sticks are offered, never the disk Windows runs from, and it asks
+  before erasing. Nothing else to download or install: no Rufus, no
+  Etcher, no Fedora Media Writer.
 
 ### New in 0.6.3: Monet's own switches
 
