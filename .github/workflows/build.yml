@@ -130,6 +130,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.check.outputs.version }}
         run: |
+          # Two pushes close together can both see a new version: one releases.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already released."
+            exit 0
+          fi
           cd dist && sha256sum * > SHA256SUMS.txt && cd ..
           gh release create "v$VERSION" dist/* \
             --title "Monet $VERSION" \
