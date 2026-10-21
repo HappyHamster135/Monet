@@ -53,7 +53,7 @@ No menu bar, no dock. Three floating glass islands along the bottom:
 | Island | What |
 |---|---|
 | Left | The Monet menu (the sun) and Windows Games (the sun as a play button) |
-| Middle | Apps and open windows, then Trash. Running apps get a small sun-colored stroke |
+| Middle | Apps and open windows, then Trash. Running apps get a small dab of sun under them: longer for the window you're in, faint when it's minimized, with a warm wash when an app asks for you. Pointing at one raises a pebble of glass |
 | Right | Quick Settings, status icons, the clock |
 
 The placard sits on the painting, top left.
@@ -83,11 +83,13 @@ color, so the glass carries the painting's light instead of looking grey.
 
 | Where | How |
 |---|---|
-| Islands, popovers, tooltips | Plasma style `monet` (`tools/make-plasma-style.py`), radius 22 / 20 / 12, soft shadow that sits lower than the glass |
-| App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection |
+| Islands, popovers, tooltips | Plasma style `monet` (`tools/make-plasma-style.py`), radius 22 / 20 / 12, soft shadow that sits lower than the glass. A solid copy of each (`solid/`) for when a window touches the islands, and an opaque one (`opaque/`) without compositing, so they never turn into Breeze |
+| On the glass | The same style draws everything Plasma puts on it, so the app menu, search, the popovers, notifications, the lock screen and Alt+Tab are Monet's too: pebble buttons (radius 8, so check boxes stay round), a well with a lily ring for typing, soft highlights (an ink wash to point, lily for what's chosen), Monet Settings' switch and slider, glass tabs, hairline headings, a lily progress bar and a lily arc for "working" |
+| App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection. Menus and tooltips cast a soft shadow, blur with rounded corners, part groups with a hairline and highlight the item in lily, inset from the edge |
+| GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables |
 | Monet Settings | The Plasma style's dialog glass around a solid paper page |
-| Title bars | The color scheme's alpha (Breeze) |
-| Terminal | Konsole color schemes with opacity and blur |
+| Title bars | The color scheme's alpha (Breeze); a wide, soft shadow in ink instead of black |
+| Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
 
 Two global themes carry this into KDE's settings: **Monet Mist** and
 **Monet Smoke** (`org.monet.desktop`, `org.monet.smoke.desktop`), KDE's
@@ -137,10 +139,15 @@ sidebar; the files on paper; folders big enough to see their paintings
 block.
 
 **Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
-glass sheet, about 1000 × 660. On the glass: the name in Fraunces, search,
-and eight pages, each marked by a swatch cut from the paintings with a white
-glyph. On the paper: the page, in rounded cards with switches (Lily when on),
-and the sun only for Restart in Windows. The `monet-quick` helper does the
+glass sheet, about 1000 × 700. On the glass: the name in Fraunces, search,
+and the pages, each marked by a swatch cut from the paintings with a white
+glyph, in three groups: Monet's own, the ones KDE's settings open (marked
+↗), and Windows, Updates and About. A pebble of glass glides to the page
+you're on. On the paper: the page under its swatch, title and a line saying
+how things stand ("Connected to Harbor"), in rounded cards with switches
+(Lily when on), devices with what they are (headphones, a controller, a
+mouse) in a chip that turns lily while connected, and the sun only for
+Restart in Windows. The `monet-quick` helper does the
 work. Settings in the dock and the app menu runs `monet-quick open [page]`,
 which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into
@@ -151,6 +158,7 @@ KDE's System Settings instead. Pictures come from `make-icons.py` into
 | Name | Duration | Curve | Used for |
 |---|---|---|---|
 | Rise | 380 ms | `cubic-bezier(.2, .9, .25, 1.08)` | popovers, sheets, toasts |
+| Glide | 320 ms | `cubic-bezier(.2, .9, .25, 1.08)` | a pebble moving to what you chose: Settings' pages, Quick Settings' light |
 | Settle | 200 ms | `cubic-bezier(.4, 0, 1, 1)` | closing: leaving is quicker than arriving |
 | Press | 160 ms | `cubic-bezier(.2, .9, .25, 1.25)` | buttons, tiles, the islands |
 | Sunset | 900 ms | `cubic-bezier(.4, 0, .2, 1)` | the screen fades to night before Windows |
@@ -234,4 +242,5 @@ python3 tools/make-branding.py    # marks, Windows icon, installer art
 python3 tools/make-icons.py       # icon theme, brush texture
 python3 tools/make-plasma-style.py
 python3 tools/make-kvantum.py
+python3 tools/make-gtk.py
 ```

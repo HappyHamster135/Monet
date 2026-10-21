@@ -1,12 +1,19 @@
-"""Draws Monet's Plasma style: the glass of the bar islands, popovers and tooltips.
+"""Draws Monet's Plasma style: the glass of the bar islands, popovers and tooltips,
+and everything Plasma draws on it.
 
 Plasma draws panels and popovers from SVG frames cut into nine pieces. Here
 each frame is a rounded rectangle of see-through color (KWin blurs the
 painting behind it), a hairline edge, a line of light along the top, and a
 soft shadow that sits a little below, like the islands in the design.
 
+The rest is Monet's too, so nothing in the bar or its popovers falls back to
+Breeze: the sun's dab under running apps, soft highlights, pebble buttons,
+wells for typing, the switch and slider from Monet Settings, and a solid
+version of each glass for when a window touches the islands.
+
 Colors come from the color scheme (MonetLight or MonetDark), so one style
-serves mist and smoke. Everything not drawn here falls back to Breeze.
+serves mist and smoke. Only shapes are filled: Qt counts a stroke's width in
+an element's size, which shifts pieces.
 
 Run from the repository root:  python3 tools/make-plasma-style.py
 """
@@ -14,25 +21,38 @@ Run from the repository root:  python3 tools/make-plasma-style.py
 import base64
 import io
 import json
+import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "linux" / "share" / "plasma" / "desktoptheme" / "monet"
+VERSION = (ROOT / "VERSION").read_text().strip()
 
 # name: radius, content margin, shadow blur, shadow drop, shadow strength, glass opacity
 FRAMES = {
     "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
     "widgets/panel-background": dict(radius=22, margin=8, blur=12, drop=7, strength=0.32, glass=0.40),
     "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.66),
+    # Popups and desktop widgets drawn by Plasma's own components.
+    "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
 }
+SOLID = 0.96
 
 STYLE = """<style type="text/css" id="current-color-scheme">
 .ColorScheme-Background { color:#f3f1ec; }
 .ColorScheme-Text { color:#1c1b19; }
+.ColorScheme-ViewBackground { color:#fbfaf7; }
+.ColorScheme-Highlight { color:#357f72; }
 </style>"""
+
+SUN = "#F2552C"
+INK = 'class="ColorScheme-Text" fill="currentColor"'
+LILY = 'class="ColorScheme-Highlight" fill="currentColor"'
+WELL = 'class="ColorScheme-ViewBackground" fill="currentColor"'
+WHITE = 'fill="#FFFFFF"'
 
 
 class Sheet:
@@ -134,7 +154,6 @@ def shadow_pieces(sheet, r, blur, drop, strength):
     W = (side + r) * 2 + middle
     H = top + bottom + r * 2 + middle
     big = Image.new("L", (W * k, H * k), 0)
-    from PIL import ImageDraw
     d = ImageDraw.Draw(big)
     box = [side * k, top * k, (W - side) * k - 1, (H - bottom) * k - 1]
     shadow_box = [box[0], box[1] + drop * k, box[2], box[3] + drop * k]
@@ -148,11 +167,6 @@ def shadow_pieces(sheet, r, blur, drop, strength):
     rgba = np.zeros((H, W, 4), np.uint8)
     rgba[..., 3] = np.clip(alpha, 0, 255).astype(np.uint8)
     img = Image.fromarray(rgba, "RGBA")
-
-    def png(crop):
-        buf = io.BytesIO()
-        img.crop(crop).save(buf, "PNG", optimize=True)
-        return base64.b64encode(buf.getvalue()).decode()
 
     x0, x1 = side + r, W - side - r
     y0, y1 = top + r, H - bottom - r
@@ -169,9 +183,8 @@ def shadow_pieces(sheet, r, blur, drop, strength):
     }
     for ident, crop in pieces.items():
         w, h = crop[2] - crop[0], crop[3] - crop[1]
-        data = png(crop)
-        sheet.element(ident, w, h, lambda x, y, w=w, h=h, data=data:
-                      f'<image x="{x}" y="{y}" width="{w}" height="{h}" xlink:href="data:image/png;base64,{data}"/>')
+        data = png(img.crop(crop))
+        sheet.element(ident, w, h, lambda x, y, w=w, h=h, data=data: image(x, y, w, h, data))
     sheet.element("shadow-center", 4, 4, lambda x, y: "")
     sheet.hint("shadow-hint-top-margin", 2, top)
     sheet.hint("shadow-hint-bottom-margin", 2, bottom)
@@ -179,11 +192,22 @@ def shadow_pieces(sheet, r, blur, drop, strength):
     sheet.hint("shadow-hint-right-margin", side, 2)
 
 
-def frame_svg(radius, margin, blur, drop, strength, glass):
+def png(img):
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def image(x, y, w, h, data):
+    return f'<image x="{x}" y="{y}" width="{w}" height="{h}" xlink:href="data:image/png;base64,{data}"/>'
+
+
+def frame_svg(radius, margin, blur, drop, strength, glass, shadow=True):
     sheet = Sheet()
     frame_pieces(sheet, "", radius, glass)
     frame_pieces(sheet, "mask-", radius, glass, mask=True)
-    shadow_pieces(sheet, radius, blur, drop, strength)
+    if shadow:
+        shadow_pieces(sheet, radius, blur, drop, strength)
     sheet.hint("hint-top-margin", 4, margin)
     sheet.hint("hint-bottom-margin", 4, margin)
     sheet.hint("hint-left-margin", margin, 4)
@@ -191,16 +215,448 @@ def frame_svg(radius, margin, blur, drop, strength, glass):
     return sheet.svg()
 
 
+# Shapes for the controls ----------------------------------------------------
+# Pieces are cut from one drawing of the whole control: each piece shows the
+# part of the shapes inside its box, so corners, edges and middle always meet.
+
+def rounded(x0, y0, x1, y1, r, steps=18):
+    """A rounded rectangle's outline as points, clockwise."""
+    r = max(0.0, min(r, (x1 - x0) / 2, (y1 - y0) / 2))
+    out = []
+    for cx, cy, start in ((x0 + r, y0 + r, 180), (x1 - r, y0 + r, 270), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90)):
+        for i in range(steps + 1):
+            a = math.radians(start + 90 * i / steps)
+            out.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return out
+
+
+def disc(cx, cy, r, steps=72):
+    return [(cx + r * math.cos(2 * math.pi * i / steps), cy + r * math.sin(2 * math.pi * i / steps)) for i in range(steps)]
+
+
+def clip(points, box):
+    """The part of a convex outline inside box (x0, y0, x1, y1)."""
+    x0, y0, x1, y1 = box
+    edges = ((lambda p: p[0] >= x0, lambda a, b: (x0, a[1] + (b[1] - a[1]) * (x0 - a[0]) / (b[0] - a[0]))),
+             (lambda p: p[0] <= x1, lambda a, b: (x1, a[1] + (b[1] - a[1]) * (x1 - a[0]) / (b[0] - a[0]))),
+             (lambda p: p[1] >= y0, lambda a, b: (a[0] + (b[0] - a[0]) * (y0 - a[1]) / (b[1] - a[1]), y0)),
+             (lambda p: p[1] <= y1, lambda a, b: (a[0] + (b[0] - a[0]) * (y1 - a[1]) / (b[1] - a[1]), y1)))
+    for inside, cut in edges:
+        if not points:
+            break
+        kept, prev = [], points[-1]
+        for cur in points:
+            if inside(cur):
+                if not inside(prev):
+                    kept.append(cut(prev, cur))
+                kept.append(cur)
+            elif inside(prev):
+                kept.append(cut(prev, cur))
+            prev = cur
+        points = kept
+    return points
+
+
+def outline(points, dx=0.0, dy=0.0):
+    if len(points) < 3:
+        return ""
+    return "M" + " L".join(f"{x + dx:.3f},{y + dy:.3f}" for x, y in points) + " Z"
+
+
+class Shape:
+    """A filled outline, or a ring between two outlines, in one paint."""
+
+    def __init__(self, paint, outer, inner=None):
+        self.paint, self.outer, self.inner = paint, outer, inner
+
+    def cut(self, box, dx, dy):
+        d = outline(clip(self.outer, box), dx, dy)
+        if not d:
+            return ""
+        if self.inner:
+            d += " " + outline(clip(self.inner, box), dx, dy)
+            return f'<path d="{d}" fill-rule="evenodd" {self.paint}/>'
+        return f'<path d="{d}" {self.paint}/>'
+
+
+def paint(how, opacity=1.0):
+    return f'{how} fill-opacity="{opacity:g}"' if opacity < 1 else how
+
+
+def fill(how, opacity, size, inset=0.0, radius=0.0):
+    w, h = size
+    return Shape(paint(how, opacity), rounded(inset, inset, w - inset, h - inset, radius))
+
+
+def band(how, opacity, size, inset, radius, width):
+    """A ring of the given width just inside a rounded rectangle."""
+    w, h = size
+    return Shape(paint(how, opacity), rounded(inset, inset, w - inset, h - inset, radius),
+                 rounded(inset + width, inset + width, w - inset - width, h - inset - width, radius - width))
+
+
+def nine(sheet, prefix, borders, shapes, middle=8, margins=None):
+    """A frame's nine pieces (corners, edges, middle) cut from one drawing.
+
+    borders: (left, top, right, bottom); shapes are drawn on a frame of the
+    smallest size, so the edges in between are uniform and can be tiled.
+    middle is the middle piece's size, or (width, height)."""
+    left, top, right, bottom = borders
+    mw, mh = middle if isinstance(middle, tuple) else (middle, middle)
+    w, h = left + mw + right, top + mh + bottom
+    name = prefix + "-" if prefix else ""
+    xs, ys = (0, left, left + mw, w), (0, top, top + mh, h)
+    grid = {"topleft": (0, 0), "top": (1, 0), "topright": (2, 0), "left": (0, 1), "center": (1, 1),
+            "right": (2, 1), "bottomleft": (0, 2), "bottom": (1, 2), "bottomright": (2, 2)}
+    for piece, (i, j) in grid.items():
+        box = (xs[i], ys[j], xs[i + 1], ys[j + 1])
+        pw, ph = box[2] - box[0], box[3] - box[1]
+        if pw <= 0 or ph <= 0:
+            continue
+        sheet.element(name + piece, pw, ph,
+                      lambda x, y, box=box: "".join(s.cut(box, x - box[0], y - box[1]) for s in shapes))
+    for side, value in zip(("left", "top", "right", "bottom"), margins or ()):
+        sheet.hint(f"{name}hint-{side}-margin", *((value, 2) if side in ("left", "right") else (2, value)))
+    return w, h
+
+
+def drawing(shapes, w, h):
+    """A plain element: the shapes, placed in its box."""
+    return lambda x, y: "".join(s.cut((0, 0, w, h), x, y) for s in shapes)
+
+
+def blurred_disc(size, r, drop, blur, strength):
+    """A soft round shadow, as a PNG to place under a knob."""
+    k = 4
+    img = Image.new("L", (size * k, size * k), 0)
+    c = size * k / 2
+    ImageDraw.Draw(img).ellipse([c - r * k, c - r * k + drop * k, c + r * k, c + r * k + drop * k], fill=255)
+    img = img.filter(ImageFilter.GaussianBlur(blur * k)).resize((size, size), Image.LANCZOS)
+    alpha = (np.asarray(img).astype(np.float32) * strength).astype(np.uint8)
+    rgba = np.zeros((size, size, 4), np.uint8)
+    rgba[..., 3] = alpha
+    return png(Image.fromarray(rgba, "RGBA"))
+
+
+# The controls ---------------------------------------------------------------
+
+def sun_dab(w, h, left, right, middle_y, thick, tip):
+    """The sun's dab under a running app: flat in the middle (so it tiles),
+    rounded at the ends, which sit in the bottom corners."""
+    x0, x1 = left - tip, w - right + tip
+    top, bottom = [], []
+    for i in range(13):
+        t = i / 12
+        # Left end: half an ellipse growing from the tip.
+        x = x0 + tip * t
+        half = thick / 2 * math.sqrt(max(0.0, 1 - (1 - t) ** 2))
+        top.append((x, middle_y - half))
+        bottom.append((x, middle_y + half))
+    for i in range(13):
+        t = i / 12
+        x = x1 - tip + tip * t
+        half = thick / 2 * math.sqrt(max(0.0, 1 - t ** 2))
+        top.append((x, middle_y - half))
+        bottom.append((x, middle_y + half))
+    return top + bottom[::-1]
+
+
+def tasks_svg():
+    """The dock: a dab of sun under each running app, longer for the window
+    you're in, faint for minimized ones; a soft pebble of glass on hover."""
+    sheet = Sheet()
+    tip, thick, below = 5.5, 3.2, 3.4
+    looks = {
+        # prefix: (left/right border, dab opacity, wash)
+        "normal": (22, 0.85, None),
+        "focus": (16, 1.0, None),
+        "minimized": (22, 0.42, None),
+        "attention": (16, 1.0, (SUN, 0.16)),
+    }
+    radius = 12
+
+    def shapes(side, dab, wash, hovered):
+        w, h = side * 2 + 8, radius * 2 + 8
+        out = []
+        if hovered:
+            out.append(fill(INK, 0.09, (w, h), 0, radius))
+        if wash:
+            out.append(fill(f'fill="{wash[0]}"', wash[1] + (0.06 if hovered else 0), (w, h), 0, radius))
+        if dab:
+            out.append(Shape(paint(f'fill="{SUN}"', dab), sun_dab(w, h, side, side, h - below, thick, tip)))
+        return out
+
+    for prefix, (side, dab, wash) in looks.items():
+        margins = (4, 4, 4, 4) if prefix == "normal" else None
+        nine(sheet, prefix, (side, radius, side, radius), shapes(side, dab, wash, False), margins=margins)
+        nine(sheet, prefix + "-hover", (side, radius, side, radius), shapes(side, dab, wash, True))
+    for prefix in ("hover", "launcher-hover"):
+        nine(sheet, prefix, (radius, radius, radius, radius), shapes(radius, None, None, True))
+    # Progress (a download, say): lily rising through the tile.
+    nine(sheet, "progress", (8, 8, 8, 8), [fill(LILY, 0.24, (24, 24), 0, 8)])
+    return sheet.svg()
+
+
+def viewitem_svg():
+    """Highlights in lists and grids: the app menu, search, the popovers."""
+    sheet = Sheet()
+    for prefix, how, opacity in (("normal", INK, 0.07), ("hover", INK, 0.09),
+                                 ("selected", LILY, 0.24), ("selected+hover", LILY, 0.32)):
+        nine(sheet, prefix, (10, 10, 10, 10), [fill(how, opacity, (28, 28), 0, 10)], margins=(5, 5, 5, 5))
+    return sheet.svg()
+
+
+def listitem_svg():
+    sheet = Sheet()
+    nine(sheet, "normal", (8, 8, 8, 8), [], margins=(6, 6, 6, 6))
+    nine(sheet, "hover", (8, 8, 8, 8), [fill(INK, 0.08, (24, 24), 0, 8)], margins=(6, 6, 6, 6))
+    nine(sheet, "pressed", (8, 8, 8, 8), [fill(LILY, 0.24, (24, 24), 0, 8)], margins=(6, 6, 6, 6))
+    nine(sheet, "section", (8, 8, 8, 8), [], margins=(6, 6, 6, 6))
+    sheet.element("separator", 16, 1, lambda x, y: f'<rect x="{x}" y="{y}" width="16" height="1" {paint(INK, 0.10)}/>')
+    return sheet.svg()
+
+
+def button_svg():
+    """Buttons are pebbles of glass, like the pills in Monet Settings. Their
+    corners stay at 8: a check box draws the same frame at 16 x 16."""
+    sheet = Sheet()
+    r = 8
+    size = (24, 24)
+    pebble = [fill(INK, 0.07, size, 0, r), band(INK, 0.17, size, 0, r, 1)]
+    nine(sheet, "normal", (r, r, r, r), pebble, margins=(6, 6, 6, 6))
+    nine(sheet, "pressed", (r, r, r, r), [fill(INK, 0.16, size, 0, r)], margins=(6, 6, 6, 6))
+    nine(sheet, "hover", (r, r, r, r), [fill(INK, 0.05, size, 0, r)], margins=(0.001,) * 4)
+    nine(sheet, "toolbutton-hover", (r, r, r, r), [fill(INK, 0.08, size, 0, r)], margins=(4, 4, 4, 4))
+    nine(sheet, "toolbutton-pressed", (r, r, r, r), [fill(INK, 0.14, size, 0, r)], margins=(4, 4, 4, 4))
+    # Keyboard focus: a lily ring just outside the button.
+    for prefix in ("focus", "toolbutton-focus"):
+        nine(sheet, prefix, (r + 2, r + 2, r + 2, r + 2), [band(LILY, 1, (28, 28), 0, r + 2, 2)], margins=(2, 2, 2, 2))
+    return sheet.svg()
+
+
+def tick(cx, cy, scale, width):
+    """A check mark as two round-ended bars (filled, not drawn with a line)."""
+    pts = [(-0.42, 0.02), (-0.12, 0.31), (0.42, -0.28)]
+    shapes = []
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        ax, ay, bx, by = cx + ax * scale, cy + ay * scale, cx + bx * scale, cy + by * scale
+        angle = math.atan2(by - ay, bx - ax)
+        # Half a circle around each end makes a convex capsule.
+        back = [(ax + width / 2 * math.cos(a), ay + width / 2 * math.sin(a))
+                for a in (angle + math.pi / 2 + math.pi * i / 10 for i in range(11))]
+        front = [(bx + width / 2 * math.cos(a), by + width / 2 * math.sin(a))
+                 for a in (angle - math.pi / 2 + math.pi * i / 10 for i in range(11))]
+        shapes.append(back + front)
+    return [Shape(WHITE, s) for s in shapes]
+
+
+def actionbutton_svg():
+    """Round buttons (Plasma's round buttons, the lock screen's): coins of glass."""
+    sheet = Sheet()
+    c = 16
+    sheet.element("normal", 32, 32, drawing([Shape(paint(INK, 0.08), disc(c, c, 16)),
+                                            Shape(paint(INK, 0.17), disc(c, c, 16), disc(c, c, 15))], 32, 32))
+    sheet.element("hover", 32, 32, drawing([Shape(paint(INK, 0.06), disc(c, c, 16))], 32, 32))
+    sheet.element("pressed", 32, 32, drawing([Shape(paint(INK, 0.18), disc(c, c, 16))], 32, 32))
+    sheet.element("focus", 32, 32, drawing([Shape(LILY, disc(c, c, 16), disc(c, c, 14))], 32, 32))
+    return sheet.svg()
+
+
+def checkmarks_svg():
+    sheet = Sheet()
+    # Drawn over the button frame: a lily coin with a white check, like Settings.
+    sheet.element("checkbox", 16, 16, drawing([Shape(LILY, disc(8, 8, 8))] + tick(8, 8.2, 10, 1.9), 16, 16))
+    sheet.element("radiobutton", 16, 16, drawing([Shape(LILY, disc(8, 8, 8)), Shape(WHITE, disc(8, 8, 3))], 16, 16))
+    return sheet.svg()
+
+
+def radiobutton_svg():
+    sheet = Sheet()
+    sheet.element("hint-size", 16, 16, lambda x, y: "")
+    sheet.element("normal", 16, 16, drawing([Shape(paint(INK, 0.06), disc(8, 8, 8)),
+                                            Shape(paint(INK, 0.30), disc(8, 8, 8), disc(8, 8, 7))], 16, 16))
+    sheet.element("checked", 16, 16, drawing([Shape(LILY, disc(8, 8, 8))], 16, 16))
+    sheet.element("symbol", 6, 6, drawing([Shape(WHITE, disc(3, 3, 3))], 6, 6))
+    sheet.element("hover", 16, 16, drawing([Shape(paint(INK, 0.06), disc(8, 8, 8))], 16, 16))
+    sheet.element("focus", 20, 20, drawing([Shape(LILY, disc(10, 10, 10), disc(10, 10, 8.6))], 20, 20))
+    sheet.element("shadow", 22, 22, lambda x, y: "")
+    return sheet.svg()
+
+
+def switch_svg():
+    """Monet Settings' switch: a pill that turns lily, a white knob inside it."""
+    sheet = Sheet()
+    h, end = 24, 12
+    sheet.hint("hint-bar-size", 44, h)
+    sheet.hint("hint-stretch-borders", 4, 4)
+    for prefix, how, opacity in (("inactive", INK, 0.18), ("active", LILY, 1.0)):
+        nine(sheet, prefix, (end, 0, end, 0), [fill(how, opacity, (end * 2 + 8, h), 0, end)], middle=(8, h))
+    # The knob sits 2 px inside the pill at both ends: the bar is 1 px in from
+    # each side of the switch, and the knob 3 px inside its 26 px handle.
+    knob = (26, h)
+    sheet.element("handle", *knob, drawing([Shape(WHITE, disc(13, 12, 10))], *knob))
+    sheet.element("handle-hover", *knob, drawing([Shape(WHITE, disc(13, 12, 10))], *knob))
+    sheet.element("handle-pressed", *knob, drawing([Shape(WHITE, rounded(1, 2, 25, 22, 10))], *knob))
+    shadow = blurred_disc(32, 10, 1.0, 1.2, 0.30)
+    sheet.element("handle-shadow", 32, 32, lambda x, y: image(x, y, 32, 32, shadow))
+    sheet.element("handle-focus", 30, 30, drawing([Shape(LILY, disc(15, 15, 13.5), disc(15, 15, 11.6))], 30, 30))
+    return sheet.svg()
+
+
+def slider_svg():
+    """A thin track, lily up to a white knob that casts a soft shadow."""
+    sheet = Sheet()
+    for prefix, how, opacity in (("groove", INK, 0.18), ("groove-highlight", LILY, 1.0)):
+        nine(sheet, prefix, (2, 2, 2, 2), [fill(how, opacity, (12, 12), 0, 2)], middle=8)
+    sheet.element("hint-handle-size", 20, 20, lambda x, y: "")
+    shadow = blurred_disc(28, 9.5, 1.0, 1.2, 0.32)
+    for d in ("horizontal", "vertical"):
+        sheet.element(f"{d}-slider-handle", 20, 20, drawing([Shape(paint(INK, 0.10), disc(10, 10, 10)),
+                                                            Shape(WHITE, disc(10, 10, 9.4))], 20, 20))
+        sheet.element(f"{d}-slider-shadow", 28, 28, lambda x, y: image(x, y, 28, 28, shadow))
+        sheet.element(f"{d}-slider-hover", 28, 28, drawing([Shape(paint(LILY, 0.22), disc(14, 14, 13.5), disc(14, 14, 10))], 28, 28))
+        sheet.element(f"{d}-slider-focus", 28, 28, drawing([Shape(LILY, disc(14, 14, 13.2), disc(14, 14, 11.4))], 28, 28))
+    return sheet.svg()
+
+
+def scrollbar_svg():
+    """A slim pill over the content, darker under the pointer. Breeze's sizes."""
+    sheet = Sheet()
+    sheet.hint("hint-scrollbar-size", 6, 6)
+    for prefix in ("background-vertical", "background-horizontal"):
+        nine(sheet, prefix, (3, 3, 3, 3), [], middle=3)
+    nine(sheet, "slider", (3, 3, 3, 3), [fill(INK, 0.30, (9, 9), 0, 3)], middle=3)
+    nine(sheet, "mouseover-slider", (3, 3, 3, 3), [fill(INK, 0.52, (9, 9), 0, 3)], middle=3)
+    for prefix in ("background-vertical", "background-horizontal", "slider", "mouseover-slider"):
+        sheet.hint(f"{prefix}-hint-left-inset", 6, 3)
+        sheet.hint(f"{prefix}-hint-right-inset", 6, 3)
+        sheet.hint(f"{prefix}-hint-top-inset", 3, 6)
+        sheet.hint(f"{prefix}-hint-bottom-inset", 3, 6)
+    return sheet.svg()
+
+
+def lineedit_svg():
+    """A well to type in, ringed in lily while you type."""
+    sheet = Sheet()
+    r = 8
+    size = (24, 24)
+    nine(sheet, "base", (r, r, r, r), [fill(WELL, 0.55, size, 0, r), band(INK, 0.11, size, 0, r, 1)], margins=(6, 6, 6, 6))
+    nine(sheet, "hover", (r, r, r, r), [band(INK, 0.12, size, 0, r, 1)], margins=(0.001,) * 4)
+    nine(sheet, "focus", (r, r, r, r), [band(LILY, 1, size, 0, r, 2)], margins=(0.001,) * 4)
+    sheet.hint("hint-focus-over-base", 2, 2)
+    return sheet.svg()
+
+
+def tabbar_svg():
+    """The chosen tab is a pebble of glass, as in Quick Settings."""
+    sheet = Sheet()
+    r = 10
+    for prefix in ("north-active-tab", "south-active-tab", "east-active-tab", "west-active-tab"):
+        nine(sheet, prefix, (r, r, r, r), [fill(INK, 0.10, (28, 28), 0, r)], margins=(6, 10, 6, 10))
+    return sheet.svg()
+
+
+def plasmoidheading_svg():
+    """Headers and footers of popovers: the glass carries on, a hairline divides."""
+    sheet = Sheet()
+    sheet.hint("hint-stretch-borders", 4, 4)
+    nine(sheet, "header", (6, 6, 6, 6), [Shape(paint(INK, 0.09), rounded(0, 19, 20, 20, 0))], middle=8)
+    nine(sheet, "footer", (6, 6, 6, 6), [Shape(paint(INK, 0.09), rounded(0, 0, 20, 1, 0))], middle=8)
+    sheet.hint("hint-top-margin", 4, 6)
+    sheet.hint("hint-bottom-margin", 4, 6)
+    sheet.hint("hint-left-margin", 6, 4)
+    sheet.hint("hint-right-margin", 6, 4)
+    return sheet.svg()
+
+
+def frame_widget_svg():
+    """Frames and group boxes: quiet cards, like Monet Settings'."""
+    sheet = Sheet()
+    r, size = 12, (32, 32)
+    nine(sheet, "plain", (r, r, r, r), [fill(INK, 0.035, size, 0, r), band(INK, 0.08, size, 0, r, 1)], margins=(6, 6, 6, 6))
+    nine(sheet, "raised", (r, r, r, r), [fill(WELL, 0.45, size, 0, r), band(INK, 0.08, size, 0, r, 1)], margins=(6, 6, 6, 6))
+    nine(sheet, "sunken", (r, r, r, r), [fill(INK, 0.07, size, 0, r)], margins=(6, 6, 6, 6))
+    return sheet.svg()
+
+
+def bar_meter_svg():
+    """Progress: a lily bar in a quiet track."""
+    sheet = Sheet()
+    sheet.hint("hint-bar-size", 6, 6)
+    nine(sheet, "bar-inactive", (3, 3, 3, 3), [fill(INK, 0.16, (10, 10), 0, 3)], middle=4)
+    nine(sheet, "bar-active", (3, 3, 3, 3), [fill(LILY, 1, (10, 10), 0, 3)], middle=4)
+    return sheet.svg()
+
+
+def busywidget_svg():
+    """Working: a lily arc going round a faint ring."""
+    sheet = Sheet()
+    c, r0, r1 = 18, 12.5, 16
+    track = Shape(paint(INK, 0.12), disc(c, c, r1), disc(c, c, r0))
+    arc = []
+    start, sweep = -90, 270
+    for i in range(61):
+        a = math.radians(start + sweep * i / 60)
+        arc.append((c + r1 * math.cos(a), c + r1 * math.sin(a)))
+    for i in range(61):
+        a = math.radians(start + sweep * (60 - i) / 60)
+        arc.append((c + r0 * math.cos(a), c + r0 * math.sin(a)))
+    mid = (r0 + r1) / 2
+    ends = [Shape(LILY, disc(c + mid * math.cos(math.radians(a)), c + mid * math.sin(math.radians(a)), (r1 - r0) / 2, 24))
+            for a in (start, start + sweep)]
+    # The arc isn't convex, so it's placed as it is rather than cut.
+    sheet.element("busywidget", 36, 36, lambda x, y: track.cut((0, 0, 36, 36), x, y)
+                  + f'<path d="{outline(arc, x, y)}" {LILY}/>' + "".join(e.cut((0, 0, 36, 36), x, y) for e in ends))
+    return sheet.svg()
+
+
+def line_svg():
+    sheet = Sheet()
+    sheet.element("horizontal-line", 8, 1, lambda x, y: f'<rect x="{x}" y="{y}" width="8" height="1" {paint(INK, 0.10)}/>')
+    sheet.element("vertical-line", 1, 8, lambda x, y: f'<rect x="{x}" y="{y}" width="1" height="8" {paint(INK, 0.10)}/>')
+    return sheet.svg()
+
+
+CONTROLS = {
+    "widgets/tasks": tasks_svg,
+    "widgets/viewitem": viewitem_svg,
+    "widgets/listitem": listitem_svg,
+    "widgets/button": button_svg,
+    "widgets/actionbutton": actionbutton_svg,
+    "widgets/checkmarks": checkmarks_svg,
+    "widgets/radiobutton": radiobutton_svg,
+    "widgets/switch": switch_svg,
+    "widgets/slider": slider_svg,
+    "widgets/scrollbar": scrollbar_svg,
+    "widgets/lineedit": lineedit_svg,
+    "widgets/tabbar": tabbar_svg,
+    "widgets/plasmoidheading": plasmoidheading_svg,
+    "widgets/frame": frame_widget_svg,
+    "widgets/bar_meter_horizontal": bar_meter_svg,
+    "widgets/busywidget": busywidget_svg,
+    "widgets/line": line_svg,
+}
+
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
 def write_style(out, ident, name, description, solid=False):
     out.mkdir(parents=True, exist_ok=True)
     for frame, spec in FRAMES.items():
         if solid:
-            spec = dict(spec, glass=0.96)
+            spec = dict(spec, glass=SOLID)
         svg = frame_svg(**spec)
         for folder in ("", "translucent/"):
-            path = out / f"{folder}{frame}.svg"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(svg)
+            write(out / f"{folder}{frame}.svg", svg)
+        # When a window touches the islands, Plasma draws them from solid/;
+        # without compositing (no see-through, no shadows), from opaque/.
+        write(out / f"solid/{frame}.svg", frame_svg(**dict(spec, glass=SOLID)))
+        write(out / f"opaque/{frame}.svg", frame_svg(**dict(spec, glass=1), shadow=False))
+    for frame, draw in CONTROLS.items():
+        write(out / f"{frame}.svg", draw())
     (out / "metadata.json").write_text(json.dumps({
         "KPlugin": {
             "Authors": [{"Name": "Monet"}],
@@ -209,7 +665,7 @@ def write_style(out, ident, name, description, solid=False):
             "Id": ident,
             "License": "GPL-3.0-or-later",
             "Name": name,
-            "Version": "0.6.0",
+            "Version": VERSION,
         },
         "X-Plasma-API": "5.0",
     }, indent=4) + "\n")

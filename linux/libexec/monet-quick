@@ -152,8 +152,15 @@ def bt_list():
         parts = line.split(" ", 2)
         if len(parts) == 3 and parts[0] == "Device":
             info = run("bluetoothctl", "info", parts[1], timeout=3) or ""
-            devices.append({"address": parts[1], "name": parts[2], "connected": "Connected: yes" in info})
+            devices.append({"address": parts[1], "name": parts[2], "connected": "Connected: yes" in info,
+                            "icon": bt_kind(info)})
     return devices
+
+
+def bt_kind(info):
+    """What the device is, as BlueZ names it (audio-headset, input-gaming, ...)."""
+    match = re.search(r"^\s*Icon:\s*(\S+)", info, re.M)
+    return match.group(1) if match else ""
 
 
 # Sound ---------------------------------------------------------------------

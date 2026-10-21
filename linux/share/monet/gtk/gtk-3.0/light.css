@@ -1,0 +1,171 @@
+/* Monet: GTK apps in Monet's colors (Mist, by day). Written by monet-light; a
+   gtk.css without this first line is yours, and Monet leaves it alone. */
+
+/* KDE's colors for GTK (the color scheme's), then Monet's on top. */
+@import 'colors.css';
+
+@define-color accent_color #2A6A5F;
+@define-color accent_bg_color #357F72;
+@define-color accent_fg_color #FFFFFF;
+@define-color destructive_color #C2401F;
+@define-color destructive_bg_color #D4462A;
+@define-color destructive_fg_color #FFFFFF;
+@define-color success_color #278050;
+@define-color success_bg_color #2F8A55;
+@define-color warning_color #B06C18;
+@define-color warning_bg_color #E39B3D;
+@define-color error_color #C2401F;
+@define-color error_bg_color #D4462A;
+@define-color window_bg_color #F3F1EC;
+@define-color window_fg_color #1C1B19;
+@define-color view_bg_color #FBFAF7;
+@define-color view_fg_color #1C1B19;
+@define-color headerbar_bg_color #F3F1EC;
+@define-color headerbar_fg_color #1C1B19;
+@define-color headerbar_border_color #1C1B19;
+@define-color headerbar_backdrop_color #F3F1EC;
+@define-color sidebar_bg_color #ECE9E3;
+@define-color sidebar_fg_color #1C1B19;
+@define-color card_bg_color #FBFAF7;
+@define-color card_fg_color #1C1B19;
+@define-color dialog_bg_color #F7F5F1;
+@define-color dialog_fg_color #1C1B19;
+@define-color popover_bg_color #FBFAF7;
+@define-color popover_fg_color #1C1B19;
+@define-color theme_bg_color #F3F1EC;
+@define-color theme_fg_color #1C1B19;
+@define-color theme_base_color #FBFAF7;
+@define-color theme_text_color #1C1B19;
+@define-color theme_selected_bg_color #357F72;
+@define-color theme_selected_fg_color #FFFFFF;
+
+/* The button that goes ahead is the sun, as everywhere in Monet. */
+button.suggested-action {
+    background-color: #F2552C;
+    color: #FFFFFF;
+}
+
+button.suggested-action:hover {
+    background-color: #FF6A42;
+}
+
+button.suggested-action:active,
+button.suggested-action:checked {
+    background-color: #D9441F;
+}
+
+/* Monet's switches: a pill that turns lily, with a white knob. And checks,
+   radios, sliders and progress in lily, instead of the usual blue. */
+switch {
+    background-color: alpha(#1C1B19, 0.16);
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: none;
+    padding: 2px;
+    color: transparent;
+}
+
+switch:hover {
+    background-color: alpha(#1C1B19, 0.24);
+}
+
+switch:checked {
+    background-color: #357F72;
+}
+
+switch:checked:hover {
+    background-color: #3F9483;
+}
+
+switch slider {
+    background-color: #FFFFFF;
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px alpha(#000000, 0.28);
+    min-width: 20px;
+    min-height: 20px;
+    margin: 0;
+}
+
+switch image {
+    color: transparent;
+}
+
+switch:disabled {
+    opacity: 0.5;
+}
+
+check,
+radio {
+    background-color: #FFFFFF;
+    background-image: none;
+    border: 1px solid alpha(#1C1B19, 0.22);
+    box-shadow: none;
+}
+
+check {
+    border-radius: 6px;
+}
+
+radio {
+    border-radius: 999px;
+}
+
+check:checked,
+check:indeterminate,
+radio:checked {
+    background-color: #357F72;
+    border-color: #357F72;
+    color: #FFFFFF;
+}
+
+scale trough {
+    border-radius: 999px;
+    background-color: alpha(#1C1B19, 0.16);
+    background-image: none;
+    border: none;
+}
+
+scale.horizontal trough {
+    min-height: 4px;
+}
+
+scale.vertical trough {
+    min-width: 4px;
+}
+
+scale highlight {
+    border-radius: 999px;
+}
+
+scale highlight,
+progressbar progress,
+levelbar block.filled {
+    background-color: #357F72;
+    background-image: none;
+    border-color: #357F72;
+}
+
+scale slider {
+    background-color: #FFFFFF;
+    background-image: none;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px alpha(#000000, 0.28);
+}
+
+/* Choices are a soft lily wash, as in Files, not a solid block. */
+row:selected,
+treeview.view:selected,
+flowboxchild:selected {
+    background-color: alpha(#357F72, 0.22);
+    color: #1C1B19;
+}
+
+/* Tooltips: ink on mist, paper on smoke, like the rest of Monet. */
+tooltip.background {
+    background-color: alpha(#1C1B19, 0.92);
+    color: #F3F1EC;
+}

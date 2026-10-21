@@ -139,6 +139,66 @@ class PlasmaStyle(unittest.TestCase):
             for svg in style.rglob("*.svg"):
                 self.assertNotIn("stroke", svg.read_text(), svg)
 
+    def test_solid_and_opaque_glass(self):
+        # A window touching the islands makes Plasma draw them from solid/;
+        # without compositing, from opaque/. Missing ones fall back to Breeze.
+        for style in self.STYLES:
+            for folder in ("solid/", "opaque/"):
+                for name in ("dialogs/background", "widgets/panel-background", "widgets/tooltip", "widgets/background"):
+                    ids = element_ids((style / f"{folder}{name}.svg").read_text())
+                    for piece in self.PIECES:
+                        self.assertIn(piece, ids, f"{style.name} {folder}{name}: {piece}")
+                        self.assertIn("mask-" + piece, ids, f"{style.name} {folder}{name}: mask-{piece}")
+
+    def test_controls_are_monets(self):
+        # Everything the bar and its popovers draw comes from Monet, not Breeze.
+        need = {
+            "widgets/tasks": [p + "-" + piece for p in ("normal", "focus", "minimized", "attention", "normal-hover",
+                                                         "focus-hover", "hover", "launcher-hover", "progress")
+                              for piece in self.PIECES] + ["normal-hint-left-margin", "normal-hint-bottom-margin"],
+            "widgets/viewitem": [p + "-center" for p in ("normal", "hover", "selected", "selected+hover")],
+            "widgets/listitem": ["normal-center", "hover-center", "pressed-center", "section-center", "separator"],
+            "widgets/button": [p + "-center" for p in ("normal", "pressed", "hover", "focus", "toolbutton-hover",
+                                                        "toolbutton-pressed", "toolbutton-focus")],
+            "widgets/actionbutton": ["normal", "hover", "pressed", "focus"],
+            "widgets/checkmarks": ["checkbox", "radiobutton"],
+            "widgets/radiobutton": ["hint-size", "normal", "checked", "symbol", "focus", "hover", "shadow"],
+            "widgets/switch": ["hint-bar-size", "inactive-left", "inactive-center", "inactive-right", "active-left",
+                               "active-center", "active-right", "handle", "handle-hover", "handle-pressed",
+                               "handle-shadow", "handle-focus"],
+            "widgets/slider": ["groove-center", "groove-highlight-center", "hint-handle-size", "horizontal-slider-handle",
+                               "horizontal-slider-shadow", "horizontal-slider-focus", "horizontal-slider-hover"],
+            "widgets/scrollbar": ["hint-scrollbar-size", "slider-center", "mouseover-slider-center",
+                                  "background-vertical-center", "slider-hint-left-inset"],
+            "widgets/lineedit": ["base-center", "hover-center", "focus-center", "hint-focus-over-base"],
+            "widgets/tabbar": ["north-active-tab-center", "south-active-tab-center"],
+            "widgets/plasmoidheading": ["header-center", "footer-center", "hint-top-margin"],
+            "widgets/frame": ["plain-center", "raised-center", "sunken-center"],
+            "widgets/bar_meter_horizontal": ["hint-bar-size", "bar-inactive-center", "bar-active-center"],
+            "widgets/busywidget": ["busywidget"],
+            "widgets/line": ["horizontal-line", "vertical-line"],
+        }
+        for style in self.STYLES:
+            for name, elements in need.items():
+                ids = element_ids((style / f"{name}.svg").read_text())
+                for element in elements:
+                    self.assertIn(element, ids, f"{style.name} {name}: {element}")
+
+    def test_check_boxes_fit_the_button_frame(self):
+        # Plasma draws a check box as the button frame at 16 x 16: corners
+        # larger than 8 would overlap and cut notches into it.
+        svg = (self.STYLES[0] / "widgets/button.svg").read_text()
+        for corner in re.findall(r'<g id="normal-topleft"><rect x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="([\d.]+)"', svg):
+            self.assertLessEqual(max(float(corner[0]), float(corner[1])), 8)
+        self.assertIn('id="normal-topleft"', svg)
+
+    def test_running_apps_get_the_sun(self):
+        # The design: a small sun-colored dab under running apps, nothing under launchers.
+        svg = (self.STYLES[0] / "widgets/tasks.svg").read_text()
+        self.assertIn("#F2552C", element_body(svg, "normal-bottom"))
+        self.assertIn("#F2552C", element_body(svg, "focus-bottom"))
+        self.assertNotIn('id="topleft"', svg)
+
 
 class AppStyle(unittest.TestCase):
     KVANTUM = SHARE / "Kvantum"
@@ -195,6 +255,37 @@ class AppStyle(unittest.TestCase):
                 if re.search(r"-(top|bottom|left|right|topleft|topright|bottomleft|bottomright)$", ident):
                     self.assertNotIn("stroke", element_body(svg, ident), ident)
 
+    def test_menus_and_tooltips_cast_shadows(self):
+        # Kvantum draws a popup's shadow from "<element>-shadow-*" pieces, and
+        # the hints say how much of each is shadow (so blur stays under the glass).
+        for theme in self.THEMES:
+            conf = self.sections(self.KVANTUM / theme / f"{theme}.kvconfig")
+            ids = element_ids((self.KVANTUM / theme / f"{theme}.svg").read_text())
+            general = conf["%General"]
+            for section, key in (("Menu", "menu_shadow_depth"), ("ToolTip", "tooltip_shadow_depth")):
+                self.assertGreater(int(general[key]), 0, f"{theme} {key}")
+                element = self.resolved(conf, section, "frame.element")
+                for piece in ("topleft", "top", "topright", "left", "right", "bottomleft", "bottom", "bottomright"):
+                    self.assertIn(f"{element}-shadow-{piece}", ids, f"{theme} {element}-shadow-{piece}")
+                for side in ("top", "bottom", "left", "right"):
+                    self.assertIn(f"{element}-shadow-hint-{side}", ids, f"{theme} {element}-shadow-hint-{side}")
+            # Rounded menus get rounded blur, not a square of it at the corners.
+            self.assertGreater(int(general["menu_blur_radius"]), 0, theme)
+            self.assertGreater(int(general["tooltip_blur_radius"]), 0, theme)
+
+    def test_menu_separators_are_drawn(self):
+        # Kvantum draws them as the menu item's indicator element plus "-separator".
+        for theme in self.THEMES:
+            conf = self.sections(self.KVANTUM / theme / f"{theme}.kvconfig")
+            ids = element_ids((self.KVANTUM / theme / f"{theme}.svg").read_text())
+            self.assertIn(self.resolved(conf, "MenuItem", "indicator.element") + "-separator", ids, theme)
+
+    def test_solid_menus_are_opaque(self):
+        # Without glass there's no blur, so a see-through menu would show the text behind it.
+        for theme in ("MonetSolid", "MonetDarkSolid"):
+            svg = (self.KVANTUM / theme / f"{theme}.svg").read_text()
+            self.assertNotRegex(element_body(svg, "menu-normal"), r'fill-opacity="0\.\d+"', theme)
+
 
 class Colors(unittest.TestCase):
     def test_schemes(self):
@@ -208,6 +299,21 @@ class Colors(unittest.TestCase):
             # The title bar is glass: its color has an alpha value.
             self.assertEqual(len(conf["WM"]["activeBackground"].split(",")), 4)
             self.assertEqual(conf["Colors:Selection"]["BackgroundNormal"], "53,127,114")
+
+    def test_gtk_sheets(self):
+        gtk = SHARE / "monet/gtk"
+        for version in ("3.0", "4.0"):
+            for light, window in (("light", "#F3F1EC"), ("dark", "#242321")):
+                css = (gtk / f"gtk-{version}/{light}.css").read_text()
+                # monet-light knows its own sheet by the first line.
+                self.assertTrue(css.startswith("/* Monet:"), f"{version} {light}")
+                # KDE's colors first (KDE adds the import if it's missing, at the end).
+                first = re.sub(r"/\*.*?\*/", "", css, flags=re.S).split()[:2]
+                self.assertEqual(first, ["@import", "'colors.css';"], f"{version} {light}")
+                # The same paper and smoke as the Qt side.
+                self.assertIn(f"@define-color window_bg_color {window};", css)
+                # Libadwaita 1.6+ only reads variables, and only GTK 4 parses them.
+                self.assertEqual(f"--window-bg-color: {window};" in css, version == "4.0", f"{version} {light}")
 
 
 class Paintings(unittest.TestCase):
@@ -323,6 +429,32 @@ class Light(unittest.TestCase):
         self.assertEqual(kde.choice(), "smoke")
         self.assertEqual(kde.settings()["kvantum.kvconfig|General|theme"], "MonetDark")
 
+    def test_gtk_apps_get_monet_and_keep_kdes_colors(self):
+        kde = FakeKDE(self.tmp.name, hour=21)
+        light = Path(self.tmp.name) / "monet-light"
+        light.write_text((ROOT / "linux/libexec/monet-light").read_text().replace("@DATADIR@", str(SHARE)))
+        config = Path(self.tmp.name) / "config"
+        # What KDE writes by itself: only its colors.
+        (config / "gtk-3.0").mkdir(parents=True)
+        (config / "gtk-3.0/gtk.css").write_text("\n@import 'colors.css';")
+        # And a gtk.css someone wrote.
+        (config / "gtk-4.0").mkdir(parents=True)
+        (config / "gtk-4.0/gtk.css").write_text("window { background: pink; }\n")
+        subprocess.run(["bash", str(light), "apply"], env=kde.env, check=True, timeout=30)
+        gtk3 = (config / "gtk-3.0/gtk.css").read_text()
+        self.assertTrue(gtk3.startswith("/* Monet:"))
+        self.assertIn("Smoke", gtk3.splitlines()[0])
+        self.assertIn("@import 'colors.css';", gtk3)
+        self.assertEqual((config / "gtk-4.0/gtk.css").read_text(), "window { background: pink; }\n")
+        # By day, Monet's own sheet turns to mist.
+        (Path(self.tmp.name) / "noon").mkdir()
+        noon = FakeKDE(Path(self.tmp.name) / "noon", hour=12)
+        sheet = Path(self.tmp.name) / "noon/config/gtk-3.0/gtk.css"
+        sheet.parent.mkdir(parents=True)
+        sheet.write_text(gtk3)
+        subprocess.run(["bash", str(light), "apply"], env=noon.env, check=True, timeout=30)
+        self.assertIn("Mist", sheet.read_text().splitlines()[0])
+
     def test_other_themes_are_left_alone(self):
         kde = FakeKDE(self.tmp.name, hour=12)
         kde.light("apply")
@@ -398,7 +530,9 @@ class Icons(unittest.TestCase):
     def test_painted_folders_and_apps(self):
         places = ("folder", "user-home", "user-desktop", "folder-documents", "folder-download", "folder-pictures",
                   "folder-music", "folder-videos", "folder-games", "user-trash", "user-trash-full")
-        apps = ("monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover")
+        # Store is Bazaar on Bazzite: the dock's bag is Monet's either way.
+        apps = ("monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover",
+                "io.github.kolunmi.Bazaar")
         for context, names in (("places", places), ("apps", apps)):
             for name in names:
                 svg = self.THEME / context / "scalable" / f"{name}.svg"
@@ -483,6 +617,11 @@ class Scripts(unittest.TestCase):
         self.assertEqual(nets[0]["signal"], 72)
         self.assertFalse(nets[2]["secure"])
         self.assertFalse(nets[3]["secure"])
+
+    def test_quick_knows_what_a_bluetooth_device_is(self):
+        info = "Device AA:BB:CC:DD:EE:FF (public)\n\tName: WH-1000XM5\n\tIcon: audio-headset\n\tConnected: yes\n"
+        self.assertEqual(quick_helper().bt_kind(info), "audio-headset")
+        self.assertEqual(quick_helper().bt_kind("Device 11:22:33:44:55:66\n\tName: Pad\n"), "")
 
     def test_text_from_people_reaches_nmcli_as_is(self):
         # Monet Settings sends network names and passwords as hex of their UTF-8.

@@ -39,7 +39,7 @@ PlasmaCore.Dialog {
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
           words: "sound volume speakers headphones microphone mic audio output" },
         // Opened in KDE's settings (kde), each with a painting's swatch.
-        { id: "input", name: i18n("Mouse & Keyboard"), kde: "input", swatch: "bluetooth",
+        { id: "input", name: i18n("Mouse & Keyboard"), kde: "input", swatch: "bluetooth", gap: true,
           glyph: "M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM12 3v5",
           words: "mouse keyboard touchpad pointer speed layout typing repeat" },
         { id: "power", name: i18n("Power & Sleep"), kde: "power", swatch: "light",
@@ -57,7 +57,7 @@ PlasmaCore.Dialog {
         { id: "apps", name: i18n("Default Apps"), kde: "apps", swatch: "display",
           glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
           words: "default apps browser email player open with" },
-        { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true,
+        { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true, gap: true,
           words: "windows games play anti-cheat steam restart boot doctor check" },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
           words: "updates update version upgrade new" },
@@ -400,8 +400,8 @@ PlasmaCore.Dialog {
         implicitHeight: 16
         Shape {
             anchors.fill: parent
-            layer.enabled: true
-            layer.samples: 4
+            // Smooth edges without a multisampled layer for every glyph.
+            preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 scale: Qt.size(glyph.width / 24, glyph.height / 24)
                 strokeColor: glyph.color
@@ -438,29 +438,64 @@ PlasmaCore.Dialog {
         }
     }
 
-    component PageTitle: ColumnLayout {
+    // A page's title next to its swatch, as large as the one in the list.
+    component PageTitle: RowLayout {
         id: heading
         property var tone
         property string text
         property string detail
+        property var entry: ({})
+        property string art
         Layout.fillWidth: true
-        spacing: 6
-        Text {
-            Layout.fillWidth: true
-            text: heading.text
-            color: heading.tone.ink
-            font.family: "Fraunces 72pt SuperSoft"
-            font.weight: Font.Light
-            font.pixelSize: 30
-            elide: Text.ElideRight
+        spacing: 16
+        Item {
+            visible: heading.entry.glyph !== undefined
+            Layout.preferredWidth: 46
+            Layout.preferredHeight: 46
+            Layout.alignment: Qt.AlignTop
+            Image {
+                anchors.fill: parent
+                source: heading.art + "swatch-" + (heading.entry.swatch || heading.entry.id) + ".png"
+                sourceSize: Qt.size(92, 92)
+                smooth: true
+            }
+            Glyph {
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: 1
+                width: 24
+                height: 24
+                path: heading.entry.glyph || ""
+                filled: heading.entry.filled === true
+                color: Qt.rgba(0, 0, 0, 0.3)
+            }
+            Glyph {
+                anchors.centerIn: parent
+                width: 24
+                height: 24
+                path: heading.entry.glyph || ""
+                filled: heading.entry.filled === true
+            }
         }
-        Text {
+        ColumnLayout {
             Layout.fillWidth: true
-            visible: heading.detail !== ""
-            text: heading.detail
-            color: heading.tone.dim
-            font.pixelSize: 14
-            wrapMode: Text.Wrap
+            spacing: 4
+            Text {
+                Layout.fillWidth: true
+                text: heading.text
+                color: heading.tone.ink
+                font.family: "Fraunces 72pt SuperSoft"
+                font.weight: Font.Light
+                font.pixelSize: 30
+                elide: Text.ElideRight
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: heading.detail !== ""
+                text: heading.detail
+                color: heading.tone.dim
+                font.pixelSize: 14
+                wrapMode: Text.Wrap
+            }
         }
     }
 
@@ -793,7 +828,8 @@ PlasmaCore.Dialog {
     mainItem: Item {
         id: frame
         width: Math.min(1000, sheet.area.width - 64)
-        height: Math.min(660, sheet.area.height - 96)
+        // Tall enough for every page in the list on most screens (it scrolls on short ones).
+        height: Math.min(700, sheet.area.height - 96)
         // Mist or smoke, from the colors Monet's light chose.
         readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
 
@@ -886,87 +922,131 @@ PlasmaCore.Dialog {
                     }
                 }
 
-                Repeater {
-                    model: sheet.pages
-                    Rectangle {
-                        id: navItem
-                        readonly property bool current: sheet.page === modelData.id
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: visible ? 34 : 0
-                        visible: side.matches(modelData)
-                        radius: 12
-                        color: current ? (look.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.55))
-                            : navHover.hovered ? (look.dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.3)) : "transparent"
-                        Behavior on color { ColorAnimation { duration: Math.round(140 * sheet.speed) } }
-                        border.width: activeFocus ? 2 : 0
-                        border.color: look.lily
-                        activeFocusOnTab: true
-                        Keys.onSpacePressed: sheet.go(modelData)
-                        Keys.onReturnPressed: sheet.go(modelData)
+                // The pages, scrolling when the screen is short. The current
+                // page's pebble of glass glides from one to the next.
+                Flickable {
+                    id: navList
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    contentHeight: navColumn.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 8
-                            anchors.rightMargin: 8
-                            spacing: 12
-                            // A swatch cut from the paintings, with a white mark.
-                            Item {
-                                Layout.preferredWidth: 28
-                                Layout.preferredHeight: 28
-                                Image {
-                                    anchors.fill: parent
-                                    source: sheet.art + "swatch-" + (modelData.swatch || modelData.id) + ".png"
-                                    sourceSize: Qt.size(56, 56)
-                                    smooth: true
-                                }
-                                Glyph {
-                                    anchors.centerIn: parent
-                                    anchors.verticalCenterOffset: 1
-                                    width: 16
-                                    height: 16
-                                    path: modelData.glyph
-                                    filled: modelData.filled === true
-                                    color: Qt.rgba(0, 0, 0, 0.3)
-                                }
-                                Glyph {
-                                    anchors.centerIn: parent
-                                    width: 16
-                                    height: 16
-                                    path: modelData.glyph
-                                    filled: modelData.filled === true
-                                }
-                            }
-                            Text {
+                    Rectangle {
+                        id: pebble
+                        readonly property Item target: navRepeater.count > 0
+                            ? navRepeater.itemAt(sheet.pages.findIndex(p => p.id === sheet.page)) : null
+                        width: navColumn.width
+                        height: target ? target.height : 0
+                        y: target ? target.y : 0
+                        visible: target !== null && target.visible
+                        radius: 12
+                        color: look.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.6)
+                        Behavior on y {
+                            enabled: sheet.visible
+                            NumberAnimation { duration: Math.round(320 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
+                        }
+                    }
+
+                    ColumnLayout {
+                        id: navColumn
+                        width: navList.width
+                        spacing: 2
+
+                        Repeater {
+                            id: navRepeater
+                            model: sheet.pages
+                            Rectangle {
+                                id: navItem
+                                readonly property bool current: sheet.page === modelData.id
                                 Layout.fillWidth: true
-                                text: modelData.name
-                                color: look.ink
-                                opacity: navItem.current ? 1 : 0.88
-                                font.pixelSize: 14
-                                font.weight: navItem.current ? Font.DemiBold : Font.Normal
-                                elide: Text.ElideRight
+                                Layout.preferredHeight: visible ? 32 : 0
+                                // A little air between Monet's pages, KDE's, and Windows'.
+                                Layout.topMargin: modelData.gap ? 10 : 0
+                                visible: side.matches(modelData)
+                                radius: 12
+                                color: navHover.hovered && !current ? (look.dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.3)) : "transparent"
+                                Behavior on color { ColorAnimation { duration: Math.round(140 * sheet.speed) } }
+                                border.width: activeFocus ? 2 : 0
+                                border.color: look.lily
+                                activeFocusOnTab: true
+                                Keys.onSpacePressed: sheet.go(modelData)
+                                Keys.onReturnPressed: sheet.go(modelData)
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 10
+                                    spacing: 12
+                                    // A swatch cut from the paintings, with a white mark.
+                                    Item {
+                                        Layout.preferredWidth: 26
+                                        Layout.preferredHeight: 26
+                                        Image {
+                                            anchors.fill: parent
+                                            source: sheet.art + "swatch-" + (modelData.swatch || modelData.id) + ".png"
+                                            sourceSize: Qt.size(56, 56)
+                                            smooth: true
+                                        }
+                                        Glyph {
+                                            anchors.centerIn: parent
+                                            anchors.verticalCenterOffset: 1
+                                            width: 15
+                                            height: 15
+                                            path: modelData.glyph
+                                            filled: modelData.filled === true
+                                            color: Qt.rgba(0, 0, 0, 0.3)
+                                        }
+                                        Glyph {
+                                            anchors.centerIn: parent
+                                            width: 15
+                                            height: 15
+                                            path: modelData.glyph
+                                            filled: modelData.filled === true
+                                        }
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.name
+                                        color: look.ink
+                                        opacity: navItem.current ? 1 : 0.88
+                                        font.pixelSize: 14
+                                        font.weight: navItem.current ? Font.DemiBold : Font.Normal
+                                        elide: Text.ElideRight
+                                    }
+                                    // Opens in KDE's settings, not here.
+                                    Glyph {
+                                        visible: modelData.kde !== undefined
+                                        Layout.preferredWidth: 11
+                                        Layout.preferredHeight: 11
+                                        path: "M7 17L17 7M9 7h8v8"
+                                        color: look.ink
+                                        opacity: navHover.hovered ? 0.6 : 0.32
+                                    }
+                                }
+                                HoverHandler { id: navHover }
+                                TapHandler { onTapped: sheet.go(modelData) }
+                                Accessible.role: Accessible.PageTab
+                                Accessible.name: modelData.name
+                                Accessible.description: modelData.kde !== undefined ? i18n("Opens in KDE's settings") : ""
+                                Accessible.selected: current
+                                Accessible.onPressAction: sheet.go(modelData)
                             }
                         }
-                        HoverHandler { id: navHover }
-                        TapHandler { onTapped: sheet.go(modelData) }
-                        Accessible.role: Accessible.PageTab
-                        Accessible.name: modelData.name
-                        Accessible.selected: current
-                        Accessible.onPressAction: sheet.go(modelData)
+
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 10
+                            Layout.topMargin: 8
+                            visible: !sheet.pages.some(p => side.matches(p))
+                            text: i18n("Nothing here by that name. Try More settings in KDE.")
+                            color: look.dim
+                            font.pixelSize: 13
+                            wrapMode: Text.Wrap
+                        }
                     }
                 }
-
-                Text {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 10
-                    Layout.topMargin: 8
-                    visible: !sheet.pages.some(p => side.matches(p))
-                    text: i18n("Nothing here by that name. Try More settings in KDE.")
-                    color: look.dim
-                    font.pixelSize: 13
-                    wrapMode: Text.Wrap
-                }
-
-                Item { Layout.fillHeight: true }
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -1081,6 +1161,36 @@ PlasmaCore.Dialog {
         return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound", about: "about" })[page] || "all"
     }
 
+    function entry(id) {
+        return pages.find(p => p.id === id) || ({})
+    }
+
+    // What Bluetooth says a device is (its icon name), as a glyph.
+    function deviceGlyph(kind) {
+        if (kind.indexOf("audio") === 0)
+            return "M4 15v-3a8 8 0 0 1 16 0v3M4 14h3v6H4zM17 14h3v6h-3z"
+        if (kind === "input-gaming")
+            return "M7.5 8.5h9a4 4 0 0 1 3.9 4.9l-.8 3.3a2 2 0 0 1-3.4.9L14.8 16H9.2l-1.4 1.6a2 2 0 0 1-3.4-.9l-.8-3.3a4 4 0 0 1 3.9-4.9zM8.5 11.5v3M7 13h3M15.5 12h.01M17 14h.01"
+        if (kind === "input-mouse")
+            return "M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6zM12 7v3"
+        if (kind === "input-keyboard")
+            return "M3 7h18v10H3zM7 10.5h.01M11 10.5h.01M15 10.5h.01M8 14h8"
+        if (kind === "phone")
+            return "M8 3h8v18H8zM11 18h2"
+        if (kind === "computer")
+            return "M4 5h16v10H4zM2 19h20"
+        return entry("bluetooth").glyph
+    }
+
+    // Speakers, headphones or a screen, from the output's name.
+    function outputGlyph(name) {
+        if (/head|ear|buds/i.test(name))
+            return deviceGlyph("audio")
+        if (/hdmi|displayport|monitor|tv/i.test(name))
+            return entry("display").glyph
+        return entry("sound").glyph
+    }
+
     // Pages -----------------------------------------------------------------
 
     Component {
@@ -1089,6 +1199,8 @@ PlasmaCore.Dialog {
             spacing: 20
             PageTitle {
                 tone: look
+                entry: sheet.entry("light")
+                art: sheet.art
                 text: i18n("Light & Wallpaper")
                 detail: i18n("How Monet looks, and when it changes.")
             }
@@ -1192,7 +1304,12 @@ PlasmaCore.Dialog {
             spacing: 20
             PageTitle {
                 tone: look
+                entry: sheet.entry("wifi")
+                art: sheet.art
                 text: i18n("Wi-Fi")
+                detail: sheet.info.wifi === true
+                    ? ((sheet.info.network || "") !== "" ? i18n("Connected to %1", sheet.info.network) : i18n("Not connected"))
+                    : sheet.info.wifi === false ? i18n("Off") : ""
             }
             Card {
                 tone: look
@@ -1263,11 +1380,25 @@ PlasmaCore.Dialog {
                                     sheet.join(modelData.name, "")
                                 }
                             }
-                            Text {
-                                text: sheet.joining === modelData.name && sheet.joinState === "joining" ? i18n("Joining…")
-                                    : modelData.secure ? i18n("Secured") : i18n("Open")
-                                color: look.dim
-                                font.pixelSize: 13
+                            Row {
+                                readonly property bool busy: sheet.joining === modelData.name && sheet.joinState === "joining"
+                                spacing: 6
+                                Text {
+                                    visible: parent.busy
+                                    text: i18n("Joining…")
+                                    color: look.dim
+                                    font.pixelSize: 13
+                                }
+                                // A lock for networks that ask for a password.
+                                Glyph {
+                                    visible: modelData.secure && !parent.busy
+                                    width: 15
+                                    height: 15
+                                    path: "M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6z"
+                                    color: look.dim
+                                }
+                                Accessible.role: Accessible.StaticText
+                                Accessible.name: modelData.secure ? i18n("Secured") : i18n("Open")
                             }
                         }
                         RowLayout {
@@ -1337,8 +1468,14 @@ PlasmaCore.Dialog {
         ColumnLayout {
             spacing: 20
             PageTitle {
+                readonly property int connected: sheet.devices.filter(d => d.connected).length
                 tone: look
+                entry: sheet.entry("bluetooth")
+                art: sheet.art
                 text: i18n("Bluetooth")
+                detail: sheet.info.bluetooth === true
+                    ? (connected > 0 ? i18np("%1 device connected", "%1 devices connected", connected) : i18n("On"))
+                    : sheet.info.bluetooth === false ? i18n("Off") : ""
             }
             Card {
                 tone: look
@@ -1374,6 +1511,21 @@ PlasmaCore.Dialog {
                         divider: index > 0
                         title: modelData.name
                         detail: modelData.connected ? i18n("Connected") : i18n("Not connected")
+                        // What it is, in a lily chip while it's connected (like Quick Settings).
+                        lead: Rectangle {
+                            width: 34
+                            height: 34
+                            radius: 17
+                            color: modelData.connected ? look.lily : look.wash2
+                            Behavior on color { ColorAnimation { duration: Math.round(180 * look.speed) } }
+                            Glyph {
+                                anchors.centerIn: parent
+                                width: 18
+                                height: 18
+                                path: sheet.deviceGlyph(modelData.icon || "")
+                                color: modelData.connected ? "#FFFFFF" : look.ink
+                            }
+                        }
                         Pill {
                             tone: look
                             text: sheet.busyDevice === modelData.address ? (modelData.connected ? i18n("Disconnecting…") : i18n("Connecting…"))
@@ -1399,7 +1551,10 @@ PlasmaCore.Dialog {
             spacing: 20
             PageTitle {
                 tone: look
+                entry: sheet.entry("display")
+                art: sheet.art
                 text: i18n("Display")
+                detail: i18n("Brightness, and warmer colors at night.")
             }
             Card {
                 tone: look
@@ -1439,8 +1594,12 @@ PlasmaCore.Dialog {
         ColumnLayout {
             spacing: 20
             PageTitle {
+                readonly property string playing: (sheet.outputs.find(o => o.default) || {}).name || ""
                 tone: look
+                entry: sheet.entry("sound")
+                art: sheet.art
                 text: i18n("Sound")
+                detail: playing !== "" ? i18n("Playing through %1", playing) : ""
             }
             Card {
                 tone: look
@@ -1470,6 +1629,13 @@ PlasmaCore.Dialog {
                         strong: false
                         title: modelData.name
                         onTapped: sheet.pickOutput(modelData)
+                        lead: Glyph {
+                            width: 18
+                            height: 18
+                            path: sheet.outputGlyph(modelData.name)
+                            color: look.ink
+                            opacity: modelData.default === true ? 1 : 0.6
+                        }
                         Check {
                             tone: look
                             active: modelData.default === true
@@ -1503,7 +1669,10 @@ PlasmaCore.Dialog {
             spacing: 20
             PageTitle {
                 tone: look
+                entry: sheet.entry("windows")
+                art: sheet.art
                 text: i18n("Windows & Games")
+                detail: i18n("Games that need Windows, a restart away.")
             }
             Card {
                 tone: look
@@ -1647,7 +1816,10 @@ PlasmaCore.Dialog {
             spacing: 20
             PageTitle {
                 tone: look
+                entry: sheet.entry("updates")
+                art: sheet.art
                 text: i18n("Updates")
+                detail: i18n("Only when you ask.")
             }
             Card {
                 tone: look
@@ -1677,6 +1849,13 @@ PlasmaCore.Dialog {
                             color: sheet.updateState === "failed" ? "#E0603A" : look.dim
                             font.pixelSize: 13
                             wrapMode: Text.Wrap
+                        }
+                        // Still working: there's no number to show, so it just moves.
+                        PlasmaComponents.ProgressBar {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 6
+                            visible: sheet.updateState === "checking" || sheet.updateState === "installing"
+                            indeterminate: true
                         }
                     }
                     Pill {

@@ -72,6 +72,10 @@ kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
 kw --file breezerc --group Windeco --key TitleAlignment AlignCenterFullWidth
 kw --file breezerc --group Windeco --key DrawBackgroundGradient false
 kw --file breezerc --group Windeco --key DrawBorderOnMaximizedWindows false
+# Windows cast a wide, soft shadow in ink, not black, like the islands do.
+kw --file breezerc --group Common --key ShadowSize ShadowVeryLarge
+kw --file breezerc --group Common --key ShadowStrength 180
+kw --file breezerc --group Common --key ShadowColor "28,27,25"
 
 # The glass app style for Qt apps, when Kvantum is installed.
 if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so >/dev/null 2>&1; then
@@ -86,11 +90,15 @@ if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/
     kw --file kdeglobals --group KDE --key widgetStyle kvantum
 fi
 
-# The terminal: glass too.
+# The terminal: glass too, with room around the text and a thin cursor, and
+# its menu behind a button instead of a menu bar (like Files).
 if [ -f "$DATADIR/konsole/Monet.profile" ]; then
     mkdir -p "$DATA/konsole"
     [ -f "$DATA/konsole/Monet.profile" ] || cp "$DATADIR/konsole/Monet.profile" "$DATA/konsole/Monet.profile"
+    kw_default "$DATA/konsole/Monet.profile" "Cursor Options" CursorShape 1
+    kw_default "$DATA/konsole/Monet.profile" General TerminalCenter true
     kw --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
+    kw_default konsolerc MainWindow MenuBar Disabled
 fi
 
 # GTK apps from Flathub read Monet's colors (monet-light writes them).

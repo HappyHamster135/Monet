@@ -111,17 +111,19 @@ apply() {
     fi
 
     # GTK apps (Flatpak ones too: monet-look lets them read these) in the
-    # same light. A gtk.css someone wrote themselves is left alone.
-    local gtk=light
+    # same light. KDE's own gtk.css, only its colors.css import, becomes
+    # Monet's (which imports it too); a gtk.css someone wrote is left alone.
+    local gtk=light version src dir
     case "$kvantum" in *Dark*) gtk=dark ;; esac
-    if [ -f "$DATADIR/monet/gtk/$gtk.css" ]; then
-        for dir in "$CONFIG/gtk-3.0" "$CONFIG/gtk-4.0"; do
-            if [ ! -s "$dir/gtk.css" ] || head -1 "$dir/gtk.css" | grep -q '^/\* Monet:'; then
-                cmp -s "$DATADIR/monet/gtk/$gtk.css" "$dir/gtk.css" ||
-                    { mkdir -p "$dir" && cp "$DATADIR/monet/gtk/$gtk.css" "$dir/gtk.css"; }
-            fi
-        done
-    fi
+    for version in 3.0 4.0; do
+        src="$DATADIR/monet/gtk/gtk-$version/$gtk.css"
+        dir="$CONFIG/gtk-$version"
+        [ -f "$src" ] || continue
+        if [ ! -s "$dir/gtk.css" ] || head -1 "$dir/gtk.css" | grep -q '^/\* Monet:' ||
+            ! grep -qv -e '^[[:space:]]*$' -e "^@import 'colors.css';\$" "$dir/gtk.css"; then
+            cmp -s "$src" "$dir/gtk.css" || { mkdir -p "$dir" && cp "$src" "$dir/gtk.css"; }
+        fi
+    done
 }
 
 # Someone picked Light or Dark in KDE's settings (or a Monet global theme):

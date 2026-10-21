@@ -1,35 +1,41 @@
 /* Monet: GTK apps in Monet's colors (Smoke, after dark). Written by monet-light; a
    gtk.css without this first line is yours, and Monet leaves it alone. */
 
-@define-color accent_color #6FC2B0;
+/* KDE's colors for GTK (the color scheme's), then Monet's on top. */
+@import 'colors.css';
+
+@define-color accent_color #62C4B0;
 @define-color accent_bg_color #357F72;
 @define-color accent_fg_color #FFFFFF;
 @define-color destructive_color #FF8A66;
 @define-color destructive_bg_color #D4462A;
 @define-color destructive_fg_color #FFFFFF;
-@define-color success_color #6FC2B0;
-@define-color warning_color #E39B3D;
+@define-color success_color #58BE82;
+@define-color success_bg_color #2F8A55;
+@define-color warning_color #E8A040;
+@define-color warning_bg_color #C98A2E;
 @define-color error_color #FF8A66;
-@define-color window_bg_color #22232E;
-@define-color window_fg_color #ECE9F2;
-@define-color view_bg_color #2A2B37;
-@define-color view_fg_color #ECE9F2;
-@define-color headerbar_bg_color #22232E;
-@define-color headerbar_fg_color #ECE9F2;
-@define-color headerbar_border_color #ECE9F2;
-@define-color headerbar_backdrop_color #22232E;
-@define-color sidebar_bg_color #1B1C25;
-@define-color sidebar_fg_color #ECE9F2;
-@define-color card_bg_color #2F3040;
-@define-color card_fg_color #ECE9F2;
-@define-color dialog_bg_color #22232E;
-@define-color dialog_fg_color #ECE9F2;
-@define-color popover_bg_color #2A2B37;
-@define-color popover_fg_color #ECE9F2;
-@define-color theme_bg_color #22232E;
-@define-color theme_fg_color #ECE9F2;
-@define-color theme_base_color #2A2B37;
-@define-color theme_text_color #ECE9F2;
+@define-color error_bg_color #D4462A;
+@define-color window_bg_color #242321;
+@define-color window_fg_color #EFECE6;
+@define-color view_bg_color #1E1D1C;
+@define-color view_fg_color #EFECE6;
+@define-color headerbar_bg_color #242321;
+@define-color headerbar_fg_color #EFECE6;
+@define-color headerbar_border_color #EFECE6;
+@define-color headerbar_backdrop_color #242321;
+@define-color sidebar_bg_color #2C2A28;
+@define-color sidebar_fg_color #EFECE6;
+@define-color card_bg_color #2C2A28;
+@define-color card_fg_color #EFECE6;
+@define-color dialog_bg_color #2A2927;
+@define-color dialog_fg_color #EFECE6;
+@define-color popover_bg_color #2A2927;
+@define-color popover_fg_color #EFECE6;
+@define-color theme_bg_color #242321;
+@define-color theme_fg_color #EFECE6;
+@define-color theme_base_color #1E1D1C;
+@define-color theme_text_color #EFECE6;
 @define-color theme_selected_bg_color #357F72;
 @define-color theme_selected_fg_color #FFFFFF;
 
@@ -41,6 +47,11 @@ button.suggested-action {
 
 button.suggested-action:hover {
     background-color: #FF6A42;
+}
+
+button.suggested-action:active,
+button.suggested-action:checked {
+    background-color: #D9441F;
 }
 
 /* Monet's switches: a pill that turns lily, with a white knob. And checks,
@@ -88,7 +99,7 @@ switch:disabled {
 
 check,
 radio {
-    background-color: #2A2B37;
+    background-color: #2C2A28;
     background-image: none;
     border: 1px solid alpha(#FFFFFF, 0.25);
     box-shadow: none;
@@ -145,10 +156,16 @@ scale slider {
     box-shadow: 0 1px 3px alpha(#000000, 0.28);
 }
 
+/* Choices are a soft lily wash, as in Files, not a solid block. */
 row:selected,
 treeview.view:selected,
 flowboxchild:selected {
     background-color: alpha(#357F72, 0.22);
-    color: #ECE9F2;
+    color: #EFECE6;
 }
 
+/* Tooltips: ink on mist, paper on smoke, like the rest of Monet. */
+tooltip.background {
+    background-color: alpha(#F3F1EC, 0.94);
+    color: #1C1B19;
+}

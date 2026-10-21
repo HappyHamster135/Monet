@@ -11,8 +11,13 @@ edges and the middle), the way Kvantum stretches them.
 Run from the repository root:  python3 tools/make-kvantum.py
 """
 
+import base64
+import io
 from dataclasses import dataclass
 from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "linux" / "share" / "Kvantum"
@@ -20,6 +25,9 @@ OUT = ROOT / "linux" / "share" / "Kvantum"
 LILY = "#357F72"
 LILY_LIGHT = "#4DB4A0"
 SUN = "#F2552C"
+# How far menus' and tooltips' shadows reach beyond their glass.
+MENU_SHADOW = 8
+TOOLTIP_SHADOW = 6
 
 
 @dataclass
@@ -86,7 +94,8 @@ def solid(p: Palette, name):
     """The same style without glass: for slower PCs, or people who prefer it."""
     from dataclasses import replace
     return replace(p, name=name, see_through=False,
-                   glass_top=p.window_color + "FF", glass_bottom=p.window_color + "FF")
+                   glass_top=p.window_color + "FF", glass_bottom=p.window_color + "FF",
+                   menu=p.menu[:7] + "FF", tooltip=p.tooltip[:7] + "FF")
 
 
 def rgba(color):
@@ -192,9 +201,80 @@ class Sheet:
             self.box(ident, size, size,
                      lambda x, y: f'<rect x="{x}" y="{y}" width="{size}" height="{size}" {fl}/>' if fill else "")
 
+    def shadowed(self, ident, f, depth, fill, border, strength=0.26, blur=3.2, drop=1.5):
+        """A popup's frame together with the soft shadow around it, for
+        translucent menus and tooltips: Kvantum's "<element>-shadow-*" pieces,
+        each the shadow plus the frame inside it, and the hints that say how
+        much of each is only shadow (so the blur stays under the glass)."""
+        t = f + depth
+        middle = 12
+        W = 2 * t + middle
+        k = 4
+        big = Image.new("L", (W * k, W * k), 0)
+        box = [depth * k, depth * k, (W - depth) * k - 1, (W - depth) * k - 1]
+        ImageDraw.Draw(big).rounded_rectangle([box[0], box[1] + drop * k, box[2], box[3] + drop * k], radius=f * k, fill=255)
+        soft = big.filter(ImageFilter.GaussianBlur(blur * k)).resize((W, W), Image.LANCZOS)
+        under = Image.new("L", (W * k, W * k), 0)
+        ImageDraw.Draw(under).rounded_rectangle(box, radius=f * k, fill=255)
+        under = under.resize((W, W), Image.LANCZOS)
+        alpha = np.asarray(soft).astype(np.float32) * strength * (1 - np.asarray(under).astype(np.float32) / 255)
+        rgba = np.zeros((W, W, 4), np.uint8)
+        rgba[..., 3] = np.clip(alpha, 0, 255).astype(np.uint8)
+        shadow = Image.fromarray(rgba, "RGBA")
+
+        def png(crop):
+            buf = io.BytesIO()
+            shadow.crop(crop).save(buf, "PNG", optimize=True)
+            return base64.b64encode(buf.getvalue()).decode()
+
+        fl, edge = paint(fill), paint(border)
+        pieces = {
+            "topleft": (0, 0, t, t), "top": (t, 0, t + middle, t), "topright": (t + middle, 0, W, t),
+            "left": (0, t, t, t + middle), "right": (t + middle, t, W, t + middle),
+            "bottomleft": (0, t + middle, t, W), "bottom": (t, t + middle, t + middle, W), "bottomright": (t + middle, t + middle, W, W),
+        }
+        for which, crop in pieces.items():
+            w, h = crop[2] - crop[0], crop[3] - crop[1]
+            data = png(crop)
+
+            def body(x, y, which=which, crop=crop, w=w, h=h, data=data):
+                out = f'<image x="{x}" y="{y}" width="{w}" height="{h}" xlink:href="data:image/png;base64,{data}"/>'
+                # The frame's part of this piece, in the reference frame's coordinates.
+                ox, oy = x - crop[0], y - crop[1]
+                a, b = depth, W - depth  # the frame's outer edges
+                if which in ("top", "bottom"):
+                    yy = a if which == "top" else b - f
+                    out += f'<rect x="{x}" y="{oy + yy}" width="{w}" height="{f}" {fl}/>'
+                    line = oy + (a if which == "top" else b - 1)
+                    out += f'<rect x="{x}" y="{line}" width="{w}" height="1" {edge}/>'
+                elif which in ("left", "right"):
+                    xx = a if which == "left" else b - f
+                    out += f'<rect x="{ox + xx}" y="{y}" width="{f}" height="{h}" {fl}/>'
+                    line = ox + (a if which == "left" else b - 1)
+                    out += f'<rect x="{line}" y="{y}" width="1" height="{h}" {edge}/>'
+                else:
+                    cx = ox + (a + f if "left" in which else b - f)
+                    cy = oy + (a + f if "top" in which else b - f)
+                    sx = -1 if "left" in which else 1
+                    sy = -1 if "top" in which else 1
+                    # A quarter disc of fill, and a 1 px quarter ring for the edge.
+                    p0, p1 = (cx + sx * f, cy), (cx, cy + sy * f)
+                    sweep = 1 if sx * sy > 0 else 0
+                    out += f'<path d="M{cx},{cy} L{p0[0]},{p0[1]} A{f},{f} 0 0 {sweep} {p1[0]},{p1[1]} Z" {fl}/>'
+                    r2 = f - 1
+                    q0, q1 = (cx + sx * r2, cy), (cx, cy + sy * r2)
+                    out += (f'<path d="M{p0[0]},{p0[1]} A{f},{f} 0 0 {sweep} {p1[0]},{p1[1]} L{q1[0]},{q1[1]} '
+                            f'A{r2},{r2} 0 0 {1 - sweep} {q0[0]},{q0[1]} Z" {edge}/>')
+                return out
+            self.box(f"{ident}-shadow-{which}", w, h, body)
+        for side in ("top", "bottom", "left", "right"):
+            w, h = (2, depth) if side in ("top", "bottom") else (depth, 2)
+            self.box(f"{ident}-shadow-hint-{side}", w, h, lambda x, y: "")
+
     def svg(self):
         height = self.y + self.row + 8
-        return ('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="%d" viewBox="0 0 1600 %d">\n'
+        return ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+                'width="1600" height="%d" viewBox="0 0 1600 %d">\n'
                 "<!-- Monet app style for Kvantum. Generated by tools/make-kvantum.py. -->\n%s\n</svg>\n"
                 % (height, height, "\n".join(self.parts)))
 
@@ -265,18 +345,23 @@ def theme_svg(p: Palette):
     s.frame("itemview-pressed", 6, fill=wash)
     s.frame("itemview-toggled", 6, fill=wash)
 
-    # Menus, the menu bar and tooltips.
+    # Menus, the menu bar and tooltips. With compositing, menus and tooltips
+    # cast a soft shadow, drawn with their frame (see MENU_SHADOW below).
     s.frame("menu-normal", 10, fill=p.menu, border=p.line)
-    s.frame("menuitem-normal", 5, fill=None)
+    s.shadowed("menu", 10, MENU_SHADOW, p.menu, p.line)
+    s.frame("menuitem-normal", 6, fill=None)
     # Kvantum draws the highlighted menu item as "pressed".
-    s.frame("menuitem-focused", 5, fill=LILY + "E6")
-    s.frame("menuitem-pressed", 5, fill=LILY + "E6")
-    s.frame("menuitem-toggled", 5, fill=LILY + "E6")
+    s.frame("menuitem-focused", 6, fill=LILY + "E6")
+    s.frame("menuitem-pressed", 6, fill=LILY + "E6")
+    s.frame("menuitem-toggled", 6, fill=LILY + "E6")
+    # Between groups of menu items: a hairline (MenuItem's indicator is "arrow").
+    s.box("arrow-separator", 40, 9, lambda x, y: f'<rect x="{x}" y="{y + 4}" width="40" height="1" {paint(p.line)}/>')
     s.frame("menubaritem-normal", 6, fill=None)
     s.frame("menubaritem-focused", 6, fill=p.hover)
     s.frame("menubaritem-pressed", 6, fill=p.button)
     s.frame("menubaritem-toggled", 6, fill=p.button)
     s.frame("tooltip-normal", 8, fill=p.tooltip)
+    s.shadowed("tooltip", 8, TOOLTIP_SHADOW, p.tooltip, p.tooltip, strength=0.22, blur=2.4, drop=1)
 
     # Table headers: just a hairline underneath.
     for st in ("normal", "focused", "pressed", "toggled"):
@@ -382,9 +467,12 @@ mirror_doc_tabs=false
 group_toolbar_buttons=false
 spread_progressbar=true
 composite=true
-menu_shadow_depth=0
-tooltip_shadow_depth=0
-spread_menuitems=true
+menu_shadow_depth={menu_shadow}
+tooltip_shadow_depth={tooltip_shadow}
+menu_blur_radius=10
+tooltip_blur_radius=8
+spread_menuitems=false
+menu_separator_height=9
 scroll_width=10
 scroll_arrows=false
 scroll_min_extent=36
@@ -732,12 +820,12 @@ text.press.color=#FFFFFF
 text.toggle.color=#FFFFFF
 text.margin.top=0
 text.margin.bottom=0
-text.margin.left=5
-text.margin.right=5
-frame.top=5
-frame.bottom=5
-frame.left=5
-frame.right=5
+text.margin.left=4
+text.margin.right=4
+frame.top=6
+frame.bottom=6
+frame.left=6
+frame.right=6
 
 [MenuBarItem]
 inherits=PanelButtonCommand
@@ -825,6 +913,7 @@ def kvconfig(p: Palette):
         tooltipbase=rgba(p.tooltip)[0], tooltiptext="#F3F1EC" if not p.dark else "#1C1B19",
         disabled="#A39D94" if not p.dark else "#6B665E", link=LILY if not p.dark else LILY_LIGHT,
         selection=p.selection, selection_text=p.selection_text, see_through=str(p.see_through).lower(),
+        menu_shadow=MENU_SHADOW, tooltip_shadow=TOOLTIP_SHADOW,
     )
     return GENERAL.format(**fill) + SECTIONS.format(**fill)
 

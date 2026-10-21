@@ -310,10 +310,26 @@ PlasmoidItem {
 
                 // Hours follows the paintings; Mist and Smoke stay put.
                 Rectangle {
+                    id: lights
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
                     radius: 14
                     color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.07)
+
+                    // The chosen light's pebble glides to it.
+                    Rectangle {
+                        readonly property int picked: Math.max(0, ["hours", "mist", "smoke"].indexOf(root.info.light || "hours"))
+                        readonly property real slot: (lights.width - 16) / 3
+                        x: 4 + picked * (slot + 4)
+                        y: 4
+                        width: slot
+                        height: lights.height - 8
+                        radius: 10
+                        color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.9)
+                        Behavior on x {
+                            NumberAnimation { duration: Math.round(320 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
+                        }
+                    }
 
                     RowLayout {
                         anchors.fill: parent
@@ -321,19 +337,17 @@ PlasmoidItem {
                         spacing: 4
                         Repeater {
                             model: [["hours", i18n("Hours")], ["mist", i18n("Mist")], ["smoke", i18n("Smoke")]]
-                            Rectangle {
+                            Item {
                                 id: choice
                                 readonly property bool picked: (root.info.light || "hours") === modelData[0]
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                radius: 10
-                                color: picked ? Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.9) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Math.round(160 * root.speed) } }
                                 PlasmaComponents.Label {
                                     anchors.centerIn: parent
                                     text: modelData[1]
                                     font.weight: Font.DemiBold
                                     opacity: choice.picked ? 1 : 0.66
+                                    Behavior on opacity { NumberAnimation { duration: Math.round(160 * root.speed) } }
                                 }
                                 TapHandler {
                                     onTapped: {

@@ -230,7 +230,8 @@ ICONS = {
     "files": (lambda: folder_icon("folder", *FOLDERS["folder"]), ["apps/system-file-manager", "apps/org.kde.dolphin"]),
     "settings": (settings_icon, ["apps/preferences-system", "apps/systemsettings", "apps/monet-settings"]),
     "terminal": (terminal_icon, ["apps/utilities-terminal", "apps/org.kde.konsole"]),
-    "store": (store_icon, ["apps/plasmadiscover", "apps/org.kde.discover"]),
+    # Store is Bazaar when Bazzite has it, otherwise Discover: the same bag either way.
+    "store": (store_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar"]),
     "monitor": (monitor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor"]),
     "trash": (lambda: trash_icon(False), ["places/user-trash"]),
     "trash-full": (lambda: trash_icon(True), ["places/user-trash-full"]),

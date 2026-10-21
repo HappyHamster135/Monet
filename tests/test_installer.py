@@ -363,12 +363,21 @@ class InstallerLook(unittest.TestCase):
         python = next((c for c in candidates if c and subprocess.run([c, "-c", probe], capture_output=True).returncode == 0), None)
         if python is None:
             self.skipTest("GTK 3 Python bindings aren't installed")
-        # Monet's colors for GTK apps on the desktop too (light and dark).
-        for path in [css] + sorted((ROOT / "linux/share/monet/gtk").glob("*.css")):
-            check = subprocess.run([python, "-c", "import sys, gi; gi.require_version('Gtk', '3.0'); "
-                                    "from gi.repository import Gtk; Gtk.CssProvider().load_from_path(sys.argv[1])",
-                                    str(path)], capture_output=True, text=True, env={**os.environ, "DISPLAY": ""})
-            self.assertEqual(check.returncode, 0, f"{path.name}: {check.stderr}")
+        # Monet's colors for GTK 3 apps on the desktop too (light and dark),
+        # next to a colors.css like the one KDE writes, which they import.
+        desktop = sorted((ROOT / "linux/share/monet/gtk/gtk-3.0").glob("*.css"))
+        self.assertEqual(len(desktop), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "colors.css").write_text("@define-color theme_bg_color #f3f1ec;\n")
+            for path in [css] + desktop:
+                label = path.name
+                if path in desktop:
+                    shutil.copy(path, Path(tmp) / "gtk.css")
+                    path = Path(tmp) / "gtk.css"
+                check = subprocess.run([python, "-c", "import sys, gi; gi.require_version('Gtk', '3.0'); "
+                                        "from gi.repository import Gtk; Gtk.CssProvider().load_from_path(sys.argv[1])",
+                                        str(path)], capture_output=True, text=True, env={**os.environ, "DISPLAY": ""})
+                self.assertEqual(check.returncode, 0, f"{label}: {check.stderr}")
 
     def test_stylesheet_targets_anaconda(self):
         css = (self.PRODUCT / "usr/share/anaconda/pixmaps/monet.css").read_text()
