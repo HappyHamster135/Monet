@@ -582,8 +582,15 @@ def tabbar_svg():
     """The chosen tab is a pebble of glass, as in Quick Settings."""
     sheet = Sheet()
     r = 10
-    for prefix in ("north-active-tab", "south-active-tab", "east-active-tab", "west-active-tab"):
+    for prefix in ("north-active-tab", "east-active-tab", "west-active-tab"):
         nine(sheet, prefix, (r, r, r, r), [fill(INK, 0.10, (28, 28), 0, r)], margins=(6, 10, 6, 10))
+    # The bar's tray marks the open icon with this one, stretched to the island's
+    # edges by the island's margins all round: the pebble keeps to the icon's own
+    # cell, so it never reaches over the icons beside it.
+    ix, iy = FRAMES["widgets/panel-background"]["margin"], 11
+    w, h = 2 * (ix + r) + 8, 2 * (iy + r) + 8
+    nine(sheet, "south-active-tab", (ix + r, iy + r, ix + r, iy + r),
+         [Shape(paint(INK, 0.10), rounded(ix, iy, w - ix, h - iy, r))], margins=(ix + 6, iy + 2, ix + 6, iy + 2))
     return sheet.svg()
 
 

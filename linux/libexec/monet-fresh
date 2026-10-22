@@ -26,6 +26,28 @@ if [ ! -e "$CONFIG/monet/menu-add-widgets" ] && command -v kwriteconfig6 >/dev/n
     mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-add-widgets"
 fi
 
+# Brightness and Night Light are in Quick Settings, beside Mist and Smoke: KDE's
+# own panel for them, with its Dark Mode switch, leaves the bar. Once per
+# account with a bar (a new one gets it from Monet's layout), here because
+# Plasma reads its tray only as it starts. Known but not chosen, or the tray
+# would add it back as new.
+rc=plasma-org.kde.plasma.desktop-appletsrc
+if [ ! -e "$CONFIG/monet/tray-brightness" ] && [ -e "$CONFIG/$rc" ] && command -v kwriteconfig6 >/dev/null; then
+    for id in $(awk '/^\[/ { id = ""; if ($0 ~ /^\[Containments\]\[[0-9]+\]$/) { id = $0; gsub(/[^0-9]/, "", id) } }
+                     /^plugin=org\.kde\.plasma\.private\.systemtray$/ && id != "" { print id }' "$CONFIG/$rc"); do
+        general=(--file "$rc" --group Containments --group "$id" --group General)
+        extra="$(kreadconfig6 "${general[@]}" --key extraItems | tr ',' '\n' | grep -vx org.kde.plasma.brightness | paste -sd, -)"
+        known="$(kreadconfig6 "${general[@]}" --key knownItems)"
+        case ",$known," in
+            *,org.kde.plasma.brightness,*) ;;
+            *) known="${known:+$known,}org.kde.plasma.brightness" ;;
+        esac
+        kwriteconfig6 "${general[@]}" --key extraItems "$extra"
+        kwriteconfig6 "${general[@]}" --key knownItems "$known"
+    done
+    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/tray-brightness"
+fi
+
 [ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit 0
 rm -f "$CACHE/ksvg-elements" "$CACHE"/plasma_theme_*.kcache "$CACHE"/plasma-svgelements* "$CACHE/icon-cache.kcache"
 mkdir -p "$CACHE" && printf '%s\n' "$version" > "$stamp"
