@@ -309,8 +309,14 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   time zone, Wi-Fi and Windows' waiting state, imports Universal Blue's
   driver key, and names the firmware entry "Monet".
 - **Tested in CI** (`tools/vm-test.py`): QEMU with Secure Boot on installs
-  Monet on a blank disk through the real screens and starts it; the
-  screenshots are kept in the registry (`tools/ci-screens.py`).
+  Monet on a blank disk through the real screens and starts it, then looks
+  around it: signs in, and shows the desktop, the app menu, Files and
+  Settings, then locks the screen and unlocks it with the password (the run's
+  summary says whether it did). So every build shows Monet as it really
+  looks, KWin's blur and all. The screenshots are kept in the registry:
+  `python3 tools/ci-screens.py pull ghcr.io/happyhamster135/monet:ci-screens screens/`
+  (or the run's `setup-screens` artifact). It runs with every release and by
+  hand from the Actions tab (Monet OS → Run workflow).
 
 ## Not Apple
 

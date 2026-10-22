@@ -8,7 +8,12 @@ real PC), a blank 96 GB disk and a wired network. Waits for Monet Setup,
 takes a screenshot of each step, and with --install goes on: types a name and
 password, chooses "Monet and Windows", installs, confirms Universal Blue's
 driver key on the firmware's blue screen, and starts the installed Monet.
-Screenshots go to SCREENS/ (NN-name.png); the exit code says how far it got.
+Then it looks around Monet the way someone would: signs in, and shows the
+desktop, the app menu, Files and Settings, then locks the screen, wakes it
+and unlocks it with the password (which says whether Monet's lock screen
+really lets people back in).
+Screenshots go to SCREENS/ (NN-name.png); the exit code says how far the
+install got. The look around never changes it: it prints what it saw.
 """
 
 import json
@@ -20,7 +25,7 @@ import sys
 import time
 from pathlib import Path
 
-from PIL import Image, ImageStat
+from PIL import Image, ImageChops, ImageStat
 
 W, H = 1920, 1080
 U = min(W / 1440, H / 900)          # Monet Setup's scale on this screen
@@ -128,6 +133,88 @@ def setup_showing(img):
     return brightness(img, (u(80), u(300), u(580), u(600))) > 170 and brightness(img, (u(900), u(20), W - 20, u(60))) < 200
 
 
+def changed(a, b):
+    """How different two screenshots are: 0 (the same) to 255."""
+    return ImageStat.Stat(ImageChops.difference(a, b).convert("L")).mean[0]
+
+
+def settle(vm, seconds, every=5, quiet=1.0):
+    """The screen once it stops changing (and isn't black), or None after `seconds`.
+    The wallpaper's light and the clock move a little; that's below `quiet`."""
+    end = time.time() + seconds
+    last = vm.screen()
+    while time.time() < end:
+        time.sleep(every)
+        now = vm.screen()
+        if changed(last, now) < quiet and brightness(now, (0, 0, now.width, now.height)) > 12:
+            return now
+        last = now
+    return None
+
+
+PASSWORD = "monet-test"
+
+
+def tour(vm, run):
+    """Monet as people see it, after the first start: the sign-in screen, the
+    desktop, the app menu, Files, Settings, and the lock screen, at rest, awake
+    and unlocked. Returns whether the password unlocked it."""
+    if not settle(vm, 600, every=10):
+        run.shot("sign-in-timeout")
+        return False
+    run.shot("sign-in")
+    vm.type(PASSWORD)
+    vm.keys("ret")
+    time.sleep(30)
+    # The first sign-in gives the account Monet's look, which redraws the desktop.
+    settle(vm, 300, every=10)
+    run.shot("first-sign-in")
+    # Whatever opened by itself then (Bazzite's portal, Steam): close it, and
+    # dismiss the leave screen in case nothing was open.
+    for _ in range(3):
+        vm.keys("alt-f4")
+        time.sleep(3)
+        vm.keys("esc")
+        time.sleep(2)
+    desktop = settle(vm, 90) or vm.screen()
+    run.shot("desktop")
+    vm.keys("meta_l")
+    time.sleep(4)
+    run.shot("app-menu")
+    vm.keys("esc")
+    time.sleep(2)
+    vm.keys("meta_l-e")
+    time.sleep(10)
+    settle(vm, 60)
+    run.shot("files")
+    vm.keys("alt-f4")
+    time.sleep(3)
+    vm.keys("alt-spc")
+    time.sleep(3)
+    vm.type("Monet Settings")
+    time.sleep(3)
+    vm.keys("ret")
+    time.sleep(8)
+    settle(vm, 60)
+    run.shot("settings")
+    vm.keys("esc")
+    time.sleep(3)
+    vm.keys("meta_l-l")
+    time.sleep(8)
+    settle(vm, 60)
+    run.shot("lock-screen")
+    vm.keys("shift_r")
+    time.sleep(3)
+    awake = run.shot("lock-screen-awake")
+    vm.type(PASSWORD)
+    vm.keys("ret")
+    time.sleep(8)
+    back = settle(vm, 60) or vm.screen()
+    run.shot("unlocked")
+    # Unlocked looks like the desktop again; still locked looks like the lock screen.
+    return changed(back, desktop) < changed(back, awake)
+
+
 class Run:
     def __init__(self, vm, out):
         self.vm, self.out, self.n = vm, Path(out), 0
@@ -215,9 +302,14 @@ def main():
         time.sleep(2)
         run.shot("mok-done")
         vm.keys("ret")
-        for minute in range(1, 6):
-            time.sleep(60)
-            run.shot(f"monet-{minute}m")
+        time.sleep(60)
+        run.shot("monet-starting")
+        try:
+            unlocked = tour(vm, run)
+            print("tour: the lock screen " + ("unlocked with the password" if unlocked else "did NOT unlock"), flush=True)
+        except Exception as e:  # the look around never fails the install test
+            print(f"tour: stopped ({e})", flush=True)
+            run.shot("tour-stopped")
         return 0
     finally:
         vm.stop()

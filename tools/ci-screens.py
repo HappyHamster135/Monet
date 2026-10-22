@@ -74,7 +74,9 @@ def push(folder, ref):
             headers={**bearer, "Content-Type": "application/octet-stream"}), timeout=30).close()
 
     annotations, total = {}, 0
-    for path in sorted(Path(folder).glob("*.png")):
+    # The minute-by-minute install shots go last: when the manifest is full,
+    # they're the ones left out, not Monet itself.
+    for path in sorted(Path(folder).glob("*.png"), key=lambda p: ("installing" in p.stem, p.name)):
         data = base64.b64encode(shrink(path)).decode()
         if total + len(data) > LIMIT:
             print(f"skipping {path.name}: the manifest is full")
