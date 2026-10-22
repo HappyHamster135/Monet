@@ -372,12 +372,36 @@ PlasmoidItem {
                             font.weight: Font.DemiBold
                         }
                     }
+                    // The day before, the day after.
+                    Repeater {
+                        model: [-1, 1]
+                        Text {
+                            required property int modelData
+                            text: modelData < 0 ? "‹" : "›"
+                            color: stepArea.containsMouse ? card.ink : card.dim
+                            font.family: "Inter"
+                            font.pixelSize: 20
+                            Layout.preferredWidth: 20
+                            horizontalAlignment: Text.AlignHCenter
+                            Accessible.role: Accessible.Button
+                            Accessible.name: modelData < 0 ? i18n("The day before") : i18n("The day after")
+                            MouseArea {
+                                id: stepArea
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.step(parent.modelData)
+                            }
+                        }
+                    }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.smallSpacing
 
+                    // The date, today's in the sun's color.
                     Text {
                         text: root.day.getDate()
                         color: root.sameDay(root.day, root.today) ? "#E2471F" : card.ink
@@ -406,28 +430,6 @@ PlasmoidItem {
                             font.pixelSize: 12
                         }
                     }
-                    Repeater {
-                        model: [-1, 1]
-                        Text {
-                            required property int modelData
-                            text: modelData < 0 ? "‹" : "›"
-                            color: stepArea.containsMouse ? card.ink : card.dim
-                            font.family: "Inter"
-                            font.pixelSize: 20
-                            Layout.preferredWidth: 18
-                            horizontalAlignment: Text.AlignHCenter
-                            Accessible.role: Accessible.Button
-                            Accessible.name: modelData < 0 ? i18n("The day before") : i18n("The day after")
-                            MouseArea {
-                                id: stepArea
-                                anchors.fill: parent
-                                anchors.margins: -6
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.step(parent.modelData)
-                            }
-                        }
-                    }
                 }
 
                 // The day's note, on a sheet of the glass.
@@ -442,6 +444,7 @@ PlasmoidItem {
                     QQC2.ScrollView {
                         anchors.fill: parent
                         anchors.margins: 4
+                        QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
 
                         QQC2.TextArea {
                             id: note
