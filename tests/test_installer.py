@@ -275,6 +275,25 @@ class DiskPlan(unittest.TestCase):
         self.assertEqual(window.describe({"got": 3 * 10**8, "total": 0})[0], "0.3 GB so far")
         self.assertEqual(window.describe({"got": 10**9, "total": 10**9, "note": "Picking up"})[0], "Picking up")
         self.assertLess(window.describe({"got": 10**9, "total": 10**9})[1], 1)
+        # The page before the restart: the blue screen's choices and the password the key was queued with.
+        title, intro, steps, note = window.BEFORE_RESTART
+        words = " ".join([intro, *steps, note])
+        self.assertIn("Enroll MOK", words)
+        self.assertIn("monetsetup", words)
+        self.assertIn("printf 'monetsetup\\nmonetsetup\\n' | mokutil --import", self.KS)
+        # --timeout -1 skips shim's "Press any key": the menu opens on Continue boot, and Enter there skips it.
+        self.assertIn("mokutil --timeout -1", self.KS)
+        self.assertNotIn("any key", words.lower())
+
+    KS = (ROOT / "image/monet.ks").read_text()
+
+    def test_the_last_thing_is_the_first_start(self):
+        # After everything else, before the installer offers to restart.
+        last = self.KS.rsplit("%post", 1)[1]
+        self.assertIn("--nochroot", last.splitlines()[0])
+        self.assertIn("monet-download --before-restart", last)
+        # Backgrounded and off anaconda's pipe: a hidden window can't hold up the install.
+        self.assertRegex(last, r"--before-restart </dev/null >\S+ 2>&1 &\n")
 
     def test_keep_asks(self):
         self.assertEqual(self.plan("inst.stage2=hd:LABEL=X monet.keep"), "")

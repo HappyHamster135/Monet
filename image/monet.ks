@@ -322,3 +322,13 @@ if ! grep -qw monet.keep /proc/cmdline; then
     echo waiting > /var/lib/monet/windows-setup
 fi
 %end
+
+%post --nochroot
+# Last: the blue screen at the first start, explained before it comes (it's
+# easy to skip by accident, and then Secure Boot refuses Monet's kernel). It
+# stays over the installer's last page until "Got it". In the background and off
+# the installer's output pipe, so nothing waits on it if it ends up hidden.
+if [ -f /usr/libexec/monet-download ]; then
+    /usr/bin/python3 /usr/libexec/monet-download --before-restart </dev/null >/tmp/monet-before-restart.log 2>&1 &
+fi
+%end

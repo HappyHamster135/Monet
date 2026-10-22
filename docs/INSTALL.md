@@ -80,10 +80,22 @@ If something can't go ahead, the page says why in a sentence.
 
 ## 3. First start
 
-**Once**, a blue screen asks to trust the NVIDIA driver, which anti-cheat
-games need:
+**Once**, a blue screen asks to trust Monet (its kernel and the NVIDIA
+driver are signed with Universal Blue's key, which Secure Boot doesn't know
+yet). With the arrow keys and Enter:
 
 **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**
+
+It opens on **Continue boot**: don't choose that. It skips this, and then
+Secure Boot won't let Monet start (it says "bad shim signature"). If that
+happened:
+
+1. Turn Secure Boot off in the PC's firmware settings, and start Monet.
+2. In Terminal, run `sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der`
+   and type `monetsetup` twice. Then run `sudo mokutil --timeout -1`, so
+   the blue screen waits for you.
+3. Restart, turn Secure Boot back on, and this time choose **Enroll MOK** on
+   the blue screen.
 
 Sign in to Monet. It greets you by name.
 

@@ -244,6 +244,14 @@ class Window(unittest.TestCase):
         setup.report({"done": True})
         self.assertEqual(setup._phase, "done")
 
+    def test_all_set_explains_the_first_start(self):
+        # The blue screen at the first start, with the password the key was queued with.
+        done = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8").split("id: doneStep", 1)[1].split("Component {", 1)[0]
+        self.assertIn("Enroll MOK", done)
+        self.assertIn(install.MOK_PASSWORD, done)
+        self.assertIn("Continue boot", done)
+        self.assertNotIn("any key", done.lower())  # install's --timeout -1 skips shim's "Press any key"
+
 
 if __name__ == "__main__":
     unittest.main()

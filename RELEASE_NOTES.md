@@ -62,6 +62,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   installs during the next restart, and what's in the way (like "Plug in
   the charger first").
 
+- **The first start can't be missed.** Both installers now say, before you
+  restart, what the blue screen at the first start wants: Enroll MOK, then
+  `monetsetup`. Choosing Continue boot there left Monet unable to start with
+  Secure Boot on ("bad shim signature"); the install guide says how to
+  recover if it happened.
+
 Updating from 0.7: Settings → Updates → Install, then restart. The new look
 arrives when you sign in; your panels stay as they are, and the weather and
 the other widgets are in the desktop's widget gallery.

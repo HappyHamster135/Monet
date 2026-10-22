@@ -498,6 +498,29 @@ ApplicationWindow {
                       ? "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
                       : "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
             }
+            // The blue screen at the first start: easy to skip by accident,
+            // and then Secure Boot refuses Monet.
+            Card {
+                height: firstStart.implicitHeight + px(36)
+                Column {
+                    id: firstStart
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: px(18)
+                    spacing: px(6)
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: "Once, when it first starts"
+                        font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink
+                    }
+                    Body {
+                        font.pixelSize: px(14)
+                        text: "A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start."
+                    }
+                }
+            }
         }
     }
 
