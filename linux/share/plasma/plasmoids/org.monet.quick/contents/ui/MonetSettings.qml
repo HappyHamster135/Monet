@@ -51,9 +51,15 @@ PlasmaCore.Dialog {
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
           words: "notifications alerts do not disturb quiet popups sounds apps" },
+        { id: "accessibility", name: i18n("Accessibility"),
+          glyph: "M12 5h.01M5 8.5l7 1.5 7-1.5M12 10v4.5M8.5 20.5l3.5-6 3.5 6",
+          words: "accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read" },
         { id: "apps", name: i18n("Default Apps"),
           glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
           words: "default apps browser web email mail files music video photos pdf text open with" },
+        { id: "storage", name: i18n("Storage"),
+          glyph: "M4 7.5h16v9H4zM7.5 12h.01M11 12h5.5",
+          words: "storage disk space room full free trash downloads clean games apps" },
         { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true, gap: true,
           words: "windows games play anti-cheat steam restart boot doctor check" },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
@@ -80,6 +86,10 @@ PlasmaCore.Dialog {
     property var knownLayouts: []
     property var notifyInfo: ({})
     property var appDefaults: []
+    property var storageInfo: ({})
+    // The Monet before the last update: { version, date, pending }, or {}.
+    property var previous: ({})
+    property var accessInfo: ({})
     property bool dragging: false
 
     // Wi-Fi: the network being joined, and how it went.
@@ -198,6 +208,13 @@ PlasmaCore.Dialog {
             ask("notify", out => sheet.notifyInfo = sheet.json(out, sheet.notifyInfo))
         } else if (page === "apps") {
             ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults))
+        } else if (page === "storage") {
+            ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
+        } else if (page === "accessibility") {
+            ask("access", out => sheet.accessInfo = sheet.json(out, sheet.accessInfo))
+        }
+        if (page === "updates") {
+            ask("previous", out => sheet.previous = sheet.json(out, {}))
         }
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
@@ -312,7 +329,7 @@ PlasmaCore.Dialog {
         }).join("<br>")
     }
 
-    // Monet never updates by itself: first look, then install if asked.
+    // When asked: first look, then install. By itself (once a day, unless that's off) the helper does both.
     function checkUpdates() {
         updateState = "checking"
         ask("update-check", out => {
@@ -322,6 +339,20 @@ PlasmaCore.Dialog {
             sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
         })
         checkFirmware()
+    }
+
+    function goBack() {
+        previous = changed(previous, ["pending"], true)
+        ask("rollback", () => ask("previous", out => sheet.previous = sheet.json(out, {})))
+    }
+    function previousName() {
+        return previous.version ? i18n("Monet %1", previous.version) : i18n("the Monet from before")
+    }
+
+    function flipAutoUpdates() {
+        const on = pc.autoUpdates === false
+        pc = changed(pc, ["autoUpdates"], on)
+        ask("auto-updates " + (on ? "on" : "off"), () => ask("about", out => sheet.pc = sheet.json(out, sheet.pc)))
     }
 
     function checkFirmware() {
@@ -604,6 +635,24 @@ PlasmaCore.Dialog {
     function setDefault(kind, app) {
         appDefaults = appDefaults.map(k => k.id === kind ? Object.assign({}, k, { current: app.id }) : k)
         ask("default " + kind + " " + hex(app.id), () => ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults)))
+    }
+
+    function emptyTrash() {
+        storageInfo = changed(storageInfo, ["trash"], 0)
+        ask("empty-trash", () => ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
+    }
+    function access(what, value) {
+        accessInfo = changed(accessInfo, [what], value)
+        const said = what === "reduced" ? (value ? "reduced" : "normal") : what === "reader" ? (value ? "on" : "off") : value
+        ask("access-" + ({ scale: "scale", cursor: "cursor", reduced: "motion", reader: "reader" })[what] + " " + said)
+    }
+
+    // A size on disk in words: 840 MB, 6.2 GB, 412 GB, 1.8 TB.
+    function bytes(n) {
+        n = n || 0
+        return n >= 1e12 ? i18n("%1 TB", (n / 1e12).toFixed(1)) : n >= 1e10 ? i18n("%1 GB", Math.round(n / 1e9))
+            : n >= 1e9 ? i18n("%1 GB", (n / 1e9).toFixed(1)) : n >= 1e6 ? i18n("%1 MB", Math.round(n / 1e6))
+            : i18n("%1 KB", Math.round(n / 1e3))
     }
 
     // How long, in words: 300 is "5 min", 3600 "1 hour", 0 "Never".
@@ -1185,7 +1234,7 @@ PlasmaCore.Dialog {
         id: frame
         width: Math.min(1000, sheet.area.width - 64)
         // Tall enough for every page in the list on most screens (it scrolls on short ones).
-        height: Math.min(700, sheet.area.height - 96)
+        height: Math.min(780, sheet.area.height - 96)
         // Mist or smoke, from the colors Monet's light chose.
         readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
 
@@ -1466,7 +1515,8 @@ PlasmaCore.Dialog {
                     sourceComponent: ({
                         light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, display: displayPage,
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
-                        power: powerPage, notifications: notificationsPage, apps: appsPage, windows: windowsPage,
+                        power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
+                        storage: storagePage, windows: windowsPage,
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
                     onLoaded: {
@@ -2971,6 +3021,228 @@ PlasmaCore.Dialog {
         }
 
         Component {
+            id: accessibilityPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("accessibility")
+                    art: sheet.art
+                    text: i18n("Accessibility")
+                    detail: i18n("Make Monet easier to see, read and use.")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: typeof sheet.accessInfo.scale === "number"
+                        title: i18n("Size of everything")
+                        detail: i18n("Text, pictures and windows, on every screen")
+                        Segments {
+                            tone: look
+                            options: [100, 125, 150, 175, 200].map(s => [s, s + "%"])
+                            current: sheet.accessInfo.scale
+                            onPicked: value => sheet.access("scale", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: typeof sheet.accessInfo.scale === "number"
+                        title: i18n("Pointer size")
+                        Segments {
+                            tone: look
+                            options: [[24, i18n("Normal")], [36, i18n("Large")], [48, i18n("Larger")]]
+                            current: sheet.accessInfo.cursor || 24
+                            onPicked: value => sheet.access("cursor", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Reduce motion")
+                        detail: i18n("Things appear without sliding, fading or bouncing")
+                        onTapped: sheet.access("reduced", sheet.accessInfo.reduced !== true)
+                        Switch {
+                            tone: look
+                            active: sheet.accessInfo.reduced === true
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: typeof sheet.accessInfo.reader === "boolean"
+                        tappable: true
+                        title: i18n("Screen reader")
+                        detail: i18n("Reads aloud what's on the screen and what you type")
+                        onTapped: sheet.access("reader", sheet.accessInfo.reader !== true)
+                        Switch {
+                            tone: look
+                            active: sheet.accessInfo.reader === true
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More accessibility settings…")
+                    onClicked: sheet.ask("kde access")
+                }
+            }
+        }
+
+        Component {
+            id: storagePage
+            ColumnLayout {
+                id: storageColumn
+                // What fills the disk, each in a color of The Hours.
+                readonly property var parts: [
+                    ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
+                    ["files", i18n("Your files"), "#357F72"], ["system", i18n("Monet"), "#9C7BC0"]
+                ]
+                readonly property real total: sheet.storageInfo.total || 0
+                // Emptying the Trash asks once more.
+                property bool askingTrash: false
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("storage")
+                    art: sheet.art
+                    text: i18n("Storage")
+                    detail: i18n("What fills this PC, and room to make.")
+                }
+                Card {
+                    tone: look
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 12
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            Text {
+                                text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free)) : i18n("Measuring…")
+                                color: look.ink
+                                font.family: "Fraunces 72pt SuperSoft"
+                                font.weight: Font.Light
+                                font.pixelSize: 32
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignBaseline
+                                visible: storageColumn.total > 0
+                                text: i18n("of %1", sheet.bytes(storageColumn.total))
+                                color: look.dim
+                                font.pixelSize: 14
+                            }
+                        }
+                        // The disk as one bar: each part its share, free space left plain.
+                        Rounded {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 14
+                            radius: 7
+                            Rectangle {
+                                anchors.fill: parent
+                                color: look.wash2
+                            }
+                            Row {
+                                anchors.fill: parent
+                                Repeater {
+                                    model: storageColumn.parts
+                                    Rectangle {
+                                        required property var modelData
+                                        width: parent.width * (sheet.storageInfo[modelData[0]] || 0) / Math.max(1, storageColumn.total)
+                                        height: parent.height
+                                        color: modelData[2]
+                                        Behavior on width { NumberAnimation { duration: Math.round(400 * sheet.speed); easing.type: Easing.OutCubic } }
+                                    }
+                                }
+                            }
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 18
+                            visible: storageColumn.total > 0
+                            Repeater {
+                                model: storageColumn.parts
+                                Row {
+                                    required property var modelData
+                                    spacing: 7
+                                    Rectangle {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 10
+                                        height: 10
+                                        radius: 5
+                                        color: parent.modelData[2]
+                                    }
+                                    Text {
+                                        text: parent.modelData[1] + "  " + sheet.bytes(sheet.storageInfo[parent.modelData[0]])
+                                        color: look.dim
+                                        font.pixelSize: 13
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Make room")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Trash")
+                        detail: storageColumn.askingTrash ? i18n("Everything in it is gone for good. Sure?")
+                            : (sheet.storageInfo.trash || 0) > 0 ? sheet.bytes(sheet.storageInfo.trash) : i18n("Empty")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: storageColumn.askingTrash
+                                text: i18n("Keep it")
+                                onClicked: storageColumn.askingTrash = false
+                            }
+                            Pill {
+                                tone: look
+                                visible: (sheet.storageInfo.trash || 0) > 0
+                                text: storageColumn.askingTrash ? i18n("Empty for good") : i18n("Empty Trash")
+                                onClicked: {
+                                    if (storageColumn.askingTrash) {
+                                        storageColumn.askingTrash = false
+                                        sheet.emptyTrash()
+                                    } else {
+                                        storageColumn.askingTrash = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Downloads")
+                        detail: (sheet.storageInfo.downloads || 0) > 0
+                            ? i18n("%1 · look through them in Files", sheet.bytes(sheet.storageInfo.downloads)) : i18n("Empty")
+                        Pill {
+                            tone: look
+                            visible: (sheet.storageInfo.downloadsPath || "") !== ""
+                            text: i18n("Show")
+                            onClicked: Qt.openUrlExternally("file://" + encodeURI(sheet.storageInfo.downloadsPath))
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: i18n("What apps leave behind when they update is cleared away with each update, by itself.")
+                    color: look.dim
+                    font.pixelSize: 14
+                    lineHeight: 1.3
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        Component {
             id: windowsPage
             ColumnLayout {
                 spacing: 20
@@ -3126,7 +3398,8 @@ PlasmaCore.Dialog {
                     entry: sheet.entry("updates")
                     art: sheet.art
                     text: i18n("Updates")
-                    detail: i18n("Only when you ask.")
+                    detail: sheet.pc.autoUpdates === false ? i18n("Only when you ask.")
+                        : i18n("Monet and your apps keep themselves up to date.")
                 }
                 Card {
                     tone: look
@@ -3184,6 +3457,69 @@ PlasmaCore.Dialog {
                                 } else {
                                     sheet.checkUpdates()
                                 }
+                            }
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Update automatically")
+                        detail: sheet.pc.autoUpdates === false
+                            ? i18n("Monet and your apps update only when you choose Check for updates")
+                            : i18n("Once a day, in the background: your apps right away, Monet at your next restart")
+                        onTapped: sheet.flipAutoUpdates()
+                        Switch {
+                            tone: look
+                            active: sheet.pc.autoUpdates !== false
+                        }
+                    }
+                }
+                // The Monet from before the last update, kept for when one misbehaves.
+                Card {
+                    tone: look
+                    visible: sheet.previous.date !== undefined
+                    SettingRow {
+                        id: backRow
+                        property bool asking: false
+                        tone: look
+                        divider: false
+                        title: sheet.previous.pending === true ? i18n("%1 starts at your next restart", sheet.previousName())
+                            : i18n("Go back to %1", sheet.previousName())
+                        detail: sheet.previous.pending === true ? i18n("The one you're using now stays too, to come back to.")
+                            : backRow.asking ? i18n("It starts the next time you restart. Your files and apps stay as they are.")
+                            : sheet.previous.date ? i18n("From %1. If something stopped working after an update, the one before is still here.", sheet.previous.date)
+                            : i18n("If something stopped working after an update, the one before is still here.")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: backRow.asking
+                                text: i18n("Stay")
+                                onClicked: backRow.asking = false
+                            }
+                            Pill {
+                                tone: look
+                                visible: sheet.previous.pending !== true
+                                text: backRow.asking ? i18n("Go back at restart") : i18n("Go back")
+                                onClicked: {
+                                    if (backRow.asking) {
+                                        backRow.asking = false
+                                        sheet.goBack()
+                                    } else {
+                                        backRow.asking = true
+                                    }
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                visible: sheet.previous.pending === true
+                                kind: "lily"
+                                text: i18n("Restart now")
+                                onClicked: sheet.ask("restart")
                             }
                         }
                     }
@@ -3264,7 +3600,7 @@ PlasmaCore.Dialog {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: i18n("Monet never updates by itself. When you install an update, the new version starts the next time you restart, and the one before stays in the start menu, just in case.")
+                    text: i18n("A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case.")
                     color: look.dim
                     font.pixelSize: 14
                     lineHeight: 1.3
@@ -3357,7 +3693,8 @@ PlasmaCore.Dialog {
 
     function kdePage() {
         return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound", datetime: "datetime",
-                  users: "users", input: "input", power: "power", notifications: "notifications", apps: "apps" })[page] || "all"
+                  users: "users", input: "input", power: "power", notifications: "notifications", apps: "apps",
+                  accessibility: "access" })[page] || "all"
     }
 
     function entry(id) {

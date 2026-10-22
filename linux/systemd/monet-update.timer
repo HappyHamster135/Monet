@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: update by itself, once a day
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+# A day the PC was off is caught up after it starts.
+Persistent=true
+OnBootSec=20min
+
+[Install]
+WantedBy=timers.target

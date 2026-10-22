@@ -30,7 +30,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.8.2"
+current="$looks/look-0.8.3"
 if [ ! -e "$current" ]; then
     # Plasma needs a moment after sign-in before it accepts changes.
     sleep 4
@@ -42,6 +42,19 @@ if [ ! -e "$current" ]; then
         "$LIBEXECDIR/monet-look"
     fi
     mkdir -p "$looks" && touch "$current"
+fi
+
+# The apps chosen in Monet Setup (or the everyday ones) arrive in the background
+# (monet-apps.timer): said once, so they're expected in the menu.
+if [ ! -e /var/lib/monet/apps-done ] && [ ! -e "$looks/apps-notice" ] && command -v notify-send >/dev/null; then
+    notify-send --app-name=Monet --icon=monet "Adding your apps" \
+        "Your apps download in the background and show up in the menu as they arrive."
+    mkdir -p "$looks" && touch "$looks/apps-notice"
+fi
+# Apps that arrived while signed out get their plain names now (monet-names.path
+# does it as they arrive).
+if [ /var/lib/monet/apps-done -nt "$looks/names" ]; then
+    "$LIBEXECDIR/monet-look" --names
 fi
 
 # Monet's widgets on the desktop, once, after the look (which may lay the

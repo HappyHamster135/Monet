@@ -33,6 +33,9 @@ Usage:
   monet update              Install the newest Monet and app updates (Monet starts
                             the new version at the next restart)
   monet update --check      Only look: is there anything new?
+  monet auto-updates on|off Update by itself in the background (on unless turned off)
+  monet rollback            Go back to the Monet from before the last update (at the
+                            next restart)
   monet make-default        Start Monet by default when the PC turns on
   monet shortcuts           Add Windows games to the app menu
 
@@ -86,6 +89,10 @@ fn main() -> ExitCode {
         }
         ["update"] => elevate(&["helper", "update"]),
         ["helper", "update"] => helper_update(args.iter().any(|a| a == "--check"), json),
+        ["auto-updates", which @ ("on" | "off")] => elevate(&["helper", "auto-updates", *which]),
+        ["helper", "auto-updates", which @ ("on" | "off")] => helper_auto_updates(*which == "on"),
+        ["rollback"] => elevate(&["helper", "rollback"]),
+        ["helper", "rollback"] => helper_rollback(),
         ["shortcuts"] => shortcuts(),
         ["helper", "switch"] => helper_switch(option_value(&args, "--game")),
         ["helper", "check-switch"] => helper_check_switch(),
@@ -870,8 +877,48 @@ fn check_for_updates() -> Res<UpdateCheck> {
     Ok(UpdateCheck { system, version, apps })
 }
 
-/// Looks for updates, or installs them. Monet never updates by itself: this
-/// only runs when someone asks, in Settings → Updates or with `monet update`.
+/// Where turning automatic updates off is kept: monet-update.service doesn't
+/// run while it's there (ConditionPathExists=!).
+const AUTO_UPDATES_OFF: &str = "auto-updates-off";
+
+/// Automatic updates, on unless turned off: Settings → Updates or `monet auto-updates`.
+fn helper_auto_updates(on: bool) -> Res<()> {
+    require_root()?;
+    let path = state_dir().join(AUTO_UPDATES_OFF);
+    if on {
+        if let Err(e) = fs::remove_file(&path) {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                return Err(e.to_string());
+            }
+        }
+        println!("Monet and your apps update by themselves.");
+    } else {
+        fs::create_dir_all(state_dir()).map_err(|e| e.to_string())?;
+        fs::write(&path, "off\n").map_err(|e| e.to_string())?;
+        println!("Monet updates only when you ask, in Settings → Updates.");
+    }
+    Ok(())
+}
+
+/// The Monet from before the last update starts at the next restart (bootc keeps
+/// it, as the start menu's second entry): Settings → Updates → Go back.
+fn helper_rollback() -> Res<()> {
+    require_root()?;
+    let status = if has("bootc") {
+        Command::new("bootc").arg("rollback").status()
+    } else {
+        Command::new("rpm-ostree").arg("rollback").status()
+    }
+    .map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err("There's no earlier Monet on this PC to go back to.".into());
+    }
+    println!("The Monet from before starts the next time you restart.");
+    Ok(())
+}
+
+/// Looks for updates, or installs them: when someone asks (Settings → Updates,
+/// `monet update`), and daily by itself unless that's turned off (monet-update.timer).
 fn helper_update(check: bool, json: bool) -> Res<()> {
     require_root()?;
     if check {
@@ -907,6 +954,8 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
         println!("Updating your apps…");
         // Apps that fail to update keep working as they are.
         let _ = Command::new("flatpak").args(["update", "-y", "--noninteractive"]).status();
+        // And what no app uses anymore (old runtimes) makes room.
+        let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y", "--noninteractive"]).status();
     }
     println!("Done. Restart your PC to use the newest Monet.");
     Ok(())

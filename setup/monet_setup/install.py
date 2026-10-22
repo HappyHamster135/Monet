@@ -345,6 +345,9 @@ def configure(plan):
                 write(folder / Path(conn).name, data, 0o600)
         if plan["mode"] == "erase":
             write(var / "lib/monet/windows-setup", "waiting\n")
+        # The apps picked on "Your apps": monet-apps installs them once Monet is
+        # online (an empty list is a choice too: none).
+        write(var / "lib/monet/apps", "".join(f"{app}\n" for app in plan.get("apps", [])))
 
         # NVIDIA's driver is signed with Universal Blue's key: ask the firmware
         # to trust it (confirmed once, on a blue screen, with "monetsetup").

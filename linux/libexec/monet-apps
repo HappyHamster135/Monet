@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Installs the apps chosen in Monet Setup from Flathub, for everyone on this PC,
+# once: monet-apps.timer runs it until they're all in. /var/lib/monet/apps lists
+# them, one per line; a PC that never chose (updated from an earlier Monet, or
+# set up with Fedora's installer) gets the everyday ones Setup starts with.
+set -u
+
+STATE=/var/lib/monet
+CHOSEN="$STATE/apps"
+DONE="$STATE/apps-done"
+EVERYDAY="app.zen_browser.zen org.kde.gwenview org.kde.okular org.kde.haruna org.kde.elisa org.kde.kcalc"
+
+[ -e "$DONE" ] && exit 0
+command -v flatpak >/dev/null || exit 0
+if [ -f "$CHOSEN" ]; then
+    wanted="$(cat "$CHOSEN")"
+else
+    wanted="$EVERYDAY"
+fi
+
+flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
+
+# One at a time, so one that fails (no connection, no room) doesn't keep the rest out.
+left=()
+for app in $wanted; do
+    [[ "$app" =~ ^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$ ]] || continue
+    flatpak install --system --noninteractive --or-update -y flathub "$app" || left+=("$app")
+done
+
+mkdir -p "$STATE"
+if [ ${#left[@]} -eq 0 ]; then
+    touch "$DONE"
+    rm -f "$CHOSEN"
+else
+    printf '%s\n' "${left[@]}" > "$CHOSEN"
+    exit 1
+fi

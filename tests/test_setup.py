@@ -244,6 +244,31 @@ class Window(unittest.TestCase):
         setup.report({"done": True})
         self.assertEqual(setup._phase, "done")
 
+    def test_your_apps_go_into_the_plan(self):
+        try:
+            from monet_setup import app
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        setup = app.Setup.__new__(app.Setup)
+        setup._apps = [ticked for *_, ticked in app.APPS]
+        setup.changed = types.SimpleNamespace(emit=lambda: None)
+        everyday = [app_id for app_id, _, _, ticked in app.APPS if ticked]
+        self.assertEqual(setup.picked_apps(), everyday)
+        office = next(i for i, (app_id, *_) in enumerate(app.APPS) if app_id == "org.libreoffice.LibreOffice")
+        setup.toggleApp(office)
+        setup.toggleApp(0)
+        self.assertEqual(setup.picked_apps(), everyday[1:] + ["org.libreoffice.LibreOffice"])
+        self.assertEqual(len({app_id for app_id, *_ in app.APPS}), len(app.APPS))
+        # A PC that never chose gets what Setup ticks to start with.
+        script = (ROOT / "linux/libexec/monet-apps").read_text()
+        self.assertIn(f'EVERYDAY="{" ".join(everyday)}"', script)
+        # The step sits between the person and Ready, and install writes the list for monet-apps.
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn("[helloStep, wifiStep, personStep, appsStep, readyStep][step]", qml)
+        self.assertIn("readonly property bool installing: step === 5", qml)
+        configure = (ROOT / "setup/monet_setup/install.py").read_text()
+        self.assertIn('write(var / "lib/monet/apps", "".join(f"{app}\\n" for app in plan.get("apps", [])))', configure)
+
     def test_all_set_explains_the_first_start(self):
         # The blue screen at the first start, with the password the key was queued with.
         done = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8").split("id: doneStep", 1)[1].split("Component {", 1)[0]

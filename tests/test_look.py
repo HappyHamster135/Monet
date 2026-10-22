@@ -610,12 +610,86 @@ class GlobalThemes(unittest.TestCase):
 
 
 class Updates(unittest.TestCase):
-    def test_nothing_updates_by_itself(self):
+    def test_only_monets_own_updater_runs(self):
+        # Bazzite's and KDE's updaters stay masked; Monet's timer does it, once a day.
         install = (ROOT / "linux/install.sh").read_text()
         for unit in ("uupd.timer", "rpm-ostreed-automatic.timer", "bootc-fetch-apply-updates.timer"):
             self.assertIn(unit, install)
         self.assertIn('systemctl mask "$unit"', install)
         self.assertIn("AutomaticUpdatePolicy=none", install)
+        self.assertIn("systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer", install)
+        self.assertIn("for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer; do", install)
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        for unit in ("monet-update.timer", "monet-apps.timer", "monet-update.service", "monet-apps.service"):
+            self.assertIn(unit, uninstall)
+
+    def test_updates_by_itself_unless_turned_off(self):
+        service = (ROOT / "linux/systemd/monet-update.service").read_text()
+        self.assertIn("ExecStart=@BINDIR@/monet helper update\n", service)
+        self.assertIn("ConditionPathExists=!/var/lib/monet/auto-updates-off", service)
+        self.assertIn("After=network-online.target", service)
+        timer = (ROOT / "linux/systemd/monet-update.timer").read_text()
+        for line in ("OnCalendar=daily", "Persistent=true", "WantedBy=timers.target"):
+            self.assertIn(line, timer)
+        # The switch: Settings → Updates, through the helper, which keeps the same file.
+        rust = (ROOT / "crates/monet/src/main.rs").read_text()
+        self.assertIn('const AUTO_UPDATES_OFF: &str = "auto-updates-off";', rust)
+        self.assertIn('["auto-updates", which @ ("on" | "off")] => elevate(&["helper", "auto-updates", *which])', rust)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('"autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists()', quick)
+        self.assertIn('run(f"{BINDIR}/monet", "auto-updates", args[0], timeout=30)', quick)
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('title: i18n("Update automatically")', qml)
+        self.assertIn('ask("auto-updates " + (on ? "on" : "off")', qml)
+
+    def test_zen_is_the_browser(self):
+        # Setup's everyday apps bring it, web links open in it, and it wears Monet's painted window.
+        self.assertIn('EVERYDAY="app.zen_browser.zen ', (ROOT / "linux/libexec/monet-apps").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        image_only = install.split('if [ "$IMAGE" = 1 ]; then', 2)[2]
+        self.assertIn("browser=app.zen_browser.zen.desktop", image_only)
+        self.assertIn("mimeapps=/etc/xdg/mimeapps.list", image_only)
+        self.assertIn('--group General --key BrowserApplication "$browser"', image_only)
+        self.assertIn("apps/scalable/app.zen_browser.zen.svg org.mozilla.firefox.svg", (SHARE / "icons/Monet/aliases").read_text())
+
+    def test_arriving_apps_get_their_plain_names(self):
+        # The names are given once per look, before Setup's apps have arrived: again as they do.
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn('if [ "${1:-}" = --names ]; then\n    plain_names\n', look)
+        self.assertIn('"org.kde.gwenview:Photos"', look.split("plain_names() {", 1)[1].split("\n}\n", 1)[0])
+        self.assertIn("PathChanged=/var/lib/monet/apps-done", (ROOT / "linux/systemd/user/monet-names.path").read_text())
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-look --names", (ROOT / "linux/systemd/user/monet-names.service").read_text())
+        self.assertIn('if [ /var/lib/monet/apps-done -nt "$looks/names" ]; then', (ROOT / "linux/libexec/monet-session").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertEqual(install.count("monet-fresh.service monet-names.path"), 2)
+        self.assertIn("monet-names.path", (ROOT / "linux/uninstall.sh").read_text())
+
+    def test_going_back_to_the_monet_before(self):
+        rust = (ROOT / "crates/monet/src/main.rs").read_text()
+        self.assertIn('["rollback"] => elevate(&["helper", "rollback"])', rust)
+        self.assertIn('Command::new("bootc").arg("rollback")', rust)
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('ask("rollback"', qml)
+        self.assertIn('i18n("Go back at restart")', qml)  # asked once more before it's chosen
+        # Updating also clears what no app uses anymore, which Storage says.
+        self.assertIn('["uninstall", "--unused", "-y", "--noninteractive"]', rust)
+
+    def test_reduced_motion_outlasts_the_look(self):
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn('--key AnimationDurationFactor 2>/dev/null)" = 0 ] ||\n    kw --file kdeglobals --group KDE --key AnimationDurationFactor 0.8', look)
+
+    def test_the_chosen_apps_arrive_after_setup(self):
+        service = (ROOT / "linux/systemd/monet-apps.service").read_text()
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-apps", service)
+        self.assertIn("ConditionPathExists=!/var/lib/monet/apps-done", service)
+        self.assertIn("OnUnitInactiveSec=", (ROOT / "linux/systemd/monet-apps.timer").read_text())
+        script = (ROOT / "linux/libexec/monet-apps").read_text()
+        self.assertIn("flatpak install --system --noninteractive --or-update -y flathub", script)
+        self.assertIn('touch "$DONE"', script)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("monet-widgets monet-apps; do", install)
+        self.assertIn("monet-apps", (ROOT / "linux/uninstall.sh").read_text())
+        self.assertIn("/var/lib/monet/apps-done", (ROOT / "linux/libexec/monet-session").read_text())
 
     def test_settings_checks_before_installing(self):
         qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text()
@@ -803,8 +877,8 @@ class MonetsOwn(unittest.TestCase):
         for app, name in (("org.kde.dolphin", "Files"), ("org.kde.konsole", "Terminal"), ("org.kde.gwenview", "Photos"),
                           ("org.kde.spectacle", "Screenshot")):
             self.assertIn(f'"{app}:{name}"', self.LOOK)
-        self.assertIn('store=io.github.kolunmi.Bazaar\nif rename "$store" Store', self.LOOK)
-        hidden = re.search(r"for app in (systemsettings .*?); do\n    hide", self.LOOK, re.S).group(1).split()
+        self.assertIn('    store=io.github.kolunmi.Bazaar\n    if rename "$store" Store', self.LOOK)
+        hidden = re.search(r"for app in (systemsettings .*?); do\n        hide", self.LOOK, re.S).group(1).split()
         for app in ("systemsettings", "org.kde.kinfocenter", "bazzite-documentation", "discourse", "bbrew"):
             self.assertIn(app, hidden)
 
@@ -1462,6 +1536,34 @@ class Scripts(unittest.TestCase):
         found = quick.takers([("firefox.desktop", browser), ("viewer.desktop", viewer)], "browser")
         self.assertEqual([app["id"] for app in found], ["firefox.desktop"])
         self.assertEqual(found[0]["types"], ["x-scheme-handler/https", "x-scheme-handler/http", "text/html"])
+
+    def test_quick_measures_storage_and_finds_the_monet_before(self):
+        quick = quick_helper()
+        GB = 10**9
+        # Home holds the games, your apps and the Trash; the system is what's used besides.
+        parts = quick.storage_parts(total=1000 * GB, free=400 * GB, home=450 * GB, games=300 * GB, apps=20 * GB,
+                                    user_apps=10 * GB, trash=5 * GB)
+        self.assertEqual(parts, {"games": 300 * GB, "apps": 30 * GB, "files": 140 * GB, "system": 130 * GB,
+                                 "free": 400 * GB})
+        self.assertEqual(sum(parts.values()), 1000 * GB)
+        self.assertEqual(quick.storage_parts(100, 10, 0, 0, 0, 0, 0)["system"], 90)
+        booted, earlier = {"booted": True, "version": "0.8.3"}, {"version": "0.8.2", "timestamp": 1792000000}
+        found = quick.previous_monet({"deployments": [booted, earlier]})
+        self.assertEqual((found["version"], found["pending"]), ("0.8.2", False))
+        self.assertTrue(quick.previous_monet({"deployments": [earlier, booted]})["pending"])
+        self.assertEqual(quick.previous_monet({"deployments": [{"staged": True}, booted]}), {})
+
+    def test_quick_accessibility_takes_only_its_own_values(self):
+        from unittest import mock
+        quick = quick_helper()
+        with mock.patch.object(quick, "kwrite") as kwrite, mock.patch.object(quick, "run") as run, \
+                mock.patch.object(quick.subprocess, "Popen") as popen, mock.patch("sys.stderr"):
+            for argv in (["access-scale", "130"], ["access-scale", "x"], ["access-cursor", "30"],
+                         ["access-motion", "fast"], ["access-reader", "maybe"]):
+                quick.main(argv)
+            kwrite.assert_not_called()
+            run.assert_not_called()
+            popen.assert_not_called()
 
     def test_quick_tells_mice_from_touchpads(self):
         quick = quick_helper()

@@ -41,12 +41,22 @@
     monet-quick notify-place clock|topright|topcenter
     monet-quick notify-time 3|5|10       seconds a popup stays
     monet-quick notify-app ID on|off     an app's popups (ID as hex of its UTF-8)
+    monet-quick access                   the size of everything, the pointer, motion and the screen reader, as JSON
+    monet-quick access-scale 100|125|150|175|200
+    monet-quick access-cursor 24|36|48
+    monet-quick access-motion reduced|normal
+    monet-quick access-reader on|off     Orca, when it's there
+    monet-quick storage                  what fills the disk (games, apps, files, system, free), Trash, Downloads, as JSON
+    monet-quick empty-trash              empty the Trash for good (Settings asks first)
     monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
     monet-quick default KIND ID          set it (ID, a menu entry's file name, as hex of its UTF-8)
     monet-quick about                    this PC, as JSON
     monet-quick doctor                   run `monet doctor`
     monet-quick update-check             is there a newer Monet, or app updates? as JSON
-    monet-quick update                   install them (Monet never updates by itself)
+    monet-quick update                   install them now (by itself, it does once a day)
+    monet-quick auto-updates on|off      update by itself, or only when asked
+    monet-quick previous                 the Monet before the last update, to go back to, as JSON
+    monet-quick rollback                 go back to it, at the next restart
     monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
     monet-quick firmware-update          install them
     monet-quick restart                  ask to restart, the way the app menu does
@@ -55,7 +65,8 @@
     monet-quick launch ID                start an app by its menu entry's file name (as hex of its UTF-8)
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
-                                         sound, datetime, users, input, power, notifications, apps,
+                                         sound, datetime, users, input, power, notifications,
+                                         accessibility, apps, storage,
                                          windows, updates or about)
     monet-quick listen                   wait until someone asks to open Monet Settings
 """
@@ -67,6 +78,7 @@ import select
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 BINDIR = "@BINDIR@"
@@ -76,8 +88,8 @@ PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
-PAGES = ("light", "wifi", "bluetooth", "display", "sound", "datetime", "users", "input", "power", "notifications", "apps",
-         "windows", "updates", "about")
+PAGES = ("light", "wifi", "bluetooth", "display", "sound", "datetime", "users", "input", "power", "notifications",
+         "accessibility", "apps", "storage", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -91,6 +103,7 @@ KDE_PAGES = {
     "datetime": "kcm_clock",
     "users": "kcm_users",
     "apps": "kcm_componentchooser",
+    "access": "kcm_access",
     "all": "",
 }
 
@@ -314,6 +327,20 @@ def set_light(mode):
     subprocess.Popen(["sh", "-c", 'sleep 0.3; exec nice -n 5 "$0" paint', f"{LIBEXECDIR}/monet-light"],
                      start_new_session=True, stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def previous_monet(status):
+    """From `rpm-ostree status --json`: the Monet to go back to ({version, date}, or {} if
+    there's none), and whether it's already chosen for the next restart ("pending")."""
+    deployments = status.get("deployments", [])
+    earlier = next((d for d in deployments if not d.get("booted") and not d.get("staged")), None)
+    if not earlier:
+        return {}
+    stamp = earlier.get("timestamp")
+    date = time.strftime("%Y-%m-%d", time.localtime(stamp)) if isinstance(stamp, (int, float)) else ""
+    first = deployments[0] if deployments else {}
+    return {"version": earlier.get("version") or "", "date": date,
+            "pending": first is earlier}
 
 
 def update_check():
@@ -766,6 +793,105 @@ def notify_state():
     return state
 
 
+# Storage -------------------------------------------------------------------
+# What fills the disk Monet is on, roughly: games, apps, your files, the system
+# (the rest of what's used), and what can go: the Trash, Downloads.
+
+HOME = Path.home()
+DATA_HOME = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+
+
+def du(*paths):
+    """Bytes under paths that exist, on the disk each is on (du -sx), or 0."""
+    found = [str(p) for p in paths if Path(p).exists()]
+    if not found:
+        return 0
+    out = run("du", "-s", "-x", "-B1", "-c", *found, timeout=300) or ""
+    total = re.search(r"(?m)^(\d+)\s+total$", out)
+    return int(total.group(1)) if total else 0
+
+
+def storage_parts(total, free, home, games, apps, user_apps, trash):
+    """The bar's parts, in bytes: games, apps, your files (home without games, apps and the
+    Trash), the system (the rest of what's used) and free; never below nothing."""
+    files = max(0, home - games - user_apps - trash)
+    used = max(0, total - free)
+    system = max(0, used - games - apps - user_apps - files - trash)
+    return {"games": games, "apps": apps + user_apps, "files": files + trash, "system": system, "free": free}
+
+
+def storage():
+    disk = shutil.disk_usage(HOME)
+    games = du(DATA_HOME / "Steam/steamapps", HOME / "Games")
+    trash = du(DATA_HOME / "Trash")
+    parts = storage_parts(disk.total, disk.free, du(HOME), games, du("/var/lib/flatpak"),
+                          du(DATA_HOME / "flatpak", HOME / ".var/app"), trash)
+    return dict(parts, total=disk.total, trash=trash, downloads=du(HOME / "Downloads"),
+                downloadsPath=str(HOME / "Downloads"))
+
+
+def empty_trash():
+    """Asked for, and confirmed, in Settings: the Trash emptied for good."""
+    for command in (["gio", "trash", "--empty"], ["ktrash6", "--empty"]):
+        if shutil.which(command[0]):
+            return run(*command, timeout=600) is not None
+    return False
+
+
+# Accessibility -------------------------------------------------------------
+# The size of everything (each screen's scale, kscreen-doctor), the pointer's size
+# (kcminputrc, as KDE's page sets it), motion (KDE's animation speed, which Monet's
+# own pieces follow too) and the screen reader (Orca, when it's there).
+
+SCALES = (100, 125, 150, 175, 200)
+CURSOR_SIZES = (24, 36, 48)
+MONETS_MOTION = "0.8"  # Monet's look: a touch quicker than KDE's
+
+
+def screens():
+    """[(name, scale)] of the screens in use, or []."""
+    try:
+        outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
+    except ValueError:
+        return []
+    return [(o.get("name", ""), o.get("scale", 1)) for o in outputs if o.get("enabled") and o.get("name")]
+
+
+def access_state():
+    shown = screens()
+    try:
+        cursor = int(kread("kcminputrc", "Mouse", "cursorSize", "24") or 24)
+    except ValueError:
+        cursor = 24
+    return {
+        "scale": round(shown[0][1] * 100) if shown else None,
+        "cursor": cursor,
+        "reduced": kread("kdeglobals", "KDE", "AnimationDurationFactor", MONETS_MOTION) in ("0", "0.0"),
+        "reader": kread("kaccessrc", "ScreenReader", "Enabled", "false") == "true" if shutil.which("orca") else None,
+    }
+
+
+def set_scale(percent):
+    for name, _ in screens():
+        if re.fullmatch(r"[\w.-]+", name):
+            run("kscreen-doctor", f"output.{name}.scale.{percent / 100:g}", timeout=30)
+
+
+def set_cursor_size(size):
+    kwrite("kcminputrc", "Mouse", "cursorSize", size)
+    # KDE's "the cursor changed" (KGlobalSettings' CursorChanged), which KWin and apps follow.
+    run("dbus-send", "--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange",
+        "int32:5", "int32:0")
+
+
+def set_reader(on):
+    kwrite("kaccessrc", "ScreenReader", "Enabled", "true" if on else "false")
+    if on:
+        subprocess.Popen(["orca", "--replace"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        run("pkill", "-x", "orca")
+
+
 # Default Apps --------------------------------------------------------------
 # What opens what: the [Default Applications] of the person's mimeapps.list, which KDE
 # and everyone else read. A category's first type says which apps can take it.
@@ -1047,6 +1173,7 @@ def about():
         "windows": windows.group(1).strip() if windows else "",
         "notice": read_text(Path("/var/lib/monet/switch-notice")),
         "setup": read_text(Path("/var/lib/monet/windows-setup")),
+        "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
     }
 
 
@@ -1197,6 +1324,17 @@ def main(argv):
         emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
     elif cmd == "update-check":
         emit(update_check())
+    elif cmd == "previous":
+        try:
+            emit(previous_monet(json.loads(run("rpm-ostree", "status", "--json", timeout=30) or "{}")))
+        except ValueError:
+            emit({})
+    elif cmd == "rollback":
+        # Monet's helper does it, as root (without a password, as for updates).
+        emit({"ok": run(f"{BINDIR}/monet", "rollback", timeout=120) is not None})
+    elif cmd == "auto-updates" and args and args[0] in ("on", "off"):
+        # Monet's helper keeps it, as root (without a password, as for switching to Windows).
+        run(f"{BINDIR}/monet", "auto-updates", args[0], timeout=30)
     elif cmd == "firmware-check":
         emit(firmware_check())
     elif cmd == "firmware-update":
@@ -1240,6 +1378,20 @@ def main(argv):
         app_id = unhex(args[0])
         if re.fullmatch(r"[\w.+-]+", app_id):
             kwrite("plasmanotifyrc", ("Applications", app_id), "ShowPopups", "true" if args[1] == "on" else "false")
+    elif cmd == "access":
+        emit(access_state())
+    elif cmd == "access-scale" and args and args[0].isdigit() and int(args[0]) in SCALES:
+        set_scale(int(args[0]))
+    elif cmd == "access-cursor" and args and args[0].isdigit() and int(args[0]) in CURSOR_SIZES:
+        set_cursor_size(int(args[0]))
+    elif cmd == "access-motion" and args and args[0] in ("reduced", "normal"):
+        kwrite("kdeglobals", "KDE", "AnimationDurationFactor", "0" if args[0] == "reduced" else MONETS_MOTION)
+    elif cmd == "access-reader" and args and args[0] in ("on", "off") and shutil.which("orca"):
+        set_reader(args[0] == "on")
+    elif cmd == "storage":
+        emit(storage())
+    elif cmd == "empty-trash":
+        emit({"ok": empty_trash()})
     elif cmd == "defaults":
         emit(defaults_state())
     elif cmd == "default" and len(args) == 2 and args[0] in DEFAULT_KINDS and re.fullmatch(r"(?:[0-9a-f]{2})+", args[1]):

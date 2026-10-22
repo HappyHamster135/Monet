@@ -355,8 +355,13 @@ how things stand ("Connected to Harbor"), in rounded cards with switches
 mouse) in a chip that turns lily while connected, and the sun only for
 Restart in Windows. Updates looks for a new Monet, app updates and the PC's
 own firmware (UEFI, disks, docks: fwupd, from their makers through LVFS)
-together, and installs each only from its own button; firmware that installs
-during a restart says so. Date & Time shows the time as your clocks will,
+together, and installs each from its own button; firmware that installs
+during a restart says so. Monet and the apps also update by themselves once
+a day (`monet-update.timer`, at low priority: the apps at once, a new Monet
+put in place for the next restart, never while you work), until Update
+automatically is turned off (`monet auto-updates off`, kept as
+`/var/lib/monet/auto-updates-off`). Bazzite's and KDE's own updaters stay
+masked, so only Monet's runs. Date & Time shows the time as your clocks will,
 sets it from the internet and finds a time zone by its city; 24-hour time
 switches the locale Plasma exports at sign-in (`plasma-localerc`'s
 `[Formats] LC_TIME`, en_US ↔ en_GB, so dates follow), which Monet's clock,
@@ -379,7 +384,15 @@ ones let through), where popups go and how long they stay, and each app that
 has notified, to let it pop up or not (`plasmanotifyrc`, watched by
 Plasma). Default Apps shows what opens web links, mail, folders, music,
 video, photos, PDFs and text, and the apps that can, set in
-`mimeapps.list`; a kind with no app at all offers the Store. The `monet-quick` helper does the
+`mimeapps.list`; a kind with no app at all offers the Store. Accessibility
+sets the size of everything (each screen's scale, `kscreen-doctor`), the
+pointer's size, less motion (KDE's animation speed at 0, which Monet's own
+pieces follow too, and which Monet's look then leaves alone) and the screen
+reader where Orca is. Storage shows what fills the disk in one bar (games,
+apps, your files, Monet) and makes room: the Trash, asked once more before
+it's emptied, and Downloads, opened in Files. Updates offers the Monet
+before the last update, kept by bootc: Go back, asked once more, starts it
+at the next restart. The `monet-quick` helper does the
 work. Settings in the dock and the app menu runs `monet-quick open [page]`,
 which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into
@@ -477,15 +490,20 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   for reading, ink for Continue and the sun for Erase & Install. Laid out on
   a 1440 x 900 grid and scaled to the screen.
 - **The steps:** Hello (language and keyboard), Wi-Fi (skipped with a cable),
-  who's using this PC, Ready (Monet and Windows, or next to my Windows, and
-  the disk), installing, All set. Anything that can't go ahead says why on
+  who's using this PC, Your apps (the everyday ones ticked: Zen Browser, Photos,
+  Documents, Video, Music, Calculator; Office, Mail, Discord, Spotify, OBS
+  Studio and Krita to tick, in tiles that turn lily), Ready (Monet and
+  Windows, or next to my Windows, and the disk), installing, All set. Anything that can't go ahead says why on
   the page, in a sentence.
 - **Installing** (`monet_setup/install.py`, its own process reporting JSON
   lines): partitions (EFI, boot, Monet's btrfs with `root` and `download`
   subvolumes, Windows' share left free), downloads Monet with skopeo into
   `download` (kept across tries; restarted when it stalls), installs it
   with `bootc install to-filesystem`, sets up the person, language, keyboard,
-  time zone, Wi-Fi and Windows' waiting state, imports Universal Blue's
+  time zone, Wi-Fi, Windows' waiting state and the apps picked
+  (`/var/lib/monet/apps`, which `monet-apps.timer` installs from Flathub
+  once Monet is online, until all are in; a PC that never chose gets the
+  everyday ones), imports Universal Blue's
   driver key, and names the firmware entry "Monet".
 - **Tested in CI** (`tools/vm-test.py`): QEMU with Secure Boot on installs
   Monet on a blank disk through the real screens and starts it, then looks

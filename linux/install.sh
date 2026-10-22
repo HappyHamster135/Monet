@@ -79,7 +79,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
@@ -140,15 +140,21 @@ tree "$SRC/share/sounds/monet" "$DATADIR/sounds/monet"
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
+for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer; do
+    put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
+done
 put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.service"
 put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
+put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
+put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
 
-# Updates happen only when you ask for them, in Settings → Updates: no
-# background updates of Monet or its apps. Masked, because Bazzite turns some
-# of these on from /usr, where disabling can't reach.
+# Monet updates itself, once a day (monet-update.timer: the new Monet starts at
+# the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
+# updaters stay masked so only Monet's runs: masked, because Bazzite turns some
+# of them on from /usr, where disabling can't reach.
 for unit in uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
     flatpak-system-update.timer; do
     systemctl mask "$unit" >/dev/null 2>&1 || true
@@ -189,8 +195,8 @@ sed -e "s|@PROGRAMS@|$programs|" "$SRC/polkit/49-monet.rules" > /etc/polkit-1/ru
 chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
-    systemctl enable monet-sync.service monet-windows-setup.service
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service
+    systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -227,6 +233,15 @@ ABOUT
         /etc/profile.d/user-motd.sh
     # And KDE's welcome, which Plasma starts at the first sign-in and after updates.
     printf '[General]\nLastSeenVersion=9999\nShowUpdatePage=false\n' > /etc/xdg/plasma-welcomerc
+    # Zen is the browser (Monet Setup's everyday apps bring it): web links open
+    # in it, unless someone picks another in Settings → Default Apps.
+    browser=app.zen_browser.zen.desktop
+    mimeapps=/etc/xdg/mimeapps.list
+    touch "$mimeapps"
+    sed -i -E '/^(x-scheme-handler\/https?|text\/html)=/d' "$mimeapps"
+    grep -q '^\[Default Applications\]' "$mimeapps" || printf '\n[Default Applications]\n' >> "$mimeapps"
+    sed -i "/^\[Default Applications\]/a x-scheme-handler/http=$browser\nx-scheme-handler/https=$browser\ntext/html=$browser" "$mimeapps"
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group General --key BrowserApplication "$browser"
     # Change Avatar offers Monet's pictures alone, not KDE's dragon and photos.
     find "$DATADIR/plasma/avatars" -mindepth 1 -maxdepth 1 ! -name Monet -exec rm -rf {} +
     # The app menu's first favorites, over Bazzite's (KDE's settings, its portal).
@@ -314,8 +329,8 @@ else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
         "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
     systemctl daemon-reload
-    for unit in monet-sync.service monet-windows-setup.service; do
+    for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service >/dev/null 2>&1 || true
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path >/dev/null 2>&1 || true
 fi

@@ -1,0 +1,6 @@
+[Unit]
+Description=Monet: plain names for the apps that just arrived
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-look --names

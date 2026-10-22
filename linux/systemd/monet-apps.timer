@@ -1,0 +1,9 @@
+[Unit]
+Description=Monet: install the chosen apps soon after starting, again until they're all in
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=30min
+
+[Install]
+WantedBy=timers.target

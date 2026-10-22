@@ -5,6 +5,7 @@
 #
 #   monet-look           apply everything, including a fresh panel layout
 #   monet-look --keep    apply everything but keep the panels as they are
+#   monet-look --names   only give the apps their plain names
 set -u
 
 DATADIR="@DATADIR@"
@@ -18,6 +19,94 @@ kw() { kwriteconfig6 "$@" 2>/dev/null; }
 kw_default() { # kw_default <file> <group> <key> <value>
     [ -n "$(kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null)" ] || kw --file "$1" --group "$2" --key "$3" "$4"
 }
+
+# Apps go by plain names, and the tools that only show how Monet is built
+# (KDE's and Bazzite's) stay out of the menu: copies of their menu entries in
+# this account's menu, marked as Monet's so uninstalling takes them away.
+# Also on its own (--names): monet-names.path runs it when the apps chosen at
+# setup have arrived, so they get their plain names too.
+plain_names() {
+    entry() { # entry <id>: where the app keeps its menu entry
+        local f
+        for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
+                 "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
+            [ -f "$f" ] && { echo "$f"; return 0; }
+        done
+        return 1
+    }
+    rename() { # rename <id> <name> [comment]
+        local f
+        f="$(entry "$1")" || return 1
+        mkdir -p "$DATA/applications"
+        sed -e '/^Name\[/d' -e '/^GenericName/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$DATA/applications/$1.desktop"
+        if [ -n "${3:-}" ]; then
+            sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$DATA/applications/$1.desktop"
+        fi
+    }
+    hide() { # hide <id>
+        local f
+        f="$(entry "$1")" || return 1
+        mkdir -p "$DATA/applications"
+        sed -e '/^NoDisplay=/d' -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nNoDisplay=true\nX-Monet=true/' \
+            "$f" > "$DATA/applications/$1.desktop"
+    }
+
+    # The store is called Store: Bazaar (Bazzite's) when it's there, otherwise
+    # Discover. It doesn't pop up about updates: those are in Monet Settings,
+    # when you ask.
+    store=io.github.kolunmi.Bazaar
+    if rename "$store" Store "Apps and games for Monet"; then
+        hide org.kde.discover
+    else
+        store=org.kde.discover
+        rename "$store" Store "Apps and games for Monet" || store=""
+    fi
+    mkdir -p "$CONFIG/autostart"
+    printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
+    kw --file PlasmaDiscoverUpdates --group Global --key UseUnattendedUpdates false
+
+    for app in "org.kde.dolphin:Files" "org.kde.konsole:Terminal" "org.kde.kate:Text Editor" "org.kde.gwenview:Photos" \
+        "org.kde.okular:Documents" "org.kde.ark:Archives" "org.kde.spectacle:Screenshot" "org.kde.kcalc:Calculator" \
+        "org.kde.elisa:Music" "org.kde.haruna:Videos" "org.kde.filelight:Disk Usage" "org.kde.partitionmanager:Disks" \
+        "org.kde.kdeconnect.app:Phone" "org.kde.kdeconnect.sms:Phone Messages"; do
+        rename "${app%%:*}" "${app#*:}" || :
+    done
+    # Settings is Monet Settings; KDE's own opens from it, as More settings.
+    for app in systemsettings org.kde.kinfocenter org.kde.khelpcenter org.kde.kmenuedit org.kde.plasma-welcome \
+        org.kde.kwalletmanager5 org.kde.kwalletmanager org.kde.kdeconnect-settings org.kde.kuserfeedback-console \
+        bazzite-documentation discourse bbrew waydroid-container-restart bazzite-portal io.github.ublue_os.yafti_gtk \
+        htop btop nvtop; do
+        hide "$app" || :
+    done
+    # One text editor is enough.
+    entry org.kde.kate >/dev/null && { hide org.kde.kwrite || :; }
+    # Bazzite's setup portal, in accounts made before Monet's image left it out
+    # (and closed, if it opened at this sign-in).
+    if [ -f "$CONFIG/autostart/bazzite-portal.desktop" ]; then
+        printf '[Desktop Entry]\nHidden=true\nX-Monet=true\n' > "$CONFIG/autostart/bazzite-portal.desktop"
+        pkill -u "$(id -u)" -f yafti_gtk >/dev/null 2>&1 || :
+    fi
+    # The app menu's favorites stay even for apps that left the menu (Bazzite
+    # seeds KDE's settings and its portal there): Monet Settings instead.
+    favorite() { # favorite <method> <app> <activity>
+        busctl --user call org.kde.ActivityManager /ActivityManager/Resources/Linking \
+            org.kde.ActivityManager.ResourcesLinking "$1" sss org.kde.plasma.favorites.applications "applications:$2" "$3" 2>/dev/null
+    }
+    for activity in :global :current; do
+        if favorite IsResourceLinkedToActivity systemsettings.desktop "$activity" | grep -q true; then
+            favorite UnlinkResourceFromActivity systemsettings.desktop "$activity" >/dev/null
+            favorite LinkResourceToActivity monet-settings.desktop "$activity" >/dev/null
+        fi
+        favorite UnlinkResourceFromActivity io.github.ublue_os.yafti_gtk.desktop "$activity" >/dev/null
+    done
+}
+
+if [ "${1:-}" = --names ]; then
+    plain_names
+    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
+    exit 0
+fi
 
 # Whether the panels are Monet's islands already: on Monet's image a new
 # account starts with them, since Monet's look is the default there.
@@ -66,7 +155,8 @@ if fc-list : family 2>/dev/null | grep -qx "Fraunces 72pt SuperSoft"; then
 fi
 
 # Motion: a touch quicker than KDE's default, so things feel light.
-kw --file kdeglobals --group KDE --key AnimationDurationFactor 0.8
+[ "$(kreadconfig6 --file kdeglobals --group KDE --key AnimationDurationFactor 2>/dev/null)" = 0 ] ||
+    kw --file kdeglobals --group KDE --key AnimationDurationFactor 0.8
 
 # Glass: blur with a little grain and color behind panels, popovers and
 # see-through windows; windows scale gently in and out.
@@ -116,83 +206,8 @@ fi
 # GTK apps from Flathub read Monet's colors (monet-light writes them).
 flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro 2>/dev/null || :
 
-# Apps go by plain names, and the tools that only show how Monet is built
-# (KDE's and Bazzite's) stay out of the menu: copies of their menu entries in
-# this account's menu, marked as Monet's so uninstalling takes them away.
-entry() { # entry <id>: where the app keeps its menu entry
-    local f
-    for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
-             "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
-        [ -f "$f" ] && { echo "$f"; return 0; }
-    done
-    return 1
-}
-rename() { # rename <id> <name> [comment]
-    local f
-    f="$(entry "$1")" || return 1
-    mkdir -p "$DATA/applications"
-    sed -e '/^Name\[/d' -e '/^GenericName/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
-        -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$DATA/applications/$1.desktop"
-    if [ -n "${3:-}" ]; then
-        sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$DATA/applications/$1.desktop"
-    fi
-}
-hide() { # hide <id>
-    local f
-    f="$(entry "$1")" || return 1
-    mkdir -p "$DATA/applications"
-    sed -e '/^NoDisplay=/d' -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nNoDisplay=true\nX-Monet=true/' \
-        "$f" > "$DATA/applications/$1.desktop"
-}
-
-# The store is called Store: Bazaar (Bazzite's) when it's there, otherwise
-# Discover. It doesn't pop up about updates: those are in Monet Settings,
-# when you ask.
-store=io.github.kolunmi.Bazaar
-if rename "$store" Store "Apps and games for Monet"; then
-    hide org.kde.discover
-else
-    store=org.kde.discover
-    rename "$store" Store "Apps and games for Monet" || store=""
-fi
-mkdir -p "$CONFIG/autostart"
-printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
-kw --file PlasmaDiscoverUpdates --group Global --key UseUnattendedUpdates false
-
-for app in "org.kde.dolphin:Files" "org.kde.konsole:Terminal" "org.kde.kate:Text Editor" "org.kde.gwenview:Photos" \
-    "org.kde.okular:Documents" "org.kde.ark:Archives" "org.kde.spectacle:Screenshot" "org.kde.kcalc:Calculator" \
-    "org.kde.elisa:Music" "org.kde.haruna:Videos" "org.kde.filelight:Disk Usage" "org.kde.partitionmanager:Disks" \
-    "org.kde.kdeconnect.app:Phone" "org.kde.kdeconnect.sms:Phone Messages"; do
-    rename "${app%%:*}" "${app#*:}" || :
-done
-# Settings is Monet Settings; KDE's own opens from it, as More settings.
-for app in systemsettings org.kde.kinfocenter org.kde.khelpcenter org.kde.kmenuedit org.kde.plasma-welcome \
-    org.kde.kwalletmanager5 org.kde.kwalletmanager org.kde.kdeconnect-settings org.kde.kuserfeedback-console \
-    bazzite-documentation discourse bbrew waydroid-container-restart bazzite-portal io.github.ublue_os.yafti_gtk \
-    htop btop nvtop; do
-    hide "$app" || :
-done
-# One text editor is enough.
-entry org.kde.kate >/dev/null && { hide org.kde.kwrite || :; }
-# Bazzite's setup portal, in accounts made before Monet's image left it out
-# (and closed, if it opened at this sign-in).
-if [ -f "$CONFIG/autostart/bazzite-portal.desktop" ]; then
-    printf '[Desktop Entry]\nHidden=true\nX-Monet=true\n' > "$CONFIG/autostart/bazzite-portal.desktop"
-    pkill -u "$(id -u)" -f yafti_gtk >/dev/null 2>&1 || :
-fi
-# The app menu's favorites stay even for apps that left the menu (Bazzite
-# seeds KDE's settings and its portal there): Monet Settings instead.
-favorite() { # favorite <method> <app> <activity>
-    busctl --user call org.kde.ActivityManager /ActivityManager/Resources/Linking \
-        org.kde.ActivityManager.ResourcesLinking "$1" sss org.kde.plasma.favorites.applications "applications:$2" "$3" 2>/dev/null
-}
-for activity in :global :current; do
-    if favorite IsResourceLinkedToActivity systemsettings.desktop "$activity" | grep -q true; then
-        favorite UnlinkResourceFromActivity systemsettings.desktop "$activity" >/dev/null
-        favorite LinkResourceToActivity monet-settings.desktop "$activity" >/dev/null
-    fi
-    favorite UnlinkResourceFromActivity io.github.ublue_os.yafti_gtk.desktop "$activity" >/dev/null
-done
+plain_names
+mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
 # KDE's welcome doesn't come back after Plasma updates to say what's new.
 kw --file plasma-welcomerc --group General --key ShowUpdatePage false
 

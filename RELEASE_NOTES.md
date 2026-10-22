@@ -6,14 +6,30 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.8.2-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.8.2-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.8.2-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.8.2-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
-| Monet-0.8.2-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.8.3-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.8.3-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.8.3-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.8.3-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
+| Monet-0.8.3-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
-### New in 0.8.3: widgets you can use, settings of its own
+### New in 0.8.3: your apps, kept up to date
 
+- **Choose your apps while installing.** Monet Setup has a new step, Your
+  apps: the everyday ones are ticked (Zen Browser, Photos, Documents,
+  Video, Music, Calculator), and Office, Mail, Discord, Spotify, OBS
+  Studio and Krita are a click away. They download after your first
+  sign-in and show up in the menu under their plain names. A PC set up
+  before gets the everyday ones once, by itself. Before, Monet came with
+  no apps beyond Steam, Lutris and the Text Editor.
+- **Zen is the browser.** Web links open in Zen Browser, with Monet's
+  painted window for its icon; Settings → Default Apps picks another.
+- **Monet keeps itself up to date.** Once a day, in the background: your
+  apps right away, and a new Monet ready for your next restart, never
+  while you work. Settings → Updates → Update automatically turns it off.
+  What apps leave behind as they update is cleared away too.
+- **Go back to the Monet from before.** If something stops working after
+  an update, Settings → Updates → Go back starts the one before at your
+  next restart, with your files and apps as they are.
 - **Every page of Settings is Monet's.** Mouse & Keyboard, Power & Sleep,
   Notifications and Default Apps no longer open KDE's settings:
   - **Mouse & Keyboard:** pointer speed, tap to click, natural scrolling,
@@ -27,8 +43,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
     long they stay, and which apps may pop up.
   - **Default Apps:** what opens web links, mail, folders, music, video,
     photos, PDFs and text, with the Store offered when nothing can.
+  - **Accessibility** (new): the size of everything, a larger pointer,
+    less motion, and the screen reader when there is one.
+  - **Storage** (new): what fills the PC (games, apps, your files,
+    Monet) in one bar, and room to make: empty the Trash, look through
+    Downloads.
   The rarer settings are a "More…" away on each page.
-
 - **The Calendar opens its days.** Click a day for its page: the date in
   Fraunces, ‹ › to the day before or after, Today to come back, and a note
   for that day, kept as you type. Days with a note have a dot of lily under
@@ -64,9 +84,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   trash sound like Monet now: soft felt and glass, quiet and warm. Before,
   they were KDE's.
 
-Updating from 0.8.2: Settings → Updates → Install, then restart. At your
-next sign-in KDE's Brightness panel leaves the bar, and Monet's sounds take
-over from KDE's.
+Updating from 0.8.2: Settings → Updates → Install, then restart. After
+that Monet updates by itself. At your next sign-in KDE's Brightness panel
+leaves the bar, Monet's sounds take over from KDE's, and the everyday apps
+start downloading.
 
 ### New in 0.8.2: the everyday screens
 

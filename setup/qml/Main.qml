@@ -3,7 +3,7 @@
 // The dawn harbor fills the screen; the steps sit on a sheet of frosted glass
 // (the painting blurred in advance and drawn once, so it needs no graphics
 // card). Laid out on a 1440 x 900 grid and scaled to the screen with `u`.
-// Steps: Hello, Wi-Fi, who's using this PC, Ready, then installing and done.
+// Steps: Hello, Wi-Fi, who's using this PC, your apps, Ready, then installing and done.
 
 import QtQuick
 import QtQuick.Controls.Basic
@@ -27,9 +27,9 @@ ApplicationWindow {
     readonly property string serif: "Fraunces 72pt SuperSoft"
     readonly property string sans: "Inter"
 
-    // 0 hello, 1 wifi, 2 person, 3 ready, 4 installing (then done or failed)
+    // 0 hello, 1 wifi, 2 person, 3 apps, 4 ready, 5 installing (then done or failed)
     property int step: setup.startStep
-    readonly property bool installing: step === 4
+    readonly property bool installing: step === 5
     readonly property string phase: setup.phase
 
     function px(n) { return Math.max(1, Math.round(n * u)) }
@@ -149,7 +149,7 @@ ApplicationWindow {
                 anchors.top: parent.top
                 anchors.bottom: footer.top
                 anchors.bottomMargin: px(16)
-                sourceComponent: !installing ? [helloStep, wifiStep, personStep, readyStep][step]
+                sourceComponent: !installing ? [helloStep, wifiStep, personStep, appsStep, readyStep][step]
                                : phase === "done" ? doneStep : phase === "failed" ? failedStep : progressStep
                 onLoaded: rise.restart()
                 ParallelAnimation {
@@ -174,13 +174,13 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignVCenter
                     visible: !installing
                     Repeater {
-                        model: 5
+                        model: 6
                         Rectangle {
                             required property int index
                             height: px(5)
-                            width: index === Math.min(step, 4) ? px(28) : px(10)
+                            width: index === Math.min(step, 5) ? px(28) : px(10)
                             radius: height / 2
-                            color: index === Math.min(step, 4) ? sun : Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.18)
+                            color: index === Math.min(step, 5) ? sun : Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.18)
                             Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
                         }
                     }
@@ -195,16 +195,16 @@ ApplicationWindow {
                 PillButton {
                     id: next
                     text: installing ? "Restart"
-                        : step === 3 ? (setup.mode === "erase" ? "Erase & Install" : "Install")
+                        : step === 4 ? (setup.mode === "erase" ? "Erase & Install" : "Install")
                         : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : "Continue"
-                    accent: step === 3 && !installing
+                    accent: step === 4 && !installing
                     enabled: installing || (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
                     onClicked: {
                         if (installing) { setup.restart(); return }
                         var item = stepLoader.item
                         if (item.leave && !item.leave())
                             return
-                        if (step === 3) { setup.install(); step = 4 } else step = step + 1
+                        if (step === 4) { setup.install(); step = 5 } else step = step + 1
                     }
                 }
             }
@@ -371,6 +371,106 @@ ApplicationWindow {
                 Entry { id: pass; width: parent.width; secret: true; placeholder: "At least 6 characters"; text: setup.personPassword; onAccepted: next.clicked() }
             }
             Note { text: parent.problem; warm: true; visible: text !== "" }
+        }
+    }
+
+    // What's on the PC from the start: the everyday apps ticked, the rest to pick.
+    // They arrive after the first sign-in; the Store has everything else.
+    Component {
+        id: appsStep
+        Column {
+            property bool ready: true
+            property bool busy: false
+            spacing: px(16)
+            Title { text: "Your apps" }
+            Body { text: "Monet starts with the everyday ones. Add anything else you like: it all arrives after you sign in, and the Store has the rest." }
+            Repeater {
+                model: [["Everyday", true], ["More", false]]
+                Column {
+                    id: appSection
+                    required property var modelData
+                    width: parent.width
+                    spacing: px(8)
+                    Text {
+                        text: appSection.modelData[0]
+                        font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
+                    }
+                    Grid {
+                        width: parent.width
+                        columns: 2
+                        columnSpacing: px(8)
+                        rowSpacing: px(8)
+                        Repeater {
+                            model: setup.apps.map((app, i) => Object.assign({ index: i }, app))
+                                                .filter(app => app.everyday === appSection.modelData[1])
+                            AbstractButton {
+                                id: appTile
+                                required property var modelData
+                                width: (appSection.width - px(8)) / 2
+                                height: px(54)
+                                hoverEnabled: true
+                                leftPadding: px(12)
+                                rightPadding: px(10)
+                                onClicked: setup.toggleApp(modelData.index)
+                                Accessible.role: Accessible.CheckBox
+                                Accessible.name: modelData.name
+                                Accessible.checked: modelData.picked
+                                background: Rectangle {
+                                    radius: px(14)
+                                    color: appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
+                                         : appTile.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
+                                    border.color: appTile.modelData.picked ? lily : "transparent"
+                                    border.width: Math.max(2, px(2))
+                                    Behavior on color { ColorAnimation { duration: 140 } }
+                                }
+                                contentItem: RowLayout {
+                                    spacing: px(10)
+                                    // The tick: lily when it's coming.
+                                    Rectangle {
+                                        Layout.preferredWidth: px(20)
+                                        Layout.preferredHeight: px(20)
+                                        radius: width / 2
+                                        color: appTile.modelData.picked ? lily : "transparent"
+                                        border.width: appTile.modelData.picked ? 0 : Math.max(1, px(1.5))
+                                        border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
+                                        Shape {
+                                            visible: appTile.modelData.picked
+                                            anchors.centerIn: parent
+                                            width: 24
+                                            height: 24
+                                            scale: px(12) / 24
+                                            ShapePath {
+                                                strokeColor: "#FFFFFF"
+                                                strokeWidth: 3
+                                                fillColor: "transparent"
+                                                capStyle: ShapePath.RoundCap
+                                                joinStyle: ShapePath.RoundJoin
+                                                PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
+                                            }
+                                        }
+                                    }
+                                    Column {
+                                        Layout.fillWidth: true
+                                        spacing: px(1)
+                                        Text {
+                                            width: parent.width
+                                            text: appTile.modelData.name
+                                            elide: Text.ElideRight
+                                            font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink
+                                        }
+                                        Text {
+                                            width: parent.width
+                                            text: appTile.modelData.detail
+                                            elide: Text.ElideRight
+                                            font.family: sans; font.pixelSize: px(12); color: dim
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -135,6 +135,7 @@ mimetypes/scalable/application-x-iso9660-image.svg ../../devices/scalable/media-
 apps/scalable/firefox.svg org.mozilla.firefox.svg
 apps/scalable/web-browser.svg org.mozilla.firefox.svg
 apps/scalable/internet-web-browser.svg org.mozilla.firefox.svg
+apps/scalable/app.zen_browser.zen.svg org.mozilla.firefox.svg
 apps/scalable/com.valvesoftware.Steam.svg steam.svg
 apps/scalable/lutris.svg net.lutris.Lutris.svg
 apps/scalable/yafti.svg io.github.ublue_os.yafti_gtk.svg

@@ -32,6 +32,25 @@ PHASES = {
 }
 
 
+# The apps offered on "Your apps", from Flathub: (ID, name, what it's for, ticked at first).
+# They arrive after the first sign-in (monet-apps); the ticked ones are also what a PC
+# that never chose gets (linux/libexec/monet-apps' EVERYDAY).
+APPS = [
+    ("app.zen_browser.zen", "Zen Browser", "The web", True),
+    ("org.kde.gwenview", "Photos", "Your pictures", True),
+    ("org.kde.okular", "Documents", "PDFs and e-books", True),
+    ("org.kde.haruna", "Video", "Films and clips", True),
+    ("org.kde.elisa", "Music", "Your songs", True),
+    ("org.kde.kcalc", "Calculator", "Quick sums", True),
+    ("org.libreoffice.LibreOffice", "Office", "Documents, sheets, slides", False),
+    ("org.mozilla.Thunderbird", "Mail", "Email and calendars", False),
+    ("com.discordapp.Discord", "Discord", "Talk while you play", False),
+    ("com.spotify.Client", "Spotify", "Music to stream", False),
+    ("com.obsproject.Studio", "OBS Studio", "Record and stream games", False),
+    ("org.kde.krita", "Krita", "Paint and draw", False),
+]
+
+
 def minutes_text(seconds):
     if seconds is None:
         return ""
@@ -53,6 +72,7 @@ class Setup(QObject):
         self._joining, self._wifi_error, self._joined = False, "", ""
         self._disks, self._disk, self._mode = [], 0, "erase"
         self._name, self._password = "", ""
+        self._apps = [ticked for *_, ticked in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
         self._proc = None
         # Queued across threads: the callback runs on the window's thread.
@@ -231,6 +251,21 @@ class Setup(QObject):
     def accountFor(self, name):
         return account_name(name) if name.strip() else ""
 
+    # -- apps --
+    @Property("QVariant", notify=changed)
+    def apps(self):
+        return [{"name": name, "detail": detail, "everyday": everyday, "picked": picked}
+                for (_, name, detail, everyday), picked in zip(APPS, self._apps)]
+
+    @Slot(int)
+    def toggleApp(self, index):
+        if 0 <= index < len(self._apps):
+            self._apps[index] = not self._apps[index]
+            self.changed.emit()
+
+    def picked_apps(self):
+        return [app_id for (app_id, *_), picked in zip(APPS, self._apps) if picked]
+
     # -- disk and mode --
     def _load_disks(self):
         self._background(disks.offer, self._disks_loaded)
@@ -308,6 +343,7 @@ class Setup(QObject):
             "timezone": zone_guess,             # refined from the internet while installing
             "name": self._name, "account": account_name(self._name), "password": self._password,
             "wifi": self._joined,
+            "apps": self.picked_apps(),
         }
         fd, path = tempfile.mkstemp(prefix="monet-plan-", suffix=".json", dir="/run")
         with os.fdopen(fd, "w") as f:

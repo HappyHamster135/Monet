@@ -20,7 +20,7 @@ Windows downloads in the background while you use it.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.8.2-Make-USB-Stick.exe** from the
+1. Download **Monet-0.8.3-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -33,19 +33,19 @@ On a Windows PC (this one, or any other):
    then says it's ready.
 
 The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.8.2-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.8.2-Installer.iso**). Monet Setup is in a release only once
+it (**Monet-0.8.3-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.8.3-Installer.iso**). Monet Setup is in a release only once
 it has installed Monet in a test PC.
 
-On Linux or a Mac, download **Monet-0.8.2-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.8.2-Installer.iso**) and write it with your disk
+On Linux or a Mac, download **Monet-0.8.3-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.8.3-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.8.2**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.8.3**).
 2. Monet Setup opens over the harbor at dawn. Choose your language and
    keyboard, and click **Continue**.
 3. Connect to Wi-Fi (with a cable, this step is skipped).
@@ -62,7 +62,7 @@ If something can't go ahead, the page says why in a sentence.
 6. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.8.2-Installer.iso)</summary>
+<summary>With Fedora's installer (Monet-0.8.3-Installer.iso)</summary>
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -157,15 +157,21 @@ __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRA
 
 ## Keeping Monet up to date
 
-Monet never updates by itself. When you want to, open **Settings → Updates**
-and choose **Check for updates**. If there's something new, choose
-**Install** (it updates Monet and your apps), then **Restart now**.
+Monet keeps itself up to date. Once a day, in the background, it updates
+your apps and gets the newest Monet ready; the new Monet starts the next
+time you restart, never while you work. To update only when you ask, turn
+off **Settings → Updates → Update automatically**.
+
+To update right away, open **Settings → Updates** and choose **Check for
+updates**. If there's something new, choose **Install** (it updates Monet
+and your apps), then **Restart now**.
 
 From a terminal, the same is:
 
 ```sh
-monet update --check   # only look
-monet update           # install, then restart
+monet update --check      # only look
+monet update              # install, then restart
+monet auto-updates off    # only when you ask (on turns it back)
 ```
 
 If a new version ever misbehaves, choose the previous one in the start menu
@@ -199,5 +205,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.8.2-Linux.tar.gz** and run `./monet-0.8.2-linux/install.sh`,
+Download **Monet-0.8.3-Linux.tar.gz** and run `./monet-0.8.3-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`.

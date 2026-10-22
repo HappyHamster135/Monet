@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: download the newest Monet and update the apps
+Wants=network-online.target
+After=network-online.target
+# Settings → Updates → Update automatically, off.
+ConditionPathExists=!/var/lib/monet/auto-updates-off
+
+[Service]
+Type=oneshot
+# The new Monet is put in place for the next restart; nothing changes under you.
+ExecStart=@BINDIR@/monet helper update
+Nice=19
+IOSchedulingClass=idle

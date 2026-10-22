@@ -1081,7 +1081,7 @@ FILES = {
     "disc": (disc_icon, "devices/media-optical", [
         "drive-optical", "media-optical-dvd", "media-optical-cd", "media-optical-data", "media-optical-audio",
         "mimetypes/application-x-cd-image", "mimetypes/application-x-iso9660-image"]),
-    "browser": (window_icon, "apps/org.mozilla.firefox", ["firefox", "web-browser", "internet-web-browser"]),
+    "browser": (window_icon, "apps/org.mozilla.firefox", ["firefox", "web-browser", "internet-web-browser", "app.zen_browser.zen"]),
     "steam": (locomotive_icon, "apps/steam", ["com.valvesoftware.Steam"]),
     "lutris": (rowboat_icon, "apps/net.lutris.Lutris", ["lutris"]),
     "portal": (bridge_icon, "apps/io.github.ublue_os.yafti_gtk", ["yafti", "bazzite-portal"]),
@@ -1178,6 +1178,8 @@ SWATCHES = {
     "power": ("dusk", (1080, 1240, 1520, 1680)),
     "notifications": ("day", (1700, 260, 2140, 700)),
     "apps": ("dawn", (2900, 760, 3340, 1200)),
+    "accessibility": ("day", (2200, 1300, 2640, 1740)),
+    "storage": ("dusk", (2600, 1500, 3040, 1940)),
     "windows": ("night", (2900, 1050, 3340, 1490)),
     "updates": ("dawn", (900, 1500, 1340, 1940)),
     "about": ("dusk", (1090, 800, 1530, 1240)),

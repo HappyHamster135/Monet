@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: install the apps chosen in Monet Setup
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/monet/apps-done
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-apps
+Nice=10
+IOSchedulingClass=idle
+StateDirectory=monet
+StateDirectoryMode=0755
