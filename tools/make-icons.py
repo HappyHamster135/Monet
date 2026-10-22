@@ -1015,8 +1015,9 @@ ICONS = {
     # Store is Bazaar when Bazzite has it, otherwise Discover: the same bouquet either way.
     "store": (bouquet_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar"]),
     "monitor": (harbor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor", "categories/applications-system"]),
-    "trash": (lambda: pot_icon(False), ["places/user-trash"]),
-    "trash-full": (lambda: pot_icon(True), ["places/user-trash-full"]),
+    # In a bar, Plasma's Trash asks for the "-symbolic" names: the painting there too.
+    "trash": (lambda: pot_icon(False), ["places/user-trash", "places/user-trash-symbolic"]),
+    "trash-full": (lambda: pot_icon(True), ["places/user-trash-full", "places/user-trash-full-symbolic"]),
     # KDE's apps that Bazzite brings (Flatpaks) or might.
     "pictures": (frame_icon, ["apps/org.kde.gwenview", "apps/gwenview"]),
     "documents": (book_icon, ["apps/org.kde.okular", "apps/okular", "categories/applications-office", "categories/applications-education"]),
@@ -1465,7 +1466,6 @@ def ink_actions():
                         line((9, 18), (13, 18), w=1.4)],
         "edit-delete": pot(),
         "trash-empty": pot(),
-        "user-trash-symbolic": pot(),
         "document-properties": page() + [line((7.8, 11.4), (13.8, 11.4), w=1.4), line((7.8, 14.6), (12, 14.6), w=1.4)],
         "document-open": folder(),
         "document-open-folder": folder(),
@@ -1531,6 +1531,8 @@ def ink_actions():
         "preferences-desktop-display-randr": screen(),
         # A painting in the dock, a sign in menus (Files' Open Terminal Here).
         "utilities-terminal": glyphs["utilities-terminal-symbolic"],
+        # The same for Trash: the dock asks for "user-trash-symbolic" too, and gets the pot's painting.
+        "user-trash-symbolic": pot(),
     }
 
     # The bar's status icons. Plasma 6.7 takes them from the icon theme by name

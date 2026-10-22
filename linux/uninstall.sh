@@ -51,7 +51,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/plasma/plasmoids/org.monet.weather" "$PREFIX/share/plasma/plasmoids/org.monet.calendar" \
     "$PREFIX/share/plasma/plasmoids/org.monet.clock" "$PREFIX/share/plasma/plasmoids/org.monet.menu" \
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
-    "$PREFIX/share/plasma/plasmoids/org.monet.frame" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.frame" "$PREFIX/share/plasma/avatars/Monet" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
     "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/plasma/look-and-feel/org.monet.smoke.desktop" \
     "$PREFIX/share/icons/Monet" "$PREFIX/share/icons/Monet-cursors" \

@@ -710,6 +710,27 @@ class Icons(unittest.TestCase):
         for name in ("drive-harddisk", "drive-removable-media-usb-pendrive", "media-optical", "media-flash-sd-mmc"):
             self.assertTrue((status / f"{name}-symbolic.svg").is_file(), name)
 
+    def test_the_dock_keeps_the_painted_trash(self):
+        # In a bar Plasma's Trash asks for "user-trash-symbolic" or "user-trash-full-symbolic": the pot's painting
+        # answers at the dock's size, the ink sign only at menu size (actions/16 comes first in the theme).
+        for name in ("user-trash-symbolic", "user-trash-full-symbolic"):
+            self.assertIn("data:image/png;base64,", (self.THEME / "places/scalable" / f"{name}.svg").read_text(), name)
+        self.assertNotIn("data:image", (self.THEME / "actions/16/user-trash-symbolic.svg").read_text())
+        self.assertFalse((self.THEME / "actions/scalable/user-trash-symbolic.svg").exists())
+
+    def test_account_pictures_are_monets(self):
+        # Change Avatar lists every picture under plasma/avatars: Monet's, and on the image no one else's.
+        pictures = sorted((SHARE / "plasma/avatars/Monet").glob("*.jpg"))
+        self.assertGreaterEqual(len(pictures), 12)
+        for picture in pictures:
+            jpeg = picture.read_bytes()
+            self.assertEqual(jpeg[:3], b"\xff\xd8\xff", picture.name)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"', install)
+        image_only = install.split('if [ "$IMAGE" = 1 ]; then', 2)[2]
+        self.assertIn('find "$DATADIR/plasma/avatars" -mindepth 1 -maxdepth 1 ! -name Monet -exec rm -rf {} +', image_only)
+        self.assertIn("plasma/avatars/Monet", (ROOT / "linux/uninstall.sh").read_text())
+
     def test_message_boxes_get_ink_signs(self):
         # Message boxes and apps' inline notes ask for these: Monet's ink, never Breeze's triangle.
         for name in ("dialog-information", "dialog-question", "dialog-warning", "dialog-error", "dialog-positive"):

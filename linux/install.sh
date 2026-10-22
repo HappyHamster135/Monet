@@ -110,6 +110,9 @@ for theme in org.monet.desktop org.monet.smoke.desktop; do
     # The restart and shut-down screen, the same in both lights.
     tree "$SRC/share/monet/logout" "$DATADIR/plasma/look-and-feel/$theme/contents/logout"
 done
+# Account pictures: pieces of The Hours and small paintings, offered in
+# Change Avatar (which lists every picture under plasma/avatars).
+tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"
 for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
     org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
@@ -220,6 +223,8 @@ ABOUT
         /etc/profile.d/user-motd.sh
     # And KDE's welcome, which Plasma starts at the first sign-in and after updates.
     printf '[General]\nLastSeenVersion=9999\nShowUpdatePage=false\n' > /etc/xdg/plasma-welcomerc
+    # Change Avatar offers Monet's pictures alone, not KDE's dragon and photos.
+    find "$DATADIR/plasma/avatars" -mindepth 1 -maxdepth 1 ! -name Monet -exec rm -rf {} +
     # The app menu's first favorites, over Bazzite's (KDE's settings, its portal).
     printf '[General]\nPrepend=%s\nIgnoreDefaults=true\n' \
         'preferred://browser;steam.desktop;org.kde.dolphin.desktop;org.kde.konsole.desktop;io.github.kolunmi.Bazaar.desktop;monet-settings.desktop;' \
