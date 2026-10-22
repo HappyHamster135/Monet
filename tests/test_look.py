@@ -1209,9 +1209,11 @@ class EverydayScreens(unittest.TestCase):
                       'initForClient("org.monet.menu.favorites.instance-"', "portOldFavorites(",
                       "model.trigger(index", "addFavorite(", "removeFavorite("):
             self.assertIn(piece, menu)
-        # Lock, the power sign (Monet's restart and shut-down screen) and Accounts.
-        for piece in ("sessions.lock()", "sessions.requestLogoutPrompt()", '"@LIBEXECDIR@/monet-quick kde users"'):
+        # Lock, the power sign (Monet's restart and shut-down screen) and Accounts in Monet Settings
+        # (KDE's page without Quick Settings).
+        for piece in ("sessions.lock()", "sessions.requestLogoutPrompt()", '"@LIBEXECDIR@/monet-quick open users"'):
             self.assertIn(piece, menu)
+        self.assertIn("users", quick_helper().PAGES)
         self.assertIn('"users": "kcm_users"', (ROOT / "linux/libexec/monet-quick").read_text())
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
@@ -1356,6 +1358,47 @@ class MonetSettings(unittest.TestCase):
         for picture in ("light-hours.png", "light-mist.png", "light-smoke.png", "about.jpg"):
             self.assertTrue((art / picture).is_file(), picture)
 
+    def test_date_time_and_accounts_are_monets(self):
+        qml = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
+        for page in ("datetime", "users"):
+            entry = re.search(r'\{ id: "%s",[^}]*\}' % page, qml).group(0)
+            self.assertNotIn("kde:", entry)
+            # KDE's page stays one click away, for what Monet's leaves out.
+            self.assertIn(f'sheet.ask("kde {page}")', qml)
+        helper = quick_helper()
+        for command in ("time", "zones", "zone NAME", "ntp on|off", "time-locale LOCALE|region", "accounts",
+                        "name NAME", "pad", "password OLD NEW"):
+            self.assertRegex(helper.__doc__, rf"monet-quick {re.escape(command)}\s")
+        for asked in ('ask("time"', 'ask("zones"', 'ask("zone " + zone', 'ask("ntp " + ', 'ask("time-locale " + ',
+                      'ask("accounts"', 'ask("name " + hex(name)', 'ask("pad"', 'ask("password " + sealed.join(" ")'):
+            self.assertIn(asked, qml)
+        # 24-hour time is what Monet's clocks follow: the locale's short time.
+        for clock in (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml", SHARE / "monet/lockscreen/MonetLockScreen.qml"):
+            self.assertIn("Qt.locale().timeFormat(Locale.ShortFormat)", clock.read_text(encoding="utf-8"))
+
+    def test_power_input_notifications_and_apps_are_monets(self):
+        qml = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
+        for page in ("input", "power", "notifications", "apps"):
+            entry = re.search(r'\{ id: "%s",[^}]*\}' % page, qml).group(0)
+            self.assertNotIn("kde:", entry)
+            self.assertIn(f'sheet.ask("kde {page}")', qml)
+        helper = quick_helper()
+        for command in ("power", "power-time", "power-button|power-lid", "power-mode", "input", "pointer", "layouts-known",
+                        "layouts", "notify", "notify-rule", "notify-place", "notify-time", "notify-app", "defaults", "default"):
+            self.assertRegex(helper.__doc__, rf"monet-quick {re.escape(command)}\s")
+        # What the pages offer is what the helper takes: times, what the buttons do, popups.
+        times = lambda name: [int(s) for s in re.search(name + r": \[([\d, ]+)\]\.map", qml).group(1).split(",")]
+        self.assertTrue(set(times("screenTimes")) <= set(helper.SCREEN_TIMES))
+        self.assertTrue(set(times("sleepTimes")) <= set(helper.SLEEP_TIMES))
+        offered = [[int(v) for v in re.findall(r"\[(\d+), i18n", found)]
+                   for found in re.findall(r"options: (\[\[\d+, i18n.*)", qml)]
+        self.assertIn(sorted(helper.BUTTON_ACTIONS), [sorted(o) for o in offered])
+        self.assertIn(sorted(helper.LID_ACTIONS), [sorted(o) for o in offered])
+        places = re.search(r'options: (\[\["clock".*)', qml).group(1)
+        self.assertEqual(set(re.findall(r'\["(\w+)", i18n', places)), set(helper.POPUP_PLACES))
+        self.assertIn("[3, 5, 10].map(", qml)
+        self.assertEqual(helper.POPUP_TIMES, (3, 5, 10))
+
     def test_quick_settings_opens_it(self):
         main = (self.QUICK / "main.qml").read_text()
         self.assertIn("MonetSettings {", main)
@@ -1399,6 +1442,48 @@ class Scripts(unittest.TestCase):
         status = json.loads(out.stdout)
         self.assertIn(status["light"], ("hours", "mist", "smoke"))
         self.assertIn("mic", status)
+
+    def test_quick_reads_layouts_notifications_and_default_apps(self):
+        quick = quick_helper()
+        listing = "! model\n  pc104  Generic 104-key PC\n\n! layout\n  us   English (US)\n  se   Swedish\n\n! variant\n  dvorak  us: English (Dvorak)\n"
+        self.assertEqual(quick.known_layouts(listing), [("us", "English (US)"), ("se", "Swedish")])
+        rc = "[Applications][discord]\nSeen=true\nShowPopups=false\n\n[Applications][org.kde.dolphin]\nSeen=true\n\n[Services][plasma_workspace]\nShowPopups=false\n"
+        self.assertEqual(quick.notified_apps(rc), {"discord": False, "org.kde.dolphin": True})
+        # A default set keeps every other line of mimeapps.list.
+        before = "[Added Associations]\nimage/png=a.desktop;\n\n[Default Applications]\ntext/plain=b.desktop;\naudio/mpeg=c.desktop;\n"
+        after = quick.with_defaults(before, {"audio/mpeg": "org.kde.elisa.desktop", "audio/flac": "org.kde.elisa.desktop"})
+        for line in ("image/png=a.desktop;", "text/plain=b.desktop;", "audio/mpeg=org.kde.elisa.desktop;", "audio/flac=org.kde.elisa.desktop;"):
+            self.assertIn(line, after)
+        self.assertNotIn("c.desktop", after)
+        self.assertEqual(quick.with_defaults("", {"inode/directory": "org.kde.dolphin.desktop"}),
+                         "[Default Applications]\ninode/directory=org.kde.dolphin.desktop;\n")
+        browser = quick.desktop_entry("[Desktop Entry]\nType=Application\nName=Firefox\nMimeType=text/html;x-scheme-handler/http;x-scheme-handler/https;\n")
+        viewer = quick.desktop_entry("[Desktop Entry]\nType=Application\nName=Viewer\nMimeType=text/html;\n")
+        found = quick.takers([("firefox.desktop", browser), ("viewer.desktop", viewer)], "browser")
+        self.assertEqual([app["id"] for app in found], ["firefox.desktop"])
+        self.assertEqual(found[0]["types"], ["x-scheme-handler/https", "x-scheme-handler/http", "text/html"])
+
+    def test_quick_tells_mice_from_touchpads(self):
+        quick = quick_helper()
+        self.assertEqual(quick.device_kind({"pointer": True, "supportsPointerAcceleration": True}), "mouse")
+        self.assertEqual(quick.device_kind({"touchpad": True, "pointer": True}), "touchpad")
+        self.assertEqual(quick.device_kind({"keyboard": True, "pointer": True}), "")  # a keyboard's media keys
+        touchpad = {"touchpad": True, "pointerAcceleration": 0.2, "supportsPointerAcceleration": True, "tapFingerCount": 3,
+                    "tapToClick": False, "naturalScroll": True, "supportsNaturalScroll": True}
+        self.assertEqual(quick.pointer_state({"event5": touchpad}),
+                         {"mouse": None, "touchpad": {"speed": 60, "natural": True, "tap": False}})
+
+    def test_quick_settings_commands_take_only_their_own_values(self):
+        from unittest import mock
+        quick = quick_helper()
+        with mock.patch.object(quick, "kwrite") as kwrite, mock.patch.object(quick, "run") as run, \
+                mock.patch("sys.stderr"):
+            for argv in (["power-time", "ac", "screen", "123"], ["power-time", "home", "sleep", "900"], ["power-button", "4"],
+                         ["power-lid", "8"], ["power-mode", "turbo"], ["layouts", "us;rm -rf ~"], ["notify-place", "left"],
+                         ["notify-time", "7"], ["notify-app", "zz", "on"], ["default", "browser", "zz"], ["default", "games", "6161"]):
+                quick.main(argv)
+            kwrite.assert_not_called()
+            run.assert_not_called()
 
     def test_quick_reads_nmcli(self):
         quick = quick_helper()
@@ -1503,6 +1588,103 @@ Audio
             {"id": 56, "name": "Speakers", "default": True},
             {"id": 60, "name": "Monitor (HDMI)", "default": False},
         ])
+
+    def test_quick_reads_the_clock(self):
+        from unittest import mock
+        quick = quick_helper()
+        show = "Timezone=Europe/Stockholm\nLocalRTC=no\nCanNTP=yes\nNTP=yes\nNTPSynchronized=yes\n"
+        formats = {"LANG": "en_US.UTF-8", "LC_TIME": "en_GB.UTF-8"}
+        with mock.patch.object(quick, "kread", lambda file, group, key, default="": formats.get(key, default)):
+            self.assertEqual(quick.clock(show), {"zone": "Europe/Stockholm", "ntp": True,
+                                                 "locale": "en_GB.UTF-8", "region": "en_US.UTF-8"})
+            del formats["LC_TIME"]
+            self.assertEqual(quick.clock(show)["locale"], "en_US.UTF-8")
+        # Without a time service there's nothing to switch.
+        self.assertIsNone(quick.clock("Timezone=UTC\nCanNTP=no\nNTP=no\n")["ntp"])
+
+    def test_quick_takes_only_zones_and_locales_it_knows(self):
+        import contextlib
+        import io
+        from unittest import mock
+        quick = quick_helper()
+        done = []
+
+        def run(*args, **kw):
+            done.append(args)
+            return "Europe/Stockholm\nUTC\n" if args[1:] == ("list-timezones",) else ""
+        with mock.patch.object(quick, "run", run), contextlib.redirect_stderr(io.StringIO()):
+            for argv in (["zone", "Europe/Stockholm"], ["zone", "Mars/Olympus_Mons"], ["time-locale", "en_GB.UTF-8"],
+                         ["time-locale", "region"], ["time-locale", "en_GB.UTF-8; rm -rf ~"], ["time-locale", "../x"]):
+                quick.main(argv)
+        changes = [args for args in done if args[1:] != ("list-timezones",)]
+        self.assertEqual(changes, [
+            ("timedatectl", "set-timezone", "Europe/Stockholm"),
+            ("kwriteconfig6", *quick.TIME_LOCALE, "en_GB.UTF-8"),
+            ("kwriteconfig6", *quick.TIME_LOCALE, "--delete"),
+        ])
+        self.assertEqual(quick.TIME_LOCALE, ("--file", "plasma-localerc", "--group", "Formats", "--key", "LC_TIME"))
+
+    def test_quick_knows_the_people_on_this_pc(self):
+        from unittest import mock
+        quick = quick_helper()
+        found = {"Uid": {"type": "t", "data": 1000}, "UserName": {"type": "s", "data": "claude"},
+                 "RealName": {"type": "s", "data": " Claude Monet "}, "AccountType": {"type": "i", "data": 1},
+                 "IconFile": {"type": "s", "data": "/nonexistent/claude"}}
+        self.assertEqual(quick.person(found, 1000),
+                         {"login": "claude", "name": "Claude Monet", "picture": "", "admin": True, "you": True})
+        camille = quick.person({"Uid": {"data": 1001}, "UserName": {"data": "camille"}, "AccountType": {"data": 0}}, 1000)
+        self.assertEqual((camille["name"], camille["admin"], camille["you"]), ("camille", False, False))
+        # Your name goes to AccountsService as it is, unless the password file couldn't keep it.
+        calls = []
+        with mock.patch.object(quick, "your_account", lambda: "/org/freedesktop/Accounts/User1000"), \
+                mock.patch.object(quick, "run", lambda *args, **kw: calls.append(args) or ""):
+            self.assertTrue(quick.set_name(" Claude Monet "))
+            for name in ("", "   ", "Monet, Claude", "Claude: Monet", "Claude\nMonet", "C" * 65):
+                self.assertFalse(quick.set_name(name), name)
+        self.assertEqual(calls, [("busctl", "call", "org.freedesktop.Accounts", "/org/freedesktop/Accounts/User1000",
+                                  "org.freedesktop.Accounts.User", "SetRealName", "s", "Claude Monet")])
+
+    def test_passwords_come_sealed(self):
+        # A command line is anyone's to read: Monet Settings seals passwords with a pad from the helper.
+        quick = quick_helper()
+        pad = bytes(range(7, 135))
+        secret = "Café $(rf) '☀'"
+        sealed = bytes(a ^ b for a, b in zip(secret.encode(), pad)).hex()
+        self.assertEqual(quick.unseal(sealed, pad), secret)
+        self.assertIsNone(quick.unseal("00" * 129, pad))
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertNotRegex(qml, r'"password " \+ (sheet\.)?hex\(')
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "passwd answers in a Linux terminal")
+    def test_quick_changes_a_password_with_passwd(self):
+        import os
+        import tempfile
+        from unittest import mock
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            # A passwd that asks the way Fedora's does.
+            fake = Path(tmp) / "passwd"
+            fake.write_text(
+                "#!/bin/sh\necho 'Changing password for user claude.'\n"
+                "printf 'Current password: '; read old\n"
+                "[ \"$old\" = Giverny ] || { echo 'passwd: Authentication token manipulation error'; exit 1; }\n"
+                "printf 'New password: '; read new\n"
+                "[ ${#new} -ge 8 ] || { echo 'BAD PASSWORD: The password is shorter than 8 characters'; exit 1; }\n"
+                "printf 'Retype new password: '; read again\n"
+                "[ \"$new\" = \"$again\" ] && echo 'passwd: all authentication tokens updated successfully.'\n")
+            fake.chmod(0o755)
+            with mock.patch.dict(os.environ, {"PATH": tmp + os.pathsep + os.environ["PATH"]}):
+                self.assertEqual(quick.change_password("Giverny", "Water lilies"), {"ok": True})
+                self.assertEqual(quick.change_password("Argenteuil", "Water lilies"),
+                                 {"ok": False, "message": "That isn't your current password."})
+                self.assertEqual(quick.change_password("Giverny", "lilies"),
+                                 {"ok": False, "message": "The password is shorter than 8 characters."})
+            # The pad: only yours to read, and only once.
+            with mock.patch.object(quick, "PAD", Path(tmp) / "pad"):
+                pad = bytes.fromhex(quick.make_pad())
+                self.assertEqual((Path(tmp) / "pad").stat().st_mode & 0o777, 0o600)
+                self.assertEqual(quick.take_pad(), pad)
+                self.assertEqual(quick.take_pad(), b"")
 
     def test_trips_to_windows_are_checked_at_startup(self):
         unit = (ROOT / "linux/systemd/monet-sync.service").read_text()

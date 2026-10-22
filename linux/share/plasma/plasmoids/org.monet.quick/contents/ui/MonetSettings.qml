@@ -38,25 +38,22 @@ PlasmaCore.Dialog {
           words: "display screen brightness night light monitor resolution scale size" },
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
           words: "sound volume speakers headphones microphone mic audio output" },
-        // Opened in KDE's settings (kde), each with a painting's swatch.
-        { id: "input", name: i18n("Mouse & Keyboard"), kde: "input", swatch: "bluetooth", gap: true,
+        { id: "datetime", name: i18n("Date & Time"), glyph: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2",
+          words: "date time clock time zone 24-hour format automatic" },
+        { id: "users", name: i18n("Accounts"), glyph: "M8 8a4 4 0 1 0 8 0a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0",
+          words: "accounts users password picture people name login sign in" },
+        { id: "input", name: i18n("Mouse & Keyboard"), gap: true,
           glyph: "M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM12 3v5",
-          words: "mouse keyboard touchpad pointer speed layout typing repeat" },
-        { id: "power", name: i18n("Power & Sleep"), kde: "power", swatch: "light",
+          words: "mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing" },
+        { id: "power", name: i18n("Power & Sleep"),
           glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
-          words: "power sleep suspend screen off energy battery lid shutdown" },
-        { id: "notifications", name: i18n("Notifications"), kde: "notifications", swatch: "sound",
+          words: "power sleep suspend screen off energy battery lid button shutdown performance saver mode" },
+        { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
-          words: "notifications alerts do not disturb popups badges" },
-        { id: "datetime", name: i18n("Date & Time"), kde: "datetime", swatch: "updates",
-          glyph: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2",
-          words: "date time clock time zone 24-hour format" },
-        { id: "users", name: i18n("Accounts"), kde: "users", swatch: "about",
-          glyph: "M8 8a4 4 0 1 0 8 0a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0",
-          words: "accounts users password picture people login sign in" },
-        { id: "apps", name: i18n("Default Apps"), kde: "apps", swatch: "display",
+          words: "notifications alerts do not disturb quiet popups sounds apps" },
+        { id: "apps", name: i18n("Default Apps"),
           glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
-          words: "default apps browser email player open with" },
+          words: "default apps browser web email mail files music video photos pdf text open with" },
         { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true, gap: true,
           words: "windows games play anti-cheat steam restart boot doctor check" },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
@@ -73,6 +70,16 @@ PlasmaCore.Dialog {
     property var outputs: []
     property var games: []
     property var pc: ({})
+    property var clock: ({})
+    property var zones: []
+    // You first, then everyone else on this PC.
+    property var people: []
+    // Power & Sleep, Mouse & Keyboard, Notifications and Default Apps, as the helper reports them.
+    property var powerInfo: ({})
+    property var inputInfo: ({})
+    property var knownLayouts: []
+    property var notifyInfo: ({})
+    property var appDefaults: []
     property bool dragging: false
 
     // Wi-Fi: the network being joined, and how it went.
@@ -96,6 +103,14 @@ PlasmaCore.Dialog {
     property var firmware: []
     property string firmwareMessage: ""
     readonly property bool firmwareRestart: firmware.some(f => f.restart)
+    // Accounts: changing your name, and your password: "", "open", "changing", "done" or
+    // "failed", with what went wrong.
+    property bool renaming: false
+    property string nameProblem: ""
+    property string passwordState: ""
+    property string passwordMessage: ""
+    // Each language's locale with a 12-hour clock, and its nearest with a 24-hour one.
+    readonly property var clocks: ({ en: ["en_US.UTF-8", "en_GB.UTF-8"] })
 
     title: i18n("Settings")
     location: PlasmaCore.Types.Floating
@@ -117,6 +132,10 @@ PlasmaCore.Dialog {
     onPageChanged: {
         joining = ""
         asking = null
+        renaming = false
+        if (passwordState !== "changing") {
+            passwordState = ""
+        }
         if (visible) {
             load()
         }
@@ -161,6 +180,24 @@ PlasmaCore.Dialog {
             ask("outputs", out => sheet.outputs = sheet.json(out, []))
         } else if (page === "windows") {
             call(monet + " games --json", out => sheet.games = sheet.json(out, []))
+        } else if (page === "datetime") {
+            ask("time", out => sheet.clock = sheet.json(out, sheet.clock))
+            if (zones.length === 0) {
+                ask("zones", out => sheet.zones = sheet.json(out, []))
+            }
+        } else if (page === "users") {
+            ask("accounts", out => sheet.people = sheet.json(out, sheet.people))
+        } else if (page === "power") {
+            ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
+        } else if (page === "input") {
+            ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo))
+            if (knownLayouts.length === 0) {
+                ask("layouts-known", out => sheet.knownLayouts = sheet.json(out, []))
+            }
+        } else if (page === "notifications") {
+            ask("notify", out => sheet.notifyInfo = sheet.json(out, sheet.notifyInfo))
+        } else if (page === "apps") {
+            ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults))
         }
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
@@ -372,6 +409,126 @@ PlasmaCore.Dialog {
         }
     }
 
+    // Date & Time -----------------------------------------------------------
+
+    function reloadClock() {
+        ask("time", out => sheet.clock = sheet.json(out, sheet.clock))
+    }
+
+    function flipNtp() {
+        const on = clock.ntp !== true
+        clock = Object.assign({}, clock, { ntp: on })
+        ask("ntp " + (on ? "on" : "off"), () => sheet.reloadClock())
+    }
+
+    // The locale the time is shown in from the next sign-in.
+    function timeLocale() {
+        return clock.locale ? Qt.locale(clock.locale) : Qt.locale()
+    }
+
+    // Whether a locale's clock runs to 24 hours, as Qt (and so every clock in Monet) shows it.
+    function hours24(locale) {
+        return !/a/i.test(locale.timeFormat(Locale.ShortFormat).replace(/'[^']*'/g, ""))
+    }
+
+    // The locale with the other clock: the region's own, or its language's other one ("" if none).
+    function otherClock() {
+        const region = clock.region || ""
+        const want = !hours24(timeLocale())
+        const twins = clocks[region.split("_")[0]]
+        return region !== "" && hours24(Qt.locale(region)) === want ? region : twins ? twins[want ? 1 : 0] : ""
+    }
+
+    function flipClock() {
+        const next = otherClock()
+        if (next !== "") {
+            ask("time-locale " + (next === clock.region ? "region" : next), () => sheet.reloadClock())
+            clock = Object.assign({}, clock, { locale: next })
+        }
+    }
+
+    // Zone names are letters, digits and "/_+-" (timedatectl's list).
+    function chooseZone(zone) {
+        if (!/^[A-Za-z0-9\/_+-]+$/.test(zone)) {
+            return
+        }
+        clock = Object.assign({}, clock, { zone: zone })
+        ask("zone " + zone, () => {
+            Date.timeZoneUpdated()
+            sheet.reloadClock()
+        })
+    }
+
+    // Time zones where each word typed starts a word of the name ("new y": New York), up to six.
+    function findZones(text) {
+        const words = text.toLowerCase().split(/\s+/).filter(w => w !== "")
+        return zones.filter(z => {
+            const parts = z.toLowerCase().split(/[\/_]/)
+            return words.every(w => parts.some(p => p.startsWith(w)))
+        }).slice(0, 6)
+    }
+
+    // "America/Argentina/Buenos_Aires" is Buenos Aires, in America · Argentina.
+    function zoneCity(zone) {
+        return zone.split("/").pop().replace(/_/g, " ")
+    }
+
+    function zoneRegion(zone) {
+        return zone.split("/").slice(0, -1).join(" · ").replace(/_/g, " ")
+    }
+
+    // Accounts --------------------------------------------------------------
+
+    function rename(name) {
+        name = name.trim()
+        nameProblem = name === "" ? i18n("Type your name.") : /[:,]/.test(name) ? i18n("A name can't have : or , in it.") : ""
+        if (nameProblem !== "") {
+            return
+        }
+        ask("name " + hex(name), out => {
+            const done = sheet.json(out, { ok: false }).ok
+            sheet.renaming = !done
+            sheet.nameProblem = done ? "" : i18n("Monet couldn't change your name.")
+            sheet.ask("accounts", found => sheet.people = sheet.json(found, sheet.people))
+        })
+    }
+
+    // A password goes to the helper sealed with a one-time pad the helper hands back first (as
+    // hex), because anyone on the PC can read a command line.
+    function seal(text, pad) {
+        const bytes = unescape(encodeURIComponent(text))
+        let out = ""
+        for (let i = 0; i < bytes.length && i * 2 < pad.length; i++) {
+            out += (bytes.charCodeAt(i) ^ parseInt(pad.substr(i * 2, 2), 16)).toString(16).padStart(2, "0")
+        }
+        return out.length === bytes.length * 2 ? out : ""
+    }
+
+    function changePassword(old, fresh, again) {
+        passwordMessage = fresh === "" ? i18n("Type a new password.") : fresh !== again ? i18n("The new passwords don't match.") : ""
+        passwordState = passwordMessage !== "" ? "failed" : "changing"
+        if (passwordState === "failed") {
+            return
+        }
+        ask("pad", pad => {
+            pad = pad.trim()
+            // 128 bytes of pad for each.
+            const sealed = [old === "" ? "-" : sheet.seal(old, pad.slice(0, 256)), sheet.seal(fresh, pad.slice(256))]
+            const problem = pad.length !== 512 ? i18n("Monet couldn't change your password.")
+                : sealed.includes("") ? i18n("That password is too long.") : ""
+            if (problem !== "") {
+                sheet.passwordMessage = problem
+                sheet.passwordState = "failed"
+                return
+            }
+            sheet.ask("password " + sealed.join(" "), out => {
+                const result = sheet.json(out, { ok: false })
+                sheet.passwordMessage = result.ok ? "" : result.message || i18n("Monet couldn't change your password.")
+                sheet.passwordState = result.ok ? "done" : "failed"
+            })
+        })
+    }
+
     function glaze(name) {
         const glazes = [["#E2603A", "#5B2350"], ["#3F9A89", "#1C3556"], ["#9C7BC0", "#2B2547"],
                         ["#5C88D0", "#1B2546"], ["#F0A048", "#7A3326"], ["#D46A8C", "#2E2A55"]]
@@ -380,6 +537,79 @@ PlasmaCore.Dialog {
             h = (Math.imul(h, 31) + name.charCodeAt(i)) >>> 0
         }
         return glazes[h % glazes.length]
+    }
+
+    // Power & Sleep, Mouse & Keyboard, Notifications, Default Apps -----------
+    // Each change shows at once, then the helper does it and the page reloads.
+
+    function changed(object, path, value) {
+        const next = JSON.parse(JSON.stringify(object))
+        let at = next
+        for (let i = 0; i < path.length - 1; i++) {
+            at = at[path[i]] = at[path[i]] || {}
+        }
+        at[path[path.length - 1]] = value
+        return next
+    }
+
+    function powerTime(state, what, seconds) {
+        powerInfo = changed(powerInfo, [state, what], seconds)
+        ask("power-time " + state + " " + what + " " + seconds, () => sheet.reloadPower())
+    }
+    function powerAction(key, action) {
+        powerInfo = changed(powerInfo, [key === "button" ? "button" : "lidAction"], action)
+        ask((key === "button" ? "power-button " : "power-lid ") + action, () => sheet.reloadPower())
+    }
+    function powerMode(mode) {
+        powerInfo = changed(powerInfo, ["mode"], mode)
+        ask("power-mode " + mode, () => sheet.reloadPower())
+    }
+    function reloadPower() {
+        ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
+    }
+
+    function pointer(kind, name, on) {
+        inputInfo = changed(inputInfo, [kind, name], on)
+        ask("pointer " + kind + " " + name + (on ? " on" : " off"))
+    }
+    function setLayouts(codes) {
+        if (codes.length === 0) {
+            return
+        }
+        const names = {}
+        knownLayouts.forEach(l => names[l.code] = l.name)
+        inputInfo = changed(inputInfo, ["layouts"], codes.map(c => ({ code: c, name: names[c] || c })))
+        ask("layouts " + codes.join(","), () => ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo)))
+    }
+    function findLayouts(text) {
+        const word = text.trim().toLowerCase()
+        const used = (inputInfo.layouts || []).map(l => l.code)
+        return word === "" ? [] : knownLayouts.filter(l => used.indexOf(l.code) === -1
+            && (l.name.toLowerCase().indexOf(word) !== -1 || l.code === word)).slice(0, 6)
+    }
+
+    function notifyRule(name, on) {
+        notifyInfo = changed(notifyInfo, [name], on)
+        ask("notify-rule " + name + (on ? " on" : " off"))
+    }
+    function notifyPopups(what, value) {
+        notifyInfo = changed(notifyInfo, [what], value)
+        ask((what === "place" ? "notify-place " : "notify-time ") + value)
+    }
+    function notifyApp(app, on) {
+        notifyInfo = changed(notifyInfo, ["apps"], (notifyInfo.apps || []).map(a => a.id === app.id ? Object.assign({}, a, { popups: on }) : a))
+        ask("notify-app " + hex(app.id) + (on ? " on" : " off"))
+    }
+
+    function setDefault(kind, app) {
+        appDefaults = appDefaults.map(k => k.id === kind ? Object.assign({}, k, { current: app.id }) : k)
+        ask("default " + kind + " " + hex(app.id), () => ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults)))
+    }
+
+    // How long, in words: 300 is "5 min", 3600 "1 hour", 0 "Never".
+    function span(seconds) {
+        return seconds === 0 ? i18n("Never") : seconds < 3600 ? i18n("%1 min", seconds / 60)
+            : seconds === 3600 ? i18n("1 hour") : i18n("%1 hours", seconds / 3600)
     }
 
     // Pieces ----------------------------------------------------------------
@@ -722,6 +952,56 @@ PlasmaCore.Dialog {
         Accessible.onPressAction: if (enabledPill) pill.clicked()
     }
 
+    // A few choices side by side, the chosen one on a pebble: [[value, label], …].
+    component Segments: Rectangle {
+        id: segments
+        property var tone
+        property var options: []
+        property var current
+        signal picked(var value)
+        implicitWidth: segmentRow.implicitWidth + 6
+        implicitHeight: 34
+        radius: 11
+        color: tone.wash2
+        Row {
+            id: segmentRow
+            anchors.centerIn: parent
+            spacing: 2
+            Repeater {
+                model: segments.options
+                Rectangle {
+                    id: segment
+                    required property var modelData
+                    readonly property bool chosen: segments.current === modelData[0]
+                    width: segmentLabel.implicitWidth + 22
+                    height: 28
+                    radius: 9
+                    color: chosen ? (segments.tone.dark ? Qt.rgba(1, 1, 1, 0.17) : "#FFFFFF")
+                        : segmentHover.hovered ? segments.tone.press : "transparent"
+                    border.width: segment.activeFocus ? 2 : 0
+                    border.color: segments.tone.lily
+                    activeFocusOnTab: true
+                    Keys.onSpacePressed: segments.picked(modelData[0])
+                    Behavior on color { ColorAnimation { duration: Math.round(140 * segments.tone.speed) } }
+                    Text {
+                        id: segmentLabel
+                        anchors.centerIn: parent
+                        text: segment.modelData[1]
+                        color: segments.tone.ink
+                        font.pixelSize: 13
+                        font.weight: segment.chosen ? Font.DemiBold : Font.Medium
+                    }
+                    HoverHandler { id: segmentHover }
+                    TapHandler { onTapped: segments.picked(segment.modelData[0]) }
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.name: modelData[1]
+                    Accessible.checked: chosen
+                    Accessible.onPressAction: segments.picked(modelData[0])
+                }
+            }
+        }
+    }
+
     component SliderRow: Item {
         id: sliderRow
         property var tone
@@ -767,6 +1047,87 @@ PlasmaCore.Dialog {
                 onMoved: sliderRow.moved(value)
             }
         }
+    }
+
+    // A well to type in, like Wi-Fi's password.
+    component Field: Rectangle {
+        id: field
+        property var tone
+        property alias text: input.text
+        property string hint
+        property bool secret
+        signal accepted()
+        function focusInput() {
+            input.forceActiveFocus()
+        }
+        Layout.fillWidth: true
+        Layout.preferredHeight: 38
+        radius: 12
+        color: tone.dark ? Qt.rgba(0, 0, 0, 0.28) : Qt.rgba(1, 1, 1, 0.9)
+        border.width: input.activeFocus ? 2 : 1
+        border.color: input.activeFocus ? tone.lily : tone.line
+        TextInput {
+            id: input
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            echoMode: field.secret ? TextInput.Password : TextInput.Normal
+            color: field.tone.ink
+            font.pixelSize: 14
+            clip: true
+            selectByMouse: true
+            selectionColor: field.tone.lily
+            Accessible.role: Accessible.EditableText
+            Accessible.name: field.hint
+            onAccepted: field.accepted()
+            Text {
+                anchors.fill: parent
+                verticalAlignment: Text.AlignVCenter
+                visible: input.text === ""
+                text: field.hint
+                color: field.tone.dim
+                font.pixelSize: 14
+            }
+        }
+    }
+
+    // Someone's picture, or their initial on a glaze.
+    component Face: Item {
+        id: face
+        property string name
+        property string picture
+        property var glaze: ["#4DB4A0", "#245A50"]
+        Rounded {
+            anchors.fill: parent
+            radius: width / 2
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop { position: 0; color: face.glaze[0] }
+                    GradientStop { position: 1; color: face.glaze[1] }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -1
+                    text: face.name.charAt(0).toUpperCase()
+                    color: "#FBF7EE"
+                    font.family: "Fraunces 72pt SuperSoft"
+                    font.pixelSize: Math.round(face.height * 0.46)
+                }
+            }
+            Image {
+                anchors.fill: parent
+                source: face.picture !== "" ? "file://" + encodeURI(face.picture) : ""
+                sourceSize: Qt.size(face.width * 2, face.height * 2)
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: false
+                visible: status === Image.Ready
+            }
+        }
+        Accessible.role: Accessible.Graphic
+        Accessible.name: name
     }
 
     // The game covers on Windows & Games.
@@ -1104,7 +1465,9 @@ PlasmaCore.Dialog {
                     transform: Translate { y: pageLoader.shift }
                     sourceComponent: ({
                         light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, display: displayPage,
-                        sound: soundPage, windows: windowsPage, updates: updatesPage, about: aboutPage
+                        sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
+                        power: powerPage, notifications: notificationsPage, apps: appsPage, windows: windowsPage,
+                        updates: updatesPage, about: aboutPage
                     })[sheet.page]
                     onLoaded: {
                         scroller.contentY = 0
@@ -1694,6 +2057,920 @@ PlasmaCore.Dialog {
         }
 
         Component {
+            id: datetimePage
+            ColumnLayout {
+                id: datetimeColumn
+                property date now: new Date()
+                spacing: 20
+                Timer {
+                    interval: 1000
+                    running: true
+                    repeat: true
+                    onTriggered: datetimeColumn.now = new Date()
+                }
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("datetime")
+                    art: sheet.art
+                    text: i18n("Date & Time")
+                    detail: i18n("Your clock, and where in the world it keeps time.")
+                }
+                // The time now, as the clocks will show it.
+                Card {
+                    tone: look
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 2
+                        Text {
+                            Layout.fillWidth: true
+                            text: datetimeColumn.now.toLocaleTimeString(sheet.timeLocale(), Locale.ShortFormat)
+                            color: look.ink
+                            font.family: "Fraunces 72pt SuperSoft"
+                            font.weight: Font.Light
+                            font.pixelSize: 52
+                            font.letterSpacing: -1
+                            font.features: { "tnum": 1 }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: datetimeColumn.now.toLocaleDateString(sheet.timeLocale(), Locale.LongFormat)
+                                + ((sheet.clock.zone || "") !== "" ? " · " + sheet.zoneCity(sheet.clock.zone) : "")
+                            color: look.dim
+                            font.pixelSize: 14
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: typeof sheet.clock.ntp === "boolean"
+                        title: i18n("Set automatically")
+                        detail: typeof sheet.clock.ntp === "boolean" ? i18n("From the internet, to the second") : i18n("This PC can't set its own time")
+                        onTapped: sheet.flipNtp()
+                        Switch {
+                            tone: look
+                            visible: typeof sheet.clock.ntp === "boolean"
+                            active: sheet.clock.ntp === true
+                        }
+                    }
+                    SettingRow {
+                        id: clockRow
+                        readonly property bool on24: sheet.hours24(sheet.timeLocale())
+                        tone: look
+                        tappable: sheet.otherClock() !== ""
+                        title: i18n("24-hour time")
+                        detail: sheet.hours24(Qt.locale()) !== on24 ? i18n("Your clocks change the next time you sign in")
+                            : !tappable ? i18n("As your region keeps it")
+                            : on24 ? i18n("13:00, not 1:00 PM") : i18n("1:00 PM, not 13:00")
+                        onTapped: sheet.flipClock()
+                        Switch {
+                            tone: look
+                            active: clockRow.on24
+                            opacity: clockRow.tappable ? 1 : 0.5
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Time zone")
+                }
+                Card {
+                    tone: look
+                    Field {
+                        id: zoneSearch
+                        Layout.margins: 14
+                        tone: look
+                        hint: i18n("Search for a city")
+                        onAccepted: {
+                            const first = sheet.findZones(text)[0]
+                            if (first) {
+                                sheet.chooseZone(first)
+                                text = ""
+                            }
+                        }
+                    }
+                    Repeater {
+                        model: zoneSearch.text.trim() === "" ? [sheet.clock.zone || ""].filter(z => z !== "") : sheet.findZones(zoneSearch.text)
+                        SettingRow {
+                            tone: look
+                            tappable: modelData !== sheet.clock.zone
+                            strong: false
+                            title: sheet.zoneCity(modelData)
+                            detail: sheet.zoneRegion(modelData)
+                            onTapped: {
+                                sheet.chooseZone(modelData)
+                                zoneSearch.text = ""
+                            }
+                            Check {
+                                tone: look
+                                active: modelData === sheet.clock.zone
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: zoneSearch.text.trim() !== "" && sheet.findZones(zoneSearch.text).length === 0
+                        strong: false
+                        title: i18n("No time zone by that name")
+                        detail: i18n("Try a big city near you.")
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More date & time settings…")
+                    onClicked: sheet.ask("kde datetime")
+                }
+            }
+        }
+
+        Component {
+            id: usersPage
+            ColumnLayout {
+                id: usersColumn
+                readonly property var you: sheet.people.find(p => p.you) || null
+                readonly property var others: sheet.people.filter(p => !p.you)
+                readonly property bool passwordOpen: ["open", "changing", "failed"].indexOf(sheet.passwordState) !== -1
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("users")
+                    art: sheet.art
+                    text: i18n("Accounts")
+                    detail: i18n("You, and the people who share this PC.")
+                }
+                Card {
+                    tone: look
+                    visible: usersColumn.you !== null
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 18
+                        // Your initial on a dab of lily, as in the menu.
+                        Face {
+                            Layout.preferredWidth: 64
+                            Layout.preferredHeight: 64
+                            name: usersColumn.you ? usersColumn.you.name : ""
+                            picture: usersColumn.you ? usersColumn.you.picture : ""
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Text {
+                                Layout.fillWidth: true
+                                text: usersColumn.you ? usersColumn.you.name : ""
+                                color: look.ink
+                                font.family: "Fraunces 72pt SuperSoft"
+                                font.weight: Font.Light
+                                font.pixelSize: 26
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: !usersColumn.you ? ""
+                                    : usersColumn.you.admin ? i18n("%1 · Administrator", usersColumn.you.login)
+                                    : i18n("%1 · Standard account", usersColumn.you.login)
+                                color: look.dim
+                                font.pixelSize: 13
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Pill {
+                            tone: look
+                            visible: !sheet.renaming
+                            text: i18n("Change name")
+                            onClicked: {
+                                sheet.nameProblem = ""
+                                sheet.renaming = true
+                            }
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 20
+                        Layout.rightMargin: 20
+                        Layout.bottomMargin: 18
+                        visible: sheet.renaming
+                        spacing: 8
+                        onVisibleChanged: {
+                            if (visible) {
+                                nameField.text = usersColumn.you ? usersColumn.you.name : ""
+                                nameField.focusInput()
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Field {
+                                id: nameField
+                                tone: look
+                                hint: i18n("Your name")
+                                onAccepted: sheet.rename(text)
+                            }
+                            Pill {
+                                tone: look
+                                text: i18n("Cancel")
+                                onClicked: sheet.renaming = false
+                            }
+                            Pill {
+                                tone: look
+                                kind: "lily"
+                                text: i18n("Save")
+                                onClicked: sheet.rename(nameField.text)
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: sheet.nameProblem !== ""
+                            text: sheet.nameProblem
+                            color: "#E0603A"
+                            font.pixelSize: 13
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Password")
+                        detail: sheet.passwordState === "done" ? i18n("Changed. Use the new one from now on.")
+                            : i18n("For signing in, unlocking and allowing changes")
+                        Pill {
+                            tone: look
+                            visible: !usersColumn.passwordOpen
+                            text: i18n("Change…")
+                            onClicked: sheet.passwordState = "open"
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 18
+                        Layout.rightMargin: 18
+                        Layout.bottomMargin: 18
+                        visible: usersColumn.passwordOpen
+                        spacing: 8
+                        onVisibleChanged: {
+                            if (visible) {
+                                oldPassword.text = ""
+                                newPassword.text = ""
+                                againPassword.text = ""
+                                oldPassword.focusInput()
+                            }
+                        }
+                        Field {
+                            id: oldPassword
+                            tone: look
+                            secret: true
+                            hint: i18n("Current password")
+                            onAccepted: newPassword.focusInput()
+                        }
+                        Field {
+                            id: newPassword
+                            tone: look
+                            secret: true
+                            hint: i18n("New password")
+                            onAccepted: againPassword.focusInput()
+                        }
+                        Field {
+                            id: againPassword
+                            tone: look
+                            secret: true
+                            hint: i18n("New password, again")
+                            onAccepted: sheet.changePassword(oldPassword.text, newPassword.text, againPassword.text)
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 4
+                            spacing: 8
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.passwordState === "failed" ? sheet.passwordMessage : ""
+                                color: "#E0603A"
+                                font.pixelSize: 13
+                                wrapMode: Text.Wrap
+                            }
+                            Pill {
+                                tone: look
+                                text: i18n("Cancel")
+                                enabledPill: sheet.passwordState !== "changing"
+                                onClicked: sheet.passwordState = ""
+                            }
+                            Pill {
+                                tone: look
+                                kind: "lily"
+                                text: sheet.passwordState === "changing" ? i18n("Changing…") : i18n("Change password")
+                                enabledPill: sheet.passwordState !== "changing"
+                                onClicked: sheet.changePassword(oldPassword.text, newPassword.text, againPassword.text)
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Other people")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: usersColumn.others.length === 0
+                        strong: false
+                        title: i18n("Only you, so far")
+                        detail: i18n("Add someone in More account settings.")
+                    }
+                    Repeater {
+                        model: usersColumn.others
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: modelData.admin ? i18n("Administrator") : i18n("Standard account")
+                            lead: Face {
+                                width: 34
+                                height: 34
+                                name: modelData.name
+                                picture: modelData.picture
+                                glaze: sheet.glaze(modelData.login)
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More account settings…")
+                    onClicked: sheet.ask("kde users")
+                }
+            }
+        }
+
+        Component {
+            id: inputPage
+            ColumnLayout {
+                id: inputColumn
+                readonly property var codes: (sheet.inputInfo.layouts || []).map(l => l.code)
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("input")
+                    art: sheet.art
+                    text: i18n("Mouse & Keyboard")
+                    detail: i18n("How the pointer moves and scrolls, and the languages you type in.")
+                }
+                // The mouse and the touchpad, each set as one (all mice alike).
+                Repeater {
+                    model: [["mouse", i18n("Mouse")], ["touchpad", i18n("Touchpad")]].filter(k => !!sheet.inputInfo[k[0]])
+                    ColumnLayout {
+                        id: pointerKind
+                        required property var modelData
+                        readonly property var settings: sheet.inputInfo[modelData[0]] || {}
+                        Layout.fillWidth: true
+                        spacing: 20
+                        Caption {
+                            tone: look
+                            text: pointerKind.modelData[1]
+                        }
+                        Card {
+                            tone: look
+                            SliderRow {
+                                tone: look
+                                divider: false
+                                visible: pointerKind.settings.speed !== undefined
+                                title: i18n("Pointer speed")
+                                value: pointerKind.settings.speed !== undefined ? pointerKind.settings.speed : 50
+                                onHeld: down => sheet.dragging = down
+                                onMoved: value => sheet.queue("pointer " + pointerKind.modelData[0] + " speed", value)
+                            }
+                            Repeater {
+                                model: [
+                                    ["tap", i18n("Tap to click"), i18n("A light tap is a click")],
+                                    ["natural", i18n("Natural scrolling"), i18n("The page follows your fingers, as on a phone")],
+                                    ["left", i18n("Left-handed"), i18n("The buttons swap sides")],
+                                    ["typing", i18n("Off while typing"), i18n("A palm on it won't move the pointer")]
+                                ].filter(s => pointerKind.settings[s[0]] !== undefined)
+                                SettingRow {
+                                    id: pointerRow
+                                    required property var modelData
+                                    required property int index
+                                    tone: look
+                                    divider: index > 0 || pointerKind.settings.speed !== undefined
+                                    tappable: true
+                                    title: modelData[1]
+                                    detail: modelData[2]
+                                    onTapped: sheet.pointer(pointerKind.modelData[0], modelData[0], pointerKind.settings[modelData[0]] !== true)
+                                    Switch {
+                                        tone: look
+                                        active: pointerKind.settings[pointerRow.modelData[0]] === true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Keyboard")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: sheet.inputInfo.layouts || []
+                        SettingRow {
+                            id: layoutRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            tappable: index > 0
+                            strong: index === 0
+                            title: modelData.name
+                            detail: index === 0 ? i18n("Typing starts in this one") : i18n("Click to type in this one first")
+                            onTapped: sheet.setLayouts([modelData.code].concat(inputColumn.codes.filter(c => c !== layoutRow.modelData.code)))
+                            Pill {
+                                tone: look
+                                visible: inputColumn.codes.length > 1
+                                text: i18n("Remove")
+                                onClicked: sheet.setLayouts(inputColumn.codes.filter(c => c !== layoutRow.modelData.code))
+                            }
+                        }
+                    }
+                    Field {
+                        id: layoutSearch
+                        Layout.margins: 14
+                        tone: look
+                        hint: i18n("Add a language or layout")
+                        onAccepted: {
+                            const first = sheet.findLayouts(text)[0]
+                            if (first) {
+                                sheet.setLayouts(inputColumn.codes.concat([first.code]))
+                                text = ""
+                            }
+                        }
+                    }
+                    Repeater {
+                        model: sheet.findLayouts(layoutSearch.text)
+                        SettingRow {
+                            required property var modelData
+                            tone: look
+                            tappable: true
+                            strong: false
+                            title: modelData.name
+                            onTapped: {
+                                sheet.setLayouts(inputColumn.codes.concat([modelData.code]))
+                                layoutSearch.text = ""
+                            }
+                            Glyph {
+                                width: 14
+                                height: 14
+                                path: "M12 5v14M5 12h14"
+                                color: look.lily
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: layoutSearch.text.trim() !== "" && sheet.findLayouts(layoutSearch.text).length === 0
+                        strong: false
+                        title: i18n("No layout by that name")
+                        detail: i18n("Try your language's name, like Swedish or Japanese.")
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    Layout.topMargin: -8
+                    visible: inputColumn.codes.length > 1
+                    text: i18n("The bar shows which one you're typing in. Click it to switch.")
+                    color: look.dim
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More mouse & keyboard settings…")
+                    onClicked: sheet.ask("kde input")
+                }
+            }
+        }
+
+        Component {
+            id: powerPage
+            ColumnLayout {
+                id: powerColumn
+                readonly property var screenTimes: [300, 600, 1800, 3600, 0].map(s => [s, sheet.span(s)])
+                readonly property var sleepTimes: [900, 1800, 3600, 7200, 0].map(s => [s, sheet.span(s)])
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("power")
+                    art: sheet.art
+                    text: i18n("Power & Sleep")
+                    detail: i18n("When the screen rests, when the PC sleeps, and how hard it works.")
+                }
+                // How hard it works: three choices, like Light's.
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    visible: (sheet.powerInfo.modes || []).length > 0
+                    Repeater {
+                        model: [
+                            ["power-saver", i18n("Power saver"), i18n("Cooler and quieter, longer on battery"),
+                             "M5 19c0-9 5-14 14-14c0 9-5 14-14 14zM5 19l7-7"],
+                            ["balanced", i18n("Balanced"), i18n("Quick when it counts"),
+                             "M12 4v16M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0zM8 20h8"],
+                            ["performance", i18n("Performance"), i18n("As fast as it goes, warmer and louder"),
+                             "M13 3L5 13h6l-1 8 8-10h-6z"]
+                        ].filter(m => (sheet.powerInfo.modes || []).indexOf(m[0]) !== -1)
+                        Rectangle {
+                            id: modeChoice
+                            required property var modelData
+                            readonly property bool picked: sheet.powerInfo.mode === modelData[0]
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            implicitHeight: modeColumn.implicitHeight + 28
+                            radius: 18
+                            color: picked ? Qt.rgba(0.302, 0.706, 0.627, 0.1) : modeHover.hovered ? look.wash2 : look.wash
+                            border.width: picked || activeFocus ? 2 : 1
+                            border.color: picked || activeFocus ? look.lily : look.line
+                            scale: modeTap.pressed ? 0.98 : 1
+                            activeFocusOnTab: true
+                            Keys.onSpacePressed: sheet.powerMode(modelData[0])
+                            Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
+                            Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
+                            ColumnLayout {
+                                id: modeColumn
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.margins: 14
+                                spacing: 4
+                                Glyph {
+                                    Layout.preferredWidth: 22
+                                    Layout.preferredHeight: 22
+                                    Layout.bottomMargin: 6
+                                    path: modeChoice.modelData[3]
+                                    color: modeChoice.picked ? look.lily : look.ink
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modeChoice.modelData[1]
+                                    color: look.ink
+                                    font.pixelSize: 14
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modeChoice.modelData[2]
+                                    color: look.dim
+                                    font.pixelSize: 13
+                                    wrapMode: Text.Wrap
+                                }
+                            }
+                            HoverHandler { id: modeHover }
+                            TapHandler {
+                                id: modeTap
+                                onTapped: sheet.powerMode(modeChoice.modelData[0])
+                            }
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.name: modelData[1]
+                            Accessible.description: modelData[2]
+                            Accessible.checked: picked
+                            Accessible.onPressAction: sheet.powerMode(modelData[0])
+                        }
+                    }
+                }
+                // Plugged in, and on battery when there is one.
+                Repeater {
+                    model: sheet.powerInfo.hasBattery === true ? [["ac", i18n("Plugged in")], ["battery", i18n("On battery")]] : [["ac", ""]]
+                    ColumnLayout {
+                        id: powerState
+                        required property var modelData
+                        readonly property var times: sheet.powerInfo[modelData[0]] || {}
+                        Layout.fillWidth: true
+                        spacing: 20
+                        Caption {
+                            tone: look
+                            visible: powerState.modelData[1] !== ""
+                            text: powerState.modelData[1]
+                        }
+                        Card {
+                            tone: look
+                            SettingRow {
+                                tone: look
+                                divider: false
+                                title: i18n("Turn off the screen")
+                                detail: i18n("After this long untouched")
+                                Segments {
+                                    tone: look
+                                    options: powerColumn.screenTimes
+                                    current: powerState.times.screen
+                                    onPicked: value => sheet.powerTime(powerState.modelData[0], "screen", value)
+                                }
+                            }
+                            SettingRow {
+                                tone: look
+                                title: i18n("Sleep")
+                                detail: i18n("It wakes where you left off")
+                                Segments {
+                                    tone: look
+                                    options: powerColumn.sleepTimes
+                                    current: powerState.times.sleep
+                                    onPicked: value => sheet.powerTime(powerState.modelData[0], "sleep", value)
+                                }
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Buttons")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Power button")
+                        detail: i18n("What a press does")
+                        Segments {
+                            tone: look
+                            options: [[16, i18n("Ask")], [1, i18n("Sleep")], [8, i18n("Shut down")], [0, i18n("Nothing")]]
+                            current: sheet.powerInfo.button
+                            onPicked: value => sheet.powerAction("button", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: sheet.powerInfo.hasLid === true
+                        title: i18n("Closing the lid")
+                        Segments {
+                            tone: look
+                            options: [[1, i18n("Sleep")], [32, i18n("Lock")], [64, i18n("Screen off")], [0, i18n("Nothing")]]
+                            current: sheet.powerInfo.lidAction
+                            onPicked: value => sheet.powerAction("lid", value)
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More power settings…")
+                    onClicked: sheet.ask("kde power")
+                }
+            }
+        }
+
+        Component {
+            id: notificationsPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("notifications")
+                    art: sheet.art
+                    text: i18n("Notifications")
+                    detail: i18n("What may interrupt you, and when it waits.")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Do not disturb")
+                        detail: sheet.info.quiet === true ? i18n("Notifications wait quietly in the list") : i18n("Notifications pop up as they come")
+                        onTapped: sheet.flip("quiet", "quiet")
+                        Switch {
+                            tone: look
+                            active: sheet.info.quiet === true
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Sounds")
+                        detail: i18n("A soft sound with each one")
+                        onTapped: sheet.notifyRule("sounds", sheet.notifyInfo.sounds === false)
+                        Switch {
+                            tone: look
+                            active: sheet.notifyInfo.sounds !== false
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Quiet by itself")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: [
+                            ["fullscreen", i18n("While a game or film fills the screen"), i18n("They wait until you're done")],
+                            ["mirrored", i18n("While you share or mirror your screen"), i18n("So nothing private pops up for others")],
+                            ["urgent", i18n("Let urgent ones through"), i18n("Like a low battery, even while quiet")]
+                        ]
+                        SettingRow {
+                            id: ruleRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            tappable: true
+                            title: modelData[1]
+                            detail: modelData[2]
+                            onTapped: sheet.notifyRule(modelData[0], sheet.notifyInfo[modelData[0]] === false)
+                            Switch {
+                                tone: look
+                                active: sheet.notifyInfo[ruleRow.modelData[0]] !== false
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Popups")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Where they appear")
+                        Segments {
+                            tone: look
+                            options: [["clock", i18n("By the clock")], ["topright", i18n("Top right")], ["topcenter", i18n("Top center")]]
+                            current: sheet.notifyInfo.place || "clock"
+                            onPicked: value => sheet.notifyPopups("place", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("How long they stay")
+                        Segments {
+                            tone: look
+                            options: [3, 5, 10].map(s => [s, i18n("%1 s", s)])
+                            current: sheet.notifyInfo.time || 5
+                            onPicked: value => sheet.notifyPopups("time", value)
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Apps")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: sheet.notifyInfo.apps || []
+                        SettingRow {
+                            id: appRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            tappable: true
+                            strong: false
+                            title: modelData.name
+                            detail: modelData.popups ? i18n("Pops up") : i18n("Only in the list, without popping up")
+                            lead: Kirigami.Icon {
+                                width: 28
+                                height: 28
+                                source: appRow.modelData.icon
+                            }
+                            onTapped: sheet.notifyApp(modelData, !modelData.popups)
+                            Switch {
+                                tone: look
+                                active: appRow.modelData.popups === true
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: (sheet.notifyInfo.apps || []).length === 0
+                        divider: false
+                        strong: false
+                        title: i18n("No apps yet")
+                        detail: i18n("Apps show up here once they've sent a notification.")
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More notification settings…")
+                    onClicked: sheet.ask("kde notifications")
+                }
+            }
+        }
+
+        Component {
+            id: appsPage
+            ColumnLayout {
+                id: appsColumn
+                // The kind whose apps are showing, to pick one.
+                property string choosing: ""
+                readonly property var names: ({
+                    browser: i18n("Web browser"), mail: i18n("Email"), files: i18n("Folders"), music: i18n("Music"),
+                    video: i18n("Video"), photos: i18n("Photos"), pdf: i18n("PDF documents"), text: i18n("Text files")
+                })
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("apps")
+                    art: sheet.art
+                    text: i18n("Default Apps")
+                    detail: i18n("What opens web links, mail, folders, music, films, photos, PDFs and text.")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: sheet.appDefaults
+                        ColumnLayout {
+                            id: kindBlock
+                            required property var modelData
+                            required property int index
+                            readonly property var current: modelData.apps.find(a => a.id === modelData.current) || null
+                            readonly property bool opened: appsColumn.choosing === modelData.id
+                            Layout.fillWidth: true
+                            spacing: 0
+                            SettingRow {
+                                tone: look
+                                divider: kindBlock.index > 0
+                                tappable: kindBlock.modelData.apps.length > 0 || (kindBlock.modelData.store || "") !== ""
+                                title: appsColumn.names[kindBlock.modelData.id] || kindBlock.modelData.id
+                                detail: kindBlock.current ? kindBlock.current.name
+                                    : kindBlock.modelData.apps.length > 0 ? i18n("Nothing chosen yet")
+                                    : (kindBlock.modelData.store || "") !== "" ? i18n("No app for this yet. Find one in the Store")
+                                    : i18n("No app for this yet")
+                                lead: Kirigami.Icon {
+                                    width: 28
+                                    height: 28
+                                    source: kindBlock.current ? kindBlock.current.icon : "application-x-executable"
+                                }
+                                onTapped: {
+                                    if (kindBlock.modelData.apps.length > 0) {
+                                        appsColumn.choosing = kindBlock.opened ? "" : kindBlock.modelData.id
+                                    } else {
+                                        sheet.ask("launch " + sheet.hex(kindBlock.modelData.store))
+                                    }
+                                }
+                                // A row, so only what shows takes room.
+                                Row {
+                                    Glyph {
+                                        visible: kindBlock.modelData.apps.length > 0
+                                        width: 14
+                                        height: 14
+                                        path: kindBlock.opened ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"
+                                        color: look.dim
+                                    }
+                                    Pill {
+                                        tone: look
+                                        visible: kindBlock.modelData.apps.length === 0 && (kindBlock.modelData.store || "") !== ""
+                                        kind: "lily"
+                                        text: i18n("Find one")
+                                        onClicked: sheet.ask("launch " + sheet.hex(kindBlock.modelData.store))
+                                    }
+                                }
+                            }
+                            Repeater {
+                                model: kindBlock.opened ? kindBlock.modelData.apps : []
+                                SettingRow {
+                                    id: takerRow
+                                    required property var modelData
+                                    Layout.leftMargin: 28
+                                    tone: look
+                                    tappable: true
+                                    strong: false
+                                    title: modelData.name
+                                    lead: Kirigami.Icon {
+                                        width: 24
+                                        height: 24
+                                        source: takerRow.modelData.icon
+                                    }
+                                    onTapped: {
+                                        sheet.setDefault(kindBlock.modelData.id, modelData)
+                                        appsColumn.choosing = ""
+                                    }
+                                    Check {
+                                        tone: look
+                                        active: takerRow.modelData.id === kindBlock.modelData.current
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More default apps…")
+                    onClicked: sheet.ask("kde apps")
+                }
+            }
+        }
+
+        Component {
             id: windowsPage
             ColumnLayout {
                 spacing: 20
@@ -2079,7 +3356,8 @@ PlasmaCore.Dialog {
     }
 
     function kdePage() {
-        return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound" })[page] || "all"
+        return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound", datetime: "datetime",
+                  users: "users", input: "input", power: "power", notifications: "notifications", apps: "apps" })[page] || "all"
     }
 
     function entry(id) {

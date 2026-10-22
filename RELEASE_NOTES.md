@@ -12,7 +12,22 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 | Monet-0.8.2-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
 | Monet-0.8.2-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
-### New in 0.8.3: widgets you can use
+### New in 0.8.3: widgets you can use, settings of its own
+
+- **Every page of Settings is Monet's.** Mouse & Keyboard, Power & Sleep,
+  Notifications and Default Apps no longer open KDE's settings:
+  - **Mouse & Keyboard:** pointer speed, tap to click, natural scrolling,
+    left-handed and "off while typing" for the mouse and the touchpad, and
+    the languages you type in, found by name.
+  - **Power & Sleep:** Power saver, Balanced or Performance, when the
+    screen turns off and when the PC sleeps (plugged in and on battery),
+    and what the power button and the lid do.
+  - **Notifications:** Do Not Disturb, sounds, going quiet by itself while
+    a game fills the screen or you share it, where popups appear and how
+    long they stay, and which apps may pop up.
+  - **Default Apps:** what opens web links, mail, folders, music, video,
+    photos, PDFs and text, with the Store offered when nothing can.
+  The rarer settings are a "More…" away on each page.
 
 - **The Calendar opens its days.** Click a day for its page: the date in
   Fraunces, ‹ › to the day before or after, Today to come back, and a note
@@ -38,6 +53,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   in the bar no longer reaches over the icons beside it.
 - **Trash is the garden pot again.** 0.8.1's sign for Trash in menus had
   taken the dock's painting; menus keep the sign and the dock the pot.
+- **Date & Time and Accounts are Monet's own.** Settings shows the time as
+  your clocks will, sets it from the internet, finds your time zone by its
+  city and switches to 24-hour time (from your next sign-in). Accounts shows
+  you with your picture and name, changes your name and your password on
+  Monet's paper, and lists the other people on the PC. Before, both opened
+  KDE's settings; the face in the menu now opens Accounts here too.
 - **Monet's own sounds.** Messages, warnings and errors, a drive or the
   charger plugged in or out, a low battery, the volume step and emptying the
   trash sound like Monet now: soft felt and glass, quiet and warm. Before,

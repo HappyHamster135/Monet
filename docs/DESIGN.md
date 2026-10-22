@@ -345,8 +345,10 @@ block.
 **Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
 glass sheet, about 1000 × 700. On the glass: the name in Fraunces, search,
 and the pages, each marked by a swatch cut from the paintings with a white
-glyph, in three groups: Monet's own, the ones KDE's settings open (marked
-↗), and Windows, Updates and About. A pebble of glass glides to the page
+glyph, in three groups: the light, the network, the screen, sound, the clock
+and you; the pointer, power, notifications and default apps; and Windows,
+Updates and About. Every page is Monet's own, each with a "More…" button at
+its foot for KDE's page of the rarer settings. A pebble of glass glides to the page
 you're on. On the paper: the page under its swatch, title and a line saying
 how things stand ("Connected to Harbor"), in rounded cards with switches
 (Lily when on), devices with what they are (headphones, a controller, a
@@ -354,7 +356,30 @@ mouse) in a chip that turns lily while connected, and the sun only for
 Restart in Windows. Updates looks for a new Monet, app updates and the PC's
 own firmware (UEFI, disks, docks: fwupd, from their makers through LVFS)
 together, and installs each only from its own button; firmware that installs
-during a restart says so. The `monet-quick` helper does the
+during a restart says so. Date & Time shows the time as your clocks will,
+sets it from the internet and finds a time zone by its city; 24-hour time
+switches the locale Plasma exports at sign-in (`plasma-localerc`'s
+`[Formats] LC_TIME`, en_US ↔ en_GB, so dates follow), which Monet's clock,
+the placard and the lock screen show. Accounts shows you with your picture
+(or your initial on lily), changes your name (AccountsService) and your
+password (`passwd` in a terminal of its own, the password sealed with a
+one-time pad on its way), and lists the other people; adding or removing
+someone is KDE's page, More account settings. Mouse & Keyboard sets every
+mouse alike and every touchpad alike (speed, tap to click, natural
+scrolling, left-handed, off while typing) through KWin's input devices on
+D-Bus, which keep what's set, and keeps the layouts you type in (kxkbrc,
+which KWin watches), searched by name, the first one first. Power & Sleep
+offers the power mode as three choices (power-profiles-daemon, at once) and,
+plugged in and on battery, when the screen turns off and when the PC
+sleeps, then what the power button and the lid do: PowerDevil's own
+settings in `powerdevilrc`, reread as they change. Choices of a few are
+Segments: the chosen one on a pebble. Notifications has Do Not Disturb, the
+sounds, when it goes quiet by itself (fullscreen, sharing the screen, urgent
+ones let through), where popups go and how long they stay, and each app that
+has notified, to let it pop up or not (`plasmanotifyrc`, watched by
+Plasma). Default Apps shows what opens web links, mail, folders, music,
+video, photos, PDFs and text, and the apps that can, set in
+`mimeapps.list`; a kind with no app at all offers the Store. The `monet-quick` helper does the
 work. Settings in the dock and the app menu runs `monet-quick open [page]`,
 which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into

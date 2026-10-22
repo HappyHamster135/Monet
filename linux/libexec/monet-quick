@@ -18,6 +18,31 @@
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
     monet-quick pref hours|placard|glass on|off
+    monet-quick time                     the time zone, whether it sets itself and the clock's locale, as JSON
+    monet-quick zones                    every time zone, as JSON
+    monet-quick zone NAME                move to time zone NAME (one of zones)
+    monet-quick ntp on|off               set the time automatically, from the internet
+    monet-quick time-locale LOCALE|region
+                                         show the time as LOCALE (12- or 24-hour) from the next sign-in
+    monet-quick accounts                 you and the other people on this PC, as JSON
+    monet-quick name NAME                your name, as hex of its UTF-8
+    monet-quick pad                      a one-time pad for password, as hex
+    monet-quick password OLD NEW         change your password, both sealed with the pad (OLD - if none)
+    monet-quick power                    screen off, sleep, power button, lid and power mode, as JSON
+    monet-quick power-time ac|battery screen|sleep SECONDS   (0 is never)
+    monet-quick power-button|power-lid ACTION   PowerDevil's number for what it does
+    monet-quick power-mode power-saver|balanced|performance
+    monet-quick input                    mouse, touchpad and keyboard layouts, as JSON
+    monet-quick pointer mouse|touchpad speed 0-100 | natural|left|tap|typing on|off
+    monet-quick layouts-known            every keyboard layout there is, as JSON
+    monet-quick layouts CODE[,CODE…]     the keyboard layouts, the first one first
+    monet-quick notify                   Do Not Disturb's rules, popups and the apps that notify, as JSON
+    monet-quick notify-rule mirrored|fullscreen|sounds|urgent on|off
+    monet-quick notify-place clock|topright|topcenter
+    monet-quick notify-time 3|5|10       seconds a popup stays
+    monet-quick notify-app ID on|off     an app's popups (ID as hex of its UTF-8)
+    monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
+    monet-quick default KIND ID          set it (ID, a menu entry's file name, as hex of its UTF-8)
     monet-quick about                    this PC, as JSON
     monet-quick doctor                   run `monet doctor`
     monet-quick update-check             is there a newer Monet, or app updates? as JSON
@@ -30,7 +55,8 @@
     monet-quick launch ID                start an app by its menu entry's file name (as hex of its UTF-8)
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
-                                         sound, windows, updates or about)
+                                         sound, datetime, users, input, power, notifications, apps,
+                                         windows, updates or about)
     monet-quick listen                   wait until someone asks to open Monet Settings
 """
 
@@ -49,7 +75,9 @@ CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
 PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
-PAGES = ("light", "wifi", "bluetooth", "display", "sound", "windows", "updates", "about")
+PAD = RUNTIME / "monet-pad"
+PAGES = ("light", "wifi", "bluetooth", "display", "sound", "datetime", "users", "input", "power", "notifications", "apps",
+         "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -231,8 +259,20 @@ def set_brightness(percent):
 # Monet's own switches ------------------------------------------------------
 
 def kread(file, group, key, default=""):
-    out = run("kreadconfig6", "--file", file, "--group", group, "--key", key, "--default", default)
+    """A key from a KDE config file; group is a name, or the names of nested groups."""
+    args = ["kreadconfig6", "--file", file]
+    for name in (group,) if isinstance(group, str) else group:
+        args += ["--group", name]
+    out = run(*args, "--key", key, "--default", default)
     return (out or default).strip()
+
+
+def kwrite(file, group, key, value):
+    """Writes a key and tells whoever watches the file (Plasma, KWin) at once."""
+    args = ["kwriteconfig6", "--notify", "--file", file]
+    for name in (group,) if isinstance(group, str) else group:
+        args += ["--group", name]
+    return run(*args, "--key", key, str(value)) is not None
 
 
 def light_state():
@@ -410,8 +450,8 @@ def music_apps(entries, default=""):
     return apps
 
 
-def music():
-    """What Now Playing offers when nothing plays: the music apps, and the Store for more."""
+def menu_entries():
+    """Every app entry, as (file name, entry) pairs, nearest first."""
     entries = []
     for folder in app_dirs():
         for path in sorted(folder.glob("*.desktop")) if folder.is_dir() else ():
@@ -419,10 +459,20 @@ def music():
                 entries.append((path.name, desktop_entry(path.read_text(encoding="utf-8", errors="replace"))))
             except OSError:
                 pass
+    return entries
+
+
+def music():
+    """What Now Playing offers when nothing plays: the music apps, and the Store for more."""
+    entries = menu_entries()
     default = (run("xdg-mime", "query", "default", "audio/mpeg") or "").strip()
+    return {"apps": music_apps(entries, default), "store": store_entry()}
+
+
+def store_entry():
+    """The Store's menu entry (Bazaar where Bazzite has it, otherwise Discover), or ""."""
     stores = ("io.github.kolunmi.Bazaar.desktop", "org.kde.discover.desktop")
-    store = next((s for s in stores if any((folder / s).is_file() for folder in app_dirs())), "")
-    return {"apps": music_apps(entries, default), "store": store}
+    return next((s for s in stores if any((folder / s).is_file() for folder in app_dirs())), "")
 
 
 def launch(app_id):
@@ -436,6 +486,363 @@ def launch(app_id):
         if shutil.which(command[0]):
             subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return
+
+
+def entry_by_id(app_id):
+    """The nearest entry of that name, or None."""
+    for folder in app_dirs():
+        path = folder / app_id
+        if path.is_file():
+            try:
+                return desktop_entry(path.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                return None
+    return None
+
+
+def busjson(*args):
+    """busctl's answer as JSON's data, or None."""
+    out = run("busctl", "--json=short", *args, timeout=5)
+    try:
+        return json.loads(out)["data"] if out else None
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+# Power & Sleep -------------------------------------------------------------
+# PowerDevil keeps them in powerdevilrc: [AC], [Battery] and [LowBattery], each with
+# [Display] and [SuspendAndShutdown]; times in seconds, actions as PowerDevil's numbers,
+# and it rereads them when asked (refreshStatus). The power mode is the system's
+# (power-profiles-daemon or tuned's stand-in for it), switched at once.
+
+NO_ACTION, SLEEP, SHUT_DOWN, ASK, LOCK, SCREEN_OFF = 0, 1, 8, 16, 32, 64
+BUTTON_ACTIONS = (ASK, SLEEP, SHUT_DOWN, NO_ACTION)
+LID_ACTIONS = (SLEEP, LOCK, SCREEN_OFF, NO_ACTION)
+SCREEN_TIMES = (120, 300, 600, 900, 1800, 3600, 0)
+SLEEP_TIMES = (900, 1800, 3600, 7200, 0)
+POWER_STATES = {"ac": ("AC", 600, 900), "battery": ("Battery", 300, 600)}  # group, screen off, sleep (KDE's)
+PROFILE_SERVICES = (("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/UPower/PowerProfiles"),
+                    ("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"))
+
+
+def virtual_machine():
+    return (run("systemd-detect-virt") or "none").strip() not in ("none", "")
+
+
+def has_battery():
+    return any(Path("/sys/class/power_supply").glob("BAT*"))
+
+
+def has_lid():
+    return any(Path("/proc/acpi/button/lid").glob("*/state"))
+
+
+def power_mode():
+    """(the mode now, the modes there are), or ("", []) without a power-profiles service."""
+    for service, path in PROFILE_SERVICES:
+        profiles = busjson("--system", "get-property", service, path, service, "Profiles")
+        active = busjson("--system", "get-property", service, path, service, "ActiveProfile")
+        if profiles is not None and active:
+            names = [p.get("Profile", {}).get("data") for p in profiles]
+            return active, [n for n in ("power-saver", "balanced", "performance") if n in names]
+    return "", []
+
+
+def power_state():
+    virtual = virtual_machine()
+    state = {"hasBattery": has_battery(), "hasLid": has_lid()}
+    for name, (group, screen_default, sleep_default) in POWER_STATES.items():
+        screen_on = kread("powerdevilrc", (group, "Display"), "TurnOffDisplayWhenIdle", "true") == "true"
+        screen = kread("powerdevilrc", (group, "Display"), "TurnOffDisplayIdleTimeoutSec", str(screen_default))
+        action = kread("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendAction", str(NO_ACTION if virtual else SLEEP))
+        sleep = kread("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendIdleTimeoutSec", str(sleep_default))
+        try:
+            state[name] = {"screen": int(screen) if screen_on else 0, "sleep": int(sleep) if int(action) == SLEEP else 0}
+        except ValueError:
+            state[name] = {"screen": screen_default, "sleep": sleep_default}
+    try:
+        state["button"] = int(kread("powerdevilrc", ("AC", "SuspendAndShutdown"), "PowerButtonAction", str(ASK)))
+        state["lidAction"] = int(kread("powerdevilrc", ("AC", "SuspendAndShutdown"), "LidAction",
+                                       str(NO_ACTION if virtual else SLEEP)))
+    except ValueError:
+        state["button"], state["lidAction"] = ASK, SLEEP
+    state["mode"], state["modes"] = power_mode()
+    return state
+
+
+def reload_power():
+    busctl("call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
+           "org.kde.Solid.PowerManagement", "refreshStatus")
+
+
+def set_power_time(name, what, seconds):
+    """When the screen turns off, or the PC sleeps, plugged in or on battery (0 is never)."""
+    group = POWER_STATES[name][0]
+    if what == "screen":
+        kwrite("powerdevilrc", (group, "Display"), "TurnOffDisplayWhenIdle", "true" if seconds else "false")
+        kwrite("powerdevilrc", (group, "Display"), "DimDisplayWhenIdle", "true" if seconds else "false")
+        if seconds:
+            kwrite("powerdevilrc", (group, "Display"), "TurnOffDisplayIdleTimeoutSec", seconds)
+            kwrite("powerdevilrc", (group, "Display"), "DimDisplayIdleTimeoutSec", max(30, seconds // 2))
+    else:
+        kwrite("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendAction", SLEEP if seconds else NO_ACTION)
+        if seconds:
+            kwrite("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendIdleTimeoutSec", seconds)
+    reload_power()
+
+
+def set_power_action(key, action):
+    """What the power button or the lid does, the same plugged in, on battery and low."""
+    for group in ("AC", "Battery", "LowBattery"):
+        kwrite("powerdevilrc", (group, "SuspendAndShutdown"), key, action)
+    reload_power()
+
+
+def set_power_mode(mode):
+    """Now, and kept when the PC is plugged in or unplugged."""
+    for service, path in PROFILE_SERVICES:
+        if run("busctl", "--system", "set-property", service, path, service, "ActiveProfile", "s", mode, timeout=10) is not None:
+            break
+    for group in ("AC", "Battery"):
+        kwrite("powerdevilrc", (group, "Performance"), "PowerProfile", mode)
+    reload_power()
+
+
+# Mouse & Keyboard ----------------------------------------------------------
+# KWin shows each input device on D-Bus and saves what's set there itself (kcminputrc).
+# Mice and touchpads are set together, each kind as one. Layouts are kxkbrc's, which
+# KWin watches.
+
+KWIN_DEVICES = ("org.kde.KWin", "/org/kde/KWin/InputDevice")
+INPUT_SETTINGS = {  # Monet's name: (KWin's property, D-Bus type, what says it can)
+    "speed": ("pointerAcceleration", "d", "supportsPointerAcceleration"),
+    "natural": ("naturalScroll", "b", "supportsNaturalScroll"),
+    "left": ("leftHanded", "b", "supportsLeftHanded"),
+    "tap": ("tapToClick", "b", "tapFingerCount"),
+    "typing": ("disableWhileTyping", "b", "supportsDisableWhileTyping"),
+}
+
+
+def device_kind(props):
+    """"touchpad", "mouse", or "" for keyboards and the rest."""
+    if props.get("touchpad"):
+        return "touchpad"
+    if props.get("pointer") and props.get("supportsPointerAcceleration"):
+        return "mouse"
+    return ""
+
+
+def input_devices():
+    """{sysName: properties} for every input device KWin knows."""
+    names = busjson("--user", "get-property", *KWIN_DEVICES, "org.kde.KWin.InputDeviceManager", "devicesSysNames") or []
+    devices = {}
+    for sys_name in names:
+        if not re.fullmatch(r"[\w.-]+", sys_name):
+            continue
+        data = busjson("--user", "call", KWIN_DEVICES[0], f"{KWIN_DEVICES[1]}/{sys_name}",
+                       "org.freedesktop.DBus.Properties", "GetAll", "s", "org.kde.KWin.InputDevice")
+        if data:
+            devices[sys_name] = {key: value.get("data") for key, value in data[0].items()}
+    return devices
+
+
+def pointer_state(devices):
+    """Each kind as its first device has it: {"mouse": {...} or None, "touchpad": ...}."""
+    state = {"mouse": None, "touchpad": None}
+    for props in devices.values():
+        kind = device_kind(props)
+        if kind and state[kind] is None:
+            entry = {}
+            for name, (prop, _, can) in INPUT_SETTINGS.items():
+                if props.get(can):
+                    value = props.get(prop)
+                    entry[name] = round(((value or 0) + 1) * 50) if name == "speed" else bool(value)
+            state[kind] = entry
+    return state
+
+
+def set_pointer(kind, name, value):
+    prop, kind_of, can = INPUT_SETTINGS[name]
+    shown = str((value - 50) / 50) if name == "speed" else ("true" if value else "false")
+    for sys_name, props in input_devices().items():
+        if device_kind(props) == kind and props.get(can):
+            busctl("set-property", KWIN_DEVICES[0], f"{KWIN_DEVICES[1]}/{sys_name}", "org.kde.KWin.InputDevice",
+                   prop, kind_of, shown)
+
+
+def known_layouts(text):
+    """[(code, name)] from xkb's evdev.lst: the "! layout" section's lines."""
+    layouts, inside = [], False
+    for line in text.splitlines():
+        if line.startswith("!"):
+            inside = line.strip() == "! layout"
+        elif inside and line.strip():
+            code, _, name = line.strip().partition(" ")
+            layouts.append((code, name.strip()))
+    return layouts
+
+
+def layout_names():
+    try:
+        return dict(known_layouts(Path("/usr/share/X11/xkb/rules/evdev.lst").read_text(encoding="utf-8")))
+    except OSError:
+        return {}
+
+
+def keyboard_state():
+    """The layouts in use, first the one typing starts with: [{code, name}], and if they're
+    the system's (no list of the person's own yet)."""
+    names = layout_names()
+    chosen = [c for c in kread("kxkbrc", "Layout", "LayoutList").split(",") if c]
+    system = not chosen
+    if system:
+        found = re.search(r"X11 Layout:\s*(\S+)", run("localectl", "status") or "")
+        chosen = (found.group(1) if found else "us").split(",")
+    return {"layouts": [{"code": c, "name": names.get(c, c)} for c in chosen], "system": system}
+
+
+def set_layouts(codes):
+    """Keeps each kept layout's variant; KWin rereads them as kxkbrc changes."""
+    old = kread("kxkbrc", "Layout", "LayoutList").split(",")
+    variants = kread("kxkbrc", "Layout", "VariantList").split(",")
+    kept = dict(zip(old, variants + [""] * len(old)))
+    kwrite("kxkbrc", "Layout", "VariantList", ",".join(kept.get(c, "") for c in codes))
+    kwrite("kxkbrc", "Layout", "Use", "true")
+    kwrite("kxkbrc", "Layout", "LayoutList", ",".join(codes))
+
+
+# Notifications -------------------------------------------------------------
+# plasmanotifyrc, which Plasma's notification server watches: Do Not Disturb's rules,
+# where popups go and for how long, and each app that has sent one ([Applications]).
+
+POPUP_PLACES = {"clock": "CloseToWidget", "topright": "TopRight", "topcenter": "TopCenter"}
+POPUP_TIMES = (3, 5, 10)
+QUIET_RULES = {  # Monet's name: (group, key, inverted)
+    "mirrored": ("DoNotDisturb", "WhenScreensMirrored", False),
+    "fullscreen": ("DoNotDisturb", "WhenFullscreen", False),
+    "sounds": ("DoNotDisturb", "NotificationSoundsMuted", True),
+    "urgent": ("Notifications", "CriticalInDndMode", False),
+}
+
+
+def notified_apps(text):
+    """{desktop entry: shows popups} for each [Applications][…] group in plasmanotifyrc's text."""
+    apps, current = {}, None
+    for line in text.splitlines():
+        line = line.strip()
+        found = re.fullmatch(r"\[Applications\]\[([^\]]+)\]", line)
+        if found:
+            current = found.group(1)
+            apps.setdefault(current, True)
+        elif line.startswith("["):
+            current = None
+        elif current and line.startswith("ShowPopups="):
+            apps[current] = line.split("=", 1)[1].strip() != "false"
+    return apps
+
+
+def notify_state():
+    state = {}
+    for name, (group, key, inverted) in QUIET_RULES.items():
+        default = "false" if name == "sounds" else "true"
+        on = kread("plasmanotifyrc", group, key, default) == "true"
+        state[name] = on != inverted
+    place = kread("plasmanotifyrc", "Notifications", "PopupPosition", "CloseToWidget")
+    state["place"] = next((k for k, v in POPUP_PLACES.items() if v == place), "clock")
+    try:
+        state["time"] = round(int(kread("plasmanotifyrc", "Notifications", "PopupTimeout", "5000")) / 1000)
+    except ValueError:
+        state["time"] = 5
+    try:
+        text = (CONFIG / "plasmanotifyrc").read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    apps = []
+    for app_id, popups in notified_apps(text).items():
+        entry = entry_by_id(app_id + ".desktop")
+        if entry and entry.get("NoDisplay") != "true":
+            apps.append({"id": app_id, "name": entry.get("Name", app_id), "icon": entry.get("Icon", ""), "popups": popups})
+    state["apps"] = sorted(apps, key=lambda app: app["name"].lower())
+    return state
+
+
+# Default Apps --------------------------------------------------------------
+# What opens what: the [Default Applications] of the person's mimeapps.list, which KDE
+# and everyone else read. A category's first type says which apps can take it.
+
+DEFAULT_KINDS = {
+    "browser": ("x-scheme-handler/https", "x-scheme-handler/http", "text/html"),
+    "mail": ("x-scheme-handler/mailto",),
+    "files": ("inode/directory",),
+    "music": ("audio/mpeg", "audio/flac", "audio/ogg", "audio/x-vorbis+ogg", "audio/x-opus+ogg", "audio/x-wav",
+              "audio/mp4", "audio/aac"),
+    "video": ("video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo", "video/mpeg"),
+    "photos": ("image/jpeg", "image/png", "image/gif", "image/webp", "image/heif", "image/avif", "image/tiff",
+               "image/bmp"),
+    "pdf": ("application/pdf",),
+    "text": ("text/plain", "text/markdown"),
+}
+MIMEAPPS = CONFIG / "mimeapps.list"
+
+
+def takers(entries, kind):
+    """The shown apps that open a kind's first type, nearest copy deciding: [{id, name, icon}]."""
+    first = DEFAULT_KINDS[kind][0]
+    seen, apps = set(), []
+    for app_id, entry in entries:
+        if app_id in seen:
+            continue
+        seen.add(app_id)
+        types = set(filter(None, entry.get("MimeType", "").split(";")))
+        if (entry.get("Type") == "Application" and entry.get("NoDisplay") != "true" and entry.get("Hidden") != "true"
+                and first in types):
+            apps.append({"id": app_id, "name": entry.get("Name", app_id), "icon": entry.get("Icon", ""),
+                         "types": [t for t in DEFAULT_KINDS[kind] if t in types]})
+    return sorted(apps, key=lambda app: app["name"].lower())
+
+
+def with_defaults(text, chosen):
+    """mimeapps.list's text with {type: app} set under [Default Applications], the rest kept."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.strip() == "[Default Applications]"), None)
+    if start is None:
+        lines += ([""] if lines and lines[-1].strip() else []) + ["[Default Applications]"]
+        start = len(lines) - 1
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("[")), len(lines))
+    body = [line for line in lines[start + 1:end] if line.split("=", 1)[0].strip() not in chosen]
+    while body and not body[-1].strip():
+        body.pop()
+    body += [f"{mime}={app};" for mime, app in chosen.items()]
+    tail = lines[end:]
+    return "\n".join(lines[:start + 1] + body + ([""] if tail else []) + tail) + "\n"
+
+
+def defaults_state():
+    entries, store = menu_entries(), store_entry()
+    kinds = []
+    for kind, types in DEFAULT_KINDS.items():
+        current = (run("xdg-mime", "query", "default", types[0]) or "").strip()
+        apps = [{k: a[k] for k in ("id", "name", "icon")} for a in takers(entries, kind)]
+        # Nothing to open it with: the Store, to find something.
+        kinds.append({"id": kind, "current": current, "apps": apps, "store": "" if apps else store})
+    return kinds
+
+
+def set_default(kind, app_id):
+    app = next((a for a in takers(menu_entries(), kind) if a["id"] == app_id), None)
+    if app is None:
+        return
+    try:
+        text = MIMEAPPS.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    MIMEAPPS.parent.mkdir(parents=True, exist_ok=True)
+    MIMEAPPS.write_text(with_defaults(text, {mime: app_id for mime in app["types"]}), encoding="utf-8")
+    if kind == "browser":
+        kwrite("kdeglobals", "General", "BrowserApplication", app_id)
+    # KDE answers "what opens this" from its cache: rebuilt in the background.
+    if shutil.which("kbuildsycoca6"):
+        subprocess.Popen(["kbuildsycoca6"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def plasma_script(script):
@@ -455,6 +862,147 @@ def set_placard(show):
             'desktops().forEach(function (d) {'
             '  d.widgets("org.monet.placard").forEach(function (w) { w.remove(); });'
             '})')
+
+
+# Date & Time ---------------------------------------------------------------
+
+# 24-hour time is the locale's: Plasma exports plasma-localerc's [Formats] LC_TIME when someone
+# signs in, and Monet's clock, the placard and the lock screen show that locale's short time
+# (Monet Settings picks the locale, as only Qt knows which clock each one has).
+TIME_LOCALE = ("--file", "plasma-localerc", "--group", "Formats", "--key", "LC_TIME")
+
+
+def clock(show):
+    """The time zone and whether the time sets itself, from `timedatectl show`, and the locale
+    the time is shown in from the next sign-in, beside the region's own."""
+    values = dict(line.split("=", 1) for line in show.splitlines() if "=" in line)
+    region = kread("plasma-localerc", "Formats", "LANG") or os.environ.get("LANG") or "en_US.UTF-8"
+    return {
+        "zone": values.get("Timezone", ""),
+        "ntp": values.get("NTP") == "yes" if values.get("CanNTP") == "yes" else None,
+        "locale": kread("plasma-localerc", "Formats", "LC_TIME") or region,
+        "region": region,
+    }
+
+
+def zones():
+    return (run("timedatectl", "list-timezones") or "").split()
+
+
+# Accounts ------------------------------------------------------------------
+
+def accounts_call(path, interface, method, *args):
+    """A method of AccountsService, on the system bus: its first answer."""
+    out = run("busctl", "--json=short", "call", "org.freedesktop.Accounts", path, interface, method, *args)
+    try:
+        return json.loads(out)["data"][0]
+    except (TypeError, ValueError, KeyError, IndexError):
+        return None
+
+
+def your_account():
+    return accounts_call("/org/freedesktop/Accounts", "org.freedesktop.Accounts", "FindUserById", "x", str(os.getuid()))
+
+
+def person(found, uid):
+    """Someone, from AccountsService's properties of a user."""
+    def get(key):
+        return (found.get(key) or {}).get("data")
+    login, picture = get("UserName") or "", get("IconFile") or ""
+    return {"login": login, "name": (get("RealName") or "").strip() or login,
+            "picture": picture if os.path.isfile(picture) else "",
+            "admin": get("AccountType") == 1, "you": get("Uid") == uid}
+
+
+def accounts():
+    """You first, then the other people on this PC, A to Z."""
+    yours = your_account()
+    paths = accounts_call("/org/freedesktop/Accounts", "org.freedesktop.Accounts", "ListCachedUsers") or []
+    people = []
+    for path in dict.fromkeys(([yours] if yours else []) + paths):
+        found = accounts_call(path, "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.Accounts.User")
+        if found:
+            people.append(person(found, os.getuid()))
+    return sorted(people, key=lambda p: (not p["you"], p["name"].lower()))
+
+
+def set_name(name):
+    name = name.strip()
+    # The password file keeps it, where ':' and ',' separate things.
+    if not 0 < len(name) <= 64 or re.search(r"[:,\x00-\x1f\x7f]", name):
+        return False
+    yours = your_account()
+    return bool(yours) and run("busctl", "call", "org.freedesktop.Accounts", yours, "org.freedesktop.Accounts.User",
+                               "SetRealName", "s", name, timeout=120) is not None
+
+
+# A password comes here on a command line, which anyone on the PC can read, so Monet Settings
+# first asks for a one-time pad (over its own pipe) and sends the password sealed with it.
+def make_pad():
+    PAD.unlink(missing_ok=True)
+    pad = os.urandom(256)
+    with os.fdopen(os.open(PAD, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
+        f.write(pad)
+    return pad.hex()
+
+
+def take_pad():
+    """The pad, once: it's gone as soon as it's read."""
+    try:
+        with os.fdopen(os.open(PAD, os.O_RDONLY | os.O_NOFOLLOW), "rb") as f:
+            return f.read()
+    except OSError:
+        return b""
+    finally:
+        PAD.unlink(missing_ok=True)
+
+
+def unseal(sealed, pad):
+    """Monet Settings' hex, each byte XORed with the pad's; None if the pad is too short."""
+    data = bytes.fromhex(sealed)
+    return bytes(a ^ b for a, b in zip(data, pad)).decode("utf-8", "replace") if len(data) <= len(pad) else None
+
+
+def change_password(old, new):
+    """Changes your password with passwd, answering it in a terminal of its own as GNOME's
+    settings do, so passwd checks the old one, and that the new one is good enough."""
+    import pty
+    pid, fd = pty.fork()
+    if pid == 0:
+        try:
+            os.execvpe("passwd", ["passwd"], dict(os.environ, LC_ALL="C"))
+        finally:
+            os._exit(127)
+    said, answered, news = "", 0, 0
+    while select.select([fd], [], [], 60)[0]:
+        try:
+            chunk = os.read(fd, 1024)
+        except OSError:  # passwd is done, and its terminal with it
+            break
+        if not chunk:
+            break
+        said += chunk.decode("utf-8", "replace")
+        asked = said[answered:].rstrip()
+        if not asked.lower().endswith("password:"):
+            continue
+        if re.search(r"current|old", asked.rsplit("\n", 1)[-1], re.I):
+            answer = old
+        elif news < 2:
+            answer, news = new, news + 1
+        else:
+            break  # it asks for a new one again: that one wasn't good enough
+        os.write(fd, answer.encode() + b"\n")
+        answered = len(said)
+    os.close(fd)  # hangs up on passwd, if it's still asking
+    _, code = os.waitpid(pid, 0)
+    if os.waitstatus_to_exitcode(code) == 0:
+        return {"ok": True}
+    bad = re.search(r"BAD PASSWORD: (.+)", said)
+    if bad:
+        return {"ok": False, "message": bad.group(1).strip() + "."}
+    wrong = re.search(r"manipulation error|Authentication failure", said)
+    return {"ok": False, "message": "That isn't your current password." if wrong
+            else last_line(said) or "Monet couldn't change your password."}
 
 
 # About this PC -------------------------------------------------------------
@@ -619,6 +1167,29 @@ def main(argv):
             set_placard(values["placard"])
         else:
             run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] == "hours" else "apply", timeout=30)
+    elif cmd == "time":
+        emit(clock(run("timedatectl", "show") or ""))
+    elif cmd == "zones":
+        emit(zones())
+    # These two may ask for your password first (Monet's own prompt): time to answer it.
+    elif cmd == "zone" and args and args[0] in zones():
+        ok("timedatectl", "set-timezone", args[0], timeout=120)
+    elif cmd == "ntp" and args:
+        ok("timedatectl", "set-ntp", "true" if on else "false", timeout=120)
+    elif cmd == "time-locale" and args and re.fullmatch(r"region|[a-z]{2,3}_[A-Z]{2}\.UTF-8", args[0]):
+        run("kwriteconfig6", *TIME_LOCALE, *(["--delete"] if args[0] == "region" else [args[0]]))
+    elif cmd == "accounts":
+        emit(accounts())
+    elif cmd == "name" and args:
+        emit({"ok": set_name(unhex(args[0]))})
+    elif cmd == "pad":
+        print(make_pad())
+    elif cmd == "password" and len(args) == 2:
+        pad = take_pad()
+        old = unseal(args[0], pad[:128]) if args[0] != "-" else ""
+        new = unseal(args[1], pad[128:])
+        emit(change_password(old, new) if old is not None and new
+             else {"ok": False, "message": "Monet couldn't change your password."})
     elif cmd == "about":
         emit(about())
     elif cmd in ("doctor", "update"):
@@ -632,6 +1203,49 @@ def main(argv):
         emit(firmware_update())
     elif cmd == "restart":
         restart()
+    elif cmd == "power":
+        emit(power_state())
+    elif cmd == "power-time" and len(args) == 3 and args[0] in POWER_STATES and args[1] in ("screen", "sleep") \
+            and args[2].isdigit() and int(args[2]) in (SCREEN_TIMES if args[1] == "screen" else SLEEP_TIMES):
+        set_power_time(args[0], args[1], int(args[2]))
+    elif cmd in ("power-button", "power-lid") and args and args[0].isdigit() \
+            and int(args[0]) in (BUTTON_ACTIONS if cmd == "power-button" else LID_ACTIONS):
+        set_power_action("PowerButtonAction" if cmd == "power-button" else "LidAction", int(args[0]))
+    elif cmd == "power-mode" and args and args[0] in ("power-saver", "balanced", "performance"):
+        set_power_mode(args[0])
+    elif cmd == "input":
+        emit(dict(pointer_state(input_devices()), **keyboard_state()))
+    elif cmd == "pointer" and len(args) == 3 and args[0] in ("mouse", "touchpad") and args[1] in INPUT_SETTINGS:
+        if args[1] == "speed" and args[2].isdigit() and int(args[2]) <= 100:
+            set_pointer(args[0], "speed", int(args[2]))
+        elif args[1] != "speed" and args[2] in ("on", "off"):
+            set_pointer(args[0], args[1], args[2] == "on")
+    elif cmd == "layouts-known":
+        emit([{"code": c, "name": n} for c, n in sorted(layout_names().items(), key=lambda item: item[1].lower())])
+    elif cmd == "layouts" and args and re.fullmatch(r"[a-z][a-z0-9_]*(,[a-z][a-z0-9_]*){0,7}", args[0]):
+        set_layouts(args[0].split(","))
+    elif cmd == "notify":
+        emit(notify_state())
+    elif cmd == "notify-rule" and len(args) == 2 and args[0] in QUIET_RULES and args[1] in ("on", "off"):
+        group, key, inverted = QUIET_RULES[args[0]]
+        value = "true" if (args[1] == "on") != inverted else "false"
+        kwrite("plasmanotifyrc", group, key, value)
+        if args[0] == "mirrored":
+            kwrite("plasmanotifyrc", "DoNotDisturb", "WhenScreenSharing", value)
+    elif cmd == "notify-place" and args and args[0] in POPUP_PLACES:
+        kwrite("plasmanotifyrc", "Notifications", "PopupPosition", POPUP_PLACES[args[0]])
+    elif cmd == "notify-time" and args and args[0].isdigit() and int(args[0]) in POPUP_TIMES:
+        kwrite("plasmanotifyrc", "Notifications", "PopupTimeout", int(args[0]) * 1000)
+    elif cmd == "notify-app" and len(args) == 2 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]) and args[1] in ("on", "off"):
+        app_id = unhex(args[0])
+        if re.fullmatch(r"[\w.+-]+", app_id):
+            kwrite("plasmanotifyrc", ("Applications", app_id), "ShowPopups", "true" if args[1] == "on" else "false")
+    elif cmd == "defaults":
+        emit(defaults_state())
+    elif cmd == "default" and len(args) == 2 and args[0] in DEFAULT_KINDS and re.fullmatch(r"(?:[0-9a-f]{2})+", args[1]):
+        app_id = unhex(args[1])
+        if re.fullmatch(r"[\w.+-]+\.desktop", app_id):
+            set_default(args[0], app_id)
     elif cmd == "music":
         emit(music())
     elif cmd == "launch" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):

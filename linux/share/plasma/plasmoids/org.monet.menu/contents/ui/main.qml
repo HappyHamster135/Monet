@@ -557,7 +557,7 @@ PlasmoidItem {
                     implicitHeight: 40
                     Accessible.name: i18n("Accounts")
                     onClicked: {
-                        helper.connectSource("@LIBEXECDIR@/monet-quick kde users")
+                        helper.connectSource("@LIBEXECDIR@/monet-quick open users")
                         root.expanded = false
                     }
                     background: Rectangle {
