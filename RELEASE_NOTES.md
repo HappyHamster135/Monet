@@ -6,11 +6,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.8.1-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
-| Monet-0.8.1-Setup.iso | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.8.1-Installer.iso | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso. |
-| Monet-0.8.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.8.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.8.2-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
+| Monet-0.8.2-Setup.iso | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.8.2-Installer.iso | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso. |
+| Monet-0.8.2-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.8.2-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
 
 ### New in 0.8.2: the everyday screens
 

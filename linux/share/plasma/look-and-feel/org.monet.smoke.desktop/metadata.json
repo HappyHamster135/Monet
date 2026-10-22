@@ -10,7 +10,7 @@
         "Id": "org.monet.smoke.desktop",
         "License": "GPL-3.0-or-later",
         "Name": "Smoke",
-        "Version": "0.8.1"
+        "Version": "0.8.2"
     },
     "X-Plasma-APIVersion": "2"
 }

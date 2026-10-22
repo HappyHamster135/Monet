@@ -10,7 +10,7 @@
         "Id": "org.monet.desktop",
         "License": "GPL-3.0-or-later",
         "Name": "Mist",
-        "Version": "0.8.1"
+        "Version": "0.8.2"
     },
     "X-Plasma-APIVersion": "2"
 }
