@@ -6,10 +6,65 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File | What |
 |---|---|
-| **Monet-0.7.0-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
-| Monet-0.7.0-Installer.iso | The USB stick's image, for writing it yourself (on Linux or a Mac). |
-| Monet-0.7.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
-| Monet-0.7.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+| **Monet-0.8.0-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you. |
+| Monet-0.8.0-Setup.iso | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.8.0-Installer.iso | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso. |
+| Monet-0.8.0-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
+| Monet-0.8.0-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
+
+### New in 0.8: Monet's own, down to the pointer
+
+- **Every icon is a small oil painting,** in short strokes the way Monet
+  painted, with violet shadows and warm light. Settings is a painter's
+  palette, Terminal a night canvas on an easel, System Monitor the harbor's
+  masts at sunset, the Store a market bouquet, Trash a garden pot. KDE's
+  apps (Gwenview, Okular, Kate, Ark, Spectacle, ...) and the app menu's
+  categories get paintings too.
+- **The rest of the dock and the menu too.** The browser is a window thrown
+  open onto the harbor, Steam a locomotive steaming into Saint-Lazare,
+  Lutris a rowing boat, Bazzite Portal the Japanese footbridge at Giverny,
+  and the Flatpak tools, Waydroid and Input Remapper have paintings of their
+  own.
+- **Files and drives are painted.** Text, code, pictures, music, films,
+  PDFs, spreadsheets, programs and archives each have their own painted
+  sheet; disks are a paint box, USB sticks a tube of paint.
+- **Monet's own window frames.** Title bars are the same glass as the
+  window. The buttons are signs brushed in ink, and a dab of paint swells
+  up under the one you point at: lily, ochre, or the sun to close.
+- **Monet's pointer:** ink with a paper edge, and Monet's sun breathing
+  over its reflection while something works.
+- **Clearer glass.** The painting's color comes through the panels and
+  popovers more, and their edges catch the light like a pane of glass:
+  brightest along the top, fading down the sides.
+- **Widgets on the desktop.** Weather, Calendar, Now Playing, a Note and a
+  Photo Frame, as glass cards that frost the painting behind them. A new
+  desktop starts with the weather and the month at the top right; the rest
+  are in the widget gallery. The weather comes from Open-Meteo once you
+  choose a place (no account; only the place is sent).
+- **Monet's own lock screen.** At rest, the painting and its placard: the
+  date, the time in Fraunces, which light it is. Touch a key and the
+  painting softens behind a sheet of glass with your name, a well for the
+  password and the sun to go back in. If it ever can't load, KDE's lock
+  screen takes its place, so you can always unlock.
+- **The bar's signs** for sound, Wi-Fi, battery, notifications, the
+  clipboard, drives and power are brushed in ink. Sleep is the moon, shut
+  down the setting sun.
+- **Starting and signing in are Monet's.** The boot screen is the harbor at
+  dawn (and asks for a disk password there), and the sign-in screen has
+  Monet's fields, buttons, colors and pointer.
+- **Monet's own installer on the USB stick.** Make-USB-Stick.exe now writes
+  Monet Setup whenever the release has it, and Fedora's installer only
+  otherwise. Monet Setup couldn't be built before: a check in its build
+  stopped it every time.
+- **Firmware updates in Settings.** Updates now also finds new firmware for
+  the PC's own parts (its UEFI, disks, docks), from their makers, and
+  installs it when you press Install, never by itself. It says when one
+  installs during the next restart, and what's in the way (like "Plug in
+  the charger first").
+
+Updating from 0.7: Settings → Updates → Install, then restart. The new look
+arrives when you sign in; your panels stay as they are, and the weather and
+the other widgets are in the desktop's widget gallery.
 
 ### New in 0.7: Monet all the way through
 
@@ -31,60 +86,14 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **The Store and other Flathub apps in Monet's colors.** Paper or smoke,
   lily for choices, the sun for the button that goes ahead. Before, newer
   apps like the Store kept their own grey and blue, older ones lost KDE's
-  colors, and dark mode was bluish.
-- **Firmware updates in Settings.** Updates now also finds new firmware for
-  the PC's own parts (its UEFI, disks, docks), from their makers, and
-  installs it when you press Install, never by itself. It says when one
-  installs during the next restart, and what's in the way (like "Plug in
-  the charger first").
+  colors, and dark mode was bluish. The Store's icon in the dock is
+  Monet's painted bag.
 - **Settings is clearer.** Each page shows its painting and how things
   stand ("Connected to Harbor"), the list glides to the page you're on,
   pages that open KDE's settings are marked ↗, Bluetooth devices show what
   they are, secured networks show a lock, and updates show they're
   working. Everything fits again: "More settings in KDE" had slipped off
   the bottom.
-- **Every icon is a small oil painting,** in short strokes the way Monet
-  painted, with violet shadows and warm light. Settings is a painter's
-  palette, Terminal a night canvas on an easel, System Monitor the harbor's
-  masts at sunset, the Store a market bouquet, Trash a garden pot. KDE's
-  apps (Gwenview, Okular, Kate, Ark, Spectacle, ...) and the app menu's
-  categories get paintings too.
-- **The rest of the dock and the menu too.** The browser is a window thrown
-  open onto the harbor, Steam a locomotive steaming into Saint-Lazare,
-  Lutris a rowing boat, Bazzite Portal the Japanese footbridge at Giverny,
-  and the Flatpak tools, Waydroid and Input Remapper have paintings of their
-  own.
-- **Files and drives are painted.** Text, code, pictures, music, films,
-  PDFs, spreadsheets, programs and archives each have their own painted
-  sheet; disks are a paint box, USB sticks a tube of paint.
-- **Monet's own window frames.** Title bars are the same glass as the
-  window. The buttons are signs brushed in ink, and a dab of paint swells
-  up under the one you point at: lily, ochre, or the sun to close.
-- **Monet's pointer:** ink with a paper edge, and Monet's sun breathing
-  over its reflection while something works.
-- **The bar's signs** for sound, Wi-Fi, battery, notifications, the
-  clipboard, drives and power are brushed in ink. Sleep is the moon, shut
-  down the setting sun.
-- **Starting and signing in are Monet's.** The boot screen is the harbor at
-  dawn (and asks for a disk password there), and the sign-in screen has
-  Monet's fields, buttons, colors and pointer.
-- **Widgets on the desktop.** Weather, Calendar, Now Playing, a Note and a
-  Photo Frame, as glass cards that frost the painting behind them. A new
-  desktop starts with the weather and the month at the top right; the rest
-  are in the widget gallery. The weather comes from Open-Meteo once you
-  choose a place (no account; only the place is sent).
-- **Clearer glass.** The painting's color comes through the panels and
-  popovers more, and their edges catch the light like a pane of glass:
-  brightest along the top, fading down the sides.
-- **Monet's own installer on the USB stick.** Make-USB-Stick.exe now writes
-  Monet Setup whenever the release has it, and Fedora's installer only
-  otherwise. Monet Setup couldn't be built before: a check in its build
-  stopped it every time.
-- **Monet's own lock screen.** At rest, the painting and its placard: the
-  date, the time in Fraunces, which light it is. Touch a key and the
-  painting softens behind a sheet of glass with your name, a well for the
-  password and the sun to go back in. If it ever can't load, KDE's lock
-  screen takes its place, so you can always unlock.
 - **Terminal** has a thin cursor, more room around the text, and its menu
   behind a button instead of a menu bar.
 - **Window shadows** are softer and wider, in ink instead of black.
