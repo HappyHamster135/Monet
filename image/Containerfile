@@ -17,6 +17,12 @@ RUN rustup toolchain install \
  && tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out \
         target/x86_64-pc-windows-gnu/release/monet-bridge.exe
 
+# Monet's password prompt: KDE's polkit agent built with Monet's page, against
+# the same Plasma as below. If it can't be built, the image keeps KDE's prompt.
+FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable AS password
+COPY image/password /src/password
+RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
+
 FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
 # Tools for installing Windows from Monet: splitting Windows' install image
 # (wimlib), formatting its partition (ntfsprogs), and boot entries. Then the
@@ -26,6 +32,7 @@ RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
  && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script \
  && dnf5 clean all
 COPY --from=build /out /tmp/monet
+COPY --from=password /out /tmp/monet/password
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the
 # sun breathing, instead of Bazzite's. It lives in the initramfs, so that's
 # rebuilt the way Bazzite builds it.

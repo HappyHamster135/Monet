@@ -31,15 +31,19 @@ fi
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
 current="$looks/look-0.8.1"
-[ -e "$current" ] && exit 0
-
-# Plasma needs a moment after sign-in before it accepts changes.
-sleep 4
-if ls "$looks"/look-* >/dev/null 2>&1; then
-    # A newer look on an account that has Monet's already: freshen it (and
-    # mend anything a Breeze theme put back), but keep the panels.
-    "$LIBEXECDIR/monet-look" --keep
-else
-    "$LIBEXECDIR/monet-look"
+if [ ! -e "$current" ]; then
+    # Plasma needs a moment after sign-in before it accepts changes.
+    sleep 4
+    if ls "$looks"/look-* >/dev/null 2>&1; then
+        # A newer look on an account that has Monet's already: freshen it (and
+        # mend anything a Breeze theme put back), but keep the panels.
+        "$LIBEXECDIR/monet-look" --keep
+    else
+        "$LIBEXECDIR/monet-look"
+    fi
+    mkdir -p "$looks" && touch "$current"
 fi
-mkdir -p "$looks" && touch "$current"
+
+# Monet's widgets on the desktop, once, after the look (which may lay the
+# desktop out afresh); until Plasma had a desktop for them, at every sign-in.
+"$LIBEXECDIR/monet-widgets"

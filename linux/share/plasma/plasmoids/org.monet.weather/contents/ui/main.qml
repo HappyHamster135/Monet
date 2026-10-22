@@ -88,7 +88,11 @@ PlasmoidItem {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: Kirigami.Units.gridUnit
+                anchors.leftMargin: Kirigami.Units.gridUnit
+                anchors.rightMargin: Kirigami.Units.gridUnit
+                // A little less above and below, so the forecast has room under today.
+                anchors.topMargin: Math.round(Kirigami.Units.gridUnit * 0.8)
+                anchors.bottomMargin: Math.round(Kirigami.Units.gridUnit * 0.7)
                 spacing: 0
                 visible: card.now !== null
 
@@ -162,7 +166,7 @@ PlasmoidItem {
                             }
                             Sky {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                size: Kirigami.Units.gridUnit * 1.6
+                                size: Kirigami.Units.gridUnit * 1.35
                                 code: card.days.weather_code[parent.day]
                             }
                             Text {

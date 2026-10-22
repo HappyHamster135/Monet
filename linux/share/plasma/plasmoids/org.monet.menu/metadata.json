@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Application Launchers",
+        "Description": "Your pinned apps, every app from A to Z, and a search for apps, files and settings",
+        "Icon": "monet",
+        "Id": "org.monet.menu",
+        "License": "GPL-3.0-or-later",
+        "Name": "Menu",
+        "Version": "0.8.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-Provides": ["org.kde.plasma.launchermenu"]
+}

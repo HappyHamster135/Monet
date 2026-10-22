@@ -12,6 +12,42 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 | Monet-0.8.1-Windows.zip | Only for "next to my Windows" when Windows is encrypted |
 | Monet-0.8.1-Linux.tar.gz | Only for adding Monet to an existing Bazzite install |
 
+### New in 0.8.2: the everyday screens
+
+- **Monet's own menu.** The sun in the left island opens your pinned apps
+  and the files you opened last, a search for apps, files and settings that
+  starts as you type, all your apps from A to Z, and you at the foot with
+  Lock and the power sign. The pins you had stay. Before, this was KDE's
+  menu in Monet's colors.
+- **Restart and shut down on Monet's screen.** The desktop softens behind
+  one question, "Restart now?" with the sun on Restart and a countdown, and
+  the screen fades to night before the PC goes. From the power sign,
+  Ctrl+Alt+Del or the PC's power button, it offers sleep, restart, shut down
+  and sign out, and says see you soon.
+- **Monet's password prompt.** When an app needs more rights, Monet says
+  what it wants and asks for your password on its own paper, with Cancel
+  and the sun to allow it. A wrong password shakes it.
+- **Widgets the way a Mac does them.** Right-click the desktop and choose
+  Add or Manage Widgets (or Settings → Light & Wallpaper → Edit widgets): a
+  gallery opens beside your desktop, with Monet's widgets down the side and
+  big cards showing each one as it looks, + Add on each, and Remove for the
+  ones already out. Click one to add it, or drag it where you want it; Done
+  when you're finished. KDE's widgets are a list under More widgets.
+- **Editing the desktop is light.** While you add or move widgets the
+  desktop steps back into a frame on a wash of mist or smoke, instead of
+  KDE's blur of the whole desktop, which stuttered wherever the processor
+  draws the screen, as in a virtual machine.
+- **Widgets from the start.** The placard, Weather and Calendar
+  could miss a desktop when Plasma started slowly, and then never came. Now
+  a new account starts with Monet's layout, and any desktop without them gets
+  them once, trying again at the next sign-in if Plasma wasn't ready.
+- **The weather breathes.** The next four days have room under today.
+
+Updating from 0.8.1: Settings → Updates → Install, then restart. At your
+next sign-in Monet's menu takes the place of KDE's in your panel, with your
+pins, the widgets come if your desktop has none, and the right-click menu
+offers Add or Manage Widgets.
+
 ### New in 0.8.1: just Monet
 
 - **The painting goes with the light.** Choosing Mist or Smoke now changes

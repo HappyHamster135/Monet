@@ -19,12 +19,24 @@ kw_default() { # kw_default <file> <group> <key> <value>
     [ -n "$(kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null)" ] || kw --file "$1" --group "$2" --key "$3" "$4"
 }
 
-# The global theme: islands, painting, placard, colors, Plasma style, icons.
+# Whether the panels are Monet's islands already: on Monet's image a new
+# account starts with them, since Monet's look is the default there.
+monets_panels() {
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s \
+        'print(panels().some(function (p) { return p.widgets("org.monet.games").length > 0 }))' 2>/dev/null | grep -q true
+}
+
+# The global theme: islands, painting, placard, colors, Plasma style, icons. A
+# fresh layout only when the panels aren't Monet's yet: laying it out again
+# would race Plasma's own first start, and forgets the desktop's menu settings.
 if has plasma-apply-lookandfeel; then
-    if [ "${1:-}" = --keep ]; then
+    if [ "${1:-}" = --keep ] || monets_panels; then
         plasma-apply-lookandfeel --apply org.monet.desktop >/dev/null 2>&1
     else
         plasma-apply-lookandfeel --apply org.monet.desktop --resetLayout >/dev/null 2>&1
+        # It forgot the right-click menu's Add Widgets too: monet-fresh puts it back
+        # before Plasma starts next time.
+        rm -f "$CONFIG/monet/menu-add-widgets"
     fi
 fi
 
@@ -225,24 +237,6 @@ panels().forEach(function (panel) {
 JS
 )" >/dev/null 2>&1
 
-# The weather and the month at the top right, also on desktops that kept
-# their layout from before Monet had widgets (a fresh layout has them). Once:
-# taking them away afterwards is someone's choice.
-placed="$CONFIG/monet/widgets-placed"
-if [ ! -e "$placed" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
-desktopsForActivity(currentActivity()).forEach(function (d) {
-    if (d.widgets("org.monet.weather").length > 0 || d.widgets("org.monet.calendar").length > 0)
-        return;
-    var width = 1920;
-    try { width = screenGeometry(d.screen).width } catch (e) {}
-    var right = width - gridUnit * 22;
-    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10);
-    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12);
-});
-JS
-)" >/dev/null 2>&1; then
-    mkdir -p "$CONFIG/monet" && touch "$placed"
-fi
 # Monet's clock in the panel instead of KDE's, on kept panels too (once).
 swapped="$CONFIG/monet/clock-placed"
 if [ ! -e "$swapped" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
@@ -255,6 +249,24 @@ panels().forEach(function (panel) {
 JS
 )" >/dev/null 2>&1; then
     mkdir -p "$CONFIG/monet" && touch "$swapped"
+fi
+# And Monet's menu instead of KDE's, in its place and with its shortcut
+# (once). The pins are KDE's own and stay.
+menu="$CONFIG/monet/menu-placed"
+if [ ! -e "$menu" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+panels().forEach(function (panel) {
+    panel.widgets("org.kde.plasma.kickoff").forEach(function (kickoff) {
+        var place = kickoff.index;
+        var keys = kickoff.globalShortcut;
+        var menu = panel.addWidget("org.monet.menu");
+        kickoff.remove();
+        menu.index = place;
+        menu.globalShortcut = keys || "Alt+F1";
+    });
+});
+JS
+)" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$menu"
 fi
 
 # The lock screen shows the same painting, in the same light.

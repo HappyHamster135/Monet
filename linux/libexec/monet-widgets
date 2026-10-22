@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Puts Monet's widgets on the desktop: the placard, Weather and Calendar, on
+# each desktop that has neither Weather nor Calendar yet (one laid out before
+# Monet had widgets, or where Plasma's first layout found no desktop to put
+# them on). Once per account: taking them away afterwards is someone's
+# choice. monet-session runs it at every sign-in until Plasma had a desktop
+# to put them on.
+set -u
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+placed="$CONFIG/monet/widgets-placed"
+[ -e "$placed" ] && exit 0
+
+# Plasma joins the session bus a little after sign-in.
+for _ in $(seq 60); do
+    busctl --user status org.kde.plasmashell >/dev/null 2>&1 && break
+    sleep 1
+done
+
+answer="$(busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+var seen = 0;
+desktops().forEach(function (d) {
+    seen++;
+    if (d.widgets("org.monet.weather").length > 0 || d.widgets("org.monet.calendar").length > 0)
+        return;
+    var width = 1920;
+    try { width = screenGeometry(d.screen).width } catch (e) {}
+    var right = width - gridUnit * 22;
+    if (d.widgets("org.monet.placard").length === 0)
+        d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12);
+    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10);
+    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12);
+});
+print("desktops " + seen);
+JS
+)" 2>/dev/null)"
+
+# Done only once Plasma had at least one desktop; otherwise, next sign-in.
+case "$answer" in
+    *"desktops "[1-9]*) mkdir -p "$CONFIG/monet" && touch "$placed" ;;
+esac
+exit 0

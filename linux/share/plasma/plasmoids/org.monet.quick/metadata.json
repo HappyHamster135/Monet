@@ -4,7 +4,7 @@
         "Authors": [{ "Name": "Monet" }],
         "Category": "System Information",
         "Description": "Wi-Fi, Bluetooth, sound, brightness and Monet's light in one place",
-        "Icon": "monet-quick",
+        "Icon": "monet-quick-symbolic",
         "Id": "org.monet.quick",
         "License": "GPL-3.0-or-later",
         "Name": "Quick Settings",

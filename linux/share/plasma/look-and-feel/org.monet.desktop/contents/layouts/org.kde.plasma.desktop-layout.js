@@ -38,12 +38,7 @@ for (var i = 0; i < desktops.length; i++) {
 }
 
 var left = island("left")
-var menu = left.addWidget("org.kde.plasma.kickoff")
-menu.currentConfigGroup = ["General"]
-menu.writeConfig("icon", "monet")
-menu.writeConfig("favoritesDisplay", 0)
-menu.writeConfig("applicationsDisplay", 0)
-menu.writeConfig("showActionButtonCaptions", false)
+var menu = left.addWidget("org.monet.menu")
 menu.currentConfigGroup = ["Shortcuts"]
 menu.writeConfig("global", "Alt+F1")
 left.addWidget("org.monet.games")

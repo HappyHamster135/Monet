@@ -1,16 +1,30 @@
 #!/usr/bin/env bash
-# Runs at sign-in, before KWin and Plasma start. When Monet has changed, it
-# forgets what KDE measured in Monet's pictures before: KDE keeps those
-# measurements by file and modification time, and on Monet's image every file
-# keeps the same time from one version to the next, so a new version would be
-# drawn with the old one's sizes (window buttons missing, glass out of line,
-# new icons not found).
+# Runs at sign-in, before KWin and Plasma start, for what Plasma only reads as
+# it starts. When Monet has changed, it forgets what KDE measured in Monet's
+# pictures before: KDE keeps those measurements by file and modification time,
+# and on Monet's image every file keeps the same time from one version to the
+# next, so a new version would be drawn with the old one's sizes (window
+# buttons missing, glass out of line, new icons not found).
 set -u
 
 BINDIR="@BINDIR@"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 stamp="$CACHE/monet-version"
 version="$("$BINDIR/monet" --version 2>/dev/null)"
+
+# The desktop's right-click menu offers Add or Manage Widgets, which KDE hides
+# there: once per account, here because Plasma reads it only as it starts.
+# Without any mouse settings yet (a new account), KDE's own come first.
+if [ ! -e "$CONFIG/monet/menu-add-widgets" ] && command -v kwriteconfig6 >/dev/null; then
+    rc=plasma-org.kde.plasma.desktop-appletsrc
+    if [ -z "$(kreadconfig6 --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" 2>/dev/null)" ]; then
+        kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" org.kde.contextmenu
+        kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste
+    fi
+    kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" --key "add widgets" true
+    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-add-widgets"
+fi
 
 [ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit 0
 rm -f "$CACHE/ksvg-elements" "$CACHE"/plasma_theme_*.kcache "$CACHE"/plasma-svgelements* "$CACHE/icon-cache.kcache"

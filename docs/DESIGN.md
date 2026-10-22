@@ -212,12 +212,36 @@ the same ink; anything not drawn falls back to Breeze.
   image puts `MonetLockScreen.qml` beside KDE's files there and swaps KDE's
   `LockScreen.qml` for one that opens Monet's, or KDE's own if Monet's can't
   load. Everything that unlocks works as in KDE's `LockScreenUi.qml`.
+- **Restart and shut down** (`linux/share/monet/logout`, put into both global
+  themes' `logout/` by install.sh): the desktop softens behind a sheet of
+  glass with one question. Asked to restart, shut down or sign out, it says
+  "Restart now?" in Fraunces, counts down from 30 ("Your PC restarts in 30
+  seconds. Open apps close, so save your work first.") and puts the sun on
+  the answer beside Cancel. From the menu's power sign, Ctrl+Alt+Del or the
+  power button, it offers all of them under your face and "See you soon":
+  the moon to sleep, restart, the setting sun to shut down, sign out. Going
+  ahead, the screen fades to night (Sunset) first; Esc or a click outside
+  cancels; a key on any screen stops the countdown on all of them (`timer.js`).
+  KDE's logout greeter shows KDE's own if this can't load.
+- **Password prompt** (`image/password`): when an app needs more rights, a
+  sheet of paper or smoke says "Allow this?", what the app wants in its own
+  words and for whom, then the password well, Cancel and the sun to allow;
+  Details shows what exactly is asked for. A wrong password shakes it. KDE's
+  agent builds its page into itself, so the image builds the agent (the same
+  version as its Plasma) with Monet's page instead, keeping KDE's inside for
+  when Monet's can't load, and starts that build in KDE's place. If the
+  build fails, the image keeps KDE's prompt.
 
 ## Widgets
 
 Like a desk: glass cards on the painting, added from the desktop's widget
-gallery. A fresh desktop has the placard, Weather and Calendar, and so does one that
-kept its layout from before there were widgets (once).
+gallery. A fresh desktop has the placard, Weather and Calendar: on the image a
+new account starts with Monet's look, so Plasma lays them out itself as it
+first starts, and `monet-widgets` gives any desktop without Weather or Calendar
+all three, once (one laid out before there were widgets, or where Plasma's
+first layout found no desktop). It looks at every desktop whatever its
+activity, and counts it done only once Plasma had one, so a slow first start
+is tried again at the next sign-in.
 
 - **The glass** (`linux/share/monet/widgets/Glass.qml`, copied into each widget
   by install.sh): widgets share the desktop's surface with the wallpaper, so
@@ -237,6 +261,49 @@ kept its layout from before there were widgets (once).
   the sun, and next.
 - **Note**: paper pinned with a dab of lily; kept as you type.
 - **Photo Frame**: your Pictures in a gilt frame, a new one every ten minutes.
+- **The gallery** (`linux/share/monet/explorer`), after the way a Mac edits
+  its widgets: from the desktop's right-click menu (Add or Manage Widgets,
+  which KDE leaves out of it and `monet-fresh` puts back before Plasma
+  starts) or Settings → Light & Wallpaper → Edit widgets. Glass down half the
+  screen with "Widgets" in Fraunces and Done; down its left a search well and
+  Monet's widgets for where you're adding one (the desktop's or the bar's),
+  each with a small picture, then More widgets; beside them big cards, two
+  side by side or the chosen one alone, each with the widget's name, what it
+  does, a picture of it, + Add in lily, and "On your desktop" with Remove for
+  the ones out already. Everyone else's widgets (KDE's too) are a plain list
+  under More widgets. Click a card to add it, or drag it where you want it.
+  The pictures are each widget on its patch of The Hours, in mist and in
+  smoke (`contents/screenshot.png` and `screenshot-smoke.png`, which KDE's
+  gallery shows too); the bar's are their islands. Plasma reads the gallery
+  from its desktop shell, so the image keeps KDE's as `KdeWidgetExplorer.qml`
+  and swaps in a `WidgetExplorer.qml` that opens Monet's, or KDE's if
+  Monet's can't load.
+- **Edit mode** (`linux/share/monet/editmode`), while the gallery is open or
+  after a press and hold on a widget: Plasma shrinks the desktop beside the
+  gallery, as the column of current widgets on a Mac. Monet puts it in a
+  frame of paper or smoke on a wash of mist or smoke, with a line on how to
+  move, resize and remove widgets, More (bars and desktops), Add widgets and
+  Done. KDE's edit mode blurs the whole desktop behind the frame and draws it
+  twice, at every change, which stutters wherever the processor draws the
+  screen (as in a virtual machine); the wash doesn't. Shell file, kept KDE's
+  and swapped as with the gallery (`DesktopEditMode.qml`).
+
+## The menu
+
+The sun in the left island (`org.monet.menu`, instead of KDE's Kickoff):
+one sheet on the popover's glass. At the top a search well, typed into
+straight away; then **Pinned**, six to a row, and **Recent**, the files you
+opened last, each with where it is. All apps lists everything from A to Z
+under letters in Fraunces, and typing anywhere searches apps, files and
+settings at once, with lily on the result Enter opens. At the foot, your
+face (or your initial on a dab of lily) and name, which open Accounts, then
+Lock and the power sign, which asks on the restart and shut-down screen.
+The Meta key and Alt+F1 open it. Right-click an app to pin or unpin it.
+
+KDE's menu models do the work (`org.kde.plasma.private.kicker`), so the
+pins are KDE's: a new account starts with Monet's (`kicker-extra-favoritesrc`)
+and one that had KDE's menu keeps its own. `monet-look` puts it where KDE's
+menu was on kept panels, with its shortcut, once.
 
 ## Apps
 
@@ -289,7 +356,7 @@ night in Smoke (`make-store.py`).
 | Glide | 320 ms | `cubic-bezier(.2, .9, .25, 1.08)` | a pebble moving to what you chose: Settings' pages, Quick Settings' light |
 | Settle | 200 ms | `cubic-bezier(.4, 0, 1, 1)` | closing: leaving is quicker than arriving |
 | Press | 160 ms | `cubic-bezier(.2, .9, .25, 1.25)` | buttons, tiles, the islands |
-| Sunset | 900 ms | `cubic-bezier(.4, 0, .2, 1)` | the screen fades to night before Windows |
+| Sunset | 900 ms | `cubic-bezier(.4, 0, .2, 1)` | the screen fades to night before Windows, a restart or shutting down |
 
 Desktop animation speed 0.8x. Windows scale gently in and out. With
 animations turned off in More settings, Monet's widgets fade or cut.
@@ -301,6 +368,8 @@ animations turned off in More settings, Monet's widgets fade or cut.
 - **Play on Windows:** a sheet rises with the game's cover. On Restart & Play
   the sun sets: the screen fades to night and the sun sinks into the water.
 - **Lock screen and sign-in:** the same painting, in the same light.
+- **Restart and shut down:** the desktop softens behind one question, and
+  going ahead, the screen fades to night before the PC goes.
 
 ## The installer
 

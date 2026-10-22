@@ -97,7 +97,7 @@ class VM:
             time.sleep(0.25)
 
     def type(self, text):
-        names = {" ": "spc", ".": "dot", "-": "minus", "/": "slash"}
+        names = {" ": "spc", ".": "dot", "-": "minus", "/": "slash", "'": "apostrophe", ";": "semicolon"}
         for ch in text:
             keys = ["shift", ch.lower()] if ch.isupper() else [names.get(ch, ch)]
             self.qmp({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": k} for k in keys]}})
@@ -157,8 +157,9 @@ PASSWORD = "monet-test"
 
 def tour(vm, run):
     """Monet as people see it, after the first start: the sign-in screen, the
-    desktop, the app menu, Files, Settings, and the lock screen, at rest, awake
-    and unlocked. Returns whether the password unlocked it."""
+    desktop, the app menu and its search, the restart and shut-down screen, the
+    widget gallery, Files, Settings, and the lock screen, at rest, awake and
+    unlocked. Returns whether the password unlocked it."""
     if not settle(vm, 600, every=10):
         run.shot("sign-in-timeout")
         return False
@@ -190,6 +191,29 @@ def tour(vm, run):
     vm.keys("meta_l")
     time.sleep(4)
     run.shot("app-menu")
+    # Typing goes straight into the menu's search.
+    vm.type("te")
+    time.sleep(4)
+    run.shot("app-menu-search")
+    vm.keys("esc")
+    time.sleep(1)
+    vm.keys("esc")
+    time.sleep(2)
+    # Ctrl+Alt+Del asks what to do: Monet's restart and shut-down screen.
+    vm.keys("ctrl-alt-delete")
+    time.sleep(5)
+    run.shot("leave-screen")
+    vm.keys("esc")
+    time.sleep(3)
+    # The widget gallery, opened the way Add Widgets… does, once Terminal has closed.
+    vm.keys("ctrl-alt-t")
+    time.sleep(8)
+    vm.type("setsid -f sh -c 'sleep 4; busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell toggleWidgetExplorer'")
+    vm.keys("ret")
+    time.sleep(1)
+    vm.keys("ctrl-d")
+    time.sleep(10)
+    run.shot("widget-gallery")
     vm.keys("esc")
     time.sleep(2)
     vm.keys("meta_l-e")

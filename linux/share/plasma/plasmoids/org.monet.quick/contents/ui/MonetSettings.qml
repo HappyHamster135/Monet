@@ -1307,6 +1307,24 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
+                // The widget gallery, also from here: Settings steps aside for the desktop.
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Widgets")
+                        detail: i18n("Add, move or take away the cards on your desktop")
+                        onTapped: sheet.ask("widgets")
+                        Pill {
+                            tone: look
+                            kind: "lily"
+                            text: i18n("Edit widgets")
+                            onClicked: sheet.ask("widgets")
+                        }
+                    }
+                }
             }
         }
 

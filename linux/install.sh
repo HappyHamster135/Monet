@@ -79,7 +79,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
@@ -107,9 +107,11 @@ tree "$SRC/share/plasma/desktoptheme/monet" "$DATADIR/plasma/desktoptheme/monet"
 tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/monet-solid"
 for theme in org.monet.desktop org.monet.smoke.desktop; do
     tree "$SRC/share/plasma/look-and-feel/$theme" "$DATADIR/plasma/look-and-feel/$theme"
+    # The restart and shut-down screen, the same in both lights.
+    tree "$SRC/share/monet/logout" "$DATADIR/plasma/look-and-feel/$theme/contents/logout"
 done
-for applet in org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather org.monet.calendar \
-    org.monet.nowplaying org.monet.notes org.monet.frame; do
+for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
+    org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 # The desktop widgets share one glass.
@@ -208,6 +210,9 @@ Version=$("$BINDIR/monet" --version 2>/dev/null | cut -d' ' -f2)
 Variant=
 Website=https://github.com/HappyHamster135/Monet
 ABOUT
+    # New accounts start with Monet's look, so Plasma lays out Monet's islands
+    # and widgets itself as it first starts, instead of KDE's to be replaced.
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage org.monet.desktop
     # Bazzite's greetings: its setup portal and announcements at the first
     # sign-in, and its welcome in every new terminal. Monet Setup and Monet
     # Settings have that covered.
@@ -269,6 +274,32 @@ TMP
     if [ -f "$lock/LockScreenUi.qml" ] && [ -f "$lock/MediaControls.qml" ]; then
         install -m 644 "$SRC/share/monet/lockscreen/MonetLockScreen.qml" "$lock/MonetLockScreen.qml"
         install -m 644 "$SRC/share/monet/lockscreen/LockScreen.qml" "$lock/LockScreen.qml"
+    fi
+    # The widget gallery (Add Widgets…) lives in the desktop shell as well.
+    # KDE's file is kept as KdeWidgetExplorer.qml, and WidgetExplorer.qml
+    # becomes one that opens Monet's gallery, or KDE's if Monet's can't load.
+    explorer=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/explorer
+    if [ -f "$explorer/WidgetExplorer.qml" ] && [ -f "$explorer/AppletDelegate.qml" ]; then
+        [ -f "$explorer/KdeWidgetExplorer.qml" ] || mv "$explorer/WidgetExplorer.qml" "$explorer/KdeWidgetExplorer.qml"
+        install -m 644 "$SRC/share/monet/explorer/MonetWidgetExplorer.qml" "$explorer/MonetWidgetExplorer.qml"
+        install -m 644 "$SRC/share/monet/explorer/WidgetExplorer.qml" "$explorer/WidgetExplorer.qml"
+    fi
+    # And edit mode, around the shrunken desktop while widgets are added or
+    # moved: KDE's kept as KdeDesktopEditMode.qml, and DesktopEditMode.qml opens
+    # Monet's lighter one, or KDE's if Monet's can't load.
+    views=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/views
+    if [ -f "$views/DesktopEditMode.qml" ] && [ -f "$views/Desktop.qml" ]; then
+        [ -f "$views/KdeDesktopEditMode.qml" ] || mv "$views/DesktopEditMode.qml" "$views/KdeDesktopEditMode.qml"
+        install -m 644 "$SRC/share/monet/editmode/MonetDesktopEditMode.qml" "$views/MonetDesktopEditMode.qml"
+        install -m 644 "$SRC/share/monet/editmode/DesktopEditMode.qml" "$views/DesktopEditMode.qml"
+    fi
+    # The password prompt: KDE's agent built with Monet's page (image/password),
+    # started instead of KDE's build. Without it, KDE's prompt stays.
+    if [ -x "$SRC/password/monet-password" ]; then
+        install -m 755 "$SRC/password/monet-password" "$LIBEXECDIR/monet-password"
+        install -d "$USERUNITDIR/plasma-polkit-agent.service.d"
+        printf '[Service]\nExecStart=\nExecStart=%s\n' "$LIBEXECDIR/monet-password" \
+            > "$USERUNITDIR/plasma-polkit-agent.service.d/monet.conf"
     fi
 else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \

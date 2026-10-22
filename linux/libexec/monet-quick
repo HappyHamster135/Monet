@@ -25,6 +25,7 @@
     monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
     monet-quick firmware-update          install them
     monet-quick restart                  ask to restart, the way the app menu does
+    monet-quick widgets                  open the widget gallery, as the desktop's Add Widgets does
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
                                          sound, windows, updates or about)
@@ -562,6 +563,9 @@ def main(argv):
         emit(firmware_update())
     elif cmd == "restart":
         restart()
+    elif cmd == "widgets":
+        # Plasma's widget gallery, as the desktop's Add Widgets opens it.
+        run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "toggleWidgetExplorer")
     elif cmd == "kde" and args and args[0] in KDE_PAGES:
         page = KDE_PAGES[args[0]]
         subprocess.Popen(["systemsettings"] + ([page] if page else []), start_new_session=True,

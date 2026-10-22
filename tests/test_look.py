@@ -21,10 +21,12 @@ SHARE = ROOT / "linux" / "share"
 
 
 def qml_files():
-    """Every QML file: Plasma's pieces, the lock screen and Monet Setup's screens."""
+    """Every QML file: Plasma's pieces, the lock, shut-down and password screens, the widget
+    gallery and Monet Setup's screens."""
     return (list(PLASMA.rglob("*.qml")) + list((SHARE / "monet/lockscreen").glob("*.qml"))
-            + list((SHARE / "monet/widgets").glob("*.qml"))
-            + list((ROOT / "setup/qml").rglob("*.qml")))
+            + list((SHARE / "monet/widgets").glob("*.qml")) + list((SHARE / "monet/logout").glob("*.qml"))
+            + list((SHARE / "monet/explorer").glob("*.qml")) + list((SHARE / "monet/editmode").glob("*.qml"))
+            + list((ROOT / "image/password").glob("*.qml")) + list((ROOT / "setup/qml").rglob("*.qml")))
 PLASMA = SHARE / "plasma"
 
 
@@ -867,12 +869,28 @@ class DesktopWidgets(unittest.TestCase):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
             for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
                 self.assertIn(f'd.addWidget("{widget}"', layout)
-        # Desktops that kept their layout from before there were widgets get them too, once.
-        look = (ROOT / "linux/libexec/monet-look").read_text()
-        placing = look.split('placed="$CONFIG/monet/widgets-placed"')[1].split("\nfi\n")[0]
-        self.assertIn('d.addWidget("org.monet.weather"', placing)
+        # Any desktop without them gets them once: also one laid out before Monet had widgets, or where
+        # Plasma's first layout found no desktop. Every desktop, whatever its activity, and done only once
+        # Plasma had one: until then, again at every sign-in, after the look.
+        placing = (ROOT / "linux/libexec/monet-widgets").read_text()
+        self.assertIn("desktops().forEach(", placing)
+        self.assertNotIn("desktopsForActivity", placing)
+        for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
+            self.assertIn(f'd.addWidget("{widget}"', placing)
         self.assertIn('d.widgets("org.monet.weather").length > 0', placing)
-        self.assertIn('touch "$placed"', placing)
+        self.assertIn('*"desktops "[1-9]*) mkdir -p "$CONFIG/monet" && touch "$placed"', placing)
+        self.assertIn("busctl --user status org.kde.plasmashell", placing)
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertGreater(session.index('"$LIBEXECDIR/monet-widgets"'), session.index('"$LIBEXECDIR/monet-look" --keep'))
+        self.assertNotIn("widgets-placed", (ROOT / "linux/libexec/monet-look").read_text())
+        self.assertIn("monet-widgets", (ROOT / "linux/install.sh").read_text())
+        self.assertIn("monet-widgets", (ROOT / "linux/uninstall.sh").read_text())
+        # New accounts on the image start with Monet's look, and so its layout; the look then lays the
+        # panels out afresh only when they aren't Monet's islands yet.
+        self.assertIn("kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage org.monet.desktop",
+                      (ROOT / "linux/install.sh").read_text())
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn('if [ "${1:-}" = --keep ] || monets_panels; then', look)
 
     def test_the_panel_clock_is_monets(self):
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
@@ -893,7 +911,7 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn("kw_default dolphinrc General ShowStatusBar FullWidth", (ROOT / "linux/libexec/monet-look").read_text())
 
     def test_settings_have_their_schema(self):
-        for widget in ("org.monet.weather", "org.monet.notes"):
+        for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu"):
             schema = (PLASMA / "plasmoids" / widget / "contents/config/main.xml").read_text()
             used = set(re.findall(r"Plasmoid\.configuration\.(\w+)", (PLASMA / "plasmoids" / widget / "contents/ui/main.qml").read_text()))
             for key in used:
@@ -1069,6 +1087,150 @@ class StartAndSignIn(unittest.TestCase):
             self.assertIn(f"L+ /var/lib/plasmalogin/.config/{config} ", tmp)
         self.assertNotIn("sddm", install.lower())
 
+
+class EverydayScreens(unittest.TestCase):
+    """Monet's menu, the restart and shut-down screen, the password prompt and the widget gallery."""
+
+    def test_the_menu_is_monets(self):
+        folder = PLASMA / "plasmoids/org.monet.menu"
+        meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+        # The Meta key opens the panel widget that says it's the app menu.
+        self.assertIn("org.kde.plasma.launchermenu", meta["X-Plasma-Provides"])
+        self.assertEqual(meta["KPlugin"]["Icon"], "monet")
+        menu = (folder / "contents/ui/main.qml").read_text(encoding="utf-8")
+        # KDE's own models: the same pins, search, recent files and launching as KDE's menu.
+        for piece in ("Kicker.RootModel", "Kicker.RunnerModel", "Kicker.RecentUsageModel", "KICKER_ALL_MODEL",
+                      'initForClient("org.monet.menu.favorites.instance-"', "portOldFavorites(",
+                      "model.trigger(index", "addFavorite(", "removeFavorite("):
+            self.assertIn(piece, menu)
+        # Lock, the power sign (Monet's restart and shut-down screen) and Accounts.
+        for piece in ("sessions.lock()", "sessions.requestLogoutPrompt()", '"@LIBEXECDIR@/monet-quick kde users"'):
+            self.assertIn(piece, menu)
+        self.assertIn('"users": "kcm_users"', (ROOT / "linux/libexec/monet-quick").read_text())
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
+            self.assertIn('left.addWidget("org.monet.menu")', layout)
+            self.assertNotIn("kickoff", layout)
+        # Kept panels get it too, once, where KDE's menu was and with its shortcut.
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        swap = look.split('menu="$CONFIG/monet/menu-placed"')[1].split("\nfi\n")[0]
+        for piece in ('panel.widgets("org.kde.plasma.kickoff")', 'panel.addWidget("org.monet.menu")', "kickoff.remove()",
+                      "menu.index = place", "menu.globalShortcut = keys", 'touch "$menu"'):
+            self.assertIn(piece, swap)
+        self.assertIn("org.monet.menu", (ROOT / "linux/install.sh").read_text())
+        self.assertIn("plasmoids/org.monet.menu", (ROOT / "linux/uninstall.sh").read_text())
+
+    def test_restart_screen_is_monets_in_both_lights(self):
+        logout = (SHARE / "monet/logout/Logout.qml").read_text(encoding="utf-8")
+        # KDE's logout greeter connects these by name, and hands over these as context.
+        for signal in ("logoutRequested()", "haltRequested()", "haltUpdateRequested()", "suspendRequested(int spdMethod)",
+                       "rebootRequested()", "rebootRequested2(int opt)", "rebootUpdateRequested()", "cancelRequested()",
+                       "lockScreenRequested()", "cancelSoftwareUpdateRequested()"):
+            self.assertIn(f"signal {signal}", logout)
+        for context in ("sdtype", "ShutdownType.ShutdownTypeDefault", "ShutdownType.ShutdownTypeReboot",
+                        "ShutdownType.ShutdownTypeHalt", "maysd", "canLogout", "spdMethods.SuspendState",
+                        "softwareUpdatePending", "rebootToFirmwareSetup", "rebootToBootLoaderEntry"):
+            self.assertIn(context, logout)
+        # One countdown for all screens: a key on any of them stops it everywhere.
+        self.assertIn('import "timer.js" as AutoTriggerTimer', logout)
+        timer = (SHARE / "monet/logout/timer.js").read_text()
+        for function in ("addCancelAutoTriggerCallback", "cancelAutoTrigger"):
+            self.assertIn(f"function {function}(", timer)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('tree "$SRC/share/monet/logout" "$DATADIR/plasma/look-and-feel/$theme/contents/logout"', install)
+
+    def test_password_prompt_is_monets_inside_kdes_agent(self):
+        page = (ROOT / "image/password/QuickAuthDialog.qml").read_text(encoding="utf-8")
+        # What the agent's C++ sets, reads, connects to and calls by name; its root is a window.
+        for part in ("property alias password:", "property int inlineMessageType", "property string inlineMessageText",
+                     "property alias identitiesModel:", "property alias identitiesCurrentIndex:", "property alias selectedIdentity:",
+                     "property string mainText", "property string descriptionString", "property string descriptionActionId",
+                     "property string descriptionVendorName", "property string descriptionVendorUrl",
+                     "signal accept()", "signal reject()", "signal userSelected()",
+                     "function authenticationFailure()", "function request()", "IdentitiesModel {}"):
+            self.assertIn(part, page)
+        self.assertRegex(page, r"(?m)^Window \{")
+        # Built against the image's own Plasma, with KDE's page kept in for when Monet's can't load.
+        build = (ROOT / "image/password/build.sh").read_text()
+        self.assertIn("rpm -q --qf '%{version}' polkit-kde", build)
+        self.assertIn('--branch "v$version"', build)
+        self.assertIn("mv qml/QuickAuthDialog.qml qml/KdeQuickAuthDialog.qml", build)
+        self.assertIn('grep -q \'engine->load("qrc:/qml/KdeQuickAuthDialog.qml")\' QuickAuthDialog.cpp', build)
+        containerfile = (ROOT / "image/Containerfile").read_text()
+        self.assertIn("bazzite-nvidia-open:stable AS password", containerfile)
+        self.assertIn("sh /src/password/build.sh /out || rm -rf /out/*", containerfile)
+        self.assertIn("COPY --from=password /out /tmp/monet/password", containerfile)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('if [ -x "$SRC/password/monet-password" ]; then', install)
+        self.assertIn('"$USERUNITDIR/plasma-polkit-agent.service.d/monet.conf"', install)
+
+    def test_widget_gallery_is_monets_and_always_opens(self):
+        explorer = SHARE / "monet/explorer"
+        entry = (explorer / "WidgetExplorer.qml").read_text(encoding="utf-8")
+        # What Plasma's Desktop.qml gives and reads; Monet's gallery, or KDE's if Monet's can't load.
+        for part in ("property QtObject containment", "property PlasmaCore.Dialog sidePanel", "readonly property bool preventWindowHide",
+                     "readonly property bool outputOnly", "signal closed()", 'Qt.resolvedUrl("MonetWidgetExplorer.qml")',
+                     "monet.status === Loader.Error", 'Qt.resolvedUrl("KdeWidgetExplorer.qml")'):
+            self.assertIn(part, entry)
+        gallery = (explorer / "MonetWidgetExplorer.qml").read_text(encoding="utf-8")
+        for part in ("root.widgetExplorer", "pendingUninstallTimer.running", "explorer.addApplet(pluginName)",
+                     "explorer.removeAllInstances(pluginName)", '"text/x-plasmoidservicename"', "widgetsModel.searchTerm",
+                     "KItemModels.KSortFilterProxyModel",
+                     # Done ends the editing: the desktop comes back to full size.
+                     "containment.corona.editMode = false"):
+            self.assertIn(part, gallery)
+        # Its lists name every Monet widget once: the desktop's and the bar's.
+        lists = re.search(r'mineIds: forBar \? "([^"]+)" : "([^"]+)"', gallery)
+        named = lists.group(1).split("|") + lists.group(2).split("|")
+        widgets = sorted(f.name.removeprefix("org.monet.") for f in (PLASMA / "plasmoids").iterdir())
+        self.assertEqual(sorted(named), widgets)
+        # Every one of them brings a picture of itself, in mist and in smoke.
+        for name in named:
+            for picture in ("screenshot.png", "screenshot-smoke.png"):
+                self.assertTrue((PLASMA / "plasmoids" / f"org.monet.{name}" / "contents" / picture).is_file(), (name, picture))
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("explorer=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/explorer", install)
+        self.assertIn('mv "$explorer/WidgetExplorer.qml" "$explorer/KdeWidgetExplorer.qml"', install)
+        for name in ("MonetWidgetExplorer.qml", "WidgetExplorer.qml"):
+            self.assertIn(f'"$SRC/share/monet/explorer/{name}" "$explorer/{name}"', install)
+
+    def test_edit_mode_is_monets_and_light(self):
+        editmode = SHARE / "monet/editmode"
+        entry = (editmode / "DesktopEditMode.qml").read_text(encoding="utf-8")
+        # Desktop.qml places the shrunken desktop by these; Monet's, or KDE's if Monet's can't load.
+        for part in ("property real centerX", "property real centerY", 'Qt.resolvedUrl("MonetDesktopEditMode.qml")',
+                     "monet.status === Loader.Error", 'Qt.resolvedUrl("KdeDesktopEditMode.qml")'):
+            self.assertIn(part, entry)
+        page = (editmode / "MonetDesktopEditMode.qml").read_text(encoding="utf-8")
+        for part in ("containment.plasmoid.corona.editMode", "editModeRect", "containmentParent.scaleFactor",
+                     'internalAction("add widgets")', "sidePanel.visible"):
+            self.assertIn(part, page)
+        # No blur of the whole desktop at every change: a wash instead.
+        self.assertNotIn("blurEnabled", page)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("views=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/views", install)
+        self.assertIn('mv "$views/DesktopEditMode.qml" "$views/KdeDesktopEditMode.qml"', install)
+        for name in ("MonetDesktopEditMode.qml", "DesktopEditMode.qml"):
+            self.assertIn(f'"$SRC/share/monet/editmode/{name}" "$views/{name}"', install)
+
+    def test_adding_widgets_is_easy_to_find(self):
+        # The desktop's right-click menu offers Add or Manage Widgets (KDE hides it there), set before
+        # Plasma starts, and again after a fresh layout forgot it.
+        fresh = (ROOT / "linux/libexec/monet-fresh").read_text()
+        self.assertIn('--group ActionPlugins --group 0 --group "RightButton;NoModifier" --key "add widgets" true', fresh)
+        self.assertIn('--key "RightButton;NoModifier" org.kde.contextmenu', fresh)
+        self.assertLess(fresh.index("add widgets"), fresh.index('[ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit 0'))
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        reset = look.split("--resetLayout >/dev/null 2>&1", 1)[1].split("\nfi\n", 1)[0]
+        self.assertIn('rm -f "$CONFIG/monet/menu-add-widgets"', reset)
+        # Monet Settings' Light & Wallpaper opens the gallery too.
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('sheet.ask("widgets")', settings)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('elif cmd == "widgets":', quick)
+        self.assertIn('"org.kde.PlasmaShell", "toggleWidgetExplorer"', quick)
+
+
 class MonetSettings(unittest.TestCase):
     QUICK = PLASMA / "plasmoids/org.monet.quick/contents/ui"
 
@@ -1115,8 +1277,9 @@ class MonetSettings(unittest.TestCase):
 
 class Scripts(unittest.TestCase):
     def test_shell_scripts_parse(self):
-        for script in ("monet-session", "monet-look", "monet-light", "monet-fresh"):
+        for script in ("monet-session", "monet-look", "monet-light", "monet-fresh", "monet-widgets"):
             subprocess.run(["bash", "-n", str(ROOT / "linux/libexec" / script)], check=True)
+        subprocess.run(["sh", "-n", str(ROOT / "image/password/build.sh")], check=True)
 
     def test_quick_helper_compiles(self):
         source = (ROOT / "linux/libexec/monet-quick").read_text()

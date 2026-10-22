@@ -37,7 +37,7 @@ systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc
 systemctl --global unmask flatpak-user-update.timer >/dev/null 2>&1 || true
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
@@ -49,7 +49,7 @@ rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colors
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
     "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
     "$PREFIX/share/plasma/plasmoids/org.monet.weather" "$PREFIX/share/plasma/plasmoids/org.monet.calendar" \
-    "$PREFIX/share/plasma/plasmoids/org.monet.clock" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.clock" "$PREFIX/share/plasma/plasmoids/org.monet.menu" \
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
