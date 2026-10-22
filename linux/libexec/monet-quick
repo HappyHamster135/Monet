@@ -26,6 +26,8 @@
     monet-quick firmware-update          install them
     monet-quick restart                  ask to restart, the way the app menu does
     monet-quick widgets                  open the widget gallery, as the desktop's Add Widgets does
+    monet-quick music                    the apps that play music (the default first) and the Store, as JSON
+    monet-quick launch ID                start an app by its menu entry's file name (as hex of its UTF-8)
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
                                          sound, windows, updates or about)
@@ -369,6 +371,73 @@ def restart():
         run("systemctl", "reboot")
 
 
+# Music ---------------------------------------------------------------------
+
+def app_dirs():
+    """Where the menu's apps are described, nearest first (Flatpak's among the data dirs)."""
+    home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    dirs = [home] + [Path(d) for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d]
+    return [d / "applications" for d in dirs]
+
+
+def desktop_entry(text):
+    """The [Desktop Entry] group of a .desktop file, as a dict."""
+    entry, inside = {}, False
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("["):
+            inside = line == "[Desktop Entry]"
+        elif inside and "=" in line and not line.startswith("#"):
+            key, value = line.split("=", 1)
+            entry.setdefault(key.strip(), value.strip())
+    return entry
+
+
+def music_apps(entries, default=""):
+    """The apps that play music, from (file name, entry) pairs, nearest first: the
+    nearest copy of an entry decides (a hidden local copy hides the app). The PC's
+    default player first, then by name."""
+    seen, apps = set(), []
+    for app_id, entry in entries:
+        if app_id in seen:
+            continue
+        seen.add(app_id)
+        kinds = set(filter(None, entry.get("Categories", "").split(";")))
+        if (entry.get("Type") == "Application" and entry.get("NoDisplay") != "true" and entry.get("Hidden") != "true"
+                and "Audio" in kinds and kinds & {"Player", "Music"}):
+            apps.append({"id": app_id, "name": entry.get("Name", app_id), "icon": entry.get("Icon", "")})
+    apps.sort(key=lambda app: (app["id"] != default, app["name"].lower()))
+    return apps
+
+
+def music():
+    """What Now Playing offers when nothing plays: the music apps, and the Store for more."""
+    entries = []
+    for folder in app_dirs():
+        for path in sorted(folder.glob("*.desktop")) if folder.is_dir() else ():
+            try:
+                entries.append((path.name, desktop_entry(path.read_text(encoding="utf-8", errors="replace"))))
+            except OSError:
+                pass
+    default = (run("xdg-mime", "query", "default", "audio/mpeg") or "").strip()
+    stores = ("io.github.kolunmi.Bazaar.desktop", "org.kde.discover.desktop")
+    store = next((s for s in stores if any((folder / s).is_file() for folder in app_dirs())), "")
+    return {"apps": music_apps(entries, default), "store": store}
+
+
+def launch(app_id):
+    """Starts an app by its menu entry's file name, the way the menu would."""
+    if not re.fullmatch(r"[\w.+-]+\.desktop", app_id):
+        return
+    path = next((folder / app_id for folder in app_dirs() if (folder / app_id).is_file()), None)
+    if path is None:
+        return
+    for command in (["kioclient", "exec", str(path)], ["gio", "launch", str(path)], ["gtk-launch", app_id[:-8]]):
+        if shutil.which(command[0]):
+            subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+
+
 def plasma_script(script):
     return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
 
@@ -563,6 +632,10 @@ def main(argv):
         emit(firmware_update())
     elif cmd == "restart":
         restart()
+    elif cmd == "music":
+        emit(music())
+    elif cmd == "launch" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        launch(unhex(args[0]))
     elif cmd == "widgets":
         # Plasma's widget gallery, as the desktop's Add Widgets opens it.
         run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "toggleWidgetExplorer")

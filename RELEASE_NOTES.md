@@ -12,6 +12,41 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 | Monet-0.8.2-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
 | Monet-0.8.2-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
+### New in 0.8.3: widgets you can use
+
+- **The Calendar opens its days.** Click a day for its page: the date in
+  Fraunces, ‹ › to the day before or after, Today to come back, and a note
+  for that day, kept as you type. Days with a note have a dot of lily under
+  them. Make the widget wide and the month and the day sit side by side;
+  the wheel turns the months.
+- **Now Playing starts the music.** With nothing playing it offers your
+  music apps, the PC's own first, or the Store to find one. While something
+  plays, a line shows how far along it is, with the time gone and the time
+  left: click or drag it to go there. The cover brings the player forward.
+- **The Photo Frame fades and steps.** Pictures fade from one to the next,
+  ‹ › appear while you point at the frame, and a click opens the picture in
+  Photos.
+- **Account pictures from Monet's world.** Change Avatar offers pieces of
+  The Hours (sunrise, midday on the water, dusk, the moon, a boatman, the
+  harbor's lights) and small paintings (a water lily, poppies, the Japanese
+  bridge, a haystack, the magpie, irises, a parasol, a sailboat) instead of
+  KDE's dragon and photos.
+- **One switch for the light.** Brightness and Night Light are in Quick
+  Settings, beside Mist and Smoke, so KDE's own Brightness panel, with its
+  second "Dark Mode" switch, leaves the bar.
+- **The bar's highlight keeps to its icon.** The pebble behind an open icon
+  in the bar no longer reaches over the icons beside it.
+- **Trash is the garden pot again.** 0.8.1's sign for Trash in menus had
+  taken the dock's painting; menus keep the sign and the dock the pot.
+- **Monet's own sounds.** Messages, warnings and errors, a drive or the
+  charger plugged in or out, a low battery, the volume step and emptying the
+  trash sound like Monet now: soft felt and glass, quiet and warm. Before,
+  they were KDE's.
+
+Updating from 0.8.2: Settings → Updates → Install, then restart. At your
+next sign-in KDE's Brightness panel leaves the bar, and Monet's sounds take
+over from KDE's.
+
 ### New in 0.8.2: the everyday screens
 
 - **Monet's own menu.** The sun in the left island opens your pinned apps
@@ -42,15 +77,24 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   a new account starts with Monet's layout, and any desktop without them gets
   them once, trying again at the next sign-in if Plasma wasn't ready.
 - **The weather breathes.** The next four days have room under today.
-- **Monet's own sounds.** Messages, warnings and errors, a drive or the
-  charger plugged in or out, a low battery, the volume step and emptying the
-  trash sound like Monet now: soft felt and glass, quiet and warm. Before,
-  they were KDE's.
+- **Choose the weather's place on the card.** "Where are you?": type your
+  town and pick it, right on the widget, instead of a settings window. Click
+  the place's name for another. Fahrenheit comes on by itself where the PC's
+  region uses it.
+- **Just the widgets in the gallery.** Each card shows the widget itself
+  with its shadow, without the painting around it, and the list down the
+  side has an icon for each, Weather and Placard newly painted.
+- **Plainer questions and errors.** Monet asks "Set up Windows?" as a
+  question, not a warning. When Windows can't be set up, the box says why
+  (not enough room, for one) with the details behind a button, and
+  cancelling the password quietly stops instead of reporting a failure.
+  Message boxes in every app have Monet's ink signs instead of KDE's
+  triangle.
 
 Updating from 0.8.1: Settings → Updates → Install, then restart. At your
 next sign-in Monet's menu takes the place of KDE's in your panel, with your
-pins, the widgets come if your desktop has none, the right-click menu
-offers Add or Manage Widgets, and Monet's sounds take over from KDE's.
+pins, the widgets come if your desktop has none, and the right-click menu
+offers Add or Manage Widgets.
 
 ### New in 0.8.1: just Monet
 

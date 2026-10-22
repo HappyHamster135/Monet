@@ -54,7 +54,7 @@ No menu bar, no dock. Three floating glass islands along the bottom:
 |---|---|
 | Left | The Monet menu (the sun) and Windows Games (the sun as a play button) |
 | Middle | Apps and open windows, then Trash. Running apps get a small dab of sun under them: longer for the window you're in, faint when it's minimized, with a warm wash when an app asks for you. Pointing at one raises a pebble of glass |
-| Right | Quick Settings, status icons, the clock |
+| Right | Quick Settings, status icons, the clock. Brightness and Night Light live in Quick Settings, beside Mist and Smoke, so KDE's own Brightness panel (with its second "Dark Mode" switch) stays out. The open icon's pebble keeps to its own cell: Plasma grows it by the island's margins on every side, so the style draws it inset by them |
 
 The placard sits on the painting, top left.
 
@@ -142,7 +142,14 @@ Settings in front of it.
   a sunflower (disk usage), a letter and quill (text), a chest (archives),
   a box camera (screenshots). The app menu's categories as well, and
   Monet's widgets: the sun behind a cloud (Weather), the card beside a gilt
-  frame (Placard).
+  frame (Placard). In a bar Plasma asks for Trash's "-symbolic" names, so
+  the pot's painting answers those too, and Files' menus get the pot's ink
+  sign from the menu-size folder, which comes first.
+- **Account pictures** (`tools/make-avatars.py`, what Change Avatar offers):
+  pieces of The Hours and small paintings from Monet's world (a water lily,
+  poppies, the Japanese bridge, a haystack, the magpie, irises, a parasol,
+  a sailboat) with the icons' brush, square to the edges since they're
+  shown round. On the image they replace KDE's dragon and photos.
 - **Folders** are cut from the paintings: the front of each folder is a piece
   of one of the Hours (Home and the plain folder at dawn, Desktop at midday,
   Pictures, Music and Videos at dusk, Downloads and Games at night), with a
@@ -264,14 +271,25 @@ is tried again at the next sign-in.
   the card ("Where are you?", a town, then one of three matches), never in
   KDE's settings window; click the place's name for another. The first
   place sets the degrees the way the PC's region counts them.
-- **Calendar**: the month in Fraunces, today on a dab of the sun.
+- **Calendar**: the month in Fraunces, today on a dab of the sun. The
+  arrows or the wheel turn the month; a click on a day turns to its page:
+  the date in Fraunces (today's in the sun's color), the weekday in italic,
+  ‹ › to the day before or after, Today, and a note for the day on a sheet
+  of the glass, kept as you type (in the widget's settings, by date). Days
+  with a note have a dot of lily. Wide enough, month and day side by side.
 - **Clock** (in the right island, instead of KDE's): the time over the date
   in Inter; a click opens the day in Fraunces and its month, as Calendar
   draws it.
 - **Now Playing**: the cover, the track in Fraunces, back, play or pause on
-  the sun, and next.
+  the sun, and next; a thin line of how far along, the time gone and left
+  at its ends, to click or drag; the cover brings the player forward. With
+  nothing playing, the empty stage and "Play something with": chips for the
+  music apps there are (`monet-quick music`, the PC's own player first), or
+  the Store to find one.
 - **Note**: paper pinned with a dab of lily; kept as you type.
-- **Photo Frame**: your Pictures in a gilt frame, a new one every ten minutes.
+- **Photo Frame**: your Pictures in a gilt frame, a new one every ten
+  minutes, fading from one to the next; ‹ › on pebbles of glass while
+  pointed at, and a click opens the picture in Photos.
 - **The gallery** (`linux/share/monet/explorer`), after the way a Mac edits
   its widgets: from the desktop's right-click menu (Add or Manage Widgets,
   which KDE leaves out of it and `monet-fresh` puts back before Plasma

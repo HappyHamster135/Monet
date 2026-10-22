@@ -954,6 +954,24 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn("Plasmoid.configuration.place = place.name", weather)
         self.assertIn("onClicked: root.choosing = true", weather)
 
+    def test_calendar_days_open_with_their_notes(self):
+        # A day is clicked for its page, stepped through, and written on; the notes stay in the widget's settings.
+        calendar = (PLASMA / "plasmoids/org.monet.calendar/contents/ui/main.qml").read_text(encoding="utf-8")
+        for piece in ("onClicked: root.pick(cell.modelData)", "onClicked: root.step(parent.modelData)",
+                      "Plasmoid.configuration.notes = JSON.stringify(all)", "visible: cell.noted", "WheelHandler {",
+                      "onClicked: root.pick(root.today)"):
+            self.assertIn(piece, calendar)
+
+    def test_now_playing_starts_music_and_seeks(self):
+        # Nothing playing: the music apps from the helper, started by it; playing: the line seeks, the cover raises.
+        playing = (PLASMA / "plasmoids/org.monet.nowplaying/contents/ui/main.qml").read_text(encoding="utf-8")
+        for piece in ('helper + " music"', 'helper + " launch " + out', "row.player.position = placed(mouse.x)",
+                      "row.player.updatePosition()", "onClicked: row.player.Raise()"):
+            self.assertIn(piece, playing)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('elif cmd == "music":', quick)
+        self.assertIn('elif cmd == "launch" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):', quick)
+
     def test_gallery_pictures_are_just_the_widgets(self):
         # Cut out with their shadow, no painting around them: each picture has see-through pixels.
         for widget in self.WIDGETS + ("org.monet.placard",):
@@ -963,7 +981,7 @@ class DesktopWidgets(unittest.TestCase):
                 self.assertTrue(color_type in (4, 6) or b"tRNS" in png, f"{widget} {name}")
 
     def test_settings_have_their_schema(self):
-        for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu"):
+        for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu", "org.monet.calendar"):
             schema = (PLASMA / "plasmoids" / widget / "contents/config/main.xml").read_text()
             used = set(re.findall(r"Plasmoid\.configuration\.(\w+)", (PLASMA / "plasmoids" / widget / "contents/ui/main.qml").read_text()))
             for key in used:
@@ -1427,6 +1445,31 @@ class Scripts(unittest.TestCase):
         # No fwupd at all: nothing to show, not an error.
         with mock.patch.object(quick.shutil, "which", lambda name: None):
             self.assertEqual(quick.firmware_check(), {"ok": True, "updates": []})
+
+    def test_quick_finds_the_apps_that_play_music(self):
+        # Now Playing's "Play something with": players for music, the PC's default first, the nearest
+        # copy of an entry deciding (a hidden copy in the home folder hides the system's).
+        quick = quick_helper()
+        entry = quick.desktop_entry("[Desktop Entry]\nType=Application\nName=Elisa\nIcon=elisa\n"
+                                    "Categories=Qt;KDE;AudioVideo;Audio;Player;\n\n[Desktop Action play]\nName=Play\n")
+        self.assertEqual((entry["Name"], entry["Icon"]), ("Elisa", "elisa"))
+        app = "[Desktop Entry]\nType=Application\nName={}\nCategories={}\n"
+        entries = [
+            ("com.spotify.Client.desktop", quick.desktop_entry(app.format("Spotify", "Audio;Music;Player;AudioVideo;"))),
+            ("org.kde.elisa.desktop", entry),
+            ("org.kde.haruna.desktop", quick.desktop_entry(app.format("Haruna", "Qt;KDE;AudioVideo;Video;Player;"))),
+            ("hidden.desktop", quick.desktop_entry(app.format("Hidden", "Audio;Player;") + "NoDisplay=true\n")),
+            ("hidden.desktop", quick.desktop_entry(app.format("Hidden", "Audio;Player;"))),
+        ]
+        found = quick.music_apps(entries, default="org.kde.elisa.desktop")
+        self.assertEqual([a["id"] for a in found], ["org.kde.elisa.desktop", "com.spotify.Client.desktop"])
+        self.assertEqual([a["name"] for a in quick.music_apps(entries)], ["Elisa", "Spotify"])
+        # An app starts only by an entry's file name, never anything else.
+        from unittest import mock
+        with mock.patch.object(quick.subprocess, "Popen") as popen:
+            for bad in ("../../bin/sh.desktop", "x.desktop; rm -rf ~", "elisa"):
+                quick.launch(bad)
+            popen.assert_not_called()
 
     def test_quick_knows_what_a_bluetooth_device_is(self):
         info = "Device AA:BB:CC:DD:EE:FF (public)\n\tName: WH-1000XM5\n\tIcon: audio-headset\n\tConnected: yes\n"
