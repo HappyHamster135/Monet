@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: Zen in Monet's look, as it arrives and makes its profile
+
+[Path]
+# Zen arriving from the Store (for the whole PC or this account), and Zen
+# making its profile on its first start.
+PathChanged=/var/lib/flatpak/exports/share/applications
+PathChanged=%h/.local/share/flatpak/exports/share/applications
+PathChanged=%h/.var/app/app.zen_browser.zen/.zen
+
+[Install]
+WantedBy=default.target

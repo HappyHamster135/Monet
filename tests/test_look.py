@@ -650,7 +650,7 @@ class Updates(unittest.TestCase):
         self.assertIn("browser=app.zen_browser.zen.desktop", image_only)
         self.assertIn("mimeapps=/etc/xdg/mimeapps.list", image_only)
         self.assertIn('--group General --key BrowserApplication "$browser"', image_only)
-        self.assertIn("apps/scalable/app.zen_browser.zen.svg org.mozilla.firefox.svg", (SHARE / "icons/Monet/aliases").read_text())
+        self.assertTrue((SHARE / "icons/Monet/apps/scalable/app.zen_browser.zen.svg").is_file())  # its own rings, painted
 
     def test_arriving_apps_get_their_plain_names(self):
         # The names are given once per look, before Setup's apps have arrived: again as they do.
@@ -726,7 +726,15 @@ class Icons(unittest.TestCase):
                 # What Bazzite brings to the dock and the menu.
                 "org.mozilla.firefox", "steam", "net.lutris.Lutris", "io.github.ublue_os.yafti_gtk",
                 "com.github.tchx84.Flatseal", "io.github.flattool.Warehouse", "it.mijorus.gearlever",
-                "com.ranfdev.DistroShelf", "net.davidotek.pupgui2", "waydroid", "input-remapper")
+                "com.ranfdev.DistroShelf", "net.davidotek.pupgui2", "waydroid", "input-remapper",
+                # Big apps people add: their own marks, kept recognizable, in paint.
+                "app.zen_browser.zen", "com.discordapp.Discord", "com.spotify.Client", "com.obsproject.Studio",
+                "org.kde.krita", "org.libreoffice.LibreOffice", "org.libreoffice.LibreOffice.writer",
+                "org.libreoffice.LibreOffice.calc", "org.libreoffice.LibreOffice.impress", "org.mozilla.Thunderbird",
+                "com.google.Chrome", "org.videolan.VLC", "org.telegram.desktop",
+                "com.heroicgameslauncher.hgl", "org.prismlauncher.PrismLauncher", "org.libretro.RetroArch",
+                "com.usebottles.bottles", "org.gimp.GIMP", "org.blender.Blender", "org.kde.kdenlive",
+                "org.audacityteam.Audacity", "com.visualstudio.code", "md.obsidian.Obsidian", "org.signal.Signal")
         categories = ("applications-games", "applications-graphics", "applications-internet", "applications-multimedia",
                       "applications-office", "applications-system", "applications-utilities")
         for context, names in (("places", places), ("apps", apps), ("categories", categories)):
@@ -751,6 +759,135 @@ class Icons(unittest.TestCase):
             self.assertIn(name, links)
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('done < "$SRC/share/icons/Monet/aliases"', install)
+
+    def test_unpainted_apps_get_a_canvas(self):
+        # In a made-up home: each menu app Monet hasn't painted gets its own icon on Monet's canvas.
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            home, share = Path(tmp) / "home", Path(tmp) / "share"
+            quick.data_dirs = lambda: [home, share]
+            quick.DATADIR = str(SHARE)
+            told = []
+            quick.run = lambda *args, **kw: told.append(args)
+            apps = share / "applications"
+            apps.mkdir(parents=True)
+            for app, icon, extra in (("flat", "flatapp", ""), ("vector", "vectorapp", ""), ("files", "org.kde.dolphin", ""),
+                                     ("hidden", "hiddenapp", "NoDisplay=true\n"), ("odd", "oddapp", ""),
+                                     ("path", "/opt/app/icon.png", "")):
+                (apps / f"{app}.desktop").write_text(f"[Desktop Entry]\nType=Application\nName={app}\nIcon={icon}\n{extra}")
+            painted = share / "icons/Monet/apps/scalable"
+            painted.mkdir(parents=True)
+            (painted / "org.kde.dolphin.svg").write_text("<svg/>")
+            for folder in ("128x128/apps", "scalable/apps"):
+                (share / "icons/hicolor" / folder).mkdir(parents=True)
+            png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + (128).to_bytes(4, "big") + (64).to_bytes(4, "big") + b"\x08\x06"
+            (share / "icons/hicolor/128x128/apps/flatapp.png").write_bytes(png)
+            (share / "icons/hicolor/scalable/apps/vectorapp.svg").write_text(
+                '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/'
+                'namespaces/inkscape" width="64" height="64" fill="none" version="1.1"><rect inkscape:label="a" '
+                'width="64" height="64" fill="#2a2"/></svg>\n')
+            (share / "icons/hicolor/scalable/apps/oddapp.svg").write_text(
+                '<!DOCTYPE svg [<!ENTITY ns "http://www.w3.org/2000/svg">]><svg xmlns="&ns;"/>')
+            self.assertEqual(quick.frames(), ["flatapp", "vectorapp"])
+            out = home / "icons/Monet/apps/scalable"
+            vector = (out / "vectorapp.svg").read_text()
+            self.assertTrue(vector.startswith("<!-- Monet frame: vectorapp,"))
+            ET.fromstring(vector)
+            self.assertIn('xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"', vector)
+            self.assertIn('<g transform="translate(26.000,26.000) scale(1.18750)" fill="none">', vector)
+            # A wide PNG keeps its shape, centered on the canvas.
+            self.assertIn('<image x="26.00" y="45.00" width="76.00" height="38.00"', (out / "flatapp.svg").read_text())
+            self.assertEqual(len(told), 1)  # KDE told to look again
+            # Unchanged: nothing written, KDE not bothered. An app gone, or painted since: its frame goes.
+            self.assertEqual(quick.frames(), ["flatapp", "vectorapp"])
+            self.assertEqual(len(told), 1)
+            (apps / "flat.desktop").unlink()
+            (painted / "vectorapp.svg").write_text("<svg/>")
+            mine = out / "mine.svg"
+            mine.write_text("<svg/>")  # someone's own icon there is left alone
+            self.assertEqual(quick.frames(), [])
+            self.assertEqual(sorted(p.name for p in out.iterdir()), ["mine.svg"])
+
+    def test_frames_come_at_sign_in_and_as_apps_arrive(self):
+        for part in ("canvas", "relief"):
+            self.assertTrue((SHARE / f"monet/textures/frame-{part}.png").is_file())
+        self.assertIn('"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1 &', (ROOT / "linux/libexec/monet-session").read_text())
+        self.assertIn("PathChanged=/var/lib/flatpak/exports/share/applications",
+                      (ROOT / "linux/systemd/user/monet-frames.path").read_text())
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick frames", (ROOT / "linux/systemd/user/monet-frames.service").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertEqual(install.count("monet-names.path monet-frames.path"), 2)
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        self.assertIn("/etc/systemd/user/monet-frames.path /etc/systemd/user/monet-frames.service", uninstall)
+        self.assertIn("grep -rl --include='*.svg' 'Monet frame:'", uninstall)
+
+    def test_zen_wears_monets_look(self):
+        # In a made-up home: nothing before Zen is installed; then Monet's own profile, dressed;
+        # and an existing profile keeps what its person wrote.
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            apps, root = Path(tmp) / "applications", Path(tmp) / ".zen"
+            apps.mkdir()
+            quick.app_dirs = lambda: [apps]
+            quick.zen_root = lambda: root
+            quick.DATADIR = str(SHARE)
+            self.assertEqual(quick.zen(), [])
+            self.assertFalse(root.exists())
+            (apps / "app.zen_browser.zen.desktop").write_text("[Desktop Entry]\nName=Zen\n")
+            self.assertEqual(quick.zen(), [root / "monet.default"])
+            self.assertIn("Path=monet.default\nDefault=1", (root / "profiles.ini").read_text())
+            chrome = root / "monet.default/chrome"
+            self.assertEqual((chrome / "userChrome.css").read_text(), '@import url("monet/zen.css");\n')
+            self.assertEqual((chrome / "userContent.css").read_text(), '@import url("monet/newtab.css");\n')
+            newtab = (chrome / "monet/newtab.css").read_text()
+            self.assertEqual(newtab.count('url("data:image/jpeg;base64,'), 2)
+            self.assertNotIn('url("newtab-', newtab)
+            for name in ("zen.css", "mist.jpg", "smoke.jpg"):
+                self.assertTrue((chrome / "monet" / name).is_file(), name)
+            self.assertIn('user_pref("zen.urlbar.replace-newtab", false);', (root / "monet.default/user.js").read_text())
+            # Zen's own profile, with someone's own style and prefs and an older Monet part.
+            own = root / "abcd1234.Default (release)"
+            (own / "chrome").mkdir(parents=True)
+            (own / "chrome/userChrome.css").write_text("#nav-bar { color: red; }\n")
+            (own / "user.js").write_text('user_pref("mine", 1);\n// Monet: begin (monet-quick zen writes this part)\n'
+                                         'user_pref("old", 0);\n// Monet: end\nuser_pref("also.mine", 2);\n')
+            with open(root / "profiles.ini", "a") as ini:
+                ini.write("\n[Profile1]\nName=default-release\nIsRelative=1\nPath=abcd1234.Default (release)\n"
+                          "\n[Install4F96D1932A9F858E]\nDefault=abcd1234.Default (release)\nLocked=1\n")
+            self.assertEqual(quick.zen(), [root / "monet.default", own])
+            self.assertEqual((own / "chrome/userChrome.css").read_text(),
+                             '@import url("monet/zen.css");\n#nav-bar { color: red; }\n')
+            prefs = (own / "user.js").read_text()
+            self.assertTrue(prefs.startswith('user_pref("mine", 1);\n// Monet: begin'))
+            self.assertTrue(prefs.endswith('// Monet: end\nuser_pref("also.mine", 2);\n'))
+            self.assertNotIn('"old"', prefs)
+            self.assertEqual(prefs.count("// Monet: begin"), 1)
+            before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            quick.zen()  # again: nothing changes
+            self.assertEqual({p: p.read_bytes() for p in root.rglob("*") if p.is_file()}, before)
+
+    def test_zen_follows_at_sign_in_and_leaves_with_monet(self):
+        css = (SHARE / "monet/zen/zen.css").read_text()
+        self.assertIn("--zen-primary-color: light-dark(#357F72, #4DB4A0) !important;", css)  # lily
+        self.assertIn('url("mist.jpg")', css)
+        self.assertIn('url("smoke.jpg")', css)
+        self.assertEqual(css.count("{"), css.count("}"))
+        newtab = (SHARE / "monet/zen/newtab.css").read_text()
+        self.assertIn('@-moz-document url("about:newtab"), url("about:home")', newtab)
+        self.assertEqual(newtab.count("{"), newtab.count("}"))
+        for name in ("mist.jpg", "smoke.jpg", "newtab-mist.jpg", "newtab-smoke.jpg"):
+            self.assertTrue((SHARE / "monet/zen" / name).is_file(), name)
+        self.assertIn('"$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1 &', (ROOT / "linux/libexec/monet-session").read_text())
+        self.assertIn("PathChanged=%h/.var/app/app.zen_browser.zen/.zen", (ROOT / "linux/systemd/user/monet-zen.path").read_text())
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick zen", (ROOT / "linux/systemd/user/monet-zen.service").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('cp -r "$SRC/share/monet/zen" "$DATADIR/monet/zen"', install)
+        self.assertEqual(install.count("monet-frames.path monet-zen.path"), 2)
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        self.assertIn('rm -rf "${profile}chrome/monet"', uninstall)
+        self.assertIn("/etc/systemd/user/monet-zen.path /etc/systemd/user/monet-zen.service", uninstall)
 
     def test_bazzites_own_entries_get_paintings(self):
         # They name their pictures by path, so install.sh points them at Monet's.

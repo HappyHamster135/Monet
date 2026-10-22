@@ -10,13 +10,22 @@ if [ "$(id -u)" -ne 0 ]; then
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/monet"
     # Apps' own names and menu entries, KDE's settings pages and Help menus.
     grep -l -x 'X-Monet=true' "$HOME"/.local/share/applications/*.desktop \
-        "${XDG_CONFIG_HOME:-$HOME/.config}"/autostart/*.desktop 2>/dev/null | xargs -r rm -f
+        "${XDG_CONFIG_HOME:-$HOME/.config}"/autostart/*.desktop 2>/dev/null | xargs -r rm -f || true
     kdeglobals="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
     if [ -f "$kdeglobals" ]; then
         sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
-    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
+    # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
+    grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
+    # Zen back to its own look (monet-quick zen): Monet's folder, its two imports and its part of user.js.
+    for profile in "$HOME"/.var/app/app.zen_browser.zen/.zen/*/; do
+        rm -rf "${profile}chrome/monet"
+        sed -i '/^@import url("monet\/zen.css");$/d' "${profile}chrome/userChrome.css" 2>/dev/null || true
+        sed -i '/^@import url("monet\/newtab.css");$/d' "${profile}chrome/userContent.css" 2>/dev/null || true
+        sed -i '/^\/\/ Monet: begin/,/^\/\/ Monet: end$/d' "${profile}user.js" 2>/dev/null || true
+    done
     # Hand the desktop back to Breeze, and the sounds to Ocean.
     command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Breeze
@@ -31,10 +40,12 @@ rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-s
     /etc/systemd/system/monet-apps.service /etc/systemd/system/monet-apps.timer
 systemctl daemon-reload
 
-systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path >/dev/null 2>&1 || true
+systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service \
-    /etc/systemd/user/monet-names.path /etc/systemd/user/monet-names.service
+    /etc/systemd/user/monet-names.path /etc/systemd/user/monet-names.service \
+    /etc/systemd/user/monet-frames.path /etc/systemd/user/monet-frames.service \
+    /etc/systemd/user/monet-zen.path /etc/systemd/user/monet-zen.service
 # Background updates come back the way Bazzite has them.
 systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
     flatpak-system-update.timer >/dev/null 2>&1 || true

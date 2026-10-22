@@ -97,6 +97,7 @@ own arc, so they run on from the straight edges without a step.
 | On the glass | The same style draws everything Plasma puts on it, so the app menu, search, the popovers, notifications, the lock screen and Alt+Tab are Monet's too: pebble buttons (radius 8, so check boxes stay round), a well with a lily ring for typing, soft highlights (an ink wash to point, lily for what's chosen), Monet Settings' switch and slider, glass tabs, hairline headings, a lily progress bar and a lily arc for "working" |
 | App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection. Menus and tooltips cast a soft shadow, blur with rounded corners, part groups with a hairline and highlight the item in lily, inset from the edge |
 | GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables |
+| Zen, the browser | `linux/share/monet/zen`, which `monet-quick zen` copies into each Zen profile and imports from `userChrome.css` and `userContent.css` (at sign-in, and as Zen arrives or makes its profile: `monet-zen.path`; before Zen's first start, Monet makes its profile, already dressed). Behind the sidebar and around the page, the painting blurred and washed in paper or smoke (`tools/make-zen.py`); lily for the accent; Monet's paper and smoke for what pops up; radius 12. A new tab opens on the painting itself, by daylight in Mist and by night in Smoke. Zen follows the PC's light. Its own theme picker can't override Monet's colors; uninstalling Monet gives Zen its own look back |
 | Monet Settings | The Plasma style's dialog glass around a solid paper page |
 | Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
@@ -145,6 +146,28 @@ Settings in front of it.
   frame (Placard). In a bar Plasma asks for Trash's "-symbolic" names, so
   the pot's painting answers those too, and Files' menus get the pot's ink
   sign from the menu-size folder, which comes first.
+- **Big apps people add keep their own marks**, painted the same way, so
+  they're known at a glance: Zen's three rings as ripples on a night pond,
+  Discord's Clyde in blurple, Spotify's green sun with its three waves,
+  OBS's three wheeling rings, Krita's veils of color under its brush,
+  LibreOffice's pages with the corner folded in each app's color,
+  Thunderbird's blue bird round a letter, Chrome's wheel, VLC's striped cone
+  and Telegram's paper plane. For games: Heroic's shield and sword, Prism
+  Launcher's colored hexagon, RetroArch's space invader, Bottles' three
+  bottles. For making things: GIMP's Wilber with his brush, Blender's orange
+  eye, Kdenlive's clips and playhead, Audacity's headphones round a wave, VS
+  Code's folded ribbon, Obsidian's crystal, Signal's bubble in its ring of
+  dashes. Each answers its Flathub name and its plain one.
+- **Every other app sits on Monet's canvas**: a small primed canvas, painted
+  once (`frame-canvas.png` in textures), with the app's own icon on it and
+  the paint's relief (`frame-relief.png`) laid over both, so a flat icon
+  looks painted too. `monet-quick frames` makes them in the account's own
+  copy of the theme, found before the PC's: at sign-in and whenever the
+  Store adds or removes an app (`monet-frames.path`). It frames each menu
+  app Monet hasn't painted with the icon KDE would have shown (Breeze's,
+  then the app's own), takes a frame away once Monet paints that app or it
+  is gone, and leaves any icon it didn't make alone. Steam's games get one
+  too.
 - **Account pictures** (`tools/make-avatars.py`, what Change Avatar offers):
   pieces of The Hours and small paintings from Monet's world (a water lily,
   poppies, the Japanese bridge, a haystack, the magpie, irises, a parasol,
@@ -535,4 +558,5 @@ python3 tools/make-plasma-style.py
 python3 tools/make-decoration.py  # window frames (after make-icons.py's painter)
 python3 tools/make-kvantum.py
 python3 tools/make-gtk.py
+python3 tools/make-zen.py         # Zen's window ground and new-tab paintings
 ```

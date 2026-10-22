@@ -21,8 +21,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   sign-in and show up in the menu under their plain names. A PC set up
   before gets the everyday ones once, by itself. Before, Monet came with
   no apps beyond Steam, Lutris and the Text Editor.
-- **Zen is the browser.** Web links open in Zen Browser, with Monet's
-  painted window for its icon; Settings → Default Apps picks another.
+- **Zen is the browser, in Monet's look.** Web links open in Zen
+  Browser (Settings → Default Apps picks another). Its window sits on the
+  painting, softened as behind glass, with lily for the accent, in Mist by
+  day and Smoke by night like the rest of Monet, and a new tab opens on The
+  Hours itself.
+- **The big apps, painted.** Zen, Discord, Spotify, OBS Studio, Krita,
+  LibreOffice, Thunderbird, Chrome, VLC, Telegram, Heroic, Prism Launcher,
+  RetroArch, Bottles, GIMP, Blender, Kdenlive, Audacity, VS Code, Obsidian
+  and Signal get icons in Monet's oil paint that keep their own marks, so
+  you still know them at a glance.
+- **Every app fits in.** An app Monet hasn't painted shows its own icon
+  on a small painted canvas, with the brush's texture over it, as soon as
+  it's installed. Your Steam games too.
 - **Monet keeps itself up to date.** Once a day, in the background: your
   apps right away, and a new Monet ready for your next restart, never
   while you work. Settings → Updates → Update automatically turns it off.

@@ -150,6 +150,10 @@ put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
 put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
+put 644 "$SRC/systemd/user/monet-frames.path" "$USERUNITDIR/monet-frames.path"
+put 644 "$SRC/systemd/user/monet-frames.service" "$USERUNITDIR/monet-frames.service"
+put 644 "$SRC/systemd/user/monet-zen.path" "$USERUNITDIR/monet-zen.path"
+put 644 "$SRC/systemd/user/monet-zen.service" "$USERUNITDIR/monet-zen.service"
 
 # Monet updates itself, once a day (monet-update.timer: the new Monet starts at
 # the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
@@ -171,13 +175,15 @@ fi
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
 rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures" "$DATADIR/monet/settings" \
-    "$DATADIR/monet/gtk"
+    "$DATADIR/monet/gtk" "$DATADIR/monet/zen"
 install -d "$DATADIR/monet"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
 cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
 # Pictures for Monet Settings, cut from the paintings.
 cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
 cp -r "$SRC/share/monet/gtk" "$DATADIR/monet/gtk"
+# Zen's look, which monet-quick zen puts into each Zen profile.
+cp -r "$SRC/share/monet/zen" "$DATADIR/monet/zen"
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
 if [ -d "$SRC/windows" ]; then
@@ -196,7 +202,7 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -332,5 +338,5 @@ else
     for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path >/dev/null 2>&1 || true
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
 fi

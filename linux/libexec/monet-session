@@ -57,6 +57,14 @@ if [ /var/lib/monet/apps-done -nt "$looks/names" ]; then
     "$LIBEXECDIR/monet-look" --names
 fi
 
+# Apps Monet hasn't painted get its canvas under their own icons, so every app
+# fits in (monet-frames.path does it as apps arrive). In the background: it
+# looks through every icon theme.
+"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1 &
+# Zen, the browser, in Monet's look, freshened from this Monet's copy
+# (monet-zen.path does it as Zen arrives).
+"$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1 &
+
 # Monet's widgets on the desktop, once, after the look (which may lay the
 # desktop out afresh); until Plasma had a desktop for them, at every sign-in.
 "$LIBEXECDIR/monet-widgets"

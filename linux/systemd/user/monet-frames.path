@@ -1,0 +1,10 @@
+[Unit]
+Description=Monet: a painted canvas for each app Monet hasn't painted, as apps arrive
+
+[Path]
+# Where the Store's apps show up, for the whole PC and for this account.
+PathChanged=/var/lib/flatpak/exports/share/applications
+PathChanged=%h/.local/share/flatpak/exports/share/applications
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,6 @@
+[Unit]
+Description=Monet: a painted canvas for each app Monet hasn't painted
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-quick frames

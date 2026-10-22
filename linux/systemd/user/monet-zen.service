@@ -1,0 +1,6 @@
+[Unit]
+Description=Monet: Zen in Monet's look
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-quick zen

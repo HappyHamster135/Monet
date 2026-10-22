@@ -944,6 +944,334 @@ def placard_icon():
     return c.finish()
 
 
+# Big apps people add: their own marks, kept recognizable, painted the way the
+# rest are (no tile behind, the light from the top left, broken color).
+
+def ring_points(cx, cy, r, a0=0.0, a1=360.0, steps=48):
+    return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * k / steps)),
+             cy + r * math.sin(math.radians(a0 + (a1 - a0) * k / steps))) for k in range(steps + 1)]
+
+
+def zen_icon():
+    """Zen Browser: its three rings, ripples spreading on the pond at night."""
+    c = Canvas(331)
+    pond = circle(64, 64, 54)
+    c.paint(pond, lit("#34364E", "#141420", y0=10, y1=118, warm="#5A5A7A", cool="#0A0A18", light=0.25, shade=0.2), 4.4,
+            around(64, 64), wander=0.25, accents=["#3E4266", "#1E2440", "#4A4A6A"], accent_rate=0.2, thick=1.3)
+    for r, w in ((40, 7.0), (27, 5.2), (16, 3.6)):
+        c.mark(ring_points(64, 64, r), w, "#F2F0E3", pond, thick=1.5)
+    return c.finish()
+
+
+def curve(p0, p1, p2, p3, steps=12):
+    """A cubic Bézier, as points."""
+    return [tuple((1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * d
+                  for a, b, c, d in zip(p0, p1, p2, p3)) for t in (k / steps for k in range(steps + 1))]
+
+
+def discord_icon():
+    """Discord: its gamepad face, Clyde, in blurple paint."""
+    c = Canvas(341)
+    # The left half of Clyde, from Discord's 127 x 96 mark: horn, cheek, foot, chin.
+    left = ([(63.6, 6.0), (49, 6.8), (45.6, 0), (19.4, 8.1)] + curve((19.4, 8.1), (2.8, 32.7), (-1.7, 56.6), (0.5, 80.2))[1:]
+            + [(8, 87), (20, 93), (32.7, 96.4), (39.6, 85.3), (28.8, 80.1), (31.4, 78.1), (47, 83.5), (63.6, 85.3)])
+    outline = left + [(127.2 - x, y) for x, y in reversed(left)]
+    face = poly([(13 + 0.8 * x, 25.4 + 0.8 * y) for x, y in outline])
+    c.paint(face, lit("#808AF8", "#4450C8", y0=25, y1=103, warm="#C0C6FF", cool="#2A2A7A", light=0.3, shade=0.25), 3.6,
+            around(64, 64), wander=0.25, accents=["#9AA2FF", "#5865F2", "#3A44B0"], accent_rate=0.2, thick=1.4)
+    for x in (47, 81):
+        c.paint(poly(ellipse(x, 67.8, 9, 10, 0, 36)), one("#F6F2EA"), 1.6, around(x, 67.8), layers=2, thick=1.8)
+    return c.finish()
+
+
+def spotify_icon():
+    """Spotify: a green sun with its three waves of sound across it."""
+    c = Canvas(351)
+    disc = circle(64, 64, 54)
+    c.paint(disc, lit("#52E486", "#14A048", y0=10, y1=118, warm="#D0FFB8", cool="#0A5A3A", light=0.3, shade=0.25), 4.4,
+            around(64, 64), wander=0.25, accents=["#7AF0A0", "#1DB954", "#0E8A3E"], accent_rate=0.2, thick=1.3)
+    for y, half, w, rise in ((48, 34, 8.0, 9), (67, 28, 6.6, 7), (84, 22, 5.4, 5)):
+        pts = [(64 + x, y - rise * (1 - (x / half) ** 2) + 0.08 * x) for x in range(-half, half + 1, 4)]
+        c.mark(pts, w, "#1A1614", disc, thick=1.3)
+    return c.finish()
+
+
+def obs_icon():
+    """OBS Studio: three pale drops wheeling round a dark circle, as in its mark."""
+    c = Canvas(361)
+    disc = circle(64, 64, 54)
+    c.paint(disc, lit("#4E4A56", "#1C1A20", y0=10, y1=118, warm="#7A7488", cool="#0E0C18", light=0.25, shade=0.2), 4.4,
+            around(64, 64), wander=0.25, accents=["#5A5664", "#2A2830"], accent_rate=0.2, thick=1.3)
+    for k in range(3):
+        a = math.radians(-90 + 120 * k)
+        x, y = 64 + 24 * math.cos(a), 64 + 24 * math.sin(a)
+        # Each is a ring, thick on one side, so the three seem to wheel round.
+        b = a + math.radians(100)
+        ring = cut(circle(x, y, 17), circle(x + 5 * math.cos(b), y + 5 * math.sin(b), 10.5))
+        c.paint(ring, lit("#FBF7EE", "#C8C2D0", y0=y - 17, y1=y + 17, cool="#8A80B8"), 2.0, around(x, y), layers=2, thick=1.6)
+    return c.finish()
+
+
+def krita_icon():
+    """Krita: three veils of color meeting, and the brush across them, as in its mark."""
+    c = Canvas(371)
+    for (dx, dy), (top, bottom) in zip(((0, -15), (-14, 10), (14, 10)),
+                                       (("#F8DC5A", "#E8A830"), ("#7AD4E2", "#3A8EC0"), ("#EC96CC", "#B04A98"))):
+        x, y = 62 + dx, 62 + dy
+        c.paint(circle(x, y, 30), lit(top, bottom, y0=y - 30, y1=y + 30, light=0.3), 3.6, around(x, y), wander=0.25,
+                opacity=0.8, thick=1.2)
+    c.mark([(18, 18), (76, 76)], 7.4, "#3E3E46", None, thick=1.7)        # the handle
+    c.mark([(76, 76), (88, 88)], 8.6, "#C4C4CC", None, thick=1.5)        # the ferrule
+    c.paint(poly(ellipse(97, 97, 12, 6.5, 45, 36)), one("#26262C"), 1.6, flat(45), layers=2, thick=1.9)  # the tip
+    return c.finish()
+
+
+def office_icon(kind):
+    """LibreOffice: a page with its corner folded in the app's color."""
+    color, mark = {"start": ("#18A303", "suite"), "writer": ("#2A78D4", "lines"), "calc": ("#1E9E46", "grid"),
+                   "impress": ("#E0601E", "slide")}[kind]
+    c, page = paper(381 + len(kind))
+    c.paint(poly([(82, 10), (82, 30), (102, 30)]), lit(color, color, y0=10, y1=30, light=0.35, shade=0.2), 2.4, flat(45),
+            layers=2, wander=0.1, thick=1.5)
+    if mark == "lines":
+        lines(c, page, 6, y0=44, color=color)
+    elif mark == "grid":
+        for i in range(5):
+            c.mark([(38, 46 + i * 12), (90, 46 + i * 12)], 1.8, color, page, thick=0.6)
+        for x in (38, 56, 74, 90):
+            c.mark([(x, 46), (x, 94)], 1.8, color, page, thick=0.6)
+        c.paint(box(56, 58, 74, 70, 1), one(color), 1.6, flat(0), layers=1, thick=1.0)
+    elif mark == "slide":
+        c.paint(box(36, 48, 92, 84, 3), lit(color, "#B03A10", y0=48, y1=84, light=0.3), 2.4, flat(0), layers=2, thick=1.3)
+        c.mark([(44, 92), (84, 92)], 2.6, color, page, thick=0.7)
+    else:  # the suite: a band of each app's color
+        for i, band_color in enumerate(("#2A78D4", "#1E9E46", "#E0601E")):
+            c.mark([(38, 52 + i * 16), (88 - i * 8, 52 + i * 16)], 7.0, band_color, page, thick=1.1)
+    return c.finish()
+
+
+def thunderbird_icon():
+    """Thunderbird: a blue bird curled round a letter."""
+    c = Canvas(391)
+    body = cut(circle(62, 62, 50), circle(76, 76, 38))
+    c.paint(body, lit("#62B4F8", "#1A48C0", y0=12, y1=112, warm="#C8E4FF", cool="#1A1A6A", light=0.3), 3.2,
+            around(62, 62), wander=0.2, accents=["#8AC8FF", "#2A5AD0"], accent_rate=0.2, thick=1.4)
+    c.paint(circle(104, 54, 12), lit("#5AA8F4", "#2A5AD0", y0=42, y1=66), 1.8, around(104, 54), layers=2, thick=1.6)
+    c.dab(107 * S, 51 * S, 3 * S, 3 * S, 0, hexrgb("#F6F2EA"), np.ones((N, N), np.float32), thick=1.2, dry=0)
+    envelope = box(38, 58, 100, 102, 6)
+    c.paint(envelope, lit(y0=58, y1=102, **PAPER), 3.4, flat(0), layers=2, wander=0.08, accents=["#FFFFFF"], accent_rate=0.15)
+    c.mark([(41, 62), (69, 84), (97, 62)], 2.6, "#B4A8CC", envelope, thick=0.8)
+    return c.finish()
+
+
+def chrome_icon():
+    """Chrome: its wheel of red, yellow and green round a blue eye."""
+    c = Canvas(401)
+    for a0, (top, bottom) in ((-150, ("#F0604A", "#C8301E")), (-30, ("#FFD24A", "#E8A818")), (90, ("#3EBA62", "#1A8A3A"))):
+        sector = poly([(64, 64)] + ring_points(64, 64, 54, a0, a0 + 120, 30))
+        c.paint(sector, lit(top, bottom, y0=10, y1=118, light=0.3, shade=0.25), 3.8, around(64, 64), wander=0.25, thick=1.3)
+    c.paint(circle(64, 64, 24), lit("#FFFFFF", "#E0DCE8", y0=40, y1=88, cool="#9A90C0"), 2.4, around(64, 64), layers=2,
+            thick=1.4)
+    c.paint(circle(64, 64, 17), lit("#5AA0F4", "#1A5AD0", y0=47, y1=81, light=0.35), 2.0, around(64, 64), layers=2,
+            accents=["#8AC4FF"], accent_rate=0.2, thick=1.6)
+    return c.finish()
+
+
+def vlc_icon():
+    """VLC: the orange cone, striped, on its base."""
+    c = Canvas(411)
+    cone = poly([(55, 12), (73, 12), (98, 96), (30, 96)])
+    c.paint(cone, lit("#FFA040", "#E05A16", y0=12, y1=96, warm="#FFE0A0", cool="#8A3A2A", light=0.3), 3.0, flat(95),
+            wander=0.1, accents=["#FFB860", "#D04A10"], accent_rate=0.2, thick=1.3)
+    for y0, y1 in ((36, 46), (62, 74)):
+        stripe = poly([(0, y0), (128, y0), (128, y1), (0, y1)]) * cone
+        c.paint(stripe, lit("#FBF7EE", "#D8D0C8", y0=y0, y1=y1, cool="#9A90B8"), 2.0, flat(0), layers=2, thick=1.4)
+    c.paint(box(18, 92, 110, 108, 6), lit("#F07A2A", "#A8400E", y0=92, y1=108), 2.6, flat(0), layers=2, thick=1.4)
+    return c.finish()
+
+
+def telegram_icon():
+    """Telegram: a paper plane across a blue sky."""
+    c = Canvas(421)
+    sky = circle(64, 64, 54)
+    c.paint(sky, lit("#62CDF8", "#1A88CE", y0=10, y1=118, warm="#D8F4FF", cool="#1A3A8A", light=0.3), 4.4, around(64, 64),
+            wander=0.25, accents=["#8ADCFF", "#2A9AE0", "#FFFFFF"], accent_rate=0.18, thick=1.3)
+    plane = poly([(28, 62), (96, 34), (84, 92), (62, 78), (52, 90), (52, 72)])
+    c.paint(plane, lit("#FFFFFF", "#D8E0EE", y0=34, y1=92, cool="#8A9AC8"), 2.2, flat(-25), layers=2, wander=0.1, thick=1.5)
+    c.mark([(52, 72), (92, 40)], 2.2, "#A8B8D8", plane, thick=0.7)
+    return c.finish()
+
+
+def heroic_icon():
+    """Heroic: its blue shield with the sword down the middle."""
+    c = Canvas(431)
+    outline = [(22, 22), (64, 12), (106, 22), (106, 70), (64, 118), (22, 70)]
+    c.paint(poly(outline), one("#1E2440"), 2.4, around(64, 64), layers=2, thick=1.4)
+    shield = poly([(28, 27), (64, 18), (100, 27), (100, 68), (64, 110), (28, 68)])
+    c.paint(shield, lit("#72E0F6", "#3A5EE0", y0=18, y1=110, warm="#D8FAFF", cool="#2A2A8A", light=0.3), 3.4, flat(90),
+            wander=0.2, accents=["#8AE8FA", "#4A78E8"], accent_rate=0.2, thick=1.3)
+    blade = poly([(64, 26), (68, 36), (67.5, 76), (60.5, 76), (60, 36)])
+    hilt = join(circle(55, 82, 5.5), circle(73, 82, 5.5), circle(64, 91, 5.5), circle(64, 81, 5))
+    c.paint(join(blade, hilt), one("#161A2A"), 1.6, flat(90), layers=2, thick=1.6)
+    return c.finish()
+
+
+def prism_icon():
+    """Prism Launcher: its hexagon of colored facets round a pale prism."""
+    c = Canvas(441)
+    corner = [(64 + 53 * math.cos(math.radians(-90 + 60 * k)), 64 + 53 * math.sin(math.radians(-90 + 60 * k)))
+              for k in range(6)]
+    # Each edge halved: twelve facets, the colors going round as in its mark.
+    rim = [p for k in range(6) for p in (corner[k], tuple((a + b) / 2 for a, b in zip(corner[k], corner[(k + 1) % 6])))]
+    colors = ("#DF6277", "#FB9168", "#FB9168", "#F3DB6C", "#7AB392", "#4B7CBC", "#6F488C", "#6F488C", "#4D3F33",
+              "#7A573B", "#7A573B", "#99CD61")
+    for k, color in enumerate(colors):
+        facet = poly([(64, 64), rim[k], rim[(k + 1) % 12]])
+        c.paint(facet, lit(color, color, y0=11, y1=117, light=0.2, shade=0.1), 2.6, flat(-90 + 30 * k), layers=2,
+                wander=0.15, thick=1.3)
+    c.paint(poly([(46, 45), (82, 45), (64, 84)]), lit("#FFFFFF", "#DCD6D6", y0=45, y1=84, cool="#9A90B8"), 2.2, flat(0),
+            layers=2, thick=1.5)
+    return c.finish()
+
+
+def retroarch_icon():
+    """RetroArch: its space invader, in ink with a pale edge."""
+    c = Canvas(451)
+    rows = ("...X.....X...",
+            "..XXXXXXXXX..",
+            "XXXX.XXX.XXXX",
+            "XXXXXXXXXXXXX",
+            "X.XXXXXXXXX.X",
+            "..XX.....XX..",
+            "..XX.....XX..")
+    u, x0, y0 = 8.6, 8.1, 34
+    cells = [(x0 + i * u, y0 + j * u) for j, row in enumerate(rows) for i, ch in enumerate(row) if ch == "X"]
+    c.paint(join(*(box(x - 2.6, y - 2.6, x + u + 2.6, y + u + 2.6, 3) for x, y in cells)),
+            lit("#FBF7EE", "#D8D0C8", y0=30, y1=98, cool="#9A90B8"), 2.2, flat(0), layers=2, thick=1.3)
+    c.paint(join(*(box(x, y, x + u + 0.2, y + u + 0.2, 1.5) for x, y in cells)),
+            lit("#3A3654", "#121018", y0=34, y1=94, warm="#5A5478", cool="#0A0814", light=0.25), 2.2, flat(0),
+            layers=2, thick=1.4)
+    return c.finish()
+
+
+def bottles_icon():
+    """Bottles: three bottles side by side, orange, blue and red."""
+    c = Canvas(461)
+    c.paint(box(22, 10, 36, 18, 3), one("#33D17A"), 1.6, flat(0), layers=2, thick=1.4)
+    c.paint(box(14, 18, 44, 112, 8), lit("#FFBE6F", "#E66100", y0=18, y1=112, light=0.3), 3.0, flat(90), wander=0.15,
+            accents=["#FFA348"], accent_rate=0.2, thick=1.3)
+    c.paint(circle(29, 62, 8.5), lit("#57E389", "#26A269", y0=54, y1=71), 1.6, around(29, 62), layers=2, thick=1.5)
+    c.paint(box(88, 28, 108, 38, 3), lit("#DEDDDA", "#9A9996", y0=28, y1=38), 1.6, flat(0), layers=2, thick=1.4)
+    c.paint(box(80, 36, 116, 116, 8), lit("#F66151", "#C01C28", y0=36, y1=116, light=0.3), 3.0, flat(90), wander=0.15,
+            accents=["#ED333B"], accent_rate=0.2, thick=1.3)
+    c.paint(box(54, 14, 74, 24, 3), lit("#3584E4", "#1A5FB4", y0=14, y1=24), 1.6, flat(0), layers=2, thick=1.5)
+    glass = box(48, 22, 80, 116, 7)
+    c.paint(glass, lit("#FBFAF6", "#C0BFBC", y0=22, y1=116, cool="#8A90B8"), 2.6, flat(90), layers=2, wander=0.1,
+            thick=1.3)
+    c.paint(box(48, 56, 80, 86) * glass, lit("#4A94EC", "#1A5FB4", y0=56, y1=86, light=0.3), 2.2, flat(0), layers=2,
+            thick=1.4)
+    return c.finish()
+
+
+def gimp_icon():
+    """GIMP: Wilber, with the brush in his mouth."""
+    c = Canvas(471)
+    head = join(poly(ellipse(70, 74, 38, 32, 0, 72)), poly([(36, 62), (10, 14), (62, 46)]),
+                poly([(84, 46), (112, 12), (106, 62)]))
+    c.paint(head, lit("#8E8470", "#4E4636", y0=12, y1=106, warm="#D0C0A0", cool="#3A3450", light=0.3), 3.2,
+            around(70, 74), wander=0.25, accents=["#9A9078", "#5E5444"], accent_rate=0.2, thick=1.4)
+    c.paint(poly([(30, 54), (18, 26), (48, 48)]), one("#3E3830"), 1.8, flat(60), layers=2, thick=1.2)  # inside the ear
+    for x in (58, 84):
+        c.paint(circle(x, 70, 11), lit("#FFFFFF", "#DCD6D0", y0=59, y1=81, cool="#9A90B8"), 1.8, around(x, 70),
+                layers=2, thick=1.6)
+        c.paint(circle(x + 4, 72, 4.6), one("#141218"), 1.2, around(x + 4, 72), layers=1, thick=1.4)
+    c.mark([(56, 92), (70, 98), (84, 93)], 2.6, "#201C1A", head, thick=0.9)
+    c.mark([(78, 96), (112, 110)], 6.0, "#E8822A", None, thick=1.4)       # the brush's handle
+    c.mark([(112, 110), (122, 114)], 6.6, "#2A2420", None, thick=1.6)     # and its tip
+    return c.finish()
+
+
+def blender_icon():
+    """Blender: the orange eye with its tail of three strokes, round a blue center."""
+    c = Canvas(481)
+    body = join(cut(circle(74, 72, 38), circle(74, 72, 24)), band([(64, 40), (14, 44)], 13), band([(48, 62), (24, 76)], 11))
+    c.paint(body, lit("#FFA040", "#E06A0A", y0=30, y1=110, warm="#FFE0A0", cool="#8A3A2A", light=0.3), 3.2,
+            around(74, 72), wander=0.2, accents=["#FFB060", "#D05A08"], accent_rate=0.2, thick=1.4)
+    c.paint(circle(74, 72, 24), lit("#FBF7EE", "#D8D0C8", y0=48, y1=96, cool="#9A90B8"), 2.4, around(74, 72), layers=2,
+            thick=1.3)
+    c.paint(circle(76, 70, 13), lit("#4A82C0", "#1E4E80", y0=57, y1=83, light=0.3), 1.8, around(76, 70), layers=2,
+            thick=1.6)
+    return c.finish()
+
+
+def kdenlive_icon():
+    """Kdenlive: the clips stepping toward the playhead, and play."""
+    c = Canvas(491)
+    for y, left in ((36, 48), (46, 40), (57, 27), (67, 16), (78, 27), (88, 40)):
+        c.mark([(left, y), (56, y)], 5.4, "#5AA8E8", None, thick=1.2)
+    c.paint(poly([(76, 40), (76, 88), (110, 64)]), lit("#5CB0E8", "#2E5A8A", y0=40, y1=88, light=0.3), 2.4, flat(0),
+            layers=2, wander=0.1, thick=1.5)
+    c.mark([(64, 22), (64, 116)], 5.0, "#E05E4C", None, thick=1.3)
+    c.paint(poly([(51, 12), (77, 12), (64, 30)]), lit("#F36856", "#C42C2C", y0=12, y1=30), 1.8, flat(0), layers=2,
+            thick=1.5)
+    return c.finish()
+
+
+def audacity_icon():
+    """Audacity: blue headphones round an orange wave."""
+    c = Canvas(501)
+    for k, h in enumerate((6, 12, 20, 14, 26, 18, 30, 22, 16, 24, 12, 8, 4)):
+        x = 34 + k * 5
+        c.mark([(x, 70 - h), (x, 70 + h)], 4.2, "#FF7901", None, thick=1.2)
+        c.mark([(x, 70 - h * 0.4), (x, 70 + h * 0.6)], 3.0, "#E8201A", None, thick=1.0)
+    c.mark(ring_points(64, 66, 50, 195, 345, 24), 9.0, "#1A3AC8", None, thick=1.4)   # the band
+    for x0, x1 in ((6, 24), (104, 122)):
+        c.paint(box(x0, 56, x1, 108, 8), lit("#3A5AE8", "#0A1A9A", y0=56, y1=108, light=0.3), 2.0, flat(90), layers=2,
+                thick=1.5)
+    return c.finish()
+
+
+def vscode_icon():
+    """VS Code: its blue ribbon folded into a bracket."""
+    c = Canvas(511)
+    arms = join(band([(96, 18), (22, 80)], 16), band([(96, 110), (22, 48)], 16))
+    c.paint(arms, lit("#2A7AC8", "#0A4E90", y0=18, y1=110, warm="#9ACCF8", cool="#0A1A5A", light=0.3), 2.8, flat(-40),
+            wander=0.2, accents=["#3A8AD8"], accent_rate=0.2, thick=1.4)
+    bar = poly([(88, 10), (108, 20), (108, 108), (88, 118)])
+    c.paint(bar, lit("#3AA6F4", "#0A70C0", y0=10, y1=118, warm="#BAE0FF", light=0.3), 2.4, flat(90), layers=2,
+            wander=0.1, thick=1.5)
+    return c.finish()
+
+
+def obsidian_icon():
+    """Obsidian: its purple crystal, cut in facets."""
+    c = Canvas(521)
+    gem = poly([(70, 8), (98, 52), (92, 100), (60, 120), (32, 98), (40, 46)])
+    c.paint(gem, lit("#B49CFF", "#5A2ACB", y0=8, y1=120, warm="#F0E8FF", cool="#2A0A7A", light=0.3), 3.0, flat(70),
+            wander=0.15, accents=["#9A7AF8", "#6C31E3"], accent_rate=0.2, thick=1.3)
+    c.paint(poly([(70, 8), (98, 52), (72, 58), (56, 36)]), one("#E2D6FF"), 2.0, flat(60), layers=2, opacity=0.85,
+            thick=1.4)
+    c.paint(poly([(40, 46), (56, 36), (72, 58), (60, 120), (32, 98)]), one("#6C31E3"), 2.4, flat(80), layers=2,
+            opacity=0.7, thick=1.3)
+    c.paint(poly([(72, 58), (98, 52), (92, 100), (60, 120)]), one("#8E6AF4"), 2.4, flat(100), layers=2, opacity=0.6,
+            thick=1.3)
+    return c.finish()
+
+
+def signal_icon():
+    """Signal: a pale speech bubble in its ring of dashes, on blue."""
+    c = Canvas(531)
+    disc = circle(64, 64, 54)
+    c.paint(disc, lit("#5A6AF8", "#2A3AD8", y0=10, y1=118, warm="#C8D0FF", cool="#1A1A7A", light=0.3), 4.4,
+            around(64, 64), wander=0.25, accents=["#6A7AFF", "#3A4AF0"], accent_rate=0.2, thick=1.3)
+    for k in range(14):
+        a = 360 / 14 * k
+        c.mark(ring_points(64, 64, 39, a + 4, a + 20, 6), 4.0, "#F6F2EA", disc, thick=1.2)
+    bubble = join(circle(64, 64, 30), poly([(36, 92), (40, 72), (54, 88)]))
+    c.paint(bubble, lit("#FFFFFF", "#DCDAEC", y0=34, y1=94, cool="#9A90C8"), 2.2, around(64, 64), layers=2, thick=1.5)
+    return c.finish()
+
+
 def teapot_icon():
     """Bold Brew: a teapot from Giverny's blue kitchen."""
     c = Canvas(291)
@@ -1081,7 +1409,7 @@ FILES = {
     "disc": (disc_icon, "devices/media-optical", [
         "drive-optical", "media-optical-dvd", "media-optical-cd", "media-optical-data", "media-optical-audio",
         "mimetypes/application-x-cd-image", "mimetypes/application-x-iso9660-image"]),
-    "browser": (window_icon, "apps/org.mozilla.firefox", ["firefox", "web-browser", "internet-web-browser", "app.zen_browser.zen"]),
+    "browser": (window_icon, "apps/org.mozilla.firefox", ["firefox", "web-browser", "internet-web-browser"]),
     "steam": (locomotive_icon, "apps/steam", ["com.valvesoftware.Steam"]),
     "lutris": (rowboat_icon, "apps/net.lutris.Lutris", ["lutris"]),
     "portal": (bridge_icon, "apps/io.github.ublue_os.yafti_gtk", ["yafti", "bazzite-portal"]),
@@ -1095,6 +1423,32 @@ FILES = {
     "discourse": (cafe_icon, "apps/monet-discourse", []),
     "bbrew": (teapot_icon, "apps/monet-bbrew", []),
     "calendar": (calendar_icon, "apps/x-office-calendar", ["office-calendar", "org.kde.merkuro.calendar", "korganizer"]),
+    # Big apps people add (Monet Setup's among them): their own marks, in paint.
+    "zen": (zen_icon, "apps/app.zen_browser.zen", ["zen-browser"]),
+    "discord": (discord_icon, "apps/com.discordapp.Discord", ["discord"]),
+    "spotify": (spotify_icon, "apps/com.spotify.Client", ["spotify", "spotify-client"]),
+    "obs": (obs_icon, "apps/com.obsproject.Studio", ["obs", "com.obsproject.Studio.Plugin"]),
+    "krita": (krita_icon, "apps/org.kde.krita", ["krita"]),
+    "office": (lambda: office_icon("start"), "apps/org.libreoffice.LibreOffice",
+               ["libreoffice-startcenter", "libreoffice-main", "org.libreoffice.LibreOffice.startcenter"]),
+    "writer": (lambda: office_icon("writer"), "apps/org.libreoffice.LibreOffice.writer", ["libreoffice-writer"]),
+    "calc": (lambda: office_icon("calc"), "apps/org.libreoffice.LibreOffice.calc", ["libreoffice-calc"]),
+    "impress": (lambda: office_icon("impress"), "apps/org.libreoffice.LibreOffice.impress", ["libreoffice-impress"]),
+    "thunderbird": (thunderbird_icon, "apps/org.mozilla.Thunderbird", ["thunderbird"]),
+    "chrome": (chrome_icon, "apps/com.google.Chrome", ["google-chrome", "chrome"]),
+    "vlc": (vlc_icon, "apps/org.videolan.VLC", ["vlc"]),
+    "telegram": (telegram_icon, "apps/org.telegram.desktop", ["telegram", "telegram-desktop"]),
+    "heroic": (heroic_icon, "apps/com.heroicgameslauncher.hgl", ["heroic"]),
+    "prism": (prism_icon, "apps/org.prismlauncher.PrismLauncher", ["prismlauncher"]),
+    "retroarch": (retroarch_icon, "apps/org.libretro.RetroArch", ["retroarch", "com.libretro.RetroArch"]),
+    "bottles": (bottles_icon, "apps/com.usebottles.bottles", ["bottles"]),
+    "gimp": (gimp_icon, "apps/org.gimp.GIMP", ["gimp"]),
+    "blender": (blender_icon, "apps/org.blender.Blender", ["blender"]),
+    "kdenlive": (kdenlive_icon, "apps/org.kde.kdenlive", ["kdenlive"]),
+    "audacity": (audacity_icon, "apps/org.audacityteam.Audacity", ["audacity"]),
+    "vscode": (vscode_icon, "apps/com.visualstudio.code", ["code", "vscode", "visual-studio-code"]),
+    "obsidian": (obsidian_icon, "apps/md.obsidian.Obsidian", ["obsidian"]),
+    "signal": (signal_icon, "apps/org.signal.Signal", ["signal", "signal-desktop"]),
     # Monet's own widgets, in the widget gallery.
     "weather": (weather_icon, "apps/monet-weather", []),
     "placard": (placard_icon, "apps/monet-placard", []),
@@ -1162,6 +1516,24 @@ def brush_texture(path, w=640, h=320, seed=4):
     img = Image.new("RGBA", (w, h), (255, 255, 255, 0))
     img.putalpha(alpha)
     img.save(path, optimize=True)
+
+
+def frame_art(folder):
+    """The canvas an app Monet hasn't painted sits on (monet-quick frames), and
+    the paint's relief, laid over the app's own icon too so it looks painted."""
+    c = Canvas(541)
+    area = box(14, 14, 114, 114, 10)
+    c.paint(area, lit("#FBF6EA", "#E2D6BE", y0=14, y1=114, cool="#A898C0"), 5.0, flat(-8), layers=3, wander=0.12,
+            accents=["#FFFFFF", "#EEE4D0", "#DCE8EA"], accent_rate=0.15, thick=1.1)
+    c.finish(relief=0).save(folder / "frame-canvas.png", optimize=True)
+    # The light on those same strokes, as cream where they face it and violet where they don't.
+    h = blur(np.clip(c.height / 2, 0, 1), 2.2) * 2
+    gy, gx = np.gradient(h)
+    side = np.clip(-(gx * LIGHT[0] + gy * LIGHT[1]) * 1.3 * S, -0.35, 0.35) / 0.35 * area
+    rgb = np.where((side > 0)[..., None], np.array([1.0, 0.97, 0.9], np.float32), np.array([0.2, 0.14, 0.34], np.float32))
+    a = np.where(side > 0, side * 0.55, -side * 0.4)
+    img = Image.fromarray((np.concatenate([rgb, a[..., None]], 2) * 255).astype(np.uint8), "RGBA")
+    img.convert("RGBa").resize((256, 256), Image.LANCZOS).convert("RGBA").save(folder / "frame-relief.png", optimize=True)
 
 
 # Monet Settings: a small piece of a painting behind each section's mark.
@@ -1731,6 +2103,7 @@ def main():
     settings_art()
     TEXTURES.mkdir(parents=True, exist_ok=True)
     brush_texture(TEXTURES / "brush.png")
+    frame_art(TEXTURES)
     for old in list(THEME.glob("*/scalable/*.svg")) + list(THEME.glob("actions/16/*.svg")):
         old.unlink()
     paintings = {name: (paint, files) for name, (paint, files) in ICONS.items()}

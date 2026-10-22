@@ -1,0 +1,72 @@
+/* Monet's new tab for Zen: the painting itself, by daylight in Mist and by
+   night in Smoke, with the search on a pane of glass. monet-quick zen imports
+   this from userContent.css and puts the paintings in as data (a new tab may
+   not load files from the profile). */
+
+@-moz-document url("about:newtab"), url("about:home") {
+  :root {
+    background: #E9E5DC url("newtab-mist.jpg") center / cover no-repeat fixed !important;
+  }
+
+  body,
+  .outer-wrapper,
+  main {
+    background: transparent !important;
+  }
+
+  /* The painting is the page: no browser's logo on it. */
+  .logo-and-wordmark-wrapper,
+  .logo-and-wordmark {
+    display: none !important;
+  }
+
+  .search-wrapper .search-handoff-button,
+  .search-wrapper input,
+  .personalize-button {
+    background-color: rgba(243, 241, 236, 0.72) !important;
+    backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 28px rgba(28, 27, 25, 0.22) !important;
+    color: #1C1B19 !important;
+  }
+
+  .search-wrapper .search-handoff-button,
+  .search-wrapper input {
+    border-radius: 14px !important;
+  }
+
+  .search-wrapper .search-handoff-button:hover,
+  .personalize-button:hover {
+    background-color: rgba(243, 241, 236, 0.86) !important;
+  }
+
+  .search-wrapper .search-handoff-button:focus-visible,
+  .search-wrapper input:focus {
+    outline: 2px solid #357F72 !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      background: #242321 url("newtab-smoke.jpg") center / cover no-repeat fixed !important;
+    }
+
+    .search-wrapper .search-handoff-button,
+    .search-wrapper input,
+    .personalize-button {
+      background-color: rgba(36, 35, 33, 0.68) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4) !important;
+      color: #ECE8E1 !important;
+    }
+
+    .search-wrapper .search-handoff-button:hover,
+    .personalize-button:hover {
+      background-color: rgba(36, 35, 33, 0.82) !important;
+    }
+
+    .search-wrapper .search-handoff-button:focus-visible,
+    .search-wrapper input:focus {
+      outline-color: #4DB4A0 !important;
+    }
+  }
+}

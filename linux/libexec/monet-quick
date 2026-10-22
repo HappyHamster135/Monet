@@ -63,6 +63,8 @@
     monet-quick widgets                  open the widget gallery, as the desktop's Add Widgets does
     monet-quick music                    the apps that play music (the default first) and the Store, as JSON
     monet-quick launch ID                start an app by its menu entry's file name (as hex of its UTF-8)
+    monet-quick frames                   put the apps Monet hasn't painted on its canvas, so every app fits in
+    monet-quick zen                      dress Zen in Monet's look (its window, and new tabs on the painting)
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
                                          sound, datetime, users, input, power, notifications,
@@ -71,6 +73,8 @@
     monet-quick listen                   wait until someone asks to open Monet Settings
 """
 
+import base64
+import configparser
 import json
 import os
 import re
@@ -79,10 +83,12 @@ import shutil
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 BINDIR = "@BINDIR@"
 LIBEXECDIR = "@LIBEXECDIR@"
+DATADIR = "@DATADIR@"
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
 PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
@@ -440,11 +446,15 @@ def restart():
 
 # Music ---------------------------------------------------------------------
 
-def app_dirs():
-    """Where the menu's apps are described, nearest first (Flatpak's among the data dirs)."""
+def data_dirs():
+    """XDG's data folders, nearest first (Flatpak's among them)."""
     home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
-    dirs = [home] + [Path(d) for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d]
-    return [d / "applications" for d in dirs]
+    return [home] + [Path(d) for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d]
+
+
+def app_dirs():
+    """Where the menu's apps are described, nearest first."""
+    return [d / "applications" for d in data_dirs()]
 
 
 def desktop_entry(text):
@@ -525,6 +535,275 @@ def entry_by_id(app_id):
             except OSError:
                 return None
     return None
+
+
+# Frames ----------------------------------------------------------------------
+# An app Monet hasn't painted gets its own icon on Monet's canvas, the paint's
+# relief over both, in the account's own copy of the theme (found before the
+# PC's). Made again at sign-in and as apps arrive (monet-frames.path).
+
+FRAME_MARK = "Monet frame:"
+FRAME_BOX = (26, 26, 76)  # where the app's icon sits on the canvas: x, y and size on the 128 grid
+INHERITED = ("breeze", "hicolor")  # what Monet's index.theme inherits, nearest first
+SVG_NS, XLINK = "http://www.w3.org/2000/svg", "http://www.w3.org/1999/xlink"
+ICON_NAME = re.compile(r"[\w+-][\w.+-]*")
+ROOT_ONLY = {"xmlns", "width", "height", "viewBox", "version", "baseProfile", "id", "x", "y", "transform",
+             "preserveAspectRatio", "enable-background"}
+
+
+def is_frame(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return FRAME_MARK in f.read(400)
+    except OSError:
+        return False
+
+
+def painted_names():
+    """The icon names Monet paints, wherever its theme is installed, frames aside."""
+    names, home = set(), data_dirs()[0]
+    for base in data_dirs():
+        for folder, _, files in os.walk(base / "icons/Monet"):
+            for f in files:
+                if f.endswith(".svg") and not (base == home and is_frame(Path(folder) / f)):
+                    names.add(f[:-4])
+    return names
+
+
+def icon_size(parts):
+    """A theme folder's icon size (48, 128x128, 256x256@2, scalable), in pixels."""
+    sizes = [512 if part == "scalable" else int(m[1]) * int(m[2] or 1)
+             for part in parts if part == "scalable" or (m := re.fullmatch(r"(\d+)(?:x\d+)?(?:@(\d+)x?)?", part))]
+    return max(sizes, default=0)
+
+
+def icon_files(names):
+    """Each name's icon files in the themes Monet inherits, then the pixmaps, as (rank, size, path)."""
+    found = {}
+    roots = [(rank, base / "icons" / theme) for rank, theme in enumerate(INHERITED) for base in data_dirs()]
+    roots += [(len(INHERITED), base / "pixmaps") for base in data_dirs()]
+    for rank, root in roots:
+        for folder, _, files in os.walk(root):
+            for f in files:
+                stem, ext = os.path.splitext(f)
+                if stem in names and ext in (".png", ".svg"):
+                    size = icon_size(Path(folder).relative_to(root).parts)
+                    found.setdefault(stem, []).append((rank, size, Path(folder) / f))
+    return found
+
+
+def own_icon(candidates):
+    """The icon KDE would show, from the nearest theme that has it: a big PNG, else its SVG, else the biggest PNG."""
+    if not candidates:
+        return None
+    nearest = min(rank for rank, _, _ in candidates)
+    pngs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix == ".png")
+    svgs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix == ".svg")
+    if pngs and (pngs[-1][0] >= 128 or not svgs):
+        return Path(pngs[-1][1])
+    return Path(svgs[-1][1]) if svgs else None
+
+
+def placed(width, height):
+    """Where a picture of that size goes in the frame, keeping its shape: x, y, scale."""
+    x, y, size = FRAME_BOX
+    k = size / max(width, height)
+    return x + (size - width * k) / 2, y + (size - height * k) / 2, k
+
+
+def framed_png(data):
+    """A PNG icon as an image in the frame, or None."""
+    if data[:8] != b"\x89PNG\r\n\x1a\n" or len(data) < 24:
+        return None
+    width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    if not width or not height:
+        return None
+    x, y, k = placed(width, height)
+    return (f'<image x="{x:.2f}" y="{y:.2f}" width="{width * k:.2f}" height="{height * k:.2f}" '
+            f'xlink:href="data:image/png;base64,{base64.b64encode(data).decode()}"/>'), {}
+
+
+def framed_svg(text):
+    """An SVG icon drawn in the frame: what its root holds, in a group placed and scaled
+    (Qt's SVG can't nest whole documents), and the namespaces it needs; or None."""
+    root = re.search(r"<svg\b([^>]*?)(/?)>", text)
+    end = text.rfind("</svg>")
+    if "<!ENTITY" in text or not root or root[2] or end < root.end():
+        return None
+    attrs = dict(re.findall(r'([\w:.-]+)\s*=\s*"([^"]*)"', root[1]) + re.findall(r"([\w:.-]+)\s*=\s*'([^']*)'", root[1]))
+    try:
+        box = [float(v) for v in re.split(r"[\s,]+", attrs.get("viewBox", "").strip()) if v] or \
+            [0, 0, float(attrs["width"].removesuffix("px")), float(attrs["height"].removesuffix("px"))]
+    except (KeyError, ValueError):
+        return None
+    if len(box) != 4 or box[2] <= 0 or box[3] <= 0 or attrs.get("xmlns", SVG_NS) != SVG_NS:
+        return None
+    x, y, k = placed(box[2], box[3])
+    shift = f" translate({-box[0]:g},{-box[1]:g})" if box[0] or box[1] else ""
+    # What the root says about painting (fill, style, class) carries over to the group.
+    kept = "".join(f' {key}="{value}"' for key, value in attrs.items() if ":" not in key and key not in ROOT_ONLY)
+    spaces = {key[6:]: value for key, value in attrs.items() if key.startswith("xmlns:")}
+    return (f'<g transform="translate({x:.3f},{y:.3f}) scale({k:.5f}){shift}"{kept}>'
+            f"{text[root.end():end]}</g>"), spaces
+
+
+def frame_svg(name, path, art):
+    """The framed icon's SVG, or "" if the app's own can't be framed safely."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return ""
+    made = framed_png(data) if path.suffix == ".png" else framed_svg(data.decode("utf-8", "replace"))
+    if not made or made[1].get("xlink", XLINK) != XLINK:
+        return ""
+    icon, spaces = made
+    spaces["xlink"] = XLINK
+    declared = "".join(f' xmlns:{key}="{value}"' for key, value in spaces.items())
+    text = (f"<!-- {FRAME_MARK} {name}, its own icon on Monet's canvas. Made by monet-quick frames. -->\n"
+            f'<svg xmlns="{SVG_NS}"{declared} viewBox="0 0 128 128">\n'
+            f'  <image width="128" height="128" xlink:href="data:image/png;base64,{art[0]}"/>\n'
+            f"  {icon}\n"
+            f'  <image width="128" height="128" xlink:href="data:image/png;base64,{art[1]}"/>\n</svg>\n')
+    try:
+        ET.fromstring(text)  # whatever the app's SVG did that this can't carry shows up here
+    except ET.ParseError:
+        return ""
+    return text
+
+
+def frames():
+    """Frames the menu's apps that Monet hasn't painted and takes away the frames no longer
+    needed; KDE looks at its icons again if anything changed. Returns the framed names."""
+    textures = Path(DATADIR) / "monet/textures"
+    try:
+        art = [base64.b64encode((textures / f"frame-{part}.png").read_bytes()).decode() for part in ("canvas", "relief")]
+    except OSError:
+        return []
+    seen, names = set(), set()
+    for app_id, entry in menu_entries():
+        if app_id in seen:
+            continue
+        seen.add(app_id)
+        icon = entry.get("Icon", "")
+        if (entry.get("Type") == "Application" and entry.get("NoDisplay") != "true" and entry.get("Hidden") != "true"
+                and ICON_NAME.fullmatch(icon)):
+            names.add(icon)
+    names -= painted_names()
+    found = icon_files(names)
+    out = data_dirs()[0] / "icons/Monet/apps/scalable"
+    made, changed = [], False
+    for name in sorted(names):
+        path = own_icon(found.get(name))
+        text = frame_svg(name, path, art) if path else ""
+        if not text:
+            continue
+        made.append(name)
+        target = out / f"{name}.svg"
+        try:
+            if not target.is_file() or target.read_text(encoding="utf-8") != text:
+                out.mkdir(parents=True, exist_ok=True)
+                target.write_text(text, encoding="utf-8")
+                changed = True
+        except OSError:
+            pass
+    for old in out.glob("*.svg") if out.is_dir() else ():
+        if old.stem not in made and is_frame(old):
+            old.unlink(missing_ok=True)
+            changed = True
+    if changed:
+        run("dbus-send", "--session", "--type=signal", "/KIconLoader", "org.kde.KIconLoader.iconChanged", "int32:0")
+    return made
+
+
+# Zen -------------------------------------------------------------------------
+# Zen, the browser, in Monet's look: share/monet/zen copied into each of its
+# profiles' chrome/ folder and imported from userChrome.css and
+# userContent.css, with the two prefs that takes. At sign-in and as Zen
+# arrives or makes a profile (monet-zen.path); Zen shows it from its next start.
+
+ZEN_ID = "app.zen_browser.zen"
+ZEN_BEGIN, ZEN_END = "// Monet: begin (monet-quick zen writes this part)", "// Monet: end"
+ZEN_PREFS = ('user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);',
+             'user_pref("zen.urlbar.replace-newtab", false);  // a new tab opens on the painting')
+ZEN_IMPORTS = {"userChrome.css": '@import url("monet/zen.css");', "userContent.css": '@import url("monet/newtab.css");'}
+
+
+def zen_root():
+    return Path.home() / ".var/app" / ZEN_ID / ".zen"
+
+
+def zen_profiles(root):
+    """Zen's profile folders, from its profiles.ini. Before Zen has made one, Monet's
+    own, as the default, which Zen takes on its first start already dressed."""
+    ini = root / "profiles.ini"
+    try:
+        if not ini.is_file():
+            (root / "monet.default").mkdir(parents=True, exist_ok=True)
+            ini.write_text("[Profile0]\nName=Monet\nIsRelative=1\nPath=monet.default\nDefault=1\n\n"
+                           "[General]\nStartWithLastProfile=1\nVersion=2\n")
+        found = configparser.ConfigParser(interpolation=None, strict=False)
+        found.read_string(ini.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, configparser.Error):
+        return []
+    folders = []
+    for section in found.sections():
+        path = found[section].get("Path")
+        if section.startswith("Profile") and path:
+            folder = root / path if found[section].get("IsRelative", "1") == "1" else Path(path)
+            if folder.is_dir():
+                folders.append(folder)
+    return folders
+
+
+def with_part(text, lines):
+    """user.js with Monet's part (between its marks) as lines: replaced where it is, else added."""
+    part = "\n".join([ZEN_BEGIN, *lines, ZEN_END]) + "\n"
+    start = text.find(ZEN_BEGIN)
+    stop = text.find(ZEN_END, start) if start >= 0 else -1
+    if stop >= 0:
+        return text[:start] + part + text[stop + len(ZEN_END):].removeprefix("\n")
+    return text + ("\n" if text and not text.endswith("\n") else "") + part
+
+
+def write_if_changed(path, data):
+    if not path.is_file() or path.read_bytes() != data:
+        path.write_bytes(data)
+
+
+def zen():
+    """Dresses Zen in Monet's look, once Zen is installed. Returns the profile folders dressed."""
+    if not any((folder / f"{ZEN_ID}.desktop").is_file() for folder in app_dirs()):
+        return []
+    source = Path(DATADIR) / "monet/zen"
+    try:
+        files = {name: (source / name).read_bytes() for name in ("zen.css", "mist.jpg", "smoke.jpg")}
+        newtab = (source / "newtab.css").read_text(encoding="utf-8")
+        for light in ("mist", "smoke"):
+            data = base64.b64encode((source / f"newtab-{light}.jpg").read_bytes()).decode()
+            newtab = newtab.replace(f'url("newtab-{light}.jpg")', f'url("data:image/jpeg;base64,{data}")')
+    except OSError:
+        return []
+    files["newtab.css"] = newtab.encode()
+    dressed = []
+    for profile in zen_profiles(zen_root()):
+        chrome = profile / "chrome"
+        try:
+            (chrome / "monet").mkdir(parents=True, exist_ok=True)
+            for name, data in files.items():
+                write_if_changed(chrome / "monet" / name, data)
+            # An @import goes before anything else in a style sheet; what the person wrote stays below it.
+            for name, line in ZEN_IMPORTS.items():
+                sheet = chrome / name
+                text = sheet.read_text(encoding="utf-8") if sheet.is_file() else ""
+                if line not in text:
+                    sheet.write_text(line + "\n" + text, encoding="utf-8")
+            prefs = profile / "user.js"
+            text = prefs.read_text(encoding="utf-8") if prefs.is_file() else ""
+            write_if_changed(prefs, with_part(text, ZEN_PREFS).encode())
+        except OSError:
+            continue
+        dressed.append(profile)
+    return dressed
 
 
 def busjson(*args):
@@ -1400,6 +1679,10 @@ def main(argv):
             set_default(args[0], app_id)
     elif cmd == "music":
         emit(music())
+    elif cmd == "frames":
+        frames()
+    elif cmd == "zen":
+        zen()
     elif cmd == "launch" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
         launch(unhex(args[0]))
     elif cmd == "widgets":

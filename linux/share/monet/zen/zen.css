@@ -1,0 +1,40 @@
+/* Monet's look for Zen's window: the painting softened behind its glass, lily
+   for the accent, Monet's paper and smoke for what pops up. monet-quick zen
+   copies this folder into each Zen profile's chrome/ and imports this file
+   from userChrome.css. It follows the PC's light: Smoke is dark to Zen.
+
+   A user style sheet's !important wins over what Zen sets as it runs (its
+   theme picker's gradient and accent), so Monet's colors stay. */
+
+:root {
+  --zen-primary-color: light-dark(#357F72, #4DB4A0) !important;
+  --zen-main-browser-background: light-dark(#E9E5DC, #2A2926) !important;
+  --zen-main-browser-background-toolbar: light-dark(#E9E5DC, #2A2926) !important;
+  --toolbox-textcolor: light-dark(#1C1B19, #ECE8E1) !important;
+  --zen-border-radius: 12px !important;
+  --zen-big-shadow: 0 4px 18px light-dark(rgba(28, 27, 25, 0.18), rgba(0, 0, 0, 0.45)) !important;
+  --zen-urlbar-background: light-dark(rgba(243, 241, 236, 0.86), rgba(36, 35, 33, 0.86)) !important;
+  --zen-dialog-background: light-dark(#F3F1EC, #242321) !important;
+  --arrowpanel-background: light-dark(#F3F1EC, #2B2A27) !important;
+  --arrowpanel-color: light-dark(#1C1B19, #ECE8E1) !important;
+}
+
+/* Behind the sidebar and around the page: the painting, blurred and washed in
+   paper (or smoke), fixed to the window so the toolbar's piece lines up. */
+.zen-browser-generic-background::before,
+.zen-browser-generic-background::after {
+  background: url("mist.jpg") center / cover no-repeat fixed, #E9E5DC !important;
+  background-blend-mode: normal !important; /* Zen lightens its layers together: the paper would win */
+  opacity: 1 !important;
+}
+
+.zen-browser-grain {
+  display: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .zen-browser-generic-background::before,
+  .zen-browser-generic-background::after {
+    background: url("smoke.jpg") center / cover no-repeat fixed, #2A2926 !important;
+  }
+}
