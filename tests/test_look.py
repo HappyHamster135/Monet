@@ -1034,6 +1034,42 @@ class Cursors(unittest.TestCase):
         self.assertIn("[Mouse]\\ncursorTheme=Monet-cursors", install)
 
 
+class Sounds(unittest.TestCase):
+    """Felt and glass (tools/make-sounds.py) instead of KDE's Ocean."""
+    THEME = SHARE / "sounds/monet"
+
+    def test_monet_has_the_sounds_plasma_plays(self):
+        index = configparser.ConfigParser(interpolation=None)
+        index.read_string((self.THEME / "index.theme").read_text())
+        theme = index["Sound Theme"]
+        self.assertEqual(theme["Name"], "Monet")
+        self.assertEqual(theme["Directories"], "stereo")
+        self.assertEqual(index["stereo"]["OutputProfile"], "stereo")
+        # Ocean plays the few Monet leaves out.
+        self.assertEqual(theme["Inherits"].split(","), ["ocean", "freedesktop"])
+        # What Plasma 6.7 plays as it comes: signing in and out, KDE's dialogs, devices, power and the battery,
+        # the volume step, the bell, the trash and a timer; and the Example KDE's sound settings preview.
+        for name in ("desktop-login", "desktop-logout", "message-new-instant", "complete", "alarm-clock-elapsed",
+                     "dialog-information", "dialog-question", "dialog-warning", "dialog-error", "dialog-error-serious",
+                     "dialog-error-critical", "bell", "bell-window-system", "audio-volume-change", "device-added",
+                     "device-removed", "power-plug", "power-unplug", "battery-caution", "battery-low", "trash-empty",
+                     theme["Example"]):
+            data = (self.THEME / "stereo" / f"{name}.oga").read_bytes()
+            self.assertEqual(data[:4], b"OggS", name)
+            self.assertIn(b"\x01vorbis", data[:64], name)
+
+    def test_installed_removed_and_the_default(self):
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('tree "$SRC/share/sounds/monet" "$DATADIR/sounds/monet"', install)
+        # For new accounts on Monet's image, and for each account as it gets Monet's look.
+        self.assertIn("kwriteconfig6 --file /etc/xdg/kdeglobals --group Sounds --key Theme monet", install)
+        self.assertIn("kw --file kdeglobals --group Sounds --key Theme monet",
+                      (ROOT / "linux/libexec/monet-look").read_text())
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        self.assertIn('"$PREFIX/share/sounds/monet"', uninstall)
+        self.assertIn("kwriteconfig6 --file kdeglobals --group Sounds --key Theme ocean", uninstall)
+
+
 class StartAndSignIn(unittest.TestCase):
     PLYMOUTH = ROOT / "image/setup/files/usr/share/plymouth/themes/monet"
 

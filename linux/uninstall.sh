@@ -17,9 +17,10 @@ if [ "$(id -u)" -ne 0 ]; then
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
     systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service >/dev/null 2>&1 || true
-    # Hand the desktop back to Breeze.
+    # Hand the desktop back to Breeze, and the sounds to Ocean.
     command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Breeze
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group Sounds --key Theme ocean
     echo "Removing Monet. You may be asked for your password."
     exec sudo "$0" "$@"
 fi
@@ -59,6 +60,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/Kvantum/MonetSolid" "$PREFIX/share/Kvantum/MonetDarkSolid" \
     "$PREFIX/share/aurorae/themes/Monet" "$PREFIX/share/aurorae/themes/MonetSolid" \
     "$PREFIX/share/aurorae/themes/MonetSmoke" "$PREFIX/share/aurorae/themes/MonetSmokeSolid" \
-    "$PREFIX/share/fonts/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" /var/lib/monet
+    "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
+    /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."

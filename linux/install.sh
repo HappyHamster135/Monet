@@ -132,6 +132,8 @@ for theme in Monet MonetSolid MonetSmoke MonetSmokeSolid; do
 done
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
+# The sounds, felt and glass; KDE's Ocean plays the few Monet leaves out.
+tree "$SRC/share/sounds/monet" "$DATADIR/sounds/monet"
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
@@ -213,6 +215,8 @@ ABOUT
     # New accounts start with Monet's look, so Plasma lays out Monet's islands
     # and widgets itself as it first starts, instead of KDE's to be replaced.
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage org.monet.desktop
+    # And with Monet's sounds, from the first sign-in.
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group Sounds --key Theme monet
     # Bazzite's greetings: its setup portal and announcements at the first
     # sign-in, and its welcome in every new terminal. Monet Setup and Monet
     # Settings have that covered.

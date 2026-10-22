@@ -42,11 +42,15 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   a new account starts with Monet's layout, and any desktop without them gets
   them once, trying again at the next sign-in if Plasma wasn't ready.
 - **The weather breathes.** The next four days have room under today.
+- **Monet's own sounds.** Messages, warnings and errors, a drive or the
+  charger plugged in or out, a low battery, the volume step and emptying the
+  trash sound like Monet now: soft felt and glass, quiet and warm. Before,
+  they were KDE's.
 
 Updating from 0.8.1: Settings → Updates → Install, then restart. At your
 next sign-in Monet's menu takes the place of KDE's in your panel, with your
-pins, the widgets come if your desktop has none, and the right-click menu
-offers Add or Manage Widgets.
+pins, the widgets come if your desktop has none, the right-click menu
+offers Add or Manage Widgets, and Monet's sounds take over from KDE's.
 
 ### New in 0.8.1: just Monet
 
