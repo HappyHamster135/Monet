@@ -1,0 +1,9 @@
+[Sound Theme]
+Name=Monet
+Comment=Soft felt and glass
+Inherits=ocean,freedesktop
+Directories=stereo
+Example=desktop-login
+
+[stereo]
+OutputProfile=stereo

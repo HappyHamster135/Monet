@@ -49,6 +49,8 @@ kw --file kdeglobals --group General --key AccentColor "53,127,114"
 kw --file kdeglobals --group General --key accentColorFromWallpaper false
 kw --file kdeglobals --group Icons --key Theme Monet
 kw --file kcminputrc --group Mouse --key cursorTheme Monet-cursors
+# Monet's sounds: felt and glass, instead of KDE's Ocean.
+kw --file kdeglobals --group Sounds --key Theme monet
 
 # Inter for reading; Fraunces is used by Monet's own pieces.
 if fc-list : family 2>/dev/null | grep -qx "Inter"; then

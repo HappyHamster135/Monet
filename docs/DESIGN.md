@@ -373,6 +373,16 @@ night in Smoke (`make-store.py`).
 Desktop animation speed 0.8x. Windows scale gently in and out. With
 animations turned off in More settings, Monet's widgets fade or cut.
 
+## Sound
+
+- **Felt and glass** (`monet`, `tools/make-sounds.py`): one soft instrument,
+  felt mallets on warm bars and a little struck glass, in a small room. Quiet,
+  and every sound fades out without a click. All in F major, so two sounds at
+  once never clash. Notes go up for what arrives (signing in, a message, a
+  drive or the charger plugged in) and down for what leaves or goes wrong
+  (signing out, unplugging, warnings, errors, a low battery). The few names
+  Monet has no sound for play KDE's Ocean.
+
 ## Signature moments
 
 - **Start:** the dawn painting comes out of the dark, the sun rises from its
@@ -459,6 +469,7 @@ python3 tools/make-paintings.py   # The Hours (4K)
 python3 tools/make-branding.py    # marks, Windows icon, installer art
 python3 tools/make-icons.py       # icon theme, brush texture
 python3 tools/make-cursors.py     # pointer
+python3 tools/make-sounds.py      # sounds (needs soundfile)
 python3 tools/make-plasma-style.py
 python3 tools/make-decoration.py  # window frames (after make-icons.py's painter)
 python3 tools/make-kvantum.py
