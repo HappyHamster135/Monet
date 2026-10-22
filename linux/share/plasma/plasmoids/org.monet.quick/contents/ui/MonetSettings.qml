@@ -91,6 +91,11 @@ PlasmaCore.Dialog {
     property string updateState: ""
     property var updateFound: ({})
     property string updateMessage: ""
+    // Firmware for the PC's own parts (fwupd): the same states, and the updates.
+    property string firmwareState: ""
+    property var firmware: []
+    property string firmwareMessage: ""
+    readonly property bool firmwareRestart: firmware.some(f => f.restart)
 
     title: i18n("Settings")
     location: PlasmaCore.Types.Floating
@@ -279,6 +284,53 @@ PlasmaCore.Dialog {
             sheet.updateMessage = found.message || ""
             sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
         })
+        checkFirmware()
+    }
+
+    function checkFirmware() {
+        firmwareState = "checking"
+        ask("firmware-check", out => {
+            const found = sheet.json(out, { ok: false })
+            sheet.firmware = found.updates || []
+            sheet.firmwareMessage = found.message || ""
+            sheet.firmwareState = !found.ok ? "failed" : sheet.firmware.length > 0 ? "available" : "none"
+        })
+    }
+
+    function installFirmware() {
+        firmwareState = "installing"
+        ask("firmware-update", out => {
+            const result = sheet.json(out, { ok: false, message: "" })
+            sheet.firmwareMessage = result.message || ""
+            sheet.firmwareState = result.ok ? "done" : "failed"
+        })
+    }
+
+    function firmwareTitle() {
+        switch (firmwareState) {
+        case "installing": return i18n("Updating firmware…")
+        case "done": return firmwareRestart ? i18n("Restart to finish the firmware") : i18n("Firmware is up to date")
+        case "failed": return i18n("The firmware didn't update")
+        default: return i18np("%1 firmware update", "%1 firmware updates", firmware.length)
+        }
+    }
+
+    function firmwareDetail() {
+        switch (firmwareState) {
+        case "installing": return i18n("Keep the PC plugged in and switched on.")
+        case "done": return firmwareRestart ? i18n("It installs while the PC restarts. Keep it plugged in until it's back.") : i18n("Everything is installed.")
+        case "failed": return firmwareMessage || i18n("Try again in a moment.")
+        default: return i18n("For this PC's own parts, from their makers. Install when you're ready.")
+        }
+    }
+
+    // "1.20 → 1.32 · installs when the PC restarts", or what's in the way.
+    function firmwareLine(update) {
+        if (update.blocked) {
+            return update.blocked
+        }
+        const versions = update.current ? update.current + " → " + update.version : update.version
+        return update.restart ? i18n("%1 · installs when the PC restarts", versions) : versions
     }
 
     function installUpdates() {
@@ -1838,6 +1890,80 @@ PlasmaCore.Dialog {
                                     sheet.checkUpdates()
                                 }
                             }
+                        }
+                    }
+                }
+                // Firmware, only when there's some to install.
+                Card {
+                    tone: look
+                    visible: sheet.firmware.length > 0
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 18
+                        Rounded {
+                            Layout.preferredWidth: 56
+                            Layout.preferredHeight: 56
+                            radius: 16
+                            Image {
+                                anchors.fill: parent
+                                source: sheet.art + "swatch-updates.png"
+                                sourceSize: Qt.size(112, 112)
+                                smooth: true
+                            }
+                            Glyph {
+                                anchors.centerIn: parent
+                                width: 28
+                                height: 28
+                                // A chip on its pins.
+                                path: "M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.firmwareTitle()
+                                color: look.ink
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.firmwareDetail()
+                                color: sheet.firmwareState === "failed" ? "#E0603A" : look.dim
+                                font.pixelSize: 13
+                                wrapMode: Text.Wrap
+                            }
+                            PlasmaComponents.ProgressBar {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 6
+                                visible: sheet.firmwareState === "installing"
+                                indeterminate: true
+                            }
+                        }
+                        Pill {
+                            tone: look
+                            kind: sheet.firmwareState === "available" || (sheet.firmwareState === "done" && sheet.firmwareRestart) ? "lily" : "plain"
+                            visible: !(sheet.firmwareState === "done" && !sheet.firmwareRestart)
+                            text: sheet.firmwareState === "installing" ? i18n("Installing…")
+                                : sheet.firmwareState === "done" ? i18n("Restart now")
+                                : sheet.firmwareState === "failed" ? i18n("Try again")
+                                : i18n("Install")
+                            enabledPill: sheet.firmwareState !== "installing" && sheet.firmware.some(f => !f.blocked)
+                            onClicked: sheet.firmwareState === "done" ? sheet.ask("restart") : sheet.installFirmware()
+                        }
+                    }
+                    Repeater {
+                        model: sheet.firmware
+                        SettingRow {
+                            tone: look
+                            strong: false
+                            title: modelData.vendor && modelData.device.indexOf(modelData.vendor) < 0
+                                ? modelData.vendor + " " + modelData.device : modelData.device
+                            detail: sheet.firmwareLine(modelData)
                         }
                     }
                 }

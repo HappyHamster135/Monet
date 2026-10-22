@@ -227,7 +227,10 @@ you're on. On the paper: the page under its swatch, title and a line saying
 how things stand ("Connected to Harbor"), in rounded cards with switches
 (Lily when on), devices with what they are (headphones, a controller, a
 mouse) in a chip that turns lily while connected, and the sun only for
-Restart in Windows. The `monet-quick` helper does the
+Restart in Windows. Updates looks for a new Monet, app updates and the PC's
+own firmware (UEFI, disks, docks: fwupd, from their makers through LVFS)
+together, and installs each only from its own button; firmware that installs
+during a restart says so. The `monet-quick` helper does the
 work. Settings in the dock and the app menu runs `monet-quick open [page]`,
 which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into

@@ -562,6 +562,12 @@ class Updates(unittest.TestCase):
         self.assertIn('ask("update"', qml)
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('"update", "--check", "--json"', quick)
+        # Firmware too: looked for with Monet, installed only from its own button.
+        self.assertIn('ask("firmware-check"', qml)
+        self.assertIn('ask("firmware-update"', qml)
+        for command in ('"firmware-check"', '"firmware-update"'):
+            self.assertIn(f"cmd == {command}", quick)
+        self.assertNotIn("fwupd-refresh", (ROOT / "linux/install.sh").read_text())  # not masked: it only fetches the list
 
 
 class Fonts(unittest.TestCase):
@@ -901,6 +907,40 @@ class Scripts(unittest.TestCase):
         self.assertEqual(nets[0]["signal"], 72)
         self.assertFalse(nets[2]["secure"])
         self.assertFalse(nets[3]["secure"])
+
+    def test_quick_reads_fwupd(self):
+        report = {"Devices": [
+            {"Name": "System Firmware", "Vendor": "Lenovo", "Version": "1.20", "Flags": ["internal", "updatable", "needs-reboot"],
+             "Problems": ["require-ac-power"], "Releases": [{"Version": "1.32", "Summary": "UEFI update"}, {"Version": "1.28"}]},
+            {"Name": "Samsung SSD 990 PRO 1TB", "Vendor": "Samsung", "Version": "4B2QJXD7", "Flags": ["updatable"],
+             "Releases": [{"Version": "4B2QJXE7"}]},
+            {"Name": "Keyboard", "Version": "1.0", "Flags": ["updatable"], "Releases": []},
+        ]}
+        found = quick_helper().firmware_updates(report)
+        self.assertEqual([f["device"] for f in found], ["System Firmware", "Samsung SSD 990 PRO 1TB"])
+        uefi, ssd = found
+        self.assertEqual((uefi["current"], uefi["version"], uefi["restart"]), ("1.20", "1.32", True))
+        self.assertEqual(uefi["blocked"], "Plug in the charger first.")
+        self.assertEqual((ssd["restart"], ssd["blocked"]), (False, ""))
+
+    def test_quick_firmware_check_without_updates_or_with_trouble(self):
+        from unittest import mock
+        quick = quick_helper()
+        done = subprocess.CompletedProcess
+        answers = [
+            # fwupd's "nothing to do": no updates, or no part it can update.
+            done([], 2, "", "No updatable devices\n"),
+            done([], 1, "", "Failed to connect to daemon\nIs fwupd running?\n"),
+            done([], 0, json.dumps({"Devices": [{"Name": "Dock", "Version": "1", "Releases": [{"Version": "2"}]}]}), ""),
+        ]
+        with mock.patch.object(quick.shutil, "which", lambda name: "/usr/bin/" + name), \
+                mock.patch.object(quick.subprocess, "run", lambda args, **kw: answers.pop(0)):
+            self.assertEqual(quick.firmware_check(), {"ok": True, "updates": []})
+            self.assertEqual(quick.firmware_check(), {"ok": False, "message": "Is fwupd running?"})
+            self.assertEqual([f["version"] for f in quick.firmware_check()["updates"]], ["2"])
+        # No fwupd at all: nothing to show, not an error.
+        with mock.patch.object(quick.shutil, "which", lambda name: None):
+            self.assertEqual(quick.firmware_check(), {"ok": True, "updates": []})
 
     def test_quick_knows_what_a_bluetooth_device_is(self):
         info = "Device AA:BB:CC:DD:EE:FF (public)\n\tName: WH-1000XM5\n\tIcon: audio-headset\n\tConnected: yes\n"

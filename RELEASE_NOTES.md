@@ -32,6 +32,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   lily for choices, the sun for the button that goes ahead. Before, newer
   apps like the Store kept their own grey and blue, older ones lost KDE's
   colors, and dark mode was bluish.
+- **Firmware updates in Settings.** Updates now also finds new firmware for
+  the PC's own parts (its UEFI, disks, docks), from their makers, and
+  installs it when you press Install, never by itself. It says when one
+  installs during the next restart, and what's in the way (like "Plug in
+  the charger first").
 - **Settings is clearer.** Each page shows its painting and how things
   stand ("Connected to Harbor"), the list glides to the page you're on,
   pages that open KDE's settings are marked ↗, Bluetooth devices show what

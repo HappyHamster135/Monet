@@ -22,6 +22,8 @@
     monet-quick doctor                   run `monet doctor`
     monet-quick update-check             is there a newer Monet, or app updates? as JSON
     monet-quick update                   install them (Monet never updates by itself)
+    monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
+    monet-quick firmware-update          install them
     monet-quick restart                  ask to restart, the way the app menu does
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
@@ -284,6 +286,80 @@ def update_check():
     return {"ok": False, "message": message[-1] if message else ""}
 
 
+# Firmware: the PC's own parts (its UEFI, disks, docks), from LVFS through
+# fwupd, like Monet itself: only when asked.
+
+# fwupd's names for what stops an update, as a sentence.
+FIRMWARE_PROBLEMS = {
+    "require-ac-power": "Plug in the charger first.",
+    "system-power-too-low": "Charge the battery a little first.",
+    "power-too-low": "The device's battery is too low.",
+    "lid-is-closed": "Open the lid first.",
+    "display-required": "Connect a screen first.",
+    "update-in-progress": "An update is already running.",
+    "in-use": "It's in use right now.",
+    "unreachable": "It can't be reached right now.",
+}
+# fwupdmgr asks questions on its own otherwise (old update lists, unsent reports).
+FWUPD_QUIET = ("--no-metadata-check", "--no-unreported-check")
+
+
+def firmware_updates(report):
+    """Each device's newest update in `fwupdmgr get-updates --json`."""
+    found = []
+    for device in (report or {}).get("Devices") or []:
+        releases = device.get("Releases") or []
+        if not releases:
+            continue
+        flags = set(device.get("Flags") or [])
+        problems = [FIRMWARE_PROBLEMS[p] for p in device.get("Problems") or [] if p in FIRMWARE_PROBLEMS]
+        found.append({
+            "device": device.get("Name", ""),
+            "vendor": device.get("Vendor", ""),
+            "current": device.get("Version", ""),
+            "version": releases[0].get("Version", ""),
+            "summary": releases[0].get("Summary", ""),
+            "restart": bool(flags & {"needs-reboot", "needs-shutdown"}),
+            "blocked": problems[0] if problems else device.get("UpdateError", ""),
+        })
+    return found
+
+
+def last_line(text):
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    return lines[-1] if lines else ""
+
+
+def firmware_check():
+    if not shutil.which("fwupdmgr"):
+        return {"ok": True, "updates": []}
+    try:
+        result = subprocess.run(["fwupdmgr", "get-updates", "--json", *FWUPD_QUIET],
+                                capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "message": "Monet couldn't ask about firmware updates."}
+    try:
+        report = json.loads(result.stdout)
+    except ValueError:
+        report = None
+    if isinstance(report, dict):
+        return {"ok": True, "updates": firmware_updates(report)}
+    # 2 is fwupd's "nothing to do": no updates, or no part it can update.
+    if result.returncode == 2:
+        return {"ok": True, "updates": []}
+    return {"ok": False, "message": last_line(result.stderr or result.stdout)}
+
+
+def firmware_update():
+    """Installs them. fwupd asks for the password itself; nothing restarts."""
+    try:
+        result = subprocess.run(["fwupdmgr", "update", "--assume-yes", "--no-reboot-check", *FWUPD_QUIET],
+                                capture_output=True, text=True, timeout=3600)
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "message": "The firmware update didn't finish."}
+    return {"ok": result.returncode == 0, "message": last_line(result.stderr or result.stdout)}
+
+
 def restart():
     """KDE's own restart question, so open apps can save first."""
     if busctl("call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptReboot") is None:
@@ -489,6 +565,10 @@ def main(argv):
         emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
     elif cmd == "update-check":
         emit(update_check())
+    elif cmd == "firmware-check":
+        emit(firmware_check())
+    elif cmd == "firmware-update":
+        emit(firmware_update())
     elif cmd == "restart":
         restart()
     elif cmd == "kde" and args and args[0] in KDE_PAGES:
