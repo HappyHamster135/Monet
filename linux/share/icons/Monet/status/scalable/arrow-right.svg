@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+  <!-- Monet ink sign for the bar. Drawn by tools/make-icons.py. -->
+  <defs><style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#1c1b19; } .ColorScheme-Highlight { color:#357f72; } .ColorScheme-NegativeText { color:#d4462a; } .ColorScheme-NeutralText { color:#e39b3d; } .ColorScheme-PositiveText { color:#2f8a55; }</style></defs>
+  <path class="ColorScheme-Text" fill="currentColor" d="M7.429,5.571 L8.403,6.597 L9.379,7.621 L10.358,8.642 L11.342,9.658 L12.332,10.668 L13.050,11.000 L12.332,11.332 L11.342,12.342 L10.358,13.358 L9.379,14.379 L8.403,15.403 L7.429,16.429 L7.691,16.254 L8.000,16.192 L8.309,16.254 L8.571,16.429 L8.746,16.691 L8.808,17.000 L8.746,17.309 L8.571,17.571 L9.597,16.597 L10.621,15.621 L11.642,14.642 L12.658,13.658 L13.668,12.668 L14.950,11.000 L13.668,9.332 L12.658,8.342 L11.642,7.358 L10.621,6.379 L9.597,5.403 L8.571,4.429 L8.746,4.691 L8.807,5.000 L8.746,5.309 L8.571,5.571 L8.309,5.746 L8.000,5.808 L7.691,5.746 Z"/>
+</svg>

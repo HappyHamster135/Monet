@@ -271,7 +271,8 @@ def button_svg(ps, kind, light, dabs):
                        ("deactivated", state(spec["sign"], faint=0.35)), ("inactive", state(spec["sign_dim"])),
                        ("hover-inactive", near), ("pressed-inactive", down),
                        ("deactivated-inactive", state(spec["sign_dim"], faint=0.35))):
-        sheet.element(name, BUTTON, BUTTON, body)
+        # Aurorae draws each state as a frame with only its center: "<state>-center".
+        sheet.element(f"{name}-center", BUTTON, BUTTON, body)
     return sheet.svg()
 
 

@@ -90,15 +90,20 @@ class Sheet:
                 + "\n".join(self.parts) + "\n</svg>\n")
 
 
+def along(cx, cy, p, radius):
+    """p slid along its ray from the arc's centre onto radius: start and end lie on the
+    piece's own arc, and every band inside it must share that arc's centre."""
+    d = math.hypot(p[0] - cx, p[1] - cy)
+    return (cx + (p[0] - cx) * radius / d, cy + (p[1] - cy) * radius / d)
+
+
 def quarter(cx, cy, start, end, r):
-    return f"M{cx},{cy} L{start[0]},{start[1]} A{r},{r} 0 0 1 {end[0]},{end[1]} Z"
+    s, e = along(cx, cy, start, r), along(cx, cy, end, r)
+    return f"M{cx},{cy} L{s[0]},{s[1]} A{r},{r} 0 0 1 {e[0]},{e[1]} Z"
 
 
 def ring(cx, cy, start, end, r, w):
-    def at(p, radius):
-        return (cx + (p[0] - cx) * radius / r, cy + (p[1] - cy) * radius / r)
-
-    s0, e0, s1, e1 = at(start, r), at(end, r), at(start, r - w), at(end, r - w)
+    s0, e0, s1, e1 = (along(cx, cy, p, q) for p, q in ((start, r), (end, r), (start, r - w), (end, r - w)))
     return f"M{s0[0]},{s0[1]} A{r},{r} 0 0 1 {e0[0]},{e0[1]} L{e1[0]},{e1[1]} A{r - w},{r - w} 0 0 0 {s1[0]},{s1[1]} Z"
 
 
@@ -135,11 +140,13 @@ def frame_pieces(sheet, prefix, r, glass, mask=False):
     for which, (cx, cy, s, e) in corners(r).items():
         def body(x, y, cx=cx, cy=cy, s=s, e=e, which=which):
             shift = lambda p: (x + p[0], y + p[1])  # noqa: E731
-            out = f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r)}" {fill}/>'
+            # KWin blurs every pixel the mask touches, whole: the mask's corner sits 1 px
+            # inside the glass's (as in Breeze) so the blur stays under its soft edge.
+            out = f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r - 1 if mask else r)}" {fill}/>'
             if not mask:
                 top = which.startswith("top")
-                if top:
-                    out += f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r - 1)}" fill="url(#sheen)"/>'
+                if top:  # under the hairline and the rim, as on the top edge (y + 2)
+                    out += f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r - 2)}" fill="url(#sheen)"/>'
                 out += f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r, 1)}" {edge}/>'
                 out += (f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r - 1, 1)}" fill="#ffffff" '
                         f'fill-opacity="{RIM_TOP if top else RIM_BOTTOM}"/>')
@@ -181,9 +188,10 @@ def shadow_pieces(sheet, r, blur, drop, strength):
     shadow_box = [box[0], box[1] + drop * k, box[2], box[3] + drop * k]
     d.rounded_rectangle(shadow_box, radius=r * k, fill=255)
     soft = big.filter(ImageFilter.GaussianBlur(blur * k / 2)).resize((W, H), Image.LANCZOS)
-    glass = Image.new("L", (W * k, H * k), 0)
-    ImageDraw.Draw(glass).rounded_rectangle(box, radius=r * k, fill=255)
-    glass = glass.resize((W, H), Image.LANCZOS)
+    c = 8  # the cut must follow the glass's antialiased edge: finer, and averaged (no ringing)
+    glass = Image.new("L", (W * c, H * c), 0)
+    ImageDraw.Draw(glass).rounded_rectangle([side * c, top * c, (W - side) * c - 1, (H - bottom) * c - 1], radius=r * c, fill=255)
+    glass = glass.resize((W, H), Image.BOX)
     alpha = np.asarray(soft).astype(np.float32) * strength
     alpha *= 1 - np.asarray(glass).astype(np.float32) / 255
     rgba = np.zeros((H, W, 4), np.uint8)

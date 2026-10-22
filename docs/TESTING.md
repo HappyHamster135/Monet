@@ -64,7 +64,9 @@ then Play on Windows again (Windows resumes from hibernation).
 On a Windows 11 Pro PC, Hyper-V runs Monet the way a real PC does: UEFI
 with Secure Boot on (Microsoft's keys for Linux), so it starts through its
 signed shim and shows the blue driver-key screen once. There's no graphics
-card in it, so the glass is drawn in software: right, but slower.
+card in it, so everything is drawn by the processor, and Monet starts
+without glass there (blurring makes everything lag). To see the glass
+anyway, turn on **Glass** in Settings → Light & Wallpaper: right, but slow.
 
 1. Turn Hyper-V on, once, in PowerShell as administrator, then restart:
    `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All`

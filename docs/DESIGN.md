@@ -78,14 +78,18 @@ Two kinds, chosen by the light (Quick Settings → Light: Hours, Mist or Smoke):
 - **Mist** (dawn and midday): paper at about 50%, a bright line along the top.
 - **Smoke** (dusk and night): smoke at about 50%, a faint line along the top.
 
-Behind both: KWin's blur (strength 12, a little noise for grain) and its
-contrast effect (saturation 1.7, set in the Plasma style's `metadata.json`),
-so the glass carries the painting's light instead of looking grey.
+Behind both: KWin's blur (strength 12, a little noise for grain, saturation
+1.7 in kwinrc since KWin 6.7 folded its contrast effect into the blur), so the
+glass carries the painting's light instead of looking grey. KWin blurs whole
+pixels with a hard edge behind panels and popovers, so each frame's mask
+rounds its corners 1 px inside the glass's, as Breeze does, and the blur
+stays under the glass's soft edge instead of making a jagged halo.
 
 Light in the glass: a rim brightest along the top that fades down the sides
 (the sides stretch, so it fades over the whole height), the way light gathers
 in the thickness of a pane, and a soft sheen under the top edge. A hairline
-of ink outside it keeps the edge.
+of ink outside it keeps the edge. In the corners all three follow the glass's
+own arc, so they run on from the straight edges without a step.
 
 | Where | How |
 |---|---|
@@ -149,9 +153,14 @@ Settings in front of it.
   tube of paint for USB sticks, a disc for discs. Breeze has an icon for
   nearly every exact file type, found before the generic one, so `aliases`
   lists the names and `install.sh` links them to the paintings.
-- **The bar's signs** (sound, network, battery, power, clipboard, drives) are
-  brushed in ink in the Plasma style's `icons/`, tapering like a brush, and
-  recolor with the light. Sleep is the moon, shut down the setting sun.
+- **The bar's signs** (sound, network, Bluetooth, battery, brightness, media,
+  notifications, clipboard, drives, the arrow that opens the rest) are
+  brushed in ink, tapering like a brush, and recolor with the light. Sleep is
+  the moon, shut down the setting sun. Plasma 6.7 takes them from the icon
+  theme by name (`status/`, drawn with the Plasma style's brush), never from
+  the Plasma style, and tints them because the theme follows the color
+  scheme. A drive gets its sign under its exact `-symbolic` name, or KDE would
+  shorten the name to its painting.
 - **One grid.** Every motif is laid out on a 128 grid and fills about 0.8 of
   it along its long side, centered, so the dock reads evenly. Painted at
   512 px, kept at 256 inside SVGs.
@@ -164,8 +173,18 @@ Settings in front of it.
   can for Waydroid, piano keys for Input Remapper, café cups for the forum, a
   teapot for Bold Brew. Bazzite's own entries name their pictures by path, so
   the image points them at these.
+- **Menus and toolbars** get signs brushed in ink like the bar's (in the
+  icon theme's `actions/`, recolored with the light): the desktop's
+  right-click menu, Files' toolbar and context menu, the power buttons.
+  Names that are also settings pages get their sign only at menu size
+  (`actions/16`, first in the theme's folders), so More settings keeps its
+  swatches. Signs Monet hasn't drawn yet are Breeze's, in Monet's colors.
 - Everything is in the `Monet` icon theme (`tools/make-icons.py`). Games keep
-  their covers; toolbar icons inside apps are Breeze's, in Monet's colors.
+  their covers.
+- **After an update**, KDE would draw Monet's new pictures with what it
+  measured in the old ones (it keeps that by file and time, and on Monet's
+  image every file keeps its time), so `monet-fresh` clears KDE's caches
+  once, at the first sign-in of a new version, before KWin and Plasma start.
 
 ## Pointer
 
@@ -179,9 +198,10 @@ the same ink; anything not drawn falls back to Breeze.
 - **Boot screen** (Plymouth `monet`, the same as Monet Setup's): the harbor
   at dawn with the sun breathing. A disk password is asked for on it, in a
   line of white with a dot per letter. Built into the image's initramfs.
-- **Sign-in** (SDDM): the harbor at night and Monet's mark, with Monet's
-  fields, buttons and colors (its home gets Monet's Plasma style and colors
-  at boot) and Monet's pointer.
+- **Sign-in** (KDE's Plasma Login Manager, as Bazzite's desktop has it): the
+  harbor at night, with Monet's fields, buttons, colors, icons and pointer
+  (its home links to Monet's at every boot). Its layout is built into it, so
+  it stays KDE's.
 - **Lock screen** (`linux/share/monet/lockscreen`): at rest, the painting
   and the desktop's placard, low on the left. A key or the mouse softens the
   painting (blurred, washed in mist or smoke) and raises a sheet of glass
@@ -196,7 +216,8 @@ the same ink; anything not drawn falls back to Breeze.
 ## Widgets
 
 Like a desk: glass cards on the painting, added from the desktop's widget
-gallery. A fresh desktop has the placard, Weather and Calendar.
+gallery. A fresh desktop has the placard, Weather and Calendar, and so does one that
+kept its layout from before there were widgets (once).
 
 - **The glass** (`linux/share/monet/widgets/Glass.qml`, copied into each widget
   by install.sh): widgets share the desktop's surface with the wallpaper, so
@@ -209,6 +230,9 @@ gallery. A fresh desktop has the placard, Weather and Calendar.
   snow, fog, a storm) and the next four days. From Open-Meteo once a place is
   chosen in its settings: no account, only the place is sent.
 - **Calendar**: the month in Fraunces, today on a dab of the sun.
+- **Clock** (in the right island, instead of KDE's): the time over the date
+  in Inter; a click opens the day in Fraunces and its month, as Calendar
+  draws it.
 - **Now Playing**: the cover, the track in Fraunces, back, play or pause on
   the sun, and next.
 - **Note**: paper pinned with a dab of lily; kept as you type.

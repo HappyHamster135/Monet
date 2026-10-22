@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Date and Time",
+        "Description": "The time and the date in the panel, and the month on a click",
+        "Icon": "x-office-calendar",
+        "Id": "org.monet.clock",
+        "License": "GPL-3.0-or-later",
+        "Name": "Clock",
+        "Version": "0.8.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

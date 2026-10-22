@@ -35,10 +35,41 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **The Store's front page is Monet's:** Play, Talk & stream, Music & film,
   Work & make and Everyday, each under a strip of The Hours (by daylight in
   Mist, by night in Smoke), without Bazzite's notes.
+- **The window buttons are back.** In 0.8, minimize, maximize and close on
+  Monet's window frames were there but invisible. Their pictures were named
+  the way KDE doesn't look for them.
+- **Updates draw from the new pictures.** KDE remembers what it measured in
+  each of Monet's pictures, by file and time, and on Monet's image every
+  file keeps its time from one version to the next. Now the first sign-in
+  after an update starts KDE afresh, so frames and buttons come out right.
+- **Monet's sign-in screen.** Bazzite's desktop signs in with KDE's Plasma
+  Login Manager, not the SDDM that 0.8 dressed, so the sign-in still showed
+  Bazzite's picture. Now it's the harbor at night, with Monet's colors,
+  icons, type and pointer.
+- **A clock of Monet's own** in the panel: the time over the date, and a
+  click opens the day and its month on the glass, today on a dab of the sun.
+- **The widgets after updating.** Desktops that kept their layout from
+  before Monet had widgets get the weather and the month, once.
+- **Files shows how much room is left** on the drive, in its status bar.
+- **Menus and toolbars in ink.** The desktop's right-click menu, Files'
+  toolbar and the power buttons get signs written with a brush, instead of
+  KDE's.
+- **The bar's icons are Monet's.** Sound, network, Bluetooth, brightness,
+  media, notifications, the clipboard, drives and the battery were KDE's (or,
+  for the volume, a music note from Monet's file icons). Plasma 6.7 takes
+  them from the icon theme, so that's where Monet's ink signs are now,
+  tinted for Mist or Smoke like the rest.
+- **Straight glass edges.** The light along the glass's rim jumped a pixel
+  where each corner met a straight edge, and the blur behind ran past the
+  rounded corners in steps. The rim now follows the corner's curve, the
+  blur stays inside it, and the shadow's edge under the glass is smooth.
+- **Smoother in a virtual machine.** Where nothing but the processor draws
+  the screen, Monet starts without glass, which made everything lag; turn
+  it on in Settings → Light & Wallpaper to see it anyway.
 
 Updating from 0.8: Settings → Updates → Install, then restart. Monet's look
 freshens when you sign in (the plain names, More settings, the painting
-for your light); your panels stay as they are.
+for your light, the clock, the widgets); your panels stay as they are.
 
 ### New in 0.8: Monet's own, down to the pointer
 

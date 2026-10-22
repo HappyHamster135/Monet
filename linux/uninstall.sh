@@ -16,7 +16,7 @@ if [ "$(id -u)" -ne 0 ]; then
         sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
-    systemctl --user disable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service >/dev/null 2>&1 || true
     # Hand the desktop back to Breeze.
     command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Breeze
@@ -28,16 +28,16 @@ systemctl disable --now monet-sync.service monet-windows-setup.service >/dev/nul
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service
 systemctl daemon-reload
 
-systemctl --global disable monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
+systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
-    /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path
+    /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service
 # Background updates come back the way Bazzite has them.
 systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
     flatpak-system-update.timer >/dev/null 2>&1 || true
 systemctl --global unmask flatpak-user-update.timer >/dev/null 2>&1 || true
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
@@ -49,6 +49,7 @@ rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colors
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
     "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
     "$PREFIX/share/plasma/plasmoids/org.monet.weather" "$PREFIX/share/plasma/plasmoids/org.monet.calendar" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.clock" \
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \

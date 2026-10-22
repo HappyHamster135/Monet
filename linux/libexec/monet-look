@@ -63,6 +63,9 @@ kw --file kwinrc --group Plugins --key glideEnabled false
 kw --file kwinrc --group Plugins --key fadeEnabled false
 kw --file kwinrc --group Effect-blur --key BlurStrength 12
 kw --file kwinrc --group Effect-blur --key NoiseStrength 3
+# The painting's colors a little richer through the glass (KWin 6.7 does it in
+# the blur, no longer from the Plasma style's contrast settings).
+kw --file kwinrc --group Effect-blur --key Saturation 170
 
 # Window frames: Monet's own (tools/make-decoration.py), a glass title bar
 # with the title in the middle and three dabs of paint on the right, and a
@@ -157,9 +160,11 @@ for app in systemsettings org.kde.kinfocenter org.kde.khelpcenter org.kde.kmenue
 done
 # One text editor is enough.
 entry org.kde.kate >/dev/null && { hide org.kde.kwrite || :; }
-# Bazzite's setup portal, in accounts made before Monet's image left it out.
+# Bazzite's setup portal, in accounts made before Monet's image left it out
+# (and closed, if it opened at this sign-in).
 if [ -f "$CONFIG/autostart/bazzite-portal.desktop" ]; then
     printf '[Desktop Entry]\nHidden=true\nX-Monet=true\n' > "$CONFIG/autostart/bazzite-portal.desktop"
+    pkill -u "$(id -u)" -f yafti_gtk >/dev/null 2>&1 || :
 fi
 # The app menu's favorites stay even for apps that left the menu (Bazzite
 # seeds KDE's settings and its portal there): Monet Settings instead.
@@ -197,6 +202,9 @@ kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22
 kw_default dolphinrc General ShowZoomSlider false
+# The full status bar, with how much room is left on the drive (Dolphin's
+# small one leaves that out).
+kw_default dolphinrc General ShowStatusBar FullWidth
 
 # Settings in the dock opens Monet Settings, not KDE's, and the store button
 # opens the Store (kept panels too).
@@ -216,6 +224,38 @@ panels().forEach(function (panel) {
 });
 JS
 )" >/dev/null 2>&1
+
+# The weather and the month at the top right, also on desktops that kept
+# their layout from before Monet had widgets (a fresh layout has them). Once:
+# taking them away afterwards is someone's choice.
+placed="$CONFIG/monet/widgets-placed"
+if [ ! -e "$placed" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+desktopsForActivity(currentActivity()).forEach(function (d) {
+    if (d.widgets("org.monet.weather").length > 0 || d.widgets("org.monet.calendar").length > 0)
+        return;
+    var width = 1920;
+    try { width = screenGeometry(d.screen).width } catch (e) {}
+    var right = width - gridUnit * 22;
+    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10);
+    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12);
+});
+JS
+)" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$placed"
+fi
+# Monet's clock in the panel instead of KDE's, on kept panels too (once).
+swapped="$CONFIG/monet/clock-placed"
+if [ ! -e "$swapped" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+panels().forEach(function (panel) {
+    panel.widgets("org.kde.plasma.digitalclock").forEach(function (clock) {
+        panel.addWidget("org.monet.clock");
+        clock.remove();
+    });
+});
+JS
+)" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$swapped"
+fi
 
 # The lock screen shows the same painting, in the same light.
 kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours

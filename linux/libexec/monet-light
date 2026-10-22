@@ -43,9 +43,24 @@ now() {
     fi
 }
 
-# Glass can be turned off in Monet Settings (Light & Wallpaper).
+# Glass can be turned off in Monet Settings (Light & Wallpaper). Until it's
+# chosen there, it's off when nothing but the processor draws the screen (a
+# virtual machine, or a graphics driver that didn't load): blurring there
+# makes everything lag.
 glass() {
-    grep -q '"glass": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
+    local prefs="$CONFIG/monet/prefs.json"
+    if grep -q '"glass": false' "$prefs" 2>/dev/null; then
+        echo off
+    elif grep -q '"glass": true' "$prefs" 2>/dev/null || ! drawn_by_processor; then
+        echo on
+    else
+        echo off
+    fi
+}
+
+drawn_by_processor() {
+    busctl --user call org.kde.KWin /KWin org.kde.KWin supportInformation 2>/dev/null |
+        grep -q -E 'OpenGL renderer string: (llvmpipe|softpipe)|Compositing Type: QPainter'
 }
 
 # So can The Hours: then the painting stays instead of drifting with the day.

@@ -131,6 +131,22 @@ class PlasmaStyle(unittest.TestCase):
     STYLES = [PLASMA / "desktoptheme/monet", PLASMA / "desktoptheme/monet-solid"]
     PIECES = ["topleft", "top", "topright", "left", "center", "right", "bottomleft", "bottom", "bottomright"]
 
+    def test_corners_share_the_glass_arc(self):
+        # Rim, sheen and hairline follow the glass's arc (else they jump a pixel where corner meets
+        # edge); the blur mask's corner sits 1 px inside it, since KWin blurs whole pixels.
+        import math
+        for style in self.STYLES:
+            svg = (style / "widgets/panel-background.svg").read_text()
+            for ident in ("topleft", "mask-topleft"):
+                body = element_body(svg, ident)
+                x, y, r = (float(v) for v in re.search(r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)"', body).groups())
+                arcs = re.findall(r"A([\d.]+),[\d.]+ 0 0 [01] ([\d.]+),([\d.]+)", body)
+                self.assertTrue(arcs, ident)
+                for radius, ex, ey in arcs:
+                    self.assertAlmostEqual(math.hypot(float(ex) - x - r, float(ey) - y - r), float(radius), 3, ident)
+                if ident.startswith("mask-"):
+                    self.assertEqual({float(a[0]) for a in arcs}, {r - 1})
+
     def test_frames_are_complete(self):
         for style in self.STYLES:
             for name, folder in [(n, f) for n in ("dialogs/background", "widgets/panel-background", "widgets/tooltip")
@@ -673,6 +689,41 @@ class Icons(unittest.TestCase):
         for folder in (p.parent.relative_to(self.THEME).as_posix() for p in self.THEME.rglob("*.svg")):
             self.assertIn(f"[{folder}]", theme)
 
+    def test_the_bar_gets_ink_signs(self):
+        # Plasma 6.7 takes the tray's icons from the icon theme, by name, and tints them only if the
+        # theme says it follows the color scheme.
+        theme = (self.THEME / "index.theme").read_text()
+        self.assertIn("FollowsColorScheme=true", theme)
+        self.assertIn("status/scalable", theme.split("Directories=", 1)[1].splitlines()[0])
+        status = self.THEME / "status/scalable"
+        for name in ("audio-volume-high", "audio-volume-muted", "network-wired-activated", "network-wireless-80",
+                     "network-bluetooth-activated", "brightness-high", "media-playback-playing", "notification-inactive",
+                     "notifications-disabled", "klipper", "device-notifier", "battery-050", "battery-050-charging",
+                     "speedometer", "arrow-up", "kdeconnect-tray", "dialog-ok"):
+            svg = (status / f"{name}.svg").read_text()
+            self.assertIn('<style id="current-color-scheme"', svg, name)
+            self.assertNotIn("data:image", svg, name)
+        # A drive in the bar asks for "<name>-symbolic": without that exact sign, the name is shortened
+        # to the painting.
+        for name in ("drive-harddisk", "drive-removable-media-usb-pendrive", "media-optical", "media-flash-sd-mmc"):
+            self.assertTrue((status / f"{name}-symbolic.svg").is_file(), name)
+
+    def test_menus_and_toolbars_get_ink_signs(self):
+        theme = (self.THEME / "index.theme").read_text()
+        dirs = theme.split("Directories=", 1)[1].splitlines()[0].split(",")
+        # The menu-size folder comes first, so menus get the sign where a name also has a swatch.
+        self.assertEqual(dirs[0], "actions/16")
+        self.assertIn("actions/scalable", dirs)
+        for name in ("document-new", "edit-paste", "edit-undo", "view-list-icons", "utilities-terminal-symbolic",
+                     "document-edit", "system-lock-screen", "system-log-out", "go-previous", "edit-copy", "edit-find"):
+            svg = (self.THEME / "actions/scalable" / f"{name}.svg").read_text()
+            # One ink KDE can tint: the current-color-scheme sheet, and nothing else painted.
+            self.assertIn('<style id="current-color-scheme"', svg, name)
+            self.assertNotIn("data:image", svg, name)
+        for name in ("preferences-desktop-wallpaper", "preferences-desktop-display"):
+            self.assertTrue((self.THEME / "actions/16" / f"{name}.svg").is_file(), name)
+            self.assertFalse((self.THEME / "actions/scalable" / f"{name}.svg").exists(), name)
+
     def test_more_settings_pages_have_monets_marks(self):
         # KDE's sidebar draws these names; each is a swatch with a white sign, like Monet Settings'.
         for name in ("preferences-system-network", "preferences-system-bluetooth", "preferences-desktop-display",
@@ -683,9 +734,10 @@ class Icons(unittest.TestCase):
             svg = (self.THEME / "categories/scalable" / f"{name}.svg").read_text()
             self.assertIn("data:image/png;base64,", svg, name)
             self.assertIn('stroke="#FFFFFF"', svg, name)
-        # Names KDE also uses outside its settings keep Breeze's.
+        # Names KDE also uses outside its settings get no painted swatch (an ink sign at most).
         for name in ("system-run", "system-log-out", "tools-check-spelling", "redshift-status-on"):
-            self.assertFalse(list(self.THEME.glob(f"*/scalable/{name}.svg")), name)
+            for svg in self.THEME.glob(f"*/scalable/{name}.svg"):
+                self.assertNotIn("data:image", svg.read_text(), name)
 
 
 class MonetsOwn(unittest.TestCase):
@@ -732,6 +784,21 @@ class MonetsOwn(unittest.TestCase):
         about = self.INSTALL.split("cat > /etc/xdg/kcm-about-distrorc")[1].split("ABOUT\n", 2)[1]
         self.assertIn("Name=Monet", about)
         self.assertIn("LogoPath=$DATADIR/icons/hicolor/scalable/apps/monet.svg", about)
+
+    def test_kde_measures_each_new_version_afresh(self):
+        # KDE keeps what it measured in an SVG by path and time, and Monet's image keeps every file's time:
+        # before KWin and Plasma start, a new Monet makes it forget (or buttons and frames come out wrong).
+        unit = (ROOT / "linux/systemd/user/monet-fresh.service").read_text()
+        for before in ("plasma-kwin_wayland.service", "plasma-plasmashell.service"):
+            self.assertIn(before, unit.split("Before=", 1)[1].splitlines()[0])
+        self.assertIn("WantedBy=plasma-workspace.target", unit)
+        fresh = (ROOT / "linux/libexec/monet-fresh").read_text()
+        for cache in ('"$CACHE/ksvg-elements"', '"$CACHE"/plasma_theme_*.kcache', '"$CACHE/icon-cache.kcache"'):
+            self.assertIn(cache, fresh)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('"$USERUNITDIR/monet-fresh.service"', install)
+        self.assertEqual(install.count("monet-light-sync.path monet-fresh.service"), 2)
+        self.assertIn("monet-fresh.service", (ROOT / "linux/uninstall.sh").read_text())
 
     def test_uninstalling_gives_kde_back(self):
         uninstall = (ROOT / "linux/uninstall.sh").read_text()
@@ -800,6 +867,30 @@ class DesktopWidgets(unittest.TestCase):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
             for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
                 self.assertIn(f'd.addWidget("{widget}"', layout)
+        # Desktops that kept their layout from before there were widgets get them too, once.
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        placing = look.split('placed="$CONFIG/monet/widgets-placed"')[1].split("\nfi\n")[0]
+        self.assertIn('d.addWidget("org.monet.weather"', placing)
+        self.assertIn('d.widgets("org.monet.weather").length > 0', placing)
+        self.assertIn('touch "$placed"', placing)
+
+    def test_the_panel_clock_is_monets(self):
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
+            self.assertIn('right.addWidget("org.monet.clock")', layout)
+            self.assertNotIn("digitalclock", layout)
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn('panel.widgets("org.kde.plasma.digitalclock")', look)
+        self.assertIn("clock-placed", look)
+        self.assertIn("org.monet.clock", (ROOT / "linux/install.sh").read_text())
+        self.assertIn("plasmoids/org.monet.clock", (ROOT / "linux/uninstall.sh").read_text())
+        clock = (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml").read_text(encoding="utf-8")
+        for piece in ("compactRepresentation:", "fullRepresentation:", "Qt.locale().timeFormat(Locale.ShortFormat)"):
+            self.assertIn(piece, clock)
+
+    def test_files_shows_the_room_left(self):
+        # Dolphin's small status bar leaves out the free space; the full one shows it.
+        self.assertIn("kw_default dolphinrc General ShowStatusBar FullWidth", (ROOT / "linux/libexec/monet-look").read_text())
 
     def test_settings_have_their_schema(self):
         for widget in ("org.monet.weather", "org.monet.notes"):
@@ -849,8 +940,11 @@ class WindowFrames(unittest.TestCase):
                     self.assertIn(f"{prefix}-{piece}", ids, f"{name}: {prefix}-{piece}")
             for button in ("minimize", "maximize", "restore", "close"):
                 ids = element_ids((theme / f"{button}.svg").read_text())
+                # Aurorae draws a state from "<state>-center" and nothing else: without it,
+                # the button is there but invisible.
                 for state in ("active", "hover", "pressed", "inactive", "hover-inactive", "deactivated"):
-                    self.assertIn(state, ids, f"{name} {button}: {state}")
+                    self.assertIn(f"{state}-center", ids, f"{name} {button}: {state}")
+                self.assertNotIn("active", ids, f"{name} {button}")
 
     def test_frames_have_no_strokes(self):
         for svg in self.THEMES.rglob("*.svg"):
@@ -918,7 +1012,8 @@ class Cursors(unittest.TestCase):
         self.assertIn("cursorTheme Monet-cursors", (ROOT / "linux/libexec/monet-look").read_text())
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('done < "$SRC/share/icons/Monet-cursors/aliases"', install)
-        self.assertIn("CursorTheme=Monet-cursors", install)
+        # The sign-in screen's pointer too.
+        self.assertIn("[Mouse]\\ncursorTheme=Monet-cursors", install)
 
 
 class StartAndSignIn(unittest.TestCase):
@@ -963,10 +1058,16 @@ class StartAndSignIn(unittest.TestCase):
             self.assertIn(f'"$SRC/share/monet/lockscreen/{name}" "$lock/{name}"', install)
 
     def test_sign_in_screen_is_monets(self):
+        # Bazzite's desktop signs in with Plasma Login Manager, not SDDM: its wallpaper, and its home's
+        # colors, icons, style and pointer, linked afresh at every boot.
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn("name=monet", install)
-        self.assertIn("ColorScheme=MonetDark", install)
-        self.assertIn("/usr/lib/tmpfiles.d/monet-sddm.conf", install)
+        self.assertIn("> /usr/lib/plasmalogin/defaults.conf", install)
+        self.assertIn("[Greeter][Wallpaper][org.kde.image][General]", install)
+        self.assertIn('cat "$SRC/share/color-schemes/MonetDark.colors"', install)
+        tmp = install.split("/usr/lib/tmpfiles.d/monet-greeter.conf <<TMP\n")[1].split("TMP\n")[0]
+        for config in ("plasmarc", "kdeglobals", "kcminputrc"):
+            self.assertIn(f"L+ /var/lib/plasmalogin/.config/{config} ", tmp)
+        self.assertNotIn("sddm", install.lower())
 
 class MonetSettings(unittest.TestCase):
     QUICK = PLASMA / "plasmoids/org.monet.quick/contents/ui"
@@ -1014,7 +1115,7 @@ class MonetSettings(unittest.TestCase):
 
 class Scripts(unittest.TestCase):
     def test_shell_scripts_parse(self):
-        for script in ("monet-session", "monet-look", "monet-light"):
+        for script in ("monet-session", "monet-look", "monet-light", "monet-fresh"):
             subprocess.run(["bash", "-n", str(ROOT / "linux/libexec" / script)], check=True)
 
     def test_quick_helper_compiles(self):

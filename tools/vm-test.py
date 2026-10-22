@@ -97,7 +97,7 @@ class VM:
             time.sleep(0.25)
 
     def type(self, text):
-        names = {" ": "spc", ".": "dot", "-": "minus"}
+        names = {" ": "spc", ".": "dot", "-": "minus", "/": "slash"}
         for ch in text:
             keys = ["shift", ch.lower()] if ch.isupper() else [names.get(ch, ch)]
             self.qmp({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": k} for k in keys]}})
@@ -176,6 +176,15 @@ def tour(vm, run):
         time.sleep(3)
         vm.keys("esc")
         time.sleep(2)
+    # Only the processor draws this PC's screen, so Monet starts without glass;
+    # the look around is to show the glass, so turn it on, as Settings would.
+    vm.keys("ctrl-alt-t")
+    time.sleep(8)
+    vm.type("/usr/libexec/monet-quick pref glass on")
+    vm.keys("ret")
+    time.sleep(10)
+    vm.keys("ctrl-d")
+    time.sleep(3)
     desktop = settle(vm, 90) or vm.screen()
     run.shot("desktop")
     vm.keys("meta_l")

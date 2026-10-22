@@ -118,6 +118,7 @@ PlasmoidItem {
                         Text {
                             required property int index
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 1
                             horizontalAlignment: Text.AlignHCenter
                             text: Qt.locale().dayName((root.firstWeekday + index) % 7, Locale.NarrowFormat)
                             color: card.dim
@@ -135,6 +136,7 @@ PlasmoidItem {
                             readonly property bool inMonth: modelData.getMonth() === root.shown.getMonth()
                             readonly property bool isToday: modelData.toDateString() === root.today.toDateString()
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 1
                             Layout.fillHeight: true
                             implicitHeight: 20
 

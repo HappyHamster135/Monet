@@ -240,12 +240,20 @@ def light_state():
     return mode if mode in ("mist", "smoke") else "hours"
 
 
+def drawn_by_processor():
+    """Nothing but the processor draws the screen (a virtual machine, or no graphics driver)."""
+    info = busctl("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "supportInformation") or ""
+    return bool(re.search(r"OpenGL renderer string: (llvmpipe|softpipe)|Compositing Type: QPainter", info))
+
+
 def prefs():
     try:
         saved = json.loads(PREFS.read_text())
     except (OSError, ValueError):
         saved = {}
-    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": saved.get("glass", True)}
+    # Until it's chosen, glass is off where blurring would make everything lag (as monet-light does).
+    glass = saved["glass"] if "glass" in saved else not drawn_by_processor()
+    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass}
 
 
 def save_prefs(values):

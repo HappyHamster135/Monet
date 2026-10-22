@@ -79,7 +79,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-light monet-quick; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
@@ -108,7 +108,7 @@ tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/
 for theme in org.monet.desktop org.monet.smoke.desktop; do
     tree "$SRC/share/plasma/look-and-feel/$theme" "$DATADIR/plasma/look-and-feel/$theme"
 done
-for applet in org.monet.games org.monet.quick org.monet.placard org.monet.weather org.monet.calendar \
+for applet in org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather org.monet.calendar \
     org.monet.nowplaying org.monet.notes org.monet.frame; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
@@ -137,6 +137,7 @@ put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.servic
 put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
+put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 
 # Updates happen only when you ask for them, in Settings → Updates: no
 # background updates of Monet or its apps. Masked, because Bazzite turns some
@@ -182,7 +183,7 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service
-    systemctl --global enable monet-light.timer monet-light-sync.path
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -238,29 +239,28 @@ ABOUT
         desktop="/usr/share/applications/${entry%%:*}.desktop"
         [ -f "$desktop" ] && sed -i "s|^Icon=/.*|Icon=${entry#*:}|" "$desktop"
     done
-    # The sign-in screen: the harbor at night, and Monet's mark.
-    for theme in /usr/share/sddm/themes/breeze /usr/share/sddm/themes/01-breeze-fedora; do
-        [ -d "$theme" ] || continue
-        printf '[General]\nbackground=%s\ntype=image\nshowlogo=shown\nlogo=%s\n' \
-            "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" \
-            "$DATADIR/icons/hicolor/scalable/apps/monet.svg" > "$theme/theme.conf.user"
-    done
-    # Its fields and buttons are Monet's too: SDDM draws them with the Plasma
-    # style and colors in its own home, which starts out with KDE's defaults.
-    # Filled in at boot, only where nothing is there yet.
-    install -d "$DATADIR/monet/sddm"
-    printf '[Theme]\nname=monet\n' > "$DATADIR/monet/sddm/plasmarc"
-    printf '[General]\nColorScheme=MonetDark\nfont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1\n\n[Icons]\nTheme=Monet\n' \
-        > "$DATADIR/monet/sddm/kdeglobals"
-    install -d /usr/lib/tmpfiles.d
-    cat > /usr/lib/tmpfiles.d/monet-sddm.conf <<TMP
-d /var/lib/sddm/.config 0755 sddm sddm -
-C /var/lib/sddm/.config/plasmarc - - - - $DATADIR/monet/sddm/plasmarc
-C /var/lib/sddm/.config/kdeglobals - - - - $DATADIR/monet/sddm/kdeglobals
+    # The sign-in screen (KDE's Plasma Login Manager, which Bazzite's desktop
+    # keeps): the harbor at night, over Bazzite's picture.
+    if [ -d /usr/lib/plasmalogin ]; then
+        printf '[Greeter]\nWallpaperPluginId=org.kde.image\n\n[Greeter][Wallpaper][org.kde.image][General]\nImage=file://%s\nPreviewImage=file://%s\n' \
+            "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" "$DATADIR/wallpapers/Monet/contents/hours/night.jpg" \
+            > /usr/lib/plasmalogin/defaults.conf
+        # Its fields, buttons and pointer are Monet's too: it draws them with
+        # the colors, icons, Plasma style and pointer in its own home. Linked
+        # afresh at every boot, so a new Monet reaches PCs that have one already.
+        install -d "$DATADIR/monet/greeter"
+        printf '[Theme]\nname=monet\n' > "$DATADIR/monet/greeter/plasmarc"
+        { cat "$SRC/share/color-schemes/MonetDark.colors"
+          printf '\n[General]\nfont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1\n\n[Icons]\nTheme=Monet\n'; } > "$DATADIR/monet/greeter/kdeglobals"
+        printf '[Mouse]\ncursorTheme=Monet-cursors\n' > "$DATADIR/monet/greeter/kcminputrc"
+        install -d /usr/lib/tmpfiles.d
+        cat > /usr/lib/tmpfiles.d/monet-greeter.conf <<TMP
+d /var/lib/plasmalogin/.config 0755 plasmalogin plasmalogin -
+L+ /var/lib/plasmalogin/.config/plasmarc - - - - $DATADIR/monet/greeter/plasmarc
+L+ /var/lib/plasmalogin/.config/kdeglobals - - - - $DATADIR/monet/greeter/kdeglobals
+L+ /var/lib/plasmalogin/.config/kcminputrc - - - - $DATADIR/monet/greeter/kcminputrc
 TMP
-    # And its pointer.
-    install -d /usr/lib/sddm/sddm.conf.d
-    printf '[Theme]\nCursorTheme=Monet-cursors\n' > /usr/lib/sddm/sddm.conf.d/monet-cursors.conf
+    fi
     # The lock screen: Plasma reads it from its desktop shell, not the global
     # theme. Monet's goes in beside KDE's files, and KDE's LockScreen.qml
     # becomes one that opens Monet's, or KDE's own if Monet's can't load.
@@ -277,5 +277,5 @@ else
     for unit in monet-sync.service monet-windows-setup.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service >/dev/null 2>&1 || true
 fi

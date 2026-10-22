@@ -1340,6 +1340,267 @@ def mark_svg(spot, glyph, paint):
             f'  <path transform="translate(30.4 30.4) scale(2.8)" d="{d}" stroke="#FFFFFF" {sign}/>\n</svg>\n')
 
 
+# Menus and toolbars: small signs written with a brush, like the tray's glyphs
+# (make-plasma-style.py's brush, on its 22 grid), in one ink that KDE tints
+# for mist or smoke. Names that also have a painted mark (the settings pages)
+# get their sign only at menu size, so More settings keeps its swatches.
+def ink_actions():
+    spec = importlib.util.spec_from_file_location("make_plasma_style", Path(__file__).with_name("make-plasma-style.py"))
+    ps = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ps)
+    brush, rounded, disc, arc = ps.brush, ps.rounded, ps.disc, ps.arc
+
+    def line(*points, w=1.7, taper=0.25):
+        return brush(list(points), w, taper, smooth=False)
+
+    def curve(*points, w=1.7, taper=0.25):
+        return brush(list(points), w, taper)
+
+    def ring(x0, y0, x1, y1, r, w=1.6):
+        outer = rounded(x0, y0, x1, y1, r)
+        inner = rounded(x0 + w, y0 + w, x1 - w, y1 - w, max(r - w, 0.3))
+        return outer + [outer[0]] + inner[::-1] + [inner[-1]]
+
+    def circle(cx, cy, r, w=1.6):
+        outer, inner = disc(cx, cy, r), disc(cx, cy, r - w)
+        return outer + [outer[0]] + inner[::-1] + [inner[-1]]
+
+    def arrow(x0, y0, x1, y1, head=3.6, w=1.7):
+        """A stroke from (x0, y0) to (x1, y1) with a head at the end."""
+        dx, dy = x1 - x0, y1 - y0
+        n = math.hypot(dx, dy)
+        ux, uy = dx / n, dy / n
+        a = (x1 - head * (ux + uy * 0.9), y1 - head * (uy - ux * 0.9))
+        b = (x1 - head * (ux - uy * 0.9), y1 - head * (uy + ux * 0.9))
+        return [line((x0, y0), (x1, y1), w=w), line(a, (x1, y1), b, w=w)]
+
+    def page(fold=True):
+        if not fold:
+            return [ring(5, 3, 17, 19, 1.8)]
+        return [line((5.2, 3.8), (12.6, 3.8), (16.8, 8), (16.8, 18.2), (5.2, 18.2), (5.2, 3.8), w=1.6, taper=0.1),
+                line((12.4, 4), (12.4, 8.2), (16.6, 8.2), w=1.4, taper=0.1)]
+
+    def folder():
+        return [line((3, 6), (8.4, 6), (10.2, 7.8), (19, 7.8), (19, 17.6), (3, 17.6), (3, 6), w=1.6, taper=0.1)]
+
+    def plus(cx, cy, s=3.2, w=1.7):
+        return [line((cx - s, cy), (cx + s, cy), w=w), line((cx, cy - s), (cx, cy + s), w=w)]
+
+    def screen():
+        return [ring(3, 4, 19, 15.4, 1.8), line((8.6, 18.6), (13.4, 18.6)), line((11, 15.6), (11, 18.4), w=1.5)]
+
+    def pot():
+        # Trash is Monet's garden pot: its rim, and the pot tapering down.
+        return [line((3.6, 7), (18.4, 7), w=1.8), line((5.4, 8.6), (6.6, 18.6), (15.4, 18.6), (16.6, 8.6), w=1.6, taper=0.1),
+                line((8.6, 4.6), (13.4, 4.6), w=1.6)]
+
+    def gear():
+        return [circle(11, 11, 3.2, 1.6)] + [line((11 + 5.4 * math.cos(a), 11 + 5.4 * math.sin(a)),
+                                                    (11 + 8 * math.cos(a), 11 + 8 * math.sin(a)), w=1.9, taper=0.1)
+                                               for a in (math.radians(d) for d in range(0, 360, 45))]
+
+    glyphs = {
+        # The desktop's menu.
+        "document-new": page() + plus(11, 13.2, 2.6),
+        "edit-paste": [ring(4.5, 4.5, 17.5, 20, 2.2, 1.5), rounded(8, 2.4, 14, 6.6, 1.2), line((8.2, 11), (13.8, 11), w=1.5),
+                       line((8.2, 14.6), (12.4, 14.6), w=1.5)],
+        "edit-undo": [curve((15.6, 17), (17.6, 12.4), (14.6, 8.4), (8.4, 8.4)), line((10.8, 4.8), (6.4, 8.4), (10.8, 12))],
+        "edit-redo": [curve((6.4, 17), (4.4, 12.4), (7.4, 8.4), (13.6, 8.4)), line((11.2, 4.8), (15.6, 8.4), (11.2, 12))],
+        "view-list-icons": [ring(3.5, 3.5, 9.8, 9.8, 1.4, 1.5), ring(12.2, 3.5, 18.5, 9.8, 1.4, 1.5),
+                            ring(3.5, 12.2, 9.8, 18.5, 1.4, 1.5), ring(12.2, 12.2, 18.5, 18.5, 1.4, 1.5)],
+        "utilities-terminal-symbolic": [ring(2.6, 4, 19.4, 18, 2.4), line((6.4, 8.6), (9.4, 11), (6.4, 13.4), w=1.6),
+                                        line((10.8, 14), (15, 14), w=1.6)],
+        "document-edit": [line((5, 17), (5.8, 13.6), (14.4, 5), (17, 7.6), (8.4, 16.2), (5, 17), w=1.5, taper=0.1),
+                          line((12.6, 6.8), (15.2, 9.4), w=1.4)],
+        "system-lock-screen": [ring(5.4, 10, 16.6, 18.6, 1.8), arc(11, 9.6, 3.6, 180, 360, 1.7, 0.1), disc(11, 14.2, 1.2, 24)],
+        "system-log-out": [line((12.8, 3.6), (4.4, 3.6), (4.4, 18.4), (12.8, 18.4), w=1.6, taper=0.1)] + arrow(8.6, 11, 18.4, 11),
+        "view-sort": [line((4, 6), (16, 6)), line((4, 11), (12.6, 11)), line((4, 16), (9.4, 16))],
+        "transform-scale": [ring(3.5, 9.5, 12.5, 18.5, 1.4, 1.5)] + arrow(11.4, 10.6, 18, 4, head=3.2),
+        "window-pin": [line((8, 3.6), (14, 3.6)), line((9.2, 3.8), (8.4, 10.6), (5.6, 13), (16.4, 13), (13.6, 10.6), (12.8, 3.8), w=1.5, taper=0.1),
+                       line((11, 13.4), (11, 19), w=1.6)],
+        "go-home": [line((3, 11), (11, 3.6), (19, 11), w=1.7), line((5.6, 9.4), (5.6, 18.4), (16.4, 18.4), (16.4, 9.4), w=1.6, taper=0.1),
+                    line((9.4, 18.2), (9.4, 13.4), (12.6, 13.4), (12.6, 18.2), w=1.4, taper=0.1)],
+        "view-refresh": [curve((17.6, 9.4), (14.6, 4.2), (8, 4.2), (4.6, 8.6)), line((17.8, 4.4), (17.8, 9.6), (12.8, 9.6), w=1.6),
+                         curve((4.4, 12.6), (7.4, 17.8), (14, 17.8), (17.4, 13.4)), line((4.2, 17.6), (4.2, 12.4), (9.2, 12.4), w=1.6)],
+        "user-desktop": screen(),
+        # Files' menus and toolbar.
+        "edit-cut": [circle(6.4, 15.8, 2.6, 1.5), circle(15.6, 15.8, 2.6, 1.5), line((8.2, 13.8), (15.4, 3.8), w=1.5),
+                     line((13.8, 13.8), (6.6, 3.8), w=1.5)],
+        "edit-copy": [ring(7.4, 7.4, 18.6, 19.6, 1.8, 1.5), line((4, 15.2), (4, 3.6), (14.4, 3.6), w=1.5, taper=0.1)],
+        "edit-copy-path": [curve((9.6, 12.4), (7.4, 14.6), (5, 17), (3.6, 15.6), (6, 13.2), (8.2, 11)),
+                           curve((12.4, 9.6), (14.6, 7.4), (17, 5), (15.6, 3.6), (13.2, 6), (11, 8.2)), line((8.6, 13.4), (13.4, 8.6))],
+        "edit-rename": [ring(2.6, 7, 19.4, 15, 1.6, 1.5), line((11, 4), (11, 18), w=1.6), line((9, 4), (13, 4), w=1.4),
+                        line((9, 18), (13, 18), w=1.4)],
+        "edit-delete": pot(),
+        "trash-empty": pot(),
+        "user-trash-symbolic": pot(),
+        "document-properties": page() + [line((7.8, 11.4), (13.8, 11.4), w=1.4), line((7.8, 14.6), (12, 14.6), w=1.4)],
+        "document-open": folder(),
+        "document-open-folder": folder(),
+        "folder-open": folder(),
+        "folder-new": folder() + plus(11, 12.8, 2.6, 1.6),
+        "window-new": [ring(3, 3.5, 15.5, 14, 1.8, 1.5), line((8, 18.5), (19, 18.5), (19, 8.4), w=1.5, taper=0.1)],
+        "tab-new": [line((3, 18.6), (3, 6), (9.8, 6), (11.4, 3.8), (19, 3.8), (19, 18.6), (3, 18.6), w=1.5, taper=0.1)] + plus(11, 12.4, 2.6, 1.6),
+        "go-previous": arrow(18, 11, 4, 11),
+        "go-next": arrow(4, 11, 18, 11),
+        "go-up": arrow(11, 18, 11, 4),
+        "go-down": arrow(11, 4, 11, 18),
+        "edit-find": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2)],
+        "system-search": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2)],
+        "application-menu": [line((3.6, 6), (18.4, 6)), line((3.6, 11), (18.4, 11)), line((3.6, 16), (18.4, 16))],
+        "open-menu-symbolic": [line((3.6, 6), (18.4, 6)), line((3.6, 11), (18.4, 11)), line((3.6, 16), (18.4, 16))],
+        "view-list-details": [line((3.6, 5.4), (5.6, 5.4), w=2), line((8, 5.4), (18.4, 5.4)), line((3.6, 11), (5.6, 11), w=2),
+                              line((8, 11), (18.4, 11)), line((3.6, 16.6), (5.6, 16.6), w=2), line((8, 16.6), (18.4, 16.6))],
+        "view-list-tree": [line((4.4, 4), (4.4, 17), (9, 17), w=1.5, taper=0.1), line((4.4, 10.4), (9, 10.4), w=1.5),
+                           line((11.4, 4.6), (18.4, 4.6)), line((11.4, 10.4), (18.4, 10.4)), line((11.4, 17), (18.4, 17))],
+        "view-split-left-right": [ring(2.6, 4, 19.4, 18, 2), line((11, 4.6), (11, 17.4), w=1.5)],
+        "view-right-close": [ring(2.6, 4, 19.4, 18, 2), line((11, 4.6), (11, 17.4), w=1.5), line((13.6, 8.6), (16.8, 13.4), w=1.4),
+                             line((16.8, 8.6), (13.6, 13.4), w=1.4)],
+        "configure": gear(),
+        "settings-configure": gear(),
+        "list-add": plus(11, 11, 6.4, 1.9),
+        "list-remove": [line((4.6, 11), (17.4, 11), w=1.9)],
+        "window-close": [line((5.6, 5.6), (16.4, 16.4), w=1.8), line((16.4, 5.6), (5.6, 16.4), w=1.8)],
+        "dialog-close": [line((5.6, 5.6), (16.4, 16.4), w=1.8), line((16.4, 5.6), (5.6, 16.4), w=1.8)],
+        "edit-select-all": [line((3.4, 3.4), (6.4, 3.4), w=1.5), line((9.4, 3.4), (12.6, 3.4), w=1.5), line((15.6, 3.4), (18.6, 3.4), (18.6, 6.4), w=1.5),
+                            line((18.6, 9.4), (18.6, 12.6), w=1.5), line((18.6, 15.6), (18.6, 18.6), (15.6, 18.6), w=1.5),
+                            line((12.6, 18.6), (9.4, 18.6), w=1.5), line((6.4, 18.6), (3.4, 18.6), (3.4, 15.6), w=1.5),
+                            line((3.4, 12.6), (3.4, 9.4), w=1.5), line((3.4, 6.4), (3.4, 3.4), w=1.5)],
+        "document-save": [line((4, 13), (4, 18.4), (18, 18.4), (18, 13), w=1.6, taper=0.1)] + arrow(11, 3.6, 11, 14),
+        "help-about": [circle(11, 11, 8, 1.6), disc(11, 7.4, 1.2, 24), line((11, 10.4), (11, 15.6), w=1.8)],
+        "help-contents": [circle(11, 11, 8, 1.6), curve((8.4, 8.8), (9.4, 6.6), (12.8, 6.6), (13.6, 9), (11, 11.4), (11, 13.2), w=1.6),
+                          disc(11, 15.8, 1.1, 24)],
+        "system-shutdown": [arc(11, 11.6, 7, -55, 235, 1.8, 0.15), line((11, 3), (11, 10.4), w=1.8)],
+        "system-reboot": [arc(11, 11, 7, -40, 250, 1.7, 0.15), line((14.4, 2.8), (17.2, 5.6), (13.4, 7.4), w=1.6)],
+        "system-suspend": [ps.crescent(11, 11, 7.6, 15, 7.6, 6.4)],
+        "system-hibernate": [ps.crescent(11, 9.6, 6.4, 14.4, 6.6, 5.4), line((4.6, 18.4), (17.4, 18.4), w=1.7)],
+        # People: the sign-in screen's Other... and the switch to someone else.
+        "system-user-prompt": [circle(9, 7.4, 3.4, 1.5), arc(9, 19.4, 6.4, 200, 340, 1.6, 0.15), line((15, 15), (19, 15), w=1.5),
+                               line((15, 18.4), (19, 18.4), w=1.5)],
+        "system-user-list": [circle(8, 7.4, 3.2, 1.5), arc(8, 19, 6, 200, 340, 1.6, 0.15), circle(15.4, 6.4, 2.6, 1.4),
+                             arc(15.4, 16.6, 5, 230, 330, 1.4, 0.15)],
+        "system-switch-user": [circle(8, 7.4, 3.2, 1.5), arc(8, 19, 6, 200, 340, 1.6, 0.15)] + arrow(13.4, 7, 19.4, 7, head=2.6, w=1.5)
+                              + arrow(19.4, 12, 13.4, 12, head=2.6, w=1.5),
+        "bookmark-new": [line((6, 3.6), (16, 3.6), (16, 18.6), (11, 14.6), (6, 18.6), (6, 3.6), w=1.5, taper=0.1)],
+        "document-share": [circle(16, 5.4, 2.4, 1.4), circle(6, 11, 2.4, 1.4), circle(16, 16.6, 2.4, 1.4),
+                           line((8.2, 9.8), (13.8, 6.6), w=1.4), line((8.2, 12.2), (13.8, 15.4), w=1.4)],
+        "view-hidden": [curve((2.6, 11), (6, 6), (11, 5.4), (16, 6), (19.4, 11), w=1.6), curve((2.6, 11), (6, 16), (11, 16.6), (16, 16), (19.4, 11), w=1.6),
+                        disc(11, 11, 2.6, 32), line((4, 18.6), (18, 3.4), w=1.6)],
+        "view-visible": [curve((2.6, 11), (6, 6), (11, 5.4), (16, 6), (19.4, 11), w=1.6), curve((2.6, 11), (6, 16), (11, 16.6), (16, 16), (19.4, 11), w=1.6),
+                         disc(11, 11, 2.6, 32)],
+        "zoom-in": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2)] + plus(9.4, 9.4, 2.4, 1.5),
+        "zoom-out": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2), line((7, 9.4), (11.8, 9.4), w=1.5)],
+    }
+    # At menu size only: these names also have the painted marks of More settings.
+    small = {
+        "preferences-desktop-wallpaper": [ring(3, 4, 19, 18, 1.8), line((4.4, 16), (9, 11.4), (12.4, 14.6), (14.6, 12.4), (18, 15.8), w=1.5),
+                                          disc(14.4, 8.4, 1.6, 24)],
+        "preferences-desktop-display": screen(),
+        "preferences-desktop-display-randr": screen(),
+        # A painting in the dock, a sign in menus (Files' Open Terminal Here).
+        "utilities-terminal": glyphs["utilities-terminal-symbolic"],
+    }
+
+    # The bar's status icons. Plasma 6.7 takes them from the icon theme by name
+    # (asking for "<name>-symbolic", which a plain name answers), never from the
+    # Plasma style: so the Plasma style's glyphs for sound, the network,
+    # notifications, media, the clipboard and drives go here, with the paints
+    # they were drawn in, and the ones it never had are added.
+    INK, DIM, NEG = ps.INK, ps.DIM, ps.NEG
+    drawn = {}
+    keep = ps.glyphs
+    ps.glyphs = lambda sheet, items, size=22: drawn.update(items)
+    for make in (ps.audio_svg, ps.network_svg, ps.notification_svg, ps.battery_svg, ps.media_svg, ps.klipper_svg,
+                 ps.device_svg, ps.system_svg):
+        make()
+    ps.glyphs = keep
+
+    def ink(*parts):
+        return [(INK, p) for p in parts]
+
+    def dimmed(parts):
+        return [(DIM, p) for _, p in parts]
+
+    def sun(rays=True):
+        return ink(disc(11, 11, 3.6, 40), *([line((11 + 6 * math.cos(a), 11 + 6 * math.sin(a)), (11 + 8.4 * math.cos(a), 11 + 8.4 * math.sin(a)),
+                                                   w=1.6, taper=0.1) for a in (math.radians(d) for d in range(0, 360, 45))] if rays else []))
+
+    def chevron(*points):
+        return ink(line(*points, w=1.9, taper=0.15))
+
+    mic = [ring(8.2, 2.6, 13.8, 13.4, 2.8, 1.6), arc(11, 9.4, 6, 20, 160, 1.6, 0.1), line((11, 15.4), (11, 18.6), w=1.6),
+           line((7.8, 18.8), (14.2, 18.8), w=1.6)]
+    status = {name: parts for name, parts in drawn.items()
+              if name.startswith(("audio-volume", "media-", "network-", "notification-", "klipper", "device-notifier"))}
+    status |= {
+        "notifications-disabled": drawn["notification-disabled"],
+        "network-bluetooth-inactive": dimmed(drawn["network-bluetooth"]),
+        "network-wired-disconnected": dimmed(drawn["network-wired"]),
+        "battery-missing": drawn["Unavailable"],
+        "battery-profile-powersave": drawn["profile-powersave"],
+        "battery-profile-performance": drawn["profile-performance"],
+        "system-suspend-inhibited": drawn["system-suspend"] + ps.slash(),
+        "speedometer": ink(arc(11, 13, 7.6, 180, 360, 1.7, 0.1), line((11, 13), (15.2, 8.4), w=1.8), disc(11, 13, 1.6, 24)),
+        "brightness-high": sun(),
+        "redshift-status-day": sun(),
+        "redshift-status-off": sun() + ps.slash(),
+        "redshift-status-on": ink(ps.crescent(11, 11, 7.6, 15, 7.6, 6.4)),
+        "arrow-up": chevron((5, 14), (11, 8), (17, 14)), "arrow-down": chevron((5, 8), (11, 14), (17, 8)),
+        "arrow-left": chevron((14, 5), (8, 11), (14, 17)), "arrow-right": chevron((8, 5), (14, 11), (8, 17)),
+        "kdeconnect-tray": ink(ring(6.4, 2.6, 15.6, 19.4, 2.2, 1.5), line((9.8, 16.4), (12.2, 16.4), w=1.5)),
+        "microphone-sensitivity-muted": ink(*mic) + ps.slash(),
+        "microphone-sensitivity-low": ink(*mic), "microphone-sensitivity-medium": ink(*mic),
+        "microphone-sensitivity-high": ink(*mic),
+        "dialog-ok": ink(line((4.6, 11.6), (9, 16), (17.6, 6), w=1.9)),
+        "dialog-error": [(NEG, circle(11, 11, 8, 1.6)), (NEG, line((8, 8), (14, 14), w=1.7)), (NEG, line((14, 8), (8, 14), w=1.7))],
+        "preferences-desktop-display-randr-symbolic": ink(*glyphs["user-desktop"]),
+        "input-keyboard-virtual-on-symbolic": ink(ring(2.6, 6, 19.4, 16, 1.8), line((6.4, 9.6), (15.6, 9.6), w=1.4), line((7.6, 12.8), (14.4, 12.8), w=1.4)),
+    }
+    status["input-keyboard-virtual-off-symbolic"] = dimmed(status["input-keyboard-virtual-on-symbolic"])
+    # The battery as Plasma 6.7 names it: whole, in tens, plugged in or not.
+    for pct in range(0, 101, 10):
+        fill = drawn.get(f"Fill{pct}", [])
+        status[f"battery-{pct:03d}"] = drawn["Battery"] + fill
+        status[f"battery-{pct:03d}-charging"] = drawn["Battery"] + fill + drawn["AcAdapter"]
+    status["battery-full"], status["battery-full-charging"] = status["battery-100"], status["battery-100-charging"]
+    # Drives in the bar: a sign each, under the exact "-symbolic" name, or the
+    # name would be shortened to the painting (a tube of paint in the bar).
+    stick = ink(ring(7.4, 6.4, 14.6, 19.4, 1.6), rounded(8.8, 2.6, 13.2, 6.6, 0.8))
+    disk = ink(ring(3, 6.6, 19, 15.4, 1.8), line((14.6, 11), (16, 11), w=1.9))
+    cd = ink(circle(11, 11, 8, 1.5), circle(11, 11, 2.4, 1.3))
+    for key, sign in (("drive", disk), ("stick", stick), ("disc", cd)):
+        _, main, names = FILES[key]
+        for name in [main.split("/")[1]] + [n for n in names if "/" not in n and not n.startswith("computer")]:
+            status[f"{name}-symbolic"] = sign
+
+    def svg(parts):
+        body = "".join(f'<path class="ColorScheme-Text" style="fill:currentColor" fill-rule="nonzero" d="{ps.outline(p)}"/>'
+                       for p in parts)
+        return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">\n'
+                '  <!-- Monet ink sign. Drawn by tools/make-icons.py. -->\n'
+                '  <defs><style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#1c1b19; }</style></defs>\n'
+                f"  {body}\n</svg>\n")
+
+    def painted(parts):
+        """Parts that carry their own paint (dim, lily, warning, negative), as the Plasma style drew them."""
+        body = "".join(f'<path {how} d="{ps.outline(p)}"/>' for how, p in parts if len(p) > 2)
+        return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">\n'
+                '  <!-- Monet ink sign for the bar. Drawn by tools/make-icons.py. -->\n'
+                '  <defs><style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#1c1b19; } '
+                '.ColorScheme-Highlight { color:#357f72; } .ColorScheme-NegativeText { color:#d4462a; } '
+                '.ColorScheme-NeutralText { color:#e39b3d; } .ColorScheme-PositiveText { color:#2f8a55; }</style></defs>\n'
+                f"  {body}\n</svg>\n")
+
+    for folder_name, items, write in (("actions/scalable", glyphs, svg), ("actions/16", small, svg),
+                                      ("status/scalable", status, painted)):
+        out = THEME / folder_name
+        out.mkdir(parents=True, exist_ok=True)
+        for name, parts in items.items():
+            (out / f"{name}.svg").write_text(write(parts))
+    print("signed", len(glyphs) + len(small), "menu and toolbar actions and", len(status), "status icons")
+    return glyphs, small, status
+
+
 def settings_marks():
     paint = {n: Image.open(HOURS / f"{n}.jpg").convert("RGB") for n in ("dawn", "day", "dusk", "night")}
     out = THEME / "categories" / "scalable"
@@ -1355,7 +1616,27 @@ Comment=Small oil paintings for Monet's apps, folders and menu, Breeze for every
 Inherits=breeze,hicolor
 Example=folder
 DisplayDepth=32
-Directories=apps/scalable,categories/scalable,devices/scalable,mimetypes/scalable,places/scalable
+FollowsColorScheme=true
+Directories=actions/16,apps/scalable,categories/scalable,devices/scalable,mimetypes/scalable,places/scalable,actions/scalable,status/scalable
+
+[actions/16]
+Size=16
+Context=Actions
+Type=Fixed
+
+[actions/scalable]
+Size=22
+MinSize=8
+MaxSize=512
+Context=Actions
+Type=Scalable
+
+[status/scalable]
+Size=22
+MinSize=8
+MaxSize=512
+Context=Status
+Type=Scalable
 
 [apps/scalable]
 Size=48
@@ -1398,7 +1679,7 @@ def main():
     settings_art()
     TEXTURES.mkdir(parents=True, exist_ok=True)
     brush_texture(TEXTURES / "brush.png")
-    for old in THEME.glob("*/scalable/*.svg"):
+    for old in list(THEME.glob("*/scalable/*.svg")) + list(THEME.glob("actions/16/*.svg")):
         old.unlink()
     paintings = {name: (paint, files) for name, (paint, files) in ICONS.items()}
     paintings.update({name: (paint, [main]) for name, (paint, main, _) in FILES.items()})
@@ -1410,6 +1691,7 @@ def main():
             out.write_text(text)
         print("painted", name)
     settings_marks()
+    ink_actions()
     (THEME / "index.theme").write_text(INDEX)
     (THEME / "aliases").write_text(links())
     print("wrote", THEME.relative_to(ROOT), "and", (TEXTURES / "brush.png").relative_to(ROOT))
