@@ -381,16 +381,19 @@ except (OSError, ValueError):
 name, args = os.path.basename(sys.argv[0]), sys.argv[1:]
 def opt(flag, default=""):
     return args[args.index(flag) + 1] if flag in args else default
+groups = [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--group"]
 if name == "plasma-apply-colorscheme":
     data["kdeglobals|General|ColorScheme"] = args[0]
 elif name == "plasma-apply-desktoptheme":
     data["plasmarc|Theme|name"] = args[0]
+elif name == "busctl":
+    open(os.path.join(os.environ["FAKE_KDE"], "busctl.log"), "a").write(" ".join(" ".join(args).split()) + "\\n")
 else:
-    key = "|".join((os.path.basename(opt("--file")), opt("--group"), opt("--key")))
+    key = "|".join((os.path.basename(opt("--file")), "][".join(groups), opt("--key")))
     if name == "kreadconfig6":
         print(data.get(key, opt("--default")))
         sys.exit(0)
-    data[key] = [a for a in args if not a.startswith("--") and a not in (opt("--file"), opt("--group"), opt("--key"))][-1]
+    data[key] = [a for a in args if not a.startswith("--") and a not in (opt("--file"), *groups, opt("--key"))][-1]
 json.dump(data, open(store, "w"))
 """
 
@@ -398,7 +401,7 @@ json.dump(data, open(store, "w"))
         self.dir = Path(tmp)
         bin_ = self.dir / "bin"
         bin_.mkdir()
-        for tool in ("kreadconfig6", "kwriteconfig6", "plasma-apply-colorscheme", "plasma-apply-desktoptheme"):
+        for tool in ("kreadconfig6", "kwriteconfig6", "plasma-apply-colorscheme", "plasma-apply-desktoptheme", "busctl"):
             (bin_ / tool).write_text(self.TOOL)
             (bin_ / tool).chmod(0o755)
         (bin_ / "date").write_text(f"#!/bin/sh\necho {hour:02d}\n")
@@ -420,6 +423,10 @@ json.dump(data, open(store, "w"))
     def choice(self):
         path = self.dir / "config/monet/light"
         return path.read_text().strip() if path.exists() else "hours"
+
+    def told_plasma(self):
+        path = self.dir / "busctl.log"
+        return path.read_text() if path.exists() else ""
 
 
 class Light(unittest.TestCase):
@@ -457,6 +464,42 @@ class Light(unittest.TestCase):
         kde.light("sync")
         self.assertEqual(kde.choice(), "smoke")
         self.assertEqual(kde.settings()["kvantum.kvconfig|General|theme"], "MonetDark")
+        self.assertEqual(kde.settings()[Light.PAINTING], "smoke")
+        # KDE's Automatic is Follow the hours, and KDE's own switching stays off.
+        kde.set("kdeglobals|KDE|AutomaticLookAndFeel", "true")
+        kde.light("sync")
+        self.assertEqual(kde.choice(), "hours")
+        self.assertEqual(kde.settings()["kdeglobals|KDE|AutomaticLookAndFeel"], "false")
+        self.assertEqual(kde.settings()[Light.PAINTING], "hours")
+
+    PAINTING = "kscreenlockerrc|Greeter][Wallpaper][org.monet.hours][General|Painting"
+
+    def test_the_painting_goes_with_the_light(self):
+        kde = FakeKDE(self.tmp.name, hour=12)
+        # The Hours on: the painting drifts through the lights that go with the colors.
+        for light in ("mist", "smoke", "hours"):
+            kde.light("set", light)
+            self.assertEqual(kde.settings()[self.PAINTING], light)
+            self.assertIn(f"d.writeConfig('Painting', '{light}')", kde.told_plasma().splitlines()[-1])
+        # The Hours off: it stays, on day for mist, night for smoke, or the light it's in now.
+        prefs = Path(self.tmp.name) / "config/monet/prefs.json"
+        prefs.parent.mkdir(parents=True, exist_ok=True)
+        prefs.write_text('{"hours": false}')
+        for light, painting in (("mist", "day"), ("smoke", "night"), ("hours", "day")):
+            kde.light("set", light)
+            self.assertEqual(kde.settings()[self.PAINTING], painting, light)
+        # The hourly apply leaves the painting alone, so one that stays, stays.
+        kde.set(self.PAINTING, "dawn")
+        kde.light("apply")
+        self.assertEqual(kde.settings()[self.PAINTING], "dawn")
+        # Monet Settings' switches repaint through monet-light, and so does a fresh layout.
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('"$0" paint\', f"{LIBEXECDIR}/monet-light"', quick)
+        self.assertIn('"paint" if args[0] == "hours"', quick)
+        self.assertIn('"$LIBEXECDIR/monet-light" paint', (ROOT / "linux/libexec/monet-look").read_text())
+        # The wallpaper knows mist's and smoke's lights.
+        wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
+        self.assertIn('pools: ({ mist: ["dawn", "day"], smoke: ["dusk", "night"] })', wallpaper)
 
     def test_gtk_apps_get_monet_and_keep_kdes_colors(self):
         kde = FakeKDE(self.tmp.name, hour=21)
@@ -629,6 +672,97 @@ class Icons(unittest.TestCase):
         theme = (self.THEME / "index.theme").read_text()
         for folder in (p.parent.relative_to(self.THEME).as_posix() for p in self.THEME.rglob("*.svg")):
             self.assertIn(f"[{folder}]", theme)
+
+    def test_more_settings_pages_have_monets_marks(self):
+        # KDE's sidebar draws these names; each is a swatch with a white sign, like Monet Settings'.
+        for name in ("preferences-system-network", "preferences-system-bluetooth", "preferences-desktop-display",
+                     "preferences-desktop-sound", "preferences-desktop-mouse", "preferences-desktop-keyboard",
+                     "preferences-desktop-wallpaper", "preferences-desktop-notification-bell", "preferences-system-time",
+                     "preferences-system-users", "preferences-system-power-management", "preferences-security",
+                     "preferences-desktop-locale", "preferences-desktop"):
+            svg = (self.THEME / "categories/scalable" / f"{name}.svg").read_text()
+            self.assertIn("data:image/png;base64,", svg, name)
+            self.assertIn('stroke="#FFFFFF"', svg, name)
+        # Names KDE also uses outside its settings keep Breeze's.
+        for name in ("system-run", "system-log-out", "tools-check-spelling", "redshift-status-on"):
+            self.assertFalse(list(self.THEME.glob(f"*/scalable/{name}.svg")), name)
+
+
+class MonetsOwn(unittest.TestCase):
+    """Nothing on screen says KDE, Linux or Bazzite."""
+
+    LOOK = (ROOT / "linux/libexec/monet-look").read_text()
+    INSTALL = (ROOT / "linux/install.sh").read_text()
+
+    def test_kdes_dark_mode_and_its_own_look_are_hidden(self):
+        # More settings leaves out what Monet's light and look take care of.
+        hidden = re.search(r"for kcm in (.*?); do", self.LOOK, re.S).group(1).split()
+        for kcm in ("kcm_lookandfeel", "kcm_nighttime", "kcm_colors", "kcm_desktoptheme", "kcm_kwindecoration",
+                    "kcm_icons", "kcm_sddm", "kcm_updates", "kcm_about-distro"):
+            self.assertIn(kcm, hidden)
+        for kcm in ("kcm_kscreen", "kcm_pulseaudio", "kcm_networkmanagement", "kcm_bluetooth", "kcm_mouse"):
+            self.assertNotIn(kcm, hidden)
+        self.assertIn('--group "KDE Control Module Restrictions" --key "$kcm" false', self.LOOK)
+        self.assertIn("help_about_kde", self.LOOK)
+        # The two looks are just Mist and Smoke.
+        for theme, name in (("org.monet.desktop", "Mist"), ("org.monet.smoke.desktop", "Smoke")):
+            meta = json.loads((PLASMA / "look-and-feel" / theme / "metadata.json").read_text())
+            self.assertEqual(meta["KPlugin"]["Name"], name)
+
+    def test_apps_go_by_plain_names(self):
+        for app, name in (("org.kde.dolphin", "Files"), ("org.kde.konsole", "Terminal"), ("org.kde.gwenview", "Photos"),
+                          ("org.kde.spectacle", "Screenshot")):
+            self.assertIn(f'"{app}:{name}"', self.LOOK)
+        self.assertIn('store=io.github.kolunmi.Bazaar\nif rename "$store" Store', self.LOOK)
+        hidden = re.search(r"for app in (systemsettings .*?); do\n    hide", self.LOOK, re.S).group(1).split()
+        for app in ("systemsettings", "org.kde.kinfocenter", "bazzite-documentation", "discourse", "bbrew"):
+            self.assertIn(app, hidden)
+
+    def test_bazzites_greetings_are_gone(self):
+        for greeting in ("/etc/skel/.config/autostart/bazzite-portal.desktop",
+                         "/etc/xdg/autostart/bazzite-announcement.desktop", "/etc/profile.d/user-motd.sh"):
+            self.assertIn(greeting, self.INSTALL)
+        self.assertIn("/etc/xdg/plasma-welcomerc", self.INSTALL)
+        # The app menu's favorites: Monet Settings, not KDE's or Bazzite's portal.
+        favorites = self.INSTALL.split("/etc/xdg/kicker-extra-favoritesrc")[0].rsplit("printf", 1)[1]
+        self.assertIn("monet-settings.desktop", favorites)
+        self.assertNotIn("systemsettings", favorites)
+        self.assertNotIn("yafti", favorites)
+        self.assertIn("favorite UnlinkResourceFromActivity systemsettings.desktop", self.LOOK)
+        about = self.INSTALL.split("cat > /etc/xdg/kcm-about-distrorc")[1].split("ABOUT\n", 2)[1]
+        self.assertIn("Name=Monet", about)
+        self.assertIn("LogoPath=$DATADIR/icons/hicolor/scalable/apps/monet.svg", about)
+
+    def test_uninstalling_gives_kde_back(self):
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        self.assertIn("X-Monet=true", uninstall)
+        self.assertIn("KDE Control Module Restrictions", uninstall)
+        self.assertIn("KDE Action Restrictions", uninstall)
+        # Every menu entry monet-look writes carries the mark uninstall.sh looks for.
+        self.assertEqual(self.LOOK.count("X-Monet=true"), 3)
+
+    def test_the_stores_front_page_is_monets(self):
+        store = SHARE / "monet/store"
+        content = (store / "content.yaml").read_text()
+        banners = re.findall(r"file://@DATADIR@/monet/store/([\w-]+\.jpg)", content)
+        self.assertGreaterEqual(len(set(banners)), 10)
+        for banner in banners:
+            self.assertTrue((store / banner).is_file(), banner)
+        self.assertEqual(content.count("light-uri:"), content.count("dark-uri:"))
+        main = (store / "main.yaml").read_text()
+        self.assertNotIn("hooks", main)
+        for text in (content, main):
+            self.assertNotIn("Bazzite", text.replace("Bazzite's", ""))
+            self.assertNotIn("ujust", text)
+        self.assertIn("/usr/share/ublue-os/bazaar/content.yaml", self.INSTALL)
+
+    def test_monet_settings_doesnt_say_kde(self):
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        said = re.findall(r'i18n\("([^"]*)"', qml)
+        self.assertIn("More settings ›", said)
+        self.assertEqual([s for s in said if re.search(r"\b(KDE|Plasma|Linux|Bazzite)\b", s)], [])
+        # Nor is KDE's About page, with its KDE, Qt and kernel versions, one click away.
+        self.assertNotIn('ask("kde about")', qml)
 
 
 

@@ -3,6 +3,7 @@
 #
 #   monet-light                       apply the chosen light (at sign-in, and when the hour turns)
 #   monet-light set hours|mist|smoke  choose: follow the hours, or keep one
+#   monet-light paint                 the chosen light again, and the painting that goes with it
 #   monet-light sync                  KDE's Light or Dark was picked: keep Mist or Smoke
 #
 # Panels and KDE apps change right away. Apps that use the glass app style
@@ -45,6 +46,54 @@ now() {
 # Glass can be turned off in Monet Settings (Light & Wallpaper).
 glass() {
     grep -q '"glass": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
+}
+
+# So can The Hours: then the painting stays instead of drifting with the day.
+drifts() {
+    grep -q '"hours": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
+}
+
+# The painting that goes with the light: drifting through the lights it
+# allows (mist keeps to dawn and day, smoke to dusk and night), or the one it
+# stays on. The wallpaper's lights start at 5, 10, 17 and 21.
+painting() {
+    local chosen hour
+    chosen="$(choice)"
+    if [ "$(drifts)" = on ]; then
+        echo "$chosen"
+        return
+    fi
+    case "$chosen" in
+        mist) echo day ;;
+        smoke) echo night ;;
+        *)
+            hour=$((10#$(date +%H)))
+            if [ "$hour" -ge "$DAY_FROM" ] && [ "$hour" -lt 10 ]; then
+                echo dawn
+            elif [ "$hour" -ge 10 ] && [ "$hour" -lt "$DAY_UNTIL" ]; then
+                echo day
+            elif [ "$hour" -ge "$DAY_UNTIL" ] && [ "$hour" -lt 21 ]; then
+                echo dusk
+            else
+                echo night
+            fi
+            ;;
+    esac
+}
+
+# On every screen's desktop and on the lock screen.
+paint() {
+    local name
+    name="$(painting)"
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
+        --group General --key Painting "$name"
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "
+        desktops().forEach(function (d) {
+            if (d.wallpaperPlugin !== 'org.monet.hours') return;
+            d.currentConfigGroup = ['Wallpaper', 'org.monet.hours', 'General'];
+            d.writeConfig('Painting', '$name');
+            d.reloadConfig();
+        })" >/dev/null 2>&1
 }
 
 # One change at a time: quick hours-mist-smoke taps repaint once each, in
@@ -144,6 +193,15 @@ apply() {
 # that's a choice of Mist or Smoke, so keep it instead of following the hours.
 sync() {
     local picked
+    # KDE's Automatic is Monet's Follow the hours, and only Monet switches.
+    if [ "$(kreadconfig6 --file kdeglobals --group KDE --key AutomaticLookAndFeel 2>/dev/null)" = true ]; then
+        kwriteconfig6 --file kdeglobals --group KDE --key AutomaticLookAndFeel false
+        mkdir -p "$(dirname "$CHOICE")"
+        echo hours > "$CHOICE"
+        apply
+        paint
+        return 0
+    fi
     case "$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null)" in
         "$MIST_THEME") picked=mist ;;
         "$SMOKE_THEME") picked=smoke ;;
@@ -154,6 +212,7 @@ sync() {
     mkdir -p "$(dirname "$CHOICE")"
     echo "$picked" > "$CHOICE"
     apply
+    paint
 }
 
 case "${1:-apply}" in
@@ -170,6 +229,12 @@ case "${1:-apply}" in
         mkdir -p "$(dirname "$CHOICE")"
         echo "$2" > "$CHOICE"
         apply
+        paint
+        ;;
+    paint)
+        lock
+        apply
+        paint
         ;;
     sync)
         lock
@@ -179,7 +244,7 @@ case "${1:-apply}" in
         echo "$(choice) $(now)"
         ;;
     *)
-        sed -n '2,9p' "$0"
+        sed -n '2,10p' "$0"
         exit 1
         ;;
 esac

@@ -9,7 +9,7 @@
         "Description": "The Hours under glass, after dark",
         "Id": "org.monet.smoke.desktop",
         "License": "GPL-3.0-or-later",
-        "Name": "Monet Smoke",
+        "Name": "Smoke",
         "Version": "0.8.0"
     },
     "X-Plasma-APIVersion": "2"

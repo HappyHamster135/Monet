@@ -97,11 +97,14 @@ of ink outside it keeps the edge.
 | Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
 
-Two global themes carry this into KDE's settings: **Monet Mist** and
-**Monet Smoke** (`org.monet.desktop`, `org.monet.smoke.desktop`), KDE's
-Light and Dark. They differ only in colors and never set the app style or
-the wallpaper, so choosing one keeps the glass and The Hours. Picking Light
-or Dark in KDE's settings keeps Mist or Smoke (`monet-light sync`).
+Two global themes carry this into KDE's settings: **Mist** and **Smoke**
+(`org.monet.desktop`, `org.monet.smoke.desktop`), KDE's Light and Dark. They
+differ only in colors and never set the app style or the wallpaper, so
+choosing one keeps the glass and The Hours. Picking one on the first page of
+KDE's settings keeps Mist or Smoke, and its Automatic is Follow the hours
+(`monet-light sync`); KDE's own Global Theme page, with its "Dark Mode", is
+hidden. The painting goes with the light: Mist drifts between dawn and
+midday, Smoke between dusk and night (`monet-light paint`).
 
 Glass is for edges; anything you read sits on paper (or smoke). Turning
 **Glass** off in Settings switches to `monet-solid` and the `MonetSolid` /
@@ -236,6 +239,24 @@ which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into
 `linux/share/monet/settings`.
 
+**More settings** is KDE's System Settings, one click away from Monet
+Settings for anything rarer, and it shouldn't feel like another product.
+Its list has Monet Settings' marks: the same swatches cut from the
+paintings with a white sign, one painting per part of the list
+(`make-icons.py`, `MARKS`). It leaves out the pages for what Monet's look
+and light take care of (KDE's Global Theme with its Dark Mode, Day-Night
+Cycle, colors, styles, window frames, icons, splash and sign-in screens,
+effects), KDE's updater, and the pages about what's inside, like About
+this System. Help menus don't offer About KDE (KDE's kiosk settings,
+written by `monet-look`).
+
+Apps go by what they are, not their project names: Files, Terminal, Text
+Editor, Photos, Documents, Screenshot, Store. KDE's and Bazzite's own tools
+(Info Center, Welcome Center, Bazzite's portal and links) stay out of the
+menu, and nothing greets you from Bazzite or KDE. The Store's front page
+is Monet's picks under strips of The Hours, by daylight in Mist and by
+night in Smoke (`make-store.py`).
+
 ## Motion
 
 | Name | Duration | Curve | Used for |
@@ -247,7 +268,7 @@ KDE's System Settings instead. Pictures come from `make-icons.py` into
 | Sunset | 900 ms | `cubic-bezier(.4, 0, .2, 1)` | the screen fades to night before Windows |
 
 Desktop animation speed 0.8x. Windows scale gently in and out. With
-animations turned off in System Settings, Monet's widgets fade or cut.
+animations turned off in More settings, Monet's widgets fade or cut.
 
 ## Signature moments
 

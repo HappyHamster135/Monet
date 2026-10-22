@@ -120,7 +120,7 @@ Monet. Done.
 
 ## If something isn't right
 
-Open **Konsole** and run `monet doctor`. It says what's wrong and what to do.
+Open **Terminal** and run `monet doctor`. It says what's wrong and what to do.
 
 **"The Monet package on GitHub isn't public".** The installer can't download
 Monet. Make the package public (GitHub → your profile → **Packages** →

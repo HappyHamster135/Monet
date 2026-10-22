@@ -1,0 +1,7 @@
+# The Store (Bazaar), Monet's way. Installed over Bazzite's: its list of
+# apps that don't belong in a store still applies; its install notes, which
+# recommend Bazzite's own tools, don't.
+yaml-blocklist-paths:
+  - /usr/share/ublue-os/bazaar/blocklist.yaml
+override-eol-markings:
+  - com.obsproject.Studio

@@ -9,7 +9,7 @@
         "Description": "The Hours under glass, in the light of day",
         "Id": "org.monet.desktop",
         "License": "GPL-3.0-or-later",
-        "Name": "Monet Mist",
+        "Name": "Mist",
         "Version": "0.8.0"
     },
     "X-Plasma-APIVersion": "2"

@@ -1,0 +1,144 @@
+# The Store's front page (Bazaar's curated page): Monet's picks, each row
+# under a strip of The Hours, by daylight in Mist and by night in Smoke
+# (tools/make-store.py cuts them). Installed over Bazzite's page.
+rows:
+  - banner:
+      height: 300
+      image:
+        uri: file://@DATADIR@/monet/store/play-mist.jpg
+        light-uri: file://@DATADIR@/monet/store/play-mist.jpg
+        dark-uri: file://@DATADIR@/monet/store/play-smoke.jpg
+        fit: cover
+        can-shrink: true
+        alt: "Play"
+  - section:
+      title: "Play"
+      subtitle:
+        string: "Launchers, old consoles and new games. Steam is already here."
+      appids:
+        list:
+          - com.heroicgameslauncher.hgl
+          - io.itch.itch
+          - org.prismlauncher.PrismLauncher
+          - org.vinegarhq.Sober
+          - org.libretro.RetroArch
+          - net.retrodeck.retrodeck
+          - org.DolphinEmu.dolphin-emu
+          - net.pcsx2.PCSX2
+          - net.rpcs3.RPCS3
+          - org.ppsspp.PPSSPP
+          - info.cemu.Cemu
+          - org.scummvm.ScummVM
+          - sh.ppy.osu
+          - net.supertuxkart.SuperTuxKart
+
+  - banner:
+      height: 300
+      image:
+        uri: file://@DATADIR@/monet/store/talk-mist.jpg
+        light-uri: file://@DATADIR@/monet/store/talk-mist.jpg
+        dark-uri: file://@DATADIR@/monet/store/talk-smoke.jpg
+        fit: cover
+        can-shrink: true
+        alt: "Talk & stream"
+  - section:
+      title: "Talk & stream"
+      subtitle:
+        string: "Friends, calls, and going live."
+      appids:
+        list:
+          - com.discordapp.Discord
+          - dev.vencord.Vesktop
+          - com.obsproject.Studio
+          - com.moonlight_stream.Moonlight
+          - com.valvesoftware.SteamLink
+          - com.parsecgaming.parsec
+          - com.teamspeak.TeamSpeak
+          - info.mumble.Mumble
+          - org.signal.Signal
+          - org.telegram.desktop
+          - im.riot.Riot
+          - us.zoom.Zoom
+          - com.slack.Slack
+
+  - banner:
+      height: 300
+      image:
+        uri: file://@DATADIR@/monet/store/watch-mist.jpg
+        light-uri: file://@DATADIR@/monet/store/watch-mist.jpg
+        dark-uri: file://@DATADIR@/monet/store/watch-smoke.jpg
+        fit: cover
+        can-shrink: true
+        alt: "Music & film"
+  - section:
+      title: "Music & film"
+      subtitle:
+        string: "Something to listen to, and something to watch."
+      appids:
+        list:
+          - com.spotify.Client
+          - io.bassi.Amberol
+          - com.github.neithern.g4music
+          - org.strawberrymusicplayer.strawberry
+          - com.mastermindzh.tidal-hifi
+          - org.videolan.VLC
+          - org.jellyfin.JellyfinDesktop
+          - tv.plex.PlexDesktop
+          - com.plexamp.Plexamp
+          - rocks.shy.VacuumTube
+          - camp.nook.nookdesktop
+
+  - banner:
+      height: 300
+      image:
+        uri: file://@DATADIR@/monet/store/work-mist.jpg
+        light-uri: file://@DATADIR@/monet/store/work-mist.jpg
+        dark-uri: file://@DATADIR@/monet/store/work-smoke.jpg
+        fit: cover
+        can-shrink: true
+        alt: "Work & make"
+  - section:
+      title: "Work & make"
+      subtitle:
+        string: "Writing, drawing, editing, sending."
+      appids:
+        list:
+          - org.libreoffice.LibreOffice
+          - org.onlyoffice.desktopeditors
+          - org.mozilla.thunderbird
+          - md.obsidian.Obsidian
+          - org.standardnotes.standardnotes
+          - org.gimp.GIMP
+          - org.kde.krita
+          - org.inkscape.Inkscape
+          - org.blender.Blender
+          - org.kde.kdenlive
+          - org.audacityteam.Audacity
+          - org.ardour.Ardour
+
+  - banner:
+      height: 300
+      image:
+        uri: file://@DATADIR@/monet/store/everyday-mist.jpg
+        light-uri: file://@DATADIR@/monet/store/everyday-mist.jpg
+        dark-uri: file://@DATADIR@/monet/store/everyday-smoke.jpg
+        fit: cover
+        can-shrink: true
+        alt: "Everyday"
+  - section:
+      title: "Everyday"
+      subtitle:
+        string: "Passwords, sharing, and the small things that help."
+      appids:
+        list:
+          - org.keepassxc.KeePassXC
+          - com.bitwarden.desktop
+          - com.rustdesk.RustDesk
+          - app.drey.Warp
+          - org.qbittorrent.qBittorrent
+          - org.deskflow.deskflow
+          - com.github.wwmm.easyeffects
+          - io.github.pwr_solaar.solaar
+          - io.github.berarma.Oversteer
+          - org.raspberrypi.rpi-imager
+          - cc.arduino.IDE2

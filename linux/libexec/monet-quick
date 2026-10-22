@@ -54,7 +54,6 @@ KDE_PAGES = {
     "bluetooth": "kcm_bluetooth",
     "display": "kcm_kscreen",
     "sound": "kcm_pulseaudio",
-    "about": "kcm_about-distro",
     "input": "kcm_mouse",
     "power": "kcm_powerdevilprofilesconfig",
     "notifications": "kcm_notifications",
@@ -254,19 +253,14 @@ def save_prefs(values):
     PREFS.write_text(json.dumps(values))
 
 
-def painting_now():
-    hour = int(run("date", "+%H") or "12")
-    return "dawn" if 5 <= hour < 10 else "day" if 10 <= hour < 17 else "dusk" if 17 <= hour < 21 else "night"
-
-
 def set_light(mode):
-    """Saves the choice at once; the colors change a moment later, in the
-    background, so the switch's own animation stays smooth while every
-    window repaints (monet-light makes quick taps take turns)."""
+    """Saves the choice at once; the colors and the painting change a moment
+    later, in the background, so the switch's own animation stays smooth while
+    every window repaints (monet-light makes quick taps take turns)."""
     path = CONFIG / "monet" / "light"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(mode + "\n")
-    subprocess.Popen(["sh", "-c", 'sleep 0.3; exec nice -n 5 "$0" apply', f"{LIBEXECDIR}/monet-light"],
+    subprocess.Popen(["sh", "-c", 'sleep 0.3; exec nice -n 5 "$0" paint', f"{LIBEXECDIR}/monet-light"],
                      start_new_session=True, stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -369,15 +363,6 @@ def restart():
 def plasma_script(script):
     return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
 
-
-def set_painting(name):
-    plasma_script(
-        'desktops().forEach(function (d) {'
-        '  if (d.wallpaperPlugin !== "org.monet.hours") return;'
-        '  d.currentConfigGroup = ["Wallpaper", "org.monet.hours", "General"];'
-        f'  d.writeConfig("Painting", "{name}");'
-        '  d.reloadConfig();'
-        '})')
 
 
 def set_placard(show):
@@ -552,12 +537,10 @@ def main(argv):
         values = prefs()
         values[args[0]] = args[1] == "on"
         save_prefs(values)
-        if args[0] == "hours":
-            set_painting("hours" if values["hours"] else painting_now())
-        elif args[0] == "placard":
+        if args[0] == "placard":
             set_placard(values["placard"])
         else:
-            run(f"{LIBEXECDIR}/monet-light", "apply", timeout=30)
+            run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] == "hours" else "apply", timeout=30)
     elif cmd == "about":
         emit(about())
     elif cmd in ("doctor", "update"):

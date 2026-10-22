@@ -68,6 +68,28 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Secure Boot on ("bad shim signature"); the install guide says how to
   recover if it happened.
 
+- **The painting goes with the light.** Choosing Mist or Smoke now changes
+  the painting too, on the desktop and the lock screen: Mist drifts between
+  dawn and midday, Smoke between dusk and night (or stays on midday or
+  night with The Hours off). Before, only the colors changed.
+- **Smoke, not Dark Mode.** KDE's own Global Theme page, with its "Switch to
+  Dark Mode at Night" and Day-Night Cycle, is gone from More settings; its
+  first page offers Mist and Smoke, and its Automatic means Follow the hours.
+- **More settings looks like Monet Settings.** KDE's settings, one click
+  away as More settings, get the same painted marks as Monet Settings'
+  list, leave out the pages Monet looks after (themes, colors, window
+  frames, icons, splash and sign-in screens, effects, KDE's updater, About
+  this System), and Help menus no longer offer About KDE.
+- **Apps by plain names.** Files, Terminal, Text Editor, Photos, Documents,
+  Screenshot, Calculator, Music, Phone... instead of Dolphin, Konsole and
+  the rest. KDE's and Bazzite's own tools leave the menu, and nothing
+  greets you from Bazzite anymore: no portal or announcements at sign-in,
+  no welcome in Terminal, no KDE Welcome Center after updates. KDE's
+  About page says Monet.
+- **The Store's front page is Monet's:** Play, Talk & stream, Music & film,
+  Work & make and Everyday, each under a strip of The Hours (by daylight in
+  Mist, by night in Smoke), without Bazzite's notes.
+
 Updating from 0.7: Settings → Updates → Install, then restart. The new look
 arrives when you sign in; your panels stay as they are, and the weather and
 the other widgets are in the desktop's widget gallery.

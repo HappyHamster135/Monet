@@ -8,6 +8,14 @@ if [ "$(id -u)" -ne 0 ]; then
     # Remove this user's game shortcuts and settings, then the system part.
     rm -f "$HOME"/.local/share/applications/monet-game-*.desktop
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/monet"
+    # Apps' own names and menu entries, KDE's settings pages and Help menus.
+    grep -l -x 'X-Monet=true' "$HOME"/.local/share/applications/*.desktop \
+        "${XDG_CONFIG_HOME:-$HOME/.config}"/autostart/*.desktop 2>/dev/null | xargs -r rm -f
+    kdeglobals="${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals"
+    if [ -f "$kdeglobals" ]; then
+        sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
+            -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
+    fi
     systemctl --user disable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1 || true
     # Hand the desktop back to Breeze.
     command -v plasma-apply-lookandfeel >/dev/null && plasma-apply-lookandfeel --apply org.kde.breeze.desktop >/dev/null 2>&1

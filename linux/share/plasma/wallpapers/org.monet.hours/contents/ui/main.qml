@@ -24,8 +24,11 @@ WallpaperItem {
     property int current: 0
     property real progress: 0
 
-    // Monet Settings can keep one painting instead (The Hours switched off).
+    // Monet's light sets this (monet-light paint): "hours" drifts through all
+    // four lights, "mist" through the light ones and "smoke" through the dark
+    // ones, to go with the colors; a light's own name keeps that one.
     readonly property string fixed: root.configuration.Painting || "hours"
+    readonly property var pools: ({ mist: ["dawn", "day"], smoke: ["dusk", "night"] })
     onFixedChanged: update()
 
     function update() {
@@ -34,13 +37,15 @@ WallpaperItem {
             show(pinned, pinned, 0)
             return
         }
+        const pool = pools[fixed]
+        const lights = hours.filter(h => !pool || pool.includes(h.name))
         const now = new Date()
         const minute = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
         // The light whose start is the latest one before now.
         let index = 0
         let best = -1
-        for (let i = 0; i < hours.length; i++) {
-            const since = (minute - hours[i].from + 1440) % 1440
+        for (let i = 0; i < lights.length; i++) {
+            const since = (minute - lights[i].from + 1440) % 1440
             if (best < 0 || since < best) {
                 best = since
                 index = i
@@ -48,11 +53,11 @@ WallpaperItem {
         }
         // `index` started `best` minutes ago; while that's under `drift`, the
         // previous light is still fading out.
-        const previous = (index + hours.length - 1) % hours.length
+        const at = i => hours.indexOf(lights[(i + lights.length) % lights.length])
         if (best < drift) {
-            show(previous, index, best / drift)
+            show(at(index - 1), at(index), best / drift)
         } else {
-            show(index, (index + 1) % hours.length, 0)
+            show(at(index), at(index + 1), 0)
         }
     }
 
@@ -65,32 +70,61 @@ WallpaperItem {
     // without reloading anything that's on screen.
     property Image below: first
     property Image above: second
+    // A jump to another light waits for its painting to load, so nothing blinks.
+    property bool arriving: false
 
     function show(from, to, t) {
         if (below.source.toString() !== source(from)) {
             if (above.source.toString() === source(from)) {
+                if (arriving)
+                    return
                 // The next light has come all the way in: it becomes the one below.
-                fade.stop()
-                const old = below
-                below = above
-                above = old
-                above.opacity = 0
-                below.opacity = 1
-                below.z = 0
-                above.z = 1
-            } else {
+                swap()
+            } else if (below.source.toString() === "") {
+                // The first painting: nothing on screen to fade from.
                 below.source = source(from)
-                below.opacity = 1
+            } else {
+                // A jump (another light chosen, or waking hours later): the new
+                // light comes in over the one on screen, then takes its place.
+                if (above.opacity > 0.5)
+                    swap()
+                fade.stop()
+                above.opacity = 0
+                arriving = true
+                above.source = source(from)
+                fade.target = above
+                fade.to = 1
+                return
             }
         }
         if (above.source.toString() !== source(to)) {
             fade.stop()
+            arriving = false
             above.opacity = 0
             above.source = source(to)
         }
         fade.target = above
         fade.to = t
         fade.restart()
+    }
+
+    function swap() {
+        fade.stop()
+        const old = below
+        below = above
+        above = old
+        above.opacity = 0
+        below.opacity = 1
+        below.z = 0
+        above.z = 1
+    }
+
+    function loaded(image) {
+        if (arriving && image === above && image.status !== Image.Loading) {
+            arriving = false
+            if (image.status === Image.Ready)
+                fade.restart()
+        }
     }
 
     NumberAnimation {
@@ -108,6 +142,7 @@ WallpaperItem {
         cache: false
         sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
         z: 0
+        onStatusChanged: root.loaded(first)
     }
 
     Image {
@@ -119,6 +154,7 @@ WallpaperItem {
         sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
         opacity: 0
         z: 1
+        onStatusChanged: root.loaded(second)
     }
 
     Timer {

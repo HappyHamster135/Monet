@@ -2,7 +2,7 @@
  * Monet Settings: one glass sheet with the settings people actually change.
  * The glass is the Plasma style's dialog; the pages sit on solid paper (or
  * smoke) so text is always easy to read. Anything rarer is one click away
- * in KDE's System Settings ("More settings in KDE").
+ * in KDE's System Settings ("More settings").
  *
  * The `monet-quick` helper does the work; this only draws it.
  */
@@ -1024,7 +1024,7 @@ PlasmaCore.Dialog {
                                 TapHandler { onTapped: sheet.go(modelData) }
                                 Accessible.role: Accessible.PageTab
                                 Accessible.name: modelData.name
-                                Accessible.description: modelData.kde !== undefined ? i18n("Opens in KDE's settings") : ""
+                                Accessible.description: modelData.kde !== undefined ? i18n("Opens in a separate window") : ""
                                 Accessible.selected: current
                                 Accessible.onPressAction: sheet.go(modelData)
                             }
@@ -1035,7 +1035,7 @@ PlasmaCore.Dialog {
                             Layout.leftMargin: 10
                             Layout.topMargin: 8
                             visible: !sheet.pages.some(p => side.matches(p))
-                            text: i18n("Nothing here by that name. Try More settings in KDE.")
+                            text: i18n("Nothing here by that name. Try More settings.")
                             color: look.dim
                             font.pixelSize: 13
                             wrapMode: Text.Wrap
@@ -1052,7 +1052,7 @@ PlasmaCore.Dialog {
                         anchors.left: parent.left
                         anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
-                        text: i18n("More settings in KDE ›")
+                        text: i18n("More settings ›")
                         color: look.ink
                         opacity: 0.78
                         font.pixelSize: 13
@@ -1061,7 +1061,7 @@ PlasmaCore.Dialog {
                     HoverHandler { id: kdeHover }
                     TapHandler { onTapped: sheet.ask("kde " + sheet.kdePage()) }
                     Accessible.role: Accessible.Link
-                    Accessible.name: i18n("More settings in KDE")
+                    Accessible.name: i18n("More settings")
                     Accessible.onPressAction: sheet.ask("kde " + sheet.kdePage())
                 }
             }
@@ -1289,7 +1289,7 @@ PlasmaCore.Dialog {
                     tone: look
                     Repeater {
                         model: [
-                            ["hours", i18n("The Hours"), i18n("The painting drifts from dawn to night as the day goes")],
+                            ["hours", i18n("The Hours"), i18n("The painting drifts with the time of day")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
                             ["glass", i18n("Glass"), i18n("See the painting through panels and windows")]
                         ]
@@ -2048,11 +2048,6 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
-                Pill {
-                    tone: look
-                    text: i18n("More about this PC…")
-                    onClicked: sheet.ask("kde about")
-                }
             }
         }
     }
@@ -2066,7 +2061,7 @@ PlasmaCore.Dialog {
     }
 
     function kdePage() {
-        return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound", about: "about" })[page] || "all"
+        return ({ wifi: "wifi", bluetooth: "bluetooth", display: "display", sound: "sound" })[page] || "all"
     }
 
     function entry(id) {

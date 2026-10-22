@@ -1187,6 +1187,168 @@ def settings_art():
     banner.save(SETTINGS / "about.jpg", quality=86, optimize=True, progressive=True)
 
 
+# More settings (KDE's System Settings): each page's mark the way Monet
+# Settings draws its own, a swatch cut from the paintings with a white sign
+# (24-grid paths, as in MonetSettings.qml), so both lists look alike. One
+# painting per part of the list. Names KDE also uses outside its settings
+# (Log Out, Run, spelling, Night Light's tray icon) keep Breeze's.
+MARK_GLYPHS = {
+    "light": "M5 15a7 7 0 0 1 14 0M3 19h18",
+    "wifi": "M4 10a12 12 0 0 1 16 0M7 13.5a7.5 7.5 0 0 1 10 0M10 17a3 3 0 0 1 4 0",
+    "bluetooth": "M7 7l10 10-5 5V2l5 5L7 17",
+    "display": "M4 5h16v11H4zM10 20h4",
+    "sound": "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
+    "mouse": "M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM12 3v5",
+    "power": "M12 3v8M7 6.5a7 7 0 1 0 10 0",
+    "bell": "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
+    "clock": "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2",
+    "person": "M8 8a4 4 0 1 0 8 0a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0",
+    "apps": "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+    "sliders": "M4 7h9M17 7h3M15 5v4M4 17h3M11 17h9M9 15v4",
+    "touchpad": "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4 15h16M12 15v5",
+    "keyboard": "M3 7h18v10H3zM7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17.5 10.5h.01M8 14h8",
+    "keys": "M3 4h18v9H3zM7 7.5h.01M12 7.5h.01M17 7.5h.01M8 10.5h8M9 17l3 3 3-3",
+    "shortcut": "M9 9h6v6H9zM9 9V7a2 2 0 1 0-2 2h2M15 9V7a2 2 0 1 1 2 2h-2M9 15v2a2 2 0 1 1-2-2h2M15 15v2a2 2 0 1 0 2-2h-2",
+    "touch": "M7 3h10v18H7zM10.5 18h3M12 9.5a2.5 2.5 0 1 0 .01 0",
+    "swipe": "M4 12h14M14 8l4 4-4 4M4 7v10",
+    "edges": "M4 5h16v14H4zM7.5 9v6M16.5 9v6",
+    "gamepad": "M7 8h10a4 4 0 0 1 4 4l-.5 3.5a2 2 0 0 1-3.5 1L15.5 15h-7L7 16.5a2 2 0 0 1-3.5-1L3 12a4 4 0 0 1 4-4zM8 10.5v3M6.5 12h3M15.5 11.5h.01M17.5 13h.01",
+    "pen": "M4 5h16v14H4zM9 15l5.5-5.5 2 2L11 17H9z",
+    "access": "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7.5h.01M7.5 10.5l4.5 1 4.5-1M12 11.5v3l-2.5 3M12 14.5l2.5 3",
+    "disk": "M4 7h16v10H4zM4 13h16M16.5 15h.01",
+    "bolt": "M13 3L6 13h5l-1 8 7-10h-5z",
+    "printer": "M7 8V4h10v4M7 17H4v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7h-3M7 13h10v7H7z",
+    "shield": "M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z",
+    "shieldcheck": "M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6zM9 12l2 2 4-4",
+    "relay": "M3 12h4M17 12h4M7 8h10v8H7zM12 3v5M12 16v5",
+    "cloud": "M7.5 18a4.5 4.5 0 0 1-.5-9 5.5 5.5 0 0 1 10.5 1.5A3.75 3.75 0 0 1 17 18z",
+    "picture": "M4 5h16v14H4zM4 15l4.5-4.5 4 4 2.5-2.5 5 5M15.5 9h.01",
+    "palette": "M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-2 0-1.4-1.3-1.6-1.3-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3zM7.5 12h.01M9 7.5h.01M14.5 7.5h.01",
+    "pointer": "M6 3l12 9.5-5.5 1L15.5 20l-2.5 1-3-6.3L6 18.5z",
+    "type": "M5 7V5h14v2M12 5v14M9 19h6",
+    "typeplus": "M4 7V5h11v2M9.5 5v14M7 19h5M18 13v6M15 16h6",
+    "motion": "M13 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0M3 8.5h7M4.5 12h6M3 15.5h7",
+    "fileopen": "M6 3h8l4 4v14H6zM14 3v4h4M9 14l2 2 4-4",
+    "windows": "M3 5h12v9H3zM9 10h12v9H9z",
+    "window": "M3 5h18v14H3zM3 9h18M6.5 7h.01M9.5 7h.01",
+    "cards": "M5 9h14v11H5zM7 6h10M9 3h6",
+    "desks": "M3 5h8v6H3zM13 5h8v6h-8zM3 13h8v6H3zM13 13h8v6h-8z",
+    "search": "M4 10.5a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M15.5 15.5L20 20",
+    "lock": "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2",
+    "remote": "M3 4h18v12H3zM9 20h6M12 16v4M9 10l3-3 3 3M12 7v6",
+    "globe": "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
+    "door": "M14 4h5v16h-5M3 12h11M10 8l4 4-4 4",
+}
+# Pieces of the paintings, 440 pixels square (the first eight as in Monet Settings).
+SPOTS = {
+    "dawn-sun": ("dawn", (2160, 360)), "dawn-water": ("dawn", (900, 1500)), "dawn-sky": ("dawn", (300, 300)),
+    "dawn-glow": ("dawn", (1600, 1300)), "dawn-boat": ("dawn", (500, 1350)), "dawn-east": ("dawn", (2700, 1300)),
+    "dawn-high": ("dawn", (3200, 300)), "dawn-cloud": ("dawn", (1200, 200)), "dawn-swell": ("dawn", (2400, 1600)),
+    "dawn-shore": ("dawn", (150, 1600)), "dawn-mid": ("dawn", (1200, 600)), "dawn-masts": ("dawn", (2600, 900)),
+    "day-sky": ("day", (500, 200)), "day-high": ("day", (2900, 120)), "day-masts": ("day", (3300, 700)),
+    "day-sparkle": ("day", (2750, 1200)), "day-smoke": ("day", (2850, 600)), "day-water": ("day", (300, 1400)),
+    "day-cloud": ("day", (1700, 300)), "day-calm": ("day", (1200, 1500)), "day-deep": ("day", (2200, 1700)),
+    "day-west": ("day", (100, 700)),
+    "dusk-sky": ("dusk", (2600, 300)), "dusk-sun": ("dusk", (1090, 800)), "dusk-violet": ("dusk", (100, 100)),
+    "dusk-glow": ("dusk", (1150, 1350)), "dusk-boat": ("dusk", (500, 1450)), "dusk-high": ("dusk", (3300, 200)),
+    "dusk-haze": ("dusk", (2300, 900)), "dusk-rose": ("dusk", (2000, 200)),
+    "night-moon": ("night", (800, 260)), "night-lights": ("night", (2900, 1050)), "night-harbor": ("night", (100, 950)),
+    "night-sky": ("night", (2800, 200)), "night-water": ("night", (2000, 1500)), "night-east": ("night", (3300, 600)),
+    "night-deep": ("night", (1500, 1200)), "night-high": ("night", (2400, 400)), "night-shore": ("night", (100, 1600)),
+}
+MARKS = {
+    # Input & Output: dawn (Display and Sound as in Monet Settings).
+    "preferences-desktop-mouse": ("dawn-sky", "mouse"),
+    "preferences-desktop-touchpad": ("dawn-glow", "touchpad"),
+    "preferences-desktop-keyboard": ("dawn-boat", "keyboard"),
+    "input-keyboard-virtual": ("dawn-east", "keys"),
+    "preferences-desktop-keyboard-shortcut": ("dawn-high", "shortcut"),
+    "preferences-desktop-touchscreen": ("dawn-cloud", "touch"),
+    "preferences-desktop-gestures-touch": ("dawn-swell", "swipe"),
+    "preferences-desktop-gestures-screenedges": ("dawn-shore", "edges"),
+    "preferences-desktop-gaming": ("night-lights", "gamepad"),
+    "preferences-desktop-tablet": ("dawn-mid", "pen"),
+    "preferences-desktop-sound": ("dusk-sky", "sound"),
+    "preferences-desktop-display": ("day-high", "display"),
+    "preferences-desktop-display-randr": ("day-high", "display"),
+    "preferences-desktop-accessibility": ("day-water", "access"),
+    # Connected Devices: night.
+    "preferences-system-bluetooth": ("night-moon", "bluetooth"),
+    "preferences-system-disks": ("night-harbor", "disk"),
+    "preferences-desktop-thunderbolt": ("night-sky", "bolt"),
+    "preferences-devices-printer": ("night-water", "printer"),
+    # Networking: day.
+    "preferences-system-network": ("day-sky", "wifi"),
+    "preferences-security-firewall": ("day-masts", "shield"),
+    "preferences-system-network-proxy": ("day-sparkle", "relay"),
+    "preferences-online-accounts": ("day-smoke", "cloud"),
+    # Appearance & Style: dusk (Wallpaper as Monet Settings' Light & Wallpaper).
+    "preferences-desktop-wallpaper": ("dawn-sun", "picture"),
+    "preferences-desktop-theme-global": ("dusk-haze", "palette"),
+    "preferences-desktop-cursors": ("dusk-violet", "pointer"),
+    "preferences-desktop-font": ("dusk-glow", "type"),
+    "preferences-desktop-font-installer": ("dusk-boat", "typeplus"),
+    "preferences-desktop-animations": ("dusk-high", "motion"),
+    # Apps & Windows: day (Default Apps and Notifications as in Monet Settings).
+    "preferences-desktop-default-applications": ("day-high", "apps"),
+    "preferences-desktop-filetype-association": ("day-water", "fileopen"),
+    "preferences-desktop-notification-bell": ("dusk-sky", "bell"),
+    "preferences-system-windows": ("day-cloud", "windows"),
+    "preferences-system-windows-actions": ("day-calm", "window"),
+    "preferences-system-tabbox": ("day-deep", "cards"),
+    "preferences-desktop-virtual": ("day-west", "desks"),
+    # Workspace: dawn.
+    "preferences-desktop": ("dawn-mid", "sliders"),
+    "preferences-desktop-search": ("dawn-masts", "search"),
+    "preferences-desktop-baloo": ("dawn-masts", "search"),
+    # Security & Privacy: night.
+    "preferences-desktop-user-password": ("night-east", "lock"),
+    "preferences-security": ("night-deep", "shieldcheck"),
+    "preferences-system-network-remote": ("night-high", "remote"),
+    # Language & Time: dusk (Date & Time as in Monet Settings).
+    "preferences-desktop-locale": ("dusk-rose", "globe"),
+    "preferences-system-time": ("dawn-water", "clock"),
+    # System: (Power and Users as in Monet Settings).
+    "preferences-system-power-management": ("dawn-sun", "power"),
+    "preferences-system-users": ("dusk-sun", "person"),
+    "preferences-system-login": ("night-shore", "door"),
+}
+
+
+def mark_svg(spot, glyph, paint):
+    painting, (x, y) = SPOTS[spot]
+    img = paint[painting].crop((x, y, x + 440, y + 440)).resize((160, 160), Image.LANCZOS)
+    img = ImageEnhance.Color(img).enhance(1.25)
+    # Pale daylight is deepened, so a white sign always reads.
+    light = np.asarray(img.convert("L")).mean() / 255
+    if light > 0.52:
+        img = ImageEnhance.Color(ImageEnhance.Brightness(img).enhance(0.52 / light)).enhance(1.35)
+    mask = Image.new("L", (640, 640), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, 639, 639], radius=186, fill=255)
+    img = img.convert("RGBA")
+    img.putalpha(mask.resize((160, 160), Image.LANCZOS))
+    buf = io.BytesIO()
+    img.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG).save(buf, "PNG", optimize=True)
+    data = base64.b64encode(buf.getvalue()).decode()
+    # The sign: 58% of the swatch, centered, with a faint shadow a little below (as in Monet Settings).
+    d = MARK_GLYPHS[glyph]
+    sign = ('fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128">\n'
+            f"  <!-- Monet's mark for a page of More settings. Painted by tools/make-icons.py. -->\n"
+            f'  <image x="6" y="6" width="116" height="116" xlink:href="data:image/png;base64,{data}"/>\n'
+            f'  <path transform="translate(30.4 34.9) scale(2.8)" d="{d}" stroke="#000000" stroke-opacity="0.3" {sign}/>\n'
+            f'  <path transform="translate(30.4 30.4) scale(2.8)" d="{d}" stroke="#FFFFFF" {sign}/>\n</svg>\n')
+
+
+def settings_marks():
+    paint = {n: Image.open(HOURS / f"{n}.jpg").convert("RGB") for n in ("dawn", "day", "dusk", "night")}
+    out = THEME / "categories" / "scalable"
+    out.mkdir(parents=True, exist_ok=True)
+    for name, (spot, glyph) in MARKS.items():
+        (out / f"{name}.svg").write_text(mark_svg(spot, glyph, paint))
+    print("marked", len(MARKS), "pages of More settings")
+
+
 INDEX = """[Icon Theme]
 Name=Monet
 Comment=Small oil paintings for Monet's apps, folders and menu, Breeze for everything else
@@ -1247,6 +1409,7 @@ def main():
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(text)
         print("painted", name)
+    settings_marks()
     (THEME / "index.theme").write_text(INDEX)
     (THEME / "aliases").write_text(links())
     print("wrote", THEME.relative_to(ROOT), "and", (TEXTURES / "brush.png").relative_to(ROOT))

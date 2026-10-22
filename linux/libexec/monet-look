@@ -28,7 +28,7 @@ if has plasma-apply-lookandfeel; then
     fi
 fi
 
-# KDE's Light and Dark buttons pick Monet Mist and Monet Smoke, not Breeze.
+# KDE's Light and Dark buttons pick Mist and Smoke, not Breeze.
 kw --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.monet.desktop
 kw --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.desktop
 
@@ -99,28 +99,98 @@ fi
 # GTK apps from Flathub read Monet's colors (monet-light writes them).
 flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro 2>/dev/null || :
 
+# Apps go by plain names, and the tools that only show how Monet is built
+# (KDE's and Bazzite's) stay out of the menu: copies of their menu entries in
+# this account's menu, marked as Monet's so uninstalling takes them away.
+entry() { # entry <id>: where the app keeps its menu entry
+    local f
+    for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
+             "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
+        [ -f "$f" ] && { echo "$f"; return 0; }
+    done
+    return 1
+}
+rename() { # rename <id> <name> [comment]
+    local f
+    f="$(entry "$1")" || return 1
+    mkdir -p "$DATA/applications"
+    sed -e '/^Name\[/d' -e '/^GenericName/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
+        -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$DATA/applications/$1.desktop"
+    if [ -n "${3:-}" ]; then
+        sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$DATA/applications/$1.desktop"
+    fi
+}
+hide() { # hide <id>
+    local f
+    f="$(entry "$1")" || return 1
+    mkdir -p "$DATA/applications"
+    sed -e '/^NoDisplay=/d' -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nNoDisplay=true\nX-Monet=true/' \
+        "$f" > "$DATA/applications/$1.desktop"
+}
+
 # The store is called Store: Bazaar (Bazzite's) when it's there, otherwise
 # Discover. It doesn't pop up about updates: those are in Monet Settings,
 # when you ask.
-store=""
-for f in /var/lib/flatpak/exports/share/applications/io.github.kolunmi.Bazaar.desktop \
-         "$DATA/flatpak/exports/share/applications/io.github.kolunmi.Bazaar.desktop" \
-         /usr/share/applications/io.github.kolunmi.Bazaar.desktop /usr/share/applications/org.kde.discover.desktop; do
-    [ -f "$f" ] && { store=$f; break; }
-done
-if [ -n "$store" ]; then
-    mkdir -p "$DATA/applications"
-    sed -e '/^Name\[/d' -e '/^GenericName/d' -e '/^Comment\[/d' \
-        -e '0,/^Name=/s/^Name=.*/Name=Store/' -e 's/^Comment=.*/Comment=Apps and games for Monet/' \
-        "$store" > "$DATA/applications/$(basename "$store")"
-    if [ "$(basename "$store")" != org.kde.discover.desktop ] && [ -f /usr/share/applications/org.kde.discover.desktop ]; then
-        printf '[Desktop Entry]\nType=Application\nName=Discover\nNoDisplay=true\n' \
-            > "$DATA/applications/org.kde.discover.desktop"
-    fi
+store=io.github.kolunmi.Bazaar
+if rename "$store" Store "Apps and games for Monet"; then
+    hide org.kde.discover
+else
+    store=org.kde.discover
+    rename "$store" Store "Apps and games for Monet" || store=""
 fi
 mkdir -p "$CONFIG/autostart"
 printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
 kw --file PlasmaDiscoverUpdates --group Global --key UseUnattendedUpdates false
+
+for app in "org.kde.dolphin:Files" "org.kde.konsole:Terminal" "org.kde.kate:Text Editor" "org.kde.gwenview:Photos" \
+    "org.kde.okular:Documents" "org.kde.ark:Archives" "org.kde.spectacle:Screenshot" "org.kde.kcalc:Calculator" \
+    "org.kde.elisa:Music" "org.kde.haruna:Videos" "org.kde.filelight:Disk Usage" "org.kde.partitionmanager:Disks" \
+    "org.kde.kdeconnect.app:Phone" "org.kde.kdeconnect.sms:Phone Messages"; do
+    rename "${app%%:*}" "${app#*:}" || :
+done
+# Settings is Monet Settings; KDE's own opens from it, as More settings.
+for app in systemsettings org.kde.kinfocenter org.kde.khelpcenter org.kde.kmenuedit org.kde.plasma-welcome \
+    org.kde.kwalletmanager5 org.kde.kwalletmanager org.kde.kdeconnect-settings org.kde.kuserfeedback-console \
+    bazzite-documentation discourse bbrew waydroid-container-restart bazzite-portal io.github.ublue_os.yafti_gtk \
+    htop btop nvtop; do
+    hide "$app" || :
+done
+# One text editor is enough.
+entry org.kde.kate >/dev/null && { hide org.kde.kwrite || :; }
+# Bazzite's setup portal, in accounts made before Monet's image left it out.
+if [ -f "$CONFIG/autostart/bazzite-portal.desktop" ]; then
+    printf '[Desktop Entry]\nHidden=true\nX-Monet=true\n' > "$CONFIG/autostart/bazzite-portal.desktop"
+fi
+# The app menu's favorites stay even for apps that left the menu (Bazzite
+# seeds KDE's settings and its portal there): Monet Settings instead.
+favorite() { # favorite <method> <app> <activity>
+    busctl --user call org.kde.ActivityManager /ActivityManager/Resources/Linking \
+        org.kde.ActivityManager.ResourcesLinking "$1" sss org.kde.plasma.favorites.applications "applications:$2" "$3" 2>/dev/null
+}
+for activity in :global :current; do
+    if favorite IsResourceLinkedToActivity systemsettings.desktop "$activity" | grep -q true; then
+        favorite UnlinkResourceFromActivity systemsettings.desktop "$activity" >/dev/null
+        favorite LinkResourceToActivity monet-settings.desktop "$activity" >/dev/null
+    fi
+    favorite UnlinkResourceFromActivity io.github.ublue_os.yafti_gtk.desktop "$activity" >/dev/null
+done
+# KDE's welcome doesn't come back after Plasma updates to say what's new.
+kw --file plasma-welcomerc --group General --key ShowUpdatePage false
+
+# More settings (KDE's): the pages for what Monet's look and Monet Settings
+# take care of (KDE's Global Theme with its Dark Mode and Day-Night Cycle,
+# colors, styles, frames, icons, splash and sign-in screens, effects, its
+# updater), and the ones that only show how it's built, stay out of sight.
+for kcm in kcm_lookandfeel kcm_nighttime kcm_colors kcm_style kcm_desktoptheme kcm_kwindecoration \
+    kcm_kwindecoration_x11 kcm_icons kcm_splashscreen kcm_sddm kcm_plasmalogin kcm_plymouth kcm_kwin_effects \
+    kcm_kwin_effects_x11 kcm_kwin_scripts kcm_kwin_scripts_x11 kcm_kwinxwayland kcm_activities kcm_plasmasearch \
+    kcm_updates kcm_feedback kcm_kwallet kcm_kded kcm_qtquicksettings kcm_about-distro kcm_debugsettings; do
+    kw --file kdeglobals --group "KDE Control Module Restrictions" --key "$kcm" false
+done
+# And Help menus don't offer KDE's About, bug reports or donations.
+for action in help_about_kde help_report_bug help_donate; do
+    kw --file kdeglobals --group "KDE Action Restrictions" --key "action/$action" false
+done
 
 # Files: big painted folders with previews, on paper; a calm sidebar.
 kw_default dolphinrc IconsMode IconSize 80
@@ -130,7 +200,7 @@ kw_default dolphinrc General ShowZoomSlider false
 
 # Settings in the dock opens Monet Settings, not KDE's, and the store button
 # opens the Store (kept panels too).
-busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS' | sed "s|STORE|$(basename "${store:-}")|g"
+busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS' | sed "s|STORE|${store:+$store.desktop}|g"
 panels().forEach(function (panel) {
     panel.widgets("org.kde.plasma.icontasks").forEach(function (tasks) {
         tasks.currentConfigGroup = ["General"];
@@ -150,8 +220,9 @@ JS
 # The lock screen shows the same painting, in the same light.
 kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours
 
-# Mist or smoke, depending on the time, and keep it that way.
-"$LIBEXECDIR/monet-light" apply
+# Mist or smoke, depending on the time, and keep it that way; a fresh layout
+# also needs the painting that goes with the light.
+"$LIBEXECDIR/monet-light" paint
 has systemctl && systemctl --user enable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1
 
 busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1

@@ -197,6 +197,35 @@ SUPPORT_URL="https://github.com/HappyHamster135/Monet/blob/HEAD/docs/INSTALL.md"
 BUG_REPORT_URL="https://github.com/HappyHamster135/Monet/issues"
 DEFAULT_HOSTNAME="monet"
 OSR
+    # KDE's About page reads Bazzite's name, mark, version and site from here,
+    # over os-release: Monet's instead.
+    cat > /etc/xdg/kcm-about-distrorc <<ABOUT
+[General]
+LogoPath=$DATADIR/icons/hicolor/scalable/apps/monet.svg
+Name=Monet
+Version=$("$BINDIR/monet" --version 2>/dev/null | cut -d' ' -f2)
+Variant=
+Website=https://github.com/HappyHamster135/Monet
+ABOUT
+    # Bazzite's greetings: its setup portal and announcements at the first
+    # sign-in, and its welcome in every new terminal. Monet Setup and Monet
+    # Settings have that covered.
+    rm -f /etc/skel/.config/autostart/bazzite-portal.desktop /etc/xdg/autostart/bazzite-announcement.desktop \
+        /etc/profile.d/user-motd.sh
+    # And KDE's welcome, which Plasma starts at the first sign-in and after updates.
+    printf '[General]\nLastSeenVersion=9999\nShowUpdatePage=false\n' > /etc/xdg/plasma-welcomerc
+    # The app menu's first favorites, over Bazzite's (KDE's settings, its portal).
+    printf '[General]\nPrepend=%s\nIgnoreDefaults=true\n' \
+        'preferred://browser;steam.desktop;org.kde.dolphin.desktop;org.kde.konsole.desktop;io.github.kolunmi.Bazaar.desktop;monet-settings.desktop;' \
+        > /etc/xdg/kicker-extra-favoritesrc
+    # The Store's front page (Bazaar reads these two files): Monet's picks under
+    # strips of The Hours, without Bazzite's install notes.
+    if [ -d /usr/share/ublue-os/bazaar ]; then
+        tree "$SRC/share/monet/store" "$DATADIR/monet/store"
+        rm -f "$DATADIR"/monet/store/*.yaml
+        put 644 "$SRC/share/monet/store/main.yaml" /usr/share/ublue-os/bazaar/main.yaml
+        put 644 "$SRC/share/monet/store/content.yaml" /usr/share/ublue-os/bazaar/content.yaml
+    fi
     # The PC's boot menu names Monet's entry from the text before "release".
     if grep -q " release " /etc/system-release 2>/dev/null; then
         release="$(sed 's/^.* release /Monet release /' /etc/system-release)"
