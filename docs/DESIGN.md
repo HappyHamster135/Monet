@@ -140,7 +140,9 @@ Settings in front of it.
   garden pot from Giverny for Trash. KDE's apps too: a gilt frame
   (pictures), an open book (documents), an abacus, a little stage (videos),
   a sunflower (disk usage), a letter and quill (text), a chest (archives),
-  a box camera (screenshots). The app menu's categories as well.
+  a box camera (screenshots). The app menu's categories as well, and
+  Monet's widgets: the sun behind a cloud (Weather), the card beside a gilt
+  frame (Placard).
 - **Folders** are cut from the paintings: the front of each folder is a piece
   of one of the Hours (Home and the plain folder at dawn, Desktop at midday,
   Pictures, Music and Videos at dusk, Downloads and Games at night), with a
@@ -161,6 +163,12 @@ Settings in front of it.
   the Plasma style, and tints them because the theme follows the color
   scheme. A drive gets its sign under its exact `-symbolic` name, or KDE would
   shorten the name to its painting.
+- **Message boxes** (Monet's own questions and every app's) carry the same
+  ink: a ring with i or ? in lily, ! in amber, a cross in vermilion, a tick
+  in green. Never Breeze's warning triangle. Monet's questions are questions
+  (a question sign, the answer on the button), not warnings, and when
+  something fails the box says why in plain words, with the details behind
+  a button instead of a file's path.
 - **One grid.** Every motif is laid out on a 128 grid and fills about 0.8 of
   it along its long side, centered, so the dock reads evenly. Painted at
   512 px, kept at 256 inside SVGs.
@@ -252,7 +260,10 @@ is tried again at the next sign-in.
 - **Weather**: the temperature in Fraunces, the sky painted beside it (the
   sun and its reflection for a clear day, a crescent at night, clouds, rain,
   snow, fog, a storm) and the next four days. From Open-Meteo once a place is
-  chosen in its settings: no account, only the place is sent.
+  chosen: no account, only the place is sent. The place is chosen right on
+  the card ("Where are you?", a town, then one of three matches), never in
+  KDE's settings window; click the place's name for another. The first
+  place sets the degrees the way the PC's region counts them.
 - **Calendar**: the month in Fraunces, today on a dab of the sun.
 - **Clock** (in the right island, instead of KDE's): the time over the date
   in Inter; a click opens the day in Fraunces and its month, as Calendar
@@ -267,13 +278,14 @@ is tried again at the next sign-in.
   starts) or Settings → Light & Wallpaper → Edit widgets. Glass down half the
   screen with "Widgets" in Fraunces and Done; down its left a search well and
   Monet's widgets for where you're adding one (the desktop's or the bar's),
-  each with a small picture, then More widgets; beside them big cards, two
+  each with its painted icon, then More widgets; beside them big cards, two
   side by side or the chosen one alone, each with the widget's name, what it
   does, a picture of it, + Add in lily, and "On your desktop" with Remove for
   the ones out already. Everyone else's widgets (KDE's too) are a plain list
   under More widgets. Click a card to add it, or drag it where you want it.
-  The pictures are each widget on its patch of The Hours, in mist and in
-  smoke (`contents/screenshot.png` and `screenshot-smoke.png`, which KDE's
+  The pictures are just the widget, cut out with its shadow: its glass as
+  it frosts The Hours, but no painting around it. In mist and in smoke
+  (`contents/screenshot.png` and `screenshot-smoke.png`, which KDE's
   gallery shows too); the bar's are their islands. Plasma reads the gallery
   from its desktop shell, so the image keeps KDE's as `KdeWidgetExplorer.qml`
   and swaps in a `WidgetExplorer.qml` that opens Monet's, or KDE's if

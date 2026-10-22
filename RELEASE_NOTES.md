@@ -42,6 +42,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   a new account starts with Monet's layout, and any desktop without them gets
   them once, trying again at the next sign-in if Plasma wasn't ready.
 - **The weather breathes.** The next four days have room under today.
+- **Choose the weather's place on the card.** "Where are you?": type your
+  town and pick it, right on the widget, instead of a settings window. Click
+  the place's name for another. Fahrenheit comes on by itself where the PC's
+  region uses it.
+- **Just the widgets in the gallery.** Each card shows the widget itself
+  with its shadow, without the painting around it, and the list down the
+  side has an icon for each, Weather and Placard newly painted.
+- **Plainer questions and errors.** Monet asks "Set up Windows?" as a
+  question, not a warning. When Windows can't be set up, the box says why
+  (not enough room, for one) with the details behind a button, and
+  cancelling the password quietly stops instead of reporting a failure.
+  Message boxes in every app have Monet's ink signs instead of KDE's
+  triangle.
 
 Updating from 0.8.1: Settings → Updates → Install, then restart. At your
 next sign-in Monet's menu takes the place of KDE's in your panel, with your

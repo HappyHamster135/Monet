@@ -4,7 +4,7 @@
         "Authors": [{ "Name": "Monet" }],
         "Category": "Date and Time",
         "Description": "The time, the date and the painting's name, like the card next to a painting",
-        "Icon": "monet",
+        "Icon": "monet-placard",
         "Id": "org.monet.placard",
         "License": "GPL-3.0-or-later",
         "Name": "Placard",

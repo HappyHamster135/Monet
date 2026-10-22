@@ -708,9 +708,14 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
         Command::new("pkexec").arg(&exe).args(&args).spawn()
     }
     .map_err(|e| e.to_string())?;
-    let ok = show_progress_while(&mut child);
+    let code = show_progress_while(&mut child);
+    // pkexec says 126 when the password prompt was dismissed: the person chose not to.
+    if code == Some(126) && !is_root() {
+        return Ok(());
+    }
+    let reason = fs::read_to_string(WINDOWS_PROGRESS).ok().and_then(|p| stop_reason(&p));
     match windows_setup_status() {
-        Some(Outcome::Pending) if ok => {
+        Some(Outcome::Pending) if code == Some(0) => {
             if ask("Windows is ready", "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet.", "Restart") {
                 let _ = Command::new("systemctl").arg("reboot").status();
             }
@@ -724,8 +729,39 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
             }
             Ok(())
         }
-        _ => Err("Windows couldn't be prepared. Details are in /var/log/monet-windows.log.".into()),
+        // What went wrong in plain words; the helper's own account behind Details.
+        Some(Outcome::NoSpace) => Err(format!(
+            "{}. Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads.\n\n{}",
+            capitalized(reason.as_deref().unwrap_or("there isn't enough free space for Windows")),
+            windows_log_tail()
+        )),
+        _ => Err(format!(
+            "Windows couldn't be set up this time. Choose Windows in the app menu to try again.\n\n{}",
+            reason.map(|r| capitalized(&r) + ".\n\n").unwrap_or_default() + &windows_log_tail()
+        )),
     }
+}
+
+/// Where the Windows helper says how far it is: "PERCENT<tab>WHAT IT'S DOING".
+const WINDOWS_PROGRESS: &str = "/run/monet/windows-progress";
+
+/// Why the Windows helper stopped, in its own words: when it gives up it leaves
+/// "0<tab>there isn't enough free space ..." where its progress was.
+fn stop_reason(progress: &str) -> Option<String> {
+    let (percent, text) = progress.trim().split_once('\t')?;
+    (percent == "0" && text != "Getting Windows ready").then(|| text.to_string())
+}
+
+fn capitalized(text: &str) -> String {
+    let mut chars = text.chars();
+    chars.next().map(|c| c.to_uppercase().chain(chars).collect()).unwrap_or_default()
+}
+
+/// The end of the Windows helper's log, for a dialog's Details.
+fn windows_log_tail() -> String {
+    let log = fs::read_to_string("/var/log/monet-windows.log").unwrap_or_default();
+    let lines: Vec<&str> = log.lines().collect();
+    lines[lines.len().saturating_sub(12)..].join("\n")
 }
 
 /// A Windows 11 ISO the user downloaded, newest first.
@@ -745,8 +781,9 @@ fn downloaded_windows_iso() -> Option<PathBuf> {
     isos.into_iter().next()
 }
 
-/// Shows a progress dialog fed by the setup script until it finishes.
-fn show_progress_while(child: &mut std::process::Child) -> bool {
+/// Shows a progress dialog fed by the setup script until it finishes, and
+/// gives back how it ended (its exit code).
+fn show_progress_while(child: &mut std::process::Child) -> Option<i32> {
     let dialog = Command::new("kdialog")
         .args(["--title", "Monet", "--progressbar", "Getting Windows ready", "100"])
         .output()
@@ -759,9 +796,9 @@ fn show_progress_while(child: &mut std::process::Child) -> bool {
             if let (Some(d), Some(q)) = (&dialog, qdbus) {
                 let _ = Command::new(q).args([&d[0], &d[1], "close"]).status();
             }
-            return status.success();
+            return status.code();
         }
-        if let (Some(d), Some(q), Ok(text)) = (&dialog, qdbus, fs::read_to_string("/run/monet/windows-progress")) {
+        if let (Some(d), Some(q), Ok(text)) = (&dialog, qdbus, fs::read_to_string(WINDOWS_PROGRESS)) {
             if let Some((pct, label)) = text.trim().split_once('\t') {
                 let _ = Command::new(q).args([&d[0], &d[1], "Set", "", "value", pct]).status();
                 let _ = Command::new(q).args([&d[0], &d[1], "setLabelText", label]).status();
@@ -902,8 +939,9 @@ fn has(cmd: &str) -> bool {
 /// click that started us counts as the answer.
 fn ask(title: &str, text: &str, ok_label: &str) -> bool {
     if has("kdialog") {
+        // A question, not a warning: no warning sign for "Set up Windows?".
         return Command::new("kdialog")
-            .args(["--title", title, "--continue-label", ok_label, "--warningcontinuecancel", text])
+            .args(["--title", title, "--yes-label", ok_label, "--no-label", "Cancel", "--yesno", text])
             .status()
             .map(|s| s.success())
             .unwrap_or(false);
@@ -924,10 +962,19 @@ fn show_error(message: &str, gui: bool) {
     }
     eprintln!("{message}");
     if gui && !std::io::stderr().is_terminal() {
+        // What went wrong, then, after a blank line, the details behind a button.
+        let (text, details) = message.split_once("\n\n").unwrap_or((message, ""));
         if has("kdialog") {
-            let _ = Command::new("kdialog").args(["--title", "Monet", "--sorry", message]).status();
+            let mut cmd = Command::new("kdialog");
+            cmd.args(["--title", "Monet"]);
+            if details.trim().is_empty() {
+                cmd.args(["--sorry", text]);
+            } else {
+                cmd.args(["--detailedsorry", text, details]);
+            }
+            let _ = cmd.status();
         } else if has("zenity") {
-            let _ = Command::new("zenity").args(["--warning", "--title", "Monet", "--text", message]).status();
+            let _ = Command::new("zenity").args(["--warning", "--title", "Monet", "--text", text]).status();
         }
     }
 }
@@ -943,6 +990,17 @@ mod tests {
         assert_eq!(parse_bootc_check("Update available for: docker://x\n  Digest: sha256:abc\n"), Some((true, None)));
         assert_eq!(parse_bootc_check("No changes in: ostree-image-signed:docker://x\n"), Some((false, None)));
         assert_eq!(parse_bootc_check("error: something else\n"), None);
+    }
+
+    #[test]
+    fn reads_why_windows_setup_stopped() {
+        let stopped = "0\tthere isn't enough free space on the disk for Windows\n";
+        assert_eq!(stop_reason(stopped).as_deref(), Some("there isn't enough free space on the disk for Windows"));
+        assert_eq!(stop_reason("0\tGetting Windows ready\n"), None);
+        assert_eq!(stop_reason("45\tDownloading Windows\n"), None);
+        assert_eq!(stop_reason(""), None);
+        assert_eq!(capitalized("there isn't room"), "There isn't room");
+        assert_eq!(capitalized(""), "");
     }
 
     #[test]

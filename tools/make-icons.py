@@ -915,6 +915,35 @@ def calendar_icon():
     return c.finish()
 
 
+def weather_icon():
+    """Weather: the sun coming out from behind a cloud."""
+    c = Canvas(311)
+    c.paint(circle(78, 44, 28), lit("#FF9A5E", "#E5401C", y0=16, y1=72, light=0.3, shade=0.12, cool="#B8305A"), 5.2,
+            around(78, 44), layers=3, wander=0.18, accents=FIRE, accent_rate=0.16, thick=1.3)
+    cloud = join(circle(42, 80, 20), circle(66, 66, 26), circle(92, 82, 18), box(22, 80, 110, 102, 11))
+    c.paint(cloud, lit("#FFFDF8", "#C9C0DC", y0=40, y1=102, light=0.2, shade=0.3, cool="#8A80B8"), 4.4, around(66, 80),
+            wander=0.2, accents=["#FFFFFF", "#E8DCEF", "#BFD6E8"], accent_rate=0.2, thick=1.4)
+    return c.finish()
+
+
+def placard_icon():
+    """Placard: the little card beside a painting, with the time on it."""
+    c = Canvas(321)
+    outer, inner = box(8, 10, 78, 70, 3), box(17, 19, 69, 61, 2)
+    gilt = lit("#E8C068", "#9A6A24", y0=10, y1=70, light=0.3, shade=0.3, cool="#6A4A3A")
+    c.paint(cut(outer, inner), gilt, 3.0, lambda x, y: 0 if min(y - 10, 70 - y) < min(x - 8, 78 - x) else math.pi / 2,
+            wander=0.06, accents=["#FFE7A0", "#B88A3A"], accent_rate=0.25, thick=1.5)
+    c.paint(inner, sampled(painting("day", (1500, 400, 2700, 1400)), (17, 19, 69, 61)), 3.6, flat(0), wander=0.12, jitter=0.04)
+    card = box(46, 54, 120, 112, 5)
+    c.paint(card, lit(y0=54, y1=112, **PAPER), 4.4, flat(0), layers=2, wander=0.08, accents=["#FFFFFF", "#E8DCC4"],
+            accent_rate=0.15)
+    c.mark([(56, 70), (92, 69.4)], 6.2, INKS[1], card, thick=1.0)  # the time, large
+    c.mark([(56, 85), (108, 84.4)], 2.6, INKS[0], card, thick=0.7)
+    c.dab(59 * S, 99 * S, 7 * S, 6 * S, 0, hexrgb("#F2552C"), card, thick=1.6, dry=0)  # the sun, before the painting's name
+    c.mark([(66, 99), (100, 98.4)], 2.6, INKS[0], card, thick=0.7)
+    return c.finish()
+
+
 def teapot_icon():
     """Bold Brew: a teapot from Giverny's blue kitchen."""
     c = Canvas(291)
@@ -1065,6 +1094,9 @@ FILES = {
     "discourse": (cafe_icon, "apps/monet-discourse", []),
     "bbrew": (teapot_icon, "apps/monet-bbrew", []),
     "calendar": (calendar_icon, "apps/x-office-calendar", ["office-calendar", "org.kde.merkuro.calendar", "korganizer"]),
+    # Monet's own widgets, in the widget gallery.
+    "weather": (weather_icon, "apps/monet-weather", []),
+    "placard": (placard_icon, "apps/monet-placard", []),
 }
 # Folders asked for by their type, not their place.
 # Bazzite's documentation names its picture by path; install.sh points it here.
@@ -1553,6 +1585,16 @@ def ink_actions():
         "microphone-sensitivity-high": ink(*mic),
         "dialog-ok": ink(line((4.6, 11.6), (9, 16), (17.6, 6), w=1.9)),
         "dialog-error": [(NEG, circle(11, 11, 8, 1.6)), (NEG, line((8, 8), (14, 14), w=1.7)), (NEG, line((14, 8), (8, 14), w=1.7))],
+        # The rest of what message boxes and apps' notes show, to match: never Breeze's triangle.
+        "dialog-warning": [(ps.WARN, circle(11, 11, 8, 1.6)), (ps.WARN, line((11, 6.6), (11, 12.2), w=1.9)),
+                           (ps.WARN, disc(11, 15.3, 1.2, 24))],
+        "dialog-information": [(ps.LILY, circle(11, 11, 8, 1.6)), (ps.LILY, disc(11, 6.9, 1.2, 24)),
+                               (ps.LILY, line((11, 9.8), (11, 15.4), w=1.9))],
+        "dialog-question": [(ps.LILY, circle(11, 11, 8, 1.6)),
+                            (ps.LILY, curve((8.3, 8.4), (9.3, 6.6), (11, 6), (12.8, 6.6), (13.7, 8.2), (13, 9.9), (11.6, 11),
+                                            (11, 12.2), (11, 13), w=1.8)),
+                            (ps.LILY, disc(11, 15.5, 1.2, 24))],
+        "dialog-positive": [(ps.GOOD, circle(11, 11, 8, 1.6)), (ps.GOOD, line((7.4, 11.2), (10, 13.8), (14.8, 8.4), w=1.8))],
         "preferences-desktop-display-randr-symbolic": ink(*glyphs["user-desktop"]),
         "input-keyboard-virtual-on-symbolic": ink(ring(2.6, 6, 19.4, 16, 1.8), line((6.4, 9.6), (15.6, 9.6), w=1.4), line((7.6, 12.8), (14.4, 12.8), w=1.4)),
     }

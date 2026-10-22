@@ -710,6 +710,21 @@ class Icons(unittest.TestCase):
         for name in ("drive-harddisk", "drive-removable-media-usb-pendrive", "media-optical", "media-flash-sd-mmc"):
             self.assertTrue((status / f"{name}-symbolic.svg").is_file(), name)
 
+    def test_message_boxes_get_ink_signs(self):
+        # Message boxes and apps' inline notes ask for these: Monet's ink, never Breeze's triangle.
+        for name in ("dialog-information", "dialog-question", "dialog-warning", "dialog-error", "dialog-positive"):
+            svg = (self.THEME / "status/scalable" / f"{name}.svg").read_text()
+            self.assertIn('<style id="current-color-scheme"', svg, name)
+            self.assertNotIn("data:image", svg, name)
+
+    def test_monets_desktop_widgets_have_an_icon_each(self):
+        # The widget gallery lists them by icon: a painting each, not the sun twice.
+        desktop = DesktopWidgets.WIDGETS + ("org.monet.placard",)
+        icons = {w: json.loads((PLASMA / "plasmoids" / w / "metadata.json").read_text())["KPlugin"]["Icon"] for w in desktop}
+        self.assertEqual(len(set(icons.values())), len(desktop), icons)
+        for widget, icon in icons.items():
+            self.assertTrue(list(self.THEME.glob(f"*/scalable/{icon}.svg")), widget)
+
     def test_menus_and_toolbars_get_ink_signs(self):
         theme = (self.THEME / "index.theme").read_text()
         dirs = theme.split("Directories=", 1)[1].splitlines()[0].split(",")
@@ -909,6 +924,22 @@ class DesktopWidgets(unittest.TestCase):
     def test_files_shows_the_room_left(self):
         # Dolphin's small status bar leaves out the free space; the full one shows it.
         self.assertIn("kw_default dolphinrc General ShowStatusBar FullWidth", (ROOT / "linux/libexec/monet-look").read_text())
+
+    def test_weather_place_is_chosen_on_the_card(self):
+        # Never KDE's settings window: a search right on the widget, and the place's name for another.
+        weather = (PLASMA / "plasmoids/org.monet.weather/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertNotIn('internalAction("configure")', weather)
+        self.assertIn("geocoding-api.open-meteo.com/v1/search", weather)
+        self.assertIn("Plasmoid.configuration.place = place.name", weather)
+        self.assertIn("onClicked: root.choosing = true", weather)
+
+    def test_gallery_pictures_are_just_the_widgets(self):
+        # Cut out with their shadow, no painting around them: each picture has see-through pixels.
+        for widget in self.WIDGETS + ("org.monet.placard",):
+            for name in ("screenshot.png", "screenshot-smoke.png"):
+                png = (PLASMA / "plasmoids" / widget / "contents" / name).read_bytes()
+                color_type = png[25]  # in IHDR, after the signature, the chunk's head, width, height and depth
+                self.assertTrue(color_type in (4, 6) or b"tRNS" in png, f"{widget} {name}")
 
     def test_settings_have_their_schema(self):
         for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu"):

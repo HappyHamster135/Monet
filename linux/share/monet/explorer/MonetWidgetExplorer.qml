@@ -1,7 +1,7 @@
 /*
  * Monet's widget gallery, on the glass down the side of the screen, with the
- * desktop beside it: search and Monet's widgets down the left, each with a
- * small picture; big cards with a picture of each widget, Add, and Remove for
+ * desktop beside it: search and Monet's widgets down the left, each with its
+ * icon; big cards with a picture of each widget, Add, and Remove for
  * the ones already out; every other widget under More widgets. Click a card
  * to add it, or drag it where you want it. Done ends the editing.
  *
@@ -264,10 +264,7 @@ Item {
                         required property var model
                         Layout.fillWidth: true
                         title: model.name
-                        // The bar's widgets are small in their pictures: their signs read better here.
-                        picture: gallery.forBar ? "" : (model.screenshot || "")
                         sign: model.decoration
-                        smoke: gallery.smoke
                         chosen: gallery.shown === model.pluginName
                         ink: gallery.ink
                         wash: gallery.pebble
@@ -428,13 +425,12 @@ Item {
         }
     }
 
-    // An entry down the left: the widget's small picture (or a sign) and its name.
+    // An entry down the left: the widget's icon and its name. (Its picture is
+    // in its card: at this size the picture would be specks.)
     component Kind: T.AbstractButton {
         id: kind
         property string title
-        property string picture
         property var sign
-        property bool smoke: false
         property bool chosen: false
         property color ink
         property color wash
@@ -456,32 +452,11 @@ Item {
         }
         contentItem: RowLayout {
             spacing: 10
-            Item {
+            Kirigami.Icon {
                 Layout.leftMargin: 6
-                implicitWidth: 34
-                implicitHeight: 24
-                Image {
-                    id: thumb
-                    anchors.fill: parent
-                    visible: status === Image.Ready
-                    fillMode: Image.PreserveAspectFit
-                    asynchronous: true
-                    mipmap: true
-                    source: kind.picture === "" ? ""
-                        : kind.smoke ? kind.picture.replace(/screenshot\.png$/, "screenshot-smoke.png") : kind.picture
-                    onStatusChanged: {
-                        if (status === Image.Error && source != kind.picture) {
-                            source = kind.picture
-                        }
-                    }
-                }
-                Kirigami.Icon {
-                    anchors.centerIn: parent
-                    width: 22
-                    height: 22
-                    visible: !thumb.visible
-                    source: kind.sign
-                }
+                Layout.preferredWidth: 24
+                Layout.preferredHeight: 24
+                source: kind.sign
             }
             Text {
                 Layout.fillWidth: true
