@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Date and Time",
+        "Description": "The month on Monet's glass, today on a dab of the sun",
+        "Icon": "x-office-calendar",
+        "Id": "org.monet.calendar",
+        "License": "GPL-3.0-or-later",
+        "Name": "Calendar",
+        "Version": "0.7.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

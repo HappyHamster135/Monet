@@ -22,6 +22,6 @@ fn main() {
 #[cfg(not(windows))]
 fn main() {
     eprintln!("Make a Monet USB stick runs on Windows. On Linux, write {} with your disk tool.",
-              plan::installer_name(env!("CARGO_PKG_VERSION")));
+              plan::installer_names(env!("CARGO_PKG_VERSION"))[0]);
     std::process::exit(1);
 }

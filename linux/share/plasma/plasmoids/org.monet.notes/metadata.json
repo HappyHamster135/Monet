@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Utilities",
+        "Description": "A sheet of paper on the desktop, for what you want to keep in view",
+        "Icon": "accessories-text-editor",
+        "Id": "org.monet.notes",
+        "License": "GPL-3.0-or-later",
+        "Name": "Note",
+        "Version": "0.7.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

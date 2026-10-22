@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Environment and Weather",
+        "Description": "The sky where you are, painted on Monet's glass",
+        "Icon": "monet",
+        "Id": "org.monet.weather",
+        "License": "GPL-3.0-or-later",
+        "Name": "Weather",
+        "Version": "0.7.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

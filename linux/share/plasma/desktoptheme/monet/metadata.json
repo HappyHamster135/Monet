@@ -1,4 +1,16 @@
 {
+    "AdaptiveTransparency": {
+        "enabled": true
+    },
+    "BlurBehindEffect": {
+        "enabled": true
+    },
+    "ContrastEffect": {
+        "enabled": true,
+        "contrast": 0.18,
+        "intensity": 1.05,
+        "saturation": 1.7
+    },
     "KPlugin": {
         "Authors": [
             {

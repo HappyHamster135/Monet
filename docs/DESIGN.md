@@ -78,8 +78,14 @@ Two kinds, chosen by the light (Quick Settings → Light: Hours, Mist or Smoke):
 - **Mist** (dawn and midday): paper at about 50%, a bright line along the top.
 - **Smoke** (dusk and night): smoke at about 50%, a faint line along the top.
 
-Behind both: KWin's blur (strength 12, a little noise for grain) plus 1.5x
-color, so the glass carries the painting's light instead of looking grey.
+Behind both: KWin's blur (strength 12, a little noise for grain) and its
+contrast effect (saturation 1.7, set in the Plasma style's `metadata.json`),
+so the glass carries the painting's light instead of looking grey.
+
+Light in the glass: a rim brightest along the top that fades down the sides
+(the sides stretch, so it fades over the whole height), the way light gathers
+in the thickness of a pane, and a soft sheen under the top edge. A hairline
+of ink outside it keeps the edge.
 
 | Where | How |
 |---|---|
@@ -144,11 +150,19 @@ Settings in front of it.
   brushed in ink in the Plasma style's `icons/`, tapering like a brush, and
   recolor with the light. Sleep is the moon, shut down the setting sun.
 - **One grid.** Every motif is laid out on a 128 grid and fills about 0.8 of
-  it along its long side, centered, so the dock reads evenly next to round
-  icons like Firefox and Steam. Painted at 512 px, kept at 256 inside SVGs.
-- Everything is in the `Monet` icon theme (`tools/make-icons.py`). Apps with
-  their own brand (Firefox, Steam, games) keep their icons; toolbar icons
-  inside apps are Breeze's, in Monet's colors.
+  it along its long side, centered, so the dock reads evenly. Painted at
+  512 px, kept at 256 inside SVGs.
+- **What Bazzite brings** gets Monet's motifs too, so nothing on the dock or in
+  the menu is someone else's: a window thrown open onto the harbor for the
+  browser, a locomotive steaming into Saint-Lazare for Steam, a rowing boat on
+  the Seine for Lutris, the Japanese footbridge at Giverny for Bazzite Portal,
+  a sealed letter for Flatseal, market crates for Warehouse, a brass gear for
+  Gear Lever, pigment jars for DistroShelf, a balloon for ProtonUp, a watering
+  can for Waydroid, piano keys for Input Remapper, café cups for the forum, a
+  teapot for Bold Brew. Bazzite's own entries name their pictures by path, so
+  the image points them at these.
+- Everything is in the `Monet` icon theme (`tools/make-icons.py`). Games keep
+  their covers; toolbar icons inside apps are Breeze's, in Monet's colors.
 
 ## Pointer
 
@@ -165,6 +179,37 @@ the same ink; anything not drawn falls back to Breeze.
 - **Sign-in** (SDDM): the harbor at night and Monet's mark, with Monet's
   fields, buttons and colors (its home gets Monet's Plasma style and colors
   at boot) and Monet's pointer.
+- **Lock screen** (`linux/share/monet/lockscreen`): at rest, the painting
+  and the desktop's placard, low on the left. A key or the mouse softens the
+  painting (blurred, washed in mist or smoke) and raises a sheet of glass
+  (Rise): your face or your initial on a dab of lily, "Welcome back" in
+  Fraunces, the time and date, the password well and the sun to unlock,
+  then Sleep and Switch user. A wrong password shakes the sheet. Plasma 6.7
+  reads the lock screen from its desktop shell, not the global theme, so the
+  image puts `MonetLockScreen.qml` beside KDE's files there and swaps KDE's
+  `LockScreen.qml` for one that opens Monet's, or KDE's own if Monet's can't
+  load. Everything that unlocks works as in KDE's `LockScreenUi.qml`.
+
+## Widgets
+
+Like a desk: glass cards on the painting, added from the desktop's widget
+gallery. A fresh desktop has the placard, Weather and Calendar.
+
+- **The glass** (`linux/share/monet/widgets/Glass.qml`, copied into each widget
+  by install.sh): widgets share the desktop's surface with the wallpaper, so
+  KWin can't blur behind them. The glass finds The Hours in the scene and
+  frosts the patch of painting it covers (following the light as it drifts,
+  and the widget as it's moved), washed in mist or smoke, with the rim of
+  light, a hairline and a soft shadow. Elsewhere, frosted paper.
+- **Weather**: the temperature in Fraunces, the sky painted beside it (the
+  sun and its reflection for a clear day, a crescent at night, clouds, rain,
+  snow, fog, a storm) and the next four days. From Open-Meteo once a place is
+  chosen in its settings: no account, only the place is sent.
+- **Calendar**: the month in Fraunces, today on a dab of the sun.
+- **Now Playing**: the cover, the track in Fraunces, back, play or pause on
+  the sun, and next.
+- **Note**: paper pinned with a dab of lily; kept as you type.
+- **Photo Frame**: your Pictures in a gilt frame, a new one every ten minutes.
 
 ## Apps
 
@@ -211,8 +256,11 @@ animations turned off in System Settings, Monet's widgets fade or cut.
 
 ## The installer
 
-Fedora's installer (Anaconda), dressed as Monet, since its screens and
-wording are fixed:
+**Monet Setup** (below) is Monet's installer; the stick gets it whenever the
+release has it, which is only once it has installed Monet in a test PC (CI's
+`setup-vm`). Make-USB-Stick.exe asks the release for `Monet-<v>-Setup.iso`
+first and falls back to the other one. Until then, Fedora's installer
+(Anaconda), dressed as Monet, since its screens and wording are fixed:
 
 - **Start menu** (GRUB theme, `image/installer/grub`): the dawn painting,
   Monet's mark and name in Fraunces, the choices on smoked glass and the

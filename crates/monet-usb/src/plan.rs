@@ -1,13 +1,26 @@
 //! The parts of making a USB stick that don't touch Windows: what to download,
 //! how to name a stick, how to cut the image into writes.
 
-/// Where this version's installer is: the release this program came with.
-pub fn installer_url(version: &str) -> String {
-    format!("https://github.com/HappyHamster135/Monet/releases/download/v{version}/{}", installer_name(version))
+/// Where one of this version's files is: the release this program came with.
+pub fn release_url(version: &str, name: &str) -> String {
+    format!("https://github.com/HappyHamster135/Monet/releases/download/v{version}/{name}")
 }
 
-pub fn installer_name(version: &str) -> String {
-    format!("Monet-{version}-Installer.iso")
+/// This version's installers, best first: Monet Setup, Monet's own (in a
+/// release only once it has installed Monet in a test PC), then Fedora's
+/// installer dressed as Monet.
+pub fn installer_names(version: &str) -> [String; 2] {
+    [format!("Monet-{version}-Setup.iso"), format!("Monet-{version}-Installer.iso")]
+}
+
+/// Whether `curl -sIL` found the file: the last answer, after redirects, is a 2xx.
+pub fn found(headers: &str) -> bool {
+    headers
+        .lines()
+        .rev()
+        .find(|line| line.starts_with("HTTP/"))
+        .and_then(|line| line.split_whitespace().nth(1))
+        .is_some_and(|code| code.starts_with('2'))
 }
 
 /// "SanDisk Ultra · 32 GB": what's printed on the stick, roughly.
@@ -71,9 +84,23 @@ mod tests {
     #[test]
     fn url_names_the_release_and_its_installer() {
         assert_eq!(
-            installer_url("0.6.4"),
+            release_url("0.6.4", "Monet-0.6.4-Installer.iso"),
             "https://github.com/HappyHamster135/Monet/releases/download/v0.6.4/Monet-0.6.4-Installer.iso"
         );
+    }
+
+    #[test]
+    fn monet_setup_comes_first() {
+        assert_eq!(installer_names("0.8.0"), ["Monet-0.8.0-Setup.iso", "Monet-0.8.0-Installer.iso"]);
+    }
+
+    #[test]
+    fn found_reads_the_last_answer() {
+        assert!(found("HTTP/2 302\r\nlocation: x\r\n\r\nHTTP/2 200\r\nContent-Length: 1221263360\r\n"));
+        // GitHub's "Not Found" has a length too.
+        assert!(!found("HTTP/2 404\r\ncontent-length: 9\r\n"));
+        assert!(!found("HTTP/2 302\r\n\r\nHTTP/1.1 404 Not Found\r\n"));
+        assert!(!found(""));
     }
 
     #[test]

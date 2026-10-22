@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Multimedia",
+        "Description": "What's playing, with its cover, on Monet's glass",
+        "Icon": "applications-multimedia",
+        "Id": "org.monet.nowplaying",
+        "License": "GPL-3.0-or-later",
+        "Name": "Now Playing",
+        "Version": "0.7.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

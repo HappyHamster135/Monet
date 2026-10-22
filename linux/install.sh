@@ -108,8 +108,13 @@ tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/
 for theme in org.monet.desktop org.monet.smoke.desktop; do
     tree "$SRC/share/plasma/look-and-feel/$theme" "$DATADIR/plasma/look-and-feel/$theme"
 done
-for applet in org.monet.games org.monet.quick org.monet.placard; do
+for applet in org.monet.games org.monet.quick org.monet.placard org.monet.weather org.monet.calendar \
+    org.monet.nowplaying org.monet.notes org.monet.frame; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
+done
+# The desktop widgets share one glass.
+for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes; do
+    install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
 done
 fill "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/main.qml" \
     "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/*.qml
@@ -198,6 +203,12 @@ OSR
         rm -f /etc/system-release
         echo "$release" > /etc/system-release
     fi
+    # Bazzite's own menu entries name their pictures by path, which the icon
+    # theme can't paint over: point them at Monet's paintings.
+    for entry in bazzite-documentation:monet-documentation discourse:monet-discourse bbrew:monet-bbrew; do
+        desktop="/usr/share/applications/${entry%%:*}.desktop"
+        [ -f "$desktop" ] && sed -i "s|^Icon=/.*|Icon=${entry#*:}|" "$desktop"
+    done
     # The sign-in screen: the harbor at night, and Monet's mark.
     for theme in /usr/share/sddm/themes/breeze /usr/share/sddm/themes/01-breeze-fedora; do
         [ -d "$theme" ] || continue
@@ -221,6 +232,15 @@ TMP
     # And its pointer.
     install -d /usr/lib/sddm/sddm.conf.d
     printf '[Theme]\nCursorTheme=Monet-cursors\n' > /usr/lib/sddm/sddm.conf.d/monet-cursors.conf
+    # The lock screen: Plasma reads it from its desktop shell, not the global
+    # theme. Monet's goes in beside KDE's files, and KDE's LockScreen.qml
+    # becomes one that opens Monet's, or KDE's own if Monet's can't load.
+    # Only where KDE keeps it as Plasma 6.7 does; otherwise KDE's stays.
+    lock=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen
+    if [ -f "$lock/LockScreenUi.qml" ] && [ -f "$lock/MediaControls.qml" ]; then
+        install -m 644 "$SRC/share/monet/lockscreen/MonetLockScreen.qml" "$lock/MonetLockScreen.qml"
+        install -m 644 "$SRC/share/monet/lockscreen/LockScreen.qml" "$lock/LockScreen.qml"
+    fi
 else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
         "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true

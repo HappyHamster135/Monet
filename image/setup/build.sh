@@ -90,8 +90,11 @@ xorriso -as mkisofs -o "$OUT" -V "$LABEL" -iso-level 3 -joliet -joliet-long -rat
 xorriso -indev "$OUT" -pvd_info 2>/dev/null | grep -q "$LABEL"
 rm -rf "$W/check" && mkdir "$W/check"
 xorriso -osirrox on -indev "$OUT" -extract_boot_images "$W/check/" >/dev/null 2>&1
-mtype -i "$W"/check/*efi* ::/EFI/BOOT/grub.cfg | grep -q "CDLABEL=$LABEL"
-mdir -i "$W"/check/*efi* ::/EFI/BOOT | grep -qi bootx64
+# Both the El Torito image and the GPT partition come out: check each.
+for img in "$W"/check/*efi*; do
+    mtype -i "$img" ::/EFI/BOOT/grub.cfg | grep -q "CDLABEL=$LABEL"
+    mdir -i "$img" ::/EFI/BOOT | grep -qi bootx64
+done
 SIZE=$(stat -c %s "$OUT")
 test "$SIZE" -lt 2000000000
 echo "$OUT: $((SIZE / 1000000)) MB"

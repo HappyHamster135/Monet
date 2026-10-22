@@ -32,31 +32,51 @@ On a Windows PC (this one, or any other):
 3. It downloads Monet, writes the stick and checks it (about 10-20 minutes),
    then says it's ready.
 
-On Linux or a Mac, download **Monet-0.7.0-Installer.iso** and write it with
-your disk tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
+The stick gets **Monet Setup**, Monet's own installer, when the release has
+it (**Monet-0.7.0-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.7.0-Installer.iso**). Monet Setup is in a release only once
+it has installed Monet in a test PC.
+
+On Linux or a Mac, download **Monet-0.7.0-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.7.0-Installer.iso**) and write it with your disk
+tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
    **F11** (MSI). Choose the USB stick (it's called **Monet-0.7.0**).
+2. Monet Setup opens over the harbor at dawn. Choose your language and
+   keyboard, and click **Continue**.
+3. Connect to Wi-Fi (with a cable, this step is skipped).
+4. Enter your name and a password: your account in Monet, and in Windows.
+5. Choose **Monet and Windows** (everything on the PC is erased; about two
+   thirds of the disk for Monet, one third for Windows) or **Monet next to my
+   Windows** (Windows and your files stay; it needs free space). Check the
+   disk, then click **Erase & Install** (or **Install**).
+
+Monet downloads itself while it installs (5.7 GB) and shows how much is down
+and how long is left. If the connection drops, it picks up where it stopped.
+If something can't go ahead, the page says why in a sentence.
+
+6. When it says it's all set, click **Restart** and take out the USB stick.
+
+<details>
+<summary>With Fedora's installer (Monet-0.7.0-Installer.iso)</summary>
+
+1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
    on: then it's plain text). **Install Monet and Windows** is already
    selected. Press **Enter** (or wait ten seconds).
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
 5. Click **User Creation** and enter your name and a password.
-6. Click **Begin Installation**.
-
-The disk is already set up for you: about two thirds for Monet, one third
-for Windows.
-
-Monet downloads itself while it installs (5.7 GB): a Monet page shows how
-much is down and how long is left. If the connection drops, it picks up where
-it stopped. If there's no internet at all, the installer says so instead of
-"unknown error".
-
+6. Click **Begin Installation**. The disk is already set up for you: about
+   two thirds for Monet, one third for Windows. Monet downloads itself while
+   it installs; a Monet page shows how far it is.
 7. Click **Reboot** and take out the USB stick.
+
+</details>
 
 ## 3. First start
 

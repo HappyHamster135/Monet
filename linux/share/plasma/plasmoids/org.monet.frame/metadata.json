@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Graphics",
+        "Description": "Your pictures in a gilt frame, a new one every ten minutes",
+        "Icon": "org.kde.gwenview",
+        "Id": "org.monet.frame",
+        "License": "GPL-3.0-or-later",
+        "Name": "Photo Frame",
+        "Version": "0.7.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

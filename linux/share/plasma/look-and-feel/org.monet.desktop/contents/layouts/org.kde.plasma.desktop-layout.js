@@ -21,7 +21,8 @@ function island(alignment) {
     return p
 }
 
-// The painting that changes with the hours, and the placard.
+// The painting that changes with the hours, the placard, and the weather and
+// the month at the top right, the way a desk keeps them.
 var desktops = desktopsForActivity(currentActivity())
 for (var i = 0; i < desktops.length; i++) {
     var d = desktops[i]
@@ -29,6 +30,11 @@ for (var i = 0; i < desktops.length; i++) {
     d.currentConfigGroup = ["General"]
     d.writeConfig("iconSize", 3)
     d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12)
+    var width = 1920
+    try { width = screenGeometry(d.screen).width } catch (e) {}
+    var right = width - gridUnit * 22
+    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10)
+    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12)
 }
 
 var left = island("left")

@@ -193,9 +193,12 @@ fn start(hwnd: HWND) {
         EnableWindow(control(5), 0);
     }
     std::thread::spawn(move || {
-        let iso = std::env::temp_dir().join(plan::installer_name(VERSION));
-        let iso = iso.to_string_lossy().to_string();
-        let result = download(&plan::installer_url(VERSION), &iso).and_then(|()| {
+        let mut iso = String::new();
+        let result = installer().and_then(|(name, url, total)| {
+            iso = std::env::temp_dir().join(name).to_string_lossy().to_string();
+            download(&url, &iso, total)
+        });
+        let result = result.and_then(|()| {
             tell("Writing to the USB stick…".into(), 0.0);
             disk::write(number, &iso, |phase, done, total| {
                 let f = done as f64 / total.max(1) as f64;
@@ -211,17 +214,37 @@ fn start(hwnd: HWND) {
     });
 }
 
-/// Downloads with Windows' own curl.exe, which picks up where it stopped.
-fn download(url: &str, dest: &str) -> Result<(), String> {
+const NO_WINDOW: u32 = 0x0800_0000;
+
+/// Windows' own curl.exe.
+fn curl() -> Result<String, String> {
     let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
     let curl = format!("{root}\\System32\\curl.exe");
     if !std::path::Path::new(&curl).exists() {
         return Err("This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer.".into());
     }
-    const NO_WINDOW: u32 = 0x0800_0000;
+    Ok(curl)
+}
+
+/// The best installer this release has, with its size: Monet Setup if it's
+/// there, otherwise the other one.
+fn installer() -> Result<(String, String, u64), String> {
+    let curl = curl()?;
     tell("Getting ready to download Monet…".into(), 0.0);
-    let headers = Command::new(&curl).args(["-sIL", url]).creation_flags(NO_WINDOW).output().map_err(|e| e.to_string())?;
-    let total = plan::content_length(&String::from_utf8_lossy(&headers.stdout)).unwrap_or(0);
+    for name in plan::installer_names(VERSION) {
+        let url = plan::release_url(VERSION, &name);
+        let headers = Command::new(&curl).args(["-sIL", &url]).creation_flags(NO_WINDOW).output().map_err(|e| e.to_string())?;
+        let headers = String::from_utf8_lossy(&headers.stdout);
+        if plan::found(&headers) {
+            return Ok((name, url, plan::content_length(&headers).unwrap_or(0)));
+        }
+    }
+    Err("Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped.".into())
+}
+
+/// Downloads with Windows' own curl.exe, which picks up where it stopped.
+fn download(url: &str, dest: &str, total: u64) -> Result<(), String> {
+    let curl = curl()?;
     let size = || std::fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
     if total > 0 && size() == total {
         return Ok(());

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="place" type="String">
+      <label>The place's name, as shown on the widget.</label>
+      <default></default>
+    </entry>
+    <entry name="latitude" type="Double">
+      <default>0</default>
+    </entry>
+    <entry name="longitude" type="Double">
+      <default>0</default>
+    </entry>
+    <entry name="fahrenheit" type="Bool">
+      <label>Temperatures in degrees Fahrenheit.</label>
+      <default>false</default>
+    </entry>
+  </group>
+</kcfg>

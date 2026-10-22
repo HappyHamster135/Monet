@@ -7,8 +7,9 @@ Each motif comes from Monet's world, not from a computer's: a palette for
 Settings, a night canvas on an easel for Terminal, the harbor's masts rising
 like a graph against the sunset for System Monitor, a market bouquet for the
 Store, a garden pot from Giverny for Trash, folders cut from the paintings.
-Apps that bring their own brand (Firefox, Steam, games) keep their icon; KDE's
-apps get a Monet motif; everything else comes from Breeze.
+KDE's apps and the ones Bazzite brings (the browser, Steam, Lutris, its portal
+and Flatpak tools) get a Monet motif too; games keep their covers, everything
+else comes from Breeze.
 
 Icons are painted at 512 x 512 and kept as 256 x 256 images inside SVGs.
 
@@ -699,6 +700,235 @@ def disc_icon():
     return c.finish()
 
 
+# The apps on the dock and in the menu that Bazzite brings ------------------------
+
+def window_icon():
+    """Browser: a window thrown open onto the harbor."""
+    c = Canvas(171)
+    view = box(30, 20, 98, 108, 3)
+    c.paint(view, sampled(painting("day", (1500, 250, 2700, 1450)), (30, 20, 98, 108)), 4.4, flat(0), wander=0.12, jitter=0.04)
+    frame = cut(box(24, 14, 104, 114, 5), view)
+    c.paint(frame, lit("#F6EEE0", "#C9B8A0", y0=14, y1=114, cool="#8A7AA0"), 3.0,
+            lambda x, y: 0 if min(y - 14, 114 - y) < min(x - 24, 104 - x) else math.pi / 2, wander=0.06, thick=1.4)
+    c.mark([(64, 20), (64, 108)], 3.0, "#EFE6D6", None, thick=1.2)
+    c.mark([(30, 64), (98, 64)], 3.0, "#EFE6D6", None, thick=1.2)
+    shutter = lit("#4E9A7A", "#2A5A48", y0=14, y1=114, light=0.22, shade=0.25)
+    for side in (poly([(6, 20), (24, 14), (24, 114), (6, 108)]), poly([(104, 14), (122, 20), (122, 108), (104, 114)])):
+        c.paint(side, shutter, 3.0, flat(90), layers=2, wander=0.08, thick=1.3)
+    for y in range(28, 104, 12):  # the shutters' slats
+        c.mark([(9, y + 1), (21, y - 2)], 1.6, "#2A5A48", None, thick=0.6)
+        c.mark([(107, y - 2), (119, y + 1)], 1.6, "#2A5A48", None, thick=0.6)
+    return c.finish()
+
+
+def locomotive_icon():
+    """Steam: an engine coming into Saint-Lazare in a cloud of steam."""
+    c = Canvas(181)
+    for x, y, r in ((44, 34, 20), (70, 24, 19), (94, 38, 16), (28, 52, 13), (62, 46, 15)):
+        c.paint(poly(ellipse(x, y, r, r * 0.82, c.rng.uniform(0, 180), 30)),
+                lit("#EEF0F6", "#9AA4C8", y0=y - r, y1=y + r, cool="#7A7AB0", light=0.3), 4.0, around(x, y), wander=0.5,
+                accents=["#FFFFFF", "#C9B5EE", "#F6E0C0"], accent_rate=0.3, thick=1.2)
+    c.paint(box(56, 44, 72, 62, 2), lit("#3A3448", "#1A1626"), 2.4, flat(90), layers=2, thick=1.2)  # the chimney
+    engine = lit("#4A4258", "#1A1626", y0=56, y1=110, light=0.18, shade=0.2, cool="#101030")
+    c.paint(box(24, 62, 104, 106, 8), engine, 4.0, flat(0), wander=0.08)
+    c.paint(circle(64, 80, 22), lit("#5A5068", "#2A2436", y0=58, y1=102, light=0.25), 3.0, around(64, 80), wander=0.2,
+            thick=1.4)
+    c.paint(circle(64, 80, 8), lit("#FFE08A", "#F2A040", y0=72, y1=88, light=0.3), 2.0, around(64, 80), layers=2,
+            accents=["#FFF4C8"], accent_rate=0.3, thick=1.8)  # the lamp
+    c.paint(box(20, 100, 108, 108, 2), lit("#D0603A", "#8A2A1A"), 2.2, flat(0), layers=2, thick=1.2)  # buffer beam
+    c.mark([(16, 116), (112, 116)], 2.4, "#6A6080", None, thick=0.8)
+    return c.finish()
+
+
+def rowboat_icon():
+    """Lutris: a rowing boat on the Seine, for games from everywhere else."""
+    c = Canvas(191)
+    c.paint(poly(ellipse(64, 94, 58, 22, 0, 60)), lit("#6A9AC6", "#2C4C78", y0=72, y1=116), 4.4, flat(0), layers=2,
+            wander=0.06, accents=["#9FC4E8", "#F6E7C8", "#3F9A89"], accent_rate=0.18)
+    for y, length in ((96, 56), (103, 40), (109, 24)):  # its reflection
+        c.dab(64 * S, y * S, length * S, 3.2 * S, 0, hexrgb("#5A3A28"), np.ones((N, N), np.float32), opacity=0.45, thick=0.8)
+    c.paint(poly([(14, 66), (114, 66), (100, 88), (28, 88)]), wood(top="#C8925C", bottom="#6A4226"), 3.2, flat(0), layers=2,
+            thick=1.3)
+    c.mark([(16, 66), (112, 66)], 3.2, "#F0D2A0", None, thick=1.2)
+    for a, b in (((26, 40), (84, 100)), ((102, 40), (44, 100))):  # the oars
+        c.mark([a, b], 3.0, "#C89A5A", None, thick=1.2)
+        c.paint(poly(ellipse(b[0], b[1], 6, 3.2, math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])), 24)), one("#B07A4C"),
+                1.6, flat(0), layers=1, thick=1.4)
+    return c.finish()
+
+
+def bridge_icon():
+    """Bazzite Portal: the Japanese footbridge over the lily pond at Giverny."""
+    c = Canvas(201)
+    garden = box(8, 10, 120, 72, 14)
+    c.paint(garden, lit("#3E6A5A", "#1E3A34", y0=10, y1=72, light=0.2, shade=0.25, cool="#2A2A5A"), 5.0, flat(100),
+            wander=0.4, accents=["#5E8A6A", "#2A4A44", "#9A88C0", "#C8A85A"], accent_rate=0.25)  # willows, in shade
+    pond = box(8, 62, 120, 118, 14)
+    c.paint(pond, lit("#4A7A9A", "#1E3E52", y0=62, y1=118, light=0.15, shade=0.2), 4.4, flat(0), wander=0.1,
+            accents=["#5C88D0", "#7CD3C0", "#2A5A48"], accent_rate=0.2)
+    for x, y, r in ((26, 94, 8), (52, 106, 7), (86, 98, 9), (106, 110, 6), (70, 86, 5)):  # lily pads
+        c.paint(poly(ellipse(x, y, r, r * 0.55, 0, 24)), lit("#6AAE6A", "#2E6A44"), 2.0, around(x, y), layers=2, thick=1.4)
+    for x, y in ((28, 92), (88, 96)):
+        c.dab(x * S, y * S, 5 * S, 3.4 * S, 0.3, hexrgb("#F2A0C0"), np.ones((N, N), np.float32), thick=2.0)
+    span = [(10 + 108 * t / 20, 72 - 30 * math.sin(math.pi * t / 20)) for t in range(21)]
+    c.paint(band(span, 8), lit("#B8E08A", "#5EA060", y0=40, y1=76, light=0.32), 2.4, flat(0), layers=2, thick=1.6)
+    rail = [(x, y - 15) for x, y in span[2:-2]]
+    c.mark(rail, 3.2, "#A8D880", None, thick=1.3)
+    for i in range(3, 19, 3):
+        c.mark([span[i], (span[i][0], span[i][1] - 15)], 2.4, "#A8D880", None, thick=1.0)
+    return c.finish()
+
+
+def seal_icon():
+    """Flatseal: a letter closed with a vermilion seal: what each app may open."""
+    c = Canvas(211)
+    letter = box(12, 28, 116, 100, 6)
+    c.paint(letter, lit(y0=28, y1=100, **PAPER), 5.0, flat(0), layers=2, wander=0.08, accents=["#FFFFFF", "#E8DCC4"],
+            accent_rate=0.15)
+    for a in ((14, 30), (114, 30)):
+        c.mark([a, (64, 70)], 2.0, "#B8A88C", letter, thick=0.7)
+    c.paint(poly(ellipse(64, 70, 19, 18, 10, 36)), lit("#E8603A", "#A82A1A", y0=52, y1=88, light=0.3, shade=0.25,
+                                                       cool="#6A1A3A"),
+            2.6, around(64, 70), wander=0.4, accents=FIRE, accent_rate=0.2, thick=2.4)
+    c.paint(cut(circle(64, 70, 10), circle(64, 70, 7.5)), lit("#B83A22", "#8A2214"), 1.6, around(64, 70), layers=1,
+            thick=0.6, ground=False)
+    return c.finish()
+
+
+def crates_icon():
+    """Warehouse: crates stacked at the market, apps kept in them."""
+    c = Canvas(221)
+    for x0, y0, x1, y1, top in ((10, 70, 62, 114, "#C8925C"), (66, 70, 118, 114, "#B8824E"), (36, 26, 92, 70, "#D09A62")):
+        c.paint(box(x0, y0, x1, y1, 3), wood(top=top, bottom="#6A4226", y0=y0, y1=y1), 3.6, flat(0), wander=0.05)
+        for y in (y0 + (y1 - y0) / 3, y0 + 2 * (y1 - y0) / 3):  # the gaps between slats
+            c.mark([(x0 + 2, y), (x1 - 2, y)], 1.8, "#4A2E1C", None, thick=0.6)
+    for x, y, col in ((48, 24, "#F2552C"), (62, 21, "#F2B84B"), (78, 24, "#E8603A")):  # oranges on top
+        c.paint(circle(x, y, 7), lit(col, col, light=0.3, shade=0.22), 1.8, around(x, y), layers=2, thick=1.8)
+    return c.finish()
+
+
+def gear_icon():
+    """Gear Lever: a brass gear, for programs that come in one piece."""
+    c = Canvas(231)
+    teeth = [(64 + (46 if (k // 3) % 2 == 0 else 37) * math.cos(2 * math.pi * k / 60),
+              64 + (46 if (k // 3) % 2 == 0 else 37) * math.sin(2 * math.pi * k / 60)) for k in range(60)]
+    gear = cut(poly(teeth), circle(64, 64, 14))
+    c.paint(gear, lit("#E8C068", "#8A5A24", light=0.3, shade=0.3, cool="#5A3A4A"), 3.6, around(64, 64), wander=0.15,
+            accents=["#FFE7A0", "#B88A3A", "#C9708E"], accent_rate=0.2, thick=1.6)
+    c.paint(cut(circle(64, 64, 24), circle(64, 64, 14)), lit("#C89A48", "#7A4E1E"), 2.2, around(64, 64), layers=2,
+            thick=1.2, ground=False, opacity=0.8)
+    return c.finish()
+
+
+def jars_icon():
+    """DistroShelf: jars of pigment on a shelf, each a little world of its own."""
+    c = Canvas(241)
+    c.paint(box(8, 98, 120, 108, 2), wood(), 2.6, flat(0), layers=2, thick=1.2)
+    for x, col, acc in ((30, "#3F9A89", ["#7CD3C0"]), (64, "#5C88D0", ["#93C6EA"]), (98, "#F2552C", FIRE)):
+        jar = box(x - 15, 46, x + 15, 98, 7)
+        c.paint(box(x - 13, 58, x + 13, 96, 5), lit(col, col, light=0.3, shade=0.25), 3.0, flat(90), layers=2,
+                accents=acc, accent_rate=0.2, thick=1.6)
+        c.paint(jar, lit("#DCE8F2", "#8AA0C0", y0=46, y1=98, light=0.3), 3.0, flat(90), layers=1, opacity=0.35,
+                ground=False, thick=0.6)
+        c.paint(box(x - 13, 38, x + 13, 48, 3), lit("#6A5A48", "#3A2A20"), 2.0, flat(0), layers=2, thick=1.2)  # the lid
+        c.mark([(x - 9, 60), (x - 9, 90)], 2.4, "#FFFFFF", jar, thick=0.6)  # light on the glass
+    return c.finish()
+
+
+def balloon_icon():
+    """ProtonUp: a balloon going up, carrying what Windows games need."""
+    c = Canvas(251)
+    envelope = poly([(64 + 36 * math.sin(t) * (1 - 0.45 * max(0, -math.cos(t))), 46 - 40 * math.cos(t))
+                     for t in (math.pi * k / 40 for k in range(-40, 41))])
+    stripes = [("#F2552C", FIRE), ("#F2B84B", ["#FFE08A"]), ("#3F9A89", ["#7CD3C0"]), ("#F6EEE0", ["#FFFFFF"])]
+    for i in range(8):
+        x0 = 28 + i * 9
+        part = np.clip(envelope * box(x0, 0, x0 + 9, 128), 0, 1)
+        col, acc = stripes[i % 4]
+        c.paint(part, lit(col, col, light=0.32, shade=0.25), 2.6, flat(90), layers=2, accents=acc, accent_rate=0.15,
+                thick=1.3)
+    for a, b in (((46, 82), (58, 100)), ((82, 82), (70, 100))):
+        c.mark([a, b], 1.6, "#4A3A2A", None, thick=0.6)
+    c.paint(box(54, 100, 74, 114, 3), wood(), 2.2, flat(0), layers=2, thick=1.3)
+    return c.finish()
+
+
+def watering_can_icon():
+    """Waydroid: the garden's green watering can, for Android's apps."""
+    c = Canvas(261)
+    green = lit("#6AB07A", "#2E6A44", y0=40, y1=108, light=0.3, shade=0.25, cool="#2A3A5A")
+    c.paint(box(24, 52, 90, 108, 14), green, 4.0, around(57, 80), wander=0.2,
+            accents=["#A8D08A", "#3F7A5A"], accent_rate=0.2, thick=1.3)
+    c.paint(poly(ellipse(57, 54, 28, 6, 0, 30)), lit("#4E9A6A", "#2E6A44"), 1.8, flat(0), layers=1, thick=1.3)  # its mouth
+    c.paint(band([(84, 92), (116, 46)], 7), green, 2.4, flat(-55), layers=2, thick=1.3)  # the spout
+    c.paint(poly(ellipse(116, 44, 7, 4.5, -55, 24)), lit("#4E9A6A", "#2E6A44"), 1.8, flat(0), layers=1, thick=1.4)
+    c.mark([(32, 50), (44, 26), (72, 26), (84, 50)], 4.4, "#4E9A6A", None, thick=1.4)  # the handle
+    for x, y in ((112, 58), (106, 66), (118, 64)):  # a few drops
+        c.dab(x * S, y * S, 4 * S, 2.4 * S, 1.2, hexrgb("#9FC4E8"), np.ones((N, N), np.float32), thick=1.4)
+    return c.finish()
+
+
+def piano_icon():
+    """Input Remapper: piano keys, for keys that play another note."""
+    c = Canvas(271)
+    keys = box(12, 30, 116, 102, 6)
+    c.paint(keys, lit("#FBF5E6", "#D9CCB2", y0=30, y1=102, cool="#9A8CB8"), 4.4, flat(90), layers=2, wander=0.06,
+            accents=["#FFFFFF"], accent_rate=0.12)
+    for x in range(27, 116, 15):
+        c.mark([(x, 32), (x, 100)], 1.6, "#9A8C78", keys, thick=0.5)
+    for x in (27, 42, 72, 87, 102):
+        c.paint(box(x - 5, 30, x + 5, 74, 2), lit("#3A3448", "#1A1626"), 2.0, flat(90), layers=2, thick=1.4)
+    c.paint(box(12, 26, 116, 34, 3), lit("#C43A30", "#7A1A2A"), 2.0, flat(0), layers=2, thick=1.2)  # the felt
+    return c.finish()
+
+
+def cafe_icon():
+    """Discourse: two cups on a café table, for talking it over."""
+    c = Canvas(281)
+    c.paint(poly(ellipse(64, 84, 54, 26, 0, 60)), lit("#F6EEE0", "#C9B8A0", y0=58, y1=110, cool="#8A7AA0"), 4.4, flat(0),
+            layers=2, wander=0.08)
+    for x, col in ((44, "#5C88D0"), (82, "#F2552C")):
+        c.paint(box(x - 12, 54, x + 12, 80, 8), lit(col, col, light=0.3, shade=0.22), 2.4, flat(90), layers=2, thick=1.6)
+        c.paint(poly(ellipse(x, 55, 12, 4, 0, 24)), lit("#7A4A24", "#3A2214"), 1.6, flat(0), layers=1, thick=1.4)
+        c.mark([(x + 12, 60), (x + 18, 64), (x + 12, 72)], 2.4, col, None, thick=1.2)
+    for x in (40, 46, 80, 86):  # warmth rising
+        c.mark([(x, 48), (x + 3, 40), (x, 32)], 1.6, "#D0D4E4", None, thick=0.5)
+    return c.finish()
+
+
+def calendar_icon():
+    """Calendar: a page of the month, today in the sun."""
+    c = Canvas(301)
+    page = box(16, 22, 112, 112, 10)
+    c.paint(page, lit(y0=22, y1=112, **PAPER), 5.0, flat(0), layers=2, wander=0.08, accents=["#FFFFFF", "#E8DCC4"],
+            accent_rate=0.15)
+    c.paint(box(16, 22, 112, 44, 10) * page, lit("#4E9A8A", "#245A50", y0=22, y1=44, light=0.25), 3.0, flat(0),
+            layers=2, wander=0.08, thick=1.3)
+    for x in (40, 88):  # the rings
+        c.mark([(x, 14), (x, 30)], 4.2, "#6A6080", None, thick=1.4)
+    for row in range(4):
+        for col in range(5):
+            x, y = 30 + col * 17, 56 + row * 14
+            today = (row, col) == (2, 3)
+            c.dab(x * S, y * S, (8 if today else 5.5) * S, (8 if today else 4.2) * S, 0,
+                  hexrgb("#F2552C" if today else "#3E4A86"), page, opacity=1 if today else 0.75, thick=2.0 if today else 0.9)
+    return c.finish()
+
+
+def teapot_icon():
+    """Bold Brew: a teapot from Giverny's blue kitchen."""
+    c = Canvas(291)
+    blue = lit("#5C88D0", "#2C3C78", y0=36, y1=104, light=0.3, shade=0.25)
+    c.paint(poly(ellipse(60, 74, 32, 28, 0, 60)), blue, 3.6, around(60, 74), wander=0.2, accents=["#93C6EA", "#F6EEE0"],
+            accent_rate=0.2, thick=1.5)
+    c.paint(band([(88, 78), (112, 52)], 7), blue, 2.2, flat(-45), layers=2, thick=1.3)
+    c.mark([(30, 60), (18, 70), (30, 88)], 4.4, "#3A5A9A", None, thick=1.3)  # handle
+    c.paint(box(46, 40, 74, 50, 4), lit("#4A6AB0", "#2C3C78"), 2.0, flat(0), layers=2, thick=1.3)  # the lid
+    c.paint(circle(60, 36, 4.5), one("#F2B84B"), 1.6, around(60, 36), layers=1, thick=1.6)
+    c.mark([(42, 74), (78, 74)], 2.6, "#F6EEE0", None, thick=0.8)  # a painted band of white
+    return c.finish()
+
+
 # Folders: which painting each one's front is cut from (painting, crop box in
 # the 3840 x 2160 original), the color of its back, and its mark: lines the
 # brush follows, "dot:x,y" for a round dab, or "fill:" for a shape painted solid.
@@ -774,9 +1004,9 @@ for name, spec in FOLDERS.items():
     if name != "folder":
         ICONS[name] = ((lambda n=name, s=spec: folder_icon(n, *s)), [f"places/{name}"])
 
-# Files and drives: one painting, under a name, and the many names that ask
-# for it, linked by install.sh (Breeze has an icon for nearly every exact
-# type, and those come before the generic one).
+# Paintings asked for by many names: one file under a name, the others linked
+# by install.sh. Files and drives (Breeze has an icon for nearly every exact
+# type, and those come before the generic one), and the apps Bazzite brings.
 OFFICE = "application-vnd.openxmlformats-officedocument"
 OPEN = "application-vnd.oasis.opendocument"
 FILES = {
@@ -821,9 +1051,24 @@ FILES = {
     "disc": (disc_icon, "devices/media-optical", [
         "drive-optical", "media-optical-dvd", "media-optical-cd", "media-optical-data", "media-optical-audio",
         "mimetypes/application-x-cd-image", "mimetypes/application-x-iso9660-image"]),
+    "browser": (window_icon, "apps/org.mozilla.firefox", ["firefox", "web-browser", "internet-web-browser"]),
+    "steam": (locomotive_icon, "apps/steam", ["com.valvesoftware.Steam"]),
+    "lutris": (rowboat_icon, "apps/net.lutris.Lutris", ["lutris"]),
+    "portal": (bridge_icon, "apps/io.github.ublue_os.yafti_gtk", ["yafti", "bazzite-portal"]),
+    "flatseal": (seal_icon, "apps/com.github.tchx84.Flatseal", []),
+    "warehouse": (crates_icon, "apps/io.github.flattool.Warehouse", []),
+    "gearlever": (gear_icon, "apps/it.mijorus.gearlever", []),
+    "distroshelf": (jars_icon, "apps/com.ranfdev.DistroShelf", ["io.github.DenysMb.Kontainer"]),
+    "protonup": (balloon_icon, "apps/net.davidotek.pupgui2", ["com.vysp3r.ProtonPlus", "com.github.Matoking.protontricks"]),
+    "waydroid": (watering_can_icon, "apps/waydroid", ["id.waydro.waydroid"]),
+    "remapper": (piano_icon, "apps/input-remapper", ["input-remapper-gtk", "io.github.sezanzeb.input_remapper"]),
+    "discourse": (cafe_icon, "apps/monet-discourse", []),
+    "bbrew": (teapot_icon, "apps/monet-bbrew", []),
+    "calendar": (calendar_icon, "apps/x-office-calendar", ["office-calendar", "org.kde.merkuro.calendar", "korganizer"]),
 }
 # Folders asked for by their type, not their place.
-LINKS = {"mimetypes/inode-directory": "places/folder"}
+# Bazzite's documentation names its picture by path; install.sh points it here.
+LINKS = {"mimetypes/inode-directory": "places/folder", "apps/monet-documentation": "apps/org.kde.okular"}
 
 
 def links():

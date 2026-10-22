@@ -44,6 +44,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   masts at sunset, the Store a market bouquet, Trash a garden pot. KDE's
   apps (Gwenview, Okular, Kate, Ark, Spectacle, ...) and the app menu's
   categories get paintings too.
+- **The rest of the dock and the menu too.** The browser is a window thrown
+  open onto the harbor, Steam a locomotive steaming into Saint-Lazare,
+  Lutris a rowing boat, Bazzite Portal the Japanese footbridge at Giverny,
+  and the Flatpak tools, Waydroid and Input Remapper have paintings of their
+  own.
 - **Files and drives are painted.** Text, code, pictures, music, films,
   PDFs, spreadsheets, programs and archives each have their own painted
   sheet; disks are a paint box, USB sticks a tube of paint.
@@ -58,6 +63,23 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Starting and signing in are Monet's.** The boot screen is the harbor at
   dawn (and asks for a disk password there), and the sign-in screen has
   Monet's fields, buttons, colors and pointer.
+- **Widgets on the desktop.** Weather, Calendar, Now Playing, a Note and a
+  Photo Frame, as glass cards that frost the painting behind them. A new
+  desktop starts with the weather and the month at the top right; the rest
+  are in the widget gallery. The weather comes from Open-Meteo once you
+  choose a place (no account; only the place is sent).
+- **Clearer glass.** The painting's color comes through the panels and
+  popovers more, and their edges catch the light like a pane of glass:
+  brightest along the top, fading down the sides.
+- **Monet's own installer on the USB stick.** Make-USB-Stick.exe now writes
+  Monet Setup whenever the release has it, and Fedora's installer only
+  otherwise. Monet Setup couldn't be built before: a check in its build
+  stopped it every time.
+- **Monet's own lock screen.** At rest, the painting and its placard: the
+  date, the time in Fraunces, which light it is. Touch a key and the
+  painting softens behind a sheet of glass with your name, a well for the
+  password and the sun to go back in. If it ever can't load, KDE's lock
+  screen takes its place, so you can always unlock.
 - **Terminal** has a thin cursor, more room around the text, and its menu
   behind a button instead of a menu bar.
 - **Window shadows** are softer and wider, in ink instead of black.

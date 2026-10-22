@@ -21,8 +21,10 @@ SHARE = ROOT / "linux" / "share"
 
 
 def qml_files():
-    """Every QML file: Plasma's pieces and Monet Setup's screens."""
-    return list(PLASMA.rglob("*.qml")) + list((ROOT / "setup/qml").rglob("*.qml"))
+    """Every QML file: Plasma's pieces, the lock screen and Monet Setup's screens."""
+    return (list(PLASMA.rglob("*.qml")) + list((SHARE / "monet/lockscreen").glob("*.qml"))
+            + list((SHARE / "monet/widgets").glob("*.qml"))
+            + list((ROOT / "setup/qml").rglob("*.qml")))
 PLASMA = SHARE / "plasma"
 
 
@@ -579,7 +581,11 @@ class Icons(unittest.TestCase):
         # Store is Bazaar on Bazzite: the market bouquet is Monet's either way.
         apps = ("monet", "monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover",
                 "io.github.kolunmi.Bazaar", "org.kde.plasma-systemmonitor", "org.kde.gwenview", "org.kde.okular",
-                "org.kde.kate", "org.kde.ark", "org.kde.spectacle", "org.kde.haruna", "org.kde.kcalc")
+                "org.kde.kate", "org.kde.ark", "org.kde.spectacle", "org.kde.haruna", "org.kde.kcalc",
+                # What Bazzite brings to the dock and the menu.
+                "org.mozilla.firefox", "steam", "net.lutris.Lutris", "io.github.ublue_os.yafti_gtk",
+                "com.github.tchx84.Flatseal", "io.github.flattool.Warehouse", "it.mijorus.gearlever",
+                "com.ranfdev.DistroShelf", "net.davidotek.pupgui2", "waydroid", "input-remapper")
         categories = ("applications-games", "applications-graphics", "applications-internet", "applications-multimedia",
                       "applications-office", "applications-system", "applications-utilities")
         for context, names in (("places", places), ("apps", apps), ("categories", categories)):
@@ -605,12 +611,79 @@ class Icons(unittest.TestCase):
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('done < "$SRC/share/icons/Monet/aliases"', install)
 
+    def test_bazzites_own_entries_get_paintings(self):
+        # They name their pictures by path, so install.sh points them at Monet's.
+        install = (ROOT / "linux/install.sh").read_text()
+        links = (self.THEME / "aliases").read_text()
+        for entry, icon in re.findall(r"(\w[\w.-]*):(monet-[\w-]+)", install.split("Bazzite's own menu entries")[1][:600]):
+            painted = (self.THEME / "apps/scalable" / f"{icon}.svg").is_file()
+            self.assertTrue(painted or f"apps/scalable/{icon}.svg " in links, icon)
+
     def test_theme_lists_its_folders(self):
         theme = (self.THEME / "index.theme").read_text()
         for folder in (p.parent.relative_to(self.THEME).as_posix() for p in self.THEME.rglob("*.svg")):
             self.assertIn(f"[{folder}]", theme)
 
 
+
+
+class DesktopWidgets(unittest.TestCase):
+    """Weather, Calendar, Now Playing, Note and Photo Frame, on the desktop."""
+    WIDGETS = ("org.monet.weather", "org.monet.calendar", "org.monet.nowplaying", "org.monet.notes", "org.monet.frame")
+
+    def test_installed_and_removed(self):
+        install = (ROOT / "linux/install.sh").read_text()
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        for widget in self.WIDGETS:
+            self.assertIn(widget, install)
+            self.assertIn(f"plasmoids/{widget}", uninstall)
+
+    def test_glass_reaches_every_widget_that_uses_it(self):
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertTrue((SHARE / "monet/widgets/Glass.qml").is_file())
+        glassed = re.search(r"for applet in ([^;]+); do\n    install -m 644 \"\$SRC/share/monet/widgets/Glass.qml\"", install)
+        self.assertIsNotNone(glassed)
+        for widget in self.WIDGETS:
+            uses = any("Glass {" in f.read_text() for f in (PLASMA / "plasmoids" / widget / "contents/ui").glob("*.qml"))
+            self.assertEqual(uses, widget in glassed.group(1).split(), widget)
+
+    def test_glass_frosts_the_hours_it_finds(self):
+        glass = (SHARE / "monet/widgets/Glass.qml").read_text()
+        hours = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
+        # What the glass looks for is what The Hours has.
+        for name in ("hours", "below", "above"):
+            self.assertIn(f"item.{name} !== undefined", glass)
+            self.assertRegex(hours, rf"property [\w ]+\b{name}:")
+
+    def test_desktop_starts_with_weather_and_calendar(self):
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
+            for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
+                self.assertIn(f'd.addWidget("{widget}"', layout)
+
+    def test_settings_have_their_schema(self):
+        for widget in ("org.monet.weather", "org.monet.notes"):
+            schema = (PLASMA / "plasmoids" / widget / "contents/config/main.xml").read_text()
+            used = set(re.findall(r"Plasmoid\.configuration\.(\w+)", (PLASMA / "plasmoids" / widget / "contents/ui/main.qml").read_text()))
+            for key in used:
+                self.assertIn(f'name="{key}"', schema, f"{widget}: {key}")
+
+
+class LiquidGlass(unittest.TestCase):
+    STYLE = PLASMA / "desktoptheme/monet"
+
+    def test_rim_of_light_fades_down_the_sides(self):
+        svg = (self.STYLE / "dialogs/background.svg").read_text()
+        self.assertIn('id="hint-stretch-borders"', svg)  # so the fade spans the whole height
+        for gradient in ("rim-fall", "sheen"):
+            self.assertIn(f'<linearGradient id="{gradient}"', svg)
+            self.assertIn(f'url(#{gradient})', svg)
+
+    def test_vibrancy_behind_the_glass(self):
+        for style in ("monet", "monet-solid"):
+            meta = json.loads((PLASMA / "desktoptheme" / style / "metadata.json").read_text())
+            self.assertTrue(meta["ContrastEffect"]["enabled"])
+            self.assertGreater(meta["ContrastEffect"]["saturation"], 1)
 
 class WindowFrames(unittest.TestCase):
     """Monet's title bars (tools/make-decoration.py), one per light."""
@@ -722,7 +795,32 @@ class StartAndSignIn(unittest.TestCase):
     def test_monet_boots_with_its_own_screen(self):
         containerfile = (ROOT / "image/Containerfile").read_text()
         self.assertIn("plymouth-set-default-theme monet", containerfile)
+        self.assertIn("plymouth-plugin-script", containerfile)  # the theme is a script
         self.assertIn("dracut", containerfile)
+
+    def test_lock_screen_is_monets_and_always_unlocks(self):
+        lock = SHARE / "monet/lockscreen"
+        entry = (lock / "LockScreen.qml").read_text()
+        # What kscreenlocker and KDE's lock screen expect of the file it replaces.
+        for part in ("property string notification", "signal clearPassword()", "signal notificationRepeated()",
+                     "property bool viewVisible"):
+            self.assertIn(part, entry)
+        # Monet's, and KDE's own whenever Monet's can't load.
+        self.assertIn('source: "MonetLockScreen.qml"', entry)
+        self.assertIn("active: monet.status === Loader.Error", entry)
+        self.assertIn('source: "LockScreenUi.qml"', entry)
+        monet = (lock / "MonetLockScreen.qml").read_text()
+        for part in ("authenticator.respond(password)", "authenticator.startAuthenticating()", "Qt.quit()",
+                     "id: fadeoutTimer",  # KDE's MediaControls.qml stops it by name
+                     "PasswordSync.password", 'source: "MediaControls.qml"', 'source: "LockOsd.qml"',
+                     "VirtualKeyboardLoader", "visibleBoundary"):
+            self.assertIn(part, monet)
+        # Installed beside KDE's files in the desktop shell, only where Plasma keeps them.
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen", install)
+        self.assertIn('[ -f "$lock/LockScreenUi.qml" ]', install)
+        for name in ("MonetLockScreen.qml", "LockScreen.qml"):
+            self.assertIn(f'"$SRC/share/monet/lockscreen/{name}" "$lock/{name}"', install)
 
     def test_sign_in_screen_is_monets(self):
         install = (ROOT / "linux/install.sh").read_text()

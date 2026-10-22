@@ -1,4 +1,5 @@
 mimetypes/scalable/inode-directory.svg ../../places/scalable/folder.svg
+apps/scalable/monet-documentation.svg org.kde.okular.svg
 mimetypes/scalable/text-plain.svg text-x-generic.svg
 mimetypes/scalable/text-markdown.svg text-x-generic.svg
 mimetypes/scalable/text-x-readme.svg text-x-generic.svg
@@ -131,3 +132,19 @@ devices/scalable/media-optical-data.svg media-optical.svg
 devices/scalable/media-optical-audio.svg media-optical.svg
 mimetypes/scalable/application-x-cd-image.svg ../../devices/scalable/media-optical.svg
 mimetypes/scalable/application-x-iso9660-image.svg ../../devices/scalable/media-optical.svg
+apps/scalable/firefox.svg org.mozilla.firefox.svg
+apps/scalable/web-browser.svg org.mozilla.firefox.svg
+apps/scalable/internet-web-browser.svg org.mozilla.firefox.svg
+apps/scalable/com.valvesoftware.Steam.svg steam.svg
+apps/scalable/lutris.svg net.lutris.Lutris.svg
+apps/scalable/yafti.svg io.github.ublue_os.yafti_gtk.svg
+apps/scalable/bazzite-portal.svg io.github.ublue_os.yafti_gtk.svg
+apps/scalable/io.github.DenysMb.Kontainer.svg com.ranfdev.DistroShelf.svg
+apps/scalable/com.vysp3r.ProtonPlus.svg net.davidotek.pupgui2.svg
+apps/scalable/com.github.Matoking.protontricks.svg net.davidotek.pupgui2.svg
+apps/scalable/id.waydro.waydroid.svg waydroid.svg
+apps/scalable/input-remapper-gtk.svg input-remapper.svg
+apps/scalable/io.github.sezanzeb.input_remapper.svg input-remapper.svg
+apps/scalable/office-calendar.svg x-office-calendar.svg
+apps/scalable/org.kde.merkuro.calendar.svg x-office-calendar.svg
+apps/scalable/korganizer.svg x-office-calendar.svg
