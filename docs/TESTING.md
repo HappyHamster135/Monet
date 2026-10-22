@@ -58,3 +58,25 @@ then Play on Windows again (Windows resumes from hibernation).
 
 - Monet: `journalctl -u monet-sync` and `monet doctor`
 - Windows: `C:\ProgramData\Monet\bridge.log`
+
+## Before real hardware: a virtual machine
+
+On a Windows 11 Pro PC, Hyper-V runs Monet the way a real PC does: UEFI
+with Secure Boot on (Microsoft's keys for Linux), so it starts through its
+signed shim and shows the blue driver-key screen once. There's no graphics
+card in it, so the glass is drawn in software: right, but slower.
+
+1. Turn Hyper-V on, once, in PowerShell as administrator, then restart:
+   `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All`
+2. Download the USB stick's image (Monet-X-Setup.iso, or Monet-X-Installer.iso)
+   from the release, or a build's `setup-candidate` artifact.
+3. In PowerShell as administrator, from the repository:
+   `.\tools\hyperv-vm.ps1 -Iso D:\VMs\Monet-X-Setup.iso`
+4. Hyper-V Manager: select Monet, **Connect**, **Start**. Install as on a PC
+   ([INSTALL.md](INSTALL.md)). Where it says to take out the USB stick, use
+   **Media → DVD Drive → Eject** in the VM's window. At the blue screen, the
+   password is `monetsetup`.
+5. Once Monet is installed, take a checkpoint (**Action → Checkpoint**), so a
+   fresh Monet is a click away.
+
+The screen size is set in Monet (Settings → Display) once it's installed.

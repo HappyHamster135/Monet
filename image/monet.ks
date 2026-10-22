@@ -287,13 +287,21 @@ if root:
 
 ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification
 
-%post --erroronfail
-# The NVIDIA driver is signed with Universal Blue's key. Ask the firmware to
-# trust it, so the driver works with Secure Boot on. It is confirmed once, on
-# a blue screen at the next start, with the password "monetsetup".
-if [ -f /etc/pki/akmods/certs/akmods-ublue.der ]; then
-    mokutil --timeout -1 || :
-    printf 'monetsetup\nmonetsetup\n' | mokutil --import /etc/pki/akmods/certs/akmods-ublue.der || :
+%post --erroronfail --log=/var/log/monet-mok.log
+# Monet's kernel and the NVIDIA driver are signed with Universal Blue's key.
+# Ask the firmware to trust it, so Monet starts with Secure Boot on. It is
+# confirmed once, on a blue screen at the next start, with the password
+# "monetsetup". mokutil reaches the firmware through efivarfs, which isn't
+# always mounted in here; and what it says stays in the log.
+key=/etc/pki/akmods/certs/akmods-ublue.der
+if [ -f "$key" ]; then
+    if [ -d /sys/firmware/efi ] && ! mountpoint -q /sys/firmware/efi/efivars; then
+        mount -t efivarfs efivarfs /sys/firmware/efi/efivars || echo "efivarfs: couldn't mount it"
+    fi
+    mokutil --timeout -1 || echo "mokutil --timeout failed"
+    printf 'monetsetup\nmonetsetup\n' | mokutil --import "$key" || echo "mokutil --import failed"
+    echo "Waiting for the firmware to take:"
+    mokutil --list-new | head -5 || :
 fi
 %end
 
