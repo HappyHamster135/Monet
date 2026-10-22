@@ -383,7 +383,7 @@ ApplicationWindow {
             property bool busy: false
             spacing: px(16)
             Title { text: "Your apps" }
-            Body { text: "Monet starts with the everyday ones. Add anything else you like: it all arrives after you sign in, and the Store has the rest." }
+            Body { text: "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in." }
             Repeater {
                 model: [["Everyday", true], ["More", false]]
                 Column {
@@ -401,25 +401,27 @@ ApplicationWindow {
                         columnSpacing: px(8)
                         rowSpacing: px(8)
                         Repeater {
-                            model: setup.apps.map((app, i) => Object.assign({ index: i }, app))
-                                                .filter(app => app.everyday === appSection.modelData[1])
+                            model: setup.apps.filter(app => app.everyday === appSection.modelData[1])
                             AbstractButton {
                                 id: appTile
                                 required property var modelData
+                                // Built in: there already, nothing to choose.
+                                readonly property bool builtIn: modelData.index < 0
                                 width: (appSection.width - px(8)) / 2
                                 height: px(54)
-                                hoverEnabled: true
+                                hoverEnabled: !builtIn
                                 leftPadding: px(12)
                                 rightPadding: px(10)
-                                onClicked: setup.toggleApp(modelData.index)
+                                onClicked: if (!builtIn) setup.toggleApp(modelData.index)
                                 Accessible.role: Accessible.CheckBox
                                 Accessible.name: modelData.name
                                 Accessible.checked: modelData.picked
                                 background: Rectangle {
                                     radius: px(14)
-                                    color: appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
+                                    color: appTile.builtIn ? Qt.rgba(1, 1, 1, 0.5)
+                                         : appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
                                          : appTile.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
-                                    border.color: appTile.modelData.picked ? lily : "transparent"
+                                    border.color: appTile.modelData.picked && !appTile.builtIn ? lily : "transparent"
                                     border.width: Math.max(2, px(2))
                                     Behavior on color { ColorAnimation { duration: 140 } }
                                 }

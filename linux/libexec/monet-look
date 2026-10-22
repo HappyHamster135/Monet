@@ -76,7 +76,8 @@ plain_names() {
     for app in systemsettings org.kde.kinfocenter org.kde.khelpcenter org.kde.kmenuedit org.kde.plasma-welcome \
         org.kde.kwalletmanager5 org.kde.kwalletmanager org.kde.kdeconnect-settings org.kde.kuserfeedback-console \
         bazzite-documentation discourse bbrew waydroid-container-restart bazzite-portal io.github.ublue_os.yafti_gtk \
-        htop btop nvtop; do
+        htop btop nvtop \
+        io.github.rfrench3.bazzite-updater fcitx5-configtool kvantummanager org.kde.kdebugsettings yad-icon-browser; do
         hide "$app" || :
     done
     # One text editor is enough.

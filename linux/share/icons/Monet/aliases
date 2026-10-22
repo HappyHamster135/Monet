@@ -148,6 +148,7 @@ apps/scalable/io.github.sezanzeb.input_remapper.svg input-remapper.svg
 apps/scalable/office-calendar.svg x-office-calendar.svg
 apps/scalable/org.kde.merkuro.calendar.svg x-office-calendar.svg
 apps/scalable/korganizer.svg x-office-calendar.svg
+apps/scalable/elisa.svg org.kde.elisa.svg
 apps/scalable/zen-browser.svg app.zen_browser.zen.svg
 apps/scalable/discord.svg com.discordapp.Discord.svg
 apps/scalable/spotify.svg com.spotify.Client.svg

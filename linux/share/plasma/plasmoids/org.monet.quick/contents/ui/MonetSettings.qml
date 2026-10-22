@@ -34,6 +34,8 @@ PlasmaCore.Dialog {
           words: "wifi wi-fi wireless network internet password" },
         { id: "bluetooth", name: i18n("Bluetooth"), glyph: "M7 7l10 10-5 5V2l5 5L7 17",
           words: "bluetooth headphones controller gamepad mouse keyboard pair" },
+        { id: "printers", name: i18n("Printers"), glyph: "M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z",
+          words: "printers printer print scanner paper queue default add" },
         { id: "display", name: i18n("Display"), glyph: "M4 5h16v11H4zM10 20h4",
           words: "display screen brightness night light monitor resolution scale size" },
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
@@ -48,6 +50,8 @@ PlasmaCore.Dialog {
         { id: "power", name: i18n("Power & Sleep"),
           glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
           words: "power sleep suspend screen off energy battery lid button shutdown performance saver mode" },
+        { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
+          words: "lock screen locker password wake sleep privacy recent files history forget remember away" },
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
           words: "notifications alerts do not disturb quiet popups sounds apps" },
@@ -60,7 +64,10 @@ PlasmaCore.Dialog {
         { id: "storage", name: i18n("Storage"),
           glyph: "M4 7.5h16v9H4zM7.5 12h.01M11 12h5.5",
           words: "storage disk space room full free trash downloads clean games apps" },
-        { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true, gap: true,
+        { id: "games", name: i18n("Games & Controllers"), gap: true,
+          glyph: "M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3.5 3.5 0 0 1-6.4 2L14 14.5h-4l-.6 1A3.5 3.5 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8zM8 10.5v3M6.5 12h3M15.5 11.5h.01M17.5 13h.01",
+          words: "games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris" },
+        { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true,
           words: "windows games play anti-cheat steam restart boot doctor check" },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
           words: "updates update version upgrade new" },
@@ -87,6 +94,13 @@ PlasmaCore.Dialog {
     property var notifyInfo: ({})
     property var appDefaults: []
     property var storageInfo: ({})
+    // Games & Controllers: { controllers, overlay, pair, libraries }.
+    property var gameInfo: ({})
+    // What's new in this Monet: { version, headline, items: [{ title, text }] }.
+    property var whatsNew: ({})
+    // Lock & Privacy: { lockAfter, lockOnResume, remember }; Printers: { printers, cups }.
+    property var privacyInfo: ({})
+    property var printerInfo: ({})
     // The Monet before the last update: { version, date, pending }, or {}.
     property var previous: ({})
     property var accessInfo: ({})
@@ -212,9 +226,16 @@ PlasmaCore.Dialog {
             ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
         } else if (page === "accessibility") {
             ask("access", out => sheet.accessInfo = sheet.json(out, sheet.accessInfo))
+        } else if (page === "games") {
+            ask("gaming", out => sheet.gameInfo = sheet.json(out, sheet.gameInfo))
+        } else if (page === "privacy") {
+            ask("privacy", out => sheet.privacyInfo = sheet.json(out, sheet.privacyInfo))
+        } else if (page === "printers") {
+            ask("printers", out => sheet.printerInfo = sheet.json(out, sheet.printerInfo))
         }
         if (page === "updates") {
             ask("previous", out => sheet.previous = sheet.json(out, {}))
+            ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))
         }
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
@@ -238,6 +259,11 @@ PlasmaCore.Dialog {
         next[key] = on
         prefs = next
         tell("pref " + key + (on ? " on" : " off"))
+    }
+
+    function chooseSeries(name) {
+        prefs = changed(prefs, ["series"], name)
+        ask("series " + name)
     }
 
     function chooseLight(mode) {
@@ -392,12 +418,12 @@ PlasmaCore.Dialog {
         }
     }
 
-    // "1.20 → 1.32 · installs when the PC restarts", or what's in the way.
+    // "1.20 \u2192 1.32 · installs when the PC restarts", or what's in the way.
     function firmwareLine(update) {
         if (update.blocked) {
             return update.blocked
         }
-        const versions = update.current ? update.current + " → " + update.version : update.version
+        const versions = update.current ? update.current + " \u2192 " + update.version : update.version
         return update.restart ? i18n("%1 · installs when the PC restarts", versions) : versions
     }
 
@@ -641,6 +667,33 @@ PlasmaCore.Dialog {
         storageInfo = changed(storageInfo, ["trash"], 0)
         ask("empty-trash", () => ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
     }
+    function privacy(what, value) {
+        privacyInfo = changed(privacyInfo, [what], value)
+        ask(what === "lockAfter" ? "lock-after " + value
+            : (what === "lockOnResume" ? "lock-resume " : "remember ") + (value ? "on" : "off"))
+    }
+
+    function printerDefault(name) {
+        printerInfo = changed(printerInfo, ["printers"], (printerInfo.printers || []).map(
+            p => Object.assign({}, p, { default: p.name === name })))
+        ask("printer-default " + hex(name))
+    }
+
+    function overlay(on) {
+        gameInfo = changed(gameInfo, ["overlay"], on)
+        ask("overlay " + (on ? "on" : "off"))
+    }
+
+    // "3 games · 120 GB · 410 GB free": a game library in words.
+    function library(found) {
+        const parts = [found.games === 1 ? i18n("1 game") : i18n("%1 games", found.games || 0)]
+        if (found.size > 0)
+            parts.push(bytes(found.size))
+        if (typeof found.free === "number")
+            parts.push(i18n("%1 free", bytes(found.free)))
+        return parts.join(" · ")
+    }
+
     function access(what, value) {
         accessInfo = changed(accessInfo, [what], value)
         const said = what === "reduced" ? (value ? "reduced" : "normal") : what === "reader" ? (value ? "on" : "off") : value
@@ -1002,6 +1055,43 @@ PlasmaCore.Dialog {
     }
 
     // A few choices side by side, the chosen one on a pebble: [[value, label], …].
+    // A key on the keyboard, as a small pebble; the Windows key ("Meta" to KDE) as its four panes.
+    component Key: Rectangle {
+        id: keyCap
+        property var tone
+        property string keyName
+        implicitWidth: keyName === "Meta" ? 28 : Math.max(26, keyWord.implicitWidth + 14)
+        implicitHeight: 24
+        radius: 6
+        color: tone.wash2
+        border.width: 1
+        border.color: tone.line
+        Text {
+            id: keyWord
+            anchors.centerIn: parent
+            visible: keyCap.keyName !== "Meta"
+            text: keyCap.keyName
+            color: keyCap.tone.ink
+            font.pixelSize: 12
+            font.weight: Font.DemiBold
+        }
+        Grid {
+            anchors.centerIn: parent
+            visible: keyCap.keyName === "Meta"
+            columns: 2
+            spacing: 2
+            Repeater {
+                model: 4
+                Rectangle {
+                    width: 5
+                    height: 5
+                    radius: 1
+                    color: keyCap.tone.ink
+                }
+            }
+        }
+    }
+
     component Segments: Rectangle {
         id: segments
         property var tone
@@ -1516,7 +1606,8 @@ PlasmaCore.Dialog {
                         light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, display: displayPage,
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
-                        storage: storagePage, windows: windowsPage,
+                        storage: storagePage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
+                        printers: printersPage,
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
                     onLoaded: {
@@ -1698,11 +1789,85 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
+                // The painting on the wall: one of Monet's series, each in the same four lights.
+                Caption {
+                    tone: look
+                    text: i18n("Painting")
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Repeater {
+                        model: [
+                            ["hours", i18n("The Hours"), i18n("The harbor at Le Havre")],
+                            ["lilies", i18n("Water Lilies"), i18n("The pond at Giverny")],
+                            ["haystacks", i18n("Haystacks"), i18n("A field after the harvest")]
+                        ]
+                        Rectangle {
+                            id: seriesChoice
+                            readonly property bool picked: (sheet.prefs.series || "hours") === modelData[0]
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            implicitHeight: seriesColumn.implicitHeight + 20
+                            radius: 18
+                            color: picked ? Qt.rgba(0.302, 0.706, 0.627, 0.1) : seriesHover.hovered ? look.wash2 : look.wash
+                            border.width: picked || activeFocus ? 2 : 1
+                            border.color: picked || activeFocus ? look.lily : look.line
+                            scale: seriesTap.pressed ? 0.98 : 1
+                            activeFocusOnTab: true
+                            Keys.onSpacePressed: sheet.chooseSeries(modelData[0])
+                            Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
+                            Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
+                            ColumnLayout {
+                                id: seriesColumn
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.margins: 10
+                                spacing: 3
+                                Image {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: Math.round(width * 236 / 480)
+                                    Layout.bottomMargin: 7
+                                    source: sheet.art + "series-" + modelData[0] + ".png"
+                                    smooth: true
+                                    mipmap: true
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: 4
+                                    text: modelData[1]
+                                    color: look.ink
+                                    font.pixelSize: 14
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: 4
+                                    text: modelData[2]
+                                    color: look.dim
+                                    font.pixelSize: 13
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            HoverHandler { id: seriesHover }
+                            TapHandler {
+                                id: seriesTap
+                                onTapped: sheet.chooseSeries(modelData[0])
+                            }
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.name: modelData[1]
+                            Accessible.checked: picked
+                            Accessible.onPressAction: sheet.chooseSeries(modelData[0])
+                        }
+                    }
+                }
                 Card {
                     tone: look
                     Repeater {
                         model: [
-                            ["hours", i18n("The Hours"), i18n("The painting drifts with the time of day")],
+                            ["hours", i18n("Through the day"), i18n("The painting's light drifts with the time of day")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
                             ["glass", i18n("Glass"), i18n("See the painting through panels and windows")]
                         ]
@@ -2599,10 +2764,67 @@ PlasmaCore.Dialog {
                     font.pixelSize: 13
                     wrapMode: Text.Wrap
                 }
-                Pill {
+                // Plasma's own keys (and Monet's menu, on the Windows key), to learn them by.
+                Caption {
                     tone: look
-                    text: i18n("More mouse & keyboard settings…")
-                    onClicked: sheet.ask("kde input")
+                    text: i18n("Keyboard shortcuts")
+                }
+                Card {
+                    tone: look
+                    GridLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        columns: 2
+                        columnSpacing: 28
+                        rowSpacing: 10
+                        Repeater {
+                            model: [[i18n("Open the menu"), ["Meta"]], [i18n("Search"), ["Alt", "Space"]],
+                                    [i18n("Files"), ["Meta", "E"]], [i18n("Lock the screen"), ["Meta", "L"]],
+                                    [i18n("All your windows"), ["Meta", "W"]], [i18n("The desktop"), ["Meta", "D"]],
+                                    [i18n("Switch windows"), ["Alt", "Tab"]], [i18n("A window on one half"), ["Meta", "\u2190", "\u2192"]],
+                                    [i18n("A window on the whole screen"), ["Meta", "PgUp"]], [i18n("What you copied"), ["Meta", "V"]],
+                                    [i18n("Emoji"), ["Meta", "."]], [i18n("Screenshot"), ["Print"]],
+                                    [i18n("Restart or shut down"), ["Ctrl", "Alt", "Del"]]]
+                            RowLayout {
+                                id: shortcutRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                spacing: 10
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: shortcutRow.modelData[0]
+                                    color: look.ink
+                                    font.pixelSize: 13
+                                    elide: Text.ElideRight
+                                }
+                                Row {
+                                    spacing: 4
+                                    Repeater {
+                                        model: shortcutRow.modelData[1]
+                                        Key {
+                                            required property var modelData
+                                            tone: look
+                                            keyName: modelData
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        tone: look
+                        text: i18n("More mouse & keyboard settings…")
+                        onClicked: sheet.ask("kde input")
+                    }
+                    Pill {
+                        tone: look
+                        text: i18n("Change shortcuts…")
+                        onClicked: sheet.ask("kde keys")
+                    }
                 }
             }
         }
@@ -3243,6 +3465,297 @@ PlasmaCore.Dialog {
         }
 
         Component {
+            id: privacyPage
+            ColumnLayout {
+                id: privacyColumn
+                // Forgetting recent files asks once more.
+                property bool askingForget: false
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("privacy")
+                    art: sheet.art
+                    text: i18n("Lock & Privacy")
+                    detail: sheet.privacyInfo.lockAfter === 0 ? i18n("The screen doesn't lock by itself.")
+                        : sheet.privacyInfo.lockAfter === 1 ? i18n("The screen locks after a minute away.")
+                        : sheet.privacyInfo.lockAfter > 1 ? i18n("The screen locks after %1 minutes away.", sheet.privacyInfo.lockAfter)
+                        : i18n("Who can get in, and what Monet remembers.")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Lock the screen")
+                        detail: i18n("When you've been away this long")
+                        Segments {
+                            tone: look
+                            options: [[1, i18n("1 min")], [5, i18n("5 min")], [15, i18n("15 min")], [30, i18n("30 min")],
+                                      [0, i18n("Never")]]
+                            current: typeof sheet.privacyInfo.lockAfter === "number" ? sheet.privacyInfo.lockAfter : 5
+                            onPicked: value => sheet.privacy("lockAfter", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Ask for the password after sleep")
+                        detail: i18n("Waking the PC shows the lock screen")
+                        onTapped: sheet.privacy("lockOnResume", sheet.privacyInfo.lockOnResume === false)
+                        Switch {
+                            tone: look
+                            active: sheet.privacyInfo.lockOnResume !== false
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Lock now")
+                        detail: i18n("Or press the Windows key and L")
+                        Pill {
+                            tone: look
+                            text: i18n("Lock")
+                            onClicked: sheet.ask("lock-now")
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("What Monet remembers")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Remember recent files")
+                        detail: i18n("Files and the menu show what you opened lately")
+                        onTapped: sheet.privacy("remember", sheet.privacyInfo.remember === false)
+                        Switch {
+                            tone: look
+                            active: sheet.privacyInfo.remember !== false
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Forget recent files")
+                        detail: privacyColumn.askingForget ? i18n("The list of what you opened is cleared. Your files stay. Sure?")
+                            : i18n("Clears the list, not the files")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: privacyColumn.askingForget
+                                text: i18n("Keep it")
+                                onClicked: privacyColumn.askingForget = false
+                            }
+                            Pill {
+                                tone: look
+                                text: privacyColumn.askingForget ? i18n("Forget") : i18n("Forget…")
+                                onClicked: {
+                                    if (privacyColumn.askingForget) {
+                                        privacyColumn.askingForget = false
+                                        sheet.ask("forget-recent")
+                                    } else {
+                                        privacyColumn.askingForget = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        tone: look
+                        text: i18n("More lock screen settings…")
+                        onClicked: sheet.ask("kde screenlocker")
+                    }
+                    Pill {
+                        tone: look
+                        text: i18n("More about recent files…")
+                        onClicked: sheet.ask("kde recentfiles")
+                    }
+                }
+            }
+        }
+
+        Component {
+            id: printersPage
+            ColumnLayout {
+                id: printersColumn
+                readonly property var found: sheet.printerInfo.printers || []
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("printers")
+                    art: sheet.art
+                    text: i18n("Printers")
+                    detail: printersColumn.found.length === 0 ? i18n("Printers on your network show up by themselves.")
+                        : printersColumn.found.length === 1 ? i18n("1 printer")
+                        : i18n("%1 printers", printersColumn.found.length)
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: printersColumn.found
+                        SettingRow {
+                            id: printerRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.label
+                            detail: [modelData.default ? i18n("Your default") : "",
+                                     modelData.state === "printing" ? i18n("Printing") : modelData.state === "off" ? i18n("Turned off")
+                                         : i18n("Ready"),
+                                     modelData.jobs === 1 ? i18n("1 waiting") : modelData.jobs > 1 ? i18n("%1 waiting", modelData.jobs) : ""]
+                                    .filter(s => s !== "").join(" · ")
+                            Pill {
+                                tone: look
+                                visible: !printerRow.modelData.default
+                                text: i18n("Make default")
+                                onClicked: sheet.printerDefault(printerRow.modelData.name)
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: printersColumn.found.length > 0
+                        title: printersColumn.found.length > 0 ? i18n("Another printer") : i18n("No printers yet")
+                        detail: i18n("Turn it on and join it to your Wi-Fi: Monet finds most printers by itself")
+                        Pill {
+                            tone: look
+                            text: i18n("Add…")
+                            onClicked: sheet.ask("kde printers")
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More printer settings…")
+                    onClicked: sheet.ask("kde printers")
+                }
+            }
+        }
+
+        Component {
+            id: gamesPage
+            ColumnLayout {
+                readonly property var pads: sheet.gameInfo.controllers || []
+                readonly property var libraries: sheet.gameInfo.libraries || []
+                id: gamesColumn
+                spacing: 20
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("games")
+                    art: sheet.art
+                    text: i18n("Games & Controllers")
+                    detail: gamesColumn.pads.length === 1 ? i18n("1 controller connected")
+                        : gamesColumn.pads.length > 1 ? i18n("%1 controllers connected", gamesColumn.pads.length)
+                        : i18n("Your controllers, and where your games are kept.")
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Controllers")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: gamesColumn.pads
+                        SettingRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: modelData.battery === null ? (modelData.wireless ? i18n("Connected") : i18n("Plugged in"))
+                                : modelData.charging ? i18n("%1% · charging", modelData.battery)
+                                : i18n("%1% battery", modelData.battery)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: gamesColumn.pads.length > 0
+                        title: gamesColumn.pads.length > 0 ? i18n("Another controller") : i18n("No controller connected")
+                        detail: i18n("Plug one in, or pair one over Bluetooth")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: sheet.gameInfo.pair === true
+                                text: i18n("Pair…")
+                                onClicked: sheet.ask("pair-controller")
+                            }
+                            Pill {
+                                tone: look
+                                text: i18n("Test buttons…")
+                                onClicked: sheet.ask("kde gamecontroller")
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: typeof sheet.gameInfo.overlay === "boolean"
+                    text: i18n("While you play")
+                }
+                Card {
+                    tone: look
+                    visible: typeof sheet.gameInfo.overlay === "boolean"
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Performance overlay")
+                        detail: i18n("Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play.")
+                        onTapped: sheet.overlay(sheet.gameInfo.overlay !== true)
+                        Switch {
+                            tone: look
+                            active: sheet.gameInfo.overlay === true
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Where your games are")
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        model: gamesColumn.libraries
+                        SettingRow {
+                            id: libraryRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: sheet.library(modelData)
+                            Pill {
+                                tone: look
+                                text: i18n("Show")
+                                onClicked: Qt.openUrlExternally("file://" + encodeURI(libraryRow.modelData.path))
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: gamesColumn.libraries.length === 0
+                        title: i18n("No games yet")
+                        detail: i18n("Steam, Heroic and Lutris keep theirs here once you install one")
+                    }
+                }
+                Pill {
+                    tone: look
+                    text: i18n("More controller settings…")
+                    onClicked: sheet.ask("kde gamecontroller")
+                }
+            }
+        }
+
+        Component {
             id: windowsPage
             ColumnLayout {
                 spacing: 20
@@ -3475,6 +3988,54 @@ PlasmaCore.Dialog {
                         Switch {
                             tone: look
                             active: sheet.pc.autoUpdates !== false
+                        }
+                    }
+                }
+                // What came with this Monet, from its release notes (also offered once after an update).
+                Caption {
+                    tone: look
+                    visible: (sheet.whatsNew.items || []).length > 0
+                    text: i18n("New in Monet %1", sheet.whatsNew.version || "")
+                }
+                Card {
+                    tone: look
+                    visible: (sheet.whatsNew.items || []).length > 0
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 14
+                        Text {
+                            Layout.fillWidth: true
+                            visible: (sheet.whatsNew.headline || "") !== ""
+                            text: sheet.whatsNew.headline || ""
+                            color: look.ink
+                            font.family: "Fraunces 72pt SuperSoft"
+                            font.pixelSize: 24
+                            wrapMode: Text.Wrap
+                        }
+                        Repeater {
+                            model: sheet.whatsNew.items || []
+                            ColumnLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: parent.modelData.title
+                                    color: look.ink
+                                    font.pixelSize: 14
+                                    font.weight: Font.DemiBold
+                                    wrapMode: Text.Wrap
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: parent.modelData.text
+                                    color: look.dim
+                                    font.pixelSize: 13
+                                    lineHeight: 1.25
+                                    wrapMode: Text.Wrap
+                                }
+                            }
                         }
                     }
                 }

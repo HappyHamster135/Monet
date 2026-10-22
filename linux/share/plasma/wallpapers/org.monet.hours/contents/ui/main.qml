@@ -10,7 +10,12 @@ import org.kde.plasma.plasmoid
 WallpaperItem {
     id: root
 
-    readonly property string folder: "file://@DATADIR@/wallpapers/Monet/contents/hours/"
+    // Which series (monet-light writes it, from Monet Settings): The Hours, Water
+    // Lilies or Haystacks, each in the same four lights. A change fades in like a new light.
+    readonly property string series: ["hours", "lilies", "haystacks"].indexOf(root.configuration.Series) >= 0
+        ? root.configuration.Series : "hours"
+    readonly property string folder: "file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"
+    onFolderChanged: update()
     // Each light starts at this minute of the day, then drifts into the next.
     readonly property var hours: [
         { name: "night", from: 21 * 60 },

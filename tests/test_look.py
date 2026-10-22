@@ -370,6 +370,32 @@ class Paintings(unittest.TestCase):
         for hour in ("dawn", "day", "dusk", "night"):
             self.assertGreater((self.WALL / "hours" / f"{hour}.jpg").stat().st_size, 100_000, hour)
 
+    def test_series_each_in_four_lights(self):
+        # Water Lilies and Haystacks beside The Hours, painted by the same tool, chosen in Settings.
+        quick = quick_helper()
+        self.assertEqual(quick.SERIES, ("hours", "lilies", "haystacks"))
+        for series in quick.SERIES:
+            for hour in ("dawn", "day", "dusk", "night"):
+                self.assertGreater((self.WALL / series / f"{hour}.jpg").stat().st_size, 100_000, f"{series} {hour}")
+            self.assertTrue((SHARE / f"monet/settings/series-{series}.png").is_file(), series)
+        tool = (ROOT / "tools/make-paintings.py").read_text(encoding="utf-8")
+        for series in quick.SERIES:
+            self.assertIn(f'    "{series}": dict(hours=', tool)
+        wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
+        self.assertIn('["hours", "lilies", "haystacks"].indexOf(root.configuration.Series)', wallpaper)
+        self.assertIn('"file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"', wallpaper)
+        self.assertIn('<entry name="Series" type="String">',
+                      (PLASMA / "wallpapers/org.monet.hours/contents/config/main.xml").read_text())
+        self.assertIn('<entry name="Series" type="String">',
+                      (PLASMA / "plasmoids/org.monet.placard/contents/config/main.xml").read_text())
+        light = (ROOT / "linux/libexec/monet-light").read_text()
+        self.assertIn("--group General --key Series \"$set\"", light)  # the lock screen
+        self.assertIn("d.writeConfig('Series', '$set');", light)        # each desktop
+        self.assertIn("w.writeConfig('Series', '$set');", light)        # each placard
+        qml = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('["lilies", i18n("Water Lilies"), i18n("The pond at Giverny")]', qml)
+        self.assertIn('ask("series " + name)', qml)
+
     def test_static_wallpaper_points_at_paintings(self):
         self.assertTrue((self.WALL / "images/3840x2160.jpg").resolve().is_file())
         self.assertTrue((self.WALL / "images_dark/3840x2160.jpg").resolve().is_file())
@@ -652,6 +678,26 @@ class Updates(unittest.TestCase):
         self.assertIn('--group General --key BrowserApplication "$browser"', image_only)
         self.assertTrue((SHARE / "icons/Monet/apps/scalable/app.zen_browser.zen.svg").is_file())  # its own rings, painted
 
+    def test_files_open_in_their_built_in_apps(self):
+        # Not in whichever app claims them first (the browser claims pictures and PDFs too).
+        install = (ROOT / "linux/install.sh").read_text()
+        image_only = install.split('if [ "$IMAGE" = 1 ]; then', 2)[2]
+        defaults = image_only.split("<<'DEFAULTS'\n", 1)[1].split("\nDEFAULTS\n", 1)[0]
+        apps = {line.split()[0]: line.split()[1:] for line in defaults.splitlines()}
+        self.assertIn("image/jpeg", apps["org.kde.gwenview.desktop"])
+        self.assertIn("application/pdf", apps["org.kde.okular.desktop"])
+        self.assertIn("video/mp4", apps["org.kde.haruna.desktop"])
+        self.assertIn("audio/mpeg", apps["org.kde.elisa.desktop"])
+        self.assertIn("application/zip", apps["org.kde.ark.desktop"])
+        self.assertIn("text/plain", apps["org.kde.kate.desktop;org.kde.kwrite.desktop"])
+        types = [t for listed in apps.values() for t in listed]
+        self.assertEqual(len(types), len(set(types)))
+        self.assertIn('sed -i "\\|^$type=|d" "$mimeapps"', image_only)
+        # And they're built in, with what Files needs to show what's inside PDFs and videos.
+        image = (ROOT / "image/Containerfile").read_text()
+        self.assertIn("gwenview okular haruna elisa-player kcalc ark", image)
+        self.assertIn("kdegraphics-thumbnailers ffmpegthumbs", image)
+
     def test_arriving_apps_get_their_plain_names(self):
         # The names are given once per look, before Setup's apps have arrived: again as they do.
         look = (ROOT / "linux/libexec/monet-look").read_text()
@@ -722,7 +768,7 @@ class Icons(unittest.TestCase):
         # Store is Bazaar on Bazzite: the market bouquet is Monet's either way.
         apps = ("monet", "monet-settings", "systemsettings", "org.kde.dolphin", "org.kde.konsole", "org.kde.discover",
                 "io.github.kolunmi.Bazaar", "org.kde.plasma-systemmonitor", "org.kde.gwenview", "org.kde.okular",
-                "org.kde.kate", "org.kde.ark", "org.kde.spectacle", "org.kde.haruna", "org.kde.kcalc",
+                "org.kde.kate", "org.kde.ark", "org.kde.spectacle", "org.kde.haruna", "org.kde.kcalc", "org.kde.elisa",
                 # What Bazzite brings to the dock and the menu.
                 "org.mozilla.firefox", "steam", "net.lutris.Lutris", "io.github.ublue_os.yafti_gtk",
                 "com.github.tchx84.Flatseal", "io.github.flattool.Warehouse", "it.mijorus.gearlever",
@@ -873,7 +919,13 @@ class Icons(unittest.TestCase):
         self.assertIn("--zen-primary-color: light-dark(#357F72, #4DB4A0) !important;", css)  # lily
         self.assertIn('url("mist.jpg")', css)
         self.assertIn('url("smoke.jpg")', css)
+        self.assertIn("background-blend-mode: normal !important;", css)  # Zen lightens its layers: paper would win
+        self.assertIn("#urlbar[focused] .urlbar-background", css)
+        self.assertIn('font-family: "Fraunces 72pt SuperSoft"', css)
         self.assertEqual(css.count("{"), css.count("}"))
+        prefs = quick_helper().ZEN_PREFS
+        self.assertIn('user_pref("zen.welcome-screen.seen", true);', prefs)
+        self.assertIn('user_pref("browser.shell.checkDefaultBrowser", false);', prefs)
         newtab = (SHARE / "monet/zen/newtab.css").read_text()
         self.assertIn('@-moz-document url("about:newtab"), url("about:home")', newtab)
         self.assertEqual(newtab.count("{"), newtab.count("}"))
@@ -964,7 +1016,12 @@ class Icons(unittest.TestCase):
         self.assertEqual(dirs[0], "actions/16")
         self.assertIn("actions/scalable", dirs)
         for name in ("document-new", "edit-paste", "edit-undo", "view-list-icons", "utilities-terminal-symbolic",
-                     "document-edit", "system-lock-screen", "system-log-out", "go-previous", "edit-copy", "edit-find"):
+                     "document-edit", "system-lock-screen", "system-log-out", "go-previous", "edit-copy", "edit-find",
+                     # KDE's standard menus and the everyday apps' toolbars: no flat Breeze sign among the ink.
+                     "document-save-as", "document-print", "document-open-recent", "application-exit", "edit-clear",
+                     "edit-find-replace", "zoom-original", "zoom-fit-best", "view-fullscreen", "view-restore",
+                     "view-filter", "object-rotate-left", "object-rotate-right", "transform-crop",
+                     "media-playlist-shuffle", "media-playlist-repeat", "tools-report-bug", "overflow-menu"):
             svg = (self.THEME / "actions/scalable" / f"{name}.svg").read_text()
             # One ink KDE can tint: the current-color-scheme sheet, and nothing else painted.
             self.assertIn('<style id="current-color-scheme"', svg, name)
@@ -1016,7 +1073,9 @@ class MonetsOwn(unittest.TestCase):
             self.assertIn(f'"{app}:{name}"', self.LOOK)
         self.assertIn('    store=io.github.kolunmi.Bazaar\n    if rename "$store" Store', self.LOOK)
         hidden = re.search(r"for app in (systemsettings .*?); do\n        hide", self.LOOK, re.S).group(1).split()
-        for app in ("systemsettings", "org.kde.kinfocenter", "bazzite-documentation", "discourse", "bbrew"):
+        for app in ("systemsettings", "org.kde.kinfocenter", "bazzite-documentation", "discourse", "bbrew",
+                    # Bazzite's name, and the Linux penguin (Fcitx's), seen in the built image's menu.
+                    "io.github.rfrench3.bazzite-updater", "fcitx5-configtool", "kvantummanager"):
             self.assertIn(app, hidden)
 
     def test_bazzites_greetings_are_gone(self):
@@ -1552,6 +1611,98 @@ class EverydayScreens(unittest.TestCase):
 
 class MonetSettings(unittest.TestCase):
     QUICK = PLASMA / "plasmoids/org.monet.quick/contents/ui"
+
+    @unittest.skipIf(sys.platform == "win32", "sysfs names have colons, which Windows folders can't")
+    def test_controllers_come_from_the_kernel(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            # A DualSense over Bluetooth (HID bus 0005) with its battery, and a wired pad without one.
+            pad = Path(tmp) / "0005:054C:0CE6.0003"
+            (pad / "input/input23").mkdir(parents=True)
+            (pad / "input/input23/name").write_text("DualSense Wireless Controller\n")
+            (pad / "power_supply/ps-controller-battery").mkdir(parents=True)
+            (pad / "power_supply/ps-controller-battery/capacity").write_text("80\n")
+            (pad / "power_supply/ps-controller-battery/status").write_text("Discharging\n")
+            wired = Path(tmp) / "1-1:1.0"
+            (wired / "input/input5").mkdir(parents=True)
+            (wired / "input/input5/name").write_text("Microsoft X-Box 360 pad\n")
+            found = quick.controller(pad / "input/input23")
+            self.assertEqual({k: found[k] for k in ("name", "battery", "charging", "wireless")},
+                             {"name": "DualSense Wireless Controller", "battery": 80, "charging": False, "wireless": True})
+            found = quick.controller(wired / "input/input5")
+            self.assertEqual((found["battery"], found["wireless"]), (None, False))
+
+    def test_games_are_found_where_steam_keeps_them(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            quick.HOME, quick.DATA_HOME = home, home / ".local/share"
+            steam, other = quick.DATA_HOME / "Steam", Path(tmp) / "disk/SteamLibrary"
+            (steam / "steamapps").mkdir(parents=True)
+            other.mkdir(parents=True)
+            (steam / "steamapps/libraryfolders.vdf").write_text(
+                '"libraryfolders"\n{\n\t"0"\n\t{\n\t\t"path"\t\t"%s"\n\t\t"label"\t\t""\n\t\t"apps"\n\t\t{\n'
+                '\t\t\t"228980"\t\t"1000"\n\t\t\t"1091500"\t\t"70000000000"\n\t\t}\n\t}\n\t"1"\n\t{\n\t\t"path"\t\t"%s"\n'
+                '\t\t"apps"\n\t\t{\n\t\t\t"570"\t\t"30000000000"\n\t\t}\n\t}\n}\n' % (steam.as_posix(), other.as_posix()))
+            (home / "Games/Heroic").mkdir(parents=True)
+            found = quick.game_libraries()
+            self.assertEqual([(f["games"], f["size"]) for f in found[:2]], [(2, 70000001000), (1, 30000000000)])
+            self.assertTrue(all(f["name"].startswith("Steam") for f in found[:2]))
+            self.assertEqual(found[0]["path"], str(steam / "steamapps/common"))
+            self.assertEqual((found[2]["name"], found[2]["games"]), ("Games folder", 1))
+
+    def test_the_overlay_switches_and_keeps_your_own_look(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            quick.OVERLAY, quick.MANGOHUD_CONF = Path(tmp) / "environment.d/monet-mangohud.conf", Path(tmp) / "MangoHud.conf"
+            quick.set_overlay(True)
+            self.assertIn("MANGOHUD=1", quick.OVERLAY.read_text())
+            self.assertIn("round_corners=10", quick.MANGOHUD_CONF.read_text())  # Monet's colors, the first time
+            quick.MANGOHUD_CONF.write_text("fps\n")
+            quick.set_overlay(False)
+            self.assertFalse(quick.OVERLAY.exists())
+            quick.set_overlay(True)
+            self.assertEqual(quick.MANGOHUD_CONF.read_text(), "fps\n")  # someone's own is never replaced
+
+    def test_whats_new_comes_from_this_releases_notes(self):
+        found = quick_helper().whats_new((ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8"))
+        self.assertEqual(found["version"], (ROOT / "VERSION").read_text().strip())
+        self.assertGreaterEqual(len(found["items"]), 4)
+        for item in found["items"]:
+            self.assertTrue(item["title"] and item["text"][-1] in ".!?", item)
+        self.assertIn('cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"', (ROOT / "tools/package.sh").read_text())
+        self.assertIn('"$DATADIR/monet/release-notes.md"', (ROOT / "linux/install.sh").read_text())
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('--action=open="See what\'s new" --wait', session)
+        self.assertIn('[ "$answer" = open ] && "$LIBEXECDIR/monet-quick" open updates', session)
+        qml = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))', qml)
+
+    def test_printers_come_from_cups(self):
+        found = quick_helper().printers_from(
+            "HP_OfficeJet\nBrother\nCanon_Found_On_Wifi\n",
+            "printer HP_OfficeJet is idle.  enabled since Thu 22 Oct\nprinter Brother now printing Brother-12.  enabled since x\n",
+            "system default destination: HP_OfficeJet\n",
+            "Brother-12   jon   1024   Thu 22 Oct\nBrother-13   jon   2048   Thu 22 Oct\n")
+        self.assertEqual([(p["label"], p["state"], p["jobs"], p["default"]) for p in found],
+                         [("HP OfficeJet", "ready", 0, True), ("Brother", "printing", 2, False),
+                          ("Canon Found On Wifi", "ready", 0, False)])
+
+    def test_lock_privacy_and_the_rest_go_to_kde_by_name(self):
+        quick = quick_helper()
+        for page, kcm in (("gamecontroller", "kcm_gamecontroller"), ("screenlocker", "kcm_screenlocker"),
+                          ("recentfiles", "kcm_recentFiles"), ("printers", "kcm_printer_manager"), ("keys", "kcm_keys")):
+            self.assertEqual(quick.KDE_PAGES[page], kcm)
+        source = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('"DeleteRecentStats", "sis", "", "0", "everything"', source)
+        self.assertIn('kwrite("kscreenlockerrc", "Daemon", "LockOnResume"', source)
+        self.assertEqual(quick.LOCK_TIMES, (1, 5, 15, 30, 0))
+        qml = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn("options: [[1, i18n(\"1 min\")], [5, i18n(\"5 min\")], [15, i18n(\"15 min\")], [30, i18n(\"30 min\")]", qml)
+        self.assertIn('onClicked: sheet.ask("kde keys")', qml)
 
     def test_every_page_has_its_picture(self):
         qml = (self.QUICK / "MonetSettings.qml").read_text()

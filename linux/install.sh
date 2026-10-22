@@ -186,6 +186,10 @@ cp -r "$SRC/share/monet/gtk" "$DATADIR/monet/gtk"
 cp -r "$SRC/share/monet/zen" "$DATADIR/monet/zen"
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
+# What's new in this Monet (tools/package.sh puts the release notes in the package).
+if [ -f "$SRC/share/monet/release-notes.md" ]; then
+    install -m 644 "$SRC/share/monet/release-notes.md" "$DATADIR/monet/release-notes.md"
+fi
 if [ -d "$SRC/windows" ]; then
     cp -r "$SRC/windows" "$DATADIR/monet/windows"
 fi
@@ -247,6 +251,22 @@ ABOUT
     sed -i -E '/^(x-scheme-handler\/https?|text\/html)=/d' "$mimeapps"
     grep -q '^\[Default Applications\]' "$mimeapps" || printf '\n[Default Applications]\n' >> "$mimeapps"
     sed -i "/^\[Default Applications\]/a x-scheme-handler/http=$browser\nx-scheme-handler/https=$browser\ntext/html=$browser" "$mimeapps"
+    # Each kind of file opens in the app built in for it (Settings → Default
+    # Apps changes it), not in whichever claims it first: the browser claims
+    # pictures and PDFs too.
+    while read -r app types; do
+        for type in $types; do
+            sed -i "\|^$type=|d" "$mimeapps"
+            sed -i "/^\[Default Applications\]/a $type=$app" "$mimeapps"
+        done
+    done <<'DEFAULTS'
+org.kde.gwenview.desktop image/jpeg image/png image/gif image/webp image/avif image/heif image/bmp image/tiff image/svg+xml
+org.kde.okular.desktop application/pdf application/epub+zip image/vnd.djvu application/postscript
+org.kde.haruna.desktop video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo video/mpeg video/ogg
+org.kde.elisa.desktop audio/mpeg audio/flac audio/ogg audio/x-vorbis+ogg audio/x-opus+ogg audio/x-wav audio/mp4 audio/aac
+org.kde.ark.desktop application/zip application/x-7z-compressed application/vnd.rar application/x-tar application/x-compressed-tar application/x-xz-compressed-tar application/zstd
+org.kde.kate.desktop;org.kde.kwrite.desktop text/plain text/markdown
+DEFAULTS
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group General --key BrowserApplication "$browser"
     # Change Avatar offers Monet's pictures alone, not KDE's dragon and photos.
     find "$DATADIR/plasma/avatars" -mindepth 1 -maxdepth 1 ! -name Monet -exec rm -rf {} +

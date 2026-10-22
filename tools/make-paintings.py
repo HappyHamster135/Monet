@@ -91,7 +91,7 @@ def smooth_noise(rng, w, h, cell):
 
 def light_field(hour, w, h, noise_a, noise_b):
     """The underpainting: smooth color everywhere, before any brushstroke."""
-    hz = int(h * HORIZON)
+    hz = int(h * hour.get("horizon", HORIZON))
     sky = gradient(hour["sky"], hz)
     water = gradient(hour["water"], h - hz)
     field = np.repeat(np.concatenate([sky, water])[:, None, :], w, axis=1)
@@ -139,17 +139,19 @@ def stroke_polygon(cx, cy, length, width, angle, bend):
 class Brushwork:
     """The strokes of one painting. Built once, drawn in each hour's colors."""
 
-    def __init__(self, w, h, seed=1872):
+    def __init__(self, w, h, seed=1872, horizon=HORIZON):
         self.w, self.h = w, h
-        self.hz = int(h * HORIZON)
+        self.hz = int(h * horizon)
         self.rng = np.random.default_rng(seed)
         self.s = w / 3840
         self.strokes = []
         # Broad, thin strokes blend the underpainting; smaller ones on top
-        # give the surface its texture.
-        self._sky(step=70, size=2.2, alpha=(0.18, 0.34))
+        # give the surface its texture. A pond seen from above has no sky.
+        if self.hz > 0:
+            self._sky(step=70, size=2.2, alpha=(0.18, 0.34))
         self._water(step=11, size=1.9, alpha=(0.20, 0.38))
-        self._sky(step=40, size=1.0, alpha=(0.28, 0.55))
+        if self.hz > 0:
+            self._sky(step=40, size=1.0, alpha=(0.28, 0.55))
         self._water(step=6.5, size=1.0, alpha=(0.32, 0.62))
 
     def _add(self, layer, cx, cy, length, width, angle, bend, jitter, alpha, tint, offset):
@@ -203,7 +205,7 @@ def to255(c, alpha):
     return tuple(int(v * 255) for v in c) + (int(alpha * 255),)
 
 
-def paint(hour, brushwork, noise):
+def paint(hour, brushwork, noise, scene=None):
     w, h, s, hz = brushwork.w, brushwork.h, brushwork.s, brushwork.hz
     field = light_field(hour, w, h, *noise)
     base = Image.fromarray((field * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6 * s))
@@ -228,7 +230,7 @@ def paint(hour, brushwork, noise):
             color = color * 0.82 + accents[kind] * 0.18
         if kind == "water":
             # Ripples: alternate light and dark bands.
-            ripple = math.sin(cy / (9 * s) + cx / (400 * s)) * 0.04
+            ripple = math.sin(cy / (9 * s) + cx / (400 * s)) * hour.get("ripple", 0.04)
             color = np.clip(color * (1 + ripple), 0, 1)
         poly = stroke_polygon(cx, cy, length, width, angle, bend)
         draw.polygon(poly, fill=to255(color, alpha))
@@ -245,12 +247,7 @@ def paint(hour, brushwork, noise):
     canvas = Image.blend(canvas, soft, 0.35)
 
     p = Painter(canvas)
-    harbor(p, hour, w, h, hz, s)
-    halo(p, hour, w, h, s)
-    light_and_reflection(p, hour, w, h, hz, s, rng)
-    boats(p, hour, w, h, s)
-    if hour.get("harbor_lights"):
-        harbor_lights(p, w, h, hz, s, rng)
+    (scene or harbor_scene)(p, hour, w, h, hz, s, rng)
 
     img = p.canvas.convert("RGB").filter(ImageFilter.GaussianBlur(0.6 * s))
     return grain(img, s)
@@ -299,6 +296,16 @@ class Painter:
 
     def dot(self, x, y, r, color, alpha, blur):
         self.shape(None, color, alpha, blur, ellipse=(x - r, y - r, x + r, y + r))
+
+
+def harbor_scene(p, hour, w, h, hz, s, rng):
+    """The Hours: the harbor, the sun and its reflection, the boats."""
+    harbor(p, hour, w, h, hz, s)
+    halo(p, hour, w, h, s)
+    light_and_reflection(p, hour, w, h, hz, s, rng)
+    boats(p, hour, w, h, s)
+    if hour.get("harbor_lights"):
+        harbor_lights(p, w, h, hz, s, rng)
 
 
 def harbor(p, hour, w, h, hz, s):
@@ -437,16 +444,216 @@ def grain(img, s):
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
 
 
-def render(scale=1.0, only=None):
+# Water Lilies --------------------------------------------------------------
+# After the Nymphéas: the pond seen from above, no sky but its reflection,
+# the willows' reflections falling down it, and islands of lily pads that
+# grow as they come closer, some with a flower.
+
+def light(x, y, glow, reach=0.5, strength=0.35, r=0.0, color="#FFFFFF"):
+    return dict(x=x, y=y, r=r, color=color, glow=glow, reach=reach, strength=strength)
+
+
+LILIES = {
+    "dawn": dict(sky=[(0, "#C9B6D6"), (1, "#C9B6D6")], water=[(0, "#CDB8D8"), (0.45, "#93A6C8"), (1, "#4E6B8E")],
+                 light=light(0.7, 0.18, "#F4CDBE"), reflection="#F6D6C6", accent_sky="#C9B6D6", accent_water="#7C9A92",
+                 foliage="#4E6A5E", pad="#5E8C5A", pad_light="#A8C47A", pad_shade="#2E4A4E",
+                 flowers=["#F2A9B8", "#FBEAF0", "#F59AAE"], ripple=0.025),
+    "day": dict(sky=[(0, "#A9C9DE"), (1, "#A9C9DE")], water=[(0, "#B4D2E2"), (0.45, "#6E9CC0"), (1, "#2F5E7E")],
+                light=light(0.3, 0.12, "#EEF6F4", strength=0.4), reflection="#F4FAF6", accent_sky="#A9C9DE",
+                accent_water="#5C9A86", foliage="#3E6B4A", pad="#4F8A4C", pad_light="#A6CC6E", pad_shade="#1E4A4A",
+                flowers=["#F28CA0", "#FFFFFF", "#F26A5A"], ripple=0.025),
+    "dusk": dict(sky=[(0, "#E7A77A"), (1, "#E7A77A")], water=[(0, "#EDAA7E"), (0.45, "#B4789A"), (1, "#4A3D6A")],
+                 light=light(0.62, 0.15, "#F8B47C", strength=0.45), reflection="#FAC08A", accent_sky="#E7A77A",
+                 accent_water="#8A6A8A", foliage="#3A3A55", pad="#5A6A4A", pad_light="#B49A5E", pad_shade="#2A2440",
+                 flowers=["#F4B0C0", "#FFD7A8", "#F27A6A"], ripple=0.025),
+    "night": dict(sky=[(0, "#3B4A78"), (1, "#3B4A78")], water=[(0, "#405080"), (0.45, "#26305A"), (1, "#121630")],
+                  light=light(0.66, 0.2, "#B8C4EC", strength=0.35, reach=0.35), reflection="#D8E0F8",
+                  accent_sky="#3B4A78", accent_water="#2E4A5E", foliage="#1A2A2E", pad="#2E4440", pad_light="#5A7262",
+                  pad_shade="#0E1426", flowers=["#C8B8D8", "#E8E2F0", "#B89AC0"], ripple=0.03),
+}
+# Islands of pads: center, spread (fractions of the width) and how many.
+ISLANDS = ((0.16, 0.22, 0.08, 18), (0.58, 0.14, 0.12, 22), (0.36, 0.46, 0.12, 22), (0.84, 0.52, 0.08, 16),
+           (0.12, 0.78, 0.1, 13), (0.62, 0.86, 0.11, 12), (0.92, 0.2, 0.05, 8))
+
+
+def mix(a, b, t):
+    return a * (1 - t) + b * t
+
+
+def lily(p, x, y, r, color, s, rng):
+    """A water lily: a cup of petals opening upward, its heart yellow."""
+    for i in range(7):
+        a = -math.pi / 2 + (i - 3) * 0.34
+        p.stroke(x + math.cos(a) * r * 0.55, y + math.sin(a) * r * 0.42, r * 0.95, r * 0.34, a, 0.3,
+                 color * rng.uniform(0.92, 1.05), 0.92, 0.7 * s)
+    p.dot(x, y - r * 0.12, r * 0.18, rgb("#F2C84A"), 0.9, 0.6 * s)
+
+
+def lilies_scene(p, hour, w, h, hz, s, rng):
+    leaf = rgb(hour["foliage"])
+    # The willows on the bank, upside down in the water: long falling strokes.
+    for x0, x1, n in ((-0.04, 0.24, 90), (0.76, 1.04, 80), (0.4, 0.54, 26)):
+        for _ in range(n):
+            x, y = rng.uniform(x0, x1) * w, rng.beta(1.2, 2.6) * 0.85 * h
+            fade = 1 - y / (0.9 * h)
+            p.stroke(x, y, rng.uniform(160, 520) * s, rng.uniform(24, 60) * s, math.pi / 2 + rng.normal(0, 0.08),
+                     rng.normal(0, 0.35), leaf * rng.uniform(0.8, 1.2), rng.uniform(0.06, 0.16) * (0.4 + fade), 14 * s)
+    # The sky's light on the water, in broken dabs.
+    refl = rgb(hour["reflection"])
+    L = hour["light"]
+    for _ in range(140):
+        x, y = rng.normal(L["x"], 0.08) * w, rng.uniform(0, 0.75) * h
+        p.stroke(x, y, rng.uniform(40, 120) * s, rng.uniform(5, 10) * s, rng.normal(0, 0.04), 0, refl,
+                 rng.uniform(0.15, 0.4), 1.5 * s)
+    green, bright, dark = rgb(hour["pad"]), rgb(hour["pad_light"]), rgb(hour["pad_shade"])
+    flowers = [rgb(c) for c in hour["flowers"]]
+    for cx, cy, spread, count in ISLANDS:
+        for _ in range(count):
+            y = (cy + rng.normal(0, spread * 0.35)) * h
+            depth = min(1.0, max(0.03, y / h))
+            x = (cx + rng.normal(0, spread)) * w
+            rx = rng.uniform(55, 110) * s * (0.3 + 1.6 * depth)
+            ry = rx * (0.22 + 0.3 * depth)
+            # A shadow under the pad, the pad, the split in it, and light on top.
+            p.shape(None, dark, 0.4, 3 * s, ellipse=(x - rx * 1.05, y - ry * 0.8, x + rx * 1.05, y + ry * 1.2))
+            p.shape(None, mix(green, bright, rng.uniform(0, 0.6)) * rng.uniform(0.9, 1.06), 0.94, 1.4 * s,
+                    ellipse=(x - rx, y - ry, x + rx, y + ry))
+            a = rng.uniform(0, 2 * math.pi)
+            p.stroke(x + math.cos(a) * rx * 0.45, y + math.sin(a) * ry * 0.45, rx * 0.9, 2.5 * s * (0.6 + depth),
+                     math.atan2(math.sin(a) * ry, math.cos(a) * rx), 0, dark, 0.5, s)
+            for _ in range(2):
+                p.stroke(x + rng.normal(0, rx * 0.3), y + rng.normal(0, ry * 0.25), rx * 0.6, ry * 0.35,
+                         rng.normal(0, 0.1), 0.2, bright * 1.06, 0.4, 1.5 * s)
+            if rng.random() < 0.22:
+                lily(p, x + rng.normal(0, rx * 0.2), y - ry * 0.35, rx * 0.5, flowers[rng.integers(len(flowers))], s, rng)
+
+
+# Haystacks -----------------------------------------------------------------
+# After the Meules: two stacks in a field after the harvest, trees and a
+# village far off, and the light making the stacks glow on one side and cast
+# long colored shadows on the other.
+
+HAYSTACKS = {
+    "dawn": dict(sky=[(0, "#9EAFD0"), (0.6, "#E2C6BE"), (1, "#F2D2AC")], water=[(0, "#D2BC92"), (0.4, "#A8946E"), (1, "#6A5A4A")],
+                 light=light(0.14, 0.42, "#F7C89A", reach=0.32, strength=0.5, r=0.022, color="#F7A04A"),
+                 reflection="#F7C89A", accent_sky="#C0A8C8", accent_water="#9AA07A", mist="#7A7A96",
+                 stack_light="#F0B87A", stack_shadow="#6A6A9A", ripple=0.0),
+    "day": dict(sky=[(0, "#7FA6D6"), (0.6, "#B8CFE6"), (1, "#E6E8E0")], water=[(0, "#DCC67E"), (0.4, "#B89E5C"), (1, "#7A6A3A")],
+                light=light(0.78, 0.08, "#FFF6E0", reach=0.4, strength=0.3), reflection="#FFF6E0", accent_sky="#9FC0E2",
+                accent_water="#A8B46A", mist="#7A8AA6", stack_light="#F4C478", stack_shadow="#8A7AA2", ripple=0.0),
+    "dusk": dict(sky=[(0, "#6A5A8A"), (0.6, "#D8806A"), (1, "#F4A85A")], water=[(0, "#CC8E5C"), (0.4, "#8A5A5A"), (1, "#4A3A4A")],
+                 light=light(0.84, 0.46, "#F79A5A", reach=0.34, strength=0.55, r=0.03, color="#F2552C"),
+                 reflection="#F79A5A", accent_sky="#B87A9A", accent_water="#A0605A", mist="#4E3E62",
+                 stack_light="#F48A4A", stack_shadow="#4A3A6E", ripple=0.0),
+    "night": dict(sky=[(0, "#141C3C"), (0.6, "#2A3664"), (1, "#46527E")], water=[(0, "#3A4468"), (0.4, "#262E50"), (1, "#12162C")],
+                  light=light(0.7, 0.16, "#8E9AC6", reach=0.3, strength=0.4, r=0.016, color="#ECE6D0"),
+                  reflection="#C8CCE0", accent_sky="#3A4678", accent_water="#2E3A5E", mist="#1E2442",
+                  stack_light="#7C86B4", stack_shadow="#1A1E3C", ripple=0.0),
+}
+# Each stack: center and base (fractions), width and height (fractions of the height).
+STACKS = ((0.42, 0.80, 0.42, 0.32), (0.68, 0.70, 0.24, 0.18))
+
+
+def inside(points, x, y):
+    """Whether (x, y) is inside the polygon (ray casting)."""
+    hit = False
+    for (x0, y0), (x1, y1) in zip(points, points[1:] + points[:1]):
+        if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+            hit = not hit
+    return hit
+
+
+def stack_outline(cx, base, sw, sh):
+    """A body of hay, and on it a thatched cone whose eaves stick out a little."""
+    shoulder = base - sh * 0.45
+    pts = [(cx - sw * 0.47, base), (cx - sw * 0.46, shoulder + sh * 0.04), (cx - sw * 0.5, shoulder)]
+    for i in range(1, 24):
+        u = -1 + 2 * i / 24
+        # Round, rising to a soft point.
+        pts.append((cx + sw * 0.5 * u, shoulder - sh * 0.55 * (1 - abs(u) ** 1.9) - sh * 0.05 * (1 - abs(u)) ** 3))
+    pts += [(cx + sw * 0.5, shoulder), (cx + sw * 0.46, shoulder + sh * 0.04), (cx + sw * 0.47, base), (cx, base + sh * 0.03)]
+    return pts
+
+
+def haystacks_scene(p, hour, w, h, hz, s, rng):
+    mist, haze = rgb(hour["mist"]), rgb(hour["sky"][2][1])
+    # Far off: a line of trees, a few poplars and the village's roofs, pale in the air.
+    x = -40 * s
+    while x < w:
+        r = rng.uniform(40, 110) * s
+        p.dot(x, hz - r * 0.45, r, mix(mist, haze, rng.uniform(0.3, 0.6)), rng.uniform(0.3, 0.55), 10 * s)
+        x += r * rng.uniform(0.9, 1.6)
+    for _ in range(9):
+        x, tall = rng.uniform(0.05, 0.95) * w, rng.uniform(0.07, 0.13) * h
+        p.stroke(x, hz - tall / 2, tall, rng.uniform(16, 26) * s, math.pi / 2, 0, mix(mist, haze, 0.35), 0.45, 6 * s)
+    for _ in range(7):
+        x = rng.uniform(0.55, 0.9) * w
+        p.stroke(x, hz - 14 * s, rng.uniform(40, 80) * s, rng.uniform(14, 24) * s, 0, 0, mix(mist, haze, 0.25), 0.4, 3 * s)
+    # Stubble: short strokes across the field, bigger nearer.
+    near, far = rgb(hour["water"][0][1]), rgb(hour["water"][2][1])
+    for _ in range(int(1400 * s * s * 16) // 16 + 300):
+        y = hz + (h - hz) * rng.uniform(0.04, 1) ** 1.6
+        depth = (y - hz) / (h - hz)
+        p.stroke(rng.uniform(0, w), y, rng.uniform(20, 60) * s * (0.4 + depth), rng.uniform(4, 9) * s * (0.4 + depth),
+                 rng.normal(0, 0.25), 0, mix(near, far, depth * rng.uniform(0.6, 1.1)) * rng.uniform(0.9, 1.15),
+                 rng.uniform(0.2, 0.45), 1.5 * s)
+    halo(p, hour, w, h, s)
+    L = hour["light"]
+    if L["r"] > 0:
+        r = L["r"] * h
+        p.dot(L["x"] * w, L["y"] * h, r, rgb(L["color"]), 0.97, 1.2 * s)
+    lit, shade_col = rgb(hour["stack_light"]), rgb(hour["stack_shadow"])
+    side = 1 if L["x"] > 0.5 else -1  # the side the light comes from
+    for fx, fb, fw, fh in sorted(STACKS, key=lambda st: st[1]):
+        cx, base, sw, sh = fx * w, fb * h, fw * h, fh * h
+        # The long shadow, thrown away from the light across the stubble.
+        long = 1.9 if L["r"] > 0 else 0.9
+        p.shape([(cx - sw * 0.42, base), (cx + sw * 0.42, base), (cx - side * sw * long + sw * 0.35, base + sh * 0.2),
+                 (cx - side * sw * long - sw * 0.35, base + sh * 0.12)], shade_col, 0.55, 8 * s)
+        outline = stack_outline(cx, base, sw, sh)
+        p.shape(outline, mix(shade_col, lit, 0.45), 0.97, 1.5 * s)
+        top, apex = base - sh * 0.45, base - sh
+        x0, x1, y0 = cx - sw / 2, cx + sw / 2, base - sh * 1.05
+        for _ in range(int(520 * (sw * sh) / (0.42 * 0.32 * h * h))):
+            x, y = rng.uniform(x0, x1), rng.uniform(y0, base)
+            if not inside(outline, x, y):
+                continue
+            # Lit toward the light, cooler away from it; the top catches the most.
+            t = np.clip(0.5 + 0.6 * side * (x - cx) / (sw / 2) + 0.25 * (top - y) / sh, 0, 1)
+            # The thatch runs down from the top; the hay below stands upright.
+            angle = math.atan2(y - apex, x - cx) if y < top else math.pi / 2 + rng.normal(0, 0.2)
+            color = mix(shade_col, lit, t) * rng.uniform(0.94, 1.06)
+            if rng.random() < 0.12:  # broken color: the sky in the shade, the light in the light
+                color = mix(color, haze if t < 0.5 else lit * 1.1, 0.35)
+            p.stroke(x, y, rng.uniform(34, 80) * s, rng.uniform(10, 20) * s, angle, rng.normal(0, 0.3),
+                     color, rng.uniform(0.55, 0.85), 2.4 * s)
+        # The shadow under the eaves.
+        p.stroke(cx, top + sh * 0.05, sw * 0.88, sh * 0.045, 0, 0.15, shade_col, 0.28, 5 * s)
+        # Light along the edge that faces it.
+        for (ax, ay), (bx, by) in zip(outline, outline[1:]):
+            if side * ((ax + bx) / 2 - cx) > sw * 0.12:
+                p.stroke((ax + bx) / 2, (ay + by) / 2, math.hypot(bx - ax, by - ay) * 1.2, 5 * s,
+                         math.atan2(by - ay, bx - ax), 0, lit * 1.12, 0.55, 1.5 * s)
+
+
+SERIES = {
+    "hours": dict(hours=HOURS, scene=harbor_scene, seed=1872, horizon=HORIZON),
+    "lilies": dict(hours=LILIES, scene=lilies_scene, seed=1914, horizon=0.0),
+    "haystacks": dict(hours=HAYSTACKS, scene=haystacks_scene, seed=1890, horizon=0.52),
+}
+
+
+def render(scale=1.0, only=None, series="hours"):
     w, h = int(3840 * scale), int(2160 * scale)
-    brushwork = Brushwork(w, h)
+    kind = SERIES[series]
+    brushwork = Brushwork(w, h, kind["seed"], kind["horizon"])
     rng = np.random.default_rng(99)
     noise = (smooth_noise(rng, w, h, int(260 * scale) or 1), smooth_noise(rng, w, h, int(120 * scale) or 1))
     out = {}
-    for name, hour in HOURS.items():
+    for name, hour in kind["hours"].items():
         if only and name not in only:
             continue
-        out[name] = paint(hour, brushwork, noise)
+        out[name] = paint(dict(hour, horizon=kind["horizon"]), brushwork, noise, kind["scene"])
     return out
 
 
@@ -455,13 +662,15 @@ def main():
     ap.add_argument("--scale", type=float, default=1.0)
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--only", nargs="*")
+    ap.add_argument("--series", choices=list(SERIES), nargs="*", default=list(SERIES))
     args = ap.parse_args()
-    paintings = render(args.scale, args.only)
-    hours = args.out / "hours"
-    hours.mkdir(parents=True, exist_ok=True)
-    for name, img in paintings.items():
-        img.save(hours / f"{name}.jpg", quality=90, optimize=True, progressive=True, subsampling=0)
-        print("painted", hours / f"{name}.jpg")
+    for series in args.series:
+        paintings = render(args.scale, args.only, series)
+        folder = args.out / series
+        folder.mkdir(parents=True, exist_ok=True)
+        for name, img in paintings.items():
+            img.save(folder / f"{name}.jpg", quality=90, optimize=True, progressive=True, subsampling=0)
+            print("painted", folder / f"{name}.jpg")
 
 
 if __name__ == "__main__":

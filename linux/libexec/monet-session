@@ -57,6 +57,22 @@ if [ /var/lib/monet/apps-done -nt "$looks/names" ]; then
     "$LIBEXECDIR/monet-look" --names
 fi
 
+# A new Monet since this account last signed in: say once what's new, and
+# open Settings → Updates (which lists it) if asked. A brand-new account has
+# nothing to compare with; one from before this note has an older look's stamp.
+version="$("$BINDIR/monet" version 2>/dev/null | awk '{print $NF}')"
+if [ -n "$version" ] && [ "$(cat "$looks/seen-version" 2>/dev/null)" != "$version" ]; then
+    if { [ -e "$looks/seen-version" ] || [ "$(ls -d "$looks"/look-* 2>/dev/null | wc -l)" -gt 1 ]; } \
+        && command -v notify-send >/dev/null; then
+        (
+            answer="$(notify-send --app-name=Monet --icon=monet --action=open="See what's new" --wait \
+                "Monet $version is here" "$("$LIBEXECDIR/monet-quick" whats-new headline 2>/dev/null)")"
+            [ "$answer" = open ] && "$LIBEXECDIR/monet-quick" open updates
+        ) >/dev/null 2>&1 &
+    fi
+    mkdir -p "$looks" && printf '%s\n' "$version" > "$looks/seen-version"
+fi
+
 # Apps Monet hasn't painted get its canvas under their own icons, so every app
 # fits in (monet-frames.path does it as apps arrive). In the background: it
 # looks through every icon theme.

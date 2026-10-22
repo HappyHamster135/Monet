@@ -18,6 +18,8 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        # What's new, for Settings → Updates and the note after an update (monet-quick whats-new).
+        cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"
         mkdir -p "$OUT/icons"
         cp "$ROOT/branding/monet.svg" "$ROOT/branding/monet-windows.svg" "$ROOT/branding/monet-quick-symbolic.svg" "$OUT/icons/"
         install -m 755 "$BIN" "$OUT/monet"

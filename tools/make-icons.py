@@ -506,6 +506,24 @@ def chest_icon():
     return c.finish()
 
 
+def gramophone_icon():
+    """Music: a gramophone, its brass horn open like a flower."""
+    c = Canvas(136)
+    c.paint(box(24, 84, 100, 110, 6), wood(top="#B8824E", bottom="#6A4226"), 4.0, flat(0), wander=0.06)
+    c.paint(poly(ellipse(60, 82, 32, 7.5, 0, 48)), lit("#3A3442", "#1E1A26", y0=75, y1=90), 2.4, flat(0), layers=2,
+            thick=1.3)
+    c.paint(circle(60, 82, 3.2), one("#E8C068"), 1.2, around(60, 82), layers=1, thick=1.4)
+    brass = lit("#F6D27A", "#A8742A", warm="#FFF0C0", cool="#6A4A3A", light=0.3)
+    c.paint(join(band([(86, 80), (82, 64)], 5.5), band([(82, 64), (74, 52), (62, 44)], 9.5)), brass, 2.0, flat(-60),
+            layers=2, thick=1.4)
+    c.paint(poly(ellipse(44, 34, 28, 21, -32, 72)), brass, 3.0, around(44, 34), wander=0.2, accents=["#FFE8A0", "#C8923A"],
+            accent_rate=0.25, thick=1.4)
+    c.paint(poly(ellipse(41, 31, 19, 13, -32, 60)), lit("#7A4E22", "#3A2414", y0=18, y1=44, cool="#2A1A2A"), 2.2,
+            around(41, 31), layers=2, thick=1.1)
+    c.mark([(70, 80), (84, 76)], 2.4, "#C8C0B8", None, thick=1.2)  # the arm on the record
+    return c.finish()
+
+
 def camera_icon():
     """Spectacle: an old box camera."""
     c = Canvas(141)
@@ -1424,6 +1442,8 @@ FILES = {
     "bbrew": (teapot_icon, "apps/monet-bbrew", []),
     "calendar": (calendar_icon, "apps/x-office-calendar", ["office-calendar", "org.kde.merkuro.calendar", "korganizer"]),
     # Big apps people add (Monet Setup's among them): their own marks, in paint.
+    # Built in with the image, like Photos and Video: Music (Elisa).
+    "music": (gramophone_icon, "apps/org.kde.elisa", ["elisa"]),
     "zen": (zen_icon, "apps/app.zen_browser.zen", ["zen-browser"]),
     "discord": (discord_icon, "apps/com.discordapp.Discord", ["discord"]),
     "spotify": (spotify_icon, "apps/com.spotify.Client", ["spotify", "spotify-client"]),
@@ -1552,6 +1572,9 @@ SWATCHES = {
     "apps": ("dawn", (2900, 760, 3340, 1200)),
     "accessibility": ("day", (2200, 1300, 2640, 1740)),
     "storage": ("dusk", (2600, 1500, 3040, 1940)),
+    "games": ("dawn", (1500, 1480, 1940, 1920)),
+    "privacy": ("night", (1700, 300, 2140, 740)),
+    "printers": ("day", (2500, 900, 2940, 1340)),
     "windows": ("night", (2900, 1050, 3340, 1490)),
     "updates": ("dawn", (900, 1500, 1340, 1940)),
     "about": ("dusk", (1090, 800, 1530, 1240)),
@@ -1565,6 +1588,20 @@ def rounded_png(img, radius, path):
     out = img.convert("RGBA")
     out.putalpha(mask.resize((w, h), Image.LANCZOS))
     out.save(path, optimize=True)
+
+
+def series_art():
+    """Previews for Light & Wallpaper's paintings: each series' four lights side by side."""
+    w, h = 480, 236
+    for series, picks in (("hours", (0.62, 0.7, 0.35, 0.28)), ("lilies", (0.3, 0.4, 0.55, 0.62)),
+                          ("haystacks", (0.4, 0.45, 0.5, 0.55))):
+        strip = Image.new("RGB", (w, h))
+        for i, (name, cx) in enumerate(zip(("dawn", "day", "dusk", "night"), picks)):
+            src = Image.open(HOURS.parent / series / f"{name}.jpg").convert("RGB")
+            cw = src.height * (w / 4) / h
+            x0 = int(src.width * cx - cw / 2)
+            strip.paste(src.crop((x0, 0, int(x0 + cw), src.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
+        rounded_png(strip, 24, SETTINGS / f"series-{series}.png")
 
 
 def settings_art():
@@ -1584,6 +1621,7 @@ def settings_art():
         x0 = int(src.width * cx - cw / 2)
         strip.paste(src.crop((x0, 0, int(x0 + cw), src.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
     rounded_png(strip, 24, SETTINGS / "light-hours.png")
+    series_art()
     for name, painting, cx, glass in (("mist", "dawn", 0.62, (255, 255, 255, 140)), ("smoke", "night", 0.28, (30, 30, 40, 115))):
         src = paint[painting]
         # As wide a piece as the painting allows, at the preview's proportions.
@@ -1903,6 +1941,143 @@ def ink_actions():
         "zoom-in": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2)] + plus(9.4, 9.4, 2.4, 1.5),
         "zoom-out": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2), line((7, 9.4), (11.8, 9.4), w=1.5)],
     }
+
+    # The rest of what KDE's standard menus and the everyday apps' toolbars ask for
+    # (Files, Text Editor, Photos, Documents, Video, Music), so no flat Breeze sign is left among the ink.
+    def tray(y=13):
+        return [line((4, y), (4, 18.4), (18, 18.4), (18, y), w=1.6, taper=0.1)]
+
+    def lens(cx=8, cy=8, r=4.6):
+        return [circle(cx, cy, r, 1.5), line((cx + r * 0.72, cy + r * 0.72), (cx + r * 1.2, cy + r * 1.2), w=1.8)]
+
+    def dashes():
+        return glyphs["edit-select-all"]
+
+    def frame():
+        return [ring(2.6, 4, 19.4, 18, 2)]
+
+    def corners(inward=False):
+        """The four corners of the screen, or (inward) of a smaller one in its middle."""
+        if inward:
+            return [line((8.2, 3.6), (8.2, 8.2), (3.6, 8.2)), line((13.8, 3.6), (13.8, 8.2), (18.4, 8.2)),
+                    line((18.4, 13.8), (13.8, 13.8), (13.8, 18.4)), line((8.2, 18.4), (8.2, 13.8), (3.6, 13.8))]
+        return [line((3.6, 8.2), (3.6, 3.6), (8.2, 3.6)), line((13.8, 3.6), (18.4, 3.6), (18.4, 8.2)),
+                line((18.4, 13.8), (18.4, 18.4), (13.8, 18.4)), line((8.2, 18.4), (3.6, 18.4), (3.6, 13.8))]
+
+    def cross(cx, cy, s=2.8, w=1.4):
+        return [line((cx - s, cy - s), (cx + s, cy + s), w=w), line((cx + s, cy - s), (cx - s, cy + s), w=w)]
+
+    def gear_small(cx, cy):
+        return [circle(cx, cy, 2.2, 1.4)] + [line((cx + 3.4 * math.cos(a), cy + 3.4 * math.sin(a)),
+                                                 (cx + 5 * math.cos(a), cy + 5 * math.sin(a)), w=1.6, taper=0.1)
+                                            for a in (math.radians(d) for d in range(0, 360, 60))]
+
+    picture = [ring(3, 4, 19, 18, 1.8), line((4.4, 16), (9, 11.4), (12.4, 14.6), (14.6, 12.4), (18, 15.8), w=1.5),
+               disc(14.4, 8.4, 1.6, 24)]
+    ribbon = [line((6, 3.6), (16, 3.6), (16, 18.6), (11, 14.6), (6, 18.6), (6, 3.6), w=1.5, taper=0.1)]
+    plane = [line((3, 10.4), (19, 3.6), (13.4, 18.6), (10.4, 12.6), (3, 10.4), w=1.5, taper=0.1), line((10.4, 12.6), (19, 3.6), w=1.4)]
+    tab = [line((3, 18.6), (3, 6), (9.8, 6), (11.4, 3.8), (19, 3.8), (19, 18.6), (3, 18.6), w=1.5, taper=0.1)]
+    more = {
+        "document-open-recent": [circle(11, 11, 8, 1.6), line((11, 6.4), (11, 11), (14.6, 13.2), w=1.6)],
+        "document-save-as": tray() + arrow(9, 3.6, 9, 13.6) + [line((13, 11.4), (18.6, 5.8), w=1.6), line((12.2, 13), (13, 11.4), w=1.4)],
+        "document-save-all": [line((4, 10.4), (4, 14.4), (18, 14.4), (18, 10.4), w=1.5, taper=0.1), line((4, 18.4), (18, 18.4), w=1.5)]
+                             + arrow(11, 2.6, 11, 11.2, head=3),
+        "document-revert": page() + [curve((13.6, 15.6), (14.4, 12.6), (12, 10.6), (8.8, 10.8), w=1.4),
+                                     line((10.4, 8.8), (8.4, 10.8), (10.4, 12.8), w=1.4)],
+        "document-close": page() + cross(11, 13.2, 2.6),
+        "document-print": [ring(3, 8, 19, 15.6, 1.6, 1.5), line((6.4, 8), (6.4, 3.6), (15.6, 3.6), (15.6, 8), w=1.5, taper=0.1),
+                           line((6.4, 13.2), (6.4, 18.6), (15.6, 18.6), (15.6, 13.2), w=1.5, taper=0.1)],
+        "document-print-preview": page() + [circle(10.4, 12.4, 3, 1.4), line((12.6, 14.6), (14.6, 16.6), w=1.6)],
+        "document-export": tray() + arrow(11, 14, 11, 3.6),
+        "document-import": tray() + arrow(11, 3.6, 11, 14),
+        "document-send": plane,
+        "mail-send": plane,
+        "application-exit": glyphs["system-log-out"],
+        "edit-clear": [line((4, 14.6), (11.4, 7.2), (16.4, 12.2), (9, 19.6), (4, 14.6), w=1.5, taper=0.1), line((8, 10.8), (13, 15.8), w=1.4),
+                       line((12, 19.4), (19, 19.4), w=1.5)],
+        "edit-select-none": dashes() + [line((7, 15), (15, 7), w=1.5)],
+        "edit-select-invert": dashes() + [rounded(6.2, 6.2, 11, 15.8, 1)],
+        "edit-find-next": lens() + [line((12.6, 14.6), (15.8, 17.8), (19, 14.6), w=1.6)],
+        "edit-find-previous": lens() + [line((12.6, 17.8), (15.8, 14.6), (19, 17.8), w=1.6)],
+        "edit-find-replace": lens() + [curve((11.6, 17.2), (14.6, 19.2), (18, 17), (18.6, 13.6), w=1.5),
+                                       line((16.4, 14.8), (18.6, 13), (20, 15.4), w=1.4)],
+        "go-first": [line((4, 4), (4, 18), w=1.7)] + arrow(18, 11, 6.6, 11),
+        "go-last": arrow(4, 11, 15.4, 11) + [line((18, 4), (18, 18), w=1.7)],
+        "go-top": [line((4, 4), (18, 4), w=1.7)] + arrow(11, 18, 11, 6.6),
+        "go-bottom": arrow(11, 4, 11, 15.4) + [line((4, 18), (18, 18), w=1.7)],
+        "go-jump": [curve((4, 18), (4.6, 9), (11, 5.4), (17, 8.2), w=1.7), line((13.4, 9.6), (17.4, 8.4), (16.4, 4.4), w=1.6)],
+        "go-previous-view": glyphs["go-previous"],
+        "go-next-view": glyphs["go-next"],
+        "zoom-original": [circle(9.4, 9.4, 6, 1.6), line((13.8, 13.8), (18.6, 18.6), w=2), line((9.6, 6.6), (9.6, 12.2), w=1.5),
+                          line((8, 7.8), (9.6, 6.6), w=1.4)],
+        "zoom-fit-best": corners() + [ring(7.6, 7.6, 14.4, 14.4, 1.2, 1.4)],
+        "zoom-fit-width": [line((3.6, 5), (3.6, 17), w=1.6), line((18.4, 5), (18.4, 17), w=1.6)]
+                          + arrow(11, 11, 6.4, 11, head=2.6, w=1.5) + arrow(11, 11, 15.6, 11, head=2.6, w=1.5),
+        "zoom-fit-page": [line((5, 3.6), (17, 3.6), w=1.6), line((5, 18.4), (17, 18.4), w=1.6)]
+                         + arrow(11, 11, 11, 6.4, head=2.6, w=1.5) + arrow(11, 11, 11, 15.6, head=2.6, w=1.5),
+        "view-fullscreen": corners() + [line((4, 4), (8, 8), w=1.4), line((18, 4), (14, 8), w=1.4), line((18, 18), (14, 14), w=1.4),
+                                        line((4, 18), (8, 14), w=1.4)],
+        "view-restore": corners(inward=True) + [line((3.8, 3.8), (7.6, 7.6), w=1.4), line((18.2, 3.8), (14.4, 7.6), w=1.4),
+                                                line((18.2, 18.2), (14.4, 14.4), w=1.4), line((3.8, 18.2), (7.6, 14.4), w=1.4)],
+        "view-preview": picture,
+        "insert-image": picture,
+        "view-filter": [line((3.6, 4), (18.4, 4), (12.6, 11), (12.6, 17.6), (9.4, 19), (9.4, 11), (3.6, 4), w=1.5, taper=0.1)],
+        "view-sort-ascending": [line((9.4, 5), (12.6, 5)), line((9.4, 11), (15.4, 11)), line((9.4, 17), (18.4, 17))]
+                               + arrow(5, 18, 5, 4, head=2.6, w=1.5),
+        "view-sort-descending": [line((9.4, 5), (18.4, 5)), line((9.4, 11), (15.4, 11)), line((9.4, 17), (12.6, 17))]
+                                + arrow(5, 4, 5, 18, head=2.6, w=1.5),
+        "view-split-top-bottom": frame() + [line((3.2, 11), (18.8, 11), w=1.5)],
+        "view-close": frame() + cross(11, 11),
+        "view-right-new": frame() + [line((11, 4.6), (11, 17.4), w=1.5)] + plus(15.2, 11, 1.9, 1.4),
+        "view-sidetree": frame() + [line((8, 4.6), (8, 17.4), w=1.5), line((4.4, 8), (6.2, 8), w=1.3), line((4.4, 11), (6.2, 11), w=1.3),
+                                    line((4.4, 14), (6.2, 14), w=1.3)],
+        "view-media-playlist": [line((3.6, 5), (14, 5)), line((3.6, 10), (14, 10)), line((3.6, 15), (9.4, 15)), disc(14.4, 17, 2.2, 24),
+                                line((16.4, 17), (16.4, 9.4), (19, 10.6), w=1.5)],
+        "view-pages-single": [ring(5.6, 3, 16.4, 19, 1.6, 1.5)],
+        "view-pages-facing": [ring(2.6, 4, 10.6, 18, 1.4, 1.4), ring(11.4, 4, 19.4, 18, 1.4, 1.4)],
+        "bookmarks": ribbon,
+        "bookmarks-organize": ribbon,
+        "tools-check-spelling": [line((3.6, 5.6), (13, 5.6), w=1.5), line((3.6, 9.6), (9.6, 9.6), w=1.5),
+                                 line((8.8, 14.4), (12, 17.6), (18.6, 9.6), w=1.8)],
+        "configure-shortcuts": [ring(2.6, 6, 19.4, 16, 1.8), line((6.4, 9.6), (15.6, 9.6), w=1.4), line((7.6, 12.8), (14.4, 12.8), w=1.4)],
+        "configure-toolbars": [ring(2.6, 3.4, 19.4, 9.8, 1.4, 1.5), disc(6.6, 6.6, 1, 16), disc(11, 6.6, 1, 16), disc(15.4, 6.6, 1, 16)]
+                              + gear_small(11, 15.4),
+        "help-whatsthis": glyphs["help-contents"],
+        "help-about-kde": glyphs["help-about"],
+        "tools-report-bug": [ring(7.2, 6, 14.8, 18.6, 3.8, 1.5), line((11, 7), (11, 17.6), w=1.2), line((9.2, 6.6), (7.6, 3.4), w=1.3),
+                             line((12.8, 6.6), (14.4, 3.4), w=1.3)]
+                            + [line((x0, y), (x1, y + dy), w=1.3) for x0, x1, y, dy in ((7.2, 3.4, 9.4, -1.6), (7.2, 3.2, 12.4, 0),
+                                                                                         (7.4, 3.6, 15.4, 1.8), (14.8, 18.6, 9.4, -1.6),
+                                                                                         (14.8, 18.8, 12.4, 0), (14.6, 18.4, 15.4, 1.8))],
+        "help-donate": [curve((11, 18.4), (4.6, 13), (3, 8.6), (4.8, 5.4), (8.2, 4.8), (11, 7.8), w=1.6),
+                        curve((11, 7.8), (13.8, 4.8), (17.2, 5.4), (19, 8.6), (17.4, 13), (11, 18.4), w=1.6)],
+        "process-stop": [circle(11, 11, 8, 1.6)] + cross(11, 11, 3, 1.7),
+        # The arrow sweeps round the picture's corner, not over it (that would read as a padlock).
+        "object-rotate-left": [ring(8.6, 8.6, 18.6, 18.6, 1.2, 1.5), curve((14.4, 4.2), (8.6, 3.2), (4.2, 7.2), (4.4, 12.4), w=1.6),
+                               line((2.2, 10.4), (4.4, 13), (6.6, 10.6), w=1.5)],
+        "object-rotate-right": [ring(3.4, 8.6, 13.4, 18.6, 1.2, 1.5), curve((7.6, 4.2), (13.4, 3.2), (17.8, 7.2), (17.6, 12.4), w=1.6),
+                                line((15.4, 10.6), (17.6, 13), (19.8, 10.4), w=1.5)],
+        "object-flip-horizontal": [line((11, 2.8), (11, 5.4), w=1.4), line((11, 8.6), (11, 13.4), w=1.4), line((11, 16.6), (11, 19.2), w=1.4),
+                                   line((8.4, 5.6), (3.2, 16.4), (8.4, 16.4), (8.4, 5.6), w=1.5, taper=0.1),
+                                   line((13.6, 5.6), (18.8, 16.4), (13.6, 16.4), (13.6, 5.6), w=1.5, taper=0.1)],
+        "object-flip-vertical": [line((2.8, 11), (5.4, 11), w=1.4), line((8.6, 11), (13.4, 11), w=1.4), line((16.6, 11), (19.2, 11), w=1.4),
+                                 line((5.6, 8.4), (16.4, 3.2), (16.4, 8.4), (5.6, 8.4), w=1.5, taper=0.1),
+                                 line((5.6, 13.6), (16.4, 18.8), (16.4, 13.6), (5.6, 13.6), w=1.5, taper=0.1)],
+        "transform-crop": [line((6, 2.6), (6, 16), (19.4, 16), w=1.6, taper=0.1), line((2.6, 6), (16, 6), (16, 19.4), w=1.6, taper=0.1)],
+        "transform-move": (arrow(11, 11, 11, 3, head=2.6, w=1.5) + arrow(11, 11, 11, 19, head=2.6, w=1.5)
+                           + arrow(11, 11, 3, 11, head=2.6, w=1.5) + arrow(11, 11, 19, 11, head=2.6, w=1.5)),
+        "draw-freehand": [curve((3, 15.4), (6.4, 6.6), (10, 17.4), (14, 6), (19, 12.6), w=1.7)],
+        "draw-text": [line((5, 4.6), (17, 4.6), w=1.9), line((11, 4.8), (11, 18.4), w=1.9)],
+        "media-playlist-shuffle": [curve((3, 6.4), (8.4, 6.4), (13.6, 15.6), (17.6, 15.6), w=1.5),
+                                   curve((3, 15.6), (8.4, 15.6), (13.6, 6.4), (17.6, 6.4), w=1.5),
+                                   line((15.4, 4), (18.4, 6.4), (15.4, 8.8), w=1.4), line((15.4, 13.2), (18.4, 15.6), (15.4, 18), w=1.4)],
+        "media-playlist-repeat": [line((5, 13.4), (5, 7.4), (16.2, 7.4), w=1.5, taper=0.1), line((13.8, 5), (16.4, 7.4), (13.8, 9.8), w=1.4),
+                                  line((17, 8.6), (17, 14.6), (5.8, 14.6), w=1.5, taper=0.1), line((8.2, 12.2), (5.6, 14.6), (8.2, 17), w=1.4)],
+        "tab-close": tab + cross(11, 12.2, 2.6),
+        "overflow-menu": [disc(5, 11, 1.6, 24), disc(11, 11, 1.6, 24), disc(17, 11, 1.6, 24)],
+        "insert-link": glyphs["edit-copy-path"],
+    }
+    glyphs.update(more)
     # At menu size only: these names also have the painted marks of More settings.
     small = {
         "preferences-desktop-wallpaper": [ring(3, 4, 19, 18, 1.8), line((4.4, 16), (9, 11.4), (12.4, 14.6), (14.6, 12.4), (18, 15.8), w=1.5),

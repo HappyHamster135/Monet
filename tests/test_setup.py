@@ -259,13 +259,23 @@ class Window(unittest.TestCase):
         setup.toggleApp(0)
         self.assertEqual(setup.picked_apps(), everyday[1:] + ["org.libreoffice.LibreOffice"])
         self.assertEqual(len({app_id for app_id, *_ in app.APPS}), len(app.APPS))
-        # A PC that never chose gets what Setup ticks to start with.
+        # A PC that never chose gets what Setup ticks to start with, and the built-in ones
+        # where Monet hasn't built them in; what's built in is shown, never chosen.
         script = (ROOT / "linux/libexec/monet-apps").read_text()
-        self.assertIn(f'EVERYDAY="{" ".join(everyday)}"', script)
+        built_in = [app_id for app_id, _ in app.BUILT_IN]
+        self.assertIn(f'EVERYDAY="{" ".join(everyday + built_in)}"', script)
+        self.assertIn('[ -f "/usr/share/applications/$app.desktop" ] && continue', script)
+        shown = app.Setup.apps.fget(setup)
+        self.assertEqual([a["name"] for a in shown if a["index"] < 0], [name for _, name in app.BUILT_IN])
+        self.assertTrue(all(a["picked"] and a["everyday"] for a in shown if a["index"] < 0))
+        image = (ROOT / "image/Containerfile").read_text()
+        for package in ("gwenview", "okular", "haruna", "elisa-player", "kcalc", "ark"):
+            self.assertIn(f" {package}", image)
         # The step sits between the person and Ready, and install writes the list for monet-apps.
         qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
         self.assertIn("[helloStep, wifiStep, personStep, appsStep, readyStep][step]", qml)
         self.assertIn("readonly property bool installing: step === 5", qml)
+        self.assertIn("onClicked: if (!builtIn) setup.toggleApp(modelData.index)", qml)
         configure = (ROOT / "setup/monet_setup/install.py").read_text()
         self.assertIn('write(var / "lib/monet/apps", "".join(f"{app}\\n" for app in plan.get("apps", [])))', configure)
 

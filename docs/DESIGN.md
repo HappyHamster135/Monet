@@ -35,7 +35,15 @@ the morning mist, with one bright orange sun. Everything else follows from it.
 
 - **The Hours.** One harbor in four lights: dawn, midday, dusk and night. The
   wallpaper drifts from one to the next as the day goes, over 45 minutes, the
-  way Monet painted the same view at different times.
+  way Monet painted the same view at different times. Two more of his series
+  hang beside it, chosen in Light & Wallpaper, each in the same four lights:
+  **Water Lilies** (the pond at Giverny from above: no sky but its
+  reflection, the willows' reflections falling down it, islands of pads with
+  a flower here and there) and **Haystacks** (two stacks in a field after
+  the harvest, glowing on the side the light comes from, their long shadows
+  colored by it). All are painted by `tools/make-paintings.py` with the same
+  brushwork, so each series drifts through the day like The Hours; the
+  placard names the one on the wall ("Water Lilies, dusk").
 - **One sun.** The only bright color is the sun, and it's kept for the one
   thing that matters: **Play**, **Restart & Play**, **Erase & Install**.
 - **Glass.** Panels, popovers and app windows are see-through, with the
@@ -97,7 +105,7 @@ own arc, so they run on from the straight edges without a step.
 | On the glass | The same style draws everything Plasma puts on it, so the app menu, search, the popovers, notifications, the lock screen and Alt+Tab are Monet's too: pebble buttons (radius 8, so check boxes stay round), a well with a lily ring for typing, soft highlights (an ink wash to point, lily for what's chosen), Monet Settings' switch and slider, glass tabs, hairline headings, a lily progress bar and a lily arc for "working" |
 | App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection. Menus and tooltips cast a soft shadow, blur with rounded corners, part groups with a hairline and highlight the item in lily, inset from the edge |
 | GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables |
-| Zen, the browser | `linux/share/monet/zen`, which `monet-quick zen` copies into each Zen profile and imports from `userChrome.css` and `userContent.css` (at sign-in, and as Zen arrives or makes its profile: `monet-zen.path`; before Zen's first start, Monet makes its profile, already dressed). Behind the sidebar and around the page, the painting blurred and washed in paper or smoke (`tools/make-zen.py`); lily for the accent; Monet's paper and smoke for what pops up; radius 12. A new tab opens on the painting itself, by daylight in Mist and by night in Smoke. Zen follows the PC's light. Its own theme picker can't override Monet's colors; uninstalling Monet gives Zen its own look back |
+| Zen, the browser | `linux/share/monet/zen`, which `monet-quick zen` copies into each Zen profile and imports from `userChrome.css` and `userContent.css` (at sign-in, and as Zen arrives or makes its profile: `monet-zen.path`; before Zen's first start, Monet makes its profile, already dressed). Behind the sidebar and around the page, the painting blurred and washed in paper or smoke (`tools/make-zen.py`); lily for the accent; Monet's paper and smoke for what pops up; radius 12. Tabs: an ink wash under the pointer, the open one on a pebble of paper. The address field is a well with a lily ring while you type; on a page it floats as a sheet with Monet's soft shadow. The space's name in Fraunces. Zen's welcome and its default-browser question are skipped: Monet makes it the browser. A new tab opens on the painting itself, by daylight in Mist and by night in Smoke. Zen follows the PC's light. Its own theme picker can't override Monet's colors; uninstalling Monet gives Zen its own look back |
 | Monet Settings | The Plasma style's dialog glass around a solid paper page |
 | Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
@@ -139,13 +147,19 @@ Settings in front of it.
   Settings, a night canvas on an easel for Terminal, the harbor's masts
   rising like a graph for System Monitor, a market bouquet for the Store, a
   garden pot from Giverny for Trash. KDE's apps too: a gilt frame
-  (pictures), an open book (documents), an abacus, a little stage (videos),
+  (pictures), an open book (documents), an abacus, a little stage (videos), a gramophone (music),
   a sunflower (disk usage), a letter and quill (text), a chest (archives),
   a box camera (screenshots). The app menu's categories as well, and
   Monet's widgets: the sun behind a cloud (Weather), the card beside a gilt
   frame (Placard). In a bar Plasma asks for Trash's "-symbolic" names, so
   the pot's painting answers those too, and Files' menus get the pot's ink
   sign from the menu-size folder, which comes first.
+- **Toolbars and menus are ink too**: the signs KDE's standard menus and the
+  everyday apps' toolbars ask for (save as, print, recent, find and replace,
+  zoom to fit, full screen, rotate and crop, shuffle and repeat, and so on),
+  brushed like the bar's and tinted with the light, so no flat Breeze sign is
+  left among them. Rotate sweeps round a picture's corner, so it never reads
+  as the padlock.
 - **Big apps people add keep their own marks**, painted the same way, so
   they're known at a glance: Zen's three rings as ripples on a night pond,
   Discord's Clyde in blurple, Spotify's green sun with its three waves,
@@ -368,8 +382,9 @@ block.
 **Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
 glass sheet, about 1000 × 700. On the glass: the name in Fraunces, search,
 and the pages, each marked by a swatch cut from the paintings with a white
-glyph, in three groups: the light, the network, the screen, sound, the clock
-and you; the pointer, power, notifications and default apps; and Windows,
+glyph, in three groups: the light, the network, printers, the screen, sound,
+the clock and you; the pointer, power, the lock and privacy, notifications,
+accessibility, default apps and storage; and games and controllers, Windows,
 Updates and About. Every page is Monet's own, each with a "More…" button at
 its foot for KDE's page of the rarer settings. A pebble of glass glides to the page
 you're on. On the paper: the page under its swatch, title and a line saying
@@ -415,8 +430,22 @@ reader where Orca is. Storage shows what fills the disk in one bar (games,
 apps, your files, Monet) and makes room: the Trash, asked once more before
 it's emptied, and Downloads, opened in Files. Updates offers the Monet
 before the last update, kept by bootc: Go back, asked once more, starts it
-at the next restart. The `monet-quick` helper does the
-work. Settings in the dock and the app menu runs `monet-quick open [page]`,
+at the next restart, and lists what's new in this Monet (the newest "New in"
+section of the release notes, which the package carries); once after an
+update, a note offers it at sign-in. Games & Controllers lists the
+controllers connected (the kernel's joysticks, with the battery a wireless
+one reports), pairs a new one (KDE's Bluetooth wizard) and tests its buttons
+(KDE's page), switches the performance overlay (MangoHud, from the next
+sign-in, in Monet's colors unless you've made your own) and shows where games
+are kept (Steam's libraries, and ~/Games for Heroic and Lutris), each opened
+in Files. Lock & Privacy sets when the screen locks and whether waking asks
+for the password (KDE's screen locker), and whether Files and the menu
+remember what you opened, with forgetting it (asked once more). Printers
+shows each printer (the ones on the network turn up by themselves), its
+state and what's waiting, and makes one your default (yours alone, no
+password); adding one is KDE's page. Mouse & Keyboard ends with the keys to
+learn by, as key caps, the Windows key as its four panes. The `monet-quick`
+helper does the work. Settings in the dock and the app menu runs `monet-quick open [page]`,
 which rings Quick Settings to open the sheet; without Quick Settings it opens
 KDE's System Settings instead. Pictures come from `make-icons.py` into
 `linux/share/monet/settings`.
@@ -432,10 +461,21 @@ effects), KDE's updater, and the pages about what's inside, like About
 this System. Help menus don't offer About KDE (KDE's kiosk settings,
 written by `monet-look`).
 
+**Built in** (`image/Containerfile`): the everyday apps are part of Monet,
+not downloads: Photos, Documents, Video, Music, Calculator and Archives,
+built against the Plasma already there (tens of megabytes, where Flathub
+would bring KDE's gigabyte runtime), in Monet's glass app style, and there at
+the first sign-in. With them come previews of PDFs and videos in Files. Each
+kind of file opens in its app from the start (`/etc/xdg/mimeapps.list`,
+written by install.sh): pictures in Photos, PDFs and e-books in Documents,
+films in Video, songs in Music, archives in Archives, text in the Text
+Editor, rather than in whichever app claims it first. Zen and the big apps
+come from Flathub (`monet-apps`), which skips anything built in.
+
 Apps go by what they are, not their project names: Files, Terminal, Text
 Editor, Photos, Documents, Screenshot, Store. KDE's and Bazzite's own tools
-(Info Center, Welcome Center, Bazzite's portal and links) stay out of the
-menu, and nothing greets you from Bazzite or KDE. The Store's front page
+(Info Center, Welcome Center, Bazzite's portal, links and updater, the
+input-method and app-style tools) stay out of the menu, and nothing greets you from Bazzite or KDE. The Store's front page
 is Monet's picks under strips of The Hours, by daylight in Mist and by
 night in Smoke (`make-store.py`).
 
@@ -513,9 +553,10 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   for reading, ink for Continue and the sun for Erase & Install. Laid out on
   a 1440 x 900 grid and scaled to the screen.
 - **The steps:** Hello (language and keyboard), Wi-Fi (skipped with a cable),
-  who's using this PC, Your apps (the everyday ones ticked: Zen Browser, Photos,
-  Documents, Video, Music, Calculator; Office, Mail, Discord, Spotify, OBS
-  Studio and Krita to tick, in tiles that turn lily), Ready (Monet and
+  who's using this PC, Your apps (Photos, Documents, Video, Music and
+  Calculator shown as built in, Zen Browser ticked; Office, Mail, Discord,
+  Spotify, Heroic, Prism Launcher, OBS Studio and Krita to tick, in tiles that
+  turn lily), Ready (Monet and
   Windows, or next to my Windows, and the disk), installing, All set. Anything that can't go ahead says why on
   the page, in a sentence.
 - **Installing** (`monet_setup/install.py`, its own process reporting JSON
@@ -549,7 +590,7 @@ own: the painting, the hours, one sun.
 Everything is generated, so it can be changed and rendered again:
 
 ```sh
-python3 tools/make-paintings.py   # The Hours (4K)
+python3 tools/make-paintings.py   # The Hours, Water Lilies and Haystacks (4K)
 python3 tools/make-branding.py    # marks, Windows icon, installer art
 python3 tools/make-icons.py       # icon theme, brush texture
 python3 tools/make-cursors.py     # pointer

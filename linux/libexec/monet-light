@@ -96,18 +96,38 @@ painting() {
     esac
 }
 
+# Which of Monet's series is on the wall (Monet Settings, Light & Wallpaper):
+# The Hours, Water Lilies or Haystacks, each in the same four lights.
+series() {
+    case "$(sed -n 's/.*"series": *"\([a-z]*\)".*/\1/p' "$CONFIG/monet/prefs.json" 2>/dev/null)" in
+        lilies) echo lilies ;;
+        haystacks) echo haystacks ;;
+        *) echo hours ;;
+    esac
+}
+
 # On every screen's desktop and on the lock screen.
 paint() {
-    local name
+    local name set
     name="$(painting)"
+    set="$(series)"
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
         --group General --key Painting "$name"
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
+        --group General --key Series "$set"
     busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "
         desktops().forEach(function (d) {
             if (d.wallpaperPlugin !== 'org.monet.hours') return;
             d.currentConfigGroup = ['Wallpaper', 'org.monet.hours', 'General'];
             d.writeConfig('Painting', '$name');
+            d.writeConfig('Series', '$set');
             d.reloadConfig();
+        });
+        desktops().forEach(function (d) {
+            d.widgets('org.monet.placard').forEach(function (w) {
+                w.currentConfigGroup = ['General'];
+                w.writeConfig('Series', '$set');
+            });
         })" >/dev/null 2>&1
 }
 

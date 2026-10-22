@@ -31,6 +31,15 @@ FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
 RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
  && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script \
  && dnf5 clean all
+# The everyday apps, built in rather than downloaded: Photos, Documents, Video,
+# Music, Calculator and Archives. Built against the Plasma already here they
+# take tens of megabytes (from Flathub they'd bring KDE's runtime, about a
+# gigabyte), wear Monet's glass app style, and are there at the first sign-in.
+# With them, Files shows pictures of what's in PDFs and videos. No skipping:
+# if one can't be installed, the build stops and says which.
+RUN dnf5 -y install gwenview okular haruna elisa-player kcalc ark \
+        kdegraphics-thumbnailers ffmpegthumbs \
+ && dnf5 clean all
 COPY --from=build /out /tmp/monet
 COPY --from=password /out /tmp/monet/password
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the

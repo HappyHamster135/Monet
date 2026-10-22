@@ -1,6 +1,6 @@
 /*
  * Placard: the card next to a painting in a museum. It greets you by name,
- * shows the time in Fraunces, the date, and which light the wallpaper is in.
+ * shows the time in Fraunces, the date, and which painting and light are on the wall.
  */
 import QtQuick
 import QtQuick.Effects
@@ -112,7 +112,11 @@ PlasmoidItem {
                 }
 
                 Text {
-                    text: i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", root.light)
+                    text: Plasmoid.configuration.Series === "lilies"
+                        ? i18nc("the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", root.light)
+                        : Plasmoid.configuration.Series === "haystacks"
+                        ? i18nc("the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", root.light)
+                        : i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", root.light)
                     color: root.textColor
                     font.family: "Fraunces 72pt SuperSoft"
                     font.italic: true

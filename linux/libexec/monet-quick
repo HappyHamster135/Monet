@@ -18,6 +18,7 @@
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
     monet-quick pref hours|placard|glass on|off
+    monet-quick series hours|lilies|haystacks  the painting on the wall: The Hours, Water Lilies or Haystacks
     monet-quick time                     the time zone, whether it sets itself and the clock's locale, as JSON
     monet-quick zones                    every time zone, as JSON
     monet-quick zone NAME                move to time zone NAME (one of zones)
@@ -46,6 +47,17 @@
     monet-quick access-cursor 24|36|48
     monet-quick access-motion reduced|normal
     monet-quick access-reader on|off     Orca, when it's there
+    monet-quick privacy                  when the screen locks, the password after sleep, recent files, as JSON
+    monet-quick lock-after 1|5|15|30|0   minutes away before the screen locks (0 is never)
+    monet-quick lock-resume on|off       ask for the password after sleep
+    monet-quick remember on|off          Files and the menu remember what you opened
+    monet-quick forget-recent            forget it (Settings asks first)
+    monet-quick lock-now                 lock the screen
+    monet-quick printers                 the printers, the default and what's waiting, as JSON
+    monet-quick printer-default NAME     your default printer (NAME as hex of its UTF-8)
+    monet-quick gaming                   controllers and their batteries, the overlay, where games are kept, as JSON
+    monet-quick overlay on|off           the performance overlay over games (MangoHud), from the next sign-in
+    monet-quick pair-controller          KDE's Bluetooth wizard, to pair a controller
     monet-quick storage                  what fills the disk (games, apps, files, system, free), Trash, Downloads, as JSON
     monet-quick empty-trash              empty the Trash for good (Settings asks first)
     monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
@@ -56,6 +68,7 @@
     monet-quick update                   install them now (by itself, it does once a day)
     monet-quick auto-updates on|off      update by itself, or only when asked
     monet-quick previous                 the Monet before the last update, to go back to, as JSON
+    monet-quick whats-new [headline]     what's new in this Monet, as JSON (or just its headline)
     monet-quick rollback                 go back to it, at the next restart
     monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
     monet-quick firmware-update          install them
@@ -66,9 +79,9 @@
     monet-quick frames                   put the apps Monet hasn't painted on its canvas, so every app fits in
     monet-quick zen                      dress Zen in Monet's look (its window, and new tabs on the painting)
     monet-quick kde PAGE                 open a page of KDE's System Settings
-    monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, display,
-                                         sound, datetime, users, input, power, notifications,
-                                         accessibility, apps, storage,
+    monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, printers,
+                                         display, sound, datetime, users, input, power, privacy,
+                                         notifications, accessibility, apps, storage, games,
                                          windows, updates or about)
     monet-quick listen                   wait until someone asks to open Monet Settings
 """
@@ -94,8 +107,8 @@ PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
-PAGES = ("light", "wifi", "bluetooth", "display", "sound", "datetime", "users", "input", "power", "notifications",
-         "accessibility", "apps", "storage", "windows", "updates", "about")
+PAGES = ("light", "wifi", "bluetooth", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
+         "notifications", "accessibility", "apps", "storage", "games", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -110,6 +123,11 @@ KDE_PAGES = {
     "users": "kcm_users",
     "apps": "kcm_componentchooser",
     "access": "kcm_access",
+    "gamecontroller": "kcm_gamecontroller",
+    "screenlocker": "kcm_screenlocker",
+    "recentfiles": "kcm_recentFiles",
+    "printers": "kcm_printer_manager",
+    "keys": "kcm_keys",
     "all": "",
 }
 
@@ -315,7 +333,11 @@ def prefs():
         saved = {}
     # Until it's chosen, glass is off where blurring would make everything lag (as monet-light does).
     glass = saved["glass"] if "glass" in saved else not drawn_by_processor()
-    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass}
+    series = saved.get("series") if saved.get("series") in SERIES else "hours"
+    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass, "series": series}
+
+
+SERIES = ("hours", "lilies", "haystacks")  # Monet's paintings, each in four lights (wallpapers/Monet/contents/)
 
 
 def save_prefs(values):
@@ -724,7 +746,10 @@ def frames():
 ZEN_ID = "app.zen_browser.zen"
 ZEN_BEGIN, ZEN_END = "// Monet: begin (monet-quick zen writes this part)", "// Monet: end"
 ZEN_PREFS = ('user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);',
-             'user_pref("zen.urlbar.replace-newtab", false);  // a new tab opens on the painting')
+             'user_pref("zen.urlbar.replace-newtab", false);  // a new tab opens on the painting',
+             # Its welcome would offer a theme Monet's colors overrule, and Monet makes it the browser itself.
+             'user_pref("zen.welcome-screen.seen", true);',
+             'user_pref("browser.shell.checkDefaultBrowser", false);')
 ZEN_IMPORTS = {"userChrome.css": '@import url("monet/zen.css");', "userContent.css": '@import url("monet/newtab.css");'}
 
 
@@ -1115,6 +1140,250 @@ def empty_trash():
         if shutil.which(command[0]):
             return run(*command, timeout=600) is not None
     return False
+
+
+# Lock & Privacy --------------------------------------------------------------
+# When the screen locks and whether waking asks for the password (KDE's screen
+# locker, kscreenlockerrc, told to read it again), and whether Files and the
+# menu remember what you opened (KDE's activity manager), with forgetting it.
+
+LOCK_TIMES = (1, 5, 15, 30, 0)  # minutes away; 0 is never
+SCORING = "Plugin-org.kde.ActivityManager.Resources.Scoring"
+
+
+def privacy_state():
+    try:
+        minutes = int(kread("kscreenlockerrc", "Daemon", "Timeout", "5") or 5)
+    except ValueError:
+        minutes = 5
+    return {"lockAfter": minutes if kread("kscreenlockerrc", "Daemon", "Autolock", "true") != "false" else 0,
+            "lockOnResume": kread("kscreenlockerrc", "Daemon", "LockOnResume", "true") != "false",
+            # KDE's 0 remembers everything, 1 only some apps, 2 nothing.
+            "remember": kread("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0") != "2"}
+
+
+def reload_locker():
+    busctl("call", "org.kde.screensaver", "/ScreenSaver", "org.kde.screensaver", "configure")
+
+
+def set_lock_after(minutes):
+    kwrite("kscreenlockerrc", "Daemon", "Autolock", "true" if minutes else "false")
+    if minutes:
+        kwrite("kscreenlockerrc", "Daemon", "Timeout", str(minutes))
+    reload_locker()
+
+
+def forget_recent():
+    """Asked for, and confirmed, in Settings: what Files and the menu remember you opened, forgotten."""
+    busctl("call", "org.kde.ActivityManager", "/ActivityManager/Resources/Scoring",
+           "org.kde.ActivityManager.ResourcesScoring", "DeleteRecentStats", "sis", "", "0", "everything")
+    (DATA_HOME / "recently-used.xbel").unlink(missing_ok=True)  # GTK apps keep their own list
+
+
+# Printers --------------------------------------------------------------------
+# CUPS's printers (the ones added, and the ones it finds on the network by
+# itself), which is the default, and what's waiting. The default is each
+# person's own (lpoptions), so choosing it needs no password.
+
+def lp(*args):
+    """A CUPS tool's output in English, so it can be read, or ""."""
+    if not shutil.which(args[0]):
+        return ""
+    try:
+        out = subprocess.run(args, capture_output=True, text=True, timeout=10, env=dict(os.environ, LC_ALL="C"))
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return out.stdout
+
+
+def printers_from(found, states, default, queue):
+    """The printers, from what lpstat -e, -p, -d and -o said."""
+    status = {}
+    for line in states.splitlines():
+        m = re.match(r"printer (\S+) (?:is )?(idle|now printing|disabled)", line)
+        if m:
+            status[m[1]] = {"idle": "ready", "now printing": "printing", "disabled": "off"}[m[2]]
+    chosen = re.search(r"system default destination: (\S+)", default)
+    waiting = {}
+    for line in queue.splitlines():
+        if line.split():
+            name = line.split()[0].rsplit("-", 1)[0]
+            waiting[name] = waiting.get(name, 0) + 1
+    names = list(dict.fromkeys(found.split() + list(status)))
+    return [{"name": n, "label": n.replace("_", " "), "state": status.get(n, "ready"), "jobs": waiting.get(n, 0),
+             "default": bool(chosen) and chosen[1] == n} for n in names]
+
+
+def printers():
+    if not shutil.which("lpstat"):
+        return {"printers": [], "cups": False}
+    return {"printers": printers_from(lp("lpstat", "-e"), lp("lpstat", "-p"), lp("lpstat", "-d"), lp("lpstat", "-o")),
+            "cups": True}
+
+
+# What's new ------------------------------------------------------------------
+# The release notes come with Monet (tools/package.sh): their newest "### New in"
+# section is what Settings → Updates shows, and what monet-session offers once
+# after a new Monet starts.
+
+def whats_new(text):
+    """The newest "### New in X: headline" section: its version, headline, and each
+    highlight's bold title with its first sentence."""
+    found = re.search(r"(?m)^### New in ([\w.]+)(?::\s*(.+))?$", text)
+    if not found:
+        return {}
+    body = text[found.end():]
+    after = re.search(r"(?m)^#{1,3} ", body)
+    body = body[:after.start()] if after else body
+    items = []
+    for bullet in re.finditer(r"(?ms)^- \*\*(.+?)\*\*(.*?)(?=^- |^\S|\Z)", body):
+        # Up to its own list, if it has one; then its first sentence.
+        words = " ".join(line.strip() for line in re.split(r"\n\s+- ", bullet[2])[0].splitlines() if line.strip())
+        sentence = re.match(r"(.+?[.!?])(?=\s|$)", words)
+        said = sentence[1] if sentence else re.sub(r":$", ".", words)  # "...no longer open KDE's settings:" + its list
+        items.append({"title": bullet[1].strip().rstrip(".:"), "text": said})
+    headline = (found[2] or "").strip()
+    return {"version": found[1], "headline": headline[:1].upper() + headline[1:], "items": items[:8]}
+
+
+def whats_new_here():
+    try:
+        return whats_new((Path(DATADIR) / "monet/release-notes.md").read_text(encoding="utf-8"))
+    except OSError:
+        return {}
+
+
+# Games & Controllers ---------------------------------------------------------
+# The controllers connected (the kernel's joysticks, with the battery a wireless
+# one reports), MangoHud's performance overlay over games (MANGOHUD=1 for the
+# session, from the next sign-in, in Monet's colors unless you've made your own),
+# and where games are kept (Steam's libraries, and ~/Games for Heroic and Lutris).
+
+OVERLAY = CONFIG / "environment.d/monet-mangohud.conf"
+MANGOHUD_CONF = CONFIG / "MangoHud/MangoHud.conf"
+MONETS_MANGOHUD = """\
+# Monet's colors for the performance overlay (Monet Settings, Games & Controllers).
+# Right Shift+F12 hides and shows it while you play. Monet never changes this file again.
+fps
+frametime
+gpu_stats
+cpu_stats
+ram
+position=top-left
+round_corners=10
+font_size=20
+background_color=242321
+background_alpha=0.55
+text_color=ECE8E1
+gpu_color=4DB4A0
+cpu_color=E39B3D
+ram_color=9C7BC0
+frametime_color=4DB4A0
+"""
+
+
+def controller(device):
+    """A joystick's input device (resolved): its name, and its controller's battery, if it reports one."""
+    owner = device.parent.parent  # inputN sits in its controller's input/ folder
+    name = read_text(device / "name")
+    if not name:
+        return None
+    battery, charging = None, False
+    for supply in sorted(owner.glob("power_supply/*")) + sorted(owner.parent.glob("power_supply/*")):
+        level = read_text(supply / "capacity")
+        if level.isdigit():
+            battery, charging = int(level), read_text(supply / "status") == "Charging"
+            break
+    # Bluetooth HID devices are named 0005:vendor:product.n, USB ones 0003:...
+    return {"name": name, "battery": battery, "charging": charging, "wireless": owner.name.startswith("0005:"),
+            "owner": str(owner)}
+
+
+def controllers():
+    found = {}
+    for js in sorted(Path("/sys/class/input").glob("js*")):
+        pad = controller((js / "device").resolve())
+        if pad and pad["owner"] not in found:  # one controller can show up as more than one joystick
+            found[pad["owner"]] = pad
+    return [{k: v for k, v in pad.items() if k != "owner"} for pad in found.values()]
+
+
+def vdf(text):
+    """Valve's KeyValues text (Steam's libraryfolders.vdf), as nested dicts."""
+    root, stack, key = {}, [], None
+    node = root
+    for quoted, brace in re.findall(r'"((?:[^"\\]|\\.)*)"|([{}])', text):
+        if brace == "{":
+            child = {}
+            node[key or ""] = child
+            stack.append(node)
+            node, key = child, None
+        elif brace == "}":
+            node, key = (stack.pop() if stack else root), None
+        elif key is None:
+            key = quoted.replace("\\\\", "\\")
+        else:
+            node[key], key = quoted.replace("\\\\", "\\"), None
+    return root
+
+
+def disk_name(path):
+    """The name of the disk a folder is on, as its mount point calls it ("" for the PC's own)."""
+    path = Path(path)
+    while not os.path.ismount(path) and path != path.parent:
+        path = path.parent
+    return "" if path in (Path("/"), Path("/var"), Path("/home"), Path("/var/home")) else path.name
+
+
+def game_libraries():
+    """Where games are kept: each Steam library (its games, their size, the room left
+    on its disk), then ~/Games, where Heroic and Lutris put theirs."""
+    found, seen = [], set()
+    for steam in (DATA_HOME / "Steam", HOME / ".steam/steam"):
+        try:
+            text = (steam / "steamapps/libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for entry in vdf(text).get("libraryfolders", {}).values():
+            if not isinstance(entry, dict) or not entry.get("path"):
+                continue
+            path = Path(entry["path"])
+            if str(path.resolve()) in seen:
+                continue
+            seen.add(str(path.resolve()))
+            apps = entry.get("apps") if isinstance(entry.get("apps"), dict) else {}
+            sizes = [int(v) for v in apps.values() if str(v).isdigit()]
+            try:
+                free = shutil.disk_usage(path).free
+            except OSError:
+                free = None
+            disk = disk_name(path)
+            found.append({"name": f"Steam on {disk}" if disk else "Steam", "path": str(path / "steamapps/common"),
+                          "games": len(sizes), "size": sum(sizes), "free": free})
+    games = HOME / "Games"
+    if games.is_dir():
+        found.append({"name": "Games folder", "path": str(games),
+                      "games": sum(1 for p in games.iterdir() if p.is_dir() and not p.name.startswith(".")),
+                      "size": du(games), "free": shutil.disk_usage(games).free})
+    return found
+
+
+def gaming_state():
+    return {"controllers": controllers(),
+            "overlay": OVERLAY.is_file() if shutil.which("mangohud") else None,
+            "pair": bool(shutil.which("bluedevil-wizard")),
+            "libraries": game_libraries()}
+
+
+def set_overlay(on):
+    if not on:
+        OVERLAY.unlink(missing_ok=True)
+        return
+    OVERLAY.parent.mkdir(parents=True, exist_ok=True)
+    OVERLAY.write_text("# The performance overlay over games (Monet Settings, Games & Controllers).\nMANGOHUD=1\n")
+    if not MANGOHUD_CONF.exists():
+        MANGOHUD_CONF.parent.mkdir(parents=True, exist_ok=True)
+        MANGOHUD_CONF.write_text(MONETS_MANGOHUD)
 
 
 # Accessibility -------------------------------------------------------------
@@ -1573,6 +1842,11 @@ def main(argv):
             set_placard(values["placard"])
         else:
             run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] == "hours" else "apply", timeout=30)
+    elif cmd == "series" and args and args[0] in SERIES:
+        values = prefs()
+        values["series"] = args[0]
+        save_prefs(values)
+        run(f"{LIBEXECDIR}/monet-light", "paint", timeout=30)
     elif cmd == "time":
         emit(clock(run("timedatectl", "show") or ""))
     elif cmd == "zones":
@@ -1667,6 +1941,37 @@ def main(argv):
         kwrite("kdeglobals", "KDE", "AnimationDurationFactor", "0" if args[0] == "reduced" else MONETS_MOTION)
     elif cmd == "access-reader" and args and args[0] in ("on", "off") and shutil.which("orca"):
         set_reader(args[0] == "on")
+    elif cmd == "privacy":
+        emit(privacy_state())
+    elif cmd == "lock-after" and args and args[0].isdigit() and int(args[0]) in LOCK_TIMES:
+        set_lock_after(int(args[0]))
+    elif cmd == "lock-resume" and args and args[0] in ("on", "off"):
+        kwrite("kscreenlockerrc", "Daemon", "LockOnResume", "true" if args[0] == "on" else "false")
+        reload_locker()
+    elif cmd == "remember" and args and args[0] in ("on", "off"):
+        kwrite("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0" if args[0] == "on" else "2")
+    elif cmd == "forget-recent":
+        forget_recent()
+    elif cmd == "lock-now":
+        run("loginctl", "lock-session")
+    elif cmd == "printers":
+        emit(printers())
+    elif cmd == "printer-default" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        name = unhex(args[0])
+        if name in [p["name"] for p in printers()["printers"]]:
+            lp("lpoptions", "-d", name)
+    elif cmd == "whats-new":
+        found = whats_new_here()
+        if args and args[0] == "headline":
+            print(found.get("headline", ""))
+        else:
+            emit(found)
+    elif cmd == "gaming":
+        emit(gaming_state())
+    elif cmd == "overlay" and args and args[0] in ("on", "off"):
+        set_overlay(args[0] == "on")
+    elif cmd == "pair-controller" and shutil.which("bluedevil-wizard"):
+        subprocess.Popen(["bluedevil-wizard"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "storage":
         emit(storage())
     elif cmd == "empty-trash":

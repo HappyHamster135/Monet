@@ -8,5 +8,9 @@
     <entry name="Painting" type="String">
       <default>hours</default>
     </entry>
+    <!-- Which painting: The Hours, Water Lilies or Haystacks (each in four lights). -->
+    <entry name="Series" type="String">
+      <default>hours</default>
+    </entry>
   </group>
 </kcfg>

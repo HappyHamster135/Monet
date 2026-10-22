@@ -33,21 +33,28 @@ PHASES = {
 
 
 # The apps offered on "Your apps", from Flathub: (ID, name, what it's for, ticked at first).
-# They arrive after the first sign-in (monet-apps); the ticked ones are also what a PC
-# that never chose gets (linux/libexec/monet-apps' EVERYDAY).
+# They arrive after the first sign-in (monet-apps); the ticked ones and the built-in
+# ones are what a PC that never chose gets (linux/libexec/monet-apps' EVERYDAY).
 APPS = [
     ("app.zen_browser.zen", "Zen Browser", "The web", True),
-    ("org.kde.gwenview", "Photos", "Your pictures", True),
-    ("org.kde.okular", "Documents", "PDFs and e-books", True),
-    ("org.kde.haruna", "Video", "Films and clips", True),
-    ("org.kde.elisa", "Music", "Your songs", True),
-    ("org.kde.kcalc", "Calculator", "Quick sums", True),
     ("org.libreoffice.LibreOffice", "Office", "Documents, sheets, slides", False),
     ("org.mozilla.Thunderbird", "Mail", "Email and calendars", False),
     ("com.discordapp.Discord", "Discord", "Talk while you play", False),
     ("com.spotify.Client", "Spotify", "Music to stream", False),
+    ("com.heroicgameslauncher.hgl", "Heroic", "Epic and GOG games", False),
+    ("org.prismlauncher.PrismLauncher", "Prism Launcher", "Minecraft", False),
     ("com.obsproject.Studio", "OBS Studio", "Record and stream games", False),
     ("org.kde.krita", "Krita", "Paint and draw", False),
+]
+# Built into Monet (image/Containerfile), so "Your apps" shows them as there
+# already. A Monet without them (added to Bazzite by hand) gets them from
+# Flathub with the everyday ones (monet-apps' EVERYDAY).
+BUILT_IN = [
+    ("org.kde.gwenview", "Photos"),
+    ("org.kde.okular", "Documents"),
+    ("org.kde.haruna", "Video"),
+    ("org.kde.elisa", "Music"),
+    ("org.kde.kcalc", "Calculator"),
 ]
 
 
@@ -254,8 +261,10 @@ class Setup(QObject):
     # -- apps --
     @Property("QVariant", notify=changed)
     def apps(self):
-        return [{"name": name, "detail": detail, "everyday": everyday, "picked": picked}
-                for (_, name, detail, everyday), picked in zip(APPS, self._apps)]
+        return ([{"name": name, "detail": "Built in", "everyday": True, "picked": True, "index": -1}
+                 for _, name in BUILT_IN]
+                + [{"name": name, "detail": detail, "everyday": everyday, "picked": picked, "index": i}
+                   for i, ((_, name, detail, everyday), picked) in enumerate(zip(APPS, self._apps))])
 
     @Slot(int)
     def toggleApp(self, index):

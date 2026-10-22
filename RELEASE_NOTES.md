@@ -14,18 +14,24 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.8.3: your apps, kept up to date
 
-- **Choose your apps while installing.** Monet Setup has a new step, Your
-  apps: the everyday ones are ticked (Zen Browser, Photos, Documents,
-  Video, Music, Calculator), and Office, Mail, Discord, Spotify, OBS
-  Studio and Krita are a click away. They download after your first
-  sign-in and show up in the menu under their plain names. A PC set up
-  before gets the everyday ones once, by itself. Before, Monet came with
-  no apps beyond Steam, Lutris and the Text Editor.
+- **The everyday apps are built in.** Photos, Documents, Video, Music,
+  Calculator and Archives are part of Monet now: there at your first
+  sign-in, in Monet's look (Music's icon is a painted gramophone), and small (they share what the desktop already
+  has). Pictures, PDFs, films, songs, archives and text each open in the
+  right one from the start, and Files shows what's inside PDFs and videos.
+  Before, Monet came with no apps beyond Steam, Lutris and the Text Editor.
+- **Choose more while installing.** Monet Setup has a new step, Your apps:
+  Zen Browser is ticked, and Office, Mail, Discord, Spotify, Heroic, Prism
+  Launcher, OBS Studio and Krita are a click away. They download after your
+  first sign-in and show up in the menu under their plain names. A PC set
+  up before gets Zen once, by itself.
 - **Zen is the browser, in Monet's look.** Web links open in Zen
   Browser (Settings → Default Apps picks another). Its window sits on the
   painting, softened as behind glass, with lily for the accent, in Mist by
   day and Smoke by night like the rest of Monet, and a new tab opens on The
-  Hours itself.
+  Hours itself. The open tab sits on a pebble of paper, the address field
+  rings in lily while you type, and Zen starts ready, without its welcome
+  tour or asking to be the default.
 - **The big apps, painted.** Zen, Discord, Spotify, OBS Studio, Krita,
   LibreOffice, Thunderbird, Chrome, VLC, Telegram, Heroic, Prism Launcher,
   RetroArch, Bottles, GIMP, Blender, Kdenlive, Audacity, VS Code, Obsidian
@@ -59,7 +65,25 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   - **Storage** (new): what fills the PC (games, apps, your files,
     Monet) in one bar, and room to make: empty the Trash, look through
     Downloads.
+  - **Games & Controllers** (new): your controllers and their batteries,
+    pairing a new one and testing its buttons, the performance overlay over
+    games, and where your games are kept.
+  - **Lock & Privacy** (new): when the screen locks, the password after
+    sleep, and whether Files and the menu remember what you opened (and
+    forgetting it).
+  - **Printers** (new): your printers, what's printing and waiting, and
+    which one is the default. Printers on your network show up by
+    themselves.
+  - **Mouse & Keyboard** also lists the keyboard shortcuts worth knowing.
   The rarer settings are a "More…" away on each page.
+- **What's new, after each update.** Once a new Monet has started, a note
+  offers its highlights, and Settings → Updates keeps them.
+- **Two more paintings.** Light & Wallpaper offers Monet's Water Lilies and
+  Haystacks beside The Hours, each drifting through dawn, midday, dusk and
+  night the same way.
+- **Ink signs in apps' toolbars and menus.** Save, print, zoom, rotate,
+  crop and the rest are brushed in the same ink as the bar, and change with
+  the light.
 - **The Calendar opens its days.** Click a day for its page: the date in
   Fraunces, ‹ › to the day before or after, Today to come back, and a note
   for that day, kept as you type. Days with a note have a dot of lily under

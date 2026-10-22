@@ -2,7 +2,8 @@
 # Installs the apps chosen in Monet Setup from Flathub, for everyone on this PC,
 # once: monet-apps.timer runs it until they're all in. /var/lib/monet/apps lists
 # them, one per line; a PC that never chose (updated from an earlier Monet, or
-# set up with Fedora's installer) gets the everyday ones Setup starts with.
+# set up with Fedora's installer) gets the everyday ones Setup starts with. An
+# app Monet has built in (the image's) isn't fetched again.
 set -u
 
 STATE=/var/lib/monet
@@ -24,6 +25,7 @@ flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/
 left=()
 for app in $wanted; do
     [[ "$app" =~ ^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$ ]] || continue
+    [ -f "/usr/share/applications/$app.desktop" ] && continue
     flatpak install --system --noninteractive --or-update -y flathub "$app" || left+=("$app")
 done
 
