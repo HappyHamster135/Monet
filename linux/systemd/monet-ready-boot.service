@@ -1,0 +1,11 @@
+[Unit]
+Description=Monet: ready when you come back, decided before the sign-in screen
+After=local-fs.target
+Before=display-manager.service plasmalogin.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-ready boot
+
+[Install]
+WantedBy=multi-user.target

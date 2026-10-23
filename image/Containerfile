@@ -1,8 +1,13 @@
-# Monet OS: Bazzite (KDE Plasma, NVIDIA open drivers for RTX 20-series and
-# newer) with Monet built in, including the Windows half that Monet copies
-# into Windows by itself.
+# Monet OS: Bazzite (KDE Plasma) with Monet built in, including the Windows
+# half that Monet copies into Windows by itself. Two of it, from Bazzite's two
+# desktops: NVIDIA's open drivers (GTX 16, RTX 20 and newer: monet), and AMD's
+# and Intel's (Mesa, which also drives older NVIDIA cards: monet-amd). Monet
+# Setup picks by the PC's graphics.
 #
 #   podman build -f image/Containerfile -t monet .
+#   podman build -f image/Containerfile --build-arg BASE=ghcr.io/ublue-os/bazzite:stable -t monet-amd .
+
+ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
 
 FROM docker.io/library/rust:1 AS build
 RUN apt-get update \
@@ -19,11 +24,11 @@ RUN rustup toolchain install \
 
 # Monet's password prompt: KDE's polkit agent built with Monet's page, against
 # the same Plasma as below. If it can't be built, the image keeps KDE's prompt.
-FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable AS password
+FROM ${BASE} AS password
 COPY image/password /src/password
 RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
 
-FROM ghcr.io/ublue-os/bazzite-nvidia-open:stable
+FROM ${BASE}
 # Tools for installing Windows from Monet: splitting Windows' install image
 # (wimlib), formatting its partition (ntfsprogs), and boot entries. Then the
 # look: Kvantum draws Monet's glass app windows, Inter is the reading font,

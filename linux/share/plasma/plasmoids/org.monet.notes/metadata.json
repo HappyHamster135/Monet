@@ -64,7 +64,7 @@
         "Name[vi]": "Ghi chú",
         "Name[zh_CN]": "便签",
         "Name[zh_TW]": "便條",
-        "Version": "0.8.3"
+        "Version": "0.8.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

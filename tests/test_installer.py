@@ -191,6 +191,28 @@ class DiskPlan(unittest.TestCase):
         plan = self.plan("inst.stage2=hd:LABEL=MONET-0.6 quiet", devices=devices, media="/dev/sdc1")
         self.assertIn("ignoredisk --only-use=nvme0n1", plan)
 
+    def test_monet_for_the_graphics(self):
+        import ast
+        ks = (ROOT / "image/monet.ks").read_text()
+        code = re.search(r"%pre[^\n]*monet-image\.log\n(.*?)\n%end", ks, re.S).group(1)
+        ns = {}
+        tree = ast.parse(code)
+        exec(compile(ast.Module(body=[n for n in tree.body if isinstance(n, (ast.ImportFrom, ast.FunctionDef))],
+                                type_ignores=[]), "pre", "exec"), ns)
+        for cards, newer in (([("0x030000", "0x10de", "0x2684")], True), ([("0x030000", "0x10de", "0x1c03")], False),
+                             ([("0x030000", "0x1002", "0x73bf"), ("0x020000", "0x10de", "0x2684")], False)):
+            with tempfile.TemporaryDirectory() as tmp:
+                for i, (cls, vendor, device) in enumerate(cards):
+                    dev = Path(tmp) / f"0000-0{i}-00.0"
+                    dev.mkdir()
+                    for name, value in (("class", cls), ("vendor", vendor), ("device", device)):
+                        (dev / name).write_text(value + "\n")
+                self.assertEqual(ns["newer_nvidia"](Path(tmp)), newer, cards)
+        self.assertIn('image = f"{name}-amd:{tag}"', code)
+        self.assertIn("%include /tmp/monet-image.ks", ks)
+        self.assertNotIn("ostreecontainer --url=@IMAGE@", ks)
+        self.assertIn('open("/tmp/monet-image")', re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1))
+
     def test_download_check_compiles(self):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)

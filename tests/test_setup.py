@@ -280,6 +280,14 @@ class ThisPC(unittest.TestCase):
         self.assertEqual(pc.check([gtx1060], 16)["oldNvidia"], "only")
         self.assertEqual(pc.check([intel, gtx1060], 16)["oldNvidia"], "beside")
         self.assertEqual(pc.check([intel], 16)["oldNvidia"], "")
+        # The NVIDIA Monet only with a GTX 16 / RTX 20 or newer; everything else gets the AMD and Intel one.
+        self.assertEqual([pc.check(c, 16)["newNvidia"] for c in ([rtx2060], [gtx1650, intel], [gtx1060], [intel])],
+                         [True, True, False, False])
+        image = "ghcr.io/x/monet:latest"
+        self.assertEqual(pc.image_for(image, {"newNvidia": True}), image)
+        self.assertEqual(pc.image_for(image, {"newNvidia": False}), "ghcr.io/x/monet-amd:latest")
+        self.assertEqual(pc.image_for("localhost:5000/monet", {"newNvidia": False}), "localhost:5000/monet-amd")
+        self.assertEqual(pc.image_for("ghcr.io/x/monet-amd:0.8.3", {"newNvidia": False}), "ghcr.io/x/monet-amd:0.8.3")
 
     def test_setup_says_it_before_erasing(self):
         try:
@@ -296,11 +304,15 @@ class ThisPC(unittest.TestCase):
         notes = app.Setup.pcNotes.fget(setup)
         self.assertEqual(len(notes), 2)
         self.assertIn("4 GB", notes[1])
-        # Nothing to draw with but an old NVIDIA card, or too little memory: Install can't go ahead.
-        for facts in ({"oldNvidia": "only", "memory": 16}, {"oldNvidia": "", "memory": 1.8}):
-            setup._pc = facts
-            self.assertNotEqual(app.Setup.pcBlocker.fget(setup), "")
-            self.assertEqual(app.Setup.blocker.fget(setup), app.Setup.pcBlocker.fget(setup))
+        # Only an old NVIDIA card: the AMD and Intel Monet draws with its open driver, so just a note.
+        setup._pc = {"oldNvidia": "only", "memory": 16}
+        self.assertEqual(app.Setup.pcBlocker.fget(setup), "")
+        self.assertIn("RTX 20", app.Setup.pcNotes.fget(setup)[0])
+        # Too little memory: Install can't go ahead.
+        setup._pc = {"oldNvidia": "", "memory": 1.8}
+        self.assertNotEqual(app.Setup.pcBlocker.fget(setup), "")
+        self.assertEqual(app.Setup.blocker.fget(setup), app.Setup.pcBlocker.fget(setup))
+        self.assertIn('"image": pc.image_for(IMAGE, self._pc)', (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8"))
         qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
         hello = qml.split("id: helloStep", 1)[1].split("Component {", 1)[0]
         self.assertIn("Note { text: setup.pcBlocker; warm: true; visible: text !== \"\" }", hello)

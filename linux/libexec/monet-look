@@ -6,6 +6,7 @@
 #   monet-look           apply everything, including a fresh panel layout
 #   monet-look --keep    apply everything but keep the panels as they are
 #   monet-look --names   only give the apps their plain names
+#   monet-look --games-gpu  only start games on a laptop's NVIDIA chip
 set -u
 
 DATADIR="@DATADIR@"
@@ -25,15 +26,16 @@ kw_default() { # kw_default <file> <group> <key> <value>
 # this account's menu, marked as Monet's so uninstalling takes them away.
 # Also on its own (--names): monet-names.path runs it when the apps chosen at
 # setup have arrived, so they get their plain names too.
+entry() { # entry <id>: where the app keeps its menu entry
+    local f
+    for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
+             "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
+        [ -f "$f" ] && { echo "$f"; return 0; }
+    done
+    return 1
+}
+
 plain_names() {
-    entry() { # entry <id>: where the app keeps its menu entry
-        local f
-        for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
-                 "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
-            [ -f "$f" ] && { echo "$f"; return 0; }
-        done
-        return 1
-    }
     # The plain words in every language Monet speaks (names.tsv: English, language,
     # translation; tools/make-translations.py), put under the entry's own mark.
     localized() { # localized <file> <key> <English>
@@ -112,6 +114,46 @@ plain_names() {
         favorite UnlinkResourceFromActivity io.github.ublue_os.yafti_gtk.desktop "$activity" >/dev/null
     done
 }
+
+# A laptop with an NVIDIA chip beside its built-in graphics, NVIDIA's driver loaded.
+hybrid_nvidia() {
+    local d cards=0 nvidia=0
+    [ -d /sys/module/nvidia ] || return 1
+    for d in /sys/bus/pci/devices/*; do
+        case "$(cat "$d/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
+        cards=$((cards + 1))
+        [ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] && nvidia=1
+    done
+    [ "$nvidia" = 1 ] && [ "$cards" -gt 1 ]
+}
+
+# On such a laptop, games and the emulators that are games start on the NVIDIA
+# chip (PrefersNonDefaultGPU), from copies of their menu entries marked as
+# Monet's. Everything else keeps to the built-in graphics, Steam and the
+# launchers that stay open in the tray too, which saves the battery; Proton's
+# games choose the NVIDIA chip by themselves. At sign-in and as apps arrive.
+games_gpu() {
+    local app f mine
+    hybrid_nvidia || return 0
+    for app in org.prismlauncher.PrismLauncher org.vinegarhq.Sober org.libretro.RetroArch net.retrodeck.retrodeck \
+        org.DolphinEmu.dolphin-emu net.pcsx2.PCSX2 net.rpcs3.RPCS3 org.ppsspp.PPSSPP info.cemu.Cemu sh.ppy.osu \
+        net.supertuxkart.SuperTuxKart; do
+        f="$(entry "$app")" || continue
+        mine="$DATA/applications/$app.desktop"
+        # Your own copy stays yours; Monet's is made again when the app's changes.
+        if [ -e "$mine" ]; then
+            grep -q '^X-Monet=true$' "$mine" && [ "$f" -nt "$mine" ] || continue
+        fi
+        mkdir -p "$DATA/applications"
+        sed -e '/^PrefersNonDefaultGPU=/d' \
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nPrefersNonDefaultGPU=true/' "$f" > "$mine"
+    done
+}
+
+if [ "${1:-}" = --games-gpu ]; then
+    games_gpu
+    exit 0
+fi
 
 if [ "${1:-}" = --names ]; then
     plain_names

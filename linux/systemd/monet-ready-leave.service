@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: ready when you come back, armed when the PC leaves for Windows
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+# At shutdown: when the next start is Windows, the start after it signs in by itself.
+ExecStop=@LIBEXECDIR@/monet-ready arm
+
+[Install]
+WantedBy=multi-user.target

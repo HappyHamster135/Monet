@@ -14,6 +14,17 @@
     monet-quick mic 0-100
     monet-quick outputs                  speakers and headphones, as JSON
     monet-quick output ID
+    monet-quick hotspot                  this PC's own Wi-Fi network for phones: on, its name and password, as JSON
+    monet-quick hotspot-on|hotspot-off
+    monet-quick ready                    whether Ready when you come back is on for you, as JSON
+    monet-quick ready-on|ready-off       after Windows, sign in by itself and start the desktop behind the lock screen
+    monet-quick ready-lock               (at such a sign-in) lock before the desktop shows
+    monet-quick startup                  how long the last start took: the PC, Monet, your desktop, as JSON
+    monet-quick batteries                everything with a battery (this laptop, mouse, controllers...), as JSON
+    monet-quick battery-care             whether the battery can stop at 80%, and where it stops, as JSON
+    monet-quick battery-limit 80|100     stop charging at 80% (battery care), or charge to full
+    monet-quick apps-sound               the apps playing sound and each one's volume, as JSON
+    monet-quick app-volume ID 0-100
     monet-quick brightness 0-100
     monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
     monet-quick light hours|mist|smoke
@@ -210,6 +221,22 @@ def wifi_name():
     return ""
 
 
+def hotspot():
+    """This PC's own Wi-Fi network for phones and tablets: whether it's on, its name and password,
+    or whether there's a Wi-Fi card to make one."""
+    out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active") or ""
+    for fields in map(nmcli_fields, out.splitlines()):
+        if len(fields) >= 2 and fields[1] == "802-11-wireless":
+            name = fields[0]
+            if (run("nmcli", "-g", "802-11-wireless.mode", "connection", "show", name) or "").strip() == "ap":
+                return {"on": True, "connection": name,
+                        "name": (run("nmcli", "-g", "802-11-wireless.ssid", "connection", "show", name) or "").strip(),
+                        "password": (run("nmcli", "-s", "-g", "802-11-wireless-security.psk", "connection", "show", name)
+                                     or "").strip()}
+    devices = run("nmcli", "-t", "-f", "DEVICE,TYPE", "device") or ""
+    return {"on": False, "possible": any(f[1:2] == ["wifi"] for f in map(nmcli_fields, devices.splitlines()))}
+
+
 def saved_wifi():
     """The Wi-Fi networks NetworkManager keeps a profile for (it names them after the network)."""
     out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show") or ""
@@ -284,6 +311,40 @@ def sinks(status):
             if match:
                 found.append({"id": int(match.group(2)), "name": match.group(3), "default": bool(match.group(1))})
     return found
+
+
+def app_streams(status):
+    """The apps playing sound, from `wpctl status`'s Audio streams: (id, name) of each stream
+    with a port that plays out ("output_FL > ..."), not ones that record."""
+    found, section, inside, current = [], "", False, None
+    for raw in status.splitlines():
+        if raw and not raw[0].isspace():
+            section, inside = raw.strip(), False
+            continue
+        line = raw.strip(" │├└─\t")
+        if section != "Audio" or not line:
+            continue
+        if line.endswith(":"):
+            inside = line == "Streams:"
+            continue
+        match = re.match(r"(\d+)\.\s+(.+?)\s*$", line)
+        if not inside or not match:
+            continue
+        if ">" in line or "<" in line:
+            if current and "output_" in line and current not in found:
+                found.append(current)
+        else:
+            current = (int(match.group(1)), match.group(2))
+    return found
+
+
+def apps_sound():
+    out = []
+    for ident, name in app_streams(run("wpctl", "status") or ""):
+        level = volume(str(ident))
+        if level is not None:
+            out.append({"id": ident, "name": name[:1].upper() + name[1:], "volume": level})
+    return out
 
 
 # Screen --------------------------------------------------------------------
@@ -2059,6 +2120,145 @@ def open_settings(page):
 UPOWER_CHARGING, UPOWER_DISCHARGING = 1, 2
 
 
+# Ready when you come back (monet-ready does the root part) ------------------
+
+READY_USER = Path("/var/lib/monet/ready-user")
+READY_FLAG = Path("/run/monet/ready-auto")
+
+
+def me():
+    import pwd  # here, not at the top: Linux has it, and the tests also run on Windows
+    return pwd.getpwuid(os.getuid()).pw_name
+
+
+def ready_state():
+    try:
+        return {"on": READY_USER.read_text().strip() == me()}
+    except (OSError, KeyError):
+        return {"on": False}
+
+
+def ready_lock():
+    """A start that signed in by itself after Windows: lock before the desktop shows (KWin's screen
+    locker, else logind). Signed in by hand (the automatic sign-in didn't happen), nothing to lock.
+    The next start asks for the password again: monet-ready clears it before every sign-in screen."""
+    try:
+        if READY_FLAG.read_text().strip() != me():
+            return
+    except (OSError, KeyError):
+        return
+    session = os.environ.get("XDG_SESSION_ID") or (run("loginctl", "show-user", str(os.getuid()), "-p", "Display",
+                                                        "--value") or "").strip()
+    service = (run("loginctl", "show-session", session, "-p", "Service", "--value") or "").strip() if session else ""
+    if service in ("", "plasmalogin-autologin") or "autologin" in service:
+        for _ in range(60):  # up to 15 s for the screen locker to be on the bus
+            if run("busctl", "--user", "call", "org.freedesktop.ScreenSaver", "/ScreenSaver",
+                   "org.freedesktop.ScreenSaver", "Lock", timeout=5) is not None:
+                break
+            time.sleep(0.25)
+        else:
+            if session:
+                run("loginctl", "lock-session", session)
+
+
+def seconds(text):
+    """A systemd duration ("1min 2.345s", "820ms", "3.008s") in seconds."""
+    total = 0.0
+    for amount, unit in re.findall(r"([\d.]+)(min|ms|s)\b", text):
+        total += float(amount) * {"min": 60, "s": 1, "ms": 0.001}[unit]
+    return total
+
+
+def startup(analyze, session_start=None, desktop_ready=None):
+    """How long the last start took, from `systemd-analyze` ("Startup finished in 7.2s (firmware) +
+    3.0s (loader) + ..."), and signing in until the desktop was there (monotonic µs): {pc, monet,
+    desktop, total} in seconds, or {} while it's still starting."""
+    parts = {name: seconds(time_) for time_, name in re.findall(r"((?:\d+min )?[\d.]+m?s) \((\w+)\)", analyze or "")}
+    if "userspace" not in parts:
+        return {}
+    found = {"pc": round(parts.get("firmware", 0), 1),
+             "monet": round(sum(parts.get(p, 0) for p in ("loader", "kernel", "initrd", "userspace")), 1)}
+    if session_start and desktop_ready and desktop_ready > session_start:
+        found["desktop"] = round((desktop_ready - session_start) / 1e6, 1)
+    found["total"] = round(sum(found.values()), 1)
+    return found
+
+
+def startup_now():
+    session = os.environ.get("XDG_SESSION_ID", "")
+    start = (run("loginctl", "show-session", session, "-p", "TimestampMonotonic", "--value") or "").strip() if session else ""
+    ready = (run("systemctl", "--user", "show", "plasma-plasmashell.service", "-p", "ActiveEnterTimestampMonotonic",
+                 "--value") or "").strip()
+    return startup(run("systemd-analyze", timeout=15), int(start) if start.isdigit() else None,
+                   int(ready) if ready.isdigit() else None)
+
+
+def older_pc(meminfo=Path("/proc/meminfo"), spinning=None):
+    """An older PC, which Monet goes easier on: 8 GB of memory or less (which shows as about 7.7),
+    or Monet on a spinning disk."""
+    try:
+        kb = int(re.search(r"^MemTotal:\s+(\d+)", meminfo.read_text(), re.M).group(1))
+    except (OSError, AttributeError):
+        kb = None
+    if kb is not None and kb < 9 * 1024 ** 2:
+        return True
+    if spinning is None:
+        # /sysroot is the disk itself on Monet (/ is the system image); -v leaves out a btrfs subvolume.
+        source = next((s for s in (run("findmnt", "-nvo", "SOURCE", m) for m in ("/sysroot", "/")) if s), "").strip()
+        spinning = bool(source) and (run("lsblk", "-dno", "ROTA", source) or "").strip() == "1"
+    return spinning
+
+
+# What each kind of UPower device is, for the Batteries widget's signs.
+UPOWER_KINDS = {5: "mouse", 6: "keyboard", 8: "phone", 10: "tablet", 12: "controller", 13: "pen", 14: "touchpad",
+                17: "headset", 18: "speaker", 19: "headphones", 26: "watch"}
+
+
+def battery_list(devices):
+    """Everything with a battery, from UPower's devices' properties: this laptop's first, then the
+    mouse, the keyboard, controllers, headphones... [{kind, name, level, charging}]."""
+    found = []
+    for props in devices:
+        level, kind = props.get("Percentage"), props.get("Type")
+        if not isinstance(level, (int, float)):
+            continue
+        if kind == 2 and props.get("PowerSupply"):
+            if not props.get("IsPresent"):
+                continue  # a ThinkPad's empty second battery bay
+            kind = "laptop"
+        elif kind in UPOWER_KINDS:
+            kind = UPOWER_KINDS[kind]
+        elif kind == 2:
+            kind = "other"
+        else:
+            continue  # the mains, a UPS, the display device...
+        found.append({"kind": kind, "name": props.get("Model") or "", "level": round(level),
+                      "charging": props.get("State") == UPOWER_CHARGING})
+    return sorted(found, key=lambda b: b["kind"] != "laptop")
+
+
+def batteries():
+    paths = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower",
+                    "org.freedesktop.UPower", "EnumerateDevices")
+    devices = []
+    for path in (paths[0] if paths else []):
+        props = busjson("--system", "call", "org.freedesktop.UPower", path, "org.freedesktop.DBus.Properties",
+                        "GetAll", "s", "org.freedesktop.UPower.Device")
+        devices.append({k: v.get("data") for k, v in (props[0] if props else {}).items() if isinstance(v, dict)})
+    return battery_list(devices)
+
+
+def battery_care(supplies=Path("/sys/class/power_supply")):
+    """Whether the battery can stop charging early (charge_control_end_threshold, as on ThinkPads
+    and many other laptops), and where it stops now."""
+    for bat in sorted(supplies.glob("BAT*")):
+        try:
+            return {"supported": True, "limit": int((bat / "charge_control_end_threshold").read_text().strip())}
+        except (OSError, ValueError):
+            continue
+    return {"supported": False, "limit": 100}
+
+
 def battery_state(upower):
     """The battery, from UPower's display device (every battery together, as KDE shows it):
     {battery: percent, charging, plugged (charging, full or held at a charge limit), minutes
@@ -2106,6 +2306,17 @@ def main(argv):
             command += ["password", unhex(args[1])]
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         emit({"ok": result.returncode == 0, "message": (result.stdout or result.stderr).strip()})
+    elif cmd == "hotspot":
+        emit(hotspot())
+    # NetworkManager names it after the PC and makes up a password; the page shows both.
+    elif cmd == "hotspot-on":
+        result = subprocess.run(["nmcli", "device", "wifi", "hotspot"], capture_output=True, text=True, timeout=60)
+        emit(dict(hotspot(), ok=result.returncode == 0))
+    elif cmd == "hotspot-off":
+        state = hotspot()
+        if state.get("on"):
+            run("nmcli", "connection", "down", state["connection"], timeout=30)
+        emit(hotspot())
     elif cmd == "bluetooth":
         if on:
             run("rfkill", "unblock", "bluetooth")  # KDE's own switch blocks the radio, which bluetoothctl can't undo
@@ -2126,8 +2337,31 @@ def main(argv):
         target = "@DEFAULT_AUDIO_SINK@" if cmd == "volume" else "@DEFAULT_AUDIO_SOURCE@"
         run("wpctl", "set-mute", target, "0")
         run("wpctl", "set-volume", target, f"{min(int(args[0]), 100)}%")
+    elif cmd == "ready":
+        emit(ready_state())
+    # Root keeps who turned it on; Monet's polkit rule lets this one program run without a password.
+    elif cmd in ("ready-on", "ready-off"):
+        run("pkexec", f"{LIBEXECDIR}/monet-ready", cmd[6:], timeout=60)
+        emit(ready_state())
+    elif cmd == "ready-lock":
+        ready_lock()
+    elif cmd == "startup":
+        emit(startup_now())
+    elif cmd == "older-pc":
+        print("yes" if older_pc() else "no")
+    elif cmd == "batteries":
+        emit(batteries())
+    elif cmd == "battery-care":
+        emit(battery_care())
+    # Root writes the limit; Monet's polkit rule lets this one program run without a password.
+    elif cmd == "battery-limit" and args and args[0] in ("80", "100"):
+        run("pkexec", f"{LIBEXECDIR}/monet-charge", args[0], timeout=60)
     elif cmd == "outputs":
         emit(sinks(run("wpctl", "status") or ""))
+    elif cmd == "apps-sound":
+        emit(apps_sound())
+    elif cmd == "app-volume" and len(args) == 2 and args[0].isdigit() and args[1].isdigit():
+        run("wpctl", "set-volume", args[0], f"{min(int(args[1]), 100)}%")
     elif cmd == "output" and args and args[0].isdigit():
         run("wpctl", "set-default", args[0])
     elif cmd == "brightness" and args and args[0].isdigit():
@@ -2320,7 +2554,8 @@ def main(argv):
         page = KDE_PAGES[args[0]]
         subprocess.Popen(["systemsettings"] + ([page] if page else []), start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    elif cmd == "open" and (not args or args[0] in PAGES):
+    # And the welcome, which isn't in the list of pages (monet-session opens it for a new account).
+    elif cmd == "open" and (not args or args[0] in PAGES or args[0] == "welcome"):
         open_settings(args[0] if args else "")
     elif cmd == "say" and args:
         print(tr(*args))

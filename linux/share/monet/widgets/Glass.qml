@@ -40,10 +40,19 @@ Item {
     readonly property bool frosted: painting !== null && glassOff.count === 0
                                     && GraphicsInfo.api !== GraphicsInfo.Software
 
+    // On an older PC (monet-session leaves glass-lite) the frost reaches the edge, without the lens.
+    readonly property bool lite: glassLite.count > 0
+
     FolderListModel {
         id: glassOff
         folder: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/monet"
         nameFilters: ["glass-off"]
+        showDirs: false
+    }
+    FolderListModel {
+        id: glassLite
+        folder: glassOff.folder
+        nameFilters: ["glass-lite"]
         showDirs: false
     }
 
@@ -126,7 +135,7 @@ Item {
         visible: false
         sourceItem: glass.painting
         sourceRect: glass.lensPatch
-        live: glass.frosted
+        live: glass.frosted && !glass.lite
         recursive: false
     }
     // The pane's shape, and its middle (inside the lens) with a soft edge.
@@ -148,9 +157,10 @@ Item {
         visible: false
         layer.enabled: true
         Rectangle {
+            readonly property real band: glass.lite ? 0 : glass.lensWidth
             anchors.fill: parent
-            anchors.margins: glass.bleed + glass.lensWidth
-            radius: Math.max(glass.radius - glass.lensWidth, 4)
+            anchors.margins: glass.bleed + band
+            radius: Math.max(glass.radius - band, 4)
         }
     }
     MultiEffect {
@@ -168,7 +178,7 @@ Item {
     MultiEffect {
         id: lens
         anchors.fill: frost
-        visible: glass.frosted
+        visible: glass.frosted && !glass.lite
         source: lensGrab
         autoPaddingEnabled: false
         blurEnabled: true

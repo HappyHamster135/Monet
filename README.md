@@ -23,7 +23,7 @@ back when you're done.
 Monet installs itself, then downloads and installs a games-only Windows by
 itself. The **[install guide](docs/INSTALL.md)** has every step.
 
-Monet is a preview for PCs with an NVIDIA RTX 20-series or newer GPU.
+Monet is a preview for PCs with NVIDIA (RTX 20-series or newer), AMD or Intel graphics.
 
 ## How it works
 

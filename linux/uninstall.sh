@@ -34,12 +34,18 @@ if [ "$(id -u)" -ne 0 ]; then
     exec sudo "$0" "$@"
 fi
 
-systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer >/dev/null 2>&1 || true
+systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service \
     /etc/systemd/system/monet-update.service /etc/systemd/system/monet-update.timer \
     /etc/systemd/system/monet-apps.service /etc/systemd/system/monet-apps.timer \
-    /etc/systemd/system/monet-crash@.service /etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service
+    /etc/systemd/system/monet-crash@.service /etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service \
+    /etc/systemd/system/monet-charge.service
 rmdir /etc/systemd/system/systemd-coredump@.service.wants 2>/dev/null || true
+# Ready when you come back: off, and the sign-in screen asks for the password again.
+systemctl disable monet-ready-leave.service monet-ready-boot.service >/dev/null 2>&1 || true
+systemctl --global disable monet-ready-lock.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-ready-leave.service /etc/systemd/system/monet-ready-boot.service \
+    /etc/systemd/user/monet-ready-lock.service /etc/plasmalogin.conf.d/zz-monet-ready.conf /run/monet/ready-auto
 systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
@@ -53,8 +59,10 @@ systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc
     flatpak-system-update.timer >/dev/null 2>&1 || true
 systemctl --global unmask flatpak-user-update.timer >/dev/null 2>&1 || true
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
+# The battery charges to full again, as before battery care.
+[ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
@@ -72,7 +80,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" "$PREFIX/share/plasma/avatars/Monet" \
     "$PREFIX/share/plasma/plasmoids/org.monet.system" "$PREFIX/share/plasma/plasmoids/org.monet.played" \
-    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
     "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/plasma/look-and-feel/org.monet.smoke.desktop" \
     "$PREFIX/share/icons/Monet" "$PREFIX/share/icons/Monet-cursors" \

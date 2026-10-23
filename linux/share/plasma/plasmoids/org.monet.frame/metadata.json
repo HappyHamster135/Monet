@@ -66,7 +66,7 @@
         "Name[vi]": "Khung ảnh",
         "Name[zh_CN]": "相框",
         "Name[zh_TW]": "相框",
-        "Version": "0.8.3"
+        "Version": "0.8.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

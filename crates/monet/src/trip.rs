@@ -330,7 +330,7 @@ mod tests {
         let paths = Paths::new(temp());
         save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::Once }).unwrap();
         let mut efi = pc(None, true);
-        assert!(check_after_boot(&mut efi, &paths, 1060, true).unwrap().contains("Boot0004"));
+        assert!(check_after_boot(&mut efi, &paths, 1060, true).unwrap().contains("couldn't open its boot entry"));
         assert_eq!(bad_entries(&paths), vec![4]);
         // Once a trip works, the entry is trusted again.
         save(&paths, &Trip { created: 2000, entry: 4, monet: 1, method: Method::Once }).unwrap();

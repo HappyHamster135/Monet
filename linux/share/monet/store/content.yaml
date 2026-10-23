@@ -31,6 +31,7 @@ rows:
           - org.scummvm.ScummVM
           - sh.ppy.osu
           - net.supertuxkart.SuperTuxKart
+          - io.github.ilya_zlobintsev.LACT
 
   - banner:
       height: 300
@@ -134,6 +135,7 @@ rows:
           - org.keepassxc.KeePassXC
           - com.bitwarden.desktop
           - com.rustdesk.RustDesk
+          - org.localsend.localsend_app
           - app.drey.Warp
           - org.qbittorrent.qBittorrent
           - org.deskflow.deskflow

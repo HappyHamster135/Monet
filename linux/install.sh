@@ -79,10 +79,12 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
+# Ready when you come back (Settings → Play on Windows): root's part.
+put 755 "$SRC/libexec/monet-ready" "$LIBEXECDIR/monet-ready"
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
@@ -115,12 +117,12 @@ done
 tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"
 for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
     org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame org.monet.system org.monet.played \
-    org.monet.timer org.monet.worldclock; do
+    org.monet.timer org.monet.worldclock org.monet.batteries; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 # The desktop widgets share one glass.
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
-    org.monet.played org.monet.timer org.monet.worldclock; do
+    org.monet.played org.monet.timer org.monet.worldclock org.monet.batteries; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
 done
 # The Calendar and the bar's clock share the month, the day's note and the notes themselves.
@@ -159,7 +161,7 @@ done
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
-for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service; do
+for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service monet-charge.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
 # When an app crashes, Monet's note instead of KDE's crash reporter: beside each
@@ -177,6 +179,12 @@ put 644 "$SRC/systemd/user/monet-frames.path" "$USERUNITDIR/monet-frames.path"
 put 644 "$SRC/systemd/user/monet-frames.service" "$USERUNITDIR/monet-frames.service"
 put 644 "$SRC/systemd/user/monet-zen.path" "$USERUNITDIR/monet-zen.path"
 put 644 "$SRC/systemd/user/monet-zen.service" "$USERUNITDIR/monet-zen.service"
+# Ready when you come back: armed on the way to Windows, decided before the sign-in
+# screen, and locked before the desktop shows.
+for unit in monet-ready-leave.service monet-ready-boot.service; do
+    put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
+done
+put 644 "$SRC/systemd/user/monet-ready-lock.service" "$USERUNITDIR/monet-ready-lock.service"
 
 # Monet updates itself, once a day (monet-update.timer: the new Monet starts at
 # the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
@@ -223,15 +231,18 @@ put 644 "$SRC/autostart/monet-session.desktop" /etc/xdg/autostart/monet-session.
 
 # Allow one-click switching without a password. /usr/local is a link to
 # /var/usrlocal on Fedora Atomic, so allow both spellings of the path.
+# Battery care's helper too: it only writes the battery's charge limit.
 real_bin="$(readlink -f "$BINDIR/monet")"
-programs="[\"$BINDIR/monet\", \"$real_bin\"]"
+programs="[\"$BINDIR/monet\", \"$real_bin\", \"$LIBEXECDIR/monet-charge\", \"$(readlink -f "$LIBEXECDIR/monet-charge")\", \"$LIBEXECDIR/monet-ready\", \"$(readlink -f "$LIBEXECDIR/monet-ready")\"]"
 install -d -m 755 /etc/polkit-1/rules.d
 sed -e "s|@PROGRAMS@|$programs|" "$SRC/polkit/49-monet.rules" > /etc/polkit-1/rules.d/49-monet.rules
 chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
-    systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer
+    systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service
     systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path
+    systemctl enable monet-ready-leave.service monet-ready-boot.service
+    systemctl --global enable monet-ready-lock.service
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -380,8 +391,11 @@ else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
         "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
     systemctl daemon-reload
-    for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer; do
+    for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
     systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
+    systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
+    systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
+    systemctl --global enable monet-ready-lock.service >/dev/null 2>&1 || true
 fi

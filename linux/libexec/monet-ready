@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Ready when you come back: after a trip to Windows, Monet signs its person in by
+itself and starts the desktop behind the lock screen, so it's there as soon as they
+type their password. Off until they turn it on (Settings → Play on Windows).
+
+Runs as root. Monet's polkit rule lets the signed-in person start this program (on,
+off) and nothing else; systemd runs the rest (monet-ready-leave.service at shutdown,
+monet-ready-boot.service before every sign-in screen, which also clears the last one).
+
+    monet-ready on|off     turn it on or off, for the person who asks
+    monet-ready arm        at shutdown: when the PC is about to start Windows, arm the next start
+    monet-ready boot       before the sign-in screen: sign in by itself this once, if armed lately
+    monet-ready settle     once signed in: the next start asks for the password again
+"""
+
+import os
+import sys
+import time
+from pathlib import Path
+
+STATE = Path("/var/lib/monet")
+USER = STATE / "ready-user"  # who turned it on
+ARMED = STATE / "ready-armed"  # when the PC left for Windows
+DROPIN = Path("/etc/plasmalogin.conf.d/zz-monet-ready.conf")
+FLAG = Path("/run/monet/ready-auto")  # this start signs in by itself: lock at once
+EFIVARS = Path("/sys/firmware/efi/efivars")
+GLOBAL = "8be4df61-93ca-11d0-aa6c-00e098032b8c"
+# A trip lasts as long as the games; longer than a day and the sign-in screen asks again.
+# Generous both ways, as Windows may keep the clock in local time.
+FRESH = 24 * 3600
+
+
+def kept_user():
+    import pwd  # here, not at the top, so the tests can load this on any system
+    try:
+        name = USER.read_text().strip()
+        pwd.getpwnam(name)
+        return name
+    except (OSError, KeyError):
+        return None
+
+
+def caller():
+    import pwd
+    uid = os.environ.get("PKEXEC_UID", "")
+    try:
+        return pwd.getpwuid(int(uid)).pw_name if uid.isdigit() else None
+    except KeyError:
+        return None
+
+
+def boots_windows_next(efivars=EFIVARS):
+    """Whether the firmware's next start (BootNext) is Windows' boot manager."""
+    try:
+        number = int.from_bytes((efivars / f"BootNext-{GLOBAL}").read_bytes()[4:6], "little")
+        option = (efivars / f"Boot{number:04X}-{GLOBAL}").read_bytes()[4:]
+    except (OSError, ValueError):
+        return False
+    # The load option's name and its file path, both UTF-16, after its attributes and the path's length.
+    text = option[6:].decode("utf-16-le", errors="ignore").lower()
+    return "windows" in text or "bootmgfw.efi" in text
+
+
+def main(args):
+    cmd = args[0] if args else ""
+    if cmd in ("on", "off"):
+        who = caller()
+        if not who:
+            print("Ask from your own session.", file=sys.stderr)
+            return 2
+        if cmd == "on":
+            STATE.mkdir(parents=True, exist_ok=True)
+            USER.write_text(who + "\n")
+            USER.chmod(0o644)
+        elif kept_user() == who:
+            USER.unlink(missing_ok=True)
+            ARMED.unlink(missing_ok=True)
+        print("on" if kept_user() == who else "off")
+    elif cmd == "arm":
+        if kept_user() and boots_windows_next():
+            STATE.mkdir(parents=True, exist_ok=True)
+            ARMED.write_text(f"{int(time.time())}\n")
+    elif cmd == "boot":
+        # Each start decides afresh: no automatic sign-in unless this one comes back from Windows.
+        DROPIN.unlink(missing_ok=True)
+        FLAG.unlink(missing_ok=True)
+        try:
+            armed = int(ARMED.read_text())
+        except (OSError, ValueError):
+            armed = None
+        ARMED.unlink(missing_ok=True)
+        who = kept_user()
+        if who and armed is not None and abs(time.time() - armed) < FRESH:
+            DROPIN.parent.mkdir(parents=True, exist_ok=True)
+            DROPIN.write_text(f"[Autologin]\nUser={who}\nSession=plasma.desktop\nRelogin=false\n")
+            FLAG.parent.mkdir(parents=True, exist_ok=True)
+            FLAG.write_text(who + "\n")
+            FLAG.chmod(0o644)
+    elif cmd == "settle":
+        DROPIN.unlink(missing_ok=True)
+        FLAG.unlink(missing_ok=True)
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,14 @@
+[Unit]
+Description=Monet: ready when you come back, behind the lock screen
+# Only on a start that signed in by itself, after a trip to Windows.
+ConditionPathExists=/run/monet/ready-auto
+After=plasma-kwin_wayland.service
+# Locked before the desktop shows.
+Before=plasma-plasmashell.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-quick ready-lock
+
+[Install]
+WantedBy=plasma-workspace.target

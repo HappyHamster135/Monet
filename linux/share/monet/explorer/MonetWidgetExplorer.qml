@@ -37,12 +37,14 @@ Item {
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     readonly property color ink: smoke ? "#EFECE6" : "#1C1B19"
     readonly property color dim: smoke ? "#B4AEA5" : "#6B665E"
-    readonly property color pebble: smoke ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(0.11, 0.106, 0.098, 0.05)
+    // Pebbles of lighter glass on the glass, as in Quick Settings: not a grey wash of ink.
+    readonly property color pebble: smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
+    readonly property color rim: smoke ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.7)
     readonly property color hairline: smoke ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.08)
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
     // Adding to a panel: the bar's widgets; to the desktop: the desktop's.
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
-    readonly property string mineIds: forBar ? "clock|games|menu|quick" : "calendar|frame|notes|nowplaying|placard|played|system|timer|weather|worldclock"
+    readonly property string mineIds: forBar ? "clock|games|menu|quick" : "batteries|calendar|frame|notes|nowplaying|placard|played|system|timer|weather|worldclock"
 
     signal closed()
 
@@ -225,9 +227,9 @@ Item {
                     Keys.onEnterPressed: gallery.addFirst()
                     background: Rectangle {
                         radius: height / 2
-                        color: Qt.rgba(gallery.ink.r, gallery.ink.g, gallery.ink.b, 0.06)
+                        color: gallery.pebble
                         border.width: search.activeFocus ? 2 : 1
-                        border.color: search.activeFocus ? gallery.lily : gallery.hairline
+                        border.color: search.activeFocus ? gallery.lily : gallery.rim
                         Kirigami.Icon {
                             anchors.left: parent.left
                             anchors.leftMargin: 12
@@ -515,7 +517,8 @@ Item {
             radius: 18
             color: card.wash
             border.width: card.visualFocus ? 2 : 1
-            border.color: card.visualFocus ? card.ring : Qt.rgba(card.ink.r, card.ink.g, card.ink.b, card.hovered ? 0.16 : 0.07)
+            // The light caught in its edge, brighter under the pointer.
+            border.color: card.visualFocus ? card.ring : Qt.rgba(1, 1, 1, card.wash.a > 0.2 ? (card.hovered ? 0.95 : 0.7) : (card.hovered ? 0.24 : 0.14))
             Behavior on border.color { ColorAnimation { duration: Math.round(140 * card.speed) } }
         }
 

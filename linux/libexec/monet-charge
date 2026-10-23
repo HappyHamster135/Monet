@@ -1,0 +1,47 @@
+#!/bin/bash
+# Battery care: stop charging at 80%, so a laptop that's mostly plugged in keeps
+# its battery for more years, as Windows' and macOS's laptops offer. Runs as
+# root: Monet's polkit rule lets the signed-in person start this program and
+# nothing else, and it only writes the battery's charge limit. The limit is kept
+# in /var/lib/monet, and monet-charge.service puts it back at every start.
+#
+#   monet-charge 80|100    stop at 80%, or charge to full again
+#   monet-charge apply     the kept limit, again (at boot)
+set -u
+KEPT=/var/lib/monet/charge-limit
+
+case "${1:-}" in
+    80|100) limit=$1 ;;
+    apply)
+        limit="$(cat "$KEPT" 2>/dev/null)"
+        [ "$limit" = 80 ] || exit 0
+        ;;
+    *) echo "Choose 80 or 100." >&2; exit 2 ;;
+esac
+
+done=0
+for bat in /sys/class/power_supply/BAT*; do
+    end="$bat/charge_control_end_threshold"
+    start="$bat/charge_control_start_threshold"
+    [ -w "$end" ] || continue
+    if [ "$limit" = 80 ]; then
+        # Charging starts again at 75%. The start stays below the end, so it's set
+        # before (when the end comes down) and after (when it goes up).
+        [ -w "$start" ] && echo 75 > "$start" 2>/dev/null
+        echo 80 > "$end" && done=1
+        [ -w "$start" ] && echo 75 > "$start" 2>/dev/null
+    else
+        echo 100 > "$end" && done=1
+        # 0 is the battery's own default start.
+        [ -w "$start" ] && echo 0 > "$start" 2>/dev/null
+    fi
+done
+
+if [ "$done" = 0 ]; then
+    echo "This battery can't stop charging early." >&2
+    exit 1
+fi
+if [ "${1:-}" != apply ]; then
+    mkdir -p "${KEPT%/*}" && echo "$limit" > "$KEPT"
+fi
+exit 0

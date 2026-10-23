@@ -59,7 +59,7 @@
         "Name[vi]": "Hẹn giờ",
         "Name[zh_CN]": "计时器",
         "Name[zh_TW]": "計時器",
-        "Version": "0.8.3"
+        "Version": "0.8.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

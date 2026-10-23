@@ -1,6 +1,8 @@
-"""Can this PC run Monet? What Setup looks at before anything is erased: the
-graphics (Monet's NVIDIA driver needs an RTX 20-series or newer, and nouveau
-stays off) and the memory. UEFI needs no check: the stick only starts that way.
+"""Can this PC run Monet, and which Monet? What Setup looks at before anything is
+erased: the graphics, which choose the image (NVIDIA's open driver, for GTX 16 and
+RTX 20 and newer, or AMD's and Intel's, Mesa, which also drives older NVIDIA cards
+with the open nouveau driver), and the memory. UEFI needs no check: the stick only
+starts that way.
 """
 
 from pathlib import Path
@@ -35,10 +37,24 @@ def memory(meminfo=Path("/proc/meminfo")):
 
 
 def check(cards=None, gb=None):
-    """{"oldNvidia": "only" (nothing else to draw with), "beside" (built-in graphics too) or "",
-    "memory": GB or None}."""
+    """{"newNvidia": a GTX 16 / RTX 20 or newer, "oldNvidia": "only" (nothing else to draw with),
+    "beside" (built-in graphics too) or "", "memory": GB or None}."""
     cards = graphics() if cards is None else cards
     gb = memory() if gb is None else gb
     old = [c for c in cards if c[0] == NVIDIA and int(c[1], 16) < TURING]
     rest = [c for c in cards if c not in old]
-    return {"oldNvidia": "only" if old and not rest else "beside" if old else "", "memory": gb}
+    return {"newNvidia": any(c[0] == NVIDIA for c in rest), "memory": gb,
+            "oldNvidia": "only" if old and not rest else "beside" if old else ""}
+
+
+def image_for(image, facts):
+    """Monet for this PC's graphics: the NVIDIA image (as given) with a GTX 16 / RTX 20 or newer,
+    otherwise the same name with -amd ("ghcr.io/x/monet:latest" → "ghcr.io/x/monet-amd:latest")."""
+    if facts.get("newNvidia", True):
+        return image
+    name, _, tag = image.rpartition(":")
+    if not name or "/" in tag:  # no tag: the colon was a registry's port
+        name, tag = image, ""
+    if name.endswith("-amd"):
+        return image
+    return f"{name}-amd" + (f":{tag}" if tag else "")

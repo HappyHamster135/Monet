@@ -644,7 +644,7 @@ class Updates(unittest.TestCase):
         self.assertIn('systemctl mask "$unit"', install)
         self.assertIn("AutomaticUpdatePolicy=none", install)
         self.assertIn("systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer", install)
-        self.assertIn("for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer; do", install)
+        self.assertIn("for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do", install)
         uninstall = (ROOT / "linux/uninstall.sh").read_text()
         for unit in ("monet-update.timer", "monet-apps.timer", "monet-update.service", "monet-apps.service"):
             self.assertIn(unit, uninstall)
@@ -733,7 +733,7 @@ class Updates(unittest.TestCase):
         self.assertIn("flatpak install --system --noninteractive --or-update -y flathub", script)
         self.assertIn('touch "$DONE"', script)
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn("monet-widgets monet-apps; do", install)
+        self.assertIn("monet-widgets monet-apps monet-charge; do", install)
         self.assertIn("monet-apps", (ROOT / "linux/uninstall.sh").read_text())
         self.assertIn("/var/lib/monet/apps-done", (ROOT / "linux/libexec/monet-session").read_text())
 
@@ -1131,7 +1131,7 @@ class MonetsOwn(unittest.TestCase):
         self.assertIn("KDE Action Restrictions", uninstall)
         # Every menu entry monet-look writes carries the mark uninstall.sh looks for
         # (and localized() puts an app's names in other languages under it).
-        self.assertEqual(self.LOOK.count("X-Monet=true"), 4)
+        self.assertEqual(self.LOOK.count("X-Monet=true"), 6)
 
     def test_the_stores_front_page_is_monets(self):
         store = SHARE / "monet/store"
@@ -1163,7 +1163,7 @@ class DesktopWidgets(unittest.TestCase):
     """Weather, Calendar, Now Playing, Note, Photo Frame, System, Recently Played, Timer and World Clock,
     on the desktop."""
     WIDGETS = ("org.monet.weather", "org.monet.calendar", "org.monet.nowplaying", "org.monet.notes", "org.monet.frame",
-               "org.monet.system", "org.monet.played", "org.monet.timer", "org.monet.worldclock")
+               "org.monet.system", "org.monet.played", "org.monet.timer", "org.monet.worldclock", "org.monet.batteries")
 
     def test_installed_and_removed(self):
         install = (ROOT / "linux/install.sh").read_text()
@@ -1372,7 +1372,7 @@ class LiquidGlass(unittest.TestCase):
             self.assertIn('<radialGradient id="lens-topleft"', svg, frame)
         quick = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("component GlassRim: Rectangle {", quick)
-        self.assertEqual(quick.count("GlassRim {"), 3)
+        self.assertEqual(quick.count("GlassRim {"), 4)  # tiles, sliders, light choices, All Settings
 
     def test_widget_glass_is_clear_with_a_lens_at_the_edge(self):
         # As Apple's: the painting's strokes show through, softened; a lens along the edge magnifies
@@ -1614,7 +1614,7 @@ class Crashes(unittest.TestCase):
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick crash %i %b\n", service)
         self.assertIn("RuntimeMaxSec=5min", service)
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn("monet-apps.timer monet-crash@.service; do", install)
+        self.assertIn("monet-apps.timer monet-crash@.service monet-charge.service; do", install)
         self.assertIn('ln -sfn ../monet-crash@.service "$UNITDIR/systemd-coredump@.service.wants/monet-crash@.service"',
                       install)
         self.assertIn("/etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service",
@@ -1748,7 +1748,8 @@ class EverydayScreens(unittest.TestCase):
         self.assertIn("mv qml/QuickAuthDialog.qml qml/KdeQuickAuthDialog.qml", build)
         self.assertIn('grep -q \'engine->load("qrc:/qml/KdeQuickAuthDialog.qml")\' QuickAuthDialog.cpp', build)
         containerfile = (ROOT / "image/Containerfile").read_text()
-        self.assertIn("bazzite-nvidia-open:stable AS password", containerfile)
+        self.assertIn("ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable", containerfile)
+        self.assertIn("FROM ${BASE} AS password", containerfile)
         self.assertIn("sh /src/password/build.sh /out || rm -rf /out/*", containerfile)
         self.assertIn("COPY --from=password /out /tmp/monet/password", containerfile)
         install = (ROOT / "linux/install.sh").read_text()
@@ -2023,7 +2024,7 @@ class MonetSettings(unittest.TestCase):
     def test_quick_settings_opens_it(self):
         main = (self.QUICK / "main.qml").read_text(encoding="utf-8")
         self.assertIn("MonetSettings {", main)
-        self.assertIn('onClicked: root.openSettings("")', main)
+        self.assertIn('onTapped: root.openSettings("")', main)  # All Settings, a pebble of glass
         # Every tile's chevron opens its page (Night Light's is Display), apart from the switch.
         for page in ("wifi", "bluetooth", "display", "notifications"):
             self.assertIn(f'page: "{page}"', main)
@@ -2384,6 +2385,212 @@ Audio
     def test_slay_the_spire_is_listed_for_testing(self):
         games = json.loads((SHARE / "monet/windows-games.json").read_text())
         self.assertIn("steam:646570", [g["id"] for g in games["games"]])
+
+
+class WhatOtherSystemsHave(unittest.TestCase):
+    """0.8.5: each app's volume, battery care, a hotspot, the Batteries widget and a welcome."""
+    SETTINGS = PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml"
+
+    def test_each_app_has_its_volume(self):
+        quick = quick_helper()
+        status = ("Audio\n ├─ Sinks:\n │  *   52. Built-in Audio Analog Stereo        [vol: 0.40]\n │\n"
+                  " └─ Streams:\n        81. Firefox\n             82. output_FL       > Built-in Audio:playback_FL\t[active]\n"
+                  "        95. Discord\n             96. input_FL        < Built-in Audio:capture_FL\t[active]\n\n"
+                  "Video\n └─ Streams:\n        99. obs\n             100. output_0       > Camera:input_0\t[active]\n")
+        # Apps that play, not ones that only record, nor video.
+        self.assertEqual(quick.app_streams(status), [(81, "Firefox")])
+        self.assertEqual(quick.sinks(status)[0]["id"], 52)
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn('onMoved: value => sheet.queue("app-volume " + modelData.id, value)', settings)
+        panel = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("onTapped: root.playThrough(place.modelData)", panel)
+
+    def test_battery_care_stops_at_80(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(quick.battery_care(Path(tmp)), {"supported": False, "limit": 100})
+            (Path(tmp) / "BAT0").mkdir()
+            (Path(tmp) / "BAT0/charge_control_end_threshold").write_text("80\n")
+            self.assertEqual(quick.battery_care(Path(tmp)), {"supported": True, "limit": 80})
+        # Root writes only the limit, only 80 or 100; it's kept and put back at every start.
+        charge = (ROOT / "linux/libexec/monet-charge").read_text()
+        self.assertIn("    80|100) limit=$1 ;;", charge)
+        self.assertIn('KEPT=/var/lib/monet/charge-limit', charge)
+        unit = (ROOT / "linux/systemd/monet-charge.service").read_text()
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-charge apply", unit)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('\\"$LIBEXECDIR/monet-charge\\"', install)
+        self.assertIn("monet-charge.service", install)
+        self.assertIn('run("pkexec", f"{LIBEXECDIR}/monet-charge", args[0], timeout=60)',
+                      (ROOT / "linux/libexec/monet-quick").read_text())
+
+    def test_hotspot_shares_the_internet(self):
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('["nmcli", "device", "wifi", "hotspot"]', quick)
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn('sheet.ask(on ? "hotspot-on" : "hotspot-off"', settings)
+
+    def test_batteries_list_this_laptop_first(self):
+        quick = quick_helper()
+        found = quick.battery_list([
+            {"Type": 5, "Model": "MX Master 3", "Percentage": 91.0, "State": 2},
+            {"Type": 1, "Percentage": 0.0},  # the mains
+            {"Type": 2, "PowerSupply": True, "IsPresent": False, "Percentage": 0.0},  # an empty second bay
+            {"Type": 2, "PowerSupply": True, "IsPresent": True, "Percentage": 76.4, "State": 1},
+            {"Type": 12, "Model": "DualSense", "Percentage": 18.0, "State": 2},
+        ])
+        self.assertEqual([(b["kind"], b["level"], b["charging"]) for b in found],
+                         [("laptop", 76, True), ("mouse", 91, False), ("controller", 18, False)])
+        widget = (PLASMA / "plasmoids/org.monet.batteries/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn('onTriggered: runner.connectSource(root.helper + " batteries")', widget)
+        ring = widget.split("component Ring")[1].split("fullRepresentation")[0]
+        self.assertNotIn("root.", ring)  # an inline component can't see the widget's ids
+
+    def test_ready_when_you_come_back(self):
+        import importlib.machinery
+        import importlib.util
+        import tempfile
+        from unittest import mock
+        loader = importlib.machinery.SourceFileLoader("monet_ready", str(ROOT / "linux/libexec/monet-ready"))
+        spec = importlib.util.spec_from_loader("monet_ready", loader)
+        ready = importlib.util.module_from_spec(spec)
+        loader.exec_module(ready)
+
+        def option(name, path):
+            # An EFI load option: attributes, the path's length, the name and the path (UTF-16).
+            text = (name + "\0" + path + "\0").encode("utf-16-le")
+            return b"\x07\0\0\0" + b"\x01\0\0\0" + len(path).to_bytes(2, "little") + text
+
+        with tempfile.TemporaryDirectory() as tmp:
+            efi = Path(tmp)
+            self.assertFalse(ready.boots_windows_next(efi))  # no BootNext: a plain start
+            (efi / f"BootNext-{ready.GLOBAL}").write_bytes(b"\x07\0\0\0\x01\0")
+            (efi / f"Boot0001-{ready.GLOBAL}").write_bytes(option("Windows Boot Manager", r"\EFI\Microsoft\Boot\bootmgfw.efi"))
+            self.assertTrue(ready.boots_windows_next(efi))
+            (efi / f"Boot0001-{ready.GLOBAL}").write_bytes(option("Monet", r"\EFI\fedora\shimx64.efi"))
+            self.assertFalse(ready.boots_windows_next(efi))
+
+            # Armed on the way to Windows, the next start signs in by itself, once.
+            state = Path(tmp) / "state"
+            paths = {"STATE": state, "USER": state / "ready-user", "ARMED": state / "ready-armed",
+                     "DROPIN": Path(tmp) / "plasmalogin.conf.d/zz-monet-ready.conf", "FLAG": Path(tmp) / "run/ready-auto"}
+            with mock.patch.multiple(ready, **paths), mock.patch.object(ready, "kept_user", return_value="claude"), \
+                    mock.patch.object(ready, "boots_windows_next", return_value=True):
+                self.assertEqual(ready.main(["arm"]), 0)
+                self.assertTrue(paths["ARMED"].exists())
+                ready.main(["boot"])
+                self.assertIn("[Autologin]\nUser=claude\nSession=plasma.desktop", paths["DROPIN"].read_text())
+                self.assertEqual(paths["FLAG"].read_text().strip(), "claude")
+                self.assertFalse(paths["ARMED"].exists())
+                ready.main(["boot"])  # the start after asks for the password again
+                self.assertFalse(paths["DROPIN"].exists())
+                # Armed long ago (a trip that never came back to Monet): no automatic sign-in.
+                paths["ARMED"].write_text("1000\n")
+                ready.main(["boot"])
+                self.assertFalse(paths["DROPIN"].exists())
+        # The session locks before the desktop shows, and only one that signed in by itself.
+        unit = (ROOT / "linux/systemd/user/monet-ready-lock.service").read_text()
+        for line in ("ConditionPathExists=/run/monet/ready-auto", "Before=plasma-plasmashell.service",
+                     "ExecStart=@LIBEXECDIR@/monet-quick ready-lock"):
+            self.assertIn(line, unit)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('if service in ("", "plasmalogin-autologin") or "autologin" in service:', quick)
+        self.assertIn("Before=display-manager.service", (ROOT / "linux/systemd/monet-ready-boot.service").read_text())
+        self.assertIn("ExecStop=@LIBEXECDIR@/monet-ready arm", (ROOT / "linux/systemd/monet-ready-leave.service").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('\\"$LIBEXECDIR/monet-ready\\"', install)
+        self.assertIn("systemctl --global enable monet-ready-lock.service", install)
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn('sheet.ask(on ? "ready-on" : "ready-off"', settings)
+
+    def test_last_start_shows_where_the_time_went(self):
+        quick = quick_helper()
+        found = quick.startup("Startup finished in 7.216s (firmware) + 3.008s (loader) + 1.240s (kernel) + 2.531s (initrd)"
+                              " + 1min 2.302s (userspace) = 1min 16.297s", 10_000_000, 16_500_000)
+        self.assertEqual(found, {"pc": 7.2, "monet": 69.1, "desktop": 6.5, "total": 82.8})
+        self.assertEqual(quick.startup("Bootup is not yet finished"), {})
+        self.assertIn('ask("startup", out => sheet.startup = sheet.json(out, {}))', self.SETTINGS.read_text(encoding="utf-8"))
+
+    def test_a_new_account_is_welcomed_once(self):
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('touch "$looks/welcomed"', session)
+        self.assertIn('"$LIBEXECDIR/monet-quick" open welcome', session)
+        self.assertIn('args[0] in PAGES or args[0] == "welcome"', (ROOT / "linux/libexec/monet-quick").read_text())
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn("welcome: welcomePage", settings)
+        self.assertIn('which === "welcome" || pages.some(p => p.id === which)', settings)
+
+
+class EasierOnOlderPCs(unittest.TestCase):
+    """0.8.5: 8 GB of memory or less, or a spinning disk, and Monet goes easier on the PC."""
+
+    def test_what_counts_as_older(self):
+        import tempfile
+        from unittest import mock
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            meminfo = Path(tmp) / "meminfo"
+            meminfo.write_text("MemTotal:        8040000 kB\n")  # an 8 GB laptop's 7.7
+            self.assertTrue(quick.older_pc(meminfo, spinning=False))
+            meminfo.write_text("MemTotal:       16300000 kB\n")
+            self.assertFalse(quick.older_pc(meminfo, spinning=False))
+            self.assertTrue(quick.older_pc(meminfo, spinning=True))
+            # The disk under /sysroot, as lsblk tells it.
+            answers = {"findmnt": "/dev/sda3\n", "lsblk": "1\n"}
+            with mock.patch.object(quick, "run", lambda *a, **k: answers.get(a[0])):
+                self.assertTrue(quick.older_pc(meminfo))
+            answers["lsblk"] = "0\n"
+            with mock.patch.object(quick, "run", lambda *a, **k: answers.get(a[0])):
+                self.assertFalse(quick.older_pc(meminfo))
+        self.assertFalse(quick.older_pc(Path("/nonexistent/meminfo"), spinning=False))
+
+    def test_sign_in_goes_easier(self):
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('if [ "$("$LIBEXECDIR/monet-quick" older-pc 2>/dev/null)" = yes ]; then', session)
+        self.assertIn(': > "$looks/glass-lite"', session)
+        # Files: names only, once, unless it's been chosen.
+        self.assertIn("kwriteconfig6 --file baloofilerc --group General --key 'only basic indexing' --type bool true",
+                      session)
+        # Steam: hidden from autostart (only Monet's own copy is ever replaced or removed), started later.
+        self.assertIn("Hidden=true\\nX-Monet=true", session)
+        self.assertIn('{ [ ! -e "$steam_later" ] || grep -q \'^X-Monet=true\' "$steam_later"; }', session)
+        self.assertIn("--unit=monet-steam-later --on-active=45", session)
+        self.assertIn('rm -f "$looks/glass-lite"', session)
+
+    def test_lighter_glass_without_the_lens(self):
+        glass = (ROOT / "linux/share/monet/widgets/Glass.qml").read_text(encoding="utf-8")
+        self.assertIn('nameFilters: ["glass-lite"]', glass)
+        self.assertIn("visible: glass.frosted && !glass.lite", glass)
+        self.assertIn("live: glass.frosted && !glass.lite", glass)
+        self.assertIn("readonly property real band: glass.lite ? 0 : glass.lensWidth", glass)
+
+
+class LaptopGaming(unittest.TestCase):
+    """0.8.5: games on a laptop's NVIDIA chip, and LACT in the Store."""
+
+    def test_games_start_on_the_nvidia_chip(self):
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        games = look.split("games_gpu() {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("hybrid_nvidia || return 0", games)
+        self.assertIn("PrefersNonDefaultGPU=true", games)
+        for app in ("org.prismlauncher.PrismLauncher", "org.libretro.RetroArch", "net.pcsx2.PCSX2"):
+            self.assertIn(app, games)
+        # Not the launchers that stay open in the tray: they'd keep the NVIDIA chip awake.
+        for app in ("com.valvesoftware.Steam", "com.heroicgameslauncher.hgl", "io.itch.itch"):
+            self.assertNotIn(app, games)
+        # Your own copy stays yours; Monet's follows the app's.
+        self.assertIn("grep -q '^X-Monet=true$' \"$mine\" && [ \"$f\" -nt \"$mine\" ] || continue", games)
+        self.assertIn('[ -d /sys/module/nvidia ] || return 1', look)
+        self.assertIn('"$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1 &',
+                      (ROOT / "linux/libexec/monet-session").read_text())
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-look --games-gpu",
+                      (ROOT / "linux/systemd/user/monet-frames.service").read_text())
+
+    def test_lact_in_the_store(self):
+        content = (SHARE / "monet/store/content.yaml").read_text()
+        play = content.split('title: "Play"', 1)[1].split("- banner:", 1)[0]
+        self.assertIn("- io.github.ilya_zlobintsev.LACT", play)
 
 
 if __name__ == "__main__":

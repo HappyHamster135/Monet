@@ -6,20 +6,14 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.8.3-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.8.3-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.8.3-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.8.3-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
-| Monet-0.8.3-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.8.5-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.8.5-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.8.5-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.8.5-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
+| Monet-0.8.5-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
-### New in 0.8.3: your apps, kept up to date
+### New in 0.8.5: in your language, under clearer glass
 
-- **The everyday apps are built in.** Photos, Documents, Video, Music,
-  Calculator and Archives are part of Monet now: there at your first
-  sign-in, in Monet's look (Music's icon is a painted gramophone), and small (they share what the desktop already
-  has). Pictures, PDFs, films, songs, archives and text each open in the
-  right one from the start, and Files shows what's inside PDFs and videos.
-  Before, Monet came with no apps beyond Steam, Lutris and the Text Editor.
 - **Monet speaks your language.** Settings, Monet Setup, the widgets, the
   lock and shut-down screens, notifications and the Make a Monet USB stick
   tool come in 29 languages besides English, from Spanish, Chinese and
@@ -27,18 +21,202 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   each with its keyboard; a keyboard without Latin letters keeps the US one
   beside it (Alt+Shift switches), so Wi-Fi passwords can still be typed.
   Arabic and Hebrew read from right to left, and the layout with them.
+
+- **Clearer glass, closer to Apple's.** You see the painting's brushstrokes
+  through the widgets, the bar and the popovers now, only softened. Along the
+  widgets', the bar's and the popovers' edges the glass bends the light a
+  little, like a real pane, and the rim catches the light at the top left
+  and bottom right. Quick Settings' tiles are pebbles of lighter glass, as
+  in Control Center.
+
+- **Monet for AMD and Intel too.** Monet now comes in two: one for NVIDIA
+  graphics (RTX 20 series, GTX 16 and newer) and one for AMD and Intel,
+  without NVIDIA's driver. The installer picks the right one for the PC by
+  itself, and updates stay with it. PCs with an older NVIDIA card can now
+  install Monet as well: it draws with the open driver, fine for everyday
+  things, while games run best in Windows.
+
+- **The everyday apps are built in.** Photos, Documents, Video, Music,
+  Calculator and Archives are part of Monet now: there at your first
+  sign-in, in Monet's look (Music's icon is a painted gramophone), and small (they share what the desktop already
+  has). Pictures, PDFs, films, songs, archives and text each open in the
+  right one from the start, and Files shows what's inside PDFs and videos.
+  Before, Monet came with no apps beyond Steam, Lutris and the Text Editor.
+
 - **Choose more while installing.** Monet Setup has a new step, Your apps:
   Zen Browser is ticked, and Office, Mail, Discord, Spotify, Heroic, Prism
   Launcher, OBS Studio and Krita are a click away. They download after your
   first sign-in and show up in the menu under their plain names. A PC set
   up before gets Zen once, by itself.
+
+- **What other systems have, Monet's way.** The things you'd miss coming
+  from Windows, a Mac or a phone:
+  - **A welcome** at your first sign-in: where Quick Settings and the
+    widgets are, Play on Windows, the light, and searching Settings, each
+    with its way there.
+  - **Each app's own volume**, in Settings → Sound, and a choice of where
+    sound plays (speakers, headphones, a screen) under the volume in Quick
+    Settings.
+  - **A hotspot** in Settings → Wi-Fi: a phone or tablet can use this PC's
+    internet; its name and password are right there.
+  - **Protect the battery** in Power & Sleep, on laptops that can (ThinkPads
+    and many more): charging stops at 80%, so the battery lasts more years.
+  - **Batteries**, a new widget: this laptop, the mouse, the keyboard,
+    controllers and headphones, each with how full it is.
+  - **LocalSend** among Your apps in Monet Setup and in the Store: send
+    files between the PC and your phone.
+  - Recording the screen (Meta+Alt+R) is in the list of shortcuts.
+  - **Ready when you come back** (Settings → Play on Windows, off until you
+    turn it on): after Windows, Monet starts your desktop behind the lock
+    screen, so it's there as soon as you type your password.
+  - **Last start** in Settings → About: how long the PC, Monet and your
+    desktop each took to start.
+  - Quick Settings' All Settings is a pebble of glass like its tiles.
+
+- **Four new widgets.** System, Recently Played, Timer and World Clock, in
+  the widget gallery:
+  - System: how hard the processor, the graphics and the memory are working,
+    on dials that warm from lily to the sun, how hot they run, and what's
+    downloading.
+  - Recently Played: the games you played last, with their covers; one
+    click and you're back in.
+  - Timer: a few minutes on the sun's path, with a ring and a notification
+    when they're up.
+  - World Clock: the time in other towns, each on a little clock face,
+    light by day and dark by night.
+
+- **Notes for your days, on the desktop and in the bar.** The Calendar
+  widget and the clock's month share the same notes:
+  - Days with a note have a dot under them; point at one to read it. The
+    line under the month shows the chosen day's note.
+  - Notes (or a click on that line) brings out a panel beside the month to
+    write the day's note, step to the day before or after, and see what's
+    coming up. It's kept as you type.
+  - The clock's month now turns too: ‹ ›, the wheel, or the arrow keys, and
+    a click on the month's name comes back to today.
+  - Make the Calendar wide and the notes sit beside the month.
+
+- **Weather in more than one place.** Add another town or country from the
+  card (or its settings), and the ‹ › beside the place's name go through
+  them; each keeps its last forecast, so going back is instant.
+
+- **Two more paintings.** Light & Wallpaper offers Monet's Water Lilies and
+  Haystacks beside The Hours, each drifting through dawn, midday, dusk and
+  night the same way.
+
+- **More of Settings.** Three new pages, and one that says more:
+  - **Games & Controllers** (new): your controllers and their batteries,
+    pairing a new one and testing its buttons, the performance overlay over
+    games, and where your games are kept.
+  - **Lock & Privacy** (new): when the screen locks, the password after
+    sleep, and whether Files and the menu remember what you opened (and
+    forgetting it).
+  - **Printers** (new): your printers, what's printing and waiting, and
+    which one is the default. Printers on your network show up by
+    themselves.
+  - **Mouse & Keyboard** also lists the keyboard shortcuts worth knowing.
+  The rarer settings are a "More…" away on each page.
+
+- **What's new, after each update.** Once a new Monet has started, a note
+  offers its highlights, and Settings → Updates keeps them.
+
+- **At home on a laptop.** The battery, the keyboard's light and Wi-Fi on
+  the move get their place:
+  - Quick Settings and Power & Sleep show the battery: plugged in or
+    charging, and how long it lasts.
+  - A slider for the keyboard's light, and Monet's own signs when you
+    press the brightness, keyboard-light and touchpad keys.
+  - The arrow on the Wi-Fi and Bluetooth tiles opens their page, to pick a
+    network or a device; the tile itself still switches it on and off.
+  - Networks you've joined before join again without the password, and
+    work and school networks (eduroam) ask for your name too.
+  - Bluetooth switches back on even after KDE's own switch turned it off.
+  - Settings scrolls its list of pages on a small screen.
+  - Monet doesn't update over a phone's hotspot.
+  - Brightness follows the laptop's own screen when a monitor is plugged in.
+
+- **Laptop gaming.** On a laptop with an NVIDIA chip beside its built-in
+  graphics, Minecraft (Prism Launcher), RetroArch, the console emulators and
+  the other games in the Store's Play row start on the NVIDIA chip by
+  themselves. Everything else, Steam's window too, stays on the built-in
+  graphics, which saves the battery. The Store's Play row also has LACT, to
+  watch and tune the graphics card: its fans, clock speeds and power.
+
+- **Kinder to older PCs.** Monet runs well on an older laptop too:
+  - Monet Setup checks the PC before anything is erased: too little memory
+    is said on the first page, and Install waits. An older NVIDIA card, or
+    4 to 6 GB of memory, is mentioned before installing.
+  - Glass off (Light & Wallpaper) now reaches the desktop widgets and the
+    lock screen too: they sit on paper instead of blurring the painting,
+    much lighter for older graphics. Monet still turns it off by itself
+    where there's no graphics driver.
+  - On a PC with 8 GB of memory or less, or a spinning hard disk, Monet goes
+    easier by itself: the widgets' glass leaves out its magnifying edge,
+    Files searches by name instead of reading every file (unless you've
+    chosen otherwise), and Steam starts a little after the desktop instead
+    of with it, so signing in is quicker.
+
+- **Ink signs in apps' toolbars and menus.** Save, print, zoom, rotate,
+  crop and the rest are brushed in the same ink as the bar, and change with
+  the light.
+
+- **Tooltips on one clean pane.** The names that show when you point at
+  something sit on a single sheet of glass, no longer a box within a box.
+
+- **Zen, more at home.** The open tab sits on a pebble of paper, the address
+  field rings in lily while you type, and Zen starts ready, without its
+  welcome tour or asking to be the default.
+
+- **Easier to find your way.** Small things that said too little:
+  - Weather's place button now says "Add a place", and the place shown can
+    be forgotten right there; when the weather can't be reached, a click
+    tries again.
+  - The widget gallery says how many of a widget are on your desktop, and
+    "Remove all" when there's more than one.
+  - Quick Settings says what Hours, Mist and Smoke do, Wi-Fi says "Not
+    connected" instead of "On", and Night Light and Do Not Disturb have an
+    arrow to their settings.
+  - Pointing at the town in Weather, the cover in Now Playing, the Photo
+    Frame, the Timer's minutes or your name in the menu says what a click
+    (or the wheel) does. An empty Photo Frame says where photos come from.
+  - World Clock has a + for another town while you point at it.
+  - The lock screen names the painting that's really hanging, and a wrong
+    password says so plainly, for longer.
+  - "Windows & Games" in Settings is now "Play on Windows", so it isn't
+    mixed up with Games & Controllers; if Windows doesn't finish starting,
+    the note says where to check, not a command to type.
+  - Monet Setup reminds you to take a photo of the blue screen's steps
+    before restarting.
+  - Clearing recent files says it's done.
+  - Searching Settings works in your language, not only in English, and
+    accents don't matter: "ecran" finds "Écran".
+
+- **When an app closes unexpectedly.** A short note says so, with its name
+  and picture, and Open it again starts it straight back. Before, it just
+  vanished. When only a part of it stops, like a browser's tab or a game
+  under Steam, nothing is said.
+
+Updating from 0.8.3: Monet updates by itself within a day (or Settings →
+Updates → Install, then restart). At your next sign-in the glass turns
+clearer and the apps' names follow your language; your panels and widgets
+stay as they are. A PC with AMD or Intel graphics stays on the Monet it
+has; `sudo bootc switch ghcr.io/happyhamster135/monet-amd:latest` moves it
+to the one made for it.
+
+### New in 0.8.3: your apps, kept up to date
+
+- **Choose your apps while installing.** Monet Setup has a new step, Your
+  apps: the everyday ones are ticked (Zen Browser, Photos, Documents,
+  Video, Music, Calculator), and Office, Mail, Discord, Spotify, OBS
+  Studio and Krita are a click away. They download after your first
+  sign-in and show up in the menu under their plain names. A PC set up
+  before gets the everyday ones once, by itself. Before, Monet came with
+  no apps beyond Steam, Lutris and the Text Editor.
 - **Zen is the browser, in Monet's look.** Web links open in Zen
   Browser (Settings → Default Apps picks another). Its window sits on the
   painting, softened as behind glass, with lily for the accent, in Mist by
   day and Smoke by night like the rest of Monet, and a new tab opens on The
-  Hours itself. The open tab sits on a pebble of paper, the address field
-  rings in lily while you type, and Zen starts ready, without its welcome
-  tour or asking to be the default.
+  Hours itself.
 - **The big apps, painted.** Zen, Discord, Spotify, OBS Studio, Krita,
   LibreOffice, Thunderbird, Chrome, VLC, Telegram, Heroic, Prism Launcher,
   RetroArch, Bottles, GIMP, Blender, Kdenlive, Audacity, VS Code, Obsidian
@@ -72,104 +250,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   - **Storage** (new): what fills the PC (games, apps, your files,
     Monet) in one bar, and room to make: empty the Trash, look through
     Downloads.
-  - **Games & Controllers** (new): your controllers and their batteries,
-    pairing a new one and testing its buttons, the performance overlay over
-    games, and where your games are kept.
-  - **Lock & Privacy** (new): when the screen locks, the password after
-    sleep, and whether Files and the menu remember what you opened (and
-    forgetting it).
-  - **Printers** (new): your printers, what's printing and waiting, and
-    which one is the default. Printers on your network show up by
-    themselves.
-  - **Mouse & Keyboard** also lists the keyboard shortcuts worth knowing.
   The rarer settings are a "More…" away on each page.
-- **What's new, after each update.** Once a new Monet has started, a note
-  offers its highlights, and Settings → Updates keeps them.
-- **Two more paintings.** Light & Wallpaper offers Monet's Water Lilies and
-  Haystacks beside The Hours, each drifting through dawn, midday, dusk and
-  night the same way.
-- **Four new widgets.** System, Recently Played, Timer and World Clock, in
-  the widget gallery:
-  - System: how hard the processor, the graphics and the memory are working,
-    on dials that warm from lily to the sun, how hot they run, and what's
-    downloading.
-  - Recently Played: the games you played last, with their covers; one
-    click and you're back in.
-  - Timer: a few minutes on the sun's path, with a ring and a notification
-    when they're up.
-  - World Clock: the time in other towns, each on a little clock face,
-    light by day and dark by night.
-- **Weather in more than one place.** Add another town or country from the
-  card (or its settings), and the ‹ › beside the place's name go through
-  them; each keeps its last forecast, so going back is instant.
-- **Tooltips on one clean pane.** The names that show when you point at
-  something sit on a single sheet of glass, no longer a box within a box.
-- **At home on a laptop.** The battery, the keyboard's light and Wi-Fi on
-  the move get their place:
-  - Quick Settings and Power & Sleep show the battery: plugged in or
-    charging, and how long it lasts.
-  - A slider for the keyboard's light, and Monet's own signs when you
-    press the brightness, keyboard-light and touchpad keys.
-  - The arrow on the Wi-Fi and Bluetooth tiles opens their page, to pick a
-    network or a device; the tile itself still switches it on and off.
-  - Networks you've joined before join again without the password, and
-    work and school networks (eduroam) ask for your name too.
-  - Bluetooth switches back on even after KDE's own switch turned it off.
-  - Settings scrolls its list of pages on a small screen.
-  - Monet doesn't update over a phone's hotspot.
-  - Brightness follows the laptop's own screen when a monitor is plugged in.
-- **Ink signs in apps' toolbars and menus.** Save, print, zoom, rotate,
-  crop and the rest are brushed in the same ink as the bar, and change with
-  the light.
-- **Notes for your days, on the desktop and in the bar.** The Calendar
-  widget and the clock's month share the same notes:
-  - Days with a note have a dot under them; point at one to read it. The
-    line under the month shows the chosen day's note.
-  - Notes (or a click on that line) brings out a panel beside the month to
-    write the day's note, step to the day before or after, and see what's
-    coming up. It's kept as you type.
-  - The clock's month now turns too: ‹ ›, the wheel, or the arrow keys, and
-    a click on the month's name comes back to today.
-  - Make the Calendar wide and the notes sit beside the month.
-- **Easier to find your way.** Small things that said too little:
-  - Weather's place button now says "Add a place", and the place shown can
-    be forgotten right there; when the weather can't be reached, a click
-    tries again.
-  - The widget gallery says how many of a widget are on your desktop, and
-    "Remove all" when there's more than one.
-  - Quick Settings says what Hours, Mist and Smoke do, Wi-Fi says "Not
-    connected" instead of "On", and Night Light and Do Not Disturb have an
-    arrow to their settings.
-  - Pointing at the town in Weather, the cover in Now Playing, the Photo
-    Frame, the Timer's minutes or your name in the menu says what a click
-    (or the wheel) does. An empty Photo Frame says where photos come from.
-  - World Clock has a + for another town while you point at it.
-  - The lock screen names the painting that's really hanging, and a wrong
-    password says so plainly, for longer.
-  - "Windows & Games" in Settings is now "Play on Windows", so it isn't
-    mixed up with Games & Controllers; if Windows doesn't finish starting,
-    the note says where to check, not a command to type.
-  - Monet Setup reminds you to take a photo of the blue screen's steps
-    before restarting.
-  - Clearing recent files says it's done.
-  - Searching Settings works in your language, not only in English, and
-    accents don't matter: "ecran" finds "Écran".
-- **Clearer glass, closer to Apple's.** You see the painting's brushstrokes
-  through the widgets, the bar and the popovers now, only softened. Along the
-  widgets', the bar's and the popovers' edges the glass bends the light a
-  little, like a real pane, and the rim catches the light at the top left
-  and bottom right. Quick Settings' tiles are pebbles of lighter glass, as
-  in Control Center.
-- **Kinder to older PCs.**
-  - Monet Setup checks the PC before anything is erased: an NVIDIA card
-    older than the RTX 20 series with nothing else to draw with, or too
-    little memory, is said on the first page, and Install waits. An old
-    NVIDIA chip beside built-in graphics, or 4 to 6 GB of memory, is
-    mentioned before installing.
-  - Glass off (Light & Wallpaper) now reaches the desktop widgets and the
-    lock screen too: they sit on paper instead of blurring the painting,
-    much lighter for older graphics. Monet still turns it off by itself
-    where there's no graphics driver.
+- **The Calendar opens its days.** Click a day for its page: the date in
+  Fraunces, ‹ › to the day before or after, Today to come back, and a note
+  for that day, kept as you type. Days with a note have a dot of lily under
+  them. Make the widget wide and the month and the day sit side by side;
+  the wheel turns the months.
 - **Now Playing starts the music.** With nothing playing it offers your
   music apps, the PC's own first, or the Store to find one. While something
   plays, a line shows how far along it is, with the time gone and the time
@@ -199,10 +285,6 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   charger plugged in or out, a low battery, the volume step and emptying the
   trash sound like Monet now: soft felt and glass, quiet and warm. Before,
   they were KDE's.
-- **When an app closes unexpectedly.** A short note says so, with its name
-  and picture, and Open it again starts it straight back. Before, it just
-  vanished. When only a part of it stops, like a browser's tab or a game
-  under Steam, nothing is said.
 
 Updating from 0.8.2: Settings → Updates → Install, then restart. After
 that Monet updates by itself. At your next sign-in KDE's Brightness panel

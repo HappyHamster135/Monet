@@ -104,6 +104,17 @@ PlasmaCore.Dialog {
     property bool netsLoaded: false
     property var devices: []
     property var outputs: []
+    // The apps playing sound, each with its own volume.
+    property var appsSound: []
+    // Battery care: whether the battery can stop at 80%, and where it stops.
+    property var batteryCare: ({ supported: false, limit: 100 })
+    // This PC's own Wi-Fi network for phones and tablets.
+    property var hotspot: ({ on: false, possible: false })
+    // Ready when you come back: after Windows, the desktop starts behind the lock screen.
+    property var ready: ({ on: false })
+    // How long the last start took: { pc, monet, desktop, total } in seconds.
+    property var startup: ({})
+    property string hotspotState: ""
     property var games: []
     property var pc: ({})
     property var clock: ({})
@@ -165,7 +176,7 @@ PlasmaCore.Dialog {
     visible: false
 
     function open(which) {
-        if (which && pages.some(p => p.id === which)) {
+        if (which && (which === "welcome" || pages.some(p => p.id === which))) {
             page = which
         }
         x = Math.round(area.x + (area.width - mainItem.width) / 2)
@@ -221,11 +232,16 @@ PlasmaCore.Dialog {
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))
         } else if (page === "wifi") {
             ask("wifi-list", out => { sheet.nets = sheet.json(out, []); sheet.netsLoaded = true })
+            ask("hotspot", out => sheet.hotspot = sheet.json(out, sheet.hotspot))
         } else if (page === "bluetooth") {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
             ask("outputs", out => sheet.outputs = sheet.json(out, []))
+            ask("apps-sound", out => { if (!sheet.dragging) sheet.appsSound = sheet.json(out, []) })
+        } else if (page === "about") {
+            ask("startup", out => sheet.startup = sheet.json(out, {}))
         } else if (page === "windows") {
+            ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
             call(monet + " games --json", out => sheet.games = sheet.json(out, []))
         } else if (page === "datetime") {
             ask("time", out => sheet.clock = sheet.json(out, sheet.clock))
@@ -236,6 +252,7 @@ PlasmaCore.Dialog {
             ask("accounts", out => sheet.people = sheet.json(out, sheet.people))
         } else if (page === "power") {
             ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
+            ask("battery-care", out => sheet.batteryCare = sheet.json(out, sheet.batteryCare))
         } else if (page === "input") {
             ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo))
             if (knownLayouts.length === 0) {
@@ -1419,9 +1436,9 @@ PlasmaCore.Dialog {
                     Layout.preferredHeight: 38
                     Layout.bottomMargin: 10
                     radius: 12
-                    color: look.dark ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(1, 1, 1, 0.4)
-                    border.width: search.activeFocus ? 2 : 0
-                    border.color: look.lily
+                    color: look.dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.4)
+                    border.width: search.activeFocus ? 2 : 1
+                    border.color: search.activeFocus ? look.lily : look.dark ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.7)
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 12
@@ -1503,6 +1520,8 @@ PlasmaCore.Dialog {
                         visible: target !== null && target.visible
                         radius: 12
                         color: look.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.6)
+                        border.width: 1
+                        border.color: look.dark ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.85)
                         Behavior on y {
                             enabled: sheet.visible
                             NumberAnimation { duration: Math.round(320 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
@@ -1679,7 +1698,7 @@ PlasmaCore.Dialog {
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
                         storage: storagePage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
-                        printers: printersPage,
+                        printers: printersPage, welcome: welcomePage,
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
                     onLoaded: {
@@ -1786,6 +1805,86 @@ PlasmaCore.Dialog {
         }
 
         // Pages -----------------------------------------------------------------
+        // The first sign-in: what's worth knowing, each with the way there. Not in the list of
+        // pages; monet-session opens it once, for a new account.
+        Component {
+            id: welcomePage
+            ColumnLayout {
+                spacing: 20
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: i18n("Welcome to Monet")
+                        color: look.ink
+                        font.family: "Fraunces 72pt SuperSoft"
+                        font.weight: Font.Light
+                        font.pixelSize: 36
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: i18n("A few things worth knowing, then it's yours.")
+                        color: look.dim
+                        font.pixelSize: 15
+                        wrapMode: Text.Wrap
+                    }
+                }
+                Card {
+                    tone: look
+                    Repeater {
+                        // glyph, title, what it is, the way there (a page, or the widget gallery), its button
+                        model: [
+                            ["M4 7h10M18 7h2M4 17h4M12 17h8M16 4v6M10 14v6", i18n("Quick Settings, at the right of the bar"),
+                             i18n("Wi-Fi, sound, brightness and the light, a click away. The arrow on a tile opens its page here."), "", ""],
+                            ["M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z", i18n("Widgets on your desktop"),
+                             i18n("Weather, a calendar with notes, your batteries, clocks around the world and more."), "widgets",
+                             i18n("Edit widgets")],
+                            ["M9 6.5L18 12l-9 5.5z", i18n("Play on Windows"),
+                             i18n("Games that need Windows are a restart away, and you come back here after."), "windows",
+                             i18n("See your games")],
+                            [sheet.entry("light").glyph || "", i18n("Make it yours"),
+                             i18n("Choose the light and the painting, and how big things are on the screen."), "light",
+                             i18n("Light & Wallpaper")],
+                            ["M10 4a6 6 0 1 0 0 12a6 6 0 1 0 0-12M15 15l5 5", i18n("Find any setting"),
+                             i18n("Type what you're looking for in the search at the top left, in your own words."), "", ""]
+                        ]
+                        SettingRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData[1]
+                            detail: modelData[2]
+                            lead: Glyph {
+                                width: 20
+                                height: 20
+                                path: modelData[0]
+                                filled: modelData[3] === "windows"
+                                color: look.ink
+                            }
+                            Pill {
+                                tone: look
+                                visible: modelData[4] !== ""
+                                text: modelData[4]
+                                onClicked: modelData[3] === "widgets" ? sheet.ask("widgets") : sheet.page = modelData[3]
+                            }
+                        }
+                    }
+                }
+                Pill {
+                    tone: look
+                    kind: "lily"
+                    Layout.alignment: Qt.AlignRight
+                    text: i18n("Start using Monet")
+                    onClicked: sheet.visible = false
+                }
+            }
+        }
+
         Component {
             id: lightPage
             ColumnLayout {
@@ -2152,6 +2251,34 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
+                // A hotspot: this PC's own Wi-Fi network, so a phone or tablet can use its internet.
+                Card {
+                    tone: look
+                    visible: sheet.hotspot.on === true || sheet.hotspot.possible === true
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: sheet.hotspotState !== "starting"
+                        title: i18n("Hotspot")
+                        detail: sheet.hotspotState === "starting" ? i18n("Starting…")
+                            : sheet.hotspotState === "failed" ? i18n("This Wi-Fi can't share. Wired internet shares best.")
+                            : sheet.hotspot.on === true ? i18n("Join %1 with the password %2", sheet.hotspot.name, sheet.hotspot.password)
+                            : i18n("Lets a phone or tablet use this PC's internet")
+                        onTapped: {
+                            const on = sheet.hotspot.on !== true
+                            sheet.hotspotState = on ? "starting" : ""
+                            sheet.ask(on ? "hotspot-on" : "hotspot-off", out => {
+                                const state = sheet.json(out, { on: false })
+                                sheet.hotspot = state
+                                sheet.hotspotState = on && !state.on ? "failed" : ""
+                            })
+                        }
+                        Switch {
+                            tone: look
+                            active: sheet.hotspot.on === true
+                        }
+                    }
+                }
                 Pill {
                     tone: look
                     text: i18n("More Wi-Fi settings…")
@@ -2339,6 +2466,35 @@ PlasmaCore.Dialog {
                             }
                         }
                     }
+                }
+                // Each app's own volume, as Windows' mixer has it (apps come and go as they play).
+                Caption {
+                    tone: look
+                    visible: sheet.appsSound.length > 0
+                    text: i18n("Apps playing sound")
+                }
+                Card {
+                    tone: look
+                    visible: sheet.appsSound.length > 0
+                    Repeater {
+                        model: sheet.appsSound
+                        SliderRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            value: modelData.volume
+                            onHeld: down => sheet.dragging = down
+                            onMoved: value => sheet.queue("app-volume " + modelData.id, value)
+                        }
+                    }
+                }
+                Timer {
+                    interval: 3000
+                    repeat: true
+                    running: sheet.page === "sound" && sheet.visible
+                    onTriggered: sheet.ask("apps-sound", out => { if (!sheet.dragging) sheet.appsSound = sheet.json(out, sheet.appsSound) })
                 }
                 Card {
                     tone: look
@@ -2881,6 +3037,7 @@ PlasmaCore.Dialog {
                                     [i18n("Switch windows"), ["Alt", "Tab"]], [i18n("A window on one half"), ["Meta", "\u2190", "\u2192"]],
                                     [i18n("A window on the whole screen"), ["Meta", "PgUp"]], [i18n("What you copied"), ["Meta", "V"]],
                                     [i18n("Emoji"), ["Meta", "."]], [i18n("Screenshot"), ["Print"]],
+                                    [i18n("Record the screen"), ["Meta", "Alt", "R"]],
                                     [i18n("Restart or shut down"), ["Ctrl", "Alt", "Del"]]]
                             RowLayout {
                                 id: shortcutRow
@@ -2956,6 +3113,23 @@ PlasmaCore.Dialog {
                             ? (sheet.info.minutes ? i18nc("%1 is a time like 1:20", "Charging, full in %1", sheet.hm(sheet.info.minutes)) : i18n("Charging"))
                             : sheet.info.plugged ? i18n("Plugged in")
                             : sheet.info.minutes ? i18nc("%1 is a time like 2:15", "About %1 left", sheet.hm(sheet.info.minutes)) : i18n("On battery")
+                    }
+                    // Battery care, where the battery can do it (ThinkPads and many others): it stops at 80%.
+                    SettingRow {
+                        tone: look
+                        visible: sheet.batteryCare.supported === true
+                        tappable: true
+                        title: i18n("Protect the battery")
+                        detail: i18n("Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in.")
+                        onTapped: {
+                            const limit = sheet.batteryCare.limit <= 80 ? 100 : 80
+                            sheet.batteryCare = { supported: true, limit: limit }
+                            sheet.ask("battery-limit " + limit, () => sheet.ask("battery-care", out => sheet.batteryCare = sheet.json(out, sheet.batteryCare)))
+                        }
+                        Switch {
+                            tone: look
+                            active: sheet.batteryCare.limit <= 80
+                        }
                     }
                 }
                 // How hard it works: three choices, like Light's.
@@ -4027,6 +4201,26 @@ PlasmaCore.Dialog {
                         wrapMode: Text.Wrap
                     }
                 }
+                // Ready when you come back: off until it's chosen, as it signs in without asking first.
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Ready when you come back")
+                        detail: i18n("After Windows, Monet starts your desktop behind the lock screen, so it's there as soon as you type your password.")
+                        onTapped: {
+                            const on = sheet.ready.on !== true
+                            sheet.ready = { on: on }
+                            sheet.ask(on ? "ready-on" : "ready-off", out => sheet.ready = sheet.json(out, sheet.ready))
+                        }
+                        Switch {
+                            tone: look
+                            active: sheet.ready.on === true
+                        }
+                    }
+                }
             }
         }
 
@@ -4379,8 +4573,35 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
+                // How long the last start took, and where the time went: to see what a change does.
+                Card {
+                    tone: look
+                    visible: sheet.startup.total !== undefined
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        strong: false
+                        title: i18n("Last start")
+                        detail: [
+                            sheet.startup.pc ? i18nc("how long the PC's own start took, in seconds", "The PC %1 s", sheet.secs(sheet.startup.pc)) : "",
+                            sheet.startup.monet ? i18nc("how long Monet took to start, in seconds", "Monet %1 s", sheet.secs(sheet.startup.monet)) : "",
+                            sheet.startup.desktop ? i18nc("from signing in until the desktop was there, in seconds", "Your desktop %1 s", sheet.secs(sheet.startup.desktop)) : ""
+                        ].filter(t => t !== "").join("  ·  ")
+                        Text {
+                            horizontalAlignment: Text.AlignLeft
+                            text: i18nc("a time in seconds", "%1 s", sheet.secs(sheet.startup.total || 0))
+                            color: look.ink
+                            font.pixelSize: 14
+                        }
+                    }
+                }
             }
         }
+    }
+
+    // Seconds with one decimal, the way this PC's region writes them.
+    function secs(value) {
+        return Number(value).toLocaleString(Qt.locale(), "f", 1)
     }
 
     // A page of Monet's own, or one KDE's settings show (then this stays put).

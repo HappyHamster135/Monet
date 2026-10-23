@@ -16,6 +16,13 @@ Test machines:
 - [ ] Secure Boot **on** in both systems (`monet doctor` in Monet; in Windows, `Confirm-SecureBootUEFI` in an admin PowerShell)
 - [ ] `monet doctor` shows no ✗
 - [ ] Monet Bridge installed; `monet-bridge status` (admin terminal) lists the Monet entry
+- [ ] The right Monet for the graphics: `rpm-ostree status` (or `bootc status`) shows `monet` on the RTX PC and `monet-amd` on a PC with only Intel or AMD graphics (or an NVIDIA card older than the RTX 20 series)
+
+### Older PCs and laptops
+
+- [ ] `/usr/libexec/monet-quick older-pc` says `yes` with 8 GB of memory or less (or a hard disk), `no` otherwise
+- [ ] On an older PC: `~/.config/monet/glass-lite` is there, Steam opens about 45 s after the desktop, and `kreadconfig6 --file baloofilerc --group General --key "only basic indexing"` says `true`
+- [ ] On a laptop with an NVIDIA chip beside the built-in graphics: a game from the Store's Play row (Prism Launcher, RetroArch) runs on the NVIDIA chip (`nvidia-smi` lists it), while the desktop and Steam's window don't
 
 ## 2. Switching
 
@@ -30,6 +37,27 @@ Time with a stopwatch, from the click to the moment you can play.
 | Back to Monet shortcut → Monet desktop | | |
 
 Targets: under 30 s into a game, under 20 s back to Monet.
+
+Settings → About → **Last start** shows where the time went on the way back:
+the PC's own start (firmware), Monet's (loader, kernel, system), and your
+desktop (from signing in until it's there). Note them for both PCs:
+
+| Last start | Laptop | Desktop |
+|---|---|---|
+| The PC | | |
+| Monet | | |
+| Your desktop | | |
+
+### Ready when you come back
+
+Turn it on in Settings → Play on Windows, then Play on Windows and come back.
+
+- [ ] Coming back, Monet signs in by itself and the **lock screen** shows first, not the desktop
+- [ ] After the password, the desktop is already there (compare the time with it off)
+- [ ] The start after that asks for the password at the sign-in screen as usual
+- [ ] Shut down from Windows instead of coming back, start the PC the next day: the sign-in screen asks as usual
+- [ ] Turned off again: coming back from Windows shows the sign-in screen
+- [ ] If the desktop ever shows before the lock screen, turn it off and note it in Logs below
 
 ## 3. Anti-cheat after hibernation
 

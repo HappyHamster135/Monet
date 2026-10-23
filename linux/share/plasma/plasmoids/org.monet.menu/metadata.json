@@ -57,7 +57,7 @@
         "Name[uk]": "Меню",
         "Name[zh_CN]": "菜单",
         "Name[zh_TW]": "選單",
-        "Version": "0.8.3"
+        "Version": "0.8.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-Provides": ["org.kde.plasma.launchermenu"]

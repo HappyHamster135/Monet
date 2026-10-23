@@ -103,7 +103,8 @@ network --hostname=monet
 # installer shows if something goes wrong.
 import json, os, subprocess, sys, time, urllib.error, urllib.request
 
-image = "@IMAGE@"
+# Which Monet the %pre below chose for this PC's graphics.
+image = open("/tmp/monet-image").read().strip() if os.path.exists("/tmp/monet-image") else "@IMAGE@"
 registry, rest = image.split("/", 1)
 repo, tag = rest.rsplit(":", 1)
 accept = ", ".join([
@@ -285,7 +286,32 @@ if root:
                 window.kill()
 %end
 
-ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification
+%pre --interpreter=/usr/bin/python3 --log=/tmp/monet-image.log
+# Which Monet: NVIDIA's open driver with a GTX 16 / RTX 20 or newer (PCI ids
+# from 1e00), otherwise AMD's and Intel's, whose open drivers also draw with
+# older NVIDIA cards. Monet Setup chooses the same way (setup/monet_setup/pc.py).
+from pathlib import Path
+
+def newer_nvidia(devices=Path("/sys/bus/pci/devices")):
+    for dev in devices.glob("*"):
+        try:
+            if ((dev / "class").read_text().startswith("0x03") and (dev / "vendor").read_text().strip() == "0x10de"
+                    and int((dev / "device").read_text(), 16) >= 0x1E00):
+                return True
+        except (OSError, ValueError):
+            continue
+    return False
+
+image = "@IMAGE@"
+if not newer_nvidia():
+    name, tag = image.rsplit(":", 1)
+    image = f"{name}-amd:{tag}"
+print(f"Monet: {image}")
+open("/tmp/monet-image", "w").write(image)
+open("/tmp/monet-image.ks", "w").write(f"ostreecontainer --url={image} --transport=registry --no-signature-verification\n")
+%end
+
+%include /tmp/monet-image.ks
 
 %post --erroronfail --log=/var/log/monet-mok.log
 # Monet's kernel and the NVIDIA driver are signed with Universal Blue's key.

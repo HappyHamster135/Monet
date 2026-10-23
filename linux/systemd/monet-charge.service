@@ -1,0 +1,10 @@
+[Unit]
+Description=Monet: battery care, the charge limit chosen in Settings
+ConditionPathExists=/var/lib/monet/charge-limit
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-charge apply
+
+[Install]
+WantedBy=multi-user.target

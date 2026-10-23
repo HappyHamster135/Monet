@@ -1,6 +1,7 @@
 [Unit]
-Description=Monet: a painted canvas for each app Monet hasn't painted
+Description=Monet: a painted canvas for each app Monet hasn't painted, and games on a laptop's NVIDIA chip
 
 [Service]
 Type=oneshot
 ExecStart=@LIBEXECDIR@/monet-quick frames
+ExecStart=@LIBEXECDIR@/monet-look --games-gpu

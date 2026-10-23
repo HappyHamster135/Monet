@@ -42,6 +42,7 @@ APPS = [
     ("org.mozilla.Thunderbird", N_("Mail"), N_("Email and calendars"), False),
     ("com.discordapp.Discord", "Discord", N_("Talk while you play"), False),
     ("com.spotify.Client", "Spotify", N_("Music to stream"), False),
+    ("org.localsend.localsend_app", "LocalSend", N_("Send files to your phone"), False),
     ("com.heroicgameslauncher.hgl", "Heroic", N_("Epic and GOG games"), False),
     ("org.prismlauncher.PrismLauncher", "Prism Launcher", "Minecraft", False),
     ("com.obsproject.Studio", "OBS Studio", N_("Record and stream games"), False),
@@ -84,7 +85,7 @@ class Setup(QObject):
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
         self._proc = None
         # The demo is a PC that's fine, unless MONET_SETUP_DEMO_PC says otherwise ({"memory": 4}).
-        self._pc = ({"oldNvidia": "", "memory": 16, **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
+        self._pc = ({"newNvidia": True, "oldNvidia": "", "memory": 16, **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
                     if DEMO else pc.check())
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
@@ -336,8 +337,6 @@ class Setup(QObject):
         return self._pc_blocker()
 
     def _pc_blocker(self):
-        if self._pc["oldNvidia"] == "only":
-            return _("This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow.")  # noqa: E501
         gb = self._pc["memory"]
         if gb is not None and gb < 3:
             return tr("This PC has %1 GB of memory. Monet needs at least 4 GB.", max(1, round(gb)))
@@ -347,8 +346,11 @@ class Setup(QObject):
     def pcNotes(self):
         """What's good to know about this PC before installing, though Monet runs on it."""
         notes = []
-        if self._pc["oldNvidia"] == "beside":
-            notes.append(_("This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."))  # noqa: E501
+        # An older NVIDIA card gets the AMD and Intel Monet, whose open driver draws with it.
+        if self._pc["oldNvidia"] == "only":
+            notes.append(_("This PC's NVIDIA graphics card is older than the RTX 20 series. Monet draws with its open driver, fine for everyday things; games run best in Windows."))  # noqa: E501
+        elif self._pc["oldNvidia"] == "beside":
+            notes.append(_("This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet uses the built-in graphics. Games run best in Windows."))  # noqa: E501
         gb = self._pc["memory"]
         if gb is not None and 3 <= gb < 7:
             notes.append(tr("This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better.", round(gb)))  # noqa: E501
@@ -397,7 +399,7 @@ class Setup(QObject):
         locale, zone_guess = system.LANGUAGES[self._language][1::2]
         layout, variant = system.KEYBOARDS[self._keyboard][1:]
         plan = {
-            "image": IMAGE, "disk": disk["path"], "mode": self._mode,
+            "image": pc.image_for(IMAGE, self._pc), "disk": disk["path"], "mode": self._mode,
             "sizes": disk[self._mode],
             "language": locale, "keyboard": layout, "variant": variant,
             "timezone": zone_guess,             # refined from the internet while installing

@@ -24,6 +24,8 @@ PlasmoidItem {
     // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     property var info: ({})
+    // Speakers, headphones, a screen: where the sound can play.
+    property var outputs: []
     // While a slider is held, don't let a status refresh move it.
     property bool dragging: false
 
@@ -41,6 +43,11 @@ PlasmoidItem {
                     root.info = JSON.parse(data["stdout"])
                 } catch (e) {
                 }
+            } else if (source === root.helper + " outputs") {
+                try {
+                    root.outputs = JSON.parse(data["stdout"])
+                } catch (e) {
+                }
             } else {
                 refresh()
             }
@@ -49,6 +56,15 @@ PlasmoidItem {
 
     function refresh() {
         runner.connectSource(helper + " status")
+        runner.connectSource(helper + " outputs")
+    }
+
+    function playThrough(output) {
+        if (!Number.isInteger(output.id)) {
+            return
+        }
+        outputs = outputs.map(o => Object.assign({}, o, { default: o.id === output.id }))
+        run("output " + output.id)
     }
 
     // Arguments are fixed words or numbers, never user text.
@@ -400,6 +416,52 @@ PlasmoidItem {
                             onMoved: root.queue("volume", value)
                         }
                     }
+                    // Where the sound plays, when it could play in more than one place: a tap moves it.
+                    Flow {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 28
+                        visible: root.outputs.length > 1 && typeof root.info.volume === "number"
+                        spacing: 6
+                        Repeater {
+                            model: root.outputs
+                            Rectangle {
+                                id: place
+                                required property var modelData
+                                readonly property bool chosen: modelData.default === true
+                                implicitWidth: Math.min(placeName.implicitWidth, 170) + 22
+                                implicitHeight: 26
+                                radius: 13
+                                color: chosen ? "#357F72"
+                                    : root.smoke ? Qt.rgba(1, 1, 1, placeHover.hovered ? 0.14 : 0.08) : Qt.rgba(1, 1, 1, placeHover.hovered ? 0.5 : 0.34)
+                                activeFocusOnTab: true
+                                Keys.onSpacePressed: root.playThrough(modelData)
+                                Keys.onReturnPressed: root.playThrough(modelData)
+                                border.width: activeFocus ? 2 : chosen ? 0 : 1
+                                border.color: activeFocus ? "#357F72" : root.smoke ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.7)
+                                Accessible.role: Accessible.RadioButton
+                                Accessible.name: i18nc("%1 is speakers, headphones or a screen", "Play through %1", modelData.name)
+                                Accessible.checked: chosen
+                                Text {
+                                    id: placeName
+                                    anchors.centerIn: parent
+                                    width: Math.min(implicitWidth, 170)
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: place.modelData.name
+                                    elide: Text.ElideRight
+                                    color: place.chosen ? "#FFFFFF" : Kirigami.Theme.textColor
+                                    font.family: "Inter"
+                                    font.pixelSize: 12
+                                }
+                                HoverHandler {
+                                    id: placeHover
+                                    cursorShape: Qt.PointingHandCursor
+                                }
+                                TapHandler {
+                                    onTapped: root.playThrough(place.modelData)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -513,10 +575,58 @@ PlasmoidItem {
                         : i18n("Battery %1%", root.info.battery)
                 }
                 Item { Layout.fillWidth: typeof root.info.battery !== "number" }
-                PlasmaComponents.Button {
-                    icon.name: "configure"
-                    text: i18n("All Settings")
-                    onClicked: root.openSettings("")
+                // All of Settings: a pebble of glass like the tiles, with Settings' own sign.
+                Rectangle {
+                    id: allSettings
+                    implicitWidth: allRow.implicitWidth + 28
+                    implicitHeight: 36
+                    radius: 18
+                    color: root.smoke ? Qt.rgba(1, 1, 1, allHover.hovered ? 0.14 : 0.08)
+                        : Qt.rgba(1, 1, 1, allHover.hovered ? 0.48 : 0.34)
+                    scale: allTap.pressed ? 0.97 : 1
+                    Behavior on scale { NumberAnimation { duration: Math.round(160 * root.speed) } }
+                    activeFocusOnTab: true
+                    Keys.onSpacePressed: root.openSettings("")
+                    Keys.onReturnPressed: root.openSettings("")
+                    border.width: activeFocus ? 2 : 0
+                    border.color: "#357F72"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: i18n("All Settings")
+                    Accessible.onPressAction: root.openSettings("")
+                    GlassRim {
+                        smoke: root.smoke
+                    }
+                    RowLayout {
+                        id: allRow
+                        anchors.centerIn: parent
+                        spacing: 8
+                        // Settings' mark: two sliders, as in the app menu.
+                        Shape {
+                            Layout.preferredWidth: 16
+                            Layout.preferredHeight: 16
+                            preferredRendererType: Shape.CurveRenderer
+                            ShapePath {
+                                scale: Qt.size(16 / 24, 16 / 24)
+                                strokeColor: Kirigami.Theme.textColor
+                                strokeWidth: 2.4
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
+                                PathSvg { path: "M4 7h10M18 7h2M4 17h4M12 17h8M16 4v6M10 14v6" }
+                            }
+                        }
+                        PlasmaComponents.Label {
+                            text: i18n("All Settings")
+                            font.weight: Font.DemiBold
+                        }
+                    }
+                    HoverHandler {
+                        id: allHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                    TapHandler {
+                        id: allTap
+                        onTapped: root.openSettings("")
+                    }
                 }
             }
         }

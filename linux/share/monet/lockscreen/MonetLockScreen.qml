@@ -403,6 +403,35 @@ Item {
                             shadowBlur: 1
                             shadowVerticalOffset: 10
                         }
+                        // The light caught in the sheet's edge, as on Monet's glass: brightest at the top left
+                        // and the bottom right.
+                        Shape {
+                            anchors.fill: parent
+                            preferredRendererType: Shape.CurveRenderer
+                            ShapePath {
+                                readonly property real w: Math.max(sheet.width, 1)
+                                readonly property real h: Math.max(sheet.height, 1)
+                                strokeWidth: -1
+                                fillRule: ShapePath.OddEvenFill
+                                fillGradient: LinearGradient {
+                                    x1: 0
+                                    y1: 0
+                                    x2: 2 * parent.w * parent.h * parent.h / (parent.w * parent.w + parent.h * parent.h)
+                                    y2: 2 * parent.w * parent.w * parent.h / (parent.w * parent.w + parent.h * parent.h)
+                                    GradientStop { position: 0; color: Qt.rgba(1, 1, 1, monetLock.smoke ? 0.42 : 0.92) }
+                                    GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, monetLock.smoke ? 0.07 : 0.24) }
+                                    GradientStop { position: 1; color: Qt.rgba(1, 1, 1, monetLock.smoke ? 0.24 : 0.62) }
+                                }
+                                PathRectangle { width: sheet.width; height: sheet.height; radius: sheet.radius }
+                                PathRectangle {
+                                    x: 1.25
+                                    y: 1.25
+                                    width: sheet.width - 2.5
+                                    height: sheet.height - 2.5
+                                    radius: sheet.radius - 1.25
+                                }
+                            }
+                        }
 
                         ColumnLayout {
                             id: content

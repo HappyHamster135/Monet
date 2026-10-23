@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/monet-core", "crates/monet", "crates/monet-bridge", "crates/monet-usb"]
 
 [workspace.package]
-version = "0.8.3"
+version = "0.8.5"
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/HappyHamster135/Monet"

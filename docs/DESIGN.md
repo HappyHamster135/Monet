@@ -166,10 +166,26 @@ screen (no graphics driver, or a virtual machine), until it's chosen.
 lock screen skips its full-screen blur, the two heaviest things to draw on
 an old PC.
 
+An older PC (8 GB of memory or less, or `/sysroot` on a spinning disk:
+`monet-quick older-pc`) gets three things at each sign-in from
+`monet-session`: `~/.config/monet/glass-lite`, so `Glass.qml` frosts to the
+edge without the lens's second grab and blur; Baloo's "only basic indexing"
+(names, not contents), once, unless it's been set; and Steam's autostart
+hidden by a user copy marked `X-Monet=true`, with Steam started 45 s later
+by a transient `monet-steam-later` timer. A PC that's no longer older gets
+its glass and Steam back; a Steam autostart of the user's own is left alone.
+
+Monet comes in two images from one Containerfile (`ARG BASE`): `monet`, on
+Bazzite's NVIDIA image (NVIDIA's open driver, Turing and newer: GTX 16 / RTX
+20, PCI ids from `1e00`), and `monet-amd`, on Bazzite's AMD and Intel one
+(Mesa, whose nouveau also draws with older NVIDIA cards). Both installers
+choose by the PC's graphics: the kickstart's `%pre` writes the
+`ostreecontainer` line it `%include`s, and Monet Setup uses `pc.image_for`.
+Updates follow the image installed.
+
 Monet Setup checks the PC from its first page (`setup/monet_setup/pc.py`):
-an NVIDIA card older than Turing (GTX 16 / RTX 20, PCI ids from `1e00`) with
-nothing else to draw with, or under 3 GB of memory, can't install; an old
-NVIDIA chip beside built-in graphics, or under 7 GB, is said on Ready.
+under 3 GB of memory can't install; an NVIDIA card older than Turing (alone
+or beside built-in graphics), or under 7 GB, is said on Ready.
 UEFI needs no check: the stick only starts that way.
 
 KDE's System Settings and other apps written in QML keep solid backgrounds
@@ -381,6 +397,12 @@ is tried again at the next sign-in.
 - **World Clock**: towns from KDE's time zones (their names in your
   language), each a little face, paper by day and smoke by night, how far
   ahead or behind it is, and its time in Fraunces.
+- **Batteries**: everything with a battery, as Apple's widget has it, from
+  UPower (`monet-quick batteries`, every minute): this laptop first, then
+  the mouse, the keyboard, controllers and headphones, each a ring of paint
+  round its sign (Monet Settings' device glyphs), lily while there's plenty,
+  ochre under 20% and the sun under 10%, and a dab of the sun beside the
+  number while it charges. With nothing to show, a line saying what will.
 - **Calendar**: just the month at first, in Fraunces, today on a dab of
   the sun. The arrows or the wheel turn the month, a click on its name comes
   back to today; the arrow keys move the chosen day. A click chooses a day:
@@ -464,7 +486,30 @@ sidebar; the files on paper; folders big enough to see their paintings
 block.
 
 **Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
-glass sheet, about 1000 × 700. On the glass: the name in Fraunces, search,
+glass sheet, about 1000 × 700. What other systems have, Monet's way: Sound
+lists the apps playing and gives each its own volume (`wpctl` streams, as
+Windows' mixer does); Quick Settings picks where sound plays under its
+volume; Wi-Fi offers a hotspot (NetworkManager's own, named after the PC
+with a password it makes up, both shown); and Power & Sleep, where the
+battery can do it (`charge_control_end_threshold`, as on ThinkPads),
+offers Protect the battery: charging stops at 80% (`monet-charge`, the one
+root program Monet's polkit rule allows besides `monet`, kept in
+`/var/lib/monet/charge-limit` and put back at every start by
+`monet-charge.service`). A new account's first sign-in opens Settings on a
+welcome page (`monet-quick open welcome`, once): Quick Settings, the
+widgets, Play on Windows, the light and search, each with its way there. Play
+on Windows offers Ready when you come back (off until chosen, as it signs
+in without asking first): Linux can't hibernate with Secure Boot (the
+kernel's lockdown), so Monet can't stay in memory while Windows runs the
+way Windows does; instead, `monet-ready-leave.service` arms at shutdown when
+BootNext is Windows' boot manager, `monet-ready-boot.service` (before every
+sign-in screen) writes a one-time `[Autologin]` for `plasmalogin` when the
+trip is fresh (a day at most) and clears it otherwise, and the session's
+`monet-ready-lock.service` (after KWin, before plasmashell) locks a sign-in
+whose PAM service is `plasmalogin-autologin`, so the lock screen shows
+first and the desktop starts behind it. About shows the last start: the
+PC's own (firmware), Monet's (loader, kernel, system: `systemd-analyze`)
+and the desktop's (sign-in to plasmashell). On the glass: the name in Fraunces, search,
 and the pages, each marked by a swatch cut from the paintings with a white
 glyph, in three groups: the light, the network, printers, the screen, sound,
 the clock and you; the pointer, power, the lock and privacy, notifications,
