@@ -124,9 +124,15 @@ class PlasmaPackages(unittest.TestCase):
             self.assertEqual(inside, [], f"{qml.name}: move {inside} into mainItem")
 
     def test_qml_avoids_reserved_names(self):
+        # Item's FINAL properties (Qt 6): declaring one again stops the whole file loading,
+        # as 0.9.0's wallpaper did with "focus" (a black desktop and lock screen).
+        final = ("activeFocus|activeFocusOnTab|anchors|baseline|bottom|childrenRect|focus|height|"
+                 "horizontalCenter|layer|left|opacity|parent|right|top|transform|verticalCenter|"
+                 "visible|width|x|y|z")
         for qml in qml_files():
             text = qml.read_text()
             self.assertNotRegex(text, r"property \w+ (state|on)\b", qml.name)
+            self.assertNotRegex(text, rf"(?m)^\s*(readonly |required |default )*property [\w.<>]+ ({final})\b", qml.name)
 
 
 class PlasmaStyle(unittest.TestCase):
@@ -2848,8 +2854,9 @@ class SmallFixesFor090(unittest.TestCase):
         self.assertIn('"widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24)', style)
         menu = (PLASMA / "plasmoids/org.monet.menu/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)", menu)
-        # A new look for every account at the next sign-in.
-        self.assertIn('current="$looks/look-0.9.0"', (ROOT / "linux/libexec/monet-session").read_text())
+        # A new look for every account at the next sign-in after each release.
+        version = (ROOT / "VERSION").read_text().strip()
+        self.assertIn(f'current="$looks/look-{version}"', (ROOT / "linux/libexec/monet-session").read_text())
 
     def test_the_clocks_page_and_highlight(self):
         clock = (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml").read_text(encoding="utf-8")
@@ -2929,14 +2936,24 @@ class For090(unittest.TestCase):
 
 
 class TheBarStepsAside(unittest.TestCase):
-    def test_the_islands_dodge_windows_and_slide(self):
+    def test_the_islands_stay_in_view_unless_chosen(self):
         from unittest import mock
+        # 0.9.1: in view by default (0.9.0's stepping aside left the bar hidden on some PCs).
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
-            self.assertIn('set(p, "hiding", "dodgewindows")', layout)
+            self.assertIn('set(p, "hiding", "none")', layout)
+            self.assertNotIn("dodgewindows", layout)
         look = (ROOT / "linux/libexec/monet-look").read_text()
-        # Existing accounts once, only from KDE's always-visible.
-        self.assertIn('if (panel.location === "bottom" && panel.hiding === "none") panel.hiding = "dodgewindows";', look)
+        # Accounts 0.9.0 turned it on for, once, with Settings' switch off to match.
+        self.assertIn('if (panel.location === "bottom" && panel.hiding === "dodgewindows") panel.hiding = "none";', look)
+        self.assertIn('''sed -i 's/"dodge": true/"dodge": false/' "$CONFIG/monet/prefs.json"''', look)
+        self.assertNotIn('panel.hiding = "dodgewindows"', look)
+        quick = quick_helper()
+        with tempfile_dir() as tmp:
+            quick.PREFS = Path(tmp) / "prefs.json"
+            quick.drawn_by_processor = lambda: False
+            self.assertFalse(quick.prefs()["dodge"])
+        self.assertIn("dodge: false })", (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8"))
         self.assertIn("--group Effect-slidingpopups --key SlideOutTime 240", look)
         self.assertIn("--group Plugins --key slidingpopupsEnabled true", look)
         quick = quick_helper()
@@ -3378,6 +3395,190 @@ class EncryptedDisk(unittest.TestCase):
         for name in ("monet-boot", "monet-reset", "monet-seal"):
             self.assertIn(f"linux/libexec/{name} ", build)
             self.assertIn(name, (ROOT / "linux/uninstall.sh").read_text())
+
+
+class HiveFile:
+    """A small Windows registry file (regf) for tests, built cell by cell, keys after their
+    subkeys. Real files were checked by hand (C:\\Users\\Default\\NTUSER.DAT)."""
+
+    def __init__(self):
+        import struct
+        self.struct = struct
+        self.body = bytearray(b"hbin" + bytes(28))
+
+    def cell(self, data):
+        size = (len(data) + 4 + 7) // 8 * 8
+        at = len(self.body)
+        self.body += self.struct.pack("<i", -size) + data + bytes(size - 4 - len(data))
+        return at
+
+    def key(self, name, values=(), subkeys=(), written=0, ri=False):
+        """values: [(name, type, bytes)]; subkeys: offsets of keys; ri: list them in two parts."""
+        pack = self.struct.pack
+        offsets = []
+        for value_name, kind, data in values:
+            raw = value_name.encode("latin-1")
+            size, where = (len(data) | 0x80000000, int.from_bytes(data.ljust(4, b"\0"), "little")) \
+                if len(data) <= 4 else (len(data), self.cell(data))
+            offsets.append(self.cell(b"vk" + pack("<HIIIHH", len(raw), size, where, kind, 1, 0) + raw))
+        value_list = self.cell(b"".join(pack("<I", o) for o in offsets)) if offsets else 0xFFFFFFFF
+        subkeys = list(subkeys)
+        if not subkeys:
+            subkey_list = 0xFFFFFFFF
+        elif ri:
+            parts = [subkeys[:len(subkeys) // 2], subkeys[len(subkeys) // 2:]]
+            lists = [self.cell(b"li" + pack("<H", len(p)) + b"".join(pack("<I", o) for o in p)) for p in parts]
+            subkey_list = self.cell(b"ri" + pack("<H", 2) + b"".join(pack("<I", o) for o in lists))
+        else:
+            subkey_list = self.cell(b"lh" + pack("<H", len(subkeys)) + b"".join(pack("<II", o, 0) for o in subkeys))
+        raw = name.encode("latin-1")
+        filetime = int(written * 10 ** 7) + 116444736000000000
+        return self.cell(b"nk" + pack("<HQ", 0x20, filetime) + pack("<15I", 0, 0, len(subkeys), 0, subkey_list,
+                         0xFFFFFFFF, len(offsets), value_list, 0, 0xFFFFFFFF, 0, 0, 0, 0, 0)
+                         + pack("<HH", len(raw), 0) + raw)
+
+    def file(self, root):
+        base = bytearray(4096)
+        base[:4] = b"regf"
+        self.struct.pack_into("<II", base, 4, 1, 1)
+        self.struct.pack_into("<II", base, 36, root, len(self.body))
+        return bytes(base + self.body)
+
+
+def windows_system(link_key, le, current=2, written=2_000_000_000):
+    """A Windows SYSTEM file with one adapter: a classic device and a Low Energy one."""
+    hive = HiveFile()
+    adapter = hive.key("0a1b2c3d4e5f", written=written, values=[
+        ("112233445566", 3, link_key), ("CentralIRK", 3, bytes(range(16))), ("notadevice", 4, b"\x01\0\0\0")],
+        subkeys=[hive.key("665544332211", written=written, values=le)])
+    keys = hive.key("Keys", subkeys=[adapter])
+    bthport = hive.key("BTHPORT", subkeys=[hive.key("Parameters", subkeys=[keys])])
+    # Enough services that they're listed in parts ("ri"), as in a real SYSTEM file.
+    services = hive.key("Services", ri=True, subkeys=[hive.key("Audiosrv"), bthport, hive.key("bthserv")])
+    stale = hive.key("ControlSet001", subkeys=[hive.key("Services")])
+    used = hive.key(f"ControlSet{current:03d}", subkeys=[services])
+    select = hive.key("Select", values=[("Current", 4, current.to_bytes(4, "little"))])
+    return hive.file(hive.key("ROOT", subkeys=[select, stale, used]))
+
+
+LE_VALUES = [("LTK", 3, bytes.fromhex("00112233445566778899AABBCCDDEEFF")), ("KeyLength", 4, b"\x10\0\0\0"),
+             ("ERand", 11, (1234567890123456789).to_bytes(8, "little")), ("EDIV", 4, (4660).to_bytes(4, "little")),
+             ("IRK", 3, bytes.fromhex("0102030405060708090A0B0C0D0E0F10")), ("AddressType", 4, b"\x01\0\0\0")]
+
+
+class PairingsFromWindows(unittest.TestCase):
+    """0.9.1: a controller or headset paired in Windows works in Monet too (monet-pairings)."""
+
+    def setUp(self):
+        self.pairings = libexec_helper("monet-pairings")
+
+    def test_it_reads_windows_keys_off_its_registry(self):
+        p = self.pairings
+        found = p.windows_pairings(p.Hive(windows_system(bytes(range(16)), LE_VALUES)))
+        self.assertEqual(sorted(found), [("0A:1B:2C:3D:4E:5F", "11:22:33:44:55:66"),
+                                         ("0A:1B:2C:3D:4E:5F", "66:55:44:33:22:11")])
+        classic, written = found[("0A:1B:2C:3D:4E:5F", "11:22:33:44:55:66")]
+        self.assertEqual(classic, {"LinkKey": {"Key": "000102030405060708090A0B0C0D0E0F"}})
+        self.assertAlmostEqual(written, 2_000_000_000, places=3)
+        le, _ = found[("0A:1B:2C:3D:4E:5F", "66:55:44:33:22:11")]
+        self.assertEqual(le["LongTermKey"], {"Key": "00112233445566778899AABBCCDDEEFF", "Authenticated": "0",
+                                             "EncSize": "16", "EDiv": "4660", "Rand": "1234567890123456789"})
+        self.assertEqual(le["IdentityResolvingKey"], {"Key": "100F0E0D0C0B0A090807060504030201"})
+        self.assertEqual(p.mac("0a1b2c3d4e5f"), "0A:1B:2C:3D:4E:5F")
+        self.assertIsNone(p.mac("CentralIRK"))
+        self.assertFalse(p.Hive(windows_system(bytes(16), LE_VALUES)).unsaved())
+        with self.assertRaises(ValueError):
+            p.Hive(b"MZ" + bytes(9000))
+
+    def test_secure_connections_and_a_passing_address(self):
+        p = self.pairings
+        # Named after a passing address; its own (static: top bits 11) is in Address. Secure
+        # Connections: no EDIV or Rand, so marked to work in either role; no key length: 16.
+        values = [("LTK", 3, bytes(range(16))), ("KeyLength", 4, bytes(4)), ("ERand", 11, bytes(8)),
+                  ("EDIV", 4, bytes(4)), ("Address", 11, (0xDA5B4A88508C).to_bytes(8, "little")),
+                  ("AddressType", 4, b"\x01\0\0\0")]
+        found = p.windows_pairings(p.Hive(windows_system(bytes(16), values)))
+        sections, _ = found[("0A:1B:2C:3D:4E:5F", "DA:5B:4A:88:50:8C")]
+        self.assertEqual(sections["LongTermKey"], {"Key": "000102030405060708090A0B0C0D0E0F", "Authenticated": "2",
+                                                   "EncSize": "16", "EDiv": "0", "Rand": "0"})
+        # A private (not static) random address in Address isn't the device's own: the key's name is.
+        values[4] = ("Address", 11, (0x4A5B4A88508C).to_bytes(8, "little"))
+        found = p.windows_pairings(p.Hive(windows_system(bytes(16), values)))
+        self.assertIn(("0A:1B:2C:3D:4E:5F", "66:55:44:33:22:11"), found)
+
+    @unittest.skipIf(sys.platform == "win32", "BlueZ names its folders with colons")
+    def test_the_newer_pairing_wins(self):
+        import os
+        p = self.pairings
+        device = ("0A:1B:2C:3D:4E:5F", "11:22:33:44:55:66")
+        with tempfile_dir() as tmp:
+            bluez, seen = Path(tmp) / "bluetooth", Path(tmp) / "pairings.json"
+            info = bluez / device[0] / device[1] / "info"
+            info.parent.mkdir(parents=True)
+            info.write_text("[General]\nName=DualSense Wireless Controller\nSupportedTechnologies=BR/EDR;\n"
+                            "Trusted=true\n\n[LinkKey]\nKey=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nType=4\nPINLength=0\n\n"
+                            "[ServiceRecords]\n0x00010001=36010035\n")
+            os.utime(info, (1_000_000_000, 1_000_000_000))
+            windows = lambda key, when: {device: ({"LinkKey": {"Key": key}}, when)}
+            # Paired again in Windows after Monet: Monet takes Windows' key, keeping the rest
+            # (Bluetooth stopped first, once).
+            stops = []
+            self.assertEqual(p.sync(windows("B" * 32, 2_000_000_000), bluez, seen, lambda: stops.append(1)),
+                             ["DualSense Wireless Controller"])
+            self.assertEqual(stops, [1])
+            text = info.read_text()
+            self.assertIn("[LinkKey]\nKey=" + "B" * 32 + "\nType=4\nPINLength=0\n", text)
+            self.assertIn("SupportedTechnologies=BR/EDR;\n", text)
+            self.assertIn("[ServiceRecords]\n0x00010001=36010035\n", text)
+            # Nothing new: nothing to do.
+            self.assertEqual(p.sync(windows("B" * 32, 2_000_000_000), bluez, seen), [])
+            # Paired again in Monet since: Windows' key is the old one, so Monet keeps its own.
+            info.write_text(text.replace("B" * 32, "C" * 32))
+            self.assertEqual(p.sync(windows("B" * 32, 2_000_000_000), bluez, seen), [])
+            self.assertIn("C" * 32, info.read_text())
+            # Then paired in Windows again: taken.
+            self.assertEqual(len(p.sync(windows("D" * 32, 2_100_000_000), bluez, seen)), 1)
+            self.assertIn("D" * 32, info.read_text())
+            # The first look at a device Windows paired before Monet did: Monet's stays.
+            seen.unlink()
+            os.utime(info, (2_200_000_000, 2_200_000_000))
+            self.assertEqual(p.sync(windows("E" * 32, 2_100_000_000), bluez, seen), [])
+            # Only devices Monet has paired: none made up, none half-known filled in.
+            other = ("0A:1B:2C:3D:4E:5F", "77:88:99:AA:BB:CC")
+            (bluez / other[0] / other[1]).mkdir()
+            (bluez / other[0] / other[1] / "info").write_text("[General]\nName=Seen nearby\n")
+            gone = ("0A:1B:2C:3D:4E:5F", "DD:EE:FF:00:11:22")
+            self.assertEqual(p.sync({other: ({"LinkKey": {"Key": "F" * 32}}, 3_000_000_000),
+                                     gone: ({"LinkKey": {"Key": "F" * 32}}, 3_000_000_000)}, bluez, seen), [])
+            self.assertNotIn("LinkKey", (bluez / other[0] / other[1] / "info").read_text())
+            self.assertFalse((bluez / gone[0] / gone[1]).exists())
+
+    def test_a_low_energy_pairing_replaces_the_old_keys(self):
+        p = self.pairings
+        info = configparser.ConfigParser(interpolation=None, strict=False, delimiters=("=",))
+        info.optionxform = str
+        info.read_string("[General]\nName=Xbox Wireless Controller\nAddressType=public\n\n"
+                         "[PeripheralLongTermKey]\nKey=00\nAuthenticated=0\nEncSize=16\nEDiv=1\nRand=2\n")
+        found = p.windows_pairings(p.Hive(windows_system(bytes(16), LE_VALUES)))
+        sections, _ = found[("0A:1B:2C:3D:4E:5F", "66:55:44:33:22:11")]
+        p.apply(info, sections)
+        self.assertFalse(info.has_section("PeripheralLongTermKey"))
+        self.assertEqual(info.get("LongTermKey", "Key"), "00112233445566778899AABBCCDDEEFF")
+        self.assertEqual(info.get("LongTermKey", "Authenticated"), "0")
+        self.assertEqual(info.get("General", "AddressType"), "public")
+
+    def test_it_runs_at_every_start(self):
+        unit = (ROOT / "linux/systemd/monet-pairings.service").read_text()
+        for line in ("ExecStart=@LIBEXECDIR@/monet-pairings", "After=local-fs.target bluetooth.service",
+                     "ConditionPathIsDirectory=/var/lib/bluetooth", "WantedBy=multi-user.target"):
+            self.assertIn(line, unit)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"', install)
+        self.assertEqual(install.count("systemctl enable monet-pairings.service"), 2)
+        self.assertIn("rm -f /etc/systemd/system/monet-pairings.service", (ROOT / "linux/uninstall.sh").read_text())
+        self.assertIn("linux/libexec/monet-pairings ", (ROOT / ".github/workflows/build.yml").read_text())
+        # Read with ntfscat, which ships with Monet: Windows' drive is never mounted.
+        self.assertIn(" ntfsprogs ", (ROOT / "image/Containerfile").read_text())
 
 
 class tempfile_dir:

@@ -1,0 +1,14 @@
+[Unit]
+Description=Monet: a controller or headset paired in Windows works in Monet too
+ConditionPathIsDirectory=/var/lib/bluetooth
+After=local-fs.target bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-pairings
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target

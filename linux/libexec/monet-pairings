@@ -1,0 +1,334 @@
+#!/usr/bin/env python3
+"""A controller or headset paired in Windows works in Monet too.
+
+A Bluetooth device keeps one pairing key for the PC, and Monet and Windows share the
+PC's radio: pairing it in one makes it forget the other. So at every start Monet reads
+the keys Windows keeps (its SYSTEM registry file, read straight off its drive with
+ntfscat, never mounted) and, for each device both have paired, takes Windows' key
+when Windows paired it again since Monet last looked. Pair a device in Monet, then
+once in Windows, and from then on it works in both.
+
+Runs as root, from monet-pairings.service, at every start:
+
+    monet-pairings
+"""
+
+import configparser
+import hashlib
+import json
+import os
+import struct
+import subprocess
+import sys
+from pathlib import Path
+
+BLUEZ = Path("/var/lib/bluetooth")
+SEEN = Path("/var/lib/monet/pairings.json")  # Windows' keys as Monet last saw them
+HIVE = "/Windows/System32/config/SYSTEM"
+
+REG_BINARY, REG_DWORD, REG_QWORD = 3, 4, 11
+# The sections a pairing lives in, in BlueZ's info files.
+LE_KEYS = ("LongTermKey", "PeripheralLongTermKey", "SlaveLongTermKey")
+
+
+def run(*args, timeout=120):
+    """stdout (bytes), or None when it failed."""
+    try:
+        done = subprocess.run([str(a) for a in args], capture_output=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+# ---------------------------------------------------------------- Windows' registry
+
+class Hive:
+    """A Windows registry file (regf), read-only: its keys, their values, and when each
+    key was last written. Only what reading small values needs: no big data cells."""
+
+    def __init__(self, data):
+        if bytes(data[:4]) != b"regf" or len(data) < 4096 + 32:
+            raise ValueError("not a registry file")
+        self.data = memoryview(data)
+        self.root = self.cell(struct.unpack_from("<I", self.data, 36)[0])
+
+    def cell(self, offset):
+        """The cell at offset (counted from the first hive bin), without its size."""
+        at = 4096 + offset
+        size = -struct.unpack_from("<i", self.data, at)[0]   # in use: negative
+        if size < 8 or at + size > len(self.data):
+            raise ValueError(f"bad cell at {offset}")
+        return self.data[at + 4:at + size]
+
+    def name(self, nk):
+        length, = struct.unpack_from("<H", nk, 72)
+        raw = bytes(nk[76:76 + length])
+        return raw.decode("latin-1") if struct.unpack_from("<H", nk, 2)[0] & 0x20 else raw.decode("utf-16-le")
+
+    def unsaved(self):
+        """Windows was still keeping recent changes in the file's logs (SYSTEM.LOG1, .LOG2)."""
+        first, second = struct.unpack_from("<II", self.data, 4)
+        return first != second
+
+    def written(self, nk):
+        """When the key was last written, in Unix seconds."""
+        return (struct.unpack_from("<Q", nk, 4)[0] - 116444736000000000) / 1e7
+
+    def subkeys(self, nk):
+        """{name: key}."""
+        count, = struct.unpack_from("<I", nk, 20)
+        at, = struct.unpack_from("<I", nk, 28)
+        found = {}
+        if count and at != 0xFFFFFFFF:
+            self._gather(self.cell(at), found)
+        return found
+
+    def _gather(self, index, found):
+        kind, count = bytes(index[:2]), struct.unpack_from("<H", index, 2)[0]
+        if kind == b"ri":   # a list of lists
+            for i in range(count):
+                self._gather(self.cell(struct.unpack_from("<I", index, 4 + 4 * i)[0]), found)
+            return
+        step = {b"lf": 8, b"lh": 8, b"li": 4}.get(kind)
+        if step is None:
+            raise ValueError(f"unknown subkey list {kind!r}")
+        for i in range(count):
+            nk = self.cell(struct.unpack_from("<I", index, 4 + step * i)[0])
+            if bytes(nk[:2]) != b"nk":
+                raise ValueError("not a key")
+            found[self.name(nk)] = nk
+
+    def values(self, nk):
+        """{name: (type, bytes)}."""
+        count, = struct.unpack_from("<I", nk, 36)
+        at, = struct.unpack_from("<I", nk, 40)
+        found = {}
+        if not count or at == 0xFFFFFFFF:
+            return found
+        offsets = self.cell(at)
+        for i in range(count):
+            vk = self.cell(struct.unpack_from("<I", offsets, 4 * i)[0])
+            if bytes(vk[:2]) != b"vk":
+                raise ValueError("not a value")
+            length, size, data, kind, flags = struct.unpack_from("<HIIIH", vk, 2)
+            raw = bytes(vk[20:20 + length])
+            name = raw.decode("latin-1") if flags & 1 else raw.decode("utf-16-le")
+            if size & 0x80000000:            # four bytes or fewer live in the offset itself
+                found[name] = (kind, struct.pack("<I", data)[:size & 0x7FFFFFFF])
+            elif size <= 16344:              # larger ones are split up; no key is that big
+                found[name] = (kind, bytes(self.cell(data)[:size]))
+        return found
+
+    def find(self, *path):
+        """The key at path under the root (names in any case), or None."""
+        nk = self.root
+        for part in path:
+            nk = next((key for name, key in self.subkeys(nk).items() if name.lower() == part.lower()), None)
+            if nk is None:
+                return None
+        return nk
+
+
+def value(hive, nk, name):
+    """A value's bytes, or None."""
+    return next((data for key, (kind, data) in hive.values(nk).items() if key.lower() == name.lower()), None)
+
+
+def number(data):
+    return int.from_bytes(data, "little") if data else 0
+
+
+def mac(name):
+    """"aabbccddeeff" (as Windows names them) as BlueZ does: "AA:BB:CC:DD:EE:FF", or None."""
+    name = name.strip().lower()
+    if len(name) != 12 or any(c not in "0123456789abcdef" for c in name):
+        return None
+    return ":".join(name[i:i + 2] for i in range(0, 12, 2)).upper()
+
+
+def windows_pairings(hive):
+    """{(adapter, device): (BlueZ sections to set, when Windows wrote them)} for every
+    device Windows has paired."""
+    current = number(value(hive, hive.find("Select") or hive.root, "Current")) or 1
+    keys = hive.find(f"ControlSet{current:03d}", "Services", "BTHPORT", "Parameters", "Keys")
+    found = {}
+    for adapter_name, adapter in (hive.subkeys(keys) if keys else {}).items():
+        adapter_mac = mac(adapter_name)
+        if not adapter_mac:
+            continue
+        # Classic devices (most controllers and headsets): one link key each, by address.
+        for name, (kind, data) in hive.values(adapter).items():
+            device = mac(name)
+            if device and kind == REG_BINARY and len(data) == 16:
+                found[(adapter_mac, device)] = ({"LinkKey": {"Key": data.hex().upper()}}, hive.written(adapter))
+        # Bluetooth Low Energy devices: a key of their own.
+        for name, key in hive.subkeys(adapter).items():
+            device = identity(hive, key) or mac(name)
+            sections = le_sections(hive, key) if device else None
+            if sections:
+                found[(adapter_mac, device)] = (sections, hive.written(key))
+    return found
+
+
+def identity(hive, key):
+    """A Low Energy device's own address: Windows sometimes names its key after a passing,
+    private one. Not when that's what Address holds too (random, but not static)."""
+    address = number(value(hive, key, "Address"))
+    if not 0 < address < 1 << 48:
+        return None
+    if number(value(hive, key, "AddressType")) == 1 and address >> 46 != 0b11:
+        return None
+    return mac(f"{address:012x}")
+
+
+def le_sections(hive, key):
+    """A Low Energy pairing as BlueZ keeps it, or None. The long-term key as it is, EDIV and
+    ERand as numbers, the identity key reversed (as packet captures showed; other tools
+    disagree)."""
+    ltk = value(hive, key, "LTK")
+    if not ltk or len(ltk) != 16:
+        return None
+    ediv, rand = number(value(hive, key, "EDIV")), number(value(hive, key, "ERand"))
+    size = number(value(hive, key, "KeyLength"))
+    sections = {"LongTermKey": {
+        "Key": ltk.hex().upper(),
+        # Secure Connections (no EDIV or Rand) works in either role only marked as such.
+        "Authenticated": "2" if ediv == 0 and rand == 0 else "0",
+        "EncSize": str(size if 7 <= size <= 16 else 16),
+        "EDiv": str(ediv),
+        "Rand": str(rand),
+    }}
+    irk = value(hive, key, "IRK")
+    if irk and len(irk) == 16:
+        sections["IdentityResolvingKey"] = {"Key": irk[::-1].hex().upper()}
+    return sections
+
+
+def windows_hives():
+    """Every Windows SYSTEM registry file on the PC's NTFS drives (read with ntfscat, which
+    never writes; an encrypted Windows has no NTFS to read)."""
+    try:
+        tree = json.loads(run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE", timeout=30) or b"{}")
+    except ValueError:
+        return
+    pending = list(tree.get("blockdevices") or [])
+    while pending:
+        dev = pending.pop()
+        pending.extend(dev.get("children") or [])
+        if (dev.get("fstype") or "").lower() == "ntfs":
+            data = run("ntfscat", dev["path"], HIVE)
+            if data and data[:4] == b"regf":
+                yield data
+
+
+# ---------------------------------------------------------------- Monet's side (BlueZ)
+
+def read_info(path):
+    info = configparser.ConfigParser(interpolation=None, strict=False, delimiters=("=",))
+    info.optionxform = str           # BlueZ's keys are case-sensitive
+    info.read(path, encoding="utf-8")
+    return info
+
+
+def paired(info):
+    return info.has_section("LinkKey") or any(info.has_section(s) for s in LE_KEYS)
+
+
+def write_info(path, info):
+    temp = path.with_name(".info.monet")
+    with open(temp, "w", encoding="utf-8") as f:
+        info.write(f, space_around_delimiters=False)
+    os.chmod(temp, 0o600)
+    os.replace(temp, path)
+
+
+def apply(info, sections):
+    """Puts Windows' pairing into BlueZ's info, keeping what BlueZ knows besides."""
+    if "LongTermKey" in sections:
+        for old in LE_KEYS[1:]:
+            info.remove_section(old)
+    for section, fields in sections.items():
+        if not info.has_section(section):
+            info.add_section(section)
+        for key, text in fields.items():
+            info.set(section, key, text)
+    if info.has_section("LinkKey"):
+        if not info.has_option("LinkKey", "Type"):
+            info.set("LinkKey", "Type", "4")
+        if not info.has_option("LinkKey", "PINLength"):
+            info.set("LinkKey", "PINLength", "0")
+
+
+def same(info, sections):
+    return all(info.get(section, key, fallback=None) == text
+               for section, fields in sections.items() for key, text in fields.items())
+
+
+def signature(sections):
+    return hashlib.sha256(json.dumps(sections, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def take(seen, sections, written, info_written):
+    """Whether Monet should take Windows' pairing over its own. Windows paired the device
+    again since Monet last looked; or, the first time, it paired it after Monet did."""
+    if seen is not None:
+        return seen != signature(sections)
+    return written > info_written
+
+
+def sync(pairings, bluez=BLUEZ, seen_path=SEEN, before_writing=lambda: None):
+    """Takes Windows' pairings for the devices both have paired. The devices changed."""
+    try:
+        seen = json.loads(seen_path.read_text())
+    except (OSError, ValueError):
+        seen = {}
+    changed = []
+    for (adapter, device), (sections, written) in sorted(pairings.items()):
+        path = bluez / adapter / device / "info"
+        if not path.is_file():
+            continue
+        info = read_info(path)
+        if not paired(info):
+            continue
+        name = f"{adapter}/{device}"
+        if not same(info, sections) and take(seen.get(name), sections, written, path.stat().st_mtime):
+            if not changed:
+                before_writing()
+            apply(info, sections)
+            write_info(path, info)
+            changed.append(info.get("General", "Name", fallback=device))
+        seen[name] = signature(sections)
+    seen_path.parent.mkdir(parents=True, exist_ok=True)
+    seen_path.write_text(json.dumps(seen, indent=1, sort_keys=True) + "\n")
+    seen_path.chmod(0o600)
+    return changed
+
+
+def main():
+    if not BLUEZ.is_dir():
+        return 0
+    for data in windows_hives():
+        try:
+            hive = Hive(data)
+            pairings = windows_pairings(hive)
+        except (ValueError, struct.error, UnicodeDecodeError) as e:
+            print(f"couldn't read Windows' registry: {e}")
+            continue
+        if hive.unsaved():
+            print("Windows' registry file has changes it hasn't written back: a new pairing may come next time")
+        # bluetoothd hands its keys to the kernel when it starts, and writes its own back:
+        # stopped while they change, started again after.
+        was_running = run("systemctl", "is-active", "--quiet", "bluetooth.service", timeout=30) is not None
+        stopped = []
+        changed = sync(pairings, before_writing=lambda: stopped.append(
+            run("systemctl", "stop", "bluetooth.service", timeout=60)))
+        if changed:
+            print("took Windows' pairing for " + ", ".join(changed))
+        if stopped and was_running:
+            run("systemctl", "start", "bluetooth.service", timeout=60)
+        return 0
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

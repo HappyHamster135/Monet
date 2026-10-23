@@ -61,7 +61,7 @@
         "Name[vi]": "Hệ thống",
         "Name[zh_CN]": "系统",
         "Name[zh_TW]": "系統",
-        "Version": "0.9.0"
+        "Version": "0.9.1"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

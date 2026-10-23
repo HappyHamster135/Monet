@@ -107,11 +107,15 @@ No menu bar, no dock. Three floating glass islands along the bottom:
 | Middle | Apps and open windows, then Trash. Running apps get a small dab of sun under them: longer for the window you're in, faint when it's minimized, with a warm wash when an app asks for you. Pointing at one raises a pebble of glass |
 | Right | Quick Settings, status icons, the clock. Brightness and Night Light live in Quick Settings, beside Mist and Smoke, so KDE's own Brightness panel (with its second "Dark Mode" switch) stays out. The open icon's pebble keeps to its own cell: Plasma grows it by the island's margins on every side, so the style draws it inset by them |
 
-The islands step aside: each is a "dodge windows" panel, so it slides away
-when a window comes over it and back when you point at the bottom edge
-(KWin's sliding popups, 240 ms going and 200 ms coming). New accounts get it
-from the layout, existing ones once from `monet-look` (only from KDE's
-always-visible); Light & Wallpaper's "Bar steps aside" keeps them in view.
+The islands stay in view. Light & Wallpaper's "Bar steps aside" makes each a
+"dodge windows" panel, so it slides away when a window comes over it and back
+when you point at the bottom edge (KWin's sliding popups, 240 ms going and
+200 ms coming). 0.9.0 made that the default, and it left the bar hidden on
+some PCs: any mapped app window over an island counts, even one that draws
+nothing, and KWin brings a hidden island back only for a pointer pushed
+against the last row of pixels under it (in a VM, practically never). So
+0.9.1's layout has `hiding: none` again, and `monet-look` turns 0.9.0's
+change back once (`bar-shown`), with the switch off to match.
 
 The placard sits on the painting, top left.
 
@@ -836,6 +840,32 @@ nowhere. A start the TPM can't vouch for asks for it; that start
 (`KeyringMode=shared`) and enrolls the TPM again, so the next start doesn't
 ask. The image's initramfs carries the TPM's libraries (`--add tpm2-tss`).
 Fedora's installer doesn't encrypt.
+
+## Bluetooth in both
+
+A Bluetooth device keeps one pairing key for the PC, and Monet and Windows
+share its radio, so pairing in one used to make the device forget the other.
+At every start `monet-pairings.service` (after `bluetooth.service`) reads
+Windows' SYSTEM registry file straight off its drive with `ntfscat` (never
+mounted or written; an encrypted Windows is skipped), parses it read-only
+(`Hive` in `monet-pairings`), and for each device both have paired takes
+Windows' key into BlueZ's `info` when Windows paired it again since Monet last
+looked (`/var/lib/monet/pairings.json`; the first time, when Windows' key is
+newer than Monet's file). Classic devices take the link key; Low Energy ones
+the long-term key as it is, EDIV and ERand as numbers, the identity key
+reversed (packet captures showed it; other tools disagree), `Authenticated=2`
+for Secure Connections (no EDIV or Rand, so it works in either role), and the
+device's `Address` value as its name when Windows filed it under a passing
+one. bluetoothd is stopped while files change and started again, only when
+something changed (it hands keys to the kernel as it starts). Windows may
+keep a fresh pairing in its registry's logs for a while; then it comes over
+at a later start. So: pair in Monet, then once in
+Windows, and the device works in both. Monet doesn't write Windows' registry:
+Windows only learns a device by pairing it itself.
+
+The PC's clock keeps UTC for both: Monet Bridge's installer sets Windows'
+`RealTimeIsUniversal`, so Windows' clock isn't off by the time zone after a
+switch.
 
 ## The last 30 seconds
 

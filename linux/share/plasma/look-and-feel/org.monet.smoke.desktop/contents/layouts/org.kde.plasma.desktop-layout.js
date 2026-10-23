@@ -17,8 +17,9 @@ function island(alignment) {
     p.alignment = alignment
     set(p, "lengthMode", "fit")
     set(p, "floating", true)
-    // Out of the way when a window comes over it; back when you point at the bottom edge.
-    set(p, "hiding", "dodgewindows")
+    // Always in view. Light & Wallpaper's "Bar steps aside" lets it slide away when a window
+    // comes over it (not by default: hidden, it's hard to bring back, and in a VM impossible).
+    set(p, "hiding", "none")
     return p
 }
 

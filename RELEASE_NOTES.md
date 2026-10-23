@@ -6,11 +6,63 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.0-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.0-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.0-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.0-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
-| Monet-0.9.0-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.1-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.1-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.1-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.1-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.1, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.1-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.1: safe to update, at home on both sides
+
+- **A new Monet that doesn't start goes back by itself.** If an update
+  hasn't brought up the sign-in screen within five minutes of starting, the
+  PC restarts into the Monet from before, Settings → Updates and the next
+  sign-in say so, and the daily update waits for the next one.
+
+- **Reset this PC.** Settings → Updates → Reset this PC puts Monet back
+  as it came at the next restart: its settings, the desktop's look and the
+  changes made to the system, for everyone. Files, games and apps stay, and
+  so do accounts, Wi-Fi and printers. It asks for an administrator's
+  password first, and keeps everyone's settings from before.
+
+- **Your disk, encrypted.** On a PC with a security chip (TPM 2.0, which
+  every Windows 11 PC has), Monet Setup encrypts Monet's disk, and Monet
+  unlocks it by itself when it starts, as Windows does with BitLocker. Setup
+  shows your recovery key once, eight groups of eight letters: keep it
+  somewhere other than the PC. Monet asks for it only when the chip can't
+  vouch for the start (after a big firmware update, or with the disk in
+  another PC).
+
+- **Controllers and headsets on both sides.** Pair a Bluetooth controller
+  or headset in Monet, then once in Windows: Monet picks up Windows'
+  pairing at its next start, so it works in both from then on, instead of
+  each pairing undoing the other.
+
+- **Back to Monet by itself.** Quitting a game in Windows restarts the PC
+  into Monet. Before, Windows hibernated and the PC stayed off until you
+  pressed the power button. And Windows' clock is right after a switch now,
+  instead of off by your time zone.
+
+- **A quicker sign-in.** Work that can wait (painting new apps' icons,
+  Zen's look, games on a laptop's NVIDIA chip) runs a minute after you sign
+  in, at the lowest priority, and only when something it looks at changed.
+  Steps that only matter once, or after a trip to Windows, are skipped the
+  rest of the time.
+
+- **What you saw in 0.9.0, fixed:**
+  - The desktop and the lock screen were black instead of showing the
+    painting.
+  - The bar could stay hidden, and pointing at the bottom of the screen
+    rarely brought it back (in a virtual machine, never). It stays in view
+    again; Light & Wallpaper → **Bar steps aside** still lets it slide away.
+
+Updating from 0.9.0: Monet updates by itself within a day (or Settings →
+Updates → Install, then restart). The painting is back at once, and the bar
+at your next sign-in. Monet
+Bridge, in Windows, doesn't update by itself yet: once, in Windows, download
+**Monet-0.9.1-Windows.zip**, open it and double-click **Install Monet**.
+Then quitting a game restarts into Monet and Windows' clock is right.
+Encryption comes with Monet Setup, so it's for new installs.
 
 ### New in 0.9.0: your files kept safe, a painting for every season
 

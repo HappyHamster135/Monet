@@ -82,11 +82,12 @@ WallpaperItem {
 
     // Plein-air focus (the Timer, through monet-light): "start,end" in Unix seconds. Meanwhile
     // a whole day, dawn to night, passes on the painting, whatever light was chosen.
-    readonly property var focus: /^(\d+),(\d+)$/.exec(root.configuration.Focus || "")
+    // ("session", not "focus": every Item has a focus of its own, and Qt refuses the painting.)
+    readonly property var session: /^(\d+),(\d+)$/.exec(root.configuration.Focus || "")
     property bool focusing: false
 
     function update() {
-        focusing = focus !== null && Date.now() / 1000 < +focus[2]
+        focusing = session !== null && Date.now() / 1000 < +session[2]
         const pinned = hours.findIndex(h => h.name === fixed)
         if (pinned >= 0 && !focusing) {
             show(pinned, pinned, 0)
@@ -99,7 +100,7 @@ WallpaperItem {
         let minute = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
         if (focusing) {
             // From dawn's start to night's, the session's share of the way.
-            const share = Math.max(0, Math.min(1, (Date.now() / 1000 - focus[1]) / Math.max(60, focus[2] - focus[1])))
+            const share = Math.max(0, Math.min(1, (Date.now() / 1000 - session[1]) / Math.max(60, session[2] - session[1])))
             minute = today.dawn + share * (today.night + drift - today.dawn)
         }
         // The light whose start is the latest one before now.
@@ -227,7 +228,7 @@ WallpaperItem {
         triggeredOnStart: true
         onTriggered: root.update()
     }
-    onFocusChanged: update()
+    onSessionChanged: update()
 
     // The weather there: rain, fog and snow lay a veil of mist over the painting,
     // drifting in and out over a few minutes, darker in the dusk and night lights.

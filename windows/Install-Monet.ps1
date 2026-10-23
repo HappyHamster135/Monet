@@ -5,7 +5,7 @@
 .DESCRIPTION
     - Copies monet-bridge.exe to C:\Program Files\Monet
     - Turns off Fast Startup, so Windows always shuts down fully and Monet
-      can safely read its drive
+      can safely read its drive, and reads the PC's clock as UTC, as Monet does
     - Creates three scheduled tasks under \Monet\ (agent, launcher, back)
     - Adds "Back to Monet" to the Start menu and the desktop
 
@@ -108,6 +108,9 @@ New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 # 3. Fast Startup off: it leaves Windows' drive half asleep, and Monet restarts
 #    Windows instead of hibernating it.
 Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -Value 0 -Type DWord
+# The PC's clock keeps UTC, as Monet does; otherwise Windows reads it as local
+# time and is off by the time zone after every switch.
+Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation' -Name RealTimeIsUniversal -Value 1 -Type DWord
 
 # 4. Scheduled tasks
 Say '  Creating background tasks'

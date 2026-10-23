@@ -24,12 +24,12 @@ Test machines:
 
 ### 0.9's smaller things
 
-- [ ] Settings → Updates names Monet's version ("Monet 0.9.0 is ready"), not "44.2026…"
+- [ ] Settings → Updates names Monet's version ("Monet 0.9.1 is ready"), not "44.2026…"
 - [ ] Settings' corner and edges drag it bigger and smaller; double-clicking "Settings" fills the screen; the size is kept
 - [ ] Popovers, the tray's (Disks & Devices, Audio Volume), the menu and the bars show the painting's strokes, like the desktop widgets
 - [ ] The clock's page goes back to its width after the notes close; a note written there shows in the Calendar widget within a second
 - [ ] Light & Wallpaper → Through the year hangs the painting of the season
-- [ ] A window dragged over the bar makes the island under it slide away; pointing at the bottom edge brings it back; Light & Wallpaper → Bar steps aside off keeps it in view
+- [ ] The bar stays in view; with Light & Wallpaper → Bar steps aside on, a window dragged over the bar makes the island under it slide away, and pointing at the bottom edge under it brings it back
 - [ ] Timer → Focus, then start: notifications stay quiet, the painting goes from dawn to night over the minutes, and both come back after
 - [ ] Games & Controllers → Save the last 30 seconds: GPU Screen Recorder installs, KDE asks for the screen once, Windows+Alt+G saves an MP4 in Videos
 - [ ] Search in the menu for "printers": Settings' Printers page is found
@@ -52,6 +52,20 @@ Test machines:
 - [ ] In a VM: install an update, restart, and within its first minute stop the sign-in screen (`sudo systemctl stop display-manager`): five minutes later the PC restarts into the Monet from before, Settings → Updates says "Monet went back to …", the next sign-in says so too, and `sudo systemctl start monet-update` skips that update
 - [ ] An update that starts normally: `/var/lib/monet/trial.json` is gone a minute after the sign-in screen, and `grub2-editenv list` has no `boot_counter`
 - [ ] Settings → Updates → Reset this PC asks for the password; after Restart now: Monet's look and welcome come back, Documents, games, apps, Wi-Fi and printers are still there, the settings from before are in `~/.local/share/monet/before-reset`, and a note says Monet is as it came
+- [ ] An update that starts normally shows no start menu while the PC starts
+
+### Fixes in 0.9.1
+
+- [ ] The desktop and the lock screen show the painting (0.9.0 showed black)
+- [ ] The bar's three islands show on an empty desktop
+- [ ] Windows' clock is right after coming from Monet (and Monet's after coming back)
+- [ ] Quitting a game in Windows restarts into Monet by itself; the PC doesn't switch off
+
+### Bluetooth in both (0.9.1)
+
+- [ ] Pair a controller (a DualSense: classic Bluetooth) in Monet, then in Windows. Back in Monet it connects without pairing again (`journalctl -u monet-pairings` says "took Windows' pairing for …"), and in Windows it still connects
+- [ ] The same with a Low Energy device (an Xbox controller with current firmware, or earbuds)
+- [ ] Pair it again in Monet only: Monet keeps its own pairing at the next start (Windows needs pairing once more, then both work)
 
 ### Older PCs and laptops
 

@@ -61,6 +61,9 @@ systemctl disable monet-boot-arm.service monet-boot-check.service monet-reset.se
 rm -f /etc/systemd/system/monet-boot-arm.service /etc/systemd/system/monet-boot-check.service \
     /etc/systemd/system/monet-reset.service /etc/systemd/system/monet-seal.service \
     /etc/systemd/system/monet-seal-relearn.service /var/lib/monet/trial.json /var/lib/monet/reset
+# Windows' Bluetooth pairings stay where they are.
+systemctl disable monet-pairings.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-pairings.service /var/lib/monet/pairings.json
 systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
@@ -77,7 +80,7 @@ rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desk
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do

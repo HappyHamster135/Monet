@@ -474,7 +474,7 @@ def prefs():
     glass = saved["glass"] if "glass" in saved else not drawn_by_processor()
     series = saved.get("series") if saved.get("series") in SERIES else "hours"
     return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass, "series": series,
-            "weather": saved.get("weather", True), "dodge": saved.get("dodge", True)}
+            "weather": saved.get("weather", True), "dodge": saved.get("dodge", False)}
 
 
 # Monet's paintings, each in four lights (wallpapers/Monet/contents/), or one for each season (monet-light).
@@ -1409,7 +1409,8 @@ def whats_new(text):
         words = " ".join(line.strip() for line in re.split(r"\n\s+- ", bullet[2])[0].splitlines() if line.strip())
         sentence = re.match(r"(.+?[.!?])(?=\s|$)", words)
         said = sentence[1] if sentence else re.sub(r":$", ".", words)  # "...no longer open KDE's settings:" + its list
-        items.append({"title": bullet[1].strip().rstrip(".:"), "text": said})
+        if said:  # not "**What you saw in 0.9.0, fixed:**", only a list
+            items.append({"title": bullet[1].strip().rstrip(".:"), "text": said})
     headline = (found[2] or "").strip()
     return {"version": found[1], "headline": headline[:1].upper() + headline[1:], "items": items[:8]}
 

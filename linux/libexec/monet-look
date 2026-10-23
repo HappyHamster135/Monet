@@ -332,17 +332,19 @@ JS
 )" >/dev/null 2>&1; then
     mkdir -p "$CONFIG/monet" && touch "$swapped"
 fi
-# The bar's islands step aside when a window comes over them and come back when
-# you point at the bottom edge, as other systems' docks do (once, and only from
-# KDE's always-visible; Settings → Light & Wallpaper keeps them in view).
-dodge="$CONFIG/monet/bar-dodges"
-if [ ! -e "$dodge" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+# 0.9.0 made the bar's islands step aside for everyone; on some PCs a window Plasma counts
+# kept them hidden, and pointing at the bottom edge rarely brought them back (in a VM, never).
+# In view again, once: Settings → Light & Wallpaper → Bar steps aside turns it back on.
+shown="$CONFIG/monet/bar-shown"
+if [ ! -e "$shown" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
 panels().forEach(function (panel) {
-    if (panel.location === "bottom" && panel.hiding === "none") panel.hiding = "dodgewindows";
+    if (panel.location === "bottom" && panel.hiding === "dodgewindows") panel.hiding = "none";
 });
 JS
 )" >/dev/null 2>&1; then
-    mkdir -p "$CONFIG/monet" && touch "$dodge"
+    [ -f "$CONFIG/monet/prefs.json" ] && sed -i 's/"dodge": true/"dodge": false/' "$CONFIG/monet/prefs.json"
+    rm -f "$CONFIG/monet/bar-dodges"
+    mkdir -p "$CONFIG/monet" && touch "$shown"
 fi
 
 # And Monet's menu instead of KDE's, in its place and with its shortcut

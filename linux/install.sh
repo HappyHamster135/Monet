@@ -92,6 +92,8 @@ put 755 "$SRC/libexec/monet-keep" "$LIBEXECDIR/monet-keep"
 for tool in monet-boot monet-reset monet-seal; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
+# A controller or headset paired in Windows works in Monet too: root's part.
+put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
@@ -211,6 +213,8 @@ for unit in monet-boot-arm.service monet-boot-check.service monet-reset.service 
     monet-seal-relearn.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
+# Windows' Bluetooth pairings, taken at every start.
+put 644 "$SRC/systemd/monet-pairings.service" "$UNITDIR/monet-pairings.service"
 
 # Monet updates itself, once a day (monet-update.timer: the new Monet starts at
 # the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
@@ -273,6 +277,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl --global enable monet-backup.timer
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
+    systemctl enable monet-pairings.service
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -436,4 +441,5 @@ else
     systemctl enable --now monet-boot-arm.service >/dev/null 2>&1 || true
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \
         >/dev/null 2>&1 || true
+    systemctl enable monet-pairings.service >/dev/null 2>&1 || true
 fi

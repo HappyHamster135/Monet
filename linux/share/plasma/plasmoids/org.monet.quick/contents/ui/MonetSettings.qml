@@ -107,7 +107,7 @@ PlasmaCore.Dialog {
 
     // What the helper reported.
     property var info: ({})
-    property var prefs: ({ hours: true, placard: true, glass: true, weather: true, dodge: true })
+    property var prefs: ({ hours: true, placard: true, glass: true, weather: true, dodge: false })
     property var nets: []
     // Whether a look for networks has come back yet (until then: looking).
     property bool netsLoaded: false
