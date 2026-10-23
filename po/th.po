@@ -1,0 +1,3799 @@
+# Monet's words in Thai.
+# Gathered by tools/make-translations.py; %1, %2... stand for what is filled in.
+msgid ""
+msgstr ""
+"Project-Id-Version: Monet\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: th\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: image/password/QuickAuthDialog.qml:24
+msgid "Monet needs your password"
+msgstr "Monet ต้องใช้รหัสผ่านของคุณ"
+
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+msgid "That password didn't work. Try again."
+msgstr "รหัสผ่านนี้ใช้ไม่ได้ ลองอีกครั้ง"
+
+#: image/password/QuickAuthDialog.qml:199
+msgid "Allow this?"
+msgstr "อนุญาตไหม?"
+
+#: image/password/QuickAuthDialog.qml:224
+msgctxt "%1 is a person's name"
+msgid "As %1"
+msgstr "ในฐานะ %1"
+
+#: image/password/QuickAuthDialog.qml:241
+msgid "Someone else…"
+msgstr "ผู้ใช้อื่น…"
+
+#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
+#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+msgid "Password"
+msgstr "รหัสผ่าน"
+
+#: image/password/QuickAuthDialog.qml:337
+msgid "Fewer details"
+msgstr "ซ่อนรายละเอียด"
+
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+msgid "Details"
+msgstr "รายละเอียด"
+
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/logout/Logout.qml:320 linux/share/monet/logout/Logout.qml:419
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:425 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2583
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2669 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3945 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
+#: crates/monet/src/main.rs:1047
+msgid "Cancel"
+msgstr "ยกเลิก"
+
+#: image/password/QuickAuthDialog.qml:369
+msgid "Allow"
+msgstr "อนุญาต"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:97
+msgid "Drag a widget to move it. Point at one to resize or remove it."
+msgstr "ลากวิดเจ็ตเพื่อย้าย ชี้ที่วิดเจ็ตเพื่อปรับขนาดหรือเอาออก"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:105
+msgid "More"
+msgstr "เพิ่มเติม"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:114
+msgid "Add widgets"
+msgstr "เพิ่มวิดเจ็ต"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:179
+msgid "Done"
+msgstr "เสร็จสิ้น"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:146
+msgid "Add a bar…"
+msgstr "เพิ่มแถบ…"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:152
+msgid "Manage desktops and bars"
+msgstr "จัดการเดสก์ท็อปและแถบ"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:161 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1976
+msgid "Widgets"
+msgstr "วิดเจ็ต"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:169
+msgid "Click one to add it to the bar, or drag it there."
+msgstr "คลิกเพื่อเพิ่มลงในแถบ หรือลากไปวางที่แถบ"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:170
+msgid "Click one to add it to your desktop, or drag it where you want it."
+msgstr "คลิกเพื่อเพิ่มลงในเดสก์ท็อป หรือลากไปวางตรงที่ต้องการ"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:209 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1457
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2878 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
+msgid "Search"
+msgstr "ค้นหา"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:215
+msgid "Search widgets"
+msgstr "ค้นหาวิดเจ็ต"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:256
+msgid "All widgets"
+msgstr "วิดเจ็ตทั้งหมด"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:293
+msgid "More widgets"
+msgstr "วิดเจ็ตเพิ่มเติม"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:389
+msgid "No widget by that name."
+msgstr "ไม่พบวิดเจ็ตชื่อนี้"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:508 linux/share/monet/explorer/MonetWidgetExplorer.qml:668 linux/share/monet/explorer/MonetWidgetExplorer.qml:712
+msgctxt "%1 is a widget's name"
+msgid "Add %1"
+msgstr "เพิ่ม %1"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:631
+msgid "In your bar"
+msgstr "อยู่ในแถบของคุณ"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:631
+msgid "On your desktop"
+msgid_plural "%1 on your desktop"
+msgstr[0] "อยู่บนเดสก์ท็อป %1 รายการ"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:643
+msgid "Remove all"
+msgstr "เอาออกทั้งหมด"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:643 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2808
+msgid "Remove"
+msgstr "เอาออก"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646
+msgctxt "%1 is a widget's name"
+msgid "Remove %1"
+msgstr "เอา %1 ออก"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:665
+msgid "Add"
+msgstr "เพิ่ม"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:789
+msgid "Added"
+msgstr "เพิ่มแล้ว"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:789
+msgid "+ Add"
+msgstr "+ เพิ่ม"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+msgctxt "the painting's light, as in Impression, dawn"
+msgid "dawn"
+msgstr "ยามรุ่งอรุณ"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+msgctxt "the painting's light, as in Impression, midday"
+msgid "midday"
+msgstr "ยามเที่ยงวัน"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+msgctxt "the painting's light, as in Impression, dusk"
+msgid "dusk"
+msgstr "ยามสนธยา"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+msgctxt "the painting's light, as in Impression, night"
+msgid "night"
+msgstr "ยามราตรี"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
+msgid "Water Lilies, %1"
+msgstr "ดอกบัว %1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
+msgid "Haystacks, %1"
+msgstr "กองฟาง %1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
+msgid "Impression, %1"
+msgstr "ความประทับใจ %1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+msgctxt "%1 is a first name"
+msgid "Welcome back, %1."
+msgstr "ยินดีต้อนรับกลับมา %1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+msgid "Welcome back."
+msgstr "ยินดีต้อนรับกลับมา"
+
+#: linux/share/monet/logout/Logout.qml:251
+msgctxt "%1 is a first name"
+msgid "See you soon, %1."
+msgstr "แล้วพบกันใหม่ %1"
+
+#: linux/share/monet/logout/Logout.qml:251
+msgid "See you soon."
+msgstr "แล้วพบกันใหม่"
+
+#: linux/share/monet/logout/Logout.qml:252
+msgid "Restart now?"
+msgstr "รีสตาร์ทตอนนี้เลยไหม?"
+
+#: linux/share/monet/logout/Logout.qml:253
+msgid "Shut down now?"
+msgstr "ปิดเครื่องตอนนี้เลยไหม?"
+
+#: linux/share/monet/logout/Logout.qml:254
+msgid "Sign out now?"
+msgstr "ออกจากระบบตอนนี้เลยไหม?"
+
+#: linux/share/monet/logout/Logout.qml:269
+msgid "Open apps close, so save your work first."
+msgstr "แอปที่เปิดอยู่จะปิดลง ควรบันทึกงานไว้ก่อน"
+
+#: linux/share/monet/logout/Logout.qml:274
+msgid "Your PC installs its updates and restarts in 1 second."
+msgid_plural "Your PC installs its updates and restarts in %1 seconds."
+msgstr[0] "พีซีของคุณจะติดตั้งอัปเดตและรีสตาร์ทใน %1 วินาที"
+
+#: linux/share/monet/logout/Logout.qml:275
+msgid "Your PC restarts in 1 second."
+msgid_plural "Your PC restarts in %1 seconds."
+msgstr[0] "พีซีของคุณจะรีสตาร์ทใน %1 วินาที"
+
+#: linux/share/monet/logout/Logout.qml:277
+msgid "Your PC installs its updates and shuts down in 1 second."
+msgid_plural "Your PC installs its updates and shuts down in %1 seconds."
+msgstr[0] "พีซีของคุณจะติดตั้งอัปเดตและปิดเครื่องใน %1 วินาที"
+
+#: linux/share/monet/logout/Logout.qml:278
+msgid "Your PC shuts down in 1 second."
+msgid_plural "Your PC shuts down in %1 seconds."
+msgstr[0] "พีซีของคุณจะปิดเครื่องใน %1 วินาที"
+
+#: linux/share/monet/logout/Logout.qml:279
+msgid "You'll be signed out in 1 second."
+msgid_plural "You'll be signed out in %1 seconds."
+msgstr[0] "คุณจะออกจากระบบใน %1 วินาที"
+
+#: linux/share/monet/logout/Logout.qml:288
+msgid "Someone else is signed in too. They lose anything they haven't saved."
+msgid_plural ""
+"%1 other people are signed in too. They lose anything they haven't saved."
+msgstr[0] "มีคนอื่นลงชื่อเข้าใช้อยู่อีก %1 คน งานที่พวกเขายังไม่ได้บันทึกจะหายไป"
+
+#: linux/share/monet/logout/Logout.qml:291
+msgid "When it restarts, the PC opens its setup screen (BIOS)."
+msgstr "เมื่อรีสตาร์ต PC จะเปิดหน้าจอตั้งค่า (BIOS)"
+
+#: linux/share/monet/logout/Logout.qml:291
+msgid "When it restarts, the PC opens its firmware settings."
+msgstr "เมื่อรีสตาร์ท พีซีจะเปิดการตั้งค่าเฟิร์มแวร์"
+
+#: linux/share/monet/logout/Logout.qml:292
+msgid "When it restarts, the PC opens its boot menu."
+msgstr "เมื่อรีสตาร์ท พีซีจะเปิดเมนูบูต"
+
+#: linux/share/monet/logout/Logout.qml:294
+msgctxt "%1 is what the PC starts next"
+msgid "When it restarts, the PC starts %1."
+msgstr "เมื่อรีสตาร์ท พีซีจะเข้าสู่ %1"
+
+#: linux/share/monet/logout/Logout.qml:332 linux/share/monet/logout/Logout.qml:381
+msgid "Update and restart"
+msgstr "อัปเดตและรีสตาร์ท"
+
+#: linux/share/monet/logout/Logout.qml:332 linux/share/monet/logout/Logout.qml:381 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:431
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3953 setup/qml/Main.qml:211 crates/monet/src/main.rs:317
+#: crates/monet/src/main.rs:740
+msgid "Restart"
+msgstr "รีสตาร์ท"
+
+#: linux/share/monet/logout/Logout.qml:333 linux/share/monet/logout/Logout.qml:393
+msgid "Update and shut down"
+msgstr "อัปเดตและปิดเครื่อง"
+
+#: linux/share/monet/logout/Logout.qml:333 linux/share/monet/logout/Logout.qml:393 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+msgid "Shut down"
+msgstr "ปิดเครื่อง"
+
+#: linux/share/monet/logout/Logout.qml:334 linux/share/monet/logout/Logout.qml:403
+msgid "Sign out"
+msgstr "ออกจากระบบ"
+
+#: linux/share/monet/logout/Logout.qml:361 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3066 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Sleep"
+msgstr "พักเครื่อง"
+
+#: linux/share/monet/logout/Logout.qml:371
+msgid "Hibernate"
+msgstr "ไฮเบอร์เนต"
+
+#: linux/share/monet/widgets/DayNotes.qml:109
+msgid "Today"
+msgstr "วันนี้"
+
+#: linux/share/monet/widgets/DayNotes.qml:138
+msgid "The day before"
+msgstr "วันก่อนหน้า"
+
+#: linux/share/monet/widgets/DayNotes.qml:138
+msgid "The day after"
+msgstr "วันถัดไป"
+
+#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:425 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1717
+#: crates/monet-usb/src/gui.rs:143
+msgid "Close"
+msgstr "ปิด"
+
+#: linux/share/monet/widgets/DayNotes.qml:214
+msgid "Nothing planned. Write something for this day…"
+msgstr "ยังไม่มีแผน เขียนอะไรไว้ได้เลย…"
+
+#: linux/share/monet/widgets/DayNotes.qml:246
+msgid "Coming up"
+msgstr "เร็ว ๆ นี้"
+
+#: linux/share/monet/widgets/Month.qml:64
+msgctxt "a day in the calendar"
+msgid "Today"
+msgstr "วันนี้"
+
+#: linux/share/monet/widgets/Month.qml:65
+msgctxt "a day in the calendar"
+msgid "Tomorrow"
+msgstr "พรุ่งนี้"
+
+#: linux/share/monet/widgets/Month.qml:66
+msgctxt "a day in the calendar"
+msgid "Yesterday"
+msgstr "เมื่อวาน"
+
+#: linux/share/monet/widgets/Month.qml:116
+msgid "Put the notes away"
+msgstr "เก็บโน้ต"
+
+#: linux/share/monet/widgets/Month.qml:116
+msgid "Notes"
+msgstr "โน้ต"
+
+#: linux/share/monet/widgets/Month.qml:117
+msgid "Write something for the chosen day"
+msgstr "เขียนอะไรสักอย่างสำหรับวันที่เลือก"
+
+#: linux/share/monet/widgets/Month.qml:170
+msgid "Previous month"
+msgstr "เดือนก่อนหน้า"
+
+#: linux/share/monet/widgets/Month.qml:170
+msgid "Next month"
+msgstr "เดือนถัดไป"
+
+#: linux/share/monet/widgets/Month.qml:345
+msgctxt "%1 is a day, like Today or Fri 30 Oct"
+msgid "Notes for %1"
+msgstr "โน้ตของ %1"
+
+#: linux/share/monet/widgets/Month.qml:363
+msgid "Nothing planned"
+msgstr "ไม่มีแผน"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:149
+msgid "The picture before"
+msgstr "รูปก่อนหน้า"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:149
+msgid "The next picture"
+msgstr "รูปถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:190
+msgid "Put photos in your Pictures folder and they hang here."
+msgstr "ใส่รูปในโฟลเดอร์รูปภาพ แล้วรูปจะมาแขวนที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:209
+msgid "Open in Photos"
+msgstr "เปิดในรูปภาพ"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:32 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:244
+msgid "Windows Games"
+msgstr "เกม Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:34
+msgid "%1 game ready to play"
+msgid_plural "%1 games ready to play"
+msgstr[0] "พร้อมเล่น %1 เกม"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:35
+msgid "Play Windows games with one click"
+msgstr "เล่นเกม Windows ได้ในคลิกเดียว"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:359
+msgid "Monet couldn't switch to Windows."
+msgstr "Monet สลับไป Windows ไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:121 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3917 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4364
+msgid "Windows"
+msgstr "Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:250
+msgid "Opens in Windows. Quit to come back."
+msgstr "เปิดใน Windows ออกจากเกมเพื่อกลับมา"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:314
+msgid "Play"
+msgstr "เล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:326
+msgid "No Windows games yet"
+msgstr "ยังไม่มีเกม Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:327
+msgid ""
+"Start Windows once and install your games there. They show up here by themselves."
+msgstr "เปิด Windows สักครั้งแล้วติดตั้งเกมไว้ที่นั่น เกมจะแสดงที่นี่เอง"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:335
+msgid "Open Windows"
+msgstr "เปิด Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:341 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:712
+msgid "%1 game"
+msgid_plural "%1 games"
+msgstr[0] "%1 เกม"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3910
+msgid "Couldn't open Windows"
+msgstr "เปิด Windows ไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:407 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3911
+msgid "Play %1?"
+msgstr "เล่น %1 ไหม?"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:408 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3912 crates/monet/src/main.rs:311
+msgid "Restart in Windows?"
+msgstr "รีสตาร์ทเข้า Windows ไหม?"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:416 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3933
+msgid ""
+"Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
+msgstr ""
+"พีซีของคุณจะรีสตาร์ทเข้า Windows และเปิดเกม เมื่อออกจากเกม คุณจะกลับมาที่นี่ ควรบันทึกงานไว้ก่อน"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:417 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+msgid "Your PC restarts in Windows. Open apps close, so save your work first."
+msgstr ""
+"พีซีของคุณจะรีสตาร์ทเข้า Windows แอปที่เปิดอยู่จะปิดลง ควรบันทึกงานไว้ก่อน"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:431 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3952
+msgid "Restart & Play"
+msgstr "รีสตาร์ท & เล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:521
+msgid "Opening %1"
+msgstr "กำลังเปิด %1"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:521
+msgid "Opening Windows"
+msgstr "กำลังเปิด Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:528
+msgid "Restarting in Windows"
+msgstr "กำลังรีสตาร์ทเข้า Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:27
+msgid "Menu"
+msgstr "เมนู"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:28
+msgid "Your apps, and a search for everything on this PC"
+msgstr "แอปของคุณ และการค้นหาทุกอย่างในพีซีเครื่องนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:132
+msgid "Unpin from Menu"
+msgstr "เลิกปักหมุดจากเมนู"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:132
+msgid "Pin to Menu"
+msgstr "ปักหมุดไว้ที่เมนู"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:243
+msgid "Search apps, files and settings"
+msgstr "ค้นหาแอป ไฟล์ และการตั้งค่า"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:300 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:306
+msgid "All apps"
+msgstr "แอปทั้งหมด"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:300 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:306
+msgid "Pinned"
+msgstr "ปักหมุดไว้"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:376
+msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
+msgstr ""
+"ยังไม่มีแอปที่ปักหมุดไว้ คลิกขวาที่แอปในหน้าแอปทั้งหมดเพื่อปักหมุดไว้ที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:388
+msgid "Recent"
+msgstr "ล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:437
+msgid "Files you open show up here."
+msgstr "ไฟล์ที่คุณเปิดจะแสดงที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:538
+msgid "Nothing here by that name."
+msgstr "ไม่พบรายการชื่อนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:564 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2508
+msgid "Accounts"
+msgstr "บัญชี"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:649 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3639
+msgid "Lock"
+msgstr "ล็อก"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:662
+msgid "Sleep, restart or shut down"
+msgstr "พักเครื่อง รีสตาร์ท หรือปิดเครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/contents/ui/main.qml:52
+msgid "Write something…"
+msgstr "เขียนอะไรสักอย่าง…"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:126 linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:171
+msgctxt "%1 is a music app"
+msgid "Show %1"
+msgstr "แสดง %1"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:191 linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:409
+msgid "Nothing playing"
+msgstr "ไม่มีอะไรเล่นอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:226
+msgid "Position"
+msgstr "ตำแหน่ง"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:294
+msgid "Previous track"
+msgstr "เพลงก่อนหน้า"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:316
+msgctxt "the music"
+msgid "Pause"
+msgstr "หยุดชั่วคราว"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:316
+msgctxt "the music"
+msgid "Play"
+msgstr "เล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:352
+msgid "Next track"
+msgstr "เพลงถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:419
+msgid "Play something with"
+msgstr "เปิดเพลงด้วย"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:420
+msgid "No music app yet."
+msgstr "ยังไม่มีแอปเพลง"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:420
+msgid "Music and videos show here while they play."
+msgstr "เพลงและวิดีโอจะแสดงที่นี่ขณะเล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:433
+msgid "Find a music app"
+msgstr "หาแอปเพลง"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:39
+msgctxt "greeting late at night, %1 is a first name"
+msgid "Still up, %1?"
+msgstr "ยังไม่นอนอีกหรือ %1?"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:40
+msgctxt "%1 is a first name"
+msgid "Good morning, %1."
+msgstr "อรุณสวัสดิ์ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:41
+msgctxt "%1 is a first name"
+msgid "Good afternoon, %1."
+msgstr "สวัสดีตอนบ่าย %1"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:42
+msgctxt "%1 is a first name"
+msgid "Good evening, %1."
+msgstr "สวัสดีตอนเย็น %1"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:43
+msgctxt "%1 is a first name"
+msgid "Good night, %1."
+msgstr "ราตรีสวัสดิ์ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:74
+msgctxt "when a game was played"
+msgid "Today"
+msgstr "วันนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:76
+msgctxt "when a game was played"
+msgid "Yesterday"
+msgstr "เมื่อวาน"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:78
+msgctxt "when a game was played"
+msgid "%1 day ago"
+msgid_plural "%1 days ago"
+msgstr[0] "%1 วันที่แล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:80
+msgctxt "when a game was played"
+msgid "%1 week ago"
+msgid_plural "%1 weeks ago"
+msgstr[0] "%1 สัปดาห์ที่แล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:94
+msgctxt "%1 is a game"
+msgid "Play %1"
+msgstr "เล่น %1"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:237
+msgid "Recently played"
+msgstr "เล่นล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:289
+msgid "The games you play in Steam show up here."
+msgstr "เกมที่คุณเล่นใน Steam จะแสดงที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:298
+msgid "Open Steam"
+msgstr "เปิด Steam"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:29
+msgid "Quick Settings"
+msgstr "การตั้งค่าด่วน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:212
+msgctxt "%1 is a quick setting, like Wi-Fi"
+msgid "%1 settings"
+msgstr "การตั้งค่า %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:274 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:36 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2009
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290
+msgid "Unavailable"
+msgstr "ไม่พร้อมใช้งาน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:312 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2175
+msgid "Off"
+msgstr "ปิด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210
+msgid "Not connected"
+msgstr "ไม่ได้เชื่อมต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:286 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2172
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2183
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:312 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2174
+msgid "On"
+msgstr "เปิด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:298 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2272
+msgid "Night Light"
+msgstr "ไฟกลางคืน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:301
+msgid "Warm after sunset"
+msgstr "โทนอุ่นหลังพระอาทิตย์ตก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:309
+msgid "Do Not Disturb"
+msgstr "ห้ามรบกวน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:345 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2262
+msgid "Brightness"
+msgstr "ความสว่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:361
+msgid "Keyboard light"
+msgstr "ไฟแป้นพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:376 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2306
+msgid "Volume"
+msgstr "ระดับเสียง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390
+msgid "Light"
+msgstr "แสง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426
+msgid "Hours"
+msgstr "ตามเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1806
+msgid "Mist"
+msgstr "หมอก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1807
+msgid "Smoke"
+msgstr "ควัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:473 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1806
+msgid "Always light"
+msgstr "สว่างตลอด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1807
+msgid "Always dark"
+msgstr "มืดตลอด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1805
+msgid "Mist by day, smoke after dark"
+msgstr "หมอกยามกลางวัน ควันเมื่อฟ้ามืด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:484
+msgid "Battery %1%, charging"
+msgstr "แบตเตอรี่ %1% กำลังชาร์จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:485
+msgid "Battery %1%, plugged in"
+msgstr "แบตเตอรี่ %1% เสียบปลั๊กอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:486
+msgctxt "%2 is how long it lasts, like 2:15"
+msgid "Battery %1%, %2 left"
+msgstr "แบตเตอรี่ %1% เหลืออีก %2"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:487 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2954
+msgid "Battery %1%"
+msgstr "แบตเตอรี่ %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:492
+msgid "All Settings"
+msgstr "การตั้งค่าทั้งหมด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:33 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1797
+msgid "Light & Wallpaper"
+msgstr "แสง & ภาพพื้นหลัง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:34
+msgctxt "Settings search words, space-separated"
+msgid ""
+"light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors"
+msgstr ""
+"แสง วอลเปเปอร์ พื้นหลัง ภาพวาด ชั่วโมง หมอก ควัน มืด โหมดมืด กระจก ป้าย นาฬิกา ธีม รูปลักษณ์ สี"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:37
+msgctxt "Settings search words, space-separated"
+msgid "wifi wi-fi wireless network internet password"
+msgstr "wifi wi-fi ไวไฟ ไร้สาย เครือข่าย อินเทอร์เน็ต รหัสผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:40
+msgctxt "Settings search words, space-separated"
+msgid "bluetooth headphones controller gamepad mouse keyboard pair"
+msgstr ""
+"bluetooth บลูทูธ หูฟัง คอนโทรลเลอร์ จอยเกม gamepad เมาส์ คีย์บอร์ด แป้นพิมพ์ จับคู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3717
+msgid "Printers"
+msgstr "เครื่องพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:43
+msgctxt "Settings search words, space-separated"
+msgid "printers printer print scanner paper queue default add"
+msgstr "เครื่องพิมพ์ พิมพ์ สแกนเนอร์ กระดาษ คิว ค่าเริ่มต้น เพิ่ม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2253
+msgid "Display"
+msgstr "จอภาพ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:46
+msgctxt "Settings search words, space-separated"
+msgid "display screen brightness night light monitor resolution scale size"
+msgstr "จอแสดงผล หน้าจอ ความสว่าง แสงกลางคืน จอภาพ ความละเอียด สเกล ขนาด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2298
+msgid "Sound"
+msgstr "เสียง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+msgctxt "Settings search words, space-separated"
+msgid "sound volume speakers headphones microphone mic audio output"
+msgstr "เสียง ระดับเสียง ลำโพง หูฟัง ไมโครโฟน ไมค์ เอาต์พุต"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2379
+msgid "Date & Time"
+msgstr "วันที่ & เวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
+msgctxt "Settings search words, space-separated"
+msgid "date time clock time zone 24-hour format automatic"
+msgstr "วันที่ เวลา นาฬิกา เขตเวลา 24 ชั่วโมง รูปแบบ อัตโนมัติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
+msgctxt "Settings search words, space-separated"
+msgid "accounts users password picture people name login sign in"
+msgstr "บัญชี ผู้ใช้ รหัสผ่าน รูปภาพ ผู้คน ชื่อ เข้าสู่ระบบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2732
+msgid "Mouse & Keyboard"
+msgstr "เมาส์ & แป้นพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:59
+msgctxt "Settings search words, space-separated"
+msgid ""
+"mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing"
+msgstr ""
+"เมาส์ คีย์บอร์ด แป้นพิมพ์ ทัชแพด ตัวชี้ ความเร็ว เลื่อน ธรรมชาติ แตะ คลิก ถนัดซ้าย เลย์เอาต์ ภาษา การพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2944
+msgid "Power & Sleep"
+msgstr "พลังงาน & การพักเครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63
+msgctxt "Settings search words, space-separated"
+msgid ""
+"power sleep suspend screen off energy battery lid button shutdown performance saver mode"
+msgstr ""
+"พลังงาน พักเครื่อง สลีป ปิดหน้าจอ แบตเตอรี่ ฝาพับ ปุ่ม ปิดเครื่อง ประสิทธิภาพ ประหยัด โหมด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:65 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3601
+msgid "Lock & Privacy"
+msgstr "การล็อก & ความเป็นส่วนตัว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:66
+msgctxt "Settings search words, space-separated"
+msgid ""
+"lock screen locker password wake sleep privacy recent files history forget remember away"
+msgstr ""
+"ล็อก หน้าจอล็อก รหัสผ่าน ปลุก พักเครื่อง ความเป็นส่วนตัว ไฟล์ล่าสุด ประวัติ ลืม จดจำ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:68 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3124
+msgid "Notifications"
+msgstr "การแจ้งเตือน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:70
+msgctxt "Settings search words, space-separated"
+msgid "notifications alerts do not disturb quiet popups sounds apps"
+msgstr "การแจ้งเตือน แจ้งเตือน ห้ามรบกวน เงียบ ป๊อปอัป เสียง แอป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3370
+msgid "Accessibility"
+msgstr "การช่วยการเข้าถึง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74
+msgctxt "Settings search words, space-separated"
+msgid ""
+"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read"
+msgstr ""
+"การช่วยการเข้าถึง ใหญ่ขึ้น ข้อความ ขนาด สเกล ซูม ขยาย ตัวชี้ เคอร์เซอร์ การเคลื่อนไหว แอนิเมชัน โปรแกรมอ่านหน้าจอ orca มองเห็น อ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:76 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3272
+msgid "Default Apps"
+msgstr "แอปเริ่มต้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78
+msgctxt "Settings search words, space-separated"
+msgid ""
+"default apps browser web email mail files music video photos pdf text open with"
+msgstr ""
+"แอปเริ่มต้น เบราว์เซอร์ เว็บ อีเมล ไฟล์ เพลง วิดีโอ รูปภาพ pdf ข้อความ เปิดด้วย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:80 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4363
+msgid "Storage"
+msgstr "พื้นที่จัดเก็บ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82
+msgctxt "Settings search words, space-separated"
+msgid "storage disk space room full free trash downloads clean games apps"
+msgstr "พื้นที่จัดเก็บ ดิสก์ พื้นที่ เต็ม ว่าง ถังขยะ ดาวน์โหลด ล้าง เกม แอป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:84 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3776
+msgid "Games & Controllers"
+msgstr "เกม & คอนโทรลเลอร์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86
+msgctxt "Settings search words, space-separated"
+msgid ""
+"games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris"
+msgstr ""
+"เกม คอนโทรลเลอร์ จอยเกม จอยสติ๊ก xbox playstation dualsense แบตเตอรี่ จับคู่ ทดสอบ ปุ่ม โอเวอร์เลย์ overlay fps mangohud ประสิทธิภาพ steam คลัง ติดตั้งแล้ว heroic lutris"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:88 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3889
+msgid "Play on Windows"
+msgstr "เล่นบน Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:89
+msgctxt "Settings search words, space-separated"
+msgid "windows games play anti-cheat steam restart boot doctor check"
+msgstr "windows วินโดวส์ เกม เล่น anti-cheat steam รีสตาร์ต บูต ตรวจสอบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4041
+msgid "Updates"
+msgstr "อัปเดต"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:92
+msgctxt "Settings search words, space-separated"
+msgid "updates update version upgrade new"
+msgstr "อัปเดต เวอร์ชัน อัปเกรด ใหม่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:94
+msgid "About Monet"
+msgstr "เกี่ยวกับ Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:95
+msgctxt "Settings search words, space-separated"
+msgid ""
+"about pc computer specs graphics gpu processor cpu memory ram storage disk version"
+msgstr ""
+"เกี่ยวกับ pc คอมพิวเตอร์ สเปก กราฟิก การ์ดจอ gpu โปรเซสเซอร์ cpu หน่วยความจำ แรม ram พื้นที่จัดเก็บ ดิสก์ เวอร์ชัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:162 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1409
+msgid "Settings"
+msgstr "การตั้งค่า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:398 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:474
+msgid "Monet %1"
+msgstr "Monet %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:398
+msgid "the Monet from before"
+msgstr "Monet เวอร์ชันก่อน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:428
+msgid "Updating firmware…"
+msgstr "กำลังอัปเดตเฟิร์มแวร์…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:429
+msgid "Restart to finish the firmware"
+msgstr "รีสตาร์ทเพื่ออัปเดตเฟิร์มแวร์ให้เสร็จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:429
+msgid "Firmware is up to date"
+msgstr "เฟิร์มแวร์เป็นเวอร์ชันล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:430
+msgid "The firmware didn't update"
+msgstr "อัปเดตเฟิร์มแวร์ไม่สำเร็จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:431
+msgid "%1 firmware update"
+msgid_plural "%1 firmware updates"
+msgstr[0] "อัปเดตเฟิร์มแวร์ %1 รายการ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:437
+msgid "Keep the PC plugged in and switched on."
+msgstr "เสียบปลั๊กและเปิดเครื่องไว้ตลอด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438
+msgid "It installs while the PC restarts. Keep it plugged in until it's back."
+msgstr "จะติดตั้งขณะพีซีรีสตาร์ท เสียบปลั๊กไว้จนกว่าเครื่องจะเปิดกลับมา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:486
+msgid "Everything is installed."
+msgstr "ติดตั้งครบทั้งหมดแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:439
+msgid "Try again in a moment."
+msgstr "ลองอีกครั้งในอีกสักครู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:440
+msgid "For this PC's own parts, from their makers. Install when you're ready."
+msgstr "สำหรับชิ้นส่วนของพีซีเครื่องนี้ จากผู้ผลิตโดยตรง ติดตั้งเมื่อคุณพร้อม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:450
+msgid "%1 · installs when the PC restarts"
+msgstr "%1 · ติดตั้งเมื่อพีซีรีสตาร์ท"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:466
+msgid "Monet %1 is ready"
+msgstr "Monet %1 พร้อมแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:466
+msgid "A new Monet is ready"
+msgstr "Monet เวอร์ชันใหม่พร้อมแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:469
+msgid "%1 app update is ready"
+msgid_plural "%1 app updates are ready"
+msgstr[0] "อัปเดตแอป %1 รายการพร้อมแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:472
+msgid "Restart to finish"
+msgstr "รีสตาร์ทเพื่อให้เสร็จสิ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:472
+msgid "Your apps are up to date"
+msgstr "แอปของคุณเป็นเวอร์ชันล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+msgid "Monet"
+msgstr "Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:480
+msgid "Looking for updates…"
+msgstr "กำลังตรวจหาอัปเดต…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:481
+msgid "Monet and your apps are up to date."
+msgstr "Monet และแอปของคุณเป็นเวอร์ชันล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:483
+msgid "And %1 app update. Install when you're ready."
+msgid_plural "And %1 app updates. Install when you're ready."
+msgstr[0] "และมีอัปเดตแอปอีก %1 รายการ ติดตั้งเมื่อคุณพร้อม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:484
+msgid "Install when you're ready."
+msgstr "ติดตั้งเมื่อคุณพร้อม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:485
+msgid "Downloading and installing. You can keep using your PC."
+msgstr "กำลังดาวน์โหลดและติดตั้ง คุณใช้พีซีต่อได้ตามปกติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:486
+msgid "The new Monet starts the next time you restart."
+msgstr "Monet เวอร์ชันใหม่จะเริ่มทำงานเมื่อคุณรีสตาร์ทครั้งถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:487
+msgid ""
+"Monet couldn't look for updates. Check your internet connection and try again."
+msgstr ""
+"Monet ตรวจหาอัปเดตไม่ได้ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:488
+msgid "Monet only updates when you ask it to."
+msgstr "Monet จะอัปเดตเฉพาะเมื่อคุณสั่งเท่านั้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+msgid "Type your name."
+msgstr "พิมพ์ชื่อของคุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564
+msgid "A name can't have : or , in it."
+msgstr "ชื่อมี : หรือ , ไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+msgid "Monet couldn't change your name."
+msgstr "Monet เปลี่ยนชื่อของคุณไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:588
+msgid "Type a new password."
+msgstr "พิมพ์รหัสผ่านใหม่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:588
+msgid "The new passwords don't match."
+msgstr "รหัสผ่านใหม่ไม่ตรงกัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:597 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:606
+msgid "Monet couldn't change your password."
+msgstr "Monet เปลี่ยนรหัสผ่านของคุณไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:598
+msgid "That password is too long."
+msgstr "รหัสผ่านนี้ยาวเกินไป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:716 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3462
+msgid "%1 free"
+msgstr "ว่าง %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:729
+msgid "%1 TB"
+msgstr "%1 TB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:729 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:730
+msgid "%1 GB"
+msgstr "%1 GB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:730
+msgid "%1 MB"
+msgstr "%1 MB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:731
+msgid "%1 KB"
+msgstr "%1 KB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:741 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3617
+msgid "Never"
+msgstr "ไม่ต้อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:741
+msgid "%1 min"
+msgstr "%1 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:742
+msgid "%1 hour"
+msgid_plural "%1 hours"
+msgstr[0] "%1 ชั่วโมง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1358
+msgid "Play %1"
+msgstr "เล่น %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1445
+msgid "Search settings"
+msgstr "ค้นหาการตั้งค่า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1593
+msgid "Opens in a separate window"
+msgstr "เปิดในหน้าต่างแยก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1605
+msgid "Nothing here by that name. Try More settings."
+msgstr "ไม่พบรายการชื่อนี้ ลองดูใน “การตั้งค่าเพิ่มเติม”"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1623
+msgid "More settings ›"
+msgstr "การตั้งค่าเพิ่มเติม ›"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1632
+msgid "More settings"
+msgstr "การตั้งค่าเพิ่มเติม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1798
+msgid "How Monet looks, and when it changes."
+msgstr "รูปลักษณ์ของ Monet และเวลาที่เปลี่ยน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1805
+msgid "Follow the hours"
+msgstr "เปลี่ยนตามเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1874
+msgid "Painting"
+msgstr "ภาพวาด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1881
+msgid "The Hours"
+msgstr "ห้วงเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1881
+msgid "The harbor at Le Havre"
+msgstr "ท่าเรือเลออาฟวร์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1882
+msgid "Water Lilies"
+msgstr "ดอกบัว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1882
+msgid "The pond at Giverny"
+msgstr "สระน้ำที่ฌีแวร์นี"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1883
+msgid "Haystacks"
+msgstr "กองฟาง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1883
+msgid "A field after the harvest"
+msgstr "ท้องทุ่งหลังฤดูเก็บเกี่ยว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1951
+msgid "Through the day"
+msgstr "ตลอดวัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1951
+msgid "The painting's light drifts with the time of day"
+msgstr "แสงในภาพค่อย ๆ เปลี่ยนไปตามช่วงเวลาของวัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1952
+msgid "Placard"
+msgstr "ป้ายชื่อภาพ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1952
+msgid "The time and the painting's name on the desktop"
+msgstr "เวลาและชื่อภาพบนเดสก์ท็อป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
+msgid "Glass"
+msgstr "กระจก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
+msgid "See the painting through panels and windows"
+msgstr "มองเห็นภาพวาดผ่านแผงและหน้าต่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
+msgid "Add, move or take away the cards on your desktop"
+msgstr "เพิ่ม ย้าย หรือเอาการ์ดบนเดสก์ท็อปออก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1982
+msgid "Edit widgets"
+msgstr "แก้ไขวิดเจ็ต"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000
+msgid "Connected to %1"
+msgstr "เชื่อมต่อกับ %1 แล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2010
+msgid "This PC has no Wi-Fi"
+msgstr "พีซีเครื่องนี้ไม่มี Wi-Fi"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
+#: setup/qml/Main.qml:332
+msgid "Connected"
+msgstr "เชื่อมต่อแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2036
+msgid "Other networks"
+msgstr "เครือข่ายอื่น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2036
+msgid "Networks"
+msgstr "เครือข่าย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046
+msgid "No other networks nearby"
+msgstr "ไม่มีเครือข่ายอื่นอยู่ใกล้ ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+msgid "Looking for networks…"
+msgstr "กำลังค้นหาเครือข่าย…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+msgid "Couldn't join"
+msgstr "เชื่อมต่อไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2147
+msgid "Joining…"
+msgstr "กำลังเชื่อมต่อ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+msgid "Secured"
+msgstr "มีรหัสผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097
+msgid "Open"
+msgstr "ไม่มีรหัสผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2125
+msgid "Password for %1"
+msgstr "รหัสผ่านสำหรับ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133
+msgid "That didn't work. Check the password."
+msgstr "เชื่อมต่อไม่สำเร็จ ตรวจสอบรหัสผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2147
+msgid "Join"
+msgstr "เชื่อมต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2157
+msgid "More Wi-Fi settings…"
+msgstr "การตั้งค่า Wi-Fi เพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2174
+msgid "%1 device connected"
+msgid_plural "%1 devices connected"
+msgstr[0] "เชื่อมต่ออยู่ %1 อุปกรณ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2184
+msgid "This PC has no Bluetooth"
+msgstr "พีซีเครื่องนี้ไม่มี Bluetooth"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2201
+msgid "No devices yet"
+msgstr "ยังไม่มีอุปกรณ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2202
+msgid "Pair headphones, a controller or a mouse to see them here."
+msgstr "จับคู่หูฟัง คอนโทรลเลอร์ หรือเมาส์ แล้วจะแสดงที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228
+msgid "Disconnecting…"
+msgstr "กำลังตัดการเชื่อมต่อ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+msgid "Connecting…"
+msgstr "กำลังเชื่อมต่อ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2229
+msgid "Disconnect"
+msgstr "ตัดการเชื่อมต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2229
+msgid "Connect"
+msgstr "เชื่อมต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239
+msgid "Pair a new device…"
+msgstr "จับคู่อุปกรณ์ใหม่…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2254
+msgid "Brightness, and warmer colors at night."
+msgstr "ความสว่าง และสีที่อุ่นขึ้นในตอนกลางคืน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2273
+msgid "Warmer colors from sunset to sunrise, easier on the eyes"
+msgstr "สีอุ่นขึ้นตั้งแต่พระอาทิตย์ตกจนพระอาทิตย์ขึ้น สบายตากว่า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2283
+msgid "Arrange displays and size…"
+msgstr "จัดเรียงจอภาพและขนาด…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2299
+msgid "Playing through %1"
+msgstr "กำลังเล่นผ่าน %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2315
+msgid "Play sound through"
+msgstr "เล่นเสียงผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349
+msgid "Microphone"
+msgstr "ไมโครโฟน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2357
+msgid "More sound settings…"
+msgstr "การตั้งค่าเสียงเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2380
+msgid "Your clock, and where in the world it keeps time."
+msgstr "นาฬิกาของคุณ และเขตเวลาที่ใช้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2417
+msgid "Set automatically"
+msgstr "ตั้งค่าอัตโนมัติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2418
+msgid "From the internet, to the second"
+msgstr "จากอินเทอร์เน็ต แม่นยำถึงวินาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2418
+msgid "This PC can't set its own time"
+msgstr "พีซีเครื่องนี้ตั้งเวลาเองไม่ได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2431
+msgid "24-hour time"
+msgstr "เวลาแบบ 24 ชั่วโมง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2432
+msgid "Your clocks change the next time you sign in"
+msgstr "นาฬิกาจะเปลี่ยนเมื่อคุณลงชื่อเข้าใช้ครั้งถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2433
+msgid "As your region keeps it"
+msgstr "ตามที่ภูมิภาคของคุณใช้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2434
+msgid "13:00, not 1:00 PM"
+msgstr "13:00 ไม่ใช่ 1:00 PM"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2434
+msgid "1:00 PM, not 13:00"
+msgstr "1:00 PM ไม่ใช่ 13:00"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2445
+msgid "Time zone"
+msgstr "เขตเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2453
+msgid "Search for a city"
+msgstr "ค้นหาเมือง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2484
+msgid "No time zone by that name"
+msgstr "ไม่พบเขตเวลาชื่อนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2485
+msgid "Try a big city near you."
+msgstr "ลองเมืองใหญ่ที่อยู่ใกล้คุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2490
+msgid "More date & time settings…"
+msgstr "การตั้งค่าวันที่ & เวลาเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2509
+msgid "You, and the people who share this PC."
+msgstr "คุณ และคนอื่นที่ใช้พีซีเครื่องนี้ร่วมกัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2542
+msgid "%1 · Administrator"
+msgstr "%1 · ผู้ดูแลระบบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2543
+msgid "%1 · Standard account"
+msgstr "%1 · บัญชีมาตรฐาน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2552
+msgid "Change name"
+msgstr "เปลี่ยนชื่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+msgid "Your name"
+msgstr "ชื่อของคุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2589
+msgid "Save"
+msgstr "บันทึก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2610
+msgid "Changed. Use the new one from now on."
+msgstr "เปลี่ยนแล้ว ใช้รหัสผ่านใหม่นับจากนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2611
+msgid "For signing in, unlocking and allowing changes"
+msgstr "ใช้สำหรับลงชื่อเข้าใช้ ปลดล็อก และอนุญาตการเปลี่ยนแปลง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2615
+msgid "Change…"
+msgstr "เปลี่ยน…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2638
+msgid "Current password"
+msgstr "รหัสผ่านปัจจุบัน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2645
+msgid "New password"
+msgstr "รหัสผ่านใหม่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2652
+msgid "New password, again"
+msgstr "รหัสผ่านใหม่อีกครั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2676
+msgid "Changing…"
+msgstr "กำลังเปลี่ยน…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2676
+msgid "Change password"
+msgstr "เปลี่ยนรหัสผ่าน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2685
+msgid "Other people"
+msgstr "คนอื่น ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2694
+msgid "Only you, so far"
+msgstr "ตอนนี้มีแค่คุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2695
+msgid "Add someone in More account settings."
+msgstr "เพิ่มคนอื่นได้ใน “การตั้งค่าบัญชีเพิ่มเติม”"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2703
+msgid "Administrator"
+msgstr "ผู้ดูแลระบบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2703
+msgid "Standard account"
+msgstr "บัญชีมาตรฐาน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2716
+msgid "More account settings…"
+msgstr "การตั้งค่าบัญชีเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2733
+msgid "How the pointer moves and scrolls, and the languages you type in."
+msgstr "การเคลื่อนที่และการเลื่อนของตัวชี้ และภาษาที่คุณใช้พิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "Touchpad"
+msgstr "ทัชแพด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "Mouse"
+msgstr "เมาส์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2755
+msgid "Pointer speed"
+msgstr "ความเร็วตัวชี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2762
+msgid "Tap to click"
+msgstr "แตะเพื่อคลิก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2762
+msgid "A light tap is a click"
+msgstr "แตะเบา ๆ เท่ากับคลิก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2763
+msgid "Natural scrolling"
+msgstr "การเลื่อนแบบธรรมชาติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2763
+msgid "The page follows your fingers, as on a phone"
+msgstr "หน้าเลื่อนตามนิ้วของคุณ เหมือนบนโทรศัพท์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2764
+msgid "Left-handed"
+msgstr "ถนัดซ้าย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2764
+msgid "The buttons swap sides"
+msgstr "สลับปุ่มซ้ายขวา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2765
+msgid "Off while typing"
+msgstr "ปิดขณะพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2765
+msgid "A palm on it won't move the pointer"
+msgstr "ฝ่ามือที่วางอยู่จะไม่ทำให้ตัวชี้ขยับ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2788 setup/qml/Main.qml:249
+msgid "Keyboard"
+msgstr "แป้นพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2803
+msgid "Typing starts in this one"
+msgstr "ใช้พิมพ์เป็นอันดับแรก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2803
+msgid "Click to make this the main one"
+msgstr "คลิกเพื่อตั้งเป็นหลัก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2817
+msgid "Add a language or layout"
+msgstr "เพิ่มภาษาหรือรูปแบบแป้นพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2850
+msgid "No layout by that name"
+msgstr "ไม่พบรูปแบบแป้นพิมพ์ชื่อนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2851
+msgid "Try your language's name, like Swedish or Japanese."
+msgstr "ลองพิมพ์ชื่อภาษา เช่น ไทย หรือ ญี่ปุ่น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2859
+msgid "The bar shows which one you're typing in. Click it to switch."
+msgstr "แถบจะแสดงว่าคุณกำลังพิมพ์ภาษาใด คลิกเพื่อสลับ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2867
+msgid "Keyboard shortcuts"
+msgstr "แป้นพิมพ์ลัด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2878
+msgid "Open the menu"
+msgstr "เปิดเมนู"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2879
+msgid "Files"
+msgstr "ไฟล์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2879 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3612
+msgid "Lock the screen"
+msgstr "ล็อกหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2880
+msgid "All your windows"
+msgstr "หน้าต่างทั้งหมดของคุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2880
+msgid "The desktop"
+msgstr "เดสก์ท็อป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2881
+msgid "Switch windows"
+msgstr "สลับหน้าต่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2881
+msgid "A window on one half"
+msgstr "หน้าต่างครึ่งจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2882
+msgid "A window on the whole screen"
+msgstr "หน้าต่างเต็มจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2882
+msgid "What you copied"
+msgstr "สิ่งที่คุณคัดลอกไว้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2883
+msgid "Emoji"
+msgstr "อีโมจิ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2883
+msgid "Screenshot"
+msgstr "จับภาพหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2884
+msgid "Restart or shut down"
+msgstr "รีสตาร์ทหรือปิดเครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2918
+msgid "More mouse & keyboard settings…"
+msgstr "การตั้งค่าเมาส์ & แป้นพิมพ์เพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2923
+msgid "Change shortcuts…"
+msgstr "เปลี่ยนแป้นพิมพ์ลัด…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2945
+msgid "When the screen rests, when the PC sleeps, and how hard it works."
+msgstr "หน้าจอจะพักเมื่อไร พีซีจะพักเครื่องเมื่อไร และทำงานหนักแค่ไหน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2956
+msgctxt "%1 is a time like 1:20"
+msgid "Charging, full in %1"
+msgstr "กำลังชาร์จ จะเต็มในอีก %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2956
+msgid "Charging"
+msgstr "กำลังชาร์จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2957 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3038
+msgid "Plugged in"
+msgstr "เสียบปลั๊ก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2958
+msgctxt "%1 is a time like 2:15"
+msgid "About %1 left"
+msgstr "เหลืออีกประมาณ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2958 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3038
+msgid "On battery"
+msgstr "ใช้แบตเตอรี่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2968
+msgid "Power saver"
+msgstr "ประหยัดพลังงาน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2968
+msgid "Cooler and quieter, longer on battery"
+msgstr "เย็นกว่า เงียบกว่า ใช้แบตเตอรี่ได้นานขึ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2970
+msgid "Balanced"
+msgstr "สมดุล"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2970
+msgid "Quick when it counts"
+msgstr "เร็วเมื่อจำเป็น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2972
+msgid "Performance"
+msgstr "ประสิทธิภาพสูง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2972
+msgid "As fast as it goes, warmer and louder"
+msgstr "เร็วเต็มที่ ร้อนขึ้นและเสียงดังขึ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3055
+msgid "Turn off the screen"
+msgstr "ปิดหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3056
+msgid "After this long untouched"
+msgstr "เมื่อไม่ได้ใช้งานนานเท่านี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+msgid "It wakes where you left off"
+msgstr "เมื่อปลุก จะกลับมาตรงที่ค้างไว้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3080
+msgid "Buttons"
+msgstr "ปุ่ม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3087
+msgid "Power button"
+msgstr "ปุ่มเปิด/ปิด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3088
+msgid "What a press does"
+msgstr "เมื่อกดแล้วจะทำอะไร"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+msgid "Ask"
+msgstr "ถามก่อน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Nothing"
+msgstr "ไม่ทำอะไร"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3099
+msgid "Closing the lid"
+msgstr "เมื่อปิดฝาเครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Screen off"
+msgstr "ปิดหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3110
+msgid "More power settings…"
+msgstr "การตั้งค่าพลังงานเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3125
+msgid "What may interrupt you, and when it waits."
+msgstr "สิ่งที่รบกวนคุณได้ และเมื่อไรที่ต้องรอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3133
+msgid "Do not disturb"
+msgstr "ห้ามรบกวน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3134
+msgid "Notifications wait quietly in the list"
+msgstr "การแจ้งเตือนจะรออยู่ในรายการอย่างเงียบ ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3134
+msgid "Notifications pop up as they come"
+msgstr "การแจ้งเตือนจะเด้งขึ้นทันทีที่มาถึง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3144
+msgid "Sounds"
+msgstr "เสียง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3145
+msgid "A soft sound with each one"
+msgstr "เสียงเบา ๆ ทุกครั้งที่มีการแจ้งเตือน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3155
+msgid "Quiet by itself"
+msgstr "เงียบโดยอัตโนมัติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+msgid "While a game or film fills the screen"
+msgstr "ขณะเล่นเกมหรือดูหนังแบบเต็มจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+msgid "They wait until you're done"
+msgstr "จะรอจนกว่าคุณจะเสร็จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3162
+msgid "While you share or mirror your screen"
+msgstr "ขณะแชร์หรือสะท้อนหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3162
+msgid "So nothing private pops up for others"
+msgstr "เพื่อไม่ให้เรื่องส่วนตัวเด้งขึ้นให้คนอื่นเห็น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3163
+msgid "Let urgent ones through"
+msgstr "ให้เรื่องด่วนแสดงได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3163
+msgid "Like a low battery, even while quiet"
+msgstr "เช่น แบตเตอรี่ใกล้หมด แม้ขณะเงียบอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3184
+msgid "Popups"
+msgstr "ป๊อปอัป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3191
+msgid "Where they appear"
+msgstr "ตำแหน่งที่แสดง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "By the clock"
+msgstr "ข้างนาฬิกา"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "Top right"
+msgstr "มุมขวาบน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "Top center"
+msgstr "กลางด้านบน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3201
+msgid "How long they stay"
+msgstr "แสดงนานเท่าไร"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3204
+msgid "%1 s"
+msgstr "%1 วินาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3212 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
+msgid "Apps"
+msgstr "แอป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3227
+msgid "Pops up"
+msgstr "เด้งขึ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3227
+msgid "Only in the list, without popping up"
+msgstr "แสดงเฉพาะในรายการ ไม่เด้งขึ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+msgid "No apps yet"
+msgstr "ยังไม่มีแอป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+msgid "Apps show up here once they've sent a notification."
+msgstr "แอปจะแสดงที่นี่เมื่อเคยส่งการแจ้งเตือนแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3251
+msgid "More notification settings…"
+msgstr "การตั้งค่าการแจ้งเตือนเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Web browser"
+msgstr "เว็บเบราว์เซอร์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Email"
+msgstr "อีเมล"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Folders"
+msgstr "โฟลเดอร์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264 setup/monet_setup/app.py:57
+msgid "Music"
+msgstr "เพลง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265 setup/monet_setup/app.py:56
+msgid "Video"
+msgstr "วิดีโอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265 setup/monet_setup/app.py:54
+msgid "Photos"
+msgstr "รูปภาพ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
+msgid "PDF documents"
+msgstr "เอกสาร PDF"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
+msgid "Text files"
+msgstr "ไฟล์ข้อความ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
+msgid ""
+"What opens web links, mail, folders, music, films, photos, PDFs and text."
+msgstr "แอปที่ใช้เปิดลิงก์เว็บ อีเมล โฟลเดอร์ เพลง หนัง รูปภาพ PDF และข้อความ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3293
+msgid "Nothing chosen yet"
+msgstr "ยังไม่ได้เลือก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3294
+msgid "No app for this yet. Find one in the Store"
+msgstr "ยังไม่มีแอปสำหรับสิ่งนี้ หาได้ในร้านค้า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3295
+msgid "No app for this yet"
+msgstr "ยังไม่มีแอปสำหรับสิ่งนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3321
+msgid "Find one"
+msgstr "หาแอป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3356
+msgid "More default apps…"
+msgstr "แอปเริ่มต้นเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3371
+msgid "Make Monet easier to see, read and use."
+msgstr "ทำให้ Monet ดู อ่าน และใช้งานได้ง่ายขึ้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3379
+msgid "Size of everything"
+msgstr "ขนาดของทุกอย่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3380
+msgid "Text, pictures and windows, on every screen"
+msgstr "ข้อความ รูปภาพ และหน้าต่าง บนทุกหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3391
+msgid "Pointer size"
+msgstr "ขนาดตัวชี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Normal"
+msgstr "ปกติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Large"
+msgstr "ใหญ่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Larger"
+msgstr "ใหญ่กว่า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3402
+msgid "Reduce motion"
+msgstr "ลดการเคลื่อนไหว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3403
+msgid "Things appear without sliding, fading or bouncing"
+msgstr "สิ่งต่าง ๆ จะแสดงโดยไม่เลื่อน ไม่จาง และไม่เด้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3414
+msgid "Screen reader"
+msgstr "โปรแกรมอ่านหน้าจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3415
+msgid "Reads aloud what's on the screen and what you type"
+msgstr "อ่านออกเสียงสิ่งที่อยู่บนหน้าจอและสิ่งที่คุณพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3425
+msgid "More accessibility settings…"
+msgstr "การตั้งค่าการช่วยการเข้าถึงเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
+msgid "Games"
+msgstr "เกม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+msgid "Your files"
+msgstr "ไฟล์ของคุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449
+msgid "What fills this PC, and room to make."
+msgstr "สิ่งที่ใช้พื้นที่ในพีซีเครื่องนี้ และการเพิ่มพื้นที่ว่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3462
+msgid "Measuring…"
+msgstr "กำลังคำนวณ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3473
+msgid "of %1"
+msgstr "จาก %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530
+msgid "Make room"
+msgstr "เพิ่มพื้นที่ว่าง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3537
+msgid "Trash"
+msgstr "ถังขยะ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+msgid "Everything in it is gone for good. Sure?"
+msgstr "ทุกอย่างในนี้จะหายไปถาวร แน่ใจไหม?"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3539 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+msgid "Empty"
+msgstr "ว่างเปล่า"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3673
+msgid "Keep it"
+msgstr "เก็บไว้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3551
+msgid "Empty for good"
+msgstr "ล้างถาวร"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3551
+msgid "Empty Trash"
+msgstr "ล้างถังขยะ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3565
+msgid "Downloads"
+msgstr "ดาวน์โหลด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+msgid "%1 · look through them in Files"
+msgstr "%1 · ดูได้ในแอปไฟล์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+msgid "Show"
+msgstr "แสดง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3579
+msgid ""
+"What apps leave behind when they update is cleared away with each update, by itself."
+msgstr "สิ่งที่แอปทิ้งไว้หลังอัปเดตจะถูกล้างออกเองทุกครั้งที่อัปเดต"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3602
+msgid "The screen doesn't lock by itself."
+msgstr "หน้าจอจะไม่ล็อกเอง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3603
+msgid "The screen locks after %1 minute away."
+msgid_plural "The screen locks after %1 minutes away."
+msgstr[0] "หน้าจอจะล็อกเมื่อไม่ได้ใช้งาน %1 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3605
+msgid "Who can get in, and what Monet remembers."
+msgstr "ใครเข้าใช้ได้บ้าง และสิ่งที่ Monet จดจำ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3613
+msgid "When you've been away this long"
+msgstr "เมื่อคุณไม่อยู่นานเท่านี้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "1 min"
+msgstr "1 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "5 min"
+msgstr "5 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "15 min"
+msgstr "15 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "30 min"
+msgstr "30 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3625
+msgid "Ask for the password after sleep"
+msgstr "ขอรหัสผ่านหลังพักเครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3626
+msgid "Waking the PC shows the lock screen"
+msgstr "เมื่อปลุกพีซี จะแสดงหน้าจอล็อก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3635
+msgid "Lock now"
+msgstr "ล็อกเลย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3636
+msgid "Or press the Windows key and L"
+msgstr "หรือกดปุ่ม Windows พร้อมกับ L"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3646
+msgid "What Monet remembers"
+msgstr "สิ่งที่ Monet จดจำ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3654
+msgid "Remember recent files"
+msgstr "จดจำไฟล์ล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655
+msgid "Files and the menu show what you opened lately"
+msgstr "แอปไฟล์และเมนูจะแสดงสิ่งที่คุณเปิดล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3664
+msgid "Forget recent files"
+msgstr "ลืมไฟล์ล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3665
+msgid "The list of what you opened is cleared. Your files stay. Sure?"
+msgstr "รายการสิ่งที่คุณเปิดจะถูกล้าง ไฟล์ของคุณยังอยู่ แน่ใจไหม?"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3666
+msgid "Cleared. Your files are still there."
+msgstr "ล้างแล้ว ไฟล์ของคุณยังอยู่ครบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3667
+msgid "Clears the list, not the files"
+msgstr "ล้างรายการ แต่ไม่ลบไฟล์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+msgid "Forget"
+msgstr "ลืม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+msgid "Forget…"
+msgstr "ลืม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3695
+msgid "More lock screen settings…"
+msgstr "การตั้งค่าหน้าจอล็อกเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3700
+msgid "More recent files settings…"
+msgstr "การตั้งค่าไฟล์ล่าสุดเพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3718
+msgid "Printers on your network show up by themselves."
+msgstr "เครื่องพิมพ์ในเครือข่ายของคุณจะแสดงขึ้นมาเอง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3719
+msgid "%1 printer"
+msgid_plural "%1 printers"
+msgstr[0] "เครื่องพิมพ์ %1 เครื่อง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3732
+msgid "Your default"
+msgstr "ค่าเริ่มต้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
+msgid "Printing"
+msgstr "กำลังพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
+msgid "Turned off"
+msgstr "ปิดอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3734 crates/monet/src/main.rs:252
+msgid "Ready"
+msgstr "พร้อม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3735
+msgid "%1 waiting"
+msgid_plural "%1 waiting"
+msgstr[0] "รอ %1 งาน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3740
+msgid "Make default"
+msgstr "ตั้งเป็นค่าเริ่มต้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3748
+msgid "Another printer"
+msgstr "เครื่องพิมพ์อื่น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3748
+msgid "No printers yet"
+msgstr "ยังไม่มีเครื่องพิมพ์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3749
+msgid ""
+"Turn it on and join it to your Wi-Fi: Monet finds most printers by itself"
+msgstr ""
+"เปิดเครื่องพิมพ์และเชื่อมต่อกับ Wi-Fi ของคุณ แล้ว Monet จะหาเครื่องพิมพ์ส่วนใหญ่ได้เอง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
+msgid "Add…"
+msgstr "เพิ่ม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3759
+msgid "More printer settings…"
+msgstr "การตั้งค่าเครื่องพิมพ์เพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3778
+msgid "%1 controller connected"
+msgid_plural "%1 controllers connected"
+msgstr[0] "เชื่อมต่อคอนโทรลเลอร์อยู่ %1 ตัว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3779
+msgid "Your controllers, and where your games are kept."
+msgstr "คอนโทรลเลอร์ของคุณ และที่เก็บเกม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
+msgid "Controllers"
+msgstr "คอนโทรลเลอร์"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
+msgctxt "a controller, connected by its cable"
+msgid "Plugged in"
+msgstr "เสียบสายอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3796
+msgid "%1% · charging"
+msgstr "%1% · กำลังชาร์จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3797
+msgid "%1% battery"
+msgstr "แบตเตอรี่ %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3803
+msgid "Another controller"
+msgstr "คอนโทรลเลอร์อื่น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3803
+msgid "No controller connected"
+msgstr "ไม่มีคอนโทรลเลอร์ที่เชื่อมต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3804
+msgid "Plug one in, or pair one over Bluetooth"
+msgstr "เสียบสาย หรือจับคู่ผ่าน Bluetooth"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3810
+msgid "Pair…"
+msgstr "จับคู่…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3815
+msgid "Test buttons…"
+msgstr "ทดสอบปุ่ม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3824
+msgid "While you play"
+msgstr "ขณะเล่นเกม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3833
+msgid "Performance overlay"
+msgstr "แสดงประสิทธิภาพบนจอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3834
+msgid ""
+"Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play."
+msgstr ""
+"อัตราเฟรมต่อวินาทีและการทำงานของพีซี แสดงซ้อนบนทุกเกม ตั้งแต่การลงชื่อเข้าใช้ครั้งถัดไป กด Shift ขวา+F12 เพื่อซ่อนขณะเล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3844
+msgid "Where your games are"
+msgstr "ที่เก็บเกมของคุณ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3869
+msgid "No games yet"
+msgstr "ยังไม่มีเกม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3870
+msgid "Steam, Heroic and Lutris keep theirs here once you install one"
+msgstr ""
+"Steam, Heroic และ Lutris จะเก็บเกมไว้ที่นี่ เมื่อคุณติดตั้งตัวใดตัวหนึ่ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3875
+msgid "More controller settings…"
+msgstr "การตั้งค่าคอนโทรลเลอร์เพิ่มเติม…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3890
+msgid "Games that need Windows, a restart away."
+msgstr "เกมที่ต้องใช้ Windows แค่รีสตาร์ทก็เล่นได้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3909
+msgid "Restarting in Windows…"
+msgstr "กำลังรีสตาร์ทเข้า Windows…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3913
+msgid "The last trip didn't reach Windows"
+msgstr "ครั้งล่าสุดเข้า Windows ไม่สำเร็จ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3914 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
+msgid "Getting Windows ready"
+msgstr "กำลังเตรียม Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3915
+msgid "Windows is ready to install"
+msgstr "Windows พร้อมติดตั้งแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3916 crates/monet/src/main.rs:738
+msgid "Windows is ready"
+msgstr "Windows พร้อมแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3918
+msgid "Windows isn't ready"
+msgstr "Windows ยังไม่พร้อม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3927
+msgid "Your PC restarts in a moment."
+msgstr "พีซีของคุณจะรีสตาร์ทในอีกสักครู่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3930
+msgid ""
+"Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts."
+msgstr ""
+"Monet กำลังดาวน์โหลด Windows สำหรับเกมของคุณ ใช้พีซีต่อได้ตามปกติ Monet จะถามก่อนรีสตาร์ท"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3931
+msgid ""
+"Restart to install it. It takes about 10 minutes, then you're back in Monet."
+msgstr "รีสตาร์ทเพื่อติดตั้ง ใช้เวลาประมาณ 10 นาที แล้วคุณจะกลับมาที่ Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3932
+msgid "Plug in the charger first."
+msgstr "เสียบสายชาร์จก่อน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3935
+msgid ""
+"Games that need Windows start there, and you come back here when you quit."
+msgstr ""
+"เกมที่ต้องใช้ Windows จะเปิดใน Windows และเมื่อออกจากเกม คุณจะกลับมาที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3936
+msgid "Windows: %1. Check Monet below to see what's missing."
+msgstr "Windows: %1 ใช้ “ตรวจสอบ Monet” ด้านล่างเพื่อดูว่ายังขาดอะไร"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3954
+msgid "Restart and install"
+msgstr "รีสตาร์ทและติดตั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3955
+msgid "Restart in Windows"
+msgstr "รีสตาร์ทเข้า Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3996
+msgid ""
+"Your Windows games show up here once Windows has started with Monet Bridge."
+msgstr ""
+"เกม Windows ของคุณจะแสดงที่นี่ เมื่อ Windows เริ่มทำงานพร้อม Monet Bridge แล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4006
+msgid "Check Monet"
+msgstr "ตรวจสอบ Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4007
+msgid "See that Windows, Secure Boot and switching are all set up"
+msgstr "ดูว่า Windows, Secure Boot และการสลับระบบตั้งค่าไว้ครบแล้ว"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4010 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4088
+msgid "Checking…"
+msgstr "กำลังตรวจสอบ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4010
+msgid "Check"
+msgstr "ตรวจสอบ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4042
+msgid "Only when you ask."
+msgstr "เฉพาะเมื่อคุณสั่งเท่านั้น"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4043
+msgid "Monet and your apps keep themselves up to date."
+msgstr "Monet และแอปของคุณจะอัปเดตตัวเองอยู่เสมอ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4089 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4278
+msgid "Installing…"
+msgstr "กำลังติดตั้ง…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4090 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4281 setup/qml/Main.qml:212
+msgid "Install"
+msgstr "ติดตั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4091 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4215 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4279
+msgid "Restart now"
+msgstr "รีสตาร์ทเลย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+msgid "Try again"
+msgstr "ลองอีกครั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4093
+msgid "Check for updates"
+msgstr "ตรวจหาอัปเดต"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4113
+msgid "Update automatically"
+msgstr "อัปเดตอัตโนมัติ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4115
+msgid "Monet and your apps update only when you choose Check for updates"
+msgstr "Monet และแอปของคุณจะอัปเดตเฉพาะเมื่อคุณเลือก “ตรวจหาอัปเดต”"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4116
+msgid ""
+"Once a day, in the background: your apps right away, Monet at your next restart"
+msgstr ""
+"วันละครั้งในเบื้องหลัง: แอปของคุณอัปเดตทันที ส่วน Monet อัปเดตเมื่อรีสตาร์ทครั้งถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4128
+msgid "New in Monet %1"
+msgstr "มีอะไรใหม่ใน Monet %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4184
+msgid "%1 starts at your next restart"
+msgstr "%1 จะเริ่มทำงานเมื่อคุณรีสตาร์ทครั้งถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4185
+msgid "Go back to %1"
+msgstr "กลับไปใช้ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4186
+msgid "The one you're using now stays too, to come back to."
+msgstr "เวอร์ชันที่คุณใช้อยู่ตอนนี้ก็ยังอยู่ เผื่อจะกลับมาใช้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4187
+msgid ""
+"It starts the next time you restart. Your files and apps stay as they are."
+msgstr ""
+"จะเริ่มทำงานเมื่อคุณรีสตาร์ทครั้งถัดไป ไฟล์และแอปของคุณยังอยู่เหมือนเดิม"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4188
+msgid ""
+"From %1. If something stopped working after an update, the one before is still here."
+msgstr ""
+"จากวันที่ %1 หากมีบางอย่างใช้งานไม่ได้หลังอัปเดต เวอร์ชันก่อนหน้ายังอยู่ที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4189
+msgid ""
+"If something stopped working after an update, the one before is still here."
+msgstr "หากมีบางอย่างใช้งานไม่ได้หลังอัปเดต เวอร์ชันก่อนหน้ายังอยู่ที่นี่"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4195
+msgid "Stay"
+msgstr "ใช้ต่อ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+msgid "Go back at restart"
+msgstr "ย้อนกลับเมื่อรีสตาร์ท"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+msgid "Go back"
+msgstr "ย้อนกลับ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
+msgid ""
+"A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case."
+msgstr ""
+"Monet เวอร์ชันใหม่จะเริ่มทำงานเมื่อคุณรีสตาร์ทครั้งถัดไป ไม่ใช่ระหว่างที่คุณทำงาน และเวอร์ชันก่อนหน้าจะยังอยู่ในเมนูตอนเปิดเครื่อง เผื่อไว้"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+msgid "%1 · Impression"
+msgstr "%1 · ความประทับใจ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+msgid "Impression"
+msgstr "ความประทับใจ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4360
+msgid "Graphics"
+msgstr "กราฟิก"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4361
+msgid "Processor"
+msgstr "ตัวประมวลผล"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4362
+msgid "Memory"
+msgstr "หน่วยความจำ"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4364
+msgid "Ready for games"
+msgstr "พร้อมสำหรับเกม"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:105
+msgctxt "a dial's reading, in percent"
+msgid "%1%"
+msgstr "%1%"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:165
+msgctxt "the computer's main chip"
+msgid "Processor"
+msgstr "ตัวประมวลผล"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:175
+msgctxt "the computer's graphics chip"
+msgid "Graphics"
+msgstr "กราฟิก"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:184
+msgctxt "the computer's working memory (RAM)"
+msgid "Memory"
+msgstr "หน่วยความจำ"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:217
+msgctxt "%1 is a speed"
+msgid "Downloading %1"
+msgstr "กำลังดาวน์โหลด %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:229
+msgctxt "%1 is a speed"
+msgid "Uploading %1"
+msgstr "กำลังอัปโหลด %1"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:34
+msgid "Timer"
+msgstr "ตัวจับเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:35
+msgctxt "%1 is a time like 4:59"
+msgid "%1 left"
+msgstr "เหลืออีก %1"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:102 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:211
+msgid "Time's up"
+msgstr "หมดเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:103
+msgid "%1 minute has passed."
+msgid_plural "%1 minutes have passed."
+msgstr[0] "ผ่านไปแล้ว %1 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:119
+msgctxt "a timer's length, short"
+msgid "%1 min"
+msgstr "%1 นาที"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:228
+msgid "Scroll to change the minutes"
+msgstr "เลื่อนเพื่อเปลี่ยนนาที"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:239
+msgid "Pause"
+msgstr "หยุดชั่วคราว"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:239
+msgid "Start"
+msgstr "เริ่ม"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:291
+msgctxt "a timer: back to its full length"
+msgid "Reset"
+msgstr "รีเซ็ต"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/config/config.qml:6
+msgid "Place"
+msgstr "สถานที่"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:106
+msgid "Places:"
+msgstr "สถานที่:"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:111
+msgid "No place yet"
+msgstr "ยังไม่มีสถานที่"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:127 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:46
+msgctxt "%1 is a town"
+msgid "Remove %1"
+msgstr "เอา %1 ออก"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:138
+msgid "Add a place:"
+msgstr "เพิ่มสถานที่:"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:141 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:479 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:59
+msgid "A town or a city"
+msgstr "ชื่อเมือง"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:166
+msgid "Degrees:"
+msgstr "หน่วยองศา:"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:167
+msgid "Fahrenheit"
+msgstr "ฟาเรนไฮต์"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:176
+msgid ""
+"The weather comes from Open-Meteo. Only the places are sent. The arrows beside a place's name on the card go through them."
+msgstr ""
+"ข้อมูลสภาพอากาศมาจาก Open-Meteo และส่งไปเฉพาะสถานที่เท่านั้น ลูกศรข้างชื่อสถานที่บนการ์ดใช้เลื่อนดูสถานที่ต่าง ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Clear"
+msgstr "ท้องฟ้าแจ่มใส"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Mostly clear"
+msgstr "ค่อนข้างแจ่มใส"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Partly cloudy"
+msgstr "มีเมฆบางส่วน"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:125
+msgid "Overcast"
+msgstr "เมฆครึ้ม"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:125
+msgid "Fog"
+msgstr "มีหมอก"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:126
+msgid "Drizzle"
+msgstr "ฝนปรอย"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:126
+msgid "Rain"
+msgstr "ฝนตก"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:127
+msgid "Snow"
+msgstr "หิมะตก"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:127
+msgid "Showers"
+msgstr "ฝนเป็นช่วง ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:128
+msgid "Snow showers"
+msgstr "หิมะตกเป็นช่วง ๆ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:128
+msgid "Thunderstorm"
+msgstr "พายุฝนฟ้าคะนอง"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:158
+msgid "The weather can't be reached right now. Click to try again."
+msgstr "ไม่สามารถดูสภาพอากาศได้ในขณะนี้ คลิกเพื่อลองอีกครั้ง"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
+msgid "Weather"
+msgstr "สภาพอากาศ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:172
+msgid "Add a place…"
+msgstr "เพิ่มสถานที่…"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:177 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:587
+msgctxt "%1 is a town"
+msgid "Forget %1"
+msgstr "ลืม %1"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:193
+msgid "Place before"
+msgstr "สถานที่ก่อนหน้า"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:193
+msgid "Next place"
+msgstr "สถานที่ถัดไป"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:281 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:440
+msgid "Add a place"
+msgstr "เพิ่มสถานที่"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:327
+msgctxt "today's highest and lowest temperature"
+msgid "H %1°  L %2°"
+msgstr "สูง %1°  ต่ำ %2°"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:400
+msgid "Looking at the sky…"
+msgstr "กำลังมองท้องฟ้า…"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:440
+msgid "Where are you?"
+msgstr "คุณอยู่ที่ไหน?"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:484
+msgid "Find a place for the weather"
+msgstr "ค้นหาสถานที่เพื่อดูสภาพอากาศ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:578
+msgid "No place by that name."
+msgstr "ไม่พบสถานที่ชื่อนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:617
+msgid "Only the place is sent, to Open-Meteo."
+msgstr "ส่งไปให้ Open-Meteo เฉพาะชื่อสถานที่เท่านั้น"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/config/config.qml:6
+msgid "Towns"
+msgstr "เมือง"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:27
+msgid "Towns:"
+msgstr "เมือง:"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:32
+msgid "No town yet"
+msgstr "ยังไม่มีเมือง"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:58
+msgid "Add a town:"
+msgstr "เพิ่มเมือง:"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:42
+msgctxt "in that town it's already"
+msgid "Tomorrow"
+msgstr "พรุ่งนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:43
+msgctxt "in that town it's still"
+msgid "Yesterday"
+msgstr "เมื่อวาน"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:43
+msgctxt "in that town it's"
+msgid "Today"
+msgstr "วันนี้"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:45
+msgctxt "a town on the same time as this PC"
+msgid "Same time"
+msgstr "เวลาเดียวกัน"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:49
+msgctxt "hours ahead of this PC"
+msgid "+%1 h"
+msgstr "+%1 ชม."
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:49
+msgctxt "hours behind this PC"
+msgid "−%1 h"
+msgstr "−%1 ชม."
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:197 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:239
+msgid "Add a town"
+msgstr "เพิ่มเมือง"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:230
+msgid "What time is it elsewhere?"
+msgstr "ที่อื่นตอนนี้กี่โมงแล้ว?"
+
+#: setup/qml/Main.qml:20
+msgid "Monet Setup"
+msgstr "การติดตั้ง Monet"
+
+#: setup/qml/Main.qml:204
+msgid "Back"
+msgstr "ย้อนกลับ"
+
+#: setup/qml/Main.qml:212
+msgid "Erase & Install"
+msgstr "ลบ & ติดตั้ง"
+
+#: setup/qml/Main.qml:213
+msgid "Continue"
+msgstr "ดำเนินการต่อ"
+
+#: setup/qml/Main.qml:237
+msgid "Hello"
+msgstr "สวัสดี"
+
+#: setup/qml/Main.qml:238
+msgid ""
+"Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."
+msgstr ""
+"มาตั้งค่า Monet กัน ใช้เวลาประมาณ 15 นาที แล้ว Windows จะตั้งค่าตัวเองต่อจากนั้น"
+
+#: setup/qml/Main.qml:240
+msgid "Language"
+msgstr "ภาษา"
+
+#: setup/qml/Main.qml:292
+msgid "You're online"
+msgstr "คุณออนไลน์แล้ว"
+
+#: setup/qml/Main.qml:292
+msgid "Connect to Wi-Fi"
+msgstr "เชื่อมต่อ Wi-Fi"
+
+#: setup/qml/Main.qml:293
+msgid ""
+"Monet downloads itself and Windows while it installs. Windows will use this network too."
+msgstr ""
+"Monet จะดาวน์โหลดตัวเองและ Windows ระหว่างการติดตั้ง และ Windows ก็จะใช้เครือข่ายนี้ด้วย"
+
+#: setup/qml/Main.qml:302
+msgid "Connected with a cable"
+msgstr "เชื่อมต่อผ่านสายแล้ว"
+
+#: setup/qml/Main.qml:333
+msgctxt "a Wi-Fi network anyone can join, without a password"
+msgid "Open"
+msgstr "ไม่มีรหัสผ่าน"
+
+#: setup/qml/Main.qml:342
+msgid "No networks found"
+msgstr "ไม่พบเครือข่าย"
+
+#: setup/qml/Main.qml:359
+msgid "Looking…"
+msgstr "กำลังค้นหา…"
+
+#: setup/qml/Main.qml:359
+msgid "Look again"
+msgstr "ค้นหาอีกครั้ง"
+
+#: setup/qml/Main.qml:376
+msgid "Who's using this PC?"
+msgstr "ใครใช้พีซีเครื่องนี้?"
+
+#: setup/qml/Main.qml:377
+msgid "This is your account in Monet and in Windows."
+msgstr "นี่คือบัญชีของคุณทั้งใน Monet และใน Windows"
+
+#: setup/qml/Main.qml:380
+msgid "Name"
+msgstr "ชื่อ"
+
+#: setup/qml/Main.qml:384
+msgid "You sign in as %1"
+msgstr "คุณจะลงชื่อเข้าใช้เป็น %1"
+
+#: setup/qml/Main.qml:390
+msgid "At least 6 characters"
+msgstr "อย่างน้อย 6 ตัวอักษร"
+
+#: setup/qml/Main.qml:404
+msgid "Your apps"
+msgstr "แอปของคุณ"
+
+#: setup/qml/Main.qml:405
+msgid ""
+"Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
+msgstr ""
+"รูปภาพ เอกสาร วิดีโอ เพลง และเครื่องคิดเลขมีมาให้ในตัว แอปที่คุณเพิ่มจะตามมาหลังจากลงชื่อเข้าใช้"
+
+#: setup/qml/Main.qml:407
+msgctxt "the apps people use every day"
+msgid "Everyday"
+msgstr "ใช้ประจำ"
+
+#: setup/qml/Main.qml:407
+msgctxt "more apps to choose from"
+msgid "More"
+msgstr "เพิ่มเติม"
+
+#: setup/qml/Main.qml:508
+msgid "Ready to install"
+msgstr "พร้อมติดตั้ง"
+
+#: setup/qml/Main.qml:521
+msgid "Monet and Windows"
+msgstr "Monet และ Windows"
+
+#: setup/qml/Main.qml:525
+msgid "Erases this PC. Windows installs itself, only for games."
+msgstr ""
+"ลบทุกอย่างในพีซีเครื่องนี้ Windows จะติดตั้งตัวเองไว้สำหรับเล่นเกมเท่านั้น"
+
+#: setup/qml/Main.qml:540
+msgid "Monet next to my Windows"
+msgstr "Monet คู่กับ Windows ที่มีอยู่"
+
+#: setup/qml/Main.qml:544
+msgid "Keeps Windows and your files. Uses free space."
+msgstr "เก็บ Windows และไฟล์ของคุณไว้ ใช้พื้นที่ว่างที่มีอยู่"
+
+#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+msgid "Disk"
+msgstr "ดิสก์"
+
+#: setup/qml/Main.qml:562
+msgid "Looking for disks…"
+msgstr "กำลังค้นหาดิสก์…"
+
+#: setup/qml/Main.qml:581
+msgid ""
+"Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
+msgstr ""
+"ทุกอย่างบนดิสก์นี้จะถูกลบ รวมถึง Windows หลังจากนั้น Monet จะติดตั้ง Windows ใหม่สำหรับเกมของคุณ"
+
+#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+msgid "Installing Monet"
+msgstr "กำลังติดตั้ง Monet"
+
+#: setup/qml/Main.qml:610
+msgid ""
+"You can leave it running. If the connection drops, Monet picks up where it stopped."
+msgstr ""
+"ปล่อยให้ทำงานไปได้เลย หากการเชื่อมต่อหลุด Monet จะทำต่อจากจุดที่ค้างไว้"
+
+#: setup/qml/Main.qml:622
+msgid "All set"
+msgstr "เรียบร้อยแล้ว"
+
+#: setup/qml/Main.qml:625
+msgid ""
+"Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
+msgstr ""
+"ถอดแฟลชไดรฟ์ USB ออกแล้วรีสตาร์ท หลังจากลงชื่อเข้าใช้ Monet จะเตรียม Windows สำหรับเกมของคุณให้เอง"
+
+#: setup/qml/Main.qml:626
+msgid ""
+"Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
+msgstr ""
+"ถอดแฟลชไดรฟ์ USB ออกแล้วรีสตาร์ท พีซีของคุณจะเปิดเข้า Monet และเข้า Windows ได้ในคลิกเดียว"
+
+#: setup/qml/Main.qml:643
+msgid "Once, when it first starts"
+msgstr "ครั้งเดียว ตอนเปิดเครื่องครั้งแรก"
+
+#: setup/qml/Main.qml:648
+msgctxt ""
+"Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
+msgid ""
+"A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start."
+msgstr ""
+"หน้าจอสีน้ำเงินจะขอให้เชื่อถือ Monet ใช้ปุ่มลูกศรและ Enter เลือก Enroll MOK แล้วเลือก Continue และ Yes พิมพ์ monetsetup แล้วเลือก Reboot หน้าจอนี้จะเลือก Continue boot ไว้ตั้งแต่แรก อย่าเลือกตัวนั้น ไม่เช่นนั้น Monet จะเริ่มทำงานไม่ได้"
+
+#: setup/qml/Main.qml:652
+msgid ""
+"Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
+msgstr ""
+"ถ่ายรูปขั้นตอนเหล่านี้ด้วยโทรศัพท์ไว้ก่อน หน้าจอนี้จะหายไปเมื่อ PC รีสตาร์ต"
+
+#: setup/qml/Main.qml:665
+msgid "That didn't work"
+msgstr "ไม่สำเร็จ"
+
+#: setup/qml/Main.qml:670
+msgid "Hide details"
+msgstr "ซ่อนรายละเอียด"
+
+#: setup/qml/Main.qml:870
+msgid "Hide"
+msgstr "ซ่อน"
+
+#: setup/monet_setup/app.py:28
+msgid "Preparing the disk"
+msgstr "กำลังเตรียมดิสก์"
+
+#: setup/monet_setup/app.py:29
+msgid "Downloading Monet"
+msgstr "กำลังดาวน์โหลด Monet"
+
+#: setup/monet_setup/app.py:31
+msgid "Setting up your account"
+msgstr "กำลังตั้งค่าบัญชีของคุณ"
+
+#: setup/monet_setup/app.py:32
+msgid "Finishing"
+msgstr "กำลังทำขั้นตอนสุดท้าย"
+
+#: setup/monet_setup/app.py:40
+msgid "The web"
+msgstr "ท่องเว็บ"
+
+#: setup/monet_setup/app.py:41
+msgid "Office"
+msgstr "ออฟฟิศ"
+
+#: setup/monet_setup/app.py:41
+msgid "Documents, sheets, slides"
+msgstr "เอกสาร ตารางคำนวณ สไลด์"
+
+#: setup/monet_setup/app.py:42
+msgid "Mail"
+msgstr "เมล"
+
+#: setup/monet_setup/app.py:42
+msgid "Email and calendars"
+msgstr "อีเมลและปฏิทิน"
+
+#: setup/monet_setup/app.py:43
+msgid "Talk while you play"
+msgstr "คุยกันขณะเล่นเกม"
+
+#: setup/monet_setup/app.py:44
+msgid "Music to stream"
+msgstr "สตรีมเพลง"
+
+#: setup/monet_setup/app.py:45
+msgid "Epic and GOG games"
+msgstr "เกมจาก Epic และ GOG"
+
+#: setup/monet_setup/app.py:47
+msgid "Record and stream games"
+msgstr "อัดและสตรีมเกม"
+
+#: setup/monet_setup/app.py:48
+msgid "Paint and draw"
+msgstr "ระบายสีและวาดภาพ"
+
+#: setup/monet_setup/app.py:55
+msgid "Documents"
+msgstr "เอกสาร"
+
+#: setup/monet_setup/app.py:58
+msgid "Calculator"
+msgstr "เครื่องคิดเลข"
+
+#: setup/monet_setup/app.py:66
+msgid "about %1 minute left"
+msgid_plural "about %1 minutes left"
+msgstr[0] "เหลืออีกประมาณ %1 นาที"
+
+#: setup/monet_setup/app.py:265
+msgid "The password needs at least 6 characters."
+msgstr "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"
+
+#: setup/monet_setup/app.py:285
+msgid "Built in"
+msgstr "มีในตัว"
+
+#: setup/monet_setup/app.py:333
+msgid "No disk found to install Monet on."
+msgstr "ไม่พบดิสก์สำหรับติดตั้ง Monet"
+
+#: setup/monet_setup/app.py:338
+msgid "This disk is too small for Monet (it needs 70 GB)."
+msgstr "ดิสก์นี้เล็กเกินไปสำหรับ Monet (ต้องการ 70 GB)"
+
+#: setup/monet_setup/app.py:411
+msgid "%1 of %2 GB"
+msgstr "%1 จาก %2 GB"
+
+#: setup/monet_setup/app.py:428
+msgid "The installer stopped unexpectedly."
+msgstr "ตัวติดตั้งหยุดทำงานโดยไม่คาดคิด"
+
+#: setup/monet_setup/disks.py:128
+msgid "This disk has no EFI partition, so Windows doesn't start from it."
+msgstr "ดิสก์นี้ไม่มีพาร์ติชัน EFI จึงเปิด Windows จากดิสก์นี้ไม่ได้"
+
+#: setup/monet_setup/disks.py:132
+msgid ""
+"Needs %1 of free space; this disk has %2. Shrink Windows' drive in Disk Management first."
+msgstr ""
+"ต้องมีพื้นที่ว่าง %1 แต่ดิสก์นี้มี %2 ลดขนาดไดรฟ์ของ Windows ในการจัดการดิสก์ก่อน"
+
+#: setup/monet_setup/install.py:126
+msgid "The free space on the disk changed. Go back and choose again."
+msgstr "พื้นที่ว่างบนดิสก์เปลี่ยนไป ย้อนกลับไปแล้วเลือกใหม่"
+
+#: setup/monet_setup/install.py:135
+msgid "The new partitions didn't show up."
+msgstr "พาร์ติชันใหม่ไม่ปรากฏขึ้น"
+
+#: setup/monet_setup/install.py:139
+msgid "Windows' EFI partition wasn't found."
+msgstr "ไม่พบพาร์ติชัน EFI ของ Windows"
+
+#: setup/monet_setup/install.py:231
+msgid ""
+"The connection dropped and didn't come back. Check the Wi-Fi, then try again."
+msgstr "การเชื่อมต่อหลุดและไม่กลับมา ตรวจสอบ Wi-Fi แล้วลองอีกครั้ง"
+
+#: setup/monet_setup/install.py:294
+msgid "Monet's system wasn't found after installing."
+msgstr "ไม่พบระบบของ Monet หลังการติดตั้ง"
+
+#: setup/monet_setup/install.py:439
+msgid "Something unexpected went wrong. The details say what."
+msgstr "เกิดข้อผิดพลาดที่ไม่คาดคิด ดูสาเหตุได้ในรายละเอียด"
+
+#: setup/monet_setup/network.py:77
+msgid "The network didn't answer. Try again, or pick another network."
+msgstr "เครือข่ายไม่ตอบสนอง ลองอีกครั้ง หรือเลือกเครือข่ายอื่น"
+
+#: setup/monet_setup/network.py:79
+msgid "Wi-Fi isn't available on this PC."
+msgstr "พีซีเครื่องนี้ใช้ Wi-Fi ไม่ได้"
+
+#: setup/monet_setup/network.py:84
+msgid "That password didn't work."
+msgstr "รหัสผ่านนี้ใช้ไม่ได้"
+
+#: setup/monet_setup/network.py:85
+msgid "Couldn't connect. Try again, or pick another network."
+msgstr "เชื่อมต่อไม่ได้ ลองอีกครั้ง หรือเลือกเครือข่ายอื่น"
+
+#: setup/monet_setup/system.py:51
+msgid "English (US)"
+msgstr "อังกฤษ (สหรัฐอเมริกา)"
+
+#: setup/monet_setup/system.py:52
+msgid "English (US, international)"
+msgstr "อังกฤษ (สหรัฐอเมริกา, นานาชาติ)"
+
+#: setup/monet_setup/system.py:53
+msgid "English (UK)"
+msgstr "อังกฤษ (สหราชอาณาจักร)"
+
+#: setup/monet_setup/system.py:54
+msgid "Swedish"
+msgstr "สวีเดน"
+
+#: setup/monet_setup/system.py:55
+msgid "German"
+msgstr "เยอรมัน"
+
+#: setup/monet_setup/system.py:56
+msgid "French"
+msgstr "ฝรั่งเศส"
+
+#: setup/monet_setup/system.py:57
+msgid "Spanish"
+msgstr "สเปน"
+
+#: setup/monet_setup/system.py:58
+msgid "Italian"
+msgstr "อิตาลี"
+
+#: setup/monet_setup/system.py:59
+msgid "Norwegian"
+msgstr "นอร์เวย์"
+
+#: setup/monet_setup/system.py:60
+msgid "Danish"
+msgstr "เดนมาร์ก"
+
+#: setup/monet_setup/system.py:61
+msgid "Finnish"
+msgstr "ฟินแลนด์"
+
+#: setup/monet_setup/system.py:62
+msgid "Polish"
+msgstr "โปแลนด์"
+
+#: setup/monet_setup/system.py:63
+msgid "Czech"
+msgstr "เช็ก"
+
+#: setup/monet_setup/system.py:64
+msgid "Hungarian"
+msgstr "ฮังการี"
+
+#: setup/monet_setup/system.py:65
+msgid "Romanian"
+msgstr "โรมาเนีย"
+
+#: setup/monet_setup/system.py:66
+msgid "Greek"
+msgstr "กรีก"
+
+#: setup/monet_setup/system.py:67
+msgid "Portuguese (Brazil)"
+msgstr "โปรตุเกส (บราซิล)"
+
+#: setup/monet_setup/system.py:68
+msgid "Portuguese"
+msgstr "โปรตุเกส"
+
+#: setup/monet_setup/system.py:69
+msgid "Turkish"
+msgstr "ตุรกี"
+
+#: setup/monet_setup/system.py:70
+msgid "Russian"
+msgstr "รัสเซีย"
+
+#: setup/monet_setup/system.py:71
+msgid "Ukrainian"
+msgstr "ยูเครน"
+
+#: setup/monet_setup/system.py:72
+msgid "Thai"
+msgstr "ไทย"
+
+#: setup/monet_setup/system.py:73
+msgid "Arabic"
+msgstr "อาหรับ"
+
+#: setup/monet_setup/system.py:74
+msgid "Hebrew"
+msgstr "ฮีบรู"
+
+#: setup/monet_setup/system.py:75
+msgid "Japanese"
+msgstr "ญี่ปุ่น"
+
+#: setup/monet_setup/system.py:76
+msgid "Korean"
+msgstr "เกาหลี"
+
+#: linux/libexec/monet-quick:1426
+msgid "Steam on %1"
+msgstr "Steam บน %1"
+
+#: linux/libexec/monet-quick:1430
+msgid "Games folder"
+msgstr "โฟลเดอร์เกม"
+
+#: linux/libexec/monet-quick:1938
+msgid "%1 GB free of %2 GB"
+msgstr "ว่าง %1 GB จาก %2 GB"
+
+#: linux/libexec/monet-prepare-windows:177
+msgid "Making room for Windows"
+msgstr "กำลังเตรียมพื้นที่สำหรับ Windows"
+
+#: linux/libexec/monet-prepare-windows:371
+msgid "Downloading Windows (%1 of %2 GB)"
+msgstr "กำลังดาวน์โหลด Windows (%1 จาก %2 GB)"
+
+#: linux/libexec/monet-prepare-windows:471
+msgid "Copying Windows Setup"
+msgstr "กำลังคัดลอกตัวติดตั้ง Windows"
+
+#: linux/libexec/monet-prepare-windows:483
+msgid "Preparing %1"
+msgstr "กำลังเตรียม %1"
+
+#: linux/libexec/monet-prepare-windows:487
+msgid "Preparing Windows Setup"
+msgstr "กำลังเตรียมตัวติดตั้ง Windows"
+
+#: linux/libexec/monet-prepare-windows:571
+msgid "Asking Microsoft for Windows 11"
+msgstr "กำลังขอ Windows 11 จาก Microsoft"
+
+#: linux/libexec/monet-prepare-windows:579
+msgid "Getting ready to restart"
+msgstr "กำลังเตรียมรีสตาร์ท"
+
+#: linux/libexec/monet-prepare-windows:582
+msgid "Windows installs itself at the next restart"
+msgstr "Windows จะติดตั้งตัวเองเมื่อรีสตาร์ทครั้งถัดไป"
+
+#: linux/libexec/monet-session:20
+msgid "Finish setting up Windows"
+msgstr "ตั้งค่า Windows ให้เสร็จ"
+
+#: linux/libexec/monet-session:55
+msgid "Adding your apps"
+msgstr "กำลังเพิ่มแอปของคุณ"
+
+#: linux/libexec/monet-session:56
+msgid ""
+"Your apps download in the background and show up in the menu as they arrive."
+msgstr "แอปของคุณกำลังดาวน์โหลดในเบื้องหลัง และจะแสดงในเมนูเมื่อดาวน์โหลดเสร็จ"
+
+#: linux/libexec/monet-session:73
+msgid "See what's new"
+msgstr "ดูว่ามีอะไรใหม่"
+
+#: linux/libexec/monet-session:74
+msgid "Monet %1 is here"
+msgstr "Monet %1 มาแล้ว"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Files"
+msgstr "ไฟล์"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Terminal"
+msgstr "เทอร์มินัล"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Text Editor"
+msgstr "ตัวแก้ไขข้อความ"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Photos"
+msgstr "รูปภาพ"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Documents"
+msgstr "เอกสาร"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Archives"
+msgstr "ไฟล์บีบอัด"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Screenshot"
+msgstr "ภาพหน้าจอ"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Calculator"
+msgstr "เครื่องคิดเลข"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Music"
+msgstr "เพลง"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Videos"
+msgstr "วิดีโอ"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Disk Usage"
+msgstr "การใช้ดิสก์"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Disks"
+msgstr "ดิสก์"
+
+#: linux/libexec/monet-look:82
+msgctxt "an app's name in the menu"
+msgid "Phone"
+msgstr "โทรศัพท์"
+
+#: linux/libexec/monet-look:82
+msgctxt "an app's name in the menu"
+msgid "Phone Messages"
+msgstr "ข้อความโทรศัพท์"
+
+#: linux/libexec/monet-look:69 linux/libexec/monet-look:73
+msgctxt "an app's name in the menu"
+msgid "Store"
+msgstr "ร้านค้า"
+
+#: linux/libexec/monet-look:69 linux/libexec/monet-look:73
+msgctxt "an app's description in the menu"
+msgid "Apps and games for Monet"
+msgstr "แอปและเกมสำหรับ Monet"
+
+#: linux/share/applications/monet-settings.desktop:3
+msgctxt "an app's name in the menu"
+msgid "Settings"
+msgstr "การตั้งค่า"
+
+#: linux/share/applications/monet-settings.desktop:33
+msgctxt "what an app is, under its name in the menu"
+msgid "Monet Settings"
+msgstr "การตั้งค่า Monet"
+
+#: linux/share/applications/monet-settings.desktop:63
+msgctxt "an app's description in the menu"
+msgid ""
+"Light and wallpaper, Wi-Fi, Bluetooth, display, sound, Windows and updates"
+msgstr "แสงและภาพพื้นหลัง, Wi-Fi, Bluetooth, จอภาพ, เสียง, Windows และอัปเดต"
+
+#: linux/share/applications/monet-settings.desktop:96
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid ""
+"settings;preferences;wifi;bluetooth;display;sound;wallpaper;dark;light;update;"
+msgstr ""
+"การตั้งค่า;ตั้งค่า;ค่ากำหนด;wifi;ไวไฟ;bluetooth;บลูทูธ;จอภาพ;หน้าจอ;เสียง;ภาพพื้นหลัง;วอลเปเปอร์;มืด;สว่าง;อัปเดต;อัพเดท;"
+
+#: linux/share/applications/monet-settings.desktop:129
+msgctxt "an app's name in the menu"
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+#: linux/share/applications/monet-settings.desktop:162
+msgctxt "an app's name in the menu"
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+#: linux/share/applications/monet-settings.desktop:195
+msgctxt "an app's name in the menu"
+msgid "Display"
+msgstr "จอภาพ"
+
+#: linux/share/applications/monet-settings.desktop:228
+msgctxt "an app's name in the menu"
+msgid "Sound"
+msgstr "เสียง"
+
+#: linux/share/applications/monet-windows.desktop:3
+msgctxt "an app's name in the menu"
+msgid "Windows"
+msgstr "Windows"
+
+#: linux/share/applications/monet-windows.desktop:33
+msgctxt "what an app is, under its name in the menu"
+msgid "Restart in Windows"
+msgstr "รีสตาร์ทเข้า Windows"
+
+#: linux/share/applications/monet-windows.desktop:63
+msgctxt "an app's description in the menu"
+msgid "Restart in Windows for games that need it"
+msgstr "รีสตาร์ทเข้า Windows สำหรับเกมที่ต้องใช้"
+
+#: linux/share/applications/monet-windows.desktop:96
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid "windows;restart;reboot;anticheat;games;"
+msgstr "windows;วินโดวส์;รีสตาร์ท;เริ่มระบบใหม่;รีบูต;anticheat;แอนตี้ชีต;เกม;"
+
+#: linux/share/plasma/desktoptheme/monet/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet"
+msgstr "Monet"
+
+#: linux/share/plasma/desktoptheme/monet/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Glass islands and popovers over the painting"
+msgstr "แผงกระจกและป๊อปอัปที่ลอยอยู่เหนือภาพวาด"
+
+#: linux/share/plasma/desktoptheme/monet-solid/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet (solid)"
+msgstr "Monet (ทึบ)"
+
+#: linux/share/plasma/desktoptheme/monet-solid/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Monet's islands and popovers without the glass"
+msgstr "แผงและป๊อปอัปของ Monet แบบไม่มีกระจก"
+
+#: linux/share/plasma/look-and-feel/org.monet.desktop/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Mist"
+msgstr "หมอก"
+
+#: linux/share/plasma/look-and-feel/org.monet.desktop/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The Hours under glass, in the light of day"
+msgstr "ห้วงเวลาใต้กระจก ในแสงกลางวัน"
+
+#: linux/share/plasma/look-and-feel/org.monet.smoke.desktop/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Smoke"
+msgstr "ควัน"
+
+#: linux/share/plasma/look-and-feel/org.monet.smoke.desktop/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The Hours under glass, after dark"
+msgstr "ห้วงเวลาใต้กระจก ยามค่ำคืน"
+
+#: linux/share/plasma/plasmoids/org.monet.calendar/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Calendar"
+msgstr "ปฏิทิน"
+
+#: linux/share/plasma/plasmoids/org.monet.calendar/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The month on Monet's glass, today on a dab of the sun"
+msgstr "ทั้งเดือนบนกระจกของ Monet และวันนี้บนแต้มสีดวงอาทิตย์"
+
+#: linux/share/plasma/plasmoids/org.monet.clock/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Clock"
+msgstr "นาฬิกา"
+
+#: linux/share/plasma/plasmoids/org.monet.clock/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The time and the date in the panel, and the month on a click"
+msgstr "เวลาและวันที่บนแถบ และดูทั้งเดือนได้ในคลิกเดียว"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Photo Frame"
+msgstr "กรอบรูป"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Your pictures in a gilt frame, a new one every ten minutes"
+msgstr "รูปภาพของคุณในกรอบปิดทอง เปลี่ยนรูปใหม่ทุกสิบนาที"
+
+#: linux/share/plasma/plasmoids/org.monet.games/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Windows Games"
+msgstr "เกม Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"Your Windows games as a gallery. Play restarts in Windows and comes back."
+msgstr ""
+"เกม Windows ของคุณในรูปแบบแกลเลอรี กดเล่นแล้วพีซีจะรีสตาร์ทเข้า Windows และกลับมาเมื่อเล่นเสร็จ"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Menu"
+msgstr "เมนู"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"Your pinned apps, every app from A to Z, and a search for apps, files and settings"
+msgstr ""
+"แอปที่ปักหมุดไว้ แอปทั้งหมดเรียงตามตัวอักษร และการค้นหาแอป ไฟล์ และการตั้งค่า"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Note"
+msgstr "โน้ต"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "A sheet of paper on the desktop, for what you want to keep in view"
+msgstr "กระดาษหนึ่งแผ่นบนเดสก์ท็อป สำหรับสิ่งที่อยากเห็นอยู่ตลอด"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Now Playing"
+msgstr "กำลังเล่น"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "What's playing, with its cover, on Monet's glass"
+msgstr "สิ่งที่กำลังเล่นพร้อมภาพปก บนกระจกของ Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Placard"
+msgstr "ป้ายชื่อภาพ"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The time, the date and the painting's name, like the card next to a painting"
+msgstr "เวลา วันที่ และชื่อภาพวาด เหมือนป้ายข้างภาพในพิพิธภัณฑ์"
+
+#: linux/share/plasma/plasmoids/org.monet.played/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Recently Played"
+msgstr "เล่นล่าสุด"
+
+#: linux/share/plasma/plasmoids/org.monet.played/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The games you played last, with their covers: one click and you're back in"
+msgstr "เกมที่คุณเล่นล่าสุดพร้อมภาพปก: คลิกเดียวก็กลับเข้าเกมได้เลย"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Quick Settings"
+msgstr "การตั้งค่าด่วน"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Wi-Fi, Bluetooth, sound, brightness and Monet's light in one place"
+msgstr "Wi-Fi, Bluetooth, เสียง, ความสว่าง และแสงของ Monet ในที่เดียว"
+
+#: linux/share/plasma/plasmoids/org.monet.system/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "System"
+msgstr "ระบบ"
+
+#: linux/share/plasma/plasmoids/org.monet.system/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"How hard your PC is working: the processor, the graphics and the memory, how warm they run, and what's downloading"
+msgstr ""
+"พีซีของคุณทำงานหนักแค่ไหน: ตัวประมวลผล กราฟิก และหน่วยความจำ ร้อนแค่ไหน และกำลังดาวน์โหลดอะไรอยู่"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Timer"
+msgstr "ตัวจับเวลา"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"A few minutes on the sun's path: for the tea, a break, or one more match"
+msgstr ""
+"ไม่กี่นาทีบนเส้นทางของดวงอาทิตย์: ชงชาสักถ้วย พักสักครู่ หรือเล่นอีกสักตา"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Weather"
+msgstr "สภาพอากาศ"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The sky where you are, painted on Monet's glass"
+msgstr "ท้องฟ้าตรงที่คุณอยู่ วาดลงบนกระจกของ Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "World Clock"
+msgstr "นาฬิกาโลก"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The time in other towns, each on a little clock face, light by day and dark by night"
+msgstr ""
+"เวลาในเมืองอื่น ๆ แต่ละเมืองบนหน้าปัดนาฬิกาเล็ก ๆ สว่างยามกลางวัน มืดยามกลางคืน"
+
+#: linux/share/plasma/wallpapers/org.monet.hours/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "The Hours"
+msgstr "ห้วงเวลา"
+
+#: linux/share/plasma/wallpapers/org.monet.hours/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "One harbor in four lights, drifting through the day"
+msgstr "ท่าเรือเดียวในแสงสี่ช่วงเวลา ค่อย ๆ เปลี่ยนไปตลอดวัน"
+
+#: crates/monet/src/main.rs:211 crates/monet/src/main.rs:299
+msgid ""
+"Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."
+msgstr "ยังไม่ได้ติดตั้ง Windows เลือก Windows ในเมนูแอปเพื่อตั้งค่าให้เสร็จ"
+
+#: crates/monet/src/main.rs:213
+msgid ""
+"Windows is encrypted with BitLocker, so Monet can't set it up for you. In Windows, open Monet for Windows and run Install Monet."
+msgstr ""
+"Windows ถูกเข้ารหัสด้วย BitLocker Monet จึงตั้งค่าให้คุณไม่ได้ ใน Windows ให้เปิด “Monet for Windows” แล้วเรียกใช้ “Install Monet”"
+
+#: crates/monet/src/main.rs:218
+msgid ""
+"Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."
+msgstr ""
+"Windows อยู่ในโหมดพักเครื่อง Monet จึงยังตั้งค่าไม่ได้ เปิด Windows แล้วเลือกรีสตาร์ท จากนั้น Monet จะทำส่วนที่เหลือให้"
+
+#: crates/monet/src/main.rs:226
+msgid "This PC didn't start in UEFI mode, so Monet can't switch to Windows."
+msgstr ""
+"พีซีเครื่องนี้ไม่ได้เริ่มทำงานในโหมด UEFI Monet จึงสลับไป Windows ไม่ได้"
+
+#: crates/monet/src/main.rs:233 crates/monet/src/main.rs:512
+msgid ""
+"Windows wasn't found on this PC. Install Windows first, then try again."
+msgstr "ไม่พบ Windows ในพีซีเครื่องนี้ ติดตั้ง Windows ก่อนแล้วลองอีกครั้ง"
+
+#: crates/monet/src/main.rs:253
+msgid "Not found"
+msgstr "ไม่พบ"
+
+#: crates/monet/src/main.rs:255
+msgid "Unavailable (not a UEFI system)"
+msgstr "ไม่พร้อมใช้งาน (ไม่ใช่ระบบ UEFI)"
+
+#: crates/monet/src/main.rs:309
+msgid "Play %1 on Windows?"
+msgstr "เล่น %1 บน Windows ไหม?"
+
+#: crates/monet/src/main.rs:310
+msgid "Play on Windows?"
+msgstr "เล่นบน Windows ไหม?"
+
+#: crates/monet/src/main.rs:314
+msgid ""
+"Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."
+msgstr ""
+"พีซีของคุณจะรีสตาร์ทเข้า Windows และเปิดเกม เมื่อออกจากเกม พีซีจะกลับมาที่ Monet"
+
+#: crates/monet/src/main.rs:315
+msgid "Your PC will restart in Windows. Open apps will close."
+msgstr "พีซีของคุณจะรีสตาร์ทเข้า Windows แอปที่เปิดอยู่จะปิดลง"
+
+#: crates/monet/src/main.rs:516
+msgid ""
+"Monet seems to have started from the Windows entry, which shouldn't happen."
+msgstr "ดูเหมือน Monet จะเริ่มทำงานจากรายการบูตของ Windows ซึ่งไม่ควรเกิดขึ้น"
+
+#: crates/monet/src/main.rs:548
+msgid ""
+"This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu."
+msgstr ""
+"เฟิร์มแวร์ของพีซีเครื่องนี้ไม่ได้จำการสลับไป Windows ไว้ รีสตาร์ทแล้วเลือก Windows ในเมนูบูตของพีซี"
+
+#: crates/monet/src/main.rs:580
+msgid "The restart was blocked. Restart your PC to continue in Windows."
+msgstr "การรีสตาร์ทถูกบล็อก รีสตาร์ทพีซีของคุณเพื่อไปต่อใน Windows"
+
+#: crates/monet/src/main.rs:668
+msgid "This copy of Monet can't install Windows by itself."
+msgstr "Monet เวอร์ชันนี้ติดตั้ง Windows เองไม่ได้"
+
+#: crates/monet/src/main.rs:690
+msgid "Getting Windows ready for your games"
+msgstr "กำลังเตรียม Windows สำหรับเกมของคุณ"
+
+#: crates/monet/src/main.rs:692
+msgid ""
+"Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."
+msgstr ""
+"Monet กำลังดาวน์โหลด Windows (ประมาณ 7 GB) คุณใช้พีซีต่อได้ตามปกติ Monet จะถามก่อนรีสตาร์ท"
+
+#: crates/monet/src/main.rs:708
+msgid ""
+"Monet can install Windows from %1. Your PC restarts and Windows installs itself."
+msgstr ""
+"Monet ติดตั้ง Windows จาก %1 ได้ พีซีของคุณจะรีสตาร์ทและ Windows จะติดตั้งตัวเอง"
+
+#: crates/monet/src/main.rs:711
+msgid ""
+"Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. This takes about 30 minutes."
+msgstr ""
+"ยังไม่ได้ติดตั้ง Windows Monet จะดาวน์โหลดจาก Microsoft (ประมาณ 7 GB) แล้วติดตั้งให้ ใช้เวลาประมาณ 30 นาที"
+
+#: crates/monet/src/main.rs:715
+msgid "Set up Windows?"
+msgstr "ตั้งค่า Windows ไหม?"
+
+#: crates/monet/src/main.rs:715
+msgid "Set Up"
+msgstr "ตั้งค่า"
+
+#: crates/monet/src/main.rs:739
+msgid ""
+"Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."
+msgstr ""
+"รีสตาร์ทตอนนี้เพื่อติดตั้ง Windows ไหม? ใช้เวลาประมาณ 10 นาที แล้วคุณจะกลับมาที่ Monet"
+
+#: crates/monet/src/main.rs:747
+msgid ""
+"Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again."
+msgstr ""
+"Microsoft ไม่อนุญาตให้ดาวน์โหลดอัตโนมัติ ดาวน์โหลด Windows 11 จากหน้าเว็บของ Microsoft (เลือก \"Download Windows 11 Disk Image (ISO)\") เก็บไว้ในโฟลเดอร์ดาวน์โหลด แล้วเลือก Windows อีกครั้ง"
+
+#: crates/monet/src/main.rs:749
+msgid "Download Windows"
+msgstr "ดาวน์โหลด Windows"
+
+#: crates/monet/src/main.rs:749
+msgid "Open Microsoft's Page"
+msgstr "เปิดหน้าเว็บของ Microsoft"
+
+#: crates/monet/src/main.rs:757
+msgid "there isn't enough free space for Windows"
+msgstr "พื้นที่ว่างไม่พอสำหรับ Windows"
+
+#: crates/monet/src/main.rs:758
+msgid ""
+"Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."
+msgstr ""
+"Windows ต้องใช้พื้นที่ดิสก์ของตัวเองประมาณ 72 GB และต้องมีที่ว่างใน Monet อีก 16 GB ระหว่างดาวน์โหลด"
+
+#: crates/monet/src/main.rs:763
+msgid ""
+"Windows couldn't be set up this time. Choose Windows in the app menu to try again."
+msgstr ""
+"ครั้งนี้ตั้งค่า Windows ไม่สำเร็จ เลือก Windows ในเมนูแอปเพื่อลองอีกครั้ง"
+
+#: crates/monet/src/trip.rs:252
+msgid ""
+"Windows didn't start: this PC skipped Monet's one-time start. Next time, Monet asks it a different way."
+msgstr ""
+"Windows ไม่เริ่มทำงาน: พีซีเครื่องนี้ข้ามการบูตแบบครั้งเดียวที่ Monet ตั้งไว้ ครั้งหน้า Monet จะใช้วิธีอื่น"
+
+#: crates/monet/src/trip.rs:262
+msgid ""
+"Windows didn't start: this PC couldn't open its boot entry. Next time, Monet uses another one."
+msgstr ""
+"Windows ไม่เริ่มทำงาน: พีซีเครื่องนี้เปิดรายการบูตของ Windows ไม่ได้ ครั้งหน้า Monet จะใช้รายการอื่น"
+
+#: crates/monet/src/trip.rs:264
+msgid ""
+"Windows didn't finish starting. Choose Play again to continue. If it happens again, open Settings, then Play on Windows, and choose Check."
+msgstr ""
+"Windows เริ่มทำงานไม่เสร็จ เลือก เล่น อีกครั้งเพื่อดำเนินการต่อ หากเกิดขึ้นอีก ให้เปิดการตั้งค่า แล้วไปที่ เล่นบน Windows และเลือก ตรวจสอบ"
+
+#: crates/monet-usb/src/disk.rs:119
+msgid ""
+"Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again."
+msgstr ""
+"Windows ไม่อนุญาตให้ Monet เขียนลงแฟลชไดรฟ์ USB ถอดออกแล้วเสียบใหม่ จากนั้นลองอีกครั้ง"
+
+#: crates/monet-usb/src/disk.rs:139
+msgid ""
+"Writing to the USB stick failed. Try another USB port or another stick."
+msgstr "เขียนลงแฟลชไดรฟ์ USB ไม่สำเร็จ ลองใช้พอร์ต USB อื่นหรือแฟลชไดรฟ์อื่น"
+
+#: crates/monet-usb/src/disk.rs:147
+msgid "The USB stick didn't keep what was written. Try another stick."
+msgstr "แฟลชไดรฟ์ USB เก็บข้อมูลที่เขียนไว้ไม่ได้ ลองใช้แฟลชไดรฟ์อื่น"
+
+#: crates/monet-usb/src/disk.rs:164
+msgid "The USB stick stopped answering."
+msgstr "แฟลชไดรฟ์ USB หยุดตอบสนอง"
+
+#: crates/monet-usb/src/gui.rs:82
+msgid "Make a Monet USB stick stopped unexpectedly."
+msgstr "“สร้างแฟลชไดรฟ์ USB ของ Monet” หยุดทำงานโดยไม่คาดคิด"
+
+#: crates/monet-usb/src/gui.rs:83 crates/monet-usb/src/gui.rs:114 crates/monet-usb/src/gui.rs:134
+#: crates/monet-usb/src/gui.rs:187 crates/monet-usb/src/gui.rs:328 crates/monet-usb/src/gui.rs:345
+msgid "Make a Monet USB stick"
+msgstr "สร้างแฟลชไดรฟ์ USB ของ Monet"
+
+#: crates/monet-usb/src/gui.rs:136
+msgid ""
+"Monet %1 installs from a USB stick of 2 GB or more. Choose the stick: everything on it is erased."
+msgstr ""
+"Monet %1 ติดตั้งจากแฟลชไดรฟ์ USB ขนาด 2 GB ขึ้นไป เลือกแฟลชไดรฟ์ที่จะใช้ ทุกอย่างในนั้นจะถูกลบ"
+
+#: crates/monet-usb/src/gui.rs:142
+msgid "Make USB stick"
+msgstr "สร้างแฟลชไดรฟ์"
+
+#: crates/monet-usb/src/gui.rs:176
+msgid "Plug in a USB stick (2 GB or more)."
+msgstr "เสียบแฟลชไดรฟ์ USB (2 GB ขึ้นไป)"
+
+#: crates/monet-usb/src/gui.rs:186
+msgid ""
+"Everything on %1 will be erased.\n"
+"\n"
+"Make it a Monet USB stick?"
+msgstr ""
+"ทุกอย่างใน %1 จะถูกลบ\n"
+"\n"
+"สร้างเป็นแฟลชไดรฟ์ USB ของ Monet ไหม?"
+
+#: crates/monet-usb/src/gui.rs:205
+msgid "Writing to the USB stick…"
+msgstr "กำลังเขียนลงแฟลชไดรฟ์ USB…"
+
+#: crates/monet-usb/src/gui.rs:211
+msgid "Writing the USB stick · %1 of %2 GB"
+msgstr "กำลังเขียนแฟลชไดรฟ์ USB · %1 จาก %2 GB"
+
+#: crates/monet-usb/src/gui.rs:213
+msgid "Checking the USB stick · %1 of %2 GB"
+msgstr "กำลังตรวจสอบแฟลชไดรฟ์ USB · %1 จาก %2 GB"
+
+#: crates/monet-usb/src/gui.rs:232
+msgid ""
+"This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer."
+msgstr ""
+"Windows รุ่นนี้ดาวน์โหลด Monet เองไม่ได้: ต้องใช้ Windows 10 (2018) หรือใหม่กว่า"
+
+#: crates/monet-usb/src/gui.rs:241
+msgid "Getting ready to download Monet…"
+msgstr "กำลังเตรียมดาวน์โหลด Monet…"
+
+#: crates/monet-usb/src/gui.rs:250 crates/monet-usb/src/gui.rs:293
+msgid ""
+"Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped."
+msgstr ""
+"ดาวน์โหลด Monet ไม่ได้ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง โดยจะดาวน์โหลดต่อจากจุดที่ค้างไว้"
+
+#: crates/monet-usb/src/gui.rs:276
+msgid "Downloading Monet · %1 of %2 GB"
+msgstr "กำลังดาวน์โหลด Monet · %1 จาก %2 GB"
+
+#: crates/monet-usb/src/gui.rs:278
+msgid "Downloading Monet · %1 GB"
+msgstr "กำลังดาวน์โหลด Monet · %1 GB"
+
+#: crates/monet-usb/src/gui.rs:283
+msgid "about %1 min left"
+msgstr "เหลืออีกประมาณ %1 นาที"
+
+#: crates/monet-usb/src/gui.rs:290
+msgid "The connection dropped. Picking up where it stopped…"
+msgstr "การเชื่อมต่อหลุด กำลังทำต่อจากจุดที่ค้างไว้…"
+
+#: crates/monet-usb/src/gui.rs:322
+msgid ""
+"Your Monet USB stick is ready.\n"
+"\n"
+"Restart this PC with it plugged in, and choose the USB stick in the PC's boot menu."
+msgstr ""
+"แฟลชไดรฟ์ USB ของ Monet พร้อมแล้ว\n"
+"\n"
+"รีสตาร์ทพีซีเครื่องนี้โดยเสียบแฟลชไดรฟ์ไว้ แล้วเลือกแฟลชไดรฟ์ USB ในเมนูบูตของพีซี"
+
+#: crates/monet-usb/src/gui.rs:330
+msgid "Done."
+msgstr "เสร็จแล้ว"
+
+#: crates/monet-usb/src/gui.rs:345
+msgid "The USB stick isn't finished. Stop anyway?"
+msgstr "แฟลชไดรฟ์ USB ยังสร้างไม่เสร็จ หยุดเลยไหม?"

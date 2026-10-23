@@ -27,58 +27,81 @@ PlasmaCore.Dialog {
     property string page: "light"
 
     readonly property string art: "file://@DATADIR@/monet/settings/"
+    // Each page's search words are said in your language too: what people might type to find
+    // it, with the English ones people use anyway (wifi, bluetooth) kept in.
     readonly property var pages: [
         { id: "light", name: i18n("Light & Wallpaper"), glyph: "M5 15a7 7 0 0 1 14 0M3 19h18",
-          words: "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors" },
+          words: i18nc("Settings search words, space-separated",
+                      "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors") },
         { id: "wifi", name: i18n("Wi-Fi"), glyph: "M4 10a12 12 0 0 1 16 0M7 13.5a7.5 7.5 0 0 1 10 0M10 17a3 3 0 0 1 4 0",
-          words: "wifi wi-fi wireless network internet password" },
+          words: i18nc("Settings search words, space-separated",
+                      "wifi wi-fi wireless network internet password") },
         { id: "bluetooth", name: i18n("Bluetooth"), glyph: "M7 7l10 10-5 5V2l5 5L7 17",
-          words: "bluetooth headphones controller gamepad mouse keyboard pair" },
+          words: i18nc("Settings search words, space-separated",
+                      "bluetooth headphones controller gamepad mouse keyboard pair") },
         { id: "printers", name: i18n("Printers"), glyph: "M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z",
-          words: "printers printer print scanner paper queue default add" },
+          words: i18nc("Settings search words, space-separated",
+                      "printers printer print scanner paper queue default add") },
         { id: "display", name: i18n("Display"), glyph: "M4 5h16v11H4zM10 20h4",
-          words: "display screen brightness night light monitor resolution scale size" },
+          words: i18nc("Settings search words, space-separated",
+                      "display screen brightness night light monitor resolution scale size") },
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
-          words: "sound volume speakers headphones microphone mic audio output" },
+          words: i18nc("Settings search words, space-separated",
+                      "sound volume speakers headphones microphone mic audio output") },
         { id: "datetime", name: i18n("Date & Time"), glyph: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2",
-          words: "date time clock time zone 24-hour format automatic" },
+          words: i18nc("Settings search words, space-separated",
+                      "date time clock time zone 24-hour format automatic") },
         { id: "users", name: i18n("Accounts"), glyph: "M8 8a4 4 0 1 0 8 0a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0",
-          words: "accounts users password picture people name login sign in" },
+          words: i18nc("Settings search words, space-separated",
+                      "accounts users password picture people name login sign in") },
         { id: "input", name: i18n("Mouse & Keyboard"), gap: true,
           glyph: "M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM12 3v5",
-          words: "mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing" },
+          words: i18nc("Settings search words, space-separated",
+                      "mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing") },
         { id: "power", name: i18n("Power & Sleep"),
           glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
-          words: "power sleep suspend screen off energy battery lid button shutdown performance saver mode" },
+          words: i18nc("Settings search words, space-separated",
+                      "power sleep suspend screen off energy battery lid button shutdown performance saver mode") },
         { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
-          words: "lock screen locker password wake sleep privacy recent files history forget remember away" },
+          words: i18nc("Settings search words, space-separated",
+                      "lock screen locker password wake sleep privacy recent files history forget remember away") },
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
-          words: "notifications alerts do not disturb quiet popups sounds apps" },
+          words: i18nc("Settings search words, space-separated",
+                      "notifications alerts do not disturb quiet popups sounds apps") },
         { id: "accessibility", name: i18n("Accessibility"),
           glyph: "M12 5h.01M5 8.5l7 1.5 7-1.5M12 10v4.5M8.5 20.5l3.5-6 3.5 6",
-          words: "accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read" },
+          words: i18nc("Settings search words, space-separated",
+                      "accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read") },
         { id: "apps", name: i18n("Default Apps"),
           glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
-          words: "default apps browser web email mail files music video photos pdf text open with" },
+          words: i18nc("Settings search words, space-separated",
+                      "default apps browser web email mail files music video photos pdf text open with") },
         { id: "storage", name: i18n("Storage"),
           glyph: "M4 7.5h16v9H4zM7.5 12h.01M11 12h5.5",
-          words: "storage disk space room full free trash downloads clean games apps" },
+          words: i18nc("Settings search words, space-separated",
+                      "storage disk space room full free trash downloads clean games apps") },
         { id: "games", name: i18n("Games & Controllers"), gap: true,
           glyph: "M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3.5 3.5 0 0 1-6.4 2L14 14.5h-4l-.6 1A3.5 3.5 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8zM8 10.5v3M6.5 12h3M15.5 11.5h.01M17.5 13h.01",
-          words: "games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris" },
-        { id: "windows", name: i18n("Windows & Games"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true,
-          words: "windows games play anti-cheat steam restart boot doctor check" },
+          words: i18nc("Settings search words, space-separated",
+                      "games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris") },
+        { id: "windows", name: i18n("Play on Windows"), glyph: "M9 6.5L18 12l-9 5.5z", filled: true,
+          words: i18nc("Settings search words, space-separated",
+                      "windows games play anti-cheat steam restart boot doctor check") },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
-          words: "updates update version upgrade new" },
+          words: i18nc("Settings search words, space-separated",
+                      "updates update version upgrade new") },
         { id: "about", name: i18n("About Monet"), glyph: "M12 7.5h.01M12 11v6",
-          words: "about pc computer specs graphics gpu processor cpu memory ram storage disk version" }
+          words: i18nc("Settings search words, space-separated",
+                      "about pc computer specs graphics gpu processor cpu memory ram storage disk version") }
     ]
 
     // What the helper reported.
     property var info: ({})
     property var prefs: ({ hours: true, placard: true, glass: true })
     property var nets: []
+    // Whether a look for networks has come back yet (until then: looking).
+    property bool netsLoaded: false
     property var devices: []
     property var outputs: []
     property var games: []
@@ -197,7 +220,7 @@ PlasmaCore.Dialog {
         if (page === "light") {
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))
         } else if (page === "wifi") {
-            ask("wifi-list", out => sheet.nets = sheet.json(out, []))
+            ask("wifi-list", out => { sheet.nets = sheet.json(out, []); sheet.netsLoaded = true })
         } else if (page === "bluetooth") {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
@@ -686,7 +709,7 @@ PlasmaCore.Dialog {
 
     // "3 games · 120 GB · 410 GB free": a game library in words.
     function library(found) {
-        const parts = [found.games === 1 ? i18n("1 game") : i18n("%1 games", found.games || 0)]
+        const parts = [i18np("%1 game", "%1 games", found.games || 0)]
         if (found.size > 0)
             parts.push(bytes(found.size))
         if (typeof found.free === "number")
@@ -708,10 +731,15 @@ PlasmaCore.Dialog {
             : i18n("%1 KB", Math.round(n / 1e3))
     }
 
+    // h:mm, from minutes: how long the battery lasts.
+    function hm(minutes) {
+        return Math.floor(minutes / 60) + ":" + String(minutes % 60).padStart(2, "0")
+    }
+
     // How long, in words: 300 is "5 min", 3600 "1 hour", 0 "Never".
     function span(seconds) {
         return seconds === 0 ? i18n("Never") : seconds < 3600 ? i18n("%1 min", seconds / 60)
-            : seconds === 3600 ? i18n("1 hour") : i18n("%1 hours", seconds / 3600)
+            : i18np("%1 hour", "%1 hours", seconds / 3600)
     }
 
     // Pieces ----------------------------------------------------------------
@@ -807,6 +835,7 @@ PlasmaCore.Dialog {
             Layout.fillWidth: true
             spacing: 4
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 text: heading.text
                 color: heading.tone.ink
@@ -816,6 +845,7 @@ PlasmaCore.Dialog {
                 elide: Text.ElideRight
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 visible: heading.detail !== ""
                 text: heading.detail
@@ -917,6 +947,7 @@ PlasmaCore.Dialog {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 3
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 text: row.title
                 color: row.tone.ink
@@ -925,6 +956,7 @@ PlasmaCore.Dialog {
                 elide: Text.ElideRight
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 visible: row.detail !== ""
                 text: row.detail
@@ -1036,6 +1068,7 @@ PlasmaCore.Dialog {
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
+            horizontalAlignment: Text.AlignLeft
             id: label
             anchors.centerIn: parent
             text: pill.text
@@ -1067,6 +1100,7 @@ PlasmaCore.Dialog {
         border.width: 1
         border.color: tone.line
         Text {
+            horizontalAlignment: Text.AlignLeft
             id: keyWord
             anchors.centerIn: parent
             visible: keyCap.keyName !== "Meta"
@@ -1123,6 +1157,7 @@ PlasmaCore.Dialog {
                     Keys.onSpacePressed: segments.picked(modelData[0])
                     Behavior on color { ColorAnimation { duration: Math.round(140 * segments.tone.speed) } }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         id: segmentLabel
                         anchors.centerIn: parent
                         text: segment.modelData[1]
@@ -1168,8 +1203,11 @@ PlasmaCore.Dialog {
             anchors.leftMargin: 18
             anchors.rightMargin: 18
             spacing: 16
+            // Room for the longer words other languages use ("Zeigergeschwindigkeit"), up to a point.
             Text {
-                Layout.preferredWidth: 120
+                horizontalAlignment: Text.AlignLeft
+                Layout.preferredWidth: Math.min(Math.max(120, implicitWidth), 190)
+                elide: Text.ElideRight
                 text: sliderRow.title
                 color: sliderRow.tone.ink
                 font.pixelSize: 14
@@ -1221,6 +1259,7 @@ PlasmaCore.Dialog {
             Accessible.name: field.hint
             onAccepted: field.accepted()
             Text {
+                horizontalAlignment: Text.AlignLeft
                 anchors.fill: parent
                 verticalAlignment: Text.AlignVCenter
                 visible: input.text === ""
@@ -1247,6 +1286,7 @@ PlasmaCore.Dialog {
                     GradientStop { position: 1; color: face.glaze[1] }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: -1
                     text: face.name.charAt(0).toUpperCase()
@@ -1269,7 +1309,7 @@ PlasmaCore.Dialog {
         Accessible.name: name
     }
 
-    // The game covers on Windows & Games.
+    // The game covers on Play on Windows.
     component Cover: Item {
         id: cover
         property string name
@@ -1290,6 +1330,7 @@ PlasmaCore.Dialog {
                     GradientStop { position: 1; color: cover.glaze[1] }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.fill: parent
                     anchors.margins: 10
                     verticalAlignment: Text.AlignBottom
@@ -1322,6 +1363,8 @@ PlasmaCore.Dialog {
 
     mainItem: Item {
         id: frame
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
         width: Math.min(1000, sheet.area.width - 64)
         // Tall enough for every page in the list on most screens (it scrolls on short ones).
         height: Math.min(780, sheet.area.height - 96)
@@ -1360,6 +1403,7 @@ PlasmaCore.Dialog {
                 spacing: 4
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.leftMargin: 10
                     Layout.bottomMargin: 12
                     text: i18n("Settings")
@@ -1406,6 +1450,7 @@ PlasmaCore.Dialog {
                                 }
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 anchors.fill: parent
                                 verticalAlignment: Text.AlignVCenter
                                 visible: search.text === "" && !search.activeFocus
@@ -1427,6 +1472,26 @@ PlasmaCore.Dialog {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
+                    // On a laptop's screen not every page fits: a scrollbar says there are more,
+                    // and the page that opens (from a notification, say) is scrolled into view.
+                    QQC2.ScrollBar.vertical: PlasmaComponents.ScrollBar {}
+
+                    function reveal() {
+                        const shown = pebble.target
+                        if (shown && (shown.y < contentY || shown.y + shown.height > contentY + height)) {
+                            contentY = Math.max(0, Math.min(shown.y - (height - shown.height) / 2, contentHeight - height))
+                        }
+                    }
+
+                    Connections {
+                        target: sheet
+                        function onPageChanged() { Qt.callLater(navList.reveal) }
+                        function onVisibleChanged() {
+                            if (sheet.visible) {
+                                Qt.callLater(navList.reveal)
+                            }
+                        }
+                    }
 
                     Rectangle {
                         id: pebble
@@ -1502,6 +1567,7 @@ PlasmaCore.Dialog {
                                         }
                                     }
                                     Text {
+                                        horizontalAlignment: Text.AlignLeft
                                         Layout.fillWidth: true
                                         text: modelData.name
                                         color: look.ink
@@ -1531,6 +1597,7 @@ PlasmaCore.Dialog {
                         }
 
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             Layout.leftMargin: 10
                             Layout.topMargin: 8
@@ -1549,6 +1616,7 @@ PlasmaCore.Dialog {
                     radius: 10
                     color: kdeHover.hovered ? (look.dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.3)) : "transparent"
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         anchors.left: parent.left
                         anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -1566,9 +1634,13 @@ PlasmaCore.Dialog {
                 }
             }
 
+            // Without accents or capitals on either side: "ecran" finds "Écran".
+            function fold(text) {
+                return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+            }
             function matches(entry) {
-                const words = search.text.trim().toLowerCase()
-                return words === "" || (entry.name + " " + entry.words).toLowerCase().indexOf(words) !== -1
+                const words = fold(search.text.trim())
+                return words === "" || fold(entry.name + " " + entry.words).indexOf(words) !== -1
             }
         }
 
@@ -1673,6 +1745,11 @@ PlasmaCore.Dialog {
                 if (sheet.page === "bluetooth" && sheet.busyDevice === "") {
                     sheet.ask("bt-list", out => sheet.devices = sheet.json(out, sheet.devices))
                 }
+                // Networks come and go (and are slow to show after waking): look again, but never
+                // while a password is being typed, which a new list would wipe.
+                if (sheet.page === "wifi" && sheet.joining === "") {
+                    sheet.ask("wifi-list", out => { sheet.nets = sheet.json(out, sheet.nets); sheet.netsLoaded = true })
+                }
             }
         }
 
@@ -1760,6 +1837,7 @@ PlasmaCore.Dialog {
                                     mipmap: true
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     Layout.leftMargin: 4
                                     text: modelData[1]
@@ -1769,6 +1847,7 @@ PlasmaCore.Dialog {
                                     elide: Text.ElideRight
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     Layout.leftMargin: 4
                                     text: modelData[2]
@@ -1834,6 +1913,7 @@ PlasmaCore.Dialog {
                                     mipmap: true
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     Layout.leftMargin: 4
                                     text: modelData[1]
@@ -1843,6 +1923,7 @@ PlasmaCore.Dialog {
                                     elide: Text.ElideRight
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     Layout.leftMargin: 4
                                     text: modelData[2]
@@ -1962,7 +2043,7 @@ PlasmaCore.Dialog {
                         divider: false
                         visible: sheet.nets.filter(n => !n.active).length === 0
                         strong: false
-                        title: i18n("Looking for networks…")
+                        title: sheet.netsLoaded ? i18n("No other networks nearby") : i18n("Looking for networks…")
                     }
                     Repeater {
                         model: sheet.nets.filter(n => !n.active)
@@ -1975,15 +2056,21 @@ PlasmaCore.Dialog {
                                 tappable: true
                                 strong: false
                                 title: modelData.name
+                                detail: sheet.joining === modelData.name && sheet.joinState === "failed" && !modelData.secure
+                                    ? i18n("Couldn't join") : ""
                                 lead: Bars {
                                     tone: look
                                     level: modelData.signal > 66 ? 3 : modelData.signal > 33 ? 2 : 1
                                 }
                                 onTapped: {
                                     sheet.joinState = ""
-                                    if (modelData.secure) {
+                                    if (modelData.enterprise && !modelData.known) {
+                                        // A work or school network wants a name as well: KDE's page asks for both.
+                                        sheet.ask("kde wifi")
+                                    } else if (modelData.secure && !modelData.known) {
                                         sheet.joining = sheet.joining === modelData.name ? "" : modelData.name
                                     } else {
+                                        // Open, or known: straight in (a known one that fails asks for its password).
                                         sheet.joining = modelData.name
                                         sheet.join(modelData.name, "")
                                     }
@@ -1992,6 +2079,7 @@ PlasmaCore.Dialog {
                                     readonly property bool busy: sheet.joining === modelData.name && sheet.joinState === "joining"
                                     spacing: 6
                                     Text {
+                                        horizontalAlignment: Text.AlignLeft
                                         visible: parent.busy
                                         text: i18n("Joining…")
                                         color: look.dim
@@ -2038,6 +2126,7 @@ PlasmaCore.Dialog {
                                         onVisibleChanged: if (visible) forceActiveFocus()
                                         onAccepted: sheet.join(modelData.name, text)
                                         Text {
+                                            horizontalAlignment: Text.AlignLeft
                                             anchors.fill: parent
                                             verticalAlignment: Text.AlignVCenter
                                             visible: password.text === ""
@@ -2172,7 +2261,7 @@ PlasmaCore.Dialog {
                         visible: typeof sheet.info.brightness === "number"
                         title: i18n("Brightness")
                         from: 1
-                        value: sheet.info.brightness || 50
+                        value: sheet.info.brightness ?? 50
                         onHeld: down => sheet.dragging = down
                         onMoved: value => sheet.queue("brightness", value)
                     }
@@ -2298,6 +2387,7 @@ PlasmaCore.Dialog {
                         Layout.margins: 20
                         spacing: 2
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: datetimeColumn.now.toLocaleTimeString(sheet.timeLocale(), Locale.ShortFormat)
                             color: look.ink
@@ -2308,6 +2398,7 @@ PlasmaCore.Dialog {
                             font.features: { "tnum": 1 }
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: datetimeColumn.now.toLocaleDateString(sheet.timeLocale(), Locale.LongFormat)
                                 + ((sheet.clock.zone || "") !== "" ? " · " + sheet.zoneCity(sheet.clock.zone) : "")
@@ -2435,6 +2526,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             spacing: 2
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: usersColumn.you ? usersColumn.you.name : ""
                                 color: look.ink
@@ -2444,6 +2536,7 @@ PlasmaCore.Dialog {
                                 elide: Text.ElideRight
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: !usersColumn.you ? ""
                                     : usersColumn.you.admin ? i18n("%1 · Administrator", usersColumn.you.login)
@@ -2498,6 +2591,7 @@ PlasmaCore.Dialog {
                             }
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             visible: sheet.nameProblem !== ""
                             text: sheet.nameProblem
@@ -2563,6 +2657,7 @@ PlasmaCore.Dialog {
                             Layout.topMargin: 4
                             spacing: 8
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.passwordState === "failed" ? sheet.passwordMessage : ""
                                 color: "#E0603A"
@@ -2639,7 +2734,8 @@ PlasmaCore.Dialog {
                 }
                 // The mouse and the touchpad, each set as one (all mice alike).
                 Repeater {
-                    model: [["mouse", i18n("Mouse")], ["touchpad", i18n("Touchpad")]].filter(k => !!sheet.inputInfo[k[0]])
+                    // The touchpad first: on a laptop it's the pointer you have.
+                    model: [["touchpad", i18n("Touchpad")], ["mouse", i18n("Mouse")]].filter(k => !!sheet.inputInfo[k[0]])
                     ColumnLayout {
                         id: pointerKind
                         required property var modelData
@@ -2704,7 +2800,7 @@ PlasmaCore.Dialog {
                             tappable: index > 0
                             strong: index === 0
                             title: modelData.name
-                            detail: index === 0 ? i18n("Typing starts in this one") : i18n("Click to type in this one first")
+                            detail: index === 0 ? i18n("Typing starts in this one") : i18n("Click to make this the main one")
                             onTapped: sheet.setLayouts([modelData.code].concat(inputColumn.codes.filter(c => c !== layoutRow.modelData.code)))
                             Pill {
                                 tone: look
@@ -2756,6 +2852,7 @@ PlasmaCore.Dialog {
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     Layout.topMargin: -8
                     visible: inputColumn.codes.length > 1
@@ -2792,6 +2889,7 @@ PlasmaCore.Dialog {
                                 Layout.preferredWidth: 1
                                 spacing: 10
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     text: shortcutRow.modelData[0]
                                     color: look.ink
@@ -2835,6 +2933,9 @@ PlasmaCore.Dialog {
                 id: powerColumn
                 readonly property var screenTimes: [300, 600, 1800, 3600, 0].map(s => [s, sheet.span(s)])
                 readonly property var sleepTimes: [900, 1800, 3600, 7200, 0].map(s => [s, sheet.span(s)])
+                // On battery, KDE sleeps after 10 minutes: shorter times, that one among them, and 15
+                // (the shortest this offered before, so a time chosen then still shows).
+                readonly property var batterySleepTimes: [300, 600, 900, 1800, 3600, 0].map(s => [s, sheet.span(s)])
                 spacing: 20
                 PageTitle {
                     tone: look
@@ -2842,6 +2943,20 @@ PlasmaCore.Dialog {
                     art: sheet.art
                     text: i18n("Power & Sleep")
                     detail: i18n("When the screen rests, when the PC sleeps, and how hard it works.")
+                }
+                // The battery, on a laptop: how full, and charging or how long it lasts.
+                Card {
+                    tone: look
+                    visible: typeof sheet.info.battery === "number"
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Battery %1%", sheet.info.battery)
+                        detail: sheet.info.charging
+                            ? (sheet.info.minutes ? i18nc("%1 is a time like 1:20", "Charging, full in %1", sheet.hm(sheet.info.minutes)) : i18n("Charging"))
+                            : sheet.info.plugged ? i18n("Plugged in")
+                            : sheet.info.minutes ? i18nc("%1 is a time like 2:15", "About %1 left", sheet.hm(sheet.info.minutes)) : i18n("On battery")
+                    }
                 }
                 // How hard it works: three choices, like Light's.
                 RowLayout {
@@ -2888,6 +3003,7 @@ PlasmaCore.Dialog {
                                     color: modeChoice.picked ? look.lily : look.ink
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     text: modeChoice.modelData[1]
                                     color: look.ink
@@ -2896,6 +3012,7 @@ PlasmaCore.Dialog {
                                     elide: Text.ElideRight
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     text: modeChoice.modelData[2]
                                     color: look.dim
@@ -2950,7 +3067,7 @@ PlasmaCore.Dialog {
                                 detail: i18n("It wakes where you left off")
                                 Segments {
                                     tone: look
-                                    options: powerColumn.sleepTimes
+                                    options: powerState.modelData[0] === "battery" ? powerColumn.batterySleepTimes : powerColumn.sleepTimes
                                     current: powerState.times.sleep
                                     onPicked: value => sheet.powerTime(powerState.modelData[0], "sleep", value)
                                 }
@@ -3341,6 +3458,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             spacing: 10
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free)) : i18n("Measuring…")
                                 color: look.ink
                                 font.family: "Fraunces 72pt SuperSoft"
@@ -3348,6 +3466,7 @@ PlasmaCore.Dialog {
                                 font.pixelSize: 32
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignBaseline
                                 visible: storageColumn.total > 0
@@ -3396,6 +3515,7 @@ PlasmaCore.Dialog {
                                         color: parent.modelData[2]
                                     }
                                     Text {
+                                        horizontalAlignment: Text.AlignLeft
                                         text: parent.modelData[1] + "  " + sheet.bytes(sheet.storageInfo[parent.modelData[0]])
                                         color: look.dim
                                         font.pixelSize: 13
@@ -3454,6 +3574,7 @@ PlasmaCore.Dialog {
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: i18n("What apps leave behind when they update is cleared away with each update, by itself.")
                     color: look.dim
@@ -3470,6 +3591,8 @@ PlasmaCore.Dialog {
                 id: privacyColumn
                 // Forgetting recent files asks once more.
                 property bool askingForget: false
+                // Said once it's done, until the page is left.
+                property bool forgot: false
                 spacing: 20
                 PageTitle {
                     tone: look
@@ -3477,8 +3600,8 @@ PlasmaCore.Dialog {
                     art: sheet.art
                     text: i18n("Lock & Privacy")
                     detail: sheet.privacyInfo.lockAfter === 0 ? i18n("The screen doesn't lock by itself.")
-                        : sheet.privacyInfo.lockAfter === 1 ? i18n("The screen locks after a minute away.")
-                        : sheet.privacyInfo.lockAfter > 1 ? i18n("The screen locks after %1 minutes away.", sheet.privacyInfo.lockAfter)
+                        : sheet.privacyInfo.lockAfter > 0 ? i18np("The screen locks after %1 minute away.",
+                                                                  "The screen locks after %1 minutes away.", sheet.privacyInfo.lockAfter)
                         : i18n("Who can get in, and what Monet remembers.")
                 }
                 Card {
@@ -3540,6 +3663,7 @@ PlasmaCore.Dialog {
                         tone: look
                         title: i18n("Forget recent files")
                         detail: privacyColumn.askingForget ? i18n("The list of what you opened is cleared. Your files stay. Sure?")
+                            : privacyColumn.forgot ? i18n("Cleared. Your files are still there.")
                             : i18n("Clears the list, not the files")
                         Row {
                             spacing: 8
@@ -3555,7 +3679,7 @@ PlasmaCore.Dialog {
                                 onClicked: {
                                     if (privacyColumn.askingForget) {
                                         privacyColumn.askingForget = false
-                                        sheet.ask("forget-recent")
+                                        sheet.ask("forget-recent", () => privacyColumn.forgot = true)
                                     } else {
                                         privacyColumn.askingForget = true
                                     }
@@ -3573,7 +3697,7 @@ PlasmaCore.Dialog {
                     }
                     Pill {
                         tone: look
-                        text: i18n("More about recent files…")
+                        text: i18n("More recent files settings…")
                         onClicked: sheet.ask("kde recentfiles")
                     }
                 }
@@ -3592,8 +3716,7 @@ PlasmaCore.Dialog {
                     art: sheet.art
                     text: i18n("Printers")
                     detail: printersColumn.found.length === 0 ? i18n("Printers on your network show up by themselves.")
-                        : printersColumn.found.length === 1 ? i18n("1 printer")
-                        : i18n("%1 printers", printersColumn.found.length)
+                        : i18np("%1 printer", "%1 printers", printersColumn.found.length)
                 }
                 Card {
                     tone: look
@@ -3609,7 +3732,7 @@ PlasmaCore.Dialog {
                             detail: [modelData.default ? i18n("Your default") : "",
                                      modelData.state === "printing" ? i18n("Printing") : modelData.state === "off" ? i18n("Turned off")
                                          : i18n("Ready"),
-                                     modelData.jobs === 1 ? i18n("1 waiting") : modelData.jobs > 1 ? i18n("%1 waiting", modelData.jobs) : ""]
+                                     modelData.jobs > 0 ? i18np("%1 waiting", "%1 waiting", modelData.jobs) : ""]
                                     .filter(s => s !== "").join(" · ")
                             Pill {
                                 tone: look
@@ -3651,8 +3774,8 @@ PlasmaCore.Dialog {
                     entry: sheet.entry("games")
                     art: sheet.art
                     text: i18n("Games & Controllers")
-                    detail: gamesColumn.pads.length === 1 ? i18n("1 controller connected")
-                        : gamesColumn.pads.length > 1 ? i18n("%1 controllers connected", gamesColumn.pads.length)
+                    detail: gamesColumn.pads.length > 0
+                        ? i18np("%1 controller connected", "%1 controllers connected", gamesColumn.pads.length)
                         : i18n("Your controllers, and where your games are kept.")
                 }
                 Caption {
@@ -3669,7 +3792,7 @@ PlasmaCore.Dialog {
                             tone: look
                             divider: index > 0
                             title: modelData.name
-                            detail: modelData.battery === null ? (modelData.wireless ? i18n("Connected") : i18n("Plugged in"))
+                            detail: modelData.battery === null ? (modelData.wireless ? i18n("Connected") : i18nc("a controller, connected by its cable", "Plugged in"))
                                 : modelData.charging ? i18n("%1% · charging", modelData.battery)
                                 : i18n("%1% battery", modelData.battery)
                         }
@@ -3763,7 +3886,7 @@ PlasmaCore.Dialog {
                     tone: look
                     entry: sheet.entry("windows")
                     art: sheet.art
-                    text: i18n("Windows & Games")
+                    text: i18n("Play on Windows")
                     detail: i18n("Games that need Windows, a restart away.")
                 }
                 Card {
@@ -3781,6 +3904,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             spacing: 3
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.switching ? i18n("Restarting in Windows…")
                                     : sheet.switchProblem !== "" ? i18n("Couldn't open Windows")
@@ -3798,16 +3922,18 @@ PlasmaCore.Dialog {
                                 wrapMode: Text.Wrap
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.switching ? i18n("Your PC restarts in a moment.")
                                     : sheet.switchProblem !== "" ? sheet.switchProblem
-                                    : !sheet.asking && (sheet.pc.notice || "") !== "" ? sheet.pc.notice
+                                    : !sheet.asking && (sheet.pc.notice || "") !== "" ? i18n(sheet.pc.notice)
                                     : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts.")
                                     : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
+                                        + (typeof sheet.info.battery === "number" && !sheet.info.plugged ? " " + i18n("Plug in the charger first.") : "")
                                     : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
                                     : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
                                     : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
-                                    : i18n("Windows: %1. Check Monet below to see what's missing.", sheet.pc.windows)
+                                    : i18n("Windows: %1. Check Monet below to see what's missing.", i18n(sheet.pc.windows))
                                 color: look.dim
                                 font.pixelSize: 13
                                 wrapMode: Text.Wrap
@@ -3864,6 +3990,7 @@ PlasmaCore.Dialog {
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     visible: sheet.games.length === 0
                     text: i18n("Your Windows games show up here once Windows has started with Monet Bridge.")
@@ -3886,6 +4013,7 @@ PlasmaCore.Dialog {
                         }
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         Layout.fillWidth: true
                         Layout.leftMargin: 18
                         Layout.rightMargin: 18
@@ -3929,6 +4057,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             spacing: 3
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.updateTitle()
                                 color: look.ink
@@ -3937,6 +4066,7 @@ PlasmaCore.Dialog {
                                 wrapMode: Text.Wrap
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.updateDetail()
                                 color: sheet.updateState === "failed" ? "#E0603A" : look.dim
@@ -4005,6 +4135,7 @@ PlasmaCore.Dialog {
                         Layout.margins: 20
                         spacing: 14
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             visible: (sheet.whatsNew.headline || "") !== ""
                             text: sheet.whatsNew.headline || ""
@@ -4020,6 +4151,7 @@ PlasmaCore.Dialog {
                                 Layout.fillWidth: true
                                 spacing: 2
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     text: parent.modelData.title
                                     color: look.ink
@@ -4028,6 +4160,7 @@ PlasmaCore.Dialog {
                                     wrapMode: Text.Wrap
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     text: parent.modelData.text
                                     color: look.dim
@@ -4115,6 +4248,7 @@ PlasmaCore.Dialog {
                             Layout.fillWidth: true
                             spacing: 3
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.firmwareTitle()
                                 color: look.ink
@@ -4123,6 +4257,7 @@ PlasmaCore.Dialog {
                                 wrapMode: Text.Wrap
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.firmwareDetail()
                                 color: sheet.firmwareState === "failed" ? "#E0603A" : look.dim
@@ -4160,6 +4295,7 @@ PlasmaCore.Dialog {
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: i18n("A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case.")
                     color: look.dim
@@ -4201,6 +4337,7 @@ PlasmaCore.Dialog {
                         anchors.bottomMargin: 18
                         spacing: 4
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             text: "Monet"
                             color: "#FFFFFF"
                             font.family: "Fraunces 72pt SuperSoft"
@@ -4209,6 +4346,7 @@ PlasmaCore.Dialog {
                             font.letterSpacing: -1.2
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.monet) : i18n("Impression")
                             color: "#E6FFFFFF"
                             font.pixelSize: 14
@@ -4223,7 +4361,7 @@ PlasmaCore.Dialog {
                             [i18n("Processor"), sheet.pc.processor],
                             [i18n("Memory"), sheet.pc.memory],
                             [i18n("Storage"), sheet.pc.storage],
-                            [i18n("Windows"), sheet.pc.windows === "Ready" ? i18n("Ready for games") : sheet.pc.windows]
+                            [i18n("Windows"), sheet.pc.windows === "Ready" ? i18n("Ready for games") : (sheet.pc.windows ? i18n(sheet.pc.windows) : "")]
                         ].filter(r => r[1])
                         SettingRow {
                             tone: look
@@ -4231,6 +4369,7 @@ PlasmaCore.Dialog {
                             strong: false
                             title: modelData[0]
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 width: Math.min(implicitWidth, 380)
                                 text: modelData[1]
                                 color: look.ink

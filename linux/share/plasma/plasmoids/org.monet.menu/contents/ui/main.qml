@@ -143,6 +143,8 @@ PlasmoidItem {
 
     fullRepresentation: PlasmaExtras.Representation {
         id: page
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
         Layout.preferredWidth: Kirigami.Units.gridUnit * 30
         Layout.preferredHeight: Kirigami.Units.gridUnit * 33
         Layout.minimumWidth: Kirigami.Units.gridUnit * 24
@@ -273,6 +275,7 @@ PlasmoidItem {
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.fill: parent
                     leftPadding: search.leftPadding
                     rightPadding: search.rightPadding
@@ -291,6 +294,7 @@ PlasmoidItem {
                 visible: !page.searching
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     Layout.leftMargin: Kirigami.Units.smallSpacing
                     text: page.everything ? i18n("All apps") : i18n("Pinned")
@@ -379,6 +383,7 @@ PlasmoidItem {
                     }
 
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         Layout.leftMargin: Kirigami.Units.smallSpacing
                         text: i18n("Recent")
                         color: page.ink
@@ -450,6 +455,7 @@ PlasmoidItem {
                     boundsBehavior: Flickable.StopAtBounds
                     section.property: "group"
                     section.delegate: Text {
+                        horizontalAlignment: Text.AlignLeft
                         required property string section
                         width: ListView.view.width
                         leftPadding: 12
@@ -556,6 +562,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     implicitHeight: 40
                     Accessible.name: i18n("Accounts")
+                    PlasmaComponents.ToolTip.text: Accessible.name
+                    PlasmaComponents.ToolTip.visible: hovered
+                    PlasmaComponents.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: {
                         helper.connectSource("@LIBEXECDIR@/monet-quick open users")
                         root.expanded = false
@@ -585,6 +594,7 @@ PlasmoidItem {
                                     GradientStop { position: 1; color: "#245A50" }
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     anchors.centerIn: parent
                                     anchors.verticalCenterOffset: -1
                                     text: (root.firstName || "M").charAt(0).toUpperCase()
@@ -621,6 +631,7 @@ PlasmoidItem {
                             }
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: user.fullName || user.loginName
                             color: page.ink

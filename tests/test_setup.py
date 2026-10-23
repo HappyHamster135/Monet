@@ -107,6 +107,34 @@ class Choices(unittest.TestCase):
             self.assertTrue(locale.endswith(".UTF-8"))
             system.keyboard_for(system.LANGUAGES.index((name, locale, layout, zone)))
 
+    def test_every_language_has_its_words(self):
+        for name, locale, *_ in system.LANGUAGES:
+            code = locale.split(".")[0]
+            if code.startswith("en_"):
+                continue
+            built = [c for c in (code, code.split("_")[0])
+                     if (ROOT / "setup/locale" / c / "LC_MESSAGES/monet-setup.mo").is_file()]
+            self.assertTrue(built, name)
+
+    def test_setup_speaks_the_language_picked(self):
+        from monet_setup import words
+        try:
+            words.use("sv_SE.UTF-8")
+            self.assertNotEqual(words.tr("%1 of %2 GB", 3, 8), "3 of 8 GB")
+            self.assertIn("3", words.tr("%1 of %2 GB", 3, 8))
+            words.use("pt_PT.UTF-8")  # Portugal's words are "pt"
+            self.assertNotEqual(words._("Language"), "Language")
+            words.use("xx_XX.UTF-8")
+            self.assertEqual(words.tr("%1 of %2 GB", 3, 8), "3 of 8 GB")
+        finally:
+            words.use("")
+
+    def test_keyboards_without_latin_letters_keep_us(self):
+        self.assertEqual(system.xkb("ru", ""), ("ru,us", ",", "grp:alt_shift_toggle"))
+        self.assertEqual(system.xkb("se", ""), ("se", "", ""))
+        self.assertEqual(system.xkb("us", "intl"), ("us", "intl", ""))
+        self.assertLessEqual(system.NON_LATIN, {k[1] for k in system.KEYBOARDS})
+
     def test_account_names(self):
         account_name = system.account_name
         self.assertEqual(account_name("Jonas Wenell"), "jonas")

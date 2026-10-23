@@ -15,6 +15,7 @@
     monet-quick outputs                  speakers and headphones, as JSON
     monet-quick output ID
     monet-quick brightness 0-100
+    monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
     monet-quick pref hours|placard|glass on|off
@@ -58,6 +59,12 @@
     monet-quick gaming                   controllers and their batteries, the overlay, where games are kept, as JSON
     monet-quick overlay on|off           the performance overlay over games (MangoHud), from the next sign-in
     monet-quick pair-controller          KDE's Bluetooth wizard, to pair a controller
+    monet-quick notes                    the day notes the Calendar and the clock share, as JSON
+    monet-quick note DAY [TEXT]          write a day's note (DAY as 2026-10-23, TEXT as hex of its UTF-8; none clears it)
+    monet-quick notes-merge JSON         add notes kept before they were shared (JSON as hex), never over newer ones
+    monet-quick played                   the Steam games played last, newest first, with their covers, as JSON
+    monet-quick play APPID               start a Steam game, as Steam's Play does
+    monet-quick ring TITLE TEXT          the timer is up: a notification (both as hex of their UTF-8) and the alarm
     monet-quick storage                  what fills the disk (games, apps, files, system, free), Trash, Downloads, as JSON
     monet-quick empty-trash              empty the Trash for good (Settings asks first)
     monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
@@ -84,10 +91,12 @@
                                          notifications, accessibility, apps, storage, games,
                                          windows, updates or about)
     monet-quick listen                   wait until someone asks to open Monet Settings
+    monet-quick say TEXT [VALUE…]        TEXT in the session's language, %1… filled in (for Monet's scripts)
 """
 
 import base64
 import configparser
+import gettext
 import json
 import os
 import re
@@ -102,6 +111,16 @@ from pathlib import Path
 BINDIR = "@BINDIR@"
 LIBEXECDIR = "@LIBEXECDIR@"
 DATADIR = "@DATADIR@"
+# Monet's words in the language of the session (tools/make-translations.py), English where there are none.
+_ = gettext.translation("monet", localedir=f"{DATADIR}/locale", fallback=True).gettext
+
+
+def tr(text, *values):
+    """text in the session's language, with %1, %2, ... filled in (one convention for every translator)."""
+    said = _(text)
+    for i, value in reversed(list(enumerate(values, 1))):
+        said = said.replace(f"%{i}", str(value))
+    return said
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
 PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
@@ -189,8 +208,15 @@ def wifi_name():
     return ""
 
 
-def wifi_list(listing):
-    """Networks from `nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list`, strongest first."""
+def saved_wifi():
+    """The Wi-Fi networks NetworkManager keeps a profile for (it names them after the network)."""
+    out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show") or ""
+    return {f[0] for f in map(nmcli_fields, out.splitlines()) if len(f) >= 2 and f[1] == "802-11-wireless"}
+
+
+def wifi_list(listing, saved=()):
+    """Networks from `nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list`, strongest first:
+    known ones (saved) join without asking again; work and school ones (802.1X) want a name too."""
     nets = {}
     for line in listing.splitlines():
         fields = nmcli_fields(line)
@@ -201,7 +227,8 @@ def wifi_list(listing):
         old = nets.get(ssid)
         if old is None or active or strength > old["signal"]:
             nets[ssid] = {"name": ssid, "signal": strength, "secure": security not in ("", "--"),
-                          "active": active or bool(old and old["active"])}
+                          "active": active or bool(old and old["active"]), "known": ssid in saved,
+                          "enterprise": "802.1X" in security}
     return sorted(nets.values(), key=lambda n: (not n["active"], -n["signal"]))
 
 
@@ -263,15 +290,30 @@ def busctl(*args):
     return run("busctl", "--user", *args, timeout=5)
 
 
+SCREENS = ("org.kde.ScreenBrightness", "/org/kde/ScreenBrightness", "org.kde.ScreenBrightness")
+DISPLAY = "org.kde.ScreenBrightness.Display"
+OLD_BRIGHTNESS = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+                  "org.kde.Solid.PowerManagement.Actions.BrightnessControl")
+KEYBOARD_LIGHT = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/KeyboardBrightnessControl",
+                  "org.kde.Solid.PowerManagement.Actions.KeyboardBrightnessControl")
+
+
+def brightness_display():
+    """The built-in screen's brightness object, else the first screen's, else None. PowerDevil
+    numbers screens as they come and go: docked, display0 can be the monitor."""
+    names = busjson("--user", "get-property", *SCREENS, "DisplaysDBusNames") or []
+    paths = [f"/org/kde/ScreenBrightness/{n}" for n in names if isinstance(n, str) and re.fullmatch(r"\w+", n)]
+    inside = [p for p in paths if busjson("--user", "get-property", SCREENS[0], p, DISPLAY, "IsInternal") is True]
+    return (inside + paths + [None])[0]
+
+
 def brightness_state():
-    disp = ("org.kde.ScreenBrightness", "/org/kde/ScreenBrightness/display0", "org.kde.ScreenBrightness.Display")
-    now = busctl("get-property", *disp, "Brightness")
-    top = busctl("get-property", *disp, "MaxBrightness")
+    path = brightness_display()
+    now = busctl("get-property", SCREENS[0], path, DISPLAY, "Brightness") if path else None
+    top = busctl("get-property", SCREENS[0], path, DISPLAY, "MaxBrightness") if path else None
     if not now or not top:
-        old = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
-               "org.kde.Solid.PowerManagement.Actions.BrightnessControl")
-        now = busctl("call", *old, "brightness")
-        top = busctl("call", *old, "brightnessMax")
+        now = busctl("call", *OLD_BRIGHTNESS, "brightness")
+        top = busctl("call", *OLD_BRIGHTNESS, "brightnessMax")
     try:
         now, top = int(now.split()[1]), int(top.split()[1])
     except (AttributeError, IndexError, ValueError):
@@ -280,17 +322,30 @@ def brightness_state():
 
 
 def set_brightness(percent):
-    disp = ("org.kde.ScreenBrightness", "/org/kde/ScreenBrightness/display0", "org.kde.ScreenBrightness.Display")
-    top = busctl("get-property", *disp, "MaxBrightness")
+    path = brightness_display()
+    top = busctl("get-property", SCREENS[0], path, DISPLAY, "MaxBrightness") if path else None
     if top:
         value = int(top.split()[1]) * percent // 100
-        if busctl("call", *disp, "SetBrightness", "iu", str(value), "0") is not None:
+        # 1: no on-screen sign (KDE's SuppressIndicator); the slider being dragged shows it.
+        if busctl("call", SCREENS[0], path, DISPLAY, "SetBrightness", "iu", str(value), "1") is not None:
             return
-    old = ("org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
-           "org.kde.Solid.PowerManagement.Actions.BrightnessControl")
-    top = busctl("call", *old, "brightnessMax")
+    top = busctl("call", *OLD_BRIGHTNESS, "brightnessMax")
     if top:
-        busctl("call", *old, "setBrightness", "i", str(int(top.split()[1]) * percent // 100))
+        busctl("call", *OLD_BRIGHTNESS, "setBrightnessSilent", "i", str(int(top.split()[1]) * percent // 100))
+
+
+def keyboard_light():
+    """The keyboard's backlight: {"level", "levels"} (a few steps), or None without one."""
+    top, now = busctl("call", *KEYBOARD_LIGHT, "keyboardBrightnessMax"), busctl("call", *KEYBOARD_LIGHT, "keyboardBrightness")
+    try:
+        top, now = int(top.split()[1]), int(now.split()[1])
+    except (AttributeError, IndexError, ValueError):
+        return None
+    return {"level": now, "levels": top} if top > 0 else None
+
+
+def set_keyboard_light(level):
+    busctl("call", *KEYBOARD_LIGHT, "setKeyboardBrightnessSilent", "i", str(level))
 
 
 # Monet's own switches ------------------------------------------------------
@@ -850,7 +905,7 @@ NO_ACTION, SLEEP, SHUT_DOWN, ASK, LOCK, SCREEN_OFF = 0, 1, 8, 16, 32, 64
 BUTTON_ACTIONS = (ASK, SLEEP, SHUT_DOWN, NO_ACTION)
 LID_ACTIONS = (SLEEP, LOCK, SCREEN_OFF, NO_ACTION)
 SCREEN_TIMES = (120, 300, 600, 900, 1800, 3600, 0)
-SLEEP_TIMES = (900, 1800, 3600, 7200, 0)
+SLEEP_TIMES = (300, 600, 900, 1800, 3600, 7200, 0)  # on battery from 5 minutes, KDE's 10 among them
 POWER_STATES = {"ac": ("AC", 600, 900), "battery": ("Battery", 300, 600)}  # group, screen off, sleep (KDE's)
 PROFILE_SERVICES = (("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/UPower/PowerProfiles"),
                     ("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"))
@@ -1124,14 +1179,24 @@ def storage_parts(total, free, home, games, apps, user_apps, trash):
     return {"games": games, "apps": apps + user_apps, "files": files + trash, "system": system, "free": free}
 
 
+def downloads_dir():
+    """The Downloads folder as the account names it (xdg-user-dirs: "Hämtningar" in Swedish), else ~/Downloads."""
+    try:
+        found = re.search(r'^XDG_DOWNLOAD_DIR="([^"]*)"', (CONFIG / "user-dirs.dirs").read_text(encoding="utf-8"), re.M)
+    except OSError:
+        found = None
+    path = Path(found.group(1).replace("$HOME", str(HOME))) if found else None
+    return path if path and path.is_absolute() and path != HOME else HOME / "Downloads"
+
+
 def storage():
     disk = shutil.disk_usage(HOME)
     games = du(DATA_HOME / "Steam/steamapps", HOME / "Games")
     trash = du(DATA_HOME / "Trash")
     parts = storage_parts(disk.total, disk.free, du(HOME), games, du("/var/lib/flatpak"),
                           du(DATA_HOME / "flatpak", HOME / ".var/app"), trash)
-    return dict(parts, total=disk.total, trash=trash, downloads=du(HOME / "Downloads"),
-                downloadsPath=str(HOME / "Downloads"))
+    downloads = downloads_dir()
+    return dict(parts, total=disk.total, trash=trash, downloads=du(downloads), downloadsPath=str(downloads))
 
 
 def empty_trash():
@@ -1358,11 +1423,11 @@ def game_libraries():
             except OSError:
                 free = None
             disk = disk_name(path)
-            found.append({"name": f"Steam on {disk}" if disk else "Steam", "path": str(path / "steamapps/common"),
+            found.append({"name": tr("Steam on %1", disk) if disk else "Steam", "path": str(path / "steamapps/common"),
                           "games": len(sizes), "size": sum(sizes), "free": free})
     games = HOME / "Games"
     if games.is_dir():
-        found.append({"name": "Games folder", "path": str(games),
+        found.append({"name": tr("Games folder"), "path": str(games),
                       "games": sum(1 for p in games.iterdir() if p.is_dir() and not p.name.startswith(".")),
                       "size": du(games), "free": shutil.disk_usage(games).free})
     return found
@@ -1384,6 +1449,158 @@ def set_overlay(on):
     if not MANGOHUD_CONF.exists():
         MANGOHUD_CONF.parent.mkdir(parents=True, exist_ok=True)
         MANGOHUD_CONF.write_text(MONETS_MANGOHUD)
+
+
+# Recently played (the desktop widget): the Steam games played last, newest
+# first, with their cover from Steam's own picture cache.
+
+STEAM_ROOTS = (DATA_HOME / "Steam", HOME / ".steam/steam", HOME / ".var/app/com.valvesoftware.Steam/.local/share/Steam")
+NOT_GAMES = re.compile(r"(Proton\b|Steam Linux Runtime|Steamworks Common|Steam Runtime)", re.I)
+
+
+def pick(tree, *keys):
+    """tree[k1][k2]..., the keys in any case (Steam's files differ in theirs), or {}."""
+    for key in keys:
+        if not isinstance(tree, dict):
+            return {}
+        tree = next((v for k, v in tree.items() if k.lower() == key.lower()), {})
+    return tree
+
+
+def steam_libraries(steam):
+    """The folders holding Steam's games (each with its steamapps): every library it lists, or itself."""
+    try:
+        listed = vdf((steam / "steamapps/libraryfolders.vdf").read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return [steam]
+    paths = [Path(e["path"]) for e in pick(listed, "libraryfolders").values() if isinstance(e, dict) and e.get("path")]
+    return paths or [steam]
+
+
+def last_played(steam):
+    """{appid: when it was last played (Unix time)}, from each Steam account on the PC."""
+    found = {}
+    for config in steam.glob("userdata/*/config/localconfig.vdf"):
+        try:
+            tree = vdf(config.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        for appid, info in pick(tree, "UserLocalConfigStore", "Software", "Valve", "Steam", "apps").items():
+            when = str(info.get("LastPlayed", "")) if isinstance(info, dict) else ""
+            if appid.isdigit() and when.isdigit():
+                found[appid] = max(found.get(appid, 0), int(when))
+    return found
+
+
+def steam_cover(steam, appid):
+    """The game's tall cover (or its banner) from Steam's picture cache, as a file URL, or ""."""
+    cache = steam / "appcache/librarycache"
+    for name in ("library_600x900.jpg", "library_600x900_2x.jpg", "header.jpg"):
+        # Older Steam keeps appid_name.jpg; newer, appid/name.jpg (sometimes a folder deeper).
+        for path in [cache / f"{appid}_{name}"] + sorted((cache / appid).glob(f"**/{name}")):
+            if path.is_file():
+                return path.as_uri()
+    return ""
+
+
+def played(limit=8):
+    """[{id, name, last, art}]: the installed Steam games played most recently."""
+    games = {}
+    for steam in STEAM_ROOTS:
+        if not (steam / "steamapps").is_dir():
+            continue
+        times = last_played(steam)
+        for library in steam_libraries(steam):
+            for manifest in sorted((library / "steamapps").glob("appmanifest_*.acf")):
+                try:
+                    state = pick(vdf(manifest.read_text(encoding="utf-8", errors="replace")), "AppState")
+                except OSError:
+                    continue
+                appid, name = str(state.get("appid", "")), str(state.get("name", ""))
+                own = str(state.get("LastPlayed", ""))
+                last = max(int(own) if own.isdigit() else 0, times.get(appid, 0))
+                if not appid.isdigit() or not name or not last or NOT_GAMES.match(name):
+                    continue
+                if appid not in games or games[appid]["last"] < last:
+                    games[appid] = {"id": appid, "name": name, "last": last, "art": steam_cover(steam, appid)}
+    return sorted(games.values(), key=lambda game: -game["last"])[:limit]
+
+
+def play(appid):
+    """Starts a Steam game, the way Steam's own Play does."""
+    url = f"steam://rungameid/{appid}"
+    for command in (["steam", url], ["flatpak", "run", "com.valvesoftware.Steam", url], ["xdg-open", url]):
+        if shutil.which(command[0]):
+            subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+
+
+# Day notes: one note a day, shared by the Calendar widget and the bar's clock (a
+# note written in one shows in the other), kept for the account in
+# ~/.local/share/monet/notes.json as {"2026-10-23": "…"}.
+
+NOTES = DATA_HOME / "monet/notes.json"
+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def notes():
+    try:
+        found = json.loads(NOTES.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(found, dict):
+        return {}
+    return {day: text for day, text in found.items() if DAY.fullmatch(str(day)) and isinstance(text, str) and text.strip()}
+
+
+def save_notes(found):
+    NOTES.parent.mkdir(parents=True, exist_ok=True)
+    temp = NOTES.with_name(NOTES.name + ".tmp")
+    temp.write_text(json.dumps(found, ensure_ascii=False, sort_keys=True, indent=1), encoding="utf-8")
+    temp.replace(NOTES)  # all of it or none: never half a file
+
+
+def set_note(day, text):
+    found = notes()
+    if text.strip():
+        found[day] = text
+    else:
+        found.pop(day, None)
+    save_notes(found)
+
+
+def merge_notes(more):
+    """Notes from before they were shared (the Calendar's own settings): added, never over one already kept."""
+    found = notes()
+    for day, text in (more if isinstance(more, dict) else {}).items():
+        if DAY.fullmatch(str(day)) and isinstance(text, str) and text.strip() and day not in found:
+            found[day] = text
+    save_notes(found)
+
+
+# The timer (the desktop widget) rings: its words, said by the widget in your
+# language, as a notification, and the sound theme's alarm.
+
+def sound(name):
+    """The file of a sound in the account's sound theme (KDE's Sounds setting), else in Monet's or Ocean's."""
+    themes = [kread("kdeglobals", "Sounds", "Theme"), "monet", "ocean", "freedesktop"]
+    for theme in filter(None, themes):
+        for folder in data_dirs():
+            for ext in ("oga", "ogg", "wav"):
+                path = folder / "sounds" / theme / "stereo" / f"{name}.{ext}"
+                if path.is_file():
+                    return path
+    return None
+
+
+def ring(title, body):
+    if shutil.which("notify-send"):
+        subprocess.Popen(["notify-send", "--app-name=Monet", "--icon=monet-timer", "--urgency=critical", title, body],
+                         start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    alarm = sound("alarm-clock-elapsed")
+    player = next((p for p in ("pw-play", "paplay") if shutil.which(p)), None)
+    if alarm and player:
+        subprocess.Popen([player, str(alarm)], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 # Accessibility -------------------------------------------------------------
@@ -1412,7 +1629,8 @@ def access_state():
     except ValueError:
         cursor = 24
     return {
-        "scale": round(shown[0][1] * 100) if shown else None,
+        # One size only when every screen agrees: a docked laptop keeps its own (Settings hides the row).
+        "scale": round(shown[0][1] * 100) if shown and len({scale for _, scale in shown}) == 1 else None,
         "cursor": cursor,
         "reduced": kread("kdeglobals", "KDE", "AnimationDurationFactor", MONETS_MOTION) in ("0", "0.0"),
         "reader": kread("kaccessrc", "ScreenReader", "Enabled", "false") == "true" if shutil.which("orca") else None,
@@ -1717,7 +1935,7 @@ def about():
         "processor": re.sub(r"\s+", " ", first("/proc/cpuinfo", "model name")),
         "graphics": ", ".join(gpus),
         "memory": memory,
-        "storage": f"{disk.free // 10**9} GB free of {disk.total // 10**9} GB",
+        "storage": tr("%1 GB free of %2 GB", disk.free // 10**9, disk.total // 10**9),
         "windows": windows.group(1).strip() if windows else "",
         "notice": read_text(Path("/var/lib/monet/switch-notice")),
         "setup": read_text(Path("/var/lib/monet/windows-setup")),
@@ -1771,23 +1989,38 @@ def open_settings(page):
     os.execvp("systemsettings", ["systemsettings"] + ([page] if page else []))
 
 
-def status():
-    battery = None
-    charging = False
+UPOWER_CHARGING, UPOWER_DISCHARGING = 1, 2
+
+
+def battery_state(upower):
+    """The battery, from UPower's display device (every battery together, as KDE shows it):
+    {battery: percent, charging, plugged (charging, full or held at a charge limit), minutes
+    (left on battery, or until full)}, or the first battery the kernel lists, or no battery."""
+    props = {k: v.get("data") for k, v in (upower or {}).items() if isinstance(v, dict)}
+    if props.get("IsPresent") and props.get("Type") == 2 and isinstance(props.get("Percentage"), (int, float)):
+        state = props.get("State")
+        seconds = props.get("TimeToEmpty") if state == UPOWER_DISCHARGING else props.get("TimeToFull") if state == UPOWER_CHARGING else 0
+        return {"battery": round(props["Percentage"]), "charging": state == UPOWER_CHARGING,
+                "plugged": state != UPOWER_DISCHARGING, "minutes": round(seconds / 60) if seconds else None}
     for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
         try:
-            battery = int((bat / "capacity").read_text())
-            charging = (bat / "status").read_text().strip() == "Charging"
-            break
+            level, text = int((bat / "capacity").read_text()), (bat / "status").read_text().strip()
         except (OSError, ValueError):
             continue
+        return {"battery": level, "charging": text == "Charging", "plugged": text != "Discharging", "minutes": None}
+    return {"battery": None, "charging": False, "plugged": True, "minutes": None}
+
+
+def status():
+    upower = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/DisplayDevice",
+                     "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.UPower.Device")
     return {
         "wifi": wifi_state(), "network": wifi_name(), "bluetooth": bluetooth_state(),
         "night": kread("kwinrc", "NightColor", "Active", "false") == "true",
         "quiet": bool(kread("plasmanotifyrc", "DoNotDisturb", "Until")),
         "volume": volume("@DEFAULT_AUDIO_SINK@"), "mic": volume("@DEFAULT_AUDIO_SOURCE@"),
-        "brightness": brightness_state(),
-        "battery": battery, "charging": charging, "light": light_state(),
+        "brightness": brightness_state(), "keyboard": keyboard_light(),
+        **battery_state(upower[0] if upower else None), "light": light_state(),
     }
 
 
@@ -1799,7 +2032,7 @@ def main(argv):
     elif cmd == "wifi":
         run("nmcli", "radio", "wifi", "on" if on else "off")
     elif cmd == "wifi-list":
-        emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or ""))
+        emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or "", saved_wifi()))
     elif cmd == "wifi-join" and args:
         command = ["nmcli", "device", "wifi", "connect", unhex(args[0])]
         if len(args) > 1 and args[1]:
@@ -1807,6 +2040,8 @@ def main(argv):
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         emit({"ok": result.returncode == 0, "message": (result.stdout or result.stderr).strip()})
     elif cmd == "bluetooth":
+        if on:
+            run("rfkill", "unblock", "bluetooth")  # KDE's own switch blocks the radio, which bluetoothctl can't undo
         run("bluetoothctl", "power", "on" if on else "off", timeout=5)
     elif cmd == "bt-list":
         emit(bt_list())
@@ -1830,6 +2065,8 @@ def main(argv):
         run("wpctl", "set-default", args[0])
     elif cmd == "brightness" and args and args[0].isdigit():
         set_brightness(max(1, min(int(args[0]), 100)))
+    elif cmd == "keyboard" and args and args[0].isdigit():
+        set_keyboard_light(min(int(args[0]), 100))
     elif cmd == "light" and args and args[0] in ("hours", "mist", "smoke"):
         set_light(args[0])
     elif cmd == "prefs":
@@ -1984,6 +2221,21 @@ def main(argv):
             set_default(args[0], app_id)
     elif cmd == "music":
         emit(music())
+    elif cmd == "notes":
+        emit(notes())
+    elif cmd == "note" and args and DAY.fullmatch(args[0]) and (len(args) == 1 or re.fullmatch(r"(?:[0-9a-f]{2})+", args[1])):
+        set_note(args[0], unhex(args[1]) if len(args) > 1 else "")
+    elif cmd == "notes-merge" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        try:
+            merge_notes(json.loads(unhex(args[0])))
+        except ValueError:
+            pass
+    elif cmd == "played":
+        emit(played())
+    elif cmd == "play" and args and args[0].isdigit():
+        play(args[0])
+    elif cmd == "ring" and len(args) == 2 and all(re.fullmatch(r"(?:[0-9a-f]{2})+", a) for a in args):
+        ring(unhex(args[0]), unhex(args[1]))
     elif cmd == "frames":
         frames()
     elif cmd == "zen":
@@ -1999,6 +2251,8 @@ def main(argv):
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "open" and (not args or args[0] in PAGES):
         open_settings(args[0] if args else "")
+    elif cmd == "say" and args:
+        print(tr(*args))
     elif cmd == "listen":
         listen()
     else:

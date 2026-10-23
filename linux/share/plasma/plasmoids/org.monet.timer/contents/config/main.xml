@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="minutes" type="Int">
+      <label>How long the timer runs, in minutes.</label>
+      <default>5</default>
+    </entry>
+    <entry name="ends" type="Double">
+      <label>When a running timer ends (milliseconds since 1970), so it keeps going if Plasma starts again; 0 when it isn't running.</label>
+      <default>0</default>
+    </entry>
+    <entry name="left" type="Double">
+      <label>Milliseconds left on a paused timer; 0 when it isn't paused.</label>
+      <default>0</default>
+    </entry>
+  </group>
+</kcfg>

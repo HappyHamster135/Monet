@@ -13,8 +13,8 @@ ls /dev/dri/renderD* >/dev/null 2>&1 || export WLR_RENDERER=pixman
 export WLR_NO_HARDWARE_CURSORS=1
 
 while true; do
-    read -r layout variant < /run/monet-setup/keyboard 2>/dev/null || { layout=us; variant=; }
-    XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant cage -s -- /usr/bin/monet-setup
+    read -r layout variant options < /run/monet-setup/keyboard 2>/dev/null || { layout=us; variant=; options=; }
+    XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant XKB_DEFAULT_OPTIONS=$options cage -s -- /usr/bin/monet-setup
     code=$?
     [ "$code" = 3 ] && continue
     sleep 1

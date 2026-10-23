@@ -22,6 +22,8 @@ import "timer.js" as AutoTriggerTimer
 
 Item {
     id: root
+    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.childrenInherit: true
     width: typeof screenGeometry === "undefined" ? 1440 : screenGeometry.width
     height: typeof screenGeometry === "undefined" ? 900 : screenGeometry.height
 
@@ -199,6 +201,7 @@ Item {
                             GradientStop { position: 1; color: "#245A50" }
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             anchors.centerIn: parent
                             anchors.verticalCenterOffset: -2
                             text: (root.firstName || "M").charAt(0).toUpperCase()
@@ -245,10 +248,10 @@ Item {
                     font.family: "Fraunces 72pt SuperSoft"
                     font.italic: root.choosing
                     font.pixelSize: root.choosing ? 26 : 30
-                    text: root.choosing ? (root.firstName ? i18nc("%1 is a first name", "See you soon, %1.", root.firstName) : i18n("See you soon."))
-                        : root.restarting ? i18n("Restart now?")
-                        : root.shuttingDown ? i18n("Shut down now?")
-                        : i18n("Sign out now?")
+                    text: root.choosing ? (root.firstName ? i18ndc("monet", "%1 is a first name", "See you soon, %1.", root.firstName) : i18nd("monet", "See you soon."))
+                        : root.restarting ? i18nd("monet", "Restart now?")
+                        : root.shuttingDown ? i18nd("monet", "Shut down now?")
+                        : i18nd("monet", "Sign out now?")
                 }
 
                 Text {
@@ -263,17 +266,17 @@ Item {
                     font.pixelSize: 14
                     lineHeight: 1.15
                     text: {
-                        const save = i18n("Open apps close, so save your work first.")
+                        const save = i18nd("monet", "Open apps close, so save your work first.")
                         if (!root.counting) {
                             return save
                         }
                         const left = root.restarting
-                            ? (softwareUpdatePending ? i18np("Your PC installs its updates and restarts in 1 second.", "Your PC installs its updates and restarts in %1 seconds.", root.remaining)
-                                                     : i18np("Your PC restarts in 1 second.", "Your PC restarts in %1 seconds.", root.remaining))
+                            ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and restarts in 1 second.", "Your PC installs its updates and restarts in %1 seconds.", root.remaining)
+                                                     : i18ndp("monet", "Your PC restarts in 1 second.", "Your PC restarts in %1 seconds.", root.remaining))
                             : root.shuttingDown
-                            ? (softwareUpdatePending ? i18np("Your PC installs its updates and shuts down in 1 second.", "Your PC installs its updates and shuts down in %1 seconds.", root.remaining)
-                                                     : i18np("Your PC shuts down in 1 second.", "Your PC shuts down in %1 seconds.", root.remaining))
-                            : i18np("You'll be signed out in 1 second.", "You'll be signed out in %1 seconds.", root.remaining)
+                            ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and shuts down in 1 second.", "Your PC installs its updates and shuts down in %1 seconds.", root.remaining)
+                                                     : i18ndp("monet", "Your PC shuts down in 1 second.", "Your PC shuts down in %1 seconds.", root.remaining))
+                            : i18ndp("monet", "You'll be signed out in 1 second.", "You'll be signed out in %1 seconds.", root.remaining)
                         return left + "\n" + save
                     }
                 }
@@ -282,13 +285,13 @@ Item {
                 Repeater {
                     model: [
                         otherSessions.count > 0 && (!root.choosing || maysd)
-                            ? i18np("Someone else is signed in too. They lose anything they haven't saved.",
+                            ? i18ndp("monet", "Someone else is signed in too. They lose anything they haven't saved.",
                                     "%1 other people are signed in too. They lose anything they haven't saved.", otherSessions.count) : "",
                         rebootToFirmwareSetup && (root.choosing || root.restarting)
-                            ? (isUefi ? i18n("When it restarts, the PC opens its UEFI settings.") : i18n("When it restarts, the PC opens its firmware settings.")) : "",
-                        rebootToBootLoaderMenu && (root.choosing || root.restarting) ? i18n("When it restarts, the PC opens its boot menu.") : "",
+                            ? (isUefi ? i18nd("monet", "When it restarts, the PC opens its setup screen (BIOS).") : i18nd("monet", "When it restarts, the PC opens its firmware settings.")) : "",
+                        rebootToBootLoaderMenu && (root.choosing || root.restarting) ? i18nd("monet", "When it restarts, the PC opens its boot menu.") : "",
                         rebootToBootLoaderEntry !== "" && (root.choosing || root.restarting)
-                            ? i18nc("%1 is what the PC starts next", "When it restarts, the PC starts %1.", rebootToBootLoaderEntry) : ""
+                            ? i18ndc("monet", "%1 is what the PC starts next", "When it restarts, the PC starts %1.", rebootToBootLoaderEntry) : ""
                     ].filter(note => note !== "")
                     delegate: Text {
                         required property string modelData
@@ -314,7 +317,7 @@ Item {
 
                     Pill {
                         id: cancelPill
-                        text: i18n("Cancel")
+                        text: i18nd("monet", "Cancel")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -326,9 +329,9 @@ Item {
                     Pill {
                         id: goPill
                         focus: !root.choosing
-                        text: root.restarting ? (softwareUpdatePending ? i18n("Update and restart") : i18n("Restart"))
-                            : root.shuttingDown ? (softwareUpdatePending ? i18n("Update and shut down") : i18n("Shut down"))
-                            : i18n("Sign out")
+                        text: root.restarting ? (softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart"))
+                            : root.shuttingDown ? (softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down"))
+                            : i18nd("monet", "Sign out")
                         ink: root.paper
                         tint: root.sun
                         ring: root.ink
@@ -355,7 +358,7 @@ Item {
                         id: sleepChoice
                         visible: spdMethods.SuspendState
                         sign: "system-suspend"
-                        text: i18n("Sleep")
+                        text: i18nd("monet", "Sleep")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -365,7 +368,7 @@ Item {
                     Choice {
                         visible: spdMethods.HibernateState
                         sign: "system-suspend-hibernate"
-                        text: i18n("Hibernate")
+                        text: i18nd("monet", "Hibernate")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -375,7 +378,7 @@ Item {
                     Choice {
                         visible: maysd
                         sign: softwareUpdatePending ? "system-reboot-update" : "system-reboot"
-                        text: softwareUpdatePending ? i18n("Update and restart") : i18n("Restart")
+                        text: softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -387,7 +390,7 @@ Item {
                         visible: maysd
                         focus: root.choosing
                         sign: softwareUpdatePending ? "system-shutdown-update" : "system-shutdown"
-                        text: softwareUpdatePending ? i18n("Update and shut down") : i18n("Shut down")
+                        text: softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -397,7 +400,7 @@ Item {
                     Choice {
                         visible: canLogout
                         sign: "system-log-out"
-                        text: i18n("Sign out")
+                        text: i18nd("monet", "Sign out")
                         ink: root.ink
                         tint: root.pebble
                         ring: root.lily
@@ -413,7 +416,7 @@ Item {
                     Layout.topMargin: Kirigami.Units.smallSpacing
                     implicitWidth: cancelLabel.implicitWidth + 28
                     implicitHeight: 32
-                    text: i18n("Cancel")
+                    text: i18nd("monet", "Cancel")
                     onClicked: root.cancelRequested()
                     Accessible.name: text
                     background: Rectangle {

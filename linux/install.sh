@@ -114,12 +114,20 @@ done
 # Change Avatar (which lists every picture under plasma/avatars).
 tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"
 for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
-    org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame; do
+    org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame org.monet.system org.monet.played \
+    org.monet.timer org.monet.worldclock; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 # The desktop widgets share one glass.
-for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes; do
+for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
+    org.monet.played org.monet.timer org.monet.worldclock; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
+done
+# The Calendar and the bar's clock share the month, the day's note and the notes themselves.
+for applet in org.monet.calendar org.monet.clock; do
+    for part in Month DayNotes NoteStore; do
+        install -m 644 "$SRC/share/monet/widgets/$part.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/$part.qml"
+    done
 done
 fill "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/main.qml" \
     "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/*.qml
@@ -137,6 +145,17 @@ tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
 # The sounds, felt and glass; KDE's Ocean plays the few Monet leaves out.
 tree "$SRC/share/sounds/monet" "$DATADIR/sounds/monet"
+# Monet's words in other languages (tools/make-translations.py): one catalog, also
+# under the names Plasma looks for a widget's and the painting's words by.
+for catalog in "$SRC"/share/locale/*/LC_MESSAGES/monet.mo; do
+    [ -f "$catalog" ] || continue
+    words="$DATADIR/locale/${catalog#"$SRC/share/locale/"}"
+    install -D -m 644 "$catalog" "$words"
+    for applet in "$DATADIR"/plasma/plasmoids/org.monet.*; do
+        ln -sfn monet.mo "${words%/*}/plasma_applet_${applet##*/}.mo"
+    done
+    ln -sfn monet.mo "${words%/*}/plasma_wallpaper_org.monet.hours.mo"
+done
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
@@ -186,6 +205,8 @@ cp -r "$SRC/share/monet/gtk" "$DATADIR/monet/gtk"
 cp -r "$SRC/share/monet/zen" "$DATADIR/monet/zen"
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
+# Apps' menu names in each language, which monet-look gives the apps it renames.
+install -m 644 "$SRC/share/monet/names.tsv" "$DATADIR/monet/names.tsv"
 # What's new in this Monet (tools/package.sh puts the release notes in the package).
 if [ -f "$SRC/share/monet/release-notes.md" ]; then
     install -m 644 "$SRC/share/monet/release-notes.md" "$DATADIR/monet/release-notes.md"

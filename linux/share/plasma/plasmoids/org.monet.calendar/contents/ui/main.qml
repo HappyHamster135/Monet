@@ -1,15 +1,19 @@
 /*
  * Calendar: the month on Monet's glass, its name in Fraunces and today on a
  * dab of the sun. The arrows (or the wheel) turn the page; a click on the
- * name comes back to today. Click a day for its page: the date in Fraunces,
- * ‹ › to the day before or after, and a note for that day, kept as you type.
- * Days with a note have a dot of lily under them. Made wide, the month and
- * the day sit side by side.
+ * name comes back to today. A click chooses a day; a day with a note has a
+ * dot of lily (point at it to read the note), and the line under the month
+ * says the chosen day's note.
+ *
+ * The notes come out beside the month: the Notes button, the line, or a click
+ * on the chosen day brings out a panel with the day's note to read and write,
+ * the day before and after, and what's coming up. Made wide, the month and
+ * the notes sit side by side on the card. The notes are the bar clock's too
+ * (Monet's helper keeps them), so a note written there shows here.
  */
 import QtQuick
-import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import QtQuick.Templates as T
+import QtQuick.Window
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
@@ -18,92 +22,45 @@ PlasmoidItem {
     id: root
 
     property date today: new Date()
-    // The month on the page: its first day.
-    property date shown: new Date(today.getFullYear(), today.getMonth(), 1)
-    // The day whose page is open, and whether it is (side by side, it always is).
-    property date day: today
-    property bool dayOpen: false
-    readonly property int firstWeekday: Qt.locale().firstDayOfWeek  // 0 is Sunday
-
-    // Notes by day ("2026-10-22": "…"), kept in the widget's settings.
-    readonly property var notes: {
-        try {
-            return JSON.parse(Plasmoid.configuration.notes || "{}");
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function key(d) {
-        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    }
-
-    function noteFor(d) {
-        return notes[key(d)] || "";
-    }
-
-    function write(d, text) {
-        const all = Object.assign({}, notes);
-        if (text.trim() === "") {
-            delete all[key(d)];
-        } else {
-            all[key(d)] = text;
-        }
-        Plasmoid.configuration.notes = JSON.stringify(all);
-    }
-
-    function sameDay(a, b) {
-        return a.toDateString() === b.toDateString();
-    }
-
-    function turn(by) {
-        shown = new Date(shown.getFullYear(), shown.getMonth() + by, 1);
-    }
-
-    function pick(d) {
-        day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        shown = new Date(d.getFullYear(), d.getMonth(), 1);
-        dayOpen = true;
-    }
-
-    function step(by) {
-        pick(new Date(day.getFullYear(), day.getMonth(), day.getDate() + by));
-    }
-
-    // The 42 days the page shows, from the week the month starts in.
-    readonly property var days: {
-        const lead = (shown.getDay() - firstWeekday + 7) % 7;
-        const out = [];
-        for (let i = 0; i < 42; i++) {
-            out.push(new Date(shown.getFullYear(), shown.getMonth(), 1 - lead + i));
-        }
-        return out;
-    }
+    // The notes panel, beside the card (on a wide card they're always out).
+    property bool notesOpen: false
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "x-office-calendar"
     preferredRepresentation: fullRepresentation
-    toolTipMainText: Qt.formatDate(today, Qt.locale().dateFormat(Locale.LongFormat))
-    toolTipSubText: noteFor(today) !== "" ? noteFor(today).split("\n")[0] : ""
+    toolTipMainText: Qt.locale().toString(today, Qt.locale().dateFormat(Locale.LongFormat))
+    toolTipSubText: noteStore.noteFor(today).split("\n")[0]
+
+    NoteStore {
+        id: noteStore
+        helper: "@LIBEXECDIR@/monet-quick"
+    }
+
+    Component.onCompleted: {
+        noteStore.refresh();
+        // Notes this widget kept in its own settings, before they were shared: handed over once.
+        let older = {};
+        try {
+            older = JSON.parse(Plasmoid.configuration.notes || "{}");
+        } catch (e) {
+        }
+        if (Object.keys(older).length > 0) {
+            noteStore.merge(older);
+            Plasmoid.configuration.notes = "";
+        }
+    }
 
     Timer {
-        // The day turns at midnight.
+        // The day turns at midnight; and a look at the notes, for ones written at the clock.
         interval: 60 * 1000
         running: true
         repeat: true
         onTriggered: {
             const now = new Date();
             if (now.getDate() !== root.today.getDate()) {
-                const following = root.shown.getMonth() === root.today.getMonth();
-                const onToday = root.sameDay(root.day, root.today);
                 root.today = now;
-                if (following) {
-                    root.shown = new Date(now.getFullYear(), now.getMonth(), 1);
-                }
-                if (onToday) {
-                    root.day = now;
-                }
             }
+            noteStore.refresh();
         }
     }
 
@@ -112,11 +69,47 @@ PlasmoidItem {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 11
         Layout.minimumHeight: Kirigami.Units.gridUnit * 11
         Layout.preferredWidth: Kirigami.Units.gridUnit * 12
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 12
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 13
+        // Right to left, the month runs from the right and the notes come out on its left.
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
 
+        readonly property bool mirrored: LayoutMirroring.enabled
         readonly property bool wide: width >= Kirigami.Units.gridUnit * 20
         readonly property int margin: Math.round(Kirigami.Units.gridUnit * 0.8)
-        readonly property bool showsDay: wide || root.dayOpen
+
+        // The panel beside the card, on the side the month reads towards (the other one near the screen's edge).
+        function placeNotes() {
+            const at = card.mapToGlobal(0, 0);
+            const left = face.Screen.virtualX, top = face.Screen.virtualY;
+            const right = left + face.Screen.width, bottom = top + face.Screen.height;
+            const after = at.x + card.width + 12, before = at.x - side.width - 12;
+            let x = face.mirrored ? before : after;
+            if (x + side.width > right - 8 || x < left + 8) {
+                x = x === after ? before : after;
+            }
+            side.x = Math.round(Math.max(left + 8, Math.min(x, right - side.width - 8)));
+            side.y = Math.round(Math.max(top + 8, Math.min(at.y, bottom - side.height - 8)));
+        }
+
+        function openNotes() {
+            if (face.wide) {
+                inline.write();
+                return;
+            }
+            placeNotes();
+            root.notesOpen = true;
+            notes.write();
+        }
+
+        Connections {
+            target: root
+            function onNotesOpenChanged() {
+                if (root.notesOpen) {
+                    face.placeNotes();
+                }
+            }
+        }
 
         Glass {
             id: card
@@ -124,368 +117,92 @@ PlasmoidItem {
 
             readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
 
-            // The month.
-            ColumnLayout {
-                id: monthPage
-                x: face.margin
+            // Whenever the pointer comes, a look at the notes, so the clock's show at once.
+            HoverHandler {
+                onHoveredChanged: if (hovered) noteStore.refresh()
+            }
+
+            Month {
+                id: month
+                x: face.mirrored ? card.width - width - face.margin : face.margin
                 y: face.margin
                 width: face.wide ? Kirigami.Units.gridUnit * 10.4 : card.width - 2 * face.margin
                 height: card.height - 2 * face.margin
-                spacing: Kirigami.Units.smallSpacing
-                opacity: face.wide || !root.dayOpen ? 1 : 0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-                RowLayout {
-                    Layout.fillWidth: true
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: Qt.locale().standaloneMonthName(root.shown.getMonth())
-                              + (root.shown.getFullYear() !== root.today.getFullYear() ? " " + root.shown.getFullYear() : "")
-                        color: card.ink
-                        elide: Text.ElideRight
-                        font.family: "Fraunces 72pt SuperSoft"
-                        font.pixelSize: 20
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: root.shown = new Date(root.today.getFullYear(), root.today.getMonth(), 1)
-                        }
-                    }
-                    Repeater {
-                        model: [-1, 1]
-                        Text {
-                            required property int modelData
-                            text: modelData < 0 ? "‹" : "›"
-                            color: turnArea.containsMouse ? card.ink : card.dim
-                            font.family: "Inter"
-                            font.pixelSize: 20
-                            Layout.preferredWidth: 18
-                            horizontalAlignment: Text.AlignHCenter
-                            Accessible.role: Accessible.Button
-                            Accessible.name: modelData < 0 ? i18n("Previous month") : i18n("Next month")
-                            MouseArea {
-                                id: turnArea
-                                anchors.fill: parent
-                                anchors.margins: -6
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.turn(parent.modelData)
-                            }
-                        }
+                today: root.today
+                store: noteStore
+                ink: card.ink
+                dim: card.dim
+                lily: card.lily
+                notesButton: !face.wide
+                notesShown: root.notesOpen
+                // Wide, the notes are already beside the month: no line for them under it.
+                peekLine: !face.wide
+                onNotesToggled: {
+                    if (root.notesOpen) {
+                        root.notesOpen = false;
+                    } else {
+                        face.openNotes();
                     }
                 }
-
-                GridLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    columns: 7
-                    rowSpacing: 0
-                    columnSpacing: 0
-
-                    // The wheel turns the month, a notch at a time.
-                    WheelHandler {
-                        property real gathered: 0
-                        onWheel: event => {
-                            gathered += event.angleDelta.y;
-                            if (Math.abs(gathered) >= 120) {
-                                root.turn(gathered > 0 ? -1 : 1);
-                                gathered = 0;
-                            }
-                        }
-                    }
-
-                    // The days of the week, as letters.
-                    Repeater {
-                        model: 7
-                        Text {
-                            required property int index
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            horizontalAlignment: Text.AlignHCenter
-                            text: Qt.locale().dayName((root.firstWeekday + index) % 7, Locale.NarrowFormat)
-                            color: card.dim
-                            font.family: "Inter"
-                            font.pixelSize: 10
-                            font.weight: Font.DemiBold
-                        }
-                    }
-
-                    Repeater {
-                        model: root.days
-                        Item {
-                            id: cell
-                            required property var modelData
-                            readonly property bool inMonth: modelData.getMonth() === root.shown.getMonth()
-                            readonly property bool isToday: root.sameDay(modelData, root.today)
-                            readonly property bool isPicked: face.showsDay && root.sameDay(modelData, root.day)
-                            readonly property bool noted: root.noteFor(modelData) !== ""
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.fillHeight: true
-                            implicitHeight: 20
-                            Accessible.role: Accessible.Button
-                            Accessible.name: Qt.formatDate(modelData, Qt.locale().dateFormat(Locale.LongFormat))
-
-                            readonly property real side: Math.min(width, height) - 2
-
-                            // Under the pointer, a faint wash.
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: cell.side
-                                height: width
-                                radius: width / 2
-                                color: card.ink
-                                opacity: dayArea.containsMouse && !cell.isToday ? 0.07 : 0
-                            }
-                            // Today: a dab of the sun.
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: cell.side
-                                height: width
-                                radius: width / 2
-                                visible: cell.isToday
-                                gradient: Gradient {
-                                    GradientStop { position: 0; color: "#FF7A45" }
-                                    GradientStop { position: 1; color: "#E2471F" }
-                                }
-                            }
-                            // The open day: a ring of lily.
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: cell.side + 2
-                                height: width
-                                radius: width / 2
-                                color: "transparent"
-                                border.width: 2
-                                border.color: card.lily
-                                visible: cell.isPicked && !cell.isToday
-                            }
-                            Text {
-                                anchors.centerIn: parent
-                                anchors.verticalCenterOffset: cell.noted ? -1 : 0
-                                text: cell.modelData.getDate()
-                                color: cell.isToday ? "#FBF7EE" : card.ink
-                                opacity: cell.inMonth ? 1 : 0.32
-                                font.family: "Inter"
-                                font.pixelSize: 12
-                                font.weight: cell.isToday || cell.isPicked ? Font.DemiBold : Font.Normal
-                            }
-                            // A note that day.
-                            Rectangle {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.top: parent.verticalCenter
-                                anchors.topMargin: 6
-                                width: 4
-                                height: 4
-                                radius: 2
-                                visible: cell.noted
-                                color: cell.isToday ? "#FBF7EE" : card.lily
-                                opacity: cell.inMonth ? 1 : 0.4
-                            }
-                            MouseArea {
-                                id: dayArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.pick(cell.modelData)
-                            }
-                        }
-                    }
-                }
+                onOpened: face.openNotes()
             }
 
-            // Between the two, side by side.
+            // Wide: the notes beside the month, on the card.
             Rectangle {
                 visible: face.wide
-                x: monthPage.x + monthPage.width + face.margin - 1
+                x: face.mirrored ? month.x - face.margin : month.x + month.width + face.margin - 1
                 y: face.margin
                 width: 1
                 height: card.height - 2 * face.margin
                 color: card.ink
                 opacity: 0.1
             }
-
-            // The day.
-            ColumnLayout {
-                id: dayPage
-                x: face.wide ? monthPage.x + monthPage.width + 2 * face.margin : face.margin
+            DayNotes {
+                id: inline
+                visible: face.wide
+                x: face.mirrored ? face.margin : month.x + month.width + 2 * face.margin
                 y: face.margin
-                width: card.width - x - face.margin
+                width: card.width - month.width - 4 * face.margin
                 height: card.height - 2 * face.margin
-                spacing: Kirigami.Units.smallSpacing
-                opacity: face.showsDay ? 1 : 0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                store: noteStore
+                day: month.chosen
+                today: root.today
+                ink: card.ink
+                dim: card.dim
+                lily: card.lily
+                onMoved: day => month.choose(day)
+            }
+        }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
+        // The notes, brought out beside the card.
+        PlasmaCore.Dialog {
+            id: side
+            visible: root.notesOpen && !face.wide
+            location: PlasmaCore.Types.Floating
+            hideOnWindowDeactivate: false
+            onVisibleChanged: if (!visible) root.notesOpen = false
 
-                    // Back to the month.
-                    T.AbstractButton {
-                        id: back
-                        visible: !face.wide
-                        text: "‹ " + Qt.locale().standaloneMonthName(root.day.getMonth())
-                        implicitWidth: backLabel.implicitWidth + 12
-                        implicitHeight: 24
-                        Accessible.name: i18n("Back to the month")
-                        onClicked: root.dayOpen = false
-                        background: Rectangle {
-                            radius: height / 2
-                            color: card.ink
-                            opacity: back.hovered ? 0.08 : 0
-                        }
-                        contentItem: Text {
-                            id: backLabel
-                            text: back.text
-                            color: card.dim
-                            leftPadding: 6
-                            verticalAlignment: Text.AlignVCenter
-                            font.family: "Inter"
-                            font.pixelSize: 12
-                        }
-                    }
-                    Item {
-                        Layout.fillWidth: true
-                    }
-                    T.AbstractButton {
-                        id: toToday
-                        visible: !root.sameDay(root.day, root.today)
-                        text: i18n("Today")
-                        implicitWidth: todayLabel.implicitWidth + 18
-                        implicitHeight: 24
-                        onClicked: root.pick(root.today)
-                        background: Rectangle {
-                            radius: height / 2
-                            color: card.lily
-                            opacity: toToday.hovered ? 0.2 : 0.12
-                        }
-                        contentItem: Text {
-                            id: todayLabel
-                            text: toToday.text
-                            color: card.lily
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            font.family: "Inter"
-                            font.pixelSize: 12
-                            font.weight: Font.DemiBold
-                        }
-                    }
-                    // The day before, the day after.
-                    Repeater {
-                        model: [-1, 1]
-                        Text {
-                            required property int modelData
-                            text: modelData < 0 ? "‹" : "›"
-                            color: stepArea.containsMouse ? card.ink : card.dim
-                            font.family: "Inter"
-                            font.pixelSize: 20
-                            Layout.preferredWidth: 20
-                            horizontalAlignment: Text.AlignHCenter
-                            Accessible.role: Accessible.Button
-                            Accessible.name: modelData < 0 ? i18n("The day before") : i18n("The day after")
-                            MouseArea {
-                                id: stepArea
-                                anchors.fill: parent
-                                anchors.margins: -4
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.step(parent.modelData)
-                            }
-                        }
-                    }
-                }
+            mainItem: Item {
+                width: Kirigami.Units.gridUnit * 18
+                height: Math.max(Kirigami.Units.gridUnit * 17, card.height)
+                // Mist or smoke, from the colors Monet's light chose.
+                readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+                LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+                LayoutMirroring.childrenInherit: true
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Kirigami.Units.smallSpacing
-
-                    // The date, today's in the sun's color.
-                    Text {
-                        text: root.day.getDate()
-                        color: root.sameDay(root.day, root.today) ? "#E2471F" : card.ink
-                        font.family: "Fraunces 72pt SuperSoft"
-                        font.pixelSize: 40
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Text {
-                            Layout.fillWidth: true
-                            text: Qt.locale().dayName(root.day.getDay(), Locale.LongFormat)
-                            color: card.ink
-                            elide: Text.ElideRight
-                            font.family: "Fraunces 72pt SuperSoft"
-                            font.italic: true
-                            font.pixelSize: 17
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: Qt.locale().standaloneMonthName(root.day.getMonth()) + " " + root.day.getFullYear()
-                            color: card.dim
-                            elide: Text.ElideRight
-                            font.family: "Inter"
-                            font.pixelSize: 12
-                        }
-                    }
-                }
-
-                // The day's note, on a sheet of the glass.
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    radius: 12
-                    color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.05)
-                    border.width: note.activeFocus ? 2 : 0
-                    border.color: card.lily
-
-                    QQC2.ScrollView {
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
-
-                        QQC2.TextArea {
-                            id: note
-                            // The day this text belongs to, so a pending save keeps to it.
-                            property date written: root.day
-                            placeholderText: i18n("Nothing planned. Write something for this day…")
-                            placeholderTextColor: card.dim
-                            color: card.ink
-                            wrapMode: TextEdit.Wrap
-                            font.family: "Inter"
-                            font.pixelSize: 13
-                            selectionColor: "#9FD3C4"
-                            selectedTextColor: "#1C1B19"
-                            background: null
-                            Keys.onEscapePressed: {
-                                note.focus = false;
-                                root.dayOpen = false;
-                            }
-                            onTextChanged: if (activeFocus) keep.restart()
-                            Component.onCompleted: text = root.noteFor(root.day)
-                        }
-                    }
-
-                    Timer {
-                        id: keep
-                        interval: 600
-                        onTriggered: root.write(note.written, note.text)
-                    }
-
-                    // Another day: keep what was written, then show its own.
-                    Connections {
-                        target: root
-                        function onDayChanged() {
-                            if (keep.running) {
-                                keep.stop();
-                                root.write(note.written, note.text);
-                            }
-                            note.written = root.day;
-                            note.text = root.noteFor(root.day);
-                        }
-                    }
+                DayNotes {
+                    id: notes
+                    anchors.fill: parent
+                    anchors.margins: Kirigami.Units.smallSpacing
+                    store: noteStore
+                    day: month.chosen
+                    today: root.today
+                    ink: Kirigami.Theme.textColor
+                    dim: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.62)
+                    lily: parent.smoke ? "#4DB4A0" : "#357F72"
+                    closable: true
+                    onMoved: day => month.choose(day)
+                    onClosed: root.notesOpen = false
                 }
             }
         }

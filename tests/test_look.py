@@ -57,7 +57,7 @@ class PlasmaPackages(unittest.TestCase):
 
     def test_ids_match_folders(self):
         for kind, folder in self.packages():
-            meta = json.loads((folder / "metadata.json").read_text())
+            meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
             self.assertEqual(meta["KPlugin"]["Id"], folder.name, folder)
 
     def test_widgets_have_their_ui(self):
@@ -1004,7 +1004,7 @@ class Icons(unittest.TestCase):
     def test_monets_desktop_widgets_have_an_icon_each(self):
         # The widget gallery lists them by icon: a painting each, not the sun twice.
         desktop = DesktopWidgets.WIDGETS + ("org.monet.placard",)
-        icons = {w: json.loads((PLASMA / "plasmoids" / w / "metadata.json").read_text())["KPlugin"]["Icon"] for w in desktop}
+        icons = {w: json.loads((PLASMA / "plasmoids" / w / "metadata.json").read_text(encoding="utf-8"))["KPlugin"]["Icon"] for w in desktop}
         self.assertEqual(len(set(icons.values())), len(desktop), icons)
         for widget, icon in icons.items():
             self.assertTrue(list(self.THEME.glob(f"*/scalable/{icon}.svg")), widget)
@@ -1064,8 +1064,24 @@ class MonetsOwn(unittest.TestCase):
         self.assertIn("help_about_kde", self.LOOK)
         # The two looks are just Mist and Smoke.
         for theme, name in (("org.monet.desktop", "Mist"), ("org.monet.smoke.desktop", "Smoke")):
-            meta = json.loads((PLASMA / "look-and-feel" / theme / "metadata.json").read_text())
+            meta = json.loads((PLASMA / "look-and-feel" / theme / "metadata.json").read_text(encoding="utf-8"))
             self.assertEqual(meta["KPlugin"]["Name"], name)
+
+    def test_kdes_brightness_panel_and_its_dark_mode_stay_out_of_the_bar(self):
+        # Plasma 6 keeps the tray's items in the tray's own settings: the layout writes them there,
+        # and monet-fresh finds the tray among the bar's applets ([Containments][bar][Applets][tray]).
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
+            self.assertNotIn("SystrayContainmentId", layout)
+            for piece in ('tray.currentConfigGroup = ["General"]', 'tray.writeConfig("knownItems", known)',
+                          'item !== "org.kde.plasma.brightness"', "tray.reloadConfig()"):
+                self.assertIn(piece, layout)
+        fresh = (ROOT / "linux/libexec/monet-fresh").read_text()
+        self.assertIn(r"/^plugin=org\.kde\.plasma\.systemtray$/", fresh)
+        self.assertIn('--group Containments --group "$bar" --group Applets --group "$tray" --group General', fresh)
+        self.assertNotIn("private.systemtray", fresh)
+        # Accounts the old way missed get it once more; one without a tray yet, at the next sign-in.
+        self.assertIn('[ -n "$trays" ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/tray-brightness-6"', fresh)
 
     def test_apps_go_by_plain_names(self):
         for app, name in (("org.kde.dolphin", "Files"), ("org.kde.konsole", "Terminal"), ("org.kde.gwenview", "Photos"),
@@ -1113,8 +1129,9 @@ class MonetsOwn(unittest.TestCase):
         self.assertIn("X-Monet=true", uninstall)
         self.assertIn("KDE Control Module Restrictions", uninstall)
         self.assertIn("KDE Action Restrictions", uninstall)
-        # Every menu entry monet-look writes carries the mark uninstall.sh looks for.
-        self.assertEqual(self.LOOK.count("X-Monet=true"), 3)
+        # Every menu entry monet-look writes carries the mark uninstall.sh looks for
+        # (and localized() puts an app's names in other languages under it).
+        self.assertEqual(self.LOOK.count("X-Monet=true"), 4)
 
     def test_the_stores_front_page_is_monets(self):
         store = SHARE / "monet/store"
@@ -1143,8 +1160,10 @@ class MonetsOwn(unittest.TestCase):
 
 
 class DesktopWidgets(unittest.TestCase):
-    """Weather, Calendar, Now Playing, Note and Photo Frame, on the desktop."""
-    WIDGETS = ("org.monet.weather", "org.monet.calendar", "org.monet.nowplaying", "org.monet.notes", "org.monet.frame")
+    """Weather, Calendar, Now Playing, Note, Photo Frame, System, Recently Played, Timer and World Clock,
+    on the desktop."""
+    WIDGETS = ("org.monet.weather", "org.monet.calendar", "org.monet.nowplaying", "org.monet.notes", "org.monet.frame",
+               "org.monet.system", "org.monet.played", "org.monet.timer", "org.monet.worldclock")
 
     def test_installed_and_removed(self):
         install = (ROOT / "linux/install.sh").read_text()
@@ -1224,13 +1243,67 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn("Plasmoid.configuration.place = place.name", weather)
         self.assertIn("onClicked: root.choosing = true", weather)
 
-    def test_calendar_days_open_with_their_notes(self):
-        # A day is clicked for its page, stepped through, and written on; the notes stay in the widget's settings.
+    def test_weather_goes_through_its_places(self):
+        # Every place is kept in order; the arrows step through them, a new one joins the end, one can go.
+        weather = (PLASMA / "plasmoids/org.monet.weather/contents/ui/main.qml").read_text(encoding="utf-8")
+        for piece in ("onClicked: root.step(-1)", "onClicked: root.step(1)", "visible: root.places.length > 1",
+                      "keep(places.concat([place]))", "onTriggered: root.forget()", "all[wanted] = answer;"):
+            self.assertIn(piece, weather)
+        schema = (PLASMA / "plasmoids/org.monet.weather/contents/config/main.xml").read_text()
+        self.assertIn('<entry name="places" type="StringList">', schema)
+        settings = (PLASMA / "plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml").read_text(encoding="utf-8")
+        for piece in ("property var cfg_places", "onClicked: page.add(modelData)", "onClicked: page.remove(placeRow.index)"):
+            self.assertIn(piece, settings)
+
+    def test_widgets_leave_qts_anchor_names_alone(self):
+        # An Item's left, right, top and bottom are its anchor lines (FINAL): a property named so never loads.
+        for qml in (PLASMA / "plasmoids").glob("*/contents/ui/*.qml"):
+            text = qml.read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"property \w+ (left|right|top|bottom|horizontalCenter|verticalCenter|baseline)\b", text),
+                              qml)
+
+    def test_new_widgets_read_what_they_show(self):
+        system = (PLASMA / "plasmoids/org.monet.system/contents/ui/main.qml").read_text(encoding="utf-8")
+        for sensor in ("cpu/all/usage", "memory/physical/usedPercent", "gpu/gpu0/usage", "network/all/download"):
+            self.assertIn(f'sensorId: "{sensor}"', system)
+        played = (PLASMA / "plasmoids/org.monet.played/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn('runner.connectSource(root.helper + " played")', played)
+        self.assertIn('runner.connectSource(helper + " play " + id)', played)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        self.assertIn('elif cmd == "play" and args and args[0].isdigit():', quick)
+        timer = (PLASMA / "plasmoids/org.monet.timer/contents/ui/main.qml").read_text(encoding="utf-8")
+        # The end is kept, not the count: a timer keeps going if Plasma starts again.
+        self.assertIn("Plasmoid.configuration.ends = now + ", timer)
+        self.assertIn('helper + " ring " + hex(', timer)
+        self.assertIn("ring(unhex(args[0]), unhex(args[1]))", quick)
+        self.assertTrue((SHARE / "sounds/monet/stereo/alarm-clock-elapsed.oga").is_file())
+        clock = (PLASMA / "plasmoids/org.monet.worldclock/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("TimeZonesI18n.i18nCity(town.modelData)", clock)
+
+    def test_calendar_and_clock_share_the_day_notes(self):
+        # One month and one day's note for both widgets; the notes themselves are kept by Monet's helper.
         calendar = (PLASMA / "plasmoids/org.monet.calendar/contents/ui/main.qml").read_text(encoding="utf-8")
-        for piece in ("onClicked: root.pick(cell.modelData)", "onClicked: root.step(parent.modelData)",
-                      "Plasmoid.configuration.notes = JSON.stringify(all)", "visible: cell.noted", "WheelHandler {",
-                      "onClicked: root.pick(root.today)"):
-            self.assertIn(piece, calendar)
+        clock = (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml").read_text(encoding="utf-8")
+        for widget in (calendar, clock):
+            for piece in ("NoteStore {", "Month {", "DayNotes {", "store: noteStore"):
+                self.assertIn(piece, widget)
+        # The notes the Calendar kept in its own settings are handed over once.
+        self.assertIn("noteStore.merge(older);", calendar)
+        self.assertIn("for part in Month DayNotes NoteStore; do", (ROOT / "linux/install.sh").read_text(encoding="utf-8"))
+        month = (ROOT / "linux/share/monet/widgets/Month.qml").read_text(encoding="utf-8")
+        for piece in ("WheelHandler {", "onDoubleClicked: month.opened(cell.modelData)"):
+            self.assertIn(piece, month)
+        import tempfile
+        from unittest import mock
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(quick, "NOTES", Path(tmp) / "notes.json"):
+            self.assertEqual(quick.notes(), {})
+            quick.set_note("2026-10-22", "Buy linseed oil")
+            # Older notes never write over a day already kept.
+            quick.merge_notes({"2026-10-22": "older", "2026-10-24": "Varnish"})
+            self.assertEqual(quick.notes(), {"2026-10-22": "Buy linseed oil", "2026-10-24": "Varnish"})
+            quick.set_note("2026-10-22", "")
+            self.assertEqual(quick.notes(), {"2026-10-24": "Varnish"})
 
     def test_now_playing_starts_music_and_seeks(self):
         # Nothing playing: the music apps from the helper, started by it; playing: the line seeks, the cover raises.
@@ -1251,7 +1324,8 @@ class DesktopWidgets(unittest.TestCase):
                 self.assertTrue(color_type in (4, 6) or b"tRNS" in png, f"{widget} {name}")
 
     def test_settings_have_their_schema(self):
-        for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu", "org.monet.calendar"):
+        for widget in ("org.monet.weather", "org.monet.notes", "org.monet.menu", "org.monet.calendar", "org.monet.timer",
+                       "org.monet.worldclock"):
             schema = (PLASMA / "plasmoids" / widget / "contents/config/main.xml").read_text()
             used = set(re.findall(r"Plasmoid\.configuration\.(\w+)", (PLASMA / "plasmoids" / widget / "contents/ui/main.qml").read_text()))
             for key in used:
@@ -1267,10 +1341,16 @@ class LiquidGlass(unittest.TestCase):
         for gradient in ("rim-fall", "sheen"):
             self.assertIn(f'<linearGradient id="{gradient}"', svg)
             self.assertIn(f'url(#{gradient})', svg)
+        # Tooltips keep the hairline and the sheen, not the rim: on glass that small, a bright
+        # line inside the hairline reads as a second box.
+        for folder in ("", "translucent/", "solid/", "opaque/"):
+            tooltip = (self.STYLE / f"{folder}widgets/tooltip.svg").read_text()
+            self.assertNotIn("url(#rim-fall)", tooltip, folder)
+            self.assertIn('fill-opacity="0.13"', tooltip)  # the hairline
 
     def test_vibrancy_behind_the_glass(self):
         for style in ("monet", "monet-solid"):
-            meta = json.loads((PLASMA / "desktoptheme" / style / "metadata.json").read_text())
+            meta = json.loads((PLASMA / "desktoptheme" / style / "metadata.json").read_text(encoding="utf-8"))
             self.assertTrue(meta["ContrastEffect"]["enabled"])
             self.assertGreater(meta["ContrastEffect"]["saturation"], 1)
 
@@ -1653,6 +1733,47 @@ class MonetSettings(unittest.TestCase):
             self.assertEqual(found[0]["path"], str(steam / "steamapps/common"))
             self.assertEqual((found[2]["name"], found[2]["games"]), ("Games folder", 1))
 
+    def test_recently_played_comes_from_steam(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            steam = Path(tmp) / "Steam"
+            quick.STEAM_ROOTS = (steam,)
+            apps = steam / "steamapps"
+            apps.mkdir(parents=True)
+
+            def manifest(appid, name, last=None):
+                lines = [f'"appid"\t\t"{appid}"', f'"name"\t\t"{name}"'] + ([f'"LastPlayed"\t\t"{last}"'] if last else [])
+                (apps / f"appmanifest_{appid}.acf").write_text('"AppState"\n{\n' + "\n".join(lines) + "\n}\n")
+
+            manifest("620", "Portal 2", 1700000000)
+            manifest("1091500", "Cyberpunk 2077")  # its time is in the account's settings
+            manifest("1493710", "Proton Experimental", 1800000000)  # a tool, not a game
+            manifest("570", "Dota 2")  # never played
+            config = steam / "userdata/123/config"
+            config.mkdir(parents=True)
+            (config / "localconfig.vdf").write_text('"UserLocalConfigStore"\n{\n"Software"\n{\n"Valve"\n{\n"Steam"\n{\n"apps"\n'
+                                                    '{\n"1091500"\n{\n"LastPlayed"\t\t"1750000000"\n}\n}\n}\n}\n}\n}\n')
+            cache = steam / "appcache/librarycache"
+            (cache / "1091500").mkdir(parents=True)
+            (cache / "1091500/library_600x900.jpg").write_bytes(b"jpg")
+            (cache / "620_header.jpg").write_bytes(b"jpg")
+            found = quick.played()
+            self.assertEqual([game["id"] for game in found], ["1091500", "620"])
+            self.assertEqual(found[0]["last"], 1750000000)
+            self.assertTrue(found[0]["art"].endswith("/1091500/library_600x900.jpg"))
+            self.assertTrue(found[1]["art"].endswith("/620_header.jpg"))
+
+    def test_downloads_are_where_the_account_keeps_them(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            quick.HOME, quick.CONFIG = Path(tmp), Path(tmp) / ".config"
+            self.assertEqual(quick.downloads_dir(), Path(tmp) / "Downloads")
+            quick.CONFIG.mkdir()
+            (quick.CONFIG / "user-dirs.dirs").write_text('XDG_DOWNLOAD_DIR="$HOME/Hämtningar"\n', encoding="utf-8")
+            self.assertEqual(quick.downloads_dir(), Path(tmp) / "Hämtningar")
+
     def test_the_overlay_switches_and_keeps_your_own_look(self):
         import tempfile
         quick = quick_helper()
@@ -1676,7 +1797,7 @@ class MonetSettings(unittest.TestCase):
         self.assertIn('cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"', (ROOT / "tools/package.sh").read_text())
         self.assertIn('"$DATADIR/monet/release-notes.md"', (ROOT / "linux/install.sh").read_text())
         session = (ROOT / "linux/libexec/monet-session").read_text()
-        self.assertIn('--action=open="See what\'s new" --wait', session)
+        self.assertIn('--action=open="$(say "See what\'s new")" --wait', session)
         self.assertIn('[ "$answer" = open ] && "$LIBEXECDIR/monet-quick" open updates', session)
         qml = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
         self.assertIn('ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))', qml)
@@ -1752,6 +1873,11 @@ class MonetSettings(unittest.TestCase):
         times = lambda name: [int(s) for s in re.search(name + r": \[([\d, ]+)\]\.map", qml).group(1).split(",")]
         self.assertTrue(set(times("screenTimes")) <= set(helper.SCREEN_TIMES))
         self.assertTrue(set(times("sleepTimes")) <= set(helper.SLEEP_TIMES))
+        self.assertTrue(set(times("batterySleepTimes")) <= set(helper.SLEEP_TIMES))
+        # KDE's own times (what a new account has) are among the choices, so one is always shown as chosen.
+        for name, (group, screen, sleep) in helper.POWER_STATES.items():
+            self.assertIn(screen, times("screenTimes"), name)
+            self.assertIn(sleep, times("batterySleepTimes" if name == "battery" else "sleepTimes"), name)
         offered = [[int(v) for v in re.findall(r"\[(\d+), i18n", found)]
                    for found in re.findall(r"options: (\[\[\d+, i18n.*)", qml)]
         self.assertIn(sorted(helper.BUTTON_ACTIONS), [sorted(o) for o in offered])
@@ -1762,14 +1888,27 @@ class MonetSettings(unittest.TestCase):
         self.assertEqual(helper.POPUP_TIMES, (3, 5, 10))
 
     def test_quick_settings_opens_it(self):
-        main = (self.QUICK / "main.qml").read_text()
+        main = (self.QUICK / "main.qml").read_text(encoding="utf-8")
         self.assertIn("MonetSettings {", main)
-        self.assertIn('settings.open("")', main)
+        self.assertIn('onClicked: root.openSettings("")', main)
+        # Every tile's chevron opens its page (Night Light's is Display), apart from the switch.
+        for page in ("wifi", "bluetooth", "display", "notifications"):
+            self.assertIn(f'page: "{page}"', main)
+        self.assertEqual(main.count("onOpened: root.openSettings(page)"), 4)
         self.assertIn('" listen")', main)
         self.assertNotIn('connectSource("systemsettings")', main)
 
+    def test_settings_search_speaks_every_language(self):
+        # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
+        settings = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 19)
+        self.assertNotIn('words: "', settings)
+        self.assertIn('fold(entry.name + " " + entry.words).indexOf(words)', settings)
+        german = (ROOT / "po/de.po").read_text(encoding="utf-8")
+        self.assertIn('msgstr "wlan wifi', german)
+
     def test_app_menu_and_dock_open_it(self):
-        entry = (SHARE / "applications/monet-settings.desktop").read_text()
+        entry = (SHARE / "applications/monet-settings.desktop").read_text(encoding="utf-8")
         self.assertIn("Exec=@LIBEXECDIR@/monet-quick open\n", entry)
         self.assertIn("Icon=monet-settings", entry)
         layout = (PLASMA / "look-and-feel/org.monet.desktop/contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
@@ -1886,6 +2025,25 @@ class Scripts(unittest.TestCase):
         self.assertEqual(nets[0]["signal"], 72)
         self.assertFalse(nets[2]["secure"])
         self.assertFalse(nets[3]["secure"])
+        # Saved networks join without asking again; work and school ones want a name too.
+        nets = quick.wifi_list(":Harbor:72:WPA2\n:Campus:60:WPA2 802.1X\n", saved={"Harbor"})
+        self.assertEqual([(n["name"], n["known"], n["enterprise"]) for n in nets],
+                         [("Harbor", True, False), ("Campus", False, True)])
+
+    def test_quick_reads_the_battery(self):
+        from unittest import mock
+        quick = quick_helper()
+        found = lambda **p: quick.battery_state({k: {"type": "x", "data": v} for k, v in p.items()})
+        # UPower: every battery together, with how long it lasts (or until full).
+        self.assertEqual(found(IsPresent=True, Type=2, Percentage=76.4, State=2, TimeToEmpty=8100),
+                         {"battery": 76, "charging": False, "plugged": False, "minutes": 135})
+        self.assertEqual(found(IsPresent=True, Type=2, Percentage=40.0, State=1, TimeToFull=2400),
+                         {"battery": 40, "charging": True, "plugged": True, "minutes": 40})
+        # Full, or held at a charge limit: plugged in, not charging.
+        self.assertEqual(found(IsPresent=True, Type=2, Percentage=100.0, State=4)["plugged"], True)
+        with mock.patch.object(quick, "Path") as path:
+            path.return_value.glob.return_value = []
+            self.assertIsNone(quick.battery_state(None)["battery"])
 
     def test_quick_reads_fwupd(self):
         report = {"Devices": [

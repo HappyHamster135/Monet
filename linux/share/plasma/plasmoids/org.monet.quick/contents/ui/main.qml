@@ -8,6 +8,7 @@
  */
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import QtQuick.Window
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
@@ -26,7 +27,6 @@ PlasmoidItem {
 
     Plasmoid.icon: "monet-quick-symbolic"
     toolTipMainText: i18n("Quick Settings")
-    toolTipSubText: info.network ? i18n("Connected to %1", info.network) : ""
 
     P5Support.DataSource {
         id: runner
@@ -69,6 +69,17 @@ PlasmoidItem {
             }
             root.pending = {}
         }
+    }
+
+    // h:mm, from minutes.
+    function span(minutes) {
+        return Math.floor(minutes / 60) + ":" + String(minutes % 60).padStart(2, "0")
+    }
+
+    // A page of Settings, in place of this popup.
+    function openSettings(page) {
+        expanded = false
+        settings.open(page)
     }
 
     function flip(key, command) {
@@ -129,7 +140,10 @@ PlasmoidItem {
         property bool active
         property bool available: true
         property real speed: 1
+        // The page in Settings with more (networks to join, devices to pair): its chevron opens it.
+        property string page
         signal toggled()
+        signal opened()
 
         implicitHeight: Kirigami.Units.gridUnit * 3.4
         radius: 18
@@ -138,10 +152,17 @@ PlasmoidItem {
         scale: tap.pressed ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * tile.speed) } }
+        // From the keyboard too: Tab to it, Space or Enter to switch it.
+        activeFocusOnTab: true
+        Keys.onSpacePressed: if (available) toggled()
+        Keys.onReturnPressed: if (available) toggled()
+        border.width: activeFocus ? 2 : 0
+        border.color: "#357F72"
 
         RowLayout {
             anchors.fill: parent
             anchors.margins: 12
+            anchors.rightMargin: tile.page !== "" ? 4 : 12
             spacing: 10
 
             Rectangle {
@@ -177,6 +198,43 @@ PlasmoidItem {
                     font: Kirigami.Theme.smallFont
                 }
             }
+
+            // More, in Settings: a chevron of its own, apart from the switch.
+            Rectangle {
+                id: more
+                visible: tile.page !== ""
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 40
+                radius: 10
+                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b,
+                               moreArea.containsMouse ? 0.1 : 0)
+                Accessible.role: Accessible.Button
+                Accessible.name: i18nc("%1 is a quick setting, like Wi-Fi", "%1 settings", tile.title)
+                Accessible.onPressAction: tile.opened()
+
+                Shape {
+                    anchors.centerIn: parent
+                    width: 10
+                    height: 14
+                    preferredRendererType: Shape.CurveRenderer
+                    transform: Scale { origin.x: 5; xScale: more.LayoutMirroring.enabled ? -1 : 1 }
+                    ShapePath {
+                        strokeColor: Kirigami.Theme.textColor
+                        strokeWidth: 1.8
+                        fillColor: "transparent"
+                        capStyle: ShapePath.RoundCap
+                        joinStyle: ShapePath.RoundJoin
+                        PathPolyline { path: [Qt.point(3, 2), Qt.point(8, 7), Qt.point(3, 12)] }
+                    }
+                }
+                MouseArea {
+                    id: moreArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: tile.opened()
+                }
+            }
         }
 
         HoverHandler { id: hover }
@@ -192,6 +250,8 @@ PlasmoidItem {
     }
 
     fullRepresentation: PlasmaExtras.Representation {
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
         Layout.preferredWidth: Kirigami.Units.gridUnit * 23
         Layout.preferredHeight: column.implicitHeight + Kirigami.Units.largeSpacing * 2
         collapseMarginsHint: true
@@ -215,8 +275,10 @@ PlasmoidItem {
                     icon: "network-wireless"
                     active: root.info.wifi === true
                     available: root.info.wifi !== null && root.info.wifi !== undefined
-                    detail: !available ? i18n("Unavailable") : !active ? i18n("Off") : (root.info.network || i18n("On"))
+                    detail: !available ? i18n("Unavailable") : !active ? i18n("Off") : (root.info.network || i18n("Not connected"))
+                    page: "wifi"
                     onToggled: root.flip("wifi", "wifi")
+                    onOpened: root.openSettings(page)
                 }
                 Tile {
                     Layout.fillWidth: true
@@ -226,7 +288,9 @@ PlasmoidItem {
                     active: root.info.bluetooth === true
                     available: root.info.bluetooth !== null && root.info.bluetooth !== undefined
                     detail: !available ? i18n("Unavailable") : active ? i18n("On") : i18n("Off")
+                    page: "bluetooth"
                     onToggled: root.flip("bluetooth", "bluetooth")
+                    onOpened: root.openSettings(page)
                 }
                 Tile {
                     Layout.fillWidth: true
@@ -235,7 +299,9 @@ PlasmoidItem {
                     icon: "weather-clear-night"
                     active: root.info.night === true
                     detail: active ? i18n("Warm after sunset") : i18n("Off")
+                    page: "display"
                     onToggled: root.flip("night", "night")
+                    onOpened: root.openSettings(page)
                 }
                 Tile {
                     Layout.fillWidth: true
@@ -244,7 +310,9 @@ PlasmoidItem {
                     icon: "notifications-disabled"
                     active: root.info.quiet === true
                     detail: active ? i18n("On") : i18n("Off")
+                    page: "notifications"
                     onToggled: root.flip("quiet", "quiet")
+                    onOpened: root.openSettings(page)
                 }
             }
 
@@ -272,10 +340,27 @@ PlasmoidItem {
                             from: 1
                             to: 100
                             stepSize: 1
-                            value: root.info.brightness || 50
+                            // ?? not ||: at its dimmest the screen reads 0, which is no reason to show 50.
+                            value: root.info.brightness ?? 50
                             Accessible.name: i18n("Brightness")
                             onPressedChanged: root.dragging = pressed
                             onMoved: root.queue("brightness", value)
+                        }
+                    }
+                    // The keyboard's light, on laptops that have one: a few steps, off at the left.
+                    RowLayout {
+                        visible: root.info.keyboard ? true : false
+                        spacing: 10
+                        Kirigami.Icon { source: "input-keyboard-brightness"; isMask: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
+                        PlasmaComponents.Slider {
+                            Layout.fillWidth: true
+                            from: 0
+                            to: root.info.keyboard ? root.info.keyboard.levels : 1
+                            stepSize: 1
+                            value: root.info.keyboard ? root.info.keyboard.level : 0
+                            Accessible.name: i18n("Keyboard light")
+                            onPressedChanged: root.dragging = pressed
+                            onMoved: root.queue("keyboard", value)
                         }
                     }
                     RowLayout {
@@ -301,6 +386,7 @@ PlasmoidItem {
                 spacing: 8
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     text: i18n("Light")
                     color: Kirigami.Theme.textColor
                     font.family: "Fraunces 72pt SuperSoft"
@@ -320,7 +406,8 @@ PlasmoidItem {
                     Rectangle {
                         readonly property int picked: Math.max(0, ["hours", "mist", "smoke"].indexOf(root.info.light || "hours"))
                         readonly property real slot: (lights.width - 16) / 3
-                        x: 4 + picked * (slot + 4)
+                        // From the right in right-to-left languages, as the choices are.
+                        x: LayoutMirroring.enabled ? lights.width - 4 - slot - picked * (slot + 4) : 4 + picked * (slot + 4)
                         y: 4
                         width: slot
                         height: lights.height - 8
@@ -342,20 +429,34 @@ PlasmoidItem {
                                 readonly property bool picked: (root.info.light || "hours") === modelData[0]
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
+                                activeFocusOnTab: true
+                                Keys.onSpacePressed: choice.pick()
+                                Keys.onReturnPressed: choice.pick()
+
+                                function pick() {
+                                    const next = Object.assign({}, root.info)
+                                    next.light = modelData[0]
+                                    root.info = next
+                                    root.run("light " + modelData[0])
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 10
+                                    color: "transparent"
+                                    border.width: choice.activeFocus ? 2 : 0
+                                    border.color: "#357F72"
+                                }
                                 PlasmaComponents.Label {
                                     anchors.centerIn: parent
                                     text: modelData[1]
                                     font.weight: Font.DemiBold
-                                    opacity: choice.picked ? 1 : 0.66
+                                    opacity: choice.picked ? 1 : choiceHover.hovered ? 0.85 : 0.66
                                     Behavior on opacity { NumberAnimation { duration: Math.round(160 * root.speed) } }
                                 }
+                                HoverHandler { id: choiceHover }
                                 TapHandler {
-                                    onTapped: {
-                                        const next = Object.assign({}, root.info)
-                                        next.light = modelData[0]
-                                        root.info = next
-                                        root.run("light " + modelData[0])
-                                    }
+                                    onTapped: choice.pick()
                                 }
                                 Accessible.role: Accessible.RadioButton
                                 Accessible.name: modelData[1]
@@ -363,6 +464,14 @@ PlasmoidItem {
                             }
                         }
                     }
+                }
+                // What the chosen light does, in Settings' words.
+                PlasmaComponents.Label {
+                    Layout.leftMargin: 2
+                    opacity: 0.66
+                    font: Kirigami.Theme.smallFont
+                    text: root.info.light === "mist" ? i18n("Always light")
+                        : root.info.light === "smoke" ? i18n("Always dark") : i18n("Mist by day, smoke after dark")
                 }
             }
 
@@ -372,16 +481,16 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     visible: typeof root.info.battery === "number"
                     opacity: 0.7
-                    text: root.info.charging ? i18n("Battery %1%, charging", root.info.battery) : i18n("Battery %1%", root.info.battery)
+                    text: root.info.charging ? i18n("Battery %1%, charging", root.info.battery)
+                        : root.info.plugged ? i18n("Battery %1%, plugged in", root.info.battery)
+                        : root.info.minutes ? i18nc("%2 is how long it lasts, like 2:15", "Battery %1%, %2 left", root.info.battery, root.span(root.info.minutes))
+                        : i18n("Battery %1%", root.info.battery)
                 }
                 Item { Layout.fillWidth: typeof root.info.battery !== "number" }
                 PlasmaComponents.Button {
                     icon.name: "configure"
                     text: i18n("All Settings")
-                    onClicked: {
-                        root.expanded = false
-                        settings.open("")
-                    }
+                    onClicked: root.openSettings("")
                 }
             }
         }

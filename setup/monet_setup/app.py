@@ -12,8 +12,9 @@ import tempfile
 import threading
 from pathlib import Path
 
-from . import disks, network, system
+from . import disks, network, system, words
 from .system import account_name
+from .words import N_, _, ntr, tr
 from .qt import (Property, QFontDatabase, QGuiApplication, QObject, QProcess, QQmlApplicationEngine, QTimer, QUrl,
                  Signal, Slot)
 
@@ -24,11 +25,11 @@ DEMO = os.environ.get("MONET_SETUP_DEMO", "")
 
 # What the person sees while installing, and how much of the bar each part is.
 PHASES = {
-    "disk": ("Preparing the disk", 0.00, 0.03),
-    "download": ("Downloading Monet", 0.03, 0.75),
-    "install": ("Installing Monet", 0.75, 0.93),
-    "configure": ("Setting up your account", 0.93, 0.98),
-    "finish": ("Finishing", 0.98, 1.00),
+    "disk": (N_("Preparing the disk"), 0.00, 0.03),
+    "download": (N_("Downloading Monet"), 0.03, 0.75),
+    "install": (N_("Installing Monet"), 0.75, 0.93),
+    "configure": (N_("Setting up your account"), 0.93, 0.98),
+    "finish": (N_("Finishing"), 0.98, 1.00),
 }
 
 
@@ -36,25 +37,25 @@ PHASES = {
 # They arrive after the first sign-in (monet-apps); the ticked ones and the built-in
 # ones are what a PC that never chose gets (linux/libexec/monet-apps' EVERYDAY).
 APPS = [
-    ("app.zen_browser.zen", "Zen Browser", "The web", True),
-    ("org.libreoffice.LibreOffice", "Office", "Documents, sheets, slides", False),
-    ("org.mozilla.Thunderbird", "Mail", "Email and calendars", False),
-    ("com.discordapp.Discord", "Discord", "Talk while you play", False),
-    ("com.spotify.Client", "Spotify", "Music to stream", False),
-    ("com.heroicgameslauncher.hgl", "Heroic", "Epic and GOG games", False),
+    ("app.zen_browser.zen", "Zen Browser", N_("The web"), True),
+    ("org.libreoffice.LibreOffice", N_("Office"), N_("Documents, sheets, slides"), False),
+    ("org.mozilla.Thunderbird", N_("Mail"), N_("Email and calendars"), False),
+    ("com.discordapp.Discord", "Discord", N_("Talk while you play"), False),
+    ("com.spotify.Client", "Spotify", N_("Music to stream"), False),
+    ("com.heroicgameslauncher.hgl", "Heroic", N_("Epic and GOG games"), False),
     ("org.prismlauncher.PrismLauncher", "Prism Launcher", "Minecraft", False),
-    ("com.obsproject.Studio", "OBS Studio", "Record and stream games", False),
-    ("org.kde.krita", "Krita", "Paint and draw", False),
+    ("com.obsproject.Studio", "OBS Studio", N_("Record and stream games"), False),
+    ("org.kde.krita", "Krita", N_("Paint and draw"), False),
 ]
 # Built into Monet (image/Containerfile), so "Your apps" shows them as there
 # already. A Monet without them (added to Bazzite by hand) gets them from
 # Flathub with the everyday ones (monet-apps' EVERYDAY).
 BUILT_IN = [
-    ("org.kde.gwenview", "Photos"),
-    ("org.kde.okular", "Documents"),
-    ("org.kde.haruna", "Video"),
-    ("org.kde.elisa", "Music"),
-    ("org.kde.kcalc", "Calculator"),
+    ("org.kde.gwenview", N_("Photos")),
+    ("org.kde.okular", N_("Documents")),
+    ("org.kde.haruna", N_("Video")),
+    ("org.kde.elisa", N_("Music")),
+    ("org.kde.kcalc", N_("Calculator")),
 ]
 
 
@@ -62,7 +63,7 @@ def minutes_text(seconds):
     if seconds is None:
         return ""
     minutes = max(1, round(seconds / 60))
-    return "about 1 minute left" if minutes == 1 else f"about {minutes} minutes left"
+    return ntr("about %1 minute left", "about %1 minutes left", minutes)
 
 
 class Setup(QObject):
@@ -79,7 +80,7 @@ class Setup(QObject):
         self._joining, self._wifi_error, self._joined = False, "", ""
         self._disks, self._disk, self._mode = [], 0, "erase"
         self._name, self._password = "", ""
-        self._apps = [ticked for *_, ticked in APPS]
+        self._apps = [app[-1] for app in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
         self._proc = None
         # Queued across threads: the callback runs on the window's thread.
@@ -99,6 +100,7 @@ class Setup(QObject):
         except (OSError, ValueError):
             return
         self._language, self._keyboard = saved.get("language", 0), saved.get("keyboard", 0)
+        words.use(system.LANGUAGES[min(self._language, len(system.LANGUAGES) - 1)][1])
         self._step = saved.get("step", 0)
 
     def _save(self, step=0):
@@ -130,9 +132,9 @@ class Setup(QObject):
     def languages(self):
         return [name for name, *_ in system.LANGUAGES]
 
-    @Property("QVariant", constant=True)
+    @Property("QVariant", notify=changed)
     def keyboards(self):
-        return [name for name, *_ in system.KEYBOARDS]
+        return [_(keyboard[0]) for keyboard in system.KEYBOARDS]
 
     @Property(int, notify=changed)
     def language(self):
@@ -146,9 +148,28 @@ class Setup(QObject):
     def startStep(self):
         return getattr(self, "_step", 0)
 
+    # The language Setup speaks: QML's tr() reads it, so every page says it again when it changes.
+    @Property(str, notify=changed)
+    def lang(self):
+        return system.LANGUAGES[self._language][1]
+
+    # Arabic and Hebrew read from right to left, and the sheet's layout with them.
+    @Property(bool, notify=changed)
+    def rtl(self):
+        return self.lang[:2] in ("ar", "he")
+
+    @Slot(str, str, result=str)
+    def say(self, text, value):
+        return tr(text, value)
+
+    @Slot(str, str, str, result=str)
+    def sayIn(self, context, text, value):
+        return words.trc(context, text, value)
+
     @Slot(int)
     def setLanguage(self, index):
         self._language = index
+        words.use(system.LANGUAGES[index][1])
         self.changed.emit()
         self.setKeyboard(system.keyboard_for(index))
 
@@ -165,10 +186,10 @@ class Setup(QObject):
         on the next step. True when that's happening."""
         if DEMO or self._keyboard == self._started_with:
             return False
-        _, layout, variant = system.KEYBOARDS[self._keyboard]
+        layout, variant = system.KEYBOARDS[self._keyboard][1:]
         self._save(step=1)
         try:
-            Path("/run/monet-setup/keyboard").write_text(f"{layout} {variant}".strip())
+            Path("/run/monet-setup/keyboard").write_text(" ".join(system.xkb(layout, variant)).strip())
         except OSError:
             return False
         QTimer.singleShot(0, lambda: QGuiApplication.exit(3))
@@ -239,9 +260,9 @@ class Setup(QObject):
     def setPerson(self, name, password):
         """Empty when fine; otherwise what's missing."""
         if not name.strip():
-            return "Type your name."
+            return _("Type your name.")
         if len(password) < 6:
-            return "The password needs at least 6 characters."
+            return _("The password needs at least 6 characters.")
         self._name, self._password = name.strip(), password
         self.changed.emit()
         return ""
@@ -261,10 +282,10 @@ class Setup(QObject):
     # -- apps --
     @Property("QVariant", notify=changed)
     def apps(self):
-        return ([{"name": name, "detail": "Built in", "everyday": True, "picked": True, "index": -1}
-                 for _, name in BUILT_IN]
-                + [{"name": name, "detail": detail, "everyday": everyday, "picked": picked, "index": i}
-                   for i, ((_, name, detail, everyday), picked) in enumerate(zip(APPS, self._apps))])
+        return ([{"name": _(name), "detail": _("Built in"), "everyday": True, "picked": True, "index": -1}
+                 for _id, name in BUILT_IN]
+                + [{"name": _(name), "detail": _(detail), "everyday": everyday, "picked": picked, "index": i}
+                   for i, ((_id, name, detail, everyday), picked) in enumerate(zip(APPS, self._apps))])
 
     @Slot(int)
     def toggleApp(self, index):
@@ -309,12 +330,12 @@ class Setup(QObject):
     def blocker(self):
         """Why Install can't go ahead on the chosen disk and mode, if it can't."""
         if not self._disks:
-            return "No disk found to install Monet on."
+            return _("No disk found to install Monet on.")
         disk = self._disks[min(self._disk, len(self._disks) - 1)]
         if self._mode == "keep" and not disk["keep"]:
             return disk["keepWhy"]
         if self._mode == "erase" and not disk["erase"]:
-            return "This disk is too small for Monet (it needs 70 GB)."
+            return _("This disk is too small for Monet (it needs 70 GB).")
         return ""
 
     # -- installing --
@@ -343,8 +364,8 @@ class Setup(QObject):
         if self._proc or self.blocker:
             return
         disk = self._disks[self._disk]
-        locale, _, zone_guess = system.LANGUAGES[self._language][1:]
-        _, layout, variant = system.KEYBOARDS[self._keyboard]
+        locale, zone_guess = system.LANGUAGES[self._language][1::2]
+        layout, variant = system.KEYBOARDS[self._keyboard][1:]
         plan = {
             "image": IMAGE, "disk": disk["path"], "mode": self._mode,
             "sizes": disk[self._mode],
@@ -358,7 +379,7 @@ class Setup(QObject):
         with os.fdopen(fd, "w") as f:
             json.dump(plan, f)
         self._phase, self._error, self._log, self._progress = "disk", "", [], 0.0
-        self._status = PHASES["disk"][0]
+        self._status = _(PHASES["disk"][0])
         self.progressChanged.emit()
         self._proc = QProcess(self)
         self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
@@ -385,9 +406,9 @@ class Setup(QObject):
             self._progress = start + (end - start) * max(0.0, min(1.0, event["fraction"]))
         else:
             self._progress = max(self._progress, start)
-        parts = [title]
+        parts = [_(title)]
         if event.get("got") is not None and event.get("total"):
-            parts.append(f"{event['got'] / 1e9:.1f} of {event['total'] / 1e9:.1f} GB")
+            parts.append(tr("%1 of %2 GB", f"{event['got'] / 1e9:.1f}", f"{event['total'] / 1e9:.1f}"))
         if event.get("eta") is not None:
             parts.append(minutes_text(event["eta"]))
         if event.get("note"):
@@ -400,11 +421,11 @@ class Setup(QObject):
         self._phase = "done" if event.get("done") else phase
         self.progressChanged.emit()
 
-    def _finished(self, code, *_):
+    def _finished(self, code, *_status):
         self._proc = None
         if self._phase != "done":
             self._phase = "failed"
-            self._error = self._error or "The installer stopped unexpectedly."
+            self._error = self._error or _("The installer stopped unexpectedly.")
         self.progressChanged.emit()
 
     @Slot()

@@ -14,6 +14,8 @@ largest free area of the disk and Windows' own EFI partition:
 import json
 import subprocess
 
+from .words import _, tr
+
 MIB = 1024 * 1024
 GIB = 1024 * MIB
 EFI_MIB = 1024
@@ -62,7 +64,7 @@ def live_media(devices):
 
 def describe(disk):
     """"Samsung SSD 990 PRO · 1 TB": what people see on the box."""
-    model = " ".join((disk.get("model") or disk.get("vendor") or "Disk").split())
+    model = " ".join((disk.get("model") or disk.get("vendor") or _("Disk")).split())
     return f"{model} · {size_text(int(disk['size']))}"
 
 
@@ -123,12 +125,12 @@ def efi_partition(disk):
 def plan_keep(disk, free_bytes):
     """Monet next to what's there: the free space, Windows' EFI partition."""
     if not efi_partition(disk):
-        return None, "This disk has no EFI partition, so Windows doesn't start from it."
+        return None, _("This disk has no EFI partition, so Windows doesn't start from it.")
     monet = free_bytes // MIB - BOOT_MIB - 16
     if monet < MIN_MONET_MIB:
         need = (MIN_MONET_MIB + BOOT_MIB) * MIB
-        return None, (f"Needs {size_text(need)} of free space; this disk has {size_text(free_bytes)}. "
-                      "Shrink Windows' drive in Disk Management first.")
+        return None, tr("Needs %1 of free space; this disk has %2. Shrink Windows' drive in Disk Management first.",
+                        size_text(need), size_text(free_bytes))
     return {"boot": BOOT_MIB, "monet": monet}, ""
 
 

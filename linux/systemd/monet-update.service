@@ -7,6 +7,9 @@ ConditionPathExists=!/var/lib/monet/auto-updates-off
 
 [Service]
 Type=oneshot
+# Not over a metered connection (a phone's hotspot): NetworkManager's Metered, 1 yes or 3 guessed yes.
+# A day skipped is tried again at the next. ($$ is systemd's way to write $.)
+ExecCondition=/bin/sh -c 'case "$$(busctl get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null)" in "u 1"|"u 3") exit 1;; esac'
 # The new Monet is put in place for the next restart; nothing changes under you.
 ExecStart=@BINDIR@/monet helper update
 Nice=19

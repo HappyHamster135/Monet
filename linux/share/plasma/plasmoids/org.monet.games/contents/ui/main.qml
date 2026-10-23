@@ -51,7 +51,10 @@ PlasmoidItem {
                 // Switching didn't happen: bring the desktop back and say why.
                 sunset.close()
                 root.expanded = true
-                root.problem = (data["stderr"] || "").trim() || i18n("Monet couldn't switch to Windows.")
+                // The plain first part; the technical rest is for monet's own log.
+                root.problem = (data["stderr"] || "").trim().split("
+
+")[0] || i18n("Monet couldn't switch to Windows.")
                 root.sheetOpen = true
             }
         }
@@ -155,6 +158,7 @@ PlasmoidItem {
                     opacity: 0.9
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
@@ -203,6 +207,7 @@ PlasmoidItem {
         Behavior on color { ColorAnimation { duration: Math.round(140 * button.speed) } }
 
         Text {
+            horizontalAlignment: Text.AlignLeft
             id: label
             anchors.centerIn: parent
             color: "#FFFFFF"
@@ -218,6 +223,8 @@ PlasmoidItem {
 
     fullRepresentation: PlasmaExtras.Representation {
         id: popup
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
         Layout.preferredWidth: Kirigami.Units.gridUnit * 25
         Layout.preferredHeight: Kirigami.Units.gridUnit * 29
         Layout.minimumWidth: Kirigami.Units.gridUnit * 20
@@ -233,6 +240,7 @@ PlasmoidItem {
                 spacing: 2
                 Layout.leftMargin: Kirigami.Units.smallSpacing
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     text: i18n("Windows Games")
                     color: Kirigami.Theme.textColor
                     font.family: "Fraunces 72pt SuperSoft"
@@ -389,6 +397,7 @@ PlasmoidItem {
                 }
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.textColor
@@ -503,6 +512,7 @@ PlasmoidItem {
                 anchors.topMargin: 30
                 spacing: 10
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.horizontalCenter: parent.horizontalCenter
                     color: "#FFFFFF"
                     font.family: "Fraunces 72pt SuperSoft"
@@ -511,6 +521,7 @@ PlasmoidItem {
                     text: sunset.title !== "" ? i18n("Opening %1", sunset.title) : i18n("Opening Windows")
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.horizontalCenter: parent.horizontalCenter
                     color: "#A8FFFFFF"
                     font.pixelSize: 15

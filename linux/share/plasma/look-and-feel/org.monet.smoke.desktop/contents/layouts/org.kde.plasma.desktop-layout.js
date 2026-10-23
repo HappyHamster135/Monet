@@ -65,16 +65,17 @@ right.addWidget("org.monet.quick")
 var tray = right.addWidget("org.kde.plasma.systemtray")
 // Brightness and Night Light are in Quick Settings, beside Mist and Smoke: KDE's
 // own panel for them, with its Dark Mode switch, stays out of the bar. Known but
-// not chosen, so the tray doesn't add it back as new.
+// not chosen, so the tray doesn't add it back as new. (Plasma 6 keeps the tray's
+// items in its own settings, no longer in a containment of their own.)
 try {
-    var inside = desktopById(tray.readConfig("SystrayContainmentId"))
-    inside.currentConfigGroup = ["General"]
+    tray.currentConfigGroup = ["General"]
     var listed = function (key) {
-        return String(inside.readConfig(key, "")).split(",").filter(function (item) { return item !== "" })
+        return String(tray.readConfig(key, "")).split(",").filter(function (item) { return item !== "" })
     }
     var known = listed("knownItems")
     if (known.indexOf("org.kde.plasma.brightness") < 0) known.push("org.kde.plasma.brightness")
-    inside.writeConfig("knownItems", known)
-    inside.writeConfig("extraItems", listed("extraItems").filter(function (item) { return item !== "org.kde.plasma.brightness" }))
+    tray.writeConfig("knownItems", known)
+    tray.writeConfig("extraItems", listed("extraItems").filter(function (item) { return item !== "org.kde.plasma.brightness" }))
+    tray.reloadConfig()
 } catch (e) {}
 right.addWidget("org.monet.clock")

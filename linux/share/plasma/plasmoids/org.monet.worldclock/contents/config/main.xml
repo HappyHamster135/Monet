@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="zones" type="StringList">
+      <label>The towns shown, as time zones (Europe/Paris), in order.</label>
+      <default>America/New_York,Europe/London,Asia/Tokyo</default>
+    </entry>
+  </group>
+</kcfg>

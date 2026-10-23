@@ -57,14 +57,9 @@ pub fn content_length(headers: &str) -> Option<u64> {
     })
 }
 
-/// "about 3 minutes left".
-pub fn minutes_left(seconds: f64) -> String {
-    let minutes = (seconds / 60.0).round().max(1.0) as u64;
-    if minutes == 1 {
-        "about 1 minute left".into()
-    } else {
-        format!("about {minutes} minutes left")
-    }
+/// The minutes left, rounded, at least one: "about 3 min left" says it.
+pub fn minutes_left(seconds: f64) -> u64 {
+    (seconds / 60.0).round().max(1.0) as u64
 }
 
 /// A NUL-terminated ASCII string inside a storage descriptor, at `offset`.
@@ -125,8 +120,8 @@ mod tests {
 
     #[test]
     fn time_left() {
-        assert_eq!(minutes_left(20.0), "about 1 minute left");
-        assert_eq!(minutes_left(185.0), "about 3 minutes left");
+        assert_eq!(minutes_left(20.0), 1);
+        assert_eq!(minutes_left(185.0), 3);
     }
 
     #[test]

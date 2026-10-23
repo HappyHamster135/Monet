@@ -1,7 +1,11 @@
 /*
  * Clock: the time and the date in the panel, in Monet's type. A click opens
  * the day and its month on the panel's glass: the day's name in Fraunces,
- * the month as Monet's calendar draws it, today on a dab of the sun.
+ * the month as Monet's calendar draws it, today on a dab of the sun. A click
+ * chooses a day; a day with a note has a dot of lily (point at it to read
+ * it), and the line under the month says the chosen day's note. Notes (or a
+ * click on the line) brings the day's note out beside the month, to read and
+ * write: the same notes as the Calendar widget's.
  */
 import QtQuick
 import QtQuick.Layouts
@@ -13,31 +17,23 @@ PlasmoidItem {
     id: root
 
     property date now: new Date()
-    // The month on the page: its first day.
-    property date shown: new Date(now.getFullYear(), now.getMonth(), 1)
-    readonly property int firstWeekday: Qt.locale().firstDayOfWeek  // 0 is Sunday
+    // The notes beside the month, out or away (it stays as it was left).
+    property bool notesOpen: false
     readonly property color ink: Kirigami.Theme.textColor
     readonly property color dim: Qt.rgba(ink.r, ink.g, ink.b, 0.62)
-
-    function turn(by) {
-        shown = new Date(shown.getFullYear(), shown.getMonth() + by, 1);
-    }
-
-    // The 42 days the page shows, from the week the month starts in.
-    readonly property var days: {
-        const lead = (shown.getDay() - firstWeekday + 7) % 7;
-        const out = [];
-        for (let i = 0; i < 42; i++) {
-            out.push(new Date(shown.getFullYear(), shown.getMonth(), 1 - lead + i));
-        }
-        return out;
-    }
+    readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+    readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
 
     Plasmoid.icon: "x-office-calendar"
     toolTipMainText: Qt.formatDate(now, Qt.locale().dateFormat(Locale.LongFormat))
     toolTipSubText: Qt.formatTime(now, Qt.locale().timeFormat(Locale.ShortFormat))
-    // Back on this month whenever the page opens.
-    onExpandedChanged: if (expanded) shown = new Date(now.getFullYear(), now.getMonth(), 1)
+    // A fresh look at the notes whenever the page opens.
+    onExpandedChanged: if (expanded) noteStore.refresh()
+
+    NoteStore {
+        id: noteStore
+        helper: "@LIBEXECDIR@/monet-quick"
+    }
 
     Timer {
         // On the minute, so the time turns when the clock on the wall does.
@@ -45,11 +41,7 @@ PlasmoidItem {
         running: true
         repeat: true
         onTriggered: {
-            const following = root.shown.getMonth() === root.now.getMonth() && root.shown.getFullYear() === root.now.getFullYear();
             root.now = new Date();
-            if (following && root.now.getDate() === 1) {
-                root.shown = new Date(root.now.getFullYear(), root.now.getMonth(), 1);
-            }
             interval = (60 - root.now.getSeconds()) * 1000;
         }
     }
@@ -64,6 +56,7 @@ PlasmoidItem {
             anchors.centerIn: parent
             spacing: 0
             Text {
+                horizontalAlignment: Text.AlignLeft
                 id: time
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatTime(root.now, Qt.locale().timeFormat(Locale.ShortFormat))
@@ -74,6 +67,7 @@ PlasmoidItem {
                 font.features: { "tnum": 1 }
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 id: date
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDate(root.now, "ddd d MMM")
@@ -84,145 +78,110 @@ PlasmoidItem {
         }
     }
 
-    fullRepresentation: ColumnLayout {
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 16
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 17
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 18
-        spacing: Kirigami.Units.smallSpacing
+    fullRepresentation: RowLayout {
+        id: page
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
+        Layout.minimumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 33 : 16)
+        Layout.preferredWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 35 : 17)
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 19
+        spacing: Kirigami.Units.largeSpacing
 
-        // The day.
-        Text {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.smallSpacing
-            text: Qt.locale().standaloneDayName(root.now.getDay(), Locale.LongFormat)
-            color: root.ink
-            font.family: "Fraunces 72pt SuperSoft"
-            font.pixelSize: 28
-            font.weight: Font.Light
-            elide: Text.ElideRight
-        }
-        Text {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.smallSpacing
-            Layout.bottomMargin: Kirigami.Units.largeSpacing
-            text: Qt.formatDate(root.now, Qt.locale().dateFormat(Locale.LongFormat).replace(/dddd,?\s*/i, ""))
-            color: root.dim
-            font.family: "Inter"
-            font.pixelSize: 13
-            elide: Text.ElideRight
-        }
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 1
-            color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.12)
-        }
-
-        // The month's page, with arrows to turn it.
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: Kirigami.Units.smallSpacing
-            Text {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.smallSpacing
-                text: Qt.locale().standaloneMonthName(root.shown.getMonth())
-                      + (root.shown.getFullYear() !== root.now.getFullYear() ? " " + root.shown.getFullYear() : "")
-                color: root.ink
-                elide: Text.ElideRight
-                font.family: "Fraunces 72pt SuperSoft"
-                font.pixelSize: 19
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: root.shown = new Date(root.now.getFullYear(), root.now.getMonth(), 1)
-                }
-            }
-            Repeater {
-                model: [-1, 1]
-                Rectangle {
-                    required property int modelData
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    radius: 14
-                    color: turnArea.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : "transparent"
-                    Text {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -1
-                        text: parent.modelData < 0 ? "‹" : "›"
-                        color: turnArea.containsMouse ? root.ink : root.dim
-                        font.family: "Inter"
-                        font.pixelSize: 20
-                    }
-                    MouseArea {
-                        id: turnArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: root.turn(parent.modelData)
-                    }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: modelData < 0 ? i18n("Previous month") : i18n("Next month")
+        // Back on today whenever the page opens, the arrow keys ready to move the day.
+        Connections {
+            target: root
+            function onExpandedChanged() {
+                if (root.expanded) {
+                    month.choose(root.now);
+                    month.forceActiveFocus();
                 }
             }
         }
 
-        GridLayout {
-            Layout.fillWidth: true
+        ColumnLayout {
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 17
+            Layout.fillWidth: !root.notesOpen
             Layout.fillHeight: true
-            columns: 7
-            rowSpacing: 0
-            columnSpacing: 0
+            spacing: Kirigami.Units.smallSpacing
 
-            // The days of the week, as letters.
-            Repeater {
-                model: 7
+            // The day: a click comes back to it.
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
                 Text {
-                    required property int index
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.bottomMargin: 4
-                    horizontalAlignment: Text.AlignHCenter
-                    text: Qt.locale().dayName((root.firstWeekday + index) % 7, Locale.NarrowFormat)
+                    Layout.leftMargin: Kirigami.Units.smallSpacing
+                    text: Qt.locale().standaloneDayName(root.now.getDay(), Locale.LongFormat)
+                    color: root.ink
+                    font.family: "Fraunces 72pt SuperSoft"
+                    font.pixelSize: 28
+                    font.weight: Font.Light
+                    elide: Text.ElideRight
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.smallSpacing
+                    Layout.bottomMargin: Kirigami.Units.largeSpacing
+                    text: Qt.formatDate(root.now, Qt.locale().dateFormat(Locale.LongFormat).replace(/dddd,?\s*/i, ""))
                     color: root.dim
                     font.family: "Inter"
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                }
+                TapHandler {
+                    onTapped: month.choose(root.now)
                 }
             }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.12)
+            }
 
-            Repeater {
-                model: root.days
-                Item {
-                    id: cell
-                    required property var modelData
-                    readonly property bool inMonth: modelData.getMonth() === root.shown.getMonth()
-                    readonly property bool isToday: modelData.toDateString() === root.now.toDateString()
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.fillHeight: true
-                    implicitHeight: 30
-
-                    // Today: a dab of the sun.
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: Math.min(parent.width, parent.height) - 4
-                        height: width
-                        radius: width / 2
-                        visible: cell.isToday
-                        gradient: Gradient {
-                            GradientStop { position: 0; color: "#FF7A45" }
-                            GradientStop { position: 1; color: "#E2471F" }
-                        }
-                    }
-                    Text {
-                        anchors.centerIn: parent
-                        text: cell.modelData.getDate()
-                        color: cell.isToday ? "#FBF7EE" : root.ink
-                        opacity: cell.inMonth ? 1 : 0.32
-                        font.family: "Inter"
-                        font.pixelSize: 13
-                        font.weight: cell.isToday ? Font.DemiBold : Font.Normal
-                        font.features: { "tnum": 1 }
-                    }
+            Month {
+                id: month
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                today: root.now
+                store: noteStore
+                ink: root.ink
+                dim: root.dim
+                lily: root.lily
+                titleSize: 19
+                notesShown: root.notesOpen
+                onNotesToggled: root.notesOpen = !root.notesOpen
+                onOpened: {
+                    root.notesOpen = true;
+                    notes.write();
                 }
             }
+        }
+
+        // The notes, beside the month.
+        Rectangle {
+            visible: root.notesOpen
+            Layout.preferredWidth: 1
+            Layout.fillHeight: true
+            color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.12)
+        }
+        DayNotes {
+            id: notes
+            visible: root.notesOpen
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            store: noteStore
+            day: month.chosen
+            today: root.now
+            ink: root.ink
+            dim: root.dim
+            lily: root.lily
+            closable: true
+            onMoved: day => month.choose(day)
+            onClosed: root.notesOpen = false
         }
     }
 }

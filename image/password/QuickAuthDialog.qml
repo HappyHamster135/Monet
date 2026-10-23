@@ -21,7 +21,7 @@ import org.kde.polkitkde 1.0
 
 Window {
     id: root
-    title: i18n("Monet needs your password")
+    title: i18nd("monet", "Monet needs your password")
     color: Kirigami.Theme.backgroundColor
     flags: Qt.Dialog
 
@@ -113,7 +113,7 @@ Window {
 
     function authenticationFailure() {
         inlineMessageType = 3
-        inlineMessageText = i18n("That password didn't work. Try again.")
+        inlineMessageText = i18nd("monet", "That password didn't work. Try again.")
         rejectPassword()
     }
 
@@ -135,6 +135,8 @@ Window {
 
     ColumnLayout {
         id: column
+        LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+        LayoutMirroring.childrenInherit: true
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -192,8 +194,9 @@ Window {
                 spacing: Kirigami.Units.smallSpacing
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    text: i18n("Allow this?")
+                    text: i18nd("monet", "Allow this?")
                     color: root.ink
                     font.family: "Fraunces 72pt SuperSoft"
                     font.pixelSize: 26
@@ -201,6 +204,7 @@ Window {
 
                 // What the app wants, in its own words.
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: root.mainText
                     color: root.ink
@@ -216,13 +220,15 @@ Window {
                     spacing: Kirigami.Units.smallSpacing
                     visible: identitiesCombo.count > 0
                     Text {
-                        text: i18nc("%1 is a person's name", "As %1", identitiesCombo.currentText)
+                        horizontalAlignment: Text.AlignLeft
+                        text: i18ndc("monet", "%1 is a person's name", "As %1", identitiesCombo.currentText)
                         color: root.dim
                         textFormat: Text.PlainText
                         font.family: "Inter"
                         font.pixelSize: 13
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         visible: switchButton.visible
                         text: "·"
                         color: root.dim
@@ -232,7 +238,7 @@ Window {
                     QQC2.AbstractButton {
                         id: switchButton
                         visible: identitiesCombo.count > 1
-                        text: i18n("Someone else…")
+                        text: i18nd("monet", "Someone else…")
                         implicitWidth: switchLabel.implicitWidth
                         implicitHeight: switchLabel.implicitHeight
                         onClicked: {
@@ -240,6 +246,7 @@ Window {
                             identitiesCombo.popup.open()
                         }
                         contentItem: Text {
+                            horizontalAlignment: Text.AlignLeft
                             id: switchLabel
                             text: switchButton.text
                             color: root.lily
@@ -261,7 +268,7 @@ Window {
             verticalAlignment: TextInput.AlignVCenter
             echoMode: TextInput.Password
             passwordCharacter: "•"
-            placeholderText: i18n("Password")
+            placeholderText: i18nd("monet", "Password")
             color: root.ink
             placeholderTextColor: root.dim
             selectionColor: root.lily
@@ -278,6 +285,7 @@ Window {
                 border.color: passwordField.activeFocus ? root.lily : root.hairline
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 anchors.fill: parent
                 leftPadding: passwordField.leftPadding
                 rightPadding: passwordField.rightPadding
@@ -292,6 +300,7 @@ Window {
 
         // A wrong password or a message from the system.
         Text {
+            horizontalAlignment: Text.AlignLeft
             Layout.fillWidth: true
             Layout.minimumHeight: font.pixelSize * 1.4
             text: root.inlineMessageText
@@ -305,6 +314,7 @@ Window {
 
         // What exactly is asked for, for those who want to know.
         Text {
+            horizontalAlignment: Text.AlignLeft
             id: details
             Layout.fillWidth: true
             visible: false
@@ -324,7 +334,7 @@ Window {
             QQC2.AbstractButton {
                 id: detailsButton
                 visible: root.descriptionString !== "" || root.descriptionActionId !== ""
-                text: details.visible ? i18n("Fewer details") : i18n("Details")
+                text: details.visible ? i18nd("monet", "Fewer details") : i18nd("monet", "Details")
                 implicitWidth: detailsLabel.implicitWidth + 20
                 implicitHeight: 36
                 onClicked: details.visible = !details.visible
@@ -348,7 +358,7 @@ Window {
             }
 
             Pill {
-                text: i18n("Cancel")
+                text: i18nd("monet", "Cancel")
                 ink: root.ink
                 tint: root.pebble
                 ring: root.lily
@@ -356,7 +366,7 @@ Window {
                 onClicked: root.reject()
             }
             Pill {
-                text: i18n("Allow")
+                text: i18nd("monet", "Allow")
                 ink: root.paper
                 tint: root.sun
                 ring: root.ink

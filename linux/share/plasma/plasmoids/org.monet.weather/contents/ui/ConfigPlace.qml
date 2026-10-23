@@ -1,6 +1,7 @@
 /*
- * Where the weather is for: type a town and pick it (Open-Meteo's place
- * search), and choose degrees.
+ * Where the weather is for: every place the card goes through with its
+ * arrows (type a town and pick it, from Open-Meteo's place search), and
+ * degrees.
  */
 import QtQuick
 import QtQuick.Controls as QQC2
@@ -14,14 +15,68 @@ KCM.SimpleKCM {
     property string cfg_place
     property real cfg_latitude
     property real cfg_longitude
+    property var cfg_places: []
     property bool cfg_fahrenheit
     property string cfg_placeDefault
     property real cfg_latitudeDefault
     property real cfg_longitudeDefault
+    property var cfg_placesDefault: []
     property bool cfg_fahrenheitDefault
 
     property var found: []
     property bool searching: false
+
+    // The card's list: the place it shows is always in it.
+    readonly property var shown: ({name: cfg_place, latitude: cfg_latitude, longitude: cfg_longitude})
+    readonly property var places: {
+        const list = Array.from(cfg_places || []).map(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return null;
+            }
+        }).filter(place => place && place.name);
+        return cfg_place !== "" && !list.some(place => same(place, shown)) ? list.concat([shown]) : list;
+    }
+
+    function same(a, b) {
+        return Math.abs(a.latitude - b.latitude) < 0.0001 && Math.abs(a.longitude - b.longitude) < 0.0001;
+    }
+
+    function show(place) {
+        cfg_place = place.name;
+        cfg_latitude = place.latitude;
+        cfg_longitude = place.longitude;
+    }
+
+    function keep(list) {
+        cfg_places = list.map(place => JSON.stringify({name: place.name, latitude: place.latitude, longitude: place.longitude}));
+    }
+
+    function add(place) {
+        if (!places.some(known => same(known, place))) {
+            keep(places.concat([place]));
+        }
+        if (cfg_place === "") {
+            show(place);
+        }
+        found = [];
+        query.text = "";
+    }
+
+    // The place shown can go too: the card then shows its neighbour.
+    function remove(index) {
+        const gone = places[index];
+        const rest = places.filter((place, i) => i !== index);
+        keep(rest);
+        if (same(gone, shown)) {
+            if (rest.length > 0) {
+                show(rest[Math.min(index, rest.length - 1)]);
+            } else {
+                cfg_place = "";
+            }
+        }
+    }
 
     function search() {
         const name = query.text.trim();
@@ -47,13 +102,40 @@ KCM.SimpleKCM {
     }
 
     Kirigami.FormLayout {
-        QQC2.Label {
-            Kirigami.FormData.label: i18n("Now:")
-            text: page.cfg_place || i18n("No place yet")
+        ColumnLayout {
+            Kirigami.FormData.label: i18n("Places:")
+            spacing: 0
+
+            QQC2.Label {
+                visible: page.places.length === 0
+                text: i18n("No place yet")
+            }
+            Repeater {
+                model: page.places
+                RowLayout {
+                    id: placeRow
+                    required property var modelData
+                    required property int index
+                    QQC2.Label {
+                        Layout.minimumWidth: Kirigami.Units.gridUnit * 10
+                        text: placeRow.modelData.name
+                        // The one the card shows now.
+                        font.bold: page.same(placeRow.modelData, page.shown)
+                    }
+                    QQC2.ToolButton {
+                        icon.name: "list-remove"
+                        text: i18nc("%1 is a town", "Remove %1", placeRow.modelData.name)
+                        display: QQC2.AbstractButton.IconOnly
+                        QQC2.ToolTip.text: text
+                        QQC2.ToolTip.visible: hovered
+                        onClicked: page.remove(placeRow.index)
+                    }
+                }
+            }
         }
 
         RowLayout {
-            Kirigami.FormData.label: i18n("Find a place:")
+            Kirigami.FormData.label: i18n("Add a place:")
             QQC2.TextField {
                 id: query
                 placeholderText: i18n("A town or a city")
@@ -75,12 +157,7 @@ KCM.SimpleKCM {
                     Layout.fillWidth: true
                     flat: true
                     text: [modelData.name, modelData.admin1, modelData.country].filter(p => p).join(", ")
-                    onClicked: {
-                        page.cfg_place = modelData.name;
-                        page.cfg_latitude = modelData.latitude;
-                        page.cfg_longitude = modelData.longitude;
-                        page.found = [];
-                    }
+                    onClicked: page.add(modelData)
                 }
             }
         }
@@ -96,7 +173,7 @@ KCM.SimpleKCM {
             Layout.maximumWidth: Kirigami.Units.gridUnit * 22
             wrapMode: Text.WordWrap
             opacity: 0.7
-            text: i18n("The weather comes from Open-Meteo. Only the place is sent.")
+            text: i18n("The weather comes from Open-Meteo. Only the places are sent. The arrows beside a place's name on the card go through them.")
         }
     }
 }

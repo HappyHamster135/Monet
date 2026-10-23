@@ -30,12 +30,16 @@ fi
 # own panel for them, with its Dark Mode switch, leaves the bar. Once per
 # account with a bar (a new one gets it from Monet's layout), here because
 # Plasma reads its tray only as it starts. Known but not chosen, or the tray
-# would add it back as new.
+# would add it back as new. Plasma 6 keeps the tray's items in the tray's own
+# settings, [Containments][bar][Applets][tray][General]; until a bar has a tray,
+# it's tried again at the next sign-in.
 rc=plasma-org.kde.plasma.desktop-appletsrc
-if [ ! -e "$CONFIG/monet/tray-brightness" ] && [ -e "$CONFIG/$rc" ] && command -v kwriteconfig6 >/dev/null; then
-    for id in $(awk '/^\[/ { id = ""; if ($0 ~ /^\[Containments\]\[[0-9]+\]$/) { id = $0; gsub(/[^0-9]/, "", id) } }
-                     /^plugin=org\.kde\.plasma\.private\.systemtray$/ && id != "" { print id }' "$CONFIG/$rc"); do
-        general=(--file "$rc" --group Containments --group "$id" --group General)
+if [ ! -e "$CONFIG/monet/tray-brightness-6" ] && [ -e "$CONFIG/$rc" ] && command -v kwriteconfig6 >/dev/null; then
+    trays="$(awk '/^\[/ { tray = ""; if ($0 ~ /^\[Containments\]\[[0-9]+\]\[Applets\]\[[0-9]+\]$/) { tray = $0; gsub(/\]\[Applets\]\[/, " ", tray); gsub(/[^0-9 ]/, "", tray) } }
+                  /^plugin=org\.kde\.plasma\.systemtray$/ && tray != "" { print tray }' "$CONFIG/$rc")"
+    while read -r bar tray; do
+        [ -n "$tray" ] || continue
+        general=(--file "$rc" --group Containments --group "$bar" --group Applets --group "$tray" --group General)
         extra="$(kreadconfig6 "${general[@]}" --key extraItems | tr ',' '\n' | grep -vx org.kde.plasma.brightness | paste -sd, -)"
         known="$(kreadconfig6 "${general[@]}" --key knownItems)"
         case ",$known," in
@@ -44,8 +48,8 @@ if [ ! -e "$CONFIG/monet/tray-brightness" ] && [ -e "$CONFIG/$rc" ] && command -
         esac
         kwriteconfig6 "${general[@]}" --key extraItems "$extra"
         kwriteconfig6 "${general[@]}" --key knownItems "$known"
-    done
-    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/tray-brightness"
+    done <<< "$trays"
+    [ -n "$trays" ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/tray-brightness-6"
 fi
 
 [ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit 0

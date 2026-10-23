@@ -61,12 +61,16 @@ done
 rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
 rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colorscheme "$PREFIX"/share/konsole/MonetDark.colorscheme
+rm -f "$PREFIX"/share/locale/*/LC_MESSAGES/monet.mo "$PREFIX"/share/locale/*/LC_MESSAGES/plasma_applet_org.monet.*.mo \
+    "$PREFIX"/share/locale/*/LC_MESSAGES/plasma_wallpaper_org.monet.hours.mo
 rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/plasmoids/org.monet.quick" \
     "$PREFIX/share/plasma/plasmoids/org.monet.placard" "$PREFIX/share/plasma/wallpapers/org.monet.hours" \
     "$PREFIX/share/plasma/plasmoids/org.monet.weather" "$PREFIX/share/plasma/plasmoids/org.monet.calendar" \
     "$PREFIX/share/plasma/plasmoids/org.monet.clock" "$PREFIX/share/plasma/plasmoids/org.monet.menu" \
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" "$PREFIX/share/plasma/avatars/Monet" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.system" "$PREFIX/share/plasma/plasmoids/org.monet.played" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
     "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/plasma/look-and-feel/org.monet.smoke.desktop" \
     "$PREFIX/share/icons/Monet" "$PREFIX/share/icons/Monet-cursors" \

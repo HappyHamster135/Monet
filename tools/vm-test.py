@@ -16,6 +16,7 @@ Screenshots go to SCREENS/ (NN-name.png); the exit code says how far the
 install got. The look around never changes it: it prints what it saw.
 """
 
+import base64
 import json
 import os
 import shutil
@@ -51,6 +52,14 @@ class VM:
                "-device", "qemu-xhci", "-device", "usb-tablet", "-device", "usb-kbd",
                "-nic", "user,model=virtio-net-pci", "-display", "none",
                "-qmp", f"unix:{self.sock},server,nowait", "-serial", f"file:{self.work / 'serial.log'}"]
+        # The journal on the serial port too, so serial.log says why when a screen never comes.
+        # systemd (256+) reads these credentials from the VM's firmware; the stick stays as it is.
+        for name, text in [
+            ("systemd.extra-unit.monet-vm-journal.service",
+             "[Service]\nExecStart=/bin/sh -c 'exec journalctl -b -f -o short-monotonic >/dev/ttyS0'\n"),
+            ("systemd.unit-dropin.sysinit.target", "[Unit]\nWants=monet-vm-journal.service\n"),
+        ]:
+            cmd += ["-smbios", f"type=11,value=io.systemd.credential.binary:{name}={base64.b64encode(text.encode()).decode()}"]
         self.proc = subprocess.Popen(cmd, stdout=open(self.work / "qemu.log", "w"), stderr=subprocess.STDOUT)
         for _ in range(100):
             if self.sock.exists():

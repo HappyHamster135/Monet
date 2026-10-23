@@ -20,6 +20,8 @@ import org.kde.plasma.private.shell
 
 Item {
     id: gallery
+    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.childrenInherit: true
 
     property QtObject containment
     property PlasmaCore.Dialog sidePanel
@@ -40,7 +42,7 @@ Item {
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
     // Adding to a panel: the bar's widgets; to the desktop: the desktop's.
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
-    readonly property string mineIds: forBar ? "clock|games|menu|quick" : "calendar|frame|notes|nowplaying|placard|weather"
+    readonly property string mineIds: forBar ? "clock|games|menu|quick" : "calendar|frame|notes|nowplaying|placard|played|system|timer|weather|worldclock"
 
     signal closed()
 
@@ -155,15 +157,17 @@ Item {
                 Layout.fillWidth: true
                 spacing: 2
                 Text {
-                    text: i18n("Widgets")
+                    horizontalAlignment: Text.AlignLeft
+                    text: i18nd("monet", "Widgets")
                     color: gallery.ink
                     font.family: "Fraunces 72pt SuperSoft"
                     font.pixelSize: 30
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    text: gallery.forBar ? i18n("Click one to add it to the bar, or drag it there.")
-                                         : i18n("Click one to add it to your desktop, or drag it where you want it.")
+                    text: gallery.forBar ? i18nd("monet", "Click one to add it to the bar, or drag it there.")
+                                         : i18nd("monet", "Click one to add it to your desktop, or drag it where you want it.")
                     color: gallery.dim
                     elide: Text.ElideRight
                     font.family: "Inter"
@@ -172,7 +176,7 @@ Item {
             }
             Pill {
                 Layout.alignment: Qt.AlignTop
-                text: i18n("Done")
+                text: i18nd("monet", "Done")
                 ink: gallery.smoke ? "#242321" : "#F3F1EC"
                 tint: gallery.ink
                 ring: gallery.lily
@@ -202,13 +206,13 @@ Item {
                     rightPadding: 12
                     verticalAlignment: TextInput.AlignVCenter
                     color: gallery.ink
-                    placeholderText: i18n("Search")
+                    placeholderText: i18nd("monet", "Search")
                     placeholderTextColor: Qt.rgba(gallery.ink.r, gallery.ink.g, gallery.ink.b, 0.5)
                     selectionColor: Kirigami.Theme.highlightColor
                     selectedTextColor: Kirigami.Theme.highlightedTextColor
                     font.family: "Inter"
                     font.pixelSize: 14
-                    Accessible.name: i18n("Search widgets")
+                    Accessible.name: i18nd("monet", "Search widgets")
                     onTextChanged: {
                         if (gallery.explorer) {
                             gallery.explorer.widgetsModel.searchTerm = text
@@ -235,6 +239,7 @@ Item {
                         }
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         anchors.fill: parent
                         leftPadding: search.leftPadding
                         rightPadding: search.rightPadding
@@ -248,7 +253,7 @@ Item {
                 }
 
                 Kind {
-                    title: i18n("All widgets")
+                    title: i18nd("monet", "All widgets")
                     sign: gallery.forBar ? "monet" : "preferences-desktop-wallpaper"
                     chosen: gallery.shown === "all"
                     ink: gallery.ink
@@ -285,7 +290,7 @@ Item {
 
                 Kind {
                     visible: others.count > 0
-                    title: i18n("More widgets")
+                    title: i18nd("monet", "More widgets")
                     sign: "list-add"
                     chosen: gallery.shown === "more"
                     ink: gallery.ink
@@ -381,7 +386,7 @@ Item {
                         visible: gallery.shown === "more" ? others.count === 0 : mine.count === 0
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
-                        text: i18n("No widget by that name.")
+                        text: i18nd("monet", "No widget by that name.")
                         color: gallery.dim
                         font.family: "Inter"
                         font.italic: true
@@ -459,6 +464,7 @@ Item {
                 source: kind.sign
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 text: kind.title
                 color: kind.ink
@@ -499,7 +505,7 @@ Item {
         enabled: supported
         opacity: supported ? 1 : 0.5
         activeFocusOnTab: true
-        Accessible.name: i18nc("%1 is a widget's name", "Add %1", name)
+        Accessible.name: i18ndc("monet", "%1 is a widget's name", "Add %1", name)
         Accessible.description: description
         onClicked: add()
         Keys.onReturnPressed: add()
@@ -549,6 +555,7 @@ Item {
             spacing: 6
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 Layout.leftMargin: 16
                 Layout.rightMargin: 16
@@ -562,6 +569,7 @@ Item {
                 font.weight: Font.DemiBold
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 Layout.leftMargin: 16
                 Layout.rightMargin: 16
@@ -618,8 +626,9 @@ Item {
                 spacing: Kirigami.Units.smallSpacing
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     visible: card.running > 0
-                    text: card.forBar ? i18n("In your bar") : i18n("On your desktop")
+                    text: card.forBar ? i18nd("monet", "In your bar") : i18ndp("monet", "On your desktop", "%1 on your desktop", card.running)
                     color: card.ring
                     font.family: "Inter"
                     font.pixelSize: 12
@@ -630,10 +639,11 @@ Item {
                 T.AbstractButton {
                     id: takeAwayButton
                     visible: card.running > 0
-                    text: i18n("Remove")
+                    // Every copy goes: say so when there's more than one.
+                    text: card.running > 1 ? i18nd("monet", "Remove all") : i18nd("monet", "Remove")
                     implicitWidth: takeAwayLabel.implicitWidth + 24
                     implicitHeight: 30
-                    Accessible.name: i18nc("%1 is a widget's name", "Remove %1", card.name)
+                    Accessible.name: i18ndc("monet", "%1 is a widget's name", "Remove %1", card.name)
                     onClicked: card.takeAway()
                     background: Rectangle {
                         radius: height / 2
@@ -652,10 +662,10 @@ Item {
                 }
                 T.AbstractButton {
                     id: addButton
-                    text: i18n("Add")
+                    text: i18nd("monet", "Add")
                     implicitWidth: addLabel.implicitWidth + 30
                     implicitHeight: 30
-                    Accessible.name: i18nc("%1 is a widget's name", "Add %1", card.name)
+                    Accessible.name: i18ndc("monet", "%1 is a widget's name", "Add %1", card.name)
                     onClicked: card.add()
                     background: Rectangle {
                         radius: height / 2
@@ -699,7 +709,7 @@ Item {
         enabled: supported
         opacity: supported ? 1 : 0.5
         activeFocusOnTab: true
-        Accessible.name: i18nc("%1 is a widget's name", "Add %1", name)
+        Accessible.name: i18ndc("monet", "%1 is a widget's name", "Add %1", name)
         Accessible.description: description
         onClicked: add()
         Keys.onReturnPressed: add()
@@ -753,6 +763,7 @@ Item {
                 Layout.fillWidth: true
                 spacing: 1
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: row.name
                     color: row.ink
@@ -762,6 +773,7 @@ Item {
                     font.pixelSize: 14
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: row.description
                     color: row.dim
@@ -772,8 +784,9 @@ Item {
                 }
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.rightMargin: 12
-                text: row.running > 0 ? i18n("Added") : i18n("+ Add")
+                text: row.running > 0 ? i18nd("monet", "Added") : i18nd("monet", "+ Add")
                 color: row.ring
                 font.family: "Inter"
                 font.pixelSize: 13

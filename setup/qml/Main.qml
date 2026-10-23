@@ -17,7 +17,7 @@ ApplicationWindow {
     width: 1440
     height: 900
     color: "#9C9DB4"
-    title: "Monet Setup"
+    title: tr("Monet Setup")
 
     readonly property real u: Math.min(width / 1440, height / 900)
     readonly property color ink: "#1B1A19"
@@ -33,6 +33,17 @@ ApplicationWindow {
     readonly property string phase: setup.phase
 
     function px(n) { return Math.max(1, Math.round(n * u)) }
+
+    // Setup's words in the language picked on the first page. Reading setup.lang makes
+    // every text that asks say itself again when the language changes.
+    function tr(text, value) {
+        setup.lang
+        return setup.say(text, value === undefined ? "" : String(value))
+    }
+    function trc(context, text, value) {
+        setup.lang
+        return setup.sayIn(context, text, value === undefined ? "" : String(value))
+    }
 
     // The painting, cropped to fill the screen.
     Image {
@@ -58,6 +69,7 @@ ApplicationWindow {
             mipmap: true
         }
         Text {
+            horizontalAlignment: Text.AlignLeft
             text: "Monet"
             color: "#FFFFFF"
             font.family: serif
@@ -129,6 +141,8 @@ ApplicationWindow {
     // What's on the sheet.
     Item {
         id: sheetContent
+        LayoutMirroring.enabled: setup.rtl
+        LayoutMirroring.childrenInherit: true
         x: glass.sheet.x
         y: glass.sheet.y
         width: glass.sheet.width
@@ -187,16 +201,16 @@ ApplicationWindow {
                 }
                 Item { Layout.fillWidth: true }
                 PillButton {
-                    text: "Back"
+                    text: tr("Back")
                     plain: true
                     visible: step > 0 && !installing
                     onClicked: step = step - 1
                 }
                 PillButton {
                     id: next
-                    text: installing ? "Restart"
-                        : step === 4 ? (setup.mode === "erase" ? "Erase & Install" : "Install")
-                        : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : "Continue"
+                    text: installing ? tr("Restart")
+                        : step === 4 ? (setup.mode === "erase" ? tr("Erase & Install") : tr("Install"))
+                        : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : tr("Continue")
                     accent: step === 4 && !installing
                     enabled: installing || (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
                     onClicked: {
@@ -220,10 +234,10 @@ ApplicationWindow {
             property bool busy: false
             function leave() { return !setup.applyKeyboard() }
             spacing: px(22)
-            Title { text: "Hello"; big: true; topPadding: px(40) }
-            Body { text: "Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards." }
+            Title { text: tr("Hello"); big: true; topPadding: px(40) }
+            Body { text: tr("Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards.") }
             Field {
-                label: "Language"
+                label: tr("Language")
                 Choice {
                     width: parent.width
                     model: setup.languages
@@ -232,7 +246,7 @@ ApplicationWindow {
                 }
             }
             Field {
-                label: "Keyboard"
+                label: tr("Keyboard")
                 Choice {
                     width: parent.width
                     model: setup.keyboards
@@ -253,7 +267,7 @@ ApplicationWindow {
             readonly property bool needsPassword: chosenNet && chosenNet.secure && chosen !== setup.joined
             property bool ready: setup.wired || setup.joined !== "" || chosen !== ""
             property bool busy: setup.joining
-            property string busyText: "Connecting…"
+            property string busyText: tr("Connecting…")
             property bool waiting: false
 
             // Continue joins the chosen network first, then moves on.
@@ -275,8 +289,8 @@ ApplicationWindow {
                 }
             }
 
-            Title { text: setup.wired ? "You're online" : "Connect to Wi-Fi" }
-            Body { text: "Monet downloads itself and Windows while it installs. Windows will use this network too." }
+            Title { text: setup.wired ? tr("You're online") : tr("Connect to Wi-Fi") }
+            Body { text: tr("Monet downloads itself and Windows while it installs. Windows will use this network too.") }
             Card {
                 visible: setup.wired
                 height: px(64)
@@ -285,7 +299,7 @@ ApplicationWindow {
                     x: px(16)
                     spacing: px(14)
                     Glyph { kind: "cable"; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: "Connected with a cable"; font.family: sans; font.pixelSize: px(15); font.weight: Font.Medium; color: ink }
+                    Text { text: tr("Connected with a cable"); font.family: sans; font.pixelSize: px(15); font.weight: Font.Medium; color: ink }
                 }
             }
             Card {
@@ -307,26 +321,30 @@ ApplicationWindow {
                         onClicked: wifiPage.chosen = modelData.name
                         Glyph { kind: "wifi"; strength: modelData.signal; Layout.alignment: Qt.AlignVCenter }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: modelData.name
                             elide: Text.ElideRight
                             font.family: sans; font.pixelSize: px(15); font.weight: Font.Medium; color: ink
                         }
                         Text {
-                            text: modelData.name === setup.joined ? "Connected" : modelData.secure ? "Secured" : "Open"
+                            horizontalAlignment: Text.AlignLeft
+                            text: modelData.name === setup.joined ? tr("Connected") : modelData.secure ? tr("Secured")
+                                : trc("a Wi-Fi network anyone can join, without a password", "Open")
                             font.family: sans; font.pixelSize: px(12); color: dim
                         }
                     }
                 }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: setup.scanning ? "Looking for networks…" : "No networks found"
+                    text: setup.scanning ? tr("Looking for networks…") : tr("No networks found")
                     font.family: sans; font.pixelSize: px(14); color: dim
                 }
             }
             Field {
-                label: "Password"
+                label: tr("Password")
                 visible: !setup.wired && wifiPage.needsPassword
                 Entry {
                     id: password
@@ -338,7 +356,7 @@ ApplicationWindow {
             Note { text: setup.wifiError; warm: true; visible: text !== "" }
             Link {
                 visible: !setup.wired
-                text: setup.scanning ? "Looking…" : "Look again"
+                text: setup.scanning ? tr("Looking…") : tr("Look again")
                 onClicked: setup.scan()
             }
         }
@@ -355,20 +373,21 @@ ApplicationWindow {
                 problem = setup.setPerson(name.text, pass.text)
                 return problem === ""
             }
-            Title { text: "Who's using this PC?" }
-            Body { text: "This is your account in Monet and in Windows." }
+            Title { text: tr("Who's using this PC?") }
+            Body { text: tr("This is your account in Monet and in Windows.") }
             Field {
-                label: "Your name"
-                Entry { id: name; width: parent.width; placeholder: "Name"; focus: true; text: setup.personName }
+                label: tr("Your name")
+                Entry { id: name; width: parent.width; placeholder: tr("Name"); focus: true; text: setup.personName }
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     opacity: name.text.trim() !== "" ? 1 : 0     // keeps its place, so nothing jumps
-                    text: "You sign in as " + setup.accountFor(name.text)
+                    text: tr("You sign in as %1", setup.accountFor(name.text))
                     font.family: sans; font.pixelSize: px(12); color: dim
                 }
             }
             Field {
-                label: "Password"
-                Entry { id: pass; width: parent.width; secret: true; placeholder: "At least 6 characters"; text: setup.personPassword; onAccepted: next.clicked() }
+                label: tr("Password")
+                Entry { id: pass; width: parent.width; secret: true; placeholder: tr("At least 6 characters"); text: setup.personPassword; onAccepted: next.clicked() }
             }
             Note { text: parent.problem; warm: true; visible: text !== "" }
         }
@@ -382,16 +401,17 @@ ApplicationWindow {
             property bool ready: true
             property bool busy: false
             spacing: px(16)
-            Title { text: "Your apps" }
-            Body { text: "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in." }
+            Title { text: tr("Your apps") }
+            Body { text: tr("Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in.") }
             Repeater {
-                model: [["Everyday", true], ["More", false]]
+                model: [[trc("the apps people use every day", "Everyday"), true], [trc("more apps to choose from", "More"), false]]
                 Column {
                     id: appSection
                     required property var modelData
                     width: parent.width
                     spacing: px(8)
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         text: appSection.modelData[0]
                         font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
                     }
@@ -455,12 +475,14 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         spacing: px(1)
                                         Text {
+                                            horizontalAlignment: Text.AlignLeft
                                             width: parent.width
                                             text: appTile.modelData.name
                                             elide: Text.ElideRight
                                             font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink
                                         }
                                         Text {
+                                            horizontalAlignment: Text.AlignLeft
                                             width: parent.width
                                             text: appTile.modelData.detail
                                             elide: Text.ElideRight
@@ -483,7 +505,7 @@ ApplicationWindow {
             readonly property bool ready: setup.blocker === ""
             property bool busy: false
             readonly property var disk: setup.disks.length ? setup.disks[Math.min(setup.disk, setup.disks.length - 1)] : null
-            Title { text: "Ready to install" }
+            Title { text: tr("Ready to install") }
             Column {
                 width: parent.width
                 spacing: px(8)
@@ -496,10 +518,11 @@ ApplicationWindow {
                     Column {
                         Layout.fillWidth: true
                         spacing: px(3)
-                        Text { text: "Monet and Windows"; font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
+                        Text { text: tr("Monet and Windows"); font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             width: parent.width
-                            text: "Erases this PC. Windows installs itself, only for games."
+                            text: tr("Erases this PC. Windows installs itself, only for games.")
                             wrapMode: Text.WordWrap
                             font.family: sans; font.pixelSize: px(13); lineHeight: px(18); lineHeightMode: Text.FixedHeight; color: dim
                         }
@@ -514,10 +537,11 @@ ApplicationWindow {
                     Column {
                         Layout.fillWidth: true
                         spacing: px(3)
-                        Text { text: "Monet next to my Windows"; font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
+                        Text { text: tr("Monet next to my Windows"); font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             width: parent.width
-                            text: "Keeps Windows and your files. Uses free space."
+                            text: tr("Keeps Windows and your files. Uses free space.")
                             wrapMode: Text.WordWrap
                             font.family: sans; font.pixelSize: px(13); lineHeight: px(18); lineHeightMode: Text.FixedHeight; color: dim
                         }
@@ -531,10 +555,11 @@ ApplicationWindow {
                     anchors.fill: parent
                     anchors.leftMargin: px(16)
                     anchors.rightMargin: px(16)
-                    Text { text: "Disk"; font.family: sans; font.pixelSize: px(13); color: dim }
+                    Text { text: tr("Disk"); font.family: sans; font.pixelSize: px(13); color: dim }
                     Item { Layout.fillWidth: true }
                     Text {
-                        text: disk ? disk.label : "Looking for disks…"
+                        horizontalAlignment: Text.AlignLeft
+                        text: disk ? disk.label : tr("Looking for disks…")
                         elide: Text.ElideRight
                         Layout.maximumWidth: px(330)
                         font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
@@ -542,7 +567,7 @@ ApplicationWindow {
                 }
             }
             Field {
-                label: "Disk"
+                label: tr("Disk")
                 visible: setup.disks.length > 1
                 Choice {
                     width: parent.width
@@ -553,7 +578,7 @@ ApplicationWindow {
             }
             Note { text: setup.blocker; warm: true; visible: text !== "" }
             Note {
-                text: "Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
+                text: tr("Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards.")
                 warm: true
                 visible: setup.blocker === "" && setup.mode === "erase" && disk !== null && disk.hasWindows
             }
@@ -568,7 +593,7 @@ ApplicationWindow {
             spacing: px(22)
             topPadding: px(70)
             Ripple { anchors.horizontalCenter: parent.horizontalCenter }
-            Title { text: "Installing Monet"; anchors.horizontalCenter: parent.horizontalCenter }
+            Title { text: tr("Installing Monet"); anchors.horizontalCenter: parent.horizontalCenter }
             Bar { width: parent.width; value: setup.progress }
             Text {
                 width: parent.width
@@ -582,7 +607,7 @@ ApplicationWindow {
                 topPadding: px(24)
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                text: "You can leave it running. If the connection drops, Monet picks up where it stopped."
+                text: tr("You can leave it running. If the connection drops, Monet picks up where it stopped.")
                 font.family: sans; font.pixelSize: px(13); lineHeight: px(19); lineHeightMode: Text.FixedHeight; color: dim
             }
         }
@@ -594,11 +619,11 @@ ApplicationWindow {
             property bool ready: true
             property bool busy: false
             spacing: px(22)
-            Title { text: "All set"; big: true; topPadding: px(40) }
+            Title { text: tr("All set"); big: true; topPadding: px(40) }
             Body {
                 text: setup.mode === "erase"
-                      ? "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
-                      : "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
+                      ? tr("Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself.")
+                      : tr("Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away.")
             }
             // The blue screen at the first start: easy to skip by accident,
             // and then Secure Boot refuses Monet.
@@ -612,14 +637,19 @@ ApplicationWindow {
                     anchors.margins: px(18)
                     spacing: px(6)
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         width: parent.width
                         wrapMode: Text.WordWrap
-                        text: "Once, when it first starts"
+                        text: tr("Once, when it first starts")
                         font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink
                     }
                     Body {
                         font.pixelSize: px(14)
-                        text: "A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start."
+                        text: trc("Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way", "A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start.")
+                    }
+                    Body {
+                        font.pixelSize: px(14)
+                        text: tr("Take a photo of these steps with your phone first: this screen goes away when the PC restarts.")
                     }
                 }
             }
@@ -632,12 +662,12 @@ ApplicationWindow {
             property bool ready: false
             property bool busy: false
             spacing: px(22)
-            Title { text: "That didn't work" }
+            Title { text: tr("That didn't work") }
             Body { text: setup.error }
             Row {
                 spacing: px(8)
-                PillButton { text: "Try again"; onClicked: setup.retry() }
-                PillButton { text: details.visible ? "Hide details" : "Details"; plain: true; onClicked: details.visible = !details.visible }
+                PillButton { text: tr("Try again"); onClicked: setup.retry() }
+                PillButton { text: details.visible ? tr("Hide details") : tr("Details"); plain: true; onClicked: details.visible = !details.visible }
             }
             Card {
                 id: details
@@ -649,6 +679,7 @@ ApplicationWindow {
                     clip: true
                     contentHeight: log.implicitHeight
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         id: log
                         width: parent.width
                         text: setup.details
@@ -695,6 +726,7 @@ ApplicationWindow {
         radius: Math.round(14 * u)
         color: warm ? Qt.rgba(251 / 255, 231 / 255, 207 / 255, 0.85) : Qt.rgba(1, 1, 1, 0.55)
         Text {
+            horizontalAlignment: Text.AlignLeft
             id: noteText
             anchors.fill: parent
             anchors.margins: Math.round(12 * u)
@@ -716,6 +748,7 @@ ApplicationWindow {
         width: parent ? parent.width : 0
         spacing: Math.round(6 * u)
         Text {
+            horizontalAlignment: Text.AlignLeft
             text: label
             color: "#1B1A19"
             font.family: "Inter"
@@ -793,6 +826,7 @@ ApplicationWindow {
         readonly property real u: Window.window ? Window.window.u : 1
         hoverEnabled: true
         contentItem: Text {
+            horizontalAlignment: Text.AlignLeft
             text: link.text
             color: link.hovered ? "#1F5249" : "#2A6A5F"
             font.family: "Inter"
@@ -832,7 +866,8 @@ ApplicationWindow {
             anchors.verticalCenter: parent.verticalCenter
             onClicked: entry.shown = !entry.shown
             contentItem: Text {
-                text: entry.shown ? "Hide" : "Show"
+                horizontalAlignment: Text.AlignLeft
+                text: (setup.lang, entry.shown ? setup.say("Hide", "") : setup.say("Show", ""))
                 color: "#2A6A5F"
                 font.family: "Inter"
                 font.pixelSize: Math.round(12 * u)
@@ -855,6 +890,7 @@ ApplicationWindow {
             border.width: choice.activeFocus || choice.popup.visible ? Math.max(2, Math.round(2 * u)) : 1
         }
         contentItem: Text {
+            horizontalAlignment: Text.AlignLeft
             leftPadding: Math.round(14 * u)
             text: choice.displayText
             font: choice.font
@@ -885,6 +921,7 @@ ApplicationWindow {
             height: Math.round(40 * u)
             highlighted: choice.highlightedIndex === index
             contentItem: Text {
+                horizontalAlignment: Text.AlignLeft
                 leftPadding: Math.round(8 * u)
                 text: modelData
                 color: "#1B1A19"

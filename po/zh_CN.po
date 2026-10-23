@@ -1,0 +1,3743 @@
+# Monet's words in Chinese (Simplified).
+# Gathered by tools/make-translations.py; %1, %2... stand for what is filled in.
+msgid ""
+msgstr ""
+"Project-Id-Version: Monet\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: image/password/QuickAuthDialog.qml:24
+msgid "Monet needs your password"
+msgstr "Monet 需要你的密码"
+
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+msgid "That password didn't work. Try again."
+msgstr "密码不对，请再试一次。"
+
+#: image/password/QuickAuthDialog.qml:199
+msgid "Allow this?"
+msgstr "要允许吗？"
+
+#: image/password/QuickAuthDialog.qml:224
+msgctxt "%1 is a person's name"
+msgid "As %1"
+msgstr "以 %1 的身份"
+
+#: image/password/QuickAuthDialog.qml:241
+msgid "Someone else…"
+msgstr "其他人…"
+
+#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
+#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+msgid "Password"
+msgstr "密码"
+
+#: image/password/QuickAuthDialog.qml:337
+msgid "Fewer details"
+msgstr "收起详情"
+
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+msgid "Details"
+msgstr "详情"
+
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/logout/Logout.qml:320 linux/share/monet/logout/Logout.qml:419
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:425 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2583
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2669 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3945 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
+#: crates/monet/src/main.rs:1047
+msgid "Cancel"
+msgstr "取消"
+
+#: image/password/QuickAuthDialog.qml:369
+msgid "Allow"
+msgstr "允许"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:97
+msgid "Drag a widget to move it. Point at one to resize or remove it."
+msgstr "拖动小组件即可移动。指向小组件可调整大小或将其移除。"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:105
+msgid "More"
+msgstr "更多"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:114
+msgid "Add widgets"
+msgstr "添加小组件"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:179
+msgid "Done"
+msgstr "完成"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:146
+msgid "Add a bar…"
+msgstr "添加任务栏…"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:152
+msgid "Manage desktops and bars"
+msgstr "管理桌面和任务栏"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:161 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1976
+msgid "Widgets"
+msgstr "小组件"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:169
+msgid "Click one to add it to the bar, or drag it there."
+msgstr "点击即可添加到任务栏，也可以直接拖过去。"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:170
+msgid "Click one to add it to your desktop, or drag it where you want it."
+msgstr "点击即可添加到桌面，也可以拖到你想放的地方。"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:209 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1457
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2878 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
+msgid "Search"
+msgstr "搜索"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:215
+msgid "Search widgets"
+msgstr "搜索小组件"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:256
+msgid "All widgets"
+msgstr "全部小组件"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:293
+msgid "More widgets"
+msgstr "更多小组件"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:389
+msgid "No widget by that name."
+msgstr "没有叫这个名字的小组件。"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:508 linux/share/monet/explorer/MonetWidgetExplorer.qml:668 linux/share/monet/explorer/MonetWidgetExplorer.qml:712
+msgctxt "%1 is a widget's name"
+msgid "Add %1"
+msgstr "添加 %1"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:631
+msgid "In your bar"
+msgstr "在任务栏中"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:631
+msgid "On your desktop"
+msgid_plural "%1 on your desktop"
+msgstr[0] "桌面上有 %1 个"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:643
+msgid "Remove all"
+msgstr "全部移除"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:643 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2808
+msgid "Remove"
+msgstr "移除"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646
+msgctxt "%1 is a widget's name"
+msgid "Remove %1"
+msgstr "移除 %1"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:665
+msgid "Add"
+msgstr "添加"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:789
+msgid "Added"
+msgstr "已添加"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:789
+msgid "+ Add"
+msgstr "+ 添加"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+msgctxt "the painting's light, as in Impression, dawn"
+msgid "dawn"
+msgstr "黎明"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+msgctxt "the painting's light, as in Impression, midday"
+msgid "midday"
+msgstr "正午"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+msgctxt "the painting's light, as in Impression, dusk"
+msgid "dusk"
+msgstr "黄昏"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+msgctxt "the painting's light, as in Impression, night"
+msgid "night"
+msgstr "夜晚"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
+msgid "Water Lilies, %1"
+msgstr "睡莲·%1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
+msgid "Haystacks, %1"
+msgstr "干草堆·%1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
+msgid "Impression, %1"
+msgstr "印象·%1"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+msgctxt "%1 is a first name"
+msgid "Welcome back, %1."
+msgstr "欢迎回来，%1。"
+
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+msgid "Welcome back."
+msgstr "欢迎回来。"
+
+#: linux/share/monet/logout/Logout.qml:251
+msgctxt "%1 is a first name"
+msgid "See you soon, %1."
+msgstr "回头见，%1。"
+
+#: linux/share/monet/logout/Logout.qml:251
+msgid "See you soon."
+msgstr "回头见。"
+
+#: linux/share/monet/logout/Logout.qml:252
+msgid "Restart now?"
+msgstr "要立即重启吗？"
+
+#: linux/share/monet/logout/Logout.qml:253
+msgid "Shut down now?"
+msgstr "要立即关机吗？"
+
+#: linux/share/monet/logout/Logout.qml:254
+msgid "Sign out now?"
+msgstr "要立即退出登录吗？"
+
+#: linux/share/monet/logout/Logout.qml:269
+msgid "Open apps close, so save your work first."
+msgstr "打开的应用会关闭，请先保存你的工作。"
+
+#: linux/share/monet/logout/Logout.qml:274
+msgid "Your PC installs its updates and restarts in 1 second."
+msgid_plural "Your PC installs its updates and restarts in %1 seconds."
+msgstr[0] "%1 秒后，你的电脑会安装更新并重启。"
+
+#: linux/share/monet/logout/Logout.qml:275
+msgid "Your PC restarts in 1 second."
+msgid_plural "Your PC restarts in %1 seconds."
+msgstr[0] "%1 秒后，你的电脑会重启。"
+
+#: linux/share/monet/logout/Logout.qml:277
+msgid "Your PC installs its updates and shuts down in 1 second."
+msgid_plural "Your PC installs its updates and shuts down in %1 seconds."
+msgstr[0] "%1 秒后，你的电脑会安装更新并关机。"
+
+#: linux/share/monet/logout/Logout.qml:278
+msgid "Your PC shuts down in 1 second."
+msgid_plural "Your PC shuts down in %1 seconds."
+msgstr[0] "%1 秒后，你的电脑会关机。"
+
+#: linux/share/monet/logout/Logout.qml:279
+msgid "You'll be signed out in 1 second."
+msgid_plural "You'll be signed out in %1 seconds."
+msgstr[0] "%1 秒后，你将退出登录。"
+
+#: linux/share/monet/logout/Logout.qml:288
+msgid "Someone else is signed in too. They lose anything they haven't saved."
+msgid_plural ""
+"%1 other people are signed in too. They lose anything they haven't saved."
+msgstr[0] "另有 %1 人也已登录。他们未保存的内容都会丢失。"
+
+#: linux/share/monet/logout/Logout.qml:291
+msgid "When it restarts, the PC opens its setup screen (BIOS)."
+msgstr "重启时，电脑会打开其设置界面 (BIOS)。"
+
+#: linux/share/monet/logout/Logout.qml:291
+msgid "When it restarts, the PC opens its firmware settings."
+msgstr "重启后，电脑会打开固件设置。"
+
+#: linux/share/monet/logout/Logout.qml:292
+msgid "When it restarts, the PC opens its boot menu."
+msgstr "重启后，电脑会打开启动菜单。"
+
+#: linux/share/monet/logout/Logout.qml:294
+msgctxt "%1 is what the PC starts next"
+msgid "When it restarts, the PC starts %1."
+msgstr "重启后，电脑会启动 %1。"
+
+#: linux/share/monet/logout/Logout.qml:332 linux/share/monet/logout/Logout.qml:381
+msgid "Update and restart"
+msgstr "更新并重启"
+
+#: linux/share/monet/logout/Logout.qml:332 linux/share/monet/logout/Logout.qml:381 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:431
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3953 setup/qml/Main.qml:211 crates/monet/src/main.rs:317
+#: crates/monet/src/main.rs:740
+msgid "Restart"
+msgstr "重启"
+
+#: linux/share/monet/logout/Logout.qml:333 linux/share/monet/logout/Logout.qml:393
+msgid "Update and shut down"
+msgstr "更新并关机"
+
+#: linux/share/monet/logout/Logout.qml:333 linux/share/monet/logout/Logout.qml:393 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+msgid "Shut down"
+msgstr "关机"
+
+#: linux/share/monet/logout/Logout.qml:334 linux/share/monet/logout/Logout.qml:403
+msgid "Sign out"
+msgstr "退出登录"
+
+#: linux/share/monet/logout/Logout.qml:361 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3066 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Sleep"
+msgstr "睡眠"
+
+#: linux/share/monet/logout/Logout.qml:371
+msgid "Hibernate"
+msgstr "休眠"
+
+#: linux/share/monet/widgets/DayNotes.qml:109
+msgid "Today"
+msgstr "今天"
+
+#: linux/share/monet/widgets/DayNotes.qml:138
+msgid "The day before"
+msgstr "前一天"
+
+#: linux/share/monet/widgets/DayNotes.qml:138
+msgid "The day after"
+msgstr "后一天"
+
+#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:425 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1717
+#: crates/monet-usb/src/gui.rs:143
+msgid "Close"
+msgstr "关闭"
+
+#: linux/share/monet/widgets/DayNotes.qml:214
+msgid "Nothing planned. Write something for this day…"
+msgstr "暂无安排。为这一天写点什么…"
+
+#: linux/share/monet/widgets/DayNotes.qml:246
+msgid "Coming up"
+msgstr "即将到来"
+
+#: linux/share/monet/widgets/Month.qml:64
+msgctxt "a day in the calendar"
+msgid "Today"
+msgstr "今天"
+
+#: linux/share/monet/widgets/Month.qml:65
+msgctxt "a day in the calendar"
+msgid "Tomorrow"
+msgstr "明天"
+
+#: linux/share/monet/widgets/Month.qml:66
+msgctxt "a day in the calendar"
+msgid "Yesterday"
+msgstr "昨天"
+
+#: linux/share/monet/widgets/Month.qml:116
+msgid "Put the notes away"
+msgstr "收起笔记"
+
+#: linux/share/monet/widgets/Month.qml:116
+msgid "Notes"
+msgstr "笔记"
+
+#: linux/share/monet/widgets/Month.qml:117
+msgid "Write something for the chosen day"
+msgstr "为选中的日期写点什么"
+
+#: linux/share/monet/widgets/Month.qml:170
+msgid "Previous month"
+msgstr "上个月"
+
+#: linux/share/monet/widgets/Month.qml:170
+msgid "Next month"
+msgstr "下个月"
+
+#: linux/share/monet/widgets/Month.qml:345
+msgctxt "%1 is a day, like Today or Fri 30 Oct"
+msgid "Notes for %1"
+msgstr "%1的笔记"
+
+#: linux/share/monet/widgets/Month.qml:363
+msgid "Nothing planned"
+msgstr "暂无安排"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:149
+msgid "The picture before"
+msgstr "上一张图片"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:149
+msgid "The next picture"
+msgstr "下一张图片"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:190
+msgid "Put photos in your Pictures folder and they hang here."
+msgstr "把照片放进“图片”文件夹，它们就会挂在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/contents/ui/main.qml:209
+msgid "Open in Photos"
+msgstr "在照片中打开"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:32 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:244
+msgid "Windows Games"
+msgstr "Windows 游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:34
+msgid "%1 game ready to play"
+msgid_plural "%1 games ready to play"
+msgstr[0] "%1 款游戏随时可玩"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:35
+msgid "Play Windows games with one click"
+msgstr "一键畅玩 Windows 游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:359
+msgid "Monet couldn't switch to Windows."
+msgstr "Monet 无法切换到 Windows。"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:121 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3917 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4364
+msgid "Windows"
+msgstr "Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:250
+msgid "Opens in Windows. Quit to come back."
+msgstr "在 Windows 中打开。退出即可回来。"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:314
+msgid "Play"
+msgstr "开始"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:326
+msgid "No Windows games yet"
+msgstr "还没有 Windows 游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:327
+msgid ""
+"Start Windows once and install your games there. They show up here by themselves."
+msgstr "先启动一次 Windows，在那里安装你的游戏。它们会自动出现在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:335
+msgid "Open Windows"
+msgstr "打开 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:341 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:712
+msgid "%1 game"
+msgid_plural "%1 games"
+msgstr[0] "%1 款游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3910
+msgid "Couldn't open Windows"
+msgstr "无法打开 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:407 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3911
+msgid "Play %1?"
+msgstr "要玩 %1 吗？"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:408 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3912 crates/monet/src/main.rs:311
+msgid "Restart in Windows?"
+msgstr "要重启到 Windows 吗？"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:416 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3933
+msgid ""
+"Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
+msgstr "你的电脑会重启到 Windows 并打开游戏。退出游戏后会回到这里。请先保存你的工作。"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:417 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+msgid "Your PC restarts in Windows. Open apps close, so save your work first."
+msgstr "你的电脑会重启到 Windows。打开的应用会关闭，请先保存你的工作。"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:431 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3952
+msgid "Restart & Play"
+msgstr "重启 & 开始游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:521
+msgid "Opening %1"
+msgstr "正在打开 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:521
+msgid "Opening Windows"
+msgstr "正在打开 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:528
+msgid "Restarting in Windows"
+msgstr "正在重启到 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:27
+msgid "Menu"
+msgstr "菜单"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:28
+msgid "Your apps, and a search for everything on this PC"
+msgstr "你的应用，还能搜索这台电脑上的一切"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:132
+msgid "Unpin from Menu"
+msgstr "从菜单取消固定"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:132
+msgid "Pin to Menu"
+msgstr "固定到菜单"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:243
+msgid "Search apps, files and settings"
+msgstr "搜索应用、文件和设置"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:300 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:306
+msgid "All apps"
+msgstr "全部应用"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:300 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:306
+msgid "Pinned"
+msgstr "已固定"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:376
+msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
+msgstr "还没有固定的应用。在“全部应用”中右键点击应用，即可固定到这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:388
+msgid "Recent"
+msgstr "最近"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:437
+msgid "Files you open show up here."
+msgstr "你打开的文件会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:538
+msgid "Nothing here by that name."
+msgstr "这里没有叫这个名字的内容。"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:564 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2508
+msgid "Accounts"
+msgstr "账户"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:649 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3639
+msgid "Lock"
+msgstr "锁定"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:662
+msgid "Sleep, restart or shut down"
+msgstr "睡眠、重启或关机"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/contents/ui/main.qml:52
+msgid "Write something…"
+msgstr "写点什么…"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:126 linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:171
+msgctxt "%1 is a music app"
+msgid "Show %1"
+msgstr "显示 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:191 linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:409
+msgid "Nothing playing"
+msgstr "未在播放"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:226
+msgid "Position"
+msgstr "播放进度"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:294
+msgid "Previous track"
+msgstr "上一首"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:316
+msgctxt "the music"
+msgid "Pause"
+msgstr "暂停"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:316
+msgctxt "the music"
+msgid "Play"
+msgstr "播放"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:352
+msgid "Next track"
+msgstr "下一首"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:419
+msgid "Play something with"
+msgstr "选个应用来播放"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:420
+msgid "No music app yet."
+msgstr "还没有音乐应用。"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:420
+msgid "Music and videos show here while they play."
+msgstr "正在播放的音乐和视频会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/contents/ui/main.qml:433
+msgid "Find a music app"
+msgstr "找个音乐应用"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:39
+msgctxt "greeting late at night, %1 is a first name"
+msgid "Still up, %1?"
+msgstr "%1，还没睡吗？"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:40
+msgctxt "%1 is a first name"
+msgid "Good morning, %1."
+msgstr "早上好，%1。"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:41
+msgctxt "%1 is a first name"
+msgid "Good afternoon, %1."
+msgstr "下午好，%1。"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:42
+msgctxt "%1 is a first name"
+msgid "Good evening, %1."
+msgstr "晚上好，%1。"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:43
+msgctxt "%1 is a first name"
+msgid "Good night, %1."
+msgstr "晚安，%1。"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:74
+msgctxt "when a game was played"
+msgid "Today"
+msgstr "今天"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:76
+msgctxt "when a game was played"
+msgid "Yesterday"
+msgstr "昨天"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:78
+msgctxt "when a game was played"
+msgid "%1 day ago"
+msgid_plural "%1 days ago"
+msgstr[0] "%1 天前"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:80
+msgctxt "when a game was played"
+msgid "%1 week ago"
+msgid_plural "%1 weeks ago"
+msgstr[0] "%1 周前"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:94
+msgctxt "%1 is a game"
+msgid "Play %1"
+msgstr "玩 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:237
+msgid "Recently played"
+msgstr "最近玩过"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:289
+msgid "The games you play in Steam show up here."
+msgstr "你在 Steam 上玩过的游戏会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:298
+msgid "Open Steam"
+msgstr "打开 Steam"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:29
+msgid "Quick Settings"
+msgstr "快捷设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:212
+msgctxt "%1 is a quick setting, like Wi-Fi"
+msgid "%1 settings"
+msgstr "%1 设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:274 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:36 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2009
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290
+msgid "Unavailable"
+msgstr "不可用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:312 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2175
+msgid "Off"
+msgstr "已关闭"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:278 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210
+msgid "Not connected"
+msgstr "未连接"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:286 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2172
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2183
+msgid "Bluetooth"
+msgstr "蓝牙"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:312 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2174
+msgid "On"
+msgstr "已开启"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:298 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2272
+msgid "Night Light"
+msgstr "护眼模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:301
+msgid "Warm after sunset"
+msgstr "日落后变为暖色"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:309
+msgid "Do Not Disturb"
+msgstr "勿扰模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:345 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2262
+msgid "Brightness"
+msgstr "亮度"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:361
+msgid "Keyboard light"
+msgstr "键盘背光"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:376 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2306
+msgid "Volume"
+msgstr "音量"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390
+msgid "Light"
+msgstr "光线"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426
+msgid "Hours"
+msgstr "时光"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1806
+msgid "Mist"
+msgstr "薄雾"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:426 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1807
+msgid "Smoke"
+msgstr "轻烟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:473 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1806
+msgid "Always light"
+msgstr "始终浅色"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1807
+msgid "Always dark"
+msgstr "始终深色"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1805
+msgid "Mist by day, smoke after dark"
+msgstr "白天薄雾，入夜轻烟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:484
+msgid "Battery %1%, charging"
+msgstr "电量 %1%，正在充电"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:485
+msgid "Battery %1%, plugged in"
+msgstr "电量 %1%，已接通电源"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:486
+msgctxt "%2 is how long it lasts, like 2:15"
+msgid "Battery %1%, %2 left"
+msgstr "电量 %1%，还剩 %2"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:487 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2954
+msgid "Battery %1%"
+msgstr "电量 %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:492
+msgid "All Settings"
+msgstr "全部设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:33 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1797
+msgid "Light & Wallpaper"
+msgstr "光线 & 壁纸"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:34
+msgctxt "Settings search words, space-separated"
+msgid ""
+"light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors"
+msgstr "光线 壁纸 背景 画作 油画 时辰 薄雾 烟雾 深色 深色模式 暗色 玻璃 铭牌 时钟 主题 外观 颜色"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:37
+msgctxt "Settings search words, space-separated"
+msgid "wifi wi-fi wireless network internet password"
+msgstr "wifi wi-fi 无线 网络 互联网 上网 密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:40
+msgctxt "Settings search words, space-separated"
+msgid "bluetooth headphones controller gamepad mouse keyboard pair"
+msgstr "bluetooth 蓝牙 耳机 手柄 控制器 游戏手柄 鼠标 键盘 配对"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3717
+msgid "Printers"
+msgstr "打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:43
+msgctxt "Settings search words, space-separated"
+msgid "printers printer print scanner paper queue default add"
+msgstr "打印机 打印 扫描仪 纸张 队列 默认 添加"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2253
+msgid "Display"
+msgstr "显示"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:46
+msgctxt "Settings search words, space-separated"
+msgid "display screen brightness night light monitor resolution scale size"
+msgstr "显示 显示器 屏幕 亮度 夜间模式 夜灯 分辨率 缩放 大小"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2298
+msgid "Sound"
+msgstr "声音"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+msgctxt "Settings search words, space-separated"
+msgid "sound volume speakers headphones microphone mic audio output"
+msgstr "声音 音量 扬声器 音箱 耳机 麦克风 话筒 音频 输出"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2379
+msgid "Date & Time"
+msgstr "日期 & 时间"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
+msgctxt "Settings search words, space-separated"
+msgid "date time clock time zone 24-hour format automatic"
+msgstr "日期 时间 时钟 时区 24小时 格式 自动"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
+msgctxt "Settings search words, space-separated"
+msgid "accounts users password picture people name login sign in"
+msgstr "账户 帐户 用户 密码 头像 图片 人 名字 登录"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2732
+msgid "Mouse & Keyboard"
+msgstr "鼠标 & 键盘"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:59
+msgctxt "Settings search words, space-separated"
+msgid ""
+"mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing"
+msgstr "鼠标 键盘 触摸板 指针 速度 滚动 自然 轻触 点击 左手 布局 语言 输入 打字"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2944
+msgid "Power & Sleep"
+msgstr "电源 & 睡眠"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63
+msgctxt "Settings search words, space-separated"
+msgid ""
+"power sleep suspend screen off energy battery lid button shutdown performance saver mode"
+msgstr "电源 睡眠 休眠 挂起 关闭屏幕 能耗 电池 合盖 按钮 关机 性能 省电 模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:65 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3601
+msgid "Lock & Privacy"
+msgstr "锁屏 & 隐私"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:66
+msgctxt "Settings search words, space-separated"
+msgid ""
+"lock screen locker password wake sleep privacy recent files history forget remember away"
+msgstr "锁屏 锁定 锁屏界面 密码 唤醒 睡眠 隐私 最近文件 历史 忘记 记住"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:68 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3124
+msgid "Notifications"
+msgstr "通知"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:70
+msgctxt "Settings search words, space-separated"
+msgid "notifications alerts do not disturb quiet popups sounds apps"
+msgstr "通知 提醒 勿扰 免打扰 静音 弹窗 声音 应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3370
+msgid "Accessibility"
+msgstr "辅助功能"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74
+msgctxt "Settings search words, space-separated"
+msgid ""
+"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read"
+msgstr "无障碍 辅助功能 放大 更大 文字 大小 缩放 指针 光标 动效 动画 屏幕阅读器 读屏 orca 看 阅读"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:76 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3272
+msgid "Default Apps"
+msgstr "默认应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78
+msgctxt "Settings search words, space-separated"
+msgid ""
+"default apps browser web email mail files music video photos pdf text open with"
+msgstr "默认应用 浏览器 网页 邮件 电子邮件 文件 音乐 视频 照片 pdf 文本 打开方式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:80 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4363
+msgid "Storage"
+msgstr "存储"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82
+msgctxt "Settings search words, space-separated"
+msgid "storage disk space room full free trash downloads clean games apps"
+msgstr "存储 磁盘 空间 已满 可用 回收站 下载 清理 游戏 应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:84 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3776
+msgid "Games & Controllers"
+msgstr "游戏 & 手柄"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86
+msgctxt "Settings search words, space-separated"
+msgid ""
+"games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris"
+msgstr ""
+"游戏 手柄 控制器 游戏手柄 摇杆 xbox playstation dualsense 电池 配对 测试 按键 叠加层 overlay fps mangohud 性能 steam 游戏库 已安装 heroic lutris"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:88 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3889
+msgid "Play on Windows"
+msgstr "在 Windows 中玩"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:89
+msgctxt "Settings search words, space-separated"
+msgid "windows games play anti-cheat steam restart boot doctor check"
+msgstr "windows 游戏 玩 开始 反作弊 anti-cheat steam 重启 启动 检查"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4041
+msgid "Updates"
+msgstr "更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:92
+msgctxt "Settings search words, space-separated"
+msgid "updates update version upgrade new"
+msgstr "更新 升级 版本 新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:94
+msgid "About Monet"
+msgstr "关于 Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:95
+msgctxt "Settings search words, space-separated"
+msgid ""
+"about pc computer specs graphics gpu processor cpu memory ram storage disk version"
+msgstr "关于 pc 电脑 计算机 配置 规格 显卡 图形 gpu 处理器 cpu 内存 ram 存储 磁盘 版本"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:162 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1409
+msgid "Settings"
+msgstr "设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:398 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:474
+msgid "Monet %1"
+msgstr "Monet %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:398
+msgid "the Monet from before"
+msgstr "之前的 Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:428
+msgid "Updating firmware…"
+msgstr "正在更新固件…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:429
+msgid "Restart to finish the firmware"
+msgstr "重启以完成固件更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:429
+msgid "Firmware is up to date"
+msgstr "固件已是最新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:430
+msgid "The firmware didn't update"
+msgstr "固件未能更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:431
+msgid "%1 firmware update"
+msgid_plural "%1 firmware updates"
+msgstr[0] "%1 个固件更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:437
+msgid "Keep the PC plugged in and switched on."
+msgstr "请保持电脑接通电源并处于开机状态。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438
+msgid "It installs while the PC restarts. Keep it plugged in until it's back."
+msgstr "固件会在电脑重启时安装。请保持接通电源，直到电脑重新开机。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:486
+msgid "Everything is installed."
+msgstr "全部安装完毕。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:439
+msgid "Try again in a moment."
+msgstr "请稍后再试。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:440
+msgid "For this PC's own parts, from their makers. Install when you're ready."
+msgstr "适用于这台电脑的硬件，由各硬件厂商提供。准备好后即可安装。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:450
+msgid "%1 · installs when the PC restarts"
+msgstr "%1 · 电脑重启时安装"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:466
+msgid "Monet %1 is ready"
+msgstr "Monet %1 已就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:466
+msgid "A new Monet is ready"
+msgstr "新版 Monet 已就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:469
+msgid "%1 app update is ready"
+msgid_plural "%1 app updates are ready"
+msgstr[0] "%1 个应用更新已就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:472
+msgid "Restart to finish"
+msgstr "重启以完成"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:472
+msgid "Your apps are up to date"
+msgstr "你的应用已是最新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+msgid "Monet"
+msgstr "Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:480
+msgid "Looking for updates…"
+msgstr "正在检查更新…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:481
+msgid "Monet and your apps are up to date."
+msgstr "Monet 和你的应用都已是最新版本。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:483
+msgid "And %1 app update. Install when you're ready."
+msgid_plural "And %1 app updates. Install when you're ready."
+msgstr[0] "另有 %1 个应用更新。准备好后即可安装。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:484
+msgid "Install when you're ready."
+msgstr "准备好后即可安装。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:485
+msgid "Downloading and installing. You can keep using your PC."
+msgstr "正在下载并安装。你可以继续使用电脑。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:486
+msgid "The new Monet starts the next time you restart."
+msgstr "新版 Monet 会在你下次重启时启动。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:487
+msgid ""
+"Monet couldn't look for updates. Check your internet connection and try again."
+msgstr "Monet 无法检查更新。请检查网络连接，然后重试。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:488
+msgid "Monet only updates when you ask it to."
+msgstr "Monet 只会在你要求时更新。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+msgid "Type your name."
+msgstr "请输入你的名字。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564
+msgid "A name can't have : or , in it."
+msgstr "名字中不能包含“:”或“,”。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+msgid "Monet couldn't change your name."
+msgstr "Monet 无法更改你的名字。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:588
+msgid "Type a new password."
+msgstr "请输入新密码。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:588
+msgid "The new passwords don't match."
+msgstr "两次输入的新密码不一致。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:597 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:606
+msgid "Monet couldn't change your password."
+msgstr "Monet 无法更改你的密码。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:598
+msgid "That password is too long."
+msgstr "这个密码太长了。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:716 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3462
+msgid "%1 free"
+msgstr "可用 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:729
+msgid "%1 TB"
+msgstr "%1 TB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:729 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:730
+msgid "%1 GB"
+msgstr "%1 GB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:730
+msgid "%1 MB"
+msgstr "%1 MB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:731
+msgid "%1 KB"
+msgstr "%1 KB"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:741 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3617
+msgid "Never"
+msgstr "永不"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:741
+msgid "%1 min"
+msgstr "%1 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:742
+msgid "%1 hour"
+msgid_plural "%1 hours"
+msgstr[0] "%1 小时"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1358
+msgid "Play %1"
+msgstr "玩 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1445
+msgid "Search settings"
+msgstr "搜索设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1593
+msgid "Opens in a separate window"
+msgstr "在单独的窗口中打开"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1605
+msgid "Nothing here by that name. Try More settings."
+msgstr "这里没有叫这个名字的内容。试试“更多设置”。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1623
+msgid "More settings ›"
+msgstr "更多设置 ›"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1632
+msgid "More settings"
+msgstr "更多设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1798
+msgid "How Monet looks, and when it changes."
+msgstr "Monet 的外观，以及它何时变化。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1805
+msgid "Follow the hours"
+msgstr "跟随时光"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1874
+msgid "Painting"
+msgstr "画作"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1881
+msgid "The Hours"
+msgstr "时光"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1881
+msgid "The harbor at Le Havre"
+msgstr "勒阿弗尔的港口"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1882
+msgid "Water Lilies"
+msgstr "睡莲"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1882
+msgid "The pond at Giverny"
+msgstr "吉维尼的池塘"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1883
+msgid "Haystacks"
+msgstr "干草堆"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1883
+msgid "A field after the harvest"
+msgstr "收获后的田野"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1951
+msgid "Through the day"
+msgstr "从早到晚"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1951
+msgid "The painting's light drifts with the time of day"
+msgstr "画中的光线随一天的时间缓缓变化"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1952
+msgid "Placard"
+msgstr "展签"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1952
+msgid "The time and the painting's name on the desktop"
+msgstr "在桌面上显示时间和画作名称"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
+msgid "Glass"
+msgstr "玻璃"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
+msgid "See the painting through panels and windows"
+msgstr "透过面板和窗口看见画作"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
+msgid "Add, move or take away the cards on your desktop"
+msgstr "添加、移动或移除桌面上的卡片"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1982
+msgid "Edit widgets"
+msgstr "编辑小组件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000
+msgid "Connected to %1"
+msgstr "已连接到 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2010
+msgid "This PC has no Wi-Fi"
+msgstr "这台电脑没有 Wi-Fi"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
+#: setup/qml/Main.qml:332
+msgid "Connected"
+msgstr "已连接"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2036
+msgid "Other networks"
+msgstr "其他网络"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2036
+msgid "Networks"
+msgstr "网络"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046
+msgid "No other networks nearby"
+msgstr "附近没有其他网络"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+msgid "Looking for networks…"
+msgstr "正在查找网络…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+msgid "Couldn't join"
+msgstr "无法加入"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2147
+msgid "Joining…"
+msgstr "正在加入…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+msgid "Secured"
+msgstr "已加密"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097
+msgid "Open"
+msgstr "开放"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2125
+msgid "Password for %1"
+msgstr "%1 的密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133
+msgid "That didn't work. Check the password."
+msgstr "没能连上，请检查密码。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2147
+msgid "Join"
+msgstr "加入"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2157
+msgid "More Wi-Fi settings…"
+msgstr "更多 Wi-Fi 设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2174
+msgid "%1 device connected"
+msgid_plural "%1 devices connected"
+msgstr[0] "已连接 %1 个设备"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2184
+msgid "This PC has no Bluetooth"
+msgstr "这台电脑没有蓝牙"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2201
+msgid "No devices yet"
+msgstr "还没有设备"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2202
+msgid "Pair headphones, a controller or a mouse to see them here."
+msgstr "配对耳机、手柄或鼠标后，它们会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228
+msgid "Disconnecting…"
+msgstr "正在断开…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+msgid "Connecting…"
+msgstr "正在连接…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2229
+msgid "Disconnect"
+msgstr "断开连接"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2229
+msgid "Connect"
+msgstr "连接"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239
+msgid "Pair a new device…"
+msgstr "配对新设备…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2254
+msgid "Brightness, and warmer colors at night."
+msgstr "亮度，以及夜间的暖色。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2273
+msgid "Warmer colors from sunset to sunrise, easier on the eyes"
+msgstr "从日落到日出使用暖色，让眼睛更舒适"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2283
+msgid "Arrange displays and size…"
+msgstr "排列显示器和调整大小…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2299
+msgid "Playing through %1"
+msgstr "正在通过 %1 播放"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2315
+msgid "Play sound through"
+msgstr "声音输出设备"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349
+msgid "Microphone"
+msgstr "麦克风"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2357
+msgid "More sound settings…"
+msgstr "更多声音设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2380
+msgid "Your clock, and where in the world it keeps time."
+msgstr "你的时钟，以及它按哪里的时间走。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2417
+msgid "Set automatically"
+msgstr "自动设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2418
+msgid "From the internet, to the second"
+msgstr "从网络获取，精确到秒"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2418
+msgid "This PC can't set its own time"
+msgstr "这台电脑无法自动设置时间"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2431
+msgid "24-hour time"
+msgstr "24 小时制"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2432
+msgid "Your clocks change the next time you sign in"
+msgstr "时钟会在你下次登录时更改"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2433
+msgid "As your region keeps it"
+msgstr "按你所在地区的习惯"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2434
+msgid "13:00, not 1:00 PM"
+msgstr "13:00，而不是下午 1:00"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2434
+msgid "1:00 PM, not 13:00"
+msgstr "下午 1:00，而不是 13:00"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2445
+msgid "Time zone"
+msgstr "时区"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2453
+msgid "Search for a city"
+msgstr "搜索城市"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2484
+msgid "No time zone by that name"
+msgstr "没有叫这个名字的时区"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2485
+msgid "Try a big city near you."
+msgstr "试试你附近的大城市。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2490
+msgid "More date & time settings…"
+msgstr "更多日期 & 时间设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2509
+msgid "You, and the people who share this PC."
+msgstr "你，以及和你共用这台电脑的人。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2542
+msgid "%1 · Administrator"
+msgstr "%1 · 管理员"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2543
+msgid "%1 · Standard account"
+msgstr "%1 · 标准账户"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2552
+msgid "Change name"
+msgstr "更改名字"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+msgid "Your name"
+msgstr "你的名字"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2589
+msgid "Save"
+msgstr "保存"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2610
+msgid "Changed. Use the new one from now on."
+msgstr "已更改。从现在起请使用新密码。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2611
+msgid "For signing in, unlocking and allowing changes"
+msgstr "用于登录、解锁和允许更改"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2615
+msgid "Change…"
+msgstr "更改…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2638
+msgid "Current password"
+msgstr "当前密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2645
+msgid "New password"
+msgstr "新密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2652
+msgid "New password, again"
+msgstr "再次输入新密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2676
+msgid "Changing…"
+msgstr "正在更改…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2676
+msgid "Change password"
+msgstr "更改密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2685
+msgid "Other people"
+msgstr "其他人"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2694
+msgid "Only you, so far"
+msgstr "目前只有你"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2695
+msgid "Add someone in More account settings."
+msgstr "可在“更多账户设置”中添加其他人。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2703
+msgid "Administrator"
+msgstr "管理员"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2703
+msgid "Standard account"
+msgstr "标准账户"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2716
+msgid "More account settings…"
+msgstr "更多账户设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2733
+msgid "How the pointer moves and scrolls, and the languages you type in."
+msgstr "指针如何移动和滚动，以及你用哪些语言输入。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "Touchpad"
+msgstr "触控板"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "Mouse"
+msgstr "鼠标"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2755
+msgid "Pointer speed"
+msgstr "指针速度"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2762
+msgid "Tap to click"
+msgstr "轻点即点击"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2762
+msgid "A light tap is a click"
+msgstr "轻轻一点就是一次点击"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2763
+msgid "Natural scrolling"
+msgstr "自然滚动"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2763
+msgid "The page follows your fingers, as on a phone"
+msgstr "页面跟随手指移动，就像在手机上一样"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2764
+msgid "Left-handed"
+msgstr "左手模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2764
+msgid "The buttons swap sides"
+msgstr "左右按键互换"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2765
+msgid "Off while typing"
+msgstr "打字时停用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2765
+msgid "A palm on it won't move the pointer"
+msgstr "手掌碰到也不会移动指针"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2788 setup/qml/Main.qml:249
+msgid "Keyboard"
+msgstr "键盘"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2803
+msgid "Typing starts in this one"
+msgstr "打字时默认使用这个"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2803
+msgid "Click to make this the main one"
+msgstr "点击设为主要布局"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2817
+msgid "Add a language or layout"
+msgstr "添加语言或布局"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2850
+msgid "No layout by that name"
+msgstr "没有叫这个名字的布局"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2851
+msgid "Try your language's name, like Swedish or Japanese."
+msgstr "试试语言名称，比如瑞典语或日语。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2859
+msgid "The bar shows which one you're typing in. Click it to switch."
+msgstr "任务栏会显示你当前用的是哪一个。点击即可切换。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2867
+msgid "Keyboard shortcuts"
+msgstr "键盘快捷键"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2878
+msgid "Open the menu"
+msgstr "打开菜单"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2879
+msgid "Files"
+msgstr "文件管理"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2879 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3612
+msgid "Lock the screen"
+msgstr "锁定屏幕"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2880
+msgid "All your windows"
+msgstr "所有窗口"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2880
+msgid "The desktop"
+msgstr "桌面"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2881
+msgid "Switch windows"
+msgstr "切换窗口"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2881
+msgid "A window on one half"
+msgstr "窗口占半边屏幕"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2882
+msgid "A window on the whole screen"
+msgstr "窗口占满整个屏幕"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2882
+msgid "What you copied"
+msgstr "复制过的内容"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2883
+msgid "Emoji"
+msgstr "表情符号"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2883
+msgid "Screenshot"
+msgstr "截图"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2884
+msgid "Restart or shut down"
+msgstr "重启或关机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2918
+msgid "More mouse & keyboard settings…"
+msgstr "更多鼠标 & 键盘设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2923
+msgid "Change shortcuts…"
+msgstr "更改快捷键…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2945
+msgid "When the screen rests, when the PC sleeps, and how hard it works."
+msgstr "屏幕何时休息、电脑何时睡眠，以及它的工作强度。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2956
+msgctxt "%1 is a time like 1:20"
+msgid "Charging, full in %1"
+msgstr "正在充电，%1 后充满"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2956
+msgid "Charging"
+msgstr "正在充电"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2957 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3038
+msgid "Plugged in"
+msgstr "接通电源"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2958
+msgctxt "%1 is a time like 2:15"
+msgid "About %1 left"
+msgstr "大约还剩 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2958 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3038
+msgid "On battery"
+msgstr "使用电池"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2968
+msgid "Power saver"
+msgstr "省电模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2968
+msgid "Cooler and quieter, longer on battery"
+msgstr "更凉爽、更安静，续航更久"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2970
+msgid "Balanced"
+msgstr "平衡模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2970
+msgid "Quick when it counts"
+msgstr "需要时足够快"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2972
+msgid "Performance"
+msgstr "性能模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2972
+msgid "As fast as it goes, warmer and louder"
+msgstr "全速运行，更热也更吵"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3055
+msgid "Turn off the screen"
+msgstr "关闭屏幕"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3056
+msgid "After this long untouched"
+msgstr "多久无操作后"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+msgid "It wakes where you left off"
+msgstr "唤醒后回到你离开时的状态"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3080
+msgid "Buttons"
+msgstr "按键"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3087
+msgid "Power button"
+msgstr "电源键"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3088
+msgid "What a press does"
+msgstr "按下后的操作"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+msgid "Ask"
+msgstr "询问"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Nothing"
+msgstr "无操作"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3099
+msgid "Closing the lid"
+msgstr "合上盖子"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+msgid "Screen off"
+msgstr "熄屏"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3110
+msgid "More power settings…"
+msgstr "更多电源设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3125
+msgid "What may interrupt you, and when it waits."
+msgstr "什么可以打扰你，以及何时先等一等。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3133
+msgid "Do not disturb"
+msgstr "勿扰模式"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3134
+msgid "Notifications wait quietly in the list"
+msgstr "通知会静静地留在列表中"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3134
+msgid "Notifications pop up as they come"
+msgstr "通知到达时会弹出"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3144
+msgid "Sounds"
+msgstr "提示音"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3145
+msgid "A soft sound with each one"
+msgstr "每条通知都有轻柔的提示音"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3155
+msgid "Quiet by itself"
+msgstr "自动勿扰"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+msgid "While a game or film fills the screen"
+msgstr "游戏或影片全屏时"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+msgid "They wait until you're done"
+msgstr "通知会等你结束后再出现"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3162
+msgid "While you share or mirror your screen"
+msgstr "共享屏幕或投屏时"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3162
+msgid "So nothing private pops up for others"
+msgstr "避免私人内容弹出被别人看到"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3163
+msgid "Let urgent ones through"
+msgstr "允许紧急通知"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3163
+msgid "Like a low battery, even while quiet"
+msgstr "比如电量不足，勿扰时也会提醒"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3184
+msgid "Popups"
+msgstr "弹出通知"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3191
+msgid "Where they appear"
+msgstr "显示位置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "By the clock"
+msgstr "时钟旁"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "Top right"
+msgstr "右上角"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3194
+msgid "Top center"
+msgstr "顶部居中"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3201
+msgid "How long they stay"
+msgstr "停留时长"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3204
+msgid "%1 s"
+msgstr "%1 秒"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3212 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
+msgid "Apps"
+msgstr "应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3227
+msgid "Pops up"
+msgstr "会弹出"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3227
+msgid "Only in the list, without popping up"
+msgstr "只在列表中显示，不弹出"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+msgid "No apps yet"
+msgstr "还没有应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+msgid "Apps show up here once they've sent a notification."
+msgstr "应用发送过通知后，就会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3251
+msgid "More notification settings…"
+msgstr "更多通知设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Web browser"
+msgstr "浏览器"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Email"
+msgstr "电子邮件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
+msgid "Folders"
+msgstr "文件夹"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264 setup/monet_setup/app.py:57
+msgid "Music"
+msgstr "音乐"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265 setup/monet_setup/app.py:56
+msgid "Video"
+msgstr "视频"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265 setup/monet_setup/app.py:54
+msgid "Photos"
+msgstr "照片"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
+msgid "PDF documents"
+msgstr "PDF 文档"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
+msgid "Text files"
+msgstr "文本文件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
+msgid ""
+"What opens web links, mail, folders, music, films, photos, PDFs and text."
+msgstr "用什么打开网页链接、邮件、文件夹、音乐、影片、照片、PDF 和文本。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3293
+msgid "Nothing chosen yet"
+msgstr "尚未选择"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3294
+msgid "No app for this yet. Find one in the Store"
+msgstr "还没有合适的应用。可在应用商店中查找"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3295
+msgid "No app for this yet"
+msgstr "还没有合适的应用"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3321
+msgid "Find one"
+msgstr "查找"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3356
+msgid "More default apps…"
+msgstr "更多默认应用…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3371
+msgid "Make Monet easier to see, read and use."
+msgstr "让 Monet 更容易看清、阅读和使用。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3379
+msgid "Size of everything"
+msgstr "整体大小"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3380
+msgid "Text, pictures and windows, on every screen"
+msgstr "所有屏幕上的文字、图片和窗口"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3391
+msgid "Pointer size"
+msgstr "指针大小"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Normal"
+msgstr "标准"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Large"
+msgstr "大"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3394
+msgid "Larger"
+msgstr "更大"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3402
+msgid "Reduce motion"
+msgstr "减弱动态效果"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3403
+msgid "Things appear without sliding, fading or bouncing"
+msgstr "内容直接出现，不再滑动、淡入或弹跳"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3414
+msgid "Screen reader"
+msgstr "屏幕阅读器"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3415
+msgid "Reads aloud what's on the screen and what you type"
+msgstr "朗读屏幕上的内容和你输入的文字"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3425
+msgid "More accessibility settings…"
+msgstr "更多辅助功能设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
+msgid "Games"
+msgstr "游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+msgid "Your files"
+msgstr "你的文件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449
+msgid "What fills this PC, and room to make."
+msgstr "什么占用了这台电脑的空间，以及怎样腾出空间。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3462
+msgid "Measuring…"
+msgstr "正在计算…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3473
+msgid "of %1"
+msgstr "共 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530
+msgid "Make room"
+msgstr "腾出空间"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3537
+msgid "Trash"
+msgstr "回收站"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+msgid "Everything in it is gone for good. Sure?"
+msgstr "里面的所有内容都会被永久删除。确定吗？"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3539 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+msgid "Empty"
+msgstr "空"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3673
+msgid "Keep it"
+msgstr "保留"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3551
+msgid "Empty for good"
+msgstr "永久清空"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3551
+msgid "Empty Trash"
+msgstr "清空回收站"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3565
+msgid "Downloads"
+msgstr "下载"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+msgid "%1 · look through them in Files"
+msgstr "%1 · 可在“文件管理”中查看"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+msgid "Show"
+msgstr "显示"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3579
+msgid ""
+"What apps leave behind when they update is cleared away with each update, by itself."
+msgstr "应用更新后留下的旧文件，会在每次更新时自动清理。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3602
+msgid "The screen doesn't lock by itself."
+msgstr "屏幕不会自动锁定。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3603
+msgid "The screen locks after %1 minute away."
+msgid_plural "The screen locks after %1 minutes away."
+msgstr[0] "你离开 %1 分钟后，屏幕会锁定。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3605
+msgid "Who can get in, and what Monet remembers."
+msgstr "谁能进入，以及 Monet 会记住什么。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3613
+msgid "When you've been away this long"
+msgstr "你离开多久后锁定"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "1 min"
+msgstr "1 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "5 min"
+msgstr "5 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "15 min"
+msgstr "15 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3616
+msgid "30 min"
+msgstr "30 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3625
+msgid "Ask for the password after sleep"
+msgstr "睡眠后需要输入密码"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3626
+msgid "Waking the PC shows the lock screen"
+msgstr "唤醒电脑时显示锁屏"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3635
+msgid "Lock now"
+msgstr "立即锁定"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3636
+msgid "Or press the Windows key and L"
+msgstr "也可以按 Windows 键 + L"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3646
+msgid "What Monet remembers"
+msgstr "Monet 会记住什么"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3654
+msgid "Remember recent files"
+msgstr "记住最近的文件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655
+msgid "Files and the menu show what you opened lately"
+msgstr "“文件管理”和菜单会显示你最近打开的内容"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3664
+msgid "Forget recent files"
+msgstr "忘记最近的文件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3665
+msgid "The list of what you opened is cleared. Your files stay. Sure?"
+msgstr "最近打开的记录会被清除，你的文件仍会保留。确定吗？"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3666
+msgid "Cleared. Your files are still there."
+msgstr "已清除。你的文件仍在原处。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3667
+msgid "Clears the list, not the files"
+msgstr "只清除列表，不删除文件"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+msgid "Forget"
+msgstr "忘记"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+msgid "Forget…"
+msgstr "忘记…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3695
+msgid "More lock screen settings…"
+msgstr "更多锁屏设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3700
+msgid "More recent files settings…"
+msgstr "更多最近文件设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3718
+msgid "Printers on your network show up by themselves."
+msgstr "你网络中的打印机会自动显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3719
+msgid "%1 printer"
+msgid_plural "%1 printers"
+msgstr[0] "%1 台打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3732
+msgid "Your default"
+msgstr "默认打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
+msgid "Printing"
+msgstr "正在打印"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
+msgid "Turned off"
+msgstr "已关机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3734 crates/monet/src/main.rs:252
+msgid "Ready"
+msgstr "就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3735
+msgid "%1 waiting"
+msgid_plural "%1 waiting"
+msgstr[0] "%1 个待打印"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3740
+msgid "Make default"
+msgstr "设为默认"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3748
+msgid "Another printer"
+msgstr "另一台打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3748
+msgid "No printers yet"
+msgstr "还没有打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3749
+msgid ""
+"Turn it on and join it to your Wi-Fi: Monet finds most printers by itself"
+msgstr "打开打印机并连接到你的 Wi-Fi：Monet 能自动找到大多数打印机"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
+msgid "Add…"
+msgstr "添加…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3759
+msgid "More printer settings…"
+msgstr "更多打印机设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3778
+msgid "%1 controller connected"
+msgid_plural "%1 controllers connected"
+msgstr[0] "已连接 %1 个手柄"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3779
+msgid "Your controllers, and where your games are kept."
+msgstr "你的手柄，以及游戏的存放位置。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
+msgid "Controllers"
+msgstr "手柄"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
+msgctxt "a controller, connected by its cable"
+msgid "Plugged in"
+msgstr "有线连接"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3796
+msgid "%1% · charging"
+msgstr "%1% · 正在充电"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3797
+msgid "%1% battery"
+msgstr "电量 %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3803
+msgid "Another controller"
+msgstr "另一个手柄"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3803
+msgid "No controller connected"
+msgstr "未连接手柄"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3804
+msgid "Plug one in, or pair one over Bluetooth"
+msgstr "插上手柄，或通过蓝牙配对"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3810
+msgid "Pair…"
+msgstr "配对…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3815
+msgid "Test buttons…"
+msgstr "测试按键…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3824
+msgid "While you play"
+msgstr "游戏时"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3833
+msgid "Performance overlay"
+msgstr "性能浮窗"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3834
+msgid ""
+"Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play."
+msgstr "下次登录后，在每个游戏上显示帧率和电脑的运行状态。玩游戏时按右 Shift+F12 可隐藏。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3844
+msgid "Where your games are"
+msgstr "游戏位置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3869
+msgid "No games yet"
+msgstr "还没有游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3870
+msgid "Steam, Heroic and Lutris keep theirs here once you install one"
+msgstr "安装 Steam、Heroic 或 Lutris 后，它们的游戏会存放在这里"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3875
+msgid "More controller settings…"
+msgstr "更多手柄设置…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3890
+msgid "Games that need Windows, a restart away."
+msgstr "需要 Windows 的游戏，重启一下就能玩。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3909
+msgid "Restarting in Windows…"
+msgstr "正在重启到 Windows…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3913
+msgid "The last trip didn't reach Windows"
+msgstr "上次没能进入 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3914 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
+msgid "Getting Windows ready"
+msgstr "正在准备 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3915
+msgid "Windows is ready to install"
+msgstr "Windows 已准备好安装"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3916 crates/monet/src/main.rs:738
+msgid "Windows is ready"
+msgstr "Windows 已就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3918
+msgid "Windows isn't ready"
+msgstr "Windows 尚未就绪"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3927
+msgid "Your PC restarts in a moment."
+msgstr "你的电脑马上就会重启。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3930
+msgid ""
+"Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts."
+msgstr "Monet 正在为你的游戏下载 Windows。你可以继续使用电脑，Monet 重启前会先问你。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3931
+msgid ""
+"Restart to install it. It takes about 10 minutes, then you're back in Monet."
+msgstr "重启即可安装，大约需要 10 分钟，之后会回到 Monet。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3932
+msgid "Plug in the charger first."
+msgstr "请先接上充电器。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3935
+msgid ""
+"Games that need Windows start there, and you come back here when you quit."
+msgstr "需要 Windows 的游戏会在那里启动，退出后就会回到这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3936
+msgid "Windows: %1. Check Monet below to see what's missing."
+msgstr "Windows：%1。用下方的“检查 Monet”看看缺少什么。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3954
+msgid "Restart and install"
+msgstr "重启并安装"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3955
+msgid "Restart in Windows"
+msgstr "重启到 Windows"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3996
+msgid ""
+"Your Windows games show up here once Windows has started with Monet Bridge."
+msgstr "Windows 启动并运行 Monet Bridge 后，你的 Windows 游戏会显示在这里。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4006
+msgid "Check Monet"
+msgstr "检查 Monet"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4007
+msgid "See that Windows, Secure Boot and switching are all set up"
+msgstr "确认 Windows、安全启动和切换功能都已设置好"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4010 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4088
+msgid "Checking…"
+msgstr "正在检查…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4010
+msgid "Check"
+msgstr "检查"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4042
+msgid "Only when you ask."
+msgstr "仅在你要求时更新。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4043
+msgid "Monet and your apps keep themselves up to date."
+msgstr "Monet 和你的应用会自动保持最新。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4089 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4278
+msgid "Installing…"
+msgstr "正在安装…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4090 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4281 setup/qml/Main.qml:212
+msgid "Install"
+msgstr "安装"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4091 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4215 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4279
+msgid "Restart now"
+msgstr "立即重启"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+msgid "Try again"
+msgstr "重试"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4093
+msgid "Check for updates"
+msgstr "检查更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4113
+msgid "Update automatically"
+msgstr "自动更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4115
+msgid "Monet and your apps update only when you choose Check for updates"
+msgstr "只有在你选择“检查更新”时，Monet 和你的应用才会更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4116
+msgid ""
+"Once a day, in the background: your apps right away, Monet at your next restart"
+msgstr "每天在后台更新一次：应用立即更新，Monet 在下次重启时更新"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4128
+msgid "New in Monet %1"
+msgstr "Monet %1 新功能"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4184
+msgid "%1 starts at your next restart"
+msgstr "%1 会在下次重启时启动"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4185
+msgid "Go back to %1"
+msgstr "回退到 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4186
+msgid "The one you're using now stays too, to come back to."
+msgstr "当前使用的版本也会保留，方便你再回来。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4187
+msgid ""
+"It starts the next time you restart. Your files and apps stay as they are."
+msgstr "下次重启时生效。你的文件和应用都会原样保留。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4188
+msgid ""
+"From %1. If something stopped working after an update, the one before is still here."
+msgstr "%1 的版本。如果更新后有东西不能用了，之前的版本还在。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4189
+msgid ""
+"If something stopped working after an update, the one before is still here."
+msgstr "如果更新后有东西不能用了，之前的版本还在。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4195
+msgid "Stay"
+msgstr "保持现状"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+msgid "Go back at restart"
+msgstr "重启时回退"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+msgid "Go back"
+msgstr "回退"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
+msgid ""
+"A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case."
+msgstr "新版 Monet 会在你下次重启时启动，绝不会在你工作时启动。以防万一，之前的版本会保留在启动菜单中。"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+msgid "%1 · Impression"
+msgstr "%1 · 印象"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+msgid "Impression"
+msgstr "印象"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4360
+msgid "Graphics"
+msgstr "显卡"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4361
+msgid "Processor"
+msgstr "处理器"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4362
+msgid "Memory"
+msgstr "内存"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4364
+msgid "Ready for games"
+msgstr "可以玩游戏了"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:105
+msgctxt "a dial's reading, in percent"
+msgid "%1%"
+msgstr "%1%"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:165
+msgctxt "the computer's main chip"
+msgid "Processor"
+msgstr "处理器"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:175
+msgctxt "the computer's graphics chip"
+msgid "Graphics"
+msgstr "显卡"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:184
+msgctxt "the computer's working memory (RAM)"
+msgid "Memory"
+msgstr "内存"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:217
+msgctxt "%1 is a speed"
+msgid "Downloading %1"
+msgstr "下载速度 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:229
+msgctxt "%1 is a speed"
+msgid "Uploading %1"
+msgstr "上传速度 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:34
+msgid "Timer"
+msgstr "计时器"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:35
+msgctxt "%1 is a time like 4:59"
+msgid "%1 left"
+msgstr "还剩 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:102 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:211
+msgid "Time's up"
+msgstr "时间到"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:103
+msgid "%1 minute has passed."
+msgid_plural "%1 minutes have passed."
+msgstr[0] "%1 分钟已经过去了。"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:119
+msgctxt "a timer's length, short"
+msgid "%1 min"
+msgstr "%1 分钟"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:228
+msgid "Scroll to change the minutes"
+msgstr "滚动以更改分钟数"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:239
+msgid "Pause"
+msgstr "暂停"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:239
+msgid "Start"
+msgstr "开始"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:291
+msgctxt "a timer: back to its full length"
+msgid "Reset"
+msgstr "重置"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/config/config.qml:6
+msgid "Place"
+msgstr "地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:106
+msgid "Places:"
+msgstr "地点："
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:111
+msgid "No place yet"
+msgstr "尚未设置地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:127 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:46
+msgctxt "%1 is a town"
+msgid "Remove %1"
+msgstr "移除 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:138
+msgid "Add a place:"
+msgstr "添加地点："
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:141 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:479 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:59
+msgid "A town or a city"
+msgstr "城镇或城市"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:166
+msgid "Degrees:"
+msgstr "温度单位："
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:167
+msgid "Fahrenheit"
+msgstr "华氏度"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:176
+msgid ""
+"The weather comes from Open-Meteo. Only the places are sent. The arrows beside a place's name on the card go through them."
+msgstr "天气信息来自 Open-Meteo。只会发送地点。卡片上地点名称旁的箭头可以在这些地点之间切换。"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Clear"
+msgstr "晴"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Mostly clear"
+msgstr "少云"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:124
+msgid "Partly cloudy"
+msgstr "晴间多云"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:125
+msgid "Overcast"
+msgstr "阴"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:125
+msgid "Fog"
+msgstr "雾"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:126
+msgid "Drizzle"
+msgstr "毛毛雨"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:126
+msgid "Rain"
+msgstr "雨"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:127
+msgid "Snow"
+msgstr "雪"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:127
+msgid "Showers"
+msgstr "阵雨"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:128
+msgid "Snow showers"
+msgstr "阵雪"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:128
+msgid "Thunderstorm"
+msgstr "雷阵雨"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:158
+msgid "The weather can't be reached right now. Click to try again."
+msgstr "现在无法获取天气。点击重试。"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
+msgid "Weather"
+msgstr "天气"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:172
+msgid "Add a place…"
+msgstr "添加地点…"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:177 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:587
+msgctxt "%1 is a town"
+msgid "Forget %1"
+msgstr "忘记 %1"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:193
+msgid "Place before"
+msgstr "上一个地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:193
+msgid "Next place"
+msgstr "下一个地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:281 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:440
+msgid "Add a place"
+msgstr "添加地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:327
+msgctxt "today's highest and lowest temperature"
+msgid "H %1°  L %2°"
+msgstr "最高 %1°  最低 %2°"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:400
+msgid "Looking at the sky…"
+msgstr "正在观察天空…"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:440
+msgid "Where are you?"
+msgstr "你在哪里？"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:484
+msgid "Find a place for the weather"
+msgstr "查找天气地点"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:578
+msgid "No place by that name."
+msgstr "没有叫这个名字的地点。"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:617
+msgid "Only the place is sent, to Open-Meteo."
+msgstr "只会将地点发送给 Open-Meteo。"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/config/config.qml:6
+msgid "Towns"
+msgstr "城市"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:27
+msgid "Towns:"
+msgstr "城市："
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:32
+msgid "No town yet"
+msgstr "尚未添加城市"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/ConfigTowns.qml:58
+msgid "Add a town:"
+msgstr "添加城市："
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:42
+msgctxt "in that town it's already"
+msgid "Tomorrow"
+msgstr "明天"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:43
+msgctxt "in that town it's still"
+msgid "Yesterday"
+msgstr "昨天"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:43
+msgctxt "in that town it's"
+msgid "Today"
+msgstr "今天"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:45
+msgctxt "a town on the same time as this PC"
+msgid "Same time"
+msgstr "时间相同"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:49
+msgctxt "hours ahead of this PC"
+msgid "+%1 h"
+msgstr "+%1 小时"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:49
+msgctxt "hours behind this PC"
+msgid "−%1 h"
+msgstr "−%1 小时"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:197 linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:239
+msgid "Add a town"
+msgstr "添加城市"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/contents/ui/main.qml:230
+msgid "What time is it elsewhere?"
+msgstr "其他地方现在几点？"
+
+#: setup/qml/Main.qml:20
+msgid "Monet Setup"
+msgstr "Monet 安装程序"
+
+#: setup/qml/Main.qml:204
+msgid "Back"
+msgstr "返回"
+
+#: setup/qml/Main.qml:212
+msgid "Erase & Install"
+msgstr "清除 & 安装"
+
+#: setup/qml/Main.qml:213
+msgid "Continue"
+msgstr "继续"
+
+#: setup/qml/Main.qml:237
+msgid "Hello"
+msgstr "你好"
+
+#: setup/qml/Main.qml:238
+msgid ""
+"Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."
+msgstr "我们来设置 Monet 吧。大约需要 15 分钟，之后 Windows 会自行完成设置。"
+
+#: setup/qml/Main.qml:240
+msgid "Language"
+msgstr "语言"
+
+#: setup/qml/Main.qml:292
+msgid "You're online"
+msgstr "已联网"
+
+#: setup/qml/Main.qml:292
+msgid "Connect to Wi-Fi"
+msgstr "连接 Wi-Fi"
+
+#: setup/qml/Main.qml:293
+msgid ""
+"Monet downloads itself and Windows while it installs. Windows will use this network too."
+msgstr "Monet 会在安装时下载自身和 Windows。Windows 也会使用这个网络。"
+
+#: setup/qml/Main.qml:302
+msgid "Connected with a cable"
+msgstr "已通过网线连接"
+
+#: setup/qml/Main.qml:333
+msgctxt "a Wi-Fi network anyone can join, without a password"
+msgid "Open"
+msgstr "开放"
+
+#: setup/qml/Main.qml:342
+msgid "No networks found"
+msgstr "未找到网络"
+
+#: setup/qml/Main.qml:359
+msgid "Looking…"
+msgstr "正在查找…"
+
+#: setup/qml/Main.qml:359
+msgid "Look again"
+msgstr "重新查找"
+
+#: setup/qml/Main.qml:376
+msgid "Who's using this PC?"
+msgstr "谁在使用这台电脑？"
+
+#: setup/qml/Main.qml:377
+msgid "This is your account in Monet and in Windows."
+msgstr "这是你在 Monet 和 Windows 中的账户。"
+
+#: setup/qml/Main.qml:380
+msgid "Name"
+msgstr "名字"
+
+#: setup/qml/Main.qml:384
+msgid "You sign in as %1"
+msgstr "你的登录名是 %1"
+
+#: setup/qml/Main.qml:390
+msgid "At least 6 characters"
+msgstr "至少 6 个字符"
+
+#: setup/qml/Main.qml:404
+msgid "Your apps"
+msgstr "你的应用"
+
+#: setup/qml/Main.qml:405
+msgid ""
+"Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
+msgstr "照片、文档、视频、音乐和计算器都已内置。你选的应用会在登录后陆续装好。"
+
+#: setup/qml/Main.qml:407
+msgctxt "the apps people use every day"
+msgid "Everyday"
+msgstr "常用"
+
+#: setup/qml/Main.qml:407
+msgctxt "more apps to choose from"
+msgid "More"
+msgstr "更多"
+
+#: setup/qml/Main.qml:508
+msgid "Ready to install"
+msgstr "准备安装"
+
+#: setup/qml/Main.qml:521
+msgid "Monet and Windows"
+msgstr "Monet 和 Windows"
+
+#: setup/qml/Main.qml:525
+msgid "Erases this PC. Windows installs itself, only for games."
+msgstr "将清除这台电脑。Windows 会自行安装，仅用于游戏。"
+
+#: setup/qml/Main.qml:540
+msgid "Monet next to my Windows"
+msgstr "Monet 与我的 Windows 并存"
+
+#: setup/qml/Main.qml:544
+msgid "Keeps Windows and your files. Uses free space."
+msgstr "保留 Windows 和你的文件。使用空闲空间。"
+
+#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+msgid "Disk"
+msgstr "磁盘"
+
+#: setup/qml/Main.qml:562
+msgid "Looking for disks…"
+msgstr "正在查找磁盘…"
+
+#: setup/qml/Main.qml:581
+msgid ""
+"Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
+msgstr "这块磁盘上的所有内容都会被清除，包括 Windows。之后 Monet 会为你的游戏安装全新的 Windows。"
+
+#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+msgid "Installing Monet"
+msgstr "正在安装 Monet"
+
+#: setup/qml/Main.qml:610
+msgid ""
+"You can leave it running. If the connection drops, Monet picks up where it stopped."
+msgstr "你可以让它自己运行。如果网络断开，Monet 会从中断的地方继续。"
+
+#: setup/qml/Main.qml:622
+msgid "All set"
+msgstr "一切就绪"
+
+#: setup/qml/Main.qml:625
+msgid ""
+"Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
+msgstr "拔出 U 盘并重启。登录后，Monet 会自动为你的游戏准备好 Windows。"
+
+#: setup/qml/Main.qml:626
+msgid ""
+"Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
+msgstr "拔出 U 盘并重启。电脑会启动进入 Monet，Windows 一键即达。"
+
+#: setup/qml/Main.qml:643
+msgid "Once, when it first starts"
+msgstr "仅在首次启动时"
+
+#: setup/qml/Main.qml:648
+msgctxt ""
+"Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
+msgid ""
+"A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start."
+msgstr ""
+"蓝色屏幕会询问是否信任 Monet。用方向键和 Enter 键依次选择 Enroll MOK、Continue 和 Yes，输入 monetsetup，然后选择 Reboot。屏幕默认停在 Continue boot 上：不要选它，否则 Monet 无法启动。"
+
+#: setup/qml/Main.qml:652
+msgid ""
+"Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
+msgstr "请先用手机拍下这些步骤：电脑重启后，此屏幕就会消失。"
+
+#: setup/qml/Main.qml:665
+msgid "That didn't work"
+msgstr "出了点问题"
+
+#: setup/qml/Main.qml:670
+msgid "Hide details"
+msgstr "隐藏详情"
+
+#: setup/qml/Main.qml:870
+msgid "Hide"
+msgstr "隐藏"
+
+#: setup/monet_setup/app.py:28
+msgid "Preparing the disk"
+msgstr "正在准备磁盘"
+
+#: setup/monet_setup/app.py:29
+msgid "Downloading Monet"
+msgstr "正在下载 Monet"
+
+#: setup/monet_setup/app.py:31
+msgid "Setting up your account"
+msgstr "正在设置你的账户"
+
+#: setup/monet_setup/app.py:32
+msgid "Finishing"
+msgstr "即将完成"
+
+#: setup/monet_setup/app.py:40
+msgid "The web"
+msgstr "浏览网页"
+
+#: setup/monet_setup/app.py:41
+msgid "Office"
+msgstr "办公"
+
+#: setup/monet_setup/app.py:41
+msgid "Documents, sheets, slides"
+msgstr "文档、表格、幻灯片"
+
+#: setup/monet_setup/app.py:42
+msgid "Mail"
+msgstr "邮件"
+
+#: setup/monet_setup/app.py:42
+msgid "Email and calendars"
+msgstr "电子邮件和日历"
+
+#: setup/monet_setup/app.py:43
+msgid "Talk while you play"
+msgstr "边玩边聊"
+
+#: setup/monet_setup/app.py:44
+msgid "Music to stream"
+msgstr "在线听音乐"
+
+#: setup/monet_setup/app.py:45
+msgid "Epic and GOG games"
+msgstr "Epic 和 GOG 游戏"
+
+#: setup/monet_setup/app.py:47
+msgid "Record and stream games"
+msgstr "录制和直播游戏"
+
+#: setup/monet_setup/app.py:48
+msgid "Paint and draw"
+msgstr "绘画创作"
+
+#: setup/monet_setup/app.py:55
+msgid "Documents"
+msgstr "文档"
+
+#: setup/monet_setup/app.py:58
+msgid "Calculator"
+msgstr "计算器"
+
+#: setup/monet_setup/app.py:66
+msgid "about %1 minute left"
+msgid_plural "about %1 minutes left"
+msgstr[0] "大约还剩 %1 分钟"
+
+#: setup/monet_setup/app.py:265
+msgid "The password needs at least 6 characters."
+msgstr "密码至少需要 6 个字符。"
+
+#: setup/monet_setup/app.py:285
+msgid "Built in"
+msgstr "内置"
+
+#: setup/monet_setup/app.py:333
+msgid "No disk found to install Monet on."
+msgstr "找不到可以安装 Monet 的磁盘。"
+
+#: setup/monet_setup/app.py:338
+msgid "This disk is too small for Monet (it needs 70 GB)."
+msgstr "这块磁盘太小，装不下 Monet（需要 70 GB）。"
+
+#: setup/monet_setup/app.py:411
+msgid "%1 of %2 GB"
+msgstr "%1 / %2 GB"
+
+#: setup/monet_setup/app.py:428
+msgid "The installer stopped unexpectedly."
+msgstr "安装程序意外停止了。"
+
+#: setup/monet_setup/disks.py:128
+msgid "This disk has no EFI partition, so Windows doesn't start from it."
+msgstr "这块磁盘没有 EFI 分区，所以 Windows 不是从它启动的。"
+
+#: setup/monet_setup/disks.py:132
+msgid ""
+"Needs %1 of free space; this disk has %2. Shrink Windows' drive in Disk Management first."
+msgstr "需要 %1 可用空间，这块磁盘只有 %2。请先在“磁盘管理”中压缩 Windows 所在的分区。"
+
+#: setup/monet_setup/install.py:126
+msgid "The free space on the disk changed. Go back and choose again."
+msgstr "磁盘上的可用空间变了。请返回重新选择。"
+
+#: setup/monet_setup/install.py:135
+msgid "The new partitions didn't show up."
+msgstr "新分区没有出现。"
+
+#: setup/monet_setup/install.py:139
+msgid "Windows' EFI partition wasn't found."
+msgstr "找不到 Windows 的 EFI 分区。"
+
+#: setup/monet_setup/install.py:231
+msgid ""
+"The connection dropped and didn't come back. Check the Wi-Fi, then try again."
+msgstr "网络连接断开了，且没有恢复。请检查 Wi-Fi，然后重试。"
+
+#: setup/monet_setup/install.py:294
+msgid "Monet's system wasn't found after installing."
+msgstr "安装后找不到 Monet 的系统。"
+
+#: setup/monet_setup/install.py:439
+msgid "Something unexpected went wrong. The details say what."
+msgstr "发生了意外问题。详情里有具体说明。"
+
+#: setup/monet_setup/network.py:77
+msgid "The network didn't answer. Try again, or pick another network."
+msgstr "网络没有响应。请重试，或选择其他网络。"
+
+#: setup/monet_setup/network.py:79
+msgid "Wi-Fi isn't available on this PC."
+msgstr "这台电脑无法使用 Wi-Fi。"
+
+#: setup/monet_setup/network.py:84
+msgid "That password didn't work."
+msgstr "密码不对。"
+
+#: setup/monet_setup/network.py:85
+msgid "Couldn't connect. Try again, or pick another network."
+msgstr "无法连接。请重试，或选择其他网络。"
+
+#: setup/monet_setup/system.py:51
+msgid "English (US)"
+msgstr "英语（美国）"
+
+#: setup/monet_setup/system.py:52
+msgid "English (US, international)"
+msgstr "英语（美国，国际）"
+
+#: setup/monet_setup/system.py:53
+msgid "English (UK)"
+msgstr "英语（英国）"
+
+#: setup/monet_setup/system.py:54
+msgid "Swedish"
+msgstr "瑞典语"
+
+#: setup/monet_setup/system.py:55
+msgid "German"
+msgstr "德语"
+
+#: setup/monet_setup/system.py:56
+msgid "French"
+msgstr "法语"
+
+#: setup/monet_setup/system.py:57
+msgid "Spanish"
+msgstr "西班牙语"
+
+#: setup/monet_setup/system.py:58
+msgid "Italian"
+msgstr "意大利语"
+
+#: setup/monet_setup/system.py:59
+msgid "Norwegian"
+msgstr "挪威语"
+
+#: setup/monet_setup/system.py:60
+msgid "Danish"
+msgstr "丹麦语"
+
+#: setup/monet_setup/system.py:61
+msgid "Finnish"
+msgstr "芬兰语"
+
+#: setup/monet_setup/system.py:62
+msgid "Polish"
+msgstr "波兰语"
+
+#: setup/monet_setup/system.py:63
+msgid "Czech"
+msgstr "捷克语"
+
+#: setup/monet_setup/system.py:64
+msgid "Hungarian"
+msgstr "匈牙利语"
+
+#: setup/monet_setup/system.py:65
+msgid "Romanian"
+msgstr "罗马尼亚语"
+
+#: setup/monet_setup/system.py:66
+msgid "Greek"
+msgstr "希腊语"
+
+#: setup/monet_setup/system.py:67
+msgid "Portuguese (Brazil)"
+msgstr "葡萄牙语（巴西）"
+
+#: setup/monet_setup/system.py:68
+msgid "Portuguese"
+msgstr "葡萄牙语"
+
+#: setup/monet_setup/system.py:69
+msgid "Turkish"
+msgstr "土耳其语"
+
+#: setup/monet_setup/system.py:70
+msgid "Russian"
+msgstr "俄语"
+
+#: setup/monet_setup/system.py:71
+msgid "Ukrainian"
+msgstr "乌克兰语"
+
+#: setup/monet_setup/system.py:72
+msgid "Thai"
+msgstr "泰语"
+
+#: setup/monet_setup/system.py:73
+msgid "Arabic"
+msgstr "阿拉伯语"
+
+#: setup/monet_setup/system.py:74
+msgid "Hebrew"
+msgstr "希伯来语"
+
+#: setup/monet_setup/system.py:75
+msgid "Japanese"
+msgstr "日语"
+
+#: setup/monet_setup/system.py:76
+msgid "Korean"
+msgstr "韩语"
+
+#: linux/libexec/monet-quick:1426
+msgid "Steam on %1"
+msgstr "%1 上的 Steam"
+
+#: linux/libexec/monet-quick:1430
+msgid "Games folder"
+msgstr "游戏文件夹"
+
+#: linux/libexec/monet-quick:1938
+msgid "%1 GB free of %2 GB"
+msgstr "可用 %1 GB，共 %2 GB"
+
+#: linux/libexec/monet-prepare-windows:177
+msgid "Making room for Windows"
+msgstr "正在为 Windows 腾出空间"
+
+#: linux/libexec/monet-prepare-windows:371
+msgid "Downloading Windows (%1 of %2 GB)"
+msgstr "正在下载 Windows（%1 / %2 GB）"
+
+#: linux/libexec/monet-prepare-windows:471
+msgid "Copying Windows Setup"
+msgstr "正在复制 Windows 安装程序"
+
+#: linux/libexec/monet-prepare-windows:483
+msgid "Preparing %1"
+msgstr "正在准备 %1"
+
+#: linux/libexec/monet-prepare-windows:487
+msgid "Preparing Windows Setup"
+msgstr "正在准备 Windows 安装程序"
+
+#: linux/libexec/monet-prepare-windows:571
+msgid "Asking Microsoft for Windows 11"
+msgstr "正在向 Microsoft 请求 Windows 11"
+
+#: linux/libexec/monet-prepare-windows:579
+msgid "Getting ready to restart"
+msgstr "正在准备重启"
+
+#: linux/libexec/monet-prepare-windows:582
+msgid "Windows installs itself at the next restart"
+msgstr "Windows 会在下次重启时自行安装"
+
+#: linux/libexec/monet-session:20
+msgid "Finish setting up Windows"
+msgstr "完成 Windows 设置"
+
+#: linux/libexec/monet-session:55
+msgid "Adding your apps"
+msgstr "正在添加你的应用"
+
+#: linux/libexec/monet-session:56
+msgid ""
+"Your apps download in the background and show up in the menu as they arrive."
+msgstr "你的应用正在后台下载，装好后会陆续出现在菜单中。"
+
+#: linux/libexec/monet-session:73
+msgid "See what's new"
+msgstr "查看新功能"
+
+#: linux/libexec/monet-session:74
+msgid "Monet %1 is here"
+msgstr "Monet %1 来了"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Files"
+msgstr "文件管理"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Terminal"
+msgstr "终端"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Text Editor"
+msgstr "文本编辑器"
+
+#: linux/libexec/monet-look:79
+msgctxt "an app's name in the menu"
+msgid "Photos"
+msgstr "照片"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Documents"
+msgstr "文档"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Archives"
+msgstr "压缩文件"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Screenshot"
+msgstr "截图"
+
+#: linux/libexec/monet-look:80
+msgctxt "an app's name in the menu"
+msgid "Calculator"
+msgstr "计算器"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Music"
+msgstr "音乐"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Videos"
+msgstr "视频"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Disk Usage"
+msgstr "磁盘用量"
+
+#: linux/libexec/monet-look:81
+msgctxt "an app's name in the menu"
+msgid "Disks"
+msgstr "磁盘"
+
+#: linux/libexec/monet-look:82
+msgctxt "an app's name in the menu"
+msgid "Phone"
+msgstr "手机"
+
+#: linux/libexec/monet-look:82
+msgctxt "an app's name in the menu"
+msgid "Phone Messages"
+msgstr "手机短信"
+
+#: linux/libexec/monet-look:69 linux/libexec/monet-look:73
+msgctxt "an app's name in the menu"
+msgid "Store"
+msgstr "应用商店"
+
+#: linux/libexec/monet-look:69 linux/libexec/monet-look:73
+msgctxt "an app's description in the menu"
+msgid "Apps and games for Monet"
+msgstr "适用于 Monet 的应用和游戏"
+
+#: linux/share/applications/monet-settings.desktop:3
+msgctxt "an app's name in the menu"
+msgid "Settings"
+msgstr "设置"
+
+#: linux/share/applications/monet-settings.desktop:33
+msgctxt "what an app is, under its name in the menu"
+msgid "Monet Settings"
+msgstr "Monet 设置"
+
+#: linux/share/applications/monet-settings.desktop:63
+msgctxt "an app's description in the menu"
+msgid ""
+"Light and wallpaper, Wi-Fi, Bluetooth, display, sound, Windows and updates"
+msgstr "光线和壁纸、Wi-Fi、蓝牙、显示、声音、Windows 和更新"
+
+#: linux/share/applications/monet-settings.desktop:96
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid ""
+"settings;preferences;wifi;bluetooth;display;sound;wallpaper;dark;light;update;"
+msgstr "设置;偏好设置;首选项;wifi;无线网络;蓝牙;bluetooth;显示;屏幕;声音;壁纸;深色;浅色;更新;"
+
+#: linux/share/applications/monet-settings.desktop:129
+msgctxt "an app's name in the menu"
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+#: linux/share/applications/monet-settings.desktop:162
+msgctxt "an app's name in the menu"
+msgid "Bluetooth"
+msgstr "蓝牙"
+
+#: linux/share/applications/monet-settings.desktop:195
+msgctxt "an app's name in the menu"
+msgid "Display"
+msgstr "显示"
+
+#: linux/share/applications/monet-settings.desktop:228
+msgctxt "an app's name in the menu"
+msgid "Sound"
+msgstr "声音"
+
+#: linux/share/applications/monet-windows.desktop:3
+msgctxt "an app's name in the menu"
+msgid "Windows"
+msgstr "Windows"
+
+#: linux/share/applications/monet-windows.desktop:33
+msgctxt "what an app is, under its name in the menu"
+msgid "Restart in Windows"
+msgstr "重启到 Windows"
+
+#: linux/share/applications/monet-windows.desktop:63
+msgctxt "an app's description in the menu"
+msgid "Restart in Windows for games that need it"
+msgstr "为需要 Windows 的游戏重启到 Windows"
+
+#: linux/share/applications/monet-windows.desktop:96
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid "windows;restart;reboot;anticheat;games;"
+msgstr "windows;重启;重新启动;反作弊;游戏;"
+
+#: linux/share/plasma/desktoptheme/monet/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet"
+msgstr "Monet"
+
+#: linux/share/plasma/desktoptheme/monet/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Glass islands and popovers over the painting"
+msgstr "画作之上的玻璃浮岛和弹出面板"
+
+#: linux/share/plasma/desktoptheme/monet-solid/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet (solid)"
+msgstr "Monet（不透明）"
+
+#: linux/share/plasma/desktoptheme/monet-solid/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Monet's islands and popovers without the glass"
+msgstr "不带玻璃效果的 Monet 浮岛和弹出面板"
+
+#: linux/share/plasma/look-and-feel/org.monet.desktop/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Mist"
+msgstr "薄雾"
+
+#: linux/share/plasma/look-and-feel/org.monet.desktop/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The Hours under glass, in the light of day"
+msgstr "玻璃下的《时光》，白昼的光线"
+
+#: linux/share/plasma/look-and-feel/org.monet.smoke.desktop/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Smoke"
+msgstr "轻烟"
+
+#: linux/share/plasma/look-and-feel/org.monet.smoke.desktop/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The Hours under glass, after dark"
+msgstr "玻璃下的《时光》，入夜之后"
+
+#: linux/share/plasma/plasmoids/org.monet.calendar/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Calendar"
+msgstr "日历"
+
+#: linux/share/plasma/plasmoids/org.monet.calendar/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The month on Monet's glass, today on a dab of the sun"
+msgstr "Monet 玻璃上的整月日历，今天以一抹阳光标出"
+
+#: linux/share/plasma/plasmoids/org.monet.clock/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Clock"
+msgstr "时钟"
+
+#: linux/share/plasma/plasmoids/org.monet.clock/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The time and the date in the panel, and the month on a click"
+msgstr "任务栏中的时间和日期，点一下可查看整月"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Photo Frame"
+msgstr "相框"
+
+#: linux/share/plasma/plasmoids/org.monet.frame/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Your pictures in a gilt frame, a new one every ten minutes"
+msgstr "你的照片装在镀金相框里，每十分钟换一张"
+
+#: linux/share/plasma/plasmoids/org.monet.games/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Windows Games"
+msgstr "Windows 游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.games/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"Your Windows games as a gallery. Play restarts in Windows and comes back."
+msgstr "以画廊形式展示你的 Windows 游戏。点“开始”会重启到 Windows，玩完再回来。"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Menu"
+msgstr "菜单"
+
+#: linux/share/plasma/plasmoids/org.monet.menu/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"Your pinned apps, every app from A to Z, and a search for apps, files and settings"
+msgstr "你固定的应用、按 A 到 Z 排列的全部应用，还能搜索应用、文件和设置"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Note"
+msgstr "便签"
+
+#: linux/share/plasma/plasmoids/org.monet.notes/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "A sheet of paper on the desktop, for what you want to keep in view"
+msgstr "桌面上的一张纸，记下你想随时看到的内容"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Now Playing"
+msgstr "正在播放"
+
+#: linux/share/plasma/plasmoids/org.monet.nowplaying/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "What's playing, with its cover, on Monet's glass"
+msgstr "在 Monet 的玻璃上显示正在播放的内容和封面"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Placard"
+msgstr "展签"
+
+#: linux/share/plasma/plasmoids/org.monet.placard/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The time, the date and the painting's name, like the card next to a painting"
+msgstr "时间、日期和画作名称，就像画作旁的说明卡"
+
+#: linux/share/plasma/plasmoids/org.monet.played/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Recently Played"
+msgstr "最近玩过"
+
+#: linux/share/plasma/plasmoids/org.monet.played/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The games you played last, with their covers: one click and you're back in"
+msgstr "你最近玩过的游戏和封面：点一下，马上回到游戏"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Quick Settings"
+msgstr "快捷设置"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Wi-Fi, Bluetooth, sound, brightness and Monet's light in one place"
+msgstr "Wi-Fi、蓝牙、声音、亮度和 Monet 的光线，集中在一处"
+
+#: linux/share/plasma/plasmoids/org.monet.system/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "System"
+msgstr "系统"
+
+#: linux/share/plasma/plasmoids/org.monet.system/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"How hard your PC is working: the processor, the graphics and the memory, how warm they run, and what's downloading"
+msgstr "你的电脑有多忙：处理器、显卡和内存，它们有多热，还有正在下载的内容"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Timer"
+msgstr "计时器"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"A few minutes on the sun's path: for the tea, a break, or one more match"
+msgstr "沿着太阳的轨迹走过几分钟：泡一壶茶、歇一会儿，或再来一局"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Weather"
+msgstr "天气"
+
+#: linux/share/plasma/plasmoids/org.monet.weather/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "The sky where you are, painted on Monet's glass"
+msgstr "你所在地的天空，画在 Monet 的玻璃上"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "World Clock"
+msgstr "世界时钟"
+
+#: linux/share/plasma/plasmoids/org.monet.worldclock/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid ""
+"The time in other towns, each on a little clock face, light by day and dark by night"
+msgstr "其他城市的时间，每座城市一个小表盘，白天浅色，夜晚深色"
+
+#: linux/share/plasma/wallpapers/org.monet.hours/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "The Hours"
+msgstr "时光"
+
+#: linux/share/plasma/wallpapers/org.monet.hours/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "One harbor in four lights, drifting through the day"
+msgstr "一座港口，四种光线，随一天流转"
+
+#: crates/monet/src/main.rs:211 crates/monet/src/main.rs:299
+msgid ""
+"Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."
+msgstr "Windows 尚未安装。在应用菜单中选择 Windows 即可完成设置。"
+
+#: crates/monet/src/main.rs:213
+msgid ""
+"Windows is encrypted with BitLocker, so Monet can't set it up for you. In Windows, open Monet for Windows and run Install Monet."
+msgstr ""
+"Windows 已使用 BitLocker 加密，因此 Monet 无法替你设置。请在 Windows 中打开 Monet for Windows，然后运行 Install Monet。"
+
+#: crates/monet/src/main.rs:218
+msgid ""
+"Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."
+msgstr "Windows 正处于休眠状态，因此 Monet 暂时无法设置它。请打开 Windows，选择“重启”，剩下的交给 Monet。"
+
+#: crates/monet/src/main.rs:226
+msgid "This PC didn't start in UEFI mode, so Monet can't switch to Windows."
+msgstr "这台电脑没有以 UEFI 模式启动，因此 Monet 无法切换到 Windows。"
+
+#: crates/monet/src/main.rs:233 crates/monet/src/main.rs:512
+msgid ""
+"Windows wasn't found on this PC. Install Windows first, then try again."
+msgstr "这台电脑上找不到 Windows。请先安装 Windows，然后重试。"
+
+#: crates/monet/src/main.rs:253
+msgid "Not found"
+msgstr "未找到"
+
+#: crates/monet/src/main.rs:255
+msgid "Unavailable (not a UEFI system)"
+msgstr "不可用（不是 UEFI 系统）"
+
+#: crates/monet/src/main.rs:309
+msgid "Play %1 on Windows?"
+msgstr "要在 Windows 中玩 %1 吗？"
+
+#: crates/monet/src/main.rs:310
+msgid "Play on Windows?"
+msgstr "要在 Windows 中玩吗？"
+
+#: crates/monet/src/main.rs:314
+msgid ""
+"Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."
+msgstr "你的电脑将重启到 Windows 并启动游戏。退出游戏后，会回到 Monet。"
+
+#: crates/monet/src/main.rs:315
+msgid "Your PC will restart in Windows. Open apps will close."
+msgstr "你的电脑将重启到 Windows。打开的应用会关闭。"
+
+#: crates/monet/src/main.rs:516
+msgid ""
+"Monet seems to have started from the Windows entry, which shouldn't happen."
+msgstr "Monet 似乎是从 Windows 启动项启动的，这不应该发生。"
+
+#: crates/monet/src/main.rs:548
+msgid ""
+"This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu."
+msgstr "这台电脑的固件没有保留切换到 Windows 的设置。请重启，然后在电脑的启动菜单中选择 Windows。"
+
+#: crates/monet/src/main.rs:580
+msgid "The restart was blocked. Restart your PC to continue in Windows."
+msgstr "重启被阻止了。请重启电脑以继续进入 Windows。"
+
+#: crates/monet/src/main.rs:668
+msgid "This copy of Monet can't install Windows by itself."
+msgstr "这个版本的 Monet 无法自行安装 Windows。"
+
+#: crates/monet/src/main.rs:690
+msgid "Getting Windows ready for your games"
+msgstr "正在为你的游戏准备 Windows"
+
+#: crates/monet/src/main.rs:692
+msgid ""
+"Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."
+msgstr "Monet 正在下载 Windows（约 7 GB）。你可以继续使用电脑，Monet 重启前会先问你。"
+
+#: crates/monet/src/main.rs:708
+msgid ""
+"Monet can install Windows from %1. Your PC restarts and Windows installs itself."
+msgstr "Monet 可以从 %1 安装 Windows。电脑会重启，然后 Windows 会自行安装。"
+
+#: crates/monet/src/main.rs:711
+msgid ""
+"Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. This takes about 30 minutes."
+msgstr "Windows 尚未安装。Monet 会从 Microsoft 下载（约 7 GB）并安装它，大约需要 30 分钟。"
+
+#: crates/monet/src/main.rs:715
+msgid "Set up Windows?"
+msgstr "要设置 Windows 吗？"
+
+#: crates/monet/src/main.rs:715
+msgid "Set Up"
+msgstr "开始设置"
+
+#: crates/monet/src/main.rs:739
+msgid ""
+"Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."
+msgstr "要立即重启来安装 Windows 吗？大约需要 10 分钟，之后会回到 Monet。"
+
+#: crates/monet/src/main.rs:747
+msgid ""
+"Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again."
+msgstr ""
+"Microsoft 不允许自动下载。请从 Microsoft 的网页下载 Windows 11（选择“下载 Windows 11 磁盘映像 (ISO)”），保存在“下载”文件夹中，然后再次选择 Windows。"
+
+#: crates/monet/src/main.rs:749
+msgid "Download Windows"
+msgstr "下载 Windows"
+
+#: crates/monet/src/main.rs:749
+msgid "Open Microsoft's Page"
+msgstr "打开 Microsoft 网页"
+
+#: crates/monet/src/main.rs:757
+msgid "there isn't enough free space for Windows"
+msgstr "没有足够的可用空间来安装 Windows"
+
+#: crates/monet/src/main.rs:758
+msgid ""
+"Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."
+msgstr "Windows 需要独占约 72 GB 的磁盘空间，下载期间 Monet 中还需要 16 GB 可用空间。"
+
+#: crates/monet/src/main.rs:763
+msgid ""
+"Windows couldn't be set up this time. Choose Windows in the app menu to try again."
+msgstr "这次没能设置好 Windows。请在应用菜单中选择 Windows 重试。"
+
+#: crates/monet/src/trip.rs:252
+msgid ""
+"Windows didn't start: this PC skipped Monet's one-time start. Next time, Monet asks it a different way."
+msgstr "Windows 没有启动：这台电脑跳过了 Monet 的一次性启动。下次 Monet 会换一种方式请求。"
+
+#: crates/monet/src/trip.rs:262
+msgid ""
+"Windows didn't start: this PC couldn't open its boot entry. Next time, Monet uses another one."
+msgstr "Windows 没有启动：这台电脑无法打开它的启动项。下次 Monet 会改用另一个。"
+
+#: crates/monet/src/trip.rs:264
+msgid ""
+"Windows didn't finish starting. Choose Play again to continue. If it happens again, open Settings, then Play on Windows, and choose Check."
+msgstr "Windows 未能完成启动。再选一次“开始”即可继续。如果再次发生，请打开“设置”，然后进入“在 Windows 中玩”，选择“检查”。"
+
+#: crates/monet-usb/src/disk.rs:119
+msgid ""
+"Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again."
+msgstr "Windows 不允许 Monet 写入 U 盘。请拔出 U 盘，重新插入，然后重试。"
+
+#: crates/monet-usb/src/disk.rs:139
+msgid ""
+"Writing to the USB stick failed. Try another USB port or another stick."
+msgstr "写入 U 盘失败。请换个 USB 接口或换个 U 盘试试。"
+
+#: crates/monet-usb/src/disk.rs:147
+msgid "The USB stick didn't keep what was written. Try another stick."
+msgstr "U 盘没能保存写入的内容。请换个 U 盘试试。"
+
+#: crates/monet-usb/src/disk.rs:164
+msgid "The USB stick stopped answering."
+msgstr "U 盘没有响应了。"
+
+#: crates/monet-usb/src/gui.rs:82
+msgid "Make a Monet USB stick stopped unexpectedly."
+msgstr "“制作 Monet U 盘”意外停止了。"
+
+#: crates/monet-usb/src/gui.rs:83 crates/monet-usb/src/gui.rs:114 crates/monet-usb/src/gui.rs:134
+#: crates/monet-usb/src/gui.rs:187 crates/monet-usb/src/gui.rs:328 crates/monet-usb/src/gui.rs:345
+msgid "Make a Monet USB stick"
+msgstr "制作 Monet U 盘"
+
+#: crates/monet-usb/src/gui.rs:136
+msgid ""
+"Monet %1 installs from a USB stick of 2 GB or more. Choose the stick: everything on it is erased."
+msgstr "Monet %1 需要用 2 GB 或更大的 U 盘来安装。请选择 U 盘：上面的所有内容都会被清除。"
+
+#: crates/monet-usb/src/gui.rs:142
+msgid "Make USB stick"
+msgstr "制作 U 盘"
+
+#: crates/monet-usb/src/gui.rs:176
+msgid "Plug in a USB stick (2 GB or more)."
+msgstr "请插入 U 盘（2 GB 或以上）。"
+
+#: crates/monet-usb/src/gui.rs:186
+msgid ""
+"Everything on %1 will be erased.\n"
+"\n"
+"Make it a Monet USB stick?"
+msgstr ""
+"%1 上的所有内容都将被清除。\n"
+"\n"
+"要将它制作成 Monet U 盘吗？"
+
+#: crates/monet-usb/src/gui.rs:205
+msgid "Writing to the USB stick…"
+msgstr "正在写入 U 盘…"
+
+#: crates/monet-usb/src/gui.rs:211
+msgid "Writing the USB stick · %1 of %2 GB"
+msgstr "正在写入 U 盘 · %1 / %2 GB"
+
+#: crates/monet-usb/src/gui.rs:213
+msgid "Checking the USB stick · %1 of %2 GB"
+msgstr "正在检查 U 盘 · %1 / %2 GB"
+
+#: crates/monet-usb/src/gui.rs:232
+msgid ""
+"This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer."
+msgstr "这个版本的 Windows 无法自行下载 Monet：需要 Windows 10（2018 年版）或更新版本。"
+
+#: crates/monet-usb/src/gui.rs:241
+msgid "Getting ready to download Monet…"
+msgstr "正在准备下载 Monet…"
+
+#: crates/monet-usb/src/gui.rs:250 crates/monet-usb/src/gui.rs:293
+msgid ""
+"Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped."
+msgstr "无法下载 Monet。请检查网络连接，然后重试：下载会从中断处继续。"
+
+#: crates/monet-usb/src/gui.rs:276
+msgid "Downloading Monet · %1 of %2 GB"
+msgstr "正在下载 Monet · %1 / %2 GB"
+
+#: crates/monet-usb/src/gui.rs:278
+msgid "Downloading Monet · %1 GB"
+msgstr "正在下载 Monet · %1 GB"
+
+#: crates/monet-usb/src/gui.rs:283
+msgid "about %1 min left"
+msgstr "大约还剩 %1 分钟"
+
+#: crates/monet-usb/src/gui.rs:290
+msgid "The connection dropped. Picking up where it stopped…"
+msgstr "网络连接断开了。正在从中断处继续…"
+
+#: crates/monet-usb/src/gui.rs:322
+msgid ""
+"Your Monet USB stick is ready.\n"
+"\n"
+"Restart this PC with it plugged in, and choose the USB stick in the PC's boot menu."
+msgstr ""
+"你的 Monet U 盘已制作完成。\n"
+"\n"
+"插着 U 盘重启这台电脑，然后在电脑的启动菜单中选择这个 U 盘。"
+
+#: crates/monet-usb/src/gui.rs:330
+msgid "Done."
+msgstr "完成。"
+
+#: crates/monet-usb/src/gui.rs:345
+msgid "The USB stick isn't finished. Stop anyway?"
+msgstr "U 盘还没有制作完成。仍要停止吗？"

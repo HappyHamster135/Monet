@@ -116,7 +116,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
         }
     }
     let disk = open(&format!("\\\\.\\PhysicalDrive{number}"), GENERIC_READ | GENERIC_WRITE, FILE_FLAG_WRITE_THROUGH)
-        .ok_or("Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again.")?;
+        .ok_or(t!("Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again."))?;
     ioctl(&disk, IOCTL_DISK_DELETE_DRIVE_LAYOUT, std::ptr::null(), 0, null_mut(), 0);
 
     let total = std::fs::metadata(iso).map_err(|e| e.to_string())?.len();
@@ -136,7 +136,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
             if phase == 0 {
                 let mut wrote = 0u32;
                 if unsafe { WriteFile(disk.0, buf.as_ptr(), len as u32, &mut wrote, null_mut()) } == 0 || wrote as usize != len {
-                    return Err("Writing to the USB stick failed. Try another USB port or another stick.".into());
+                    return Err(t!("Writing to the USB stick failed. Try another USB port or another stick.").into());
                 }
             } else {
                 let mut got = 0u32;
@@ -144,7 +144,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
                     || got as usize != len
                     || back[..n] != buf[..n]
                 {
-                    return Err("The USB stick didn't keep what was written. Try another stick.".into());
+                    return Err(t!("The USB stick didn't keep what was written. Try another stick.").into());
                 }
             }
             done += n as u64;
@@ -161,7 +161,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
 
 fn seek(h: &Handle, to: i64) -> Result<(), String> {
     if unsafe { SetFilePointerEx(h.0, to, null_mut(), FILE_BEGIN) } == 0 {
-        return Err("The USB stick stopped answering.".into());
+        return Err(t!("The USB stick stopped answering.").into());
     }
     Ok(())
 }

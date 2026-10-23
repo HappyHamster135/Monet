@@ -34,14 +34,24 @@ plain_names() {
         done
         return 1
     }
+    # The plain words in every language Monet speaks (names.tsv: English, language,
+    # translation; tools/make-translations.py), put under the entry's own mark.
+    localized() { # localized <file> <key> <English>
+        awk -F '\t' -v key="$2" -v text="$3" '$1 == text { printf "%s[%s]=%s\n", key, $2, $3 }' \
+            "$DATADIR/monet/names.tsv" > "$1.words" 2>/dev/null
+        [ -s "$1.words" ] && sed -i "/^X-Monet=true$/r $1.words" "$1"
+        rm -f "$1.words"
+    }
     rename() { # rename <id> <name> [comment]
         local f
         f="$(entry "$1")" || return 1
         mkdir -p "$DATA/applications"
         sed -e '/^Name\[/d' -e '/^GenericName/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
             -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$DATA/applications/$1.desktop"
+        localized "$DATA/applications/$1.desktop" Name "$2"
         if [ -n "${3:-}" ]; then
             sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$DATA/applications/$1.desktop"
+            localized "$DATA/applications/$1.desktop" Comment "$3"
         fi
     }
     hide() { # hide <id>

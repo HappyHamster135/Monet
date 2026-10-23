@@ -1,5 +1,14 @@
 //! `monet`: play Windows games from Monet with one click.
 
+/// Marks words people read, for tools/make-translations.py. They're said in the
+/// person's language where they're shown: `say()` here, Settings' i18n, or the
+/// session's `monet-quick say`.
+macro_rules! t {
+    ($text:literal) => {
+        $text
+    };
+}
+
 mod efivarfs;
 mod esp;
 mod trip;
@@ -8,7 +17,7 @@ mod windows_setup;
 use std::fs;
 use std::io::IsTerminal;
 use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -199,14 +208,14 @@ fn trip_paths() -> trip::Paths {
 fn setup_notice() -> Option<&'static str> {
     match windows_setup_status()? {
         Outcome::DownloadFailed | Outcome::Failed | Outcome::NoSpace => {
-            Some("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up.")
+            Some(t!("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."))
         }
-        Outcome::BitLocker => Some(
+        Outcome::BitLocker => Some(t!(
             "Windows is encrypted with BitLocker, so Monet can't set it up for you. \
-             In Windows, open Monet for Windows and run Install Monet.",
-        ),
+             In Windows, open Monet for Windows and run Install Monet."
+        )),
         Outcome::Hibernated => {
-            Some("Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest.")
+            Some(t!("Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."))
         }
         _ => None,
     }
@@ -214,14 +223,14 @@ fn setup_notice() -> Option<&'static str> {
 
 fn efi() -> Res<EfiVarFs> {
     EfiVarFs::open().map_err(|_| {
-        "This PC didn't start in UEFI mode, so Monet can't switch to Windows.".to_string()
+        t!("This PC didn't start in UEFI mode, so Monet can't switch to Windows.").to_string()
     })
 }
 
 /// The Windows boot entry that can start (old, dead entries are skipped).
 fn find_windows(efi: &dyn EfiVars) -> Res<BootEntry> {
     trip::choose(efi, &trip_paths())
-        .ok_or_else(|| "Windows wasn't found on this PC. Install Windows first, then try again.".to_string())
+        .ok_or_else(|| t!("Windows wasn't found on this PC. Install Windows first, then try again.").to_string())
 }
 
 fn ago(then: u64) -> String {
@@ -240,10 +249,10 @@ fn status() -> Res<()> {
     println!("Monet {}\n", monet_core::VERSION);
     let windows = match efi() {
         Ok(efi) => match find_windows(&efi) {
-            Ok(_) => "Ready".to_string(),
-            Err(_) => "Not found".to_string(),
+            Ok(_) => t!("Ready").to_string(),
+            Err(_) => t!("Not found").to_string(),
         },
-        Err(_) => "Unavailable (not a UEFI system)".to_string(),
+        Err(_) => t!("Unavailable (not a UEFI system)").to_string(),
     };
     println!("  Windows   {windows}");
     match load_games() {
@@ -287,7 +296,7 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
         // Installing Windows downloads a lot and restarts: only when asked
         // (the app menu's Windows), never from a Play button.
         if !confirm {
-            return Err("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up.".into());
+            return Err(t!("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up.").into());
         }
         return finish_windows_setup(true);
     }
@@ -297,15 +306,15 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
     if confirm {
         let name = game.and_then(|id| all_games().find(id).map(|g| g.name.clone()));
         let title = match (&name, game) {
-            (Some(name), _) => format!("Play {name} on Windows?"),
-            (None, Some(_)) => "Play on Windows?".to_string(),
-            (None, None) => "Restart in Windows?".to_string(),
+            (Some(name), _) => say(t!("Play %1 on Windows?"), &[name.as_str()]),
+            (None, Some(_)) => t!("Play on Windows?").to_string(),
+            (None, None) => t!("Restart in Windows?").to_string(),
         };
         let text = match game {
-            Some(_) => "Your PC will restart in Windows and start the game. When you quit, it comes back to Monet.",
-            None => "Your PC will restart in Windows. Open apps will close.",
+            Some(_) => t!("Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."),
+            None => t!("Your PC will restart in Windows. Open apps will close."),
         };
-        if !ask(&title, text, "Restart") {
+        if !ask(&title, text, t!("Restart")) {
             return Ok(());
         }
     }
@@ -500,11 +509,11 @@ fn helper_switch(game: Option<String>) -> Res<()> {
                 Err(e) => trip::log(&paths, now(), &format!("couldn't add a Windows entry: {e}")),
             }
             trip::choose(&efi, &paths)
-                .ok_or("Windows wasn't found on this PC. Install Windows first, then try again.")?
+                .ok_or(t!("Windows wasn't found on this PC. Install Windows first, then try again."))?
         }
     };
     if current == windows.number {
-        return Err("Monet seems to have started from the Windows entry, which shouldn't happen.".into());
+        return Err(t!("Monet seems to have started from the Windows entry, which shouldn't happen.").into());
     }
 
     // A Windows that's still finishing its own setup restarts on the way, and
@@ -535,7 +544,9 @@ fn helper_switch(game: Option<String>) -> Res<()> {
     if !next_ok || efi.get(MONET_GUID, LAUNCH_VAR).is_err() {
         undo(&mut efi);
         trip::log(&paths, now(), &format!("the firmware didn't keep the switch: {}", trip::snapshot(&efi)));
-        return Err("This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu.".into());
+        return Err(
+            t!("This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu.").into(),
+        );
     }
 
     let trip = Trip { created: now(), entry: windows.number, monet: current, method };
@@ -566,7 +577,7 @@ fn helper_switch(game: Option<String>) -> Res<()> {
     if status.success() {
         Ok(())
     } else {
-        Err("The restart was blocked. Restart your PC to continue in Windows.".into())
+        Err(t!("The restart was blocked. Restart your PC to continue in Windows.").into())
     }
 }
 
@@ -654,7 +665,7 @@ fn helper_prepare_windows(iso: Option<String>) -> Res<()> {
     let script = windows_setup::libexec_dir()
         .map(|d| d.join("monet-prepare-windows"))
         .filter(|p| p.is_file())
-        .ok_or("This copy of Monet can't install Windows by itself.")?;
+        .ok_or(t!("This copy of Monet can't install Windows by itself."))?;
     let mut cmd = Command::new(script);
     if let Some(iso) = iso {
         cmd.args(["--iso", &iso]);
@@ -676,13 +687,13 @@ fn first_run_windows() -> Res<()> {
     if windows_setup_status() != Some(Outcome::Waiting) {
         return Ok(());
     }
+    let title = say(t!("Getting Windows ready for your games"), &[]);
+    let text = say(
+        t!("Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."),
+        &[],
+    );
     let _ = Command::new("notify-send")
-        .args([
-            "--app-name=Monet",
-            "--icon=monet-windows",
-            "Getting Windows ready for your games",
-            "Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts.",
-        ])
+        .args(["--app-name=Monet", "--icon=monet-windows", title.as_str(), text.as_str()])
         .status();
     finish_windows_setup(false)
 }
@@ -693,15 +704,15 @@ fn first_run_windows() -> Res<()> {
 fn finish_windows_setup(ask_first: bool) -> Res<()> {
     let iso = downloaded_windows_iso();
     let question = match &iso {
-        Some(p) => format!(
-            "Monet can install Windows from {}. Your PC restarts and Windows installs itself.",
-            p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+        Some(p) => say(
+            t!("Monet can install Windows from %1. Your PC restarts and Windows installs itself."),
+            &[p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default().as_str()],
         ),
-        None => "Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. \
-                 This takes about 30 minutes."
-            .to_string(),
+        None => t!("Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. \
+                 This takes about 30 minutes.")
+        .to_string(),
     };
-    if ask_first && !ask("Set up Windows?", &question, "Set Up") {
+    if ask_first && !ask(t!("Set up Windows?"), &question, t!("Set Up")) {
         return Ok(());
     }
     let mut args = vec!["helper".to_string(), "prepare-windows".to_string()];
@@ -723,27 +734,33 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
     let reason = fs::read_to_string(WINDOWS_PROGRESS).ok().and_then(|p| stop_reason(&p));
     match windows_setup_status() {
         Some(Outcome::Pending) if code == Some(0) => {
-            if ask("Windows is ready", "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet.", "Restart") {
+            if ask(
+                t!("Windows is ready"),
+                t!("Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."),
+                t!("Restart"),
+            ) {
                 let _ = Command::new("systemctl").arg("reboot").status();
             }
             Ok(())
         }
         Some(Outcome::DownloadFailed) => {
-            let text = "Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page \
-                        (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again.";
-            if ask("Download Windows", text, "Open Microsoft's Page") {
+            let text = t!("Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page \
+                        (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again.");
+            if ask(t!("Download Windows"), text, t!("Open Microsoft's Page")) {
                 let _ = Command::new("xdg-open").arg("https://www.microsoft.com/software-download/windows11").status();
             }
             Ok(())
         }
         // What went wrong in plain words; the helper's own account behind Details.
         Some(Outcome::NoSpace) => Err(format!(
-            "{}. Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads.\n\n{}",
-            capitalized(reason.as_deref().unwrap_or("there isn't enough free space for Windows")),
+            "{}. {}\n\n{}",
+            capitalized(&say(reason.as_deref().unwrap_or(t!("there isn't enough free space for Windows")), &[])),
+            say(t!("Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."), &[]),
             windows_log_tail()
         )),
         _ => Err(format!(
-            "Windows couldn't be set up this time. Choose Windows in the app menu to try again.\n\n{}",
+            "{}\n\n{}",
+            say(t!("Windows couldn't be set up this time. Choose Windows in the app menu to try again."), &[]),
             reason.map(|r| capitalized(&r) + ".\n\n").unwrap_or_default() + &windows_log_tail()
         )),
     }
@@ -771,10 +788,22 @@ fn windows_log_tail() -> String {
     lines[lines.len().saturating_sub(12)..].join("\n")
 }
 
+/// The Downloads folder as the account names it in `user-dirs.dirs` (xdg-user-dirs:
+/// "Hämtningar" in Swedish), else ~/Downloads.
+fn downloads_dir(home: &Path, user_dirs: &str) -> PathBuf {
+    user_dirs
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("XDG_DOWNLOAD_DIR="))
+        .map(|value| PathBuf::from(value.trim_matches('"').replace("$HOME", &home.to_string_lossy())))
+        .filter(|path| path.is_absolute() && path != home)
+        .unwrap_or_else(|| home.join("Downloads"))
+}
+
 /// A Windows 11 ISO the user downloaded, newest first.
 fn downloaded_windows_iso() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME")?;
-    let dir = PathBuf::from(home).join("Downloads");
+    let home = PathBuf::from(std::env::var_os("HOME")?);
+    let config = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
+    let dir = downloads_dir(&home, &fs::read_to_string(config.join("user-dirs.dirs")).unwrap_or_default());
     let mut isos: Vec<_> = fs::read_dir(dir)
         .ok()?
         .flatten()
@@ -791,13 +820,16 @@ fn downloaded_windows_iso() -> Option<PathBuf> {
 /// Shows a progress dialog fed by the setup script until it finishes, and
 /// gives back how it ended (its exit code).
 fn show_progress_while(child: &mut std::process::Child) -> Option<i32> {
+    let first = say(t!("Getting Windows ready"), &[]);
     let dialog = Command::new("kdialog")
-        .args(["--title", "Monet", "--progressbar", "Getting Windows ready", "100"])
+        .args(["--title", "Monet", "--progressbar", first.as_str(), "100"])
         .output()
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).split_whitespace().map(String::from).collect::<Vec<_>>())
         .filter(|parts| parts.len() == 2);
     let qdbus = ["qdbus6", "qdbus-qt6", "qdbus"].into_iter().find(|c| has(c));
+    // The label as the helper wrote it, and as it's shown: said again only when it changes.
+    let mut shown = (String::new(), String::new());
     loop {
         if let Ok(Some(status)) = child.try_wait() {
             if let (Some(d), Some(q)) = (&dialog, qdbus) {
@@ -807,8 +839,15 @@ fn show_progress_while(child: &mut std::process::Child) -> Option<i32> {
         }
         if let (Some(d), Some(q), Ok(text)) = (&dialog, qdbus, fs::read_to_string(WINDOWS_PROGRESS)) {
             if let Some((pct, label)) = text.trim().split_once('\t') {
+                // "TEXT<tab>VALUE...": TEXT in the person's language, its %1... filled in.
+                if label != shown.0 {
+                    let mut parts = label.split('\t');
+                    let words = parts.next().unwrap_or_default();
+                    let values: Vec<&str> = parts.collect();
+                    shown = (label.to_string(), say(words, &values));
+                }
                 let _ = Command::new(q).args([&d[0], &d[1], "Set", "", "value", pct]).status();
-                let _ = Command::new(q).args([&d[0], &d[1], "setLabelText", label]).status();
+                let _ = Command::new(q).args([&d[0], &d[1], "setLabelText", shown.1.as_str()]).status();
             }
         }
         std::thread::sleep(std::time::Duration::from_secs(2));
@@ -984,20 +1023,58 @@ fn has(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Words in the person's language, from Monet's catalog (the session's
+/// `monet-quick say` looks them up), with %1, %2... filled in. English when
+/// there's no translation or no helper.
+fn say(text: &str, values: &[&str]) -> String {
+    let said = windows_setup::libexec_dir()
+        .map(|dir| dir.join("monet-quick"))
+        .and_then(|helper| Command::new(helper).arg("say").arg(text).args(values).output().ok())
+        .filter(|out| out.status.success() && !out.stdout.is_empty())
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim_end_matches('\n').to_string());
+    said.unwrap_or_else(|| {
+        let mut english = text.to_string();
+        for (i, value) in values.iter().enumerate().rev() {
+            english = english.replace(&format!("%{}", i + 1), value);
+        }
+        english
+    })
+}
+
 /// Asks a yes/no question with a native dialog. Without a dialog tool the
 /// click that started us counts as the answer.
 fn ask(title: &str, text: &str, ok_label: &str) -> bool {
+    let (title, text, ok_label, cancel) = (say(title, &[]), say(text, &[]), say(ok_label, &[]), say("Cancel", &[]));
     if has("kdialog") {
         // A question, not a warning: no warning sign for "Set up Windows?".
         return Command::new("kdialog")
-            .args(["--title", title, "--yes-label", ok_label, "--no-label", "Cancel", "--yesno", text])
+            .args([
+                "--title",
+                title.as_str(),
+                "--yes-label",
+                ok_label.as_str(),
+                "--no-label",
+                cancel.as_str(),
+                "--yesno",
+                text.as_str(),
+            ])
             .status()
             .map(|s| s.success())
             .unwrap_or(false);
     }
     if has("zenity") {
         return Command::new("zenity")
-            .args(["--question", "--title", title, "--text", text, "--ok-label", ok_label, "--cancel-label", "Cancel"])
+            .args([
+                "--question",
+                "--title",
+                title.as_str(),
+                "--text",
+                text.as_str(),
+                "--ok-label",
+                ok_label.as_str(),
+                "--cancel-label",
+                cancel.as_str(),
+            ])
             .status()
             .map(|s| s.success())
             .unwrap_or(false);
@@ -1009,6 +1086,9 @@ fn show_error(message: &str, gui: bool) {
     if message.is_empty() {
         return;
     }
+    // A message made of one marked sentence is said in the person's language.
+    let said = say(message, &[]);
+    let message = said.as_str();
     eprintln!("{message}");
     if gui && !std::io::stderr().is_terminal() {
         // What went wrong, then, after a blank line, the details behind a button.
@@ -1031,6 +1111,16 @@ fn show_error(message: &str, gui: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_downloads_where_the_account_keeps_them() {
+        let home = Path::new("/home/claude");
+        let swedish = "# written by xdg-user-dirs-update\nXDG_DESKTOP_DIR=\"$HOME/Skrivbord\"\nXDG_DOWNLOAD_DIR=\"$HOME/Hämtningar\"\n";
+        assert_eq!(downloads_dir(home, swedish), PathBuf::from("/home/claude/Hämtningar"));
+        assert_eq!(downloads_dir(home, ""), PathBuf::from("/home/claude/Downloads"));
+        // Turned off (the folder is home itself) means none of its own.
+        assert_eq!(downloads_dir(home, "XDG_DOWNLOAD_DIR=\"$HOME/\"\n"), PathBuf::from("/home/claude/Downloads"));
+    }
 
     #[test]
     fn reads_bootc_update_checks() {

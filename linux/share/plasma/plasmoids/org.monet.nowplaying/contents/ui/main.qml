@@ -133,6 +133,7 @@ PlasmoidItem {
                                 GradientStop { position: 1; color: "#F09A6A" }
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 anchors.centerIn: parent
                                 text: "♪"
                                 color: "#FBF7EE"
@@ -164,11 +165,17 @@ PlasmoidItem {
                             maskThresholdMin: 0.5
                             maskSpreadAtMin: 1
                         }
-                        MouseArea {
+                        PlasmaCore.ToolTipArea {
                             anchors.fill: parent
-                            enabled: !!row.model.canRaise && row.player !== null
-                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: row.player.Raise()
+                            active: raise.enabled
+                            mainText: i18nc("%1 is a music app", "Show %1", row.model.identity || "")
+                            MouseArea {
+                                id: raise
+                                anchors.fill: parent
+                                enabled: !!row.model.canRaise && row.player !== null
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: row.player.Raise()
+                            }
                         }
                     }
 
@@ -179,6 +186,7 @@ PlasmoidItem {
 
                         Item { Layout.fillHeight: true }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: row.model.track || i18n("Nothing playing")
                             color: card.ink
@@ -187,6 +195,7 @@ PlasmoidItem {
                             font.pixelSize: 18
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: row.model.artist || row.model.identity || ""
                             color: card.dim
@@ -203,6 +212,7 @@ PlasmoidItem {
                             spacing: 6
 
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 text: root.clock(row.at)
                                 color: card.dim
                                 font.family: "Inter"
@@ -261,6 +271,7 @@ PlasmoidItem {
                                 }
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 text: "-" + root.clock(row.length - row.at)
                                 color: card.dim
                                 font.family: "Inter"
@@ -302,7 +313,7 @@ PlasmoidItem {
                                 id: play
                                 implicitWidth: 38
                                 implicitHeight: 38
-                                Accessible.name: row.playing ? i18n("Pause") : i18n("Play")
+                                Accessible.name: row.playing ? i18nc("the music", "Pause") : i18nc("the music", "Play")
                                 onClicked: row.model.container.PlayPause()
                                 scale: down ? 0.92 : hovered ? 1.06 : 1
                                 Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
@@ -379,6 +390,7 @@ PlasmoidItem {
                         GradientStop { position: 1; color: "#F09A6A" }
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         anchors.centerIn: parent
                         text: "♪"
                         color: "#FBF7EE"
@@ -392,6 +404,7 @@ PlasmoidItem {
                     spacing: 4
 
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         Layout.fillWidth: true
                         text: i18n("Nothing playing")
                         color: card.ink
@@ -401,6 +414,7 @@ PlasmoidItem {
                         font.pixelSize: 18
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         Layout.fillWidth: true
                         text: root.music.apps.length > 0 ? i18n("Play something with")
                             : root.music.store !== "" ? i18n("No music app yet.") : i18n("Music and videos show here while they play.")
@@ -444,6 +458,7 @@ PlasmoidItem {
                                             Layout.preferredHeight: 18
                                         }
                                         Text {
+                                            horizontalAlignment: Text.AlignLeft
                                             text: chip.modelData.name
                                             color: card.ink
                                             font.family: "Inter"

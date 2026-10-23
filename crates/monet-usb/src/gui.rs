@@ -22,6 +22,7 @@ use windows_sys::Win32::UI::HiDpi::GetDpiForSystem;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
+use crate::words::{tr, trf};
 use crate::{disk, plan};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -78,8 +79,9 @@ fn finish(result: Result<(), String>) {
 pub fn run() {
     // Say what went wrong instead of vanishing: there's no console to print to.
     std::panic::set_hook(Box::new(|info| {
-        let text = wide(&format!("Make a Monet USB stick stopped unexpectedly.\n\n{info}"));
-        unsafe { MessageBoxW(null_mut(), text.as_ptr(), w!("Make a Monet USB stick"), MB_OK | MB_ICONERROR) };
+        let text = wide(&format!("{}\n\n{info}", tr("Make a Monet USB stick stopped unexpectedly.")));
+        let title = wide(&tr("Make a Monet USB stick"));
+        unsafe { MessageBoxW(null_mut(), text.as_ptr(), title.as_ptr(), MB_OK | MB_ICONERROR) };
     }));
     unsafe {
         let icc = INITCOMMONCONTROLSEX {
@@ -109,7 +111,7 @@ pub fn run() {
         let mut frame = windows_sys::Win32::Foundation::RECT { left: 0, top: 0, right: px(540), bottom: px(340) };
         let style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
         AdjustWindowRect(&mut frame, style, 0);
-        let title = wide("Make a Monet USB stick");
+        let title = wide(&tr("Make a Monet USB stick"));
         // Shown once its controls are all there, so it paints them right the first time.
         let hwnd = CreateWindowExW(0, class, title.as_ptr(), style, CW_USEDEFAULT, CW_USEDEFAULT,
                                    frame.right - frame.left, frame.bottom - frame.top, null_mut(), null_mut(),
@@ -129,15 +131,16 @@ pub fn run() {
             c as isize
         };
         let controls = vec![
-            make(w!("STATIC"), "Make a Monet USB stick", 0, 32, 26, 476, 40, 0, big),
+            make(w!("STATIC"), &tr("Make a Monet USB stick"), 0, 32, 26, 476, 40, 0, big),
             make(w!("STATIC"),
-                 &format!("Monet {VERSION} installs from a USB stick of 2 GB or more. Choose the stick: everything on it is erased."),
+                 &trf("Monet %1 installs from a USB stick of 2 GB or more. Choose the stick: everything on it is erased.",
+                      &[VERSION]),
                  0, 32, 74, 476, 44, 0, body),
             make(w!("COMBOBOX"), "", CBS_DROPDOWNLIST as u32 | WS_VSCROLL | WS_TABSTOP, 32, 130, 476, 200, ID_STICKS, body),
             make(w!("msctls_progress32"), "", 0, 32, 184, 476, 8, 0, body),
             make(w!("STATIC"), "", 0, 32, 202, 476, 44, 0, body),
-            make(w!("BUTTON"), "Make USB stick", BS_DEFPUSHBUTTON as u32 | WS_TABSTOP, 348, 276, 160, 38, ID_MAKE, body),
-            make(w!("BUTTON"), "Close", BS_PUSHBUTTON as u32 | WS_TABSTOP, 236, 276, 100, 38, ID_CLOSE, body),
+            make(w!("BUTTON"), &tr("Make USB stick"), BS_DEFPUSHBUTTON as u32 | WS_TABSTOP, 348, 276, 160, 38, ID_MAKE, body),
+            make(w!("BUTTON"), &tr("Close"), BS_PUSHBUTTON as u32 | WS_TABSTOP, 236, 276, 100, 38, ID_CLOSE, body),
         ];
         SendMessageW(controls[3] as HWND, PBM_SETRANGE32, 0, 1000);
         *CONTROLS.lock().unwrap() = controls;
@@ -170,8 +173,8 @@ fn refresh_sticks() {
             SendMessageW(combo, CB_SETCURSEL, 0, 0);
         }
         EnableWindow(control(5), (!found.is_empty()) as i32);
-        let text = if found.is_empty() { "Plug in a USB stick (2 GB or more)." } else { "" };
-        let text = wide(text);
+        let text = if found.is_empty() { tr("Plug in a USB stick (2 GB or more).") } else { String::new() };
+        let text = wide(&text);
         SetWindowTextW(control(4), text.as_ptr());
     }
     *STICKS.lock().unwrap() = found.into_iter().map(|s| (s.number, s.label)).collect();
@@ -180,10 +183,10 @@ fn refresh_sticks() {
 fn start(hwnd: HWND) {
     let choice = unsafe { SendMessageW(control(2), CB_GETCURSEL, 0, 0) };
     let Some((number, label)) = STICKS.lock().unwrap().get(choice.max(0) as usize).cloned() else { return };
-    let question = wide(&format!("Everything on {label} will be erased.\n\nMake it a Monet USB stick?"));
-    let answer = unsafe {
-        MessageBoxW(hwnd, question.as_ptr(), w!("Make a Monet USB stick"), MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2)
-    };
+    let question = wide(&trf("Everything on %1 will be erased.\n\nMake it a Monet USB stick?", &[label.as_str()]));
+    let title = wide(&tr("Make a Monet USB stick"));
+    let answer =
+        unsafe { MessageBoxW(hwnd, question.as_ptr(), title.as_ptr(), MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2) };
     if answer != IDOK {
         return;
     }
@@ -199,12 +202,17 @@ fn start(hwnd: HWND) {
             download(&url, &iso, total)
         });
         let result = result.and_then(|()| {
-            tell("Writing to the USB stick…".into(), 0.0);
+            tell(tr("Writing to the USB stick…"), 0.0);
             disk::write(number, &iso, |phase, done, total| {
                 let f = done as f64 / total.max(1) as f64;
                 let gb = |b: u64| b as f64 / 1e9;
-                let what = if phase == 0 { "Writing" } else { "Checking" };
-                tell(format!("{what} the USB stick · {:.1} of {:.1} GB", gb(done), gb(total)), f);
+                let (done, total) = (format!("{:.1}", gb(done)), format!("{:.1}", gb(total)));
+                let line = if phase == 0 {
+                    trf("Writing the USB stick · %1 of %2 GB", &[done.as_str(), total.as_str()])
+                } else {
+                    trf("Checking the USB stick · %1 of %2 GB", &[done.as_str(), total.as_str()])
+                };
+                tell(line, f);
             })
         });
         if result.is_ok() {
@@ -221,7 +229,7 @@ fn curl() -> Result<String, String> {
     let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
     let curl = format!("{root}\\System32\\curl.exe");
     if !std::path::Path::new(&curl).exists() {
-        return Err("This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer.".into());
+        return Err(tr("This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer."));
     }
     Ok(curl)
 }
@@ -230,7 +238,7 @@ fn curl() -> Result<String, String> {
 /// there, otherwise the other one.
 fn installer() -> Result<(String, String, u64), String> {
     let curl = curl()?;
-    tell("Getting ready to download Monet…".into(), 0.0);
+    tell(tr("Getting ready to download Monet…"), 0.0);
     for name in plan::installer_names(VERSION) {
         let url = plan::release_url(VERSION, &name);
         let headers = Command::new(&curl).args(["-sIL", &url]).creation_flags(NO_WINDOW).output().map_err(|e| e.to_string())?;
@@ -239,7 +247,7 @@ fn installer() -> Result<(String, String, u64), String> {
             return Ok((name, url, plan::content_length(&headers).unwrap_or(0)));
         }
     }
-    Err("Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped.".into())
+    Err(tr("Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped."))
 }
 
 /// Downloads with Windows' own curl.exe, which picks up where it stopped.
@@ -263,24 +271,26 @@ fn download(url: &str, dest: &str, total: u64) -> Result<(), String> {
             std::thread::sleep(Duration::from_millis(500));
             let got = size();
             let rate = (got.saturating_sub(first)) as f64 / start.elapsed().as_secs_f64().max(0.5);
-            let mut line = format!("Downloading Monet · {:.1}", got as f64 / 1e9);
-            if total > 0 {
-                line += &format!(" of {:.1} GB", total as f64 / 1e9);
-                if rate > 0.0 {
-                    line += &format!(" · {}", plan::minutes_left((total - got.min(total)) as f64 / rate));
-                }
+            let so_far = format!("{:.1}", got as f64 / 1e9);
+            let mut line = if total > 0 {
+                trf("Downloading Monet · %1 of %2 GB", &[so_far.as_str(), format!("{:.1}", total as f64 / 1e9).as_str()])
             } else {
-                line += " GB";
+                trf("Downloading Monet · %1 GB", &[so_far.as_str()])
+            };
+            if total > 0 && rate > 0.0 {
+                let minutes = plan::minutes_left((total - got.min(total)) as f64 / rate).to_string();
+                line += " · ";
+                line += &trf("about %1 min left", &[minutes.as_str()]);
             }
             tell(line, if total > 0 { got as f64 / total as f64 } else { 0.0 });
         };
         if status.success() && (total == 0 || size() == total) {
             return Ok(());
         }
-        tell("The connection dropped. Picking up where it stopped…".into(), 0.0);
+        tell(tr("The connection dropped. Picking up where it stopped…"), 0.0);
         std::thread::sleep(Duration::from_secs(5));
     }
-    Err("Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped.".into())
+    Err(tr("Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped."))
 }
 
 unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -309,13 +319,16 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
             SendMessageW(control(3), PBM_SETPOS, (fraction.clamp(0.0, 1.0) * 1000.0) as usize, 0);
             if let Some(result) = finished {
                 let (text, icon) = match &result {
-                    Ok(()) => ("Your Monet USB stick is ready.\n\nRestart this PC with it plugged in, and choose the \
-                                USB stick in the PC's boot menu.".to_string(), MB_ICONINFORMATION),
-                    Err(e) => (e.clone(), MB_ICONERROR),
+                    Ok(()) => (tr("Your Monet USB stick is ready.\n\nRestart this PC with it plugged in, and choose the \
+                                   USB stick in the PC's boot menu."), MB_ICONINFORMATION),
+                    // A message that's one of the window's own sentences is said in Windows' language.
+                    Err(e) => (tr(e), MB_ICONERROR),
                 };
                 let t = wide(&text);
-                MessageBoxW(hwnd, t.as_ptr(), w!("Make a Monet USB stick"), MB_OK | icon);
-                SetWindowTextW(control(4), wide(if result.is_ok() { "Done." } else { "" }).as_ptr());
+                let title = wide(&tr("Make a Monet USB stick"));
+                MessageBoxW(hwnd, t.as_ptr(), title.as_ptr(), MB_OK | icon);
+                let done = wide(&if result.is_ok() { tr("Done.") } else { String::new() });
+                SetWindowTextW(control(4), done.as_ptr());
                 EnableWindow(control(2), 1);
                 refresh_sticks();
             }
@@ -329,8 +342,8 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
         }
         WM_CLOSE => {
             if NEWS.lock().unwrap().busy {
-                let answer = MessageBoxW(hwnd, w!("The USB stick isn't finished. Stop anyway?"),
-                                         w!("Make a Monet USB stick"), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+                let (question, title) = (wide(&tr("The USB stick isn't finished. Stop anyway?")), wide(&tr("Make a Monet USB stick")));
+                let answer = MessageBoxW(hwnd, question.as_ptr(), title.as_ptr(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
                 if answer != IDYES {
                     return 0;
                 }

@@ -5,6 +5,11 @@
 BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 
+# Monet's words in your language (monet-quick says them), English if it can't.
+say() {
+    "$LIBEXECDIR/monet-quick" say "$@" 2>/dev/null || printf '%s' "$1"
+}
+
 "$BINDIR/monet" shortcuts 2>/dev/null
 
 # If Monet couldn't prepare Windows by itself, say once what to do.
@@ -12,7 +17,7 @@ notice="$("$BINDIR/monet" setup-notice 2>/dev/null)"
 if [ -n "$notice" ] && command -v notify-send >/dev/null; then
     seen="${XDG_CONFIG_HOME:-$HOME/.config}/monet/notice-$(printf '%s' "$notice" | cksum | cut -d' ' -f1)"
     if [ ! -e "$seen" ]; then
-        notify-send --app-name=Monet --icon=monet "Finish setting up Windows" "$notice"
+        notify-send --app-name=Monet --icon=monet "$(say "Finish setting up Windows")" "$(say "$notice")"
         mkdir -p "$(dirname "$seen")" && touch "$seen"
     fi
 fi
@@ -47,8 +52,8 @@ fi
 # The apps chosen in Monet Setup (or the everyday ones) arrive in the background
 # (monet-apps.timer): said once, so they're expected in the menu.
 if [ ! -e /var/lib/monet/apps-done ] && [ ! -e "$looks/apps-notice" ] && command -v notify-send >/dev/null; then
-    notify-send --app-name=Monet --icon=monet "Adding your apps" \
-        "Your apps download in the background and show up in the menu as they arrive."
+    notify-send --app-name=Monet --icon=monet "$(say "Adding your apps")" \
+        "$(say "Your apps download in the background and show up in the menu as they arrive.")"
     mkdir -p "$looks" && touch "$looks/apps-notice"
 fi
 # Apps that arrived while signed out get their plain names now (monet-names.path
@@ -65,8 +70,8 @@ if [ -n "$version" ] && [ "$(cat "$looks/seen-version" 2>/dev/null)" != "$versio
     if { [ -e "$looks/seen-version" ] || [ "$(ls -d "$looks"/look-* 2>/dev/null | wc -l)" -gt 1 ]; } \
         && command -v notify-send >/dev/null; then
         (
-            answer="$(notify-send --app-name=Monet --icon=monet --action=open="See what's new" --wait \
-                "Monet $version is here" "$("$LIBEXECDIR/monet-quick" whats-new headline 2>/dev/null)")"
+            answer="$(notify-send --app-name=Monet --icon=monet --action=open="$(say "See what's new")" --wait \
+                "$(say "Monet %1 is here" "$version")" "$("$LIBEXECDIR/monet-quick" whats-new headline 2>/dev/null)")"
             [ "$answer" = open ] && "$LIBEXECDIR/monet-quick" open updates
         ) >/dev/null 2>&1 &
     fi

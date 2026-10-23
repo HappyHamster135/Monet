@@ -27,6 +27,33 @@ Short sentences. Sentence case. Talk about games and the PC, not boot entries.
 Buttons name the action: **Restart**, **Play**, **Cancel**. Never "OK" when a
 word would be clearer, except where Windows forces it.
 
+### In every language
+
+Monet's words are written in English in the code and translated in `po/`
+(one file per language, 29 besides English; `po/monet.pot` is the list).
+`tools/make-translations.py` gathers every text from the sources (QML's
+`i18n` calls, Setup's `tr`, the helpers' and scripts' `say`, the Rust tools'
+`t!`, menu entries and widgets' names) and builds what each part reads:
+
+- `linux/share/locale/<language>/LC_MESSAGES/monet.mo`, one catalog that
+  install.sh also links under the names Plasma looks for a widget's words by
+  (`plasma_applet_<widget>.mo`, `plasma_wallpaper_org.monet.hours.mo`). KDE's
+  own screens that Monet replaces (lock, shut down, the widget gallery, edit
+  mode, the password prompt) ask for `monet` by name (`i18nd`).
+- `setup/locale/<language>/LC_MESSAGES/monet-setup.mo`: Monet Setup switches
+  language as soon as one is picked, and mirrors for Arabic and Hebrew.
+- The menu entries' and widgets' own names (`Name[de]=` and the like), the
+  apps' plain names (`linux/share/monet/names.tsv`, which `monet-look` gives
+  the apps it renames) and the USB stick maker's table (it picks Windows'
+  display language).
+- Scripts say things through `monet-quick say TEXT VALUE...`; the Windows
+  setup's progress lines carry their values beside the text.
+
+Every translation keeps the English `%1`s (`--check`, and a test). A text
+whose meaning depends on where it shows gets a note (`i18nc`), as "Play"
+does for a game and for music. Monet's own windows mirror for right-to-left
+languages (`LayoutMirroring` on each window's root).
+
 ## The idea: Impression
 
 Monet is painted, not machined. It's named after the painter, so the desktop
@@ -97,7 +124,9 @@ Light in the glass: a rim brightest along the top that fades down the sides
 (the sides stretch, so it fades over the whole height), the way light gathers
 in the thickness of a pane, and a soft sheen under the top edge. A hairline
 of ink outside it keeps the edge. In the corners all three follow the glass's
-own arc, so they run on from the straight edges without a step.
+own arc, so they run on from the straight edges without a step. Tooltips
+leave the rim out: on glass that small, a bright line just inside the
+hairline reads as a second box inside the first.
 
 | Where | How |
 |---|---|
@@ -307,16 +336,48 @@ is tried again at the next sign-in.
   chosen: no account, only the place is sent. The place is chosen right on
   the card ("Where are you?", a town, then one of three matches), never in
   KDE's settings window; click the place's name for another. The first
-  place sets the degrees the way the PC's region counts them.
-- **Calendar**: the month in Fraunces, today on a dab of the sun. The
-  arrows or the wheel turn the month; a click on a day turns to its page:
-  the date in Fraunces (today's in the sun's color), the weekday in italic,
-  ‹ › to the day before or after, Today, and a note for the day on a sheet
-  of the glass, kept as you type (in the widget's settings, by date). Days
-  with a note have a dot of lily. Wide enough, month and day side by side.
+  place sets the degrees the way the PC's region counts them. Every place
+  chosen is kept (`places`, in order): ‹ › beside the name go through them,
+  each keeps its last forecast so going back is instant, and the widget's
+  right-click menu adds one or forgets the one shown.
+- **System**: a dial each for the processor, the graphics and the memory,
+  a stroke of paint in lily, ochre past 60% and the sun past 85%, the
+  temperature (or the memory used) beneath and the network along the foot.
+  KDE's own sensors (`org.kde.ksysguard.sensors`, as System Monitor); of two
+  graphics chips the busier counts, and a part the PC can't measure leaves.
+- **Recently Played**: the Steam games played last (`monet-quick played`:
+  the appmanifests and each account's localconfig, newest first, Steam's
+  tools left out), each its tall cover from Steam's picture cache or a
+  painted card with its name, and when it was played; the sun comes up over
+  a cover under the pointer, and a click starts it the way Steam's Play
+  does (`monet-quick play`). As many as the card is wide.
+- **Timer**: the sun goes round a ring as the time runs out; 3, 5, 10 or 25
+  minutes, or the wheel over the time. The end is kept, not the count, so it
+  keeps going if Plasma starts again; when it's up, `monet-quick ring` says
+  so in a notification and plays the sound theme's alarm.
+- **World Clock**: towns from KDE's time zones (their names in your
+  language), each a little face, paper by day and smoke by night, how far
+  ahead or behind it is, and its time in Fraunces.
+- **Calendar**: just the month at first, in Fraunces, today on a dab of
+  the sun. The arrows or the wheel turn the month, a click on its name comes
+  back to today; the arrow keys move the chosen day. A click chooses a day:
+  a day with a note has a dot of lily (point at it to read the note), and
+  the line under the month says the chosen day's note, or "Nothing planned".
+  The Notes button, that line, or a click on the chosen day brings the notes
+  out in a panel beside the card (on the side the month reads towards):
+  the date in Fraunces (today's in the sun's color), ‹ › to the day before
+  or after, Today, the note on a sheet, kept as you type, and what's coming
+  up. Wide enough, month and notes sit side by side on the card.
 - **Clock** (in the right island, instead of KDE's): the time over the date
-  in Inter; a click opens the day in Fraunces and its month, as Calendar
-  draws it.
+  in Inter; a click opens the day in Fraunces and its month, drawn as the
+  Calendar draws it, and the same notes come out beside the month. Both
+  widgets share `Month.qml`, `DayNotes.qml` and `NoteStore.qml`
+  (`linux/share/monet/widgets`, copied into each package by install.sh);
+  the notes themselves are `monet-quick notes`/`note`, one JSON file by date
+  (`~/.local/share/monet/notes.json`), written whole and swapped in, so a
+  note written at the clock shows on the desktop. The Calendar's older
+  notes, kept in its own settings, are handed over once (`notes-merge`,
+  which never writes over a day already kept).
 - **Now Playing**: the cover, the track in Fraunces, back, play or pause on
   the sun, and next; a thin line of how far along, the time gone and left
   at its ends, to click or drag; the cover brings the player forward. With

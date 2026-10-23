@@ -34,7 +34,7 @@ echo "== Monet Setup"
 cp -a "$HERE/files/." "$ROOT/"
 APP=$ROOT/usr/share/monet-setup
 mkdir -p "$APP" "$ROOT/usr/share/fonts/monet"
-cp -a "$REPO/setup/monet-setup" "$REPO/setup/monet_setup" "$REPO/setup/qml" "$REPO/setup/art" "$APP/"
+cp -a "$REPO/setup/monet-setup" "$REPO/setup/monet_setup" "$REPO/setup/qml" "$REPO/setup/art" "$REPO/setup/locale" "$APP/"
 find "$APP" -name __pycache__ -prune -exec rm -rf {} +
 echo "$VERSION" > "$APP/VERSION"
 echo "$IMAGE" > "$APP/IMAGE"

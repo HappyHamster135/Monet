@@ -2,6 +2,8 @@
 
 import subprocess
 
+from .words import _
+
 
 def run(*args, timeout=30):
     try:
@@ -72,12 +74,12 @@ def join(name, password):
     try:
         done = subprocess.run(args, capture_output=True, text=True, timeout=60)
     except subprocess.TimeoutExpired:
-        return "The network didn't answer. Try again, or pick another network."
+        return _("The network didn't answer. Try again, or pick another network.")
     except OSError:
-        return "Wi-Fi isn't available on this PC."
+        return _("Wi-Fi isn't available on this PC.")
     if done.returncode == 0:
         return ""
     reason = (done.stderr or done.stdout).lower()
     if "secrets were required" in reason or "802-1x" in reason or "password" in reason:
-        return "That password didn't work."
-    return "Couldn't connect. Try again, or pick another network."
+        return _("That password didn't work.")
+    return _("Couldn't connect. Try again, or pick another network.")

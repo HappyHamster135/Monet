@@ -37,7 +37,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import disks, system
+from . import disks, system, words
+from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
 TARGET = "/mnt/monet"           # the root subvolume, where bootc installs
@@ -122,7 +123,7 @@ def prepare_keep(plan):
     boot_end = first + sizes["boot"] * mib - 1
     monet_end = boot_end + sizes["monet"] * mib
     if monet_end >= start + sectors:
-        raise Stop("The free space on the disk changed. Go back and choose again.")
+        raise Stop(_("The free space on the disk changed. Go back and choose again."))
     before = set(numbers(disk))
     run("sgdisk",
         "-n", f"0:{first}:{boot_end}", "-t", "0:8300", "-c", "0:boot",
@@ -131,11 +132,11 @@ def prepare_keep(plan):
     settle(disk)
     new = sorted(set(numbers(disk)) - before)
     if len(new) != 2:
-        raise Stop("The new partitions didn't show up.")
+        raise Stop(_("The new partitions didn't show up."))
     found = next((p for p in disks.lsblk() if p["path"] == disk), {})
     efi = disks.efi_partition(found)
     if not efi:
-        raise Stop("Windows' EFI partition wasn't found.")
+        raise Stop(_("Windows' EFI partition wasn't found."))
     return {"efi": efi["path"], "boot": partition_path(disk, new[0]), "monet": partition_path(disk, new[1])}
 
 
@@ -227,7 +228,7 @@ def download(plan, tries=8):
             return
         emit(phase="download", note="the connection dropped, picking up where it stopped")
         time.sleep(min(10 * (attempt + 1), 60))
-    raise Stop("The connection dropped and didn't come back. Check the Wi-Fi, then try again.")
+    raise Stop(_("The connection dropped and didn't come back. Check the Wi-Fi, then try again."))
 
 
 # -- 3. installing ----------------------------------------------------------------
@@ -290,7 +291,7 @@ def entries(listing):
 def deployment():
     found = [d for d in glob.glob(f"{TARGET}/ostree/deploy/*/deploy/*.0") if os.path.isdir(d)]
     if not found:
-        raise Stop("Monet's system wasn't found after installing.")
+        raise Stop(_("Monet's system wasn't found after installing."))
     root = Path(sorted(found)[-1])
     return root, root.parent.parent / "var"
 
@@ -323,10 +324,12 @@ def configure(plan):
         etc = root / "etc"
         write(etc / "locale.conf", f"LANG={plan['language']}\n")
         write(etc / "vconsole.conf", f"KEYMAP={plan['keyboard']}{'-' + plan['variant'] if plan['variant'] else ''}\n")
+        layouts, variants, options = system.xkb(plan["keyboard"], plan["variant"])
         write(etc / "X11/xorg.conf.d/00-keyboard.conf",
               'Section "InputClass"\n    Identifier "system-keyboard"\n    MatchIsKeyboard "on"\n'
-              f'    Option "XkbLayout" "{plan["keyboard"]}"\n'
-              + (f'    Option "XkbVariant" "{plan["variant"]}"\n' if plan["variant"] else "")
+              f'    Option "XkbLayout" "{layouts}"\n'
+              + (f'    Option "XkbVariant" "{variants}"\n' if variants else "")
+              + (f'    Option "XkbOptions" "{options}"\n' if options else "")
               + "EndSection\n")
         zone = system.guess_time_zone(plan["timezone"])
         if (root / "usr/share/zoneinfo" / zone).exists():
@@ -406,6 +409,7 @@ def remember(plan, parts):
 
 def main(path):
     plan = json.loads(Path(path).read_text())
+    words.use(plan.get("language", ""))
     phase = "disk"
     try:
         parts = remembered(plan)
@@ -432,7 +436,7 @@ def main(path):
         sys.exit(1)
     except Exception as e:  # noqa: BLE001 - shown to the person, details in the log
         log(f"{type(e).__name__}: {e}")
-        emit(phase=phase, error="Something unexpected went wrong. The details say what.")
+        emit(phase=phase, error=_("Something unexpected went wrong. The details say what."))
         sys.exit(1)
     finally:
         try:

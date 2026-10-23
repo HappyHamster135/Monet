@@ -148,6 +148,7 @@ PlasmoidItem {
                             Accessible.role: Accessible.Button
                             Accessible.name: modelData < 0 ? i18n("The picture before") : i18n("The next picture")
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 anchors.centerIn: parent
                                 anchors.horizontalCenterOffset: parent.modelData < 0 ? -1 : 1
                                 text: parent.modelData < 0 ? "‹" : "›"
@@ -164,6 +165,34 @@ PlasmoidItem {
                             }
                         }
                     }
+
+                    // With no photos yet, where they come from, while pointed at.
+                    Rectangle {
+                        z: 2
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 8
+                        width: Math.min(parent.width - 16, hint.implicitWidth + 20)
+                        height: hint.implicitHeight + 10
+                        radius: Math.min(height / 2, 14)
+                        color: Qt.rgba(0.11, 0.106, 0.098, 0.55)
+                        opacity: pointing.hovered && pictures.count === 0 ? 1 : 0
+                        visible: opacity > 0
+                        Behavior on opacity { NumberAnimation { duration: 160 } }
+                        Text {
+                            id: hint
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.WordWrap
+                            text: i18n("Put photos in your Pictures folder and they hang here.")
+                            color: "#FBF7EE"
+                            font.family: "Inter"
+                            font.pixelSize: 12
+                        }
+                    }
                 }
             }
         }
@@ -173,10 +202,15 @@ PlasmoidItem {
             id: pointing
             cursorShape: pictures.count > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
         }
-        MouseArea {
+        PlasmaCore.ToolTipArea {
             anchors.fill: parent
             z: -1
-            onClicked: if (pictures.count > 0) Qt.openUrlExternally(root.current)
+            active: pictures.count > 0
+            mainText: i18n("Open in Photos")
+            MouseArea {
+                anchors.fill: parent
+                onClicked: if (pictures.count > 0) Qt.openUrlExternally(root.current)
+            }
         }
     }
 }

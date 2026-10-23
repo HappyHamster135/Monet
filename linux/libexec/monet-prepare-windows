@@ -78,13 +78,18 @@ def set_status(code):
     STATUS.write_text(code)
 
 
-def progress(percent, text):
+def progress(percent, text, *values):
+    """How far it is, for the person's progress dialog: "PERCENT<tab>TEXT<tab>VALUE...". The dialog says
+    TEXT in their language (it's in Monet's catalog) and fills its %1, %2... with the values."""
     try:
         PROGRESS.parent.mkdir(parents=True, exist_ok=True)
-        PROGRESS.write_text(f"{int(percent)}\t{text}\n")
+        PROGRESS.write_text("\t".join([str(int(percent)), text, *map(str, values)]) + "\n")
     except OSError:
         pass
-    log(f"[{int(percent)}%] {text}")
+    said = text
+    for i, value in reversed(list(enumerate(values, 1))):
+        said = said.replace(f"%{i}", str(value))
+    log(f"[{int(percent)}%] {said}")
 
 
 def run(*cmd, check=True, capture=False, stdin=None):
@@ -363,7 +368,7 @@ def download(url, target):
                         done += len(chunk)
                         if total and time.time() - last > 5:
                             last = time.time()
-                            progress(5 + 60 * done / total, f"Downloading Windows ({done >> 30} of {total >> 30} GB)")
+                            progress(5 + 60 * done / total, "Downloading Windows (%1 of %2 GB)", done >> 30, total >> 30)
             if not total or done >= total:
                 return
             log("download ended early, resuming")
@@ -475,7 +480,7 @@ def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
             if not source:
                 raise Stop("failed", "the Windows download has no install image")
             index, name = pick_edition(wim_images(source))
-            progress(72, f"Preparing {name}")
+            progress(72, "Preparing %1", name)
             single = WORK / "windows.wim"
             single.unlink(missing_ok=True)
             run("wimlib-imagex", "export", source, index, single, "--compress=LZX", capture=True)

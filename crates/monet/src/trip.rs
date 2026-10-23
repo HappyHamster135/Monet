@@ -249,7 +249,7 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
         Arrival::Skipped => {
             // Next time, Windows goes first in the boot order as well.
             let _ = fs::write(paths.skips_boot_next(), "");
-            "Windows didn't start: this PC skipped Monet's one-time start. Next time, Monet asks it a different way."
+            t!("Windows didn't start: this PC skipped Monet's one-time start. Next time, Monet asks it a different way.")
                 .to_string()
         }
         Arrival::Failed if setup_done && trip.method == Method::Once => {
@@ -259,12 +259,10 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
                 bad.push(trip.entry);
                 save_bad_entries(paths, &bad);
             }
-            format!(
-                "Windows didn't start: this PC couldn't open its boot entry (Boot{:04X}). Next time, Monet uses another one.",
-                trip.entry
-            )
+            t!("Windows didn't start: this PC couldn't open its boot entry. Next time, Monet uses another one.").to_string()
         }
-        _ => "Windows didn't finish starting. Choose Play again to continue; if it happens again, run `monet doctor`.".to_string(),
+        _ => t!("Windows didn't finish starting. Choose Play again to continue. If it happens again, open Settings, then Play on Windows, and choose Check.")
+            .to_string(),
     };
     let _ = fs::write(paths.notice(), &notice);
     Some(notice)

@@ -6,6 +6,15 @@
 
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
+/// Marks words the window shows, for tools/make-translations.py; they're said
+/// in Windows' language where they're shown (words::tr).
+#[cfg(windows)]
+macro_rules! t {
+    ($text:literal) => {
+        $text
+    };
+}
+
 #[cfg_attr(not(windows), allow(dead_code))]
 mod plan;
 
@@ -13,6 +22,8 @@ mod plan;
 mod disk;
 #[cfg(windows)]
 mod gui;
+#[cfg(windows)]
+mod words;
 
 #[cfg(windows)]
 fn main() {

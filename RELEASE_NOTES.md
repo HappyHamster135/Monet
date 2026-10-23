@@ -20,6 +20,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   has). Pictures, PDFs, films, songs, archives and text each open in the
   right one from the start, and Files shows what's inside PDFs and videos.
   Before, Monet came with no apps beyond Steam, Lutris and the Text Editor.
+- **Monet speaks your language.** Settings, Monet Setup, the widgets, the
+  lock and shut-down screens, notifications and the Make a Monet USB stick
+  tool come in 29 languages besides English, from Spanish, Chinese and
+  Hindi to Swedish and Hebrew. Monet Setup's first page offers them all,
+  each with its keyboard; a keyboard without Latin letters keeps the US one
+  beside it (Alt+Shift switches), so Wi-Fi passwords can still be typed.
+  Arabic and Hebrew read from right to left, and the layout with them.
 - **Choose more while installing.** Monet Setup has a new step, Your apps:
   Zen Browser is ticked, and Office, Mail, Discord, Spotify, Heroic, Prism
   Launcher, OBS Studio and Krita are a click away. They download after your
@@ -81,14 +88,72 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Two more paintings.** Light & Wallpaper offers Monet's Water Lilies and
   Haystacks beside The Hours, each drifting through dawn, midday, dusk and
   night the same way.
+- **Four new widgets.** System, Recently Played, Timer and World Clock, in
+  the widget gallery:
+  - System: how hard the processor, the graphics and the memory are working,
+    on dials that warm from lily to the sun, how hot they run, and what's
+    downloading.
+  - Recently Played: the games you played last, with their covers; one
+    click and you're back in.
+  - Timer: a few minutes on the sun's path, with a ring and a notification
+    when they're up.
+  - World Clock: the time in other towns, each on a little clock face,
+    light by day and dark by night.
+- **Weather in more than one place.** Add another town or country from the
+  card (or its settings), and the ‹ › beside the place's name go through
+  them; each keeps its last forecast, so going back is instant.
+- **Tooltips on one clean pane.** The names that show when you point at
+  something sit on a single sheet of glass, no longer a box within a box.
+- **At home on a laptop.** The battery, the keyboard's light and Wi-Fi on
+  the move get their place:
+  - Quick Settings and Power & Sleep show the battery: plugged in or
+    charging, and how long it lasts.
+  - A slider for the keyboard's light, and Monet's own signs when you
+    press the brightness, keyboard-light and touchpad keys.
+  - The arrow on the Wi-Fi and Bluetooth tiles opens their page, to pick a
+    network or a device; the tile itself still switches it on and off.
+  - Networks you've joined before join again without the password, and
+    work and school networks (eduroam) ask for your name too.
+  - Bluetooth switches back on even after KDE's own switch turned it off.
+  - Settings scrolls its list of pages on a small screen.
+  - Monet doesn't update over a phone's hotspot.
+  - Brightness follows the laptop's own screen when a monitor is plugged in.
 - **Ink signs in apps' toolbars and menus.** Save, print, zoom, rotate,
   crop and the rest are brushed in the same ink as the bar, and change with
   the light.
-- **The Calendar opens its days.** Click a day for its page: the date in
-  Fraunces, ‹ › to the day before or after, Today to come back, and a note
-  for that day, kept as you type. Days with a note have a dot of lily under
-  them. Make the widget wide and the month and the day sit side by side;
-  the wheel turns the months.
+- **Notes for your days, on the desktop and in the bar.** The Calendar
+  widget and the clock's month share the same notes:
+  - Days with a note have a dot under them; point at one to read it. The
+    line under the month shows the chosen day's note.
+  - Notes (or a click on that line) brings out a panel beside the month to
+    write the day's note, step to the day before or after, and see what's
+    coming up. It's kept as you type.
+  - The clock's month now turns too: ‹ ›, the wheel, or the arrow keys, and
+    a click on the month's name comes back to today.
+  - Make the Calendar wide and the notes sit beside the month.
+- **Easier to find your way.** Small things that said too little:
+  - Weather's place button now says "Add a place", and the place shown can
+    be forgotten right there; when the weather can't be reached, a click
+    tries again.
+  - The widget gallery says how many of a widget are on your desktop, and
+    "Remove all" when there's more than one.
+  - Quick Settings says what Hours, Mist and Smoke do, Wi-Fi says "Not
+    connected" instead of "On", and Night Light and Do Not Disturb have an
+    arrow to their settings.
+  - Pointing at the town in Weather, the cover in Now Playing, the Photo
+    Frame, the Timer's minutes or your name in the menu says what a click
+    (or the wheel) does. An empty Photo Frame says where photos come from.
+  - World Clock has a + for another town while you point at it.
+  - The lock screen names the painting that's really hanging, and a wrong
+    password says so plainly, for longer.
+  - "Windows & Games" in Settings is now "Play on Windows", so it isn't
+    mixed up with Games & Controllers; if Windows doesn't finish starting,
+    the note says where to check, not a command to type.
+  - Monet Setup reminds you to take a photo of the blue screen's steps
+    before restarting.
+  - Clearing recent files says it's done.
+  - Searching Settings works in your language, not only in English, and
+    accents don't matter: "ecran" finds "Écran".
 - **Now Playing starts the music.** With nothing playing it offers your
   music apps, the PC's own first, or the Store to find one. While something
   plays, a line shows how far along it is, with the time gone and the time

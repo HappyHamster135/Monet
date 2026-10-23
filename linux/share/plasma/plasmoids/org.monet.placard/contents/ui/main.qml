@@ -18,6 +18,13 @@ PlasmoidItem {
         const h = now.getHours()
         return h >= 5 && h < 10 ? "dawn" : h >= 10 && h < 17 ? "midday" : h >= 17 && h < 21 ? "dusk" : "night"
     }
+    // The light's name, as the card says it: "Impression, dawn".
+    readonly property string lightName: ({
+        dawn: i18nc("the painting's light, as in Impression, dawn", "dawn"),
+        midday: i18nc("the painting's light, as in Impression, midday", "midday"),
+        dusk: i18nc("the painting's light, as in Impression, dusk", "dusk"),
+        night: i18nc("the painting's light, as in Impression, night", "night")
+    })[light]
     // Midday's sky is bright, so the text turns to ink.
     readonly property bool ink: light === "midday"
     readonly property color textColor: ink ? "#13202E" : "#FFFFFF"
@@ -70,6 +77,7 @@ PlasmoidItem {
             }
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 visible: root.firstName !== ""
                 text: root.greeting
                 color: root.textColor
@@ -80,6 +88,7 @@ PlasmoidItem {
             }
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 text: Qt.formatDate(root.now, "dddd, d MMMM")
                 color: root.textColor
                 opacity: 0.88
@@ -89,6 +98,7 @@ PlasmoidItem {
             }
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 text: Qt.formatTime(root.now, Qt.locale().timeFormat(Locale.ShortFormat))
                 color: root.textColor
                 font.family: "Fraunces 72pt SuperSoft"
@@ -112,11 +122,12 @@ PlasmoidItem {
                 }
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     text: Plasmoid.configuration.Series === "lilies"
-                        ? i18nc("the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", root.light)
+                        ? i18nc("the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", root.lightName)
                         : Plasmoid.configuration.Series === "haystacks"
-                        ? i18nc("the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", root.light)
-                        : i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", root.light)
+                        ? i18nc("the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", root.lightName)
+                        : i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", root.lightName)
                     color: root.textColor
                     font.family: "Fraunces 72pt SuperSoft"
                     font.italic: true

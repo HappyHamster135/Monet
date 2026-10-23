@@ -51,6 +51,7 @@ Item {
             Layout.fillWidth: true
             spacing: 1
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 text: row.name
                 color: Kirigami.Theme.textColor
@@ -60,6 +61,7 @@ Item {
                 font.pixelSize: 14
             }
             Text {
+                horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
                 visible: row.detail !== ""
                 text: row.detail

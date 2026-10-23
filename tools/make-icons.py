@@ -970,6 +970,18 @@ def ring_points(cx, cy, r, a0=0.0, a1=360.0, steps=48):
              cy + r * math.sin(math.radians(a0 + (a1 - a0) * k / steps))) for k in range(steps + 1)]
 
 
+def timer_icon():
+    """Timer: a dial of paper, the sun most of the way round its ring."""
+    c = Canvas(551)
+    face = circle(64, 64, 54)
+    c.paint(face, lit(y0=10, y1=118, **PAPER), 4.6, around(64, 64), layers=2, wander=0.1, accents=["#FFFFFF", "#E8DCC4"],
+            accent_rate=0.15)
+    c.mark(ring_points(64, 64, 38), 7.0, "#D9CDB2", face, thick=1.1)  # the whole way round, faint
+    c.mark(ring_points(64, 64, 38, -90, 180), 7.6, "#F2552C", face, thick=1.6)  # the time left, in the sun's paint
+    c.dab(26 * S, 64 * S, 11 * S, 11 * S, 0, hexrgb("#FF7A45"), face, thick=2.0, dry=0)  # the sun, where it has got to
+    return c.finish()
+
+
 def zen_icon():
     """Zen Browser: its three rings, ripples spreading on the pond at night."""
     c = Canvas(331)
@@ -1472,6 +1484,7 @@ FILES = {
     # Monet's own widgets, in the widget gallery.
     "weather": (weather_icon, "apps/monet-weather", []),
     "placard": (placard_icon, "apps/monet-placard", []),
+    "timer": (timer_icon, "apps/monet-timer", []),
 }
 # Folders asked for by their type, not their place.
 # Bazzite's documentation names its picture by path; install.sh points it here.
@@ -1609,9 +1622,10 @@ def settings_art():
     SETTINGS.mkdir(parents=True, exist_ok=True)
     paint = {n: Image.open(HOURS / f"{n}.jpg").convert("RGB") for n in ("dawn", "day", "dusk", "night")}
     for name, (painting, box) in SWATCHES.items():
-        img = paint[painting].crop(box).resize((56, 56), Image.LANCZOS)
+        # Twice the size they're mostly shown at, so they stay sharp on a 200% screen.
+        img = paint[painting].crop(box).resize((112, 112), Image.LANCZOS)
         img = ImageEnhance.Color(img).enhance(1.25)
-        rounded_png(img, 16, SETTINGS / f"swatch-{name}.png")
+        rounded_png(img, 32, SETTINGS / f"swatch-{name}.png")
     # Previews for Light: the four hours side by side, mist, and smoke.
     w, h = 480, 236
     strip = Image.new("RGB", (w, h))
@@ -2154,8 +2168,18 @@ def ink_actions():
         "dialog-positive": [(ps.GOOD, circle(11, 11, 8, 1.6)), (ps.GOOD, line((7.4, 11.2), (10, 13.8), (14.8, 8.4), w=1.8))],
         "preferences-desktop-display-randr-symbolic": ink(*glyphs["user-desktop"]),
         "input-keyboard-virtual-on-symbolic": ink(ring(2.6, 6, 19.4, 16, 1.8), line((6.4, 9.6), (15.6, 9.6), w=1.4), line((7.6, 12.8), (14.4, 12.8), w=1.4)),
+        # What KDE's on-screen signs ask for as the keys are pressed: the screen's light, the keyboard's,
+        # and the touchpad.
+        "video-display-brightness": sun(),
+        "input-keyboard-brightness": ink(ring(2.6, 9.6, 19.4, 19.4, 1.8), line((6.4, 13.2), (15.6, 13.2), w=1.3),
+                                         line((7.6, 16), (14.4, 16), w=1.3), disc(11, 4.6, 2.0, 24),
+                                         line((5.4, 4.6), (7.2, 4.6), w=1.3, taper=0.1), line((14.8, 4.6), (16.6, 4.6), w=1.3, taper=0.1)),
+        "input-touchpad-on": ink(ring(3.6, 3.6, 18.4, 18.4, 2.2), line((4.4, 13.8), (17.6, 13.8), w=1.3),
+                                 line((11, 13.8), (11, 17.6), w=1.3)),
     }
     status["input-keyboard-virtual-off-symbolic"] = dimmed(status["input-keyboard-virtual-on-symbolic"])
+    status["keyboard-layout"] = status["input-keyboard-virtual-on-symbolic"]
+    status["input-touchpad-off"] = dimmed(status["input-touchpad-on"]) + ps.slash()
     # The battery as Plasma 6.7 names it: whole, in tens, plugged in or not.
     for pct in range(0, 101, 10):
         fill = drawn.get(f"Fill{pct}", [])

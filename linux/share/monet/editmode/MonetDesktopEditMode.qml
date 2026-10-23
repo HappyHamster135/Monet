@@ -17,6 +17,8 @@ import org.kde.plasma.extras as PlasmaExtras
 
 Item {
     id: editModeItem
+    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.childrenInherit: true
 
     property real centerX: Math.round(editModeUi.x + editModeUi.width / 2)
     property real centerY: Math.round(editModeUi.y + editModeUi.height / 2)
@@ -90,8 +92,9 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
 
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    text: i18n("Drag a widget to move it. Point at one to resize or remove it.")
+                    text: i18nd("monet", "Drag a widget to move it. Point at one to resize or remove it.")
                     color: editModeItem.dim
                     elide: Text.ElideRight
                     font.family: "Inter"
@@ -99,7 +102,7 @@ Item {
                 }
                 Pill {
                     id: moreButton
-                    text: i18n("More")
+                    text: i18nd("monet", "More")
                     ink: editModeItem.ink
                     tint: editModeItem.pebble
                     ring: editModeItem.lily
@@ -108,7 +111,7 @@ Item {
                 }
                 Pill {
                     visible: !sidePanel.visible
-                    text: i18n("Add widgets")
+                    text: i18nd("monet", "Add widgets")
                     ink: editModeItem.ink
                     tint: editModeItem.pebble
                     ring: editModeItem.lily
@@ -123,7 +126,7 @@ Item {
                 Pill {
                     // The gallery has its own Done while it's open.
                     visible: !sidePanel.visible
-                    text: i18n("Done")
+                    text: i18nd("monet", "Done")
                     ink: editModeItem.paper
                     tint: editModeItem.ink
                     ring: editModeItem.lily
@@ -140,13 +143,13 @@ Item {
             placement: PlasmaExtras.Menu.BottomPosedLeftAlignedPopup
 
             PlasmaExtras.MenuItem {
-                text: i18n("Add a bar…")
+                text: i18nd("monet", "Add a bar…")
                 icon: "list-add"
                 onClicked: containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
             }
             PlasmaExtras.MenuItem {
                 readonly property QtObject manage: containment ? containment.plasmoid.corona.action("manage-containments") : null
-                text: i18n("Manage desktops and bars")
+                text: i18nd("monet", "Manage desktops and bars")
                 icon: "configure"
                 visible: manage ? manage.visible : false
                 onClicked: manage.trigger()

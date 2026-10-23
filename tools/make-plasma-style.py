@@ -32,10 +32,11 @@ OUT = ROOT / "linux" / "share" / "plasma" / "desktoptheme" / "monet"
 VERSION = (ROOT / "VERSION").read_text().strip()
 
 # name: radius, content margin, shadow blur, shadow drop, shadow strength, glass opacity
+# (and rim=False for glass too small for a rim of light: inside the hairline, it reads as a second box)
 FRAMES = {
     "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
     "widgets/panel-background": dict(radius=22, margin=8, blur=12, drop=7, strength=0.32, glass=0.40),
-    "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.66),
+    "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.66, rim=False),
     # Popups and desktop widgets drawn by Plasma's own components.
     "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
 }
@@ -128,7 +129,7 @@ GRADIENTS = (f'<linearGradient id="rim-fall" x1="0" y1="0" x2="0" y2="1">'
              f'<stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>')
 
 
-def frame_pieces(sheet, prefix, r, glass, mask=False):
+def frame_pieces(sheet, prefix, r, glass, mask=False, rim=True):
     """The glass itself: fill, hairline edge, the rim of light and its sheen.
     The sides stretch (hint-stretch-borders), so the rim fades over the
     frame's whole height."""
@@ -148,8 +149,9 @@ def frame_pieces(sheet, prefix, r, glass, mask=False):
                 if top:  # under the hairline and the rim, as on the top edge (y + 2)
                     out += f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r - 2)}" fill="url(#sheen)"/>'
                 out += f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r, 1)}" {edge}/>'
-                out += (f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r - 1, 1)}" fill="#ffffff" '
-                        f'fill-opacity="{RIM_TOP if top else RIM_BOTTOM}"/>')
+                if rim:
+                    out += (f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r - 1, 1)}" fill="#ffffff" '
+                            f'fill-opacity="{RIM_TOP if top else RIM_BOTTOM}"/>')
             return out
         sheet.element(prefix + which, r, r, body)
     for which in ("top", "bottom", "left", "right"):
@@ -164,11 +166,13 @@ def frame_pieces(sheet, prefix, r, glass, mask=False):
             bar = {"top": (x, y, w, 1), "bottom": (x, y + h - 1, w, 1),
                    "left": (x, y, 1, h), "right": (x + w - 1, y, 1, h)}[which]
             out += f'<rect x="{bar[0]}" y="{bar[1]}" width="{bar[2]}" height="{bar[3]}" {edge}/>'
-            rim = {"top": (x, y + 1, w, 1, f'fill="#ffffff" fill-opacity="{RIM_TOP}"'),
-                   "bottom": (x, y + h - 2, w, 1, f'fill="#ffffff" fill-opacity="{RIM_BOTTOM}"'),
-                   "left": (x + 1, y, 1, h, 'fill="url(#rim-fall)"'),
-                   "right": (x + w - 2, y, 1, h, 'fill="url(#rim-fall)"')}[which]
-            out += f'<rect x="{rim[0]}" y="{rim[1]}" width="{rim[2]}" height="{rim[3]}" {rim[4]}/>'
+            if not rim:
+                return out
+            light = {"top": (x, y + 1, w, 1, f'fill="#ffffff" fill-opacity="{RIM_TOP}"'),
+                     "bottom": (x, y + h - 2, w, 1, f'fill="#ffffff" fill-opacity="{RIM_BOTTOM}"'),
+                     "left": (x + 1, y, 1, h, 'fill="url(#rim-fall)"'),
+                     "right": (x + w - 2, y, 1, h, 'fill="url(#rim-fall)"')}[which]
+            out += f'<rect x="{light[0]}" y="{light[1]}" width="{light[2]}" height="{light[3]}" {light[4]}/>'
             return out
         sheet.element(prefix + which, w, h, body)
     sheet.element(prefix + "center", size, size, lambda x, y: f'<rect x="{x}" y="{y}" width="{size}" height="{size}" {fill}/>')
@@ -232,9 +236,9 @@ def image(x, y, w, h, data):
     return f'<image x="{x}" y="{y}" width="{w}" height="{h}" xlink:href="data:image/png;base64,{data}"/>'
 
 
-def frame_svg(radius, margin, blur, drop, strength, glass, shadow=True):
+def frame_svg(radius, margin, blur, drop, strength, glass, shadow=True, rim=True):
     sheet = Sheet(GRADIENTS)
-    frame_pieces(sheet, "", radius, glass)
+    frame_pieces(sheet, "", radius, glass, rim=rim)
     frame_pieces(sheet, "mask-", radius, glass, mask=True)
     if shadow:
         shadow_pieces(sheet, radius, blur, drop, strength)

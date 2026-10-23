@@ -3,9 +3,12 @@
  * Fraunces with the sky painted beside it, and the next four days beneath.
  * From Open-Meteo (no account, nothing sent but the place), every half hour,
  * once a place is chosen: right on the card (or in the widget's settings).
+ * More places, in other towns or countries, are added the same way; the
+ * arrows beside the name go through them.
  */
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import QtQuick.Templates as T
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
@@ -16,7 +19,25 @@ PlasmoidItem {
 
     readonly property bool placed: Plasmoid.configuration.place !== ""
     readonly property bool fahrenheit: Plasmoid.configuration.fahrenheit
-    property var weather: null
+    // The place shown, and every place in the order the arrows go (the one shown
+    // is always among them, as it is when there was only ever one).
+    readonly property var here: ({name: Plasmoid.configuration.place, latitude: Plasmoid.configuration.latitude,
+                                   longitude: Plasmoid.configuration.longitude})
+    readonly property var places: {
+        const list = Array.from(Plasmoid.configuration.places || []).map(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return null;
+            }
+        }).filter(place => place && place.name);
+        return placed && !list.some(place => same(place, here)) ? list.concat([here]) : list;
+    }
+    readonly property int at: places.findIndex(place => same(place, here))
+    // The last weather of each place, so going back to one shows it at once.
+    property var weathers: ({})
+    readonly property string key: here.latitude + "," + here.longitude
+    readonly property var weather: weathers[key] || null
     property string problem: ""
 
     // Choosing the place on the card: a town, then one of Open-Meteo's matches.
@@ -52,16 +73,51 @@ PlasmoidItem {
         request.send();
     }
 
+    function same(a, b) {
+        return Math.abs(a.latitude - b.latitude) < 0.0001 && Math.abs(a.longitude - b.longitude) < 0.0001;
+    }
+
+    function show(place) {
+        Plasmoid.configuration.place = place.name;
+        Plasmoid.configuration.latitude = place.latitude;
+        Plasmoid.configuration.longitude = place.longitude;
+    }
+
+    function keep(list) {
+        Plasmoid.configuration.places = list.map(place => JSON.stringify(
+            {name: place.name, latitude: place.latitude, longitude: place.longitude}));
+    }
+
+    // A place from the search: added after the others, and shown.
     function choose(place) {
         if (!placed) {
             // The first place: degrees the way this PC's region counts them.
             Plasmoid.configuration.fahrenheit = Qt.locale().measurementSystem === Locale.ImperialUSSystem;
         }
-        Plasmoid.configuration.place = place.name;
-        Plasmoid.configuration.latitude = place.latitude;
-        Plasmoid.configuration.longitude = place.longitude;
+        if (!places.some(known => same(known, place))) {
+            keep(places.concat([place]));
+        }
+        show(place);
         found = [];
         choosing = false;
+    }
+
+    // The next place (1) or the one before (-1), round and round.
+    function step(by) {
+        if (places.length > 1) {
+            show(places[(Math.max(at, 0) + by + places.length) % places.length]);
+        }
+    }
+
+    // The place shown leaves the list; its neighbour is shown, or none is.
+    function forget() {
+        const rest = places.filter((place, i) => i !== at);
+        keep(rest);
+        if (rest.length > 0) {
+            show(rest[Math.min(Math.max(at, 0), rest.length - 1)]);
+        } else {
+            Plasmoid.configuration.place = "";
+        }
     }
 
     function words(code) {
@@ -81,6 +137,8 @@ PlasmoidItem {
             + "&current=temperature_2m,weather_code,is_day"
             + "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5"
             + (fahrenheit ? "&temperature_unit=fahrenheit" : "");
+        // The answer belongs to the place asked about, even if another is shown by then.
+        const wanted = key;
         const request = new XMLHttpRequest();
         request.onreadystatechange = () => {
             if (request.readyState !== XMLHttpRequest.DONE) {
@@ -90,11 +148,14 @@ PlasmoidItem {
                 if (request.status !== 200) {
                     throw new Error(String(request.status));
                 }
-                weather = JSON.parse(request.responseText);
+                const answer = JSON.parse(request.responseText);
+                const all = Object.assign({}, weathers);
+                all[wanted] = answer;
+                weathers = all;
                 problem = "";
             } catch (e) {
                 // Keep the last weather; say why only when there's none.
-                problem = i18n("The weather can't be reached right now.");
+                problem = i18n("The weather can't be reached right now. Click to try again.");
             }
         };
         request.open("GET", url);
@@ -105,6 +166,51 @@ PlasmoidItem {
     Plasmoid.icon: "monet-weather"
     preferredRepresentation: fullRepresentation
     toolTipMainText: Plasmoid.configuration.place || i18n("Weather")
+
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: i18n("Add a place…")
+            icon.name: "list-add"
+            onTriggered: root.choosing = true
+        },
+        PlasmaCore.Action {
+            text: i18nc("%1 is a town", "Forget %1", Plasmoid.configuration.place)
+            icon.name: "list-remove"
+            visible: root.placed
+            onTriggered: root.forget()
+        }
+    ]
+
+    // Beside the place's name, to the place before or after it.
+    component Arrow: T.AbstractButton {
+        id: arrow
+        property bool back: false
+        property color ink
+        property color dim
+        readonly property bool pointsLeft: back !== LayoutMirroring.enabled
+        implicitWidth: 22
+        implicitHeight: 22
+        Accessible.name: back ? i18n("Place before") : i18n("Next place")
+        background: Rectangle {
+            radius: height / 2
+            color: arrow.ink
+            opacity: arrow.down ? 0.14 : arrow.hovered || arrow.visualFocus ? 0.08 : 0
+        }
+        contentItem: Shape {
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeColor: arrow.hovered ? arrow.ink : arrow.dim
+                strokeWidth: 1.7
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathPolyline {
+                    path: arrow.pointsLeft ? [Qt.point(13, 6.5), Qt.point(8.5, 11), Qt.point(13, 15.5)]
+                                           : [Qt.point(9, 6.5), Qt.point(13.5, 11), Qt.point(9, 15.5)]
+                }
+            }
+        }
+    }
 
     // A new place or other degrees: look again.
     readonly property string asked: [Plasmoid.configuration.place, Plasmoid.configuration.latitude,
@@ -152,27 +258,59 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         spacing: 0
 
-                        Text {
+                        RowLayout {
                             Layout.fillWidth: true
-                            text: Plasmoid.configuration.place
-                            color: card.ink
-                            elide: Text.ElideRight
-                            font.family: "Inter"
-                            font.pixelSize: 13
-                            font.weight: Font.DemiBold
-                            font.underline: placeArea.containsMouse
+                            spacing: 2
 
-                            // Another place: click its name.
-                            MouseArea {
-                                id: placeArea
-                                width: Math.min(parent.width, parent.implicitWidth)
-                                height: parent.height
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.choosing = true
+                            Text {
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: implicitWidth
+                                text: Plasmoid.configuration.place
+                                color: card.ink
+                                elide: Text.ElideRight
+                                font.family: "Inter"
+                                font.pixelSize: 13
+                                font.weight: Font.DemiBold
+                                font.underline: placeArea.containsMouse
+
+                                // Another place: click its name.
+                                PlasmaCore.ToolTipArea {
+                                    width: Math.min(parent.width, parent.implicitWidth)
+                                    height: parent.height
+                                    mainText: i18n("Add a place")
+                                    MouseArea {
+                                        id: placeArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.choosing = true
+                                    }
+                                }
                             }
+                            // Taller than the name, without making its line taller.
+                            Arrow {
+                                Layout.leftMargin: 4
+                                Layout.topMargin: -3
+                                Layout.bottomMargin: -3
+                                visible: root.places.length > 1
+                                back: true
+                                ink: card.ink
+                                dim: card.dim
+                                onClicked: root.step(-1)
+                            }
+                            Arrow {
+                                Layout.topMargin: -3
+                                Layout.bottomMargin: -3
+                                visible: root.places.length > 1
+                                ink: card.ink
+                                dim: card.dim
+                                onClicked: root.step(1)
+                            }
+                            Item { Layout.fillWidth: true }
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             text: card.now ? Math.round(card.now.temperature_2m) + "°" : ""
                             color: card.ink
                             font.family: "Fraunces 72pt SuperSoft"
@@ -182,6 +320,7 @@ PlasmoidItem {
                             Layout.bottomMargin: -6
                         }
                         Text {
+                            horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: card.now && card.days
                                 ? root.words(card.now.weather_code) + "  ·  "
@@ -217,6 +356,7 @@ PlasmoidItem {
                             width: forecast.width / 4
                             spacing: 2
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Qt.locale().dayName(new Date(card.days.time[parent.day] + "T12:00").getDay(), Locale.ShortFormat)
                                 color: card.dim
@@ -229,6 +369,7 @@ PlasmoidItem {
                                 code: card.days.weather_code[parent.day]
                             }
                             Text {
+                                horizontalAlignment: Text.AlignLeft
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Math.round(card.days.temperature_2m_max[parent.day]) + "°"
                                 color: card.ink
@@ -262,6 +403,14 @@ PlasmoidItem {
                     font.italic: true
                     font.pixelSize: 17
                 }
+                // Out of reach: a click tries again now, not in half an hour.
+                TapHandler {
+                    enabled: root.problem !== ""
+                    onTapped: {
+                        root.problem = "";
+                        root.refresh();
+                    }
+                }
             }
 
             // The place, chosen right here: a town, then one of the matches.
@@ -286,8 +435,9 @@ PlasmoidItem {
                     Layout.fillWidth: true
 
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         Layout.fillWidth: true
-                        text: root.placed ? i18n("Another place?") : i18n("Where are you?")
+                        text: root.placed ? i18n("Add a place") : i18n("Where are you?")
                         color: card.ink
                         elide: Text.ElideRight
                         font.family: "Fraunces 72pt SuperSoft"
@@ -355,6 +505,7 @@ PlasmoidItem {
                     }
                     // Templates draw no placeholder.
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         anchors.fill: parent
                         leftPadding: field.leftPadding
                         rightPadding: field.rightPadding
@@ -395,6 +546,7 @@ PlasmoidItem {
                             contentItem: RowLayout {
                                 spacing: 6
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.leftMargin: 8
                                     text: match.modelData.name
                                     textFormat: Text.PlainText
@@ -404,6 +556,7 @@ PlasmoidItem {
                                     font.weight: Font.DemiBold
                                 }
                                 Text {
+                                    horizontalAlignment: Text.AlignLeft
                                     Layout.fillWidth: true
                                     Layout.rightMargin: 8
                                     text: match.where
@@ -417,6 +570,7 @@ PlasmoidItem {
                         }
                     }
                     Text {
+                        horizontalAlignment: Text.AlignLeft
                         width: parent.width
                         visible: root.found.length === 0 && field.text.trim().length >= 2 && !root.searching && !typing.running
                         leftPadding: 8
@@ -426,9 +580,37 @@ PlasmoidItem {
                         font.family: "Inter"
                         font.pixelSize: 12
                     }
+                    // The place on the card, taken off it (the one before or after shows).
+                    T.AbstractButton {
+                        id: forgetPlace
+                        visible: root.placed && field.text.trim().length === 0
+                        text: i18nc("%1 is a town", "Forget %1", Plasmoid.configuration.place)
+                        implicitWidth: Math.min(parent.width, forgetLabel.implicitWidth + 18)
+                        implicitHeight: 26
+                        onClicked: {
+                            root.forget();
+                            root.choosing = false;
+                        }
+                        background: Rectangle {
+                            radius: height / 2
+                            color: card.ink
+                            opacity: forgetPlace.hovered || forgetPlace.visualFocus ? 0.08 : 0
+                        }
+                        contentItem: Text {
+                            id: forgetLabel
+                            text: forgetPlace.text
+                            color: card.dim
+                            elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.family: "Inter"
+                            font.pixelSize: 12
+                        }
+                    }
                 }
                 // At the foot, while the matches don't need the room.
                 Text {
+                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     visible: root.found.length === 0
                     elide: Text.ElideRight

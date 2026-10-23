@@ -48,6 +48,15 @@ Item {
         const h = now.getHours()
         return h >= 5 && h < 10 ? "dawn" : h >= 10 && h < 17 ? "midday" : h >= 17 && h < 21 ? "dusk" : "night"
     }
+    // The light's name, as the placard on the desktop says it: "Impression, dawn".
+    readonly property string lightName: ({
+        dawn: i18ndc("monet", "the painting's light, as in Impression, dawn", "dawn"),
+        midday: i18ndc("monet", "the painting's light, as in Impression, midday", "midday"),
+        dusk: i18ndc("monet", "the painting's light, as in Impression, dusk", "dusk"),
+        night: i18ndc("monet", "the painting's light, as in Impression, night", "night")
+    })[light]
+    // Which of Monet's paintings hangs: the wallpaper says (its own `series`).
+    readonly property string series: typeof wallpaper === "undefined" || !wallpaper || !wallpaper.series ? "hours" : wallpaper.series
     readonly property string userName: String(typeof kscreenlocker_userName === "undefined" ? "" : kscreenlocker_userName)
     readonly property string userImage: String(typeof kscreenlocker_userImage === "undefined" ? "" : kscreenlocker_userImage)
     readonly property string firstName: userName.trim().split(" ")[0]
@@ -72,7 +81,7 @@ Item {
             if (kind != 0) { // if this is coming from the noninteractive authenticators
                 return;
             }
-            monetLock.handleMessage(i18ndc("plasma_shell_org.kde.plasma.desktop", "@info:status", "Unlocking failed"));
+            monetLock.handleMessage(i18nd("monet", "That password didn't work. Try again."));
             graceLockTimer.restart();
             notificationRemoveTimer.restart();
             rejectPasswordAnimation.start();
@@ -206,7 +215,7 @@ Item {
         }
         Timer {
             id: notificationRemoveTimer
-            interval: 3000
+            interval: 6000
             onTriggered: root.notification = ""
         }
         Timer {
@@ -273,6 +282,7 @@ Item {
             }
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 text: Qt.formatDate(monetLock.now, "dddd, d MMMM")
                 color: placard.textColor
                 opacity: 0.88
@@ -283,6 +293,7 @@ Item {
             }
 
             Text {
+                horizontalAlignment: Text.AlignLeft
                 text: monetLock.timeText
                 color: placard.textColor
                 font.family: "Fraunces 72pt SuperSoft"
@@ -306,7 +317,12 @@ Item {
                 }
 
                 Text {
-                    text: i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", monetLock.light)
+                    horizontalAlignment: Text.AlignLeft
+                    text: monetLock.series === "lilies"
+                        ? i18ndc("monet", "the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", monetLock.lightName)
+                        : monetLock.series === "haystacks"
+                        ? i18ndc("monet", "the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", monetLock.lightName)
+                        : i18ndc("monet", "the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", monetLock.lightName)
                     color: placard.textColor
                     font.family: "Fraunces 72pt SuperSoft"
                     font.italic: true
@@ -407,6 +423,7 @@ Item {
                                         GradientStop { position: 1; color: "#245A50" }
                                     }
                                     Text {
+                                        horizontalAlignment: Text.AlignLeft
                                         anchors.centerIn: parent
                                         anchors.verticalCenterOffset: -2
                                         text: (monetLock.firstName || "M").charAt(0).toUpperCase()
@@ -449,7 +466,7 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.topMargin: Kirigami.Units.smallSpacing
                                 horizontalAlignment: Text.AlignHCenter
-                                text: monetLock.firstName ? i18nc("%1 is a first name", "Welcome back, %1.", monetLock.firstName) : i18n("Welcome back.")
+                                text: monetLock.firstName ? i18ndc("monet", "%1 is a first name", "Welcome back, %1.", monetLock.firstName) : i18nd("monet", "Welcome back.")
                                 color: monetLock.ink
                                 elide: Text.ElideRight
                                 font.family: "Fraunces 72pt SuperSoft"
