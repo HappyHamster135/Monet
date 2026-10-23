@@ -67,8 +67,7 @@ Time with a stopwatch, from the click to the moment you can play.
 
 | Test | Laptop | Desktop |
 |---|---|---|
-| Monet → Windows desktop, first time (cold boot) | | |
-| Monet → Windows desktop, Windows hibernated | | |
+| Monet → Windows desktop | | |
 | Play on Windows → game menu | | |
 | Quit game → Monet desktop | | |
 | Back to Monet shortcut → Monet desktop | | |
@@ -96,12 +95,12 @@ Turn it on in Settings → Play on Windows, then Play on Windows and come back.
 - [ ] Turned off again: coming back from Windows shows the sign-in screen
 - [ ] If the desktop ever shows before the lock screen, turn it off and note it in Logs below
 
-## 3. Anti-cheat after hibernation
+## 3. Anti-cheat
 
-For each game: play once after a cold Windows boot, then go back to Monet,
-then Play on Windows again (Windows resumes from hibernation).
+For each game: Play on Windows, quit (the PC restarts into Monet by itself,
+not off), then Play on Windows again.
 
-| Game | Anti-cheat | Cold boot | After resume | Notes |
+| Game | Anti-cheat | First play | Second play | Notes |
 |---|---|---|---|---|
 | Valorant | Riot Vanguard | | | |
 | League of Legends | Riot Vanguard | | | |

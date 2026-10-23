@@ -542,8 +542,9 @@ welcome page (`monet-quick open welcome`, once): Quick Settings, the
 widgets, Play on Windows, the light and search, each with its way there. Play
 on Windows offers Ready when you come back (off until chosen, as it signs
 in without asking first): Linux can't hibernate with Secure Boot (the
-kernel's lockdown), so Monet can't stay in memory while Windows runs the
-way Windows does; instead, `monet-ready-leave.service` arms at shutdown when
+kernel's lockdown), so Monet can't stay in memory while Windows runs
+(and Windows doesn't either: Back to Monet restarts it, as a hibernated PC
+stays off until the power button); instead, `monet-ready-leave.service` arms at shutdown when
 BootNext is Windows' boot manager, `monet-ready-boot.service` (before every
 sign-in screen) writes a one-time `[Autologin]` for `plasmalogin` when the
 trip is fresh (a day at most) and clears it otherwise, and the session's

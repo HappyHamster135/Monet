@@ -622,10 +622,10 @@ fn go_back(efi: &mut FirmwareVars, state: &State, found: &[WinGame]) -> Res<()> 
     boot::set_boot_next(efi, target).map_err(|e| format!("couldn't set Monet to start next: {e}"))?;
     log(&format!("returning to Monet (Boot{target:04X})"));
 
-    // Hibernate so Windows resumes in seconds next time. Restart if
-    // hibernation is turned off.
-    if !win::run_hidden("shutdown", &["/h"]) {
-        win::run_hidden("shutdown", &["/r", "/t", "0"]);
+    // Restart, not hibernate: a hibernated PC stays off until someone presses
+    // the power button, and a hibernated Windows drive can't be written from Monet.
+    if !win::run_hidden("shutdown", &["/r", "/t", "0"]) {
+        return Err("couldn't restart into Monet".into());
     }
     Ok(())
 }

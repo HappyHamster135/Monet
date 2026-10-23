@@ -22,8 +22,9 @@ Monet's unique parts are:
    Windows, starts the game, and returns to Monet when you quit.
 2. **Windows as a game console**: Monet installs and strips Windows itself, so
    the user never has to deal with Windows setup, ads, or clutter.
-3. **Fast switching**: Windows hibernates instead of shutting down, so it
-   resumes in seconds with the anti-cheat already loaded.
+3. **Fast switching**: one click restarts into the game in Windows, and
+   quitting it restarts into Monet. Windows always shuts down fully, so Monet
+   can safely use its drive.
 4. **A simple, opinionated design** inspired by Apple's simplicity, with its
    own visual identity.
 
@@ -84,14 +85,14 @@ User clicks "Play on Windows: Valorant"
  ├─ write launch request to an EFI variable
  │    MonetLaunch = { store: "riot", game: "valorant" }
  ├─ set one-time boot: BootNext = Windows
- └─ reboot ─────────────────────────────▶ Windows resumes from hibernation (~5–10 s)
+ └─ reboot ─────────────────────────────▶ Windows starts (~10–15 s)
                                           │
                                           ├─ Monet Bridge reads + clears MonetLaunch
                                           ├─ launches the game
                                           ├─ waits for the game to exit
                                           ├─ "Back to Monet in 10 s"  [Stay] [Go now]
                                           ├─ set one-time boot: Monet
-                                          └─ hibernate ───────────────┐
+                                          └─ restart ─────────────────┐
  Monet cold-boots (~10 s) ◀────────────────────────────────────────────┘
 ```
 
@@ -100,10 +101,12 @@ that both systems can read and write: Linux through `efivarfs`, Windows through
 `GetFirmwareEnvironmentVariable`. No shared disk means no risk of corruption.
 It's written only once per switch, so wear on the firmware chip is negligible.
 
-**Why does only Windows hibernate?** Secure Boot must stay on for Windows
-anti-cheat. On Linux, Secure Boot turns on kernel "lockdown", which blocks
-hibernation. So Windows resumes from hibernation, and Monet does a fast cold
-boot instead.
+**Why doesn't anything hibernate?** Secure Boot must stay on for Windows
+anti-cheat, and on Linux it turns on kernel "lockdown", which blocks
+hibernation. Windows could hibernate, but a hibernated PC stays off until
+someone presses the power button, writing its memory to disk slows the way
+back, and Monet can't write to its drive while it's asleep. So both start
+fresh: Monet with a fast cold boot and "Ready when you come back".
 
 **Target times**
 
@@ -122,7 +125,7 @@ item is a reviewed entry in a list, not an ad-hoc script.
 | Preinstalled apps, ads, "suggestions" | Windows Update |
 | OneDrive, Copilot, Widgets, Teams | Defender / Windows Security |
 | Search indexing, most startup items | TPM, Secure Boot, VBS components (Memory Integrity off by default, see 4.1) |
-| Fast Startup (we use full hibernation) | WebView2 (launchers need it) |
+| Fast Startup (it leaves Windows' drive half asleep) | WebView2 (launchers need it) |
 | Lock screen, login screen (auto-login to a local account) | DirectX and VC++ runtimes |
 | Telemetry, as far as official settings allow | Gaming Services / Xbox app (for Game Pass) |
 
@@ -147,7 +150,7 @@ keeps Windows from taking over the bootloader.
       `autounattend.xml` answer file (local account, Game Profile, Monet Bridge),
    4. reboots into Windows Setup, which runs with **no screens to click through**,
    5. on Windows' first login, Monet Bridge puts Monet back as the default
-      boot entry, hibernates Windows, and returns to Monet,
+      boot entry and restarts into Monet,
    6. Monet deletes the temporary partition.
 4. The user sees one progress screen: *"Setting up Windows for games… (about
    20 minutes)"*.
@@ -212,7 +215,6 @@ kernel instead, which is where most of the gaming benefit comes from.
 | Hardware-accelerated GPU scheduling + Windows Game Mode on | Lower latency |
 | **Memory Integrity (HVCI) off by default** | Recovers a few percent of FPS (Microsoft itself says gamers can turn it off). Turned on automatically for any game that requires it. |
 | No background apps, indexing, or startup items | All CPU and RAM go to the game |
-| Full hibernation file (`hiberfile /type full`) | Required for fast resume |
 
 ### 4.2 First supported hardware
 
@@ -244,7 +246,7 @@ it works on both development machines with Secure Boot right away:
 - `monet` (Rust, Linux): Play on Windows, open Windows, `doctor`, games list,
   app-menu shortcuts. Elevates through a polkit rule, so no password prompts.
 - `monet-bridge` (Rust, Windows): starts the game as the normal user, waits
-  for it to close, offers to return, hibernates, and repairs the boot order.
+  for it to close, offers to return, restarts into Monet, and repairs the boot order.
 - The handoff is a UEFI variable (`MonetLaunch`). The games list travels on the
   EFI partition, which Windows mounts only while writing it.
 - A Plasma panel widget (QML) and the Monet look (wallpaper, accent color).
@@ -416,7 +418,6 @@ Every release of Monet Switch and the Game Profile must pass on Windows game mod
 
 | Risk | Impact | Plan |
 |---|---|---|
-| Anti-cheat breaks after hibernation | Switching gets slower | Fall back to a full Windows boot for those games (tracked per game) |
 | Windows Update overwrites the boot order or bootloader | User lands in Windows | Monet Bridge checks and repairs the boot order on every Windows boot |
 | BitLocker asks for a recovery key | Scary for users | Test in Phase 0. Save the recovery key in Monet, or turn off device encryption in the profile |
 | Microsoft changes how unattended installs or local accounts work | Setup breaks | Pin a tested Windows build. Re-test the setup on every new Windows release |
@@ -437,7 +438,7 @@ Every release of Monet Switch and the Game Profile must pass on Windows game mod
 | UI | **Qt 6 / QML (Kirigami)**. v0.1 is a QML panel widget that calls the Rust CLI; a full app via CXX-Qt comes with Monet Games | Fast, GPU-rendered, native on KDE |
 | License | **GPL-3.0-or-later** | Keeps Monet and its forks open source. Same family as Linux and KDE |
 | First beta hardware | See section 4.2 | Best-supported GPUs on Linux. TPM 2.0 is required by Windows 11 and Vanguard |
-| Hibernation fallback | **Hibernate by default.** A per-game "needs full boot" flag in Monet's compatibility data, set from testing | Fastest switch for most games, safe for the exceptions |
+| Leaving Windows | **Restart, not hibernate** (since 0.9.1) | A hibernated PC stays off until the power button is pressed. Restarting comes back to Monet by itself and sooner, every game starts from a cold boot as its anti-cheat expects, and Windows' drive stays safe to write from Monet |
 
 | Branding | Sun-over-water logo, Monet Blue accent, impressionist wallpaper. See [docs/DESIGN.md](docs/DESIGN.md) | Apple's simplicity, our own look |
 

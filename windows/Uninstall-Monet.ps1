@@ -34,7 +34,6 @@ Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'HKLM:\SOFTWARE\Micros
 
 Write-Host ''
 Write-Host 'Monet Bridge is removed.' -ForegroundColor Green
-Write-Host 'Hibernation stays on. To turn it off, run: powercfg /hibernate off'
 if (-not $NoPause) {
     Write-Host ''
     Read-Host 'Press Enter to close'

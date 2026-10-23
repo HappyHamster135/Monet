@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     - Copies monet-bridge.exe to C:\Program Files\Monet
-    - Turns on full hibernation and turns off Fast Startup, so Windows can
-      resume in seconds when you switch from Monet
+    - Turns off Fast Startup, so Windows always shuts down fully and Monet
+      can safely read its drive
     - Creates three scheduled tasks under \Monet\ (agent, launcher, back)
     - Adds "Back to Monet" to the Start menu and the desktop
 
@@ -105,10 +105,8 @@ Unblock-File -Path $exe -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 & icacls.exe $dataDir /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 
-# 3. Fast switching: full hibernation on, Fast Startup off.
-Say '  Turning on hibernation for fast switching'
-& powercfg.exe /hibernate on | Out-Null
-& powercfg.exe /h /type full | Out-Null
+# 3. Fast Startup off: it leaves Windows' drive half asleep, and Monet restarts
+#    Windows instead of hibernating it.
 Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -Value 0 -Type DWord
 
 # 4. Scheduled tasks

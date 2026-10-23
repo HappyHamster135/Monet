@@ -32,7 +32,7 @@ Monet is a preview for PCs with NVIDIA (RTX 20-series or newer), AMD or Intel gr
  ─────                                 ───────
  Press Play on Valorant
    → leaves a note for Windows
-   → restarts in Windows      ───────▶ Windows wakes up (hibernated, so it's fast)
+   → restarts in Windows      ───────▶ Windows starts
                                        Monet Bridge starts Valorant
                                        You play
                                        You quit
@@ -40,8 +40,8 @@ Monet is a preview for PCs with NVIDIA (RTX 20-series or newer), AMD or Intel gr
 ```
 
 The note is a small UEFI variable that both systems can read, so no shared
-drive is needed. Windows hibernates instead of shutting down, so it resumes in
-seconds with the anti-cheat already running.
+drive is needed. Quitting the game restarts the PC into Monet by itself, and
+Windows always shuts down fully, so its drive is safe to open from Monet.
 
 ## What's inside
 
