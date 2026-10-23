@@ -23,6 +23,8 @@ from pathlib import Path
 HOME = Path("/var/home")
 SNAPSHOTS = Path("/var/lib/monet/snapshots")
 OFF = Path("/var/lib/monet/keep-off")
+# prepare has nothing left to do: monet-keep-prepare.service skips it from then on.
+PREPARED = Path("/var/lib/monet/home-subvolume")
 # Sorts by time, and reads well in Files ("2026-10-23 14.00").
 STAMP = "%Y-%m-%d %H.%M"
 # Room people need beats the oldest versions.
@@ -50,14 +52,19 @@ def signed_in():
     return bool(out.strip())
 
 
-def prepare(home=HOME):
+def prepare(home=HOME, prepared=PREPARED):
     """/var/home as its own subvolume: a new one, the homes copied in (sharing their
     blocks: quick, and no room taken), then swapped. Before anyone signs in."""
     old, new = home.with_name(home.name + ".monet-old"), home.with_name(home.name + ".monet-new")
     # Stopped between the two renames last time: the homes go back first.
     if not home.exists() and old.is_dir():
         old.rename(home)
-    if not on_btrfs(home) or subvolume(home) or signed_in():
+    if home.is_dir() and (not on_btrfs(home) or subvolume(home)):
+        # A subvolume already, or never one (not btrfs): no start needs to look again.
+        prepared.parent.mkdir(parents=True, exist_ok=True)
+        prepared.touch()
+        return
+    if not on_btrfs(home) or signed_in():
         return
     if new.exists():
         run("btrfs", "subvolume", "delete", new)
@@ -73,6 +80,8 @@ def prepare(home=HOME):
     home.rename(old)
     new.rename(home)
     shutil.rmtree(old, ignore_errors=True)
+    prepared.parent.mkdir(parents=True, exist_ok=True)
+    prepared.touch()
 
 
 def thin(names, now):

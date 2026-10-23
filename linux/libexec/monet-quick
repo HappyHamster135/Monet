@@ -107,6 +107,9 @@
     monet-quick previous                 the Monet before the last update, to go back to, as JSON
     monet-quick whats-new [headline]     what's new in this Monet, as JSON (or just its headline)
     monet-quick rollback                 go back to it, at the next restart
+    monet-quick went-back                an update that didn't start here and went back by itself, as JSON
+    monet-quick reset-state              whether Reset this PC waits for the next restart, as JSON
+    monet-quick reset on|off             reset at the next restart, or don't (asks for an administrator's password)
     monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
     monet-quick firmware-update          install them
     monet-quick restart                  ask to restart, the way the app menu does
@@ -507,6 +510,23 @@ def previous_monet(status):
     first = deployments[0] if deployments else {}
     return {"version": earlier.get("version") or "", "date": date,
             "pending": first is earlier}
+
+
+# An update that didn't start on this PC, so Monet went back by itself (monet-boot notes it),
+# and Reset this PC waiting for the next restart (monet-reset).
+WENT_BACK = Path("/var/lib/monet/went-back.json")
+RESET_PENDING = Path("/var/lib/monet/reset")
+
+
+def went_back(path=WENT_BACK):
+    """{version, to}: the Monet that didn't start and the one it went back to, or {}."""
+    try:
+        found = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(found, dict):
+        return {}
+    return {"version": str(found.get("version") or ""), "to": str(found.get("to") or "")}
 
 
 def update_check():
@@ -3039,6 +3059,15 @@ def main(argv):
     elif cmd == "rollback":
         # Monet's helper does it, as root (without a password, as for updates).
         emit({"ok": run(f"{BINDIR}/monet", "rollback", timeout=120) is not None})
+    elif cmd == "went-back":
+        emit(went_back())
+    elif cmd == "reset-state":
+        emit({"pending": RESET_PENDING.exists()})
+    # Resetting asks for an administrator's password: monet-reset isn't among the helpers Monet's
+    # polkit rule lets run without one.
+    elif cmd == "reset" and args and args[0] in ("on", "off"):
+        run("pkexec", f"{LIBEXECDIR}/monet-reset", "arm" if args[0] == "on" else "cancel", timeout=600)
+        emit({"pending": RESET_PENDING.exists()})
     elif cmd == "auto-updates" and args and args[0] in ("on", "off"):
         # Monet's helper keeps it, as root (without a password, as for switching to Windows).
         run(f"{BINDIR}/monet", "auto-updates", args[0], timeout=30)

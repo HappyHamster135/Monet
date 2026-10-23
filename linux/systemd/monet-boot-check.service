@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: a new Monet on trial brings up the sign-in screen, or Monet goes back
+ConditionPathExists=/var/lib/monet/trial.json
+After=display-manager.service
+
+[Service]
+# Started at once, so the start isn't kept waiting while it watches (a few minutes at most).
+Type=exec
+ExecStart=@LIBEXECDIR@/monet-boot check
+
+[Install]
+WantedBy=multi-user.target

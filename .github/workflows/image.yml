@@ -3,8 +3,8 @@ name: Monet OS
 # Builds the Monet OS image (Bazzite with Monet built in), pushes it to
 # GitHub Packages, and builds the installer ISO that installs it.
 #
-# Runs as part of every release, weekly to pick up Bazzite updates, and by
-# hand from the Actions tab.
+# Runs as part of every release, weekly to rebuild the released version with
+# Bazzite's updates, and by hand from the Actions tab (that builds main).
 on:
   workflow_call:
   workflow_dispatch:
@@ -28,6 +28,9 @@ jobs:
           sudo docker system prune -af >/dev/null
           df -h /
       - uses: actions/checkout@v4
+      - name: The released Monet (the weekly rebuild never ships unreleased work)
+        if: github.event_name == 'schedule'
+        run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Build
         id: build
         run: |
@@ -57,6 +60,9 @@ jobs:
           sudo docker system prune -af >/dev/null
           df -h /
       - uses: actions/checkout@v4
+      - name: The released Monet (the weekly rebuild never ships unreleased work)
+        if: github.event_name == 'schedule'
+        run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Build
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet-amd"
@@ -76,6 +82,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: The released Monet (the weekly rebuild never ships unreleased work)
+        if: github.event_name == 'schedule'
+        run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Download the Fedora network installer
         env:
           FEDORA: ${{ needs.image.outputs.fedora }}
@@ -184,6 +193,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: The released Monet (the weekly rebuild never ships unreleased work)
+        if: github.event_name == 'schedule'
+        run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Build Monet Setup's USB stick
         env:
           IMAGE: ${{ needs.image.outputs.image }}
@@ -205,6 +217,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: The released Monet (the weekly rebuild never ships unreleased work)
+        if: github.event_name == 'schedule'
+        run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - uses: actions/download-artifact@v4
         with:
           name: setup-candidate

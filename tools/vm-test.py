@@ -312,10 +312,13 @@ def main():
         run.shot("person-filled")
         vm.click(*NEXT)
         time.sleep(3)
+        run.shot("apps")
+        vm.click(*NEXT)
+        time.sleep(3)
         run.shot("ready")
         if not full:
             return 0
-        vm.click(*NEXT)
+        vm.click(*NEXT)                                    # Erase & Install
         start = time.time()
         while time.time() - start < 3600:
             time.sleep(60)

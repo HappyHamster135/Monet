@@ -371,6 +371,108 @@ class ThisPC(unittest.TestCase):
         self.assertIn("model: setup.blocker === \"\" ? setup.pcNotes : []", qml)
 
 
+class Encrypting(unittest.TestCase):
+    """0.9.1: encrypted where the PC's TPM 2.0 unlocks it by itself, with a recovery key shown once."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.commands = []
+        self.saved = {name: getattr(install, name) for name in ("run", "KEY", "TOP", "TARGET")}
+        install.KEY = Path(self.tmp.name) / "run/disk.key"
+        install.TOP = str(Path(self.tmp.name) / "top")
+        install.TARGET = str(Path(self.tmp.name) / "target")
+
+        def fake_run(*args, check=True, input=None, timeout=1800, quiet=False):
+            self.commands.append([str(a) for a in args])
+            if args[0] == "blkid":
+                return {"/dev/nvme0n1p3": "ab12\n", "/dev/nvme0n1p2": "cd34\n"}.get(str(args[-1]), "")
+            return ""
+
+        install.run = fake_run
+
+    def tearDown(self):
+        for name, value in self.saved.items():
+            setattr(install, name, value)
+        self.tmp.cleanup()
+
+    def test_only_with_a_tpm_2(self):
+        from monet_setup import pc
+        chips = Path(self.tmp.name) / "tpm"
+        self.assertFalse(pc.tpm2(chips))
+        (chips / "tpm0").mkdir(parents=True)
+        (chips / "tpm0/tpm_version_major").write_text("1\n")
+        self.assertFalse(pc.tpm2(chips))
+        (chips / "tpm0/tpm_version_major").write_text("2\n")
+        self.assertTrue(pc.tpm2(chips))
+        self.assertTrue(pc.check([], 16, tpm=True)["tpm"])
+        app_code = (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8")
+        self.assertIn('"encrypt": self._encrypt and bool(self._pc.get("tpm")),', app_code)
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn("visible: setup.blocker === \"\" && setup.tpm", qml)
+        self.assertIn("onClicked: setup.setEncrypt(!setup.encrypt)", qml)
+
+    def test_the_disk_is_encrypted_with_a_key_of_its_own(self):
+        plan = {"disk": "/dev/nvme0n1", "mode": "erase", "sizes": disks.plan_erase(1000 * GB), "encrypt": True}
+        with redirect_stdout(io.StringIO()):
+            parts = install.prepare_disk(plan)
+        self.assertEqual(parts["fs"], "/dev/mapper/monet")
+        key = str(install.KEY)
+        self.assertEqual(len(install.KEY.read_bytes()), 64)
+        luks = next(c for c in self.commands if c[:2] == ["cryptsetup", "luksFormat"])
+        self.assertEqual(luks[-3:], ["--key-file", key, "/dev/nvme0n1p3"])
+        self.assertIn("luks2", luks)
+        self.assertIn(["cryptsetup", "open", "--key-file", key, "/dev/nvme0n1p3", "monet"], self.commands)
+        self.assertIn(["mkfs.btrfs", "-f", "-q", "-L", "monet", "/dev/mapper/monet"], self.commands)
+        self.assertIn(["mount", "/dev/mapper/monet", install.TOP], self.commands)
+        # The kernel's command line: the disk, unlocked by the TPM, and by the boot partition's key until then.
+        self.assertEqual(install.luks_kargs({"monet": "/dev/nvme0n1p3", "boot": "/dev/nvme0n1p2"}),
+                         ["--karg", "rd.luks.uuid=ab12", "--karg", "rd.luks.options=ab12=tpm2-device=auto",
+                          "--karg", "rd.luks.key=ab12=/monet-firstboot.key:UUID=cd34"])
+        # Not encrypted: the btrfs goes straight on the partition.
+        self.commands.clear()
+        with redirect_stdout(io.StringIO()):
+            parts = install.prepare_disk(dict(plan, encrypt=False))
+        self.assertNotIn("fs", parts)
+        self.assertFalse(any(c[0] == "cryptsetup" for c in self.commands))
+
+    def test_the_recovery_key_is_added_and_shown_once(self):
+        import re
+        key = install.recovery_key()
+        self.assertRegex(key, r"^([cbdefghijklnrtuv]{8}-){7}[cbdefghijklnrtuv]{8}$")
+        self.assertNotEqual(key, install.recovery_key())
+        install.KEY.parent.mkdir(parents=True)
+        install.KEY.write_bytes(b"k" * 64)
+        (Path(install.TARGET) / "boot").mkdir(parents=True)
+        with redirect_stdout(io.StringIO()):
+            shown = install.seal({"monet": "/dev/nvme0n1p3", "fs": "/dev/mapper/monet"})
+        self.assertRegex(shown, r"^([cbdefghijklnrtuv]{8}-){7}[cbdefghijklnrtuv]{8}$")
+        self.assertEqual((Path(install.TARGET) / "boot/monet-firstboot.key").read_bytes(), b"k" * 64)
+        add = next(c for c in self.commands if c[:2] == ["cryptsetup", "luksAddKey"])
+        self.assertEqual(add[3:6], ["--key-file", str(install.KEY), "/dev/nvme0n1p3"])
+        # Never on a command line, never left on disk, never in the log.
+        self.assertFalse(any(shown in " ".join(c) for c in self.commands))
+        self.assertFalse(Path(add[-1]).exists())
+        code = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        self.assertLess(code.index("emit(recovery=recovery)"), code.index("emit(done=True)"))
+        self.assertNotRegex(code, r"log\([^)]*recovery")
+        self.assertEqual(install.seal({"monet": "/dev/nvme0n1p3"}), "")
+        try:
+            from monet_setup import app
+        except ImportError:
+            return
+        setup = app.Setup.__new__(app.Setup)
+        setup._phase, setup._progress, setup._status, setup._error, setup._log = "", 0.0, "", "", []
+        setup._recovery = ""
+        setup.progressChanged = types.SimpleNamespace(emit=lambda: None)
+        setup.report({"recovery": shown})
+        setup.report({"done": True})
+        self.assertEqual(app.Setup.recoveryKey.fget(setup), shown)
+        self.assertFalse(any(shown in line for line in setup._log))
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn('installing && phase === "done" && setup.recoveryKey !== "" && !keyKept', qml)
+        self.assertIn("readonly property bool ready: kept.checked", qml)
+
+
 class KeepYourFiles(unittest.TestCase):
     def test_setup_offers_the_files_next_to_windows(self):
         try:

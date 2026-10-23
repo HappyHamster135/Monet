@@ -30,8 +30,8 @@ msgstr "Ως %1"
 msgid "Someone else…"
 msgstr "Κάποιος άλλος…"
 
-#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2392 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2967
-#: setup/qml/Main.qml:349 setup/qml/Main.qml:391
+#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2973
+#: setup/qml/Main.qml:354 setup/qml/Main.qml:396
 msgid "Password"
 msgstr "Κωδικός πρόσβασης"
 
@@ -39,13 +39,13 @@ msgstr "Κωδικός πρόσβασης"
 msgid "Fewer details"
 msgstr "Λιγότερες λεπτομέρειες"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:740
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:744
 msgid "Details"
 msgstr "Λεπτομέρειες"
 
 #: image/password/QuickAuthDialog.qml:361 linux/share/monet/logout/Logout.qml:350 linux/share/monet/logout/Logout.qml:449
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2400 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2941
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3027 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4588 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2406 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2947
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3033 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4594 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
 #: crates/monet/src/main.rs:1047
 msgid "Cancel"
 msgstr "Ακύρωση"
@@ -67,7 +67,7 @@ msgstr "Περισσότερα"
 msgid "Add widgets"
 msgstr "Προσθήκη γραφικών στοιχείων"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4041
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4047
 msgid "Done"
 msgstr "Τέλος"
 
@@ -79,7 +79,7 @@ msgstr "Προσθήκη γραμμής…"
 msgid "Manage desktops and bars"
 msgstr "Διαχείριση επιφανειών εργασίας και γραμμών"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2235
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
 msgid "Widgets"
 msgstr "Γραφικά στοιχεία"
 
@@ -92,8 +92,8 @@ msgid "Click one to add it to your desktop, or drag it where you want it."
 msgstr ""
 "Κάντε κλικ σε ένα για να το προσθέσετε στην επιφάνεια εργασίας ή σύρετέ το όπου θέλετε."
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1571
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3236 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
 msgid "Search"
 msgstr "Αναζήτηση"
 
@@ -132,7 +132,7 @@ msgstr[1] "%1 στην επιφάνεια εργασίας σας"
 msgid "Remove all"
 msgstr "Αφαίρεση όλων"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3166
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3172
 msgid "Remove"
 msgstr "Αφαίρεση"
 
@@ -295,7 +295,7 @@ msgid "Update and restart"
 msgstr "Ενημέρωση και επανεκκίνηση"
 
 #: linux/share/monet/logout/Logout.qml:362 linux/share/monet/logout/Logout.qml:411 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4596 setup/qml/Main.qml:211 crates/monet/src/main.rs:317
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4602 setup/qml/Main.qml:214 crates/monet/src/main.rs:317
 #: crates/monet/src/main.rs:740
 msgid "Restart"
 msgstr "Επανεκκίνηση"
@@ -304,7 +304,7 @@ msgstr "Επανεκκίνηση"
 msgid "Update and shut down"
 msgstr "Ενημέρωση και απενεργοποίηση"
 
-#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3468
+#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
 msgid "Shut down"
 msgstr "Απενεργοποίηση"
 
@@ -312,8 +312,8 @@ msgstr "Απενεργοποίηση"
 msgid "Sign out"
 msgstr "Αποσύνδεση"
 
-#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3443 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3468
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3479
+#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
 msgid "Sleep"
 msgstr "Ύπνος"
 
@@ -333,7 +333,7 @@ msgstr "Προηγούμενη μέρα"
 msgid "The day after"
 msgstr "Επόμενη μέρα"
 
-#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1885
+#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1891
 #: crates/monet-usb/src/gui.rs:143
 msgid "Close"
 msgstr "Κλείσιμο"
@@ -507,12 +507,12 @@ msgstr[1] "%1 παιχνίδια έτοιμα για παίξιμο"
 msgid "Play Windows games with one click"
 msgstr "Παίξτε παιχνίδια Windows με ένα κλικ"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:432
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438
 msgid "Monet couldn't switch to Windows."
 msgstr "Το Monet δεν μπόρεσε να μεταβεί στα Windows."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5030
-#: linux/libexec/monet-quick:2479 linux/libexec/monet-quick:2479
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4566 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
+#: linux/libexec/monet-quick:2499 linux/libexec/monet-quick:2499
 msgid "Windows"
 msgstr "Windows"
 
@@ -542,36 +542,36 @@ msgstr ""
 msgid "Open Windows"
 msgstr "Άνοιγμα των Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:791
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:797
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "%1 παιχνίδι"
 msgstr[1] "%1 παιχνίδια"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4553
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559
 msgid "Couldn't open Windows"
 msgstr "Τα Windows δεν άνοιξαν"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4554
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560
 msgid "Play %1?"
 msgstr "Θέλετε να παίξετε %1;"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4555 crates/monet/src/main.rs:311
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4561 crates/monet/src/main.rs:311
 msgid "Restart in Windows?"
 msgstr "Επανεκκίνηση στα Windows;"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4576
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4582
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows και ανοίγει το παιχνίδι. Μόλις το κλείσετε, επιστρέφετε εδώ. Αποθηκεύστε πρώτα την εργασία σας."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4577
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4583
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows. Οι ανοιχτές εφαρμογές θα κλείσουν, οπότε αποθηκεύστε πρώτα την εργασία σας."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4595
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4601
 msgid "Restart & Play"
 msgstr "Επανεκκίνηση & παιχνίδι"
 
@@ -632,11 +632,11 @@ msgstr "Τα αρχεία που ανοίγετε εμφανίζονται εδ�
 msgid "Nothing here by that name."
 msgstr "Δεν βρέθηκε τίποτα με αυτό το όνομα."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2866
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2872
 msgid "Accounts"
 msgstr "Λογαριασμοί"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3479 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4224
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4230
 msgid "Lock"
 msgstr "Κλείδωμα"
 
@@ -770,8 +770,8 @@ msgctxt "%1 is a quick setting, like Wi-Fi"
 msgid "%1 settings"
 msgstr "Ρυθμίσεις: %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2257
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2268
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2274
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -780,24 +780,24 @@ msgid "Unavailable"
 msgstr "Μη διαθέσιμο"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:342
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2260 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2462
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2266 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2468
 msgid "Off"
 msgstr "Ανενεργό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2259 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2497
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503
 msgid "Not connected"
 msgstr "Χωρίς σύνδεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2459
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2470
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2465
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2476
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2461
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
 msgid "On"
 msgstr "Ενεργό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2559
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2565
 msgid "Night Light"
 msgstr "Νυχτερινός φωτισμός"
 
@@ -809,7 +809,7 @@ msgstr "Ζεστό φως μετά τη δύση"
 msgid "Do Not Disturb"
 msgstr "Μην ενοχλείτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2549
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2555
 msgid "Brightness"
 msgstr "Φωτεινότητα"
 
@@ -817,7 +817,7 @@ msgstr "Φωτεινότητα"
 msgid "Keyboard light"
 msgstr "Φωτισμός πληκτρολογίου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2635
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2641
 msgid "Volume"
 msgstr "Ένταση ήχου"
 
@@ -834,23 +834,23 @@ msgstr "Φως"
 msgid "Hours"
 msgstr "Ώρες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2054
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
 msgid "Mist"
 msgstr "Ομίχλη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2055
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
 msgid "Smoke"
 msgstr "Καπνός"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2054
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
 msgid "Always light"
 msgstr "Πάντα φωτεινό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2055
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
 msgid "Always dark"
 msgstr "Πάντα σκοτεινό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2053
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
 msgid "Mist by day, smoke after dark"
 msgstr "Ομίχλη τη μέρα, καπνός όταν νυχτώνει"
 
@@ -867,7 +867,7 @@ msgctxt "%2 is how long it lasts, like 2:15"
 msgid "Battery %1%, %2 left"
 msgstr "Μπαταρία %1%, απομένουν %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3314
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3320
 msgid "Battery %1%"
 msgstr "Μπαταρία %1%"
 
@@ -875,7 +875,7 @@ msgstr "Μπαταρία %1%"
 msgid "All Settings"
 msgstr "Όλες οι ρυθμίσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2045
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2006 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2051
 msgid "Light & Wallpaper"
 msgstr "Φως & ταπετσαρία"
 
@@ -896,7 +896,7 @@ msgctxt "Settings search words, space-separated"
 msgid "bluetooth headphones controller gamepad mouse keyboard pair"
 msgstr "bluetooth ακουστικά χειριστήριο gamepad ποντίκι πληκτρολόγιο σύζευξη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4302
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4308
 msgid "Printers"
 msgstr "Εκτυπωτές"
 
@@ -905,7 +905,7 @@ msgctxt "Settings search words, space-separated"
 msgid "printers printer print scanner paper queue default add"
 msgstr "εκτυπωτές εκτυπωτής εκτύπωση σαρωτής χαρτί ουρά προεπιλογή προσθήκη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2540
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
 msgid "Display"
 msgstr "Οθόνη"
 
@@ -916,7 +916,7 @@ msgid ""
 msgstr ""
 "οθόνη φωτεινότητα νυχτερινός φωτισμός ανάλυση κλίμακα μέγεθος hdr vrr freesync g-sync ρυθμός ανανέωσης σκίσιμο display screen brightness monitor"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2627
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2633
 msgid "Sound"
 msgstr "Ήχος"
 
@@ -925,7 +925,7 @@ msgctxt "Settings search words, space-separated"
 msgid "sound volume speakers headphones microphone mic audio output"
 msgstr "ήχος ένταση ηχεία ακουστικά μικρόφωνο έξοδος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2737
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2743
 msgid "Date & Time"
 msgstr "Ημερομηνία & ώρα"
 
@@ -939,7 +939,7 @@ msgctxt "Settings search words, space-separated"
 msgid "accounts users password picture people name login sign in"
 msgstr "λογαριασμοί χρήστες κωδικός εικόνα άτομα όνομα σύνδεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3090
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3096
 msgid "Mouse & Keyboard"
 msgstr "Ποντίκι & πληκτρολόγιο"
 
@@ -950,7 +950,7 @@ msgid ""
 msgstr ""
 "ποντίκι πληκτρολόγιο touchpad επιφάνεια αφής δείκτης ταχύτητα κύλιση φυσική πάτημα κλικ αριστερόχειρας διάταξη γλώσσα πληκτρολόγηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:67 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3304
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:67 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3310
 msgid "Power & Sleep"
 msgstr "Ενέργεια & ύπνος"
 
@@ -961,7 +961,7 @@ msgid ""
 msgstr ""
 "ενέργεια ύπνος αναστολή απενεργοποίηση οθόνης μπαταρία καπάκι κουμπί τερματισμός απόδοση εξοικονόμηση λειτουργία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:71 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4186
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:71 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4192
 msgid "Lock & Privacy"
 msgstr "Κλείδωμα & απόρρητο"
 
@@ -972,7 +972,7 @@ msgid ""
 msgstr ""
 "κλείδωμα οθόνη κλειδώματος κωδικός αφύπνιση ύπνος απόρρητο πρόσφατα αρχεία ιστορικό ξέχασε θυμήσου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3501
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3507
 msgid "Notifications"
 msgstr "Ειδοποιήσεις"
 
@@ -981,7 +981,7 @@ msgctxt "Settings search words, space-separated"
 msgid "notifications alerts do not disturb quiet popups sounds apps"
 msgstr "ειδοποιήσεις μην ενοχλείτε ησυχία αναδυόμενα ήχοι εφαρμογές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3747
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3753
 msgid "Accessibility"
 msgstr "Προσβασιμότητα"
 
@@ -992,7 +992,7 @@ msgid ""
 msgstr ""
 "προσβασιμότητα μεγαλύτερο κείμενο μέγεθος κλίμακα μεγέθυνση ζουμ δείκτης κέρσορας κίνηση κινούμενα αναγνώστης οθόνης orca όραση ανάγνωση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3649
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655
 msgid "Default Apps"
 msgstr "Προεπιλεγμένες εφαρμογές"
 
@@ -1003,7 +1003,7 @@ msgid ""
 msgstr ""
 "προεπιλεγμένες εφαρμογές πρόγραμμα περιήγησης web email αλληλογραφία αρχεία μουσική βίντεο φωτογραφίες pdf κείμενο άνοιγμα με"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3825 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5029
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3831 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5101
 msgid "Storage"
 msgstr "Αποθηκευτικός χώρος"
 
@@ -1013,7 +1013,7 @@ msgid "storage disk space room full free trash downloads clean games apps"
 msgstr ""
 "αποθήκευση δίσκος χώρος γεμάτος ελεύθερος κάδος λήψεις καθαρισμός παιχνίδια εφαρμογές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:90 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3982
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:90 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3988
 msgid "Backups"
 msgstr "Αντίγραφα ασφαλείας"
 
@@ -1024,7 +1024,7 @@ msgid ""
 msgstr ""
 "αντίγραφα ασφαλείας αντίγραφο επαναφορά προηγούμενες εκδόσεις ιστορικό στιγμιότυπο αναίρεση χαμένα διαγραμμένα usb δίσκος backup restore time machine"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4361
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4367
 msgid "Games & Controllers"
 msgstr "Παιχνίδια & χειριστήρια"
 
@@ -1035,7 +1035,7 @@ msgid ""
 msgstr ""
 "παιχνίδια χειριστήριο gamepad joystick xbox playstation dualsense μπαταρία σύζευξη δοκιμή κουμπιά overlay fps mangohud απόδοση steam βιβλιοθήκη εγκατεστημένα heroic lutris"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:97 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1995 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4532
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:97 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4538
 msgid "Play on Windows"
 msgstr "Παιχνίδι στα Windows"
 
@@ -1045,14 +1045,15 @@ msgid "windows games play anti-cheat steam restart boot doctor check"
 msgstr ""
 "windows παιχνίδια παίξτε παιχνίδι anti-cheat steam επανεκκίνηση εκκίνηση έλεγχος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4707
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4713
 msgid "Updates"
 msgstr "Ενημερώσεις"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:101
 msgctxt "Settings search words, space-separated"
-msgid "updates update version upgrade new"
-msgstr "ενημερώσεις ενημέρωση έκδοση αναβάθμιση νέα"
+msgid "updates update version upgrade new reset restore rollback"
+msgstr ""
+"ενημερώσεις ενημέρωση έκδοση αναβάθμιση νέα επαναφορά αποκατάσταση επιστροφή"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:103
 msgid "About Monet"
@@ -1065,1896 +1066,1956 @@ msgid ""
 msgstr ""
 "σχετικά pc υπολογιστής προδιαγραφές γραφικά κάρτα γραφικών gpu επεξεργαστής cpu μνήμη ram αποθήκευση δίσκος έκδοση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:190 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1520
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:194 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1526
 msgid "Settings"
 msgstr "Ρυθμίσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:471 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:553
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559
 msgid "Monet %1"
 msgstr "Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:471
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477
 msgid "the Monet from before"
 msgstr "προηγούμενο Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:501
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:507
 msgid "Updating firmware…"
 msgstr "Ενημέρωση υλικολογισμικού…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:502
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
 msgid "Restart to finish the firmware"
 msgstr "Κάντε επανεκκίνηση για να ολοκληρωθεί η ενημέρωση υλικολογισμικού"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:502
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
 msgid "Firmware is up to date"
 msgstr "Το υλικολογισμικό είναι ενημερωμένο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:503
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:509
 msgid "The firmware didn't update"
 msgstr "Το υλικολογισμικό δεν ενημερώθηκε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:504
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:510
 msgid "%1 firmware update"
 msgid_plural "%1 firmware updates"
 msgstr[0] "%1 ενημέρωση υλικολογισμικού"
 msgstr[1] "%1 ενημερώσεις υλικολογισμικού"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:510
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:516
 msgid "Keep the PC plugged in and switched on."
 msgstr "Κρατήστε τον υπολογιστή στην πρίζα και ανοιχτό."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:511
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517
 msgid "It installs while the PC restarts. Keep it plugged in until it's back."
 msgstr ""
 "Εγκαθίσταται κατά την επανεκκίνηση. Κρατήστε τον υπολογιστή στην πρίζα μέχρι να ξανανοίξει."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:511 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "Everything is installed."
 msgstr "Όλα εγκαταστάθηκαν."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:512
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:518
 msgid "Try again in a moment."
 msgstr "Δοκιμάστε ξανά σε λίγο."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:513
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:519
 msgid "For this PC's own parts, from their makers. Install when you're ready."
 msgstr ""
 "Για τα εξαρτήματα αυτού του υπολογιστή, από τους κατασκευαστές τους. Κάντε την εγκατάσταση όποτε θέλετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:523
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:529
 msgid "%1 · installs when the PC restarts"
 msgstr "%1 · εγκαθίσταται στην επανεκκίνηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:542
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:548
 msgid "Fixes for Monet %1 are ready"
 msgstr "Οι διορθώσεις για το Monet %1 είναι έτοιμες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:544
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:550
 msgid "Monet %1 is ready"
 msgstr "Το Monet %1 είναι έτοιμο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:545
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:551
 msgid "A new Monet is ready"
 msgstr "Ένα νέο Monet είναι έτοιμο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:548
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:554
 msgid "%1 app update is ready"
 msgid_plural "%1 app updates are ready"
 msgstr[0] "%1 ενημέρωση εφαρμογής είναι έτοιμη"
 msgstr[1] "%1 ενημερώσεις εφαρμογών είναι έτοιμες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:551
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
 msgid "Restart to finish"
 msgstr "Κάντε επανεκκίνηση για να ολοκληρωθεί"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:551
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
 msgid "Your apps are up to date"
 msgstr "Οι εφαρμογές σας είναι ενημερωμένες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:553 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
 msgid "Monet"
 msgstr "Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
 msgid "Looking for updates…"
 msgstr "Αναζήτηση ενημερώσεων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:560
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:566
 msgid "Monet and your apps are up to date."
 msgstr "Το Monet και οι εφαρμογές σας είναι ενημερωμένα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:562
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:568
 msgid "And %1 app update. Install when you're ready."
 msgid_plural "And %1 app updates. Install when you're ready."
 msgstr[0] "Και %1 ενημέρωση εφαρμογής. Κάντε την εγκατάσταση όποτε θέλετε."
 msgstr[1] "Και %1 ενημερώσεις εφαρμογών. Κάντε την εγκατάσταση όποτε θέλετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:563
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:569
 msgid "Install when you're ready."
 msgstr "Κάντε την εγκατάσταση όποτε θέλετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:570
 msgid "Downloading and installing. You can keep using your PC."
 msgstr ""
 "Γίνεται λήψη και εγκατάσταση. Μπορείτε να συνεχίσετε να χρησιμοποιείτε τον υπολογιστή σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "The new Monet starts the next time you restart."
 msgstr "Το νέο Monet ξεκινά την επόμενη φορά που θα κάνετε επανεκκίνηση."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:566
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:572
 msgid ""
 "Monet couldn't look for updates. Check your internet connection and try again."
 msgstr ""
 "Το Monet δεν μπόρεσε να αναζητήσει ενημερώσεις. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο και δοκιμάστε ξανά."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:567
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573
 msgid "Monet only updates when you ask it to."
 msgstr "Το Monet ενημερώνεται μόνο όταν του το ζητήσετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:643 setup/monet_setup/app.py:272
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649 setup/monet_setup/app.py:277
 msgid "Type your name."
 msgstr "Γράψτε το όνομά σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:643
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649
 msgid "A name can't have : or , in it."
 msgstr "Το όνομα δεν μπορεί να περιέχει «:» ή «,»."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:650
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:656
 msgid "Monet couldn't change your name."
 msgstr "Το Monet δεν μπόρεσε να αλλάξει το όνομά σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:667
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
 msgid "Type a new password."
 msgstr "Γράψτε έναν νέο κωδικό πρόσβασης."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:667
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
 msgid "The new passwords don't match."
 msgstr "Οι νέοι κωδικοί δεν ταιριάζουν."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:676 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:685
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:682 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:691
 msgid "Monet couldn't change your password."
 msgstr "Το Monet δεν μπόρεσε να αλλάξει τον κωδικό σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:677
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:683
 msgid "That password is too long."
 msgstr "Αυτός ο κωδικός είναι πολύ μεγάλος."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:795 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3839
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:801 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
 msgid "%1 free"
 msgstr "%1 ελεύθερα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:808
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814
 msgid "%1 TB"
 msgstr "%1 TB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:808 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:809
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:809
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:810
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:816
 msgid "%1 KB"
 msgstr "%1 KB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:818
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
 msgid "Today, %1"
 msgstr "Σήμερα, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:818
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
 msgid "Yesterday, %1"
 msgstr "Χθες, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:819
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:825
 msgid "%1, %2"
 msgstr "%1, %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:829 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4202
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4208
 msgid "Never"
 msgstr "Ποτέ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:829
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835
 msgid "%1 min"
 msgstr "%1 λεπ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:830
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:836
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1 ώρα"
 msgstr[1] "%1 ώρες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1453
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1459
 msgid "Plays here too"
 msgstr "Παίζει και εδώ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1466
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1472
 msgid "Play %1"
 msgstr "Παίξτε %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1559
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1565
 msgid "Search settings"
 msgstr "Αναζήτηση ρυθμίσεων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1710
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1716
 msgid "Opens in a separate window"
 msgstr "Ανοίγει σε ξεχωριστό παράθυρο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1722
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1728
 msgid "Nothing here by that name. Try More settings."
 msgstr ""
 "Δεν βρέθηκε τίποτα με αυτό το όνομα. Δοκιμάστε τις «Περισσότερες ρυθμίσεις»."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1740
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1746
 msgid "More settings ›"
 msgstr "Περισσότερες ρυθμίσεις ›"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1749
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1755
 msgid "More settings"
 msgstr "Περισσότερες ρυθμίσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1969
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1975
 msgid "Welcome to Monet"
 msgstr "Καλώς ήρθατε στο Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1979
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1985
 msgid "A few things worth knowing, then it's yours."
 msgstr "Λίγα πράγματα που αξίζει να ξέρετε, και μετά είναι δικό σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1990
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1996
 msgid "Quick Settings, at the right of the bar"
 msgstr "Γρήγορες ρυθμίσεις, στα δεξιά της γραμμής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1991
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1997
 msgid ""
 "Wi-Fi, sound, brightness and the light, a click away. The arrow on a tile opens its page here."
 msgstr ""
 "Wi-Fi, ήχος, φωτεινότητα και φως, με ένα κλικ. Το βέλος σε ένα πλακίδιο ανοίγει εδώ τη σελίδα του."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1992
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
 msgid "Widgets on your desktop"
 msgstr "Γραφικά στοιχεία στην επιφάνεια εργασίας σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1993
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
 msgid ""
 "Weather, a calendar with notes, your batteries, clocks around the world and more."
 msgstr ""
 "Καιρός, ημερολόγιο με σημειώσεις, οι μπαταρίες σας, ρολόγια από όλο τον κόσμο και άλλα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1994 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2247
 msgid "Edit widgets"
 msgstr "Επεξεργασία γραφικών στοιχείων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1996
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2002
 msgid ""
 "Games that need Windows are a restart away, and you come back here after."
 msgstr ""
 "Τα παιχνίδια που χρειάζονται Windows απέχουν μόλις μία επανεκκίνηση, και μετά επιστρέφετε εδώ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1997
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2003
 msgid "See your games"
 msgstr "Δείτε τα παιχνίδια σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2004
 msgid "Make it yours"
 msgstr "Κάντε το δικό σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2005
 msgid ""
 "Choose the light and the painting, and how big things are on the screen."
 msgstr ""
 "Επιλέξτε το φως και τον πίνακα, και πόσο μεγάλα φαίνονται όλα στην οθόνη."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2007
 msgid "Find any setting"
 msgstr "Βρείτε οποιαδήποτε ρύθμιση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2002
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2008
 msgid ""
 "Type what you're looking for in the search at the top left, in your own words."
 msgstr ""
 "Πληκτρολογήστε αυτό που ψάχνετε στην αναζήτηση πάνω αριστερά, με δικά σας λόγια."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2031
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2037
 msgid "Start using Monet"
 msgstr "Ξεκινήστε με το Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2052
 msgid "How Monet looks, and when it changes."
 msgstr "Η εμφάνιση του Monet και πότε αλλάζει."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2053
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
 msgid "Follow the hours"
 msgstr "Ακολουθεί τις ώρες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2122
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2128
 msgid "Painting"
 msgstr "Πίνακας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2132
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
 msgid "The Hours"
 msgstr "Οι Ώρες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2132
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
 msgid "The harbor at Le Havre"
 msgstr "Το λιμάνι της Χάβρης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
 msgid "Water Lilies"
 msgstr "Νούφαρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
 msgid "The pond at Giverny"
 msgstr "Η λιμνούλα στο Ζιβερνί"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2134
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
 msgid "Haystacks"
 msgstr "Θημωνιές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2134
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
 msgid "A field after the harvest"
 msgstr "Ένα χωράφι μετά τον θερισμό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2135
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
 msgid "The Magpie"
 msgstr "Η κίσσα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2135
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
 msgid "A farm under snow"
 msgstr "Ένα αγρόκτημα κάτω από το χιόνι"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2136
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
 msgid "Through the year"
 msgstr "Όλο τον χρόνο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2136
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
 msgid "Each season its painting"
 msgstr "Κάθε εποχή ο πίνακάς της"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2208
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
 msgid "Through the day"
 msgstr "Στο πέρασμα της μέρας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2208
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
 msgid "The painting's light follows the sun where you are, from dawn to night"
 msgstr ""
 "Το φως του πίνακα ακολουθεί τον ήλιο εκεί που βρίσκεστε, από την αυγή ως τη νύχτα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2209 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
 msgid "Weather"
 msgstr "Καιρός"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2209
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215
 msgid "Rain, fog and snow where you are soften the painting with mist"
 msgstr ""
 "Η βροχή, η ομίχλη και το χιόνι εκεί που βρίσκεστε απαλύνουν τον πίνακα με αχλή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
 msgid "Placard"
 msgstr "Λεζάντα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
 msgid "The time and the painting's name on the desktop"
 msgstr "Η ώρα και το όνομα του πίνακα στην επιφάνεια εργασίας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2211
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
 msgid "Bar steps aside"
 msgstr "Η γραμμή κάνει στην άκρη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2211
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
 msgid ""
 "The bar slides away when a window comes over it, and back when you point at the bottom of the screen"
 msgstr ""
 "Η γραμμή γλιστρά μακριά όταν ένα παράθυρο έρχεται από πάνω της, και επιστρέφει όταν δείχνετε το κάτω μέρος της οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2212
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
 msgid "Glass"
 msgstr "Γυαλί"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2212
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
 msgid ""
 "See the painting through panels, windows and widgets. Off is lighter on older PCs."
 msgstr ""
 "Ο πίνακας φαίνεται μέσα από πάνελ, παράθυρα και γραφικά στοιχεία. Απενεργοποιημένο είναι πιο ελαφρύ για παλαιότερους υπολογιστές."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2236
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
 msgid "Add, move or take away the cards on your desktop"
 msgstr ""
 "Προσθέστε, μετακινήστε ή αφαιρέστε τις κάρτες στην επιφάνεια εργασίας σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2259
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265
 msgid "Connected to %1"
 msgstr "Συνδέθηκε στο %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2269
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2275
 msgid "This PC has no Wi-Fi"
 msgstr "Αυτός ο υπολογιστής δεν έχει Wi-Fi"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2285 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2497 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4380
-#: setup/qml/Main.qml:334
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2291 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
+#: setup/qml/Main.qml:339
 msgid "Connected"
 msgstr "Συνδέθηκε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2295
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
 msgid "Other networks"
 msgstr "Άλλα δίκτυα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2295
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
 msgid "Networks"
 msgstr "Δίκτυα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2305
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311
 msgid "No other networks nearby"
 msgstr "Κανένα άλλο δίκτυο κοντά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2305 setup/qml/Main.qml:344
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311 setup/qml/Main.qml:349
 msgid "Looking for networks…"
 msgstr "Αναζήτηση δικτύων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2319
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
 msgid "Couldn't join"
 msgstr "Η σύνδεση δεν ήταν δυνατή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2343 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2406
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
 msgid "Joining…"
 msgstr "Σύνδεση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2356 setup/qml/Main.qml:334
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 setup/qml/Main.qml:339
 msgid "Secured"
 msgstr "Ασφαλές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2356 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4120
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4126
 msgid "Open"
 msgstr "Ανοιχτό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2384
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2390
 msgid "Password for %1"
 msgstr "Κωδικός πρόσβασης για το %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2392
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398
 msgid "That didn't work. Check the password."
 msgstr "Δεν πέτυχε. Ελέγξτε τον κωδικό πρόσβασης."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2406
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
 msgid "Join"
 msgstr "Σύνδεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2422
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2428
 msgid "Hotspot"
 msgstr "Σημείο πρόσβασης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2423
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2429
 msgid "Starting…"
 msgstr "Εκκίνηση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2424
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2430
 msgid "This Wi-Fi can't share. Wired internet shares best."
 msgstr ""
 "Αυτό το Wi-Fi δεν μπορεί να μοιραστεί τη σύνδεση. Το ενσύρματο διαδίκτυο μοιράζεται καλύτερα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2425
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2431
 msgid "Join %1 with the password %2"
 msgstr "Συνδεθείτε στο δίκτυο %1 με τον κωδικό %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2426
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2432
 msgid "Lets a phone or tablet use this PC's internet"
 msgstr ""
 "Ένα τηλέφωνο ή tablet μπορεί να χρησιμοποιεί το διαδίκτυο αυτού του υπολογιστή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2444
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2450
 msgid "More Wi-Fi settings…"
 msgstr "Περισσότερες ρυθμίσεις Wi-Fi…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2461
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
 msgid "%1 device connected"
 msgid_plural "%1 devices connected"
 msgstr[0] "%1 συνδεδεμένη συσκευή"
 msgstr[1] "%1 συνδεδεμένες συσκευές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2471
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2477
 msgid "This PC has no Bluetooth"
 msgstr "Αυτός ο υπολογιστής δεν έχει Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2488
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2494
 msgid "No devices yet"
 msgstr "Καμία συσκευή ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2489
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2495
 msgid "Pair headphones, a controller or a mouse to see them here."
 msgstr ""
 "Κάντε σύζευξη ακουστικών, χειριστηρίου ή ποντικιού για να εμφανιστούν εδώ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2515
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521
 msgid "Disconnecting…"
 msgstr "Αποσύνδεση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2515 setup/qml/Main.qml:272
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521 setup/qml/Main.qml:277
 msgid "Connecting…"
 msgstr "Σύνδεση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
 msgid "Disconnect"
 msgstr "Αποσύνδεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
 msgid "Connect"
 msgstr "Σύνδεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2526
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2532
 msgid "Pair a new device…"
 msgstr "Σύζευξη νέας συσκευής…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2541
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2547
 msgid "Brightness, and warmer colors at night."
 msgstr "Φωτεινότητα και πιο ζεστά χρώματα τη νύχτα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2560
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2566
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr ""
 "Πιο ζεστά χρώματα από τη δύση ως την ανατολή, πιο ξεκούραστα για τα μάτια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2573
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2579
 msgid "Games and films"
 msgstr "Παιχνίδια και ταινίες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2586
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
 msgid "HDR on %1"
 msgstr "HDR σε %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2586
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
 msgid "HDR"
 msgstr "HDR"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2587
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2593
 msgid "Brighter highlights and deeper colors, in games and films made for it"
 msgstr ""
 "Φωτεινότερα σημεία και βαθύτερα χρώματα, σε παιχνίδια και ταινίες φτιαγμένα γι' αυτό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2599
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2605
 msgid "Smoother games on %1"
 msgstr "Πιο ομαλά παιχνίδια σε %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2600
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2606
 msgid "Smoother games"
 msgstr "Πιο ομαλά παιχνίδια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2601
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2607
 msgid ""
 "The screen keeps pace with the game, without tearing (FreeSync, G-Sync)"
 msgstr "Η οθόνη συμβαδίζει με το παιχνίδι, χωρίς σκισίματα (FreeSync, G-Sync)"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2612
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2618
 msgid "Arrange displays and size…"
 msgstr "Διάταξη οθονών και μέγεθος…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2628
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2634
 msgid "Playing through %1"
 msgstr "Αναπαραγωγή μέσω %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2644
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2650
 msgid "Play sound through"
 msgstr "Αναπαραγωγή ήχου μέσω"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2676
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2682
 msgid "Apps playing sound"
 msgstr "Εφαρμογές που παίζουν ήχο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2707
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2713
 msgid "Microphone"
 msgstr "Μικρόφωνο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2715
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2721
 msgid "More sound settings…"
 msgstr "Περισσότερες ρυθμίσεις ήχου…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2744
 msgid "Your clock, and where in the world it keeps time."
 msgstr "Το ρολόι σας και με ποιο μέρος του κόσμου συμβαδίζει."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2775
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2781
 msgid "Set automatically"
 msgstr "Αυτόματη ρύθμιση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2776
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
 msgid "From the internet, to the second"
 msgstr "Από το διαδίκτυο, με ακρίβεια δευτερολέπτου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2776
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
 msgid "This PC can't set its own time"
 msgstr "Αυτός ο υπολογιστής δεν μπορεί να ρυθμίσει μόνος του την ώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2789
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2795
 msgid "24-hour time"
 msgstr "24ωρη μορφή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2790
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2796
 msgid "Your clocks change the next time you sign in"
 msgstr "Τα ρολόγια σας αλλάζουν την επόμενη φορά που θα συνδεθείτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2791
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2797
 msgid "As your region keeps it"
 msgstr "Όπως συνηθίζεται στην περιοχή σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2792
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "13:00, not 1:00 PM"
 msgstr "13:00, όχι 1:00 μ.μ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2792
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "1:00 PM, not 13:00"
 msgstr "1:00 μ.μ., όχι 13:00"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2803
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2809
 msgid "Time zone"
 msgstr "Ζώνη ώρας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2811
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2817
 msgid "Search for a city"
 msgstr "Αναζήτηση πόλης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2842
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2848
 msgid "No time zone by that name"
 msgstr "Δεν υπάρχει ζώνη ώρας με αυτό το όνομα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2843
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2849
 msgid "Try a big city near you."
 msgstr "Δοκιμάστε μια μεγάλη πόλη κοντά σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2848
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2854
 msgid "More date & time settings…"
 msgstr "Περισσότερες ρυθμίσεις ημερομηνίας & ώρας…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2867
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2873
 msgid "You, and the people who share this PC."
 msgstr "Εσείς και όσοι μοιράζονται αυτόν τον υπολογιστή."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2900
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2906
 msgid "%1 · Administrator"
 msgstr "%1 · Διαχειριστής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2901
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2907
 msgid "%1 · Standard account"
 msgstr "%1 · Τυπικός λογαριασμός"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2910
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2916
 msgid "Change name"
 msgstr "Αλλαγή ονόματος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2936 setup/qml/Main.qml:381
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2942 setup/qml/Main.qml:386
 msgid "Your name"
 msgstr "Το όνομά σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2947
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2953
 msgid "Save"
 msgstr "Αποθήκευση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2968
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2974
 msgid "Changed. Use the new one from now on."
 msgstr "Άλλαξε. Από εδώ και πέρα χρησιμοποιήστε τον νέο."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2969
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2975
 msgid "For signing in, unlocking and allowing changes"
 msgstr "Για σύνδεση, ξεκλείδωμα και έγκριση αλλαγών"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2973
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2979
 msgid "Change…"
 msgstr "Αλλαγή…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2996
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3002
 msgid "Current password"
 msgstr "Τρέχων κωδικός πρόσβασης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3003
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3009
 msgid "New password"
 msgstr "Νέος κωδικός πρόσβασης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3010
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3016
 msgid "New password, again"
 msgstr "Νέος κωδικός πρόσβασης, ξανά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3034
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
 msgid "Changing…"
 msgstr "Αλλαγή…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3034
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
 msgid "Change password"
 msgstr "Αλλαγή κωδικού πρόσβασης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3043
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3049
 msgid "Other people"
 msgstr "Άλλα άτομα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3052
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3058
 msgid "Only you, so far"
 msgstr "Μόνο εσείς, προς το παρόν"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3053
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3059
 msgid "Add someone in More account settings."
 msgstr "Προσθέστε κάποιον από τις «Περισσότερες ρυθμίσεις λογαριασμού»."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
 msgid "Administrator"
 msgstr "Διαχειριστής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
 msgid "Standard account"
 msgstr "Τυπικός λογαριασμός"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3074
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3080
 msgid "More account settings…"
 msgstr "Περισσότερες ρυθμίσεις λογαριασμού…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3091
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3097
 msgid "How the pointer moves and scrolls, and the languages you type in."
 msgstr "Πώς κινείται και κυλά ο δείκτης, και σε ποιες γλώσσες γράφετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3096
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
 msgid "Touchpad"
 msgstr "Επιφάνεια αφής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3096
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
 msgid "Mouse"
 msgstr "Ποντίκι"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3113
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3119
 msgid "Pointer speed"
 msgstr "Ταχύτητα δείκτη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3120
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
 msgid "Tap to click"
 msgstr "Άγγιγμα για κλικ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3120
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
 msgid "A light tap is a click"
 msgstr "Ένα ελαφρύ άγγιγμα μετράει ως κλικ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3121
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
 msgid "Natural scrolling"
 msgstr "Φυσική κύλιση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3121
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
 msgid "The page follows your fingers, as on a phone"
 msgstr "Η σελίδα ακολουθεί τα δάχτυλά σας, όπως στο κινητό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3122
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
 msgid "Left-handed"
 msgstr "Για αριστερόχειρες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3122
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
 msgid "The buttons swap sides"
 msgstr "Τα κουμπιά αλλάζουν πλευρά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3123
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
 msgid "Off while typing"
 msgstr "Ανενεργή όσο πληκτρολογείτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3123
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
 msgid "A palm on it won't move the pointer"
 msgstr "Η παλάμη σας πάνω της δεν μετακινεί τον δείκτη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3146 setup/qml/Main.qml:249
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3152 setup/qml/Main.qml:254
 msgid "Keyboard"
 msgstr "Πληκτρολόγιο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
 msgid "Typing starts in this one"
 msgstr "Η πληκτρολόγηση ξεκινά με αυτή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3161
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
 msgid "Click to make this the main one"
 msgstr "Κάντε κλικ για να γίνει η κύρια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3175
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3181
 msgid "Add a language or layout"
 msgstr "Προσθήκη γλώσσας ή διάταξης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3208
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3214
 msgid "No layout by that name"
 msgstr "Δεν υπάρχει διάταξη με αυτό το όνομα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3209
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3215
 msgid "Try your language's name, like Swedish or Japanese."
 msgstr "Δοκιμάστε το όνομα της γλώσσας σας, όπως Σουηδικά ή Ιαπωνικά."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3223
 msgid "The bar shows which one you're typing in. Click it to switch."
 msgstr ""
 "Η γραμμή δείχνει σε ποια γλώσσα γράφετε. Κάντε κλικ εκεί για να την αλλάξετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3225
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3231
 msgid "Keyboard shortcuts"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3236
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242
 msgid "Open the menu"
 msgstr "Άνοιγμα του μενού"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3237
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243
 msgid "Files"
 msgstr "Αρχεία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3237 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4197
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4203
 msgid "Lock the screen"
 msgstr "Κλείδωμα της οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3238
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
 msgid "All your windows"
 msgstr "Όλα τα παράθυρά σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3238
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
 msgid "The desktop"
 msgstr "Η επιφάνεια εργασίας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3239
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
 msgid "Switch windows"
 msgstr "Εναλλαγή παραθύρων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3239
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
 msgid "A window on one half"
 msgstr "Παράθυρο στο μισό της οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3240
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "A window on the whole screen"
 msgstr "Παράθυρο σε όλη την οθόνη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3240
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "What you copied"
 msgstr "Ό,τι αντιγράψατε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3241
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
 msgid "Emoji"
 msgstr "Emoji"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3241
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
 msgid "Screenshot"
 msgstr "Στιγμιότυπο οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4433
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3248 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4439
 msgid "Save the last 30 seconds"
 msgstr "Αποθήκευση των τελευταίων 30 δευτερολέπτων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3249
 msgid "Record the screen"
 msgstr "Εγγραφή της οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3250
 msgid "Restart or shut down"
 msgstr "Επανεκκίνηση ή απενεργοποίηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3278
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3284
 msgid "More mouse & keyboard settings…"
 msgstr "Περισσότερες ρυθμίσεις ποντικιού & πληκτρολογίου…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3283
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3289
 msgid "Change shortcuts…"
 msgstr "Αλλαγή συντομεύσεων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3305
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3311
 msgid "When the screen rests, when the PC sleeps, and how hard it works."
 msgstr ""
 "Πότε ξεκουράζεται η οθόνη, πότε κοιμάται ο υπολογιστής και πόσο σκληρά δουλεύει."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3316
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
 msgctxt "%1 is a time like 1:20"
 msgid "Charging, full in %1"
 msgstr "Φορτίζει, γεμάτη σε %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3316
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
 msgid "Charging"
 msgstr "Φορτίζει"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3415
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3323 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
 msgid "Plugged in"
 msgstr "Με καλώδιο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3318
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324
 msgctxt "%1 is a time like 2:15"
 msgid "About %1 left"
 msgstr "Απομένουν περίπου %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3318 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3415
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
 msgid "On battery"
 msgstr "Με μπαταρία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3325
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3331
 msgid "Protect the battery"
 msgstr "Προστασία μπαταρίας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3326
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
 msgid ""
 "Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in."
 msgstr ""
 "Σταματά τη φόρτιση στο 80%, ώστε η μπαταρία να αντέξει περισσότερα χρόνια. Ιδανικό για φορητό που είναι συνήθως στην πρίζα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3345
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
 msgid "Power saver"
 msgstr "Εξοικονόμηση ενέργειας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3345
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
 msgid "Cooler and quieter, longer on battery"
 msgstr "Πιο δροσερός και πιο αθόρυβος, η μπαταρία κρατά περισσότερο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3347
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
 msgid "Balanced"
 msgstr "Ισορροπημένη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3347
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
 msgid "Quick when it counts"
 msgstr "Γρήγορος όταν χρειάζεται"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3349
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
 msgid "Performance"
 msgstr "Επιδόσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3349
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
 msgid "As fast as it goes, warmer and louder"
 msgstr "Όσο πιο γρήγορος γίνεται, πιο ζεστός και πιο θορυβώδης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3432
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
 msgid "Turn off the screen"
 msgstr "Σβήσιμο οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3433
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3439
 msgid "After this long untouched"
 msgstr "Μετά από τόση ώρα αδράνειας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3444
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
 msgid "It wakes where you left off"
 msgstr "Ξυπνά από εκεί που σταματήσατε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3457
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3463
 msgid "Buttons"
 msgstr "Κουμπιά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3464
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3470
 msgid "Power button"
 msgstr "Κουμπί λειτουργίας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3465
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3471
 msgid "What a press does"
 msgstr "Τι κάνει όταν το πατάτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3468
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
 msgid "Ask"
 msgstr "Ερώτηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3468 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3479
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
 msgid "Nothing"
 msgstr "Τίποτα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3476
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3482
 msgid "Closing the lid"
 msgstr "Κλείσιμο του καπακιού"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3479
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
 msgid "Screen off"
 msgstr "Σβήσιμο οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3487
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3493
 msgid "More power settings…"
 msgstr "Περισσότερες ρυθμίσεις ενέργειας…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3502
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3508
 msgid "What may interrupt you, and when it waits."
 msgstr "Τι μπορεί να σας διακόπτει και πότε περιμένει."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3510
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3516
 msgid "Do not disturb"
 msgstr "Μην ενοχλείτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3511
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
 msgid "Notifications wait quietly in the list"
 msgstr "Οι ειδοποιήσεις περιμένουν αθόρυβα στη λίστα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3511
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
 msgid "Notifications pop up as they come"
 msgstr "Οι ειδοποιήσεις εμφανίζονται μόλις φτάνουν"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3521
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3527
 msgid "Sounds"
 msgstr "Ήχοι"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3522
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
 msgid "A soft sound with each one"
 msgstr "Ένας απαλός ήχος με την καθεμία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3532
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
 msgid "Quiet by itself"
 msgstr "Αυτόματη ησυχία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
 msgid "While a game or film fills the screen"
 msgstr "Όταν ένα παιχνίδι ή μια ταινία γεμίζει την οθόνη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
 msgid "They wait until you're done"
 msgstr "Περιμένουν μέχρι να τελειώσετε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3539
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
 msgid "While you share or mirror your screen"
 msgstr "Όταν μοιράζεστε ή κατοπτρίζετε την οθόνη σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3539
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
 msgid "So nothing private pops up for others"
 msgstr "Για να μη δουν οι άλλοι κάτι προσωπικό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3540
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
 msgid "Let urgent ones through"
 msgstr "Να περνούν οι επείγουσες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3540
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
 msgid "Like a low battery, even while quiet"
 msgstr "Όπως η χαμηλή μπαταρία, ακόμα και σε ησυχία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3561
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
 msgid "Popups"
 msgstr "Αναδυόμενες ειδοποιήσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3568
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3574
 msgid "Where they appear"
 msgstr "Πού εμφανίζονται"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
 msgid "By the clock"
 msgstr "Δίπλα στο ρολόι"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
 msgid "Top right"
 msgstr "Πάνω δεξιά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
 msgid "Top center"
 msgstr "Πάνω στο κέντρο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3578
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3584
 msgid "How long they stay"
 msgstr "Πόση ώρα μένουν"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3581
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3587
 msgid "%1 s"
 msgstr "%1 δευτ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3589 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3814
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3595 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
 msgid "Apps"
 msgstr "Εφαρμογές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3604
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
 msgid "Pops up"
 msgstr "Εμφανίζονται στην οθόνη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3604
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
 msgid "Only in the list, without popping up"
 msgstr "Μόνο στη λίστα, χωρίς να εμφανίζονται"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3622
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3628
 msgid "No apps yet"
 msgstr "Καμία εφαρμογή ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3623
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3629
 msgid "Apps show up here once they've sent a notification."
 msgstr "Οι εφαρμογές εμφανίζονται εδώ μόλις στείλουν μια ειδοποίηση."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3628
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3634
 msgid "More notification settings…"
 msgstr "Περισσότερες ρυθμίσεις ειδοποιήσεων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3641
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
 msgid "Web browser"
 msgstr "Πρόγραμμα περιήγησης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3641
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
 msgid "Email"
 msgstr "Email"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3641
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
 msgid "Folders"
 msgstr "Φάκελοι"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3641 setup/monet_setup/app.py:59
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647 setup/monet_setup/app.py:59
 msgid "Music"
 msgstr "Μουσική"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3642 setup/monet_setup/app.py:58
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:58
 msgid "Video"
 msgstr "Βίντεο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3642 setup/monet_setup/app.py:56
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:56
 msgid "Photos"
 msgstr "Φωτογραφίες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3642
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
 msgid "PDF documents"
 msgstr "Έγγραφα PDF"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3642
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
 msgid "Text files"
 msgstr "Αρχεία κειμένου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3650
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3656
 msgid ""
 "What opens web links, mail, folders, music, films, photos, PDFs and text."
 msgstr ""
 "Ποια εφαρμογή ανοίγει συνδέσμους, email, φακέλους, μουσική, ταινίες, φωτογραφίες, PDF και κείμενα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3670
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3676
 msgid "Nothing chosen yet"
 msgstr "Δεν έχει επιλεγεί τίποτα ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3671
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3677
 msgid "No app for this yet. Find one in the Store"
 msgstr "Καμία εφαρμογή για αυτό ακόμα. Βρείτε μία στο Κατάστημα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3672
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
 msgid "No app for this yet"
 msgstr "Καμία εφαρμογή για αυτό ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3698
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3704
 msgid "Find one"
 msgstr "Εύρεση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3739
 msgid "More default apps…"
 msgstr "Περισσότερες προεπιλεγμένες εφαρμογές…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3748
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3754
 msgid "Make Monet easier to see, read and use."
 msgstr ""
 "Για να βλέπετε, να διαβάζετε και να χρησιμοποιείτε το Monet πιο εύκολα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3756
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3762
 msgid "Size of everything"
 msgstr "Μέγεθος των πάντων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3757
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3763
 msgid "Text, pictures and windows, on every screen"
 msgstr "Κείμενο, εικόνες και παράθυρα, σε κάθε οθόνη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3768
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3774
 msgid "Pointer size"
 msgstr "Μέγεθος δείκτη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3771
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
 msgid "Normal"
 msgstr "Κανονικό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3771
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
 msgid "Large"
 msgstr "Μεγάλο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3771
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
 msgid "Larger"
 msgstr "Μεγαλύτερο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3779
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3785
 msgid "Reduce motion"
 msgstr "Μείωση κίνησης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3780
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3786
 msgid "Things appear without sliding, fading or bouncing"
 msgstr "Όλα εμφανίζονται χωρίς να γλιστρούν, να ξεθωριάζουν ή να αναπηδούν"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3791
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3797
 msgid "Screen reader"
 msgstr "Αναγνώστης οθόνης"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3792
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3798
 msgid "Reads aloud what's on the screen and what you type"
 msgstr "Διαβάζει δυνατά ό,τι υπάρχει στην οθόνη και ό,τι πληκτρολογείτε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3802
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3808
 msgid "More accessibility settings…"
 msgstr "Περισσότερες ρυθμίσεις προσβασιμότητας…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3814
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
 msgid "Games"
 msgstr "Παιχνίδια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
 msgid "Your files"
 msgstr "Τα αρχεία σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3826
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3832
 msgid "What fills this PC, and room to make."
 msgstr "Τι πιάνει χώρο σε αυτόν τον υπολογιστή και πώς να κάνετε χώρο."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3839
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
 msgid "Measuring…"
 msgstr "Μέτρηση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3850
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3856
 msgid "of %1"
 msgstr "από %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3907
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3913
 msgid "Make room"
 msgstr "Ελευθέρωση χώρου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3914
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3920
 msgid "Trash"
 msgstr "Κάδος απορριμμάτων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3915
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3921
 msgid "Everything in it is gone for good. Sure?"
 msgstr "Ό,τι περιέχει θα χαθεί οριστικά. Σίγουρα;"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3916 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3944
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3922 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
 msgid "Empty"
 msgstr "Κανένα αρχείο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3922 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4258
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4264
 msgid "Keep it"
 msgstr "Διατήρηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3928
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
 msgid "Empty for good"
 msgstr "Οριστικό άδειασμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3928
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
 msgid "Empty Trash"
 msgstr "Άδειασμα κάδου"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3942
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3948
 msgid "Downloads"
 msgstr "Λήψεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3944
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
 msgid "%1 · look through them in Files"
 msgstr "%1 · ρίξτε μια ματιά στα Αρχεία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3948 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4016 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4462
-#: setup/qml/Main.qml:940 linux/libexec/monet-quick:1582
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3954 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4022 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4468
+#: setup/qml/Main.qml:1010 linux/libexec/monet-quick:1602
 msgid "Show"
 msgstr "Εμφάνιση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3956
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3962
 msgid ""
 "What apps leave behind when they update is cleared away with each update, by itself."
 msgstr ""
 "Ό,τι αφήνουν πίσω τους οι εφαρμογές όταν ενημερώνονται καθαρίζεται αυτόματα με κάθε ενημέρωση."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3989
 msgid "Copies of your files, for when something goes wrong."
 msgstr "Αντίγραφα των αρχείων σας, για όταν κάτι πάει στραβά."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3984
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3990
 msgid "Monet keeps your files as they were, every hour."
 msgstr "Το Monet κρατά τα αρχεία σας όπως ήταν, κάθε ώρα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3991
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3997
 msgid "Earlier versions of %1"
 msgstr "Προηγούμενες εκδόσεις του %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4000
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4006
 msgid "No earlier versions yet"
 msgstr "Δεν υπάρχουν ακόμη προηγούμενες εκδόσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4001
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4007
 msgid "Monet keeps one every hour from now on."
 msgstr "Το Monet κρατά μία κάθε ώρα από τώρα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4011
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4017
 msgid "Folder"
 msgstr "Φάκελος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4021
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4027
 msgid "Put back"
 msgstr "Επαναφορά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4032
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
 msgid ""
 "Put back keeps both: the earlier version goes beside it, with its time in the name."
 msgstr ""
 "Η επαναφορά κρατά και τα δύο: η προηγούμενη έκδοση μπαίνει δίπλα, με την ώρα της στο όνομα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4047
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4053
 msgid "Earlier versions"
 msgstr "Προηγούμενες εκδόσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4055
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4061
 msgid "Keep earlier versions"
 msgstr "Διατήρηση προηγούμενων εκδόσεων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4056
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4062
 msgid "Every hour, for two months. Only what changed takes room."
 msgstr "Κάθε ώρα, για δύο μήνες. Χώρο πιάνει μόνο ό,τι άλλαξε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4070
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
 msgid "Your files as they were"
 msgstr "Τα αρχεία σας όπως ήταν"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4071
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4077
 msgid "Opens in Files: copy back what you need."
 msgstr "Ανοίγει στα Αρχεία: αντιγράψτε πίσω ό,τι χρειάζεστε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4072
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4078
 msgid "The first one is kept within the hour."
 msgstr "Το πρώτο κρατιέται μέσα στην ώρα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
 msgid "An hour ago"
 msgstr "Πριν από μία ώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
 msgid "Yesterday"
 msgstr "Χθες"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
 msgid "Last week"
 msgstr "Την περασμένη εβδομάδα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4098
 msgid "A copy on a drive"
 msgstr "Αντίγραφο σε δίσκο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4101
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4107
 msgid "Your backup drive"
 msgstr "Ο δίσκος αντιγράφων σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4108
 msgid "Copying… %1%"
 msgstr "Αντιγραφή… %1%"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4104
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4110
 msgid "Last copy: %1"
 msgstr "Τελευταίο αντίγραφο: %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4105
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
 msgid "Not copied yet"
 msgstr "Δεν έχει αντιγραφεί ακόμη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4105
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
 msgid "Plug it in to copy your files"
 msgstr "Συνδέστε τον για να αντιγραφούν τα αρχεία σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4117
 msgid "Copy now"
 msgstr "Αντιγραφή τώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4134
 msgid "Stop copying to this drive"
 msgstr "Διακοπή αντιγραφής σε αυτόν τον δίσκο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4129
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4135
 msgid "What's on it stays there"
 msgstr "Ό,τι έχει μένει εκεί"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4132
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4138
 msgid "Stop"
 msgstr "Διακοπή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4144
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4150
 msgid "USB drive"
 msgstr "Δίσκος USB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4148
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4154
 msgid "Copy to this drive"
 msgstr "Αντιγραφή σε αυτόν τον δίσκο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4157
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4163
 msgid "Plug in a USB drive"
 msgstr "Συνδέστε έναν δίσκο USB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4158
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4164
 msgid ""
 "Monet copies your files to it whenever it's plugged in, at most once a day."
 msgstr ""
 "Το Monet αντιγράφει τα αρχεία σας σε αυτόν κάθε φορά που συνδέεται, το πολύ μία φορά τη μέρα."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4164
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4170
 msgid ""
 "Games aren't copied: Steam and the other stores download them again. Neither is the Trash."
 msgstr ""
 "Τα παιχνίδια δεν αντιγράφονται: το Steam και τα άλλα καταστήματα τα κατεβάζουν ξανά. Ούτε ο Κάδος."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4187
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4193
 msgid "The screen doesn't lock by itself."
 msgstr "Η οθόνη δεν κλειδώνει μόνη της."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4188
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4194
 msgid "The screen locks after %1 minute away."
 msgid_plural "The screen locks after %1 minutes away."
 msgstr[0] "Η οθόνη κλειδώνει αφού λείψετε %1 λεπτό."
 msgstr[1] "Η οθόνη κλειδώνει αφού λείψετε %1 λεπτά."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4190
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4196
 msgid "Who can get in, and what Monet remembers."
 msgstr "Ποιος μπορεί να μπει και τι θυμάται το Monet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4198
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4204
 msgid "When you've been away this long"
 msgstr "Όταν λείπετε τόση ώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "1 min"
 msgstr "1 λεπ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "5 min"
 msgstr "5 λεπ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "15 min"
 msgstr "15 λεπ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4201
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "30 min"
 msgstr "30 λεπ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4210
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4216
 msgid "Ask for the password after sleep"
 msgstr "Ζήτηση κωδικού μετά τον ύπνο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4211
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4217
 msgid "Waking the PC shows the lock screen"
 msgstr "Όταν ξυπνά ο υπολογιστής, εμφανίζεται η οθόνη κλειδώματος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4220
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4226
 msgid "Lock now"
 msgstr "Κλείδωμα τώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4221
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4227
 msgid "Or press the Windows key and L"
 msgstr "Ή πατήστε το πλήκτρο Windows και το L"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4231
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4237
 msgid "What Monet remembers"
 msgstr "Τι θυμάται το Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4239
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4245
 msgid "Remember recent files"
 msgstr "Να θυμάται τα πρόσφατα αρχεία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4240
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4246
 msgid "Files and the menu show what you opened lately"
 msgstr "Τα Αρχεία και το μενού δείχνουν τι ανοίξατε πρόσφατα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4249
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4255
 msgid "Forget recent files"
 msgstr "Εκκαθάριση πρόσφατων αρχείων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4250
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4256
 msgid "The list of what you opened is cleared. Your files stay. Sure?"
 msgstr "Η λίστα με ό,τι ανοίξατε θα διαγραφεί. Τα αρχεία σας μένουν. Σίγουρα;"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4251
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4257
 msgid "Cleared. Your files are still there."
 msgstr "Διαγράφηκε. Τα αρχεία σας είναι ακόμα εκεί."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4252
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4258
 msgid "Clears the list, not the files"
 msgstr "Διαγράφει τη λίστα, όχι τα αρχεία"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
 msgid "Forget"
 msgstr "Εκκαθάριση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
 msgid "Forget…"
 msgstr "Εκκαθάριση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4286
 msgid "More lock screen settings…"
 msgstr "Περισσότερες ρυθμίσεις οθόνης κλειδώματος…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4285
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4291
 msgid "More recent files settings…"
 msgstr "Περισσότερες ρυθμίσεις πρόσφατων αρχείων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4303
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4309
 msgid "Printers on your network show up by themselves."
 msgstr "Οι εκτυπωτές του δικτύου σας εμφανίζονται μόνοι τους."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4304
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4310
 msgid "%1 printer"
 msgid_plural "%1 printers"
 msgstr[0] "%1 εκτυπωτής"
 msgstr[1] "%1 εκτυπωτές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4317
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4323
 msgid "Your default"
 msgstr "Προεπιλογή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4318
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
 msgid "Printing"
 msgstr "Εκτυπώνει"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4318
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
 msgid "Turned off"
 msgstr "Κλειστό"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4319 crates/monet/src/main.rs:252
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325 crates/monet/src/main.rs:252
 msgid "Ready"
 msgstr "Έτοιμο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4320
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4326
 msgid "%1 waiting"
 msgid_plural "%1 waiting"
 msgstr[0] "%1 σε αναμονή"
 msgstr[1] "%1 σε αναμονή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4331
 msgid "Make default"
 msgstr "Ορισμός ως προεπιλογή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4333
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
 msgid "Another printer"
 msgstr "Άλλος εκτυπωτής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4333
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
 msgid "No printers yet"
 msgstr "Κανένας εκτυπωτής ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4334
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4340
 msgid ""
 "Turn it on and join it to your Wi-Fi: Monet finds most printers by itself"
 msgstr ""
 "Ανοίξτε τον και συνδέστε τον στο Wi-Fi σας: το Monet βρίσκει μόνο του τους περισσότερους εκτυπωτές"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4337
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4343
 msgid "Add…"
 msgstr "Προσθήκη…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4344
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
 msgid "More printer settings…"
 msgstr "Περισσότερες ρυθμίσεις εκτυπωτή…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4363
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4369
 msgid "%1 controller connected"
 msgid_plural "%1 controllers connected"
 msgstr[0] "%1 συνδεδεμένο χειριστήριο"
 msgstr[1] "%1 συνδεδεμένα χειριστήρια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4364
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4370
 msgid "Your controllers, and where your games are kept."
 msgstr "Τα χειριστήριά σας και πού βρίσκονται τα παιχνίδια σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4368
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4374
 msgid "Controllers"
 msgstr "Χειριστήρια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4380
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
 msgctxt "a controller, connected by its cable"
 msgid "Plugged in"
 msgstr "Με καλώδιο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4381
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4387
 msgid "%1% · charging"
 msgstr "%1% · φορτίζει"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4382
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
 msgid "%1% battery"
 msgstr "Μπαταρία %1%"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
 msgid "Another controller"
 msgstr "Άλλο χειριστήριο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
 msgid "No controller connected"
 msgstr "Κανένα συνδεδεμένο χειριστήριο"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4389
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4395
 msgid "Plug one in, or pair one over Bluetooth"
 msgstr "Συνδέστε ένα με καλώδιο ή κάντε σύζευξη μέσω Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4395
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4401
 msgid "Pair…"
 msgstr "Σύζευξη…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4400
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4406
 msgid "Test buttons…"
 msgstr "Δοκιμή κουμπιών…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4409
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4415
 msgid "While you play"
 msgstr "Όσο παίζετε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4419
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "Performance overlay"
 msgstr "Ένδειξη επιδόσεων"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4420
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4426
 msgid ""
 "Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play."
 msgstr ""
 "Καρέ ανά δευτερόλεπτο και τι κάνει ο υπολογιστής, πάνω από κάθε παιχνίδι, από την επόμενη σύνδεσή σας. Το δεξί Shift+F12 την κρύβει όσο παίζετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4434
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4440
 msgid "Getting it ready…"
 msgstr "Προετοιμασία…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4435
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4441
 msgid ""
 "It couldn't be installed. Check the internet connection, then try again."
 msgstr ""
 "Δεν ήταν δυνατή η εγκατάσταση. Ελέγξτε τη σύνδεση στο διαδίκτυο και δοκιμάστε ξανά."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4436
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4442
 msgid ""
 "Windows key + Alt + G keeps the last 30 seconds on screen in Videos. The first time, choose the screen to record."
 msgstr ""
 "Το πλήκτρο Windows + Alt + G κρατά τα τελευταία 30 δευτερόλεπτα της οθόνης στα Βίντεο. Την πρώτη φορά, επιλέξτε την οθόνη που θα καταγράφεται."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4446
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4452
 msgid "Where your games are"
 msgstr "Πού βρίσκονται τα παιχνίδια σας"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4471
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4477
 msgid "No games yet"
 msgstr "Κανένα παιχνίδι ακόμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4472
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4478
 msgid "Steam, Heroic and Lutris keep theirs here once you install one"
 msgstr ""
 "Το Steam, το Heroic και το Lutris βάζουν εδώ τα παιχνίδια τους, μόλις εγκαταστήσετε κάποιο από αυτά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4479
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4485
 msgid "Needs Windows"
 msgstr "Χρειάζεται Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4493
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4499
 msgid "Its anti-cheat only allows Windows. It's there too."
 msgstr "Το anti-cheat του επιτρέπει μόνο Windows. Υπάρχει και εκεί."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4494
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4500
 msgid ""
 "Its anti-cheat only allows Windows. Install it in Windows' Steam to play."
 msgstr ""
 "Το anti-cheat του επιτρέπει μόνο Windows. Εγκαταστήστε το στο Steam των Windows για να παίξετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4498
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4504
 msgid "Play on Windows…"
 msgstr "Παιχνίδι στα Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4511
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4517
 msgid "Which games need Windows comes from AreWeAntiCheatYet."
 msgstr ""
 "Ποια παιχνίδια χρειάζονται Windows προέρχεται από το AreWeAntiCheatYet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4518
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4524
 msgid "More controller settings…"
 msgstr "Περισσότερες ρυθμίσεις χειριστηρίων…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4533
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4539
 msgid "Games that need Windows, a restart away."
 msgstr "Τα παιχνίδια που θέλουν Windows, με μία επανεκκίνηση."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4552
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
 msgid "Restarting in Windows…"
 msgstr "Επανεκκίνηση στα Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4556
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4562
 msgid "The last trip didn't reach Windows"
 msgstr "Η τελευταία μετάβαση δεν έφτασε στα Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4557 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4563 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
 msgid "Getting Windows ready"
 msgstr "Προετοιμασία των Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4564
 msgid "Windows is ready to install"
 msgstr "Τα Windows είναι έτοιμα για εγκατάσταση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559 crates/monet/src/main.rs:738
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4565 crates/monet/src/main.rs:738
 msgid "Windows is ready"
 msgstr "Τα Windows είναι έτοιμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4561
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4567
 msgid "Windows isn't ready"
 msgstr "Τα Windows δεν είναι έτοιμα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4570
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4576
 msgid "Your PC restarts in a moment."
 msgstr "Ο υπολογιστής σας κάνει επανεκκίνηση σε λίγο."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4573
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4579
 msgid ""
 "Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts."
 msgstr ""
 "Το Monet κατεβάζει τα Windows για τα παιχνίδια σας. Συνεχίστε να χρησιμοποιείτε τον υπολογιστή σας. Το Monet θα ρωτήσει πριν κάνει επανεκκίνηση."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4574
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4580
 msgid ""
 "Restart to install it. It takes about 10 minutes, then you're back in Monet."
 msgstr ""
 "Κάντε επανεκκίνηση για να τα εγκαταστήσετε. Διαρκεί περίπου 10 λεπτά και μετά επιστρέφετε στο Monet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4575
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4581
 msgid "Plug in the charger first."
 msgstr "Συνδέστε πρώτα τον φορτιστή."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4578
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4584
 msgid ""
 "Games that need Windows start there, and you come back here when you quit."
 msgstr ""
 "Τα παιχνίδια που θέλουν Windows ξεκινούν εκεί και επιστρέφετε εδώ όταν βγείτε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4579
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4585
 msgid "Windows: %1. Check Monet below to see what's missing."
 msgstr "Windows: %1. Δείτε τι λείπει με τον «Έλεγχο Monet» παρακάτω."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4597
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4603
 msgid "Restart and install"
 msgstr "Επανεκκίνηση και εγκατάσταση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4598
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4604
 msgid "Restart in Windows"
 msgstr "Επανεκκίνηση στα Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4642
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4648
 msgid ""
 "Your Windows games show up here once Windows has started with Monet Bridge."
 msgstr ""
 "Τα παιχνίδια σας στα Windows εμφανίζονται εδώ μόλις τα Windows ξεκινήσουν με το Monet Bridge."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4652
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4658
 msgid "Check Monet"
 msgstr "Έλεγχος Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4653
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4659
 msgid "See that Windows, Secure Boot and switching are all set up"
 msgstr ""
 "Βεβαιωθείτε ότι τα Windows, η Ασφαλής εκκίνηση και η εναλλαγή είναι όλα ρυθμισμένα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4656 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4754
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4760
 msgid "Checking…"
 msgstr "Έλεγχος…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4656
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662
 msgid "Check"
 msgstr "Έλεγχος"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4683
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4689
 msgid "Ready when you come back"
 msgstr "Έτοιμο όταν επιστρέφετε"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4684
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4690
 msgid ""
 "After Windows, Monet starts your desktop behind the lock screen, so it's there as soon as you type your password."
 msgstr ""
 "Μετά τα Windows, το Monet ξεκινά την επιφάνεια εργασίας σας πίσω από την οθόνη κλειδώματος, ώστε να είναι έτοιμη μόλις πληκτρολογήσετε τον κωδικό σας."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4708
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4714
 msgid "Only when you ask."
 msgstr "Μόνο όταν το ζητάτε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4709
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4715
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Το Monet και οι εφαρμογές σας ενημερώνονται μόνα τους."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4944
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4761 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5016
 msgid "Installing…"
 msgstr "Εγκατάσταση…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4756 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4947 setup/qml/Main.qml:212
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4762 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5019 setup/qml/Main.qml:215
 msgid "Install"
 msgstr "Εγκατάσταση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4757 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4881 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4945
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4763 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4902 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4953
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5017
 msgid "Restart now"
 msgstr "Επανεκκίνηση τώρα"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4758 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4946 setup/qml/Main.qml:739
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4764 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5018 setup/qml/Main.qml:743
 msgid "Try again"
 msgstr "Δοκιμάστε ξανά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4759
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4765
 msgid "Check for updates"
 msgstr "Έλεγχος για ενημερώσεις"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4779
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4785
 msgid "Update automatically"
 msgstr "Αυτόματη ενημέρωση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4781
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4787
 msgid "Monet and your apps update only when you choose Check for updates"
 msgstr ""
 "Το Monet και οι εφαρμογές σας ενημερώνονται μόνο όταν επιλέγετε «Έλεγχος για ενημερώσεις»"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4782
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4788
 msgid ""
 "Once a day, in the background: your apps right away, Monet at your next restart"
 msgstr ""
 "Μία φορά τη μέρα, στο παρασκήνιο: οι εφαρμογές σας αμέσως, το Monet στην επόμενη επανεκκίνηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4794
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4800
 msgid "New in Monet %1"
 msgstr "Νέα στο Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4850
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+msgid "Monet went back to %1"
+msgstr "Το Monet επέστρεψε στο %1"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+msgid "Monet went back"
+msgstr "Το Monet επέστρεψε"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4856 linux/libexec/monet-session:169
+msgid ""
+"Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
+msgstr ""
+"Το Monet %1 δεν ξεκίνησε σωστά σε αυτόν τον υπολογιστή, οπότε επέστρεψε μόνο του. Τα αρχεία σας είναι όπως ήταν, και η καθημερινή ενημέρωση περιμένει την επόμενη."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4857 linux/libexec/monet-session:171
+msgid ""
+"The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
+msgstr ""
+"Το νέο Monet δεν ξεκίνησε σωστά σε αυτόν τον υπολογιστή, οπότε επέστρεψε μόνο του. Τα αρχεία σας είναι όπως ήταν, και η καθημερινή ενημέρωση περιμένει την επόμενη."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4871
 msgid "%1 starts at your next restart"
 msgstr "Το %1 ξεκινά στην επόμενη επανεκκίνηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4851
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4872
 msgid "Go back to %1"
 msgstr "Επιστροφή στο %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4852
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4873
 msgid "The one you're using now stays too, to come back to."
 msgstr ""
 "Αυτό που χρησιμοποιείτε τώρα μένει επίσης, για να μπορείτε να επιστρέψετε."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4853
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4874
 msgid ""
 "It starts the next time you restart. Your files and apps stay as they are."
 msgstr ""
 "Ξεκινά την επόμενη φορά που θα κάνετε επανεκκίνηση. Τα αρχεία και οι εφαρμογές σας μένουν όπως είναι."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4875
 msgid ""
 "From %1. If something stopped working after an update, the one before is still here."
 msgstr ""
 "Με ημερομηνία %1. Αν κάτι σταμάτησε να λειτουργεί μετά από μια ενημέρωση, το προηγούμενο είναι ακόμα εδώ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4855
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4876
 msgid ""
 "If something stopped working after an update, the one before is still here."
 msgstr ""
 "Αν κάτι σταμάτησε να λειτουργεί μετά από μια ενημέρωση, το προηγούμενο είναι ακόμα εδώ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4861
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4882 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4927
 msgid "Stay"
 msgstr "Παραμονή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4867
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
 msgid "Go back at restart"
 msgstr "Επιστροφή με την επανεκκίνηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4867
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
 msgid "Go back"
 msgstr "Επιστροφή"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4966
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+msgid "Monet resets itself at your next restart"
+msgstr ""
+"Το Monet θα επανέλθει στην αρχική του κατάσταση στην επόμενη επανεκκίνηση"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+msgid "Reset this PC"
+msgstr "Επαναφορά αυτού του υπολογιστή"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4919
+msgid ""
+"Everyone's settings go back to how Monet comes. Files, games and apps stay."
+msgstr ""
+"Οι ρυθμίσεις όλων επιστρέφουν σε αυτές με τις οποίες έρχεται το Monet. Τα αρχεία, τα παιχνίδια και οι εφαρμογές μένουν."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4920
+msgid ""
+"Monet's settings, the desktop's look and the changes made to the system go back to how Monet comes, for everyone. Files, games and apps stay, and so do accounts, Wi-Fi and printers. It happens at your next restart."
+msgstr ""
+"Οι ρυθμίσεις του Monet, η εμφάνιση της επιφάνειας εργασίας και οι αλλαγές στο σύστημα επιστρέφουν για όλους σε αυτές με τις οποίες έρχεται το Monet. Τα αρχεία, τα παιχνίδια και οι εφαρμογές μένουν, όπως και οι λογαριασμοί, το Wi-Fi και οι εκτυπωτές. Γίνεται στην επόμενη επανεκκίνηση."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4921
+msgid ""
+"For when something's wrong, and going back to the Monet from before didn't help."
+msgstr ""
+"Για όταν κάτι δεν πάει καλά και η επιστροφή στο προηγούμενο Monet δεν βοήθησε."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+msgid "Reset at restart"
+msgstr "Επαναφορά στην επανεκκίνηση"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+msgid "Reset"
+msgstr "Επαναφορά"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4946
+msgid "Don't reset"
+msgstr "Χωρίς επαναφορά"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5038
 msgid ""
 "A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case."
 msgstr ""
 "Ένα νέο Monet ξεκινά την επόμενη φορά που θα κάνετε επανεκκίνηση, ποτέ ενώ δουλεύετε, και το προηγούμενο μένει στο μενού εκκίνησης, για κάθε ενδεχόμενο."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
 msgid "%1 · Impression"
 msgstr "%1 · Εντύπωση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
 msgid "Impression"
 msgstr "Εντύπωση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5026
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5098
 msgid "Graphics"
 msgstr "Γραφικά"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5027
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5099
 msgid "Processor"
 msgstr "Επεξεργαστής"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5028
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5100
 msgid "Memory"
 msgstr "Μνήμη"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5030
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
 msgid "Ready for games"
 msgstr "Έτοιμα για παιχνίδια"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5056
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5128
 msgid "Last start"
 msgstr "Τελευταία εκκίνηση"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5058
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5130
 msgctxt "how long the PC's own start took, in seconds"
 msgid "The PC %1 s"
 msgstr "Υπολογιστής %1 δευτ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5131
 msgctxt "how long Monet took to start, in seconds"
 msgid "Monet %1 s"
 msgstr "Monet %1 δευτ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5060
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5132
 msgctxt "from signing in until the desktop was there, in seconds"
 msgid "Your desktop %1 s"
 msgstr "Επιφάνεια εργασίας %1 δευτ."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5064
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5136
 msgctxt "a time in seconds"
 msgid "%1 s"
 msgstr "%1 δευτ."
@@ -3233,177 +3294,187 @@ msgstr "Τι ώρα είναι αλλού;"
 msgid "Monet Setup"
 msgstr "Εγκατάσταση Monet"
 
-#: setup/qml/Main.qml:204
+#: setup/qml/Main.qml:207
 msgid "Back"
 msgstr "Πίσω"
 
-#: setup/qml/Main.qml:212
-msgid "Erase & Install"
-msgstr "Διαγραφή & εγκατάσταση"
-
-#: setup/qml/Main.qml:213
+#: setup/qml/Main.qml:214 setup/qml/Main.qml:216
 msgid "Continue"
 msgstr "Συνέχεια"
 
-#: setup/qml/Main.qml:237
+#: setup/qml/Main.qml:215
+msgid "Erase & Install"
+msgstr "Διαγραφή & εγκατάσταση"
+
+#: setup/qml/Main.qml:242
 msgid "Hello"
 msgstr "Γεια σας"
 
-#: setup/qml/Main.qml:238
+#: setup/qml/Main.qml:243
 msgid ""
 "Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."
 msgstr ""
 "Ας ρυθμίσουμε το Monet. Διαρκεί περίπου 15 λεπτά και τα Windows ρυθμίζονται μόνα τους μετά."
 
-#: setup/qml/Main.qml:240
+#: setup/qml/Main.qml:245
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: setup/qml/Main.qml:294
+#: setup/qml/Main.qml:299
 msgid "You're online"
 msgstr "Έχετε σύνδεση"
 
-#: setup/qml/Main.qml:294
+#: setup/qml/Main.qml:299
 msgid "Connect to Wi-Fi"
 msgstr "Σύνδεση σε Wi-Fi"
 
-#: setup/qml/Main.qml:295
+#: setup/qml/Main.qml:300
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "Όσο εγκαθίσταται, το Monet κατεβάζει τον εαυτό του και τα Windows. Τα Windows θα χρησιμοποιούν επίσης αυτό το δίκτυο."
 
-#: setup/qml/Main.qml:304
+#: setup/qml/Main.qml:309
 msgid "Connected with a cable"
 msgstr "Σύνδεση με καλώδιο"
 
-#: setup/qml/Main.qml:335
+#: setup/qml/Main.qml:340
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "Ανοιχτό"
 
-#: setup/qml/Main.qml:344
+#: setup/qml/Main.qml:349
 msgid "No networks found"
 msgstr "Δεν βρέθηκαν δίκτυα"
 
-#: setup/qml/Main.qml:361
+#: setup/qml/Main.qml:366
 msgid "Looking…"
 msgstr "Αναζήτηση…"
 
-#: setup/qml/Main.qml:361
+#: setup/qml/Main.qml:366
 msgid "Look again"
 msgstr "Νέα αναζήτηση"
 
-#: setup/qml/Main.qml:378
+#: setup/qml/Main.qml:383
 msgid "Who's using this PC?"
 msgstr "Ποιος θα χρησιμοποιεί αυτόν τον υπολογιστή;"
 
-#: setup/qml/Main.qml:379
+#: setup/qml/Main.qml:384
 msgid "This is your account in Monet and in Windows."
 msgstr "Αυτός είναι ο λογαριασμός σας στο Monet και στα Windows."
 
-#: setup/qml/Main.qml:382
+#: setup/qml/Main.qml:387
 msgid "Name"
 msgstr "Όνομα"
 
-#: setup/qml/Main.qml:386
+#: setup/qml/Main.qml:391
 msgid "You sign in as %1"
 msgstr "Θα συνδέεστε ως %1"
 
-#: setup/qml/Main.qml:392
+#: setup/qml/Main.qml:397
 msgid "At least 6 characters"
 msgstr "Τουλάχιστον 6 χαρακτήρες"
 
-#: setup/qml/Main.qml:406
+#: setup/qml/Main.qml:411
 msgid "Your apps"
 msgstr "Οι εφαρμογές σας"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:412
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "Περιλαμβάνονται ήδη: Φωτογραφίες, Έγγραφα, Βίντεο, Μουσική και Αριθμομηχανή. Ό,τι προσθέσετε έρχεται μετά τη σύνδεσή σας."
 
-#: setup/qml/Main.qml:409
+#: setup/qml/Main.qml:414
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "Καθημερινές"
 
-#: setup/qml/Main.qml:409
+#: setup/qml/Main.qml:414
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "Περισσότερες"
 
-#: setup/qml/Main.qml:510
+#: setup/qml/Main.qml:515
 msgid "Ready to install"
 msgstr "Έτοιμο για εγκατάσταση"
 
-#: setup/qml/Main.qml:523
+#: setup/qml/Main.qml:528
 msgid "Monet and Windows"
 msgstr "Monet και Windows"
 
-#: setup/qml/Main.qml:527
+#: setup/qml/Main.qml:532
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr ""
 "Σβήνει τα πάντα από αυτόν τον υπολογιστή. Τα Windows εγκαθίστανται αυτόματα, μόνο για παιχνίδια."
 
-#: setup/qml/Main.qml:542
+#: setup/qml/Main.qml:547
 msgid "Monet next to my Windows"
 msgstr "Το Monet δίπλα στα Windows μου"
 
-#: setup/qml/Main.qml:546
+#: setup/qml/Main.qml:551
 msgid "Keeps Windows and your files. Monet makes room for itself."
 msgstr "Κρατά τα Windows και τα αρχεία σας. Το Monet κάνει χώρο μόνο του."
 
-#: setup/qml/Main.qml:560 setup/qml/Main.qml:572 setup/monet_setup/disks.py:90
+#: setup/qml/Main.qml:565 setup/qml/Main.qml:577 setup/monet_setup/disks.py:90
 msgid "Disk"
 msgstr "Δίσκος"
 
-#: setup/qml/Main.qml:564
+#: setup/qml/Main.qml:569
 msgid "Looking for disks…"
 msgstr "Αναζήτηση δίσκων…"
 
-#: setup/qml/Main.qml:594 setup/qml/Main.qml:631
+#: setup/qml/Main.qml:592
 msgid "Bring my files"
 msgstr "Φέρε τα αρχεία μου"
 
-#: setup/qml/Main.qml:651
+#: setup/qml/Main.qml:601
+msgid "Encrypt this PC"
+msgstr "Κρυπτογράφηση αυτού του υπολογιστή"
+
+#: setup/qml/Main.qml:602
+msgid ""
+"Only this PC can read its disk: taken out, it's locked. Monet unlocks it by itself when it starts."
+msgstr ""
+"Μόνο αυτός ο υπολογιστής μπορεί να διαβάσει τον δίσκο του: αν αφαιρεθεί, είναι κλειδωμένος. Το Monet τον ξεκλειδώνει μόνο του όταν ξεκινά."
+
+#: setup/qml/Main.qml:615
 msgid ""
 "Everything on this disk is erased, Windows and your files too. To keep them, choose Monet next to my Windows."
 msgstr ""
 "Όλα σε αυτόν τον δίσκο διαγράφονται, και τα Windows και τα αρχεία σας. Για να τα κρατήσετε, επιλέξτε «Το Monet δίπλα στα Windows μου»."
 
-#: setup/qml/Main.qml:666 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:630 setup/monet_setup/app.py:30
 msgid "Installing Monet"
 msgstr "Γίνεται εγκατάσταση του Monet"
 
-#: setup/qml/Main.qml:680
+#: setup/qml/Main.qml:644
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "Μπορείτε να το αφήσετε να δουλεύει. Αν πέσει η σύνδεση, το Monet συνεχίζει από εκεί που σταμάτησε."
 
-#: setup/qml/Main.qml:692
+#: setup/qml/Main.qml:656
 msgid "All set"
 msgstr "Όλα έτοιμα"
 
-#: setup/qml/Main.qml:695
+#: setup/qml/Main.qml:659
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "Βγάλτε το στικάκι USB και κάντε επανεκκίνηση. Μόλις συνδεθείτε, το Monet ετοιμάζει μόνο του τα Windows για τα παιχνίδια σας."
 
-#: setup/qml/Main.qml:696
+#: setup/qml/Main.qml:660
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "Βγάλτε το στικάκι USB και κάντε επανεκκίνηση. Ο υπολογιστής σας ξεκινά στο Monet και τα Windows είναι σε απόσταση ενός κλικ."
 
-#: setup/qml/Main.qml:713
+#: setup/qml/Main.qml:677
 msgid "Once, when it first starts"
 msgstr "Μία φορά, στην πρώτη εκκίνηση"
 
-#: setup/qml/Main.qml:718
+#: setup/qml/Main.qml:682
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -3411,21 +3482,41 @@ msgid ""
 msgstr ""
 "Μια μπλε οθόνη σάς ζητά να εμπιστευτείτε το Monet. Με τα βελάκια και το Enter, επιλέξτε Enroll MOK, μετά Continue και Yes, πληκτρολογήστε monetsetup και επιλέξτε Reboot. Η οθόνη ανοίγει στο Continue boot: μην το επιλέξετε, αλλιώς το Monet δεν μπορεί να ξεκινήσει."
 
-#: setup/qml/Main.qml:722
+#: setup/qml/Main.qml:686
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "Βγάλτε πρώτα φωτογραφία αυτά τα βήματα με το κινητό σας: αυτή η οθόνη εξαφανίζεται όταν γίνει επανεκκίνηση του υπολογιστή."
 
-#: setup/qml/Main.qml:735
+#: setup/qml/Main.qml:700
+msgid "Your recovery key"
+msgstr "Το κλειδί ανάκτησής σας"
+
+#: setup/qml/Main.qml:702
+msgid ""
+"This PC's disk is encrypted, and Monet unlocks it by itself. If it ever can't, after a big firmware update or with the disk in another PC, it asks for this key. Without it nobody can read the disk, not even you."
+msgstr ""
+"Ο δίσκος αυτού του υπολογιστή είναι κρυπτογραφημένος και το Monet τον ξεκλειδώνει μόνο του. Αν κάποτε δεν μπορέσει, μετά από μια μεγάλη ενημέρωση υλικολογισμικού ή με τον δίσκο σε άλλον υπολογιστή, ζητά αυτό το κλειδί. Χωρίς αυτό κανείς δεν μπορεί να διαβάσει τον δίσκο, ούτε καν εσείς."
+
+#: setup/qml/Main.qml:722
+msgid ""
+"Take a photo of it or write it down, and keep it somewhere other than this PC. It isn't shown again."
+msgstr ""
+"Φωτογραφίστε το ή σημειώστε το, και κρατήστε το κάπου αλλού, όχι σε αυτόν τον υπολογιστή. Δεν θα εμφανιστεί ξανά."
+
+#: setup/qml/Main.qml:728
+msgid "I've kept my recovery key"
+msgstr "Κράτησα το κλειδί ανάκτησης"
+
+#: setup/qml/Main.qml:739
 msgid "That didn't work"
 msgstr "Κάτι δεν πήγε καλά"
 
-#: setup/qml/Main.qml:740
+#: setup/qml/Main.qml:744
 msgid "Hide details"
 msgstr "Απόκρυψη λεπτομερειών"
 
-#: setup/qml/Main.qml:940
+#: setup/qml/Main.qml:1010
 msgid "Hide"
 msgstr "Απόκρυψη"
 
@@ -3507,68 +3598,68 @@ msgid_plural "about %1 minutes left"
 msgstr[0] "απομένει περίπου %1 λεπτό"
 msgstr[1] "απομένουν περίπου %1 λεπτά"
 
-#: setup/monet_setup/app.py:274
+#: setup/monet_setup/app.py:279
 msgid "The password needs at least 6 characters."
 msgstr "Ο κωδικός πρόσβασης χρειάζεται τουλάχιστον 6 χαρακτήρες."
 
-#: setup/monet_setup/app.py:294
+#: setup/monet_setup/app.py:299
 msgid "Built in"
 msgstr "Περιλαμβάνεται"
 
-#: setup/monet_setup/app.py:347
+#: setup/monet_setup/app.py:352
 msgid ""
 "Monet makes room by shrinking Windows' drive from %1 to %2. Nothing in Windows is lost, and it checks its drive once the next time it starts."
 msgstr ""
 "Το Monet κάνει χώρο μικραίνοντας τον δίσκο των Windows από %1 σε %2. Τίποτα στα Windows δεν χάνεται, και ελέγχουν τον δίσκο τους μία φορά στην επόμενη εκκίνηση."
 
-#: setup/monet_setup/app.py:358
+#: setup/monet_setup/app.py:363
 msgid ""
 "Your files in Windows (%1) don't fit next to Monet. Open them from Files once Monet is installed."
 msgstr ""
 "Τα αρχεία σας στα Windows (%1) δεν χωρούν δίπλα στο Monet. Ανοίξτε τα από τα Αρχεία μόλις εγκατασταθεί το Monet."
 
-#: setup/monet_setup/app.py:359
+#: setup/monet_setup/app.py:364
 msgid ""
 "Desktop, Documents, Pictures, Music, Videos and Downloads from Windows (%1). They stay in Windows too."
 msgstr ""
 "Επιφάνεια εργασίας, Έγγραφα, Εικόνες, Μουσική, Βίντεο και Λήψεις από τα Windows (%1). Μένουν και στα Windows."
 
-#: setup/monet_setup/app.py:385
+#: setup/monet_setup/app.py:408
 msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
 msgstr ""
 "Αυτός ο υπολογιστής έχει %1 GB μνήμης. Το Monet χρειάζεται τουλάχιστον 4 GB."
 
-#: setup/monet_setup/app.py:394
+#: setup/monet_setup/app.py:417
 msgid ""
 "This PC's NVIDIA graphics card is older than the RTX 20 series. Monet draws with its open driver, fine for everyday things; games run best in Windows."
 msgstr ""
 "Η κάρτα γραφικών NVIDIA αυτού του υπολογιστή είναι παλαιότερη από τη σειρά RTX 20. Το Monet σχεδιάζει με τον ανοιχτό οδηγό της, εντάξει για τα καθημερινά· τα παιχνίδια τρέχουν καλύτερα στα Windows."
 
-#: setup/monet_setup/app.py:396
+#: setup/monet_setup/app.py:419
 msgid ""
 "This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet uses the built-in graphics. Games run best in Windows."
 msgstr ""
 "Το τσιπ γραφικών NVIDIA αυτού του υπολογιστή είναι παλαιότερο από τη σειρά RTX 20, οπότε το Monet χρησιμοποιεί τα ενσωματωμένα γραφικά. Τα παιχνίδια τρέχουν καλύτερα στα Windows."
 
-#: setup/monet_setup/app.py:399
+#: setup/monet_setup/app.py:422
 msgid ""
 "This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
 msgstr ""
 "Αυτός ο υπολογιστής έχει %1 GB μνήμης. Το Monet λειτουργεί, αλλά καθυστερεί με πολλές ανοιχτές εφαρμογές: τα 8 GB είναι καλύτερα."
 
-#: setup/monet_setup/app.py:408
+#: setup/monet_setup/app.py:431
 msgid "No disk found to install Monet on."
 msgstr "Δεν βρέθηκε δίσκος για την εγκατάσταση του Monet."
 
-#: setup/monet_setup/app.py:413
+#: setup/monet_setup/app.py:436
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "Αυτός ο δίσκος είναι πολύ μικρός για το Monet (χρειάζεται 70 GB)."
 
-#: setup/monet_setup/app.py:487
+#: setup/monet_setup/app.py:511
 msgid "%1 of %2 GB"
 msgstr "%1 από %2 GB"
 
-#: setup/monet_setup/app.py:504
+#: setup/monet_setup/app.py:530
 msgid "The installer stopped unexpectedly."
 msgstr "Η εγκατάσταση σταμάτησε απροσδόκητα."
 
@@ -3607,29 +3698,33 @@ msgid ""
 msgstr ""
 "Ο δίσκος των Windows είναι πολύ γεμάτος για να γίνει χώρος για το Monet. Ελευθερώστε %1 στα Windows και δοκιμάστε ξανά."
 
-#: setup/monet_setup/install.py:151
+#: setup/monet_setup/install.py:165
 msgid "The free space on the disk changed. Go back and choose again."
 msgstr "Ο ελεύθερος χώρος στον δίσκο άλλαξε. Επιστρέψτε και επιλέξτε ξανά."
 
-#: setup/monet_setup/install.py:160
+#: setup/monet_setup/install.py:174
 msgid "The new partitions didn't show up."
 msgstr "Τα νέα διαμερίσματα δεν εμφανίστηκαν."
 
-#: setup/monet_setup/install.py:164
+#: setup/monet_setup/install.py:178
 msgid "Windows' EFI partition wasn't found."
 msgstr "Δεν βρέθηκε το διαμέρισμα EFI των Windows."
 
-#: setup/monet_setup/install.py:256
+#: setup/monet_setup/install.py:300
 msgid ""
 "The connection dropped and didn't come back. Check the Wi-Fi, then try again."
 msgstr ""
 "Η σύνδεση χάθηκε και δεν επανήλθε. Ελέγξτε το Wi-Fi και δοκιμάστε ξανά."
 
-#: setup/monet_setup/install.py:319
+#: setup/monet_setup/install.py:344
+msgid "The encrypted disk wasn't found."
+msgstr "Ο κρυπτογραφημένος δίσκος δεν βρέθηκε."
+
+#: setup/monet_setup/install.py:376
 msgid "Monet's system wasn't found after installing."
 msgstr "Το σύστημα του Monet δεν βρέθηκε μετά την εγκατάσταση."
 
-#: setup/monet_setup/install.py:530
+#: setup/monet_setup/install.py:625
 msgid "Something unexpected went wrong. The details say what."
 msgstr "Συνέβη κάτι απρόσμενο. Οι λεπτομέρειες λένε τι."
 
@@ -3753,73 +3848,73 @@ msgstr "Ιαπωνικά"
 msgid "Korean"
 msgstr "Κορεατικά"
 
-#: linux/libexec/monet-quick:1509
+#: linux/libexec/monet-quick:1529
 msgid "Steam on %1"
 msgstr "Steam στον δίσκο %1"
 
-#: linux/libexec/monet-quick:1513
+#: linux/libexec/monet-quick:1533
 msgid "Games folder"
 msgstr "Φάκελος παιχνιδιών"
 
-#: linux/libexec/monet-quick:1583
+#: linux/libexec/monet-quick:1603
 msgid "Saved the last 30 seconds"
 msgstr "Αποθηκεύτηκαν τα τελευταία 30 δευτερόλεπτα"
 
-#: linux/libexec/monet-quick:1583
+#: linux/libexec/monet-quick:1603
 msgid "In Videos."
 msgstr "Στα Βίντεο."
 
-#: linux/libexec/monet-quick:1885
+#: linux/libexec/monet-quick:1905
 msgid "Open it again"
 msgstr "Ανοίξτε ξανά"
 
-#: linux/libexec/monet-quick:1885
+#: linux/libexec/monet-quick:1905
 msgid "%1 closed unexpectedly"
 msgstr "Η εφαρμογή %1 έκλεισε απροσδόκητα"
 
-#: linux/libexec/monet-quick:2309
+#: linux/libexec/monet-quick:2329
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB ελεύθερα από %2 GB"
 
-#: linux/libexec/monet-quick:2678
+#: linux/libexec/monet-quick:2698
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "Ο δίσκος δεν άνοιξε. Δοκιμάστε να τον συνδέσετε ξανά."
 
-#: linux/libexec/monet-quick:2682
+#: linux/libexec/monet-quick:2702
 msgid "earlier"
 msgstr "προηγούμενα"
 
-#: linux/libexec/monet-quick:2686
+#: linux/libexec/monet-quick:2706
 msgid "Monet can't write on this drive."
 msgstr "Το Monet δεν μπορεί να γράψει σε αυτόν τον δίσκο."
 
-#: linux/libexec/monet-quick:2694 linux/libexec/monet-quick:2718
+#: linux/libexec/monet-quick:2714 linux/libexec/monet-quick:2738
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr ""
 "Η αντιγραφή δεν ολοκληρώθηκε. Το Monet θα ξαναδοκιμάσει την επόμενη φορά που θα συνδεθεί ο δίσκος."
 
-#: linux/libexec/monet-quick:2733
+#: linux/libexec/monet-quick:2753
 msgid "Your files haven't been copied for a week"
 msgstr "Τα αρχεία σας δεν έχουν αντιγραφεί εδώ και μία εβδομάδα"
 
-#: linux/libexec/monet-quick:2734
+#: linux/libexec/monet-quick:2754
 msgid "Plug in %1 and Monet copies them."
 msgstr "Συνδέστε το %1 και το Monet θα τα αντιγράψει."
 
-#: linux/libexec/monet-quick:2734
+#: linux/libexec/monet-quick:2754
 msgid "your backup drive"
 msgstr "τον δίσκο αντιγράφων σας"
 
-#: linux/libexec/monet-quick:2749
+#: linux/libexec/monet-quick:2769
 msgid "Open Files"
 msgstr "Άνοιγμα Αρχείων"
 
-#: linux/libexec/monet-quick:2750
+#: linux/libexec/monet-quick:2770
 msgid "Your files from Windows are here"
 msgstr "Τα αρχεία σας από τα Windows είναι εδώ"
 
-#: linux/libexec/monet-quick:2751
+#: linux/libexec/monet-quick:2771
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr ""
 "Στα Έγγραφα, τις Εικόνες, τη Μουσική, τα Βίντεο, τις Λήψεις και στην επιφάνεια εργασίας."
@@ -3856,27 +3951,37 @@ msgstr "Προετοιμασία για επανεκκίνηση"
 msgid "Windows installs itself at the next restart"
 msgstr "Τα Windows εγκαθίστανται στην επόμενη επανεκκίνηση"
 
-#: linux/libexec/monet-session:20
+#: linux/libexec/monet-session:45
 msgid "Finish setting up Windows"
 msgstr "Ολοκληρώστε τη ρύθμιση των Windows"
 
-#: linux/libexec/monet-session:91
+#: linux/libexec/monet-session:126
 msgid "Adding your apps"
 msgstr "Προσθήκη των εφαρμογών σας"
 
-#: linux/libexec/monet-session:92
+#: linux/libexec/monet-session:127
 msgid ""
 "Your apps download in the background and show up in the menu as they arrive."
 msgstr ""
 "Οι εφαρμογές σας κατεβαίνουν στο παρασκήνιο και εμφανίζονται στο μενού μόλις έρθουν."
 
-#: linux/libexec/monet-session:117
+#: linux/libexec/monet-session:152
 msgid "See what's new"
 msgstr "Δείτε τα νέα"
 
-#: linux/libexec/monet-session:118
+#: linux/libexec/monet-session:153
 msgid "Monet %1 is here"
 msgstr "Ήρθε το Monet %1"
+
+#: linux/libexec/monet-session:180
+msgid "Monet is as it came"
+msgstr "Το Monet είναι σαν καινούργιο"
+
+#: linux/libexec/monet-session:181
+msgid ""
+"Your files, games and apps are all here. Your settings from before are kept, in case you want one back."
+msgstr ""
+"Τα αρχεία, τα παιχνίδια και οι εφαρμογές σας είναι όλα εδώ. Οι προηγούμενες ρυθμίσεις σας φυλάσσονται, σε περίπτωση που θέλετε κάποια πίσω."
 
 #: linux/libexec/monet-look:81
 msgctxt "an app's name in the menu"

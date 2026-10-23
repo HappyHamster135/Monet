@@ -861,7 +861,7 @@ class Icons(unittest.TestCase):
     def test_frames_come_at_sign_in_and_as_apps_arrive(self):
         for part in ("canvas", "relief"):
             self.assertTrue((SHARE / f"monet/textures/frame-{part}.png").is_file())
-        self.assertIn('"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1 &', (ROOT / "linux/libexec/monet-session").read_text())
+        self.assertIn('"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1\n', (ROOT / "linux/libexec/monet-session").read_text())
         self.assertIn("PathChanged=/var/lib/flatpak/exports/share/applications",
                       (ROOT / "linux/systemd/user/monet-frames.path").read_text())
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick frames", (ROOT / "linux/systemd/user/monet-frames.service").read_text())
@@ -934,7 +934,7 @@ class Icons(unittest.TestCase):
         self.assertEqual(newtab.count("{"), newtab.count("}"))
         for name in ("mist.jpg", "smoke.jpg", "newtab-mist.jpg", "newtab-smoke.jpg"):
             self.assertTrue((SHARE / "monet/zen" / name).is_file(), name)
-        self.assertIn('"$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1 &', (ROOT / "linux/libexec/monet-session").read_text())
+        self.assertIn('"$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1\n', (ROOT / "linux/libexec/monet-session").read_text())
         self.assertIn("PathChanged=%h/.var/app/app.zen_browser.zen/.zen", (ROOT / "linux/systemd/user/monet-zen.path").read_text())
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick zen", (ROOT / "linux/systemd/user/monet-zen.service").read_text())
         install = (ROOT / "linux/install.sh").read_text()
@@ -2550,7 +2550,7 @@ class EasierOnOlderPCs(unittest.TestCase):
 
     def test_sign_in_goes_easier(self):
         session = (ROOT / "linux/libexec/monet-session").read_text()
-        self.assertIn('if [ "$("$LIBEXECDIR/monet-quick" older-pc 2>/dev/null)" = yes ]; then', session)
+        self.assertIn('older_pc="$("$LIBEXECDIR/monet-quick" older-pc 2>/dev/null)"', session)
         self.assertIn(': > "$looks/glass-lite"', session)
         # Files: names only, once, unless it's been chosen.
         self.assertIn("kwriteconfig6 --file baloofilerc --group General --key 'only basic indexing' --type bool true",
@@ -2595,12 +2595,17 @@ class FilesFromWindows(unittest.TestCase):
         self.assertIn('"$LIBEXECDIR/monet-quick" bring-files', session)
 
 
-def keep_helper():
-    loader = importlib.machinery.SourceFileLoader("monet_keep", str(ROOT / "linux/libexec/monet-keep"))
-    spec = importlib.util.spec_from_loader("monet_keep", loader)
+def libexec_helper(name):
+    """One of Monet's helpers in linux/libexec, loaded as a module (they have no .py)."""
+    loader = importlib.machinery.SourceFileLoader(name.replace("-", "_"), str(ROOT / "linux/libexec" / name))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module
+
+
+def keep_helper():
+    return libexec_helper("monet-keep")
 
 
 class Backups(unittest.TestCase):
@@ -2961,7 +2966,7 @@ class LaptopGaming(unittest.TestCase):
         # Your own copy stays yours; Monet's follows the app's.
         self.assertIn("grep -q '^X-Monet=true$' \"$mine\" && [ \"$f\" -nt \"$mine\" ] || continue", games)
         self.assertIn('[ -d /sys/module/nvidia ] || return 1', look)
-        self.assertIn('"$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1 &',
+        self.assertIn('"$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1\n',
                       (ROOT / "linux/libexec/monet-session").read_text())
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-look --games-gpu",
                       (ROOT / "linux/systemd/user/monet-frames.service").read_text())
@@ -2970,6 +2975,421 @@ class LaptopGaming(unittest.TestCase):
         content = (SHARE / "monet/store/content.yaml").read_text()
         play = content.split('title: "Play"', 1)[1].split("- banner:", 1)[0]
         self.assertIn("- io.github.ilya_zlobintsev.LACT", play)
+
+
+class SignInWaitsLess(unittest.TestCase):
+    """0.9.1: what can wait waits until the desktop is up, and nothing runs when there's nothing to do."""
+
+    def test_the_jobs_that_can_wait_run_later_and_only_when_needed(self):
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        later = session.split('if [ "${1:-}" = --later ]; then', 1)[1].split("\nfi\n", 1)[0]
+        jobs = ('"$LIBEXECDIR/monet-quick" frames', '"$LIBEXECDIR/monet-look" --games-gpu', '"$LIBEXECDIR/monet-quick" zen')
+        for job in jobs:
+            self.assertIn(job, later)
+            # Not at sign-in itself any more.
+            self.assertEqual(session.count(job), 1, job)
+        # What they looked at is noted after they ran, and the sign-in itself never runs in --later.
+        self.assertGreater(later.index('apps_now > "$apps_seen"'), later.index('"$LIBEXECDIR/monet-quick" zen'))
+        self.assertIn("exit 0", later)
+        self.assertLess(session.index("= --later ]"), session.index('"$BINDIR/monet" shortcuts'))
+        # A minute after sign-in, at the lowest priority, and only when something changed.
+        self.assertIn('if [ "$(apps_now)" != "$(cat "$apps_seen" 2>/dev/null)" ]; then', session)
+        self.assertIn("--unit=monet-after-sign-in --on-active=60 --nice=19", session)
+        self.assertIn('--property=IOSchedulingClass=idle "$LIBEXECDIR/monet-session" --later', session)
+        self.assertIn('(sleep 60; nice -n 19 ionice -c 3 "$LIBEXECDIR/monet-session" --later)', session)
+        # What they look at: a new Monet, the apps arrived while signed out, Zen's profiles.
+        looked = session.split("apps_now() {", 1)[1].split("\n}\n", 1)[0]
+        for where in ('"$BINDIR/monet" --version', "/var/lib/flatpak/exports/share/applications",
+                      '"$DATA/flatpak/exports/share/applications"', '"$DATA/applications"',
+                      '"$HOME/.var/app/app.zen_browser.zen/.zen"'):
+            self.assertIn(where, looked)
+
+    def test_an_older_pc_is_worked_out_once(self):
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('older_key="$("$BINDIR/monet" --version 2>/dev/null) $(grep -m1 \'^MemTotal\' /proc/meminfo 2>/dev/null)"',
+                      session)
+        self.assertIn('if [ "$(head -1 "$older" 2>/dev/null)" = "$older_key" ]; then', session)
+        # Only an answer is kept: a failed check is tried again next time.
+        self.assertIn('[ -n "$older_pc" ] && mkdir -p', session)
+        self.assertIn('if [ "$older_pc" = yes ]; then', session)
+        self.assertEqual(session.count('"$LIBEXECDIR/monet-quick" older-pc'), 1)
+
+    def test_starts_skip_what_has_nothing_to_do(self):
+        ready = (ROOT / "linux/systemd/monet-ready-boot.service").read_text()
+        self.assertIn("ConditionPathExists=|/var/lib/monet/ready-armed", ready)
+        self.assertIn("ConditionPathExists=|/etc/plasmalogin.conf.d/zz-monet-ready.conf", ready)
+        # The same places monet-ready arms and signs in from.
+        script = (ROOT / "linux/libexec/monet-ready").read_text()
+        self.assertIn('ARMED = STATE / "ready-armed"', script)
+        self.assertIn('DROPIN = Path("/etc/plasmalogin.conf.d/zz-monet-ready.conf")', script)
+        self.assertIn('STATE = Path("/var/lib/monet")', script)
+        keep = keep_helper()
+        unit = (ROOT / "linux/systemd/monet-keep-prepare.service").read_text()
+        self.assertIn(f"ConditionPathExists=!{keep.PREPARED.as_posix()}", unit)
+
+    def test_the_homes_are_marked_once_they_need_nothing_more(self):
+        import tempfile
+        keep = keep_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            home, prepared = Path(tmp) / "home", Path(tmp) / "state" / "home-subvolume"
+            home.mkdir()
+            keep.signed_in = lambda: True
+            # Someone signed in before it could swap: tried again at the next start.
+            keep.on_btrfs, keep.subvolume = (lambda path: True), (lambda path: False)
+            keep.prepare(home, prepared)
+            self.assertFalse(prepared.exists())
+            # A subvolume already: marked, whoever is signed in.
+            keep.subvolume = lambda path: True
+            keep.prepare(home, prepared)
+            self.assertTrue(prepared.exists())
+            # Not btrfs: never a subvolume, so marked too.
+            prepared.unlink()
+            keep.on_btrfs, keep.subvolume = (lambda path: False), (lambda path: False)
+            keep.prepare(home, prepared)
+            self.assertTrue(prepared.exists())
+
+
+def bootc(booted, staged=None, rollback=None, offered=None):
+    """bootc status --json's status, for deployments given as (digest, version)."""
+    def entry(found):
+        return {"image": {"imageDigest": found[0], "version": found[1]}} if found else None
+    status = {"booted": entry(booted), "staged": entry(staged), "rollback": entry(rollback)}
+    if offered:
+        status["booted"]["cachedUpdate"] = {"imageDigest": offered}
+    return status
+
+
+OLD, NEW = ("sha256:aaa", "0.9.1"), ("sha256:bbb", "0.9.2")
+
+
+class GoingBackByItself(unittest.TestCase):
+    """0.9.1: a new Monet that doesn't start goes back by itself (monet-boot)."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.boot = libexec_helper("monet-boot")
+        self.boot.TRIAL = Path(self.tmp.name) / "trial.json"
+        self.boot.WENT_BACK = Path(self.tmp.name) / "went-back.json"
+        self.ran = []
+        self.boot.run = lambda *args, timeout=120: self.ran.append([str(a) for a in args]) or ""
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def on_trial(self):
+        self.boot.arm(bootc(OLD, staged=NEW), counts=True)
+
+    def test_a_staged_monet_goes_on_trial_at_shutdown(self):
+        self.on_trial()
+        trial = json.loads(self.boot.TRIAL.read_text())
+        self.assertEqual(trial, {"digest": NEW[0], "version": NEW[1], "before": OLD[0], "beforeVersion": OLD[1]})
+        # GRUB counts its tries, where its menu can.
+        self.assertIn(["grub2-editenv", "-", "set", "boot_counter=3", "boot_success=0"], self.ran)
+        self.boot.TRIAL.unlink()
+        self.ran.clear()
+        self.boot.arm(bootc(OLD, staged=NEW), counts=False)
+        self.assertTrue(self.boot.TRIAL.exists())
+        self.assertEqual(self.ran, [])
+        # Nothing staged, or the same Monet with other kernel arguments: nothing on trial.
+        self.boot.TRIAL.unlink()
+        self.boot.arm(bootc(OLD), counts=True)
+        self.boot.arm(bootc(OLD, staged=OLD), counts=True)
+        self.assertFalse(self.boot.TRIAL.exists())
+        with tempfile_dir() as tmp:
+            cfg = Path(tmp) / "grub.cfg"
+            cfg.write_text("if [ -n \"${boot_counter}\" -a \"${boot_success}\" = \"0\" ]; then\n")
+            self.assertTrue(self.boot.grub_counts([cfg, Path(tmp) / "missing.cfg"]))
+            cfg.write_text("set default=0\n")
+            self.assertFalse(self.boot.grub_counts([cfg]))
+
+    def test_a_monet_that_starts_passes(self):
+        self.on_trial()
+        self.boot.WENT_BACK.write_text(json.dumps({"version": "0.9.0", "digest": "sha256:old"}))
+        self.ran.clear()
+        self.assertEqual(self.boot.check(bootc(NEW, rollback=OLD), up=lambda: True, env={}), "passed")
+        self.assertFalse(self.boot.TRIAL.exists())
+        self.assertFalse(self.boot.WENT_BACK.exists())
+        self.assertIn(["grub2-editenv", "-", "unset", "boot_counter"], self.ran)
+        self.assertNotIn(["bootc", "rollback"], self.ran)
+
+    def test_one_that_doesnt_goes_back_and_restarts(self):
+        self.on_trial()
+        self.ran.clear()
+        self.assertEqual(self.boot.check(bootc(NEW, rollback=OLD), up=lambda: False, env={}), "went back")
+        self.assertEqual(json.loads(self.boot.WENT_BACK.read_text())["version"], "0.9.2")
+        self.assertEqual(json.loads(self.boot.WENT_BACK.read_text())["to"], "0.9.1")
+        self.assertLess(self.ran.index(["bootc", "rollback"]), self.ran.index(["systemctl", "reboot"]))
+        self.assertFalse(self.boot.TRIAL.exists())
+        # With nothing to go back to, it stays, and is no longer on trial.
+        self.on_trial()
+        self.ran.clear()
+        self.assertEqual(self.boot.check(bootc(NEW), up=lambda: False, env={}), "nothing to go back to")
+        self.assertNotIn(["bootc", "rollback"], self.ran)
+
+    def test_grub_giving_up_keeps_the_one_before(self):
+        self.on_trial()
+        self.ran.clear()
+        self.assertEqual(self.boot.check(bootc(OLD, rollback=NEW), env={"boot_counter": "-1"}), "went back")
+        self.assertIn(["bootc", "rollback"], self.ran)
+        self.assertNotIn(["systemctl", "reboot"], self.ran)
+        self.assertTrue(self.boot.WENT_BACK.exists())
+
+    def test_the_one_before_picked_in_the_menu_leaves_the_trial_waiting(self):
+        self.on_trial()
+        self.assertEqual(self.boot.check(bootc(OLD, rollback=NEW), env={"boot_counter": "2"}), "waiting")
+        self.assertTrue(self.boot.TRIAL.exists())
+        # An update that never reached the disk (the PC stopped while shutting down) isn't on trial.
+        self.assertEqual(self.boot.check(bootc(OLD), env={}), "none")
+        self.assertFalse(self.boot.TRIAL.exists())
+
+    def test_the_sign_in_screen_has_to_stay_up(self):
+        import types
+        clock = types.SimpleNamespace(t=0.0)
+        fake = types.SimpleNamespace(monotonic=lambda: clock.t, sleep=lambda s: setattr(clock, "t", clock.t + s))
+        self.assertTrue(self.boot.desktop_up(lambda: ((True, "0", "100"), frozenset({"c1"})), clock=fake))
+        self.assertLessEqual(clock.t, 70)
+        # A sign-in screen that keeps crashing comes back as a new session: never steady, and it ends.
+        clock.t, polls = 0.0, iter(range(10000))
+        crashing = lambda: ((True, "0", "100"), frozenset({f"c{next(polls) // 3}"}))
+        self.assertFalse(self.boot.desktop_up(crashing, clock=fake))
+        self.assertLessEqual(clock.t, self.boot.WAIT + self.boot.STEADY + 5)
+        clock.t = 0.0
+        self.assertFalse(self.boot.desktop_up(lambda: ((False, "0", ""), frozenset()), clock=fake))
+        clock.t = 0.0
+        restarting = iter(str(n // 4) for n in range(10000))
+        self.assertFalse(self.boot.desktop_up(lambda: ((True, next(restarting), "1"), frozenset({"c1"})), clock=fake))
+
+    def test_the_daily_update_skips_the_one_that_didnt_start(self):
+        self.assertEqual(self.boot.may_update(bootc(OLD, offered=NEW[0]), refresh=False), 0)
+        self.boot.WENT_BACK.write_text(json.dumps({"version": "0.9.2", "digest": NEW[0], "to": "0.9.1"}))
+        self.assertEqual(self.boot.may_update(bootc(OLD, offered=NEW[0]), refresh=False), 1)
+        self.assertEqual(self.boot.may_update(bootc(OLD, offered="sha256:ccc"), refresh=False), 0)
+        update = (ROOT / "linux/systemd/monet-update.service").read_text()
+        self.assertIn("ExecCondition=@LIBEXECDIR@/monet-boot may-update", update)
+
+    def test_it_runs_at_shutdown_and_after_the_sign_in_screen(self):
+        arm = (ROOT / "linux/systemd/monet-boot-arm.service").read_text()
+        self.assertIn("ExecStop=@LIBEXECDIR@/monet-boot arm", arm)
+        self.assertIn("After=local-fs.target ostree-finalize-staged.service", arm)
+        self.assertIn("RemainAfterExit=yes", arm)
+        check = (ROOT / "linux/systemd/monet-boot-check.service").read_text()
+        for line in ("ConditionPathExists=/var/lib/monet/trial.json", "After=display-manager.service", "Type=exec"):
+            self.assertIn(line, check)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("systemctl enable --now monet-boot-arm.service", install)
+        self.assertIn("monet-boot-arm.service monet-boot-check.service monet-reset.service", install)
+        # Settings and the next sign-in say so, and Go back doesn't offer the one that didn't start.
+        quick = quick_helper()
+        with tempfile_dir() as tmp:
+            note = Path(tmp) / "went-back.json"
+            self.assertEqual(quick.went_back(note), {})
+            note.write_text(json.dumps({"version": "0.9.2", "digest": "x", "to": "0.9.1", "when": 1}))
+            self.assertEqual(quick.went_back(note), {"version": "0.9.2", "to": "0.9.1"})
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('ask("went-back", out => sheet.wentBack = sheet.json(out, {}))', settings)
+        self.assertIn("&& !(sheet.wentBack.version && sheet.wentBack.version === sheet.previous.version)", settings)
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('[ "$went" -nt "$looks/went-back-seen" ]', session)
+
+
+class ResetThisPC(unittest.TestCase):
+    """0.9.1: Monet as it comes, with files, games and apps kept (monet-reset)."""
+
+    def setUp(self):
+        self.reset = libexec_helper("monet-reset")
+
+    def test_what_makes_this_pc_this_one_stays(self):
+        for rel in ("passwd", "shadow-", "group", "machine-id", "hostname", "fstab", "crypttab", "locale.conf",
+                    "NetworkManager/system-connections/Harbor.nmconnection", "ssh/ssh_host_ed25519_key",
+                    "cups/printers.conf", "X11/xorg.conf.d/00-keyboard.conf", ".updated", "pki/tls/cert.pem"):
+            self.assertTrue(self.reset.kept(rel), rel)
+        for rel in ("ssh/sshd_config", "sudoers.d/mine", "systemd/system/multi-user.target.wants/sshd.service",
+                    "plasmalogin.conf.d/zz-monet-ready.conf", "environment", "modprobe.d/mine.conf"):
+            self.assertFalse(self.reset.kept(rel), rel)
+        self.assertEqual(self.reset.changes("A    b/c\nM    a\nD    b\nnot a change\n"),
+                         [("M", "a"), ("D", "b"), ("A", "b/c")])
+
+    def test_the_systems_settings_go_back(self):
+        import shutil
+        copy = lambda source, target: (shutil.copytree(source, target, symlinks=True) if Path(source).is_dir()
+                                       else shutil.copy2(source, target)) and ""
+        with tempfile_dir() as tmp:
+            etc, defaults, into = (Path(tmp) / name for name in ("etc", "usr-etc", "kept"))
+            for base in (etc, defaults):
+                (base / "ssh").mkdir(parents=True)
+            (defaults / "ssh/sshd_config").write_text("Monet's\n")
+            (etc / "ssh/sshd_config").write_text("mine\n")
+            (etc / "mine.conf").write_text("added\n")
+            (defaults / "environment").write_text("Monet's environment\n")
+            (defaults / "hostname").write_text("monet\n")
+            (etc / "hostname").write_text("ann-pc\n")
+            (etc / "added").mkdir()
+            (etc / "added/x").write_text("x\n")
+            found = self.reset.changes("M ssh/sshd_config\nA mine.conf\nD environment\nM hostname\nA added\nA added/x\n")
+            done = self.reset.reset_etc(found, into, etc=etc, defaults=defaults, copy=copy)
+            self.assertEqual((etc / "ssh/sshd_config").read_text(), "Monet's\n")
+            self.assertEqual((into / "ssh/sshd_config").read_text(), "mine\n")
+            self.assertFalse((etc / "mine.conf").exists())
+            self.assertEqual((into / "mine.conf").read_text(), "added\n")
+            self.assertEqual((etc / "environment").read_text(), "Monet's environment\n")
+            self.assertEqual((etc / "hostname").read_text(), "ann-pc\n")
+            self.assertEqual((into / "added/x").read_text(), "x\n")
+            self.assertNotIn("added/x", done)
+            self.assertEqual(sorted(p.name for p in etc.rglob("*.monet-reset")), [])
+            # When Monet's copy can't be made, what's there stays as it is.
+            (etc / "ssh/sshd_config").write_text("mine again\n")
+            self.reset.reset_etc([("M", "ssh/sshd_config")], into, etc=etc, defaults=defaults, copy=lambda s, t: None)
+            self.assertEqual((etc / "ssh/sshd_config").read_text(), "mine again\n")
+
+    def test_an_accounts_desktop_starts_afresh_and_its_files_stay(self):
+        with tempfile_dir() as tmp:
+            home = Path(tmp) / "ann"
+            for rel in (".config/kdeglobals", ".config/kwinrc", ".config/plasma-org.kde.plasma.desktop-appletsrc",
+                        ".config/monet/prefs.json", ".config/autostart/steam.desktop", ".config/user-dirs.dirs",
+                        ".config/lutris/system.yml", ".local/share/plasma/look.json", ".local/share/Steam/steamapps/x",
+                        ".local/share/monet/notes.json", ".local/share/applications/game.desktop",
+                        ".cache/thumbnails/x.png", ".cache/fontconfig", "Documents/letter.txt"):
+                (home / rel).parent.mkdir(parents=True, exist_ok=True)
+                (home / rel).write_text(rel)
+            moved = self.reset.reset_home(home, "2026-10-24 09.00")
+            kept = home / ".local/share/monet/before-reset/2026-10-24 09.00"
+            for rel in (".config/kdeglobals", ".config/kwinrc", ".config/plasma-org.kde.plasma.desktop-appletsrc",
+                        ".config/monet/prefs.json", ".config/autostart/steam.desktop", ".local/share/plasma/look.json"):
+                self.assertFalse((home / rel).exists(), rel)
+                self.assertEqual((kept / rel).read_text(), rel)
+            for rel in (".config/user-dirs.dirs", ".config/lutris/system.yml", ".local/share/Steam/steamapps/x",
+                        ".local/share/monet/notes.json", ".local/share/applications/game.desktop", "Documents/letter.txt"):
+                self.assertEqual((home / rel).read_text(), rel)
+            self.assertEqual(list((home / ".cache").iterdir()), [])
+            self.assertIn(".config/kdeglobals", [m.replace("\\", "/") for m in moved])
+        Entry = __import__("types").SimpleNamespace
+        found = self.reset.accounts([Entry(pw_name="root", pw_uid=0, pw_gid=0, pw_dir="/root"),
+                                     Entry(pw_name="ann", pw_uid=1000, pw_gid=1000, pw_dir="/var/home/ann"),
+                                     Entry(pw_name="nobody", pw_uid=65534, pw_gid=65534, pw_dir="/"),
+                                     Entry(pw_name="gone", pw_uid=1001, pw_gid=1001, pw_dir="/var/home/gone")],
+                                    there=lambda path: path != "/var/home/gone")
+        self.assertEqual([name for name, *_ in found], ["ann"])
+
+    def test_it_asks_for_a_password_and_resets_before_the_sign_in_screen(self):
+        script = (ROOT / "linux/libexec/monet-reset").read_text()
+        now = script.split("def now():", 1)[1].split("\ndef ", 1)[0]
+        # Each home is reset as its own account, never as root; Earlier versions has it all first.
+        self.assertIn("as_account(uid, gid, lambda home=home: reset_home(home, stamp))", now)
+        self.assertLess(now.index("monet-keep"), now.index("reset_etc("))
+        for name in ("keep-off", "charge-limit", "ready-user", "auto-updates-off"):
+            self.assertIn(name, self.reset.MONET)
+        unit = (ROOT / "linux/systemd/monet-reset.service").read_text()
+        self.assertIn("ConditionPathExists=/var/lib/monet/reset", unit)
+        self.assertIn("Before=display-manager.service plasmalogin.service systemd-user-sessions.service", unit)
+        quick = (ROOT / "linux/libexec/monet-quick").read_text()
+        self.assertIn('run("pkexec", f"{LIBEXECDIR}/monet-reset", "arm" if args[0] == "on" else "cancel", timeout=600)',
+                      quick)
+        # Not among the helpers Monet's polkit rule lets run without a password.
+        programs = next(line for line in (ROOT / "linux/install.sh").read_text().splitlines() if line.startswith("programs="))
+        self.assertNotIn("monet-reset", programs)
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('sheet.ask("reset on", out => sheet.resetState = sheet.json(out, sheet.resetState))', settings)
+        self.assertIn('"updates update version upgrade new reset restore rollback"', settings)
+
+
+class EncryptedDisk(unittest.TestCase):
+    """0.9.1: Monet Setup encrypts the disk; Monet's first start hands its key to the TPM (monet-seal)."""
+
+    CMDLINE = ("BOOT_IMAGE=(hd0,gpt2)/vmlinuz root=UUID=1 rd.luks.uuid=luks-ab12 rd.luks.options=ab12=tpm2-device=auto "
+               "rd.luks.key=ab12=/monet-firstboot.key:UUID=cd34 rw")
+
+    def setUp(self):
+        self.seal = libexec_helper("monet-seal")
+
+    def test_the_disk_and_its_start_up_key_come_from_the_command_line(self):
+        device, key = self.seal.disk(self.CMDLINE)
+        self.assertEqual(device.as_posix(), "/dev/disk/by-uuid/ab12")
+        self.assertEqual(key, "rd.luks.key=ab12=/monet-firstboot.key:UUID=cd34")
+        self.assertEqual(self.seal.disk("root=UUID=1 rw"), (None, ""))
+        self.assertEqual(self.seal.key_slot("No usable token is available.\nKey slot 2 unlocked.\n"), 2)
+        self.assertIsNone(self.seal.key_slot(None))
+
+    def test_the_first_start_hands_the_key_to_the_tpm(self):
+        from contextlib import redirect_stderr
+        import io
+        with tempfile_dir() as tmp:
+            key = Path(tmp) / "monet-firstboot.key"
+            key.write_bytes(b"k" * 64)
+            self.seal.FIRST_KEY, self.seal.CMDLINE = key, Path(tmp) / "cmdline"
+            self.seal.CMDLINE.write_text(self.CMDLINE)
+            ran = []
+
+            def run(*args, timeout=300):
+                ran.append([str(a) for a in args])
+                return "Key slot 0 unlocked.\n" if args[0] == "cryptsetup" else ""
+
+            self.seal.run = run
+            self.assertEqual(self.seal.first_start(), 0)
+            device = str(Path("/dev/disk/by-uuid/ab12"))
+            self.assertEqual(ran[0], ["systemd-cryptenroll", f"--unlock-key-file={key}", "--wipe-slot=tpm2",
+                                      "--tpm2-device=auto", "--tpm2-pcrs=7", device])
+            self.assertIn(["cryptsetup", "luksKillSlot", "-q", device, "0"], ran)
+            self.assertIn(["rpm-ostree", "kargs", "--delete-if-present=rd.luks.key=ab12=/monet-firstboot.key:UUID=cd34"], ran)
+            self.assertFalse(key.exists())
+            # When the chip can't learn it, the start-up key stays for the next start.
+            key.write_bytes(b"k")
+            ran.clear()
+            self.seal.run = lambda *args, timeout=300: ran.append(args) and None
+            with redirect_stderr(io.StringIO()):
+                self.assertEqual(self.seal.first_start(), 1)
+            self.assertTrue(key.exists())
+            self.assertEqual(len(ran), 1)
+
+    def test_after_the_recovery_key_the_tpm_learns_the_pc_again(self):
+        from contextlib import redirect_stdout
+        import io
+        with tempfile_dir() as tmp:
+            self.seal.CMDLINE, self.seal.RUNDIR = Path(tmp) / "cmdline", tmp
+            self.seal.CMDLINE.write_text("rd.luks.uuid=ab12")
+            tried = []
+
+            def run(*args, timeout=300):
+                unlock = next(a for a in map(str, args) if a.startswith("--unlock-key-file="))
+                tried.append(Path(unlock.split("=", 1)[1]).read_bytes())
+                return "" if tried[-1] == b"right" else None
+
+            self.seal.run = run
+            with redirect_stdout(io.StringIO()):
+                self.seal.relearn([b"wrong", b"right", b"never"])
+            self.assertEqual(tried, [b"wrong", b"right"])
+            self.assertEqual(list(Path(tmp).iterdir()), [self.seal.CMDLINE])
+            tried.clear()
+            self.seal.relearn([])
+            self.assertEqual(tried, [])
+
+    def test_the_image_unlocks_by_itself(self):
+        first = (ROOT / "linux/systemd/monet-seal.service").read_text()
+        self.assertIn("ConditionPathExists=/boot/monet-firstboot.key", first)
+        again = (ROOT / "linux/systemd/monet-seal-relearn.service").read_text()
+        for line in ("ConditionKernelCommandLine=rd.luks.uuid", "ConditionPathExists=!/boot/monet-firstboot.key",
+                     "KeyringMode=shared"):
+            self.assertIn(line, again)
+        image = (ROOT / "image/Containerfile").read_text()
+        self.assertIn("--add tpm2-tss", image)
+        self.assertIn(" cryptsetup tpm2-tss", image)
+        self.assertIn("\ncryptsetup\n", (ROOT / "image/setup/packages.txt").read_text())
+        build = (ROOT / ".github/workflows/build.yml").read_text()
+        for name in ("monet-boot", "monet-reset", "monet-seal"):
+            self.assertIn(f"linux/libexec/{name} ", build)
+            self.assertIn(name, (ROOT / "linux/uninstall.sh").read_text())
+
+
+class tempfile_dir:
+    """A folder for one test, removed afterwards (read-only files too)."""
+
+    def __enter__(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        return self.tmp.name
+
+    def __exit__(self, *exc):
+        self.tmp.cleanup()
 
 
 if __name__ == "__main__":

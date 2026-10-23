@@ -200,6 +200,19 @@ edge without the lens's second grab and blur; Baloo's "only basic indexing"
 hidden by a user copy marked `X-Monet=true`, with Steam started 45 s later
 by a transient `monet-steam-later` timer. A PC that's no longer older gets
 its glass and Steam back; a Steam autostart of the user's own is left alone.
+The answer is kept in `~/.cache/monet/older-pc` with the Monet version and
+`MemTotal` it was worked out for, so Python starts for it only when those
+change.
+
+Every PC's sign-in leaves what can wait until the desktop is up: framing the
+apps Monet hasn't painted, games on a laptop's NVIDIA chip and Zen's look run
+as `monet-session --later`, a minute after sign-in at nice 19 and idle I/O
+(a transient `monet-after-sign-in` timer), and only when this Monet, the
+menu's app folders or Zen's profiles changed since they last ran
+(`~/.cache/monet/apps-seen`); while signed in, their `.path` units keep them
+current. Before the sign-in screen, `monet-ready-boot` only starts after a
+trip to Windows, and `monet-keep-prepare` stops starting once
+`/var/lib/monet/home-subvolume` says the homes need nothing more.
 
 Monet comes in two images from one Containerfile (`ARG BASE`): `monet`, on
 Bazzite's NVIDIA image (NVIDIA's open driver, Turing and newer: GTX 16 / RTX
@@ -772,6 +785,56 @@ for every quarter of an hour), at most once a day, rsync copies the home to
 `Monet Backup/<person>` on it, leaving out caches, the Trash and games. What a
 copy replaces or deletes is kept beside it by date for three months. A week
 without a copy says so once.
+
+## Safety and recovery
+
+**A new Monet that doesn't start goes back by itself** (`monet-boot`). At
+shutdown, a staged update goes on trial (`monet-boot-arm.service`'s
+ExecStop, before ostree finalizes it): `/var/lib/monet/trial.json`, and
+where GRUB counts tries (Fedora's fallback counting in `grub.cfg`),
+`boot_counter=3` in its environment. At its first start
+(`monet-boot-check.service`) it has five minutes to bring up the sign-in
+screen, which then has to stay up for a minute: the display manager active
+and not restarting, and a greeter's or a person's session that stays the
+same one (a sign-in screen that keeps crashing comes back as new sessions).
+If it doesn't, `bootc rollback` and a restart. A start that hangs before
+then is GRUB's: after three it starts the one before (`boot_counter=-1`),
+which `bootc rollback` then keeps. Either way `/var/lib/monet/went-back.json`
+notes the update; Settings → Updates and the next sign-in say so, and
+`monet-update.service`'s ExecCondition skips that image (by digest) until a
+newer one is offered. A Monet that starts clears the note.
+
+**Reset this PC** (`monet-reset`, Settings → Updates, after an
+administrator's password: it isn't in the polkit rule's list). The reset
+happens at the next start, before the sign-in screen
+(`monet-reset.service`): a snapshot of the homes first (Earlier versions),
+then each path `ostree admin config-diff` shows changed in /etc goes back to
+the image's `/usr/etc` (Monet's copy goes in beside it first; what was there
+moves to `/var/lib/monet/before-reset/<date>/etc`), except what makes the PC
+this one: accounts and passwords, its name and identity, disks and
+encryption, language, keyboard and time zone, Wi-Fi, printers and keys.
+Monet's own (Earlier versions, battery care, Ready when you come back,
+automatic updates) go back to how they come. Each account's desktop settings
+(KDE's `k*rc` and `plasma*`, GTK, Kvantum, autostart, Monet's own, its
+default apps) move to `~/.local/share/monet/before-reset/<date>` and its
+cache is emptied, as that account (a home is its owner's to arrange, so root
+never moves things in it). Files, games, apps and their data stay.
+
+**An encrypted disk that unlocks by itself.** On a PC with a TPM 2.0,
+Monet Setup's **Encrypt this PC** is ticked: Monet's btrfs goes inside
+LUKS2. The TPM can't learn the PC under Setup (Monet's kernel is signed with
+Universal Blue's key, so Secure Boot's measurement differs from the stick's),
+so the disk's key waits on the boot partition (`rd.luks.key`) for Monet's
+first start, when `monet-seal` enrolls the TPM (`systemd-cryptenroll`, PCR 7:
+Secure Boot's state, steady through kernel updates and trips to Windows),
+wipes the key's slot and the file, and takes `rd.luks.key` off the command
+line (`rpm-ostree kargs`). The recovery key (64 letters that type the same
+on every keyboard layout) is shown once on Setup's last page and kept
+nowhere. A start the TPM can't vouch for asks for it; that start
+`monet-seal relearn` reads the key typed from root's kernel keyring
+(`KeyringMode=shared`) and enrolls the TPM again, so the next start doesn't
+ask. The image's initramfs carries the TPM's libraries (`--add tpm2-tss`).
+Fedora's installer doesn't encrypt.
 
 ## The last 30 seconds
 

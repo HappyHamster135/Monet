@@ -63,6 +63,8 @@ gdisk
 util-linux
 efibootmgr
 mokutil
+# Encrypting Monet's disk (the PC's security chip learns it at Monet's first start)
+cryptsetup
 # Making room next to Windows, and bringing its files
 ntfsprogs
 ntfs-3g

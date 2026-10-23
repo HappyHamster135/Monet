@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: Reset this PC, before the sign-in screen (when asked in Settings)
+ConditionPathExists=/var/lib/monet/reset
+After=local-fs.target monet-keep-prepare.service
+Before=display-manager.service plasmalogin.service systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-reset now
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

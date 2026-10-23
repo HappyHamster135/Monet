@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""Reset this PC: Monet as it comes, with your files kept.
+
+Settings → Updates → Reset this PC asks for it (with an administrator's password), and
+the reset itself happens at the next start, before the sign-in screen, when nothing is
+in use:
+
+- The system's settings (/etc) that differ from how Monet comes go back to it, except
+  what makes this PC this one: its accounts and passwords, its name, disks and
+  encryption, language, keyboard and time zone, Wi-Fi, printers and its keys.
+- Monet's own go back too: Earlier versions on, battery care off, Ready when you come
+  back off, updates by themselves.
+- Every account's desktop settings go back (each account's own part runs as that
+  account): Monet's look comes again at its next sign-in, with the welcome.
+
+Files, games and apps stay, and nothing is deleted: Earlier versions takes a snapshot of
+the homes first, the system's settings it replaced go to /var/lib/monet/before-reset,
+and each account's to .local/share/monet/before-reset in its home.
+
+    monet-reset arm      reset at the next start (Settings, through pkexec)
+    monet-reset cancel   don't, after all
+    monet-reset now      the reset (monet-reset.service, before the sign-in screen)
+"""
+
+import fnmatch
+import json
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+
+STATE = Path("/var/lib/monet")
+PENDING = STATE / "reset"          # asked for: the next start resets (Settings reads it)
+DONE = STATE / "reset-done"        # when it last happened: each account's next sign-in says so
+KEPT = STATE / "before-reset"      # the system's settings it replaced, by date
+ETC, DEFAULTS = Path("/etc"), Path("/usr/etc")
+STAMP = "%Y-%m-%d %H.%M"
+# What makes this PC this one, which a reset leaves as it is (paths in /etc).
+KEEP = ("passwd*", "shadow*", "group*", "gshadow*", "subuid*", "subgid*", "machine-id", "machine-info",
+        "hostname", "hosts", "fstab", "crypttab", "localtime", "locale.conf", "vconsole.conf", "adjtime",
+        "resolv.conf", "ld.so.cache", "alternatives*", "udev/hwdb.bin", "mdadm.conf", "lvm*",
+        "X11/xorg.conf.d/00-keyboard.conf", "NetworkManager/system-connections*", "ssh/ssh_host_*", "cups*",
+        "pki*", "selinux*", "ostree*", "containers*", "default/grub", "kernel*", "dracut.conf.d*")
+# Monet's own settings for the whole PC (in STATE), back to how they come.
+MONET = ("keep-off", "charge-limit", "ready-user", "ready-armed", "auto-updates-off")
+# An account's desktop settings: in ~/.config, and in ~/.local/share.
+SETTINGS = ("kdeglobals", "k*rc", "plasma*", "powerdevilrc", "powermanagementprofilesrc", "baloofilerc", "dolphinrc",
+            "spectaclerc", "systemsettingsrc", "Trolltech.conf", "gtkrc*", "gtk-3.0", "gtk-4.0", "Kvantum",
+            "xsettingsd", "autostart", "monet", "kdedefaults", "breezerc", "mimeapps.list", "menus", "environment.d",
+            "systemd", "kwinoutputconfig.json")
+SHARED = ("plasma", "kactivitymanagerd", "kxmlgui5", "kscreen")
+
+
+def run(*args, timeout=600):
+    try:
+        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def kept(rel):
+    """Whether a path in /etc is one a reset leaves (hidden ones too: the system's own marks)."""
+    return rel.startswith(".") or any(fnmatch.fnmatch(rel, pattern) for pattern in KEEP)
+
+
+def changes(listing):
+    """`ostree admin config-diff`: ("M"/"A"/"D", path in /etc) for each, parents first."""
+    found = []
+    for line in listing.splitlines():
+        kind, _, rel = line.strip().partition(" ")
+        if kind in ("M", "A", "D") and rel.strip():
+            found.append((kind, rel.strip()))
+    return sorted(found, key=lambda change: change[1])
+
+
+def reset_etc(found, into, etc=ETC, defaults=DEFAULTS, copy=None):
+    """Puts each changed path in /etc back as Monet comes, but for KEEP; what was there goes into
+    `into`. Returns the paths put back."""
+    copy = copy or (lambda source, target: run("cp", "-a", "--no-target-directory", source, target))
+    done = []
+    for _, rel in found:
+        if kept(rel) or any(rel.startswith(parent + "/") for parent in done):
+            continue
+        current, original = etc / rel, defaults / rel
+        # Monet's copy goes in beside it first: if that can't be made, this one stays as it is.
+        fresh = None
+        if original.is_symlink() or original.exists():
+            fresh = current.with_name(current.name + ".monet-reset")
+            current.parent.mkdir(parents=True, exist_ok=True)
+            if fresh.is_dir() and not fresh.is_symlink():
+                shutil.rmtree(fresh)
+            elif fresh.is_symlink() or fresh.exists():
+                fresh.unlink()
+            if copy(original, fresh) is None:
+                continue
+        if current.is_symlink() or current.exists():
+            (into / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(current), str(into / rel))
+        if fresh:
+            fresh.rename(current)
+        done.append(rel)
+    return done
+
+
+def accounts(entries=None, there=lambda path: Path(path).is_dir()):
+    """People's accounts: (name, uid, gid, home) with a home in /var/home or /home."""
+    if entries is None:
+        import pwd  # here, not at the top, so the tests can load this on any system
+        entries = pwd.getpwall()
+    return [(e.pw_name, e.pw_uid, e.pw_gid, Path(e.pw_dir)) for e in entries
+            if 1000 <= e.pw_uid < 60000 and e.pw_dir.startswith(("/var/home/", "/home/")) and there(e.pw_dir)]
+
+
+def reset_home(home, stamp):
+    """One account's desktop settings into .local/share/monet/before-reset/<stamp>, its cache emptied.
+    Runs as the account itself. Returns the names moved."""
+    into = home / ".local/share/monet/before-reset" / stamp
+    moved = []
+    for base, patterns in ((home / ".config", SETTINGS), (home / ".local/share", SHARED)):
+        try:
+            names = sorted(os.listdir(base))
+        except OSError:
+            continue
+        for name in names:
+            if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
+                target = into / base.relative_to(home) / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(base / name), str(target))
+                moved.append(str(base.relative_to(home) / name))
+    cache = home / ".cache"
+    for child in cache.iterdir() if cache.is_dir() and not cache.is_symlink() else ():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child, ignore_errors=True)
+        else:
+            child.unlink(missing_ok=True)
+    return moved
+
+
+def as_account(uid, gid, work):
+    """Runs work() as that account (never as root: a home is its owner's to arrange)."""
+    pid = os.fork()
+    if pid == 0:
+        code = 1
+        try:
+            os.setgroups([])
+            os.setgid(gid)
+            os.setuid(uid)
+            work()
+            code = 0
+        finally:
+            os._exit(code)
+    _, status = os.waitpid(pid, 0)
+    return os.waitstatus_to_exitcode(status) == 0
+
+
+def arm():
+    import pwd
+    who = os.environ.get("PKEXEC_UID", "")
+    try:
+        name = pwd.getpwuid(int(who)).pw_name if who else "root"
+    except (KeyError, ValueError):
+        name = ""
+    STATE.mkdir(parents=True, exist_ok=True)
+    PENDING.write_text(json.dumps({"by": name, "when": datetime.now().strftime(STAMP)}) + "\n")
+    PENDING.chmod(0o644)
+
+
+def now():
+    if not PENDING.exists():
+        return
+    stamp = datetime.now().strftime(STAMP)
+    # Earlier versions has everything as it was, first.
+    if Path("@LIBEXECDIR@/monet-keep").exists():
+        run("@LIBEXECDIR@/monet-keep", "snap", timeout=1800)
+    put_back = reset_etc(changes(run("ostree", "admin", "config-diff") or ""), KEPT / stamp / "etc")
+    for rel in put_back:
+        run("restorecon", "-RF", ETC / rel)
+    for name in MONET:
+        (STATE / name).unlink(missing_ok=True)
+    for name, uid, gid, home in accounts():
+        if not as_account(uid, gid, lambda home=home: reset_home(home, stamp)):
+            print(f"{name}'s settings couldn't all be reset", file=sys.stderr)
+    DONE.write_text(stamp + "\n")
+    DONE.chmod(0o644)
+    PENDING.unlink(missing_ok=True)
+    print(f"Reset: {len(put_back)} of the system's settings put back as Monet comes")
+
+
+def main(args):
+    cmd = args[0] if args else ""
+    if cmd == "arm":
+        arm()
+    elif cmd == "cancel":
+        PENDING.unlink(missing_ok=True)
+    elif cmd == "now":
+        now()
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

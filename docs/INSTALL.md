@@ -61,12 +61,20 @@ tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
    thirds of the disk for Monet, one third for Windows) or **Monet next to my
    Windows** (Windows and your files stay; it needs free space). Check the
    disk, then click **Erase & Install** (or **Install**).
+   On a PC with a security chip (TPM 2.0, which every Windows 11 PC has),
+   **Encrypt this PC** is ticked: only this PC can read Monet's disk, and
+   Monet unlocks it by itself when it starts, as Windows does with BitLocker.
 
 Monet downloads itself while it installs (5.7 GB) and shows how much is down
 and how long is left. If the connection drops, it picks up where it stopped.
 If something can't go ahead, the page says why in a sentence.
 
-6. When it says it's all set, click **Restart** and take out the USB stick.
+6. Encrypted, Setup shows your **recovery key** once: eight groups of eight
+   letters. Take a photo of it or write it down, and keep it somewhere other
+   than this PC. Monet asks for it only if it can't unlock the disk by itself
+   (after a big firmware update, or with the disk in another PC). Type it
+   with the dashes.
+7. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
 <summary>With Fedora's installer (Monet-0.9.0-Installer.iso)</summary>
@@ -137,6 +145,20 @@ start the installer again.
 **"Test this media" fails.** Use the first menu entry instead; the test is
 optional.
 
+**The start asks for a passphrase.** Monet's disk is encrypted, and this time
+the PC's security chip couldn't vouch for the start: after a firmware update,
+with Secure Boot turned off or on, or after the chip was cleared. Type your
+recovery key, dashes and all. Monet then lets the chip learn the PC again,
+so the next start doesn't ask.
+
+**Something's wrong, and going back to the Monet from before didn't help.**
+**Settings → Updates → Reset this PC** puts Monet back as it comes at the
+next restart: its settings, the desktop's look and the changes made to the
+system, for everyone. Files, games and apps stay, and so do accounts, Wi-Fi
+and printers. It asks for an administrator's password first. Each person's
+settings from before are kept in `~/.local/share/monet/before-reset`, and
+the system's in `/var/lib/monet/before-reset`.
+
 **Windows didn't install.** Choose **Windows** in the app menu. Monet
 offers to try again.
 
@@ -181,8 +203,13 @@ monet update              # install, then restart
 monet auto-updates off    # only when you ask (on turns it back)
 ```
 
-If a new version ever misbehaves, choose the previous one in the start menu
-that appears while the PC starts, or run `sudo bootc rollback` and restart.
+A new Monet that doesn't start properly goes back by itself: if it hasn't
+brought up the sign-in screen within five minutes, the PC restarts into the
+Monet from before, and Settings → Updates says so. The daily update then
+waits for the next one. If a new version misbehaves in some other way,
+choose **Settings → Updates → Go back**, choose the previous one in the start
+menu that appears while the PC starts, or run `sudo bootc rollback` and
+restart.
 
 The first time you start a version with a new look, Monet freshens your
 desktop (the painting, the colors, the glass) and keeps your panels. Your

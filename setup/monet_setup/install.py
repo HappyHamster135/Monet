@@ -13,7 +13,9 @@ Progress goes to stdout, one JSON object per line:
               keep: boot | Monet in the largest free area, Windows' EFI;
               room made first by shrinking Windows' drive when planned.
               Monet's btrfs gets two subvolumes: root (the system) and
-              download (the image, removed at the end).
+              download (the image, removed at the end). With "encrypt" (on
+              PCs with a TPM 2.0), the btrfs is inside LUKS2, with a key of
+              its own until Monet's first start.
 2. download   skopeo copies Monet into download/ as an OCI layout. Pieces
               already there are kept, so "Try again" and restarts after a
               stall pick up where they stopped.
@@ -23,6 +25,10 @@ Progress goes to stdout, one JSON object per line:
               Wi-Fi (also kept for Windows), Windows' "waiting" state, and
               Universal Blue's driver key for Secure Boot. Next to Windows,
               its files too, when asked (from its drive, read-only).
+   seal       encrypted: the key goes on the boot partition for Monet's first
+              start (monet-seal moves it into the TPM, then wipes it), and a
+              recovery key is added, shown once on the last page and kept
+              nowhere: {"recovery": "..."} before {"done": true}.
 5. finish     unmount, delete the download, done.
 
 A retry in the same session skips the disk step when it already finished
@@ -33,6 +39,7 @@ import glob
 import json
 import os
 import re
+import secrets
 import shlex
 import shutil
 import subprocess
@@ -51,6 +58,13 @@ STALL = 240                     # seconds with no bytes before a download restar
 MOK_PASSWORD = "monetsetup"
 SHIM = "\\EFI\\fedora\\shimx64.efi"
 LOG = Path("/run/monet-setup/install.log")
+# An encrypted Monet: its disk's key (in memory, for this session), the name it's opened as,
+# and the copy on the boot partition for Monet's first start (rd.luks.key points to it).
+KEY = Path("/run/monet-setup/disk.key")
+MAPPED = "monet"
+FIRST_KEY = "monet-firstboot.key"
+# Recovery keys in letters that type the same on every keyboard layout, as systemd's.
+MODHEX = "cbdefghijklnrtuv"
 
 
 class Stop(Exception):
@@ -171,14 +185,44 @@ def numbers(disk):
     return [int(line.split()[0]) for line in out.splitlines() if line.strip()[:1].isdigit()]
 
 
+def filesystem(parts):
+    """Where Monet's btrfs is: the partition, or the encrypted one opened."""
+    return parts.get("fs", parts["monet"])
+
+
+def opened(partition):
+    """The encrypted partition, opened with its key."""
+    device = f"/dev/mapper/{MAPPED}"
+    if not os.path.exists(device):
+        run("cryptsetup", "open", "--key-file", KEY, partition, MAPPED)
+    return device
+
+
+def encrypt(partition):
+    """LUKS2 on Monet's partition, with a key of its own (made once a session, so a try again
+    can open it); returns where the btrfs goes."""
+    if os.path.ismount(TOP):
+        run("umount", "-R", TOP, check=False, quiet=True)
+    run("cryptsetup", "close", MAPPED, check=False, quiet=True)
+    KEY.parent.mkdir(parents=True, exist_ok=True)
+    if not KEY.exists():
+        fd = os.open(KEY, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(secrets.token_bytes(64))
+    run("cryptsetup", "luksFormat", "--type", "luks2", "--batch-mode", "--label", "monet", "--key-file", KEY, partition)
+    return opened(partition)
+
+
 def prepare_disk(plan):
     emit(phase="disk", fraction=0.1)
     parts = prepare_erase(plan) if plan["mode"] == "erase" else prepare_keep(plan)
     emit(phase="disk", fraction=0.5)
     run("mkfs.ext4", "-F", "-q", "-L", "boot", parts["boot"])
-    run("mkfs.btrfs", "-f", "-q", "-L", "monet", parts["monet"])
+    if plan.get("encrypt"):
+        parts["fs"] = encrypt(parts["monet"])
+    run("mkfs.btrfs", "-f", "-q", "-L", "monet", filesystem(parts))
     os.makedirs(TOP, exist_ok=True)
-    run("mount", parts["monet"], TOP)
+    run("mount", filesystem(parts), TOP)
     run("btrfs", "subvolume", "create", f"{TOP}/root")
     run("btrfs", "subvolume", "create", DOWNLOAD)
     emit(phase="disk", fraction=1.0)
@@ -260,7 +304,7 @@ def download(plan, tries=8):
 
 def mount_target(parts):
     os.makedirs(TARGET, exist_ok=True)
-    run("mount", "-o", "subvol=root,compress=zstd:1", parts["monet"], TARGET)
+    run("mount", "-o", "subvol=root,compress=zstd:1", filesystem(parts), TARGET)
     os.makedirs(f"{TARGET}/boot", exist_ok=True)
     run("mount", parts["boot"], f"{TARGET}/boot")
     os.makedirs(f"{TARGET}/boot/efi", exist_ok=True)
@@ -283,10 +327,23 @@ def install(plan, parts):
         "--target-imgref", plan["image"],
         "--skip-fetch-check",
         "--karg", "rootflags=subvol=root",
+        *(luks_kargs(parts) if parts.get("fs") else []),
         TARGET, timeout=3600)
     emit(phase="install", fraction=0.9)
     boot_entry(plan, parts)
     emit(phase="install", fraction=1.0)
+
+
+def luks_kargs(parts):
+    """The kernel's command line for an encrypted Monet: the disk to unlock, by the TPM once it
+    has learnt the key, and until then by the key on the boot partition (rd.luks.key, which
+    Monet's first start takes away)."""
+    luks = run("blkid", "-s", "UUID", "-o", "value", parts["monet"], check=False, quiet=True).strip()
+    boot = run("blkid", "-s", "UUID", "-o", "value", parts["boot"], check=False, quiet=True).strip()
+    if not luks or not boot:
+        raise Stop(_("The encrypted disk wasn't found."))
+    return ["--karg", f"rd.luks.uuid={luks}", "--karg", f"rd.luks.options={luks}=tpm2-device=auto",
+            "--karg", f"rd.luks.key={luks}=/{FIRST_KEY}:UUID={boot}"]
 
 
 def boot_entry(plan, parts):
@@ -462,6 +519,35 @@ def bring_files(files, dest):
     return done > 0
 
 
+# -- sealing an encrypted Monet ------------------------------------------------------
+
+def recovery_key(choose=secrets.choice):
+    """Eight groups of eight letters (256 bits), with dashes: what the start asks for if the
+    PC's security chip ever can't unlock the disk."""
+    return "-".join("".join(choose(MODHEX) for _ in range(8)) for _ in range(8))
+
+
+def seal(parts):
+    """An encrypted Monet: its key on the boot partition for the first start, and a recovery key
+    added (returned, to be shown once; never written anywhere but the disk's own header)."""
+    if not parts.get("fs"):
+        return ""
+    first = Path(f"{TARGET}/boot") / FIRST_KEY
+    shutil.copyfile(KEY, first)
+    os.chmod(first, 0o400)
+    key = recovery_key()
+    new = KEY.with_name("recovery.key")
+    fd = os.open(new, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(key)
+        run("cryptsetup", "luksAddKey", "--batch-mode", "--key-file", KEY, parts["monet"], new)
+    finally:
+        new.unlink(missing_ok=True)
+    log("encrypted: the PC's security chip learns the disk at Monet's first start")
+    return key
+
+
 # -- 5. tidying up -----------------------------------------------------------------
 
 def unmount_target():
@@ -470,11 +556,14 @@ def unmount_target():
             run("umount", "-R", path, check=False, quiet=True)
 
 
-def finish():
+def finish(parts=None):
     emit(phase="finish", fraction=0.2)
     unmount_target()
     run("btrfs", "subvolume", "delete", DOWNLOAD, check=False)
     run("umount", TOP, check=False, quiet=True)
+    if parts and parts.get("fs"):
+        run("cryptsetup", "close", MAPPED, check=False, quiet=True)
+        KEY.unlink(missing_ok=True)
     run("sync", check=False, quiet=True)
     emit(phase="finish", fraction=1.0)
 
@@ -507,8 +596,10 @@ def main(path):
         if parts and os.path.exists(parts["monet"]):
             log("using the disk prepared by the last try")
             if not os.path.ismount(TOP):
+                if parts.get("fs"):
+                    opened(parts["monet"])
                 os.makedirs(TOP, exist_ok=True)
-                run("mount", parts["monet"], TOP)
+                run("mount", filesystem(parts), TOP)
         else:
             parts = prepare_disk(plan)
             remember(plan, parts)
@@ -518,9 +609,13 @@ def main(path):
         install(plan, parts)
         phase = "configure"
         configure(plan)
+        recovery = seal(parts)
         phase = "finish"
-        finish()
+        finish(parts)
         STATE.unlink(missing_ok=True)
+        if recovery:
+            # Shown once, on the last page; never in the log.
+            emit(recovery=recovery)
         emit(done=True)
     except Stop as e:
         emit(phase=phase, error=str(e))

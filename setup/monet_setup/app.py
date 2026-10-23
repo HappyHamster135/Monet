@@ -82,12 +82,15 @@ class Setup(QObject):
         self._joining, self._wifi_error, self._joined = False, "", ""
         self._disks, self._disk, self._mode = [], 0, "erase"
         self._bring = True
+        self._encrypt = True                 # on PCs with a TPM 2.0 (the choice shows only there)
+        self._recovery = ""                  # the recovery key, once installed: shown once, kept nowhere
         self._name, self._password = "", ""
         self._apps = [app[-1] for app in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
         self._proc = None
         # The demo is a PC that's fine, unless MONET_SETUP_DEMO_PC says otherwise ({"memory": 4}).
-        self._pc = ({"newNvidia": True, "oldNvidia": "", "memory": 16, **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
+        self._pc = ({"newNvidia": True, "oldNvidia": "", "memory": 16, "tpm": True,
+                     **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
                     if DEMO else pc.check())
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
@@ -135,6 +138,8 @@ class Setup(QObject):
             if phase == "failed":
                 self._error = "The connection dropped and didn't come back."
                 self._log = ["download: 2.6 of 5.7 GB", "download: no data for 4 minutes"]
+            if phase == "done" and self._pc.get("tpm"):
+                self._recovery = "bvcbtnhk-lrdglgcd-jvhbfneb-kticcrhd-uvenrtct-dhfjlbfg-vcbrhcuj-ngeldrtb"
 
     # -- languages and keyboards --
     @Property("QVariant", constant=True)
@@ -367,6 +372,24 @@ class Setup(QObject):
         self._bring = on
         self.changed.emit()
 
+    # -- encrypting --
+    @Property(bool, notify=changed)
+    def tpm(self):
+        return bool(self._pc.get("tpm"))
+
+    @Property(bool, notify=changed)
+    def encrypt(self):
+        return self._encrypt
+
+    @Slot(bool)
+    def setEncrypt(self, on):
+        self._encrypt = on
+        self.changed.emit()
+
+    @Property(str, notify=progressChanged)
+    def recoveryKey(self):
+        return self._recovery
+
     def _files_plan(self):
         found = self._chosen().get("files")
         if self._mode == "keep" and self._bring and found and found.get("fits"):
@@ -450,6 +473,7 @@ class Setup(QObject):
             "wifi": self._joined,
             "apps": self.picked_apps(),
             "files": self._files_plan(),
+            "encrypt": self._encrypt and bool(self._pc.get("tpm")),
         }
         fd, path = tempfile.mkstemp(prefix="monet-plan-", suffix=".json", dir="/run")
         with os.fdopen(fd, "w") as f:
@@ -494,6 +518,8 @@ class Setup(QObject):
             self._log.append(event["log"])
         if event.get("error"):
             self._error = event["error"]
+        if event.get("recovery"):
+            self._recovery = event["recovery"]
         self._phase = "done" if event.get("done") else phase
         self.progressChanged.emit()
 

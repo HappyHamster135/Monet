@@ -99,7 +99,7 @@ PlasmaCore.Dialog {
                       "windows games play anti-cheat steam restart boot doctor check") },
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
           words: i18nc("Settings search words, space-separated",
-                      "updates update version upgrade new") },
+                      "updates update version upgrade new reset restore rollback") },
         { id: "about", name: i18n("About Monet"), glyph: "M12 7.5h.01M12 11v6",
           words: i18nc("Settings search words, space-separated",
                       "about pc computer specs graphics gpu processor cpu memory ram storage disk version") }
@@ -154,6 +154,10 @@ PlasmaCore.Dialog {
     property var printerInfo: ({})
     // The Monet before the last update: { version, date, pending }, or {}.
     property var previous: ({})
+    // An update that didn't start here, so Monet went back by itself: { version, to }, or {}.
+    property var wentBack: ({})
+    // Reset this PC: { pending } once it waits for the next restart.
+    property var resetState: ({})
     property var accessInfo: ({})
     property bool dragging: false
 
@@ -313,6 +317,8 @@ PlasmaCore.Dialog {
         if (page === "updates") {
             ask("previous", out => sheet.previous = sheet.json(out, {}))
             ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))
+            ask("went-back", out => sheet.wentBack = sheet.json(out, {}))
+            ask("reset-state", out => sheet.resetState = sheet.json(out, {}))
         }
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
@@ -4838,10 +4844,25 @@ PlasmaCore.Dialog {
                         }
                     }
                 }
-                // The Monet from before the last update, kept for when one misbehaves.
+                // An update that didn't start on this PC: Monet went back by itself (monet-boot).
+                Card {
+                    tone: look
+                    visible: sheet.wentBack.version !== undefined
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: sheet.wentBack.to ? i18n("Monet went back to %1", sheet.wentBack.to) : i18n("Monet went back")
+                        detail: sheet.wentBack.version
+                            ? i18n("Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one.", sheet.wentBack.version)
+                            : i18n("The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one.")
+                    }
+                }
+                // The Monet from before the last update, kept for when one misbehaves (not the one that
+                // just didn't start).
                 Card {
                     tone: look
                     visible: sheet.previous.date !== undefined
+                        && !(sheet.wentBack.version && sheet.wentBack.version === sheet.previous.version)
                     SettingRow {
                         id: backRow
                         property bool asking: false
@@ -4877,6 +4898,57 @@ PlasmaCore.Dialog {
                             Pill {
                                 tone: look
                                 visible: sheet.previous.pending === true
+                                kind: "lily"
+                                text: i18n("Restart now")
+                                onClicked: sheet.ask("restart")
+                            }
+                        }
+                    }
+                }
+                // Reset this PC: Monet as it comes, with files, games and apps kept (monet-reset, at the
+                // next restart, after an administrator's password).
+                Card {
+                    tone: look
+                    SettingRow {
+                        id: resetRow
+                        property bool asking: false
+                        readonly property bool pending: sheet.resetState.pending === true
+                        tone: look
+                        divider: false
+                        title: pending ? i18n("Monet resets itself at your next restart") : i18n("Reset this PC")
+                        detail: pending ? i18n("Everyone's settings go back to how Monet comes. Files, games and apps stay.")
+                            : asking ? i18n("Monet's settings, the desktop's look and the changes made to the system go back to how Monet comes, for everyone. Files, games and apps stay, and so do accounts, Wi-Fi and printers. It happens at your next restart.")
+                            : i18n("For when something's wrong, and going back to the Monet from before didn't help.")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: resetRow.asking && !resetRow.pending
+                                text: i18n("Stay")
+                                onClicked: resetRow.asking = false
+                            }
+                            Pill {
+                                tone: look
+                                visible: !resetRow.pending
+                                text: resetRow.asking ? i18n("Reset at restart") : i18n("Reset")
+                                onClicked: {
+                                    if (resetRow.asking) {
+                                        resetRow.asking = false
+                                        sheet.ask("reset on", out => sheet.resetState = sheet.json(out, sheet.resetState))
+                                    } else {
+                                        resetRow.asking = true
+                                    }
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                visible: resetRow.pending
+                                text: i18n("Don't reset")
+                                onClicked: sheet.ask("reset off", out => sheet.resetState = sheet.json(out, sheet.resetState))
+                            }
+                            Pill {
+                                tone: look
+                                visible: resetRow.pending
                                 kind: "lily"
                                 text: i18n("Restart now")
                                 onClicked: sheet.ask("restart")

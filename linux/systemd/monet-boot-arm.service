@@ -1,0 +1,14 @@
+[Unit]
+Description=Monet: a new Monet waiting for the restart goes on trial (at shutdown)
+# Stopped before ostree finalizes the staged Monet, while it still shows as staged.
+After=local-fs.target ostree-finalize-staged.service
+RequiresMountsFor=/boot /var/lib
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=@LIBEXECDIR@/monet-boot arm
+
+[Install]
+WantedBy=multi-user.target

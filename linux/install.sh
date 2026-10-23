@@ -87,6 +87,11 @@ install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepar
 put 755 "$SRC/libexec/monet-ready" "$LIBEXECDIR/monet-ready"
 # Earlier versions of everyone's files (Settings → Backups): root's part.
 put 755 "$SRC/libexec/monet-keep" "$LIBEXECDIR/monet-keep"
+# A new Monet that doesn't start goes back by itself; Reset this PC; and an encrypted disk
+# that unlocks with the PC's security chip. Root's, run by systemd (Reset after a password).
+for tool in monet-boot monet-reset monet-seal; do
+    put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
+done
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
@@ -200,6 +205,12 @@ for unit in monet-keep-prepare.service monet-keep.service monet-keep.timer; do
 done
 put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.service"
 put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
+# Safety: a new Monet on trial at its first start, Reset this PC before the sign-in screen,
+# and the encrypted disk's key into the security chip (at the first start, and again when needed).
+for unit in monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
+    monet-seal-relearn.service; do
+    put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
+done
 
 # Monet updates itself, once a day (monet-update.timer: the new Monet starts at
 # the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
@@ -260,6 +271,8 @@ if [ "$IMAGE" = 1 ]; then
     systemctl --global enable monet-ready-lock.service
     systemctl enable monet-keep-prepare.service monet-keep.timer
     systemctl --global enable monet-backup.timer
+    systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
+        monet-seal-relearn.service
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -419,4 +432,8 @@ else
     systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true
     systemctl --global enable monet-backup.timer >/dev/null 2>&1 || true
+    # Started now, so the next shutdown already puts a staged update on trial.
+    systemctl enable --now monet-boot-arm.service >/dev/null 2>&1 || true
+    systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \
+        >/dev/null 2>&1 || true
 fi

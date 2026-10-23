@@ -54,6 +54,13 @@ systemctl --global disable monet-backup.timer >/dev/null 2>&1 || true
 [ -x "$PREFIX/libexec/monet-keep" ] && "$PREFIX/libexec/monet-keep" off >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-keep-prepare.service /etc/systemd/system/monet-keep.service \
     /etc/systemd/system/monet-keep.timer /etc/systemd/user/monet-backup.service /etc/systemd/user/monet-backup.timer
+# No more trials for new Monets, resets or re-learning the security chip. An encrypted disk
+# stays encrypted, and still unlocks by itself: that's systemd's part.
+systemctl disable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
+    monet-seal-relearn.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-boot-arm.service /etc/systemd/system/monet-boot-check.service \
+    /etc/systemd/system/monet-reset.service /etc/systemd/system/monet-seal.service \
+    /etc/systemd/system/monet-seal-relearn.service /var/lib/monet/trial.json /var/lib/monet/reset
 systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
@@ -70,7 +77,7 @@ rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desk
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do

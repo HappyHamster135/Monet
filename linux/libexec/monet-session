@@ -5,10 +5,35 @@
 BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+
 # Monet's words in your language (monet-quick says them), English if it can't.
 say() {
     "$LIBEXECDIR/monet-quick" say "$@" 2>/dev/null || printf '%s' "$1"
 }
+
+# What the jobs that can wait look at: this Monet, the menu's apps and Zen's profiles.
+# Anything new there and they run again (while signed in, their .path units see to it).
+apps_now() {
+    { "$BINDIR/monet" --version
+      stat -c '%n %Y' /var/lib/flatpak/exports/share/applications "$DATA/flatpak/exports/share/applications" \
+          "$DATA/applications" "$HOME/.var/app/app.zen_browser.zen/.zen"
+    } 2>/dev/null | cksum
+}
+apps_seen="$CACHE/monet/apps-seen"
+
+# The jobs that can wait, run a minute after sign-in at the lowest priority (below) so the
+# desktop starts without them: apps Monet hasn't painted get its canvas under their icons
+# (it looks through every icon theme), games start on a laptop's NVIDIA chip, and Zen
+# wears Monet's look.
+if [ "${1:-}" = --later ]; then
+    "$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1
+    "$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1
+    "$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1
+    mkdir -p "$(dirname "$apps_seen")" && apps_now > "$apps_seen"
+    exit 0
+fi
 
 "$BINDIR/monet" shortcuts 2>/dev/null
 
@@ -59,7 +84,17 @@ fi
 # inside files (unless that's been chosen), and Steam starts a little after the
 # desktop instead of with it.
 steam_later="${XDG_CONFIG_HOME:-$HOME/.config}/autostart/steam.desktop"
-if [ "$("$LIBEXECDIR/monet-quick" older-pc 2>/dev/null)" = yes ]; then
+# Worked out once per Monet and amount of memory, not at every sign-in: monet-quick takes
+# a moment to start, and an older PC is the one that feels it.
+older="$CACHE/monet/older-pc"
+older_key="$("$BINDIR/monet" --version 2>/dev/null) $(grep -m1 '^MemTotal' /proc/meminfo 2>/dev/null)"
+if [ "$(head -1 "$older" 2>/dev/null)" = "$older_key" ]; then
+    older_pc="$(sed -n 2p "$older")"
+else
+    older_pc="$("$LIBEXECDIR/monet-quick" older-pc 2>/dev/null)"
+    [ -n "$older_pc" ] && mkdir -p "$(dirname "$older")" && printf '%s\n%s\n' "$older_key" "$older_pc" > "$older"
+fi
+if [ "$older_pc" = yes ]; then
     mkdir -p "$looks" && : > "$looks/glass-lite"
     if [ ! -e "$looks/files-names" ]; then
         [ -n "$(kreadconfig6 --file baloofilerc --group General --key 'only basic indexing' 2>/dev/null)" ] ||
@@ -122,15 +157,39 @@ if [ -n "$version" ] && [ "$(cat "$looks/seen-version" 2>/dev/null)" != "$versio
     mkdir -p "$looks" && printf '%s\n' "$version" > "$looks/seen-version"
 fi
 
-# Apps Monet hasn't painted get its canvas under their own icons, so every app
-# fits in (monet-frames.path does it as apps arrive). In the background: it
-# looks through every icon theme.
-"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1 &
-# On a laptop with an NVIDIA chip, games start on it (monet-frames.path too).
-"$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1 &
-# Zen, the browser, in Monet's look, freshened from this Monet's copy
-# (monet-zen.path does it as Zen arrives).
-"$LIBEXECDIR/monet-quick" zen >/dev/null 2>&1 &
+# A new Monet that didn't start went back by itself (monet-boot): said once to each account that
+# was here before.
+went=/var/lib/monet/went-back.json
+if [ -e "$went" ] && [ -e "$looks/seen-version" ] && [ "$went" -nt "$looks/went-back-seen" ] \
+    && command -v notify-send >/dev/null; then
+    bad="$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$went")"
+    good="$(sed -n 's/.*"to": "\([^"]*\)".*/\1/p' "$went")"
+    if [ -n "$good" ]; then title="$(say "Monet went back to %1" "$good")"; else title="$(say "Monet went back")"; fi
+    if [ -n "$bad" ]; then
+        body="$(say "Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one." "$bad")"
+    else
+        body="$(say "The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one.")"
+    fi
+    notify-send --app-name=Monet --icon=monet "$title" "$body"
+    touch "$looks/went-back-seen"
+fi
+
+# After Reset this PC (monet-reset), each account that had settings to reset hears it once.
+if [ -e /var/lib/monet/reset-done ] && [ -d "$DATA/monet/before-reset" ] \
+    && [ /var/lib/monet/reset-done -nt "$looks/reset-seen" ] && command -v notify-send >/dev/null; then
+    notify-send --app-name=Monet --icon=monet "$(say "Monet is as it came")" \
+        "$(say "Your files, games and apps are all here. Your settings from before are kept, in case you want one back.")"
+    mkdir -p "$looks" && touch "$looks/reset-seen"
+fi
+
+# The jobs that can wait (--later, above), only when something they look at changed
+# since they last ran: a new Monet, apps that arrived while signed out, a new Zen profile.
+if [ "$(apps_now)" != "$(cat "$apps_seen" 2>/dev/null)" ]; then
+    if ! systemd-run --user --quiet --collect --unit=monet-after-sign-in --on-active=60 --nice=19 \
+        --property=IOSchedulingClass=idle "$LIBEXECDIR/monet-session" --later >/dev/null 2>&1; then
+        (sleep 60; nice -n 19 ionice -c 3 "$LIBEXECDIR/monet-session" --later) >/dev/null 2>&1 &
+    fi
+fi
 
 # Monet's widgets on the desktop, once, after the look (which may lay the
 # desktop out afresh); until Plasma had a desktop for them, at every sign-in.

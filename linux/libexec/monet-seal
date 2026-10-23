@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Monet's encrypted disk unlocks by itself, with the PC's security chip (TPM 2.0).
+
+Monet Setup encrypts the disk (LUKS2) with a key that's there only for the first
+start: a file on the boot partition, which the kernel's command line points to
+(rd.luks.key). The TPM can't learn the PC during Setup: Monet's kernel is signed
+with Universal Blue's key, so the PC measures its own start differently from the
+USB stick's. So Monet's first start does it: the TPM learns the disk's key, sealed
+to Secure Boot's state (PCR 7); the start-up key is wiped from the disk and the boot
+partition, and the command line forgets it. From then on Monet starts by itself.
+
+When the PC's start changes in a way the TPM can't vouch for (a firmware update that
+changes Secure Boot's keys, the TPM cleared), the start asks for the recovery key.
+That start, the TPM learns the PC again with the key that was typed (systemd keeps
+it in root's kernel keyring for a couple of minutes), so the next ones don't ask.
+
+    monet-seal first-start   at the first start (monet-seal.service)
+    monet-seal relearn       at each start of an encrypted Monet (monet-seal-relearn.service):
+                             only does anything when the recovery key was typed
+"""
+
+import ctypes
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+FIRST_KEY = Path("/boot/monet-firstboot.key")
+CMDLINE = Path("/proc/cmdline")
+RUNDIR = "/run"  # where a typed key waits, in memory, while the chip learns it
+PCRS = "7"  # Secure Boot's state: the same through kernel updates and trips to Windows
+
+
+def run(*args, timeout=300):
+    """Everything it said, or None when it failed."""
+    try:
+        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return (done.stdout or "") + (done.stderr or "") if done.returncode == 0 else None
+
+
+def disk(cmdline=None):
+    """The encrypted disk (/dev/disk/by-uuid/...) and the rd.luks.key argument, from the kernel's
+    command line: (None, "") when Monet isn't encrypted."""
+    words = (CMDLINE.read_text() if cmdline is None else cmdline).split()
+    uuid = next((w.split("=", 1)[1] for w in words if w.startswith("rd.luks.uuid=")), "").removeprefix("luks-")
+    key = next((w for w in words if w.startswith("rd.luks.key=")), "")
+    return (Path("/dev/disk/by-uuid") / uuid if uuid else None), key
+
+
+def enroll(device, unlock):
+    """The TPM learns the disk's key (in a slot of its own; one it had before goes)."""
+    return run("systemd-cryptenroll", f"--unlock-key-file={unlock}", "--wipe-slot=tpm2", "--tpm2-device=auto",
+               f"--tpm2-pcrs={PCRS}", device) is not None
+
+
+def key_slot(said):
+    """The slot `cryptsetup open --test-passphrase -v` says the key opened, or None."""
+    found = re.search(r"Key slot (\d+) unlocked", said or "")
+    return int(found.group(1)) if found else None
+
+
+def wipe(path):
+    """A key file overwritten, then deleted."""
+    try:
+        size = path.stat().st_size
+        with open(path, "r+b") as f:
+            f.write(b"\0" * size)
+            f.flush()
+            os.fsync(f.fileno())
+    except OSError:
+        pass
+    path.unlink(missing_ok=True)
+
+
+def first_start():
+    device, karg = disk()
+    if not device or not FIRST_KEY.exists():
+        return 0
+    if not enroll(device, FIRST_KEY):
+        print("The security chip couldn't learn the disk's key; trying again at the next start", file=sys.stderr)
+        return 1
+    # Then the start-up key goes: its slot, the file, and the command line's mention of it.
+    slot = key_slot(run("cryptsetup", "open", "--test-passphrase", "-v", "--key-file", FIRST_KEY, device))
+    if slot is not None:
+        run("cryptsetup", "luksKillSlot", "-q", device, slot)
+    wipe(FIRST_KEY)
+    if karg:
+        run("rpm-ostree", "kargs", f"--delete-if-present={karg}", timeout=900)
+    return 0
+
+
+def typed_keys():
+    """Keys typed for disks at this start, newest first: systemd keeps them in root's kernel keyring
+    ("cryptsetup", for two and a half minutes)."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    keyctl, search, read, user_keyring = ctypes.c_long(250), ctypes.c_long(10), ctypes.c_long(11), ctypes.c_long(-4)
+    serial = libc.syscall(keyctl, search, user_keyring, b"user", b"cryptsetup", ctypes.c_long(0))
+    if serial < 0:
+        return [], None
+    size = libc.syscall(keyctl, read, ctypes.c_long(serial), None, ctypes.c_long(0))
+    if size <= 0:
+        return [], serial
+    buf = ctypes.create_string_buffer(size)
+    if libc.syscall(keyctl, read, ctypes.c_long(serial), buf, ctypes.c_long(size)) < 0:
+        return [], serial
+    return [key for key in buf.raw[:size].split(b"\0") if key][::-1], serial
+
+
+def relearn(keys=None):
+    device, _ = disk()
+    if not device:
+        return 0
+    keys, serial = typed_keys() if keys is None else (keys, None)
+    for key in keys:
+        fd, name = tempfile.mkstemp(dir=RUNDIR)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(key)
+            if enroll(device, name):
+                print("The security chip knows this PC again: the next start unlocks by itself")
+                if serial is not None:
+                    ctypes.CDLL(None).syscall(ctypes.c_long(250), ctypes.c_long(21), ctypes.c_long(serial))
+                return 0
+        finally:
+            Path(name).unlink(missing_ok=True)
+    return 0
+
+
+def main(args):
+    cmd = args[0] if args else ""
+    if cmd == "first-start":
+        return first_start()
+    if cmd == "relearn":
+        return relearn()
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

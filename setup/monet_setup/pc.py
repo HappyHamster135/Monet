@@ -36,15 +36,27 @@ def memory(meminfo=Path("/proc/meminfo")):
     return None
 
 
-def check(cards=None, gb=None):
+def tpm2(chips=Path("/sys/class/tpm")):
+    """Whether the PC has a TPM 2.0, the security chip that unlocks an encrypted disk by itself."""
+    for chip in sorted(chips.glob("tpm[0-9]*")):
+        try:
+            if (chip / "tpm_version_major").read_text().strip() == "2":
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def check(cards=None, gb=None, tpm=None):
     """{"newNvidia": a GTX 16 / RTX 20 or newer, "oldNvidia": "only" (nothing else to draw with),
-    "beside" (built-in graphics too) or "", "memory": GB or None}."""
+    "beside" (built-in graphics too) or "", "memory": GB or None, "tpm": a TPM 2.0}."""
     cards = graphics() if cards is None else cards
     gb = memory() if gb is None else gb
     old = [c for c in cards if c[0] == NVIDIA and int(c[1], 16) < TURING]
     rest = [c for c in cards if c not in old]
     return {"newNvidia": any(c[0] == NVIDIA for c in rest), "memory": gb,
-            "oldNvidia": "only" if old and not rest else "beside" if old else ""}
+            "oldNvidia": "only" if old and not rest else "beside" if old else "",
+            "tpm": tpm2() if tpm is None else tpm}
 
 
 def image_for(image, facts):

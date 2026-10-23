@@ -44,10 +44,21 @@ Test machines:
 - [ ] Display shows HDR and Smoother games on a monitor that can do them, and they change the monitor
 - [ ] Games & Controllers lists a game installed here whose anti-cheat needs Windows
 
+### Safety and recovery (0.9.1)
+
+- [ ] Monet Setup on a PC with a TPM 2.0: Encrypt this PC is ticked; after installing, the recovery key page shows eight groups of eight letters, and Continue waits for "I've kept my recovery key"
+- [ ] The first start (after the blue screen) asks for no passphrase; afterwards `sudo systemd-cryptenroll /dev/disk/by-uuid/<uuid>` lists a tpm2 slot and a password slot (the recovery key), `/boot/monet-firstboot.key` is gone, and after the next restart `/proc/cmdline` has no `rd.luks.key`
+- [ ] Turn Secure Boot off (or clear the TPM): the start asks for the passphrase; the recovery key opens it, and the start after that doesn't ask
+- [ ] In a VM: install an update, restart, and within its first minute stop the sign-in screen (`sudo systemctl stop display-manager`): five minutes later the PC restarts into the Monet from before, Settings → Updates says "Monet went back to …", the next sign-in says so too, and `sudo systemctl start monet-update` skips that update
+- [ ] An update that starts normally: `/var/lib/monet/trial.json` is gone a minute after the sign-in screen, and `grub2-editenv list` has no `boot_counter`
+- [ ] Settings → Updates → Reset this PC asks for the password; after Restart now: Monet's look and welcome come back, Documents, games, apps, Wi-Fi and printers are still there, the settings from before are in `~/.local/share/monet/before-reset`, and a note says Monet is as it came
+
 ### Older PCs and laptops
 
 - [ ] `/usr/libexec/monet-quick older-pc` says `yes` with 8 GB of memory or less (or a hard disk), `no` otherwise
 - [ ] On an older PC: `~/.config/monet/glass-lite` is there, Steam opens about 45 s after the desktop, and `kreadconfig6 --file baloofilerc --group General --key "only basic indexing"` says `true`
+- [ ] Sign-in: `systemctl --user list-timers` shows `monet-after-sign-in` for a minute only after something changed (the first sign-in after an update, or an app installed while signed out); signing out and in again with nothing new shows none
+- [ ] A normal start: `systemctl status monet-ready-boot monet-keep-prepare` say "condition unmet", and Settings → About Monet → Last start shows where the start's time went
 - [ ] On a laptop with an NVIDIA chip beside the built-in graphics: a game from the Store's Play row (Prism Launcher, RetroArch) runs on the NVIDIA chip (`nvidia-smi` lists it), while the desktop and Steam's window don't
 
 ## 2. Switching

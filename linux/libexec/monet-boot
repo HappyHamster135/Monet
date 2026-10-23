@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""A new Monet that doesn't start goes back by itself.
+
+An update waits (staged) until the PC restarts, and then it's on trial: at its first
+start it has to bring up the sign-in screen and keep it up for a minute. If it hasn't
+within five minutes, Monet goes back to the one before and restarts into it. A new
+Monet that doesn't get that far (the PC hangs or stops while starting) is caught by
+GRUB, where its menu counts tries (Fedora's fallback counting): after three starts
+without one that worked it starts the one before, which Monet then keeps. Either way
+the update is noted (Settings → Updates says so) and the daily update leaves it
+alone, waiting for the next one.
+
+Runs as root, from systemd:
+
+    monet-boot arm         at shutdown (monet-boot-arm.service): a staged Monet goes on trial
+    monet-boot check       at a start on trial (monet-boot-check.service): it worked, or back it goes
+    monet-boot may-update  before the daily update (monet-update.service): exit 1 to skip the one
+                           that didn't start here
+"""
+
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+STATE = Path("/var/lib/monet")
+TRIAL = STATE / "trial.json"          # the Monet on trial, and the one before it
+WENT_BACK = STATE / "went-back.json"  # an update that didn't start here (Settings reads it)
+GRUB_CONFIGS = (Path("/boot/grub2/grub.cfg"), Path("/boot/efi/EFI/fedora/grub.cfg"))
+TRIES = 3     # starts GRUB gives a new Monet before it starts the one before
+WAIT = 300    # seconds a new Monet has to bring up the sign-in screen
+STEADY = 60   # and then to keep it up, with nothing restarting
+
+
+def run(*args, timeout=120):
+    """stdout, or None when it failed."""
+    try:
+        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def read(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def write(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value) + "\n")
+    path.chmod(0o644)
+
+
+def bootc_status():
+    try:
+        return json.loads(run("bootc", "status", "--json") or "{}").get("status") or {}
+    except ValueError:
+        return {}
+
+
+def deployment(status, which):
+    """(image digest, version) of bootc's booted, staged or rollback deployment."""
+    found = (status.get(which) or {}).get("image") or {}
+    return found.get("imageDigest"), found.get("version") or ""
+
+
+def grub_counts(configs=GRUB_CONFIGS):
+    """Whether the PC's GRUB counts a new Monet's tries."""
+    for config in configs:
+        try:
+            if "boot_counter" in config.read_text(errors="replace"):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def grub_env():
+    out = run("grub2-editenv", "-", "list") or ""
+    return dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+
+
+def arm(status=None, counts=None):
+    """At shutdown: the Monet staged for this restart goes on trial."""
+    status = bootc_status() if status is None else status
+    digest, version = deployment(status, "staged")
+    before, before_version = deployment(status, "booted")
+    # Nothing staged, or the same Monet with other settings (its kernel arguments): no trial.
+    if not digest or digest == before:
+        return
+    write(TRIAL, {"digest": digest, "version": version, "before": before, "beforeVersion": before_version})
+    if grub_counts() if counts is None else counts:
+        run("grub2-editenv", "-", "set", f"boot_counter={TRIES}", "boot_success=0")
+
+
+def manager():
+    """The display manager (the sign-in screen's service): (active, restarts, since)."""
+    out = run("systemctl", "show", "display-manager.service", "-p", "ActiveState", "-p", "NRestarts",
+              "-p", "ActiveEnterTimestampMonotonic") or ""
+    props = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+    return props.get("ActiveState") == "active", props.get("NRestarts", "0"), props.get("ActiveEnterTimestampMonotonic", "")
+
+
+def sessions():
+    """The sign-in screen's session, or someone's: the ids of those online, as a set."""
+    found = set()
+    for line in (run("loginctl", "list-sessions", "--no-legend") or "").splitlines():
+        session = line.split()[0] if line.split() else ""
+        out = run("loginctl", "show-session", session, "-p", "Class", "-p", "State") or ""
+        props = dict(item.split("=", 1) for item in out.splitlines() if "=" in item)
+        if props.get("Class") in ("greeter", "user") and props.get("State") in ("online", "active"):
+            found.add(session)
+    return frozenset(found)
+
+
+def desktop_up(look=None, wait=WAIT, steady=STEADY, clock=time):
+    """Whether the sign-in screen (or a session) came up within `wait` seconds and then stayed,
+    for `steady` seconds, with nothing restarting: a sign-in screen that keeps crashing doesn't count."""
+    look = look or (lambda: (manager(), sessions()))
+    end = clock.monotonic() + wait
+    seen = since = None
+    # Up by `end`, and then steady: by `end + steady` at the latest, however it flickers.
+    while clock.monotonic() < end + steady:
+        (active, restarts, entered), online = look()
+        now = clock.monotonic()
+        if active and online:
+            if seen != (restarts, entered, online):
+                seen, since = (restarts, entered, online), now
+            elif now - since >= steady:
+                return True
+        else:
+            seen = since = None
+            if now >= end:
+                return False
+        clock.sleep(5)
+    return False
+
+
+def went_back(trial, now=time.time):
+    write(WENT_BACK, {"version": trial.get("version", ""), "digest": trial.get("digest"),
+                      "to": trial.get("beforeVersion", ""), "when": int(now())})
+
+
+def done(trial=None):
+    """The trial is over: GRUB stops counting, and the next start is an ordinary one."""
+    TRIAL.unlink(missing_ok=True)
+    run("grub2-editenv", "-", "unset", "boot_counter")
+    run("grub2-editenv", "-", "set", "boot_success=1")
+
+
+def check(status=None, up=None, env=None):
+    """At a start with a Monet on trial."""
+    trial = read(TRIAL)
+    if not trial:
+        return "none"
+    status = bootc_status() if status is None else status
+    env = grub_env() if env is None else env
+    booted, _ = deployment(status, "booted")
+    if booted == trial.get("digest"):
+        if (up or desktop_up)():
+            done()
+            # The update waited for (one that didn't start here) is history once a Monet starts.
+            WENT_BACK.unlink(missing_ok=True)
+            return "passed"
+        if not deployment(status, "rollback")[0]:
+            done()
+            return "nothing to go back to"
+        went_back(trial)
+        done()
+        run("bootc", "rollback")
+        run("systemctl", "reboot")
+        return "went back"
+    if env.get("boot_counter") == "-1":
+        # GRUB gave up on it and started the one before: that one stays the one that starts.
+        went_back(trial)
+        done()
+        run("bootc", "rollback")
+        return "went back"
+    if trial.get("digest") not in (deployment(status, "staged")[0], deployment(status, "rollback")[0]):
+        # It never got onto the disk (the PC stopped while shutting down): nothing is on trial.
+        done()
+        return "none"
+    # The one before was picked in the start menu: the new one is still next.
+    return "waiting"
+
+
+def may_update(status=None, refresh=True):
+    """0: go ahead with the daily update. 1: skip it, it's the one that didn't start here."""
+    note = read(WENT_BACK)
+    if not note or not note.get("digest"):
+        return 0
+    if refresh:
+        run("bootc", "upgrade", "--check", timeout=300)
+    status = bootc_status() if status is None else status
+    offered = ((status.get("booted") or {}).get("cachedUpdate") or {}).get("imageDigest")
+    return 1 if offered == note["digest"] else 0
+
+
+def main(args):
+    cmd = args[0] if args else ""
+    if cmd == "arm":
+        arm()
+    elif cmd == "check":
+        check()
+    elif cmd == "may-update":
+        return may_update()
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -2,6 +2,10 @@
 Description=Monet: ready when you come back, decided before the sign-in screen
 After=local-fs.target
 Before=display-manager.service plasmalogin.service
+# Only after a trip to Windows, or to take back the last one's sign-in: any other start has
+# nothing to decide, and the sign-in screen needn't wait for it.
+ConditionPathExists=|/var/lib/monet/ready-armed
+ConditionPathExists=|/etc/plasmalogin.conf.d/zz-monet-ready.conf
 
 [Service]
 Type=oneshot

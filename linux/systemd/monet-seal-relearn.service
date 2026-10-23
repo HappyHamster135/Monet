@@ -1,0 +1,16 @@
+[Unit]
+Description=Monet: after a start that needed the recovery key, the PC's security chip learns it again
+# Only an encrypted Monet, past its first start.
+ConditionKernelCommandLine=rd.luks.uuid
+ConditionPathExists=!/boot/monet-firstboot.key
+After=local-fs.target cryptsetup.target monet-seal.service
+RequiresMountsFor=/boot
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-seal relearn
+# The key typed at the start waits in root's own kernel keyring: this links that keyring in.
+KeyringMode=shared
+
+[Install]
+WantedBy=multi-user.target

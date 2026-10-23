@@ -31,6 +31,9 @@ ApplicationWindow {
     property int step: setup.startStep
     readonly property bool installing: step === 5
     readonly property string phase: setup.phase
+    // An encrypted Monet's recovery key comes before All set, until it's said to be kept.
+    property bool keyKept: false
+    readonly property bool showingKey: installing && phase === "done" && setup.recoveryKey !== "" && !keyKept
 
     function px(n) { return Math.max(1, Math.round(n * u)) }
 
@@ -164,7 +167,7 @@ ApplicationWindow {
                 anchors.bottom: footer.top
                 anchors.bottomMargin: px(16)
                 sourceComponent: !installing ? [helloStep, wifiStep, personStep, appsStep, readyStep][step]
-                               : phase === "done" ? doneStep : phase === "failed" ? failedStep : progressStep
+                               : showingKey ? keyStep : phase === "done" ? doneStep : phase === "failed" ? failedStep : progressStep
                 onLoaded: rise.restart()
                 ParallelAnimation {
                     id: rise
@@ -208,12 +211,14 @@ ApplicationWindow {
                 }
                 PillButton {
                     id: next
-                    text: installing ? tr("Restart")
+                    text: showingKey ? tr("Continue") : installing ? tr("Restart")
                         : step === 4 ? (setup.mode === "erase" ? tr("Erase & Install") : tr("Install"))
                         : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : tr("Continue")
                     accent: step === 4 && !installing
-                    enabled: installing || (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
+                    enabled: showingKey ? !!stepLoader.item && stepLoader.item.ready === true
+                        : installing || (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
                     onClicked: {
+                        if (showingKey) { keyKept = true; return }
                         if (installing) { setup.restart(); return }
                         var item = stepLoader.item
                         if (item.leave && !item.leave())
@@ -581,63 +586,22 @@ ApplicationWindow {
             Note { text: setup.blocker; warm: true; visible: text !== "" }
             Note { text: setup.roomNote; visible: setup.blocker === "" && text !== "" }
             // Windows' files come along, copied into Monet's folders.
-            AbstractButton {
-                id: bringFiles
+            Tick {
                 width: parent.width
-                height: px(68)
                 visible: setup.blocker === "" && !!setup.files && setup.files.fits
-                hoverEnabled: true
-                leftPadding: px(16)
-                rightPadding: px(16)
+                title: tr("Bring my files")
+                detail: setup.files ? setup.files.text : ""
+                checked: setup.bring
                 onClicked: setup.setBring(!setup.bring)
-                Accessible.role: Accessible.CheckBox
-                Accessible.name: tr("Bring my files")
-                Accessible.checked: setup.bring
-                background: Rectangle {
-                    radius: px(16)
-                    color: setup.bring ? Qt.rgba(1, 1, 1, 0.85) : bringFiles.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
-                    border.color: setup.bring ? lily : "transparent"
-                    border.width: Math.max(2, px(2))
-                    Behavior on color { ColorAnimation { duration: 140 } }
-                }
-                contentItem: RowLayout {
-                    spacing: px(12)
-                    Rectangle {
-                        Layout.preferredWidth: px(20)
-                        Layout.preferredHeight: px(20)
-                        radius: width / 2
-                        color: setup.bring ? lily : "transparent"
-                        border.width: setup.bring ? 0 : Math.max(1, px(1.5))
-                        border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
-                        Shape {
-                            visible: setup.bring
-                            anchors.centerIn: parent
-                            width: 24
-                            height: 24
-                            scale: px(12) / 24
-                            ShapePath {
-                                strokeColor: "#FFFFFF"
-                                strokeWidth: 3
-                                fillColor: "transparent"
-                                capStyle: ShapePath.RoundCap
-                                joinStyle: ShapePath.RoundJoin
-                                PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
-                            }
-                        }
-                    }
-                    Column {
-                        Layout.fillWidth: true
-                        spacing: px(2)
-                        Text { text: tr("Bring my files"); font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink }
-                        Text {
-                            horizontalAlignment: Text.AlignLeft
-                            width: parent.width
-                            text: setup.files ? setup.files.text : ""
-                            wrapMode: Text.WordWrap
-                            font.family: sans; font.pixelSize: px(12); lineHeight: px(16); lineHeightMode: Text.FixedHeight; color: dim
-                        }
-                    }
-                }
+            }
+            // Encrypted, as Windows and Macs are: only on a PC whose security chip unlocks it by itself.
+            Tick {
+                width: parent.width
+                visible: setup.blocker === "" && setup.tpm
+                title: tr("Encrypt this PC")
+                detail: tr("Only this PC can read its disk: taken out, it's locked. Monet unlocks it by itself when it starts.")
+                checked: setup.encrypt
+                onClicked: setup.setEncrypt(!setup.encrypt)
             }
             Note {
                 text: setup.files ? setup.files.text : ""
@@ -722,6 +686,46 @@ ApplicationWindow {
                         text: tr("Take a photo of these steps with your phone first: this screen goes away when the PC restarts.")
                     }
                 }
+            }
+        }
+    }
+
+    // An encrypted Monet's recovery key: shown once, before All set, and kept nowhere.
+    Component {
+        id: keyStep
+        Column {
+            readonly property bool ready: kept.checked
+            property bool busy: false
+            spacing: px(18)
+            Title { text: tr("Your recovery key") }
+            Body {
+                text: tr("This PC's disk is encrypted, and Monet unlocks it by itself. If it ever can't, after a big firmware update or with the disk in another PC, it asks for this key. Without it nobody can read the disk, not even you.")
+            }
+            Card {
+                height: recovery.implicitHeight + px(36)
+                Text {
+                    id: recovery
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: px(18)
+                    LayoutMirroring.enabled: false
+                    horizontalAlignment: Text.AlignHCenter
+                    textFormat: Text.PlainText
+                    // Four groups to a line, as it's typed: dashes and all.
+                    text: setup.recoveryKey.split("-").slice(0, 4).join("-") + "-\n" + setup.recoveryKey.split("-").slice(4).join("-")
+                    font.family: "monospace"; font.pixelSize: px(18); lineHeight: px(28); lineHeightMode: Text.FixedHeight; color: ink
+                }
+            }
+            Body {
+                font.pixelSize: px(14)
+                text: tr("Take a photo of it or write it down, and keep it somewhere other than this PC. It isn't shown again.")
+            }
+            Tick {
+                id: kept
+                width: parent.width
+                checkable: true
+                title: tr("I've kept my recovery key")
             }
         }
     }
@@ -860,6 +864,72 @@ ApplicationWindow {
         }
         leftPadding: Math.round(16 * u)
         rightPadding: Math.round(16 * u)
+    }
+
+    // A choice to tick: a pebble of paper with a lily ring, and the check in a lily dot.
+    component Tick: AbstractButton {
+        id: tick
+        readonly property real u: Window.window ? Window.window.u : 1
+        property string title
+        property string detail
+        height: Math.round((detail !== "" ? 68 : 52) * u)
+        hoverEnabled: true
+        leftPadding: Math.round(16 * u)
+        rightPadding: Math.round(16 * u)
+        Accessible.role: Accessible.CheckBox
+        Accessible.name: title
+        Accessible.checked: checked
+        background: Rectangle {
+            radius: Math.round(16 * tick.u)
+            color: tick.checked ? Qt.rgba(1, 1, 1, 0.85) : tick.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
+            border.color: tick.checked ? "#357F72" : "transparent"
+            border.width: Math.max(2, Math.round(2 * tick.u))
+            Behavior on color { ColorAnimation { duration: 140 } }
+        }
+        contentItem: RowLayout {
+            spacing: Math.round(12 * tick.u)
+            Rectangle {
+                Layout.preferredWidth: Math.round(20 * tick.u)
+                Layout.preferredHeight: Math.round(20 * tick.u)
+                radius: width / 2
+                color: tick.checked ? "#357F72" : "transparent"
+                border.width: tick.checked ? 0 : Math.max(1, Math.round(1.5 * tick.u))
+                border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
+                Shape {
+                    visible: tick.checked
+                    anchors.centerIn: parent
+                    width: 24
+                    height: 24
+                    scale: Math.round(12 * tick.u) / 24
+                    ShapePath {
+                        strokeColor: "#FFFFFF"
+                        strokeWidth: 3
+                        fillColor: "transparent"
+                        capStyle: ShapePath.RoundCap
+                        joinStyle: ShapePath.RoundJoin
+                        PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
+                    }
+                }
+            }
+            Column {
+                Layout.fillWidth: true
+                spacing: Math.round(2 * tick.u)
+                Text {
+                    text: tick.title
+                    font.family: "Inter"; font.pixelSize: Math.round(14 * tick.u); font.weight: Font.DemiBold; color: "#1B1A19"
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    width: parent.width
+                    visible: tick.detail !== ""
+                    text: tick.detail
+                    wrapMode: Text.WordWrap
+                    font.family: "Inter"; font.pixelSize: Math.round(12 * tick.u)
+                    lineHeight: Math.round(16 * tick.u); lineHeightMode: Text.FixedHeight
+                    color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.64)
+                }
+            }
+        }
     }
 
     component PillButton: AbstractButton {
