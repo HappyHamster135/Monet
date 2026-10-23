@@ -27,7 +27,7 @@ Windows downloads in the background while you use it.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.8.5-Make-USB-Stick.exe** from the
+1. Download **Monet-0.9.0-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -40,19 +40,19 @@ On a Windows PC (this one, or any other):
    then says it's ready.
 
 The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.8.5-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.8.5-Installer.iso**). Monet Setup is in a release only once
+it (**Monet-0.9.0-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.9.0-Installer.iso**). Monet Setup is in a release only once
 it has installed Monet in a test PC.
 
-On Linux or a Mac, download **Monet-0.8.5-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.8.5-Installer.iso**) and write it with your disk
+On Linux or a Mac, download **Monet-0.9.0-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.9.0-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.8.5**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.0**).
 2. Monet Setup opens over the harbor at dawn. Choose your language and
    keyboard, and click **Continue**.
 3. Connect to Wi-Fi (with a cable, this step is skipped).
@@ -69,7 +69,7 @@ If something can't go ahead, the page says why in a sentence.
 6. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.8.5-Installer.iso)</summary>
+<summary>With Fedora's installer (Monet-0.9.0-Installer.iso)</summary>
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -197,21 +197,30 @@ another way the next time.
 
 ---
 
-## Keep your current Windows instead
+## Keep your current Windows and your files instead
 
-On the USB stick's start menu, choose **Install Monet next to my Windows**.
-Windows and your files stay. The installer then asks where to put Monet:
-choose **Free up space** to shrink Windows, or use free space you made in
-Windows' **Disk Management**.
+No full reset needed. In Monet Setup, choose **Monet next to my Windows**:
+Windows and your files stay, and Monet makes room for itself by shrinking
+Windows' drive (it keeps what it uses and half its free space, at least
+30 GB). Leave **Bring my files** ticked and your Desktop, Documents,
+Pictures, Music, Videos and Downloads are copied into Monet too, into the
+same folders (in your language). They stay in Windows as well.
 
-This needs Windows to be fully shut down (Fast Startup off), and Windows
-can't be shrunk if it's encrypted with BitLocker. If that's the case, use
-**Install Monet and Windows** instead.
+With Fedora's installer instead, choose **Install Monet next to my Windows**
+on the stick's start menu, then **Free up space** to shrink Windows, or use
+free space you made in Windows' **Disk Management**. It doesn't bring your
+files: open them from Windows' drive in Files.
+
+Either way Windows needs to be fully shut down: hold **Shift** while you
+choose **Shut down** in Windows (that skips Fast Startup). Windows can't be
+shrunk if it's encrypted with BitLocker; turn BitLocker off in Windows
+first, or use **Install Monet and Windows** instead. Windows checks its
+drive once the next time it starts.
 
 The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.8.5-Linux.tar.gz** and run `./monet-0.8.5-linux/install.sh`,
+Download **Monet-0.9.0-Linux.tar.gz** and run `./monet-0.9.0-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).

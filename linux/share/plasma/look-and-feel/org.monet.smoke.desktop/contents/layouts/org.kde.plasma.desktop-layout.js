@@ -17,7 +17,8 @@ function island(alignment) {
     p.alignment = alignment
     set(p, "lengthMode", "fit")
     set(p, "floating", true)
-    set(p, "hiding", "none")
+    // Out of the way when a window comes over it; back when you point at the bottom edge.
+    set(p, "hiding", "dodgewindows")
     return p
 }
 

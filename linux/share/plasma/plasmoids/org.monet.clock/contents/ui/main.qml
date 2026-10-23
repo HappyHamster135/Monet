@@ -47,7 +47,8 @@ PlasmoidItem {
     }
 
     compactRepresentation: MouseArea {
-        Layout.minimumWidth: Math.max(time.implicitWidth, date.implicitWidth) + Kirigami.Units.smallSpacing * 2
+        // Room on both sides, so the bar's pebble (when the page is open) holds the time and date.
+        Layout.minimumWidth: Math.max(time.implicitWidth, date.implicitWidth) + Kirigami.Units.largeSpacing * 3
         Layout.preferredWidth: Layout.minimumWidth
         hoverEnabled: true
         onClicked: root.expanded = !root.expanded
@@ -84,6 +85,9 @@ PlasmoidItem {
         LayoutMirroring.childrenInherit: true
         Layout.minimumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 33 : 16)
         Layout.preferredWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 35 : 17)
+        // Back to the month's own width when the notes go away: Plasma keeps a popup as big
+        // as it once was otherwise.
+        Layout.maximumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 42 : 19)
         Layout.preferredHeight: Kirigami.Units.gridUnit * 19
         spacing: Kirigami.Units.largeSpacing
 

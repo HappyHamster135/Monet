@@ -6,11 +6,104 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.8.5-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.8.5-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.8.5-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.8.5-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
-| Monet-0.8.5-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.0-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.0-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.0-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.0-Windows.zip            | Only for "next to my Windows" when Windows is encrypted                                                                                                |
+| Monet-0.9.0-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.0: your files kept safe, a painting for every season
+
+- **Earlier versions of your files.** Every hour Monet keeps your files as
+  they were: all from the last day, then one a day for two weeks and one a
+  week for two months. Settings → Backups opens them as they were an hour,
+  a day or a week ago, and in Files, right-click a file → **Earlier
+  versions** to show one of its versions or put it back beside it. They
+  only take room for what has changed since, and the oldest go first when
+  the disk gets full.
+
+- **A copy on a USB drive.** Pick a drive once in Settings → Backups.
+  Whenever it's plugged in, at most once a day, Monet copies your files to
+  "Monet Backup" on it, leaving out caches, the Trash and games. What a copy
+  replaces or deletes is kept on the drive for three months, and a week
+  without a copy says so once.
+
+- **Keep your Windows and your files.** In Monet Setup, "Monet next to my
+  Windows" no longer needs a full reset: with too little free space, Monet
+  makes room by shrinking Windows' drive (Windows keeps what it uses and
+  half its free space, at least 30 GB). Leave **Bring my files** ticked and
+  your Desktop, Documents, Pictures, Music, Videos and Downloads (OneDrive's
+  too) come along into your new folders, named in your language; they stay
+  in Windows as well. A Windows left asleep by Fast Startup, a drive that
+  needs a check, or BitLocker each say what to do instead. With Fedora's
+  installer, **Install Monet next to my Windows** → **Free up space**
+  shrinks Windows too, and your files stay on Windows' drive, a click away
+  in Files.
+
+- **A painting for every season.** **The Magpie** joins the wall, after
+  Monet's *La Pie*: a farm under snow, trees white with frost and one
+  magpie on the gate, with Monet's blue and violet shadows across the snow,
+  in four lights like the others. **Through the year** in Light & Wallpaper
+  hangs the season's painting: The Hours in spring, Water Lilies in summer,
+  Haystacks in autumn, The Magpie in winter (the other way round south of
+  the equator).
+
+- **Every painting, repainted in oil.** All four are laid in strokes of a
+  loaded flat brush now: its bristles streak the paint, and the end of each
+  stroke breaks up where the brush runs dry. Water Lilies has lilies drawn
+  by hand, no two alike, and pads that float apart instead of piling up;
+  the Haystacks are rounder and looser; the people in The Hours' boats are
+  a few quick strokes, as Monet put them down.
+
+- **The painting follows your sun and your weather.** The Hours turns to
+  dawn, midday, dusk and night at your own sunrise and sunset (from the
+  Weather widget's town, or else your time zone's city), not at fixed hours.
+  Rain, fog and snow where you are soften the painting with mist; Light &
+  Wallpaper turns that off.
+
+- **Focus, like a painter outdoors.** Timer → **Focus**, then start:
+  notifications stay quiet until the timer ends, and The Hours runs a whole
+  day, dawn to night, over the session.
+
+- **Save the last 30 seconds.** Turn it on in Games & Controllers, then
+  **Windows key + Alt + G** saves the last 30 seconds of the screen and its
+  sound as a video in Videos, as Xbox Game Bar does. The first time, it
+  installs its recorder and asks once which screen to record.
+
+- **Which games play here.** Play on Windows' covers and the Windows Games
+  widget mark the games that play in Monet too ("Plays here too"), and Games
+  & Controllers lists the games installed here whose anti-cheat only allows
+  Windows.
+
+- **HDR and smoother games.** Settings → Display offers **HDR** and
+  **Smoother games** (variable refresh rate) on a monitor that can do them.
+
+- **Search finds Settings' pages.** Search the menu for "printers" or
+  "Wi-Fi" and that page of Settings is there.
+
+- **The bar steps aside.** The islands at the bottom slide away when a
+  window comes over them, and back when you point at the bottom of the
+  screen. Light & Wallpaper → **Bar steps aside** keeps them in view.
+
+- **What you saw in 0.8.5, fixed:**
+  - Make a Monet USB stick found no USB stick to write to.
+  - Settings → Updates called the update "44.20261012.1"; it says "Monet
+    0.9.0" now.
+  - Settings can be made bigger and smaller from its edges and corner
+    (double-click "Settings" to fill the screen), and keeps its size. Its
+    scroll bar no longer runs into the highlighted page.
+  - Settings, the popovers (Disks & Devices, Audio Volume, Notifications),
+    the menu's search and the bar have the clear glass, like the desktop
+    widgets, instead of a matte one.
+  - Notes in the clock's calendar no longer leave it wide after they close,
+    and a note shows in the Calendar widget at once instead of after a
+    while. The clock's highlight in the bar fits it.
+
+Updating from 0.8.5: Monet updates by itself within a day (or Settings →
+Updates → Install, then restart). The first start after it takes a little
+longer, once, while Monet gets your files ready for earlier versions. At your
+next sign-in the bar starts stepping aside, and Windows key + Alt + G is
+there for Save the last 30 seconds.
 
 ### New in 0.8.5: in your language, under clearer glass
 

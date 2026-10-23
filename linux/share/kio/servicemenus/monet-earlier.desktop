@@ -1,0 +1,40 @@
+[Desktop Entry]
+Type=Service
+MimeType=all/all;
+Actions=earlier
+X-KDE-Priority=TopLevel
+X-Monet=true
+
+[Desktop Action earlier]
+Name=Earlier versions
+Name[ar]=الإصدارات السابقة
+Name[cs]=Starší verze
+Name[da]=Tidligere versioner
+Name[de]=Frühere Versionen
+Name[el]=Προηγούμενες εκδόσεις
+Name[es]=Versiones anteriores
+Name[fi]=Aiemmat versiot
+Name[fr]=Versions précédentes
+Name[he]=גרסאות קודמות
+Name[hi]=पिछले संस्करण
+Name[hu]=Korábbi verziók
+Name[id]=Versi sebelumnya
+Name[it]=Versioni precedenti
+Name[ja]=以前のバージョン
+Name[ko]=이전 버전
+Name[nb]=Tidligere versjoner
+Name[nl]=Eerdere versies
+Name[pl]=Wcześniejsze wersje
+Name[pt]=Versões anteriores
+Name[pt_BR]=Versões anteriores
+Name[ro]=Versiuni anterioare
+Name[ru]=Прежние версии
+Name[sv]=Tidigare versioner
+Name[th]=เวอร์ชันก่อนหน้า
+Name[tr]=Önceki sürümler
+Name[uk]=Попередні версії
+Name[vi]=Phiên bản trước
+Name[zh_CN]=早先版本
+Name[zh_TW]=先前版本
+Icon=document-open-recent
+Exec=@LIBEXECDIR@/monet-quick earlier %f

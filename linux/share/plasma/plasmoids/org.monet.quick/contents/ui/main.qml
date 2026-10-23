@@ -114,6 +114,13 @@ PlasmoidItem {
         speed: root.speed
         // The screen this panel is on.
         area: Qt.rect(root.Screen.virtualX, root.Screen.virtualY, root.Screen.width, root.Screen.height)
+        // The size people gave it, kept for next time.
+        chosenWidth: Plasmoid.configuration.SettingsWidth
+        chosenHeight: Plasmoid.configuration.SettingsHeight
+        onResized: (width, height) => {
+            Plasmoid.configuration.SettingsWidth = Math.round(width)
+            Plasmoid.configuration.SettingsHeight = Math.round(height)
+        }
     }
 
     // Waits for `monet-quick open [PAGE]`, opens Settings, and waits again.

@@ -29,11 +29,15 @@ COPY image/password /src/password
 RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
 
 FROM ${BASE}
+# Monet's own version, which updates show ("Monet 0.9.0 is ready"), not Bazzite's.
+ARG VERSION=dev
+LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
 # Tools for installing Windows from Monet: splitting Windows' install image
-# (wimlib), formatting its partition (ntfsprogs), and boot entries. Then the
-# look: Kvantum draws Monet's glass app windows, Inter is the reading font,
-# and Plymouth's script plugin plays Monet's boot screen.
-RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 \
+# (wimlib), formatting its partition (ntfsprogs), and boot entries; rsync for
+# the copies on a backup drive. Then the look: Kvantum draws Monet's glass app
+# windows, Inter is the reading font, and Plymouth's script plugin plays
+# Monet's boot screen.
+RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 rsync \
  && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script \
  && dnf5 clean all
 # The everyday apps, built in rather than downloaded: Photos, Documents, Video,

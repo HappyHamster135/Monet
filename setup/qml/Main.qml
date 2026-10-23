@@ -543,7 +543,7 @@ ApplicationWindow {
                         Text {
                             horizontalAlignment: Text.AlignLeft
                             width: parent.width
-                            text: tr("Keeps Windows and your files. Uses free space.")
+                            text: tr("Keeps Windows and your files. Monet makes room for itself.")
                             wrapMode: Text.WordWrap
                             font.family: sans; font.pixelSize: px(13); lineHeight: px(18); lineHeightMode: Text.FixedHeight; color: dim
                         }
@@ -579,12 +579,76 @@ ApplicationWindow {
                 }
             }
             Note { text: setup.blocker; warm: true; visible: text !== "" }
+            Note { text: setup.roomNote; visible: setup.blocker === "" && text !== "" }
+            // Windows' files come along, copied into Monet's folders.
+            AbstractButton {
+                id: bringFiles
+                width: parent.width
+                height: px(68)
+                visible: setup.blocker === "" && !!setup.files && setup.files.fits
+                hoverEnabled: true
+                leftPadding: px(16)
+                rightPadding: px(16)
+                onClicked: setup.setBring(!setup.bring)
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: tr("Bring my files")
+                Accessible.checked: setup.bring
+                background: Rectangle {
+                    radius: px(16)
+                    color: setup.bring ? Qt.rgba(1, 1, 1, 0.85) : bringFiles.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
+                    border.color: setup.bring ? lily : "transparent"
+                    border.width: Math.max(2, px(2))
+                    Behavior on color { ColorAnimation { duration: 140 } }
+                }
+                contentItem: RowLayout {
+                    spacing: px(12)
+                    Rectangle {
+                        Layout.preferredWidth: px(20)
+                        Layout.preferredHeight: px(20)
+                        radius: width / 2
+                        color: setup.bring ? lily : "transparent"
+                        border.width: setup.bring ? 0 : Math.max(1, px(1.5))
+                        border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
+                        Shape {
+                            visible: setup.bring
+                            anchors.centerIn: parent
+                            width: 24
+                            height: 24
+                            scale: px(12) / 24
+                            ShapePath {
+                                strokeColor: "#FFFFFF"
+                                strokeWidth: 3
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
+                                joinStyle: ShapePath.RoundJoin
+                                PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
+                            }
+                        }
+                    }
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: px(2)
+                        Text { text: tr("Bring my files"); font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink }
+                        Text {
+                            horizontalAlignment: Text.AlignLeft
+                            width: parent.width
+                            text: setup.files ? setup.files.text : ""
+                            wrapMode: Text.WordWrap
+                            font.family: sans; font.pixelSize: px(12); lineHeight: px(16); lineHeightMode: Text.FixedHeight; color: dim
+                        }
+                    }
+                }
+            }
+            Note {
+                text: setup.files ? setup.files.text : ""
+                visible: setup.blocker === "" && !!setup.files && !setup.files.fits
+            }
             Repeater {
                 model: setup.blocker === "" ? setup.pcNotes : []
                 Note { required property string modelData; text: modelData }
             }
             Note {
-                text: tr("Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards.")
+                text: tr("Everything on this disk is erased, Windows and your files too. To keep them, choose Monet next to my Windows.")
                 warm: true
                 visible: setup.blocker === "" && setup.mode === "erase" && disk !== null && disk.hasWindows
             }

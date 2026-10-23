@@ -28,7 +28,7 @@ jobs:
       - name: Shell scripts
         run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh image/setup/build.sh image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-ready tools/*.py setup/monet-setup setup/monet_setup/*.py image/installer/product/usr/libexec/monet-download
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-ready linux/libexec/monet-keep tools/*.py setup/monet-setup setup/monet_setup/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.

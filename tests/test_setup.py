@@ -86,8 +86,60 @@ class Disks(unittest.TestCase):
         plan, why = disks.plan_keep(disk("sdb", 500 * GB), 200 * GB)
         self.assertIn("EFI", why)
 
+    def test_keep_makes_room_by_shrinking_windows(self):
+        efi = part("nvme0n1p1", parttype=disks.EFI_TYPE, fstype="vfat")
+        pc = disk("nvme0n1", 1000 * GB, children=[efi, dict(part("nvme0n1p3", fstype="ntfs"), size=999 * GB)])
+        # Windows uses 300 GB: it keeps that and half the rest; Monet gets the other half.
+        plan, why = disks.plan_keep(pc, 0, shrink=lambda path: (300 * GB, ""))
+        self.assertEqual(why, "")
+        self.assertEqual(plan["shrink"]["partition"], "/dev/nvme0n1p3")
+        self.assertAlmostEqual(plan["shrink"]["to"] / GB, 649.5, delta=1)
+        self.assertEqual(plan["shrink"]["to"] % disks.MIB, 0)
+        self.assertGreaterEqual(plan["monet"], disks.MIN_MONET_MIB)
+        # Nearly full: Monet still gets what it needs, and Windows keeps 30 GiB to grow into.
+        plan, why = disks.plan_keep(pc, 0, shrink=lambda path: (880 * GB, ""))
+        self.assertGreaterEqual(plan["monet"], disks.MIN_MONET_MIB)
+        self.assertGreaterEqual(plan["shrink"]["to"], 880 * GB + disks.WINDOWS_ROOM_MIB * disks.MIB)
+        # Full: it says how much to free up.
+        plan, why = disks.plan_keep(pc, 0, shrink=lambda path: (960 * GB, ""))
+        self.assertIsNone(plan)
+        self.assertIn("64 GB", why)
+        # Asleep (Fast Startup) or BitLocker: it says what to do instead.
+        asleep = disks.smallest_size("ERROR: Windows is hibernated, refused to resize.")
+        self.assertIn("Shift", disks.plan_keep(pc, 0, shrink=lambda path: asleep)[1])
+        locked = disk("nvme0n1", 1000 * GB, children=[efi, dict(part("nvme0n1p3", fstype="BitLocker"), size=999 * GB)])
+        self.assertIn("BitLocker", disks.plan_keep(locked, 0, shrink=lambda path: (1, ""))[1])
+        self.assertEqual(disks.smallest_size("You might resize at 25369563136 bytes or 25370 MB (freeing 474626 MB)."),
+                         (25369563136, ""))
+        # Enough free space already: nothing in Windows changes.
+        self.assertNotIn("shrink", disks.plan_keep(pc, 200 * GB, shrink=lambda path: (300 * GB, ""))[0])
+
+    def test_windows_files_of_the_account_used_last(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, data in (("Users/Ann/Documents/letter.txt", "x" * 10), ("Users/Ann/Desktop/desktop.ini", "x"),
+                              ("Users/Ann/OneDrive/Pictures/sea.jpg", "x" * 20), ("Users/Bob/Documents/b.txt", "x"),
+                              ("Users/Public/Documents/p.txt", "x"), ("Users/Ann/NTUSER.DAT", ""),
+                              ("Users/Bob/NTUSER.DAT", "")):
+                (Path(tmp) / rel).parent.mkdir(parents=True, exist_ok=True)
+                (Path(tmp) / rel).write_text(data)
+            os.utime(Path(tmp) / "Users/Bob/NTUSER.DAT", (1, 1))
+            found = disks.your_files(tmp)
+            self.assertEqual(found["person"], "Ann")
+            # OneDrive keeps Ann's pictures.
+            self.assertEqual(found["folders"], {"Desktop": "Users/Ann/Desktop", "Documents": "Users/Ann/Documents",
+                                                "Pictures": "Users/Ann/OneDrive/Pictures"})
+            self.assertEqual(found["total"], 31)
+            # Copied while installing; desktop.ini stays behind.
+            dest = Path(tmp) / "home/.local/share/monet/from-windows"
+            done, stayed = install.copy_files(tmp, found["folders"], dest)
+            self.assertEqual((done, stayed), (30, 0))
+            self.assertEqual((dest / "Pictures/sea.jpg").read_text(), "x" * 20)
+            self.assertFalse((dest / "Desktop/desktop.ini").exists())
+        self.assertIsNone(disks.your_files("/nonexistent"))
+
     def test_offer(self):
-        offered = disks.offer([STICK, NVME], free=lambda path: (2048, 30 * GB // 512, 512))
+        offered = disks.offer([STICK, NVME], free=lambda path: (2048, 30 * GB // 512, 512),
+                              shrink=lambda path: (None, ""), files=lambda d: None)
         self.assertEqual(len(offered), 1)
         self.assertEqual(offered[0]["label"], "Samsung SSD 990 PRO · 1 TB")
         self.assertTrue(offered[0]["hasWindows"])
@@ -317,6 +369,45 @@ class ThisPC(unittest.TestCase):
         hello = qml.split("id: helloStep", 1)[1].split("Component {", 1)[0]
         self.assertIn("Note { text: setup.pcBlocker; warm: true; visible: text !== \"\" }", hello)
         self.assertIn("model: setup.blocker === \"\" ? setup.pcNotes : []", qml)
+
+
+class KeepYourFiles(unittest.TestCase):
+    def test_setup_offers_the_files_next_to_windows(self):
+        try:
+            from monet_setup import app
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        setup = app.Setup.__new__(app.Setup)
+        files = {"person": "Ann", "partition": "/dev/nvme0n1p3", "total": 41 * GB, "fits": True,
+                 "folders": {"Documents": "Users/Ann/Documents"}, "sizes": {}}
+        keep = {"boot": 2048, "monet": 488000, "shrink": {"partition": "/dev/nvme0n1p3", "from": 999 * GB, "to": 487 * GB}}
+        setup._disks, setup._disk, setup._mode, setup._bring = [{"keep": keep, "files": files}], 0, "keep", True
+        self.assertIn("999 GB", app.Setup.roomNote.fget(setup))
+        self.assertIn("41 GB", app.Setup.files.fget(setup)["text"])
+        self.assertEqual(setup._files_plan(), {"partition": "/dev/nvme0n1p3", "folders": files["folders"],
+                                               "total": 41 * GB})
+        # Not ticked, too big, or erasing: nothing comes along.
+        setup._bring = False
+        self.assertIsNone(setup._files_plan())
+        setup._bring, files["fits"] = True, False
+        self.assertIsNone(setup._files_plan())
+        self.assertFalse(app.Setup.files.fget(setup)["fits"])
+        setup._mode = "erase"
+        self.assertIsNone(setup._files_plan())
+        self.assertEqual(app.Setup.roomNote.fget(setup), "")
+        self.assertEqual(app.PHASES["files"][1:], (0.95, 0.99))
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn("onClicked: setup.setBring(!setup.bring)", qml)
+
+    def test_windows_drive_is_shrunk_file_system_first(self):
+        code = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        shrink = code.split("def shrink_windows", 1)[1].split("\ndef ", 1)[0]
+        self.assertLess(shrink.index('"--no-action"'), shrink.index('run("ntfsresize", "--force"'))
+        self.assertLess(shrink.index('run("ntfsresize", "--force"'), shrink.index('run("sfdisk"'))
+        packages = (ROOT / "image/setup/packages.txt").read_text()
+        for name in ("ntfsprogs", "ntfs-3g", "systemd-pam", "seatd"):
+            self.assertIn(f"\n{name}\n", packages)
+        self.assertIn("seat=(seatd-launch --)", (ROOT / "image/setup/files/usr/libexec/monet-setup-session").read_text())
 
 
 class Window(unittest.TestCase):

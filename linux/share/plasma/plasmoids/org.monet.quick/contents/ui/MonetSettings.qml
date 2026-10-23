@@ -24,6 +24,12 @@ PlasmaCore.Dialog {
     property real speed: 1
     // The screen to open on, from the panel.
     property rect area: Qt.rect(0, 0, 1280, 800)
+    // The size people gave it by dragging its corner or edges (0: the size that fits).
+    property real chosenWidth: 0
+    property real chosenHeight: 0
+    signal resized(real width, real height)
+    readonly property real fittingWidth: Math.min(1000, area.width - 64)
+    readonly property real fittingHeight: Math.min(780, area.height - 96)
     property string page: "light"
 
     readonly property string art: "file://@DATADIR@/monet/settings/"
@@ -44,7 +50,7 @@ PlasmaCore.Dialog {
                       "printers printer print scanner paper queue default add") },
         { id: "display", name: i18n("Display"), glyph: "M4 5h16v11H4zM10 20h4",
           words: i18nc("Settings search words, space-separated",
-                      "display screen brightness night light monitor resolution scale size") },
+                      "display screen brightness night light monitor resolution scale size hdr vrr freesync g-sync refresh tearing") },
         { id: "sound", name: i18n("Sound"), glyph: "M5 10h3l5-4v12l-5-4H5zM17 9a4.5 4.5 0 0 1 0 6",
           words: i18nc("Settings search words, space-separated",
                       "sound volume speakers headphones microphone mic audio output") },
@@ -81,6 +87,9 @@ PlasmaCore.Dialog {
           glyph: "M4 7.5h16v9H4zM7.5 12h.01M11 12h5.5",
           words: i18nc("Settings search words, space-separated",
                       "storage disk space room full free trash downloads clean games apps") },
+        { id: "backups", name: i18n("Backups"), glyph: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3h3M12 8.5V12l2.5 1.5",
+          words: i18nc("Settings search words, space-separated",
+                      "backups backup copy restore earlier versions history snapshot undo lost deleted usb drive time machine") },
         { id: "games", name: i18n("Games & Controllers"), gap: true,
           glyph: "M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3.5 3.5 0 0 1-6.4 2L14 14.5h-4l-.6 1A3.5 3.5 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8zM8 10.5v3M6.5 12h3M15.5 11.5h.01M17.5 13h.01",
           words: i18nc("Settings search words, space-separated",
@@ -98,7 +107,7 @@ PlasmaCore.Dialog {
 
     // What the helper reported.
     property var info: ({})
-    property var prefs: ({ hours: true, placard: true, glass: true })
+    property var prefs: ({ hours: true, placard: true, glass: true, weather: true, dodge: true })
     property var nets: []
     // Whether a look for networks has come back yet (until then: looking).
     property bool netsLoaded: false
@@ -128,6 +137,14 @@ PlasmaCore.Dialog {
     property var notifyInfo: ({})
     property var appDefaults: []
     property var storageInfo: ({})
+    // Which games play here and which need Windows (anti-cheat), by Steam id.
+    property var gameMarks: ({ marks: {}, blocked: [] })
+    // The screens that can show HDR or keep pace with games: [{name, hdr, vrr}].
+    property var screenInfo: []
+    // Backups: earlier versions, and the copy on a drive.
+    property var backup: ({ versions: true, drives: [], lookBack: {} })
+    // The earlier versions of one file, when Files asked for them.
+    property var earlier: ({})
     // Games & Controllers: { controllers, overlay, pair, libraries }.
     property var gameInfo: ({})
     // What's new in this Monet: { version, headline, items: [{ title, text }] }.
@@ -179,12 +196,25 @@ PlasmaCore.Dialog {
         if (which && (which === "welcome" || pages.some(p => p.id === which))) {
             page = which
         }
-        x = Math.round(area.x + (area.width - mainItem.width) / 2)
-        y = Math.round(area.y + (area.height - mainItem.height) / 2 - area.height * 0.03)
+        center()
         visible = true
         raise()
         requestActivate()
         load()
+    }
+
+    function center() {
+        x = Math.round(area.x + (area.width - mainItem.width) / 2)
+        y = Math.round(area.y + Math.max(16, (area.height - mainItem.height) / 2 - area.height * 0.03))
+    }
+
+    // Double-clicking the name: as big as the screen allows, or back to the size that fits.
+    function toggleBig() {
+        const big = mainItem.width >= area.width - 72 && mainItem.height >= area.height - 104
+        chosenWidth = big ? 0 : area.width - 64
+        chosenHeight = big ? 0 : area.height - 96
+        resized(chosenWidth, chosenHeight)
+        Qt.callLater(center)
     }
 
     onPageChanged: {
@@ -242,6 +272,7 @@ PlasmaCore.Dialog {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
         } else if (page === "windows") {
             ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
+            ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
             call(monet + " games --json", out => sheet.games = sheet.json(out, []))
         } else if (page === "datetime") {
             ask("time", out => sheet.clock = sheet.json(out, sheet.clock))
@@ -262,12 +293,18 @@ PlasmaCore.Dialog {
             ask("notify", out => sheet.notifyInfo = sheet.json(out, sheet.notifyInfo))
         } else if (page === "apps") {
             ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults))
+        } else if (page === "display") {
+            ask("screens", out => sheet.screenInfo = sheet.json(out, []))
         } else if (page === "storage") {
             ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
+        } else if (page === "backups") {
+            ask("backup", out => sheet.backup = sheet.json(out, sheet.backup))
+            ask("versions", out => sheet.earlier = sheet.json(out, {}))
         } else if (page === "accessibility") {
             ask("access", out => sheet.accessInfo = sheet.json(out, sheet.accessInfo))
         } else if (page === "games") {
             ask("gaming", out => sheet.gameInfo = sheet.json(out, sheet.gameInfo))
+            ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
         } else if (page === "privacy") {
             ask("privacy", out => sheet.privacyInfo = sheet.json(out, sheet.privacyInfo))
         } else if (page === "printers") {
@@ -291,6 +328,25 @@ PlasmaCore.Dialog {
         if (key === "wifi" && on) {
             rescan.restart()
         }
+    }
+
+    // The last 30 seconds: GPU Screen Recorder comes from Flathub the first time (a minute or two).
+    property bool replaying: false
+    property bool replayFailed: false
+    function replay(on) {
+        gameInfo = changed(gameInfo, ["replay"], on)
+        replaying = on
+        replayFailed = false
+        ask("replay " + (on ? "on" : "off"), out => {
+            sheet.replaying = false
+            sheet.gameInfo = sheet.json(out, sheet.gameInfo)
+            sheet.replayFailed = on && sheet.gameInfo.replay !== true
+        })
+    }
+
+    function screenFeature(name, what, on) {
+        screenInfo = screenInfo.map(s => s.name === name ? Object.assign({}, s, { [what]: on }) : s)
+        ask("screen-" + what + " " + name + (on ? " on" : " off"), out => sheet.screenInfo = sheet.json(out, sheet.screenInfo))
     }
 
     function pref(key) {
@@ -480,7 +536,13 @@ PlasmaCore.Dialog {
     function updateTitle() {
         const found = updateFound
         if (updateState === "available" && found.system) {
-            return found.version ? i18n("Monet %1 is ready", found.version) : i18n("A new Monet is ready")
+            // The same Monet built again on a fixed base: fixes, not a new version. Older images
+            // carry their base's version ("44.20261012.1"), which isn't Monet's to show.
+            if (found.version && found.version === pc.monet) {
+                return i18n("Fixes for Monet %1 are ready", found.version)
+            }
+            return /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/.test(found.version || "") ? i18n("Monet %1 is ready", found.version)
+                : i18n("A new Monet is ready")
         }
         if (updateState === "available") {
             return i18np("%1 app update is ready", "%1 app updates are ready", found.apps || 0)
@@ -746,6 +808,15 @@ PlasmaCore.Dialog {
         return n >= 1e12 ? i18n("%1 TB", (n / 1e12).toFixed(1)) : n >= 1e10 ? i18n("%1 GB", Math.round(n / 1e9))
             : n >= 1e9 ? i18n("%1 GB", (n / 1e9).toFixed(1)) : n >= 1e6 ? i18n("%1 MB", Math.round(n / 1e6))
             : i18n("%1 KB", Math.round(n / 1e3))
+    }
+
+    // When it was, said plainly: "Today, 14:00", "Yesterday, 09:00", or the date and time.
+    function moment(seconds) {
+        const then = new Date(seconds * 1000)
+        const time = then.toLocaleTimeString(timeLocale(), Locale.ShortFormat)
+        const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(then).setHours(0, 0, 0, 0)) / 86400000)
+        return days === 0 ? i18n("Today, %1", time) : days === 1 ? i18n("Yesterday, %1", time)
+            : i18n("%1, %2", then.toLocaleDateString(timeLocale(), Locale.ShortFormat), time)
     }
 
     // h:mm, from minutes: how long the battery lasts.
@@ -1332,6 +1403,7 @@ PlasmaCore.Dialog {
         property string name
         property string artwork
         property var glaze: ["#5C88D0", "#1B2546"]
+        property bool here: false
         signal picked()
         implicitHeight: width * 215 / 460
         scale: tap.pressed ? 0.97 : hover.hovered ? 1.03 : 1
@@ -1365,6 +1437,25 @@ PlasmaCore.Dialog {
                 asynchronous: true
                 visible: status === Image.Ready
             }
+            // A pebble on the corner: this one plays in Monet too.
+            Rectangle {
+                visible: cover.here
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.margins: 6
+                width: hereText.implicitWidth + 14
+                height: 20
+                radius: 10
+                color: Qt.rgba(0.11, 0.106, 0.098, 0.72)
+                Text {
+                    id: hereText
+                    anchors.centerIn: parent
+                    text: i18n("Plays here too")
+                    color: "#FFFFFF"
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                }
+            }
         }
         HoverHandler { id: hover }
         TapHandler {
@@ -1382,9 +1473,12 @@ PlasmaCore.Dialog {
         id: frame
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
-        width: Math.min(1000, sheet.area.width - 64)
-        // Tall enough for every page in the list on most screens (it scrolls on short ones).
-        height: Math.min(780, sheet.area.height - 96)
+        // Tall enough for every page in the list on most screens (it scrolls on short ones), or
+        // the size people dragged it to, never bigger than the screen nor too small to read.
+        width: Math.max(Math.min(760, sheet.area.width - 32),
+                        Math.min(sheet.chosenWidth > 0 ? sheet.chosenWidth : sheet.fittingWidth, sheet.area.width - 32))
+        height: Math.max(Math.min(520, sheet.area.height - 48),
+                         Math.min(sheet.chosenHeight > 0 ? sheet.chosenHeight : sheet.fittingHeight, sheet.area.height - 48))
         // Mist or smoke, from the colors Monet's light chose.
         readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
 
@@ -1429,6 +1523,9 @@ PlasmaCore.Dialog {
                     font.weight: Font.Light
                     font.pixelSize: 34
                     font.letterSpacing: -0.6
+                    TapHandler {
+                        onDoubleTapped: sheet.toggleBig()
+                    }
                 }
 
                 Rectangle {
@@ -1491,7 +1588,7 @@ PlasmaCore.Dialog {
                     interactive: contentHeight > height
                     // On a laptop's screen not every page fits: a scrollbar says there are more,
                     // and the page that opens (from a notification, say) is scrolled into view.
-                    QQC2.ScrollBar.vertical: PlasmaComponents.ScrollBar {}
+                    QQC2.ScrollBar.vertical: PlasmaComponents.ScrollBar { id: navScroll }
 
                     function reveal() {
                         const shown = pebble.target
@@ -1530,7 +1627,8 @@ PlasmaCore.Dialog {
 
                     ColumnLayout {
                         id: navColumn
-                        width: navList.width
+                        // Clear of the scrollbar, when there is one, so the pebble never runs under it.
+                        width: navList.width - (navList.interactive ? navScroll.width + 4 : 0)
                         spacing: 2
 
                         Repeater {
@@ -1663,6 +1761,57 @@ PlasmaCore.Dialog {
             }
         }
 
+        // Bigger or smaller: drag the right edge, the bottom edge or the corner (kept for next time).
+        Repeater {
+            model: [[true, false], [false, true], [true, true]]
+            Item {
+                id: grip
+                required property var modelData
+                readonly property bool sideways: modelData[0]
+                readonly property bool downwards: modelData[1]
+                property real fromWidth: 0
+                property real fromHeight: 0
+                LayoutMirroring.enabled: false
+                z: 10
+                x: sideways ? frame.width - (downwards ? 18 : 6) : 0
+                y: downwards ? frame.height - (sideways ? 18 : 6) : 0
+                width: sideways ? (downwards ? 18 : 6) : frame.width - 18
+                height: downwards ? (sideways ? 18 : 6) : frame.height - 18
+                HoverHandler {
+                    cursorShape: grip.sideways && grip.downwards ? Qt.SizeFDiagCursor
+                        : grip.sideways ? Qt.SizeHorCursor : Qt.SizeVerCursor
+                }
+                DragHandler {
+                    target: null
+                    onActiveChanged: {
+                        if (active) {
+                            grip.fromWidth = frame.width
+                            grip.fromHeight = frame.height
+                        } else {
+                            sheet.resized(sheet.chosenWidth, sheet.chosenHeight)
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (grip.sideways) {
+                            sheet.chosenWidth = Math.max(760, grip.fromWidth + translation.x)
+                        }
+                        if (grip.downwards) {
+                            sheet.chosenHeight = Math.max(520, grip.fromHeight + translation.y)
+                        }
+                    }
+                }
+                // The corner shows it can be pulled: two short strokes.
+                Glyph {
+                    visible: grip.sideways && grip.downwards
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    path: "M20 10L10 20M20 16L16 20"
+                    color: look.dim
+                    opacity: 0.6
+                }
+            }
+        }
+
         // The page: solid paper, so reading never fights the painting.
         Rectangle {
             id: pageArea
@@ -1697,7 +1846,7 @@ PlasmaCore.Dialog {
                         light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, display: displayPage,
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
-                        storage: storagePage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
+                        storage: storagePage, backups: backupsPage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
                         printers: printersPage, welcome: welcomePage,
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
@@ -1972,19 +2121,25 @@ PlasmaCore.Dialog {
                     tone: look
                     text: i18n("Painting")
                 }
-                RowLayout {
+                // Three to a row, like paintings on a gallery wall.
+                GridLayout {
                     Layout.fillWidth: true
-                    spacing: 12
+                    columns: 3
+                    columnSpacing: 12
+                    rowSpacing: 12
                     Repeater {
                         model: [
                             ["hours", i18n("The Hours"), i18n("The harbor at Le Havre")],
                             ["lilies", i18n("Water Lilies"), i18n("The pond at Giverny")],
-                            ["haystacks", i18n("Haystacks"), i18n("A field after the harvest")]
+                            ["haystacks", i18n("Haystacks"), i18n("A field after the harvest")],
+                            ["magpie", i18n("The Magpie"), i18n("A farm under snow")],
+                            ["seasons", i18n("Through the year"), i18n("Each season its painting")]
                         ]
                         Rectangle {
                             id: seriesChoice
                             readonly property bool picked: (sheet.prefs.series || "hours") === modelData[0]
                             Layout.fillWidth: true
+                            Layout.fillHeight: true
                             Layout.preferredWidth: 1
                             implicitHeight: seriesColumn.implicitHeight + 20
                             radius: 18
@@ -2028,6 +2183,9 @@ PlasmaCore.Dialog {
                                     text: modelData[2]
                                     color: look.dim
                                     font.pixelSize: 13
+                                    // Four side by side: room for two lines rather than cutting the words off.
+                                    wrapMode: Text.WordWrap
+                                    maximumLineCount: 2
                                     elide: Text.ElideRight
                                 }
                             }
@@ -2047,8 +2205,10 @@ PlasmaCore.Dialog {
                     tone: look
                     Repeater {
                         model: [
-                            ["hours", i18n("Through the day"), i18n("The painting's light drifts with the time of day")],
+                            ["hours", i18n("Through the day"), i18n("The painting's light follows the sun where you are, from dawn to night")],
+                            ["weather", i18n("Weather"), i18n("Rain, fog and snow where you are soften the painting with mist")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
+                            ["dodge", i18n("Bar steps aside"), i18n("The bar slides away when a window comes over it, and back when you point at the bottom of the screen")],
                             ["glass", i18n("Glass"), i18n("See the painting through panels, windows and widgets. Off is lighter on older PCs.")]
                         ]
                         SettingRow {
@@ -2402,6 +2562,48 @@ PlasmaCore.Dialog {
                         Switch {
                             tone: look
                             active: sheet.info.night === true
+                        }
+                    }
+                }
+                // For games and films: HDR, and the refresh rate keeping pace with the game,
+                // on the screens that can (named when there's more than one).
+                Caption {
+                    tone: look
+                    visible: sheet.screenInfo.length > 0
+                    text: i18n("Games and films")
+                }
+                Repeater {
+                    model: sheet.screenInfo
+                    Card {
+                        id: screenCard
+                        required property var modelData
+                        tone: look
+                        SettingRow {
+                            tone: look
+                            divider: false
+                            visible: screenCard.modelData.hdr !== null
+                            tappable: true
+                            title: sheet.screenInfo.length > 1 ? i18n("HDR on %1", screenCard.modelData.name) : i18n("HDR")
+                            detail: i18n("Brighter highlights and deeper colors, in games and films made for it")
+                            onTapped: sheet.screenFeature(screenCard.modelData.name, "hdr", !screenCard.modelData.hdr)
+                            Switch {
+                                tone: look
+                                active: screenCard.modelData.hdr === true
+                            }
+                        }
+                        SettingRow {
+                            tone: look
+                            divider: screenCard.modelData.hdr !== null
+                            visible: screenCard.modelData.vrr !== null
+                            tappable: true
+                            title: sheet.screenInfo.length > 1 ? i18n("Smoother games on %1", screenCard.modelData.name)
+                                : i18n("Smoother games")
+                            detail: i18n("The screen keeps pace with the game, without tearing (FreeSync, G-Sync)")
+                            onTapped: sheet.screenFeature(screenCard.modelData.name, "vrr", !screenCard.modelData.vrr)
+                            Switch {
+                                tone: look
+                                active: screenCard.modelData.vrr === true
+                            }
                         }
                     }
                 }
@@ -3037,6 +3239,7 @@ PlasmaCore.Dialog {
                                     [i18n("Switch windows"), ["Alt", "Tab"]], [i18n("A window on one half"), ["Meta", "\u2190", "\u2192"]],
                                     [i18n("A window on the whole screen"), ["Meta", "PgUp"]], [i18n("What you copied"), ["Meta", "V"]],
                                     [i18n("Emoji"), ["Meta", "."]], [i18n("Screenshot"), ["Print"]],
+                                    [i18n("Save the last 30 seconds"), ["Meta", "Alt", "G"]],
                                     [i18n("Record the screen"), ["Meta", "Alt", "R"]],
                                     [i18n("Restart or shut down"), ["Ctrl", "Alt", "Del"]]]
                             RowLayout {
@@ -3760,6 +3963,214 @@ PlasmaCore.Dialog {
         }
 
         Component {
+            id: backupsPage
+            ColumnLayout {
+                id: backupsColumn
+                readonly property var versions: sheet.earlier.versions || []
+                spacing: 20
+                // A copy in progress: how far along, every two seconds.
+                Timer {
+                    interval: 2000
+                    repeat: true
+                    running: sheet.backup.copying === true
+                    onTriggered: sheet.ask("backup", out => sheet.backup = sheet.json(out, sheet.backup))
+                }
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("backups")
+                    art: sheet.art
+                    text: i18n("Backups")
+                    detail: sheet.backup.versions === false ? i18n("Copies of your files, for when something goes wrong.")
+                        : i18n("Monet keeps your files as they were, every hour.")
+                }
+
+                // From Files' menu: this file's earlier versions.
+                Caption {
+                    tone: look
+                    visible: (sheet.earlier.file || "") !== ""
+                    text: i18n("Earlier versions of %1", sheet.earlier.name || "")
+                }
+                Card {
+                    tone: look
+                    visible: (sheet.earlier.file || "") !== ""
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: backupsColumn.versions.length === 0
+                        title: i18n("No earlier versions yet")
+                        detail: i18n("Monet keeps one every hour from now on.")
+                    }
+                    Repeater {
+                        model: backupsColumn.versions.slice(0, 12)
+                        SettingRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: sheet.moment(modelData.time)
+                            detail: modelData.folder ? i18n("Folder") : sheet.bytes(modelData.size)
+                            Row {
+                                spacing: 8
+                                Pill {
+                                    tone: look
+                                    text: i18n("Show")
+                                    onClicked: sheet.ask("version-open " + index)
+                                }
+                                Pill {
+                                    tone: look
+                                    text: i18n("Put back")
+                                    onClicked: sheet.ask("put-back " + index)
+                                }
+                            }
+                        }
+                    }
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    visible: (sheet.earlier.file || "") !== "" && backupsColumn.versions.length > 0
+                    text: i18n("Put back keeps both: the earlier version goes beside it, with its time in the name.")
+                    color: look.dim
+                    font.pixelSize: 14
+                    lineHeight: 1.3
+                    wrapMode: Text.Wrap
+                }
+                Pill {
+                    tone: look
+                    visible: (sheet.earlier.file || "") !== ""
+                    text: i18n("Done")
+                    onClicked: sheet.ask("versions-done", () => sheet.earlier = {})
+                }
+
+                Caption {
+                    tone: look
+                    text: i18n("Earlier versions")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        title: i18n("Keep earlier versions")
+                        detail: i18n("Every hour, for two months. Only what changed takes room.")
+                        onTapped: {
+                            const on = sheet.backup.versions === false
+                            sheet.backup = sheet.changed(sheet.backup, ["versions"], on)
+                            sheet.ask("keep " + (on ? "on" : "off"), out => sheet.backup = sheet.json(out, sheet.backup))
+                        }
+                        Switch {
+                            tone: look
+                            active: sheet.backup.versions !== false
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: sheet.backup.versions !== false
+                        title: i18n("Your files as they were")
+                        detail: (sheet.backup.kept || 0) > 0 ? i18n("Opens in Files: copy back what you need.")
+                            : i18n("The first one is kept within the hour.")
+                        Row {
+                            spacing: 8
+                            Repeater {
+                                model: [["hour", i18n("An hour ago")], ["day", i18n("Yesterday")], ["week", i18n("Last week")]]
+                                Pill {
+                                    required property var modelData
+                                    readonly property var snapshot: (sheet.backup.lookBack || {})[modelData[0]]
+                                    tone: look
+                                    visible: !!snapshot
+                                    text: modelData[1]
+                                    onClicked: sheet.ask("backup-open " + snapshot.time)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Caption {
+                    tone: look
+                    text: i18n("A copy on a drive")
+                }
+                Card {
+                    tone: look
+                    // The drive chosen for copies.
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: !!sheet.backup.drive
+                        title: sheet.backup.label || i18n("Your backup drive")
+                        detail: sheet.backup.copying ? i18n("Copying… %1%", sheet.backup.percent || 0)
+                            : (sheet.backup.error || "") !== "" ? sheet.backup.error
+                            : sheet.backup.last ? i18n("Last copy: %1", sheet.moment(sheet.backup.last))
+                            : sheet.backup.plugged ? i18n("Not copied yet") : i18n("Plug it in to copy your files")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                visible: sheet.backup.plugged === true && !sheet.backup.copying
+                                text: i18n("Copy now")
+                                onClicked: {
+                                    sheet.backup = sheet.changed(sheet.backup, ["copying"], true)
+                                    sheet.ask("backup-now")
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                visible: sheet.backup.plugged === true
+                                text: i18n("Open")
+                                onClicked: sheet.ask("backup-open-drive")
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: !!sheet.backup.drive
+                        title: i18n("Stop copying to this drive")
+                        detail: i18n("What's on it stays there")
+                        Pill {
+                            tone: look
+                            text: i18n("Stop")
+                            onClicked: sheet.ask("backup-drive none", out => sheet.backup = sheet.json(out, sheet.backup))
+                        }
+                    }
+                    // No drive chosen: the ones plugged in, or how to start.
+                    Repeater {
+                        model: sheet.backup.drive ? [] : (sheet.backup.drives || [])
+                        SettingRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.label || i18n("USB drive")
+                            detail: sheet.bytes(modelData.size)
+                            Pill {
+                                tone: look
+                                text: i18n("Copy to this drive")
+                                onClicked: sheet.ask("backup-drive " + modelData.uuid, out => sheet.backup = sheet.json(out, sheet.backup))
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: !sheet.backup.drive && (sheet.backup.drives || []).length === 0
+                        title: i18n("Plug in a USB drive")
+                        detail: i18n("Monet copies your files to it whenever it's plugged in, at most once a day.")
+                    }
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    text: i18n("Games aren't copied: Steam and the other stores download them again. Neither is the Trash.")
+                    color: look.dim
+                    font.pixelSize: 14
+                    lineHeight: 1.3
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        Component {
             id: privacyPage
             ColumnLayout {
                 id: privacyColumn
@@ -3999,10 +4410,11 @@ PlasmaCore.Dialog {
                 }
                 Card {
                     tone: look
-                    visible: typeof sheet.gameInfo.overlay === "boolean"
+                    visible: typeof sheet.gameInfo.overlay === "boolean" || typeof sheet.gameInfo.replay === "boolean"
                     SettingRow {
                         tone: look
                         divider: false
+                        visible: typeof sheet.gameInfo.overlay === "boolean"
                         tappable: true
                         title: i18n("Performance overlay")
                         detail: i18n("Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play.")
@@ -4010,6 +4422,22 @@ PlasmaCore.Dialog {
                         Switch {
                             tone: look
                             active: sheet.gameInfo.overlay === true
+                        }
+                    }
+                    // As Xbox Game Bar has it: the last 30 seconds, kept to save.
+                    SettingRow {
+                        tone: look
+                        divider: typeof sheet.gameInfo.overlay === "boolean"
+                        visible: typeof sheet.gameInfo.replay === "boolean"
+                        tappable: !sheet.replaying
+                        title: i18n("Save the last 30 seconds")
+                        detail: sheet.replaying ? i18n("Getting it ready…")
+                            : sheet.replayFailed ? i18n("It couldn't be installed. Check the internet connection, then try again.")
+                            : i18n("Windows key + Alt + G keeps the last 30 seconds on screen in Videos. The first time, choose the screen to record.")
+                        onTapped: sheet.replay(sheet.gameInfo.replay !== true)
+                        Switch {
+                            tone: look
+                            active: sheet.gameInfo.replay === true
                         }
                     }
                 }
@@ -4043,6 +4471,47 @@ PlasmaCore.Dialog {
                         title: i18n("No games yet")
                         detail: i18n("Steam, Heroic and Lutris keep theirs here once you install one")
                     }
+                }
+                // Games installed here whose anti-cheat only lets them run on Windows.
+                Caption {
+                    tone: look
+                    visible: (sheet.gameMarks.blocked || []).length > 0
+                    text: i18n("Needs Windows")
+                }
+                Card {
+                    tone: look
+                    visible: (sheet.gameMarks.blocked || []).length > 0
+                    Repeater {
+                        model: sheet.gameMarks.blocked || []
+                        SettingRow {
+                            id: blockedRow
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: modelData.onWindows ? i18n("Its anti-cheat only allows Windows. It's there too.")
+                                : i18n("Its anti-cheat only allows Windows. Install it in Windows' Steam to play.")
+                            Pill {
+                                tone: look
+                                visible: blockedRow.modelData.onWindows === true
+                                text: i18n("Play on Windows…")
+                                onClicked: {
+                                    sheet.page = "windows"
+                                    sheet.asking = ({ id: "steam:" + blockedRow.modelData.id, name: blockedRow.modelData.name })
+                                }
+                            }
+                        }
+                    }
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    visible: (sheet.gameMarks.blocked || []).length > 0
+                    text: i18n("Which games need Windows comes from AreWeAntiCheatYet.")
+                    color: look.dim
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
                 }
                 Pill {
                     tone: look
@@ -4156,6 +4625,9 @@ PlasmaCore.Dialog {
                             artwork: modelData.id.indexOf("steam:") === 0
                                 ? "https://cdn.cloudflare.steamstatic.com/steam/apps/" + modelData.id.slice(6) + "/header.jpg" : ""
                             glaze: sheet.glaze(modelData.name)
+                            // Plays in Monet too: no restart needed, once it's in Steam here.
+                            here: modelData.id.indexOf("steam:") === 0
+                                && (sheet.gameMarks.marks || {})[modelData.id.slice(6)] === "here"
                             onPicked: {
                                 sheet.switchProblem = ""
                                 sheet.asking = modelData

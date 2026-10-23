@@ -197,10 +197,12 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.minimumHeight: 90
+        // Lighter glass with light in its rim, as Monet's fields are.
+        readonly property bool dark: page.ink.hslLightness > 0.5
         radius: 12
-        color: Qt.rgba(page.ink.r, page.ink.g, page.ink.b, 0.05)
+        color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
         border.width: note.activeFocus ? 2 : 1
-        border.color: note.activeFocus ? page.lily : Qt.rgba(page.ink.r, page.ink.g, page.ink.b, 0.1)
+        border.color: note.activeFocus ? page.lily : dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.75)
 
         QQC2.ScrollView {
             anchors.fill: parent

@@ -85,6 +85,8 @@ done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
 # Ready when you come back (Settings → Play on Windows): root's part.
 put 755 "$SRC/libexec/monet-ready" "$LIBEXECDIR/monet-ready"
+# Earlier versions of everyone's files (Settings → Backups): root's part.
+put 755 "$SRC/libexec/monet-keep" "$LIBEXECDIR/monet-keep"
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"
@@ -100,6 +102,10 @@ while read -r alias name; do
 done < "$SRC/share/icons/Monet-cursors/aliases"
 put 644 "$SRC/share/applications/monet-windows.desktop" "$DATADIR/applications/monet-windows.desktop"
 put 644 "$SRC/share/applications/monet-settings.desktop" "$DATADIR/applications/monet-settings.desktop"
+# Windows+Alt+G: the last 30 seconds of a game, saved (its shortcut comes with Monet's look).
+put 644 "$SRC/share/applications/monet-replay.desktop" "$DATADIR/applications/monet-replay.desktop"
+# Earlier versions, in Files' menu.
+put 644 "$SRC/share/kio/servicemenus/monet-earlier.desktop" "$DATADIR/kio/servicemenus/monet-earlier.desktop"
 
 # The look: paintings, the Plasma style and global theme, Monet's widgets,
 # colors, the glass app style, the terminal's colors and the fonts.
@@ -185,6 +191,15 @@ for unit in monet-ready-leave.service monet-ready-boot.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
 put 644 "$SRC/systemd/user/monet-ready-lock.service" "$USERUNITDIR/monet-ready-lock.service"
+# The last 30 seconds, kept while Games & Controllers' switch is on (each person turns it on).
+put 644 "$SRC/systemd/user/monet-replay.service" "$USERUNITDIR/monet-replay.service"
+# Backups: earlier versions every hour (the homes made a subvolume of their own
+# once, before the sign-in screen), and the copy on a drive when it's plugged in.
+for unit in monet-keep-prepare.service monet-keep.service monet-keep.timer; do
+    put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
+done
+put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.service"
+put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
 
 # Monet updates itself, once a day (monet-update.timer: the new Monet starts at
 # the next restart; Settings → Updates turns it off). Bazzite's and KDE's own
@@ -233,7 +248,7 @@ put 644 "$SRC/autostart/monet-session.desktop" /etc/xdg/autostart/monet-session.
 # /var/usrlocal on Fedora Atomic, so allow both spellings of the path.
 # Battery care's helper too: it only writes the battery's charge limit.
 real_bin="$(readlink -f "$BINDIR/monet")"
-programs="[\"$BINDIR/monet\", \"$real_bin\", \"$LIBEXECDIR/monet-charge\", \"$(readlink -f "$LIBEXECDIR/monet-charge")\", \"$LIBEXECDIR/monet-ready\", \"$(readlink -f "$LIBEXECDIR/monet-ready")\"]"
+programs="[\"$BINDIR/monet\", \"$real_bin\", \"$LIBEXECDIR/monet-charge\", \"$(readlink -f "$LIBEXECDIR/monet-charge")\", \"$LIBEXECDIR/monet-ready\", \"$(readlink -f "$LIBEXECDIR/monet-ready")\", \"$LIBEXECDIR/monet-keep\", \"$(readlink -f "$LIBEXECDIR/monet-keep")\"]"
 install -d -m 755 /etc/polkit-1/rules.d
 sed -e "s|@PROGRAMS@|$programs|" "$SRC/polkit/49-monet.rules" > /etc/polkit-1/rules.d/49-monet.rules
 chmod 644 /etc/polkit-1/rules.d/49-monet.rules
@@ -243,6 +258,8 @@ if [ "$IMAGE" = 1 ]; then
     systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service
+    systemctl enable monet-keep-prepare.service monet-keep.timer
+    systemctl --global enable monet-backup.timer
     # Monet's name, mark and links where the system describes itself (KDE's
     # About page, the PC's name on the network). ID and VARIANT stay Bazzite's,
     # which its tools rely on.
@@ -398,4 +415,8 @@ else
     systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service >/dev/null 2>&1 || true
+    # The homes become a subvolume at the next start, before anyone signs in.
+    systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
+    systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true
+    systemctl --global enable monet-backup.timer >/dev/null 2>&1 || true
 fi

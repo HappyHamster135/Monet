@@ -1,0 +1,8 @@
+[Unit]
+Description=Monet: earlier versions of your files
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-keep snap
+Nice=19
+IOSchedulingClass=idle

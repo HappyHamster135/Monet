@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: the homes become a subvolume of their own, for earlier versions (once)
+After=local-fs.target
+Before=display-manager.service plasmalogin.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-keep prepare
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

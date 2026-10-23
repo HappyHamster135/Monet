@@ -10,7 +10,8 @@ Progress goes to stdout, one JSON object per line:
     {"done": true}
 
 1. disk       erase: a new partition table, EFI | boot | Monet (btrfs).
-              keep: boot | Monet in the largest free area, Windows' EFI.
+              keep: boot | Monet in the largest free area, Windows' EFI;
+              room made first by shrinking Windows' drive when planned.
               Monet's btrfs gets two subvolumes: root (the system) and
               download (the image, removed at the end).
 2. download   skopeo copies Monet into download/ as an OCI layout. Pieces
@@ -20,7 +21,8 @@ Progress goes to stdout, one JSON object per line:
               the registry afterwards (--target-imgref).
 4. configure  the person (an administrator), language, keyboard, time zone,
               Wi-Fi (also kept for Windows), Windows' "waiting" state, and
-              Universal Blue's driver key for Secure Boot.
+              Universal Blue's driver key for Secure Boot. Next to Windows,
+              its files too, when asked (from its drive, read-only).
 5. finish     unmount, delete the download, done.
 
 A retry in the same session skips the disk step when it already finished
@@ -32,6 +34,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -115,8 +118,30 @@ def prepare_erase(plan):
     return {"efi": efi, "boot": boot, "monet": monet}
 
 
+def shrink_windows(disk, shrink):
+    """Makes room next to Windows: its drive's file system first (ntfsresize moves
+    nothing it can't put back and stops if anything is wrong), then the partition,
+    keeping where it starts, its type and its ID. Windows checks the drive once
+    the next time it starts."""
+    part, to = shrink["partition"], int(shrink["to"])
+    # A try that stopped after this step: the room is made already.
+    if int(run("blockdev", "--getsize64", part, quiet=True).strip() or 0) <= to + 2 * 1024 * 1024:
+        return
+    log(f"making room: Windows' drive {part} from {shrink['from'] / 1e9:.0f} GB to {to / 1e9:.0f} GB")
+    run("ntfsresize", "--no-action", "--force", "--no-progress-bar", "--size", to, part, input="y\n")
+    run("ntfsresize", "--force", "--no-progress-bar", "--size", to, part, input="y\n", timeout=7200)
+    sector = int(run("blockdev", "--getss", disk, quiet=True).strip() or 512)
+    number = int(re.search(r"(\d+)$", part).group(1))
+    # A MiB more than the file system, so it always fits.
+    sectors = -(-(to + 1024 * 1024) // sector)
+    run("sfdisk", "--no-reread", "--force", "-N", number, disk, input=f", {sectors}\n")
+    settle(disk)
+
+
 def prepare_keep(plan):
     disk, sizes = plan["disk"], plan["sizes"]
+    if sizes.get("shrink"):
+        shrink_windows(disk, sizes["shrink"])
     start, sectors, sector = disks.largest_free(disk)
     mib = 1024 * 1024 // sector
     first = -(-start // mib) * mib
@@ -362,13 +387,79 @@ def configure(plan):
 
         # Labels for what was written here, from Monet's own SELinux policy.
         contexts = "/etc/selinux/targeted/contexts/files/file_contexts"
-        if (root / contexts.lstrip("/")).exists():
+        labels = (root / contexts.lstrip("/")).exists()
+        if labels:
             run("chroot", root, "setfiles", "-F", "-T", "0", contexts, "/etc", f"/var/home/{account}", "/var/lib/monet",
                 check=False)
         emit(phase="configure", fraction=1.0)
+
+        if plan.get("files") and bring_files(plan["files"], var / "home" / account / STAGED):
+            run("chroot", root, "chown", "-R", f"{account}:{account}", f"/var/home/{account}/.local", check=False)
+            if labels:
+                run("chroot", root, "setfiles", "-F", "-T", "0", contexts, f"/var/home/{account}/.local", check=False)
     finally:
         for target in reversed(mounts):
             run("umount", "-R", target, check=False, quiet=True)
+
+
+# -- bringing the files from Windows ------------------------------------------------
+
+# Where they wait in the new account until its first sign-in, when monet-quick
+# bring-files puts them in its folders (named in its language by then).
+STAGED = ".local/share/monet/from-windows"
+SKIP = {"desktop.ini", "thumbs.db"}
+
+
+def copy_files(root, folders, dest, tell=lambda done: None):
+    """Copies each of Windows' folders ({"Documents": "Users/Ann/Documents"}) into
+    dest/Documents...; returns (bytes copied, files that stayed). Links stay behind
+    (Documents' "My Music" and the like), and so do files that can't be read (in
+    OneDrive only)."""
+    done = stayed = 0
+    for name, rel in folders.items():
+        top = Path(root) / rel
+        for here, dirs, files in os.walk(top):
+            dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(here, d))]
+            into = Path(dest) / name / os.path.relpath(here, top)
+            into.mkdir(parents=True, exist_ok=True)
+            for file in files:
+                source = os.path.join(here, file)
+                if file.lower() in SKIP or os.path.islink(source):
+                    continue
+                try:
+                    shutil.copy2(source, into / file)
+                    done += os.path.getsize(source)
+                except OSError:
+                    stayed += 1
+                tell(done)
+    return done, stayed
+
+
+def bring_files(files, dest):
+    """Windows' files into the new account, read from its drive (mounted read-only);
+    True if any came. Nothing here stops the install: the files stay in Windows."""
+    total = files["total"]
+    emit(phase="files", fraction=0.0, got=0, total=total)
+    if not disks.mount_windows(files["partition"]):
+        log("Windows' drive couldn't be opened; the files stay there")
+        return False
+    shown = [time.time()]
+
+    def tell(done):
+        if time.time() - shown[0] >= 1:
+            shown[0] = time.time()
+            emit(phase="files", fraction=min(done / max(total, 1), 0.99), got=min(done, total), total=total)
+
+    try:
+        done, stayed = copy_files(disks.WINDOWS_MOUNT, files["folders"], dest, tell)
+    except OSError as e:
+        log(f"bringing the files stopped: {e}")
+        done, stayed = 0, 0
+    finally:
+        disks.unmount_windows()
+    log(f"brought {done / 1e9:.1f} GB of files from Windows; {stayed} stayed there (in OneDrive only, or unreadable)")
+    emit(phase="files", fraction=1.0, got=total, total=total)
+    return done > 0
 
 
 # -- 5. tidying up -----------------------------------------------------------------

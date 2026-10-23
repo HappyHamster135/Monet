@@ -8,6 +8,10 @@ kernel-modules-extra
 dracut
 dracut-live
 systemd
+# The login session cage's screen comes from (pam_systemd), and seatd to hand cage the
+# screen without one: without them cage can't open the screen at all.
+systemd-pam
+seatd
 systemd-udev
 plymouth
 plymouth-plugin-script
@@ -59,3 +63,6 @@ gdisk
 util-linux
 efibootmgr
 mokutil
+# Making room next to Windows, and bringing its files
+ntfsprogs
+ntfs-3g

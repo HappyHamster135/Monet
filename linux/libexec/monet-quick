@@ -29,8 +29,25 @@
     monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
-    monet-quick pref hours|placard|glass on|off
-    monet-quick series hours|lilies|haystacks  the painting on the wall: The Hours, Water Lilies or Haystacks
+    monet-quick pref hours|placard|glass|weather on|off
+    monet-quick series hours|lilies|haystacks|magpie|seasons  the painting on the wall, or one a season
+    monet-quick place                    roughly where the PC is ("59.33,18.07"), for the painting's sun and weather
+    monet-quick screens                  the screens that can do HDR or keep pace with games, as JSON
+    monet-quick screen-hdr|screen-vrr NAME on|off
+    monet-quick older-pc                 yes or no: 8 GB of memory or less, or a spinning disk
+    monet-quick bring-files              (first sign-in) Monet Setup's files from Windows into this account's folders
+    monet-quick backup                   earlier versions and the copy on a drive, as JSON
+    monet-quick keep on|off              keep earlier versions of everyone's files, or stop
+    monet-quick backup-drive UUID|none   the drive copies go to
+    monet-quick backup-now|backup-run|backup-auto  a copy now (in the background, or here), or when it's due
+    monet-quick backup-open TIME|backup-open-drive  your files as they were then, or the copy on the drive
+    monet-quick earlier PATH             (Files' menu) Settings → Backups with that file's earlier versions
+    monet-quick versions|versions-done   those versions, as JSON; or done with them
+    monet-quick version-open|put-back N  show version N, or put it back beside the file
+    monet-quick game-marks               which games play here and which need Windows (anti-cheat), as JSON
+    monet-quick replay on|off            keep the last 30 seconds to save (GPU Screen Recorder, monet-replay.service)
+    monet-quick replay-run|replay-save   (the service) record; (Windows+Alt+G) save them to Videos
+    monet-quick focus END|off            plein-air focus until END (Unix seconds): quiet, and a day on the painting
     monet-quick time                     the time zone, whether it sets itself and the clock's locale, as JSON
     monet-quick zones                    every time zone, as JSON
     monet-quick zone NAME                move to time zone NAME (one of zones)
@@ -115,6 +132,7 @@ import os
 import re
 import select
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -140,7 +158,7 @@ RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
 PAGES = ("light", "wifi", "bluetooth", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
-         "notifications", "accessibility", "apps", "storage", "games", "windows", "updates", "about")
+         "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -452,10 +470,12 @@ def prefs():
     # Until it's chosen, glass is off where blurring would make everything lag (as monet-light does).
     glass = saved["glass"] if "glass" in saved else not drawn_by_processor()
     series = saved.get("series") if saved.get("series") in SERIES else "hours"
-    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass, "series": series}
+    return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass, "series": series,
+            "weather": saved.get("weather", True), "dodge": saved.get("dodge", True)}
 
 
-SERIES = ("hours", "lilies", "haystacks")  # Monet's paintings, each in four lights (wallpapers/Monet/contents/)
+# Monet's paintings, each in four lights (wallpapers/Monet/contents/), or one for each season (monet-light).
+SERIES = ("hours", "lilies", "haystacks", "magpie", "seasons")
 
 
 def save_prefs(values):
@@ -1499,8 +1519,70 @@ def game_libraries():
 def gaming_state():
     return {"controllers": controllers(),
             "overlay": OVERLAY.is_file() if shutil.which("mangohud") else None,
+            "replay": replay_on() if shutil.which("flatpak") else None,
             "pair": bool(shutil.which("bluedevil-wizard")),
             "libraries": game_libraries()}
+
+
+# The last 30 seconds (Games & Controllers): GPU Screen Recorder keeps them in memory
+# (NVIDIA's, AMD's or Intel's video encoder, so games hardly notice) while
+# monet-replay.service runs; Windows+Alt+G, as Xbox Game Bar has it, saves them to Videos.
+
+REPLAY_APP = "com.dec05eba.gpu_screen_recorder"
+REPLAY_UNIT = "monet-replay.service"
+
+
+def replay_on():
+    return ok("systemctl", "--user", "--quiet", "is-enabled", REPLAY_UNIT)
+
+
+def set_replay(on):
+    """On: GPU Screen Recorder from Flathub first, if it isn't here (Monet's polkit lets an
+    administrator install apps), then the service; off: the service stops."""
+    if not on:
+        run("systemctl", "--user", "disable", "--now", REPLAY_UNIT)
+        return True
+    if run("flatpak", "info", REPLAY_APP) is None:
+        run("flatpak", "install", "--system", "--noninteractive", "-y", "flathub", REPLAY_APP, timeout=1800)
+        if run("flatpak", "info", REPLAY_APP) is None:
+            return False
+    return ok("systemctl", "--user", "enable", "--now", REPLAY_UNIT)
+
+
+def videos_folder():
+    return Path((run("xdg-user-dir", "VIDEOS") or "").strip() or Path.home() / "Videos")
+
+
+def replay_run():
+    """monet-replay.service: the recorder, keeping the last 30 seconds of the screen and its
+    sound. The screen comes through KDE's screen-sharing question, asked once, then kept."""
+    folder = videos_folder()
+    folder.mkdir(parents=True, exist_ok=True)
+    os.execvp("flatpak", ["flatpak", "run", "--command=gpu-screen-recorder", REPLAY_APP, "-w", "portal",
+                          "-restore-portal-session", "yes", "-f", "60", "-r", "30", "-c", "mp4",
+                          "-a", "default_output", "-o", str(folder)])
+
+
+def replay_save():
+    """Windows+Alt+G: the recorder saves what it keeps (SIGUSR1 to it alone; its flatpak
+    and sandbox would stop on that signal), and a note says where."""
+    if not replay_on():
+        open_settings("games")
+        return
+    found = 0
+    for comm in Path("/proc").glob("[0-9]*/comm"):
+        try:
+            # The name as the kernel keeps it: its first 15 letters.
+            if comm.read_text().strip() == "gpu-screen-reco" and comm.parent.stat().st_uid == os.getuid():
+                os.kill(int(comm.parent.name), signal.SIGUSR1)
+                found += 1
+        except (OSError, ValueError):
+            continue
+    if found and shutil.which("notify-send"):
+        answer = run("notify-send", "--app-name=Monet", "--icon=media-record", f"--action=open={tr('Show')}", "--wait",
+                     tr("Saved the last 30 seconds"), tr("In Videos."), timeout=600)
+        if (answer or "").strip() == "open":
+            show_in_files(videos_folder())
 
 
 def set_overlay(on):
@@ -1566,13 +1648,11 @@ def steam_cover(steam, appid):
     return ""
 
 
-def played(limit=8):
-    """[{id, name, last, art}]: the installed Steam games played most recently."""
-    games = {}
+def steam_games():
+    """(Steam's folder, appid, name, its manifest) of each Steam game installed here."""
     for steam in STEAM_ROOTS:
         if not (steam / "steamapps").is_dir():
             continue
-        times = last_played(steam)
         for library in steam_libraries(steam):
             for manifest in sorted((library / "steamapps").glob("appmanifest_*.acf")):
                 try:
@@ -1580,13 +1660,90 @@ def played(limit=8):
                 except OSError:
                     continue
                 appid, name = str(state.get("appid", "")), str(state.get("name", ""))
-                own = str(state.get("LastPlayed", ""))
-                last = max(int(own) if own.isdigit() else 0, times.get(appid, 0))
-                if not appid.isdigit() or not name or not last or NOT_GAMES.match(name):
-                    continue
-                if appid not in games or games[appid]["last"] < last:
-                    games[appid] = {"id": appid, "name": name, "last": last, "art": steam_cover(steam, appid)}
+                if appid.isdigit() and name and not NOT_GAMES.match(name):
+                    yield steam, appid, name, state
+
+
+def played(limit=8):
+    """[{id, name, last, art}]: the installed Steam games played most recently."""
+    games, times = {}, {}
+    for steam, appid, name, state in steam_games():
+        if steam not in times:
+            times[steam] = last_played(steam)
+        own = str(state.get("LastPlayed", ""))
+        last = max(int(own) if own.isdigit() else 0, times[steam].get(appid, 0))
+        if last and (appid not in games or games[appid]["last"] < last):
+            games[appid] = {"id": appid, "name": name, "last": last, "art": steam_cover(steam, appid)}
     return sorted(games.values(), key=lambda game: -game["last"])[:limit]
+
+
+# Which games need Windows ------------------------------------------------------
+# From AreWeAntiCheatYet (areweanticheatyet.com, MIT): the games with anti-cheat,
+# and whether it lets them run on Linux. Fetched at most every three days, keeping
+# only each Steam id and a word: Supported and Running play here; Broken, Denied and
+# Planned need Windows. Games it doesn't list mostly have no anti-cheat: no mark.
+
+ANTICHEAT_URL = "https://raw.githubusercontent.com/AreWeAntiCheatYet/AreWeAntiCheatYet/HEAD/games.json"
+ANTICHEAT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "monet" / "anticheat.json"
+PLAYS_HERE = {"Supported", "Running"}
+NEEDS_WINDOWS = {"Broken", "Denied", "Planned"}
+WINDOWS_GAMES = (Path("/var/lib/monet/games.json"), Path(DATADIR) / "monet/windows-games.json",
+                 CONFIG / "monet/windows-games.json")
+
+
+def anticheat_marks(games):
+    """{steam appid: "here" or "windows"} from AreWeAntiCheatYet's list."""
+    marks = {}
+    for game in games if isinstance(games, list) else []:
+        if not isinstance(game, dict):
+            continue
+        steam = str((game.get("storeIds") or {}).get("steam") or "")
+        if steam.isdigit() and game.get("status") in PLAYS_HERE | NEEDS_WINDOWS:
+            marks[steam] = "here" if game["status"] in PLAYS_HERE else "windows"
+    return marks
+
+
+def anticheat():
+    """The marks, from the copy kept here while it's fresh, else from the internet."""
+    try:
+        kept = json.loads(ANTICHEAT.read_text())
+        if time.time() - ANTICHEAT.stat().st_mtime < 3 * 86400:
+            return kept
+    except (OSError, ValueError):
+        kept = {}
+    try:
+        import urllib.request
+        with urllib.request.urlopen(ANTICHEAT_URL, timeout=20) as answer:
+            marks = anticheat_marks(json.loads(answer.read().decode("utf-8")))
+    except (OSError, ValueError):
+        return kept
+    if marks:
+        ANTICHEAT.parent.mkdir(parents=True, exist_ok=True)
+        ANTICHEAT.write_text(json.dumps(marks))
+    return marks or kept
+
+
+def windows_steam_ids(files=WINDOWS_GAMES):
+    """The Steam ids of the games Play on Windows offers."""
+    ids = set()
+    for f in files:
+        try:
+            games = json.loads(f.read_text()).get("games", [])
+        except (OSError, ValueError, AttributeError):
+            continue
+        ids |= {str(g.get("id", ""))[6:] for g in games if isinstance(g, dict) and str(g.get("id", "")).startswith("steam:")}
+    return ids
+
+
+def game_marks(marks=None, here=None, windows=None):
+    """{"marks": {appid: "here" or "windows"} for the games on either side, "blocked": the
+    games installed here that need Windows, [{id, name, onWindows}]}."""
+    marks = anticheat() if marks is None else marks
+    here = {appid: name for _, appid, name, _ in steam_games()} if here is None else here
+    windows = windows_steam_ids() if windows is None else windows
+    return {"marks": {a: m for a, m in marks.items() if a in here or a in windows},
+            "blocked": [{"id": a, "name": n, "onWindows": a in windows}
+                        for a, n in sorted(here.items(), key=lambda item: item[1].lower()) if marks.get(a) == "windows"]}
 
 
 def play(appid):
@@ -1765,6 +1922,86 @@ def access_state():
     }
 
 
+def coordinate(text, degrees):
+    """ISO 6709 as zone1970.tab has it ("+5920", "+01803", "-332200") in degrees."""
+    sign = -1 if text[0] == "-" else 1
+    d, rest = int(text[1:1 + degrees]), text[1 + degrees:]
+    m, s = int(rest[:2] or 0), int(rest[2:4] or 0)
+    return sign * (d + m / 60 + s / 3600)
+
+
+def place(appletsrc=None, zone_tab=Path("/usr/share/zoneinfo/zone1970.tab"), zone=None):
+    """Roughly where this PC is, for The Hours' sunrise and weather: the Weather widget's
+    place, else its time zone's city. "59.33,18.07", or "" when neither is known."""
+    found = configparser.ConfigParser(interpolation=None, strict=False)
+    try:
+        found.read_string((appletsrc or CONFIG / "plasma-org.kde.plasma.desktop-appletsrc").read_text())
+    except (OSError, configparser.Error):
+        pass
+    # KDE's nested groups ("[Containments][1][Applets][23]") read as "Containments][1][Applets][23".
+    for section in found.sections():
+        if found[section].get("plugin") == "org.monet.weather":
+            inner = section + "][Configuration][General"
+            general = found[inner] if found.has_section(inner) else {}
+            try:
+                return f"{float(general['latitude']):.2f},{float(general['longitude']):.2f}"
+            except (KeyError, ValueError):
+                pass
+    if zone is None:
+        try:
+            zone = os.readlink("/etc/localtime").split("zoneinfo/", 1)[1]
+        except (OSError, IndexError):
+            zone = ""
+    try:
+        for line in zone_tab.read_text().splitlines():
+            fields = line.split("\t")
+            if len(fields) >= 3 and fields[2] == zone:
+                found = re.fullmatch(r"([+-]\d{4,6})([+-]\d{5,7})", fields[1])
+                if found:
+                    return f"{coordinate(found.group(1), 2):.2f},{coordinate(found.group(2), 3):.2f}"
+    except OSError:
+        pass
+    return ""
+
+
+def focus(end=None):
+    """Plein-air focus (the Timer): notifications quiet until it ends, and The Hours going
+    through a whole day meanwhile. end: when it ends (Unix seconds), or None when it's over."""
+    dnd = ["kwriteconfig6", "--notify", "--file", "plasmanotifyrc", "--group", "DoNotDisturb", "--key", "Until"]
+    if end:
+        # shortcut: ending focus turns Do Not Disturb off even if it was on before; remember it if that bothers.
+        run(*dnd, ",".join(str(v) for v in time.localtime(end)[:6]))
+        run(f"{LIBEXECDIR}/monet-light", "focus", f"{int(time.time())},{int(end)}", timeout=30)
+    else:
+        run(*dnd, "--delete")
+        run(f"{LIBEXECDIR}/monet-light", "focus", "", timeout=30)
+
+
+def screen_features(outputs=None):
+    """The screens that can show HDR, or keep pace with a game (variable refresh rate):
+    [{name, hdr, vrr}], each None where the screen can't. kscreen-doctor lists "hdr"
+    and "vrrPolicy" (0 never, 1 always, 2 automatic) only for screens that can."""
+    if outputs is None:
+        try:
+            outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
+        except ValueError:
+            outputs = []
+    found = []
+    for o in outputs:
+        if not o.get("enabled") or not o.get("name") or ("hdr" not in o and "vrrPolicy" not in o):
+            continue
+        found.append({"name": o["name"], "hdr": bool(o["hdr"]) if "hdr" in o else None,
+                      "vrr": o["vrrPolicy"] != 0 if "vrrPolicy" in o else None})
+    return found
+
+
+def set_screen_feature(name, what, on):
+    """HDR on or off; the refresh rate keeping pace with games (automatic, as KDE has it) or never."""
+    if re.fullmatch(r"[\w.-]+", name):
+        value = ("enable" if on else "disable") if what == "hdr" else ("automatic" if on else "never")
+        run("kscreen-doctor", f"output.{name}.{'hdr' if what == 'hdr' else 'vrrpolicy'}.{value}", timeout=30)
+
+
 def set_scale(percent):
     for name, _ in screens():
         if re.fullmatch(r"[\w.-]+", name):
@@ -1868,6 +2105,12 @@ def set_default(kind, app_id):
 def plasma_script(script):
     return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
 
+
+
+def set_dodge(on):
+    """The bar's islands: out of the way when a window comes over them, or always in view."""
+    plasma_script("panels().forEach(function (p) { if (p.location === 'bottom') p.hiding = '%s' })"
+                  % ("dodgewindows" if on else "none"))
 
 
 def set_placard(show):
@@ -2209,6 +2452,308 @@ def older_pc(meminfo=Path("/proc/meminfo"), spinning=None):
     return spinning
 
 
+# Files from Windows ------------------------------------------------------------
+# Monet Setup copies Windows' Desktop, Documents and so on into the new account
+# (~/.local/share/monet/from-windows); at the first sign-in they go into its own
+# folders, which have their names in its language by then (xdg-user-dirs).
+
+XDG_FOLDERS = {"Desktop": "DESKTOP", "Documents": "DOCUMENTS", "Downloads": "DOWNLOAD", "Music": "MUSIC",
+               "Pictures": "PICTURES", "Videos": "VIDEOS"}
+
+
+def user_folder(home, dirs_text, key):
+    """A folder as user-dirs.dirs names it (XDG_DOCUMENTS_DIR="$HOME/Dokument"), or None."""
+    for line in dirs_text.splitlines():
+        name, _, value = line.strip().partition("=")
+        if name == f"XDG_{key}_DIR":
+            path = Path(value.strip('"').replace("$HOME", str(home)))
+            return path if path.is_absolute() and path != home else None
+    return None
+
+
+def free_name(path):
+    """path, or "name (Windows).ext" beside it when that's taken."""
+    if not path.exists():
+        return path
+    for n in range(1, 1000):
+        mark = tr("Windows") if n == 1 else f"{tr('Windows')} {n}"
+        other = path.with_name(f"{path.stem} ({mark}){path.suffix}")
+        if not other.exists():
+            return other
+    return path
+
+
+def bring_files(home=None):
+    """Moves the files Monet Setup brought from Windows into this account's folders;
+    how many were moved (renamed, never over a file of the same name)."""
+    config = CONFIG if home is None else Path(home) / ".config"
+    home = Path(home or Path.home())
+    staged = home / ".local/share/monet/from-windows"
+    if not staged.is_dir():
+        return 0
+    run("xdg-user-dirs-update")
+    try:
+        dirs = (config / "user-dirs.dirs").read_text()
+    except OSError:
+        dirs = ""
+    moved = 0
+    for folder in sorted(p for p in staged.iterdir() if p.is_dir()):
+        target = user_folder(home, dirs, XDG_FOLDERS.get(folder.name, "")) or home / folder.name
+        target.mkdir(parents=True, exist_ok=True)
+        for item in sorted(folder.iterdir()):
+            try:
+                item.rename(free_name(target / item.name))
+                moved += 1
+            except OSError:
+                continue
+        if not any(folder.iterdir()):
+            folder.rmdir()
+    if not any(staged.iterdir()):
+        staged.rmdir()
+    return moved
+
+
+# Backups ---------------------------------------------------------------------
+# Earlier versions: monet-keep (root) snapshots the homes every hour into
+# SNAPSHOTS/"2026-10-23 14.00"/<person>, read-only. A copy on a drive: the person
+# picks a USB drive once, and their files go to "Monet Backup/<person>" on it
+# whenever it's plugged in, at most once a day; what a copy replaces or deletes is
+# kept beside it by date ("Monet Backup/<person> earlier/<date>") for three months.
+
+SNAPSHOTS = Path("/var/lib/monet/snapshots")
+KEEP_OFF = Path("/var/lib/monet/keep-off")
+HOMES = "/var/home"
+SNAP_STAMP = "%Y-%m-%d %H.%M"
+BACKUP = CONFIG / "monet" / "backup.json"
+EARLIER = RUNTIME / "monet-earlier"  # the file Files asked about
+# Not copied: what comes back by itself, and games (their stores download them again).
+NOT_COPIED = ("/.cache/", "/.local/share/Trash/", "/.local/share/baloo/", "/.local/share/flatpak/",
+              "/.local/share/Steam/steamapps/", "/.var/app/*/cache/",
+              "/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/", "/.local/share/monet/from-windows/")
+BACKUP_FILESYSTEMS = {"ext4", "btrfs", "xfs", "f2fs", "vfat", "exfat", "ntfs", "ntfs3"}
+LINKS_OK = {"ext4", "btrfs", "xfs", "f2fs"}
+COPY_EVERY = 20 * 3600
+KEEP_EARLIER_DAYS = 90
+
+
+def snapshot_time(name):
+    try:
+        return int(time.mktime(time.strptime(name, SNAP_STAMP)))
+    except ValueError:
+        return None
+
+
+def snapshot_names(root=SNAPSHOTS):
+    """The snapshots, newest first."""
+    try:
+        return sorted((p.name for p in root.iterdir() if snapshot_time(p.name)), reverse=True)
+    except OSError:
+        return []
+
+
+def in_snapshot(path, name, root=SNAPSHOTS, homes=HOMES):
+    """Where path (under the homes) is in a snapshot, or None."""
+    real, homes = os.path.realpath(path), os.path.realpath(homes)
+    if not real.startswith(homes + os.sep):
+        return None
+    return Path(root) / name / os.path.relpath(real, homes)
+
+
+def versions(path, root=SNAPSHOTS, homes=HOMES):
+    """Earlier versions of a file or folder, newest first, each one different from the
+    one after it (and from now): [{name, time, path, size, folder}]."""
+    try:
+        st = os.stat(path)
+        last = (st.st_size, int(st.st_mtime))
+    except OSError:
+        last = None  # gone now: its last version counts
+    found = []
+    for name in snapshot_names(root):
+        there = in_snapshot(path, name, root, homes)
+        try:
+            st = there.stat() if there else None
+        except OSError:
+            st = None
+        if st is None or (st.st_size, int(st.st_mtime)) == last:
+            continue
+        last = (st.st_size, int(st.st_mtime))
+        found.append({"name": name, "time": snapshot_time(name), "path": str(there), "size": st.st_size,
+                      "folder": there.is_dir()})
+    return found
+
+
+def put_back(version, original):
+    """A copy of an earlier version beside the file as it is: "letter (2026-10-23 14.00).txt"."""
+    source, original = Path(version["path"]), Path(original)
+    target = free_name(original.with_name(f"{original.stem} ({version['name']}){original.suffix}"))
+    if source.is_dir():
+        shutil.copytree(source, target, symlinks=True)
+    else:
+        shutil.copy2(source, target)
+    return target
+
+
+def look_back(names, now=None):
+    """The snapshots closest to an hour, a day and a week ago (at or before then)."""
+    now = now or time.time()
+    out = {}
+    for key, ago in (("hour", 3600), ("day", 86400), ("week", 7 * 86400)):
+        then = now - ago
+        name = next((n for n in names if snapshot_time(n) <= then), None)
+        out[key] = {"name": name, "time": snapshot_time(name)} if name else None
+    return out
+
+
+def backup_drives(listing=None):
+    """Plugged-in USB drives a copy can go on: [{uuid, label, size, fstype, mount}]."""
+    if listing is None:
+        listing = json.loads(run("lsblk", "-J", "-b", "-o", "PATH,UUID,LABEL,FSTYPE,SIZE,HOTPLUG,TRAN,TYPE,MOUNTPOINTS")
+                             or "{}").get("blockdevices", [])
+    found = []
+
+    def walk(devices, removable):
+        for d in devices:
+            here = removable or d.get("tran") == "usb" or d.get("hotplug") in (True, "1")
+            label = d.get("label") or ""
+            # Not Monet's own USB stick.
+            if here and d.get("uuid") and d.get("fstype") in BACKUP_FILESYSTEMS and not label.startswith("Monet-") \
+                    and label != "MONETEFI":
+                mount = next((m for m in d.get("mountpoints") or [] if m), "")
+                found.append({"uuid": d["uuid"], "label": label, "size": int(d.get("size") or 0),
+                              "fstype": d["fstype"], "mount": mount})
+            walk(d.get("children") or [], here)
+
+    walk(listing, False)
+    return found
+
+
+def backup_prefs():
+    try:
+        return json.loads(BACKUP.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save_backup(**changes):
+    found = backup_prefs()
+    found.update(changes)
+    BACKUP.parent.mkdir(parents=True, exist_ok=True)
+    BACKUP.write_text(json.dumps(found))
+
+
+def copying(prefs):
+    pid = prefs.get("pid")
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def backup_state():
+    prefs, names = backup_prefs(), snapshot_names()
+    drives = backup_drives()
+    chosen = prefs.get("drive")
+    return {"versions": not KEEP_OFF.exists(), "kept": len(names), "lookBack": look_back(names),
+            "drives": [d for d in drives if d["uuid"] != chosen], "drive": chosen, "label": prefs.get("label", ""),
+            "plugged": any(d["uuid"] == chosen for d in drives), "last": prefs.get("last"),
+            "copying": copying(prefs), "percent": prefs.get("percent", 0), "error": prefs.get("error", "")}
+
+
+def backup_run():
+    """Copies this person's files to the drive they chose, if it's plugged in."""
+    prefs = backup_prefs()
+    drive = next((d for d in backup_drives() if d["uuid"] == prefs.get("drive")), None)
+    if not drive or copying(prefs):
+        return
+    where, mounted = drive["mount"], False
+    if not where:
+        said = run("udisksctl", "mount", "-b", f"/dev/disk/by-uuid/{drive['uuid']}", "--no-user-interaction",
+                   timeout=60) or ""
+        found = re.search(r" at (.+?)\.?\s*$", said.strip())
+        where, mounted = (found.group(1), True) if found else ("", False)
+    if not where:
+        save_backup(error=tr("The drive couldn't be opened. Try plugging it in again."))
+        return
+    me_name, today = Path.home().name, time.strftime("%Y-%m-%d")
+    top = Path(where) / "Monet Backup"
+    dest, earlier = top / me_name, top / f"{me_name} {tr('earlier')}"
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        save_backup(error=tr("Monet can't write on this drive."))
+        return
+    args = ["rsync", "-rlt" if drive["fstype"] in LINKS_OK else "-rt", "--delete", "--backup",
+            f"--backup-dir={earlier / today}", "--modify-window=2", "--info=progress2", "--no-inc-recursive"]
+    args += [f"--exclude={x}" for x in NOT_COPIED] + [f"{Path.home()}/", f"{dest}/"]
+    try:
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    except OSError:
+        save_backup(error=tr("The copy didn't finish. Monet tries again the next time the drive is plugged in."))
+        return
+    save_backup(pid=proc.pid, percent=0, error="")
+    shown = 0.0
+    for line in proc.stdout:  # rsync's \r-separated progress reads as lines
+        found = re.search(r"(\d+)%", line)
+        if found and time.time() - shown > 2:
+            shown = time.time()
+            save_backup(percent=int(found.group(1)))
+    code = proc.wait()
+    # What copies replaced or deleted, kept for three months.
+    try:
+        for old in earlier.iterdir():
+            if old.is_dir() and snapshot_time(old.name + " 00.00") and \
+                    time.time() - snapshot_time(old.name + " 00.00") > KEEP_EARLIER_DAYS * 86400:
+                shutil.rmtree(old, ignore_errors=True)
+    except OSError:
+        pass
+    if mounted:
+        run("udisksctl", "unmount", "-b", f"/dev/disk/by-uuid/{drive['uuid']}", "--no-user-interaction", timeout=120)
+    # 23 and 24: a few files couldn't be read, or went away while copying.
+    if code in (0, 23, 24):
+        save_backup(pid=None, percent=100, last=int(time.time()), error="")
+    else:
+        save_backup(pid=None, error=tr("The copy didn't finish. Monet tries again the next time the drive is plugged in."))
+
+
+def backup_auto():
+    """Every quarter of an hour: a copy when the drive is in and the last is a day old;
+    a word when it's been out for a week."""
+    prefs = backup_prefs()
+    if not prefs.get("drive"):
+        return
+    now, last = time.time(), prefs.get("last") or 0
+    if any(d["uuid"] == prefs["drive"] for d in backup_drives()):
+        if now - last > COPY_EVERY:
+            backup_run()
+    elif last and now - last > 7 * 86400 and now - prefs.get("reminded", 0) > 7 * 86400 and shutil.which("notify-send"):
+        save_backup(reminded=int(now))
+        run("notify-send", "--app-name=Monet", "--icon=drive-removable-media", tr("Your files haven't been copied for a week"),
+            tr("Plug in %1 and Monet copies them.", prefs.get("label") or tr("your backup drive")))
+
+
+def show_in_files(path):
+    path = Path(path)
+    if shutil.which("dolphin") and not path.is_dir():
+        command = ["dolphin", "--select", str(path)]
+    else:
+        command = ["xdg-open", str(path)]
+    subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def files_arrived():
+    """bring_files(), then says so, with Files a click away."""
+    if bring_files() and shutil.which("notify-send"):
+        answer = run("notify-send", "--app-name=Monet", "--icon=system-file-manager", f"--action=open={tr('Open Files')}",
+                     "--wait", tr("Your files from Windows are here"),
+                     tr("In Documents, Pictures, Music, Videos, Downloads and on the desktop."), timeout=3600)
+        if (answer or "").strip() == "open":
+            subprocess.Popen(["xdg-open", str(Path.home())], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 # What each kind of UPower device is, for the Batteries widget's signs.
 UPOWER_KINDS = {5: "mouse", 6: "keyboard", 8: "phone", 10: "tablet", 12: "controller", 13: "pen", 14: "touchpad",
                 17: "headset", 18: "speaker", 19: "headphones", 26: "watch"}
@@ -2349,6 +2894,75 @@ def main(argv):
         emit(startup_now())
     elif cmd == "older-pc":
         print("yes" if older_pc() else "no")
+    elif cmd == "bring-files":
+        files_arrived()
+    elif cmd == "game-marks":
+        emit(game_marks())
+    elif cmd == "place":
+        print(place())
+    elif cmd == "focus" and args and (args[0] == "off" or args[0].isdigit()):
+        focus(None if args[0] == "off" else int(args[0]))
+    elif cmd == "screens":
+        emit(screen_features())
+    elif cmd in ("screen-hdr", "screen-vrr") and len(args) == 2 and args[1] in ("on", "off"):
+        set_screen_feature(args[0], cmd[7:], args[1] == "on")
+        emit(screen_features())
+    elif cmd == "backup":
+        emit(backup_state())
+    # Root keeps or deletes the snapshots; Monet's polkit rule lets this one program run without a password.
+    elif cmd == "keep" and args and args[0] in ("on", "off"):
+        run("pkexec", f"{LIBEXECDIR}/monet-keep", args[0], timeout=900)
+        emit(backup_state())
+    elif cmd == "backup-drive" and args and (args[0] == "none" or re.fullmatch(r"[0-9A-Fa-f-]{4,40}", args[0])):
+        drive = next((d for d in backup_drives() if d["uuid"] == args[0]), None)
+        save_backup(drive=drive and drive["uuid"], label=drive["label"] if drive else "", last=None, error="")
+        emit(backup_state())
+    elif cmd == "backup-now":
+        if shutil.which("systemd-run"):
+            run("systemd-run", "--user", "--quiet", "--collect", "--unit=monet-backup-now",
+                f"{LIBEXECDIR}/monet-quick", "backup-run")
+        else:
+            backup_run()
+    elif cmd == "backup-run":
+        backup_run()
+    elif cmd == "backup-auto":
+        backup_auto()
+    # Your files as they were: the snapshot of that time (its time, as the page got it).
+    elif cmd == "backup-open" and args and args[0].isdigit():
+        name = next((n for n in snapshot_names() if snapshot_time(n) == int(args[0])), None)
+        there = name and in_snapshot(Path.home(), name)
+        if there:
+            show_in_files(there)
+    elif cmd == "backup-open-drive":
+        drive = next((d for d in backup_drives() if d["uuid"] == backup_prefs().get("drive")), None)
+        if drive and drive["mount"]:
+            show_in_files(Path(drive["mount"]) / "Monet Backup" / Path.home().name)
+        elif drive:
+            run("udisksctl", "mount", "-b", f"/dev/disk/by-uuid/{drive['uuid']}", "--no-user-interaction", timeout=60)
+            drive = next((d for d in backup_drives() if d["uuid"] == drive["uuid"]), drive)
+            if drive["mount"]:
+                show_in_files(Path(drive["mount"]) / "Monet Backup" / Path.home().name)
+    # Earlier versions of one file, from Files' menu: Settings → Backups shows them.
+    elif cmd == "earlier" and args:
+        EARLIER.write_text(os.path.abspath(args[0]))
+        open_settings("backups")
+    elif cmd == "versions":
+        try:
+            path = EARLIER.read_text()
+        except OSError:
+            path = ""
+        emit({"file": path, "name": os.path.basename(path), "versions": versions(path)} if path else {})
+    elif cmd == "versions-done":
+        EARLIER.unlink(missing_ok=True)
+    elif cmd in ("version-open", "put-back") and args and args[0].isdigit():
+        try:
+            path = EARLIER.read_text()
+        except OSError:
+            path = ""
+        found = versions(path) if path else []
+        if int(args[0]) < len(found):
+            version = found[int(args[0])]
+            show_in_files(version["path"] if cmd == "version-open" else put_back(version, path))
     elif cmd == "batteries":
         emit(batteries())
     elif cmd == "battery-care":
@@ -2372,14 +2986,16 @@ def main(argv):
         set_light(args[0])
     elif cmd == "prefs":
         emit(prefs())
-    elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass"):
+    elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass", "weather", "dodge"):
         values = prefs()
         values[args[0]] = args[1] == "on"
         save_prefs(values)
         if args[0] == "placard":
             set_placard(values["placard"])
+        elif args[0] == "dodge":
+            set_dodge(values["dodge"])
         else:
-            run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] == "hours" else "apply", timeout=30)
+            run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] in ("hours", "weather") else "apply", timeout=30)
     elif cmd == "series" and args and args[0] in SERIES:
         values = prefs()
         values["series"] = args[0]
@@ -2506,6 +3122,13 @@ def main(argv):
             emit(found)
     elif cmd == "gaming":
         emit(gaming_state())
+    elif cmd == "replay" and args and args[0] in ("on", "off"):
+        set_replay(args[0] == "on")
+        emit(gaming_state())
+    elif cmd == "replay-run":
+        replay_run()
+    elif cmd == "replay-save":
+        replay_save()
     elif cmd == "overlay" and args and args[0] in ("on", "off"):
         set_overlay(args[0] == "on")
     elif cmd == "pair-controller" and shutil.which("bluedevil-wizard"):

@@ -34,11 +34,11 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 # name: radius, content margin, shadow blur, shadow drop, shadow strength, glass opacity
 # (and rim=False for glass too small for a rim of light: inside the hairline, it reads as a second box)
 FRAMES = {
-    "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.34),
+    "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24),
     "widgets/panel-background": dict(radius=22, margin=8, blur=12, drop=7, strength=0.32, glass=0.10, lens=7),
     "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.60, rim=False),
     # Popups and desktop widgets drawn by Plasma's own components.
-    "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.34),
+    "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24),
 }
 SOLID = 0.96
 
@@ -615,10 +615,11 @@ def tabbar_svg():
     r = 10
     for prefix in ("north-active-tab", "east-active-tab", "west-active-tab"):
         nine(sheet, prefix, (r, r, r, r), [fill(INK, 0.10, (28, 28), 0, r)], margins=(6, 10, 6, 10))
-    # The bar's tray marks the open icon with this one, stretched to the island's
-    # edges by the island's margins all round: the pebble keeps to the icon's own
-    # cell, so it never reaches over the icons beside it.
-    ix, iy = FRAMES["widgets/panel-background"]["margin"], 11
+    # The bar marks an open icon (or the clock) with this one, stretched to the
+    # island's edges by the island's margins all round: the pebble keeps to the
+    # item's own cell, its full height, so it never reaches over the icons beside it
+    # and the clock's two lines fit in it.
+    ix = iy = FRAMES["widgets/panel-background"]["margin"]
     w, h = 2 * (ix + r) + 8, 2 * (iy + r) + 8
     nine(sheet, "south-active-tab", (ix + r, iy + r, ix + r, iy + r),
          [Shape(paint(INK, 0.10), rounded(ix, iy, w - ix, h - iy, r))], margins=(ix + 6, iy + 2, ix + 6, iy + 2))

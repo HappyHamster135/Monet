@@ -18,6 +18,32 @@ Test machines:
 - [ ] Monet Bridge installed; `monet-bridge status` (admin terminal) lists the Monet entry
 - [ ] The right Monet for the graphics: `rpm-ostree status` (or `bootc status`) shows `monet` on the RTX PC and `monet-amd` on a PC with only Intel or AMD graphics (or an NVIDIA card older than the RTX 20 series)
 
+### Making the USB stick
+
+- [ ] Make-USB-Stick.exe lists the plugged-in USB stick (0.8.5 found none) and writes it
+
+### 0.9's smaller things
+
+- [ ] Settings → Updates names Monet's version ("Monet 0.9.0 is ready"), not "44.2026…"
+- [ ] Settings' corner and edges drag it bigger and smaller; double-clicking "Settings" fills the screen; the size is kept
+- [ ] Popovers, the tray's (Disks & Devices, Audio Volume), the menu and the bars show the painting's strokes, like the desktop widgets
+- [ ] The clock's page goes back to its width after the notes close; a note written there shows in the Calendar widget within a second
+- [ ] Light & Wallpaper → Through the year hangs the painting of the season
+- [ ] A window dragged over the bar makes the island under it slide away; pointing at the bottom edge brings it back; Light & Wallpaper → Bar steps aside off keeps it in view
+- [ ] Timer → Focus, then start: notifications stay quiet, the painting goes from dawn to night over the minutes, and both come back after
+- [ ] Games & Controllers → Save the last 30 seconds: GPU Screen Recorder installs, KDE asks for the screen once, Windows+Alt+G saves an MP4 in Videos
+- [ ] Search in the menu for "printers": Settings' Printers page is found
+
+### Next to Windows, backups and the painting
+
+- [ ] Monet Setup on a PC with a full Windows drive: "Monet next to my Windows" offers to make room (the note says from and to), Bring my files is ticked, and after installing Windows still starts (it checks its drive once)
+- [ ] At the first sign-in the files from Windows are in Documents, Pictures and the rest, and a note says so
+- [ ] Settings → Backups: after an hour, "An hour ago" opens your files in Files; right-click a file → Earlier versions → Put back puts a copy beside it
+- [ ] A USB drive picked in Backups gets "Monet Backup/<you>" the next time it's plugged in
+- [ ] The Hours changes light near your sunrise and sunset, not at fixed hours; on a rainy day the painting is softer
+- [ ] Display shows HDR and Smoother games on a monitor that can do them, and they change the monitor
+- [ ] Games & Controllers lists a game installed here whose anti-cheat needs Windows
+
 ### Older PCs and laptops
 
 - [ ] `/usr/libexec/monet-quick older-pc` says `yes` with 8 GB of memory or less (or a hard disk), `no` otherwise

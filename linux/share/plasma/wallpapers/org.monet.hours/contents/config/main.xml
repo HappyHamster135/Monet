@@ -8,9 +8,21 @@
     <entry name="Painting" type="String">
       <default>hours</default>
     </entry>
-    <!-- Which painting: The Hours, Water Lilies or Haystacks (each in four lights). -->
+    <!-- Which painting: The Hours, Water Lilies, Haystacks or The Magpie (each in four lights). -->
     <entry name="Series" type="String">
       <default>hours</default>
+    </entry>
+    <!-- Where the PC is ("59.33,18.07"), from monet-light: the lights follow its sunrise and sunset. -->
+    <entry name="Place" type="String">
+      <default></default>
+    </entry>
+    <!-- Rain, fog and snow there soften the painting with mist (Light & Wallpaper). -->
+    <entry name="Weather" type="Bool">
+      <default>true</default>
+    </entry>
+    <!-- Plein-air focus (the Timer): "start,end" in Unix seconds, a whole day between them. -->
+    <entry name="Focus" type="String">
+      <default></default>
     </entry>
   </group>
 </kcfg>

@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Earlier versions of everyone's files: every hour a read-only snapshot of /var/home
+(btrfs, so it only takes room for what changes afterwards), kept for a day, then one
+a day for two weeks and one a week for two months. Each person sees their own files
+in them (Settings → Backups, and Earlier versions in Files' menu), nobody else's.
+
+Runs as root. monet-keep-prepare.service (before the sign-in screen) and
+monet-keep.timer (hourly) run it; Monet's polkit rule lets the signed-in person
+turn it on or off and nothing else.
+
+    monet-keep prepare     /var/home becomes a subvolume of its own, once (snapshots need one)
+    monet-keep snap        one more snapshot, then the old ones thinned out
+    monet-keep on|off      keep earlier versions, or stop (off deletes them, freeing the room)
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+HOME = Path("/var/home")
+SNAPSHOTS = Path("/var/lib/monet/snapshots")
+OFF = Path("/var/lib/monet/keep-off")
+# Sorts by time, and reads well in Files ("2026-10-23 14.00").
+STAMP = "%Y-%m-%d %H.%M"
+# Room people need beats the oldest versions.
+FULL = 0.9
+
+
+def run(*args):
+    return subprocess.run([str(a) for a in args], capture_output=True).returncode == 0
+
+
+def on_btrfs(path):
+    done = subprocess.run(["stat", "-f", "-c", "%T", str(path)], capture_output=True, text=True)
+    return done.stdout.strip() == "btrfs"
+
+
+def subvolume(path):
+    try:
+        return os.stat(path).st_ino == 256
+    except OSError:
+        return False
+
+
+def signed_in():
+    out = subprocess.run(["loginctl", "list-sessions", "--no-legend"], capture_output=True, text=True).stdout
+    return bool(out.strip())
+
+
+def prepare(home=HOME):
+    """/var/home as its own subvolume: a new one, the homes copied in (sharing their
+    blocks: quick, and no room taken), then swapped. Before anyone signs in."""
+    old, new = home.with_name(home.name + ".monet-old"), home.with_name(home.name + ".monet-new")
+    # Stopped between the two renames last time: the homes go back first.
+    if not home.exists() and old.is_dir():
+        old.rename(home)
+    if not on_btrfs(home) or subvolume(home) or signed_in():
+        return
+    if new.exists():
+        run("btrfs", "subvolume", "delete", new)
+    if not run("btrfs", "subvolume", "create", new):
+        return
+    st = home.stat()
+    os.chown(new, st.st_uid, st.st_gid)
+    os.chmod(new, st.st_mode & 0o7777)
+    run("chcon", "--reference", home, new)
+    if not run("cp", "-a", "--reflink=always", f"{home}/.", new):
+        run("btrfs", "subvolume", "delete", new)
+        return
+    home.rename(old)
+    new.rename(home)
+    shutil.rmtree(old, ignore_errors=True)
+
+
+def thin(names, now):
+    """Which snapshots go: all from the last day stay, then the newest of each day for
+    two weeks and of each week for two months; older ones go."""
+    kept, gone = set(), []
+    for name in sorted(names, reverse=True):
+        try:
+            when = datetime.strptime(name, STAMP)
+        except ValueError:
+            continue
+        age = now - when
+        if age <= timedelta(days=1):
+            continue
+        if age <= timedelta(days=14):
+            bucket = ("day", when.date())
+        elif age <= timedelta(weeks=9):
+            bucket = ("week", when.isocalendar()[:2])
+        else:
+            gone.append(name)
+            continue
+        if bucket in kept:
+            gone.append(name)
+        else:
+            kept.add(bucket)
+    return gone
+
+
+def snapshots():
+    try:
+        return sorted(p.name for p in SNAPSHOTS.iterdir() if p.is_dir())
+    except OSError:
+        return []
+
+
+def delete(name):
+    run("btrfs", "subvolume", "delete", SNAPSHOTS / name)
+
+
+def snap(now=None):
+    if OFF.exists() or not subvolume(HOME):
+        return
+    now = now or datetime.now()
+    SNAPSHOTS.mkdir(parents=True, exist_ok=True)
+    # Each person can reach their own home in it (it keeps its own 0700), nobody else's.
+    SNAPSHOTS.chmod(0o755)
+    target = SNAPSHOTS / now.strftime(STAMP)
+    if not target.exists():
+        run("btrfs", "subvolume", "snapshot", "-r", HOME, target)
+    for name in thin(snapshots(), now):
+        delete(name)
+    left = snapshots()
+    while len(left) > 1:
+        usage = shutil.disk_usage(HOME)
+        if usage.used / usage.total < FULL:
+            break
+        delete(left.pop(0))
+
+
+def main(args):
+    cmd = args[0] if args else ""
+    if cmd == "prepare":
+        prepare()
+    elif cmd == "snap":
+        snap()
+    elif cmd == "off":
+        OFF.parent.mkdir(parents=True, exist_ok=True)
+        OFF.touch()
+        for name in snapshots():
+            delete(name)
+    elif cmd == "on":
+        OFF.unlink(missing_ok=True)
+        snap()
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

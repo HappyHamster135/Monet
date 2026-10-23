@@ -497,11 +497,13 @@ PlasmoidItem {
                         }
                     }
 
+                    // A pebble of lighter glass with light in its rim.
                     background: Rectangle {
+                        readonly property bool dark: card.ink.hslLightness > 0.5
                         radius: height / 2
-                        color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.07)
+                        color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
                         border.width: field.activeFocus ? 2 : 1
-                        border.color: field.activeFocus ? card.lily : Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.12)
+                        border.color: field.activeFocus ? card.lily : dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.75)
                     }
                     // Templates draw no placeholder.
                     Text {

@@ -35,7 +35,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.8.5"
+current="$looks/look-0.9.0"
 if [ ! -e "$current" ]; then
     # Plasma needs a moment after sign-in before it accepts changes.
     sleep 4
@@ -47,6 +47,11 @@ if [ ! -e "$current" ]; then
         "$LIBEXECDIR/monet-look"
     fi
     mkdir -p "$looks" && touch "$current"
+fi
+
+# Files Monet Setup brought from Windows: into this account's folders, once.
+if [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/monet/from-windows" ]; then
+    (sleep 6; "$LIBEXECDIR/monet-quick" bring-files) >/dev/null 2>&1 &
 fi
 
 # An older PC (8 GB of memory or less, or a spinning disk): Monet goes easier on

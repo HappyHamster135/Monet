@@ -22,6 +22,9 @@ PlasmoidItem {
     readonly property real length: minutes * 60000
     readonly property bool running: Plasmoid.configuration.ends > 0
     readonly property bool paused: !running && Plasmoid.configuration.left > 0
+    // Plein-air focus: while it runs, notifications are quiet and the painting goes from
+    // dawn to night (monet-quick focus), so the light shows the time passing.
+    readonly property bool focusSession: Plasmoid.configuration.focus === true
     property real now: Date.now()
     // What's left, in milliseconds: counting down, held, or all of it.
     readonly property real remaining: running ? Math.max(0, Plasmoid.configuration.ends - now)
@@ -81,23 +84,36 @@ PlasmoidItem {
         Plasmoid.configuration.ends = now + (paused ? Plasmoid.configuration.left : length);
         Plasmoid.configuration.left = 0;
         done = false;
+        if (focusSession) {
+            runner.connectSource(helper + " focus " + Math.round(Plasmoid.configuration.ends / 1000));
+        }
+    }
+
+    // The painting and the notifications back as they were.
+    function unfocus() {
+        if (focusSession) {
+            runner.connectSource(helper + " focus off");
+        }
     }
 
     function pause() {
         Plasmoid.configuration.left = Math.max(1, Plasmoid.configuration.ends - Date.now());
         Plasmoid.configuration.ends = 0;
+        unfocus();
     }
 
     function reset() {
         Plasmoid.configuration.ends = 0;
         Plasmoid.configuration.left = 0;
         done = false;
+        unfocus();
     }
 
     function finish(ring) {
         Plasmoid.configuration.ends = 0;
         Plasmoid.configuration.left = 0;
         done = true;
+        unfocus();
         if (ring) {
             runner.connectSource(helper + " ring " + hex(i18n("Time's up"))
                                  + " " + hex(i18np("%1 minute has passed.", "%1 minutes have passed.", minutes)));
@@ -282,6 +298,23 @@ PlasmoidItem {
                             dim: card.dim
                             onClicked: root.setMinutes(modelData)
                         }
+                    }
+                }
+                // Plein-air focus, on or off for the next run.
+                Length {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: !root.running && !root.paused
+                    text: i18nc("a timer: quiet notifications, a day on the painting", "Focus")
+                    chosen: root.focusSession
+                    ink: card.ink
+                    dim: card.dim
+                    onClicked: Plasmoid.configuration.focus = !root.focusSession
+                    Accessible.role: Accessible.CheckBox
+                    Accessible.checked: root.focusSession
+                    PlasmaCore.ToolTipArea {
+                        anchors.fill: parent
+                        mainText: i18nc("a timer: quiet notifications, a day on the painting", "Focus")
+                        subText: i18n("Notifications stay quiet, and the painting goes from dawn to night while the timer runs.")
                     }
                 }
                 T.AbstractButton {

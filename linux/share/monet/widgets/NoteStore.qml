@@ -2,11 +2,15 @@
  * The day notes the Calendar widget and the bar's clock share: one note a
  * day, kept by Monet's helper (monet-quick notes, note DAY TEXT), so a note
  * written in one shows in the other. Changes show here at once; the helper
- * keeps them a moment later.
+ * keeps them a moment later, and the other one sees that at once too: the
+ * helper swaps notes.json in whole, which a watch on its folder catches.
  *
  * install.sh copies this file into the Calendar's and the Clock's packages.
  */
+import QtCore
 import QtQuick
+import QtQml.Models
+import Qt.labs.folderlistmodel
 import org.kde.plasma.plasma5support as P5Support
 
 QtObject {
@@ -35,6 +39,21 @@ QtObject {
             } else if (source.startsWith(store.helper + " note ")) {
                 store.writing = Math.max(0, store.writing - 1);
             }
+        }
+    }
+
+    // notes.json changing anywhere (the other widget, a second screen): a fresh look.
+    readonly property FolderListModel watch: FolderListModel {
+        folder: StandardPaths.writableLocation(StandardPaths.GenericDataLocation) + "/monet"
+        nameFilters: ["notes.json"]
+        showDirs: false
+    }
+    readonly property Instantiator changes: Instantiator {
+        model: store.watch
+        delegate: QtObject {
+            required property date fileModified
+            onFileModifiedChanged: Qt.callLater(store.refresh)
+            Component.onCompleted: Qt.callLater(store.refresh)
         }
     }
 

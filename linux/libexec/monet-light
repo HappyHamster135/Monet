@@ -5,6 +5,8 @@
 #   monet-light set hours|mist|smoke  choose: follow the hours, or keep one
 #   monet-light paint                 the chosen light again, and the painting that goes with it
 #   monet-light sync                  KDE's Light or Dark was picked: keep Mist or Smoke
+#   monet-light focus [START,END]     plein-air focus: a whole day on the painting from START to END
+#                                     (Unix seconds); nothing when it's over
 #
 # Panels and KDE apps change right away. Apps that use the glass app style
 # (Files, Kate, ...) change the next time they open.
@@ -12,6 +14,7 @@ set -u
 
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATADIR="@DATADIR@"
+LIBEXECDIR="@LIBEXECDIR@"
 CHOICE="$CONFIG/monet/light"
 # Same hours as the wallpaper: dawn and midday are light, dusk and night dark.
 DAY_FROM=5
@@ -97,30 +100,66 @@ painting() {
 }
 
 # Which of Monet's series is on the wall (Monet Settings, Light & Wallpaper):
-# The Hours, Water Lilies or Haystacks, each in the same four lights.
+# The Hours, Water Lilies, Haystacks or The Magpie, each in the same four lights, or one
+# for each season, as Monet painted them (seasons).
 series() {
     case "$(sed -n 's/.*"series": *"\([a-z]*\)".*/\1/p' "$CONFIG/monet/prefs.json" 2>/dev/null)" in
         lilies) echo lilies ;;
         haystacks) echo haystacks ;;
+        magpie) echo magpie ;;
+        seasons) season_series ;;
         *) echo hours ;;
     esac
 }
 
+# The Hours in spring, Water Lilies in summer, Haystacks in autumn, The Magpie
+# in winter; south of the equator (a place whose latitude is below zero) half
+# a year on.
+season_series() {
+    local month
+    month=$((10#$(date +%m)))
+    case "$(place)" in -*) month=$(( (month + 5) % 12 + 1 )) ;; esac
+    case "$month" in
+        6|7|8) echo lilies ;;
+        9|10|11) echo haystacks ;;
+        12|1|2) echo magpie ;;
+        *) echo hours ;;
+    esac
+}
+
+# Where the PC is, for The Hours' sunrise and sunset and its weather ("59.33,18.07").
+place() {
+    "$LIBEXECDIR/monet-quick" place 2>/dev/null | grep -E '^-?[0-9.]+,-?[0-9.]+$' || true
+}
+
+# Whether the weather shows on the painting (Light & Wallpaper): on until turned off.
+weather() {
+    grep -q '"weather": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo false || echo true
+}
+
 # On every screen's desktop and on the lock screen.
 paint() {
-    local name set
+    local name set where sky
     name="$(painting)"
     set="$(series)"
+    where="$(place)"
+    sky="$(weather)"
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
         --group General --key Painting "$name"
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
         --group General --key Series "$set"
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
+        --group General --key Place "$where"
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
+        --group General --key Weather "$sky"
     busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "
         desktops().forEach(function (d) {
             if (d.wallpaperPlugin !== 'org.monet.hours') return;
             d.currentConfigGroup = ['Wallpaper', 'org.monet.hours', 'General'];
             d.writeConfig('Painting', '$name');
             d.writeConfig('Series', '$set');
+            d.writeConfig('Place', '$where');
+            d.writeConfig('Weather', $sky);
             d.reloadConfig();
         });
         desktops().forEach(function (d) {
@@ -255,7 +294,26 @@ sync() {
     paint
 }
 
+# Plein-air focus (the Timer): The Hours goes from dawn to night between the two
+# times, so the light shows the time passing without a clock.
+focus() {
+    case "$1" in
+        ""|[0-9]*,[0-9]*) ;;
+        *) return 1 ;;
+    esac
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "
+        desktops().forEach(function (d) {
+            if (d.wallpaperPlugin !== 'org.monet.hours') return;
+            d.currentConfigGroup = ['Wallpaper', 'org.monet.hours', 'General'];
+            d.writeConfig('Focus', '$1');
+            d.reloadConfig();
+        })" >/dev/null 2>&1
+}
+
 case "${1:-apply}" in
+    focus)
+        focus "${2:-}"
+        ;;
     apply)
         lock
         apply

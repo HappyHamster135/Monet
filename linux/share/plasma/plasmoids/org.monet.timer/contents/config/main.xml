@@ -17,5 +17,9 @@
       <label>Milliseconds left on a paused timer; 0 when it isn't paused.</label>
       <default>0</default>
     </entry>
+    <entry name="focus" type="Bool">
+      <label>Plein-air focus: notifications quiet, and the painting going through a whole day while it runs.</label>
+      <default>false</default>
+    </entry>
   </group>
 </kcfg>

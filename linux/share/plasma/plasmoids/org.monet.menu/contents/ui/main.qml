@@ -259,11 +259,14 @@ PlasmoidItem {
                         page.shownView.currentIndex = 0
                     }
                 }
+                // A pebble of lighter glass with light caught in its rim, as Settings' search is.
                 background: Rectangle {
+                    readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
                     radius: height / 2
-                    color: Qt.rgba(page.ink.r, page.ink.g, page.ink.b, 0.06)
+                    color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
                     border.width: search.activeFocus ? 2 : 1
-                    border.color: search.activeFocus ? Kirigami.Theme.highlightColor : Qt.rgba(page.ink.r, page.ink.g, page.ink.b, 0.1)
+                    border.color: search.activeFocus ? Kirigami.Theme.highlightColor
+                        : dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.75)
                     Kirigami.Icon {
                         anchors.left: parent.left
                         anchors.leftMargin: 14

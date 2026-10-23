@@ -18,11 +18,14 @@ PlasmoidItem {
 
     property var games: []
     property bool loaded: false
+    // Steam ids of the games that play in Monet too (no anti-cheat that wants Windows).
+    property var marks: ({})
     // The game the sheet asks about; null for "just open Windows".
     property var asking: null
     property bool sheetOpen: false
     property string problem: ""
     readonly property string monet: "@BINDIR@/monet"
+    readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property string texture: "file://@DATADIR@/monet/textures/brush.png"
     readonly property color sun: "#F2552C"
     // Animations follow the desktop's speed, and stop when it's set to instant.
@@ -40,7 +43,13 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
-            if (source.indexOf(" games --json") !== -1) {
+            if (source.indexOf(" game-marks") !== -1) {
+                try {
+                    root.marks = JSON.parse(data["stdout"]).marks || {}
+                } catch (e) {
+                    root.marks = {}
+                }
+            } else if (source.indexOf(" games --json") !== -1) {
                 try {
                     root.games = JSON.parse(data["stdout"])
                 } catch (e) {
@@ -52,9 +61,7 @@ PlasmoidItem {
                 sunset.close()
                 root.expanded = true
                 // The plain first part; the technical rest is for monet's own log.
-                root.problem = (data["stderr"] || "").trim().split("
-
-")[0] || i18n("Monet couldn't switch to Windows.")
+                root.problem = (data["stderr"] || "").trim().split("\n\n")[0] || i18n("Monet couldn't switch to Windows.")
                 root.sheetOpen = true
             }
         }
@@ -62,6 +69,11 @@ PlasmoidItem {
 
     function refresh() {
         runner.connectSource(monet + " games --json")
+        runner.connectSource(helper + " game-marks")
+    }
+
+    function playsHere(id) {
+        return id.indexOf("steam:") === 0 && marks[id.slice(6)] === "here"
     }
 
     function ask(game) {
@@ -304,7 +316,8 @@ PlasmoidItem {
                                     font.weight: Font.DemiBold
                                 }
                                 PlasmaComponents.Label {
-                                    text: root.storeName(modelData.id)
+                                    text: root.playsHere(modelData.id) ? i18n("%1 · plays here too", root.storeName(modelData.id))
+                                        : root.storeName(modelData.id)
                                     opacity: 0.66
                                     font: Kirigami.Theme.smallFont
                                 }

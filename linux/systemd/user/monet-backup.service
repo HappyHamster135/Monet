@@ -1,0 +1,8 @@
+[Unit]
+Description=Monet: a copy of your files on your backup drive, when it's plugged in
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-quick backup-auto
+Nice=19
+IOSchedulingClass=idle

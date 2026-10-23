@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: the last 30 seconds on screen, kept to save with Windows+Alt+G (Games & Controllers)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-quick replay-run
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=graphical-session.target

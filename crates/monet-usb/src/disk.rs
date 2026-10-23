@@ -12,8 +12,8 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
 };
 use windows_sys::Win32::System::Ioctl::{
-    PropertyStandardQuery, StorageDeviceProperty, FSCTL_DISMOUNT_VOLUME, FSCTL_LOCK_VOLUME, GET_LENGTH_INFORMATION,
-    IOCTL_DISK_DELETE_DRIVE_LAYOUT, IOCTL_DISK_GET_LENGTH_INFO, IOCTL_DISK_UPDATE_PROPERTIES,
+    PropertyStandardQuery, StorageDeviceProperty, DISK_GEOMETRY_EX, FSCTL_DISMOUNT_VOLUME, FSCTL_LOCK_VOLUME,
+    IOCTL_DISK_DELETE_DRIVE_LAYOUT, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, IOCTL_DISK_UPDATE_PROPERTIES,
     IOCTL_STORAGE_GET_DEVICE_NUMBER, IOCTL_STORAGE_QUERY_PROPERTY, STORAGE_DEVICE_DESCRIPTOR, STORAGE_DEVICE_NUMBER,
     STORAGE_PROPERTY_QUERY,
 };
@@ -84,11 +84,15 @@ pub fn sticks() -> Vec<Stick> {
         if desc.BusType != BUS_USB || Some(number) == system {
             continue;
         }
-        let mut len: GET_LENGTH_INFORMATION = unsafe { zeroed() };
-        if !ioctl(&h, IOCTL_DISK_GET_LENGTH_INFO, std::ptr::null(), 0, &mut len as *mut _ as _, size_of::<GET_LENGTH_INFORMATION>()) {
+        // The size, from a question that needs no read access (the drive is opened with none):
+        // IOCTL_DISK_GET_LENGTH_INFO wants read access, so it failed for every disk and no stick showed.
+        // The answer can run past DISK_GEOMETRY_EX (partition and detection details): room for those.
+        let mut geometry = [0u64; 64];
+        if !ioctl(&h, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, std::ptr::null(), 0, geometry.as_mut_ptr() as _,
+                  size_of::<[u64; 64]>()) {
             continue;
         }
-        let size = len.Length as u64;
+        let size = unsafe { (*(geometry.as_ptr() as *const DISK_GEOMETRY_EX)).DiskSize } as u64;
         if size < plan::MIN_STICK {
             continue;
         }

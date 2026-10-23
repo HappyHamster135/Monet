@@ -1585,6 +1585,7 @@ SWATCHES = {
     "apps": ("dawn", (2900, 760, 3340, 1200)),
     "accessibility": ("day", (2200, 1300, 2640, 1740)),
     "storage": ("dusk", (2600, 1500, 3040, 1940)),
+    "backups": ("dusk", (1980, 1180, 2420, 1620)),
     "games": ("dawn", (1500, 1480, 1940, 1920)),
     "privacy": ("night", (1700, 300, 2140, 740)),
     "printers": ("day", (2500, 900, 2940, 1340)),
@@ -1607,7 +1608,7 @@ def series_art():
     """Previews for Light & Wallpaper's paintings: each series' four lights side by side."""
     w, h = 480, 236
     for series, picks in (("hours", (0.62, 0.7, 0.35, 0.28)), ("lilies", (0.3, 0.4, 0.55, 0.62)),
-                          ("haystacks", (0.4, 0.45, 0.5, 0.55))):
+                          ("haystacks", (0.4, 0.45, 0.5, 0.55)), ("magpie", (0.37, 0.35, 0.34, 0.36))):
         strip = Image.new("RGB", (w, h))
         for i, (name, cx) in enumerate(zip(("dawn", "day", "dusk", "night"), picks)):
             src = Image.open(HOURS.parent / series / f"{name}.jpg").convert("RGB")
@@ -1615,6 +1616,15 @@ def series_art():
             x0 = int(src.width * cx - cw / 2)
             strip.paste(src.crop((x0, 0, int(x0 + cw), src.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
         rounded_png(strip, 24, SETTINGS / f"series-{series}.png")
+    # Through the year: spring's harbor at dawn, summer's pond, autumn's field at dusk, winter's magpie in the snow.
+    strip = Image.new("RGB", (w, h))
+    for i, (series, name, cx) in enumerate((("hours", "dawn", 0.62), ("lilies", "day", 0.4), ("haystacks", "dusk", 0.5),
+                                            ("magpie", "day", 0.35))):
+        src = Image.open(HOURS.parent / series / f"{name}.jpg").convert("RGB")
+        cw = src.height * (w / 4) / h
+        x0 = int(src.width * cx - cw / 2)
+        strip.paste(src.crop((x0, 0, int(x0 + cw), src.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
+    rounded_png(strip, 24, SETTINGS / "series-seasons.png")
 
 
 def settings_art():

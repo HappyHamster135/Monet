@@ -238,7 +238,7 @@ def gather():
         add(MENU_NAME, m.group(1).strip('"'), None, f"{rel(look)}:{line_of(text, m.start())}")
         add(MENU_KEYS["Comment"], m.group(2), None, f"{rel(look)}:{line_of(text, m.start())}")
     # Menu entries and the widgets' names.
-    for p in sorted((ROOT / "linux/share/applications").glob("*.desktop")):
+    for p in menu_entries():
         for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
             key, _, value = line.partition("=")
             if key in MENU_KEYS and value:
@@ -428,9 +428,15 @@ def write_usb_table(usb):
     USB_TABLE.write_text("\n".join(out), encoding="utf-8", newline="\n")
 
 
+def menu_entries():
+    """Monet's own menu entries, and its entries in Files' menu."""
+    return (sorted((ROOT / "linux/share/applications").glob("*.desktop"))
+            + sorted((ROOT / "linux/share/kio/servicemenus").glob("*.desktop")))
+
+
 def localize_menu_entries(menus):
     """Name[language]= and the like, under each key of Monet's own menu entries."""
-    for p in sorted((ROOT / "linux/share/applications").glob("*.desktop")):
+    for p in menu_entries():
         lines = [l for l in p.read_text(encoding="utf-8").splitlines() if not re.match(r"^(Name|GenericName|Comment|Keywords)\[", l)]
         out = []
         for line in lines:

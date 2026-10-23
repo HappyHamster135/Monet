@@ -28,8 +28,9 @@ PHASES = {
     "disk": (N_("Preparing the disk"), 0.00, 0.03),
     "download": (N_("Downloading Monet"), 0.03, 0.75),
     "install": (N_("Installing Monet"), 0.75, 0.93),
-    "configure": (N_("Setting up your account"), 0.93, 0.98),
-    "finish": (N_("Finishing"), 0.98, 1.00),
+    "configure": (N_("Setting up your account"), 0.93, 0.95),
+    "files": (N_("Bringing your files"), 0.95, 0.99),
+    "finish": (N_("Finishing"), 0.99, 1.00),
 }
 
 
@@ -80,6 +81,7 @@ class Setup(QObject):
         self._networks, self._wired, self._scanning = [], False, False
         self._joining, self._wifi_error, self._joined = False, "", ""
         self._disks, self._disk, self._mode = [], 0, "erase"
+        self._bring = True
         self._name, self._password = "", ""
         self._apps = [app[-1] for app in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
@@ -119,10 +121,13 @@ class Setup(QObject):
                           {"name": "Giverny 5G", "signal": 74, "secure": True, "active": False},
                           {"name": "Le Havre", "signal": 51, "secure": True, "active": False},
                           {"name": "Café Argenteuil", "signal": 28, "secure": False, "active": False}]
+        # Windows on a full disk: Monet makes room, and Ann's files come along.
         self._disks = [{"path": "/dev/nvme0n1", "label": "Samsung SSD 990 PRO · 1 TB", "size": 10**12,
-                        "erase": disks.plan_erase(10**12), "keep": None, "hasWindows": True,
-                        "keepWhy": "Needs 71 GB of free space; this disk has 12 GB. "
-                                   "Shrink Windows' drive in Disk Management first."}]
+                        "erase": disks.plan_erase(10**12), "hasWindows": True, "keepWhy": "",
+                        "keep": {"boot": 2048, "monet": 488000,
+                                 "shrink": {"partition": "/dev/nvme0n1p3", "from": 999 * 10**9, "to": 487 * 10**9}},
+                        "files": {"person": "Ann", "partition": "/dev/nvme0n1p3", "total": 41 * 10**9, "fits": True,
+                                  "folders": {"Documents": "Users/Ann/Documents"}, "sizes": {}}}]
         phase = os.environ.get("MONET_SETUP_DEMO_PHASE")
         if phase:
             self._phase = phase
@@ -330,6 +335,44 @@ class Setup(QObject):
         self._mode = mode
         self.changed.emit()
 
+    def _chosen(self):
+        return self._disks[min(self._disk, len(self._disks) - 1)] if self._disks else {}
+
+    @Property(str, notify=changed)
+    def roomNote(self):
+        """Next to Windows on a full disk: how Monet makes room."""
+        shrink = (self._chosen().get("keep") or {}).get("shrink")
+        if self._mode != "keep" or not shrink:
+            return ""
+        return tr("Monet makes room by shrinking Windows' drive from %1 to %2. Nothing in Windows is lost, and it checks its drive once the next time it starts.",  # noqa: E501
+                  disks.size_text(shrink["from"]), disks.size_text(shrink["to"]))
+
+    @Property("QVariant", notify=changed)
+    def files(self):
+        """Windows' files that can come along: {"text", "fits"}, or None."""
+        found = self._chosen().get("files")
+        if self._mode != "keep" or not self._chosen().get("keep") or not found:
+            return None
+        size = disks.size_text(found["total"])
+        if not found.get("fits"):
+            return {"fits": False, "text": tr("Your files in Windows (%1) don't fit next to Monet. Open them from Files once Monet is installed.", size)}  # noqa: E501
+        return {"fits": True, "text": tr("Desktop, Documents, Pictures, Music, Videos and Downloads from Windows (%1). They stay in Windows too.", size)}  # noqa: E501
+
+    @Property(bool, notify=changed)
+    def bring(self):
+        return self._bring
+
+    @Slot(bool)
+    def setBring(self, on):
+        self._bring = on
+        self.changed.emit()
+
+    def _files_plan(self):
+        found = self._chosen().get("files")
+        if self._mode == "keep" and self._bring and found and found.get("fits"):
+            return {key: found[key] for key in ("partition", "folders", "total")}
+        return None
+
     # -- this PC --
     @Property(str, notify=changed)
     def pcBlocker(self):
@@ -406,6 +449,7 @@ class Setup(QObject):
             "name": self._name, "account": account_name(self._name), "password": self._password,
             "wifi": self._joined,
             "apps": self.picked_apps(),
+            "files": self._files_plan(),
         }
         fd, path = tempfile.mkstemp(prefix="monet-plan-", suffix=".json", dir="/run")
         with os.fdopen(fd, "w") as f:

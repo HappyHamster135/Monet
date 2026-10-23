@@ -333,6 +333,8 @@ Item {
                         ? i18ndc("monet", "the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", monetLock.lightName)
                         : monetLock.series === "haystacks"
                         ? i18ndc("monet", "the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", monetLock.lightName)
+                        : monetLock.series === "magpie"
+                        ? i18ndc("monet", "the wallpaper's name, after Monet's The Magpie (La Pie); %1 is the light", "The Magpie, %1", monetLock.lightName)
                         : i18ndc("monet", "the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", monetLock.lightName)
                     color: placard.textColor
                     font.family: "Fraunces 72pt SuperSoft"

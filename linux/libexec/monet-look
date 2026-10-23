@@ -202,6 +202,11 @@ if fc-list : family 2>/dev/null | grep -qx "Inter"; then
     kw --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
     kw --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
 fi
+# Windows+Alt+G saves the last 30 seconds of a game, as Xbox Game Bar has it
+# (Settings → Games & Controllers turns the keeping on), unless it's been set.
+[ -n "$(kreadconfig6 --file kglobalshortcutsrc --group services --group monet-replay.desktop --key _launch 2>/dev/null)" ] ||
+    kw --file kglobalshortcutsrc --group services --group monet-replay.desktop --key _launch "Meta+Alt+G"
+
 # Window titles in Fraunces, like the placard and Monet Settings.
 if fc-list : family 2>/dev/null | grep -qx "Fraunces 72pt SuperSoft"; then
     kw --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
@@ -216,11 +221,17 @@ fi
 kw --file kwinrc --group Plugins --key blurEnabled true
 kw --file kwinrc --group Plugins --key contrastEnabled true
 kw --file kwinrc --group Plugins --key scaleEnabled true
+# The bar slides away and back (KWin's sliding popups): unhurried going, quick coming.
+kw --file kwinrc --group Plugins --key slidingpopupsEnabled true
+kw --file kwinrc --group Effect-slidingpopups --key SlideOutTime 240
+kw --file kwinrc --group Effect-slidingpopups --key SlideInTime 200
 kw --file kwinrc --group Plugins --key glideEnabled false
 kw --file kwinrc --group Plugins --key fadeEnabled false
-# Clear rather than frosted, as Apple's glass is: the painting's strokes still show.
-kw --file kwinrc --group Effect-blur --key BlurStrength 4
-kw --file kwinrc --group Effect-blur --key NoiseStrength 3
+# Clear rather than frosted, as Apple's glass is: the painting's strokes still show,
+# about as softened as through the desktop widgets' glass (Glass.qml), and no grain,
+# which read as matte.
+kw --file kwinrc --group Effect-blur --key BlurStrength 3
+kw --file kwinrc --group Effect-blur --key NoiseStrength 0
 # The painting's colors a little richer through the glass (KWin 6.7 does it in
 # the blur, no longer from the Plasma style's contrast settings).
 kw --file kwinrc --group Effect-blur --key Saturation 170
@@ -321,6 +332,19 @@ JS
 )" >/dev/null 2>&1; then
     mkdir -p "$CONFIG/monet" && touch "$swapped"
 fi
+# The bar's islands step aside when a window comes over them and come back when
+# you point at the bottom edge, as other systems' docks do (once, and only from
+# KDE's always-visible; Settings → Light & Wallpaper keeps them in view).
+dodge="$CONFIG/monet/bar-dodges"
+if [ ! -e "$dodge" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+panels().forEach(function (panel) {
+    if (panel.location === "bottom" && panel.hiding === "none") panel.hiding = "dodgewindows";
+});
+JS
+)" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$dodge"
+fi
+
 # And Monet's menu instead of KDE's, in its place and with its shortcut
 # (once). The pins are KDE's own and stay.
 menu="$CONFIG/monet/menu-placed"

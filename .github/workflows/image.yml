@@ -33,7 +33,7 @@ jobs:
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"
           VERSION=$(cat VERSION)
-          sudo podman build -f image/Containerfile -t "$IMAGE:latest" -t "$IMAGE:$VERSION" .
+          sudo podman build -f image/Containerfile --build-arg VERSION="$VERSION" -t "$IMAGE:latest" -t "$IMAGE:$VERSION" .
           FEDORA=$(sudo podman run --rm --entrypoint rpm "$IMAGE:latest" -E %fedora)
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
@@ -61,7 +61,7 @@ jobs:
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet-amd"
           VERSION=$(cat VERSION)
-          sudo podman build -f image/Containerfile --build-arg BASE=ghcr.io/ublue-os/bazzite:stable \
+          sudo podman build -f image/Containerfile --build-arg BASE=ghcr.io/ublue-os/bazzite:stable --build-arg VERSION="$VERSION" \
             -t "$IMAGE:latest" -t "$IMAGE:$VERSION" .
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
       - name: Push

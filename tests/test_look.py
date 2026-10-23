@@ -373,16 +373,19 @@ class Paintings(unittest.TestCase):
     def test_series_each_in_four_lights(self):
         # Water Lilies and Haystacks beside The Hours, painted by the same tool, chosen in Settings.
         quick = quick_helper()
-        self.assertEqual(quick.SERIES, ("hours", "lilies", "haystacks"))
-        for series in quick.SERIES:
+        # "seasons" hangs one of the four a season: no painting of its own, but a preview.
+        self.assertEqual(quick.SERIES, ("hours", "lilies", "haystacks", "magpie", "seasons"))
+        painted = quick.SERIES[:4]
+        for series in painted:
             for hour in ("dawn", "day", "dusk", "night"):
                 self.assertGreater((self.WALL / series / f"{hour}.jpg").stat().st_size, 100_000, f"{series} {hour}")
+        for series in quick.SERIES:
             self.assertTrue((SHARE / f"monet/settings/series-{series}.png").is_file(), series)
         tool = (ROOT / "tools/make-paintings.py").read_text(encoding="utf-8")
-        for series in quick.SERIES:
+        for series in painted:
             self.assertIn(f'    "{series}": dict(hours=', tool)
         wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
-        self.assertIn('["hours", "lilies", "haystacks"].indexOf(root.configuration.Series)', wallpaper)
+        self.assertIn('["hours", "lilies", "haystacks", "magpie"].indexOf(root.configuration.Series)', wallpaper)
         self.assertIn('"file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"', wallpaper)
         self.assertIn('<entry name="Series" type="String">',
                       (PLASMA / "wallpapers/org.monet.hours/contents/config/main.xml").read_text())
@@ -539,7 +542,7 @@ class Light(unittest.TestCase):
         # Monet Settings' switches repaint through monet-light, and so does a fresh layout.
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('"$0" paint\', f"{LIBEXECDIR}/monet-light"', quick)
-        self.assertIn('"paint" if args[0] == "hours"', quick)
+        self.assertIn('"paint" if args[0] in ("hours", "weather")', quick)
         self.assertIn('"$LIBEXECDIR/monet-light" paint', (ROOT / "linux/libexec/monet-look").read_text())
         # The wallpaper knows mist's and smoke's lights.
         wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
@@ -2035,7 +2038,7 @@ class MonetSettings(unittest.TestCase):
     def test_settings_search_speaks_every_language(self):
         # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
         settings = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
-        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 19)
+        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 20)
         self.assertNotIn('words: "', settings)
         self.assertIn('fold(entry.name + " " + entry.words).indexOf(words)', settings)
         german = (ROOT / "po/de.po").read_text(encoding="utf-8")
@@ -2564,6 +2567,382 @@ class EasierOnOlderPCs(unittest.TestCase):
         self.assertIn("visible: glass.frosted && !glass.lite", glass)
         self.assertIn("live: glass.frosted && !glass.lite", glass)
         self.assertIn("readonly property real band: glass.lite ? 0 : glass.lensWidth", glass)
+
+
+class FilesFromWindows(unittest.TestCase):
+    def test_they_go_into_this_accounts_folders(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            staged = home / ".local/share/monet/from-windows"
+            for rel in ("Documents/letter.txt", "Documents/Taxes/2025.pdf", "Pictures/sea.jpg"):
+                (staged / rel).parent.mkdir(parents=True, exist_ok=True)
+                (staged / rel).write_text(rel)
+            # A Swedish account: Documents is called Dokument; a letter.txt is there already.
+            (home / ".config").mkdir()
+            (home / ".config/user-dirs.dirs").write_text('XDG_DOCUMENTS_DIR="$HOME/Dokument"\nXDG_PICTURES_DIR="$HOME/Bilder"\n')
+            (home / "Dokument").mkdir()
+            (home / "Dokument/letter.txt").write_text("mine")
+            self.assertEqual(quick.bring_files(home), 3)
+            self.assertEqual((home / "Dokument/letter.txt").read_text(), "mine")
+            self.assertEqual((home / "Dokument/letter (Windows).txt").read_text(), "Documents/letter.txt")
+            self.assertTrue((home / "Dokument/Taxes/2025.pdf").is_file())
+            self.assertTrue((home / "Bilder/sea.jpg").is_file())
+            self.assertFalse(staged.exists())
+            self.assertEqual(quick.bring_files(home), 0)
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertIn('"$LIBEXECDIR/monet-quick" bring-files', session)
+
+
+def keep_helper():
+    loader = importlib.machinery.SourceFileLoader("monet_keep", str(ROOT / "linux/libexec/monet-keep"))
+    spec = importlib.util.spec_from_loader("monet_keep", loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+class Backups(unittest.TestCase):
+    """0.9: earlier versions every hour, and a copy on a drive."""
+
+    def test_snapshots_thin_out_like_time_machine(self):
+        from datetime import datetime, timedelta
+        keep = keep_helper()
+        now = datetime(2026, 10, 23, 14, 0)
+        names = [(now - timedelta(hours=h)).strftime(keep.STAMP) for h in range(0, 24 * 80)]
+        gone = set(keep.thin(names, now))
+        kept = [n for n in names if n not in gone]
+        # The last day, every hour; then one a day for two weeks, one a week for two months.
+        self.assertEqual(sum(1 for n in kept if now - datetime.strptime(n, keep.STAMP) <= timedelta(days=1)), 25)
+        days = {datetime.strptime(n, keep.STAMP).date() for n in kept
+                if timedelta(days=1) < now - datetime.strptime(n, keep.STAMP) <= timedelta(days=14)}
+        self.assertEqual(len(days), 14)
+        self.assertLessEqual(len(kept), 25 + 14 + 9)
+        self.assertTrue(all(now - datetime.strptime(n, keep.STAMP) <= timedelta(weeks=9) for n in kept))
+        # The newest of each day stays.
+        self.assertIn((now - timedelta(days=3)).replace(hour=23).strftime(keep.STAMP), kept)
+        self.assertEqual(keep.thin(["not a time"], now), [])
+
+    def test_the_homes_become_a_subvolume_only_before_sign_in(self):
+        keep = (ROOT / "linux/libexec/monet-keep").read_text()
+        prepare = keep.split("def prepare", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("or signed_in()", prepare)
+        self.assertIn('"--reflink=always"', prepare)
+        # Put back after a stop between the renames.
+        self.assertIn("if not home.exists() and old.is_dir():", prepare)
+        unit = (ROOT / "linux/systemd/monet-keep-prepare.service").read_text()
+        self.assertIn("Before=display-manager.service plasmalogin.service", unit)
+        self.assertIn("OnCalendar=hourly", (ROOT / "linux/systemd/monet-keep.timer").read_text())
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('put 755 "$SRC/libexec/monet-keep" "$LIBEXECDIR/monet-keep"', install)
+        self.assertIn('\\"$LIBEXECDIR/monet-keep\\"', install)
+        self.assertIn("systemctl enable monet-keep-prepare.service monet-keep.timer", install)
+        self.assertIn("systemctl --global enable monet-backup.timer", install)
+        uninstall = (ROOT / "linux/uninstall.sh").read_text()
+        self.assertIn('"$PREFIX/libexec/monet-keep" off', uninstall)
+
+    def test_earlier_versions_of_a_file(self):
+        import os
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            homes, snaps = Path(tmp) / "home", Path(tmp) / "snapshots"
+            letter = homes / "ann/Documents/letter.txt"
+            letter.parent.mkdir(parents=True)
+            letter.write_text("now")
+            for name, text, stamp in (("2026-10-23 14.00", "now", None), ("2026-10-23 13.00", "noon", 1792000000),
+                                      ("2026-10-23 12.00", "noon", 1792000000), ("2026-10-22 09.00", "morning", 1791900000)):
+                there = snaps / name / "ann/Documents/letter.txt"
+                there.parent.mkdir(parents=True)
+                there.write_text(text)
+                os.utime(there, (stamp, stamp) if stamp else os.stat(letter)[7:9])
+            found = quick.versions(letter, snaps, homes)
+            # The same as now, and the same as the one after it, aren't listed twice.
+            self.assertEqual([v["name"] for v in found], ["2026-10-23 13.00", "2026-10-22 09.00"])
+            back = quick.put_back(found[1], letter)
+            self.assertEqual(back.name, "letter (2026-10-22 09.00).txt")
+            self.assertEqual(back.read_text(), "morning")
+            self.assertEqual(letter.read_text(), "now")
+            self.assertEqual(quick.versions(Path(tmp) / "elsewhere.txt", snaps, homes), [])
+        names = ["2026-10-23 14.00", "2026-10-23 13.00", "2026-10-22 13.00", "2026-10-15 09.00"]
+        now = quick.snapshot_time("2026-10-23 14.30")
+        self.assertEqual({k: v and v["name"] for k, v in quick.look_back(names, now).items()},
+                         {"hour": "2026-10-23 13.00", "day": "2026-10-22 13.00", "week": "2026-10-15 09.00"})
+
+    def test_the_drives_a_copy_can_go_on(self):
+        quick = quick_helper()
+        listing = [
+            {"path": "/dev/nvme0n1", "tran": "nvme", "hotplug": False, "children": [
+                {"path": "/dev/nvme0n1p3", "uuid": "aaaa", "fstype": "btrfs", "label": "monet", "size": 900}]},
+            {"path": "/dev/sdb", "tran": "usb", "hotplug": True, "children": [
+                {"path": "/dev/sdb1", "uuid": "1234-ABCD", "fstype": "exfat", "label": "T7", "size": 10**12,
+                 "mountpoints": ["/run/media/ann/T7"]}]},
+            {"path": "/dev/sdc", "tran": "usb", "hotplug": True, "children": [
+                {"path": "/dev/sdc1", "uuid": "5678-EF01", "fstype": "vfat", "label": "Monet-0.8.5", "size": 8}]},
+        ]
+        self.assertEqual(quick.backup_drives(listing), [{"uuid": "1234-ABCD", "label": "T7", "size": 10**12,
+                                                         "fstype": "exfat", "mount": "/run/media/ann/T7"}])
+        code = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        run = code.split("def backup_run", 1)[1].split("\ndef ", 1)[0]
+        # What a copy replaces or deletes is kept beside it; games aren't copied.
+        self.assertIn('"--delete", "--backup"', run)
+        self.assertIn('"/.local/share/Steam/steamapps/"', code)
+        self.assertIn("rsync", (ROOT / "image/Containerfile").read_text())
+
+    def test_settings_and_files_have_it(self):
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn("backups: backupsPage", settings)
+        self.assertIn('sheet.ask("keep " + (on ? "on" : "off")', settings)
+        self.assertIn('onClicked: sheet.ask("put-back " + index)', settings)
+        self.assertTrue((SHARE / "monet/settings/swatch-backups.png").is_file())
+        menu = (SHARE / "kio/servicemenus/monet-earlier.desktop").read_text(encoding="utf-8")
+        self.assertIn("Exec=@LIBEXECDIR@/monet-quick earlier %f", menu)
+        self.assertIn("X-Monet=true", menu)
+        self.assertIn("Name[sv]=", menu)
+
+
+class ScreensForGames(unittest.TestCase):
+    def test_hdr_and_smoother_games_where_the_screen_can(self):
+        from unittest import mock
+        quick = quick_helper()
+        outputs = [{"name": "eDP-1", "enabled": True},  # a laptop panel that can do neither
+                   {"name": "DP-1", "enabled": True, "hdr": False, "vrrPolicy": 2},
+                   {"name": "HDMI-A-1", "enabled": True, "vrrPolicy": 0},
+                   {"name": "DP-2", "enabled": False, "hdr": True}]
+        self.assertEqual(quick.screen_features(outputs), [{"name": "DP-1", "hdr": False, "vrr": True},
+                                                          {"name": "HDMI-A-1", "hdr": None, "vrr": False}])
+        said = []
+        with mock.patch.object(quick, "run", lambda *a, **k: said.append(a)):
+            quick.set_screen_feature("DP-1", "hdr", True)
+            quick.set_screen_feature("DP-1", "vrr", True)
+            quick.set_screen_feature("HDMI-A-1", "vrr", False)
+            quick.set_screen_feature("x; rm -rf ~", "hdr", True)
+        self.assertEqual(said, [("kscreen-doctor", "output.DP-1.hdr.enable"), ("kscreen-doctor", "output.DP-1.vrrpolicy.automatic"),
+                                ("kscreen-doctor", "output.HDMI-A-1.vrrpolicy.never")])
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('ask("screen-" + what + " " + name + (on ? " on" : " off")', settings)
+
+
+class TheHoursFollowTheSun(unittest.TestCase):
+    """0.9: the lights come at this place's sunrise and sunset, under its weather."""
+    HOURS = PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml"
+
+    def test_sunrise_and_sunset(self):
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        app = QCoreApplication.instance() or QCoreApplication([])  # noqa: F841 (QJSEngine needs one)
+        qml = self.HOURS.read_text(encoding="utf-8")
+        js = QJSEngine()
+        js.evaluate(re.search(r"\n    (function sun\(.*?\n    })\n", qml, re.S).group(1))
+
+        def day(args):
+            found = js.evaluate(f"JSON.stringify(sun({args}))").toString()
+            times = json.loads(found)
+            return times and (times["set"] - times["rise"]) % 1440
+
+        # Stockholm: 18 h 37 min at midsummer, 6 h 4 min at midwinter; Svalbard's sun doesn't set in June.
+        self.assertAlmostEqual(day("59.33, 18.07, new Date(2026, 5, 21)"), 1117, delta=6)
+        self.assertAlmostEqual(day("59.33, 18.07, new Date(2026, 11, 21)"), 364, delta=6)
+        self.assertIsNone(day("78.22, 15.65, new Date(2026, 5, 21)"))
+
+    def test_place_and_weather(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            applets = Path(tmp) / "appletsrc"
+            applets.write_text("[Containments][1][Applets][23]\nplugin=org.monet.weather\n\n"
+                               "[Containments][1][Applets][23][Configuration][General]\nlatitude=49.49\nlongitude=0.11\n")
+            tab = Path(tmp) / "zone1970.tab"
+            tab.write_text("# comment\nSE\t+5920+01803\tEurope/Stockholm\nAR\t-3436-05827\tAmerica/Argentina/Buenos_Aires\n")
+            # The Weather widget's place first, then the time zone's city.
+            self.assertEqual(quick.place(applets, tab, "Europe/Stockholm"), "49.49,0.11")
+            applets.write_text("")
+            self.assertEqual(quick.place(applets, tab, "Europe/Stockholm"), "59.33,18.05")
+            self.assertEqual(quick.place(applets, tab, "America/Argentina/Buenos_Aires"), "-34.60,-58.45")
+            self.assertEqual(quick.place(applets, tab, "Etc/UTC"), "")
+        light = (ROOT / "linux/libexec/monet-light").read_text()
+        self.assertIn("d.writeConfig('Place', '$where');", light)
+        qml = self.HOURS.read_text(encoding="utf-8")
+        self.assertIn('"https://api.open-meteo.com/v1/forecast?latitude="', qml)
+        self.assertIn("if (root.configuration.Weather === false || !place) {", qml)
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('["weather", i18n("Weather"),', settings)
+
+class WhichSideAGamePlaysOn(unittest.TestCase):
+    def test_marks_from_areweanticheatyet(self):
+        import tempfile
+        quick = quick_helper()
+        listed = [{"name": "Slay the Spire", "status": "Supported", "storeIds": {"steam": "646570"}},
+                  {"name": "Apex Legends", "status": "Denied", "storeIds": {"steam": "1172470"}},
+                  {"name": "Rainbow Six Siege", "status": "Broken", "storeIds": {"steam": "359550"}},
+                  {"name": "Escape from Tarkov", "status": "Planned", "storeIds": {}},
+                  {"name": "Elden Ring", "status": "Running", "storeIds": {"steam": "1245620"}},
+                  "not a game"]
+        marks = quick.anticheat_marks(listed)
+        self.assertEqual(marks, {"646570": "here", "1172470": "windows", "359550": "windows", "1245620": "here"})
+        with tempfile.TemporaryDirectory() as tmp:
+            games = Path(tmp) / "games.json"
+            games.write_text(json.dumps({"v": 1, "games": [{"id": "steam:646570", "name": "Slay the Spire"},
+                                                           {"id": "riot:valorant", "name": "Valorant"},
+                                                           {"id": "steam:1172470", "name": "Apex Legends"}]}))
+            windows = quick.windows_steam_ids([games, Path(tmp) / "missing.json"])
+        self.assertEqual(windows, {"646570", "1172470"})
+        # Installed here: Apex (on Windows too) and Siege (only here) need Windows; Elden Ring doesn't.
+        here = {"1172470": "Apex Legends", "359550": "Rainbow Six Siege", "1245620": "ELDEN RING"}
+        found = quick.game_marks(marks, here, windows)
+        self.assertEqual(found["blocked"], [{"id": "1172470", "name": "Apex Legends", "onWindows": True},
+                                            {"id": "359550", "name": "Rainbow Six Siege", "onWindows": False}])
+        self.assertEqual(found["marks"]["646570"], "here")
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('text: i18n("Which games need Windows comes from AreWeAntiCheatYet.")', settings)
+        games_widget = (PLASMA / "plasmoids/org.monet.games/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn('runner.connectSource(helper + " game-marks")', games_widget)
+
+
+class SmallFixesFor090(unittest.TestCase):
+    """What the owner saw on 0.8.5: the USB stick, the update's name, Settings, the glass, the clock."""
+    SETTINGS = PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml"
+
+    def test_the_usb_stick_maker_finds_sticks(self):
+        disk = (ROOT / "crates/monet-usb/src/disk.rs").read_text(encoding="utf-8")
+        found = disk.split("pub fn sticks()", 1)[1].split("\npub fn ", 1)[0]
+        # The drives are opened with no access; the length question needs read access and failed for all.
+        self.assertIn('open(&format!("\\\\\\\\.\\\\PhysicalDrive{number}"), 0, 0)', found)
+        self.assertNotIn("ioctl(&h, IOCTL_DISK_GET_LENGTH_INFO", found)
+        self.assertIn("IOCTL_DISK_GET_DRIVE_GEOMETRY_EX", found)
+
+    def test_updates_say_monets_version(self):
+        containerfile = (ROOT / "image/Containerfile").read_text()
+        self.assertIn('LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}"', containerfile)
+        workflow = (ROOT / ".github/workflows/image.yml").read_text()
+        self.assertEqual(workflow.count('--build-arg VERSION="$VERSION"'), 2)
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn('i18n("Fixes for Monet %1 are ready", found.version)', settings)
+        self.assertIn("/^\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$/.test(found.version", settings)
+
+    def test_settings_can_be_resized_and_its_list_keeps_clear_of_the_scrollbar(self):
+        settings = self.SETTINGS.read_text(encoding="utf-8")
+        self.assertIn("width: navList.width - (navList.interactive ? navScroll.width + 4 : 0)", settings)
+        self.assertIn("sheet.chosenWidth = Math.max(760, grip.fromWidth + translation.x)", settings)
+        self.assertIn("onDoubleTapped: sheet.toggleBig()", settings)
+        quick = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("Plasmoid.configuration.SettingsWidth = Math.round(width)", quick)
+        self.assertIn('<entry name="SettingsWidth" type="Int">',
+                      (PLASMA / "plasmoids/org.monet.quick/contents/config/main.xml").read_text())
+
+    def test_clearer_glass_everywhere(self):
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn("--key BlurStrength 3", look)
+        self.assertIn("--key NoiseStrength 0", look)
+        style = (ROOT / "tools/make-plasma-style.py").read_text(encoding="utf-8")
+        self.assertIn('"dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24)', style)
+        self.assertIn('"widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24)', style)
+        menu = (PLASMA / "plasmoids/org.monet.menu/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)", menu)
+        # A new look for every account at the next sign-in.
+        self.assertIn('current="$looks/look-0.9.0"', (ROOT / "linux/libexec/monet-session").read_text())
+
+    def test_the_clocks_page_and_highlight(self):
+        clock = (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("Layout.maximumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 42 : 19)", clock)
+        self.assertIn("Kirigami.Units.largeSpacing * 3", clock)
+        self.assertIn('ix = iy = FRAMES["widgets/panel-background"]["margin"]',
+                      (ROOT / "tools/make-plasma-style.py").read_text(encoding="utf-8"))
+        store = (SHARE / "monet/widgets/NoteStore.qml").read_text(encoding="utf-8")
+        self.assertIn('nameFilters: ["notes.json"]', store)
+        self.assertIn("onFileModifiedChanged: Qt.callLater(store.refresh)", store)
+
+    def test_every_settings_page_is_found_by_search(self):
+        entry = (SHARE / "applications/monet-settings.desktop").read_text(encoding="utf-8")
+        actions = re.search(r"^Actions=(.*)$", entry, re.M).group(1).strip(";").split(";")
+        self.assertEqual(tuple(actions), tuple(p for p in quick_helper().PAGES))
+        for page in actions:
+            self.assertIn(f"Exec=@LIBEXECDIR@/monet-quick open {page}\n", entry)
+
+
+class For090(unittest.TestCase):
+    """0.9: a painting for each season, plein-air focus, and the last 30 seconds."""
+
+    def test_a_painting_for_each_season(self):
+        light = (ROOT / "linux/libexec/monet-light").read_text()
+        body = re.search(r"\nseason_series\(\) \{\n(.*?)\n\}\n", light, re.S).group(1)
+        for month, place, series in ((7, "59.33,18.07", "lilies"), (10, "59.33,18.07", "haystacks"),
+                                     (1, "59.33,18.07", "magpie"), (4, "", "hours"), (1, "-33.87,151.21", "lilies"),
+                                     (4, "-33.87,151.21", "haystacks"), (7, "-33.87,151.21", "magpie")):
+            script = f"date() {{ echo {month:02d}; }}\nplace() {{ echo '{place}'; }}\n{body}\n"
+            out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=30)
+            self.assertEqual(out.stdout.strip(), series, (month, place))
+        self.assertIn("seasons", quick_helper().SERIES)
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('["seasons", i18n("Through the year"), i18n("Each season its painting")]', settings)
+
+    def test_plein_air_focus(self):
+        from unittest import mock
+        quick = quick_helper()
+        said = []
+        with mock.patch.object(quick, "run", lambda *a, **k: said.append(a)):
+            quick.focus(2000000000)
+            quick.focus(None)
+        until = ",".join(str(v) for v in __import__("time").localtime(2000000000)[:6])
+        self.assertEqual(said[0][-1], until)
+        self.assertEqual(said[1][1:3], ("focus", said[1][2]))
+        self.assertTrue(said[1][2].endswith(",2000000000"))
+        self.assertEqual(said[2][-1], "--delete")
+        self.assertEqual(said[3][1:], ("focus", ""))
+        hours = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("minute = today.dawn + share * (today.night + drift - today.dawn)", hours)
+        self.assertIn("interval: root.focusing ? 4000 : 60 * 1000", hours)
+        timer = (PLASMA / "plasmoids/org.monet.timer/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn('runner.connectSource(helper + " focus " + Math.round(Plasmoid.configuration.ends / 1000))', timer)
+        self.assertIn('runner.connectSource(helper + " focus off")', timer)
+
+    def test_the_last_30_seconds(self):
+        from unittest import mock
+        quick = quick_helper()
+        calls = []
+
+        def fake_run(*args, **kw):
+            calls.append(args)
+            return None if args[:2] == ("flatpak", "info") and len(calls) < 3 else ""
+
+        with mock.patch.object(quick, "run", fake_run), mock.patch.object(quick, "ok", lambda *a, **k: True):
+            self.assertTrue(quick.set_replay(True))
+        self.assertIn(("flatpak", "install", "--system", "--noninteractive", "-y", "flathub", quick.REPLAY_APP), calls)
+        unit = (ROOT / "linux/systemd/user/monet-replay.service").read_text()
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick replay-run", unit)
+        code = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        run = code.split("def replay_run", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn('"-r", "30"', run)
+        self.assertIn('"-restore-portal-session", "yes"', run)
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        self.assertIn('--group services --group monet-replay.desktop --key _launch "Meta+Alt+G"', look)
+        self.assertIn('put 644 "$SRC/systemd/user/monet-replay.service"', (ROOT / "linux/install.sh").read_text())
+
+
+class TheBarStepsAside(unittest.TestCase):
+    def test_the_islands_dodge_windows_and_slide(self):
+        from unittest import mock
+        for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
+            layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
+            self.assertIn('set(p, "hiding", "dodgewindows")', layout)
+        look = (ROOT / "linux/libexec/monet-look").read_text()
+        # Existing accounts once, only from KDE's always-visible.
+        self.assertIn('if (panel.location === "bottom" && panel.hiding === "none") panel.hiding = "dodgewindows";', look)
+        self.assertIn("--group Effect-slidingpopups --key SlideOutTime 240", look)
+        self.assertIn("--group Plugins --key slidingpopupsEnabled true", look)
+        quick = quick_helper()
+        said = []
+        with mock.patch.object(quick, "plasma_script", said.append):
+            quick.set_dodge(False)
+            quick.set_dodge(True)
+        self.assertIn("p.hiding = 'none'", said[0])
+        self.assertIn("p.hiding = 'dodgewindows'", said[1])
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('["dodge", i18n("Bar steps aside")', settings)
 
 
 class LaptopGaming(unittest.TestCase):

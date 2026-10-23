@@ -11,10 +11,14 @@ export MONET_IMAGE=${MONET_IMAGE:-$(cat /usr/share/monet-setup/IMAGE 2>/dev/null
 # No graphics driver with 3D (NVIDIA without nouveau, or nomodeset): draw in software.
 ls /dev/dri/renderD* >/dev/null 2>&1 || export WLR_RENDERER=pixman
 export WLR_NO_HARDWARE_CURSORS=1
+# seatd-launch hands cage the screen and keyboard itself, so cage doesn't
+# depend on logind having made this service a session.
+seat=()
+command -v seatd-launch >/dev/null && seat=(seatd-launch --)
 
 while true; do
     read -r layout variant options < /run/monet-setup/keyboard 2>/dev/null || { layout=us; variant=; options=; }
-    XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant XKB_DEFAULT_OPTIONS=$options cage -s -- /usr/bin/monet-setup
+    XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant XKB_DEFAULT_OPTIONS=$options "${seat[@]}" cage -s -- /usr/bin/monet-setup
     code=$?
     [ "$code" = 3 ] && continue
     sleep 1

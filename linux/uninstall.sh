@@ -45,7 +45,15 @@ rmdir /etc/systemd/system/systemd-coredump@.service.wants 2>/dev/null || true
 systemctl disable monet-ready-leave.service monet-ready-boot.service >/dev/null 2>&1 || true
 systemctl --global disable monet-ready-lock.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-ready-leave.service /etc/systemd/system/monet-ready-boot.service \
-    /etc/systemd/user/monet-ready-lock.service /etc/plasmalogin.conf.d/zz-monet-ready.conf /run/monet/ready-auto
+    /etc/systemd/user/monet-ready-lock.service /etc/plasmalogin.conf.d/zz-monet-ready.conf /run/monet/ready-auto \
+    /etc/systemd/user/monet-replay.service
+# Backups: no more earlier versions (the ones kept go, with Monet; the files themselves
+# stay), and no more copies to a drive (what's on it stays there).
+systemctl disable --now monet-keep.timer monet-keep-prepare.service >/dev/null 2>&1 || true
+systemctl --global disable monet-backup.timer >/dev/null 2>&1 || true
+[ -x "$PREFIX/libexec/monet-keep" ] && "$PREFIX/libexec/monet-keep" off >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-keep-prepare.service /etc/systemd/system/monet-keep.service \
+    /etc/systemd/system/monet-keep.timer /etc/systemd/user/monet-backup.service /etc/systemd/user/monet-backup.timer
 systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
@@ -62,13 +70,14 @@ rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desk
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
-rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop"
+rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" \
+    "$PREFIX/share/kio/servicemenus/monet-earlier.desktop" "$PREFIX/share/applications/monet-replay.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
 rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colorscheme "$PREFIX"/share/konsole/MonetDark.colorscheme
 rm -f "$PREFIX"/share/locale/*/LC_MESSAGES/monet.mo "$PREFIX"/share/locale/*/LC_MESSAGES/plasma_applet_org.monet.*.mo \

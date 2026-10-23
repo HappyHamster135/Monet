@@ -62,7 +62,21 @@ the morning mist, with one bright orange sun. Everything else follows from it.
 
 - **The Hours.** One harbor in four lights: dawn, midday, dusk and night. The
   wallpaper drifts from one to the next as the day goes, over 45 minutes, the
-  way Monet painted the same view at different times. Two more of his series
+  way Monet painted the same view at different times: at this place's own
+  sunrise and sunset (dawn an hour before sunrise, midday two hours after it,
+  dusk an hour and a half before sunset, night just after; the sunrise
+  equation, offline, from the Weather widget's place or else the time zone's
+  city in `zone1970.tab`, which `monet-light` hands the wallpaper as `Place`),
+  falling back to 5, 10, 17 and 21 where the sun doesn't rise and set.
+  **The Magpie** (after *La Pie*, 1869) is the fourth: a farm under snow,
+  trees in hoarfrost, a wattle fence and gate with one magpie, Monet's
+  colored shadows on snow, all laid in strokes of a flat brush.
+  **Through the year** hangs one series a season: The Hours in spring, Water
+  Lilies in summer, Haystacks in autumn, The Magpie in winter (half a year on
+  south of the equator; `monet-light`'s `season_series`). Rain,
+  fog and snow there (Open-Meteo, every half hour; Light & Wallpaper turns it
+  off) lay a veil of mist over the painting, darker in the dusk and night
+  lights, drifting in over three minutes. Two more of his series
   hang beside it, chosen in Light & Wallpaper, each in the same four lights:
   **Water Lilies** (the pond at Giverny from above: no sky but its
   reflection, the willows' reflections falling down it, islands of pads with
@@ -70,7 +84,9 @@ the morning mist, with one bright orange sun. Everything else follows from it.
   the harvest, glowing on the side the light comes from, their long shadows
   colored by it). All are painted by `tools/make-paintings.py` with the same
   brushwork, so each series drifts through the day like The Hours; the
-  placard names the one on the wall ("Water Lilies, dusk").
+  placard names the one on the wall ("Water Lilies, dusk"). Every stroke is
+  laid with a loaded flat brush: its bristles streak the paint, and its
+  tail breaks up where the brush runs dry.
 - **One sun.** The only bright color is the sun, and it's kept for the one
   thing that matters: **Play**, **Restart & Play**, **Erase & Install**.
 - **Glass.** Panels, popovers and app windows are see-through, with the
@@ -90,6 +106,12 @@ No menu bar, no dock. Three floating glass islands along the bottom:
 | Left | The Monet menu (the sun) and Windows Games (the sun as a play button) |
 | Middle | Apps and open windows, then Trash. Running apps get a small dab of sun under them: longer for the window you're in, faint when it's minimized, with a warm wash when an app asks for you. Pointing at one raises a pebble of glass |
 | Right | Quick Settings, status icons, the clock. Brightness and Night Light live in Quick Settings, beside Mist and Smoke, so KDE's own Brightness panel (with its second "Dark Mode" switch) stays out. The open icon's pebble keeps to its own cell: Plasma grows it by the island's margins on every side, so the style draws it inset by them |
+
+The islands step aside: each is a "dodge windows" panel, so it slides away
+when a window comes over it and back when you point at the bottom edge
+(KWin's sliding popups, 240 ms going and 200 ms coming). New accounts get it
+from the layout, existing ones once from `monet-look` (only from KDE's
+always-visible); Light & Wallpaper's "Bar steps aside" keeps them in view.
 
 The placard sits on the painting, top left.
 
@@ -121,9 +143,13 @@ middle (`LENS`, thinner on the bar's short islands), and a soft sheen sits
 under the top edge. Quick Settings' tiles, sliders and light choices are
 pebbles of lighter glass with a bright edge, as in Apple's Control Center.
 
-Behind both: KWin's blur (strength 4, a little noise for grain, saturation
-1.7 in kwinrc since KWin 6.7 folded its contrast effect into the blur), so the
-glass carries the painting's light instead of looking grey. KWin blurs whole
+Behind both: KWin's blur (strength 3, about as soft as the desktop widgets'
+`Glass.qml`, no noise, which read as matte, and saturation 1.7 in kwinrc since
+KWin 6.7 folded its contrast effect into the blur), so the glass carries the
+painting's light instead of looking grey. Popovers, Settings and Plasma's own
+popups paint 24% of the background color over it, the bar 10%; fields on the
+glass (the menu's search, the Weather's place, a day's note) are pebbles of
+lighter glass with a white rim, never darkened wells. KWin blurs whole
 pixels with a hard edge behind panels and popovers, so each frame's mask
 rounds its corners 1 px inside the glass's, as Breeze does, and the blur
 stays under the glass's soft edge instead of making a jagged halo.
@@ -393,7 +419,10 @@ is tried again at the next sign-in.
 - **Timer**: the sun goes round a ring as the time runs out; 3, 5, 10 or 25
   minutes, or the wheel over the time. The end is kept, not the count, so it
   keeps going if Plasma starts again; when it's up, `monet-quick ring` says
-  so in a notification and plays the sound theme's alarm.
+  so in a notification and plays the sound theme's alarm. **Focus** makes it
+  a plein-air session: Do Not Disturb until it ends, and The Hours runs a
+  whole day, dawn to night, over the session (`monet-quick focus`, which
+  hands the wallpaper `Focus=start,end`).
 - **World Clock**: towns from KDE's time zones (their names in your
   language), each a little face, paper by day and smoke by night, how far
   ahead or behind it is, and its time in Fraunces.
@@ -695,6 +724,16 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   turn lily), Ready (Monet and
   Windows, or next to my Windows, and the disk), installing, All set. Anything that can't go ahead says why on
   the page, in a sentence.
+- **Next to Windows, without a full reset** (`monet_setup/disks.py`): with
+  too little free space Monet makes room by shrinking Windows' drive with
+  `ntfsresize` (the file system first, then the partition with `sfdisk`,
+  keeping its start, type and ID). Windows keeps what it uses and half its
+  free space, at least 30 GiB. A Windows left asleep (Fast Startup), a drive
+  that needs a check, or BitLocker each say what to do instead. **Bring my
+  files** copies the account used last's Desktop, Documents, Pictures, Music,
+  Videos and Downloads (OneDrive's too) from the drive, read-only, into the
+  new account; at the first sign-in `monet-quick bring-files` moves them into
+  its folders, named in its language by then, and says so.
 - **Installing** (`monet_setup/install.py`, its own process reporting JSON
   lines): partitions (EFI, boot, Monet's btrfs with `root` and `download`
   subvolumes, Windows' share left free), downloads Monet with skopeo into
@@ -714,6 +753,45 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   `python3 tools/ci-screens.py pull ghcr.io/happyhamster135/monet:ci-screens screens/`
   (or the run's `setup-screens` artifact). It runs with every release and by
   hand from the Actions tab (Monet OS → Run workflow).
+
+## Backups
+
+**Earlier versions.** Every hour `monet-keep` (root, `monet-keep.timer`)
+takes a read-only btrfs snapshot of the homes into
+`/var/lib/monet/snapshots/"2026-10-23 14.00"`: all from the last day, then the
+newest of each day for two weeks and of each week for two months, and the
+oldest go first when the disk is over 90% full. Each person reaches only their
+own home in them. The homes become a subvolume of their own once, before the
+sign-in screen (`monet-keep-prepare.service`: a reflinked copy, then a swap).
+Settings → Backups opens your files as they were an hour, a day or a week
+ago, and Files' **Earlier versions** lists one file's versions there, each to
+show or put back beside it.
+
+**A copy on a drive.** Pick a USB drive once; whenever it's plugged in (looked
+for every quarter of an hour), at most once a day, rsync copies the home to
+`Monet Backup/<person>` on it, leaving out caches, the Trash and games. What a
+copy replaces or deletes is kept beside it by date for three months. A week
+without a copy says so once.
+
+## The last 30 seconds
+
+Games & Controllers turns on `monet-replay.service` (per person): GPU Screen
+Recorder from Flathub (installed the first time) keeps the last 30 seconds
+of the screen and its sound in memory, through KDE's screen-sharing question
+asked once and then kept. Windows+Alt+G, as Xbox Game Bar has it
+(`monet-replay.desktop`'s shortcut, set once by `monet-look`), sends the
+recorder SIGUSR1 (it alone: its flatpak and sandbox would stop on it) and it
+saves an MP4 in Videos.
+
+## Which games need Windows
+
+`monet-quick game-marks` reads AreWeAntiCheatYet's list (MIT, fetched at most
+every three days, kept as Steam ids and a word): Supported and Running play in
+Monet, Broken, Denied and Planned need Windows; games it doesn't list mostly
+have no anti-cheat and get no mark. Play on Windows' covers and the Windows
+Games widget mark those that play here too, and Games & Controllers lists the
+games installed here that need Windows, with Play on Windows when they're
+there too.
 
 ## Not Apple
 
