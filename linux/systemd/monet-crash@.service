@@ -1,0 +1,12 @@
+[Unit]
+Description=Monet: say when an app closes unexpectedly
+# Starts beside each systemd-coredump@ instance, as KDE's crash reporter would:
+# install.sh links it into systemd-coredump@.service.wants (systemctl enable
+# can't hook a template into another's instances, systemd#19437).
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-quick crash %i %b
+# A big crash takes a while to store; if it isn't in the journal by then, it never will be.
+RuntimeMaxSec=5min
+Nice=10
+OOMScoreAdjust=500

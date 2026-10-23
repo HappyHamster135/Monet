@@ -65,6 +65,8 @@
     monet-quick played                   the Steam games played last, newest first, with their covers, as JSON
     monet-quick play APPID               start a Steam game, as Steam's Play does
     monet-quick ring TITLE TEXT          the timer is up: a notification (both as hex of their UTF-8) and the alarm
+    monet-quick crash INSTANCE BOOT      (as root, monet-crash@.service) pass systemd-coredump@INSTANCE's crash to its person
+    monet-quick crashed UNIT             an app closed unexpectedly: say so, and offer to open it again (UNIT as hex)
     monet-quick storage                  what fills the disk (games, apps, files, system, free), Trash, Downloads, as JSON
     monet-quick empty-trash              empty the Trash for good (Settings asks first)
     monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
@@ -1603,6 +1605,71 @@ def ring(title, body):
         subprocess.Popen([player, str(alarm)], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+# Crashes ---------------------------------------------------------------------
+# When an app closes unexpectedly, a short note says so and offers to open it
+# again, instead of KDE's crash reporter (which Bazzite leaves out). Every crash
+# goes to systemd-coredump; monet-crash@.service starts beside each one, as root,
+# finds it in the journal and, when it was a person's app, hands it to their
+# session, where the note shows.
+
+def app_of_unit(unit):
+    """The menu entry an app's systemd unit is named after (app-[launcher-]ID@RANDOM.service or
+    app-[launcher-]ID-RANDOM.scope, the ID's own dashes written \\x2d), or ""."""
+    found = re.fullmatch(r"app-(?:[^-@]+-)?([^-@]+)(?:@[^@]*\.service|\.service|-[^-@]+\.scope)", unit)
+    return re.sub(r"\\x([0-9a-f]{2})", lambda m: chr(int(m[1], 16)), found[1]) + ".desktop" if found else ""
+
+
+def local_name(entry):
+    """An entry's Name in the session's language (Name[pt_BR], then Name[pt]), else its Name."""
+    lang = next(filter(None, map(os.environ.get, ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"))), "")
+    lang = re.split(r"[.@:]", lang)[0]
+    return entry.get(f"Name[{lang}]") or entry.get(f"Name[{lang.split('_')[0]}]") or entry.get("Name", "")
+
+
+def crash(instance, boot):
+    """As root, beside systemd-coredump@INSTANCE: if what crashed was a person's app, tells their session."""
+    for _ in range(280):  # the dump reaches the journal once it's stored; monet-crash@ gives it 5 minutes
+        found = run("journalctl", "--output=json", "--output-fields=COREDUMP_EXE,COREDUMP_UID,COREDUMP_USER_UNIT",
+                    "SYSLOG_IDENTIFIER=systemd-coredump", f"_SYSTEMD_UNIT=systemd-coredump@{instance}.service",
+                    f"_BOOT_ID={boot}")
+        dumps = (json.loads(line) for line in (found or "").splitlines() if line.startswith("{"))
+        dump = next((d for d in dumps if d.get("COREDUMP_EXE")), None)
+        if dump:
+            break
+        time.sleep(1)
+    else:
+        return
+    uid, unit = str(dump.get("COREDUMP_UID", "")), str(dump.get("COREDUMP_USER_UNIT", ""))
+    if not (uid.isdigit() and 1000 <= int(uid) < 60000 and app_of_unit(unit)):
+        return
+    person = (run("id", "-nu", uid) or "").strip()
+    if person:
+        # KillMode=process: what "Open it again" starts outlives the note.
+        run("systemd-run", "--user", f"--machine={person}@.host", "--quiet", "--collect", "--property=KillMode=process",
+            f"{LIBEXECDIR}/monet-quick", "crashed", unit.encode().hex())
+
+
+def crashed(unit):
+    """In the person's session: the app is gone, so say so and offer to open it again. Nothing when
+    it's still open (only a part of it crashed, as a browser's tab or a game under Steam does) or
+    isn't in the menu."""
+    app = app_of_unit(unit)
+    entry = entry_by_id(app) if app else None
+    if not entry or "true" in (entry.get("NoDisplay"), entry.get("Hidden")):
+        return
+    for _ in range(20):
+        if not ok("systemctl", "--user", "--quiet", "is-active", unit):
+            break
+        time.sleep(0.25)
+    else:
+        return
+    answer = run("notify-send", "--app-name=Monet", f"--icon={entry.get('Icon') or 'monet'}",
+                 f"--action=open={tr('Open it again')}", "--wait", tr("%1 closed unexpectedly", local_name(entry)),
+                 timeout=600)
+    if (answer or "").strip() == "open":
+        launch(app)
+
+
 # Accessibility -------------------------------------------------------------
 # The size of everything (each screen's scale, kscreen-doctor), the pointer's size
 # (kcminputrc, as KDE's page sets it), motion (KDE's animation speed, which Monet's
@@ -2236,6 +2303,10 @@ def main(argv):
         play(args[0])
     elif cmd == "ring" and len(args) == 2 and all(re.fullmatch(r"(?:[0-9a-f]{2})+", a) for a in args):
         ring(unhex(args[0]), unhex(args[1]))
+    elif cmd == "crash" and len(args) == 2 and re.fullmatch(r"[\w-]+", args[0]) and re.fullmatch(r"[0-9a-f]{32}", args[1]):
+        crash(args[0], args[1])
+    elif cmd == "crashed" and args and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        crashed(unhex(args[0]))
     elif cmd == "frames":
         frames()
     elif cmd == "zen":

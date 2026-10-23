@@ -13,7 +13,7 @@ msgstr ""
 msgid "Monet needs your password"
 msgstr "Monet a besoin de votre mot de passe"
 
-#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:95
 msgid "That password didn't work. Try again."
 msgstr "Ce mot de passe n’a pas marché. Réessayez."
 
@@ -31,7 +31,7 @@ msgid "Someone else…"
 msgstr "Quelqu’un d’autre…"
 
 #: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
-#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+#: setup/qml/Main.qml:349 setup/qml/Main.qml:391
 msgid "Password"
 msgstr "Mot de passe"
 
@@ -39,7 +39,7 @@ msgstr "Mot de passe"
 msgid "Fewer details"
 msgstr "Moins de détails"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:676
 msgid "Details"
 msgstr "Détails"
 
@@ -153,47 +153,47 @@ msgstr "Ajouté"
 msgid "+ Add"
 msgstr "+ Ajouter"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:64 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
 msgctxt "the painting's light, as in Impression, dawn"
 msgid "dawn"
 msgstr "soleil levant"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:65 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
 msgctxt "the painting's light, as in Impression, midday"
 msgid "midday"
 msgstr "milieu du jour"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:66 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
 msgctxt "the painting's light, as in Impression, dusk"
 msgid "dusk"
 msgstr "soleil couchant"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:67 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
 msgctxt "the painting's light, as in Impression, night"
 msgid "night"
 msgstr "effet de nuit"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:333 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
 msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
 msgid "Water Lilies, %1"
 msgstr "Nymphéas, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:335 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
 msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
 msgid "Haystacks, %1"
 msgstr "Meules, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:336 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
 msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
 msgid "Impression, %1"
 msgstr "Impression, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgctxt "%1 is a first name"
 msgid "Welcome back, %1."
 msgstr "Content de vous revoir, %1."
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgid "Welcome back."
 msgstr "Content de vous revoir."
 
@@ -1071,7 +1071,7 @@ msgstr ""
 msgid "Monet only updates when you ask it to."
 msgstr "Monet ne se met à jour que si vous le demandez."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:266
 msgid "Type your name."
 msgstr "Tapez votre nom."
 
@@ -1214,8 +1214,10 @@ msgid "Glass"
 msgstr "Verre"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
-msgid "See the painting through panels and windows"
-msgstr "Voir le tableau à travers les panneaux et les fenêtres"
+msgid ""
+"See the painting through panels, windows and widgets. Off is lighter on older PCs."
+msgstr ""
+"Voir le tableau à travers les barres, les fenêtres et les widgets. Désactivé, c’est plus léger pour les PC anciens."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
 msgid "Add, move or take away the cards on your desktop"
@@ -1234,7 +1236,7 @@ msgid "This PC has no Wi-Fi"
 msgstr "Ce PC n’a pas de Wi-Fi"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
-#: setup/qml/Main.qml:332
+#: setup/qml/Main.qml:334
 msgid "Connected"
 msgstr "Connecté"
 
@@ -1250,7 +1252,7 @@ msgstr "Réseaux"
 msgid "No other networks nearby"
 msgstr "Aucun autre réseau à proximité"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:344
 msgid "Looking for networks…"
 msgstr "Recherche de réseaux…"
 
@@ -1262,7 +1264,7 @@ msgstr "Connexion impossible"
 msgid "Joining…"
 msgstr "Connexion…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:334
 msgid "Secured"
 msgstr "Sécurisé"
 
@@ -1308,7 +1310,7 @@ msgstr "Associez un casque, une manette ou une souris pour les voir ici."
 msgid "Disconnecting…"
 msgstr "Déconnexion…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:272
 msgid "Connecting…"
 msgstr "Connexion…"
 
@@ -1425,7 +1427,7 @@ msgstr "%1 · Compte standard"
 msgid "Change name"
 msgstr "Changer de nom"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:381
 msgid "Your name"
 msgstr "Votre nom"
 
@@ -1987,7 +1989,7 @@ msgstr "Téléchargements"
 msgid "%1 · look through them in Files"
 msgstr "%1 · à parcourir dans Fichiers"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:876
 msgid "Show"
 msgstr "Afficher"
 
@@ -2337,7 +2339,7 @@ msgstr "Installer"
 msgid "Restart now"
 msgstr "Redémarrer maintenant"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:675
 msgid "Try again"
 msgstr "Réessayer"
 
@@ -2728,146 +2730,146 @@ msgstr ""
 msgid "Language"
 msgstr "Langue"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "You're online"
 msgstr "Vous êtes en ligne"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "Connect to Wi-Fi"
 msgstr "Connectez-vous au Wi-Fi"
 
-#: setup/qml/Main.qml:293
+#: setup/qml/Main.qml:295
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "Monet se télécharge, avec Windows, pendant l’installation. Windows utilisera aussi ce réseau."
 
-#: setup/qml/Main.qml:302
+#: setup/qml/Main.qml:304
 msgid "Connected with a cable"
 msgstr "Connecté par câble"
 
-#: setup/qml/Main.qml:333
+#: setup/qml/Main.qml:335
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "Ouvert"
 
-#: setup/qml/Main.qml:342
+#: setup/qml/Main.qml:344
 msgid "No networks found"
 msgstr "Aucun réseau trouvé"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Looking…"
 msgstr "Recherche…"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Look again"
 msgstr "Chercher à nouveau"
 
-#: setup/qml/Main.qml:376
+#: setup/qml/Main.qml:378
 msgid "Who's using this PC?"
 msgstr "Qui utilise ce PC ?"
 
-#: setup/qml/Main.qml:377
+#: setup/qml/Main.qml:379
 msgid "This is your account in Monet and in Windows."
 msgstr "C’est votre compte dans Monet et dans Windows."
 
-#: setup/qml/Main.qml:380
+#: setup/qml/Main.qml:382
 msgid "Name"
 msgstr "Nom"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:386
 msgid "You sign in as %1"
 msgstr "Vous vous connectez en tant que %1"
 
-#: setup/qml/Main.qml:390
+#: setup/qml/Main.qml:392
 msgid "At least 6 characters"
 msgstr "Au moins 6 caractères"
 
-#: setup/qml/Main.qml:404
+#: setup/qml/Main.qml:406
 msgid "Your apps"
 msgstr "Vos apps"
 
-#: setup/qml/Main.qml:405
+#: setup/qml/Main.qml:407
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "Photos, Documents, Vidéo, Musique et Calculatrice sont inclus. Ce que vous ajoutez arrive après votre connexion."
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "Au quotidien"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "Autres"
 
-#: setup/qml/Main.qml:508
+#: setup/qml/Main.qml:510
 msgid "Ready to install"
 msgstr "Prêt pour l’installation"
 
-#: setup/qml/Main.qml:521
+#: setup/qml/Main.qml:523
 msgid "Monet and Windows"
 msgstr "Monet et Windows"
 
-#: setup/qml/Main.qml:525
+#: setup/qml/Main.qml:527
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr "Efface ce PC. Windows s’installe tout seul, juste pour les jeux."
 
-#: setup/qml/Main.qml:540
+#: setup/qml/Main.qml:542
 msgid "Monet next to my Windows"
 msgstr "Monet à côté de mon Windows"
 
-#: setup/qml/Main.qml:544
+#: setup/qml/Main.qml:546
 msgid "Keeps Windows and your files. Uses free space."
 msgstr "Garde Windows et vos fichiers. Utilise l’espace libre."
 
-#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+#: setup/qml/Main.qml:560 setup/qml/Main.qml:572 setup/monet_setup/disks.py:67
 msgid "Disk"
 msgstr "Disque"
 
-#: setup/qml/Main.qml:562
+#: setup/qml/Main.qml:564
 msgid "Looking for disks…"
 msgstr "Recherche des disques…"
 
-#: setup/qml/Main.qml:581
+#: setup/qml/Main.qml:587
 msgid ""
 "Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
 msgstr ""
 "Tout ce qui est sur ce disque sera effacé, Windows aussi. Monet installe ensuite un Windows tout neuf pour vos jeux."
 
-#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:602 setup/monet_setup/app.py:30
 msgid "Installing Monet"
 msgstr "Monet s’installe"
 
-#: setup/qml/Main.qml:610
+#: setup/qml/Main.qml:616
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "Vous pouvez le laisser tourner. Si la connexion coupe, Monet reprend là où il s’était arrêté."
 
-#: setup/qml/Main.qml:622
+#: setup/qml/Main.qml:628
 msgid "All set"
 msgstr "Tout est prêt"
 
-#: setup/qml/Main.qml:625
+#: setup/qml/Main.qml:631
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "Retirez la clé USB et redémarrez. Après votre connexion, Monet prépare Windows pour vos jeux, tout seul."
 
-#: setup/qml/Main.qml:626
+#: setup/qml/Main.qml:632
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "Retirez la clé USB et redémarrez. Votre PC démarre sur Monet, et Windows est à un clic."
 
-#: setup/qml/Main.qml:643
+#: setup/qml/Main.qml:649
 msgid "Once, when it first starts"
 msgstr "Une seule fois, au premier démarrage"
 
-#: setup/qml/Main.qml:648
+#: setup/qml/Main.qml:654
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -2875,21 +2877,21 @@ msgid ""
 msgstr ""
 "Un écran bleu vous demande de faire confiance à Monet. Avec les touches fléchées et Entrée, choisissez « Enroll MOK », puis « Continue » et « Yes », tapez monetsetup et choisissez « Reboot ». Il s’ouvre sur « Continue boot » : ne le choisissez pas, sinon Monet ne pourra pas démarrer."
 
-#: setup/qml/Main.qml:652
+#: setup/qml/Main.qml:658
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "Prenez d’abord ces étapes en photo avec votre téléphone : cet écran disparaît quand le PC redémarre."
 
-#: setup/qml/Main.qml:665
+#: setup/qml/Main.qml:671
 msgid "That didn't work"
 msgstr "Ça n’a pas marché"
 
-#: setup/qml/Main.qml:670
+#: setup/qml/Main.qml:676
 msgid "Hide details"
 msgstr "Masquer les détails"
 
-#: setup/qml/Main.qml:870
+#: setup/qml/Main.qml:876
 msgid "Hide"
 msgstr "Masquer"
 
@@ -2963,27 +2965,49 @@ msgid_plural "about %1 minutes left"
 msgstr[0] "environ %1 minute restante"
 msgstr[1] "environ %1 minutes restantes"
 
-#: setup/monet_setup/app.py:265
+#: setup/monet_setup/app.py:268
 msgid "The password needs at least 6 characters."
 msgstr "Le mot de passe doit contenir au moins 6 caractères."
 
-#: setup/monet_setup/app.py:285
+#: setup/monet_setup/app.py:288
 msgid "Built in"
 msgstr "Intégrée"
 
-#: setup/monet_setup/app.py:333
+#: setup/monet_setup/app.py:340
+msgid ""
+"This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow."
+msgstr ""
+"La carte graphique NVIDIA de ce PC est antérieure à la série RTX 20. Monet ne peut pas l’utiliser : tout serait dessiné par le processeur et serait très lent."
+
+#: setup/monet_setup/app.py:343
+msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
+msgstr "Ce PC a %1 Go de mémoire. Monet a besoin d’au moins 4 Go."
+
+#: setup/monet_setup/app.py:351
+msgid ""
+"This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."
+msgstr ""
+"La puce graphique NVIDIA de ce PC est antérieure à la série RTX 20 : Monet la laisse éteinte. L’écran et les jeux utilisent la puce graphique intégrée."
+
+#: setup/monet_setup/app.py:354
+msgid ""
+"This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
+msgstr ""
+"Ce PC a %1 Go de mémoire. Monet fonctionne, mais ralentit avec beaucoup d’applications ouvertes : 8 Go, c’est mieux."
+
+#: setup/monet_setup/app.py:363
 msgid "No disk found to install Monet on."
 msgstr "Aucun disque trouvé pour installer Monet."
 
-#: setup/monet_setup/app.py:338
+#: setup/monet_setup/app.py:368
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "Ce disque est trop petit pour Monet (il faut 70 Go)."
 
-#: setup/monet_setup/app.py:411
+#: setup/monet_setup/app.py:441
 msgid "%1 of %2 GB"
 msgstr "%1 sur %2 Go"
 
-#: setup/monet_setup/app.py:428
+#: setup/monet_setup/app.py:458
 msgid "The installer stopped unexpectedly."
 msgstr "L’installateur s’est arrêté de façon inattendue."
 
@@ -3145,15 +3169,23 @@ msgstr "Japonais"
 msgid "Korean"
 msgstr "Coréen"
 
-#: linux/libexec/monet-quick:1426
+#: linux/libexec/monet-quick:1428
 msgid "Steam on %1"
 msgstr "Steam sur %1"
 
-#: linux/libexec/monet-quick:1430
+#: linux/libexec/monet-quick:1432
 msgid "Games folder"
 msgstr "Dossier des jeux"
 
-#: linux/libexec/monet-quick:1938
+#: linux/libexec/monet-quick:1667
+msgid "Open it again"
+msgstr "Rouvrir"
+
+#: linux/libexec/monet-quick:1667
+msgid "%1 closed unexpectedly"
+msgstr "%1 s’est fermé de façon inattendue"
+
+#: linux/libexec/monet-quick:2005
 msgid "%1 GB free of %2 GB"
 msgstr "%1 Go libres sur %2 Go"
 

@@ -110,10 +110,18 @@ alpha value, for apps that draw their own title bars.
 
 Two kinds, chosen by the light (Quick Settings → Light: Hours, Mist or Smoke):
 
-- **Mist** (dawn and midday): paper at about 50%, a bright line along the top.
-- **Smoke** (dusk and night): smoke at about 50%, a faint line along the top.
+- **Mist** (dawn and midday): paper at about 10% on the bar, 34% on popovers.
+- **Smoke** (dusk and night): smoke at about the same.
 
-Behind both: KWin's blur (strength 12, a little noise for grain, saturation
+Clear rather than frosted, as Apple's Liquid Glass is: the painting's
+strokes still show through. The rim catches the light where it falls on
+the pane (the top left) and where it leaves (the bottom right), dim at the
+other two corners, a lens of light just inside the edge fades into the
+middle (`LENS`, thinner on the bar's short islands), and a soft sheen sits
+under the top edge. Quick Settings' tiles, sliders and light choices are
+pebbles of lighter glass with a bright edge, as in Apple's Control Center.
+
+Behind both: KWin's blur (strength 4, a little noise for grain, saturation
 1.7 in kwinrc since KWin 6.7 folded its contrast effect into the blur), so the
 glass carries the painting's light instead of looking grey. KWin blurs whole
 pixels with a hard edge behind panels and popovers, so each frame's mask
@@ -151,7 +159,18 @@ midday, Smoke between dusk and night (`monet-light paint`).
 Glass is for edges; anything you read sits on paper (or smoke). Turning
 **Glass** off in Settings switches to `monet-solid` and the `MonetSolid` /
 `MonetDarkSolid` app themes: the same shapes and colors, without the
-see-through.
+see-through. Monet turns it off by itself where the processor draws the
+screen (no graphics driver, or a virtual machine), until it's chosen.
+`monet-light` then leaves `~/.config/monet/glass-off`: the desktop widgets
+(`Glass.qml`) sit on paper instead of frosting the painting live, and the
+lock screen skips its full-screen blur, the two heaviest things to draw on
+an old PC.
+
+Monet Setup checks the PC from its first page (`setup/monet_setup/pc.py`):
+an NVIDIA card older than Turing (GTX 16 / RTX 20, PCI ids from `1e00`) with
+nothing else to draw with, or under 3 GB of memory, can't install; an old
+NVIDIA chip beside built-in graphics, or under 7 GB, is said on Ready.
+UEFI needs no check: the stick only starts that way.
 
 KDE's System Settings and other apps written in QML keep solid backgrounds
 (they draw their own), in Monet's colors. That's why Monet has its own
@@ -327,9 +346,13 @@ is tried again at the next sign-in.
 - **The glass** (`linux/share/monet/widgets/Glass.qml`, copied into each widget
   by install.sh): widgets share the desktop's surface with the wallpaper, so
   KWin can't blur behind them. The glass finds The Hours in the scene and
-  frosts the patch of painting it covers (following the light as it drifts,
-  and the widget as it's moved), washed in mist or smoke, with the rim of
-  light, a hairline and a soft shadow. Elsewhere, frosted paper.
+  shows the patch of painting it covers (following the light as it drifts,
+  and the widget as it's moved), as through clear glass: the strokes only
+  softened, washed lightly in mist or smoke, and along the edge a lens that
+  magnifies and brightens them, fading into the middle. The rim catches the
+  light at the top left and bottom right (a Shape ring with a diagonal
+  gradient); a hairline and a soft shadow outside. Elsewhere, or with glass
+  off, paper.
 - **Weather**: the temperature in Fraunces, the sky painted beside it (the
   sun and its reflection for a clear day, a crescent at night, clouds, rain,
   snow, fog, a storm) and the next four days. From Open-Meteo once a place is
@@ -539,6 +562,13 @@ Editor, Photos, Documents, Screenshot, Store. KDE's and Bazzite's own tools
 input-method and app-style tools) stay out of the menu, and nothing greets you from Bazzite or KDE. The Store's front page
 is Monet's picks under strips of The Hours, by daylight in Mist and by
 night in Smoke (`make-store.py`).
+
+When an app closes unexpectedly, a short note says so, with its name and
+picture and **Open it again** (`monet-crash@.service`, which install.sh
+links in beside each crash `systemd-coredump@` catches, hands it to
+`monet-quick crashed` in that person's session). It says nothing while the
+app is still open (only a tab, or a game under Steam, stopped), or for what
+isn't in the menu. KDE's crash reporter isn't there: Bazzite leaves it out.
 
 ## Motion
 

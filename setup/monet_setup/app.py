@@ -12,7 +12,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from . import disks, network, system, words
+from . import disks, network, pc, system, words
 from .system import account_name
 from .words import N_, _, ntr, tr
 from .qt import (Property, QFontDatabase, QGuiApplication, QObject, QProcess, QQmlApplicationEngine, QTimer, QUrl,
@@ -83,6 +83,9 @@ class Setup(QObject):
         self._apps = [app[-1] for app in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
         self._proc = None
+        # The demo is a PC that's fine, unless MONET_SETUP_DEMO_PC says otherwise ({"memory": 4}).
+        self._pc = ({"oldNvidia": "", "memory": 16, **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
+                    if DEMO else pc.check())
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
         self._restore()
@@ -326,9 +329,36 @@ class Setup(QObject):
         self._mode = mode
         self.changed.emit()
 
+    # -- this PC --
+    @Property(str, notify=changed)
+    def pcBlocker(self):
+        """Why this PC can't run Monet at all, if it can't: said from the first page."""
+        return self._pc_blocker()
+
+    def _pc_blocker(self):
+        if self._pc["oldNvidia"] == "only":
+            return _("This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow.")  # noqa: E501
+        gb = self._pc["memory"]
+        if gb is not None and gb < 3:
+            return tr("This PC has %1 GB of memory. Monet needs at least 4 GB.", max(1, round(gb)))
+        return ""
+
+    @Property("QVariant", notify=changed)
+    def pcNotes(self):
+        """What's good to know about this PC before installing, though Monet runs on it."""
+        notes = []
+        if self._pc["oldNvidia"] == "beside":
+            notes.append(_("This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."))  # noqa: E501
+        gb = self._pc["memory"]
+        if gb is not None and 3 <= gb < 7:
+            notes.append(tr("This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better.", round(gb)))  # noqa: E501
+        return notes
+
     @Property(str, notify=changed)
     def blocker(self):
         """Why Install can't go ahead on the chosen disk and mode, if it can't."""
+        if self._pc_blocker():
+            return self._pc_blocker()
         if not self._disks:
             return _("No disk found to install Monet on.")
         disk = self._disks[min(self._disk, len(self._disks) - 1)]

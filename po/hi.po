@@ -13,7 +13,7 @@ msgstr ""
 msgid "Monet needs your password"
 msgstr "Monet को आपका पासवर्ड चाहिए"
 
-#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:95
 msgid "That password didn't work. Try again."
 msgstr "पासवर्ड सही नहीं था। फिर से कोशिश करें।"
 
@@ -31,7 +31,7 @@ msgid "Someone else…"
 msgstr "कोई और…"
 
 #: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
-#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+#: setup/qml/Main.qml:349 setup/qml/Main.qml:391
 msgid "Password"
 msgstr "पासवर्ड"
 
@@ -39,7 +39,7 @@ msgstr "पासवर्ड"
 msgid "Fewer details"
 msgstr "कम विवरण"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:676
 msgid "Details"
 msgstr "विवरण"
 
@@ -153,47 +153,47 @@ msgstr "जोड़ा गया"
 msgid "+ Add"
 msgstr "+ जोड़ें"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:64 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
 msgctxt "the painting's light, as in Impression, dawn"
 msgid "dawn"
 msgstr "भोर"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:65 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
 msgctxt "the painting's light, as in Impression, midday"
 msgid "midday"
 msgstr "दोपहर"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:66 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
 msgctxt "the painting's light, as in Impression, dusk"
 msgid "dusk"
 msgstr "सांझ"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:67 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
 msgctxt "the painting's light, as in Impression, night"
 msgid "night"
 msgstr "रात"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:333 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
 msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
 msgid "Water Lilies, %1"
 msgstr "कुमुदिनी, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:335 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
 msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
 msgid "Haystacks, %1"
 msgstr "भूसे के ढेर, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:336 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
 msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
 msgid "Impression, %1"
 msgstr "प्रभाव, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgctxt "%1 is a first name"
 msgid "Welcome back, %1."
 msgstr "फिर से स्वागत है, %1।"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgid "Welcome back."
 msgstr "फिर से स्वागत है।"
 
@@ -1061,7 +1061,7 @@ msgstr ""
 msgid "Monet only updates when you ask it to."
 msgstr "Monet सिर्फ़ तभी अपडेट होता है, जब आप कहें।"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:266
 msgid "Type your name."
 msgstr "अपना नाम लिखें।"
 
@@ -1204,8 +1204,10 @@ msgid "Glass"
 msgstr "कांच"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
-msgid "See the painting through panels and windows"
-msgstr "पैनल और विंडो के आर-पार पेंटिंग देखें"
+msgid ""
+"See the painting through panels, windows and widgets. Off is lighter on older PCs."
+msgstr ""
+"पैनल, विंडो और विजेट के आर-पार पेंटिंग दिखती है। बंद करने पर पुराने PC पर हल्का चलता है।"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
 msgid "Add, move or take away the cards on your desktop"
@@ -1224,7 +1226,7 @@ msgid "This PC has no Wi-Fi"
 msgstr "इस पीसी में Wi-Fi नहीं है"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
-#: setup/qml/Main.qml:332
+#: setup/qml/Main.qml:334
 msgid "Connected"
 msgstr "कनेक्ट है"
 
@@ -1240,7 +1242,7 @@ msgstr "नेटवर्क"
 msgid "No other networks nearby"
 msgstr "आस-पास कोई और नेटवर्क नहीं"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:344
 msgid "Looking for networks…"
 msgstr "नेटवर्क खोजे जा रहे हैं…"
 
@@ -1252,7 +1254,7 @@ msgstr "कनेक्ट नहीं हो सका"
 msgid "Joining…"
 msgstr "कनेक्ट हो रहा है…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:334
 msgid "Secured"
 msgstr "सुरक्षित"
 
@@ -1298,7 +1300,7 @@ msgstr "हेडफ़ोन, कंट्रोलर या माउस प�
 msgid "Disconnecting…"
 msgstr "डिसकनेक्ट हो रहा है…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:272
 msgid "Connecting…"
 msgstr "कनेक्ट हो रहा है…"
 
@@ -1414,7 +1416,7 @@ msgstr "%1 · सामान्य खाता"
 msgid "Change name"
 msgstr "नाम बदलें"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:381
 msgid "Your name"
 msgstr "आपका नाम"
 
@@ -1976,7 +1978,7 @@ msgstr "डाउनलोड"
 msgid "%1 · look through them in Files"
 msgstr "%1 · इन्हें फ़ाइलें ऐप में देखें"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:876
 msgid "Show"
 msgstr "दिखाएं"
 
@@ -2324,7 +2326,7 @@ msgstr "इंस्टॉल करें"
 msgid "Restart now"
 msgstr "अभी रीस्टार्ट करें"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:675
 msgid "Try again"
 msgstr "फिर से कोशिश करें"
 
@@ -2713,147 +2715,147 @@ msgstr ""
 msgid "Language"
 msgstr "भाषा"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "You're online"
 msgstr "आप ऑनलाइन हैं"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "Connect to Wi-Fi"
 msgstr "Wi-Fi से कनेक्ट करें"
 
-#: setup/qml/Main.qml:293
+#: setup/qml/Main.qml:295
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "इंस्टॉल होते समय Monet खुद को और Windows को डाउनलोड करता है। Windows भी इसी नेटवर्क का इस्तेमाल करेगा।"
 
-#: setup/qml/Main.qml:302
+#: setup/qml/Main.qml:304
 msgid "Connected with a cable"
 msgstr "केबल से कनेक्ट है"
 
-#: setup/qml/Main.qml:333
+#: setup/qml/Main.qml:335
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "खुला"
 
-#: setup/qml/Main.qml:342
+#: setup/qml/Main.qml:344
 msgid "No networks found"
 msgstr "कोई नेटवर्क नहीं मिला"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Looking…"
 msgstr "खोज रहे हैं…"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Look again"
 msgstr "फिर से खोजें"
 
-#: setup/qml/Main.qml:376
+#: setup/qml/Main.qml:378
 msgid "Who's using this PC?"
 msgstr "यह पीसी कौन इस्तेमाल कर रहा है?"
 
-#: setup/qml/Main.qml:377
+#: setup/qml/Main.qml:379
 msgid "This is your account in Monet and in Windows."
 msgstr "यह Monet और Windows में आपका खाता है।"
 
-#: setup/qml/Main.qml:380
+#: setup/qml/Main.qml:382
 msgid "Name"
 msgstr "नाम"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:386
 msgid "You sign in as %1"
 msgstr "आप %1 के रूप में साइन इन करेंगे"
 
-#: setup/qml/Main.qml:390
+#: setup/qml/Main.qml:392
 msgid "At least 6 characters"
 msgstr "कम से कम 6 वर्ण"
 
-#: setup/qml/Main.qml:404
+#: setup/qml/Main.qml:406
 msgid "Your apps"
 msgstr "आपके ऐप"
 
-#: setup/qml/Main.qml:405
+#: setup/qml/Main.qml:407
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "फ़ोटो, दस्तावेज़, वीडियो, संगीत और कैलकुलेटर पहले से मौजूद हैं। आप जो जोड़ेंगे, वह साइन इन करने के बाद आएगा।"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "रोज़ के ऐप"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "और ऐप"
 
-#: setup/qml/Main.qml:508
+#: setup/qml/Main.qml:510
 msgid "Ready to install"
 msgstr "इंस्टॉल के लिए तैयार"
 
-#: setup/qml/Main.qml:521
+#: setup/qml/Main.qml:523
 msgid "Monet and Windows"
 msgstr "Monet और Windows"
 
-#: setup/qml/Main.qml:525
+#: setup/qml/Main.qml:527
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr ""
 "इस पीसी पर सब कुछ मिट जाएगा। Windows अपने-आप इंस्टॉल होगा, सिर्फ़ गेम के लिए।"
 
-#: setup/qml/Main.qml:540
+#: setup/qml/Main.qml:542
 msgid "Monet next to my Windows"
 msgstr "मेरे Windows के साथ Monet"
 
-#: setup/qml/Main.qml:544
+#: setup/qml/Main.qml:546
 msgid "Keeps Windows and your files. Uses free space."
 msgstr "Windows और आपकी फ़ाइलें बनी रहेंगी। खाली जगह का इस्तेमाल होगा।"
 
-#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+#: setup/qml/Main.qml:560 setup/qml/Main.qml:572 setup/monet_setup/disks.py:67
 msgid "Disk"
 msgstr "डिस्क"
 
-#: setup/qml/Main.qml:562
+#: setup/qml/Main.qml:564
 msgid "Looking for disks…"
 msgstr "डिस्क खोजी जा रही हैं…"
 
-#: setup/qml/Main.qml:581
+#: setup/qml/Main.qml:587
 msgid ""
 "Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
 msgstr ""
 "इस डिस्क पर सब कुछ मिट जाएगा, Windows भी। उसके बाद Monet आपके गेम के लिए नया Windows इंस्टॉल करेगा।"
 
-#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:602 setup/monet_setup/app.py:30
 msgid "Installing Monet"
 msgstr "Monet इंस्टॉल हो रहा है"
 
-#: setup/qml/Main.qml:610
+#: setup/qml/Main.qml:616
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "आप इसे चलता छोड़ सकते हैं। कनेक्शन टूटने पर Monet वहीं से शुरू करेगा, जहां रुका था।"
 
-#: setup/qml/Main.qml:622
+#: setup/qml/Main.qml:628
 msgid "All set"
 msgstr "सब तैयार है"
 
-#: setup/qml/Main.qml:625
+#: setup/qml/Main.qml:631
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "USB ड्राइव निकालें और रीस्टार्ट करें। साइन इन करने के बाद Monet आपके गेम के लिए Windows अपने-आप तैयार करेगा।"
 
-#: setup/qml/Main.qml:626
+#: setup/qml/Main.qml:632
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "USB ड्राइव निकालें और रीस्टार्ट करें। आपका पीसी Monet में शुरू होगा, और Windows बस एक क्लिक दूर है।"
 
-#: setup/qml/Main.qml:643
+#: setup/qml/Main.qml:649
 msgid "Once, when it first starts"
 msgstr "एक बार, पहली बार शुरू होने पर"
 
-#: setup/qml/Main.qml:648
+#: setup/qml/Main.qml:654
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -2861,21 +2863,21 @@ msgid ""
 msgstr ""
 "एक नीली स्क्रीन Monet पर भरोसा करने के लिए पूछेगी। ऐरो कुंजियों और Enter से Enroll MOK चुनें, फिर Continue और Yes चुनें, monetsetup टाइप करें और Reboot चुनें। स्क्रीन Continue boot पर खुलती है: उसे न चुनें, वरना Monet शुरू नहीं हो पाएगा।"
 
-#: setup/qml/Main.qml:652
+#: setup/qml/Main.qml:658
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "पहले अपने फ़ोन से इन चरणों की फ़ोटो ले लें: PC रीस्टार्ट होने पर यह स्क्रीन चली जाती है।"
 
-#: setup/qml/Main.qml:665
+#: setup/qml/Main.qml:671
 msgid "That didn't work"
 msgstr "यह नहीं हो पाया"
 
-#: setup/qml/Main.qml:670
+#: setup/qml/Main.qml:676
 msgid "Hide details"
 msgstr "विवरण छिपाएं"
 
-#: setup/qml/Main.qml:870
+#: setup/qml/Main.qml:876
 msgid "Hide"
 msgstr "छिपाएं"
 
@@ -2949,27 +2951,49 @@ msgid_plural "about %1 minutes left"
 msgstr[0] "करीब %1 मिनट बाकी"
 msgstr[1] "करीब %1 मिनट बाकी"
 
-#: setup/monet_setup/app.py:265
+#: setup/monet_setup/app.py:268
 msgid "The password needs at least 6 characters."
 msgstr "पासवर्ड में कम से कम 6 वर्ण होने चाहिए।"
 
-#: setup/monet_setup/app.py:285
+#: setup/monet_setup/app.py:288
 msgid "Built in"
 msgstr "पहले से मौजूद"
 
-#: setup/monet_setup/app.py:333
+#: setup/monet_setup/app.py:340
+msgid ""
+"This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow."
+msgstr ""
+"इस PC का NVIDIA ग्राफ़िक्स कार्ड RTX 20 सीरीज़ से पुराना है। Monet इसका उपयोग नहीं कर सकता, इसलिए सब कुछ प्रोसेसर बनाएगा और बहुत धीमा होगा।"
+
+#: setup/monet_setup/app.py:343
+msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
+msgstr "इस PC में %1 GB मेमोरी है। Monet को कम से कम 4 GB चाहिए।"
+
+#: setup/monet_setup/app.py:351
+msgid ""
+"This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."
+msgstr ""
+"इस PC की NVIDIA ग्राफ़िक्स चिप RTX 20 सीरीज़ से पुरानी है, इसलिए Monet उसे बंद रखता है। स्क्रीन और गेम बिल्ट-इन ग्राफ़िक्स का उपयोग करते हैं।"
+
+#: setup/monet_setup/app.py:354
+msgid ""
+"This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
+msgstr ""
+"इस PC में %1 GB मेमोरी है। Monet चलता है, पर कई ऐप खुले होने पर धीमा हो जाता है: 8 GB बेहतर है।"
+
+#: setup/monet_setup/app.py:363
 msgid "No disk found to install Monet on."
 msgstr "Monet इंस्टॉल करने के लिए कोई डिस्क नहीं मिली।"
 
-#: setup/monet_setup/app.py:338
+#: setup/monet_setup/app.py:368
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "यह डिस्क Monet के लिए बहुत छोटी है (कम से कम 70 GB चाहिए)।"
 
-#: setup/monet_setup/app.py:411
+#: setup/monet_setup/app.py:441
 msgid "%1 of %2 GB"
 msgstr "%2 GB में से %1 GB"
 
-#: setup/monet_setup/app.py:428
+#: setup/monet_setup/app.py:458
 msgid "The installer stopped unexpectedly."
 msgstr "इंस्टॉलर अचानक बंद हो गया।"
 
@@ -3130,15 +3154,23 @@ msgstr "जापानी"
 msgid "Korean"
 msgstr "कोरियाई"
 
-#: linux/libexec/monet-quick:1426
+#: linux/libexec/monet-quick:1428
 msgid "Steam on %1"
 msgstr "%1 पर Steam"
 
-#: linux/libexec/monet-quick:1430
+#: linux/libexec/monet-quick:1432
 msgid "Games folder"
 msgstr "गेम फ़ोल्डर"
 
-#: linux/libexec/monet-quick:1938
+#: linux/libexec/monet-quick:1667
+msgid "Open it again"
+msgstr "फिर से खोलें"
+
+#: linux/libexec/monet-quick:1667
+msgid "%1 closed unexpectedly"
+msgstr "%1 अचानक बंद हो गया"
+
+#: linux/libexec/monet-quick:2005
 msgid "%1 GB free of %2 GB"
 msgstr "%2 GB में से %1 GB खाली"
 

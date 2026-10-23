@@ -1950,7 +1950,7 @@ PlasmaCore.Dialog {
                         model: [
                             ["hours", i18n("Through the day"), i18n("The painting's light drifts with the time of day")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
-                            ["glass", i18n("Glass"), i18n("See the painting through panels and windows")]
+                            ["glass", i18n("Glass"), i18n("See the painting through panels, windows and widgets. Off is lighter on older PCs.")]
                         ]
                         SettingRow {
                             tone: look

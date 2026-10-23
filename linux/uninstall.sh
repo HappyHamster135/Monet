@@ -37,7 +37,9 @@ fi
 systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service \
     /etc/systemd/system/monet-update.service /etc/systemd/system/monet-update.timer \
-    /etc/systemd/system/monet-apps.service /etc/systemd/system/monet-apps.timer
+    /etc/systemd/system/monet-apps.service /etc/systemd/system/monet-apps.timer \
+    /etc/systemd/system/monet-crash@.service /etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service
+rmdir /etc/systemd/system/systemd-coredump@.service.wants 2>/dev/null || true
 systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true

@@ -147,8 +147,13 @@ apply() {
         scheme=MonetDark kvantum=MonetDark theme=$SMOKE_THEME
     fi
     style=monet
+    # Monet's desktop widgets look for glass-off: without it they frost the
+    # painting live, which is the heaviest thing on an old PC's screen.
     if [ "$(glass)" = off ]; then
         kvantum="${kvantum}Solid" style=monet-solid
+        mkdir -p "$CONFIG/monet" && : > "$CONFIG/monet/glass-off"
+    else
+        rm -f "$CONFIG/monet/glass-off"
     fi
 
     # KDE's settings show Light or Dark to match (first, so sync sees it).

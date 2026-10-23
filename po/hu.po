@@ -13,7 +13,7 @@ msgstr ""
 msgid "Monet needs your password"
 msgstr "A Monet a jelszavadat kéri"
 
-#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:95
 msgid "That password didn't work. Try again."
 msgstr "Ez a jelszó nem jó. Próbáld újra."
 
@@ -31,7 +31,7 @@ msgid "Someone else…"
 msgstr "Valaki más…"
 
 #: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
-#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+#: setup/qml/Main.qml:349 setup/qml/Main.qml:391
 msgid "Password"
 msgstr "Jelszó"
 
@@ -39,7 +39,7 @@ msgstr "Jelszó"
 msgid "Fewer details"
 msgstr "Kevesebb részlet"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:676
 msgid "Details"
 msgstr "Részletek"
 
@@ -152,47 +152,47 @@ msgstr "Hozzáadva"
 msgid "+ Add"
 msgstr "+ Hozzáadás"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:64 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
 msgctxt "the painting's light, as in Impression, dawn"
 msgid "dawn"
 msgstr "hajnalban"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:65 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
 msgctxt "the painting's light, as in Impression, midday"
 msgid "midday"
 msgstr "délben"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:66 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
 msgctxt "the painting's light, as in Impression, dusk"
 msgid "dusk"
 msgstr "alkonyatkor"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:67 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
 msgctxt "the painting's light, as in Impression, night"
 msgid "night"
 msgstr "éjjel"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:333 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
 msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
 msgid "Water Lilies, %1"
 msgstr "Vízililiomok, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:335 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
 msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
 msgid "Haystacks, %1"
 msgstr "Szénaboglyák, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:336 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
 msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
 msgid "Impression, %1"
 msgstr "Impresszió, %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgctxt "%1 is a first name"
 msgid "Welcome back, %1."
 msgstr "Jó újra látni, %1."
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgid "Welcome back."
 msgstr "Jó újra látni."
 
@@ -1067,7 +1067,7 @@ msgstr ""
 msgid "Monet only updates when you ask it to."
 msgstr "A Monet csak akkor frissül, ha kéred."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:266
 msgid "Type your name."
 msgstr "Írd be a neved."
 
@@ -1210,8 +1210,10 @@ msgid "Glass"
 msgstr "Üveg"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
-msgid "See the painting through panels and windows"
-msgstr "A festmény átlátszik a paneleken és az ablakokon"
+msgid ""
+"See the painting through panels, windows and widgets. Off is lighter on older PCs."
+msgstr ""
+"A festmény átlátszik a paneleken, ablakokon és widgeteken. Kikapcsolva kíméletesebb a régebbi gépekhez."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
 msgid "Add, move or take away the cards on your desktop"
@@ -1230,7 +1232,7 @@ msgid "This PC has no Wi-Fi"
 msgstr "Ebben a gépben nincs Wi-Fi"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
-#: setup/qml/Main.qml:332
+#: setup/qml/Main.qml:334
 msgid "Connected"
 msgstr "Csatlakozva"
 
@@ -1246,7 +1248,7 @@ msgstr "Hálózatok"
 msgid "No other networks nearby"
 msgstr "Nincs más hálózat a közelben"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:344
 msgid "Looking for networks…"
 msgstr "Hálózatok keresése…"
 
@@ -1258,7 +1260,7 @@ msgstr "Nem sikerült csatlakozni"
 msgid "Joining…"
 msgstr "Csatlakozás…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:334
 msgid "Secured"
 msgstr "Védett"
 
@@ -1304,7 +1306,7 @@ msgstr "Párosíts egy fejhallgatót, kontrollert vagy egeret, és itt megjeleni
 msgid "Disconnecting…"
 msgstr "Leválasztás…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:272
 msgid "Connecting…"
 msgstr "Csatlakozás…"
 
@@ -1420,7 +1422,7 @@ msgstr "%1 · Normál fiók"
 msgid "Change name"
 msgstr "Név módosítása"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:381
 msgid "Your name"
 msgstr "A neved"
 
@@ -1980,7 +1982,7 @@ msgstr "Letöltések"
 msgid "%1 · look through them in Files"
 msgstr "%1 · nézd át őket a Fájlokban"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:876
 msgid "Show"
 msgstr "Mutasd"
 
@@ -2329,7 +2331,7 @@ msgstr "Telepítés"
 msgid "Restart now"
 msgstr "Újraindítás most"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:675
 msgid "Try again"
 msgstr "Próbáld újra"
 
@@ -2719,146 +2721,146 @@ msgstr ""
 msgid "Language"
 msgstr "Nyelv"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "You're online"
 msgstr "Online vagy"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "Connect to Wi-Fi"
 msgstr "Csatlakozás Wi-Fi-hez"
 
-#: setup/qml/Main.qml:293
+#: setup/qml/Main.qml:295
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "Telepítés közben a Monet letölti saját magát és a Windows rendszert. A Windows is ezt a hálózatot fogja használni."
 
-#: setup/qml/Main.qml:302
+#: setup/qml/Main.qml:304
 msgid "Connected with a cable"
 msgstr "Kábellel csatlakozva"
 
-#: setup/qml/Main.qml:333
+#: setup/qml/Main.qml:335
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "Nyílt"
 
-#: setup/qml/Main.qml:342
+#: setup/qml/Main.qml:344
 msgid "No networks found"
 msgstr "Nem található hálózat"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Looking…"
 msgstr "Keresés…"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Look again"
 msgstr "Újrakeresés"
 
-#: setup/qml/Main.qml:376
+#: setup/qml/Main.qml:378
 msgid "Who's using this PC?"
 msgstr "Ki használja ezt a gépet?"
 
-#: setup/qml/Main.qml:377
+#: setup/qml/Main.qml:379
 msgid "This is your account in Monet and in Windows."
 msgstr "Ez lesz a fiókod a Monet és a Windows alatt egyaránt."
 
-#: setup/qml/Main.qml:380
+#: setup/qml/Main.qml:382
 msgid "Name"
 msgstr "Név"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:386
 msgid "You sign in as %1"
 msgstr "Bejelentkezési neved: %1"
 
-#: setup/qml/Main.qml:390
+#: setup/qml/Main.qml:392
 msgid "At least 6 characters"
 msgstr "Legalább 6 karakter"
 
-#: setup/qml/Main.qml:404
+#: setup/qml/Main.qml:406
 msgid "Your apps"
 msgstr "Az alkalmazásaid"
 
-#: setup/qml/Main.qml:405
+#: setup/qml/Main.qml:407
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "A Fotók, a Dokumentumok, a Videók, a Zene és a Számológép már benne van. Amit hozzáadsz, a bejelentkezés után érkezik meg."
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "Mindennapi"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "Továbbiak"
 
-#: setup/qml/Main.qml:508
+#: setup/qml/Main.qml:510
 msgid "Ready to install"
 msgstr "Telepítésre kész"
 
-#: setup/qml/Main.qml:521
+#: setup/qml/Main.qml:523
 msgid "Monet and Windows"
 msgstr "Monet és Windows"
 
-#: setup/qml/Main.qml:525
+#: setup/qml/Main.qml:527
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr "Mindent töröl a gépről. A Windows magától települ, csak a játékokhoz."
 
-#: setup/qml/Main.qml:540
+#: setup/qml/Main.qml:542
 msgid "Monet next to my Windows"
 msgstr "Monet a meglévő Windows mellett"
 
-#: setup/qml/Main.qml:544
+#: setup/qml/Main.qml:546
 msgid "Keeps Windows and your files. Uses free space."
 msgstr "A Windows és a fájljaid megmaradnak. A szabad helyet használja."
 
-#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+#: setup/qml/Main.qml:560 setup/qml/Main.qml:572 setup/monet_setup/disks.py:67
 msgid "Disk"
 msgstr "Lemez"
 
-#: setup/qml/Main.qml:562
+#: setup/qml/Main.qml:564
 msgid "Looking for disks…"
 msgstr "Lemezek keresése…"
 
-#: setup/qml/Main.qml:581
+#: setup/qml/Main.qml:587
 msgid ""
 "Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
 msgstr ""
 "A lemezen minden törlődik, a Windows is. Utána a Monet egy friss Windows rendszert telepít a játékaidhoz."
 
-#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:602 setup/monet_setup/app.py:30
 msgid "Installing Monet"
 msgstr "A Monet telepítése"
 
-#: setup/qml/Main.qml:610
+#: setup/qml/Main.qml:616
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "Nyugodtan hagyd futni. Ha megszakad a kapcsolat, a Monet ott folytatja, ahol abbahagyta."
 
-#: setup/qml/Main.qml:622
+#: setup/qml/Main.qml:628
 msgid "All set"
 msgstr "Minden kész"
 
-#: setup/qml/Main.qml:625
+#: setup/qml/Main.qml:631
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "Húzd ki a pendrive-ot, és indítsd újra a gépet. Bejelentkezés után a Monet magától előkészíti a Windows rendszert a játékaidhoz."
 
-#: setup/qml/Main.qml:626
+#: setup/qml/Main.qml:632
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "Húzd ki a pendrive-ot, és indítsd újra a gépet. Indításkor a Monet fogad, a Windows pedig egy kattintásnyira van."
 
-#: setup/qml/Main.qml:643
+#: setup/qml/Main.qml:649
 msgid "Once, when it first starts"
 msgstr "Egyszer, az első indításkor"
 
-#: setup/qml/Main.qml:648
+#: setup/qml/Main.qml:654
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -2866,21 +2868,21 @@ msgid ""
 msgstr ""
 "Egy kék képernyő engedélyt kér a Monet számára. A nyílbillentyűkkel és az Enterrel válaszd az Enroll MOK, majd a Continue és a Yes lehetőséget, írd be, hogy monetsetup, végül válaszd a Reboot lehetőséget. Kezdetben a Continue boot van kijelölve: ezt ne válaszd, különben a Monet nem tud elindulni."
 
-#: setup/qml/Main.qml:652
+#: setup/qml/Main.qml:658
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "Előbb fotózd le ezeket a lépéseket a telefonoddal: ez a képernyő eltűnik, amikor a PC újraindul."
 
-#: setup/qml/Main.qml:665
+#: setup/qml/Main.qml:671
 msgid "That didn't work"
 msgstr "Nem sikerült"
 
-#: setup/qml/Main.qml:670
+#: setup/qml/Main.qml:676
 msgid "Hide details"
 msgstr "Részletek elrejtése"
 
-#: setup/qml/Main.qml:870
+#: setup/qml/Main.qml:876
 msgid "Hide"
 msgstr "Rejtsd el"
 
@@ -2954,27 +2956,49 @@ msgid_plural "about %1 minutes left"
 msgstr[0] "még körülbelül %1 perc"
 msgstr[1] "még körülbelül %1 perc"
 
-#: setup/monet_setup/app.py:265
+#: setup/monet_setup/app.py:268
 msgid "The password needs at least 6 characters."
 msgstr "A jelszónak legalább 6 karakterből kell állnia."
 
-#: setup/monet_setup/app.py:285
+#: setup/monet_setup/app.py:288
 msgid "Built in"
 msgstr "Beépített"
 
-#: setup/monet_setup/app.py:333
+#: setup/monet_setup/app.py:340
+msgid ""
+"This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow."
+msgstr ""
+"Ennek a gépnek az NVIDIA videokártyája régebbi az RTX 20-as sorozatnál. A Monet nem tudja használni, így mindent a processzor rajzolna, és nagyon lassú lenne."
+
+#: setup/monet_setup/app.py:343
+msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
+msgstr "Ebben a gépben %1 GB memória van. A Monetnek legalább 4 GB kell."
+
+#: setup/monet_setup/app.py:351
+msgid ""
+"This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."
+msgstr ""
+"Ennek a gépnek az NVIDIA grafikus chipje régebbi az RTX 20-as sorozatnál, ezért a Monet kikapcsolva hagyja. A képernyő és a játékok a beépített grafikát használják."
+
+#: setup/monet_setup/app.py:354
+msgid ""
+"This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
+msgstr ""
+"Ebben a gépben %1 GB memória van. A Monet fut, de sok megnyitott alkalmazással lelassul: 8 GB jobb."
+
+#: setup/monet_setup/app.py:363
 msgid "No disk found to install Monet on."
 msgstr "Nem található lemez, amelyre a Monet telepíthető."
 
-#: setup/monet_setup/app.py:338
+#: setup/monet_setup/app.py:368
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "Ez a lemez túl kicsi a Monet számára (70 GB kell neki)."
 
-#: setup/monet_setup/app.py:411
+#: setup/monet_setup/app.py:441
 msgid "%1 of %2 GB"
 msgstr "%1 / %2 GB"
 
-#: setup/monet_setup/app.py:428
+#: setup/monet_setup/app.py:458
 msgid "The installer stopped unexpectedly."
 msgstr "A telepítő váratlanul leállt."
 
@@ -3134,15 +3158,23 @@ msgstr "Japán"
 msgid "Korean"
 msgstr "Koreai"
 
-#: linux/libexec/monet-quick:1426
+#: linux/libexec/monet-quick:1428
 msgid "Steam on %1"
 msgstr "Steam (%1)"
 
-#: linux/libexec/monet-quick:1430
+#: linux/libexec/monet-quick:1432
 msgid "Games folder"
 msgstr "Játékmappa"
 
-#: linux/libexec/monet-quick:1938
+#: linux/libexec/monet-quick:1667
+msgid "Open it again"
+msgstr "Nyisd meg újra"
+
+#: linux/libexec/monet-quick:1667
+msgid "%1 closed unexpectedly"
+msgstr "%1 váratlanul bezárult"
+
+#: linux/libexec/monet-quick:2005
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB szabad, összesen %2 GB"
 

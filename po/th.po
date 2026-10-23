@@ -13,7 +13,7 @@ msgstr ""
 msgid "Monet needs your password"
 msgstr "Monet ต้องใช้รหัสผ่านของคุณ"
 
-#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:84
+#: image/password/QuickAuthDialog.qml:116 linux/share/monet/lockscreen/MonetLockScreen.qml:95
 msgid "That password didn't work. Try again."
 msgstr "รหัสผ่านนี้ใช้ไม่ได้ ลองอีกครั้ง"
 
@@ -31,7 +31,7 @@ msgid "Someone else…"
 msgstr "ผู้ใช้อื่น…"
 
 #: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2609
-#: setup/qml/Main.qml:347 setup/qml/Main.qml:389
+#: setup/qml/Main.qml:349 setup/qml/Main.qml:391
 msgid "Password"
 msgstr "รหัสผ่าน"
 
@@ -39,7 +39,7 @@ msgstr "รหัสผ่าน"
 msgid "Fewer details"
 msgstr "ซ่อนรายละเอียด"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:670
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:676
 msgid "Details"
 msgstr "รายละเอียด"
 
@@ -150,47 +150,47 @@ msgstr "เพิ่มแล้ว"
 msgid "+ Add"
 msgstr "+ เพิ่ม"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:53 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:64 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:23
 msgctxt "the painting's light, as in Impression, dawn"
 msgid "dawn"
 msgstr "ยามรุ่งอรุณ"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:54 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:65 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:24
 msgctxt "the painting's light, as in Impression, midday"
 msgid "midday"
 msgstr "ยามเที่ยงวัน"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:55 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:66 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:25
 msgctxt "the painting's light, as in Impression, dusk"
 msgid "dusk"
 msgstr "ยามสนธยา"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:56 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:67 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:26
 msgctxt "the painting's light, as in Impression, night"
 msgid "night"
 msgstr "ยามราตรี"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:322 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:333 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:127
 msgctxt "the wallpaper's name, after Monet's Water Lilies; %1 is the light"
 msgid "Water Lilies, %1"
 msgstr "ดอกบัว %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:324 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:335 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:129
 msgctxt "the wallpaper's name, after Monet's Haystacks; %1 is the light"
 msgid "Haystacks, %1"
 msgstr "กองฟาง %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:325 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:336 linux/share/plasma/plasmoids/org.monet.placard/contents/ui/main.qml:130
 msgctxt "the wallpaper's name, after Monet's Impression, soleil levant"
 msgid "Impression, %1"
 msgstr "ความประทับใจ %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgctxt "%1 is a first name"
 msgid "Welcome back, %1."
 msgstr "ยินดีต้อนรับกลับมา %1"
 
-#: linux/share/monet/lockscreen/MonetLockScreen.qml:469
+#: linux/share/monet/lockscreen/MonetLockScreen.qml:480
 msgid "Welcome back."
 msgstr "ยินดีต้อนรับกลับมา"
 
@@ -1043,7 +1043,7 @@ msgstr ""
 msgid "Monet only updates when you ask it to."
 msgstr "Monet จะอัปเดตเฉพาะเมื่อคุณสั่งเท่านั้น"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:263
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564 setup/monet_setup/app.py:266
 msgid "Type your name."
 msgstr "พิมพ์ชื่อของคุณ"
 
@@ -1185,8 +1185,10 @@ msgid "Glass"
 msgstr "กระจก"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1953
-msgid "See the painting through panels and windows"
-msgstr "มองเห็นภาพวาดผ่านแผงและหน้าต่าง"
+msgid ""
+"See the painting through panels, windows and widgets. Off is lighter on older PCs."
+msgstr ""
+"มองเห็นภาพวาดผ่านแผง หน้าต่าง และวิดเจ็ต ปิดไว้จะเบากว่าสำหรับ PC รุ่นเก่า"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1977
 msgid "Add, move or take away the cards on your desktop"
@@ -1205,7 +1207,7 @@ msgid "This PC has no Wi-Fi"
 msgstr "พีซีเครื่องนี้ไม่มี Wi-Fi"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2210 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3795
-#: setup/qml/Main.qml:332
+#: setup/qml/Main.qml:334
 msgid "Connected"
 msgstr "เชื่อมต่อแล้ว"
 
@@ -1221,7 +1223,7 @@ msgstr "เครือข่าย"
 msgid "No other networks nearby"
 msgstr "ไม่มีเครือข่ายอื่นอยู่ใกล้ ๆ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:342
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2046 setup/qml/Main.qml:344
 msgid "Looking for networks…"
 msgstr "กำลังค้นหาเครือข่าย…"
 
@@ -1233,7 +1235,7 @@ msgstr "เชื่อมต่อไม่ได้"
 msgid "Joining…"
 msgstr "กำลังเชื่อมต่อ…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2097 setup/qml/Main.qml:334
 msgid "Secured"
 msgstr "มีรหัสผ่าน"
 
@@ -1278,7 +1280,7 @@ msgstr "จับคู่หูฟัง คอนโทรลเลอร์ �
 msgid "Disconnecting…"
 msgstr "กำลังตัดการเชื่อมต่อ…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:270
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2228 setup/qml/Main.qml:272
 msgid "Connecting…"
 msgstr "กำลังเชื่อมต่อ…"
 
@@ -1394,7 +1396,7 @@ msgstr "%1 · บัญชีมาตรฐาน"
 msgid "Change name"
 msgstr "เปลี่ยนชื่อ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:379
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2578 setup/qml/Main.qml:381
 msgid "Your name"
 msgstr "ชื่อของคุณ"
 
@@ -1953,7 +1955,7 @@ msgstr "ดาวน์โหลด"
 msgid "%1 · look through them in Files"
 msgstr "%1 · ดูได้ในแอปไฟล์"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:870
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3571 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3860 setup/qml/Main.qml:876
 msgid "Show"
 msgstr "แสดง"
 
@@ -2295,7 +2297,7 @@ msgstr "ติดตั้ง"
 msgid "Restart now"
 msgstr "รีสตาร์ทเลย"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:669
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4092 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280 setup/qml/Main.qml:675
 msgid "Try again"
 msgstr "ลองอีกครั้ง"
 
@@ -2683,147 +2685,147 @@ msgstr ""
 msgid "Language"
 msgstr "ภาษา"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "You're online"
 msgstr "คุณออนไลน์แล้ว"
 
-#: setup/qml/Main.qml:292
+#: setup/qml/Main.qml:294
 msgid "Connect to Wi-Fi"
 msgstr "เชื่อมต่อ Wi-Fi"
 
-#: setup/qml/Main.qml:293
+#: setup/qml/Main.qml:295
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "Monet จะดาวน์โหลดตัวเองและ Windows ระหว่างการติดตั้ง และ Windows ก็จะใช้เครือข่ายนี้ด้วย"
 
-#: setup/qml/Main.qml:302
+#: setup/qml/Main.qml:304
 msgid "Connected with a cable"
 msgstr "เชื่อมต่อผ่านสายแล้ว"
 
-#: setup/qml/Main.qml:333
+#: setup/qml/Main.qml:335
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "ไม่มีรหัสผ่าน"
 
-#: setup/qml/Main.qml:342
+#: setup/qml/Main.qml:344
 msgid "No networks found"
 msgstr "ไม่พบเครือข่าย"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Looking…"
 msgstr "กำลังค้นหา…"
 
-#: setup/qml/Main.qml:359
+#: setup/qml/Main.qml:361
 msgid "Look again"
 msgstr "ค้นหาอีกครั้ง"
 
-#: setup/qml/Main.qml:376
+#: setup/qml/Main.qml:378
 msgid "Who's using this PC?"
 msgstr "ใครใช้พีซีเครื่องนี้?"
 
-#: setup/qml/Main.qml:377
+#: setup/qml/Main.qml:379
 msgid "This is your account in Monet and in Windows."
 msgstr "นี่คือบัญชีของคุณทั้งใน Monet และใน Windows"
 
-#: setup/qml/Main.qml:380
+#: setup/qml/Main.qml:382
 msgid "Name"
 msgstr "ชื่อ"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:386
 msgid "You sign in as %1"
 msgstr "คุณจะลงชื่อเข้าใช้เป็น %1"
 
-#: setup/qml/Main.qml:390
+#: setup/qml/Main.qml:392
 msgid "At least 6 characters"
 msgstr "อย่างน้อย 6 ตัวอักษร"
 
-#: setup/qml/Main.qml:404
+#: setup/qml/Main.qml:406
 msgid "Your apps"
 msgstr "แอปของคุณ"
 
-#: setup/qml/Main.qml:405
+#: setup/qml/Main.qml:407
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "รูปภาพ เอกสาร วิดีโอ เพลง และเครื่องคิดเลขมีมาให้ในตัว แอปที่คุณเพิ่มจะตามมาหลังจากลงชื่อเข้าใช้"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "ใช้ประจำ"
 
-#: setup/qml/Main.qml:407
+#: setup/qml/Main.qml:409
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "เพิ่มเติม"
 
-#: setup/qml/Main.qml:508
+#: setup/qml/Main.qml:510
 msgid "Ready to install"
 msgstr "พร้อมติดตั้ง"
 
-#: setup/qml/Main.qml:521
+#: setup/qml/Main.qml:523
 msgid "Monet and Windows"
 msgstr "Monet และ Windows"
 
-#: setup/qml/Main.qml:525
+#: setup/qml/Main.qml:527
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr ""
 "ลบทุกอย่างในพีซีเครื่องนี้ Windows จะติดตั้งตัวเองไว้สำหรับเล่นเกมเท่านั้น"
 
-#: setup/qml/Main.qml:540
+#: setup/qml/Main.qml:542
 msgid "Monet next to my Windows"
 msgstr "Monet คู่กับ Windows ที่มีอยู่"
 
-#: setup/qml/Main.qml:544
+#: setup/qml/Main.qml:546
 msgid "Keeps Windows and your files. Uses free space."
 msgstr "เก็บ Windows และไฟล์ของคุณไว้ ใช้พื้นที่ว่างที่มีอยู่"
 
-#: setup/qml/Main.qml:558 setup/qml/Main.qml:570 setup/monet_setup/disks.py:67
+#: setup/qml/Main.qml:560 setup/qml/Main.qml:572 setup/monet_setup/disks.py:67
 msgid "Disk"
 msgstr "ดิสก์"
 
-#: setup/qml/Main.qml:562
+#: setup/qml/Main.qml:564
 msgid "Looking for disks…"
 msgstr "กำลังค้นหาดิสก์…"
 
-#: setup/qml/Main.qml:581
+#: setup/qml/Main.qml:587
 msgid ""
 "Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards."
 msgstr ""
 "ทุกอย่างบนดิสก์นี้จะถูกลบ รวมถึง Windows หลังจากนั้น Monet จะติดตั้ง Windows ใหม่สำหรับเกมของคุณ"
 
-#: setup/qml/Main.qml:596 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:602 setup/monet_setup/app.py:30
 msgid "Installing Monet"
 msgstr "กำลังติดตั้ง Monet"
 
-#: setup/qml/Main.qml:610
+#: setup/qml/Main.qml:616
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "ปล่อยให้ทำงานไปได้เลย หากการเชื่อมต่อหลุด Monet จะทำต่อจากจุดที่ค้างไว้"
 
-#: setup/qml/Main.qml:622
+#: setup/qml/Main.qml:628
 msgid "All set"
 msgstr "เรียบร้อยแล้ว"
 
-#: setup/qml/Main.qml:625
+#: setup/qml/Main.qml:631
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "ถอดแฟลชไดรฟ์ USB ออกแล้วรีสตาร์ท หลังจากลงชื่อเข้าใช้ Monet จะเตรียม Windows สำหรับเกมของคุณให้เอง"
 
-#: setup/qml/Main.qml:626
+#: setup/qml/Main.qml:632
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "ถอดแฟลชไดรฟ์ USB ออกแล้วรีสตาร์ท พีซีของคุณจะเปิดเข้า Monet และเข้า Windows ได้ในคลิกเดียว"
 
-#: setup/qml/Main.qml:643
+#: setup/qml/Main.qml:649
 msgid "Once, when it first starts"
 msgstr "ครั้งเดียว ตอนเปิดเครื่องครั้งแรก"
 
-#: setup/qml/Main.qml:648
+#: setup/qml/Main.qml:654
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -2831,21 +2833,21 @@ msgid ""
 msgstr ""
 "หน้าจอสีน้ำเงินจะขอให้เชื่อถือ Monet ใช้ปุ่มลูกศรและ Enter เลือก Enroll MOK แล้วเลือก Continue และ Yes พิมพ์ monetsetup แล้วเลือก Reboot หน้าจอนี้จะเลือก Continue boot ไว้ตั้งแต่แรก อย่าเลือกตัวนั้น ไม่เช่นนั้น Monet จะเริ่มทำงานไม่ได้"
 
-#: setup/qml/Main.qml:652
+#: setup/qml/Main.qml:658
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "ถ่ายรูปขั้นตอนเหล่านี้ด้วยโทรศัพท์ไว้ก่อน หน้าจอนี้จะหายไปเมื่อ PC รีสตาร์ต"
 
-#: setup/qml/Main.qml:665
+#: setup/qml/Main.qml:671
 msgid "That didn't work"
 msgstr "ไม่สำเร็จ"
 
-#: setup/qml/Main.qml:670
+#: setup/qml/Main.qml:676
 msgid "Hide details"
 msgstr "ซ่อนรายละเอียด"
 
-#: setup/qml/Main.qml:870
+#: setup/qml/Main.qml:876
 msgid "Hide"
 msgstr "ซ่อน"
 
@@ -2918,27 +2920,49 @@ msgid "about %1 minute left"
 msgid_plural "about %1 minutes left"
 msgstr[0] "เหลืออีกประมาณ %1 นาที"
 
-#: setup/monet_setup/app.py:265
+#: setup/monet_setup/app.py:268
 msgid "The password needs at least 6 characters."
 msgstr "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"
 
-#: setup/monet_setup/app.py:285
+#: setup/monet_setup/app.py:288
 msgid "Built in"
 msgstr "มีในตัว"
 
-#: setup/monet_setup/app.py:333
+#: setup/monet_setup/app.py:340
+msgid ""
+"This PC's NVIDIA graphics card is older than the RTX 20 series. Monet can't use it, so everything would be drawn by the processor and be very slow."
+msgstr ""
+"การ์ดจอ NVIDIA ของ PC เครื่องนี้เก่ากว่าซีรีส์ RTX 20 Monet ใช้การ์ดนี้ไม่ได้ ทุกอย่างจึงต้องวาดด้วยโปรเซสเซอร์และจะช้ามาก"
+
+#: setup/monet_setup/app.py:343
+msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
+msgstr "PC เครื่องนี้มีหน่วยความจำ %1 GB Monet ต้องใช้อย่างน้อย 4 GB"
+
+#: setup/monet_setup/app.py:351
+msgid ""
+"This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet leaves it off. The screen and games use the built-in graphics."
+msgstr ""
+"ชิปกราฟิก NVIDIA ของ PC เครื่องนี้เก่ากว่าซีรีส์ RTX 20 Monet จึงปิดไว้ หน้าจอและเกมจะใช้กราฟิกในตัว"
+
+#: setup/monet_setup/app.py:354
+msgid ""
+"This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
+msgstr ""
+"PC เครื่องนี้มีหน่วยความจำ %1 GB Monet ทำงานได้ แต่จะช้าลงเมื่อเปิดแอปหลายตัว: 8 GB จะดีกว่า"
+
+#: setup/monet_setup/app.py:363
 msgid "No disk found to install Monet on."
 msgstr "ไม่พบดิสก์สำหรับติดตั้ง Monet"
 
-#: setup/monet_setup/app.py:338
+#: setup/monet_setup/app.py:368
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "ดิสก์นี้เล็กเกินไปสำหรับ Monet (ต้องการ 70 GB)"
 
-#: setup/monet_setup/app.py:411
+#: setup/monet_setup/app.py:441
 msgid "%1 of %2 GB"
 msgstr "%1 จาก %2 GB"
 
-#: setup/monet_setup/app.py:428
+#: setup/monet_setup/app.py:458
 msgid "The installer stopped unexpectedly."
 msgstr "ตัวติดตั้งหยุดทำงานโดยไม่คาดคิด"
 
@@ -3097,15 +3121,23 @@ msgstr "ญี่ปุ่น"
 msgid "Korean"
 msgstr "เกาหลี"
 
-#: linux/libexec/monet-quick:1426
+#: linux/libexec/monet-quick:1428
 msgid "Steam on %1"
 msgstr "Steam บน %1"
 
-#: linux/libexec/monet-quick:1430
+#: linux/libexec/monet-quick:1432
 msgid "Games folder"
 msgstr "โฟลเดอร์เกม"
 
-#: linux/libexec/monet-quick:1938
+#: linux/libexec/monet-quick:1667
+msgid "Open it again"
+msgstr "เปิดอีกครั้ง"
+
+#: linux/libexec/monet-quick:1667
+msgid "%1 closed unexpectedly"
+msgstr "%1 ปิดไปโดยไม่คาดคิด"
+
+#: linux/libexec/monet-quick:2005
 msgid "%1 GB free of %2 GB"
 msgstr "ว่าง %1 GB จาก %2 GB"
 

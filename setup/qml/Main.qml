@@ -254,6 +254,8 @@ ApplicationWindow {
                     onActivated: (i) => setup.setKeyboard(i)
                 }
             }
+            // A PC Monet can't run on hears it now, not after the questions.
+            Note { text: setup.pcBlocker; warm: true; visible: text !== "" }
         }
     }
 
@@ -577,6 +579,10 @@ ApplicationWindow {
                 }
             }
             Note { text: setup.blocker; warm: true; visible: text !== "" }
+            Repeater {
+                model: setup.blocker === "" ? setup.pcNotes : []
+                Note { required property string modelData; text: modelData }
+            }
             Note {
                 text: tr("Everything on this disk is erased, Windows too. Monet installs a fresh Windows for your games afterwards.")
                 warm: true

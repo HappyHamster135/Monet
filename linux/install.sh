@@ -159,9 +159,13 @@ done
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
-for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer; do
+for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
+# When an app crashes, Monet's note instead of KDE's crash reporter: beside each
+# crash systemd-coredump catches, linked by hand (systemctl enable can't).
+install -d "$UNITDIR/systemd-coredump@.service.wants"
+ln -sfn ../monet-crash@.service "$UNITDIR/systemd-coredump@.service.wants/monet-crash@.service"
 put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.service"
 put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"

@@ -1189,6 +1189,21 @@ class DesktopWidgets(unittest.TestCase):
             self.assertIn(f"item.{name} !== undefined", glass)
             self.assertRegex(hours, rf"property [\w ]+\b{name}:")
 
+    def test_glass_off_reaches_the_widgets_and_the_lock_screen(self):
+        # Glass off (Settings, or Monet on a PC whose processor draws): monet-light leaves glass-off, and the
+        # widgets and the lock screen stop blurring the painting, the heaviest thing on an old PC's screen.
+        light = (ROOT / "linux/libexec/monet-light").read_text()
+        self.assertIn(': > "$CONFIG/monet/glass-off"', light)
+        self.assertIn('rm -f "$CONFIG/monet/glass-off"', light)
+        glass = (SHARE / "monet/widgets/Glass.qml").read_text()
+        lock = (SHARE / "monet/lockscreen/MonetLockScreen.qml").read_text()
+        for qml in (glass, lock):
+            self.assertIn('nameFilters: ["glass-off"]', qml)
+            self.assertIn('StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/monet"', qml)
+        self.assertIn("live: glass.frosted", glass)
+        self.assertIn("visible: glass.frosted", glass)
+        self.assertIn("visible: monetLock.blurred && opacity > 0", lock)
+
     def test_desktop_starts_with_weather_and_calendar(self):
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
@@ -1335,18 +1350,39 @@ class DesktopWidgets(unittest.TestCase):
 class LiquidGlass(unittest.TestCase):
     STYLE = PLASMA / "desktoptheme/monet"
 
-    def test_rim_of_light_fades_down_the_sides(self):
+    def test_rim_of_light_catches_the_top_left_and_bottom_right(self):
         svg = (self.STYLE / "dialogs/background.svg").read_text()
-        self.assertIn('id="hint-stretch-borders"', svg)  # so the fade spans the whole height
-        for gradient in ("rim-fall", "sheen"):
+        self.assertIn('id="hint-stretch-borders"', svg)  # so each side's fade spans it whole
+        for gradient in ("rim-top", "rim-bottom", "rim-left", "rim-right", "sheen"):
             self.assertIn(f'<linearGradient id="{gradient}"', svg)
             self.assertIn(f'url(#{gradient})', svg)
         # Tooltips keep the hairline and the sheen, not the rim: on glass that small, a bright
         # line inside the hairline reads as a second box.
         for folder in ("", "translucent/", "solid/", "opaque/"):
             tooltip = (self.STYLE / f"{folder}widgets/tooltip.svg").read_text()
-            self.assertNotIn("url(#rim-fall)", tooltip, folder)
+            self.assertNotIn("url(#rim-", tooltip, folder)
             self.assertIn('fill-opacity="0.13"', tooltip)  # the hairline
+
+    def test_bar_and_popovers_have_the_lens_too(self):
+        # The same lens of light inside the edge as the widgets' glass; Quick Settings' pebbles are lighter glass.
+        for frame in ("dialogs/background", "widgets/panel-background"):
+            svg = (self.STYLE / f"{frame}.svg").read_text()
+            for side in ("down", "up", "right", "left"):
+                self.assertIn(f'url(#lens-{side})', svg, frame)
+            self.assertIn('<radialGradient id="lens-topleft"', svg, frame)
+        quick = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
+        self.assertIn("component GlassRim: Rectangle {", quick)
+        self.assertEqual(quick.count("GlassRim {"), 3)
+
+    def test_widget_glass_is_clear_with_a_lens_at_the_edge(self):
+        # As Apple's: the painting's strokes show through, softened; a lens along the edge magnifies
+        # and brightens them, and a rim catches the light at the top left and bottom right.
+        glass = (SHARE / "monet/widgets/Glass.qml").read_text()
+        for piece in ("id: lensGrab", "sourceRect: glass.lensPatch", "maskSource: middleMask", "PathRectangle {",
+                      "fillRule: ShapePath.OddEvenFill"):
+            self.assertIn(piece, glass)
+        self.assertEqual(glass.count("live: glass.frosted"), 2)
+        self.assertIn("property real wash: 0.16", glass)
 
     def test_vibrancy_behind_the_glass(self):
         for style in ("monet", "monet-solid"):
@@ -1488,6 +1524,103 @@ class Sounds(unittest.TestCase):
         uninstall = (ROOT / "linux/uninstall.sh").read_text()
         self.assertIn('"$PREFIX/share/sounds/monet"', uninstall)
         self.assertIn("kwriteconfig6 --file kdeglobals --group Sounds --key Theme ocean", uninstall)
+
+
+class Crashes(unittest.TestCase):
+    """An app that closes unexpectedly gets Monet's note, not KDE's crash reporter (Bazzite leaves it out)."""
+
+    def test_app_units_name_their_menu_entry(self):
+        # systemd's names for an app's unit: Plasma's menu and autostart, Flatpak's sandbox, another launcher.
+        app_of = quick_helper().app_of_unit
+        self.assertEqual(app_of("app-org.kde.dolphin@0123456789abcdef0123456789abcdef.service"), "org.kde.dolphin.desktop")
+        self.assertEqual(app_of("app-steam@autostart.service"), "steam.desktop")
+        self.assertEqual(app_of("app-flatpak-app.zen_browser.zen-12345.scope"), "app.zen_browser.zen.desktop")
+        self.assertEqual(app_of("app-org.kde.konsole-4242.scope"), "org.kde.konsole.desktop")
+        self.assertEqual(app_of("app-gnome-org.gnome.Calculator-77.scope"), "org.gnome.Calculator.desktop")
+        self.assertEqual(app_of(r"app-my\x2dgame@1.service"), "my-game.desktop")
+        # Not apps: Plasma's own pieces, D-Bus services, Monet's note itself.
+        for unit in ("plasma-plasmashell.service", "dbus-:1.2-org.kde.kded6@0.service", "run-u42.service", "app.slice", ""):
+            self.assertEqual(app_of(unit), "", unit)
+
+    def test_a_persons_crash_reaches_their_session(self):
+        from unittest import mock
+        quick = quick_helper()
+
+        def crash(*journal):
+            told, journal = [], list(journal)
+
+            def run(*args, **kw):
+                told.append(args)
+                if args[0] == "journalctl":
+                    return journal.pop(0) if journal else None
+                return "ada\n" if args[0] == "id" else ""
+            with mock.patch.object(quick, "run", run), mock.patch.object(quick.time, "sleep"):
+                quick.crash("3-4567-1000", "0" * 32)
+            return told
+
+        def dump(uid, unit):
+            return json.dumps({"COREDUMP_EXE": "/usr/bin/dolphin", "COREDUMP_UID": uid, "COREDUMP_USER_UNIT": unit}) + "\n"
+        # The crash reaches the journal a moment after systemd-coredump starts.
+        told = crash(None, "", dump("1000", "app-org.kde.dolphin@ab.service"))
+        journal = [args for args in told if args[0] == "journalctl"]
+        self.assertEqual(len(journal), 3)
+        self.assertIn("_SYSTEMD_UNIT=systemd-coredump@3-4567-1000.service", journal[0])
+        self.assertIn("_BOOT_ID=" + "0" * 32, journal[0])
+        self.assertEqual(told[-1], ("systemd-run", "--user", "--machine=ada@.host", "--quiet", "--collect",
+                                    "--property=KillMode=process", "@LIBEXECDIR@/monet-quick", "crashed",
+                                    b"app-org.kde.dolphin@ab.service".hex()))
+        # Not the system's own crashes, nor what isn't an app.
+        for uid, unit in (("0", "app-org.kde.dolphin@ab.service"), ("1000", "plasma-kwin_wayland.service")):
+            self.assertNotIn("systemd-run", [args[0] for args in crash(dump(uid, unit))])
+        # What systemd hands over is checked first.
+        with mock.patch("sys.stderr"):
+            self.assertEqual(quick.main(["crash", "1-2 3", "0" * 32]), 1)
+            self.assertEqual(quick.main(["crashed", "not hex"]), 1)
+
+    def test_the_note_only_once_the_app_is_gone(self):
+        from unittest import mock
+        quick = quick_helper()
+        files = quick.desktop_entry("[Desktop Entry]\nType=Application\nName=Files\nName[sv]=Filer\nIcon=system-file-manager\n")
+
+        def note(still_open=False, answer="", entry=files):
+            told = []
+
+            def run(*args, **kw):
+                told.append(args)
+                return answer if args[0] == "notify-send" else None
+            with mock.patch.object(quick, "entry_by_id", lambda app: entry if app == "org.kde.dolphin.desktop" else None), \
+                    mock.patch.object(quick, "ok", lambda *args, **kw: still_open), \
+                    mock.patch.object(quick, "run", run), mock.patch.object(quick, "launch") as launch, \
+                    mock.patch.object(quick.time, "sleep"), \
+                    mock.patch.dict(quick.os.environ, {"LANGUAGE": "", "LC_ALL": "", "LC_MESSAGES": "", "LANG": "sv_SE.UTF-8"}):
+                quick.crashed("app-org.kde.dolphin@ab.service")
+            return told, launch
+        # The app's own name (in your language) and picture; "Open it again" starts it the menu's way.
+        told, launch = note(answer="open\n")
+        self.assertEqual(told, [("notify-send", "--app-name=Monet", "--icon=system-file-manager",
+                                 "--action=open=Open it again", "--wait", "Filer closed unexpectedly")])
+        launch.assert_called_once_with("org.kde.dolphin.desktop")
+        told, launch = note(answer="")
+        self.assertEqual(len(told), 1)
+        launch.assert_not_called()
+        # Still open (a tab or a game under Steam crashed), not in the menu, or not an app Monet knows: nothing.
+        for kept in (note(still_open=True), note(entry=quick.desktop_entry("[Desktop Entry]\nName=Helper\nNoDisplay=true\n")),
+                     note(entry=None)):
+            self.assertEqual(kept[0], [])
+            kept[1].assert_not_called()
+
+    def test_wired_beside_systemd_coredump(self):
+        service = (ROOT / "linux/systemd/monet-crash@.service").read_text()
+        self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick crash %i %b\n", service)
+        self.assertIn("RuntimeMaxSec=5min", service)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn("monet-apps.timer monet-crash@.service; do", install)
+        self.assertIn('ln -sfn ../monet-crash@.service "$UNITDIR/systemd-coredump@.service.wants/monet-crash@.service"',
+                      install)
+        self.assertIn("/etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service",
+                      (ROOT / "linux/uninstall.sh").read_text())
+        for command in ("crash INSTANCE BOOT", "crashed UNIT"):
+            self.assertRegex(quick_helper().__doc__, rf"monet-quick {re.escape(command)}\s")
 
 
 class StartAndSignIn(unittest.TestCase):

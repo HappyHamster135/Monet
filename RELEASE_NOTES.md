@@ -154,6 +154,22 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   - Clearing recent files says it's done.
   - Searching Settings works in your language, not only in English, and
     accents don't matter: "ecran" finds "Écran".
+- **Clearer glass, closer to Apple's.** You see the painting's brushstrokes
+  through the widgets, the bar and the popovers now, only softened. Along the
+  widgets', the bar's and the popovers' edges the glass bends the light a
+  little, like a real pane, and the rim catches the light at the top left
+  and bottom right. Quick Settings' tiles are pebbles of lighter glass, as
+  in Control Center.
+- **Kinder to older PCs.**
+  - Monet Setup checks the PC before anything is erased: an NVIDIA card
+    older than the RTX 20 series with nothing else to draw with, or too
+    little memory, is said on the first page, and Install waits. An old
+    NVIDIA chip beside built-in graphics, or 4 to 6 GB of memory, is
+    mentioned before installing.
+  - Glass off (Light & Wallpaper) now reaches the desktop widgets and the
+    lock screen too: they sit on paper instead of blurring the painting,
+    much lighter for older graphics. Monet still turns it off by itself
+    where there's no graphics driver.
 - **Now Playing starts the music.** With nothing playing it offers your
   music apps, the PC's own first, or the Store to find one. While something
   plays, a line shows how far along it is, with the time gone and the time
@@ -183,6 +199,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   charger plugged in or out, a low battery, the volume step and emptying the
   trash sound like Monet now: soft felt and glass, quiet and warm. Before,
   they were KDE's.
+- **When an app closes unexpectedly.** A short note says so, with its name
+  and picture, and Open it again starts it straight back. Before, it just
+  vanished. When only a part of it stops, like a browser's tab or a game
+  under Steam, nothing is said.
 
 Updating from 0.8.2: Settings → Updates → Install, then restart. After
 that Monet updates by itself. At your next sign-in KDE's Brightness panel

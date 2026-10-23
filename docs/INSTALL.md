@@ -5,7 +5,12 @@ it. No preparation in Windows, no BitLocker keys, no settings to change.
 
 You need:
 
-- A PC with an NVIDIA RTX 20-series or newer GPU
+- A PC with an NVIDIA RTX 20-series or newer GPU (or Intel or AMD graphics;
+  an older NVIDIA card can't be used, and Monet Setup says so)
+- UEFI firmware: the USB stick only starts that way, so a PC from before
+  about 2012 can't run Monet. Every PC that runs Windows 11 has it.
+- 4 GB of memory at least, 8 GB to run many apps at once
+- A disk of 70 GB or more
 - A USB stick of 2 GB or more (it will be erased)
 - Internet (Wi-Fi is fine)
 

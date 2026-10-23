@@ -176,7 +176,8 @@ kw --file kwinrc --group Plugins --key contrastEnabled true
 kw --file kwinrc --group Plugins --key scaleEnabled true
 kw --file kwinrc --group Plugins --key glideEnabled false
 kw --file kwinrc --group Plugins --key fadeEnabled false
-kw --file kwinrc --group Effect-blur --key BlurStrength 12
+# Clear rather than frosted, as Apple's glass is: the painting's strokes still show.
+kw --file kwinrc --group Effect-blur --key BlurStrength 4
 kw --file kwinrc --group Effect-blur --key NoiseStrength 3
 # The painting's colors a little richer through the glass (KWin 6.7 does it in
 # the blur, no longer from the Plasma style's contrast settings).

@@ -9,11 +9,13 @@
  * neighbours. Everything that unlocks (the authenticator, the timers, the
  * grace lock, the keyboard) works the way KDE's LockScreenUi.qml does.
  */
+import QtCore
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
+import Qt.labs.folderlistmodel
 
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.extras as PlasmaExtras
@@ -30,6 +32,15 @@ Item {
 
     // If we're using software rendering, there's no blur: a heavier wash instead.
     readonly property bool softwareRendering: GraphicsInfo.api === GraphicsInfo.Software
+    // Nor with glass switched off (monet-light leaves glass-off), where blurring the
+    // whole screen would be the slowest thing about unlocking.
+    readonly property bool blurred: !softwareRendering && glassOff.count === 0
+    FolderListModel {
+        id: glassOff
+        folder: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/monet"
+        nameFilters: ["glass-off"]
+        showDirs: false
+    }
     readonly property real speed: Kirigami.Units.longDuration / 200
     // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
@@ -243,7 +254,7 @@ Item {
         MultiEffect {
             anchors.fill: parent
             source: typeof wallpaper === "undefined" ? null : wallpaper
-            visible: !monetLock.softwareRendering && opacity > 0
+            visible: monetLock.blurred && opacity > 0
             autoPaddingEnabled: false
             blurEnabled: true
             blurMax: 64
@@ -255,7 +266,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             readonly property color tone: monetLock.smoke ? "#14131A" : "#F3F1EC"
-            color: Qt.rgba(tone.r, tone.g, tone.b, monetLock.softwareRendering ? 0.7 : (monetLock.smoke ? 0.3 : 0.22))
+            color: Qt.rgba(tone.r, tone.g, tone.b, !monetLock.blurred ? 0.7 : (monetLock.smoke ? 0.3 : 0.22))
             opacity: lockScreenRoot.uiVisible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: Math.round(380 * monetLock.speed) } }
         }

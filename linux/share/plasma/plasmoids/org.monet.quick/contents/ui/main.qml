@@ -21,6 +21,8 @@ PlasmoidItem {
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property real speed: Kirigami.Units.longDuration / 200
+    // Mist or smoke, the way monet-light set the colors.
+    readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     property var info: ({})
     // While a slider is held, don't let a status refresh move it.
     property bool dragging: false
@@ -132,6 +134,16 @@ PlasmoidItem {
         onTriggered: if (!root.dragging) root.refresh()
     }
 
+    // The light caught in a pebble's edge.
+    component GlassRim: Rectangle {
+        required property bool smoke
+        anchors.fill: parent
+        radius: parent.radius
+        color: "transparent"
+        border.width: 1
+        border.color: smoke ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.7)
+    }
+
     component Tile: Rectangle {
         id: tile
         property string title
@@ -147,7 +159,9 @@ PlasmoidItem {
 
         implicitHeight: Kirigami.Units.gridUnit * 3.4
         radius: 18
-        color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, hover.hovered ? 0.11 : 0.07)
+        // A pebble of clear glass on the glass, as in Apple's Control Center: lighter, not grey.
+        readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+        color: smoke ? Qt.rgba(1, 1, 1, hover.hovered ? 0.12 : 0.08) : Qt.rgba(1, 1, 1, hover.hovered ? 0.46 : 0.34)
         opacity: available ? 1 : 0.45
         scale: tap.pressed ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
@@ -158,6 +172,10 @@ PlasmoidItem {
         Keys.onReturnPressed: if (available) toggled()
         border.width: activeFocus ? 2 : 0
         border.color: "#357F72"
+
+        GlassRim {
+            smoke: tile.smoke
+        }
 
         RowLayout {
             anchors.fill: parent
@@ -320,8 +338,12 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 Layout.preferredHeight: sliders.implicitHeight + 28
                 radius: 18
-                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.07)
+                color: root.smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
                 visible: root.info.volume !== null || root.info.brightness !== null
+
+                GlassRim {
+                    smoke: root.smoke
+                }
 
                 ColumnLayout {
                     id: sliders
@@ -400,7 +422,11 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 40
                     radius: 14
-                    color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.07)
+                    color: root.smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
+
+                    GlassRim {
+                        smoke: root.smoke
+                    }
 
                     // The chosen light's pebble glides to it.
                     Rectangle {

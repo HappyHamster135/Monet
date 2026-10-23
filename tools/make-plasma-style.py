@@ -34,11 +34,11 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 # name: radius, content margin, shadow blur, shadow drop, shadow strength, glass opacity
 # (and rim=False for glass too small for a rim of light: inside the hairline, it reads as a second box)
 FRAMES = {
-    "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
-    "widgets/panel-background": dict(radius=22, margin=8, blur=12, drop=7, strength=0.32, glass=0.40),
-    "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.66, rim=False),
+    "dialogs/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.34),
+    "widgets/panel-background": dict(radius=22, margin=8, blur=12, drop=7, strength=0.32, glass=0.10, lens=7),
+    "widgets/tooltip": dict(radius=12, margin=8, blur=8, drop=4, strength=0.24, glass=0.60, rim=False),
     # Popups and desktop widgets drawn by Plasma's own components.
-    "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.50),
+    "widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.34),
 }
 SOLID = 0.96
 
@@ -118,18 +118,33 @@ def corners(r):
     }
 
 
-# Light in the glass: a rim brightest along the top that fades down the sides,
-# the way light gathers in the thickness of a pane, and a soft sheen under it.
-RIM_TOP, RIM_BOTTOM, SHEEN = 0.34, 0.05, 0.12
-GRADIENTS = (f'<linearGradient id="rim-fall" x1="0" y1="0" x2="0" y2="1">'
-             f'<stop offset="0" stop-color="#ffffff" stop-opacity="{RIM_TOP}"/>'
-             f'<stop offset="1" stop-color="#ffffff" stop-opacity="{RIM_BOTTOM}"/></linearGradient>'
-             f'<linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">'
+# Light in the glass, as on Apple's: a rim brightest where light falls on the pane
+# (the top left) and where it leaves (the bottom right), dim at the other two
+# corners, the way light gathers in the thickness of a pane; a soft sheen under it.
+RIM_LIT, RIM_DIM, RIM_BACK, SHEEN = 0.50, 0.08, 0.28, 0.12
+RIM_CORNERS = {"topleft": RIM_LIT, "topright": RIM_DIM, "bottomright": RIM_BACK, "bottomleft": RIM_DIM}
+# And a lens inside the edge, as on the desktop widgets' glass: a band of light that
+# fades into the middle, where light bends in the pane's thickness.
+LENS, LENS_W = 0.13, 12
+
+
+def rim_gradient(ident, start, end, across):
+    x2, y2 = (1, 0) if across else (0, 1)
+    return (f'<linearGradient id="{ident}" x1="0" y1="0" x2="{x2}" y2="{y2}">'
+            f'<stop offset="0" stop-color="#ffffff" stop-opacity="{start}"/>'
+            f'<stop offset="1" stop-color="#ffffff" stop-opacity="{end}"/></linearGradient>')
+
+
+GRADIENTS = (rim_gradient("rim-top", RIM_LIT, RIM_DIM, True) + rim_gradient("rim-bottom", RIM_DIM, RIM_BACK, True)
+             + rim_gradient("rim-left", RIM_LIT, RIM_DIM, False) + rim_gradient("rim-right", RIM_DIM, RIM_BACK, False)
+             + rim_gradient("lens-down", LENS, 0, False) + rim_gradient("lens-up", 0, LENS, False)
+             + rim_gradient("lens-right", LENS, 0, True) + rim_gradient("lens-left", 0, LENS, True)
+             + f'<linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">'
              f'<stop offset="0" stop-color="#ffffff" stop-opacity="{SHEEN}"/>'
              f'<stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>')
 
 
-def frame_pieces(sheet, prefix, r, glass, mask=False, rim=True):
+def frame_pieces(sheet, prefix, r, glass, mask=False, rim=True, lens_w=LENS_W):
     """The glass itself: fill, hairline edge, the rim of light and its sheen.
     The sides stretch (hint-stretch-borders), so the rim fades over the
     frame's whole height."""
@@ -148,10 +163,17 @@ def frame_pieces(sheet, prefix, r, glass, mask=False, rim=True):
                 top = which.startswith("top")
                 if top:  # under the hairline and the rim, as on the top edge (y + 2)
                     out += f'<path d="{quarter(x + cx, y + cy, shift(s), shift(e), r - 2)}" fill="url(#sheen)"/>'
+                if rim:  # the lens: brightest just inside the edge, gone lens_w further in
+                    lens = f"lens-{prefix}{which}"
+                    out += (f'<radialGradient id="{lens}" gradientUnits="userSpaceOnUse" cx="{x + cx}" cy="{y + cy}" '
+                            f'r="{r - 1}"><stop offset="{(r - 1 - lens_w) / (r - 1):.3f}" stop-color="#ffffff" '
+                            f'stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="{LENS}"/>'
+                            f'</radialGradient><path d="{ring(x + cx, y + cy, shift(s), shift(e), r - 1, lens_w)}" '
+                            f'fill="url(#{lens})"/>')
                 out += f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r, 1)}" {edge}/>'
                 if rim:
                     out += (f'<path d="{ring(x + cx, y + cy, shift(s), shift(e), r - 1, 1)}" fill="#ffffff" '
-                            f'fill-opacity="{RIM_TOP if top else RIM_BOTTOM}"/>')
+                            f'fill-opacity="{RIM_CORNERS[which]}"/>')
             return out
         sheet.element(prefix + which, r, r, body)
     for which in ("top", "bottom", "left", "right"):
@@ -163,15 +185,19 @@ def frame_pieces(sheet, prefix, r, glass, mask=False, rim=True):
                 return out
             if which == "top":
                 out += f'<rect x="{x}" y="{y + 2}" width="{w}" height="{h - 2}" fill="url(#sheen)"/>'
+            if rim:
+                lens = {"top": (x, y + 1, w, lens_w, "down"), "bottom": (x, y + h - 1 - lens_w, w, lens_w, "up"),
+                        "left": (x + 1, y, lens_w, h, "right"), "right": (x + w - 1 - lens_w, y, lens_w, h, "left")}[which]
+                out += f'<rect x="{lens[0]}" y="{lens[1]}" width="{lens[2]}" height="{lens[3]}" fill="url(#lens-{lens[4]})"/>'
             bar = {"top": (x, y, w, 1), "bottom": (x, y + h - 1, w, 1),
                    "left": (x, y, 1, h), "right": (x + w - 1, y, 1, h)}[which]
             out += f'<rect x="{bar[0]}" y="{bar[1]}" width="{bar[2]}" height="{bar[3]}" {edge}/>'
             if not rim:
                 return out
-            light = {"top": (x, y + 1, w, 1, f'fill="#ffffff" fill-opacity="{RIM_TOP}"'),
-                     "bottom": (x, y + h - 2, w, 1, f'fill="#ffffff" fill-opacity="{RIM_BOTTOM}"'),
-                     "left": (x + 1, y, 1, h, 'fill="url(#rim-fall)"'),
-                     "right": (x + w - 2, y, 1, h, 'fill="url(#rim-fall)"')}[which]
+            light = {"top": (x, y + 1, w, 1, 'fill="url(#rim-top)"'),
+                     "bottom": (x, y + h - 2, w, 1, 'fill="url(#rim-bottom)"'),
+                     "left": (x + 1, y, 1, h, 'fill="url(#rim-left)"'),
+                     "right": (x + w - 2, y, 1, h, 'fill="url(#rim-right)"')}[which]
             out += f'<rect x="{light[0]}" y="{light[1]}" width="{light[2]}" height="{light[3]}" {light[4]}/>'
             return out
         sheet.element(prefix + which, w, h, body)
@@ -236,9 +262,10 @@ def image(x, y, w, h, data):
     return f'<image x="{x}" y="{y}" width="{w}" height="{h}" xlink:href="data:image/png;base64,{data}"/>'
 
 
-def frame_svg(radius, margin, blur, drop, strength, glass, shadow=True, rim=True):
+def frame_svg(radius, margin, blur, drop, strength, glass, shadow=True, rim=True, lens=LENS_W):
     sheet = Sheet(GRADIENTS)
-    frame_pieces(sheet, "", radius, glass, rim=rim)
+    # The bar's islands are short: a thinner lens, so it doesn't cover them.
+    frame_pieces(sheet, "", radius, glass, rim=rim, lens_w=lens)
     frame_pieces(sheet, "mask-", radius, glass, mask=True)
     if shadow:
         shadow_pieces(sheet, radius, blur, drop, strength)

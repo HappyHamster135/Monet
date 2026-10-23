@@ -255,6 +255,58 @@ class Install(unittest.TestCase):
                 install.STATE = saved
 
 
+class ThisPC(unittest.TestCase):
+    def sysfs(self, root, cards):
+        for i, (cls, vendor, device) in enumerate(cards):
+            dev = Path(root) / f"0000-0{i}-00.0"  # sysfs names have colons, which Windows refuses
+            dev.mkdir(parents=True)
+            for name, value in (("class", cls), ("vendor", f"0x{vendor}"), ("device", f"0x{device}")):
+                (dev / name).write_text(value + "\n")
+        return Path(root)
+
+    def test_graphics_and_memory(self):
+        from monet_setup import pc
+        with tempfile.TemporaryDirectory() as tmp:
+            # An RTX 4090 and a network card: only the graphics counts.
+            devices = self.sysfs(tmp, [("0x030000", "10de", "2684"), ("0x020000", "8086", "15f3")])
+            self.assertEqual(pc.graphics(devices), [("10de", "2684")])
+            meminfo = Path(tmp) / "meminfo"
+            meminfo.write_text("MemTotal:        3884524 kB\nMemFree:  1 kB\n")
+            self.assertAlmostEqual(pc.memory(meminfo), 3.7, places=1)
+        self.assertIsNone(pc.memory(Path("/nonexistent/meminfo")))
+        rtx2060, gtx1060, gtx1650, intel = ("10de", "1f08"), ("10de", "1c03"), ("10de", "1f82"), ("8086", "9bc4")
+        self.assertEqual(pc.check([rtx2060], 16)["oldNvidia"], "")
+        self.assertEqual(pc.check([gtx1650, intel], 16)["oldNvidia"], "")
+        self.assertEqual(pc.check([gtx1060], 16)["oldNvidia"], "only")
+        self.assertEqual(pc.check([intel, gtx1060], 16)["oldNvidia"], "beside")
+        self.assertEqual(pc.check([intel], 16)["oldNvidia"], "")
+
+    def test_setup_says_it_before_erasing(self):
+        try:
+            from monet_setup import app
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        setup = app.Setup.__new__(app.Setup)
+        setup._disks, setup._disk, setup._mode = [{"erase": {"plan": 1}, "keep": None}], 0, "erase"
+        setup._pc = {"oldNvidia": "", "memory": 15.5}
+        self.assertEqual((app.Setup.pcBlocker.fget(setup), app.Setup.pcNotes.fget(setup)), ("", []))
+        self.assertEqual(app.Setup.blocker.fget(setup), "")
+        setup._pc = {"oldNvidia": "beside", "memory": 3.7}
+        self.assertEqual(app.Setup.pcBlocker.fget(setup), "")
+        notes = app.Setup.pcNotes.fget(setup)
+        self.assertEqual(len(notes), 2)
+        self.assertIn("4 GB", notes[1])
+        # Nothing to draw with but an old NVIDIA card, or too little memory: Install can't go ahead.
+        for facts in ({"oldNvidia": "only", "memory": 16}, {"oldNvidia": "", "memory": 1.8}):
+            setup._pc = facts
+            self.assertNotEqual(app.Setup.pcBlocker.fget(setup), "")
+            self.assertEqual(app.Setup.blocker.fget(setup), app.Setup.pcBlocker.fget(setup))
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        hello = qml.split("id: helloStep", 1)[1].split("Component {", 1)[0]
+        self.assertIn("Note { text: setup.pcBlocker; warm: true; visible: text !== \"\" }", hello)
+        self.assertIn("model: setup.blocker === \"\" ? setup.pcNotes : []", qml)
+
+
 class Window(unittest.TestCase):
     def test_progress_events_become_words(self):
         try:
