@@ -220,6 +220,8 @@ fn start(hwnd: HWND) {
                 };
                 tell(line, f);
             })
+            // Written partly or not at all, the stick looks dead to Windows but only needs formatting.
+            .map_err(|e| format!("{}\n\n{}", tr(&e), tr("The USB stick isn't broken: Windows can format it again in Disk Management (right-click the Start button).")))
         });
         if result.is_ok() && given.is_none() {
             let _ = std::fs::remove_file(&iso);

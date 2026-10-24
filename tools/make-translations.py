@@ -14,8 +14,8 @@ What it gathers, and where each is said in your language:
   - the menu's plain names (monet-look: share/monet/names.tsv);
   - Monet's menu entries and its widgets' names (written into the .desktop
     and metadata.json files as Name[language] and so on);
-  - the monet tool's messages (t!(...), said through monet-quick) and the USB
-    stick maker's (tr/trf/t!, built into it: crates/monet-usb/src/words_table.rs).
+  - the monet tool's messages (t!(...), said through monet-quick), and the USB
+    stick maker's and Monet Bridge's (tr/trf/t!, built into each: its words_table.rs).
 
 Placeholders are %1, %2... everywhere, so translators meet one convention.
 Needs only Python.
@@ -35,7 +35,8 @@ POT = PO / "monet.pot"
 LOCALE = ROOT / "linux" / "share" / "locale"
 SETUP_LOCALE = ROOT / "setup" / "locale"
 NAMES = ROOT / "linux" / "share" / "monet" / "names.tsv"
-USB_TABLE = ROOT / "crates" / "monet-usb" / "src" / "words_table.rs"
+# The Windows programs whose words are built into them (crate -> who), each with its own table.
+TABLES = {"monet-usb": "The USB stick maker", "monet-bridge": "Monet Bridge"}
 
 # The languages Monet speaks, most spoken first, with how each counts (gettext's Plural-Forms).
 ONE = "nplurals=1; plural=0;"
@@ -249,7 +250,7 @@ def gather():
             if plugin.get(key):
                 add(context, plugin[key], None, rel(p))
     # The monet tool and the USB stick maker.
-    for crate in ("monet", "monet-usb"):
+    for crate in ("monet", *TABLES):
         for p in sorted((ROOT / "crates" / crate / "src").glob("*.rs")):
             text = p.read_text(encoding="utf-8")
             cut = text.find("#[cfg(test)]")
@@ -379,7 +380,7 @@ def write_mo(path, catalog, language):
 
 
 def build(entries):
-    names, usb = [], {}
+    names, tables = [], {crate: {} for crate in TABLES}
     menus = {}  # (context, English) -> {language: translation}
     for language in LANGUAGES:
         po = PO / f"{language}.po"
@@ -396,8 +397,9 @@ def build(entries):
                 setup[key] = (entry["plural"], translation)
             if key[0] in (MENU_NAME, *MENU_KEYS.values(), *PLUGIN_KEYS.values()):
                 menus.setdefault(key, {})[language] = translation
-            if any(r.startswith("crates/monet-usb/") for r in entry["refs"]) and not entry["plural"]:
-                usb.setdefault(language, []).append((key[1], translation))
+            for crate, table in tables.items():
+                if any(r.startswith(f"crates/{crate}/") for r in entry["refs"]) and not entry["plural"]:
+                    table.setdefault(language, []).append((key[1], translation))
             if key[0] == MENU_NAME and any(r.startswith("linux/libexec/monet-look") for r in entry["refs"]):
                 names.append((key[1], language, translation))
             if key[0] == MENU_KEYS["Comment"] and any(r.startswith("linux/libexec/monet-look") for r in entry["refs"]):
@@ -405,7 +407,8 @@ def build(entries):
         write_mo(LOCALE / language / "LC_MESSAGES" / "monet.mo", everything, language)
         write_mo(SETUP_LOCALE / language / "LC_MESSAGES" / "monet-setup.mo", setup, language)
     NAMES.write_text("".join(f"{e}\t{l}\t{t}\n" for e, l, t in sorted(names)), encoding="utf-8", newline="\n")
-    write_usb_table(usb)
+    for crate, table in tables.items():
+        write_table(crate, table)
     localize_menu_entries(menus)
     localize_plugins(menus)
 
@@ -414,18 +417,18 @@ def rust_quote(text):
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
 
 
-def write_usb_table(usb):
-    out = ["// The USB stick maker's words in each language Monet speaks: written by",
+def write_table(crate, words):
+    out = [f"// {TABLES[crate]}'s words in each language Monet speaks: written by",
            "// tools/make-translations.py from po/ (change the translations there).",
            "",
            "pub static TABLE: &[(&str, &[(&str, &str)])] = &["]
-    for language in sorted(usb):
+    for language in sorted(words):
         out.append(f"    (\n        {rust_quote(language)},\n        &[")
-        for english, said in sorted(usb[language]):
+        for english, said in sorted(words[language]):
             out.append(f"            ({rust_quote(english)}, {rust_quote(said)}),")
         out.append("        ],\n    ),")
     out.append("];\n")
-    USB_TABLE.write_text("\n".join(out), encoding="utf-8", newline="\n")
+    (ROOT / "crates" / crate / "src" / "words_table.rs").write_text("\n".join(out), encoding="utf-8", newline="\n")
 
 
 def menu_entries():

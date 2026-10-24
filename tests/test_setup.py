@@ -565,12 +565,18 @@ class Window(unittest.TestCase):
         self.assertIn('write(var / "lib/monet/apps", "".join(f"{app}\\n" for app in plan.get("apps", [])))', configure)
 
     def test_all_set_explains_the_first_start(self):
-        # The blue screen at the first start, with the password the key was queued with.
-        done = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8").split("id: doneStep", 1)[1].split("Component {", 1)[0]
-        self.assertIn("Enroll MOK", done)
-        self.assertIn(install.MOK_PASSWORD, done)
-        self.assertIn("Continue boot", done)
-        self.assertNotIn("any key", done.lower())  # install's --timeout -1 skips shim's "Press any key"
+        # The blue screen at the first start in pictures beside All set, with the password the
+        # key was queued with, in shim's own words and order.
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        guide = qml.split("id: guide", 1)[1].split("// ---- Steps ----", 1)[0]
+        self.assertIn("visible: installing && phase === \"done\" && !showingKey", guide)
+        order = ['title: "Perform MOK management"', '"Enroll MOK"', '"View key 0"', '"Enroll the key(s)?"', '"Password:',
+                 'lines: ["Reboot"']
+        self.assertEqual([guide.index(w) for w in order], sorted(guide.index(w) for w in order))
+        self.assertIn(f'"Type %1, then Enter", "{install.MOK_PASSWORD}"', guide)
+        self.assertIn("Continue boot", guide)
+        self.assertNotIn("any key", guide.lower())  # install's --timeout -1 skips shim's "Press any key"
+        self.assertIn("component BlueScreen", qml)
 
 
 class YourChoices(unittest.TestCase):
@@ -704,6 +710,51 @@ class TheBlueScreenSkipped(unittest.TestCase):
         self.assertIsNone(self.run_with(secure_boot=True, has_key=True, enrolled=True))     # trusted: fine
         self.assertIsNone(self.run_with(secure_boot=False, has_key=True, enrolled=False))   # Secure Boot off: it starts
         self.assertIsNone(self.run_with(secure_boot=True, has_key=False, enrolled=False))   # no Monet here
+
+    def test_the_key_reaches_the_kernel_as_a_cpio(self):
+        data = install.newc("monet-key.der", b"0\x82key!")
+        self.assertEqual(data[:6], b"070701")
+        name_size, size = int(data[94:102], 16), int(data[54:62], 16)
+        self.assertEqual(data[110:110 + name_size], b"monet-key.der\0")
+        start = 110 + name_size + (-(110 + name_size) % 4)
+        self.assertEqual(data[start:start + size], b"0\x82key!")
+        self.assertIn(b"TRAILER!!!\0", data)
+        self.assertEqual(len(data) % 4, 0)
+
+    def test_grub_falls_back_to_asking_again(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            boot, key, kernel, initrd = tmp / "boot", tmp / "key.der", tmp / "vmlinuz", tmp / "trust.img"
+            (boot / "grub2").mkdir(parents=True)
+            key.write_bytes(b"0\x82key")
+            kernel.write_bytes(b"MZ kernel")
+            initrd.write_bytes(b"\x1f\x8b initrd")
+            with mock.patch.object(install, "TRUST_INITRD", initrd), mock.patch.object(install, "log"):
+                (boot / "grub2/grub.cfg").write_text("blscfg\n")             # a menu that doesn't read custom.cfg
+                install.trust_fallback(boot, key, kernel)
+                self.assertFalse((boot / "monet-trust").exists())
+                (boot / "grub2/grub.cfg").write_text("blscfg\nif [ -f $prefix/custom.cfg ]; then\n  source $prefix/custom.cfg\nfi\n")
+                install.trust_fallback(boot, key, kernel)
+                install.trust_fallback(boot, key, kernel)                    # a second try adds nothing
+            custom = (boot / "grub2/custom.cfg").read_text()
+            self.assertEqual(custom.count("set fallback=monet-trust"), 1)
+            self.assertEqual((boot / "monet-trust/vmlinuz").read_bytes(), b"MZ kernel")
+            self.assertEqual((boot / "monet-trust/initrd.img").read_bytes(), b"\x1f\x8b initrd")
+            self.assertIn(b"0\x82key", (boot / "monet-trust/key.cpio").read_bytes())
+        # GRUB's entry and the small start agree on names; it asks with All set's password.
+        self.assertIn("--id monet-trust", install.TRUST_MENU)
+        self.assertIn("rdinit=/monet-trust", install.TRUST_MENU)
+        self.assertIn("initrd /monet-trust/initrd.img /monet-trust/key.cpio", install.TRUST_MENU)
+        helper = (ROOT / "image/setup/monet-trust").read_text(encoding="utf-8")
+        self.assertIn(f"PASSWORD={install.MOK_PASSWORD} ", helper)
+        self.assertIn("KEY=/monet-key.der", helper)
+        self.assertIn("echo b > /proc/sysrq-trigger", helper)
+        build = (ROOT / "image/setup/build.sh").read_text(encoding="utf-8")
+        self.assertIn('install -m 0755 "$HERE/monet-trust" "$T/monet-trust"', build)
+        self.assertIn('> "$APP/trust-initrd.img"', build)
+        self.assertEqual(str(install.TRUST_INITRD).replace("\\", "/"), "/usr/share/monet-setup/trust-initrd.img")
+        self.assertIn('APP=$ROOT/usr/share/monet-setup', build)
 
     def test_setup_leaves_the_key_where_the_stick_finds_it(self):
         installer = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")

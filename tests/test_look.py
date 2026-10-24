@@ -3768,6 +3768,65 @@ class BridgeKeepsItselfUpToDate(unittest.TestCase):
         self.assertIn('"$ROOT"/windows/*.ps1', (ROOT / "tools/package.sh").read_text())
 
 
+class ASmootherTripToWindows(unittest.TestCase):
+    """0.9.3: Monet's cover over Windows on a trip, the launchers signed in to once, and Windows
+    games updated before the PC switches off."""
+
+    def test_the_cover_travels_with_bridge(self):
+        package = (ROOT / "tools/package.sh").read_text()
+        payload = (ROOT / "crates/monet/src/windows_setup.rs").read_text()
+        install = (ROOT / "windows/Install-Monet.ps1").read_text()
+        cover = (ROOT / "crates/monet-bridge/src/cover.rs").read_text(encoding="utf-8")
+        for name in ("cover.jpg", "monet-mark.png", "Fraunces-Light.ttf", "Fraunces-Regular.ttf", "OFL-Fraunces.txt"):
+            self.assertIn(f'"$OUT/{name}"', package)      # in Windows.zip, so in a Windows Monet installs
+            self.assertIn(f'"{name}",', payload)           # and in a Windows kept from before
+            self.assertIn(f"'{name}'", install)             # next to monet-bridge.exe
+        for name in ("cover.jpg", "monet-mark.png", "Fraunces-Light.ttf", "Fraunces-Regular.ttf"):
+            self.assertIn(f'"{name}"', cover)
+        self.assertIn('"Update-Windows.ps1",', payload)
+        self.assertIn("'Update-Windows.ps1'", install)
+        # The taskbar slides away only on a Windows that Monet installed.
+        painted = install[install.index("if (Test-Path $painting) {"):install.index("# Setup ran once from the Startup folder")]
+        self.assertIn("StuckRects3", painted)
+
+    def test_settings_ask_bridge_for_a_task(self):
+        settings = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('(asking.task === "launchers" || asking.task === "update") ? asking.task : ""', settings)
+        self.assertIn('monet + " windows --" + task', settings)
+        self.assertIn('monet + " games --updated"', settings)
+        main = (ROOT / "crates/monet/src/main.rs").read_text(encoding="utf-8")
+        self.assertIn('["windows"] if args.iter().any(|a| a == "--launchers") => switch(None, Some("launchers"), confirm)', main)
+        self.assertIn('["windows"] if args.iter().any(|a| a == "--update") => switch(None, Some("update"), confirm)', main)
+        self.assertIn('args.extend(["--task", task])', main)
+        core = (ROOT / "crates/monet-core/src/request.rs").read_text(encoding="utf-8")
+        self.assertIn('pub const TASKS: &[&str] = &["launchers", "update"];', core)
+        bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
+        self.assertIn('Some("launchers") => return sign_in_trip(efi, state)', bridge)
+        self.assertIn('Some("update") => return update_trip(efi, now(), false)', bridge)
+
+    def test_launchers_open_as_the_person_never_as_administrator(self):
+        bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
+        pending = bridge[bridge.index("fn launch_pending()"):bridge.index("/// How long to wait for Steam")]
+        self.assertIn("launchers::open(key, pending.quietly)", pending)
+        trip = bridge[bridge.index("fn sign_in_trip("):bridge.index("/// An update trip that's restarting")]
+        self.assertIn("run_as_person(&pending)", trip)
+        self.assertNotIn("launchers::open(", trip)
+        self.assertIn('&["/run", "/tn", "\\\\Monet\\\\Launch"]', bridge)
+
+    def test_windows_update_on_the_update_trip(self):
+        script = (ROOT / "windows/Update-Windows.ps1").read_text(encoding="utf-8")
+        self.assertIn("Type='Software'", script)                      # not drivers: the game's driver stays
+        self.assertIn("CanRequestUserInput) { continue }", script)     # nobody is there to answer
+        self.assertIn("Tell 'done' $wanted.Count $result.RebootRequired", script)
+        self.assertIn("[IO.File]::WriteAllText", script)              # no BOM for Bridge's JSON reader
+        bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
+        trip = bridge[bridge.index("fn update_trip("):bridge.index("/// Where monet-bridge.exe and its files are.")]
+        # Restarted once into Windows only when it signs in by itself and nobody chose Switch off now.
+        self.assertIn("if said.reboot && !resumed && !early && signs_in_by_itself {", trip)
+        self.assertIn("boot::set_boot_next(efi, current)", trip)
+        self.assertIn('win::run_hidden("shutdown", &["/s", "/t", "0"])', trip)
+
+
 class tempfile_dir:
     """A folder for one test, removed afterwards (read-only files too)."""
 

@@ -66,7 +66,7 @@
         "Name[vi]": "Đã chơi gần đây",
         "Name[zh_CN]": "最近玩过",
         "Name[zh_TW]": "最近玩過",
-        "Version": "0.9.2"
+        "Version": "0.9.3"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

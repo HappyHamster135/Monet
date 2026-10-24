@@ -8,12 +8,12 @@ use std::ptr::null_mut;
 
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FlushFileBuffers, ReadFile, SetFilePointerEx, WriteFile, FILE_BEGIN, FILE_FLAG_WRITE_THROUGH,
-    FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    CreateFileW, FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, FlushFileBuffers, ReadFile, SetFilePointerEx,
+    WriteFile, FILE_BEGIN, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
 };
 use windows_sys::Win32::System::Ioctl::{
     PropertyStandardQuery, StorageDeviceProperty, DISK_GEOMETRY_EX, FSCTL_DISMOUNT_VOLUME, FSCTL_LOCK_VOLUME,
-    IOCTL_DISK_DELETE_DRIVE_LAYOUT, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, IOCTL_DISK_UPDATE_PROPERTIES,
+    IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, IOCTL_DISK_UPDATE_PROPERTIES,
     IOCTL_STORAGE_GET_DEVICE_NUMBER, IOCTL_STORAGE_QUERY_PROPERTY, STORAGE_DEVICE_DESCRIPTOR, STORAGE_DEVICE_NUMBER,
     STORAGE_PROPERTY_QUERY,
 };
@@ -22,7 +22,8 @@ use windows_sys::Win32::System::IO::DeviceIoControl;
 use crate::plan;
 
 const BUS_USB: i32 = 7;
-const CHUNK: usize = 4 << 20;
+// 1 MB plain writes and one flush at the end, as Rufus does: write-through 4 MB writes left sticks refusing writes.
+const CHUNK: usize = 1 << 20;
 
 pub struct Stick {
     pub number: u32,
@@ -112,38 +113,64 @@ fn note(what: &str) {
 }
 
 fn write_at(disk: &Handle, data: &[u8], offset: u64) -> Result<(), String> {
-    let mut wrote = 0u32;
-    if unsafe { WriteFile(disk.0, data.as_ptr(), data.len() as u32, &mut wrote, null_mut()) } == 0
-        || wrote as usize != data.len()
-    {
-        note(&format!("writing {} bytes at {offset}", data.len()));
-        return Err(t!("Writing to the USB stick failed. Try another USB port or another stick.").into());
+    // A stick that's busy says "not ready" now and then: give it a moment, three times, then stop.
+    for attempt in 0..3 {
+        let mut wrote = 0u32;
+        if unsafe { WriteFile(disk.0, data.as_ptr(), data.len() as u32, &mut wrote, null_mut()) } != 0
+            && wrote as usize == data.len()
+        {
+            return Ok(());
+        }
+        note(&format!("writing {} bytes at {offset} (try {})", data.len(), attempt + 1));
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        seek(disk, offset as i64)?;
     }
-    Ok(())
+    Err(t!("Writing to the USB stick failed. Try another USB port or another stick.").into())
+}
+
+/// Windows mustn't touch the stick's old volumes while it's written, and refuses writes into
+/// one that's mounted: every volume on disk `number`, with a drive letter or not (a stick that
+/// held an image before has an EFI part without one), locked and dismounted. The handles keep
+/// them so until they're dropped, at the end.
+fn lock_volumes(number: u32) -> Vec<Handle> {
+    let mut locked = Vec::new();
+    let mut name = [0u16; 64];
+    // SAFETY: a volume search with a buffer of the size given, closed below.
+    let search = unsafe { FindFirstVolumeW(name.as_mut_ptr(), name.len() as u32) };
+    if search == INVALID_HANDLE_VALUE {
+        return locked;
+    }
+    loop {
+        let len = name.iter().position(|c| *c == 0).unwrap_or(name.len());
+        // "\\?\Volume{…}\" is its root folder; without the last backslash, the volume itself.
+        let path = String::from_utf16_lossy(&name[..len]);
+        if let Some(v) = open(path.trim_end_matches('\\'), GENERIC_READ | GENERIC_WRITE, 0) {
+            if device_number(&v) == Some(number) {
+                ioctl(&v, FSCTL_LOCK_VOLUME, std::ptr::null(), 0, null_mut(), 0);
+                ioctl(&v, FSCTL_DISMOUNT_VOLUME, std::ptr::null(), 0, null_mut(), 0);
+                locked.push(v);
+            }
+        }
+        if unsafe { FindNextVolumeW(search, name.as_mut_ptr(), name.len() as u32) } == 0 {
+            break;
+        }
+    }
+    unsafe { FindVolumeClose(search) };
+    locked
 }
 
 /// Writes the image at `iso` onto disk `number`, then reads it back to check.
 /// `progress(phase, done, total)`: phase 0 writing, 1 checking.
 pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) -> Result<(), String> {
-    // Windows mustn't touch the stick's old volumes while it's written: lock
-    // and dismount each (the handles stay open until the end).
-    let mut volumes = Vec::new();
-    for letter in b'A'..=b'Z' {
-        let path = format!("\\\\.\\{}:", letter as char);
-        if let Some(v) = open(&path, GENERIC_READ | GENERIC_WRITE, 0) {
-            if device_number(&v) == Some(number) {
-                ioctl(&v, FSCTL_LOCK_VOLUME, std::ptr::null(), 0, null_mut(), 0);
-                ioctl(&v, FSCTL_DISMOUNT_VOLUME, std::ptr::null(), 0, null_mut(), 0);
-                volumes.push(v);
-            }
-        }
-    }
-    let Some(disk) = open(&format!("\\\\.\\PhysicalDrive{number}"), GENERIC_READ | GENERIC_WRITE, FILE_FLAG_WRITE_THROUGH)
+    let volumes = lock_volumes(number);
+    let Some(disk) = open(&format!("\\\\.\\PhysicalDrive{number}"), GENERIC_READ | GENERIC_WRITE, 0)
     else {
         note(&format!("opening PhysicalDrive{number}"));
         return Err(t!("Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again.").into());
     };
-    ioctl(&disk, IOCTL_DISK_DELETE_DRIVE_LAYOUT, std::ptr::null(), 0, null_mut(), 0);
+    // Locked, not wiped: deleting the stick's partition table first made sticks drop off the bus
+    // ("device not ready", Windows error 21) mid-write. The image's own tables replace it.
+    ioctl(&disk, FSCTL_LOCK_VOLUME, std::ptr::null(), 0, null_mut(), 0);
 
     let total = std::fs::metadata(iso).map_err(|e| e.to_string())?.len();
     let mut buf = vec![0u8; CHUNK];

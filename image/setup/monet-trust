@@ -1,0 +1,46 @@
+#!/usr/bin/bash
+# The start GRUB falls back to when Secure Boot refuses Monet ("bad shim signature"): the
+# first start's blue screen was skipped (it opens on Continue boot), so the firmware doesn't
+# trust Universal Blue's key yet. Fedora's signed kernel runs this as its only program
+# (rdinit=/monet-trust): it asks the firmware again, with the same password, and restarts,
+# so the blue screen comes back. Monet Setup puts it on the boot partition with the key
+# (/boot/monet-trust, /boot/grub2/custom.cfg); image/setup/build.sh packs it.
+export PATH=/usr/bin:/usr/sbin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+exec </dev/console >/dev/console 2>&1
+
+KEY=/monet-key.der
+PASSWORD=monetsetup     # install.py's MOK_PASSWORD, which Setup's All set shows
+
+say() {
+    printf '\033[2J\033[H\n\n'
+    printf '   %s\n' "$@"
+}
+
+# Waits that many seconds, or until Enter.
+pause() {
+    read -r -t "$1" _ || :
+}
+
+if [[ $(mokutil --test-key "$KEY" 2>&1) == *"is not enrolled"* ]]; then
+    mokutil --timeout -1 >/dev/null 2>&1
+    if printf '%s\n%s\n' "$PASSWORD" "$PASSWORD" | mokutil --import "$KEY" >/dev/null 2>&1; then
+        say "Monet needs your OK on a blue screen before it can start." "" \
+            "It comes back when the PC restarts. With the arrow keys and Enter:" \
+            "choose Enroll MOK, then Continue and Yes, type $PASSWORD, and choose Reboot." \
+            "Don't choose Continue boot." "" \
+            "Restarting in 30 seconds, or press Enter."
+        pause 30
+        echo b > /proc/sysrq-trigger
+    fi
+fi
+
+# Trusted already, or the firmware didn't take the request: something else stopped Monet.
+say "Monet couldn't start." "" \
+    "Start from the Monet USB stick, or hold the power button to switch the PC off."
+while :; do
+    pause 3600
+done

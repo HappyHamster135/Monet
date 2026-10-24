@@ -24,6 +24,8 @@ mod disk;
 mod gui;
 #[cfg(windows)]
 mod words;
+#[cfg(windows)]
+mod words_table;
 
 #[cfg(windows)]
 fn main() {

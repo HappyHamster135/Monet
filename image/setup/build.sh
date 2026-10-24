@@ -76,6 +76,29 @@ chroot "$ROOT" dracut --no-hostonly --force --quiet --add "dmsquash-live plymout
     --omit "iscsi nfs nbd fcoe fcoe-uefi multipath" /boot/initramfs-live.img "$KVER"
 cp "$ROOT/lib/modules/$KVER/vmlinuz" "$ISO/images/pxeboot/vmlinuz"
 cp "$ROOT/boot/initramfs-live.img" "$ISO/images/pxeboot/initrd.img"
+
+echo "== For a skipped blue screen: a small start that asks again (image/setup/monet-trust)"
+# Setup puts it on the boot partition with this stick's kernel (Fedora's, signed), and GRUB
+# falls back to it when Secure Boot refuses Monet's. Only bash, mount and mokutil, with the
+# libraries they load: the kernel has everything else built in. Without it the stick is as
+# before (Setup leaves the fallback out), so a problem here never stops the stick.
+pack_trust() {
+    local T=$W/trust prog path f
+    mkdir -p "$T/proc" "$T/sys" "$T/dev" || return 1
+    for prog in bash mount mokutil; do
+        path=$(chroot "$ROOT" bash -c "command -v $prog") || return 1
+        for f in "$path" $(chroot "$ROOT" ldd "$path" | grep -o '/[^ ]*'); do
+            (cd "$ROOT" && cp -L --parents ".$f" "$T/") || return 1
+        done
+    done
+    install -m 0755 "$HERE/monet-trust" "$T/monet-trust" || return 1
+    (cd "$T" && find . | cpio -o -H newc --quiet | gzip -9) > "$APP/trust-initrd.img" || return 1
+    [ -n "$(find "$T" -name mokutil -type f)" ] && [ -s "$APP/trust-initrd.img" ]
+}
+if ! pack_trust; then
+    echo "warning: no fallback for a skipped blue screen on this stick" >&2
+    rm -f "$APP/trust-initrd.img"
+fi
 for fs in dev sys proc; do umount -R "$ROOT/$fs"; done
 trap - EXIT
 

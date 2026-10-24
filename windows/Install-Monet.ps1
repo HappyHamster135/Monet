@@ -107,8 +107,14 @@ New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 Copy-Item -Force (Join-Path $source 'monet-bridge.exe') "$exe.new"
 Move-Item -Force "$exe.new" $exe
 Copy-Item -Force (Join-Path $source 'monet.ico') $icon
-foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1') {
+foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1', 'Update-Windows.ps1') {
     Copy-Item -Force (Join-Path $source $file) (Join-Path $installDir $file)
+}
+# The cover over Windows during a trip (the painting, the mark, Monet's serif): without them
+# it's a plain one.
+foreach ($file in 'cover.jpg', 'monet-mark.png', 'Fraunces-Light.ttf', 'Fraunces-Regular.ttf', 'OFL-Fraunces.txt') {
+    $from = Join-Path $source $file
+    if (Test-Path $from) { Copy-Item -Force $from (Join-Path $installDir $file) }
 }
 Unblock-File -Path $exe -ErrorAction SilentlyContinue
 
@@ -233,6 +239,16 @@ if ($FromMonet) {
             [Monet.Desktop]::SystemParametersInfo(0x14, 0, $wallpaper, 3) | Out-Null
         } catch {
             Say "  Windows kept its own wallpaper ($_)"
+        }
+        # And its taskbar slides away until it's pointed at, so a trip shows Monet's cover,
+        # not Windows (from the next sign-in).
+        try {
+            $rects = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3'
+            $bar = (Get-ItemProperty -Path $rects -Name Settings -ErrorAction Stop).Settings
+            $bar[8] = $bar[8] -bor 1
+            Set-ItemProperty -Path $rects -Name Settings -Value $bar
+        } catch {
+            Say "  The taskbar stays as it is ($_)"
         }
     }
 

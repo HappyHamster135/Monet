@@ -20,11 +20,19 @@ pub struct LaunchRequest {
     /// Game id such as `steam:1172470`, or none to just open Windows.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub game: Option<String>,
+    /// Something to do there instead of a game (one of TASKS). A Monet Bridge from before
+    /// tasks reads it as opening Windows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task: Option<String>,
     /// Boot entry to return to afterwards (the Monet entry).
     pub return_to: u16,
     /// Unix time the request was made.
     pub created: u64,
 }
+
+/// "launchers": sign in to the game launchers once, then back. "update": bring Windows and its
+/// games up to date, then switch off.
+pub const TASKS: &[&str] = &["launchers", "update"];
 
 impl LaunchRequest {
     pub fn new(game: Option<String>, return_to: u16, now: u64) -> Result<Self> {
@@ -33,7 +41,15 @@ impl LaunchRequest {
                 return Err(EfiError::Invalid(format!("not a valid game id: {id}")));
             }
         }
-        Ok(LaunchRequest { v: 1, game, return_to, created: now })
+        Ok(LaunchRequest { v: 1, game, task: None, return_to, created: now })
+    }
+
+    pub fn with_task(mut self, task: Option<String>) -> Result<Self> {
+        if task.as_deref().is_some_and(|t| !TASKS.contains(&t)) {
+            return Err(EfiError::Invalid(format!("not a task Monet Bridge knows: {task:?}")));
+        }
+        self.task = task;
+        Ok(self)
     }
 
     pub fn encode(&self) -> Vec<u8> {
@@ -53,6 +69,9 @@ impl LaunchRequest {
             if !games::is_valid_id(id) {
                 return Err(EfiError::Invalid(format!("not a valid game id: {id}")));
             }
+        }
+        if req.task.as_deref().is_some_and(|t| !TASKS.contains(&t)) {
+            return Err(EfiError::Invalid("unknown task".into()));
         }
         Ok(req)
     }
@@ -128,6 +147,21 @@ mod tests {
         assert!(take(&mut efi).is_err());
         // The broken request is gone afterwards.
         assert_eq!(take(&mut efi).unwrap(), None);
+    }
+
+    #[test]
+    fn tasks_instead_of_a_game() {
+        let req = LaunchRequest::new(None, 3, 1000).unwrap().with_task(Some("update".into())).unwrap();
+        assert_eq!(String::from_utf8(req.encode()).unwrap(), r#"{"v":1,"task":"update","return_to":3,"created":1000}"#);
+        assert_eq!(LaunchRequest::decode(&req.encode()).unwrap(), req);
+        assert!(LaunchRequest::new(None, 3, 0).unwrap().with_task(Some("format-c".into())).is_err());
+        assert!(LaunchRequest::decode(br#"{"v":1,"task":"format-c","return_to":3,"created":0}"#).is_err());
+        // A Bridge from before tasks ignores what it doesn't know: it just opens Windows.
+        #[derive(serde::Deserialize)]
+        struct Older {
+            game: Option<String>,
+        }
+        assert!(serde_json::from_slice::<Older>(&req.encode()).unwrap().game.is_none());
     }
 
     #[test]

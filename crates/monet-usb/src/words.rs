@@ -1,15 +1,23 @@
 //! The window's words in Windows' display language, from Monet's own
-//! translations (words_table.rs, written by tools/make-translations.py from
-//! po/). English when Windows speaks a language Monet doesn't yet.
+//! translations (each crate's words_table.rs, written by tools/make-translations.py
+//! from po/). English when Windows speaks a language Monet doesn't yet. Monet Bridge
+//! uses this file too.
 
 use std::sync::OnceLock;
 
-#[path = "words_table.rs"]
-mod table;
+use crate::words_table as table;
 
 fn language() -> &'static str {
     static LANGUAGE: OnceLock<&'static str> = OnceLock::new();
-    LANGUAGE.get_or_init(|| code(unsafe { windows_sys::Win32::Globalization::GetUserDefaultUILanguage() }))
+    // MONET_LANGID (a Windows language id, 0x407 say) shows another language, for a look.
+    let asked = std::env::var("MONET_LANGID").ok().and_then(|id| u16::from_str_radix(id.trim_start_matches("0x"), 16).ok());
+    LANGUAGE.get_or_init(|| code(asked.unwrap_or_else(|| unsafe { windows_sys::Win32::Globalization::GetUserDefaultUILanguage() })))
+}
+
+/// Whether the words read right to left.
+#[allow(dead_code)] // Make-USB-Stick's window is laid out one way
+pub fn rtl() -> bool {
+    matches!(language(), "ar" | "he")
 }
 
 /// Windows' language id (its primary language in the low 10 bits, the region's

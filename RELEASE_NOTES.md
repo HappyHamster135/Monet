@@ -6,11 +6,47 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.2-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.2-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.2-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.2-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.2-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.3-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.3-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.3-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.3-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.3-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.3: Windows looks like Monet, sticks that work
+
+- **A trip to Windows looks like Monet.** While Windows starts a game, Monet's
+  painting covers the screen with the game's name, and Back to Monet now if
+  you change your mind. A launcher that needs you comes up over it. When you
+  quit, Monet says Back to Monet and counts down: Go now, or Stay in Windows.
+  A Windows that Monet installs from now on hides its taskbar until you
+  point at it.
+
+- **Sign in to your game launchers once.** Settings → Play on Windows → Game
+  launchers → Sign in… restarts in Windows with Steam, Epic, Riot,
+  Battle.net and the rest listed. Sign in to each, with Remember me ticked,
+  and the games you play from Monet start without asking.
+
+- **Windows games up to date.** Settings → Play on Windows → Update Windows
+  games → Update & switch off. Windows updates itself and your games, then
+  switches the PC off, so the next Play starts the game, not a download. Good
+  before you go to bed.
+
+- **The blue screen, in pictures.** Monet Setup's last page shows the blue
+  screen at Monet's first start step by step, to take a photo of. And if
+  Continue boot is chosen anyway, the PC asks again by itself and restarts
+  into the blue screen: no USB stick needed.
+
+- **Make-USB-Stick.exe works with more sticks.** It wiped the stick's
+  partition table before writing, which made some sticks stop answering
+  halfway and left them looking dead. Now it writes over what's there, closes
+  every part of the stick first (with a drive letter or not), and tries a
+  busy stick again. If writing still fails, it says so: the stick isn't
+  broken, and Windows can format it again in Disk Management.
+
+Updating from 0.9.2: Monet updates by itself within a day (or Settings →
+Updates → Install, then restart), and Monet Bridge updates itself the next
+time you come back from Windows. For a new install, download the new
+**Monet-0.9.3-Make-USB-Stick.exe**.
 
 ### New in 0.9.2: set up your way, your phone in reach
 

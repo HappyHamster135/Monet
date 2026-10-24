@@ -82,12 +82,21 @@ ApplicationWindow {
         }
     }
 
-    // The sheet's shadow (drawn in advance: tools/make-setup-art.py).
+    // The sheet's shadow (drawn in advance: tools/make-setup-art.py), and the blue screen guide's.
     BorderImage {
         x: glass.sheet.x - 120
         y: glass.sheet.y - 120
         width: glass.sheet.width + 240
         height: glass.sheet.height + 240
+        source: art + "shadow.png"
+        border { left: 160; right: 160; top: 160; bottom: 160 }
+    }
+    BorderImage {
+        visible: guide.visible
+        x: guide.x - 120
+        y: guide.y - 120
+        width: guide.width + 240
+        height: guide.height + 240
         source: art + "shadow.png"
         border { left: 160; right: 160; top: 160; bottom: 160 }
     }
@@ -117,7 +126,13 @@ ApplicationWindow {
             var ctx = getContext("2d")
             ctx.reset()
             ctx.clearRect(0, 0, width, height)
-            var r = glass.sheet, radius = px(32)
+            pane(ctx, glass.sheet)
+            if (guide.visible)
+                pane(ctx, Qt.rect(guide.x, guide.y, guide.width, guide.height))
+        }
+
+        function pane(ctx, r) {
+            var radius = px(32)
             // The painting, blurred, lined up with the one behind it.
             ctx.save()
             rounded(ctx, r, radius)
@@ -227,6 +242,97 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    // The blue screen at Monet's first start, step by step beside All set, to take a photo
+    // of: it opens on Continue boot, which leaves Monet unable to start (if it's chosen
+    // anyway, GRUB falls back to monet-trust, which asks again). Its words stay English,
+    // as the blue screen shows them (shim's MokManager).
+    Item {
+        id: guide
+        visible: installing && phase === "done" && !showingKey
+        x: glass.sheet.x + glass.sheet.width + px(48)
+        width: px(724)
+        height: guideColumn.implicitHeight + px(80)
+        y: Math.max(px(128), (win.height - height) / 2)
+        onVisibleChanged: glass.requestPaint()
+        onHeightChanged: glass.requestPaint()
+        onYChanged: glass.requestPaint()
+        LayoutMirroring.enabled: setup.rtl
+        LayoutMirroring.childrenInherit: true
+
+        Column {
+            id: guideColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: px(40)
+            spacing: px(14)
+            opacity: guide.visible ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+
+            Title { text: tr("Once, when it first starts") }
+            Body { text: tr("A blue screen asks to trust Monet. Use the arrow keys and Enter:") }
+            Grid {
+                id: frames
+                width: parent.width
+                columns: 3
+                columnSpacing: px(16)
+                rowSpacing: px(18)
+                readonly property real cell: (width - 2 * columnSpacing) / 3
+                Repeater {
+                    model: [
+                        { title: "Perform MOK management", lines: ["Continue boot", "Enroll MOK", "Enroll key from disk", "Enroll hash from disk"],
+                          pick: 1, says: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "Choose %1", "Enroll MOK") },
+                        { title: "[Enroll MOK]", lines: ["View key 0", "Continue"], pick: 1, says: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "Choose %1", "Continue") },
+                        { title: "Enroll the key(s)?", lines: ["No", "Yes"], pick: 1, says: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "Choose %1", "Yes") },
+                        { title: "", lines: ["Password: **********"], pick: -1, says: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "Type %1, then Enter", "monetsetup") },
+                        { title: "Perform MOK management", lines: ["Reboot", "Enroll key from disk", "Enroll hash from disk"],
+                          pick: 0, says: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "Choose %1", "Reboot") }
+                    ]
+                    Column {
+                        required property var modelData
+                        required property int index
+                        width: frames.cell
+                        spacing: px(8)
+                        BlueScreen {
+                            width: parent.width
+                            title: modelData.title
+                            lines: modelData.lines
+                            pick: modelData.pick
+                        }
+                        Row {
+                            width: parent.width
+                            spacing: px(8)
+                            Rectangle {
+                                width: px(20); height: px(20); radius: px(10)
+                                color: sun
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: index + 1
+                                    color: "#FFFFFF"
+                                    font.family: sans; font.pixelSize: px(12); font.weight: Font.DemiBold
+                                }
+                            }
+                            Text {
+                                horizontalAlignment: Text.AlignLeft
+                                width: parent.width - px(28)
+                                wrapMode: Text.WordWrap
+                                text: modelData.says
+                                color: ink
+                                font.family: sans; font.pixelSize: px(14); font.weight: Font.Medium
+                            }
+                        }
+                    }
+                }
+                Note {
+                    width: frames.cell
+                    warm: true
+                    text: trc("Enroll MOK, Continue, Yes, Reboot, Continue boot and monetsetup stay in English: the blue screen shows them that way", "It opens on Continue boot: don't choose that. If it happens anyway, the PC restarts and the blue screen comes back.")
+                }
+            }
+            Body { text: tr("Take a photo of these steps with your phone first: this screen goes away when the PC restarts.") }
         }
     }
 
@@ -712,34 +818,7 @@ ApplicationWindow {
                       ? tr("Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself.")
                       : tr("Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away.")
             }
-            // The blue screen at the first start: easy to skip by accident,
-            // and then Secure Boot refuses Monet.
-            Card {
-                height: firstStart.implicitHeight + px(36)
-                Column {
-                    id: firstStart
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: px(18)
-                    spacing: px(6)
-                    Text {
-                        horizontalAlignment: Text.AlignLeft
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        text: tr("Once, when it first starts")
-                        font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink
-                    }
-                    Body {
-                        font.pixelSize: px(14)
-                        text: trc("Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way", "A blue screen asks to trust Monet. With the arrow keys and Enter, choose Enroll MOK, then Continue and Yes, type monetsetup and choose Reboot. It opens on Continue boot: don't choose that, or Monet can't start.")
-                    }
-                    Body {
-                        font.pixelSize: px(14)
-                        text: tr("Take a photo of these steps with your phone first: this screen goes away when the PC restarts.")
-                    }
-                }
-            }
+            // The blue screen at the first start is beside the sheet, in pictures (guide).
         }
     }
 
@@ -901,6 +980,79 @@ ApplicationWindow {
         color: Qt.rgba(1, 1, 1, 0.55)
         border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.05)
         border.width: 1
+    }
+
+    // The first start's blue screen as shim's MokManager draws it: light grey on blue, a frame
+    // round the screen with the title at the top, the choices in a box in the middle, the
+    // chosen one on black. Always left to right and in English, as it shows itself.
+    component BlueScreen: Rectangle {
+        readonly property real u: Window.window ? Window.window.u : 1
+        property string title
+        property var lines: []
+        property int pick: -1
+        readonly property color grey: "#AAAAAA"
+        readonly property real letter: Math.round(10 * u)
+        LayoutMirroring.enabled: false
+        LayoutMirroring.childrenInherit: true
+        height: Math.round(width * 0.625)
+        radius: Math.round(6 * u)
+        color: "#0000AA"
+        border.color: Qt.rgba(0, 0, 0, 0.25)
+        border.width: 1
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: Math.round(5 * u)
+            color: "transparent"
+            border.color: grey
+            border.width: 1
+            visible: title !== ""
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: Math.round(4 * u)
+                text: title
+                color: grey
+                font.family: "Inter"; font.pixelSize: letter
+            }
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: title !== "" ? Math.round(6 * u) : 0
+            width: choices.width + Math.round(10 * u)
+            height: choices.height + Math.round(10 * u)
+            color: "transparent"
+            border.color: grey
+            border.width: 1
+            Column {
+                id: choices
+                anchors.centerIn: parent
+                Repeater {
+                    model: lines
+                    Rectangle {
+                        required property string modelData
+                        required property int index
+                        width: widest.implicitWidth + Math.round(12 * u)
+                        height: line.implicitHeight + Math.round(2 * u)
+                        color: index === pick ? "#000000" : "transparent"
+                        Text {
+                            id: line
+                            anchors.centerIn: parent
+                            text: modelData
+                            color: grey
+                            font.family: "Inter"; font.pixelSize: letter
+                        }
+                    }
+                }
+            }
+            // The longest choice sets the box's width, as on the blue screen.
+            Text {
+                id: widest
+                visible: false
+                text: lines.reduce(function (a, b) { return b.length > a.length ? b : a }, "")
+                font.family: "Inter"; font.pixelSize: letter
+            }
+        }
     }
 
     component Option: AbstractButton {

@@ -6,8 +6,11 @@
 QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's keys, like a
 real PC), a blank 96 GB disk and a wired network. Waits for Monet Setup,
 takes a screenshot of each step, and with --install goes on: types a name and
-password, chooses "Monet and Windows", installs, confirms Universal Blue's
-driver key on the firmware's blue screen, and starts the installed Monet.
+password, chooses "Monet and Windows", installs, and on the firmware's blue
+screen first chooses Continue boot, as people do by mistake (exit code 6 if
+the blue screen doesn't come back: Monet was installed, but GRUB's fallback
+didn't ask again), then confirms Universal Blue's driver key and starts the
+installed Monet.
 Then it looks around Monet the way someone would: signs in, and shows the
 desktop, the app menu, Files and Settings, then locks the screen, wakes it
 and unlocks it with the password (which says whether Monet's lock screen
@@ -140,6 +143,12 @@ def brightness(img, box):
 def is_ink(img, point):
     r, g, b = img.getpixel(point)
     return r < 70 and g < 70 and b < 70
+
+
+def blue_screen(img):
+    """shim's blue screen (MokManager): EFI blue nearly everywhere."""
+    r, g, b = ImageStat.Stat(img.convert("RGB")).mean
+    return b > 90 and b > 2 * max(r, g)
 
 
 def setup_showing(img):
@@ -345,10 +354,23 @@ def main():
             return 4
         run.shot("all-set")
         vm.click(*NEXT)
-        # The firmware's blue screen for Universal Blue's driver key:
-        # Enroll MOK, Continue, Yes, the password, Reboot.
-        time.sleep(40)
+        # The firmware's blue screen for Universal Blue's driver key. First Continue boot, as
+        # people choose by mistake: Secure Boot refuses Monet, GRUB waits 10 s on its error
+        # and falls back to monet-trust, which asks the firmware again and restarts.
+        if not run.wait(blue_screen, 120, name="mok"):
+            return 5
         run.shot("mok")
+        vm.keys("ret")                                     # Continue boot
+        run.wait(lambda img: not blue_screen(img), 30)
+        time.sleep(25)
+        run.shot("asking-again")
+        vm.keys("ret")                                     # restart now, not in 30 s
+        if not run.wait(blue_screen, 150, name="mok-again"):
+            print("fallback: the blue screen did NOT come back after Continue boot", flush=True)
+            return 6
+        print("fallback: the blue screen came back after Continue boot", flush=True)
+        run.shot("mok-again")
+        # Now as All set shows it: Enroll MOK, Continue, Yes, the password, Reboot.
         vm.keys("down", "ret")
         time.sleep(2)
         vm.keys("down", "ret")

@@ -12,6 +12,7 @@
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::thread::sleep;
@@ -23,8 +24,11 @@ use monet_core::boot::{self, BootEntry};
 use monet_core::games::{self, Game, GameList, ESP_PATH};
 use monet_core::request::{self, LaunchRequest};
 
+use crate::cover::{self, Cover, Press, Scene};
+use crate::launchers;
 use crate::parse;
 use crate::win::{self, Answer, FirmwareVars};
+use crate::words::{tr, trf};
 
 type Res<T> = Result<T, String>;
 
@@ -51,6 +55,7 @@ pub fn main() -> ExitCode {
         }
         "publish" => need_admin().and_then(|_| publish(&scan())),
         "status" => status(),
+        "cover-preview" => cover_preview(&args[1..]),
         "version" | "--version" => {
             println!("monet-bridge {}", monet_core::VERSION);
             Ok(())
@@ -130,8 +135,14 @@ impl State {
 
 #[derive(Serialize, Deserialize)]
 struct Pending {
+    #[serde(default)]
     game: String,
     created: u64,
+    /// Launchers to open instead of a game (their keys), quietly on the update trip.
+    #[serde(default)]
+    open: Vec<String>,
+    #[serde(default)]
+    quietly: bool,
 }
 
 fn pending_path() -> PathBuf {
@@ -178,7 +189,8 @@ fn scan() -> Vec<WinGame> {
     found
 }
 
-fn scan_steam() -> Vec<WinGame> {
+/// Every Steam library's `steamapps` folder, and the `appmanifest_*.acf` files in it.
+fn steam_manifests() -> Vec<(PathBuf, PathBuf)> {
     let root = win::reg_user("Software\\Valve\\Steam", "SteamPath")
         .or_else(|| win::reg_machine("SOFTWARE\\WOW6432Node\\Valve\\Steam", "InstallPath"))
         .map(|p| PathBuf::from(p.replace('/', "\\")))
@@ -200,21 +212,35 @@ fn scan_steam() -> Vec<WinGame> {
         let Ok(entries) = fs::read_dir(&apps) else { continue };
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_lowercase();
-            if !(name.starts_with("appmanifest_") && name.ends_with(".acf")) {
-                continue;
+            if name.starts_with("appmanifest_") && name.ends_with(".acf") {
+                out.push((apps.clone(), entry.path()));
             }
-            let Some(app) = fs::read_to_string(entry.path()).ok().and_then(|t| parse::steam_app(&t)) else {
-                continue;
-            };
-            out.push(WinGame {
+        }
+    }
+    out
+}
+
+fn scan_steam() -> Vec<WinGame> {
+    steam_manifests()
+        .into_iter()
+        .filter_map(|(apps, manifest)| {
+            let app = parse::steam_app(&fs::read_to_string(manifest).ok()?)?;
+            Some(WinGame {
                 id: format!("steam:{}", app.appid),
                 name: app.name,
                 launch: Launch::Uri(format!("steam://rungameid/{}", app.appid)),
                 dir: Some(apps.join("common").join(app.installdir)),
-            });
-        }
-    }
-    out
+            })
+        })
+        .collect()
+}
+
+/// How many games Steam is updating right now.
+fn steam_updating() -> usize {
+    steam_manifests()
+        .iter()
+        .filter(|(_, manifest)| fs::read_to_string(manifest).is_ok_and(|t| parse::steam_updating(&t)))
+        .count()
 }
 
 fn scan_epic() -> Vec<WinGame> {
@@ -311,7 +337,14 @@ fn scan_custom() -> Vec<WinGame> {
 
 fn game_list(found: &[WinGame]) -> GameList {
     let games = found.iter().map(|g| Game { id: g.id.clone(), name: games::clean_name(&g.name) }).collect();
-    GameList::new(games, now())
+    let mut list = GameList::new(games, now());
+    list.games_updated = fs::read_to_string(games_updated_path()).ok().and_then(|t| t.trim().parse().ok());
+    list
+}
+
+/// When the last update trip finished, for Monet's Settings.
+fn games_updated_path() -> PathBuf {
+    data_dir().join("games-updated")
 }
 
 /// Shares the games list with Monet through the EFI system partition. The
@@ -358,6 +391,13 @@ fn agent() -> Res<()> {
     if let Err(e) = publish(&scan()) {
         log(&e);
     }
+    // An update trip that restarted Windows to finish its updates carries on, then switches off.
+    if let Some(trip) = fs::read(update_trip_path()).ok().and_then(|d| serde_json::from_slice::<UpdateTrip>(&d).ok()) {
+        if trip.restarted && now().saturating_sub(trip.started) < 3 * 60 * 60 {
+            update_trip(&mut efi, trip.started, true);
+        }
+        let _ = fs::remove_file(update_trip_path());
+    }
 
     loop {
         match request::take(&mut efi) {
@@ -391,6 +431,11 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
         state.save();
         repair_boot_order(efi, state);
     }
+    match req.task.as_deref() {
+        Some("launchers") => return sign_in_trip(efi, state),
+        Some("update") => return update_trip(efi, now(), false),
+        _ => {}
+    }
     let Some(id) = req.game else {
         log("opened Windows from Monet");
         return;
@@ -403,11 +448,9 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     let steam_appid = id.strip_prefix("steam:").map(str::to_string);
     if known.is_none() && steam_appid.is_none() {
         log(&format!("game {id} not found"));
-        let answer = win::ask_with_timeout(
-            "Monet couldn't find this game in Windows. It may have been uninstalled.\n\nClick OK to go back to Monet, or Cancel to stay in Windows.",
-            60,
-        );
-        if !matches!(answer, Answer::No) {
+        let cover = Cover::open(Scene::Back { seconds: RETURN_COUNTDOWN_SECS, why: None });
+        let why = tr("Monet couldn't find this game in Windows. It may have been uninstalled.");
+        if count_down(cover.as_ref(), Some(why)) {
             if let Err(e) = go_back(efi, state, &found) {
                 log(&e);
             }
@@ -416,10 +459,18 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     }
     let name = known.map(|g| g.name.clone()).unwrap_or_else(|| id.clone());
     log(&format!("starting {name} ({id})"));
+    // Monet's painting instead of Windows' desktop while the game gets going.
+    let cover = Cover::open(Scene::Starting { game: games::clean_name(&name) });
+    let back_now = std::cell::Cell::new(false);
+    let asked_back = || {
+        if cover.as_ref().is_some_and(|c| c.pressed() == Some(Press::BackNow)) {
+            back_now.set(true);
+        }
+        back_now.get()
+    };
 
-    let pending = Pending { game: id.clone(), created: now() };
-    let _ = fs::write(pending_path(), serde_json::to_vec(&pending).unwrap_or_default());
-    if !win::run_hidden("schtasks", &["/run", "/tn", "\\Monet\\Launch"]) {
+    let pending = Pending { game: id.clone(), created: now(), open: Vec::new(), quietly: false };
+    if !run_as_person(&pending) {
         log("launch task missing; starting the game directly");
         match (known, &steam_appid) {
             (Some(game), _) => {
@@ -433,34 +484,248 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     }
 
     let dir = match (known.and_then(|g| g.dir.clone()), &steam_appid) {
-        (Some(dir), _) => dir,
-        (None, Some(_)) => match wait_for_steam_install(&id) {
-            Some(dir) => dir,
-            None => {
-                log(&format!("{name} wasn't installed; staying in Windows"));
-                return;
-            }
-        },
-        (None, None) => return,
+        (Some(dir), _) => Some(dir),
+        (None, Some(_)) => wait_for_steam_install(&id, &asked_back),
+        (None, None) => None,
     };
-    if !wait_for_game(&dir) {
-        log("the game didn't start; staying in Windows");
+    let played = dir.is_some_and(|dir| wait_for_game(&dir, &asked_back));
+    let _ = fs::remove_file(pending_path());
+    if back_now.get() {
+        log(&format!("Back to Monet before {name} started"));
+        if let Err(e) = go_back(efi, state, &found) {
+            log(&e);
+        }
         return;
     }
-    let _ = fs::remove_file(pending_path());
+    if !played {
+        // The cover goes: Windows as it is, to sort out what kept the game from starting.
+        log(&format!("{name} didn't start; staying in Windows"));
+        return;
+    }
     log(&format!("{name} closed"));
+    if count_down(cover.as_ref(), None) {
+        if let Err(e) = go_back(efi, state, &found) {
+            log(&e);
+        }
+    } else {
+        log("staying in Windows");
+    }
+}
 
-    let text = format!(
-        "Going back to Monet in {RETURN_COUNTDOWN_SECS} seconds.\n\nClick Cancel to stay in Windows."
-    );
-    match win::ask_with_timeout(&text, RETURN_COUNTDOWN_SECS) {
-        Answer::Yes | Answer::TimedOut => {
-            if let Err(e) = go_back(efi, state, &found) {
-                log(&e);
+/// Starts what's pending as the person (the `\Monet\Launch` task), never as administrator.
+fn run_as_person(pending: &Pending) -> bool {
+    fs::write(pending_path(), serde_json::to_vec(pending).unwrap_or_default()).is_ok()
+        && win::run_hidden("schtasks", &["/run", "/tn", "\\Monet\\Launch"])
+}
+
+/// Back to Monet after a countdown, on the cover (or a message box without it), unless the
+/// person stays. True to go back.
+fn count_down(cover: Option<&Cover>, why: Option<String>) -> bool {
+    let Some(cover) = cover else {
+        let text = format!(
+            "{}\n\n{}",
+            trf("Your PC restarts in Monet in %1 s.", &[&RETURN_COUNTDOWN_SECS.to_string()]),
+            tr("Click Cancel to stay in Windows.")
+        );
+        return !matches!(win::ask_with_timeout(&text, RETURN_COUNTDOWN_SECS), Answer::No);
+    };
+    for left in (1..=RETURN_COUNTDOWN_SECS).rev() {
+        cover.show(Scene::Back { seconds: left, why: why.clone() });
+        let tick = Instant::now();
+        while tick.elapsed() < Duration::from_secs(1) {
+            match cover.pressed() {
+                Some(Press::BackNow) => return true,
+                Some(Press::Stay) => return false,
+                _ => sleep(Duration::from_millis(100)),
             }
         }
-        Answer::No => log("staying in Windows"),
     }
+    true
+}
+
+// ------------------------------------------------------------- signing in once
+
+/// A trip to sign in to the game launchers: the cover lists them, each with Open (as the
+/// person; the launcher comes up over the cover) and whether it keeps you signed in, which
+/// it looks at again every few seconds. Back to Monet ends it.
+fn sign_in_trip(efi: &mut FirmwareVars, state: &mut State) {
+    log("signing in to launchers");
+    let rows = || -> Vec<(String, bool)> {
+        launchers::installed().iter().map(|l| (l.name.to_string(), launchers::signed_in(l.key))).collect()
+    };
+    let Some(cover) = Cover::open(Scene::Launchers { rows: rows() }) else {
+        log("no cover; staying in Windows");
+        return;
+    };
+    let mut looked = Instant::now();
+    loop {
+        match cover.pressed() {
+            Some(Press::Open(i)) => {
+                if let Some(launcher) = launchers::installed().get(i) {
+                    log(&format!("opening {}", launcher.name));
+                    let pending = Pending { game: String::new(), created: now(), open: vec![launcher.key.into()], quietly: false };
+                    run_as_person(&pending);
+                }
+            }
+            Some(Press::BackNow) => {
+                if let Err(e) = go_back(efi, state, &scan()) {
+                    log(&e);
+                }
+                return;
+            }
+            _ => {}
+        }
+        if looked.elapsed() > Duration::from_secs(5) {
+            cover.show(Scene::Launchers { rows: rows() });
+            looked = Instant::now();
+        }
+        sleep(Duration::from_millis(200));
+    }
+}
+
+// ------------------------------------------------------------- updating, then off
+
+/// An update trip that's restarting Windows to finish its updates.
+#[derive(Serialize, Deserialize)]
+struct UpdateTrip {
+    started: u64,
+    restarted: bool,
+}
+
+fn update_trip_path() -> PathBuf {
+    data_dir().join("update-trip.json")
+}
+
+/// What Update-Windows.ps1 says.
+#[derive(Deserialize, Default)]
+struct WindowsUpdate {
+    #[serde(default)]
+    state: String,
+    #[serde(default)]
+    reboot: bool,
+}
+
+fn windows_update_path() -> PathBuf {
+    data_dir().join("windows-update.json")
+}
+
+fn updates_line_windows(state: &str) -> String {
+    match state {
+        "downloading" => tr("Windows Update: downloading"),
+        "installing" => tr("Windows Update: installing"),
+        "done" => tr("Windows Update: done"),
+        "failed" => tr("Windows Update: couldn't finish, it tries again next time"),
+        _ => tr("Windows Update: looking for updates"),
+    }
+}
+
+fn updates_line_steam(updating: usize) -> String {
+    if updating == 0 {
+        tr("Steam: nothing updating right now")
+    } else {
+        trf("Steam: updating (%1)", &[&updating.to_string()])
+    }
+}
+
+fn updates_line_downloads(rate: u64) -> String {
+    if rate < parse::QUIET_RATE {
+        tr("Downloads: quiet")
+    } else {
+        trf("Downloads: %1 MB/s", &[&format!("{:.1}", rate as f64 / 1e6)])
+    }
+}
+
+/// A trip to bring Windows and its games up to date, then switch off: Windows Update
+/// (Update-Windows.ps1) and every launcher, opened quietly as the person, until it's all
+/// quiet (parse::updates_settled). If Windows wants a restart to finish its updates (and
+/// signs in by itself), it comes back here once (`resumed`) before switching off.
+fn update_trip(efi: &mut FirmwareVars, started_at: u64, resumed: bool) {
+    log(if resumed { "update trip: back after Windows' restart" } else { "update trip" });
+    let mut lines = vec![updates_line_windows("")];
+    let cover = Cover::open(Scene::Updating { lines: lines.clone() });
+    let _ = fs::remove_file(windows_update_path());
+    let script = install_dir().join("Update-Windows.ps1");
+    let mut windows = Command::new("powershell.exe")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File"])
+        .arg(&script)
+        .creation_flags(win::CREATE_NO_WINDOW)
+        .spawn()
+        .map_err(|e| log(&format!("Windows Update didn't start: {e}")))
+        .ok();
+    let has_steam = launchers::installed().iter().any(|l| l.key == "steam");
+    if !resumed {
+        let keys = launchers::installed().iter().map(|l| l.key.to_string()).collect();
+        run_as_person(&Pending { game: String::new(), created: now(), open: keys, quietly: true });
+    }
+
+    let started = Instant::now();
+    let (mut bytes, mut measured, mut quiet_since) = (win::received_bytes(), Instant::now(), Instant::now());
+    let mut early = false;
+    loop {
+        sleep(Duration::from_secs(1));
+        if cover.as_ref().is_some_and(|c| c.pressed() == Some(Press::SwitchOff)) {
+            log("update trip: switched off early");
+            early = true;
+            break;
+        }
+        if measured.elapsed() < Duration::from_secs(10) {
+            continue;
+        }
+        let now_bytes = win::received_bytes();
+        let rate = now_bytes.saturating_sub(bytes) / measured.elapsed().as_secs().max(1);
+        (bytes, measured) = (now_bytes, Instant::now());
+        if rate >= parse::QUIET_RATE {
+            quiet_since = Instant::now();
+        }
+        let said: WindowsUpdate = fs::read(windows_update_path()).ok().and_then(|d| serde_json::from_slice(&d).ok()).unwrap_or_default();
+        let windows_done = windows.as_mut().is_none_or(|c| c.try_wait().ok().flatten().is_some());
+        let steam = if has_steam { steam_updating() } else { 0 };
+        lines = vec![updates_line_windows(if windows_done && said.state.is_empty() { "failed" } else { &said.state })];
+        if has_steam {
+            lines.push(updates_line_steam(steam));
+        }
+        lines.push(updates_line_downloads(rate));
+        if let Some(cover) = &cover {
+            cover.show(Scene::Updating { lines: lines.clone() });
+        }
+        // Back after a restart, only Windows' own finishing is left: no launchers to wait for.
+        let (elapsed, quiet) = (started.elapsed().as_secs(), quiet_since.elapsed().as_secs());
+        let settled = if resumed {
+            windows_done || elapsed >= parse::UPDATE_LIMIT / 3
+        } else {
+            parse::updates_settled(elapsed, quiet, windows_done, steam > 0)
+        };
+        if settled {
+            break;
+        }
+    }
+
+    let _ = fs::write(games_updated_path(), now().to_string());
+    if let Err(e) = publish(&scan()) {
+        log(&e);
+    }
+    let said: WindowsUpdate = fs::read(windows_update_path()).ok().and_then(|d| serde_json::from_slice(&d).ok()).unwrap_or_default();
+    let signs_in_by_itself = win::reg_machine("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "AutoAdminLogon")
+        .is_some_and(|v| v.trim() == "1");
+    if said.reboot && !resumed && !early && signs_in_by_itself {
+        // Windows finishes its updates while it restarts: here once more, then off.
+        let trip = UpdateTrip { started: started_at, restarted: true };
+        let _ = fs::write(update_trip_path(), serde_json::to_vec(&trip).unwrap_or_default());
+        if let Ok(current) = boot::boot_current(efi) {
+            let _ = boot::set_boot_next(efi, current);
+        }
+        log("update trip: restarting Windows to finish its updates");
+        win::run_hidden("shutdown", &["/r", "/t", "0"]);
+        return;
+    }
+    let _ = fs::remove_file(update_trip_path());
+    log("update trip: done, switching off");
+    win::run_hidden("shutdown", &["/s", "/t", "0"]);
+}
+
+/// Where monet-bridge.exe and its files are.
+fn install_dir() -> PathBuf {
+    std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)).unwrap_or_default()
 }
 
 // ------------------------------------------------------------- launching and waiting
@@ -486,6 +751,14 @@ fn launch_pending() -> Res<()> {
     if now().abs_diff(pending.created) > 120 {
         return Err("the pending game is too old".into());
     }
+    if !pending.open.is_empty() {
+        for key in &pending.open {
+            if !launchers::open(key, pending.quietly) {
+                log(&format!("couldn't open {key}"));
+            }
+        }
+        return Ok(());
+    }
     let found = scan();
     match found.iter().find(|g| g.id == pending.game) {
         Some(game) if launch(game) => Ok(()),
@@ -501,15 +774,23 @@ fn launch_pending() -> Res<()> {
 /// How long to wait for Steam to download a game that wasn't installed.
 const INSTALL_TIMEOUT: Duration = Duration::from_secs(3 * 60 * 60);
 
-/// Waits until Steam has installed the game, then returns its folder.
-fn wait_for_steam_install(id: &str) -> Option<PathBuf> {
+/// Waits until Steam has installed the game, then returns its folder; None when it took too
+/// long or `stop` says so (Back to Monet on the cover).
+fn wait_for_steam_install(id: &str, stop: &dyn Fn() -> bool) -> Option<PathBuf> {
     log(&format!("waiting for Steam to install {id}"));
     let started = Instant::now();
+    let mut looked: Option<Instant> = None;
     while started.elapsed() < INSTALL_TIMEOUT {
-        if let Some(dir) = scan_steam().into_iter().find(|g| g.id == id).and_then(|g| g.dir) {
-            return Some(dir);
+        if stop() {
+            return None;
         }
-        sleep(Duration::from_secs(10));
+        if looked.is_none_or(|t| t.elapsed() >= Duration::from_secs(10)) {
+            if let Some(dir) = scan_steam().into_iter().find(|g| g.id == id).and_then(|g| g.dir) {
+                return Some(dir);
+            }
+            looked = Some(Instant::now());
+        }
+        sleep(Duration::from_millis(500));
     }
     None
 }
@@ -567,8 +848,8 @@ fn game_running(dir: &str, names: &HashSet<String>) -> bool {
 }
 
 /// Waits for the game to start, then for it to close. Returns false if it
-/// never started.
-fn wait_for_game(dir: &Path) -> bool {
+/// never started, or `stop` said so before it did (Back to Monet on the cover).
+fn wait_for_game(dir: &Path, stop: &dyn Fn() -> bool) -> bool {
     let names = exe_names(dir);
     let mut prefix = dir.to_string_lossy().to_lowercase();
     if !prefix.ends_with('\\') {
@@ -577,10 +858,14 @@ fn wait_for_game(dir: &Path) -> bool {
 
     let started = Instant::now();
     while !game_running(&prefix, &names) {
-        if started.elapsed() > START_TIMEOUT {
-            return false;
+        // A few seconds between looks at the process list, answering Back to Monet meanwhile.
+        let look = Instant::now();
+        while look.elapsed() < POLL {
+            if started.elapsed() > START_TIMEOUT || stop() {
+                return false;
+            }
+            sleep(Duration::from_millis(250));
         }
-        sleep(POLL);
     }
 
     let mut gone_since: Option<Instant> = None;
@@ -692,13 +977,35 @@ fn finish_setup() -> Res<()> {
         log("setup finished during a trip from Monet; staying in Windows");
         return Ok(());
     }
-    let text = format!(
-        "Windows is ready for Monet.\n\nGoing back to Monet in {RETURN_COUNTDOWN_SECS} seconds. Click Cancel to stay in Windows."
-    );
-    match win::ask_with_timeout(&text, RETURN_COUNTDOWN_SECS) {
-        Answer::No => Ok(()),
-        Answer::Yes | Answer::TimedOut => back(),
+    let cover = Cover::open(Scene::Back { seconds: RETURN_COUNTDOWN_SECS, why: None });
+    if count_down(cover.as_ref(), Some(tr("Windows is ready for Monet."))) {
+        back()
+    } else {
+        Ok(())
     }
+}
+
+/// `monet-bridge cover-preview SCENE OUT.png [PICTURES]`: a scene of the cover in a PNG, with
+/// made-up games and launchers (MONET_LANGID=0x407 for German, say).
+fn cover_preview(args: &[String]) -> Res<()> {
+    let [which, out, rest @ ..] = args else {
+        return Err("Usage: monet-bridge cover-preview starting|back|launchers|updating OUT.png [PICTURES]".into());
+    };
+    let scene = match which.as_str() {
+        "starting" => Scene::Starting { game: "VALORANT".into() },
+        "back" => Scene::Back { seconds: 12, why: None },
+        "launchers" => Scene::Launchers {
+            rows: vec![("Steam".into(), true), ("Riot Client".into(), false), ("Battle.net".into(), false), ("EA app".into(), false)],
+        },
+        "updating" => Scene::Updating {
+            lines: vec![updates_line_windows("installing"), updates_line_steam(2), updates_line_downloads(24_000_000)],
+        },
+        _ => return Err(format!("no scene called {which}")),
+    };
+    let dir = rest.first().map(PathBuf::from).unwrap_or_else(|| {
+        std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)).unwrap_or_default()
+    });
+    cover::preview(&scene, &dir, Path::new(out), 1920, 1080)
 }
 
 fn status() -> Res<()> {

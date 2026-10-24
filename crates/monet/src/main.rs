@@ -37,7 +37,10 @@ Usage:
   monet                     Show status
   monet play <game>         Restart in Windows and start a game
   monet windows             Restart in Windows
+  monet windows --launchers Restart in Windows to sign in to the game launchers once
+  monet windows --update    Restart in Windows to update it and its games, then switch off
   monet games [--json]      List Windows games
+  monet games --updated     When Windows games were last updated (Unix time), if ever
   monet doctor              Check that everything is set up
   monet update              Install the newest Monet and app updates (Monet starts
                             the new version at the next restart)
@@ -61,7 +64,7 @@ fn main() -> ExitCode {
     let mut words = Vec::new();
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
-        if arg == "--game" || arg == "--iso" {
+        if arg == "--game" || arg == "--iso" || arg == "--task" {
             iter.next();
         } else if !arg.starts_with("--") {
             words.push(arg.as_str());
@@ -86,10 +89,18 @@ fn main() -> ExitCode {
             println!("monet {}", monet_core::VERSION);
             Ok(())
         }
+        ["games"] if args.iter().any(|a| a == "--updated") => {
+            if let Some(when) = all_games().games_updated {
+                println!("{when}");
+            }
+            Ok(())
+        }
         ["games"] => list_games(json),
-        ["play", id] => switch(Some(id), confirm),
+        ["play", id] => switch(Some(id), None, confirm),
         ["windows"] if args.iter().any(|a| a == "--first-run") => first_run_windows(),
-        ["windows"] => switch(None, confirm),
+        ["windows"] if args.iter().any(|a| a == "--launchers") => switch(None, Some("launchers"), confirm),
+        ["windows"] if args.iter().any(|a| a == "--update") => switch(None, Some("update"), confirm),
+        ["windows"] => switch(None, None, confirm),
         ["doctor"] => doctor(),
         ["make-default"] => elevate(&["helper", "make-default"]),
         ["update"] if args.iter().any(|a| a == "--check") => {
@@ -103,7 +114,7 @@ fn main() -> ExitCode {
         ["rollback"] => elevate(&["helper", "rollback"]),
         ["helper", "rollback"] => helper_rollback(),
         ["shortcuts"] => shortcuts(),
-        ["helper", "switch"] => helper_switch(option_value(&args, "--game")),
+        ["helper", "switch"] => helper_switch(option_value(&args, "--game"), option_value(&args, "--task")),
         ["helper", "check-switch"] => helper_check_switch(),
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
@@ -284,11 +295,14 @@ fn list_games(json: bool) -> Res<()> {
     Ok(())
 }
 
-fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
+fn switch(game: Option<&str>, task: Option<&str>, confirm: bool) -> Res<()> {
     if let Some(id) = game {
         if !games::is_valid_id(id) {
             return Err(format!("\"{id}\" isn't a game Monet knows. Run `monet games` to see the list."));
         }
+    }
+    if task.is_some_and(|t| !request::TASKS.contains(&t)) {
+        return Err("Unknown command. Run `monet help` to see what Monet can do.".into());
     }
     // Check before asking anything, so problems show up right away.
     let efi = efi()?;
@@ -305,14 +319,18 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
 
     if confirm {
         let name = game.and_then(|id| all_games().find(id).map(|g| g.name.clone()));
-        let title = match (&name, game) {
-            (Some(name), _) => say(t!("Play %1 on Windows?"), &[name.as_str()]),
-            (None, Some(_)) => t!("Play on Windows?").to_string(),
-            (None, None) => t!("Restart in Windows?").to_string(),
+        let title = match (&name, game, task) {
+            (Some(name), _, _) => say(t!("Play %1 on Windows?"), &[name.as_str()]),
+            (None, Some(_), _) => t!("Play on Windows?").to_string(),
+            (None, None, Some("launchers")) => t!("Sign in to your game launchers?").to_string(),
+            (None, None, Some(_)) => t!("Update Windows games?").to_string(),
+            (None, None, None) => t!("Restart in Windows?").to_string(),
         };
-        let text = match game {
-            Some(_) => t!("Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."),
-            None => t!("Your PC will restart in Windows. Open apps will close."),
+        let text = match (game, task) {
+            (Some(_), _) => t!("Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."),
+            (None, Some("launchers")) => t!("Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."),
+            (None, Some(_)) => t!("Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."),
+            (None, None) => t!("Your PC will restart in Windows. Open apps will close."),
         };
         if !ask(&title, text, t!("Restart")) {
             return Ok(());
@@ -322,6 +340,9 @@ fn switch(game: Option<&str>, confirm: bool) -> Res<()> {
     let mut args = vec!["helper", "switch"];
     if let Some(id) = game {
         args.extend(["--game", id]);
+    }
+    if let Some(task) = task {
+        args.extend(["--task", task]);
     }
     elevate(&args)
 }
@@ -488,7 +509,7 @@ fn require_root() -> Res<()> {
     }
 }
 
-fn helper_switch(game: Option<String>) -> Res<()> {
+fn helper_switch(game: Option<String>, task: Option<String>) -> Res<()> {
     require_root()?;
     // Windows is shut down right now, the safest moment to prepare it.
     if !windows_setup_status().is_some_and(Outcome::is_done) {
@@ -522,7 +543,7 @@ fn helper_switch(game: Option<String>) -> Res<()> {
     let installed = windows_setup_status() == Some(Outcome::Installed);
     let method = if installed && !trip::firmware_skips_boot_next(&paths) { Method::Once } else { Method::First };
 
-    let request = LaunchRequest::new(game, current, now()).map_err(|e| e.to_string())?;
+    let request = LaunchRequest::new(game, current, now()).and_then(|r| r.with_task(task)).map_err(|e| e.to_string())?;
     request::write(&mut efi, &request).map_err(|e| format!("Couldn't save the game request: {e}"))?;
     let undo = |efi: &mut EfiVarFs| {
         let _ = request::clear(efi);
@@ -557,7 +578,7 @@ fn helper_switch(game: Option<String>) -> Res<()> {
         &format!(
             "to Boot{:04X} ({method:?}) for {}; Monet {}; {}",
             windows.number,
-            request.game.as_deref().unwrap_or("Windows"),
+            request.game.as_deref().or(request.task.as_deref()).unwrap_or("Windows"),
             monet_core::VERSION,
             trip::snapshot(&efi)
         ),

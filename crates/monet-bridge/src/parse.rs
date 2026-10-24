@@ -164,6 +164,48 @@ pub fn riot_name(product: &str) -> String {
     }
 }
 
+/// Whether Steam is updating a game right now (`appmanifest_*.acf`: StateFlags 256, update
+/// running, or 1024, update started). One only waiting for an update (2) or paused (512)
+/// doesn't count: Steam may have scheduled it for later.
+pub fn steam_updating(text: &str) -> bool {
+    let flags: u32 = vdf_get(&vdf_pairs(text), "StateFlags").and_then(|f| f.parse().ok()).unwrap_or(0);
+    flags & (256 | 1024) != 0
+}
+
+/// Whether Epic's launcher keeps you signed in: `Enable=True` under `[RememberMe]` in its
+/// `GameUserSettings.ini`.
+pub fn epic_remembers(ini: &str) -> bool {
+    let mut section = "";
+    for line in ini.lines().map(str::trim) {
+        if line.starts_with('[') {
+            section = line;
+        } else if section.eq_ignore_ascii_case("[RememberMe]") && line.replace(' ', "").eq_ignore_ascii_case("Enable=True") {
+            return true;
+        }
+    }
+    false
+}
+
+/// Whether the Riot Client keeps you signed in: "Stay signed in" keeps its session cookie
+/// (`ssid`) in `RiotGamesPrivateSettings.yaml`.
+pub fn riot_remembers(yaml: &str) -> bool {
+    yaml.contains("ssid")
+}
+
+/// An update trip ends once Windows Update has finished, no Steam game is mid-update and
+/// the downloads have been quiet for five minutes (the other launchers say nothing, so the
+/// network speaks for them), but not before they've had ten minutes to start and look; or
+/// after an hour and a half whatever happens. All in seconds.
+pub const UPDATE_LIMIT: u64 = 90 * 60;
+pub const UPDATE_AT_LEAST: u64 = 10 * 60;
+pub const UPDATE_QUIET: u64 = 5 * 60;
+/// Received bytes a second below which the downloads count as quiet.
+pub const QUIET_RATE: u64 = 250_000;
+
+pub fn updates_settled(elapsed: u64, quiet_for: u64, windows_done: bool, steam_busy: bool) -> bool {
+    elapsed >= UPDATE_LIMIT || (windows_done && !steam_busy && quiet_for >= UPDATE_QUIET && elapsed >= UPDATE_AT_LEAST)
+}
+
 /// Turns a display name into the key part of a `custom:` id.
 pub fn slug(name: &str) -> String {
     let mut out = String::new();
@@ -238,6 +280,33 @@ mod tests {
         assert_eq!(riot_client_path(installs).unwrap(), "C:\\Riot Games\\Riot Client\\RiotClientServices.exe");
         assert_eq!(riot_name("valorant"), "VALORANT");
         assert_eq!(riot_name("some_new_game"), "Some New Game");
+    }
+
+    #[test]
+    fn what_launchers_say() {
+        let game = |flags: &str| format!(r#""AppState" {{ "appid" "730" "name" "Counter-Strike 2" "StateFlags" "{flags}" }}"#);
+        assert!(!steam_updating(&game("4")));        // up to date
+        assert!(steam_updating(&game("1026")));      // downloading an update
+        assert!(!steam_updating(&game("6")));        // waiting for one Steam may do later
+        assert!(!steam_updating(&game("518")));      // paused
+
+        let epic = "[Launcher]\nDefaultAppInstallLocation=C:\\Games\n\n[RememberMe]\nEnable = True\nData=abc\n";
+        assert!(epic_remembers(epic));
+        assert!(!epic_remembers(&epic.replace("True", "False")));
+        assert!(!epic_remembers("[Other]\nEnable=True\n"));
+        assert!(riot_remembers("riot-login:\n  persist:\n    session:\n      cookies:\n        - name: \"ssid\"\n"));
+        assert!(!riot_remembers("riot-login:\n  persist: {}\n"));
+    }
+
+    #[test]
+    fn an_update_trip_ends_when_everything_is_quiet() {
+        let min = 60;
+        assert!(!updates_settled(5 * min, 5 * min, true, false));     // launchers still starting
+        assert!(updates_settled(12 * min, 5 * min, true, false));
+        assert!(!updates_settled(12 * min, 5 * min, false, false));   // Windows Update still at it
+        assert!(!updates_settled(12 * min, 5 * min, true, true));     // Steam mid-update
+        assert!(!updates_settled(12 * min, 2 * min, true, false));    // still downloading
+        assert!(updates_settled(UPDATE_LIMIT, 0, false, true));       // time's up whatever happens
     }
 
     #[test]

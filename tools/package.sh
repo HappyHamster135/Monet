@@ -30,8 +30,14 @@ case "$KIND" in
         ;;
     windows)
         cp "$ROOT"/windows/*.ps1 "$ROOT"/windows/*.cmd "$ROOT/windows/monet.ico" "$OUT/"
-        # The painting a Windows that Monet installs wears (Install-Monet.ps1 -FromMonet).
+        # The painting a Windows that Monet installs wears (Install-Monet.ps1 -FromMonet), and
+        # Monet Bridge's cover over Windows: that painting, the mark and Monet's serif.
         cp "$ROOT/linux/share/wallpapers/Monet/contents/hours/day.jpg" "$OUT/wallpaper.jpg"
+        cp "$ROOT/linux/share/wallpapers/Monet/contents/hours/day.jpg" "$OUT/cover.jpg"
+        cp "$ROOT/setup/art/mark.png" "$OUT/monet-mark.png"
+        cp "$ROOT/linux/share/fonts/monet/Fraunces72ptSuperSoft-Light.ttf" "$OUT/Fraunces-Light.ttf"
+        cp "$ROOT/linux/share/fonts/monet/Fraunces72ptSuperSoft-Regular.ttf" "$OUT/Fraunces-Regular.ttf"
+        cp "$ROOT/linux/share/fonts/monet/OFL.txt" "$OUT/OFL-Fraunces.txt"
         sed -i "s/@VERSION@/$(cat "$ROOT/VERSION")/" "$OUT/Install-Monet.ps1"
         cp "$BIN" "$OUT/monet-bridge.exe"
         ;;

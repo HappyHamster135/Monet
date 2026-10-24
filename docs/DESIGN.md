@@ -805,11 +805,20 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   once Monet is online, until all are in; a PC that never chose gets the
   everyday ones), imports Universal Blue's
   driver key (and leaves a copy at `EFI/Monet/monet-key.der`), and names the
-  firmware entry "Monet". The blue screen at the first start opens on
-  Continue boot, which skips the key and leaves Monet unable to start ("bad
-  shim signature"): started again, the stick finds the copy, sees with
-  `mokutil --test-key` that it isn't trusted while Secure Boot is on, and
-  Hello offers to ask again (`mokutil --import`, the blue screen waiting) and
+  firmware entry "Monet". All set shows the blue screen at the first start in
+  pictures beside the sheet (drawn as shim's MokManager draws it, in its own
+  English words), to take a photo of. It opens on Continue boot, which skips
+  the key and leaves Monet unable to start ("bad shim signature"). Then GRUB
+  falls back (`set fallback=monet-trust` in `/boot/grub2/custom.cfg`, which
+  bootupd's grub.cfg reads) to a small start Setup put on the boot partition:
+  the stick's own kernel (Fedora's, signed, so Secure Boot takes it) with
+  `image/setup/monet-trust` as its only program (`rdinit=`; bash, mount and
+  mokutil, packed by `build.sh`) and the key in a second cpio. It asks the
+  firmware again with the same password, says so, and restarts: the blue
+  screen is back. CI's VM test chooses Continue boot on purpose first. And
+  started again, the stick finds the key's copy, sees with `mokutil
+  --test-key` that it isn't trusted while Secure Boot is on, and Hello
+  offers to ask again (`mokutil --import`, the blue screen waiting) and
   restart.
 - **Tested in CI** (`tools/vm-test.py`): QEMU with Secure Boot on installs
   Monet on a blank disk through the real screens and starts it, then looks
@@ -937,6 +946,51 @@ does nothing, as Windows is already going down. Its
 `finally` restarts the PC whatever happened, so an update never keeps
 anyone in Windows, and a game is never interrupted: it runs only after
 you've chosen to go back.
+
+## A trip to Windows
+
+**The cover.** On a trip Monet Bridge puts Monet's painting over Windows
+(`cover.rs`): a full-screen window that never takes the focus and stays off
+the taskbar, so a launcher (asking to sign in, say) and the game open over it,
+and when the game closes it's what's there, never Windows' desktop. It's the
+day painting (`cover.jpg`), dusk drawn up from a little above the words, the
+mark and "Monet" top right as in Setup, and the words bottom left (bottom
+right in Arabic and Hebrew): a small caption, a title in Fraunces (Windows'
+own font for a title in another script), a sentence, and buttons. Painted
+off-screen with GDI+ (painting, mark, rounded shapes) and GDI (words, which
+GDI finds a font for in every script, laid out right to left where it should
+be), at the screen's own pixels. Its scenes: **Starting** (the game's name,
+Back to Monet now), **Back** (the 15-second countdown that used to be a
+message box: Go now, or Stay in Windows; it comes to the front and takes
+Enter and Esc), **Launchers** and **Updating**. Its words come from `po/`
+through `crates/monet-bridge/src/words_table.rs`, in Windows' language (Make
+USB Stick's lookup, `words.rs`, shared). `monet-bridge cover-preview SCENE
+OUT.png` paints a scene into a PNG (`MONET_LANGID=0x407` for German). A
+Windows that Monet installed also hides its taskbar until it's pointed at.
+
+**Signing in once** (Settings → Play on Windows → Game launchers, `monet
+windows --launchers`): the request carries `"task": "launchers"`, and the
+cover lists the launchers Windows has (`launchers.rs`: Steam, Epic Games,
+Riot Client, Battle.net, EA app, Ubisoft Connect, GOG Galaxy), each with Sign
+in, opened as the person through the `\Monet\Launch` task (never as
+administrator). Where a launcher's own files say it keeps you signed in, the
+card says so instead (Steam's `AutoLoginUser`, Epic's `[RememberMe]`, the
+Riot Client's saved `ssid`), looked at again every five seconds. Back to
+Monet ends it.
+
+**Updating, then off** (Settings → Update Windows games, `monet windows
+--update`, `"task": "update"`): Windows Update (`Update-Windows.ps1`: Windows'
+own updates, not drivers, none that would ask something; its progress in
+`windows-update.json`) and every launcher, opened quietly as the person (Steam
+and Epic with `-silent`), until it's all quiet (`parse::updates_settled`):
+Windows Update finished, no Steam game mid-update (StateFlags 256 or 1024),
+the network cards' downloads under 250 kB/s for five minutes, after at least
+ten; at most an hour and a half. If Windows wants a restart to finish and
+signs in by itself, Bridge sets BootNext to Windows, restarts, and the agent
+picks the trip up again (`update-trip.json`) before switching off. When it's
+done, `games-updated` goes into the games list (`games_updated`) and Settings
+says when it was last done. Switch off now stops it there. A Monet Bridge
+from before tasks reads either request as opening Windows.
 
 ## The last 30 seconds
 

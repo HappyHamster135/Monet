@@ -24,7 +24,7 @@ Test machines:
 
 ### 0.9's smaller things
 
-- [ ] Settings → Updates names Monet's version ("Monet 0.9.2 is ready"), not "44.2026…"
+- [ ] Settings → Updates names Monet's version ("Monet 0.9.3 is ready"), not "44.2026…"
 - [ ] Settings' corner and edges drag it bigger and smaller; double-clicking "Settings" fills the screen; the size is kept
 - [ ] Popovers, the tray's (Disks & Devices, Audio Volume), the menu and the bars show the painting's strokes, like the desktop widgets
 - [ ] The clock's page goes back to its width after the notes close; a note written there shows in the Calendar widget within a second
@@ -48,6 +48,8 @@ Test machines:
 
 - [ ] Monet Setup's Hello shows the language's time zone with its time; once online it moves to where the PC is, unless one was chosen; the installed Monet has the zone chosen
 - [ ] On the blue screen after installing, choose Continue boot on purpose: Monet doesn't start ("bad shim signature"). Start from the USB stick: Hello says Monet can't start yet and offers Ask again and restart; after it, the blue screen is back, and Enroll MOK lets Monet start
+- [ ] All set shows the blue screen's five steps in pictures beside the sheet, in the language chosen (the blue screen's own words in English), and right to left in Arabic and Hebrew
+- [ ] Choose Continue boot on purpose with the stick out: "bad shim signature" for about ten seconds, then "Monet needs your OK on a blue screen", and the PC restarts into the blue screen; Enroll MOK, Continue, Yes, monetsetup, Reboot, and Monet starts. The GRUB menu (Esc while starting) lists "Monet: ask again for the blue screen"
 - [ ] The password twice: different, Continue waits and says so; both empty, a warning says Monet signs in by itself, and the installed Monet starts straight into the desktop without locking; after Settings → Accounts gives it a password, the next start asks for it
 - [ ] Monet Setup on a PC with a TPM 2.0: Encrypt this PC is ticked; after installing, the recovery key page shows eight groups of eight letters, and Continue waits for "I've kept my recovery key"
 - [ ] The first start (after the blue screen) asks for no passphrase; afterwards `sudo systemd-cryptenroll /dev/disk/by-uuid/<uuid>` lists a tpm2 slot and a password slot (the recovery key), `/boot/monet-firstboot.key` is gone, and after the next restart `/proc/cmdline` has no `rd.luks.key`
@@ -82,6 +84,18 @@ Test machines:
 - [ ] Monet Bridge updates itself: with an older Bridge in Windows and a newer release out, quit a game: the PC restarts into Monet a few seconds later than usual, and next time in Windows `monet-bridge status` (admin terminal) shows the new version; `C:\ProgramData\Monet\update.log` says so
 - [ ] With no internet in Windows, quitting a game still restarts into Monet (at most about 20 seconds later)
 - [ ] `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Monet\Update-Monet.ps1" -CheckOnly` says whether a newer Bridge is out, and changes nothing
+
+### A smoother trip to Windows (0.9.3)
+
+- [ ] Play a Windows game: from Windows' sign-in until the game is up, Monet's painting covers the screen with the game's name and Back to Monet now; a launcher that opens (Riot Client, say) comes up over it; a Windows that Monet installed shows no taskbar until the pointer touches the bottom edge
+- [ ] Quit the game: the cover says Back to Monet and counts down; Go now (or Enter) restarts into Monet at once, Stay in Windows (or Esc) leaves you in Windows
+- [ ] Back to Monet now while the game is still starting restarts into Monet at once; a game that doesn't start within 30 minutes leaves you in Windows, the cover gone
+- [ ] Settings → Play on Windows → Game launchers → Sign in…: Windows lists the launchers it has; Sign in opens one (not as administrator: Task Manager's Details shows it under your name, not elevated); after signing in to Steam with Remember me, its card says Signed in within a few seconds; Back to Monet goes back
+- [ ] Settings → Update Windows games → Update & switch off: the cover says Updating your games with Windows Update's and Steam's progress; Steam and Epic open in the background; the PC switches itself off when the downloads are quiet, and Settings then says when it was last done
+- [ ] With a Windows update that needs a restart: Windows restarts once (back to the cover, Windows Update finishing), then switches off; the next Play starts the game without "Working on updates"
+- [ ] Switch off now on the update cover switches the PC off at once, even when Windows wanted a restart
+- [ ] The cover in Arabic or Hebrew Windows: words on the right, buttons in reverse order; in Japanese or Chinese the title is in Windows' own font
+- [ ] `monet-bridge cover-preview launchers %TEMP%\cover.png` (in `C:\Program Files\Monet`) paints the launchers scene into a PNG
 
 ### Older PCs and laptops
 

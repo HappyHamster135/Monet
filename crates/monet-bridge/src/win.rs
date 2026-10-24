@@ -278,6 +278,24 @@ pub fn ask_with_timeout(text: &str, seconds: u32) -> Answer {
     }
 }
 
+/// Bytes received so far by the network cards (not loopback, not the filter layers that
+/// count the same traffic again), for how busy the downloads are.
+pub fn received_bytes() -> u64 {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2};
+    let mut table: *mut MIB_IF_TABLE2 = null_mut();
+    // SAFETY: GetIfTable2 allocates the table, read within its NumEntries and freed here.
+    unsafe {
+        if GetIfTable2(&mut table) != 0 || table.is_null() {
+            return 0;
+        }
+        let rows = std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
+        // Bit 0: a hardware interface; bit 1: a filter on one.
+        let total = rows.iter().filter(|r| r.InterfaceAndOperStatusFlags._bitfield & 0b11 == 0b01).map(|r| r.InOctets).sum();
+        FreeMibTable(table.cast());
+        total
+    }
+}
+
 /// A free drive letter for temporarily mounting the EFI partition.
 pub fn free_drive_letter() -> Option<char> {
     // SAFETY: no arguments.

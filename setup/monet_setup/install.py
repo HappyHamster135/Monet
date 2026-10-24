@@ -57,6 +57,18 @@ STATE = Path(os.environ.get("MONET_INSTALL_STATE", "/run/monet-setup/install.jso
 STALL = 240                     # seconds with no bytes before a download restarts
 MOK_PASSWORD = pc.MOK_PASSWORD  # the blue screen's, which All set tells
 SHIM = "\\EFI\\fedora\\shimx64.efi"
+# The small start that asks for the blue screen again (image/setup/monet-trust), and how
+# GRUB falls back to it. bootupd's grub.cfg reads custom.cfg from its own folder.
+TRUST_INITRD = Path("/usr/share/monet-setup/trust-initrd.img")
+TRUST_MENU = """
+# Monet Setup: when Secure Boot refuses Monet (the first start's blue screen was skipped),
+# a small start with Fedora's signed kernel asks the firmware again, and restarts.
+set fallback=monet-trust
+menuentry 'Monet: ask again for the blue screen' --id monet-trust {
+    linux /monet-trust/vmlinuz rdinit=/monet-trust quiet loglevel=3
+    initrd /monet-trust/initrd.img /monet-trust/key.cpio
+}
+"""
 LOG = Path("/run/monet-setup/install.log")
 # An encrypted Monet: its disk's key (in memory, for this session), the name it's opened as,
 # and the copy on the boot partition for Monet's first start (rd.luks.key points to it).
@@ -398,6 +410,37 @@ def no_password(root, account):
     run("chroot", root, "chown", "-R", f"{account}:{account}", f"/var/home/{account}/.config", check=False)
 
 
+def newc(name, data):
+    """A cpio archive (newc) holding one file: GRUB hands it to the kernel after the initramfs."""
+    def member(name, data, mode, ino):
+        name = name.encode() + b"\0"
+        fields = (ino, mode, 0, 0, 1, 0, len(data), 0, 0, 0, 0, len(name), 0)
+        head = b"070701" + b"".join(b"%08X" % v for v in fields) + name
+        return head + b"\0" * (-len(head) % 4) + data + b"\0" * (-len(data) % 4)
+    return member(name, data, 0o100644, 1) + member("TRAILER!!!", b"", 0, 0)
+
+
+def trust_fallback(boot, key, kernel=None):
+    """If the blue screen's Enroll MOK is skipped, Secure Boot refuses Monet's kernel and GRUB
+    says only "bad shim signature". With this, GRUB falls back to this stick's kernel (Fedora's,
+    signed) and image/setup/monet-trust, which asks the firmware again and restarts: the blue
+    screen comes back. Left out when GRUB's menu doesn't read custom.cfg."""
+    grub = boot / "grub2"
+    if not TRUST_INITRD.exists() or "custom.cfg" not in (grub / "grub.cfg").read_text(errors="replace"):
+        log("GRUB's menu has no custom.cfg: no fallback for a skipped blue screen")
+        return
+    folder = boot / "monet-trust"
+    folder.mkdir(exist_ok=True)
+    shutil.copyfile(kernel or f"/usr/lib/modules/{os.uname().release}/vmlinuz", folder / "vmlinuz")
+    shutil.copyfile(TRUST_INITRD, folder / "initrd.img")
+    (folder / "key.cpio").write_bytes(newc("monet-key.der", Path(key).read_bytes()))
+    custom = grub / "custom.cfg"
+    menu = custom.read_text() if custom.exists() else ""
+    if "monet-trust" not in menu:
+        custom.write_text(menu + TRUST_MENU)
+    log("a skipped blue screen comes back by itself (GRUB falls back to monet-trust)")
+
+
 def configure(plan):
     emit(phase="configure", fraction=0.1)
     # bootc may leave the new system mounted read-only when it's done.
@@ -469,6 +512,10 @@ def configure(plan):
                 shutil.copyfile(key, esp_key)
             except OSError as e:
                 log(f"Monet's key wasn't copied to the EFI partition: {e}")
+            try:
+                trust_fallback(Path(TARGET) / "boot", key)
+            except OSError as e:
+                log(f"No fallback for a skipped blue screen: {e}")
         emit(phase="configure", fraction=0.8)
 
         # Labels for what was written here, from Monet's own SELinux policy, and checked

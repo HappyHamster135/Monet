@@ -27,7 +27,7 @@ Windows downloads in the background while you use it.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.2-Make-USB-Stick.exe** from the
+1. Download **Monet-0.9.3-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -40,19 +40,19 @@ On a Windows PC (this one, or any other):
    then says it's ready.
 
 The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.9.2-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.9.2-Installer.iso**). Monet Setup is in a release only once
+it (**Monet-0.9.3-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.9.3-Installer.iso**). Monet Setup is in a release only once
 it has installed Monet in a test PC.
 
-On Linux or a Mac, download **Monet-0.9.2-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.9.2-Installer.iso**) and write it with your disk
+On Linux or a Mac, download **Monet-0.9.3-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.9.3-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.2**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.3**).
 2. Monet Setup opens over the harbor at dawn. Choose your language,
    keyboard and time zone (a region, then a city: Setup guesses it, and once
    online, finds where the PC is), and click **Continue**.
@@ -81,7 +81,7 @@ If something can't go ahead, the page says why in a sentence.
 7. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.9.2-Installer.iso)</summary>
+<summary>With Fedora's installer (Monet-0.9.3-Installer.iso)</summary>
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -105,10 +105,13 @@ yet). With the arrow keys and Enter:
 
 **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**
 
+Monet Setup's last page shows these steps in pictures: take a photo of them.
+
 It opens on **Continue boot**: don't choose that. It skips this, and then
-Secure Boot won't let Monet start (it says "bad shim signature"). If that
-happened, start from the USB stick again: Monet Setup notices and offers
-**Ask again and restart**, and the blue screen comes back at the next start.
+Secure Boot won't let Monet start. If it happens anyway, the PC says
+"bad shim signature" for ten seconds, then Monet asks the firmware again,
+says so, and restarts: the blue screen is back. (Starting from the USB stick
+works too: Monet Setup notices and offers **Ask again and restart**.)
 
 With Fedora's installer instead:
 
@@ -137,7 +140,15 @@ Monet. Done.
   straight into your games. If the PC came with Windows, Windows activates by
   itself. If not, it runs unactivated, with a small watermark.
 - **Play a Windows game:** click **Windows Games** in the panel and press
-  **Play**. When you quit, the PC comes back to Monet.
+  **Play**. While Windows starts the game you see Monet's painting, not
+  Windows. When you quit, the PC comes back to Monet.
+- **Sign in to your game launchers once:** Settings → Play on Windows →
+  **Game launchers** → **Sign in…**. Windows opens with your launchers listed;
+  sign in to each with *Remember me* ticked, then choose **Back to Monet**.
+- **Keep Windows games up to date:** Settings → Play on Windows → **Update
+  Windows games** → **Update & switch off**, before you go to bed, say. Windows
+  updates itself and your games, then switches the PC off (within an hour and a
+  half), so the next Play starts the game, not a download.
 - **Windows' language and keyboard** match the ones you picked for Monet.
 - **A Bluetooth controller or headset:** pair it in Monet, then once in
   Windows. Monet picks up Windows' pairing by itself at the next start, and
@@ -269,6 +280,6 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.2-Linux.tar.gz** and run `./monet-0.9.2-linux/install.sh`,
+Download **Monet-0.9.3-Linux.tar.gz** and run `./monet-0.9.3-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).

@@ -32,6 +32,9 @@ pub struct GameList {
     /// Unix time the list was written.
     pub updated: u64,
     pub games: Vec<Game>,
+    /// Unix time Windows and its games were last brought up to date (an update trip).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub games_updated: Option<u64>,
 }
 
 impl GameList {
@@ -39,7 +42,7 @@ impl GameList {
         let mut seen = std::collections::HashSet::new();
         games.retain(|g| seen.insert(g.id.clone()));
         games.sort_by_key(|g| g.name.to_lowercase());
-        GameList { v: 1, updated, games }
+        GameList { v: 1, updated, games, games_updated: None }
     }
 
     /// Parses a list written by the other system. Anything malformed is

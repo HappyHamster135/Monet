@@ -179,6 +179,8 @@ PlasmaCore.Dialog {
     property string busyDevice: ""
     // Windows: the game (or {} for Windows itself) waiting for a yes.
     property var asking: null
+    // When Windows games were last updated (an update trip), as Unix time; 0 if never.
+    property real gamesUpdated: 0
     property bool switching: false
     property string switchProblem: ""
     property string doctorReport: ""
@@ -289,6 +291,7 @@ PlasmaCore.Dialog {
             ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
             ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
             call(monet + " games --json", out => sheet.games = sheet.json(out, []))
+            call(monet + " games --updated", out => sheet.gamesUpdated = parseInt(out) || 0)
         } else if (page === "datetime") {
             ask("time", out => sheet.clock = sheet.json(out, sheet.clock))
             if (zones.length === 0) {
@@ -440,13 +443,14 @@ PlasmaCore.Dialog {
         ask("output " + output.id, () => sheet.ask("outputs", out => sheet.outputs = sheet.json(out, sheet.outputs)))
     }
 
-    // Game ids only contain letters, digits, ":", ".", "_" and "-".
+    // Game ids only contain letters, digits, ":", ".", "_" and "-"; tasks are fixed words.
     function restart() {
         const game = asking && asking.id && /^[A-Za-z0-9:._-]+$/.test(asking.id) ? asking : null
+        const task = asking && (asking.task === "launchers" || asking.task === "update") ? asking.task : ""
         switchProblem = ""
         asking = null
         switching = true
-        call(game ? monet + " play '" + game.id + "'" : monet + " windows", (out, code, err) => {
+        call(game ? monet + " play '" + game.id + "'" : task ? monet + " windows --" + task : monet + " windows", (out, code, err) => {
             sheet.switching = false
             if (code !== 0) {
                 sheet.switchProblem = err.trim() || i18n("Monet couldn't switch to Windows.")
@@ -4792,6 +4796,8 @@ PlasmaCore.Dialog {
                                 text: sheet.switching ? i18n("Restarting in Windows…")
                                     : sheet.switchProblem !== "" ? i18n("Couldn't open Windows")
                                     : sheet.asking && sheet.asking.id ? i18n("Play %1?", sheet.asking.name)
+                                    : sheet.asking && sheet.asking.task === "launchers" ? i18n("Sign in to your game launchers?")
+                                    : sheet.asking && sheet.asking.task === "update" ? i18n("Update Windows games?")
                                     : sheet.asking ? i18n("Restart in Windows?")
                                     : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
                                     : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Getting Windows ready")
@@ -4814,6 +4820,9 @@ PlasmaCore.Dialog {
                                     : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
                                         + (typeof sheet.info.battery === "number" && !sheet.info.plugged ? " " + i18n("Plug in the charger first.") : "")
                                     : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
+                                    : sheet.asking && sheet.asking.task === "launchers" ? i18n("Your PC restarts in Windows with your game launchers ready. Sign in to each once, then choose Back to Monet. Save your work first.")
+                                    : sheet.asking && sheet.asking.task === "update" ? i18n("Your PC restarts in Windows, updates it and your games, and switches off when they're done, within an hour and a half. Save your work first.")
+                                        + (typeof sheet.info.battery === "number" && !sheet.info.plugged ? " " + i18n("Plug in the charger first.") : "")
                                     : sheet.asking ? i18n("Your PC restarts in Windows. Open apps close, so save your work first.")
                                     : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
                                     : i18n("Windows: %1. Check Monet below to see what's missing.", i18n(sheet.pc.windows))
@@ -4883,6 +4892,42 @@ PlasmaCore.Dialog {
                     color: look.dim
                     font.pixelSize: 14
                     wrapMode: Text.Wrap
+                }
+                // Trips that make the next ones smoother: signed in everywhere, everything up to date.
+                Card {
+                    tone: look
+                    visible: sheet.games.length > 0 || sheet.pc.windows === "Ready"
+                    SettingRow {
+                        tone: look
+                        title: i18n("Game launchers")
+                        detail: i18n("Sign in once to Steam, Riot, Battle.net and the rest in Windows, and the games you play from here start without asking.")
+                        Pill {
+                            tone: look
+                            text: i18n("Sign in…")
+                            enabledPill: !sheet.switching
+                            onClicked: {
+                                sheet.switchProblem = ""
+                                sheet.asking = { task: "launchers" }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Update Windows games")
+                        detail: (sheet.gamesUpdated > 0
+                                 ? i18n("Last done %1.", Qt.formatDate(new Date(sheet.gamesUpdated * 1000), Locale.ShortFormat)) + " " : "")
+                            + i18n("Windows updates itself and your games, then switches the PC off. Good before you go to bed.")
+                        Pill {
+                            tone: look
+                            text: i18n("Update & switch off")
+                            enabledPill: !sheet.switching
+                            onClicked: {
+                                sheet.switchProblem = ""
+                                sheet.asking = { task: "update" }
+                            }
+                        }
+                    }
                 }
                 Card {
                     tone: look

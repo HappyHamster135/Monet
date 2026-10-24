@@ -10,7 +10,17 @@ mod parse;
 #[cfg(windows)]
 mod bridge;
 #[cfg(windows)]
+mod cover;
+#[cfg(windows)]
+mod launchers;
+#[cfg(windows)]
 mod win;
+// The words in Windows' language: Make-USB-Stick's lookup, with this program's own table.
+#[cfg(windows)]
+#[path = "../../monet-usb/src/words.rs"]
+mod words;
+#[cfg(windows)]
+mod words_table;
 
 #[cfg(windows)]
 fn main() -> std::process::ExitCode {
