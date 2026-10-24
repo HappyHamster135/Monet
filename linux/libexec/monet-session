@@ -60,7 +60,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.9.1"
+current="$looks/look-0.9.2"
 if [ ! -e "$current" ]; then
     # Plasma needs a moment after sign-in before it accepts changes.
     sleep 4

@@ -1592,6 +1592,7 @@ SWATCHES = {
     "windows": ("night", (2900, 1050, 3340, 1490)),
     "updates": ("dawn", (900, 1500, 1340, 1940)),
     "about": ("dusk", (1090, 800, 1530, 1240)),
+    "phone": ("day", (1500, 1100, 1940, 1540)),
 }
 
 
@@ -1660,6 +1661,32 @@ def settings_art():
         rounded_png(img.convert("RGB"), 24, SETTINGS / f"light-{name}.png")
     banner = paint["dusk"].crop((0, 520, 3840, 1672)).resize((1200, 360), Image.LANCZOS)
     banner.save(SETTINGS / "about.jpg", quality=86, optimize=True, progressive=True)
+    phone_qr()
+
+
+KDE_CONNECT = "https://kdeconnect.kde.org/download.html"
+
+
+def phone_qr():
+    """Settings → Phone: a QR code to KDE Connect's download page (the app for Android and
+    iPhone), ink on a white tile so every camera reads it. Needs segno; kept as it is without."""
+    try:
+        import segno
+    except ImportError:
+        print("segno isn't installed: phone-qr.png kept as it is")
+        return
+    code = segno.make(KDE_CONNECT, error="m", micro=False)
+    rows = list(code.matrix_iter(scale=1, border=2))
+    cell = 8
+    size = len(rows) * cell
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle([0, 0, size - 1, size - 1], radius=cell * 2, fill=(255, 255, 255, 255))
+    for y, row in enumerate(rows):
+        for x, dark in enumerate(row):
+            if dark:
+                draw.rectangle([x * cell, y * cell, x * cell + cell - 1, y * cell + cell - 1], fill=(27, 26, 25, 255))
+    img.save(SETTINGS / "phone-qr.png", optimize=True)
 
 
 # More settings (KDE's System Settings): each page's mark the way Monet

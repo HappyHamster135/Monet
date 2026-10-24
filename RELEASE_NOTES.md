@@ -6,11 +6,60 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.1-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.1-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.1-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.1-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.1, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.1-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.2-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.2-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.2-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.2-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.2-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.2: set up your way, your phone in reach
+
+- **Monet Setup asks what Fedora's installer did, the Monet way.** Hello
+  has your time zone: a region, then a city, with the time there now. Setup
+  guesses it from your language and, once online, from where the PC is,
+  unless you chose one. Your password is typed twice, and any password will
+  do. Or leave it empty: Monet then signs you in by itself and the screen
+  doesn't lock, and Setup says so before you go on.
+
+- **The blue screen, skipped by accident, isn't the end.** After
+  installing, a blue screen asks to trust Monet, and it opens on "Continue
+  boot", which leaves Monet unable to start. Start from the USB stick again:
+  Setup sees it and offers **Ask again and restart**, and the blue screen
+  is back.
+
+- **Your phone.** Settings → Phone pairs your phone with the app (a QR code
+  gets it), then shows its battery, rings it, sends it a file, and opens its
+  texts and files on the PC.
+
+- **Monet Bridge keeps itself up to date.** On the way back to Monet,
+  Windows checks for a newer Monet Bridge, checks the download is whole,
+  installs it and restarts as before. A Windows that Monet set up also wears
+  the painting as its wallpaper.
+
+- **A magnifier.** Settings → Accessibility → Magnifier: Windows key and
+  plus or minus zooms in and out.
+
+- **Your fingerprint.** With a fingerprint reader, Settings → Lock & Privacy
+  sets up a finger, which then unlocks the screen and answers administrator
+  prompts. (The sign-in screen still asks for the password.)
+
+- **Text from a picture, in your language.** A screenshot's Extract Text
+  reads every language Monet speaks, starting with yours.
+
+- **Save a report.** Settings → About Monet → Save a report puts one file
+  in Documents with what someone helping you needs: the PC, this start's
+  errors, the start before, sleep and Monet's own records.
+
+- **Make-USB-Stick.exe, sturdier.** It writes the start of the stick last,
+  so Windows can't take over the stick halfway, and if writing fails it
+  notes Windows' reason in Monet-USB-Stick.log in your temporary files. An
+  ISO dropped on it is written as it is.
+
+Updating from 0.9.1: Monet updates by itself within a day (or Settings →
+Updates → Install, then restart). Monet Bridge updates itself from this
+version on: once more, in Windows, download **Monet-0.9.2-Windows.zip**,
+open it and double-click **Install Monet**. Setup's changes are for new
+installs.
 
 ### New in 0.9.1: safe to update, at home on both sides
 

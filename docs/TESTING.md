@@ -24,7 +24,7 @@ Test machines:
 
 ### 0.9's smaller things
 
-- [ ] Settings → Updates names Monet's version ("Monet 0.9.1 is ready"), not "44.2026…"
+- [ ] Settings → Updates names Monet's version ("Monet 0.9.2 is ready"), not "44.2026…"
 - [ ] Settings' corner and edges drag it bigger and smaller; double-clicking "Settings" fills the screen; the size is kept
 - [ ] Popovers, the tray's (Disks & Devices, Audio Volume), the menu and the bars show the painting's strokes, like the desktop widgets
 - [ ] The clock's page goes back to its width after the notes close; a note written there shows in the Calendar widget within a second
@@ -46,6 +46,9 @@ Test machines:
 
 ### Safety and recovery (0.9.1)
 
+- [ ] Monet Setup's Hello shows the language's time zone with its time; once online it moves to where the PC is, unless one was chosen; the installed Monet has the zone chosen
+- [ ] On the blue screen after installing, choose Continue boot on purpose: Monet doesn't start ("bad shim signature"). Start from the USB stick: Hello says Monet can't start yet and offers Ask again and restart; after it, the blue screen is back, and Enroll MOK lets Monet start
+- [ ] The password twice: different, Continue waits and says so; both empty, a warning says Monet signs in by itself, and the installed Monet starts straight into the desktop without locking; after Settings → Accounts gives it a password, the next start asks for it
 - [ ] Monet Setup on a PC with a TPM 2.0: Encrypt this PC is ticked; after installing, the recovery key page shows eight groups of eight letters, and Continue waits for "I've kept my recovery key"
 - [ ] The first start (after the blue screen) asks for no passphrase; afterwards `sudo systemd-cryptenroll /dev/disk/by-uuid/<uuid>` lists a tpm2 slot and a password slot (the recovery key), `/boot/monet-firstboot.key` is gone, and after the next restart `/proc/cmdline` has no `rd.luks.key`
 - [ ] Turn Secure Boot off (or clear the TPM): the start asks for the passphrase; the recovery key opens it, and the start after that doesn't ask
@@ -66,6 +69,19 @@ Test machines:
 - [ ] Pair a controller (a DualSense: classic Bluetooth) in Monet, then in Windows. Back in Monet it connects without pairing again (`journalctl -u monet-pairings` says "took Windows' pairing for …"), and in Windows it still connects
 - [ ] The same with a Low Energy device (an Xbox controller with current firmware, or earbuds)
 - [ ] Pair it again in Monet only: Monet keeps its own pairing at the next start (Windows needs pairing once more, then both work)
+
+### Next (after 0.9.1)
+
+- [ ] Settings → About Monet → Save a report: after a few seconds a notification says it's in Documents; Show opens Files on it; the file has every part (the PC, this start's errors, the start before, sleep, Monet's records), none empty where the PC has the thing
+- [ ] Settings → Accessibility → Magnifier on: Windows key and + zooms in around the pointer, Windows key and − zooms out; off, the keys do nothing; it stays as set after signing out and in
+- [ ] Settings → Phone with no phone yet: the QR code opens KDE Connect's download page on the phone; with the app open on the same Wi-Fi the phone shows up under it, Pair asks on the phone, and once accepted the phone is listed with its battery
+- [ ] Ring makes the phone ring; Send a file… sends a file; Texts opens the phone's messages; Files on your phone opens it in Files; Forget unpairs it
+- [ ] On a laptop with a fingerprint reader: Lock & Privacy shows Fingerprint; after Set up… (Accounts → Configure Fingerprint) the lock screen unlocks with a finger and an administrator question (Reset this PC) accepts one; without a reader the row isn't there
+- [ ] Screenshot (Print Screen) → Extract Text on a picture with text in your language (Swedish, say) reads it; Screenshot's settings list your language and English
+- [ ] A Windows that Monet installed shows The Hours as its desktop; "Monet next to my Windows" keeps Windows' own wallpaper
+- [ ] Monet Bridge updates itself: with an older Bridge in Windows and a newer release out, quit a game: the PC restarts into Monet a few seconds later than usual, and next time in Windows `monet-bridge status` (admin terminal) shows the new version; `C:\ProgramData\Monet\update.log` says so
+- [ ] With no internet in Windows, quitting a game still restarts into Monet (at most about 20 seconds later)
+- [ ] `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Monet\Update-Monet.ps1" -CheckOnly` says whether a newer Bridge is out, and changes nothing
 
 ### Older PCs and laptops
 
@@ -134,7 +150,7 @@ not off), then Play on Windows again.
 
 ## 5. Logs
 
-- Monet: `journalctl -u monet-sync` and `monet doctor`
+- Monet: Settings → About Monet → **Save a report** (one file in Documents), or `journalctl -u monet-sync` and `monet doctor`
 - Windows: `C:\ProgramData\Monet\bridge.log`
 
 ## Before real hardware: a virtual machine

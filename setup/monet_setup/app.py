@@ -10,13 +10,14 @@ import os
 import sys
 import tempfile
 import threading
+from datetime import datetime
 from pathlib import Path
 
 from . import disks, network, pc, system, words
 from .system import account_name
 from .words import N_, _, ntr, tr
-from .qt import (Property, QFontDatabase, QGuiApplication, QObject, QProcess, QQmlApplicationEngine, QTimer, QUrl,
-                 Signal, Slot)
+from .qt import (Property, QFontDatabase, QGuiApplication, QLocale, QObject, QProcess, QQmlApplicationEngine, QTime,
+                 QTimer, QUrl, Signal, Slot)
 
 HERE = Path(__file__).resolve().parent.parent
 IMAGE = os.environ.get("MONET_IMAGE", "ghcr.io/happyhamster135/monet:latest")
@@ -73,17 +74,22 @@ class Setup(QObject):
     wifiChanged = Signal()
     progressChanged = Signal()
     workDone = Signal(object, object)       # (what to call, the result), from a worker thread
+    clockChanged = Signal()                 # the time in the chosen time zone, each few seconds
 
     def __init__(self):
         super().__init__()
         self._language = 0
         self._keyboard = 0
+        # The time zone: the language's guess, then the internet's once online, unless chosen.
+        self._zones = system.time_zones()
+        self._zone, self._zone_chosen, self._zone_asked = "", False, False
         self._networks, self._wired, self._scanning = [], False, False
         self._joining, self._wifi_error, self._joined = False, "", ""
         self._disks, self._disk, self._mode = [], 0, "erase"
         self._bring = True
         self._encrypt = True                 # on PCs with a TPM 2.0 (the choice shows only there)
         self._recovery = ""                  # the recovery key, once installed: shown once, kept nowhere
+        self._untrusted = None               # an installed Monet's key the firmware doesn't trust yet
         self._name, self._password = "", ""
         self._apps = [app[-1] for app in APPS]
         self._phase, self._progress, self._status, self._error, self._log = "", 0.0, "", "", []
@@ -95,12 +101,18 @@ class Setup(QObject):
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
         self._restore()
+        self._zone = self._zone or system.LANGUAGES[self._language][3]
         self._started_with = self._keyboard
+        self._clock = QTimer(self)
+        self._clock.setInterval(15000)
+        self._clock.timeout.connect(self.clockChanged.emit)
+        self._clock.start()
         if DEMO:
             self._demo()
         else:
             QTimer.singleShot(0, self.scan)
             QTimer.singleShot(0, self._load_disks)
+            QTimer.singleShot(0, lambda: self._background(pc.untrusted_key, self._found_untrusted))
 
     # -- state kept across a keyboard change (the window restarts) --
     def _restore(self):
@@ -109,13 +121,15 @@ class Setup(QObject):
         except (OSError, ValueError):
             return
         self._language, self._keyboard = saved.get("language", 0), saved.get("keyboard", 0)
+        self._zone, self._zone_chosen = saved.get("zone", ""), saved.get("zoneChosen", False)
         words.use(system.LANGUAGES[min(self._language, len(system.LANGUAGES) - 1)][1])
         self._step = saved.get("step", 0)
 
     def _save(self, step=0):
         try:
             STATE.parent.mkdir(parents=True, exist_ok=True)
-            STATE.write_text(json.dumps({"language": self._language, "keyboard": self._keyboard, "step": step}))
+            STATE.write_text(json.dumps({"language": self._language, "keyboard": self._keyboard, "step": step,
+                                         "zone": self._zone, "zoneChosen": self._zone_chosen}))
         except OSError:
             pass
 
@@ -184,8 +198,80 @@ class Setup(QObject):
     def setLanguage(self, index):
         self._language = index
         words.use(system.LANGUAGES[index][1])
+        if not self._zone_chosen:
+            self._zone = system.LANGUAGES[index][3]
         self.changed.emit()
+        self.clockChanged.emit()
         self.setKeyboard(system.keyboard_for(index))
+
+    # -- the time zone: a region, then a city in it --
+    def _regions(self):
+        return [region for region in system.REGIONS if any(system.zone_region(z) == region for z in self._zones)]
+
+    def _in_region(self, region):
+        return [zone for zone in self._zones if system.zone_region(zone) == region]
+
+    @Property("QVariant", notify=changed)
+    def regions(self):
+        return [_(system.REGIONS[region]) for region in self._regions()]
+
+    @Property(int, notify=changed)
+    def region(self):
+        here = system.zone_region(self._zone)
+        return self._regions().index(here) if here in self._regions() else -1
+
+    @Property("QVariant", notify=changed)
+    def cities(self):
+        return [system.zone_city(zone) for zone in self._in_region(system.zone_region(self._zone))]
+
+    @Property(int, notify=changed)
+    def city(self):
+        zones = self._in_region(system.zone_region(self._zone))
+        return zones.index(self._zone) if self._zone in zones else -1
+
+    def _choose_zone(self, zone):
+        self._zone, self._zone_chosen = zone, True
+        self.changed.emit()
+        self.clockChanged.emit()
+
+    @Slot(int)
+    def setRegion(self, index):
+        """Another region: its city of the language's own time zone if it's there, else its first."""
+        regions = self._regions()
+        if 0 <= index < len(regions) and regions[index] != system.zone_region(self._zone):
+            zones = self._in_region(regions[index])
+            guess = system.LANGUAGES[self._language][3]
+            self._choose_zone(guess if guess in zones else zones[0])
+
+    @Slot(int)
+    def setCity(self, index):
+        zones = self._in_region(system.zone_region(self._zone))
+        if 0 <= index < len(zones):
+            self._choose_zone(zones[index])
+
+    @Property(str, notify=clockChanged)
+    def zoneNow(self):
+        """The time now in the chosen time zone, as this language writes a time ("14:32", "2:32 PM")."""
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo(self._zone))
+        except Exception:      # no time zone data here (a demo on another system)
+            return ""
+        return QLocale(self.lang.split(".")[0]).toString(QTime(now.hour, now.minute), QLocale.FormatType.ShortFormat)
+
+    def _ask_zone(self):
+        """Online for the first time: where the PC is, from the internet, unless a zone was chosen."""
+        if self._zone_asked or self._zone_chosen or DEMO:
+            return
+        self._zone_asked = True
+
+        def done(zone):
+            if not self._zone_chosen and zone in self._zones and zone != self._zone:
+                self._zone = zone
+                self.changed.emit()
+                self.clockChanged.emit()
+
+        self._background(lambda: system.guess_time_zone(self._zone), done)
 
     @Slot(int)
     def setKeyboard(self, index):
@@ -251,6 +337,8 @@ class Setup(QObject):
             self._joined = self._joined or active
             self._scanning = False
             self.wifiChanged.emit()
+            if self._wired or self._joined:
+                self._ask_zone()
 
         self._background(lambda: (network.wired(), network.wifi_networks(rescan=True)), done)
 
@@ -267,16 +355,18 @@ class Setup(QObject):
         self._joining, self._wifi_error = False, error
         if not error:
             self._joined = name
+            self._ask_zone()
         self.wifiChanged.emit()
 
     # -- the person --
-    @Slot(str, str, result=str)
-    def setPerson(self, name, password):
-        """Empty when fine; otherwise what's missing."""
+    @Slot(str, str, str, result=str)
+    def setPerson(self, name, password, again):
+        """Empty when fine; otherwise what's wrong. Any password goes, or none at all
+        (Monet then signs them in by itself): it's their PC."""
         if not name.strip():
             return _("Type your name.")
-        if len(password) < 6:
-            return _("The password needs at least 6 characters.")
+        if password != again:
+            return _("The passwords don't match.")
         self._name, self._password = name.strip(), password
         self.changed.emit()
         return ""
@@ -462,13 +552,13 @@ class Setup(QObject):
         if self._proc or self.blocker:
             return
         disk = self._disks[self._disk]
-        locale, zone_guess = system.LANGUAGES[self._language][1::2]
+        locale = system.LANGUAGES[self._language][1]
         layout, variant = system.KEYBOARDS[self._keyboard][1:]
         plan = {
             "image": pc.image_for(IMAGE, self._pc), "disk": disk["path"], "mode": self._mode,
             "sizes": disk[self._mode],
             "language": locale, "keyboard": layout, "variant": variant,
-            "timezone": zone_guess,             # refined from the internet while installing
+            "timezone": self._zone,
             "name": self._name, "account": account_name(self._name), "password": self._password,
             "wifi": self._joined,
             "apps": self.picked_apps(),
@@ -541,6 +631,22 @@ class Setup(QObject):
     def restart(self):
         if not DEMO:
             os.system("systemctl reboot")
+
+    # -- a Monet installed here whose first start's blue screen was skipped --
+    def _found_untrusted(self, key):
+        self._untrusted = key
+        self.changed.emit()
+
+    @Property(bool, notify=changed)
+    def untrusted(self):
+        return self._untrusted is not None or os.environ.get("MONET_SETUP_DEMO_UNTRUSTED") == "1"
+
+    @Slot()
+    def trustAndRestart(self):
+        """Asks the firmware again to trust that Monet's key, and restarts into the blue screen."""
+        if DEMO or self._untrusted is None:
+            return
+        self._background(lambda: pc.trust(self._untrusted), lambda _result: self.restart())
 
     @Property(str, constant=True)
     def version(self):

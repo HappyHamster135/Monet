@@ -196,11 +196,17 @@ fn start(hwnd: HWND) {
         EnableWindow(control(5), 0);
     }
     std::thread::spawn(move || {
-        let mut iso = String::new();
-        let result = installer().and_then(|(name, url, total)| {
-            iso = std::env::temp_dir().join(name).to_string_lossy().to_string();
-            download(&url, &iso, total)
-        });
+        // An image dropped on the program is written as it is (a Setup ISO the release doesn't have yet),
+        // and checked before anything is erased.
+        let given = std::env::args().nth(1);
+        let mut iso = given.clone().unwrap_or_default();
+        let result = match &given {
+            Some(path) => std::fs::metadata(path).map(|_| ()).map_err(|e| format!("{path}: {e}")),
+            None => installer().and_then(|(name, url, total)| {
+                iso = std::env::temp_dir().join(name).to_string_lossy().to_string();
+                download(&url, &iso, total)
+            }),
+        };
         let result = result.and_then(|()| {
             tell(tr("Writing to the USB stick…"), 0.0);
             disk::write(number, &iso, |phase, done, total| {
@@ -215,7 +221,7 @@ fn start(hwnd: HWND) {
                 tell(line, f);
             })
         });
-        if result.is_ok() {
+        if result.is_ok() && given.is_none() {
             let _ = std::fs::remove_file(&iso);
         }
         finish(result);

@@ -128,6 +128,7 @@ SHEET = (u(64), u(64), u(604), H - u(64))
 NEXT = (u(540), H - u(123))                               # inside Continue, Restart and Install
 NAME_FIELD = (u(300), u(279))                             # person step: name entry
 PASSWORD_FIELD = (u(300), u(388))                         # person step: password entry
+AGAIN_FIELD = (u(300), u(475))                            # person step: the password again
 TRY_AGAIN = (u(130), u(258))                              # failed step: Try again
 DETAILS = (u(279), u(258))                                # failed step: Details (the install's log)
 
@@ -311,6 +312,8 @@ def main():
         vm.click(*NAME_FIELD)
         vm.type("Test Player")
         vm.click(*PASSWORD_FIELD)
+        vm.type("monet-test")
+        vm.click(*AGAIN_FIELD)
         vm.type("monet-test")
         time.sleep(1)
         run.shot("person-filled")

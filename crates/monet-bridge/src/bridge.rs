@@ -622,12 +622,41 @@ fn go_back(efi: &mut FirmwareVars, state: &State, found: &[WinGame]) -> Res<()> 
     boot::set_boot_next(efi, target).map_err(|e| format!("couldn't set Monet to start next: {e}"))?;
     log(&format!("returning to Monet (Boot{target:04X})"));
 
+    // On the way out, Bridge brings itself up to date (once a day at most) and the update
+    // task restarts the PC; a Bridge without that task restarts straight away.
+    if update_then_restart() {
+        return Ok(());
+    }
     // Restart, not hibernate: a hibernated PC stays off until someone presses
     // the power button, and a hibernated Windows drive can't be written from Monet.
     if !win::run_hidden("shutdown", &["/r", "/t", "0"]) {
         return Err("couldn't restart into Monet".into());
     }
     Ok(())
+}
+
+/// Hands the restart to `\Monet\Update` (Update-Monet.ps1), which updates Bridge when a
+/// newer Monet is out and then restarts whatever happened. True once it has taken over
+/// (renamed the marker); false when it didn't start in time, and the caller restarts.
+fn update_then_restart() -> bool {
+    let marker = data_dir().join("update-then-restart");
+    let claimed = data_dir().join("update-claimed");
+    let _ = fs::remove_file(&claimed);
+    if fs::write(&marker, now().to_string()).is_err() {
+        return false;
+    }
+    if win::run_hidden("schtasks", &["/run", "/tn", "\\Monet\\Update"]) {
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_secs(30) {
+            if claimed.exists() {
+                return true;
+            }
+            sleep(Duration::from_millis(500));
+        }
+        log("the update task didn't start; restarting");
+    }
+    // Taken over between the last look and now: the task restarts the PC.
+    fs::remove_file(&marker).is_err() && claimed.exists()
 }
 
 fn back() -> Res<()> {

@@ -29,7 +29,7 @@ COPY image/password /src/password
 RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
 
 FROM ${BASE}
-# Monet's own version, which updates show ("Monet 0.9.1 is ready"), not Bazzite's.
+# Monet's own version, which updates show ("Monet 0.9.2 is ready"), not Bazzite's.
 ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
 # Tools for installing Windows from Monet: splitting Windows' install image
@@ -50,6 +50,19 @@ RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 rsync c
 RUN dnf5 -y install gwenview okular haruna elisa-player kcalc ark \
         kdegraphics-thumbnailers ffmpegthumbs \
  && dnf5 clean all
+# Screenshot's Extract Text (copy the text in a picture, on the PC) reads every
+# language Monet speaks: Bazzite has fifteen of them; these are the rest.
+RUN dnf5 -y install --skip-unavailable tesseract-langpack-ara tesseract-langpack-dan tesseract-langpack-fin \
+        tesseract-langpack-heb tesseract-langpack-hin tesseract-langpack-hun tesseract-langpack-ind \
+        tesseract-langpack-kor tesseract-langpack-nor tesseract-langpack-ron tesseract-langpack-swe \
+        tesseract-langpack-tha tesseract-langpack-ukr tesseract-langpack-vie \
+ && dnf5 clean all
+# A fingerprint reader unlocks the screen and answers administrator prompts once a
+# finger is set up (Settings → Lock & Privacy). fprintd is Bazzite's already, but
+# its sign-in settings leave the fingerprint step out; Bluefin turns it on the same
+# way. (The sign-in screen, Plasma Login Manager, can't take a finger yet.)
+RUN dnf5 -y install fprintd-pam && dnf5 clean all \
+ && { authselect enable-feature with-fingerprint || { echo "fingerprint left off: authselect refused" >&2; authselect current; }; }
 COPY --from=build /out /tmp/monet
 COPY --from=password /out /tmp/monet/password
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the

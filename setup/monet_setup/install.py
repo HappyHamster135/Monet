@@ -47,7 +47,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import disks, system, words
+from . import disks, pc, system, words
 from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
@@ -55,7 +55,7 @@ TARGET = "/mnt/monet"           # the root subvolume, where bootc installs
 DOWNLOAD = f"{TOP}/download"
 STATE = Path(os.environ.get("MONET_INSTALL_STATE", "/run/monet-setup/install.json"))
 STALL = 240                     # seconds with no bytes before a download restarts
-MOK_PASSWORD = "monetsetup"
+MOK_PASSWORD = pc.MOK_PASSWORD  # the blue screen's, which All set tells
 SHIM = "\\EFI\\fedora\\shimx64.efi"
 LOG = Path("/run/monet-setup/install.log")
 # An encrypted Monet: its disk's key (in memory, for this session), the name it's opened as,
@@ -384,6 +384,20 @@ def write(path, text, mode=0o644):
     os.chmod(path, mode)
 
 
+# The sign-in screen's own setting, apart from monet-ready's one-time one (zz-monet-ready.conf).
+NO_PASSWORD = "plasmalogin.conf.d/50-monet-no-password.conf"
+
+
+def no_password(root, account):
+    """An account without a password, as its person chose: Monet signs it in by itself
+    (monet-ready takes that back once it has a password), and the screen doesn't lock
+    with a password it doesn't have. Settings → Accounts gives it one any time."""
+    run("chroot", root, "passwd", "-d", account, quiet=True)
+    write(root / "etc" / NO_PASSWORD, f"[Autologin]\nUser={account}\nSession=plasma.desktop\nRelogin=false\n")
+    write(root / "var/home" / account / ".config/kscreenlockerrc", "[Daemon]\nAutolock=false\nLockOnResume=false\n")
+    run("chroot", root, "chown", "-R", f"{account}:{account}", f"/var/home/{account}/.config", check=False)
+
+
 def configure(plan):
     emit(phase="configure", fraction=0.1)
     # bootc may leave the new system mounted read-only when it's done.
@@ -398,12 +412,16 @@ def configure(plan):
             run("mount", *opts, source, target)
             mounts.append(target)
         account, name = plan["account"], plan["name"]
+        etc = root / "etc"
         run("chroot", root, "useradd", "-m", "-U", "-G", "wheel", "-c", name, account)
-        run("chroot", root, "chpasswd", input=f"{account}:{plan['password']}\n", quiet=True)
-        log(f"made {account} ({name}), an administrator")
+        if plan["password"]:
+            run("chroot", root, "chpasswd", input=f"{account}:{plan['password']}\n", quiet=True)
+            log(f"made {account} ({name}), an administrator")
+        else:
+            no_password(root, account)
+            log(f"made {account} ({name}), an administrator without a password")
         emit(phase="configure", fraction=0.4)
 
-        etc = root / "etc"
         write(etc / "locale.conf", f"LANG={plan['language']}\n")
         write(etc / "vconsole.conf", f"KEYMAP={plan['keyboard']}{'-' + plan['variant'] if plan['variant'] else ''}\n")
         layouts, variants, options = system.xkb(plan["keyboard"], plan["variant"])
@@ -413,7 +431,10 @@ def configure(plan):
               + (f'    Option "XkbVariant" "{variants}"\n' if variants else "")
               + (f'    Option "XkbOptions" "{options}"\n' if options else "")
               + "EndSection\n")
-        zone = system.guess_time_zone(plan["timezone"])
+        # The time zone chosen (or found) in Setup; the internet's guess if this Monet hasn't it.
+        zone = plan["timezone"]
+        if not (root / "usr/share/zoneinfo" / zone).exists():
+            zone = system.guess_time_zone(zone)
         if (root / "usr/share/zoneinfo" / zone).exists():
             (etc / "localtime").unlink(missing_ok=True)
             (etc / "localtime").symlink_to(f"../usr/share/zoneinfo/{zone}")
@@ -440,20 +461,33 @@ def configure(plan):
         if key.exists():
             run("mokutil", "--timeout", "-1", check=False)
             run("mokutil", "--import", key, input=f"{MOK_PASSWORD}\n{MOK_PASSWORD}\n", check=False)
+            # A copy on the EFI partition: if Enroll MOK is skipped on the blue screen (it opens
+            # on Continue boot), the USB stick finds it there and asks again (pc.untrusted_key).
+            try:
+                esp_key = Path(TARGET) / "boot/efi" / pc.ESP_KEY
+                esp_key.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(key, esp_key)
+            except OSError as e:
+                log(f"Monet's key wasn't copied to the EFI partition: {e}")
         emit(phase="configure", fraction=0.8)
 
-        # Labels for what was written here, from Monet's own SELinux policy.
+        # Labels for what was written here, from Monet's own SELinux policy, and checked
+        # against it too: the stick's policy has other types (0.9.1's setfiles refused
+        # "mysqld_etc_t" as invalid and labelled nothing).
         contexts = "/etc/selinux/targeted/contexts/files/file_contexts"
         labels = (root / contexts.lstrip("/")).exists()
+        policies = sorted(root.glob("etc/selinux/targeted/policy/policy.*"))
+        policy = ["-c", "/" + policies[-1].relative_to(root).as_posix()] if policies else []
         if labels:
-            run("chroot", root, "setfiles", "-F", "-T", "0", contexts, "/etc", f"/var/home/{account}", "/var/lib/monet",
-                check=False)
+            run("chroot", root, "setfiles", "-F", "-T", "0", *policy, contexts, "/etc", f"/var/home/{account}",
+                "/var/lib/monet", check=False)
         emit(phase="configure", fraction=1.0)
 
         if plan.get("files") and bring_files(plan["files"], var / "home" / account / STAGED):
             run("chroot", root, "chown", "-R", f"{account}:{account}", f"/var/home/{account}/.local", check=False)
             if labels:
-                run("chroot", root, "setfiles", "-F", "-T", "0", contexts, f"/var/home/{account}/.local", check=False)
+                run("chroot", root, "setfiles", "-F", "-T", "0", *policy, contexts, f"/var/home/{account}/.local",
+                    check=False)
     finally:
         for target in reversed(mounts):
             run("umount", "-R", target, check=False, quiet=True)

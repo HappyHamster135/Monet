@@ -1,12 +1,12 @@
 //! USB sticks on Windows: finding them, and writing an image onto one.
 
 use std::ffi::c_void;
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
 use std::mem::{size_of, zeroed};
 use std::ptr::null_mut;
 
-use windows_sys::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE};
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FlushFileBuffers, ReadFile, SetFilePointerEx, WriteFile, FILE_BEGIN, FILE_FLAG_WRITE_THROUGH,
     FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
@@ -103,6 +103,25 @@ pub fn sticks() -> Vec<Stick> {
     found
 }
 
+/// Why something went wrong, for whoever helps: Monet-USB-Stick.log in %TEMP%, with Windows' own error code.
+fn note(what: &str) {
+    let code = unsafe { GetLastError() };
+    if let Ok(mut log) = OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("Monet-USB-Stick.log")) {
+        let _ = writeln!(log, "{what}: Windows error {code}");
+    }
+}
+
+fn write_at(disk: &Handle, data: &[u8], offset: u64) -> Result<(), String> {
+    let mut wrote = 0u32;
+    if unsafe { WriteFile(disk.0, data.as_ptr(), data.len() as u32, &mut wrote, null_mut()) } == 0
+        || wrote as usize != data.len()
+    {
+        note(&format!("writing {} bytes at {offset}", data.len()));
+        return Err(t!("Writing to the USB stick failed. Try another USB port or another stick.").into());
+    }
+    Ok(())
+}
+
 /// Writes the image at `iso` onto disk `number`, then reads it back to check.
 /// `progress(phase, done, total)`: phase 0 writing, 1 checking.
 pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) -> Result<(), String> {
@@ -119,8 +138,11 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
             }
         }
     }
-    let disk = open(&format!("\\\\.\\PhysicalDrive{number}"), GENERIC_READ | GENERIC_WRITE, FILE_FLAG_WRITE_THROUGH)
-        .ok_or(t!("Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again."))?;
+    let Some(disk) = open(&format!("\\\\.\\PhysicalDrive{number}"), GENERIC_READ | GENERIC_WRITE, FILE_FLAG_WRITE_THROUGH)
+    else {
+        note(&format!("opening PhysicalDrive{number}"));
+        return Err(t!("Windows didn't let Monet write to the USB stick. Take it out, put it back in, and try again.").into());
+    };
     ioctl(&disk, IOCTL_DISK_DELETE_DRIVE_LAYOUT, std::ptr::null(), 0, null_mut(), 0);
 
     let total = std::fs::metadata(iso).map_err(|e| e.to_string())?.len();
@@ -130,6 +152,9 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
         let mut file = File::open(iso).map_err(|e| e.to_string())?;
         seek(&disk, 0)?;
         let mut done = 0u64;
+        // The first piece, with the image's partition tables, is written last: once they're on
+        // the stick Windows mounts the partitions it finds there, and then refuses writes into them.
+        let mut head = Vec::new();
         loop {
             let n = read_full(&mut file, &mut buf)?;
             if n == 0 {
@@ -138,9 +163,11 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
             let len = plan::padded(n);
             buf[n..len].fill(0);
             if phase == 0 {
-                let mut wrote = 0u32;
-                if unsafe { WriteFile(disk.0, buf.as_ptr(), len as u32, &mut wrote, null_mut()) } == 0 || wrote as usize != len {
-                    return Err(t!("Writing to the USB stick failed. Try another USB port or another stick.").into());
+                if done == 0 {
+                    head = buf[..len].to_vec();
+                    seek(&disk, len as i64)?;
+                } else {
+                    write_at(&disk, &buf[..len], done)?;
                 }
             } else {
                 let mut got = 0u32;
@@ -148,6 +175,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
                     || got as usize != len
                     || back[..n] != buf[..n]
                 {
+                    note(&format!("checking {len} bytes at {done} (read {got})"));
                     return Err(t!("The USB stick didn't keep what was written. Try another stick.").into());
                 }
             }
@@ -155,6 +183,8 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
             progress(phase, done, total);
         }
         if phase == 0 {
+            seek(&disk, 0)?;
+            write_at(&disk, &head, 0)?;
             unsafe { FlushFileBuffers(disk.0) };
         }
     }
@@ -165,6 +195,7 @@ pub fn write(number: u32, iso: &str, mut progress: impl FnMut(u32, u64, u64)) ->
 
 fn seek(h: &Handle, to: i64) -> Result<(), String> {
     if unsafe { SetFilePointerEx(h.0, to, null_mut(), FILE_BEGIN) } == 0 {
+        note(&format!("moving to {to}"));
         return Err(t!("The USB stick stopped answering.").into());
     }
     Ok(())

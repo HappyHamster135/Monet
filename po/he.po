@@ -30,8 +30,8 @@ msgstr "בתור %1"
 msgid "Someone else…"
 msgstr "מישהו אחר…"
 
-#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2973
-#: setup/qml/Main.qml:354 setup/qml/Main.qml:396
+#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2422 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3179
+#: setup/qml/Main.qml:393 setup/qml/Main.qml:439
 msgid "Password"
 msgstr "סיסמה"
 
@@ -39,13 +39,13 @@ msgstr "סיסמה"
 msgid "Fewer details"
 msgstr "פחות פרטים"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:744
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:797
 msgid "Details"
 msgstr "פרטים"
 
 #: image/password/QuickAuthDialog.qml:361 linux/share/monet/logout/Logout.qml:350 linux/share/monet/logout/Logout.qml:449
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2406 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2947
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3033 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4594 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3153
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3239 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4828 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
 #: crates/monet/src/main.rs:1047
 msgid "Cancel"
 msgstr "ביטול"
@@ -67,7 +67,7 @@ msgstr "עוד"
 msgid "Add widgets"
 msgstr "הוספת ווידג'טים"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4047
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4265
 msgid "Done"
 msgstr "סיום"
 
@@ -79,7 +79,7 @@ msgstr "הוספת סרגל…"
 msgid "Manage desktops and bars"
 msgstr "ניהול שולחנות עבודה וסרגלים"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265
 msgid "Widgets"
 msgstr "ווידג'טים"
 
@@ -92,8 +92,8 @@ msgid "Click one to add it to your desktop, or drag it where you want it."
 msgstr ""
 "אפשר ללחוץ על ווידג'ט כדי להוסיף אותו לשולחן העבודה, או לגרור אותו למקום הרצוי."
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1577
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1601
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
 msgid "Search"
 msgstr "חיפוש"
 
@@ -132,7 +132,7 @@ msgstr[1] "%1 בשולחן העבודה שלך"
 msgid "Remove all"
 msgstr "הסרת הכול"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3172
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3378
 msgid "Remove"
 msgstr "הסרה"
 
@@ -287,7 +287,7 @@ msgid "Update and restart"
 msgstr "עדכון והפעלה מחדש"
 
 #: linux/share/monet/logout/Logout.qml:362 linux/share/monet/logout/Logout.qml:411 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4602 setup/qml/Main.qml:214 crates/monet/src/main.rs:317
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4836 setup/qml/Main.qml:214 crates/monet/src/main.rs:317
 #: crates/monet/src/main.rs:740
 msgid "Restart"
 msgstr "הפעלה מחדש"
@@ -296,7 +296,7 @@ msgstr "הפעלה מחדש"
 msgid "Update and shut down"
 msgstr "עדכון וכיבוי"
 
-#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
+#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
 msgid "Shut down"
 msgstr "כיבוי"
 
@@ -304,8 +304,8 @@ msgstr "כיבוי"
 msgid "Sign out"
 msgstr "התנתקות"
 
-#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Sleep"
 msgstr "שינה"
 
@@ -325,7 +325,7 @@ msgstr "היום הקודם"
 msgid "The day after"
 msgstr "היום הבא"
 
-#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1891
+#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1915
 #: crates/monet-usb/src/gui.rs:143
 msgid "Close"
 msgstr "סגירה"
@@ -498,12 +498,12 @@ msgstr[1] "%1 משחקים מחכים לך"
 msgid "Play Windows games with one click"
 msgstr "לשחק במשחקי Windows בלחיצה אחת"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:452
 msgid "Monet couldn't switch to Windows."
 msgstr "‏Monet לא הצליח לעבור ל-Windows."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4566 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
-#: linux/libexec/monet-quick:2499 linux/libexec/monet-quick:2499
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4800 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5336
+#: linux/libexec/monet-quick:2695 linux/libexec/monet-quick:2695
 msgid "Windows"
 msgstr "Windows"
 
@@ -533,36 +533,36 @@ msgstr ""
 msgid "Open Windows"
 msgstr "פתיחת Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:797
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:811
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "משחק אחד"
 msgstr[1] "%1 משחקים"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4793
 msgid "Couldn't open Windows"
 msgstr "לא ניתן היה לפתוח את Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4794
 msgid "Play %1?"
 msgstr "לשחק ב-%1?"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4561 crates/monet/src/main.rs:311
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4795 crates/monet/src/main.rs:311
 msgid "Restart in Windows?"
 msgstr "להפעיל מחדש ב-Windows?"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4582
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4816
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "המחשב יופעל מחדש ב-Windows ויפתח את המשחק. כשיוצאים מהמשחק, חוזרים לכאן. כדאי לשמור קודם את העבודה."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4583
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4817
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "המחשב יופעל מחדש ב-Windows. האפליקציות הפתוחות ייסגרו, אז כדאי לשמור קודם את העבודה."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4601
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4835
 msgid "Restart & Play"
 msgstr "להפעיל מחדש & לשחק"
 
@@ -623,11 +623,11 @@ msgstr "קבצים שפתחת לאחרונה יופיעו כאן."
 msgid "Nothing here by that name."
 msgstr "אין כאן שום דבר בשם הזה."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2872
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3078
 msgid "Accounts"
 msgstr "חשבונות"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4230
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4448
 msgid "Lock"
 msgstr "נעילה"
 
@@ -761,8 +761,8 @@ msgctxt "%1 is a quick setting, like Wi-Fi"
 msgid "%1 settings"
 msgstr "הגדרות %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2263
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2274
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2287
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2298
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -771,24 +771,24 @@ msgid "Unavailable"
 msgstr "לא זמין"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:342
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2266 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2468
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2492
 msgid "Off"
 msgstr "כבוי"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2289 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2527
 msgid "Not connected"
 msgstr "לא מחובר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2465
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2476
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2489
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2500
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2491
 msgid "On"
 msgstr "מופעל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2771
 msgid "Night Light"
 msgstr "תאורת לילה"
 
@@ -800,7 +800,7 @@ msgstr "גוון חם אחרי השקיעה"
 msgid "Do Not Disturb"
 msgstr "נא לא להפריע"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2555
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2761
 msgid "Brightness"
 msgstr "בהירות"
 
@@ -808,7 +808,7 @@ msgstr "בהירות"
 msgid "Keyboard light"
 msgstr "תאורת מקלדת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2641
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2847
 msgid "Volume"
 msgstr "עוצמת הקול"
 
@@ -825,23 +825,23 @@ msgstr "אור"
 msgid "Hours"
 msgstr "השעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084
 msgid "Mist"
 msgstr "ערפל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2085
 msgid "Smoke"
 msgstr "עשן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084
 msgid "Always light"
 msgstr "תמיד בהיר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2085
 msgid "Always dark"
 msgstr "תמיד כהה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2083
 msgid "Mist by day, smoke after dark"
 msgstr "ערפל ביום, עשן כשמחשיך"
 
@@ -858,7 +858,7 @@ msgctxt "%2 is how long it lasts, like 2:15"
 msgid "Battery %1%, %2 left"
 msgstr "סוללה %1%, נותרו %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3320
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3526
 msgid "Battery %1%"
 msgstr "סוללה %1%"
 
@@ -866,7 +866,7 @@ msgstr "סוללה %1%"
 msgid "All Settings"
 msgstr "כל ההגדרות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2006 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2051
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2030 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2075
 msgid "Light & Wallpaper"
 msgstr "אור & רקע"
 
@@ -887,2092 +887,2218 @@ msgctxt "Settings search words, space-separated"
 msgid "bluetooth headphones controller gamepad mouse keyboard pair"
 msgstr "bluetooth בלוטות' אוזניות בקר שלט משחק עכבר מקלדת צימוד"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4308
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2573
+msgid "Phone"
+msgstr "טלפון"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+msgctxt "Settings search words, space-separated"
+msgid ""
+"phone mobile android iphone kde connect texts messages sms notifications send files pair ring find"
+msgstr ""
+"טלפון נייד android iphone הודעות sms התראות שליחה קבצים צימוד צלצול מציאה"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4542
 msgid "Printers"
 msgstr "מדפסות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
 msgctxt "Settings search words, space-separated"
 msgid "printers printer print scanner paper queue default add"
 msgstr "מדפסות מדפסת הדפסה סורק נייר תור ברירת מחדל הוספה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2752
 msgid "Display"
 msgstr "תצוגה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
 msgctxt "Settings search words, space-separated"
 msgid ""
 "display screen brightness night light monitor resolution scale size hdr vrr freesync g-sync refresh tearing"
 msgstr ""
 "תצוגה מסך בהירות תאורת לילה צג רזולוציה קנה מידה גודל hdr vrr freesync g-sync קצב רענון קריעה display screen brightness monitor"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2633
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2839
 msgid "Sound"
 msgstr "קול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:58
 msgctxt "Settings search words, space-separated"
 msgid "sound volume speakers headphones microphone mic audio output"
 msgstr "צליל שמע עוצמה רמקולים אוזניות מיקרופון אודיו פלט"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2743
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2949
 msgid "Date & Time"
 msgstr "תאריך & שעה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:58
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61
 msgctxt "Settings search words, space-separated"
 msgid "date time clock time zone 24-hour format automatic"
 msgstr "תאריך שעה שעון אזור זמן 24 שעות תבנית אוטומטי"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:64
 msgctxt "Settings search words, space-separated"
 msgid "accounts users password picture people name login sign in"
 msgstr "חשבונות משתמשים סיסמה תמונה אנשים שם התחברות כניסה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3096
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:66 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3302
 msgid "Mouse & Keyboard"
 msgstr "עכבר & מקלדת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:65
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:68
 msgctxt "Settings search words, space-separated"
 msgid ""
 "mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing"
 msgstr ""
 "עכבר מקלדת משטח מגע סמן מהירות גלילה טבעית הקשה לחיצה שמאלי פריסה שפה הקלדה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:67 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3310
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:70 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3516
 msgid "Power & Sleep"
 msgstr "חשמל & שינה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:69
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72
 msgctxt "Settings search words, space-separated"
 msgid ""
 "power sleep suspend screen off energy battery lid button shutdown performance saver mode"
 msgstr ""
 "חשמל צריכת חשמל שינה השהיה כיבוי מסך סוללה מכסה כפתור כיבוי ביצועים חיסכון מצב"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:71 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4192
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4410
 msgid "Lock & Privacy"
 msgstr "נעילה & פרטיות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:75
 msgctxt "Settings search words, space-separated"
 msgid ""
-"lock screen locker password wake sleep privacy recent files history forget remember away"
+"lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger"
 msgstr ""
-"נעילה מסך נעילה סיסמה התעוררות שינה פרטיות קבצים אחרונים היסטוריה שכחה זכירה"
+"נעילה מסך נעילה סיסמה התעוררות שינה פרטיות קבצים אחרונים היסטוריה שכחה זכירה טביעת אצבע אצבע"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3507
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:77 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3713
 msgid "Notifications"
 msgstr "התראות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:76
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:79
 msgctxt "Settings search words, space-separated"
 msgid "notifications alerts do not disturb quiet popups sounds apps"
 msgstr "התראות הודעות נא לא להפריע שקט חלונות קופצים צלילים יישומים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3753
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:81 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3959
 msgid "Accessibility"
 msgstr "נגישות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:80
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:83
 msgctxt "Settings search words, space-separated"
 msgid ""
-"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read"
+"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read magnifier magnify"
 msgstr ""
-"נגישות גדול יותר טקסט גודל קנה מידה זום הגדלה סמן תנועה הנפשה קורא מסך orca ראייה קריאה"
+"נגישות גדול יותר טקסט גודל קנה מידה זום הגדלה סמן תנועה הנפשה קורא מסך orca ראייה קריאה זכוכית מגדלת הגדלה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:85 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3861
 msgid "Default Apps"
 msgstr "אפליקציות ברירת מחדל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:84
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:87
 msgctxt "Settings search words, space-separated"
 msgid ""
 "default apps browser web email mail files music video photos pdf text open with"
 msgstr ""
 "יישומי ברירת מחדל דפדפן אינטרנט דואר אלקטרוני מייל קבצים מוזיקה וידאו תמונות pdf טקסט פתיחה באמצעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3831 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5101
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:89 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4049 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5335
 msgid "Storage"
 msgstr "אחסון"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:88
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91
 msgctxt "Settings search words, space-separated"
 msgid "storage disk space room full free trash downloads clean games apps"
 msgstr "אחסון דיסק מקום מלא פנוי אשפה הורדות ניקוי משחקים יישומים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:90 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3988
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4206
 msgid "Backups"
 msgstr "גיבויים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:94
 msgctxt "Settings search words, space-separated"
 msgid ""
 "backups backup copy restore earlier versions history snapshot undo lost deleted usb drive time machine"
 msgstr ""
 "גיבויים גיבוי עותק שחזור גרסאות קודמות היסטוריה תמונת מצב ביטול אבד נמחק usb כונן backup restore time machine"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4367
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:96 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4601
 msgid "Games & Controllers"
 msgstr "משחקים & בקרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:95
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:98
 msgctxt "Settings search words, space-separated"
 msgid ""
 "games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris"
 msgstr ""
 "משחקים בקר שלט משחק ג'ויסטיק xbox playstation dualsense סוללה צימוד בדיקה כפתורים overlay fps mangohud ביצועים steam ספרייה מותקנים heroic lutris"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:97 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2025 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4772
 msgid "Play on Windows"
 msgstr "לשחק דרך Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:98
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:101
 msgctxt "Settings search words, space-separated"
 msgid "windows games play anti-cheat steam restart boot doctor check"
 msgstr "windows משחקים לשחק anti-cheat steam הפעלה מחדש אתחול בדיקה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4713
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:103 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4947
 msgid "Updates"
 msgstr "עדכונים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:101
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:104
 msgctxt "Settings search words, space-separated"
 msgid "updates update version upgrade new reset restore rollback"
 msgstr "עדכונים עדכון גרסה שדרוג חדש איפוס שחזור חזרה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:103
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:106
 msgid "About Monet"
 msgstr "אודות Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:104
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:107
 msgctxt "Settings search words, space-separated"
 msgid ""
-"about pc computer specs graphics gpu processor cpu memory ram storage disk version"
+"about pc computer specs graphics gpu processor cpu memory ram storage disk version report logs problem"
 msgstr ""
-"אודות pc מחשב מפרט גרפיקה כרטיס מסך gpu מעבד cpu זיכרון ram אחסון דיסק גרסה"
+"אודות pc מחשב מפרט גרפיקה כרטיס מסך gpu מעבד cpu זיכרון ram אחסון דיסק גרסה דוח יומנים בעיה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:194 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1526
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:205 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1550
 msgid "Settings"
 msgstr "הגדרות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:491 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573
 msgid "Monet %1"
 msgstr "Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:491
 msgid "the Monet from before"
 msgstr "ה-Monet הקודם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:507
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:521
 msgid "Updating firmware…"
 msgstr "הקושחה מתעדכנת…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:522
 msgid "Restart to finish the firmware"
 msgstr "צריך להפעיל מחדש כדי לסיים את עדכון הקושחה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:522
 msgid "Firmware is up to date"
 msgstr "הקושחה מעודכנת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:509
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:523
 msgid "The firmware didn't update"
 msgstr "הקושחה לא התעדכנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:510
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:524
 msgid "%1 firmware update"
 msgid_plural "%1 firmware updates"
 msgstr[0] "עדכון קושחה אחד"
 msgstr[1] "%1 עדכוני קושחה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:530
 msgid "Keep the PC plugged in and switched on."
 msgstr "חשוב להשאיר את המחשב מחובר לחשמל ודולק."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:531
 msgid "It installs while the PC restarts. Keep it plugged in until it's back."
 msgstr ""
 "ההתקנה תתבצע בזמן ההפעלה מחדש. חשוב להשאיר את המחשב מחובר לחשמל עד שיחזור לפעול."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:531 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:585
 msgid "Everything is installed."
 msgstr "הכול הותקן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:518
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:532
 msgid "Try again in a moment."
 msgstr "אפשר לנסות שוב בעוד רגע."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:519
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:533
 msgid "For this PC's own parts, from their makers. Install when you're ready."
 msgstr "עדכונים לרכיבים של המחשב, ישירות מהיצרנים. אפשר להתקין כשנוח לך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:529
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:543
 msgid "%1 · installs when the PC restarts"
 msgstr "‏%1 · יותקן כשהמחשב יופעל מחדש"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:548
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:562
 msgid "Fixes for Monet %1 are ready"
 msgstr "תיקונים ל-Monet %1 מוכנים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:550
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564
 msgid "Monet %1 is ready"
 msgstr "‏Monet %1 מוכן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:551
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
 msgid "A new Monet is ready"
 msgstr "‏Monet חדש מוכן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:554
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:568
 msgid "%1 app update is ready"
 msgid_plural "%1 app updates are ready"
 msgstr[0] "עדכון אפליקציה אחד מוכן"
 msgstr[1] "%1 עדכוני אפליקציות מוכנים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "Restart to finish"
 msgstr "צריך להפעיל מחדש כדי לסיים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "Your apps are up to date"
 msgstr "האפליקציות שלך מעודכנות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4039
 msgid "Monet"
 msgstr "Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:579
 msgid "Looking for updates…"
 msgstr "מחפשים עדכונים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:566
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:580
 msgid "Monet and your apps are up to date."
 msgstr "‏Monet והאפליקציות שלך מעודכנים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:568
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:582
 msgid "And %1 app update. Install when you're ready."
 msgid_plural "And %1 app updates. Install when you're ready."
 msgstr[0] "ועוד עדכון אפליקציה אחד. אפשר להתקין כשנוח לך."
 msgstr[1] "ועוד %1 עדכוני אפליקציות. אפשר להתקין כשנוח לך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:569
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:583
 msgid "Install when you're ready."
 msgstr "אפשר להתקין כשנוח לך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:570
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:584
 msgid "Downloading and installing. You can keep using your PC."
 msgstr "מורידים ומתקינים. אפשר להמשיך להשתמש במחשב בינתיים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:585
 msgid "The new Monet starts the next time you restart."
 msgstr "‏Monet החדש יעלה בהפעלה מחדש הבאה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:572
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:586
 msgid ""
 "Monet couldn't look for updates. Check your internet connection and try again."
 msgstr ""
 "‏Monet לא הצליח לחפש עדכונים. כדאי לבדוק את החיבור לאינטרנט ולנסות שוב."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:587
 msgid "Monet only updates when you ask it to."
 msgstr "‏Monet מתעדכן רק כשמבקשים ממנו."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649 setup/monet_setup/app.py:277
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:663 setup/monet_setup/app.py:367
 msgid "Type your name."
 msgstr "צריך להקליד את השם שלך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:663
 msgid "A name can't have : or , in it."
 msgstr "השם לא יכול להכיל נקודתיים (:) או פסיק (,)."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:656
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:670
 msgid "Monet couldn't change your name."
 msgstr "‏Monet לא הצליח לשנות את השם שלך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:687
 msgid "Type a new password."
 msgstr "צריך להקליד סיסמה חדשה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:687
 msgid "The new passwords don't match."
 msgstr "הסיסמאות החדשות לא תואמות."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:682 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:691
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:696 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:705
 msgid "Monet couldn't change your password."
 msgstr "‏Monet לא הצליח לשנות את הסיסמה שלך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:683
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:697
 msgid "That password is too long."
 msgstr "הסיסמה הזו ארוכה מדי."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:801 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4063
 msgid "%1 free"
 msgstr "‏%1 פנויים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:838
 msgid "%1 TB"
 msgstr "%1 TB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:838 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:839
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:839
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:816
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:840
 msgid "%1 KB"
 msgstr "%1 KB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:848
 msgid "Today, %1"
 msgstr "היום, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:848
 msgid "Yesterday, %1"
 msgstr "אתמול, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:825
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:849
 msgid "%1, %2"
 msgstr "%1, %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4208
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:859 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4426
 msgid "Never"
 msgstr "אף פעם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:859
 msgid "%1 min"
 msgstr "%1 דק'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:836
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:860
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "שעה אחת"
 msgstr[1] "%1 שעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1459
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1483
 msgid "Plays here too"
 msgstr "עובד גם כאן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1472
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1496
 msgid "Play %1"
 msgstr "לשחק ב-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1589
 msgid "Search settings"
 msgstr "חיפוש בהגדרות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1716
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1740
 msgid "Opens in a separate window"
 msgstr "נפתח בחלון נפרד"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1728
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1752
 msgid "Nothing here by that name. Try More settings."
 msgstr "אין כאן שום דבר בשם הזה. אפשר לחפש בהגדרות הנוספות."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1746
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1770
 msgid "More settings ›"
 msgstr "הגדרות נוספות ›"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1755
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1779
 msgid "More settings"
 msgstr "הגדרות נוספות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1975
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
 msgid "Welcome to Monet"
 msgstr "ברוכים הבאים ל-Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1985
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2009
 msgid "A few things worth knowing, then it's yours."
 msgstr "כמה דברים שכדאי לדעת, ואז הכול שלך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1996
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2020
 msgid "Quick Settings, at the right of the bar"
 msgstr "הגדרות מהירות, בקצה הסרגל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1997
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2021
 msgid ""
 "Wi-Fi, sound, brightness and the light, a click away. The arrow on a tile opens its page here."
 msgstr ""
 "‏Wi-Fi, קול, בהירות והאור, במרחק לחיצה. החץ שעל אריח פותח כאן את הדף שלו."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2022
 msgid "Widgets on your desktop"
 msgstr "ווידג'טים על שולחן העבודה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2023
 msgid ""
 "Weather, a calendar with notes, your batteries, clocks around the world and more."
 msgstr "מזג אוויר, לוח שנה עם הערות, הסוללות שלך, שעונים מרחבי העולם ועוד."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2024 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2271
 msgid "Edit widgets"
 msgstr "עריכת ווידג'טים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2002
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026
 msgid ""
 "Games that need Windows are a restart away, and you come back here after."
 msgstr ""
 "משחקים שצריכים Windows נמצאים במרחק הפעלה מחדש אחת, ואחר כך חוזרים לכאן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2003
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2027
 msgid "See your games"
 msgstr "הצגת המשחקים שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2004
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2028
 msgid "Make it yours"
 msgstr "שיהיה שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2005
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2029
 msgid ""
 "Choose the light and the painting, and how big things are on the screen."
 msgstr "אפשר לבחור את האור ואת הציור, ואת גודל הדברים על המסך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2007
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2031
 msgid "Find any setting"
 msgstr "למצוא כל הגדרה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2008
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2032
 msgid ""
 "Type what you're looking for in the search at the top left, in your own words."
 msgstr "מקלידים את מה שמחפשים בחיפוש שלמעלה מימין, במילים שלך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2037
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
 msgid "Start using Monet"
 msgstr "להתחיל להשתמש ב-Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2052
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2076
 msgid "How Monet looks, and when it changes."
 msgstr "איך Monet נראה, ומתי הוא משתנה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2083
 msgid "Follow the hours"
 msgstr "לפי השעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2152
 msgid "Painting"
 msgstr "ציור"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2162
 msgid "The Hours"
 msgstr "השעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2162
 msgid "The harbor at Le Havre"
 msgstr "הנמל של לה האבר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2163
 msgid "Water Lilies"
 msgstr "נופרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2163
 msgid "The pond at Giverny"
 msgstr "הבריכה בז'יברני"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2164
 msgid "Haystacks"
 msgstr "ערמות חציר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2164
 msgid "A field after the harvest"
 msgstr "שדה אחרי הקציר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2165
 msgid "The Magpie"
 msgstr "העקעק"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2165
 msgid "A farm under snow"
 msgstr "חווה מתחת לשלג"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2166
 msgid "Through the year"
 msgstr "לאורך השנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2166
 msgid "Each season its painting"
 msgstr "לכל עונה הציור שלה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2238
 msgid "Through the day"
 msgstr "לאורך היום"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2238
 msgid "The painting's light follows the sun where you are, from dawn to night"
 msgstr "האור בציור עוקב אחרי השמש איפה שאתם, מהשחר ועד הלילה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
 msgid "Weather"
 msgstr "מזג אוויר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239
 msgid "Rain, fog and snow where you are soften the painting with mist"
 msgstr "גשם, ערפל ושלג איפה שאתם מרככים את הציור בערפילית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2240
 msgid "Placard"
 msgstr "תווית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2240
 msgid "The time and the painting's name on the desktop"
 msgstr "השעה ושם הציור על שולחן העבודה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
 msgid "Bar steps aside"
 msgstr "הסרגל זז הצידה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
 msgid ""
 "The bar slides away when a window comes over it, and back when you point at the bottom of the screen"
 msgstr "הסרגל מחליק הצידה כשחלון עולה עליו, וחוזר כשמצביעים על תחתית המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
 msgid "Glass"
 msgstr "זכוכית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
 msgid ""
 "See the painting through panels, windows and widgets. Off is lighter on older PCs."
 msgstr ""
 "רואים את הציור דרך הלוחות, החלונות והווידג'טים. כבוי קל יותר למחשבים ישנים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2266
 msgid "Add, move or take away the cards on your desktop"
 msgstr "להוסיף, להזיז או להסיר את הכרטיסים בשולחן העבודה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2289
 msgid "Connected to %1"
 msgstr "מחובר ל-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2275
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2299
 msgid "This PC has no Wi-Fi"
 msgstr "במחשב הזה אין Wi-Fi"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2291 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
-#: setup/qml/Main.qml:339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2527 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2599
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4620 setup/qml/Main.qml:378
 msgid "Connected"
 msgstr "מחובר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
 msgid "Other networks"
 msgstr "רשתות אחרות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
 msgid "Networks"
 msgstr "רשתות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2335
 msgid "No other networks nearby"
 msgstr "אין רשתות אחרות בסביבה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311 setup/qml/Main.qml:349
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2335 setup/qml/Main.qml:388
 msgid "Looking for networks…"
 msgstr "מחפשים רשתות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349
 msgid "Couldn't join"
 msgstr "ההתחברות נכשלה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2373 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2436
 msgid "Joining…"
 msgstr "מתחברים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 setup/qml/Main.qml:339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2386 setup/qml/Main.qml:378
 msgid "Secured"
 msgstr "מאובטחת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2386 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4344
 msgid "Open"
 msgstr "פתוחה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2390
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2414
 msgid "Password for %1"
 msgstr "סיסמה ל-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2422
 msgid "That didn't work. Check the password."
 msgstr "זה לא עבד. כדאי לבדוק את הסיסמה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2436
 msgid "Join"
 msgstr "התחברות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2428
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2452
 msgid "Hotspot"
 msgstr "נקודה חמה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2429
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2453
 msgid "Starting…"
 msgstr "מפעילים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2430
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2454
 msgid "This Wi-Fi can't share. Wired internet shares best."
 msgstr "ה-Wi-Fi הזה לא יכול לשתף. אינטרנט קווי משתף הכי טוב."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2431
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2455
 msgid "Join %1 with the password %2"
 msgstr "מתחברים ל-%1 עם הסיסמה %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2432
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2456
 msgid "Lets a phone or tablet use this PC's internet"
 msgstr "מאפשר לטלפון או לטאבלט להשתמש באינטרנט של המחשב הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2450
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2474
 msgid "More Wi-Fi settings…"
 msgstr "הגדרות Wi-Fi נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2491
 msgid "%1 device connected"
 msgid_plural "%1 devices connected"
 msgstr[0] "מכשיר אחד מחובר"
 msgstr[1] "%1 מכשירים מחוברים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2501
 msgid "This PC has no Bluetooth"
 msgstr "במחשב הזה אין Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2494
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2518
 msgid "No devices yet"
 msgstr "עדיין אין מכשירים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2495
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2519
 msgid "Pair headphones, a controller or a mouse to see them here."
 msgstr "אפשר לצמד אוזניות, בקר או עכבר כדי לראות אותם כאן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2545
 msgid "Disconnecting…"
 msgstr "מנתקים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521 setup/qml/Main.qml:277
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2545 setup/qml/Main.qml:316
 msgid "Connecting…"
 msgstr "מתחברים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
 msgid "Disconnect"
 msgstr "ניתוק"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
 msgid "Connect"
 msgstr "חיבור"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2532
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2556
 msgid "Pair a new device…"
 msgstr "צימוד מכשיר חדש…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2547
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2574
+msgid "Texts, notifications and files between your phone and this PC."
+msgstr "הודעות, התראות וקבצים בין הטלפון שלך לבין המחשב הזה."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2598
+msgid "Not nearby"
+msgstr "לא בקרבת מקום"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2600
+msgid "Connected · charging, %1%"
+msgstr "מחובר · בטעינה, %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2601
+msgid "Connected · %1% battery"
+msgstr "מחובר · סוללה %1%"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2621
+msgid "Ring"
+msgstr "צלצול"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2628
+msgid "Send a file…"
+msgstr "שליחת קובץ…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2633 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4503
+msgid "Forget"
+msgstr "לשכוח"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2645
+msgid "Texts"
+msgstr "הודעות"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2650
+msgid "Files on your phone"
+msgstr "קבצים בטלפון שלך"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2664
+msgid "Accept on your phone"
+msgstr "יש לאשר בטלפון"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2664
+msgid "Nearby, not paired"
+msgstr "בקרבת מקום, לא מצומד"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2668
+msgid "Waiting…"
+msgstr "ממתין…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2668
+msgid "Pair"
+msgstr "צימוד"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2707
+msgid "Get the app on your phone"
+msgstr "התקנת האפליקציה בטלפון"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2716
+msgid ""
+"Point your phone's camera at this and install the app it shows. Open it on the same Wi-Fi as this PC, and your phone shows up here to pair."
+msgstr ""
+"יש לכוון את מצלמת הטלפון לכאן ולהתקין את האפליקציה שהיא מציגה. כשפותחים אותה באותה רשת Wi-Fi כמו המחשב הזה, הטלפון מופיע כאן לצימוד."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2731
+msgid "Phones can't connect to this PC yet"
+msgstr "טלפונים עדיין לא יכולים להתחבר למחשב הזה"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2732
+msgid "The part of Monet that talks to phones is missing here."
+msgstr "החלק של Monet שמדבר עם טלפונים חסר כאן."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "More phone settings…"
+msgstr "הגדרות טלפון נוספות…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2753
 msgid "Brightness, and warmer colors at night."
 msgstr "בהירות, וצבעים חמימים יותר בלילה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2566
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2772
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "צבעים חמימים יותר מהשקיעה ועד הזריחה, נעים יותר לעיניים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2579
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2785
 msgid "Games and films"
 msgstr "משחקים וסרטים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "HDR on %1"
 msgstr "HDR ב-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "HDR"
 msgstr "HDR"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2593
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2799
 msgid "Brighter highlights and deeper colors, in games and films made for it"
 msgstr "אורות בהירים יותר וצבעים עמוקים יותר, במשחקים ובסרטים שנועדו לכך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2605
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2811
 msgid "Smoother games on %1"
 msgstr "משחקים חלקים יותר ב-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2606
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2812
 msgid "Smoother games"
 msgstr "משחקים חלקים יותר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2607
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2813
 msgid ""
 "The screen keeps pace with the game, without tearing (FreeSync, G-Sync)"
 msgstr "המסך עומד בקצב של המשחק, בלי קריעה (FreeSync, G-Sync)"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2618
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2824
 msgid "Arrange displays and size…"
 msgstr "סידור מסכים וגודל…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2634
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2840
 msgid "Playing through %1"
 msgstr "הקול יוצא דרך %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2650
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2856
 msgid "Play sound through"
 msgstr "להשמיע קול דרך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2682
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2888
 msgid "Apps playing sound"
 msgstr "אפליקציות שמשמיעות קול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2713
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2919
 msgid "Microphone"
 msgstr "מיקרופון"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2721
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2927
 msgid "More sound settings…"
 msgstr "הגדרות קול נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2744
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2950
 msgid "Your clock, and where in the world it keeps time."
 msgstr "השעון שלך, ולאיזה מקום בעולם הוא מכוון."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2781
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2987
 msgid "Set automatically"
 msgstr "הגדרה אוטומטית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2988
 msgid "From the internet, to the second"
 msgstr "מהאינטרנט, מדויק עד השנייה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2988
 msgid "This PC can't set its own time"
 msgstr "המחשב הזה לא יכול לכוון את השעה בעצמו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2795
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3001
 msgid "24-hour time"
 msgstr "שעון 24 שעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2796
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3002
 msgid "Your clocks change the next time you sign in"
 msgstr "השעונים ישתנו בהתחברות הבאה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2797
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3003
 msgid "As your region keeps it"
 msgstr "כמקובל באזור שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3004
 msgid "13:00, not 1:00 PM"
 msgstr "13:00, ולא 1:00 אחה״צ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3004
 msgid "1:00 PM, not 13:00"
 msgstr "1:00 אחה״צ, ולא 13:00"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2809
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3015 setup/qml/Main.qml:266
 msgid "Time zone"
 msgstr "אזור זמן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2817
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3023
 msgid "Search for a city"
 msgstr "חיפוש עיר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2848
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3054
 msgid "No time zone by that name"
 msgstr "אין אזור זמן בשם הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2849
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3055
 msgid "Try a big city near you."
 msgstr "כדאי לנסות עיר גדולה קרובה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2854
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3060
 msgid "More date & time settings…"
 msgstr "הגדרות תאריך & שעה נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2873
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3079
 msgid "You, and the people who share this PC."
 msgstr "החשבון שלך, ושל מי שחולק איתך את המחשב."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2906
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3112
 msgid "%1 · Administrator"
 msgstr "‏%1 · חשבון מנהל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2907
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3113
 msgid "%1 · Standard account"
 msgstr "‏%1 · חשבון רגיל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2916
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3122
 msgid "Change name"
 msgstr "שינוי השם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2942 setup/qml/Main.qml:386
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3148 setup/qml/Main.qml:429
 msgid "Your name"
 msgstr "השם שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2953
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3159 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5387
 msgid "Save"
 msgstr "שמירה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2974
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3180
 msgid "Changed. Use the new one from now on."
 msgstr "הסיסמה שונתה. מעכשיו צריך להשתמש בחדשה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2975
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3181
 msgid "For signing in, unlocking and allowing changes"
 msgstr "להתחברות, לביטול הנעילה ולאישור שינויים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2979
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3185 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4464
 msgid "Change…"
 msgstr "שינוי…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3002
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3208
 msgid "Current password"
 msgstr "הסיסמה הנוכחית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3009
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3215
 msgid "New password"
 msgstr "סיסמה חדשה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3222
 msgid "New password, again"
 msgstr "הסיסמה החדשה, שוב"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "Changing…"
 msgstr "משנים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "Change password"
 msgstr "שינוי הסיסמה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3049
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3255
 msgid "Other people"
 msgstr "אנשים אחרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3058
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
 msgid "Only you, so far"
 msgstr "בינתיים רק החשבון שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
 msgid "Add someone in More account settings."
 msgstr "אפשר להוסיף אנשים בהגדרות החשבון הנוספות."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
 msgid "Administrator"
 msgstr "חשבון מנהל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
 msgid "Standard account"
 msgstr "חשבון רגיל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3080
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3286
 msgid "More account settings…"
 msgstr "הגדרות חשבון נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3097
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3303
 msgid "How the pointer moves and scrolls, and the languages you type in."
 msgstr "איך הסמן זז וגולל, ובאילו שפות מקלידים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3308
 msgid "Touchpad"
 msgstr "משטח מגע"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3308
 msgid "Mouse"
 msgstr "עכבר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3119
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3325
 msgid "Pointer speed"
 msgstr "מהירות הסמן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
 msgid "Tap to click"
 msgstr "הקשה ללחיצה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
 msgid "A light tap is a click"
 msgstr "נגיעה קלה נחשבת ללחיצה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3333
 msgid "Natural scrolling"
 msgstr "גלילה טבעית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3333
 msgid "The page follows your fingers, as on a phone"
 msgstr "הדף נע עם האצבעות, כמו בטלפון"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3334
 msgid "Left-handed"
 msgstr "מצב יד שמאל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3334
 msgid "The buttons swap sides"
 msgstr "הלחצנים מחליפים צד"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3335
 msgid "Off while typing"
 msgstr "כבוי בזמן הקלדה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3335
 msgid "A palm on it won't move the pointer"
 msgstr "כף יד שנחה עליו לא תזיז את הסמן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3152 setup/qml/Main.qml:254
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3358 setup/qml/Main.qml:255
 msgid "Keyboard"
 msgstr "מקלדת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3373
 msgid "Typing starts in this one"
 msgstr "ברירת המחדל להקלדה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3373
 msgid "Click to make this the main one"
 msgstr "לחיצה תהפוך אותה לראשית"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3181
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3387
 msgid "Add a language or layout"
 msgstr "הוספת שפה או פריסה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3420
 msgid "No layout by that name"
 msgstr "אין פריסה בשם הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
 msgid "Try your language's name, like Swedish or Japanese."
 msgstr "אפשר לנסות את שם השפה, למשל שוודית או יפנית."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3223
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3429
 msgid "The bar shows which one you're typing in. Click it to switch."
 msgstr "הסרגל מראה באיזו שפה מקלידים. לחיצה עליו מחליפה שפה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3231
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
 msgid "Keyboard shortcuts"
 msgstr "קיצורי מקלדת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448
 msgid "Open the menu"
 msgstr "פתיחת התפריט"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449
 msgid "Files"
 msgstr "קבצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4203
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4421
 msgid "Lock the screen"
 msgstr "נעילת המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
 msgid "All your windows"
 msgstr "כל החלונות שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
 msgid "The desktop"
 msgstr "שולחן העבודה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3451
 msgid "Switch windows"
 msgstr "מעבר בין חלונות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3451
 msgid "A window on one half"
 msgstr "חלון על חצי מסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3452
 msgid "A window on the whole screen"
 msgstr "חלון על כל המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3452
 msgid "What you copied"
 msgstr "מה שהעתקת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3453
 msgid "Emoji"
 msgstr "אימוג'י"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3453
 msgid "Screenshot"
 msgstr "צילום מסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3248 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4439
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3454 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4673
 msgid "Save the last 30 seconds"
 msgstr "שמירת 30 השניות האחרונות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3249
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3455
 msgid "Record the screen"
 msgstr "הקלטת המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3250
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3456
 msgid "Restart or shut down"
 msgstr "הפעלה מחדש או כיבוי"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3284
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3490
 msgid "More mouse & keyboard settings…"
 msgstr "הגדרות עכבר & מקלדת נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3289
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3495
 msgid "Change shortcuts…"
 msgstr "שינוי קיצורים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3311
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
 msgid "When the screen rests, when the PC sleeps, and how hard it works."
 msgstr "מתי המסך נח, מתי המחשב נכנס לשינה, וכמה קשה הוא עובד."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
 msgctxt "%1 is a time like 1:20"
 msgid "Charging, full in %1"
 msgstr "בטעינה, מלאה בעוד %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
 msgid "Charging"
 msgstr "בטעינה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3323 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3529 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3627
 msgid "Plugged in"
 msgstr "מחובר לחשמל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530
 msgctxt "%1 is a time like 2:15"
 msgid "About %1 left"
 msgstr "נותרו כ-%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3627
 msgid "On battery"
 msgstr "על סוללה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3331
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3537
 msgid "Protect the battery"
 msgstr "הגנה על הסוללה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
 msgid ""
 "Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in."
 msgstr ""
 "הטעינה נעצרת ב-80%, כך שהסוללה מחזיקה יותר שנים. הכי מתאים למחשב נייד שמחובר לחשמל רוב הזמן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3557
 msgid "Power saver"
 msgstr "חיסכון בחשמל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3557
 msgid "Cooler and quieter, longer on battery"
 msgstr "קריר ושקט יותר, ויותר זמן על סוללה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3559
 msgid "Balanced"
 msgstr "מאוזן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3559
 msgid "Quick when it counts"
 msgstr "מהיר כשצריך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3561
 msgid "Performance"
 msgstr "ביצועים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3561
 msgid "As fast as it goes, warmer and louder"
 msgstr "הכי מהיר שאפשר, חם ורועש יותר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3644
 msgid "Turn off the screen"
 msgstr "כיבוי המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3439
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3645
 msgid "After this long untouched"
 msgstr "אחרי זמן כזה בלי שימוש"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3656
 msgid "It wakes where you left off"
 msgstr "הוא מתעורר בדיוק איפה שהפסקת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3463
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3669
 msgid "Buttons"
 msgstr "לחצנים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3470
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3676
 msgid "Power button"
 msgstr "לחצן ההפעלה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3471
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3677
 msgid "What a press does"
 msgstr "מה קורה כשלוחצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
 msgid "Ask"
 msgstr "לשאול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Nothing"
 msgstr "כלום"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3482
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3688
 msgid "Closing the lid"
 msgstr "סגירת המכסה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Screen off"
 msgstr "כיבוי מסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3493
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3699
 msgid "More power settings…"
 msgstr "הגדרות חשמל נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3714
 msgid "What may interrupt you, and when it waits."
 msgstr "מה יכול להפריע לך, ומתי ההתראות ממתינות."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3722
 msgid "Do not disturb"
 msgstr "נא לא להפריע"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3723
 msgid "Notifications wait quietly in the list"
 msgstr "ההתראות ממתינות בשקט ברשימה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3723
 msgid "Notifications pop up as they come"
 msgstr "ההתראות קופצות ברגע שהן מגיעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3527
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
 msgid "Sounds"
 msgstr "צלילים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3734
 msgid "A soft sound with each one"
 msgstr "צליל עדין עם כל התראה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3744
 msgid "Quiet by itself"
 msgstr "שקט אוטומטי"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3750
 msgid "While a game or film fills the screen"
 msgstr "כשמשחק או סרט ממלאים את המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3750
 msgid "They wait until you're done"
 msgstr "הן ממתינות עד שמסיימים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3751
 msgid "While you share or mirror your screen"
 msgstr "כשמשתפים את המסך או משקפים אותו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3751
 msgid "So nothing private pops up for others"
 msgstr "כדי ששום דבר פרטי לא יקפוץ מול אחרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
 msgid "Let urgent ones through"
 msgstr "לאפשר התראות דחופות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
 msgid "Like a low battery, even while quiet"
 msgstr "כמו סוללה חלשה, גם בזמן שקט"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3773
 msgid "Popups"
 msgstr "חלונות קופצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3574
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3780
 msgid "Where they appear"
 msgstr "איפה הן מופיעות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "By the clock"
 msgstr "ליד השעון"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "Top right"
 msgstr "למעלה מימין"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "Top center"
 msgstr "למעלה במרכז"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3584
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3790
 msgid "How long they stay"
 msgstr "כמה זמן הן נשארות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3587
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3793
 msgid "%1 s"
 msgstr "%1 שנ'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3595 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3801 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
 msgid "Apps"
 msgstr "אפליקציות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3816
 msgid "Pops up"
 msgstr "קופצות על המסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3816
 msgid "Only in the list, without popping up"
 msgstr "רק ברשימה, בלי לקפוץ"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3628
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3834
 msgid "No apps yet"
 msgstr "עדיין אין אפליקציות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3629
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3835
 msgid "Apps show up here once they've sent a notification."
 msgstr "אפליקציות יופיעו כאן אחרי שישלחו התראה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3634
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3840
 msgid "More notification settings…"
 msgstr "הגדרות התראות נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Web browser"
 msgstr "דפדפן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Email"
 msgstr "אימייל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Folders"
 msgstr "תיקיות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647 setup/monet_setup/app.py:59
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853 setup/monet_setup/app.py:60
 msgid "Music"
 msgstr "מוזיקה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:58
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854 setup/monet_setup/app.py:59
 msgid "Video"
 msgstr "וידאו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:56
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854 setup/monet_setup/app.py:57
 msgid "Photos"
 msgstr "תמונות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854
 msgid "PDF documents"
 msgstr "מסמכי PDF"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854
 msgid "Text files"
 msgstr "קובצי טקסט"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3656
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3862
 msgid ""
 "What opens web links, mail, folders, music, films, photos, PDFs and text."
 msgstr ""
 "מה פותח קישורים, אימייל, תיקיות, מוזיקה, סרטים, תמונות, קובצי PDF וטקסט."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3676
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3882
 msgid "Nothing chosen yet"
 msgstr "עדיין לא נבחר כלום"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3677
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3883
 msgid "No app for this yet. Find one in the Store"
 msgstr "עדיין אין אפליקציה לזה. אפשר למצוא אחת בחנות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3884
 msgid "No app for this yet"
 msgstr "עדיין אין אפליקציה לזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3704
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3910
 msgid "Find one"
 msgstr "חיפוש בחנות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3739
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3945
 msgid "More default apps…"
 msgstr "אפליקציות ברירת מחדל נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3754
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3960
 msgid "Make Monet easier to see, read and use."
 msgstr "להפוך את Monet לקל יותר לראייה, לקריאה ולשימוש."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3762
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3968
 msgid "Size of everything"
 msgstr "גודל הכול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3763
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3969
 msgid "Text, pictures and windows, on every screen"
 msgstr "טקסט, תמונות וחלונות, בכל מסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3774
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3980
 msgid "Pointer size"
 msgstr "גודל הסמן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Normal"
 msgstr "רגיל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Large"
 msgstr "גדול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Larger"
 msgstr "גדול יותר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3785
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3991
 msgid "Reduce motion"
 msgstr "הפחתת תנועה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3786
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3992
 msgid "Things appear without sliding, fading or bouncing"
 msgstr "הכול מופיע בלי החלקה, דהייה או קפיצה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3797
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4003
 msgid "Screen reader"
 msgstr "קורא מסך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4004
 msgid "Reads aloud what's on the screen and what you type"
 msgstr "מקריא בקול את מה שעל המסך ואת מה שמקלידים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3808
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4015
+msgid "Magnifier"
+msgstr "זכוכית מגדלת"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4016
+msgid ""
+"The Windows key and + zooms in where the pointer is, the Windows key and − zooms out"
+msgstr "מקש Windows ו־+ מגדילים במקום שבו נמצא הסמן, מקש Windows ו־− מקטינים"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4026
 msgid "More accessibility settings…"
 msgstr "הגדרות נגישות נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
 msgid "Games"
 msgstr "משחקים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4039
 msgid "Your files"
 msgstr "הקבצים שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3832
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4050
 msgid "What fills this PC, and room to make."
 msgstr "מה ממלא את המחשב, ואיך לפנות מקום."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4063
 msgid "Measuring…"
 msgstr "מודדים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3856
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4074
 msgid "of %1"
 msgstr "מתוך %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3913
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4131
 msgid "Make room"
 msgstr "פינוי מקום"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3920
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4138
 msgid "Trash"
 msgstr "פח"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3921
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4139
 msgid "Everything in it is gone for good. Sure?"
 msgstr "כל מה שבו יימחק לצמיתות. להמשיך?"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3922 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4140 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4168
 msgid "Empty"
 msgstr "ריק"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4264
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4146 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4498
 msgid "Keep it"
 msgstr "להשאיר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4152
 msgid "Empty for good"
 msgstr "לרוקן לצמיתות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4152
 msgid "Empty Trash"
 msgstr "לרוקן את הפח"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3948
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4166
 msgid "Downloads"
 msgstr "הורדות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4168
 msgid "%1 · look through them in Files"
 msgstr "‏%1 · אפשר לעיין בהן בקבצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3954 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4022 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4468
-#: setup/qml/Main.qml:1010 linux/libexec/monet-quick:1602
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4172 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4240 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4702
+#: setup/qml/Main.qml:1068 linux/libexec/monet-quick:1678 linux/libexec/monet-quick:2527
 msgid "Show"
 msgstr "הצגה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3962
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4180
 msgid ""
 "What apps leave behind when they update is cleared away with each update, by itself."
 msgstr "שאריות שאפליקציות משאירות בעדכונים מתנקות מעצמן בכל עדכון."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3989
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "Copies of your files, for when something goes wrong."
 msgstr "עותקים של הקבצים שלכם, למקרה שמשהו משתבש."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3990
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4208
 msgid "Monet keeps your files as they were, every hour."
 msgstr "Monet שומר את הקבצים שלכם כפי שהיו, כל שעה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3997
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4215
 msgid "Earlier versions of %1"
 msgstr "גרסאות קודמות של %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4006
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4224
 msgid "No earlier versions yet"
 msgstr "עדיין אין גרסאות קודמות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4007
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4225
 msgid "Monet keeps one every hour from now on."
 msgstr "מעכשיו Monet שומר גרסה אחת כל שעה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4017
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4235
 msgid "Folder"
 msgstr "תיקייה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4027
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4245
 msgid "Put back"
 msgstr "החזרה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4256
 msgid ""
 "Put back keeps both: the earlier version goes beside it, with its time in the name."
 msgstr "החזרה שומרת את שתיהן: הגרסה הקודמת מונחת לצדה, והשעה שלה בשם."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4053
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4271
 msgid "Earlier versions"
 msgstr "גרסאות קודמות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4279
 msgid "Keep earlier versions"
 msgstr "שמירת גרסאות קודמות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4062
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280
 msgid "Every hour, for two months. Only what changed takes room."
 msgstr "כל שעה, במשך חודשיים. רק מה שהשתנה תופס מקום."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4294
 msgid "Your files as they were"
 msgstr "הקבצים שלכם כפי שהיו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4077
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4295
 msgid "Opens in Files: copy back what you need."
 msgstr "נפתח בקבצים: העתיקו בחזרה את מה שצריך."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4078
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4296
 msgid "The first one is kept within the hour."
 msgstr "הראשונה נשמרת בתוך שעה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "An hour ago"
 msgstr "לפני שעה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "Yesterday"
 msgstr "אתמול"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "Last week"
 msgstr "בשבוע שעבר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4098
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4316
 msgid "A copy on a drive"
 msgstr "עותק בכונן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4107
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325
 msgid "Your backup drive"
 msgstr "כונן הגיבוי שלכם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4108
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4326
 msgid "Copying… %1%"
 msgstr "מעתיק… %1%"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4110
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4328
 msgid "Last copy: %1"
 msgstr "העותק האחרון: %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4329
 msgid "Not copied yet"
 msgstr "עדיין לא הועתק"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4329
 msgid "Plug it in to copy your files"
 msgstr "חברו אותו כדי להעתיק את הקבצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4117
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4335
 msgid "Copy now"
 msgstr "להעתיק עכשיו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4134
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4352
 msgid "Stop copying to this drive"
 msgstr "להפסיק להעתיק לכונן הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4135
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4353
 msgid "What's on it stays there"
 msgstr "מה שיש עליו נשאר שם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4356
 msgid "Stop"
 msgstr "הפסקה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4150
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4368
 msgid "USB drive"
 msgstr "כונן USB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4154
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4372
 msgid "Copy to this drive"
 msgstr "להעתיק לכונן הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4163
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4381
 msgid "Plug in a USB drive"
 msgstr "חברו כונן USB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4164
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4382
 msgid ""
 "Monet copies your files to it whenever it's plugged in, at most once a day."
 msgstr ""
 "Monet מעתיק אליו את הקבצים שלכם בכל פעם שהוא מחובר, לכל היותר פעם ביום."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4170
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
 msgid ""
 "Games aren't copied: Steam and the other stores download them again. Neither is the Trash."
 msgstr ""
 "משחקים לא מועתקים: Steam והחנויות האחרות מורידות אותם מחדש. גם האשפה לא."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4193
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4411
 msgid "The screen doesn't lock by itself."
 msgstr "המסך לא ננעל מעצמו."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4194
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4412
 msgid "The screen locks after %1 minute away."
 msgid_plural "The screen locks after %1 minutes away."
 msgstr[0] "המסך ננעל אחרי דקה אחת בלי שימוש."
 msgstr[1] "המסך ננעל אחרי %1 דקות בלי שימוש."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4196
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4414
 msgid "Who can get in, and what Monet remembers."
 msgstr "מי יכול להיכנס, ומה Monet זוכר."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4204
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4422
 msgid "When you've been away this long"
 msgstr "אחרי היעדרות של זמן כזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "1 min"
 msgstr "1 דק'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "5 min"
 msgstr "5 דק'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "15 min"
 msgstr "15 דק'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "30 min"
 msgstr "30 דק'"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4434
 msgid "Ask for the password after sleep"
 msgstr "לבקש סיסמה אחרי שינה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4435
 msgid "Waking the PC shows the lock screen"
 msgstr "כשהמחשב מתעורר, מופיע מסך הנעילה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4226
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4444
 msgid "Lock now"
 msgstr "לנעול עכשיו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4227
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4445
 msgid "Or press the Windows key and L"
 msgstr "או ללחוץ על מקש Windows ועל L"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4237
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4457
+msgid "Fingerprint"
+msgstr "טביעת אצבע"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4459
+msgid ""
+"Your finger unlocks the screen and says yes when Monet asks for your password"
+msgstr "האצבע שלך פותחת את נעילת המסך ומאשרת כש־Monet מבקש את הסיסמה שלך"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4460
+msgid ""
+"Set up a finger to unlock the screen and say yes when Monet asks for your password"
+msgstr "אפשר להגדיר אצבע שתפתח את נעילת המסך ותאשר כש־Monet מבקש את הסיסמה שלך"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4464
+msgid "Set up…"
+msgstr "הגדרה…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4471
 msgid "What Monet remembers"
 msgstr "מה Monet זוכר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4479
 msgid "Remember recent files"
 msgstr "לזכור קבצים אחרונים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4480
 msgid "Files and the menu show what you opened lately"
 msgstr "התפריט ואפליקציית קבצים מציגים את מה שפתחת לאחרונה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4255
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4489
 msgid "Forget recent files"
 msgstr "לשכוח את הקבצים האחרונים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4256
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4490
 msgid "The list of what you opened is cleared. Your files stay. Sure?"
 msgstr "רשימת הפריטים שפתחת תימחק. הקבצים עצמם יישארו. להמשיך?"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4257
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4491
 msgid "Cleared. Your files are still there."
 msgstr "נמחק. הקבצים שלך עדיין שם."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4258
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4492
 msgid "Clears the list, not the files"
 msgstr "רק הרשימה נמחקת, לא הקבצים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
-msgid "Forget"
-msgstr "לשכוח"
-
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4503
 msgid "Forget…"
 msgstr "לשכוח…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4286
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4520
 msgid "More lock screen settings…"
 msgstr "הגדרות מסך נעילה נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4291
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4525
 msgid "More recent files settings…"
 msgstr "הגדרות נוספות לקבצים אחרונים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4309
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4543
 msgid "Printers on your network show up by themselves."
 msgstr "מדפסות ברשת שלך יופיעו כאן מעצמן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4310
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4544
 msgid "%1 printer"
 msgid_plural "%1 printers"
 msgstr[0] "מדפסת אחת"
 msgstr[1] "%1 מדפסות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4323
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4557
 msgid "Your default"
 msgstr "ברירת המחדל שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
 msgid "Printing"
 msgstr "מדפיסה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
 msgid "Turned off"
 msgstr "כבויה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325 crates/monet/src/main.rs:252
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559 crates/monet/src/main.rs:252
 msgid "Ready"
 msgstr "מוכנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4326
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560
 msgid "%1 waiting"
 msgid_plural "%1 waiting"
 msgstr[0] "%1 בהמתנה"
 msgstr[1] "%1 בהמתנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4331
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4565
 msgid "Make default"
 msgstr "הגדרה כברירת מחדל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4573
 msgid "Another printer"
 msgstr "מדפסת נוספת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4573
 msgid "No printers yet"
 msgstr "עדיין אין מדפסות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4340
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4574
 msgid ""
 "Turn it on and join it to your Wi-Fi: Monet finds most printers by itself"
 msgstr ""
 "אפשר להדליק אותה ולחבר אותה ל-Wi-Fi שלך: Monet מוצא בעצמו את רוב המדפסות"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4343
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4577
 msgid "Add…"
 msgstr "הוספה…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4584
 msgid "More printer settings…"
 msgstr "הגדרות מדפסת נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4369
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4603
 msgid "%1 controller connected"
 msgid_plural "%1 controllers connected"
 msgstr[0] "בקר אחד מחובר"
 msgstr[1] "%1 בקרים מחוברים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4370
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4604
 msgid "Your controllers, and where your games are kept."
 msgstr "הבקרים שלך, ואיפה המשחקים שלך שמורים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4374
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4608
 msgid "Controllers"
 msgstr "בקרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4620
 msgctxt "a controller, connected by its cable"
 msgid "Plugged in"
 msgstr "מחובר בכבל"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4387
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4621
 msgid "%1% · charging"
 msgstr "%1% · בטעינה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4622
 msgid "%1% battery"
 msgstr "סוללה %1%"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4628
 msgid "Another controller"
 msgstr "בקר נוסף"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4628
 msgid "No controller connected"
 msgstr "אין בקר מחובר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4395
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4629
 msgid "Plug one in, or pair one over Bluetooth"
 msgstr "אפשר לחבר בכבל, או לצמד דרך Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4401
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4635
 msgid "Pair…"
 msgstr "צימוד…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4406
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4640
 msgid "Test buttons…"
 msgstr "בדיקת לחצנים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4415
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4649
 msgid "While you play"
 msgstr "בזמן משחק"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4659
 msgid "Performance overlay"
 msgstr "שכבת ביצועים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4426
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4660
 msgid ""
 "Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play."
 msgstr ""
 "פריימים לשנייה ומה המחשב עושה, מעל כל משחק, החל מההתחברות הבאה. Shift ימני+F12 מסתיר אותה בזמן משחק."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4440
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4674
 msgid "Getting it ready…"
 msgstr "מכינים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4441
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4675
 msgid ""
 "It couldn't be installed. Check the internet connection, then try again."
 msgstr "ההתקנה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4442
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4676
 msgid ""
 "Windows key + Alt + G keeps the last 30 seconds on screen in Videos. The first time, choose the screen to record."
 msgstr ""
 "מקש Windows + Alt + G שומר את 30 השניות האחרונות שעל המסך בתיקייה סרטונים. בפעם הראשונה, בחרו את המסך להקלטה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4452
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4686
 msgid "Where your games are"
 msgstr "איפה המשחקים שלך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4711
 msgid "No games yet"
 msgstr "עדיין אין משחקים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4478
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4712
 msgid "Steam, Heroic and Lutris keep theirs here once you install one"
 msgstr ""
 "‏Steam, Heroic ו-Lutris שומרים כאן את המשחקים שלהם אחרי שמתקינים אחד מהם"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4719
 msgid "Needs Windows"
 msgstr "דורש Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4499
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4733
 msgid "Its anti-cheat only allows Windows. It's there too."
 msgstr "מערכת נגד הרמאות שלו מתירה רק Windows. הוא נמצא גם שם."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4500
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4734
 msgid ""
 "Its anti-cheat only allows Windows. Install it in Windows' Steam to play."
 msgstr ""
 "מערכת נגד הרמאות שלו מתירה רק Windows. התקינו אותו ב-Steam של Windows כדי לשחק."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4504
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4738
 msgid "Play on Windows…"
 msgstr "לשחק דרך Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4751
 msgid "Which games need Windows comes from AreWeAntiCheatYet."
 msgstr "המידע אילו משחקים דורשים Windows מגיע מ-AreWeAntiCheatYet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4524
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4758
 msgid "More controller settings…"
 msgstr "הגדרות בקר נוספות…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4539
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4773
 msgid "Games that need Windows, a restart away."
 msgstr "משחקים שצריכים Windows, במרחק הפעלה מחדש."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4792
 msgid "Restarting in Windows…"
 msgstr "מפעילים מחדש ב-Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4562
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4796
 msgid "The last trip didn't reach Windows"
 msgstr "המעבר האחרון לא הגיע ל-Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4563 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4797 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
 msgid "Getting Windows ready"
 msgstr "מכינים את Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4564
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4798
 msgid "Windows is ready to install"
 msgstr "‏Windows מוכן להתקנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4565 crates/monet/src/main.rs:738
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4799 crates/monet/src/main.rs:738
 msgid "Windows is ready"
 msgstr "‏Windows מוכן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4567
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4801
 msgid "Windows isn't ready"
 msgstr "‏Windows לא מוכן"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4576
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4810
 msgid "Your PC restarts in a moment."
 msgstr "המחשב יופעל מחדש עוד רגע."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4579
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4813
 msgid ""
 "Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts."
 msgstr ""
 "‏Monet מוריד את Windows בשביל המשחקים שלך. אפשר להמשיך להשתמש במחשב; Monet ישאל לפני שהוא מפעיל מחדש."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4580
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4814
 msgid ""
 "Restart to install it. It takes about 10 minutes, then you're back in Monet."
 msgstr "צריך להפעיל מחדש כדי להתקין. זה לוקח כ-10 דקות, ואז חוזרים ל-Monet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4581
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4815
 msgid "Plug in the charger first."
 msgstr "צריך לחבר קודם את המטען."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4584
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4818
 msgid ""
 "Games that need Windows start there, and you come back here when you quit."
 msgstr "משחקים שצריכים Windows נפתחים שם, וכשיוצאים מהם חוזרים לכאן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4585
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4819
 msgid "Windows: %1. Check Monet below to see what's missing."
 msgstr "‏Windows: %1. אפשר להשתמש בבדיקת Monet למטה כדי לראות מה חסר."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4603
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4837
 msgid "Restart and install"
 msgstr "הפעלה מחדש והתקנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4604
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4838
 msgid "Restart in Windows"
 msgstr "הפעלה מחדש ב-Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4882
 msgid ""
 "Your Windows games show up here once Windows has started with Monet Bridge."
 msgstr "משחקי ה-Windows שלך יופיעו כאן אחרי ש-Windows יופעל עם Monet Bridge."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4658
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4892
 msgid "Check Monet"
 msgstr "בדיקת Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4659
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4893
 msgid "See that Windows, Secure Boot and switching are all set up"
 msgstr "לוודא ש-Windows, אתחול מאובטח והמעבר ביניהם מוגדרים כמו שצריך"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4760
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4896 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4994
 msgid "Checking…"
 msgstr "בודקים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4896
 msgid "Check"
 msgstr "בדיקה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4689
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4923
 msgid "Ready when you come back"
 msgstr "מוכן כשחוזרים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4690
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4924
 msgid ""
 "After Windows, Monet starts your desktop behind the lock screen, so it's there as soon as you type your password."
 msgstr ""
 "אחרי Windows, Monet מפעיל את שולחן העבודה מאחורי מסך הנעילה, כך שהוא מוכן מיד כשמקלידים את הסיסמה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4714
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4948
 msgid "Only when you ask."
 msgstr "רק כשמבקשים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4715
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4949
 msgid "Monet and your apps keep themselves up to date."
 msgstr "‏Monet והאפליקציות שלך מתעדכנים מעצמם."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4761 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4995 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5250
 msgid "Installing…"
 msgstr "מתקינים…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4762 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5019 setup/qml/Main.qml:215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4996 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5253 setup/qml/Main.qml:215
 msgid "Install"
 msgstr "התקנה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4763 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4902 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4953
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5017
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4997 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5187
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5251
 msgid "Restart now"
 msgstr "הפעלה מחדש עכשיו"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4764 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5018 setup/qml/Main.qml:743
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4998 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5252 setup/qml/Main.qml:796
 msgid "Try again"
 msgstr "לנסות שוב"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4765
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4999
 msgid "Check for updates"
 msgstr "בדיקת עדכונים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4785
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5019
 msgid "Update automatically"
 msgstr "עדכון אוטומטי"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4787
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5021
 msgid "Monet and your apps update only when you choose Check for updates"
 msgstr "‏Monet והאפליקציות שלך מתעדכנים רק כשבוחרים בבדיקת עדכונים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4788
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5022
 msgid ""
 "Once a day, in the background: your apps right away, Monet at your next restart"
 msgstr "פעם ביום, ברקע: האפליקציות מיד, Monet בהפעלה מחדש הבאה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4800
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5034
 msgid "New in Monet %1"
 msgstr "מה חדש ב-Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088 linux/libexec/monet-session:167
 msgid "Monet went back to %1"
 msgstr "Monet חזר ל־%1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088 linux/libexec/monet-session:167
 msgid "Monet went back"
 msgstr "Monet חזר לגרסה הקודמת"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4856 linux/libexec/monet-session:169
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5090 linux/libexec/monet-session:169
 msgid ""
 "Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
 "Monet %1 לא הופעל כראוי במחשב הזה, ולכן חזר מעצמו לגרסה הקודמת. הקבצים שלך כפי שהיו, והעדכון היומי ממתין לגרסה הבאה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4857 linux/libexec/monet-session:171
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5091 linux/libexec/monet-session:171
 msgid ""
 "The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
 "Monet החדש לא הופעל כראוי במחשב הזה, ולכן חזר מעצמו לגרסה הקודמת. הקבצים שלך כפי שהיו, והעדכון היומי ממתין לגרסה הבאה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4871
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5105
 msgid "%1 starts at your next restart"
 msgstr "‏%1 יעלה בהפעלה מחדש הבאה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4872
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5106
 msgid "Go back to %1"
 msgstr "חזרה אל %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4873
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5107
 msgid "The one you're using now stays too, to come back to."
 msgstr "גם הגרסה שבה משתמשים עכשיו נשארת, כדי שאפשר יהיה לחזור אליה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4874
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5108
 msgid ""
 "It starts the next time you restart. Your files and apps stay as they are."
 msgstr "הוא יעלה בהפעלה מחדש הבאה. הקבצים והאפליקציות שלך יישארו כמו שהם."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4875
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5109
 msgid ""
 "From %1. If something stopped working after an update, the one before is still here."
 msgstr "מ-%1. אם משהו הפסיק לעבוד אחרי עדכון, הגרסה הקודמת עדיין כאן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4876
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5110
 msgid ""
 "If something stopped working after an update, the one before is still here."
 msgstr "אם משהו הפסיק לעבוד אחרי עדכון, הגרסה הקודמת עדיין כאן."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4882 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4927
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5116 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5161
 msgid "Stay"
 msgstr "להישאר"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5122
 msgid "Go back at restart"
 msgstr "לחזור בהפעלה מחדש"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5122
 msgid "Go back"
 msgstr "לחזור"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5152
 msgid "Monet resets itself at your next restart"
 msgstr "Monet יתאפס בהפעלה מחדש הבאה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5152
 msgid "Reset this PC"
 msgstr "איפוס המחשב הזה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4919
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5153
 msgid ""
 "Everyone's settings go back to how Monet comes. Files, games and apps stay."
 msgstr ""
 "ההגדרות של כולם חוזרות למה ש־Monet מגיע איתו. קבצים, משחקים ואפליקציות נשארים."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4920
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5154
 msgid ""
 "Monet's settings, the desktop's look and the changes made to the system go back to how Monet comes, for everyone. Files, games and apps stay, and so do accounts, Wi-Fi and printers. It happens at your next restart."
 msgstr ""
 "ההגדרות של Monet, מראה שולחן העבודה והשינויים שנעשו במערכת חוזרים לכולם למה ש־Monet מגיע איתו. קבצים, משחקים ואפליקציות נשארים, וכך גם חשבונות, Wi-Fi ומדפסות. זה קורה בהפעלה מחדש הבאה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4921
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5155
 msgid ""
 "For when something's wrong, and going back to the Monet from before didn't help."
 msgstr "למקרה שמשהו לא בסדר, והחזרה ל־Monet הקודם לא עזרה."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5167
 msgid "Reset at restart"
 msgstr "איפוס בהפעלה מחדש"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5167
 msgid "Reset"
 msgstr "איפוס"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4946
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5180
 msgid "Don't reset"
 msgstr "לא לאפס"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5038
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5272
 msgid ""
 "A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case."
 msgstr ""
 "‏Monet חדש עולה רק בהפעלה מחדש הבאה, אף פעם לא באמצע העבודה, והקודם נשאר בתפריט האתחול, ליתר ביטחון."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5322
 msgid "%1 · Impression"
 msgstr "‏%1 · אימפרסיה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5322
 msgid "Impression"
 msgstr "אימפרסיה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5098
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5332
 msgid "Graphics"
 msgstr "גרפיקה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5099
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5333
 msgid "Processor"
 msgstr "מעבד"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5100
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5334
 msgid "Memory"
 msgstr "זיכרון"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5336
 msgid "Ready for games"
 msgstr "מוכן למשחקים"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5362
 msgid "Last start"
 msgstr "ההפעלה האחרונה"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5130
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5364
 msgctxt "how long the PC's own start took, in seconds"
 msgid "The PC %1 s"
 msgstr "המחשב %1 שנ׳"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5131
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5365
 msgctxt "how long Monet took to start, in seconds"
 msgid "Monet %1 s"
 msgstr "Monet %1 שנ׳"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5132
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5366
 msgctxt "from signing in until the desktop was there, in seconds"
 msgid "Your desktop %1 s"
 msgstr "שולחן העבודה %1 שנ׳"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5136
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5370
 msgctxt "a time in seconds"
 msgid "%1 s"
 msgstr "%1 שנ׳"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5382
+msgid "Save a report"
+msgstr "שמירת דוח"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5383 linux/libexec/monet-quick:2528
+msgid "In Documents, as %1."
+msgstr "במסמכים, בשם %1."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5384
+msgid ""
+"What helps find out why something went wrong, in one file in Documents. It stays on this PC until you send it to someone."
+msgstr ""
+"מה שעוזר לגלות למה משהו השתבש, בקובץ אחד במסמכים. הוא נשאר במחשב הזה עד ששולחים אותו למישהו."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5387
+msgid "Saving…"
+msgstr "בשמירה…"
 
 #: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:105
 msgctxt "a dial's reading, in percent"
@@ -3258,173 +3384,197 @@ msgstr "המשך"
 msgid "Erase & Install"
 msgstr "מחיקה & התקנה"
 
-#: setup/qml/Main.qml:242
+#: setup/qml/Main.qml:243
 msgid "Hello"
 msgstr "שלום"
 
-#: setup/qml/Main.qml:243
+#: setup/qml/Main.qml:244
 msgid ""
 "Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."
 msgstr ""
 "בואו נתקין את Monet. זה לוקח כ-15 דקות, ו-Windows יתקין את עצמו אחר כך."
 
-#: setup/qml/Main.qml:245
+#: setup/qml/Main.qml:246
 msgid "Language"
 msgstr "שפה"
 
-#: setup/qml/Main.qml:299
+#: setup/qml/Main.qml:286
+msgid "It's %1 there now"
+msgstr "השעה שם עכשיו %1"
+
+#: setup/qml/Main.qml:296
+msgid ""
+"Monet is already installed on this PC, but it can't start yet: the blue screen at its first start was skipped. Monet can ask again. Restart, and on the blue screen choose Enroll MOK, then Continue and Yes, type monetsetup, and choose Reboot."
+msgstr ""
+"Monet כבר מותקן במחשב הזה, אבל עדיין לא יכול לעלות: המסך הכחול בהפעלה הראשונה שלו דולג. Monet יכול לבקש שוב. יש להפעיל מחדש, ובמסך הכחול לבחור Enroll MOK, אחר כך Continue ו-Yes, להקליד monetsetup ולבחור Reboot."
+
+#: setup/qml/Main.qml:300
+msgid "Ask again and restart"
+msgstr "לבקש שוב ולהפעיל מחדש"
+
+#: setup/qml/Main.qml:338
 msgid "You're online"
 msgstr "יש חיבור לאינטרנט"
 
-#: setup/qml/Main.qml:299
+#: setup/qml/Main.qml:338
 msgid "Connect to Wi-Fi"
 msgstr "התחברות ל-Wi-Fi"
 
-#: setup/qml/Main.qml:300
+#: setup/qml/Main.qml:339
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "‏Monet מוריד את עצמו ואת Windows בזמן ההתקנה. גם Windows ישתמש ברשת הזו."
 
-#: setup/qml/Main.qml:309
+#: setup/qml/Main.qml:348
 msgid "Connected with a cable"
 msgstr "מחובר בכבל"
 
-#: setup/qml/Main.qml:340
+#: setup/qml/Main.qml:379
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "פתוחה"
 
-#: setup/qml/Main.qml:349
+#: setup/qml/Main.qml:388
 msgid "No networks found"
 msgstr "לא נמצאו רשתות"
 
-#: setup/qml/Main.qml:366
+#: setup/qml/Main.qml:405
 msgid "Looking…"
 msgstr "מחפשים…"
 
-#: setup/qml/Main.qml:366
+#: setup/qml/Main.qml:405
 msgid "Look again"
 msgstr "חיפוש חוזר"
 
-#: setup/qml/Main.qml:383
+#: setup/qml/Main.qml:426
 msgid "Who's using this PC?"
 msgstr "מי משתמש במחשב הזה?"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:427
 msgid "This is your account in Monet and in Windows."
 msgstr "זה החשבון שלך ב-Monet וב-Windows."
 
-#: setup/qml/Main.qml:387
+#: setup/qml/Main.qml:430
 msgid "Name"
 msgstr "שם"
 
-#: setup/qml/Main.qml:391
+#: setup/qml/Main.qml:434
 msgid "You sign in as %1"
 msgstr "שם המשתמש שלך יהיה %1"
 
-#: setup/qml/Main.qml:397
-msgid "At least 6 characters"
-msgstr "6 תווים לפחות"
+#: setup/qml/Main.qml:443
+msgid "Password again"
+msgstr "הסיסמה שוב"
 
-#: setup/qml/Main.qml:411
+#: setup/qml/Main.qml:447 setup/monet_setup/app.py:369
+msgid "The passwords don't match."
+msgstr "הסיסמאות לא תואמות."
+
+#: setup/qml/Main.qml:448
+msgid ""
+"No password: Monet signs you in by itself, and anyone who uses this PC can open your account and change its settings."
+msgstr ""
+"ללא סיסמה: Monet מחבר אותך מעצמו, וכל מי שמשתמש במחשב הזה יכול לפתוח את החשבון שלך ולשנות את ההגדרות שלו."
+
+#: setup/qml/Main.qml:464
 msgid "Your apps"
 msgstr "האפליקציות שלך"
 
-#: setup/qml/Main.qml:412
+#: setup/qml/Main.qml:465
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "תמונות, מסמכים, וידאו, מוזיקה ומחשבון מובנים. מה שמוסיפים יגיע אחרי ההתחברות."
 
-#: setup/qml/Main.qml:414
+#: setup/qml/Main.qml:467
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "יומיומיות"
 
-#: setup/qml/Main.qml:414
+#: setup/qml/Main.qml:467
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "עוד"
 
-#: setup/qml/Main.qml:515
+#: setup/qml/Main.qml:568
 msgid "Ready to install"
 msgstr "הכול מוכן להתקנה"
 
-#: setup/qml/Main.qml:528
+#: setup/qml/Main.qml:581
 msgid "Monet and Windows"
 msgstr "‏Monet ו-Windows"
 
-#: setup/qml/Main.qml:532
+#: setup/qml/Main.qml:585
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr "כל מה שבמחשב יימחק. Windows יותקן מעצמו, רק בשביל משחקים."
 
-#: setup/qml/Main.qml:547
+#: setup/qml/Main.qml:600
 msgid "Monet next to my Windows"
 msgstr "‏Monet לצד ה-Windows שלי"
 
-#: setup/qml/Main.qml:551
+#: setup/qml/Main.qml:604
 msgid "Keeps Windows and your files. Monet makes room for itself."
 msgstr "שומר את Windows ואת הקבצים שלכם. Monet מפנה לעצמו מקום."
 
-#: setup/qml/Main.qml:565 setup/qml/Main.qml:577 setup/monet_setup/disks.py:90
+#: setup/qml/Main.qml:618 setup/qml/Main.qml:630 setup/monet_setup/disks.py:90
 msgid "Disk"
 msgstr "דיסק"
 
-#: setup/qml/Main.qml:569
+#: setup/qml/Main.qml:622
 msgid "Looking for disks…"
 msgstr "מחפשים דיסקים…"
 
-#: setup/qml/Main.qml:592
+#: setup/qml/Main.qml:645
 msgid "Bring my files"
 msgstr "להביא את הקבצים שלי"
 
-#: setup/qml/Main.qml:601
+#: setup/qml/Main.qml:654
 msgid "Encrypt this PC"
 msgstr "הצפנת המחשב הזה"
 
-#: setup/qml/Main.qml:602
+#: setup/qml/Main.qml:655
 msgid ""
 "Only this PC can read its disk: taken out, it's locked. Monet unlocks it by itself when it starts."
 msgstr ""
 "רק המחשב הזה יכול לקרוא את הדיסק שלו: אם יוצא ממנו, הוא נעול. Monet פותח אותו מעצמו כשהוא מופעל."
 
-#: setup/qml/Main.qml:615
+#: setup/qml/Main.qml:668
 msgid ""
 "Everything on this disk is erased, Windows and your files too. To keep them, choose Monet next to my Windows."
 msgstr ""
 "כל מה שבדיסק הזה יימחק, גם Windows והקבצים שלכם. כדי לשמור אותם, בחרו ב-‏Monet לצד ה-Windows שלי."
 
-#: setup/qml/Main.qml:630 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:683 setup/monet_setup/app.py:31
 msgid "Installing Monet"
 msgstr "מתקינים את Monet"
 
-#: setup/qml/Main.qml:644
+#: setup/qml/Main.qml:697
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr "אפשר להשאיר את זה לרוץ. אם החיבור נופל, Monet ימשיך מאיפה שעצר."
 
-#: setup/qml/Main.qml:656
+#: setup/qml/Main.qml:709
 msgid "All set"
 msgstr "הכול מוכן"
 
-#: setup/qml/Main.qml:659
+#: setup/qml/Main.qml:712
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "צריך להוציא את כונן ה-USB ולהפעיל מחדש. אחרי ההתחברות, Monet יכין בעצמו את Windows למשחקים שלך."
 
-#: setup/qml/Main.qml:660
+#: setup/qml/Main.qml:713
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "צריך להוציא את כונן ה-USB ולהפעיל מחדש. המחשב יעלה ב-Monet, ו-Windows יהיה במרחק לחיצה."
 
-#: setup/qml/Main.qml:677
+#: setup/qml/Main.qml:730
 msgid "Once, when it first starts"
 msgstr "פעם אחת, בהפעלה הראשונה"
 
-#: setup/qml/Main.qml:682
+#: setup/qml/Main.qml:735
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -3432,183 +3582,179 @@ msgid ""
 msgstr ""
 "יופיע מסך כחול שמבקש לסמוך על Monet. עם מקשי החיצים ו-Enter, צריך לבחור Enroll MOK, אחר כך Continue ו-Yes, להקליד monetsetup ולבחור Reboot. הסמן מתחיל על Continue boot: לא לבחור בזה, אחרת Monet לא יוכל לעלות."
 
-#: setup/qml/Main.qml:686
+#: setup/qml/Main.qml:739
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "כדאי לצלם קודם את השלבים האלה בטלפון: המסך הזה נעלם כשהמחשב מופעל מחדש."
 
-#: setup/qml/Main.qml:700
+#: setup/qml/Main.qml:753
 msgid "Your recovery key"
 msgstr "מפתח השחזור שלך"
 
-#: setup/qml/Main.qml:702
+#: setup/qml/Main.qml:755
 msgid ""
 "This PC's disk is encrypted, and Monet unlocks it by itself. If it ever can't, after a big firmware update or with the disk in another PC, it asks for this key. Without it nobody can read the disk, not even you."
 msgstr ""
 "הדיסק של המחשב הזה מוצפן, ו־Monet פותח אותו מעצמו. אם יום אחד לא יוכל, אחרי עדכון קושחה גדול או כשהדיסק נמצא במחשב אחר, הוא יבקש את המפתח הזה. בלעדיו אף אחד, כולל אותך, לא יכול לקרוא את הדיסק."
 
-#: setup/qml/Main.qml:722
+#: setup/qml/Main.qml:775
 msgid ""
 "Take a photo of it or write it down, and keep it somewhere other than this PC. It isn't shown again."
 msgstr ""
 "צלמו אותו או רשמו אותו, ושמרו אותו במקום אחר שאינו המחשב הזה. הוא לא יוצג שוב."
 
-#: setup/qml/Main.qml:728
+#: setup/qml/Main.qml:781
 msgid "I've kept my recovery key"
 msgstr "שמרתי את מפתח השחזור"
 
-#: setup/qml/Main.qml:739
+#: setup/qml/Main.qml:792
 msgid "That didn't work"
 msgstr "זה לא עבד"
 
-#: setup/qml/Main.qml:744
+#: setup/qml/Main.qml:797
 msgid "Hide details"
 msgstr "הסתרת הפרטים"
 
-#: setup/qml/Main.qml:1010
+#: setup/qml/Main.qml:1068
 msgid "Hide"
 msgstr "הסתרה"
 
-#: setup/monet_setup/app.py:28
+#: setup/monet_setup/app.py:29
 msgid "Preparing the disk"
 msgstr "מכינים את הדיסק"
 
-#: setup/monet_setup/app.py:29
+#: setup/monet_setup/app.py:30
 msgid "Downloading Monet"
 msgstr "מורידים את Monet"
 
-#: setup/monet_setup/app.py:31
+#: setup/monet_setup/app.py:32
 msgid "Setting up your account"
 msgstr "מגדירים את החשבון שלך"
 
-#: setup/monet_setup/app.py:32
+#: setup/monet_setup/app.py:33
 msgid "Bringing your files"
 msgstr "מביאים את הקבצים שלכם"
 
-#: setup/monet_setup/app.py:33
+#: setup/monet_setup/app.py:34
 msgid "Finishing"
 msgstr "מסיימים"
 
-#: setup/monet_setup/app.py:41
+#: setup/monet_setup/app.py:42
 msgid "The web"
 msgstr "גלישה באינטרנט"
 
-#: setup/monet_setup/app.py:42
+#: setup/monet_setup/app.py:43
 msgid "Office"
 msgstr "כלי משרד"
 
-#: setup/monet_setup/app.py:42
+#: setup/monet_setup/app.py:43
 msgid "Documents, sheets, slides"
 msgstr "מסמכים, גיליונות, מצגות"
 
-#: setup/monet_setup/app.py:43
+#: setup/monet_setup/app.py:44
 msgid "Mail"
 msgstr "דואר"
 
-#: setup/monet_setup/app.py:43
+#: setup/monet_setup/app.py:44
 msgid "Email and calendars"
 msgstr "אימייל ויומנים"
 
-#: setup/monet_setup/app.py:44
+#: setup/monet_setup/app.py:45
 msgid "Talk while you play"
 msgstr "לדבר תוך כדי משחק"
 
-#: setup/monet_setup/app.py:45
+#: setup/monet_setup/app.py:46
 msgid "Music to stream"
 msgstr "מוזיקה בסטרימינג"
 
-#: setup/monet_setup/app.py:46
+#: setup/monet_setup/app.py:47
 msgid "Send files to your phone"
 msgstr "שליחת קבצים לטלפון"
 
-#: setup/monet_setup/app.py:47
+#: setup/monet_setup/app.py:48
 msgid "Epic and GOG games"
 msgstr "משחקים מ-Epic ומ-GOG"
 
-#: setup/monet_setup/app.py:49
+#: setup/monet_setup/app.py:50
 msgid "Record and stream games"
 msgstr "הקלטה ושידור של משחקים"
 
-#: setup/monet_setup/app.py:50
+#: setup/monet_setup/app.py:51
 msgid "Paint and draw"
 msgstr "ציור ורישום"
 
-#: setup/monet_setup/app.py:57
+#: setup/monet_setup/app.py:58
 msgid "Documents"
 msgstr "מסמכים"
 
-#: setup/monet_setup/app.py:60
+#: setup/monet_setup/app.py:61
 msgid "Calculator"
 msgstr "מחשבון"
 
-#: setup/monet_setup/app.py:68
+#: setup/monet_setup/app.py:69
 msgid "about %1 minute left"
 msgid_plural "about %1 minutes left"
 msgstr[0] "נותרה כדקה"
 msgstr[1] "נותרו כ-%1 דקות"
 
-#: setup/monet_setup/app.py:279
-msgid "The password needs at least 6 characters."
-msgstr "הסיסמה צריכה לכלול לפחות 6 תווים."
-
-#: setup/monet_setup/app.py:299
+#: setup/monet_setup/app.py:389
 msgid "Built in"
 msgstr "מובנית"
 
-#: setup/monet_setup/app.py:352
+#: setup/monet_setup/app.py:442
 msgid ""
 "Monet makes room by shrinking Windows' drive from %1 to %2. Nothing in Windows is lost, and it checks its drive once the next time it starts."
 msgstr ""
 "‏Monet מפנה מקום על ידי הקטנת הכונן של Windows מ-%1 ל-%2. שום דבר ב-Windows לא אובד, והוא יבדוק את הכונן שלו פעם אחת בהפעלה הבאה."
 
-#: setup/monet_setup/app.py:363
+#: setup/monet_setup/app.py:453
 msgid ""
 "Your files in Windows (%1) don't fit next to Monet. Open them from Files once Monet is installed."
 msgstr ""
 "הקבצים שלכם ב-Windows (%1) לא נכנסים לצד Monet. פתחו אותם מקבצים אחרי ש-Monet מותקן."
 
-#: setup/monet_setup/app.py:364
+#: setup/monet_setup/app.py:454
 msgid ""
 "Desktop, Documents, Pictures, Music, Videos and Downloads from Windows (%1). They stay in Windows too."
 msgstr ""
 "שולחן העבודה, מסמכים, תמונות, מוזיקה, סרטונים והורדות מ-Windows (%1). הם נשארים גם ב-Windows."
 
-#: setup/monet_setup/app.py:408
+#: setup/monet_setup/app.py:498
 msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
 msgstr "במחשב הזה יש %1 GB זיכרון. ל-Monet נדרשים לפחות 4 GB."
 
-#: setup/monet_setup/app.py:417
+#: setup/monet_setup/app.py:507
 msgid ""
 "This PC's NVIDIA graphics card is older than the RTX 20 series. Monet draws with its open driver, fine for everyday things; games run best in Windows."
 msgstr ""
 "כרטיס הגרפיקה של NVIDIA במחשב הזה ישן יותר מסדרת RTX 20. Monet מצייר בעזרת מנהל ההתקן הפתוח שלו, שמתאים לשימוש יומיומי; משחקים רצים הכי טוב ב־Windows."
 
-#: setup/monet_setup/app.py:419
+#: setup/monet_setup/app.py:509
 msgid ""
 "This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet uses the built-in graphics. Games run best in Windows."
 msgstr ""
 "שבב הגרפיקה של NVIDIA במחשב הזה ישן יותר מסדרת RTX 20, ולכן Monet משתמש בגרפיקה המובנית. משחקים רצים הכי טוב ב־Windows."
 
-#: setup/monet_setup/app.py:422
+#: setup/monet_setup/app.py:512
 msgid ""
 "This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
 msgstr ""
 "במחשב הזה יש %1 GB זיכרון. Monet עובד, אבל מאט כשפתוחות אפליקציות רבות: 8 GB עדיף."
 
-#: setup/monet_setup/app.py:431
+#: setup/monet_setup/app.py:521
 msgid "No disk found to install Monet on."
 msgstr "לא נמצא דיסק להתקנת Monet."
 
-#: setup/monet_setup/app.py:436
+#: setup/monet_setup/app.py:526
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "הדיסק הזה קטן מדי בשביל Monet (צריך 70 GB)."
 
-#: setup/monet_setup/app.py:511
+#: setup/monet_setup/app.py:602
 msgid "%1 of %2 GB"
 msgstr "%1 מתוך %2 GB"
 
-#: setup/monet_setup/app.py:530
+#: setup/monet_setup/app.py:623
 msgid "The installer stopped unexpectedly."
 msgstr "תוכנית ההתקנה נעצרה באופן לא צפוי."
 
@@ -3671,7 +3817,7 @@ msgstr "הדיסק המוצפן לא נמצא."
 msgid "Monet's system wasn't found after installing."
 msgstr "המערכת של Monet לא נמצאה אחרי ההתקנה."
 
-#: setup/monet_setup/install.py:625
+#: setup/monet_setup/install.py:659
 msgid "Something unexpected went wrong. The details say what."
 msgstr "משהו לא צפוי השתבש. הפרטים מסבירים מה."
 
@@ -3691,176 +3837,228 @@ msgstr "הסיסמה הזו לא עבדה."
 msgid "Couldn't connect. Try again, or pick another network."
 msgstr "החיבור נכשל. אפשר לנסות שוב, או לבחור רשת אחרת."
 
-#: setup/monet_setup/system.py:51
+#: setup/monet_setup/system.py:53
 msgid "English (US)"
 msgstr "אנגלית (ארה״ב)"
 
-#: setup/monet_setup/system.py:52
+#: setup/monet_setup/system.py:54
 msgid "English (US, international)"
 msgstr "אנגלית (ארה״ב, בינלאומית)"
 
-#: setup/monet_setup/system.py:53
+#: setup/monet_setup/system.py:55
 msgid "English (UK)"
 msgstr "אנגלית (בריטניה)"
 
-#: setup/monet_setup/system.py:54
+#: setup/monet_setup/system.py:56
 msgid "Swedish"
 msgstr "שוודית"
 
-#: setup/monet_setup/system.py:55
+#: setup/monet_setup/system.py:57
 msgid "German"
 msgstr "גרמנית"
 
-#: setup/monet_setup/system.py:56
+#: setup/monet_setup/system.py:58
 msgid "French"
 msgstr "צרפתית"
 
-#: setup/monet_setup/system.py:57
+#: setup/monet_setup/system.py:59
 msgid "Spanish"
 msgstr "ספרדית"
 
-#: setup/monet_setup/system.py:58
+#: setup/monet_setup/system.py:60
 msgid "Italian"
 msgstr "איטלקית"
 
-#: setup/monet_setup/system.py:59
+#: setup/monet_setup/system.py:61
 msgid "Norwegian"
 msgstr "נורווגית"
 
-#: setup/monet_setup/system.py:60
+#: setup/monet_setup/system.py:62
 msgid "Danish"
 msgstr "דנית"
 
-#: setup/monet_setup/system.py:61
+#: setup/monet_setup/system.py:63
 msgid "Finnish"
 msgstr "פינית"
 
-#: setup/monet_setup/system.py:62
+#: setup/monet_setup/system.py:64
 msgid "Polish"
 msgstr "פולנית"
 
-#: setup/monet_setup/system.py:63
+#: setup/monet_setup/system.py:65
 msgid "Czech"
 msgstr "צ'כית"
 
-#: setup/monet_setup/system.py:64
+#: setup/monet_setup/system.py:66
 msgid "Hungarian"
 msgstr "הונגרית"
 
-#: setup/monet_setup/system.py:65
+#: setup/monet_setup/system.py:67
 msgid "Romanian"
 msgstr "רומנית"
 
-#: setup/monet_setup/system.py:66
+#: setup/monet_setup/system.py:68
 msgid "Greek"
 msgstr "יוונית"
 
-#: setup/monet_setup/system.py:67
+#: setup/monet_setup/system.py:69
 msgid "Portuguese (Brazil)"
 msgstr "פורטוגזית (ברזיל)"
 
-#: setup/monet_setup/system.py:68
+#: setup/monet_setup/system.py:70
 msgid "Portuguese"
 msgstr "פורטוגזית"
 
-#: setup/monet_setup/system.py:69
+#: setup/monet_setup/system.py:71
 msgid "Turkish"
 msgstr "טורקית"
 
-#: setup/monet_setup/system.py:70
+#: setup/monet_setup/system.py:72
 msgid "Russian"
 msgstr "רוסית"
 
-#: setup/monet_setup/system.py:71
+#: setup/monet_setup/system.py:73
 msgid "Ukrainian"
 msgstr "אוקראינית"
 
-#: setup/monet_setup/system.py:72
+#: setup/monet_setup/system.py:74
 msgid "Thai"
 msgstr "תאית"
 
-#: setup/monet_setup/system.py:73
+#: setup/monet_setup/system.py:75
 msgid "Arabic"
 msgstr "ערבית"
 
-#: setup/monet_setup/system.py:74
+#: setup/monet_setup/system.py:76
 msgid "Hebrew"
 msgstr "עברית"
 
-#: setup/monet_setup/system.py:75
+#: setup/monet_setup/system.py:77
 msgid "Japanese"
 msgstr "יפנית"
 
-#: setup/monet_setup/system.py:76
+#: setup/monet_setup/system.py:78
 msgid "Korean"
 msgstr "קוריאנית"
 
-#: linux/libexec/monet-quick:1529
+#: setup/monet_setup/system.py:105
+msgid "Africa"
+msgstr "אפריקה"
+
+#: setup/monet_setup/system.py:105
+msgid "America"
+msgstr "אמריקה"
+
+#: setup/monet_setup/system.py:105
+msgid "Antarctica"
+msgstr "אנטארקטיקה"
+
+#: setup/monet_setup/system.py:105
+msgid "Arctic"
+msgstr "הקוטב הצפוני"
+
+#: setup/monet_setup/system.py:106
+msgid "Asia"
+msgstr "אסיה"
+
+#: setup/monet_setup/system.py:106
+msgid "Atlantic"
+msgstr "האוקיינוס האטלנטי"
+
+#: setup/monet_setup/system.py:106
+msgid "Australia"
+msgstr "אוסטרליה"
+
+#: setup/monet_setup/system.py:106
+msgid "Europe"
+msgstr "אירופה"
+
+#: setup/monet_setup/system.py:107
+msgid "Indian Ocean"
+msgstr "האוקיינוס ההודי"
+
+#: setup/monet_setup/system.py:107
+msgid "Pacific"
+msgstr "האוקיינוס השקט"
+
+#: setup/monet_setup/system.py:107
+msgid "Other"
+msgstr "אחר"
+
+#: linux/libexec/monet-quick:1421
+msgid "Send to your phone"
+msgstr "שליחה לטלפון שלך"
+
+#: linux/libexec/monet-quick:1605
 msgid "Steam on %1"
 msgstr "‏Steam ב-%1"
 
-#: linux/libexec/monet-quick:1533
+#: linux/libexec/monet-quick:1609
 msgid "Games folder"
 msgstr "תיקיית משחקים"
 
-#: linux/libexec/monet-quick:1603
+#: linux/libexec/monet-quick:1679
 msgid "Saved the last 30 seconds"
 msgstr "30 השניות האחרונות נשמרו"
 
-#: linux/libexec/monet-quick:1603
+#: linux/libexec/monet-quick:1679
 msgid "In Videos."
 msgstr "בסרטונים."
 
-#: linux/libexec/monet-quick:1905
+#: linux/libexec/monet-quick:1981
 msgid "Open it again"
 msgstr "לפתוח שוב"
 
-#: linux/libexec/monet-quick:1905
+#: linux/libexec/monet-quick:1981
 msgid "%1 closed unexpectedly"
 msgstr "האפליקציה %1 נסגרה באופן לא צפוי"
 
-#: linux/libexec/monet-quick:2329
+#: linux/libexec/monet-quick:2418
 msgid "%1 GB free of %2 GB"
 msgstr "‏%1 GB פנויים מתוך %2 GB"
 
-#: linux/libexec/monet-quick:2698
+#: linux/libexec/monet-quick:2528
+msgid "Saved a report"
+msgstr "הדוח נשמר"
+
+#: linux/libexec/monet-quick:2894
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "לא ניתן לפתוח את הכונן. נסו לחבר אותו שוב."
 
-#: linux/libexec/monet-quick:2702
+#: linux/libexec/monet-quick:2898
 msgid "earlier"
 msgstr "קודמים"
 
-#: linux/libexec/monet-quick:2706
+#: linux/libexec/monet-quick:2902
 msgid "Monet can't write on this drive."
 msgstr "‏Monet לא יכול לכתוב על הכונן הזה."
 
-#: linux/libexec/monet-quick:2714 linux/libexec/monet-quick:2738
+#: linux/libexec/monet-quick:2910 linux/libexec/monet-quick:2934
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr "ההעתקה לא הסתיימה. Monet ינסה שוב בפעם הבאה שהכונן יחובר."
 
-#: linux/libexec/monet-quick:2753
+#: linux/libexec/monet-quick:2949
 msgid "Your files haven't been copied for a week"
 msgstr "הקבצים שלכם לא הועתקו כבר שבוע"
 
-#: linux/libexec/monet-quick:2754
+#: linux/libexec/monet-quick:2950
 msgid "Plug in %1 and Monet copies them."
 msgstr "חברו את %1 ו-Monet יעתיק אותם."
 
-#: linux/libexec/monet-quick:2754
+#: linux/libexec/monet-quick:2950
 msgid "your backup drive"
 msgstr "כונן הגיבוי שלכם"
 
-#: linux/libexec/monet-quick:2769
+#: linux/libexec/monet-quick:2965
 msgid "Open Files"
 msgstr "פתיחת קבצים"
 
-#: linux/libexec/monet-quick:2770
+#: linux/libexec/monet-quick:2966
 msgid "Your files from Windows are here"
 msgstr "הקבצים שלכם מ-Windows כאן"
 
-#: linux/libexec/monet-quick:2771
+#: linux/libexec/monet-quick:2967
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr "במסמכים, בתמונות, במוזיקה, בסרטונים, בהורדות ועל שולחן העבודה."
 
@@ -3927,82 +4125,82 @@ msgid ""
 msgstr ""
 "הקבצים, המשחקים והאפליקציות שלך כולם כאן. ההגדרות הקודמות שלך שמורות, למקרה שיהיה צורך להחזיר אחת מהן."
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Files"
 msgstr "קבצים"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Terminal"
 msgstr "מסוף"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Text Editor"
 msgstr "עורך טקסט"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Photos"
 msgstr "תמונות"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Documents"
 msgstr "מסמכים"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Archives"
 msgstr "ארכיונים"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Screenshot"
 msgstr "צילום מסך"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Calculator"
 msgstr "מחשבון"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Music"
 msgstr "מוזיקה"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Videos"
 msgstr "סרטונים"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Disk Usage"
 msgstr "שימוש בדיסק"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Disks"
 msgstr "דיסקים"
 
-#: linux/libexec/monet-look:84
+#: linux/libexec/monet-look:95 linux/share/applications/monet-settings.desktop:228
 msgctxt "an app's name in the menu"
 msgid "Phone"
 msgstr "טלפון"
 
-#: linux/libexec/monet-look:84
+#: linux/libexec/monet-look:95
 msgctxt "an app's name in the menu"
 msgid "Phone Messages"
 msgstr "הודעות מהטלפון"
 
-#: linux/libexec/monet-look:71 linux/libexec/monet-look:75
+#: linux/libexec/monet-look:82 linux/libexec/monet-look:86
 msgctxt "an app's name in the menu"
 msgid "Store"
 msgstr "חנות"
 
-#: linux/libexec/monet-look:71 linux/libexec/monet-look:75
+#: linux/libexec/monet-look:82 linux/libexec/monet-look:86
 msgctxt "an app's description in the menu"
 msgid "Apps and games for Monet"
 msgstr "אפליקציות ומשחקים ל-Monet"
@@ -4051,87 +4249,87 @@ msgctxt "an app's name in the menu"
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: linux/share/applications/monet-settings.desktop:228
+#: linux/share/applications/monet-settings.desktop:261
 msgctxt "an app's name in the menu"
 msgid "Printers"
 msgstr "מדפסות"
 
-#: linux/share/applications/monet-settings.desktop:261
+#: linux/share/applications/monet-settings.desktop:294
 msgctxt "an app's name in the menu"
 msgid "Display"
 msgstr "תצוגה"
 
-#: linux/share/applications/monet-settings.desktop:294
+#: linux/share/applications/monet-settings.desktop:327
 msgctxt "an app's name in the menu"
 msgid "Sound"
 msgstr "קול"
 
-#: linux/share/applications/monet-settings.desktop:327
+#: linux/share/applications/monet-settings.desktop:360
 msgctxt "an app's name in the menu"
 msgid "Date & Time"
 msgstr "תאריך & שעה"
 
-#: linux/share/applications/monet-settings.desktop:360
+#: linux/share/applications/monet-settings.desktop:393
 msgctxt "an app's name in the menu"
 msgid "Accounts"
 msgstr "חשבונות"
 
-#: linux/share/applications/monet-settings.desktop:393
+#: linux/share/applications/monet-settings.desktop:426
 msgctxt "an app's name in the menu"
 msgid "Mouse & Keyboard"
 msgstr "עכבר & מקלדת"
 
-#: linux/share/applications/monet-settings.desktop:426
+#: linux/share/applications/monet-settings.desktop:459
 msgctxt "an app's name in the menu"
 msgid "Power & Sleep"
 msgstr "חשמל & שינה"
 
-#: linux/share/applications/monet-settings.desktop:459
+#: linux/share/applications/monet-settings.desktop:492
 msgctxt "an app's name in the menu"
 msgid "Lock & Privacy"
 msgstr "נעילה & פרטיות"
 
-#: linux/share/applications/monet-settings.desktop:492
+#: linux/share/applications/monet-settings.desktop:525
 msgctxt "an app's name in the menu"
 msgid "Notifications"
 msgstr "התראות"
 
-#: linux/share/applications/monet-settings.desktop:525
+#: linux/share/applications/monet-settings.desktop:558
 msgctxt "an app's name in the menu"
 msgid "Accessibility"
 msgstr "נגישות"
 
-#: linux/share/applications/monet-settings.desktop:558
+#: linux/share/applications/monet-settings.desktop:591
 msgctxt "an app's name in the menu"
 msgid "Default Apps"
 msgstr "אפליקציות ברירת מחדל"
 
-#: linux/share/applications/monet-settings.desktop:591
+#: linux/share/applications/monet-settings.desktop:624
 msgctxt "an app's name in the menu"
 msgid "Storage"
 msgstr "אחסון"
 
-#: linux/share/applications/monet-settings.desktop:624
+#: linux/share/applications/monet-settings.desktop:657
 msgctxt "an app's name in the menu"
 msgid "Backups"
 msgstr "גיבויים"
 
-#: linux/share/applications/monet-settings.desktop:657
+#: linux/share/applications/monet-settings.desktop:690
 msgctxt "an app's name in the menu"
 msgid "Games & Controllers"
 msgstr "משחקים & בקרים"
 
-#: linux/share/applications/monet-settings.desktop:690
+#: linux/share/applications/monet-settings.desktop:723
 msgctxt "an app's name in the menu"
 msgid "Play on Windows"
 msgstr "לשחק דרך Windows"
 
-#: linux/share/applications/monet-settings.desktop:723
+#: linux/share/applications/monet-settings.desktop:756
 msgctxt "an app's name in the menu"
 msgid "Updates"
 msgstr "עדכונים"
 
-#: linux/share/applications/monet-settings.desktop:756
+#: linux/share/applications/monet-settings.desktop:789
 msgctxt "an app's name in the menu"
 msgid "About Monet"
 msgstr "אודות Monet"

@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "setup"))
 sys.dont_write_bytecode = True
 
-from monet_setup import disks, install, network, system  # noqa: E402
+from monet_setup import disks, install, network, pc, system  # noqa: E402
 
 GB = 10**9
 
@@ -571,6 +571,147 @@ class Window(unittest.TestCase):
         self.assertIn(install.MOK_PASSWORD, done)
         self.assertIn("Continue boot", done)
         self.assertNotIn("any key", done.lower())  # install's --timeout -1 skips shim's "Press any key"
+
+
+class YourChoices(unittest.TestCase):
+    """The time zone is chosen in Setup; the password is typed twice, and none at all is allowed."""
+
+    def test_time_zones_by_region_then_city(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tab = Path(tmp) / "zone1970.tab"
+            tab.write_text("# comment\nSE\t+5920+01803\tEurope/Stockholm\n"
+                           "AR\t-3436-05827\tAmerica/Argentina/Buenos_Aires\tBuenos Aires (BA, CF)\n")
+            zones = system.time_zones(tab)
+        self.assertIn("America/Argentina/Buenos_Aires", zones)
+        self.assertEqual(zones[-1], "UTC")                                     # under Other, last
+        self.assertTrue(set(z for *_, z in system.LANGUAGES) <= set(zones))   # every language's guess is there
+        regions = [system.zone_region(z) for z in zones]
+        self.assertEqual(regions, sorted(regions, key=list(system.REGIONS).index))
+        self.assertEqual(system.zone_city("America/Argentina/Buenos_Aires"), "Buenos Aires (Argentina)")
+        self.assertEqual(system.zone_city("Europe/Stockholm"), "Stockholm")
+
+    def test_the_zone_chosen_is_the_one_installed(self):
+        try:
+            from monet_setup import app
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        setup = app.Setup.__new__(app.Setup)
+        setup._zones = ["America/New_York", "America/Toronto", "Europe/Oslo", "Europe/Stockholm", "UTC"]
+        setup._zone, setup._zone_chosen, setup._language = "Europe/Oslo", False, 2    # Svenska: Stockholm's
+        setup.changed = setup.clockChanged = types.SimpleNamespace(emit=lambda: None)
+        self.assertEqual(setup._regions(), ["America", "Europe", "UTC"])
+        self.assertEqual(app.Setup.cities.fget(setup), ["Oslo", "Stockholm"])
+        setup.setCity(1)
+        self.assertEqual((setup._zone, setup._zone_chosen), ("Europe/Stockholm", True))
+        setup.setRegion(0)                                    # America: its first city (no Swedish one there)
+        self.assertEqual(setup._zone, "America/New_York")
+        setup.setRegion(1)                                    # back to Europe: the language's own
+        self.assertEqual(setup._zone, "Europe/Stockholm")
+        source = (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8")
+        self.assertIn('"timezone": self._zone,', source)
+        self.assertIn("if self._zone_asked or self._zone_chosen or DEMO:", source)   # the internet never overrules a choice
+        installer = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        self.assertIn('zone = plan["timezone"]\n        if not (root / "usr/share/zoneinfo" / zone).exists():', installer)
+
+    def test_the_password_twice_or_none(self):
+        try:
+            from monet_setup import app
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        setup = app.Setup.__new__(app.Setup)
+        setup._name, setup._password = "", ""
+        setup.changed = types.SimpleNamespace(emit=lambda: None)
+        self.assertEqual(setup.setPerson("Ann", "secret", "secrte"), "The passwords don't match.")
+        self.assertEqual(setup.setPerson("Ann", "abc", "abc"), "")               # any password: theirs to choose
+        self.assertEqual(setup.setPerson("Ann", "", ""), "")                     # none at all, too
+        self.assertEqual((setup._name, setup._password), ("Ann", ""))
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn('property bool ready: name.text.trim() !== "" && pass.text === again.text', qml)
+        self.assertIn('tr("No password: Monet signs you in by itself, and anyone who uses this PC can open your account and change its settings.")', qml)
+        test = (ROOT / "tools/vm-test.py").read_text(encoding="utf-8")
+        self.assertIn("vm.click(*AGAIN_FIELD)", test)
+
+    def test_no_password_signs_in_by_itself(self):
+        commands = []
+        saved = install.run
+        install.run = lambda *args, **kw: commands.append([str(a) for a in args]) or ""
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                install.no_password(root, "ann")
+                autologin = (root / "etc/plasmalogin.conf.d/50-monet-no-password.conf").read_text()
+                locker = (root / "var/home/ann/.config/kscreenlockerrc").read_text()
+        finally:
+            install.run = saved
+        self.assertEqual(autologin, "[Autologin]\nUser=ann\nSession=plasma.desktop\nRelogin=false\n")
+        self.assertIn("Autolock=false", locker)
+        self.assertIn(["chroot", tmp, "passwd", "-d", "ann"], commands)
+        # Labelled against Monet's own policy, not the stick's.
+        installer = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        self.assertIn('policy = ["-c", "/" + policies[-1].relative_to(root).as_posix()] if policies else []', installer)
+        self.assertEqual(installer.count('"setfiles", "-F", "-T", "0", *policy, contexts'), 2)
+
+    def test_a_password_set_later_ends_it(self):
+        import importlib.machinery
+        import importlib.util
+        loader = importlib.machinery.SourceFileLoader("monet_ready", str(ROOT / "linux/libexec/monet-ready"))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        ready = importlib.util.module_from_spec(spec)
+        loader.exec_module(ready)
+        with tempfile.TemporaryDirectory() as tmp:
+            conf, shadow = Path(tmp) / "50-monet-no-password.conf", Path(tmp) / "shadow"
+            conf.write_text("[Autologin]\nUser=ann\nSession=plasma.desktop\n")
+            shadow.write_text("root:!:19000::::::\nann::19000:0:99999:7:::\n")
+            ready.settle_no_password(conf, shadow)
+            self.assertTrue(conf.exists())                    # still none: still signs in by itself
+            shadow.write_text("root:!:19000::::::\nann:$y$j9T$abc:19001:0:99999:7:::\n")
+            ready.settle_no_password(conf, shadow)
+            self.assertFalse(conf.exists())                   # a password now: the sign-in screen asks
+        unit = (ROOT / "linux/systemd/monet-ready-boot.service").read_text()
+        self.assertIn("ConditionPathExists=|/etc/plasmalogin.conf.d/50-monet-no-password.conf", unit)
+
+
+class TheBlueScreenSkipped(unittest.TestCase):
+    """The first start's blue screen opens on Continue boot: choosing it leaves Monet unable to
+    start (bad shim signature). The USB stick notices and asks the firmware again."""
+
+    def run_with(self, secure_boot, has_key, enrolled):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            def fake_said(*args, input=None, timeout=60):
+                if args[:2] == ("mokutil", "--sb-state"):
+                    return "SecureBoot enabled\n" if secure_boot else "SecureBoot disabled\n"
+                if args[0] == "lsblk":
+                    return json.dumps({"blockdevices": [{"path": "/dev/sda", "parttype": None, "children": [
+                        {"path": "/dev/sda1", "parttype": "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"}]}]})
+                if args[:2] == ("mokutil", "--test-key"):
+                    return f"{args[2]} is already enrolled\n" if enrolled else f"{args[2]} is not enrolled\n"
+                return ""
+
+            def fake_run(args, **kw):
+                if args[0] == "mount" and has_key:
+                    key = Path(args[-1]) / pc.ESP_KEY
+                    key.parent.mkdir(parents=True, exist_ok=True)
+                    key.write_bytes(b"0\x82key")
+                return types.SimpleNamespace(returncode=0)
+
+            with mock.patch.object(pc, "said", fake_said), mock.patch.object(pc.subprocess, "run", fake_run):
+                found = pc.untrusted_key(Path(tmp))
+                return found.name if found else None
+
+    def test_only_an_installed_monet_that_cant_start(self):
+        self.assertEqual(self.run_with(secure_boot=True, has_key=True, enrolled=False), "monet-key.der")
+        self.assertIsNone(self.run_with(secure_boot=True, has_key=True, enrolled=True))     # trusted: fine
+        self.assertIsNone(self.run_with(secure_boot=False, has_key=True, enrolled=False))   # Secure Boot off: it starts
+        self.assertIsNone(self.run_with(secure_boot=True, has_key=False, enrolled=False))   # no Monet here
+
+    def test_setup_leaves_the_key_where_the_stick_finds_it(self):
+        installer = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        self.assertIn('esp_key = Path(TARGET) / "boot/efi" / pc.ESP_KEY', installer)
+        self.assertEqual(pc.ESP_KEY, "EFI/Monet/monet-key.der")
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn("onClicked: setup.trustAndRestart()", qml)
+        self.assertIn("visible: setup.untrusted", qml)
 
 
 class TheStick(unittest.TestCase):

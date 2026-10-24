@@ -16,12 +16,13 @@ back when you're done.
 
 ## Get it
 
-1. Download **Monet-Installer.iso** from the [latest release](https://github.com/HappyHamster135/Monet/releases).
-2. Write it to a USB stick with [Fedora Media Writer](https://fedoraproject.org/workstation/download).
-3. Boot from it and choose **Install Monet and Windows**.
+1. On Windows, download **Make-USB-Stick.exe** from the [latest release](https://github.com/HappyHamster135/Monet/releases) and open it.
+2. Choose a USB stick of 2 GB or more: it downloads Monet and writes the stick.
+3. Restart from the stick and follow Monet Setup.
 
 Monet installs itself, then downloads and installs a games-only Windows by
-itself. The **[install guide](docs/INSTALL.md)** has every step.
+itself. On Linux or a Mac, write the release's Setup.iso with your disk tool.
+The **[install guide](docs/INSTALL.md)** has every step.
 
 Monet is a preview for PCs with NVIDIA (RTX 20-series or newer), AMD or Intel graphics.
 

@@ -239,8 +239,9 @@ ApplicationWindow {
             property bool busy: false
             function leave() { return !setup.applyKeyboard() }
             spacing: px(22)
-            Title { text: tr("Hello"); big: true; topPadding: px(40) }
-            Body { text: tr("Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards.") }
+            // Room for the note about an installed Monet that can't start, when there is one.
+            Title { text: tr("Hello"); big: true; topPadding: setup.untrusted ? 0 : px(40) }
+            Body { text: tr("Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."); visible: !setup.untrusted }
             Field {
                 label: tr("Language")
                 Choice {
@@ -259,8 +260,46 @@ ApplicationWindow {
                     onActivated: (i) => setup.setKeyboard(i)
                 }
             }
+            // A region, then a city in it (as Fedora's installer asks): guessed from the
+            // language, then from where the PC is once it's online, unless chosen.
+            Field {
+                label: tr("Time zone")
+                Row {
+                    width: parent.width
+                    spacing: px(10)
+                    Choice {
+                        width: Math.round((parent.width - parent.spacing) * 0.42)
+                        model: setup.regions
+                        currentIndex: setup.region
+                        onActivated: (i) => setup.setRegion(i)
+                    }
+                    Choice {
+                        width: parent.width - parent.spacing - Math.round((parent.width - parent.spacing) * 0.42)
+                        model: setup.cities
+                        currentIndex: setup.city
+                        onActivated: (i) => setup.setCity(i)
+                    }
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    opacity: setup.zoneNow !== "" ? 1 : 0     // keeps its place, so nothing jumps
+                    text: tr("It's %1 there now", setup.zoneNow)
+                    font.family: sans; font.pixelSize: px(12); color: dim
+                }
+            }
             // A PC Monet can't run on hears it now, not after the questions.
             Note { text: setup.pcBlocker; warm: true; visible: text !== "" }
+            // Monet is installed here but can't start: its first start's blue screen was skipped.
+            Note {
+                visible: setup.untrusted
+                warm: true
+                text: tr("Monet is already installed on this PC, but it can't start yet: the blue screen at its first start was skipped. Monet can ask again. Restart, and on the blue screen choose Enroll MOK, then Continue and Yes, type monetsetup, and choose Reboot.")
+            }
+            PillButton {
+                visible: setup.untrusted
+                text: tr("Ask again and restart")
+                onClicked: setup.trustAndRestart()
+            }
         }
     }
 
@@ -372,12 +411,16 @@ ApplicationWindow {
     Component {
         id: personStep
         Column {
+            id: person
             spacing: px(22)
-            property bool ready: name.text.trim() !== "" && pass.text.length >= 6
+            // Any password, or none: it's theirs to choose. Twice, so a slip doesn't lock them out.
+            readonly property bool mismatch: again.text !== "" && pass.text !== again.text
+            readonly property bool none: pass.text === "" && again.text === "" && name.text.trim() !== ""
+            property bool ready: name.text.trim() !== "" && pass.text === again.text
             property bool busy: false
             property string problem: ""
             function leave() {
-                problem = setup.setPerson(name.text, pass.text)
+                problem = setup.setPerson(name.text, pass.text, again.text)
                 return problem === ""
             }
             Title { text: tr("Who's using this PC?") }
@@ -394,9 +437,19 @@ ApplicationWindow {
             }
             Field {
                 label: tr("Password")
-                Entry { id: pass; width: parent.width; secret: true; placeholder: tr("At least 6 characters"); text: setup.personPassword; onAccepted: next.clicked() }
+                Entry { id: pass; width: parent.width; secret: true; text: setup.personPassword; onAccepted: again.forceActiveFocus() }
             }
-            Note { text: parent.problem; warm: true; visible: text !== "" }
+            Field {
+                label: tr("Password again")
+                Entry { id: again; width: parent.width; secret: true; text: setup.personPassword; onAccepted: next.clicked() }
+            }
+            Note {
+                text: person.mismatch ? tr("The passwords don't match.")
+                    : person.none ? tr("No password: Monet signs you in by itself, and anyone who uses this PC can open your account and change its settings.")
+                    : person.problem
+                warm: true
+                visible: text !== ""
+            }
         }
     }
 

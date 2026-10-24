@@ -556,7 +556,16 @@ trip is fresh (a day at most) and clears it otherwise, and the session's
 whose PAM service is `plasmalogin-autologin`, so the lock screen shows
 first and the desktop starts behind it. About shows the last start: the
 PC's own (firmware), Monet's (loader, kernel, system: `systemd-analyze`)
-and the desktop's (sign-in to plasmashell). On the glass: the name in Fraunces, search,
+and the desktop's (sign-in to plasmashell), and **Save a report** writes one
+text file into Documents (`monet-quick report`): Monet's version and `monet
+doctor`, `rpm-ostree status`, the PC (DMI, `lscpu`, `lspci -nnk`, `lsusb`, disks),
+the screens and KWin's support information, battery (`upower`), network,
+radios, Bluetooth and sound, the start's timing, failed services, this start's
+errors and the kernel's warnings, sleep and waking, the session's errors,
+Monet's services, the start before's errors and how it ended, a week's
+crashes, and Monet's records (trips to Windows, going back, Windows' setup),
+each cut to its useful end. Headings in English, for whoever it's sent to; it
+stays on the PC until it's sent, and a notification shows it in Files. On the glass: the name in Fraunces, search,
 and the pages, each marked by a swatch cut from the paintings with a white
 glyph, in three groups: the light, the network, printers, the screen, sound,
 the clock and you; the pointer, power, the lock and privacy, notifications,
@@ -601,8 +610,35 @@ video, photos, PDFs and text, and the apps that can, set in
 `mimeapps.list`; a kind with no app at all offers the Store. Accessibility
 sets the size of everything (each screen's scale, `kscreen-doctor`), the
 pointer's size, less motion (KDE's animation speed at 0, which Monet's own
-pieces follow too, and which Monet's look then leaves alone) and the screen
-reader where Orca is. Storage shows what fills the disk in one bar (games,
+pieces follow too, and which Monet's look then leaves alone), the screen
+reader where Orca is, and the magnifier: KWin's Zoom effect, loaded and
+unloaded over D-Bus (`org.kde.kwin.Effects`) and kept in `kwinrc`, with
+KWin's own shortcuts (Windows key and + or −).
+
+**Phone** is KDE Connect (Bazzite's, with its menu entry renamed Phone), in
+Monet's words and never by its name: `kdeconnect-cli --list-devices` (read in
+English) for the phones paired and near, their battery from KDE Connect's
+D-Bus (`…/battery`, `charge` and `isCharging`), and Pair, Ring, Send a file…
+(KDE's file dialog, then `--share`), Texts (`kdeconnect-sms`), Files on your
+phone (`kdeconnect://`) and Forget. With no phone yet, a QR code
+(`phone-qr.png`, made by `make-icons.py` with segno: ink on a white tile)
+leads to KDE Connect's download page, for Android and iPhone alike. The page
+looks again every four seconds while it's open, as phones join the Wi-Fi and
+pairings are answered on the phone.
+
+**Fingerprint** (Lock & Privacy) shows with a reader (`fprintd-list`, read in
+English): set up, a finger unlocks the screen and answers administrator
+questions (polkit, `sudo`). Bazzite has fprintd but leaves authselect's
+fingerprint step off; the image turns it on (`authselect enable-feature
+with-fingerprint`, as Bluefin does), and Monet's lock screen already says "or
+scan your fingerprint". Setting a finger up is KDE's Accounts page. The
+sign-in screen (Plasma Login Manager) can't take a finger yet.
+
+**Text from a picture** is Screenshot's (Spectacle's) Extract Text, all on the
+PC (Tesseract). Bazzite has fifteen of Monet's languages' data; the image adds
+the rest, and `monet-look` sets Spectacle's `ocrLanguages` to your language
+and English once (`ocr_language`: `sv_SE.UTF-8` is `swe`), unless you've
+chosen others. Storage shows what fills the disk in one bar (games,
 apps, your files, Monet) and makes room: the Trash, asked once more before
 it's emptied, and Downloads, opened in Files. Updates offers the Monet
 before the last update, kept by bootc: Go back, asked once more, starts it
@@ -735,8 +771,15 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   graphics card: Qt Quick runs in software, in cage), Fraunces titles, Inter
   for reading, ink for Continue and the sun for Erase & Install. Laid out on
   a 1440 x 900 grid and scaled to the screen.
-- **The steps:** Hello (language and keyboard), Wi-Fi (skipped with a cable),
-  who's using this PC, Your apps (Photos, Documents, Video, Music and
+- **The steps:** Hello (language, keyboard and time zone: a region, then a
+  city, as Fedora's installer asks; the language's guess, then where the PC
+  is from Fedora's location service once it's online, unless chosen; with
+  the time there now), Wi-Fi (skipped with a cable), who's using this PC (the password
+  twice; any password, or none: then a warning says Monet signs them in by
+  itself and anyone at the PC can open the account, and the install deletes
+  the password, writes `plasmalogin.conf.d/50-monet-no-password.conf` and
+  turns the screen lock off, until `monet-ready boot` sees the account has a
+  password), Your apps (Photos, Documents, Video, Music and
   Calculator shown as built in, Zen Browser ticked; Office, Mail, Discord,
   Spotify, Heroic, Prism Launcher, OBS Studio and Krita to tick, in tiles that
   turn lily), Ready (Monet and
@@ -757,11 +800,17 @@ shim, GRUB and kernel, so it starts with Secure Boot on.
   subvolumes, Windows' share left free), downloads Monet with skopeo into
   `download` (kept across tries; restarted when it stalls), installs it
   with `bootc install to-filesystem`, sets up the person, language, keyboard,
-  time zone, Wi-Fi, Windows' waiting state and the apps picked
+  time zone (the one chosen), Wi-Fi, Windows' waiting state and the apps picked
   (`/var/lib/monet/apps`, which `monet-apps.timer` installs from Flathub
   once Monet is online, until all are in; a PC that never chose gets the
   everyday ones), imports Universal Blue's
-  driver key, and names the firmware entry "Monet".
+  driver key (and leaves a copy at `EFI/Monet/monet-key.der`), and names the
+  firmware entry "Monet". The blue screen at the first start opens on
+  Continue boot, which skips the key and leaves Monet unable to start ("bad
+  shim signature"): started again, the stick finds the copy, sees with
+  `mokutil --test-key` that it isn't trusted while Secure Boot is on, and
+  Hello offers to ask again (`mokutil --import`, the blue screen waiting) and
+  restart.
 - **Tested in CI** (`tools/vm-test.py`): QEMU with Secure Boot on installs
   Monet on a blank disk through the real screens and starts it, then looks
   around it: signs in, and shows the desktop, the app menu, Files and
@@ -866,6 +915,28 @@ Windows only learns a device by pairing it itself.
 The PC's clock keeps UTC for both: Monet Bridge's installer sets Windows'
 `RealTimeIsUniversal`, so Windows' clock isn't off by the time zone after a
 switch.
+
+A Windows that Monet installed wears The Hours (`wallpaper.jpg` in the
+Windows package, set by `Install-Monet.ps1 -FromMonet`); a Windows kept from
+before keeps its own, as its setup (`windows_setup.rs`' payload) carries no
+painting.
+
+Monet Bridge keeps itself up to date on the way out. `go_back` sets BootNext,
+leaves `update-then-restart` in `C:\ProgramData\Monet` and starts the
+`\Monet\Update` task (`Update-Monet.ps1`), which renames it `update-claimed`
+as it starts; if that hasn't happened within 30 seconds, Bridge restarts by
+itself. The task asks GitHub for Monet's releases at most once a day (every
+Monet is a pre-release while it's a preview, so not `releases/latest`), and
+when the newest is newer than Bridge it downloads `Monet-X-Windows.zip`,
+checks it against the release's `SHA256SUMS.txt` and runs its
+`Install-Monet.ps1 -Quiet`, which leaves the running Update task alone and
+swaps Bridge's program in one step (a copy cut short never leaves half of
+it). An update that isn't downloaded within 75 seconds of taking over waits
+for the next trip, and a task that starts after Bridge has given up on it
+does nothing, as Windows is already going down. Its
+`finally` restarts the PC whatever happened, so an update never keeps
+anyone in Windows, and a game is never interrupted: it runs only after
+you've chosen to go back.
 
 ## The last 30 seconds
 

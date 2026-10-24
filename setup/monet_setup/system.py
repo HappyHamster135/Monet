@@ -1,13 +1,15 @@
 """Languages, keyboards and time zones Monet Setup offers.
 
 Each language brings a sensible keyboard and time zone, so most people only
-pick one thing. The time zone is refined from the internet once Wi-Fi works.
+pick one thing. The time zone is refined from the internet once Wi-Fi works,
+unless it's been chosen.
 """
 
 import json
 import re
 import unicodedata
 import urllib.request
+from pathlib import Path
 
 from .words import N_
 
@@ -93,6 +95,44 @@ def keyboard_for(language_index):
     """The keyboard that goes with a language."""
     layout = LANGUAGES[language_index][2]
     return next(i for i, k in enumerate(KEYBOARDS) if k[1] == layout and not k[2])
+
+
+ZONE_TAB = Path("/usr/share/zoneinfo/zone1970.tab")
+
+# The time zones' regions, in the order tzdata names them; a time zone is chosen as a region,
+# then a city in it, as Fedora's installer asks. UTC is under Other.
+REGIONS = {
+    "Africa": N_("Africa"), "America": N_("America"), "Antarctica": N_("Antarctica"), "Arctic": N_("Arctic"),
+    "Asia": N_("Asia"), "Atlantic": N_("Atlantic"), "Australia": N_("Australia"), "Europe": N_("Europe"),
+    "Indian": N_("Indian Ocean"), "Pacific": N_("Pacific"), "UTC": N_("Other"),
+}
+
+
+def zone_region(zone):
+    """"Europe/Stockholm": "Europe"."""
+    return zone.split("/")[0]
+
+
+def zone_city(zone):
+    """"Europe/Stockholm": "Stockholm"; "America/Argentina/Buenos_Aires": "Buenos Aires (Argentina)"."""
+    parts = zone.replace("_", " ").split("/")
+    if len(parts) <= 2:
+        return parts[-1]
+    return f"{parts[-1]} ({' '.join(parts[1:-1])})"
+
+
+def time_zones(tab=ZONE_TAB):
+    """Every place's time zone ("Europe/Stockholm"), from tzdata, by region and then city; the
+    languages' own and UTC without it."""
+    zones = {"UTC"} | {zone for *_, zone in LANGUAGES}
+    try:
+        zones |= {line.split("\t")[2] for line in tab.read_text().splitlines()
+                  if line.strip() and not line.startswith("#")}
+    except (OSError, IndexError):
+        pass
+    order = list(REGIONS)
+    return sorted((zone for zone in zones if zone_region(zone) in REGIONS),
+                  key=lambda zone: (order.index(zone_region(zone)), zone_city(zone).casefold()))
 
 
 def guess_time_zone(fallback, timeout=6):

@@ -103,6 +103,7 @@ const PAYLOAD: &[&str] = &[
     "Install-Monet.ps1",
     "Uninstall-Monet.ps1",
     "GameProfile.ps1",
+    "Update-Monet.ps1",
     "monet.ico",
 ];
 

@@ -123,7 +123,7 @@ Keywords[uk]=налаштування;параметри;wifi;вайфай;bluet
 Keywords[vi]=cài đặt;tùy chọn;wifi;bluetooth;màn hình;âm thanh;hình nền;tối;sáng;cập nhật;
 Keywords[zh_CN]=设置;偏好设置;首选项;wifi;无线网络;蓝牙;bluetooth;显示;屏幕;声音;壁纸;深色;浅色;更新;
 Keywords[zh_TW]=設定;偏好設定;wifi;無線網路;bluetooth;藍牙;顯示器;螢幕;聲音;桌布;深色;淺色;更新;settings;
-Actions=light;wifi;bluetooth;printers;display;sound;datetime;users;input;power;privacy;notifications;accessibility;apps;storage;backups;games;windows;updates;about;
+Actions=light;wifi;bluetooth;phone;printers;display;sound;datetime;users;input;power;privacy;notifications;accessibility;apps;storage;backups;games;windows;updates;about;
 
 [Desktop Action light]
 Name=Light & Wallpaper
@@ -223,6 +223,39 @@ Name[vi]=Bluetooth
 Name[zh_CN]=蓝牙
 Name[zh_TW]=Bluetooth
 Exec=@LIBEXECDIR@/monet-quick open bluetooth
+
+[Desktop Action phone]
+Name=Phone
+Name[ar]=الهاتف
+Name[cs]=Telefon
+Name[da]=Telefon
+Name[de]=Handy
+Name[el]=Τηλέφωνο
+Name[es]=Teléfono
+Name[fi]=Puhelin
+Name[fr]=Téléphone
+Name[he]=טלפון
+Name[hi]=फ़ोन
+Name[hu]=Telefon
+Name[id]=Ponsel
+Name[it]=Telefono
+Name[ja]=スマートフォン
+Name[ko]=휴대폰
+Name[nb]=Telefon
+Name[nl]=Telefoon
+Name[pl]=Telefon
+Name[pt]=Telemóvel
+Name[pt_BR]=Celular
+Name[ro]=Telefon
+Name[ru]=Телефон
+Name[sv]=Telefon
+Name[th]=โทรศัพท์
+Name[tr]=Telefon
+Name[uk]=Телефон
+Name[vi]=Điện thoại
+Name[zh_CN]=手机
+Name[zh_TW]=手機
+Exec=@LIBEXECDIR@/monet-quick open phone
 
 [Desktop Action printers]
 Name=Printers

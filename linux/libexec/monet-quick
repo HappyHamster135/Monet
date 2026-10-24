@@ -71,12 +71,16 @@
     monet-quick notify-place clock|topright|topcenter
     monet-quick notify-time 3|5|10       seconds a popup stays
     monet-quick notify-app ID on|off     an app's popups (ID as hex of its UTF-8)
-    monet-quick access                   the size of everything, the pointer, motion and the screen reader, as JSON
+    monet-quick access                   the size of everything, the pointer, motion, the screen reader and the magnifier, as JSON
     monet-quick access-scale 100|125|150|175|200
     monet-quick access-cursor 24|36|48
     monet-quick access-motion reduced|normal
     monet-quick access-reader on|off     Orca, when it's there
-    monet-quick privacy                  when the screen locks, the password after sleep, recent files, as JSON
+    monet-quick access-zoom on|off       the magnifier (KWin's Zoom: Windows key and + or −)
+    monet-quick phones                   phones through KDE Connect (near, paired, battery), as JSON; null without it
+    monet-quick phone-pair|phone-unpair|phone-ring|phone-send|phone-files ID
+    monet-quick phone-texts              KDE Connect's texts
+    monet-quick privacy                  when the screen locks, the password after sleep, recent files, the fingerprint, as JSON
     monet-quick lock-after 1|5|15|30|0   minutes away before the screen locks (0 is never)
     monet-quick lock-resume on|off       ask for the password after sleep
     monet-quick remember on|off          Files and the menu remember what you opened
@@ -100,6 +104,7 @@
     monet-quick defaults                 what opens web pages, mail, folders, music, video, photos, PDFs and text, as JSON
     monet-quick default KIND ID          set it (ID, a menu entry's file name, as hex of its UTF-8)
     monet-quick about                    this PC, as JSON
+    monet-quick report                   save a report (logs, the PC, Monet's records) in Documents; its name as JSON
     monet-quick doctor                   run `monet doctor`
     monet-quick update-check             is there a newer Monet, or app updates? as JSON
     monet-quick update                   install them now (by itself, it does once a day)
@@ -129,6 +134,7 @@
 
 import base64
 import configparser
+import getpass
 import gettext
 import json
 import os
@@ -160,13 +166,14 @@ PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
-PAGES = ("light", "wifi", "bluetooth", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
+PAGES = ("light", "wifi", "bluetooth", "phone", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
          "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
     "wifi": "kcm_networkmanagement",
     "bluetooth": "kcm_bluetooth",
+    "phone": "kcm_kdeconnect",
     "display": "kcm_kscreen",
     "sound": "kcm_pulseaudio",
     "input": "kcm_mouse",
@@ -1319,6 +1326,23 @@ LOCK_TIMES = (1, 5, 15, 30, 0)  # minutes away; 0 is never
 SCORING = "Plugin-org.kde.ActivityManager.Resources.Scoring"
 
 
+def fingerprint_state(listed=None):
+    """None without a fingerprint reader; else whether a finger of yours is set up.
+    listed: `fprintd-list YOU` (in English), as fprintd says it."""
+    if listed is None:
+        if not shutil.which("fprintd-list"):
+            return None
+        try:
+            done = subprocess.run(["fprintd-list", getpass.getuser()], capture_output=True, text=True, timeout=10,
+                                  env=dict(os.environ, LANGUAGE="C", LC_ALL="C.UTF-8"))
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        listed = done.stdout + done.stderr
+    if "No devices available" in listed or "Using device" not in listed:
+        return None
+    return {"enrolled": bool(re.search(r"^\s*-\s*#\d+:", listed, re.M))}
+
+
 def privacy_state():
     try:
         minutes = int(kread("kscreenlockerrc", "Daemon", "Timeout", "5") or 5)
@@ -1327,7 +1351,8 @@ def privacy_state():
     return {"lockAfter": minutes if kread("kscreenlockerrc", "Daemon", "Autolock", "true") != "false" else 0,
             "lockOnResume": kread("kscreenlockerrc", "Daemon", "LockOnResume", "true") != "false",
             # KDE's 0 remembers everything, 1 only some apps, 2 nothing.
-            "remember": kread("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0") != "2"}
+            "remember": kread("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0") != "2",
+            "fingerprint": fingerprint_state()}
 
 
 def reload_locker():
@@ -1346,6 +1371,56 @@ def forget_recent():
     busctl("call", "org.kde.ActivityManager", "/ActivityManager/Resources/Scoring",
            "org.kde.ActivityManager.ResourcesScoring", "DeleteRecentStats", "sis", "", "0", "everything")
     (DATA_HOME / "recently-used.xbel").unlink(missing_ok=True)  # GTK apps keep their own list
+
+
+# Phone -----------------------------------------------------------------------
+# Your phone through KDE Connect (its app on the phone, on the same Wi-Fi): the phones
+# near and the ones paired, their battery, and pairing, ringing, sending a file and texts.
+
+# Settings passes the id on a command line: a phone with any other kind of id is left out.
+PHONE_LISTED = re.compile(r"^- (.+): ([\w-]+) \((.+)\)$")
+
+
+def phones(listed=None, battery=None):
+    """[{id, name, paired, near, battery, charging}], or None when KDE Connect isn't here.
+    listed: `kdeconnect-cli --list-devices` (in English, whatever the session's language)."""
+    if listed is None:
+        if not shutil.which("kdeconnect-cli"):
+            return None
+        try:
+            done = subprocess.run(["kdeconnect-cli", "--list-devices"], capture_output=True, text=True, timeout=10,
+                                  env=dict(os.environ, LANGUAGE="C", LC_ALL="C.UTF-8"))
+        except (OSError, subprocess.TimeoutExpired):
+            return []
+        listed = done.stdout
+    found = []
+    for line in listed.splitlines():
+        match = PHONE_LISTED.match(line.strip())
+        if not match:
+            continue
+        name, ident, state = match.groups()
+        paired, near = "paired" in state, "reachable" in state
+        charge, charging = (battery or phone_battery)(ident) if paired and near else (None, None)
+        found.append({"id": ident, "name": name, "paired": paired, "near": near, "battery": charge,
+                      "charging": charging})
+    return found
+
+
+def phone_battery(ident):
+    """(percent, charging) as the phone tells KDE Connect, or (None, None)."""
+    path = f"/modules/kdeconnect/devices/{ident}/battery"
+    said = [busctl("get-property", "org.kde.kdeconnect", path, "org.kde.kdeconnect.device.battery", key) or ""
+            for key in ("charge", "isCharging")]
+    charge = re.fullmatch(r"i (-?\d+)", said[0].strip())
+    return (int(charge.group(1)) if charge and int(charge.group(1)) >= 0 else None,
+            said[1].strip() == "b true" if said[1].strip() else None)
+
+
+def phone_send(ident):
+    """Picks a file (KDE's file dialog) and sends it to the phone."""
+    picked = run("kdialog", "--getopenfilename", str(Path.home()), "--title", tr("Send to your phone"), timeout=3600)
+    if picked and picked.strip():
+        run("kdeconnect-cli", "--share", picked.strip(), "-d", ident, timeout=60)
 
 
 # Printers --------------------------------------------------------------------
@@ -1912,7 +1987,7 @@ def crashed(unit):
 # Accessibility -------------------------------------------------------------
 # The size of everything (each screen's scale, kscreen-doctor), the pointer's size
 # (kcminputrc, as KDE's page sets it), motion (KDE's animation speed, which Monet's
-# own pieces follow too) and the screen reader (Orca, when it's there).
+# own pieces follow too), the screen reader (Orca, when it's there) and the magnifier (KWin's Zoom).
 
 SCALES = (100, 125, 150, 175, 200)
 CURSOR_SIZES = (24, 36, 48)
@@ -1940,7 +2015,20 @@ def access_state():
         "cursor": cursor,
         "reduced": kread("kdeglobals", "KDE", "AnimationDurationFactor", MONETS_MOTION) in ("0", "0.0"),
         "reader": kread("kaccessrc", "ScreenReader", "Enabled", "false") == "true" if shutil.which("orca") else None,
+        "zoom": zoom_on(),
     }
+
+
+def zoom_on():
+    """Whether KWin's magnifier (its Zoom effect) is on, or None when KWin can't say."""
+    out = busctl("call", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects", "isEffectLoaded", "s", "zoom") or ""
+    return {"b true": True, "b false": False}.get(out.strip())
+
+
+def set_zoom(on):
+    """The magnifier: Windows key and + or − zooms the screen in and out (KWin's own shortcuts)."""
+    kwrite("kwinrc", "Plugins", "zoomEnabled", "true" if on else "false")
+    busctl("call", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects", "loadEffect" if on else "unloadEffect", "s", "zoom")
 
 
 def coordinate(text, degrees):
@@ -2333,6 +2421,113 @@ def about():
         "setup": read_text(Path("/var/lib/monet/windows-setup")),
         "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
     }
+
+
+# Save a report: what helps find out why something went wrong, in one text file in
+# Documents (Settings → About Monet). Monet and the PC, this start's and the one before's
+# errors, sleep, the network, Bluetooth, sound, the screens, crashes and Monet's own
+# records. The headings are in English, for whoever it's sent to; nothing leaves the PC.
+
+DMI = Path("/sys/class/dmi/id")
+# (heading, a command or a file, ("head" or "tail", lines) or None for all of it)
+REPORT_PARTS = (
+    ("Monet", (f"{BINDIR}/monet", "version"), None),
+    ("monet doctor", (f"{BINDIR}/monet", "doctor"), None),
+    ("This Monet and the ones to go back to", ("rpm-ostree", "status"), None),
+    ("Kernel", ("uname", "-a"), None),
+    ("Kernel command line", Path("/proc/cmdline"), None),
+    ("Processor", ("lscpu",), ("head", 30)),
+    ("Memory", ("free", "-h"), None),
+    ("Graphics and other devices", ("lspci", "-nnk"), None),
+    ("USB", ("lsusb",), None),
+    ("Disks", ("lsblk", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS,MODEL"), None),
+    ("Space", ("df", "-h", "-x", "tmpfs", "-x", "devtmpfs", "-x", "overlay", "-x", "squashfs", "-x", "efivarfs"), None),
+    ("Screens", ("kscreen-doctor", "-o"), None),
+    ("KWin", ("busctl", "--user", "--json=short", "call", "org.kde.KWin", "/KWin", "org.kde.KWin",
+              "supportInformation"), ("head", 400)),
+    ("Battery and power", ("upower", "-d"), ("head", 150)),
+    ("Network", ("nmcli", "general"), None),
+    ("Network devices", ("nmcli", "device"), None),
+    ("Radios", ("rfkill",), None),
+    ("Bluetooth", ("bluetoothctl", "show"), None),
+    ("Bluetooth devices", ("bluetoothctl", "devices", "Paired"), None),
+    ("Sound", ("wpctl", "status"), ("head", 120)),
+    ("Start time", ("systemd-analyze",), None),
+    ("What the start waited for", ("systemd-analyze", "blame", "--no-pager"), ("head", 25)),
+    ("Failed services", ("systemctl", "--failed", "--no-pager"), None),
+    ("Your failed services", ("systemctl", "--user", "--failed", "--no-pager"), None),
+    ("Errors since this start", ("journalctl", "-b", "-p", "err", "--no-pager", "-o", "short-monotonic"), ("tail", 300)),
+    ("The kernel's warnings since this start", ("journalctl", "-k", "-b", "-p", "warning", "--no-pager",
+                                                "-o", "short-monotonic"), ("tail", 150)),
+    ("Sleep and waking", ("journalctl", "-b", "--no-pager", "-o", "short-monotonic",
+                          "-g", "suspend|resume|hibernat|PM: |sleep"), ("tail", 100)),
+    ("Your session's errors", ("journalctl", "--user", "-b", "-p", "err", "--no-pager"), ("tail", 200)),
+    ("Monet's services", ("journalctl", "-b", "--no-pager", "-u", "monet-*"), ("tail", 200)),
+    ("Your Monet services", ("journalctl", "--user", "-b", "--no-pager", "-u", "monet-*"), ("tail", 100)),
+    ("Errors in the start before", ("journalctl", "-b", "-1", "-p", "err", "--no-pager"), ("tail", 150)),
+    ("How the start before ended", ("journalctl", "-b", "-1", "--no-pager"), ("tail", 60)),
+    ("Crashes in the last week", ("coredumpctl", "list", "--since=-7d", "--no-pager"), ("tail", 40)),
+    ("Trips to Windows", Path("/var/lib/monet/switch.log"), ("tail", 60)),
+    ("Went back by itself", Path("/var/lib/monet/went-back.json"), None),
+    ("On trial", Path("/var/lib/monet/trial.json"), None),
+    ("Setting Windows up", Path("/var/log/monet-windows.log"), ("tail", 80)),
+)
+ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def said(source, timeout=30):
+    """A command's output (what it printed and any errors), or a file's text: whatever there is."""
+    if isinstance(source, Path):
+        try:
+            return source.read_text(errors="replace")
+        except OSError as e:
+            return f"({e.strerror})"
+    if not shutil.which(source[0]):
+        return f"({source[0]} isn't here)"
+    try:
+        done = subprocess.run(source, capture_output=True, text=True, errors="replace", timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return f"({type(e).__name__})"
+    text = done.stdout + (done.stderr if done.stderr.strip() else "")
+    if source[:2] == ("busctl", "--user"):   # {"type":"s","data":["..."]}: the text inside
+        try:
+            text = json.loads(text)["data"][0]
+        except (ValueError, KeyError, IndexError, TypeError):
+            pass
+    return text
+
+
+def report_text(parts=REPORT_PARTS, now=None):
+    now = now or time.localtime()
+    out = [f"Monet report, {time.strftime('%Y-%m-%d %H:%M', now)}", ""]
+    machine = [read_text(DMI / name) for name in ("sys_vendor", "product_name", "product_version", "board_name",
+                                                 "bios_version", "bios_date")]
+    out += ["== The PC", " · ".join(m for m in machine if m and m.lower() not in ("default string", "to be filled by o.e.m.")), ""]
+    for heading, source, cut in parts:
+        lines = ANSI.sub("", said(source)).rstrip().splitlines()
+        if cut:
+            lines = lines[:cut[1]] if cut[0] == "head" else lines[-cut[1]:]
+        out += [f"== {heading}", *(lines or ["(nothing)"]), ""]
+    return "\n".join(out)
+
+
+def save_report(folder=None, now=None):
+    """Writes the report into Documents and gives its path."""
+    now = now or time.localtime()
+    folder = Path(folder or (run("xdg-user-dir", "DOCUMENTS") or "").strip() or Path.home() / "Documents")
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"Monet report {time.strftime('%Y-%m-%d %H.%M', now)}.txt"
+    path.write_text(report_text(now=now), encoding="utf-8")
+    return path
+
+
+def report_saved(path):
+    """Says the report is there, with Files a click away."""
+    if shutil.which("notify-send"):
+        answer = run("notify-send", "--app-name=Monet", "--icon=document-save", f"--action=open={tr('Show')}", "--wait",
+                     tr("Saved a report"), tr("In Documents, as %1.", Path(path).name), timeout=3600)
+        if (answer or "").strip() == "open":
+            show_in_files(path)
 
 
 # Opening Monet Settings ----------------------------------------------------
@@ -3047,6 +3242,13 @@ def main(argv):
              else {"ok": False, "message": "Monet couldn't change your password."})
     elif cmd == "about":
         emit(about())
+    elif cmd == "report":
+        path = save_report()
+        emit({"saved": path.name})
+        subprocess.Popen([sys.argv[0], "report-saved", str(path)], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "report-saved" and args:
+        report_saved(args[0])
     elif cmd in ("doctor", "update"):
         result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=3600)
         emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
@@ -3125,6 +3327,19 @@ def main(argv):
         kwrite("kdeglobals", "KDE", "AnimationDurationFactor", "0" if args[0] == "reduced" else MONETS_MOTION)
     elif cmd == "access-reader" and args and args[0] in ("on", "off") and shutil.which("orca"):
         set_reader(args[0] == "on")
+    elif cmd == "access-zoom" and args and args[0] in ("on", "off"):
+        set_zoom(args[0] == "on")
+    elif cmd == "phones":
+        emit(phones())
+    elif cmd in ("phone-pair", "phone-unpair", "phone-ring") and args and re.fullmatch(r"[\w-]+", args[0]):
+        run("kdeconnect-cli", "--" + cmd.split("-", 1)[1], "-d", args[0], timeout=30)
+    elif cmd == "phone-send" and args and re.fullmatch(r"[\w-]+", args[0]):
+        phone_send(args[0])
+    elif cmd == "phone-files" and args and re.fullmatch(r"[\w-]+", args[0]):
+        subprocess.Popen(["xdg-open", f"kdeconnect://{args[0]}/"], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "phone-texts":
+        subprocess.Popen(["kdeconnect-sms"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "privacy":
         emit(privacy_state())
     elif cmd == "lock-after" and args and args[0].isdigit() and int(args[0]) in LOCK_TIMES:

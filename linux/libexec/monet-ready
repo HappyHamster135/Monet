@@ -10,10 +10,12 @@ monet-ready-boot.service before every sign-in screen, which also clears the last
     monet-ready on|off     turn it on or off, for the person who asks
     monet-ready arm        at shutdown: when the PC is about to start Windows, arm the next start
     monet-ready boot       before the sign-in screen: sign in by itself this once, if armed lately
+                           (and end Monet Setup's sign-in for an account without a password, once it has one)
     monet-ready settle     once signed in: the next start asks for the password again
 """
 
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -23,6 +25,9 @@ USER = STATE / "ready-user"  # who turned it on
 ARMED = STATE / "ready-armed"  # when the PC left for Windows
 DROPIN = Path("/etc/plasmalogin.conf.d/zz-monet-ready.conf")
 FLAG = Path("/run/monet/ready-auto")  # this start signs in by itself: lock at once
+# Monet Setup's: an account made without a password signs in by itself, until it has one.
+NO_PASSWORD = Path("/etc/plasmalogin.conf.d/50-monet-no-password.conf")
+SHADOW = Path("/etc/shadow")
 EFIVARS = Path("/sys/firmware/efi/efivars")
 GLOBAL = "8be4df61-93ca-11d0-aa6c-00e098032b8c"
 # A trip lasts as long as the games; longer than a day and the sign-in screen asks again.
@@ -47,6 +52,28 @@ def caller():
         return pwd.getpwuid(int(uid)).pw_name if uid.isdigit() else None
     except KeyError:
         return None
+
+
+def has_password(user, shadow=SHADOW):
+    """Whether the account has a password now (or is locked): anything in shadow's second field."""
+    try:
+        for line in shadow.read_text().splitlines():
+            fields = line.split(":")
+            if fields[0] == user:
+                return len(fields) > 1 and fields[1] != ""
+    except OSError:
+        return False
+    return True  # gone: there's no one to sign in
+
+
+def settle_no_password(conf=NO_PASSWORD, shadow=SHADOW):
+    """Setup's automatic sign-in ends once its account has a password (Settings → Accounts)."""
+    try:
+        user = re.search(r"^User=(.+)$", conf.read_text(), re.M).group(1).strip()
+    except (OSError, AttributeError):
+        return
+    if has_password(user, shadow):
+        conf.unlink(missing_ok=True)
 
 
 def boots_windows_next(efivars=EFIVARS):
@@ -81,6 +108,7 @@ def main(args):
             STATE.mkdir(parents=True, exist_ok=True)
             ARMED.write_text(f"{int(time.time())}\n")
     elif cmd == "boot":
+        settle_no_password()
         # Each start decides afresh: no automatic sign-in unless this one comes back from Windows.
         DROPIN.unlink(missing_ok=True)
         FLAG.unlink(missing_ok=True)

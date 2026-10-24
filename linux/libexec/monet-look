@@ -21,6 +21,17 @@ kw_default() { # kw_default <file> <group> <key> <value>
     [ -n "$(kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null)" ] || kw --file "$1" --group "$2" --key "$3" "$4"
 }
 
+# Tesseract's name for one of Monet's languages ("sv_SE.UTF-8" -> swe), or nothing for English.
+ocr_language() {
+    case "$1" in
+        pt_BR*|pt*) echo por ;; zh_TW*|zh_HK*) echo chi_tra ;; zh*) echo chi_sim ;; nb*|nn*|no*) echo nor ;;
+        ar*) echo ara ;; cs*) echo ces ;; da*) echo dan ;; de*) echo deu ;; el*) echo ell ;; es*) echo spa ;;
+        fi*) echo fin ;; fr*) echo fra ;; he*) echo heb ;; hi*) echo hin ;; hu*) echo hun ;; id*) echo ind ;;
+        it*) echo ita ;; ja*) echo jpn ;; ko*) echo kor ;; nl*) echo nld ;; pl*) echo pol ;; ro*) echo ron ;;
+        ru*) echo rus ;; sv*) echo swe ;; th*) echo tha ;; tr*) echo tur ;; uk*) echo ukr ;; vi*) echo vie ;;
+    esac
+}
+
 # Apps go by plain names, and the tools that only show how Monet is built
 # (KDE's and Bazzite's) stay out of the menu: copies of their menu entries in
 # this account's menu, marked as Monet's so uninstalling takes them away.
@@ -299,6 +310,11 @@ kw_default dolphinrc General ShowZoomSlider false
 # The full status bar, with how much room is left on the drive (Dolphin's
 # small one leaves that out).
 kw_default dolphinrc General ShowStatusBar FullWidth
+
+# Screenshot's Extract Text reads your language as well as English (Tesseract's
+# names; the image has them all), unless you've chosen others.
+ocr="$(ocr_language "${LANGUAGE:-${LANG:-en}}")"
+kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"
 
 # Settings in the dock opens Monet Settings, not KDE's, and the store button
 # opens the Store (kept panels too).

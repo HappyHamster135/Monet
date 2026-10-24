@@ -66,7 +66,7 @@
         "Name[vi]": "Cài đặt nhanh",
         "Name[zh_CN]": "快捷设置",
         "Name[zh_TW]": "快速設定",
-        "Version": "0.9.1"
+        "Version": "0.9.2"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

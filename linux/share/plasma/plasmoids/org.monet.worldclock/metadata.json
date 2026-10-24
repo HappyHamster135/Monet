@@ -66,7 +66,7 @@
         "Name[vi]": "Đồng hồ thế giới",
         "Name[zh_CN]": "世界时钟",
         "Name[zh_TW]": "世界時鐘",
-        "Version": "0.9.1"
+        "Version": "0.9.2"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

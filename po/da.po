@@ -30,8 +30,8 @@ msgstr "Som %1"
 msgid "Someone else…"
 msgstr "En anden…"
 
-#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2973
-#: setup/qml/Main.qml:354 setup/qml/Main.qml:396
+#: image/password/QuickAuthDialog.qml:271 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2422 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3179
+#: setup/qml/Main.qml:393 setup/qml/Main.qml:439
 msgid "Password"
 msgstr "Adgangskode"
 
@@ -39,13 +39,13 @@ msgstr "Adgangskode"
 msgid "Fewer details"
 msgstr "Færre detaljer"
 
-#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:744
+#: image/password/QuickAuthDialog.qml:337 setup/qml/Main.qml:797
 msgid "Details"
 msgstr "Detaljer"
 
 #: image/password/QuickAuthDialog.qml:361 linux/share/monet/logout/Logout.qml:350 linux/share/monet/logout/Logout.qml:449
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2406 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2947
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3033 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4594 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3153
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3239 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4828 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:450
 #: crates/monet/src/main.rs:1047
 msgid "Cancel"
 msgstr "Annuller"
@@ -67,7 +67,7 @@ msgstr "Mere"
 msgid "Add widgets"
 msgstr "Tilføj widgets"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4047
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:129 linux/share/monet/explorer/MonetWidgetExplorer.qml:181 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4265
 msgid "Done"
 msgstr "Færdig"
 
@@ -79,7 +79,7 @@ msgstr "Tilføj en bjælke…"
 msgid "Manage desktops and bars"
 msgstr "Administrer skriveborde og bjælker"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:163 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265
 msgid "Widgets"
 msgstr "Widgets"
 
@@ -92,8 +92,8 @@ msgid "Click one to add it to your desktop, or drag it where you want it."
 msgstr ""
 "Klik på en for at sætte den på dit skrivebord, eller træk den derhen, hvor du vil have den."
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1577
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:211 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:249 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1601
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/ConfigPlace.qml:145
 msgid "Search"
 msgstr "Søg"
 
@@ -132,7 +132,7 @@ msgstr[1] "%1 på dit skrivebord"
 msgid "Remove all"
 msgstr "Fjern alle"
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3172
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:646 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3378
 msgid "Remove"
 msgstr "Fjern"
 
@@ -287,7 +287,7 @@ msgid "Update and restart"
 msgstr "Opdater og genstart"
 
 #: linux/share/monet/logout/Logout.qml:362 linux/share/monet/logout/Logout.qml:411 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4602 setup/qml/Main.qml:214 crates/monet/src/main.rs:317
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4836 setup/qml/Main.qml:214 crates/monet/src/main.rs:317
 #: crates/monet/src/main.rs:740
 msgid "Restart"
 msgstr "Genstart"
@@ -296,7 +296,7 @@ msgstr "Genstart"
 msgid "Update and shut down"
 msgstr "Opdater og luk ned"
 
-#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
+#: linux/share/monet/logout/Logout.qml:363 linux/share/monet/logout/Logout.qml:423 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
 msgid "Shut down"
 msgstr "Luk ned"
 
@@ -304,8 +304,8 @@ msgstr "Luk ned"
 msgid "Sign out"
 msgstr "Log ud"
 
-#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/monet/logout/Logout.qml:391 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Sleep"
 msgstr "Slumre"
 
@@ -325,7 +325,7 @@ msgstr "Dagen før"
 msgid "The day after"
 msgstr "Dagen efter"
 
-#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1891
+#: linux/share/monet/widgets/DayNotes.qml:168 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:438 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1915
 #: crates/monet-usb/src/gui.rs:143
 msgid "Close"
 msgstr "Luk"
@@ -499,12 +499,12 @@ msgstr[1] "%1 spil er klar"
 msgid "Play Windows games with one click"
 msgstr "Spil Windows-spil med ét klik"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:438
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:64 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:452
 msgid "Monet couldn't switch to Windows."
 msgstr "Monet kunne ikke skifte til Windows."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4566 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
-#: linux/libexec/monet-quick:2499 linux/libexec/monet-quick:2499
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:133 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4800 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5336
+#: linux/libexec/monet-quick:2695 linux/libexec/monet-quick:2695
 msgid "Windows"
 msgstr "Windows"
 
@@ -534,36 +534,36 @@ msgstr ""
 msgid "Open Windows"
 msgstr "Åbn Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:797
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:354 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:811
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "%1 spil"
 msgstr[1] "%1 spil"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:419 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4793
 msgid "Couldn't open Windows"
 msgstr "Kunne ikke åbne Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:420 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4794
 msgid "Play %1?"
 msgstr "Spil %1?"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4561 crates/monet/src/main.rs:311
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4795 crates/monet/src/main.rs:311
 msgid "Restart in Windows?"
 msgstr "Genstart i Windows?"
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4582
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:429 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4816
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "Din pc genstarter i Windows og åbner spillet. Når du afslutter, er du tilbage her. Gem dit arbejde først."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4583
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:430 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4817
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "Din pc genstarter i Windows. Åbne apps lukkes, så gem dit arbejde først."
 
-#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4601
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:444 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4835
 msgid "Restart & Play"
 msgstr "Genstart & spil"
 
@@ -624,11 +624,11 @@ msgstr "Filer, du åbner, vises her."
 msgid "Nothing here by that name."
 msgstr "Intet her med det navn."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2872
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:567 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3078
 msgid "Accounts"
 msgstr "Konti"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4230
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:652 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4448
 msgid "Lock"
 msgstr "Lås"
 
@@ -762,8 +762,8 @@ msgctxt "%1 is a quick setting, like Wi-Fi"
 msgid "%1 settings"
 msgstr "Indstillinger for %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2263
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2274
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:42 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2287
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2298
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -772,24 +772,24 @@ msgid "Unavailable"
 msgstr "Ikke tilgængelig"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:342
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2266 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2468
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2290 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2492
 msgid "Off"
 msgstr "Fra"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:319 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2289 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2527
 msgid "Not connected"
 msgstr "Ikke forbundet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2465
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2476
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:327 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:45 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2489
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2500
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:331 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:353 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2491
 msgid "On"
 msgstr "Til"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:339 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2771
 msgid "Night Light"
 msgstr "Natlys"
 
@@ -801,7 +801,7 @@ msgstr "Varmt efter solnedgang"
 msgid "Do Not Disturb"
 msgstr "Forstyr ikke"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2555
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:390 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2761
 msgid "Brightness"
 msgstr "Lysstyrke"
 
@@ -809,7 +809,7 @@ msgstr "Lysstyrke"
 msgid "Keyboard light"
 msgstr "Tastaturbelysning"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2641
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:421 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2847
 msgid "Volume"
 msgstr "Lydstyrke"
 
@@ -826,23 +826,23 @@ msgstr "Lys"
 msgid "Hours"
 msgstr "Timerne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084
 msgid "Mist"
 msgstr "Dis"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:521 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2085
 msgid "Smoke"
 msgstr "Røg"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2060
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2084
 msgid "Always light"
 msgstr "Altid lyst"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2085
 msgid "Always dark"
 msgstr "Altid mørkt"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:569 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2083
 msgid "Mist by day, smoke after dark"
 msgstr "Dis om dagen, røg i mørket"
 
@@ -859,7 +859,7 @@ msgctxt "%2 is how long it lasts, like 2:15"
 msgid "Battery %1%, %2 left"
 msgstr "Batteri %1 %, %2 tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3320
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:582 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3526
 msgid "Battery %1%"
 msgstr "Batteri %1 %"
 
@@ -867,7 +867,7 @@ msgstr "Batteri %1 %"
 msgid "All Settings"
 msgstr "Alle indstillinger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2006 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2051
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:39 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2030 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2075
 msgid "Light & Wallpaper"
 msgstr "Lys & baggrund"
 
@@ -888,2110 +888,2239 @@ msgctxt "Settings search words, space-separated"
 msgid "bluetooth headphones controller gamepad mouse keyboard pair"
 msgstr "bluetooth hovedtelefoner controller gamepad mus tastatur parre parring"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4308
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:48 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2573
+msgid "Phone"
+msgstr "Telefon"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+msgctxt "Settings search words, space-separated"
+msgid ""
+"phone mobile android iphone kde connect texts messages sms notifications send files pair ring find"
+msgstr ""
+"telefon mobil android iphone beskeder sms notifikationer send filer par ring find"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4542
 msgid "Printers"
 msgstr "Printere"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:49
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
 msgctxt "Settings search words, space-separated"
 msgid "printers printer print scanner paper queue default add"
 msgstr "printere printer udskriv scanner papir kø standard tilføj"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:51 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2752
 msgid "Display"
 msgstr "Skærm"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:52
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
 msgctxt "Settings search words, space-separated"
 msgid ""
 "display screen brightness night light monitor resolution scale size hdr vrr freesync g-sync refresh tearing"
 msgstr ""
 "skærm lysstyrke natlys skærme opløsning skalering størrelse hdr vrr freesync g-sync opdateringshastighed tearing display screen brightness monitor"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:54 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2633
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2839
 msgid "Sound"
 msgstr "Lyd"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:55
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:58
 msgctxt "Settings search words, space-separated"
 msgid "sound volume speakers headphones microphone mic audio output"
 msgstr "lyd lydstyrke højttalere hovedtelefoner mikrofon mic output"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:57 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2743
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:60 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2949
 msgid "Date & Time"
 msgstr "Dato & tid"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:58
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61
 msgctxt "Settings search words, space-separated"
 msgid "date time clock time zone 24-hour format automatic"
 msgstr "dato tid ur tidszone 24-timer format automatisk"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:61
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:64
 msgctxt "Settings search words, space-separated"
 msgid "accounts users password picture people name login sign in"
 msgstr "konti brugere adgangskode billede personer navn log ind"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:63 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3096
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:66 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3302
 msgid "Mouse & Keyboard"
 msgstr "Mus & tastatur"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:65
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:68
 msgctxt "Settings search words, space-separated"
 msgid ""
 "mouse keyboard touchpad trackpad pointer speed scrolling natural tap click left-handed layout language typing"
 msgstr ""
 "mus tastatur touchpad pegefelt markør hastighed rulning naturlig tryk klik venstrehåndet layout sprog skrivning"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:67 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3310
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:70 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3516
 msgid "Power & Sleep"
 msgstr "Strøm & slumre"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:69
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72
 msgctxt "Settings search words, space-separated"
 msgid ""
 "power sleep suspend screen off energy battery lid button shutdown performance saver mode"
 msgstr ""
 "strøm dvale slumre skærm slukket energi batteri låg knap luk ned ydelse strømbesparelse tilstand"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:71 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4192
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4410
 msgid "Lock & Privacy"
 msgstr "Lås & privatliv"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:72
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:75
 msgctxt "Settings search words, space-separated"
 msgid ""
-"lock screen locker password wake sleep privacy recent files history forget remember away"
+"lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger"
 msgstr ""
-"lås låseskærm adgangskode væk dvale privatliv seneste filer historik glem husk"
+"lås låseskærm adgangskode væk dvale privatliv seneste filer historik glem husk fingeraftryk finger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:74 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3507
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:77 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3713
 msgid "Notifications"
 msgstr "Notifikationer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:76
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:79
 msgctxt "Settings search words, space-separated"
 msgid "notifications alerts do not disturb quiet popups sounds apps"
 msgstr "notifikationer meddelelser forstyr ikke stille pop op lyde apps"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:78 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3753
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:81 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3959
 msgid "Accessibility"
 msgstr "Tilgængelighed"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:80
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:83
 msgctxt "Settings search words, space-separated"
 msgid ""
-"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read"
+"accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read magnifier magnify"
 msgstr ""
-"tilgængelighed større tekst størrelse skalering zoom markør bevægelse animation skærmlæser orca se læse"
+"tilgængelighed større tekst størrelse skalering zoom markør bevægelse animation skærmlæser orca se læse lup forstør"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:82 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3655
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:85 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3861
 msgid "Default Apps"
 msgstr "Standardapps"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:84
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:87
 msgctxt "Settings search words, space-separated"
 msgid ""
 "default apps browser web email mail files music video photos pdf text open with"
 msgstr ""
 "standardapps browser web e-mail mail filer musik video fotos pdf tekst åbn med"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:86 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3831 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5101
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:89 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4049 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5335
 msgid "Storage"
 msgstr "Lagerplads"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:88
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91
 msgctxt "Settings search words, space-separated"
 msgid "storage disk space room full free trash downloads clean games apps"
 msgstr ""
 "lagring disk plads fuld ledig papirkurv overførsler downloads rydde op spil apps"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:90 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3988
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4206
 msgid "Backups"
 msgstr "Sikkerhedskopier"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:91
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:94
 msgctxt "Settings search words, space-separated"
 msgid ""
 "backups backup copy restore earlier versions history snapshot undo lost deleted usb drive time machine"
 msgstr ""
 "sikkerhedskopi backup kopi gendan tidligere versioner historik øjebliksbillede fortryd mistet slettet usb drev restore time machine"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:93 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4367
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:96 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4601
 msgid "Games & Controllers"
 msgstr "Spil & controllere"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:95
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:98
 msgctxt "Settings search words, space-separated"
 msgid ""
 "games controller gamepad joystick xbox playstation dualsense battery pair test buttons overlay fps mangohud performance steam library installed heroic lutris"
 msgstr ""
 "spil controller gamepad joystick xbox playstation dualsense batteri parre test knapper overlay fps mangohud ydelse steam bibliotek installeret heroic lutris"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:97 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2001 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2025 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4772
 msgid "Play on Windows"
 msgstr "Spil i Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:98
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:101
 msgctxt "Settings search words, space-separated"
 msgid "windows games play anti-cheat steam restart boot doctor check"
 msgstr "windows spil spille anti-cheat steam genstart opstart tjek"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:100 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4713
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:103 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4947
 msgid "Updates"
 msgstr "Opdateringer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:101
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:104
 msgctxt "Settings search words, space-separated"
 msgid "updates update version upgrade new reset restore rollback"
 msgstr ""
 "opdateringer opdatering version opgradering ny nulstil gendan tilbagerul"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:103
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:106
 msgid "About Monet"
 msgstr "Om Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:104
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:107
 msgctxt "Settings search words, space-separated"
 msgid ""
-"about pc computer specs graphics gpu processor cpu memory ram storage disk version"
+"about pc computer specs graphics gpu processor cpu memory ram storage disk version report logs problem"
 msgstr ""
-"om pc computer specifikationer grafik gpu processor cpu hukommelse ram lagring disk version"
+"om pc computer specifikationer grafik gpu processor cpu hukommelse ram lagring disk version rapport logfiler problem"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:194 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1526
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:205 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1550
 msgid "Settings"
 msgstr "Indstillinger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:491 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573
 msgid "Monet %1"
 msgstr "Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:491
 msgid "the Monet from before"
 msgstr "den forrige Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:507
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:521
 msgid "Updating firmware…"
 msgstr "Opdaterer firmware…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:522
 msgid "Restart to finish the firmware"
 msgstr "Genstart for at installere firmwaren"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:522
 msgid "Firmware is up to date"
 msgstr "Firmwaren er opdateret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:509
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:523
 msgid "The firmware didn't update"
 msgstr "Firmwaren blev ikke opdateret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:510
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:524
 msgid "%1 firmware update"
 msgid_plural "%1 firmware updates"
 msgstr[0] "%1 firmwareopdatering"
 msgstr[1] "%1 firmwareopdateringer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:530
 msgid "Keep the PC plugged in and switched on."
 msgstr "Lad pc'en være tilsluttet strøm og tændt."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:531
 msgid "It installs while the PC restarts. Keep it plugged in until it's back."
 msgstr ""
 "Den installeres, mens pc'en genstarter. Lad pc'en være tilsluttet strøm, til den er tilbage."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:517 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:531 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:585
 msgid "Everything is installed."
 msgstr "Alt er installeret."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:518
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:532
 msgid "Try again in a moment."
 msgstr "Prøv igen om lidt."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:519
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:533
 msgid "For this PC's own parts, from their makers. Install when you're ready."
 msgstr ""
 "Til denne pc's egne dele, fra deres producenter. Installer, når du er klar."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:529
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:543
 msgid "%1 · installs when the PC restarts"
 msgstr "%1 · installeres, når pc'en genstarter"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:548
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:562
 msgid "Fixes for Monet %1 are ready"
 msgstr "Rettelser til Monet %1 er klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:550
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:564
 msgid "Monet %1 is ready"
 msgstr "Monet %1 er klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:551
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
 msgid "A new Monet is ready"
 msgstr "En ny Monet er klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:554
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:568
 msgid "%1 app update is ready"
 msgid_plural "%1 app updates are ready"
 msgstr[0] "%1 app-opdatering er klar"
 msgstr[1] "%1 app-opdateringer er klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "Restart to finish"
 msgstr "Genstart for at afslutte"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:557
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
 msgid "Your apps are up to date"
 msgstr "Dine apps er opdaterede"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:559 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4039
 msgid "Monet"
 msgstr "Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:579
 msgid "Looking for updates…"
 msgstr "Søger efter opdateringer…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:566
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:580
 msgid "Monet and your apps are up to date."
 msgstr "Monet og dine apps er opdaterede."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:568
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:582
 msgid "And %1 app update. Install when you're ready."
 msgid_plural "And %1 app updates. Install when you're ready."
 msgstr[0] "Og %1 app-opdatering. Installer, når du er klar."
 msgstr[1] "Og %1 app-opdateringer. Installer, når du er klar."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:569
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:583
 msgid "Install when you're ready."
 msgstr "Installer, når du er klar."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:570
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:584
 msgid "Downloading and installing. You can keep using your PC."
 msgstr "Downloader og installerer. Du kan fortsætte med at bruge din pc."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:571
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:585
 msgid "The new Monet starts the next time you restart."
 msgstr "Den nye Monet starter, næste gang du genstarter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:572
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:586
 msgid ""
 "Monet couldn't look for updates. Check your internet connection and try again."
 msgstr ""
 "Monet kunne ikke søge efter opdateringer. Tjek din internetforbindelse, og prøv igen."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:573
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:587
 msgid "Monet only updates when you ask it to."
 msgstr "Monet opdaterer kun, når du beder om det."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649 setup/monet_setup/app.py:277
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:663 setup/monet_setup/app.py:367
 msgid "Type your name."
 msgstr "Skriv dit navn."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:649
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:663
 msgid "A name can't have : or , in it."
 msgstr "Der må ikke være : eller , i et navn."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:656
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:670
 msgid "Monet couldn't change your name."
 msgstr "Monet kunne ikke ændre dit navn."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:687
 msgid "Type a new password."
 msgstr "Skriv en ny adgangskode."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:673
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:687
 msgid "The new passwords don't match."
 msgstr "De nye adgangskoder er ikke ens."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:682 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:691
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:696 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:705
 msgid "Monet couldn't change your password."
 msgstr "Monet kunne ikke ændre din adgangskode."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:683
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:697
 msgid "That password is too long."
 msgstr "Den adgangskode er for lang."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:801 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4063
 msgid "%1 free"
 msgstr "%1 ledig"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:838
 msgid "%1 TB"
 msgstr "%1 TB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:814 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:838 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:839
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:815
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:839
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:816
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:840
 msgid "%1 KB"
 msgstr "%1 KB"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:848
 msgid "Today, %1"
 msgstr "I dag, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:824
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:848
 msgid "Yesterday, %1"
 msgstr "I går, %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:825
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:849
 msgid "%1, %2"
 msgstr "%1, %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4208
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:859 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4426
 msgid "Never"
 msgstr "Aldrig"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:835
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:859
 msgid "%1 min"
 msgstr "%1 min."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:836
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:860
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1 time"
 msgstr[1] "%1 timer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1459
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1483
 msgid "Plays here too"
 msgstr "Kan også spilles her"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1472
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1496
 msgid "Play %1"
 msgstr "Spil %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1565
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1589
 msgid "Search settings"
 msgstr "Søg i indstillinger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1716
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1740
 msgid "Opens in a separate window"
 msgstr "Åbner i et separat vindue"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1728
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1752
 msgid "Nothing here by that name. Try More settings."
 msgstr "Intet her med det navn. Prøv Flere indstillinger."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1746
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1770
 msgid "More settings ›"
 msgstr "Flere indstillinger ›"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1755
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1779
 msgid "More settings"
 msgstr "Flere indstillinger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1975
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
 msgid "Welcome to Monet"
 msgstr "Velkommen til Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1985
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2009
 msgid "A few things worth knowing, then it's yours."
 msgstr "Et par ting, der er gode at vide, og så er det hele dit."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1996
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2020
 msgid "Quick Settings, at the right of the bar"
 msgstr "Hurtige indstillinger, til højre på bjælken"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1997
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2021
 msgid ""
 "Wi-Fi, sound, brightness and the light, a click away. The arrow on a tile opens its page here."
 msgstr ""
 "Wi-Fi, lyd, lysstyrke og lyset, et klik væk. Pilen på en flise åbner dens side her."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1998
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2022
 msgid "Widgets on your desktop"
 msgstr "Widgets på dit skrivebord"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:1999
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2023
 msgid ""
 "Weather, a calendar with notes, your batteries, clocks around the world and more."
 msgstr ""
 "Vejr, en kalender med noter, dine batterier, ure fra hele verden og meget mere."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2000 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2024 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2271
 msgid "Edit widgets"
 msgstr "Rediger widgets"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2002
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2026
 msgid ""
 "Games that need Windows are a restart away, and you come back here after."
 msgstr ""
 "Spil, der kræver Windows, er kun en genstart væk, og bagefter kommer du tilbage hertil."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2003
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2027
 msgid "See your games"
 msgstr "Se dine spil"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2004
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2028
 msgid "Make it yours"
 msgstr "Gør den til din"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2005
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2029
 msgid ""
 "Choose the light and the painting, and how big things are on the screen."
 msgstr "Vælg lyset og maleriet, og hvor stort alt er på skærmen."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2007
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2031
 msgid "Find any setting"
 msgstr "Find enhver indstilling"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2008
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2032
 msgid ""
 "Type what you're looking for in the search at the top left, in your own words."
 msgstr ""
 "Skriv det, du leder efter, i søgefeltet øverst til venstre, med dine egne ord."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2037
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2061
 msgid "Start using Monet"
 msgstr "Kom i gang med Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2052
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2076
 msgid "How Monet looks, and when it changes."
 msgstr "Hvordan Monet ser ud, og hvornår det skifter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2083
 msgid "Follow the hours"
 msgstr "Følg timerne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2152
 msgid "Painting"
 msgstr "Maleri"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2162
 msgid "The Hours"
 msgstr "Timerne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2162
 msgid "The harbor at Le Havre"
 msgstr "Havnen i Le Havre"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2163
 msgid "Water Lilies"
 msgstr "Åkander"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2139
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2163
 msgid "The pond at Giverny"
 msgstr "Dammen i Giverny"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2164
 msgid "Haystacks"
 msgstr "Høstakke"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2140
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2164
 msgid "A field after the harvest"
 msgstr "En mark efter høsten"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2165
 msgid "The Magpie"
 msgstr "Skaden"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2141
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2165
 msgid "A farm under snow"
 msgstr "En gård under sne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2166
 msgid "Through the year"
 msgstr "Hen over året"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2142
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2166
 msgid "Each season its painting"
 msgstr "Hver årstid sit maleri"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2238
 msgid "Through the day"
 msgstr "Hen over dagen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2238
 msgid "The painting's light follows the sun where you are, from dawn to night"
 msgstr "Maleriets lys følger solen, hvor du er, fra daggry til nat"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:168
 msgid "Weather"
 msgstr "Vejr"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2239
 msgid "Rain, fog and snow where you are soften the painting with mist"
 msgstr "Regn, tåge og sne, hvor du er, gør maleriet blødere med dis"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2240
 msgid "Placard"
 msgstr "Værkskilt"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2240
 msgid "The time and the painting's name on the desktop"
 msgstr "Klokken og maleriets navn på skrivebordet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
 msgid "Bar steps aside"
 msgstr "Linjen viger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2241
 msgid ""
 "The bar slides away when a window comes over it, and back when you point at the bottom of the screen"
 msgstr ""
 "Linjen glider væk, når et vindue kommer hen over den, og tilbage, når du peger nederst på skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
 msgid "Glass"
 msgstr "Glas"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2218
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
 msgid ""
 "See the painting through panels, windows and widgets. Off is lighter on older PCs."
 msgstr ""
 "Se maleriet gennem paneler, vinduer og widgets. Slået fra er lettere for ældre pc'er."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2242
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2266
 msgid "Add, move or take away the cards on your desktop"
 msgstr "Tilføj, flyt eller fjern kortene på dit skrivebord"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2265
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2289
 msgid "Connected to %1"
 msgstr "Forbundet til %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2275
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2299
 msgid "This PC has no Wi-Fi"
 msgstr "Denne pc har ikke Wi-Fi"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2291 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2503 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
-#: setup/qml/Main.qml:339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2315 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2527 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2599
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4620 setup/qml/Main.qml:378
 msgid "Connected"
 msgstr "Forbundet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
 msgid "Other networks"
 msgstr "Andre netværk"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2301
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
 msgid "Networks"
 msgstr "Netværk"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2335
 msgid "No other networks nearby"
 msgstr "Ingen andre netværk i nærheden"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2311 setup/qml/Main.qml:349
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2335 setup/qml/Main.qml:388
 msgid "Looking for networks…"
 msgstr "Søger efter netværk…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2325
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349
 msgid "Couldn't join"
 msgstr "Kunne ikke oprette forbindelse"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2349 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2373 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2436
 msgid "Joining…"
 msgstr "Forbinder…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 setup/qml/Main.qml:339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2386 setup/qml/Main.qml:378
 msgid "Secured"
 msgstr "Sikret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2362 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2386 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4344
 msgid "Open"
 msgstr "Åbent"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2390
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2414
 msgid "Password for %1"
 msgstr "Adgangskode til %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2398
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2422
 msgid "That didn't work. Check the password."
 msgstr "Det virkede ikke. Tjek adgangskoden."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2412
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2436
 msgid "Join"
 msgstr "Forbind"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2428
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2452
 msgid "Hotspot"
 msgstr "Hotspot"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2429
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2453
 msgid "Starting…"
 msgstr "Starter…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2430
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2454
 msgid "This Wi-Fi can't share. Wired internet shares best."
 msgstr "Dette Wi-Fi kan ikke deles. Internet via kabel deles bedst."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2431
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2455
 msgid "Join %1 with the password %2"
 msgstr "Opret forbindelse til %1 med adgangskoden %2"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2432
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2456
 msgid "Lets a phone or tablet use this PC's internet"
 msgstr "Lader en telefon eller tablet bruge denne pc's internet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2450
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2474
 msgid "More Wi-Fi settings…"
 msgstr "Flere Wi-Fi-indstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2467
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2491
 msgid "%1 device connected"
 msgid_plural "%1 devices connected"
 msgstr[0] "%1 enhed forbundet"
 msgstr[1] "%1 enheder forbundet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2501
 msgid "This PC has no Bluetooth"
 msgstr "Denne pc har ikke Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2494
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2518
 msgid "No devices yet"
 msgstr "Ingen enheder endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2495
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2519
 msgid "Pair headphones, a controller or a mouse to see them here."
 msgstr "Par hovedtelefoner, en controller eller en mus for at se dem her."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2545
 msgid "Disconnecting…"
 msgstr "Afbryder…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2521 setup/qml/Main.qml:277
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2545 setup/qml/Main.qml:316
 msgid "Connecting…"
 msgstr "Forbinder…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
 msgid "Disconnect"
 msgstr "Afbryd"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2522
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2546
 msgid "Connect"
 msgstr "Forbind"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2532
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2556
 msgid "Pair a new device…"
 msgstr "Par en ny enhed…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2547
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2574
+msgid "Texts, notifications and files between your phone and this PC."
+msgstr "Beskeder, notifikationer og filer mellem din telefon og denne pc."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2598
+msgid "Not nearby"
+msgstr "Ikke i nærheden"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2600
+msgid "Connected · charging, %1%"
+msgstr "Forbundet · oplader, %1 %"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2601
+msgid "Connected · %1% battery"
+msgstr "Forbundet · %1 % batteri"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2621
+msgid "Ring"
+msgstr "Ring"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2628
+msgid "Send a file…"
+msgstr "Send en fil…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2633 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4503
+msgid "Forget"
+msgstr "Glem"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2645
+msgid "Texts"
+msgstr "Beskeder"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2650
+msgid "Files on your phone"
+msgstr "Filer på din telefon"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2664
+msgid "Accept on your phone"
+msgstr "Godkend på din telefon"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2664
+msgid "Nearby, not paired"
+msgstr "I nærheden, ikke parret"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2668
+msgid "Waiting…"
+msgstr "Venter…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2668
+msgid "Pair"
+msgstr "Par"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2707
+msgid "Get the app on your phone"
+msgstr "Hent appen til din telefon"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2716
+msgid ""
+"Point your phone's camera at this and install the app it shows. Open it on the same Wi-Fi as this PC, and your phone shows up here to pair."
+msgstr ""
+"Ret telefonens kamera mod dette, og installer den app, den viser. Åbn den på samme Wi-Fi som denne pc, så dukker din telefon op her og kan parres."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2731
+msgid "Phones can't connect to this PC yet"
+msgstr "Telefoner kan endnu ikke forbinde til denne pc"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2732
+msgid "The part of Monet that talks to phones is missing here."
+msgstr "Den del af Monet, der taler med telefoner, mangler her."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2738
+msgid "More phone settings…"
+msgstr "Flere telefonindstillinger…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2753
 msgid "Brightness, and warmer colors at night."
 msgstr "Lysstyrke og varmere farver om natten."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2566
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2772
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "Varmere farver fra solnedgang til solopgang, mere skånsomt for øjnene"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2579
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2785
 msgid "Games and films"
 msgstr "Spil og film"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "HDR on %1"
 msgstr "HDR på %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2592
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
 msgid "HDR"
 msgstr "HDR"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2593
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2799
 msgid "Brighter highlights and deeper colors, in games and films made for it"
 msgstr "Lysere højlys og dybere farver i spil og film, der er lavet til det"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2605
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2811
 msgid "Smoother games on %1"
 msgstr "Jævnere spil på %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2606
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2812
 msgid "Smoother games"
 msgstr "Jævnere spil"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2607
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2813
 msgid ""
 "The screen keeps pace with the game, without tearing (FreeSync, G-Sync)"
 msgstr "Skærmen holder trit med spillet uden tearing (FreeSync, G-Sync)"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2618
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2824
 msgid "Arrange displays and size…"
 msgstr "Skærmplacering og størrelse…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2634
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2840
 msgid "Playing through %1"
 msgstr "Afspilles via %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2650
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2856
 msgid "Play sound through"
 msgstr "Afspil lyd via"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2682
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2888
 msgid "Apps playing sound"
 msgstr "Apps, der afspiller lyd"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2713
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2919
 msgid "Microphone"
 msgstr "Mikrofon"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2721
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2927
 msgid "More sound settings…"
 msgstr "Flere lydindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2744
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2950
 msgid "Your clock, and where in the world it keeps time."
 msgstr "Dit ur, og hvor i verden det går efter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2781
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2987
 msgid "Set automatically"
 msgstr "Indstil automatisk"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2988
 msgid "From the internet, to the second"
 msgstr "Fra internettet, på sekundet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2782
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2988
 msgid "This PC can't set its own time"
 msgstr "Denne pc kan ikke selv indstille tiden"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2795
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3001
 msgid "24-hour time"
 msgstr "24-timers ur"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2796
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3002
 msgid "Your clocks change the next time you sign in"
 msgstr "Dine ure skifter, næste gang du logger ind"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2797
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3003
 msgid "As your region keeps it"
 msgstr "Som i din region"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3004
 msgid "13:00, not 1:00 PM"
 msgstr "13:00, ikke 1:00 PM"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3004
 msgid "1:00 PM, not 13:00"
 msgstr "1:00 PM, ikke 13:00"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2809
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3015 setup/qml/Main.qml:266
 msgid "Time zone"
 msgstr "Tidszone"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2817
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3023
 msgid "Search for a city"
 msgstr "Søg efter en by"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2848
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3054
 msgid "No time zone by that name"
 msgstr "Ingen tidszone med det navn"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2849
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3055
 msgid "Try a big city near you."
 msgstr "Prøv en storby nær dig."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2854
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3060
 msgid "More date & time settings…"
 msgstr "Flere indstillinger for dato & tid…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2873
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3079
 msgid "You, and the people who share this PC."
 msgstr "Dig og dem, du deler denne pc med."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2906
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3112
 msgid "%1 · Administrator"
 msgstr "%1 · Administrator"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2907
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3113
 msgid "%1 · Standard account"
 msgstr "%1 · Standardkonto"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2916
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3122
 msgid "Change name"
 msgstr "Skift navn"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2942 setup/qml/Main.qml:386
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3148 setup/qml/Main.qml:429
 msgid "Your name"
 msgstr "Dit navn"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2953
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3159 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5387
 msgid "Save"
 msgstr "Gem"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2974
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3180
 msgid "Changed. Use the new one from now on."
 msgstr "Ændret. Brug den nye fra nu af."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2975
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3181
 msgid "For signing in, unlocking and allowing changes"
 msgstr "Til at logge ind, låse op og tillade ændringer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:2979
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3185 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4464
 msgid "Change…"
 msgstr "Skift…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3002
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3208
 msgid "Current password"
 msgstr "Nuværende adgangskode"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3009
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3215
 msgid "New password"
 msgstr "Ny adgangskode"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3222
 msgid "New password, again"
 msgstr "Ny adgangskode igen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "Changing…"
 msgstr "Skifter…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3040
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
 msgid "Change password"
 msgstr "Skift adgangskode"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3049
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3255
 msgid "Other people"
 msgstr "Andre personer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3058
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3264
 msgid "Only you, so far"
 msgstr "Kun dig indtil videre"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3059
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3265
 msgid "Add someone in More account settings."
 msgstr "Tilføj nogen under Flere kontoindstillinger."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
 msgid "Administrator"
 msgstr "Administrator"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3067
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3273
 msgid "Standard account"
 msgstr "Standardkonto"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3080
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3286
 msgid "More account settings…"
 msgstr "Flere kontoindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3097
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3303
 msgid "How the pointer moves and scrolls, and the languages you type in."
 msgstr "Hvordan markøren bevæger sig og ruller, og de sprog, du skriver på."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3308
 msgid "Touchpad"
 msgstr "Touchpad"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3308
 msgid "Mouse"
 msgstr "Mus"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3119
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3325
 msgid "Pointer speed"
 msgstr "Markørhastighed"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
 msgid "Tap to click"
 msgstr "Tryk for at klikke"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3126
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
 msgid "A light tap is a click"
 msgstr "Et let tryk er et klik"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3333
 msgid "Natural scrolling"
 msgstr "Naturlig rulning"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3127
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3333
 msgid "The page follows your fingers, as on a phone"
 msgstr "Siden følger dine fingre, som på en telefon"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3334
 msgid "Left-handed"
 msgstr "Venstrehåndet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3334
 msgid "The buttons swap sides"
 msgstr "Knapperne bytter side"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3335
 msgid "Off while typing"
 msgstr "Fra, mens du skriver"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3129
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3335
 msgid "A palm on it won't move the pointer"
 msgstr "En håndflade på den flytter ikke markøren"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3152 setup/qml/Main.qml:254
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3358 setup/qml/Main.qml:255
 msgid "Keyboard"
 msgstr "Tastatur"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3373
 msgid "Typing starts in this one"
 msgstr "Du starter med at skrive på dette"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3373
 msgid "Click to make this the main one"
 msgstr "Klik for at gøre den til den primære"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3181
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3387
 msgid "Add a language or layout"
 msgstr "Tilføj et sprog eller layout"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3214
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3420
 msgid "No layout by that name"
 msgstr "Intet layout med det navn"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
 msgid "Try your language's name, like Swedish or Japanese."
 msgstr "Prøv navnet på dit sprog, fx dansk eller japansk."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3223
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3429
 msgid "The bar shows which one you're typing in. Click it to switch."
 msgstr "Bjælken viser, hvilket sprog du skriver på. Klik der for at skifte."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3231
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3437
 msgid "Keyboard shortcuts"
 msgstr "Tastaturgenveje"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3242
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3448
 msgid "Open the menu"
 msgstr "Åbn menuen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449
 msgid "Files"
 msgstr "Filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3243 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4203
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3449 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4421
 msgid "Lock the screen"
 msgstr "Lås skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
 msgid "All your windows"
 msgstr "Alle dine vinduer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3244
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
 msgid "The desktop"
 msgstr "Skrivebordet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3451
 msgid "Switch windows"
 msgstr "Skift vindue"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3451
 msgid "A window on one half"
 msgstr "Et vindue på den ene halvdel"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3452
 msgid "A window on the whole screen"
 msgstr "Et vindue på hele skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3452
 msgid "What you copied"
 msgstr "Det, du har kopieret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3453
 msgid "Emoji"
 msgstr "Emoji"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3247
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3453
 msgid "Screenshot"
 msgstr "Skærmbillede"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3248 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4439
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3454 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4673
 msgid "Save the last 30 seconds"
 msgstr "Gem de sidste 30 sekunder"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3249
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3455
 msgid "Record the screen"
 msgstr "Optag skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3250
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3456
 msgid "Restart or shut down"
 msgstr "Genstart eller luk ned"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3284
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3490
 msgid "More mouse & keyboard settings…"
 msgstr "Flere indstillinger for mus & tastatur…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3289
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3495
 msgid "Change shortcuts…"
 msgstr "Skift genveje…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3311
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
 msgid "When the screen rests, when the PC sleeps, and how hard it works."
 msgstr ""
 "Hvornår skærmen hviler, hvornår pc'en slumrer, og hvor hårdt den arbejder."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
 msgctxt "%1 is a time like 1:20"
 msgid "Charging, full in %1"
 msgstr "Oplader, fuldt opladet om %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3322
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
 msgid "Charging"
 msgstr "Oplader"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3323 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3529 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3627
 msgid "Plugged in"
 msgstr "Tilsluttet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530
 msgctxt "%1 is a time like 2:15"
 msgid "About %1 left"
 msgstr "Ca. %1 tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3324 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3421
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3530 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3627
 msgid "On battery"
 msgstr "På batteri"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3331
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3537
 msgid "Protect the battery"
 msgstr "Beskyt batteriet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3332
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
 msgid ""
 "Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in."
 msgstr ""
 "Stopper opladningen ved 80 %, så batteriet holder flere år. Bedst til en bærbar, der for det meste er tilsluttet strøm."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3557
 msgid "Power saver"
 msgstr "Strømbesparelse"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3351
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3557
 msgid "Cooler and quieter, longer on battery"
 msgstr "Køligere og mere stille, længere tid på batteri"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3559
 msgid "Balanced"
 msgstr "Balanceret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3353
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3559
 msgid "Quick when it counts"
 msgstr "Hurtig, når det gælder"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3561
 msgid "Performance"
 msgstr "Ydeevne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3355
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3561
 msgid "As fast as it goes, warmer and louder"
 msgstr "Så hurtig som muligt, varmere og mere støjende"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3438
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3644
 msgid "Turn off the screen"
 msgstr "Sluk skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3439
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3645
 msgid "After this long untouched"
 msgstr "Efter så lang tid uden brug"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3450
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3656
 msgid "It wakes where you left off"
 msgstr "Du fortsætter, hvor du slap"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3463
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3669
 msgid "Buttons"
 msgstr "Knapper"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3470
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3676
 msgid "Power button"
 msgstr "Tænd/sluk-knap"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3471
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3677
 msgid "What a press does"
 msgstr "Hvad et tryk gør"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680
 msgid "Ask"
 msgstr "Spørg"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3474 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3680 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Nothing"
 msgstr "Ingenting"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3482
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3688
 msgid "Closing the lid"
 msgstr "Når låget lukkes"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3691
 msgid "Screen off"
 msgstr "Sluk skærm"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3493
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3699
 msgid "More power settings…"
 msgstr "Flere strømindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3508
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3714
 msgid "What may interrupt you, and when it waits."
 msgstr "Hvad der må forstyrre dig, og hvornår det venter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3516
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3722
 msgid "Do not disturb"
 msgstr "Forstyr ikke"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3723
 msgid "Notifications wait quietly in the list"
 msgstr "Notifikationer venter stille på listen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3723
 msgid "Notifications pop up as they come"
 msgstr "Notifikationer dukker op, når de kommer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3527
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3733
 msgid "Sounds"
 msgstr "Lyde"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3528
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3734
 msgid "A soft sound with each one"
 msgstr "En blød lyd ved hver enkelt"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3538
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3744
 msgid "Quiet by itself"
 msgstr "Automatisk stille"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3750
 msgid "While a game or film fills the screen"
 msgstr "Når et spil eller en film fylder skærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3544
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3750
 msgid "They wait until you're done"
 msgstr "De venter, til du er færdig"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3751
 msgid "While you share or mirror your screen"
 msgstr "Når du deler eller spejler din skærm"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3545
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3751
 msgid "So nothing private pops up for others"
 msgstr "Så intet privat dukker op for andre"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
 msgid "Let urgent ones through"
 msgstr "Lad de hastende komme igennem"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3546
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3752
 msgid "Like a low battery, even while quiet"
 msgstr "Som lavt batteri, selv når der er stille"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3567
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3773
 msgid "Popups"
 msgstr "Pop op-beskeder"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3574
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3780
 msgid "Where they appear"
 msgstr "Hvor de vises"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "By the clock"
 msgstr "Ved uret"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "Top right"
 msgstr "Øverst til højre"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3577
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3783
 msgid "Top center"
 msgstr "Øverst i midten"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3584
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3790
 msgid "How long they stay"
 msgstr "Hvor længe de bliver"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3587
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3793
 msgid "%1 s"
 msgstr "%1 sek."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3595 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3801 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
 msgid "Apps"
 msgstr "Apps"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3816
 msgid "Pops up"
 msgstr "Dukker op"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3610
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3816
 msgid "Only in the list, without popping up"
 msgstr "Kun på listen, uden at dukke op"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3628
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3834
 msgid "No apps yet"
 msgstr "Ingen apps endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3629
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3835
 msgid "Apps show up here once they've sent a notification."
 msgstr "Apps vises her, når de har sendt en notifikation."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3634
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3840
 msgid "More notification settings…"
 msgstr "Flere notifikationsindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Web browser"
 msgstr "Webbrowser"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Email"
 msgstr "E-mail"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853
 msgid "Folders"
 msgstr "Mapper"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3647 setup/monet_setup/app.py:59
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3853 setup/monet_setup/app.py:60
 msgid "Music"
 msgstr "Musik"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:58
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854 setup/monet_setup/app.py:59
 msgid "Video"
 msgstr "Video"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648 setup/monet_setup/app.py:56
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854 setup/monet_setup/app.py:57
 msgid "Photos"
 msgstr "Fotos"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854
 msgid "PDF documents"
 msgstr "PDF-dokumenter"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3854
 msgid "Text files"
 msgstr "Tekstfiler"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3656
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3862
 msgid ""
 "What opens web links, mail, folders, music, films, photos, PDFs and text."
 msgstr ""
 "Hvad der åbner weblinks, mail, mapper, musik, film, fotos, PDF'er og tekst."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3676
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3882
 msgid "Nothing chosen yet"
 msgstr "Intet valgt endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3677
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3883
 msgid "No app for this yet. Find one in the Store"
 msgstr "Ingen app til dette endnu. Find en i Butikken"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3678
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3884
 msgid "No app for this yet"
 msgstr "Ingen app til dette endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3704
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3910
 msgid "Find one"
 msgstr "Find en"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3739
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3945
 msgid "More default apps…"
 msgstr "Flere standardapps…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3754
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3960
 msgid "Make Monet easier to see, read and use."
 msgstr "Gør Monet nemmere at se, læse og bruge."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3762
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3968
 msgid "Size of everything"
 msgstr "Størrelse på alt"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3763
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3969
 msgid "Text, pictures and windows, on every screen"
 msgstr "Tekst, billeder og vinduer på alle skærme"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3774
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3980
 msgid "Pointer size"
 msgstr "Markørstørrelse"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Normal"
 msgstr "Normal"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Large"
 msgstr "Stor"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3777
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3983
 msgid "Larger"
 msgstr "Større"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3785
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3991
 msgid "Reduce motion"
 msgstr "Reducer bevægelse"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3786
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3992
 msgid "Things appear without sliding, fading or bouncing"
 msgstr "Ting vises uden at glide, tone frem eller hoppe"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3797
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4003
 msgid "Screen reader"
 msgstr "Skærmlæser"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3798
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4004
 msgid "Reads aloud what's on the screen and what you type"
 msgstr "Læser højt, hvad der er på skærmen, og hvad du skriver"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3808
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4015
+msgid "Magnifier"
+msgstr "Lup"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4016
+msgid ""
+"The Windows key and + zooms in where the pointer is, the Windows key and − zooms out"
+msgstr ""
+"Windows-tasten og + zoomer ind, hvor markøren er, Windows-tasten og − zoomer ud"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4026
 msgid "More accessibility settings…"
 msgstr "Flere indstillinger for tilgængelighed…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3820
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
 msgid "Games"
 msgstr "Spil"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3821
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4039
 msgid "Your files"
 msgstr "Dine filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3832
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4050
 msgid "What fills this PC, and room to make."
 msgstr "Hvad der fylder på denne pc, og hvordan du får mere plads."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3845
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4063
 msgid "Measuring…"
 msgstr "Måler…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3856
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4074
 msgid "of %1"
 msgstr "af %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3913
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4131
 msgid "Make room"
 msgstr "Frigør plads"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3920
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4138
 msgid "Trash"
 msgstr "Papirkurv"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3921
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4139
 msgid "Everything in it is gone for good. Sure?"
 msgstr "Alt i den forsvinder for altid. Er du sikker?"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3922 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4140 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4168
 msgid "Empty"
 msgstr "Tom"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4264
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4146 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4498
 msgid "Keep it"
 msgstr "Behold den"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4152
 msgid "Empty for good"
 msgstr "Tøm for altid"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3934
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4152
 msgid "Empty Trash"
 msgstr "Tøm papirkurven"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3948
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4166
 msgid "Downloads"
 msgstr "Downloads"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3950
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4168
 msgid "%1 · look through them in Files"
 msgstr "%1 · gennemse dem i Filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3954 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4022 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4468
-#: setup/qml/Main.qml:1010 linux/libexec/monet-quick:1602
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4172 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4240 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4702
+#: setup/qml/Main.qml:1068 linux/libexec/monet-quick:1678 linux/libexec/monet-quick:2527
 msgid "Show"
 msgstr "Vis"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3962
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4180
 msgid ""
 "What apps leave behind when they update is cleared away with each update, by itself."
 msgstr ""
 "Det, apps efterlader, når de opdateres, ryddes automatisk væk ved hver opdatering."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3989
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
 msgid "Copies of your files, for when something goes wrong."
 msgstr "Kopier af dine filer, til når noget går galt."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3990
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4208
 msgid "Monet keeps your files as they were, every hour."
 msgstr "Monet gemmer dine filer, som de var, hver time."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:3997
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4215
 msgid "Earlier versions of %1"
 msgstr "Tidligere versioner af %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4006
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4224
 msgid "No earlier versions yet"
 msgstr "Ingen tidligere versioner endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4007
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4225
 msgid "Monet keeps one every hour from now on."
 msgstr "Monet gemmer én hver time fra nu af."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4017
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4235
 msgid "Folder"
 msgstr "Mappe"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4027
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4245
 msgid "Put back"
 msgstr "Læg tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4038
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4256
 msgid ""
 "Put back keeps both: the earlier version goes beside it, with its time in the name."
 msgstr ""
 "Læg tilbage beholder begge: den tidligere version lægges ved siden af med tidspunktet i navnet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4053
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4271
 msgid "Earlier versions"
 msgstr "Tidligere versioner"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4061
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4279
 msgid "Keep earlier versions"
 msgstr "Gem tidligere versioner"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4062
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4280
 msgid "Every hour, for two months. Only what changed takes room."
 msgstr "Hver time i to måneder. Kun det, der er ændret, fylder."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4076
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4294
 msgid "Your files as they were"
 msgstr "Dine filer, som de var"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4077
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4295
 msgid "Opens in Files: copy back what you need."
 msgstr "Åbner i Filer: kopiér tilbage, hvad du har brug for."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4078
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4296
 msgid "The first one is kept within the hour."
 msgstr "Den første gemmes inden for en time."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "An hour ago"
 msgstr "For en time siden"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "Yesterday"
 msgstr "I går"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4082
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4300
 msgid "Last week"
 msgstr "Sidste uge"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4098
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4316
 msgid "A copy on a drive"
 msgstr "En kopi på et drev"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4107
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325
 msgid "Your backup drive"
 msgstr "Dit backupdrev"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4108
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4326
 msgid "Copying… %1%"
 msgstr "Kopierer… %1%"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4110
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4328
 msgid "Last copy: %1"
 msgstr "Seneste kopi: %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4329
 msgid "Not copied yet"
 msgstr "Ikke kopieret endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4111
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4329
 msgid "Plug it in to copy your files"
 msgstr "Sæt det i for at kopiere dine filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4117
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4335
 msgid "Copy now"
 msgstr "Kopiér nu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4134
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4352
 msgid "Stop copying to this drive"
 msgstr "Stop med at kopiere til dette drev"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4135
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4353
 msgid "What's on it stays there"
 msgstr "Det, der er på det, bliver der"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4138
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4356
 msgid "Stop"
 msgstr "Stop"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4150
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4368
 msgid "USB drive"
 msgstr "USB-drev"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4154
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4372
 msgid "Copy to this drive"
 msgstr "Kopiér til dette drev"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4163
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4381
 msgid "Plug in a USB drive"
 msgstr "Sæt et USB-drev i"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4164
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4382
 msgid ""
 "Monet copies your files to it whenever it's plugged in, at most once a day."
 msgstr ""
 "Monet kopierer dine filer til det, hver gang det er sat i, højst én gang om dagen."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4170
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
 msgid ""
 "Games aren't copied: Steam and the other stores download them again. Neither is the Trash."
 msgstr ""
 "Spil kopieres ikke: Steam og de andre butikker henter dem igen. Det gør papirkurven heller ikke."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4193
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4411
 msgid "The screen doesn't lock by itself."
 msgstr "Skærmen låses ikke af sig selv."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4194
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4412
 msgid "The screen locks after %1 minute away."
 msgid_plural "The screen locks after %1 minutes away."
 msgstr[0] "Skærmen låses, når du har været væk i %1 minut."
 msgstr[1] "Skærmen låses, når du har været væk i %1 minutter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4196
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4414
 msgid "Who can get in, and what Monet remembers."
 msgstr "Hvem der kan komme ind, og hvad Monet husker."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4204
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4422
 msgid "When you've been away this long"
 msgstr "Når du har været væk så længe"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "1 min"
 msgstr "1 min."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "5 min"
 msgstr "5 min."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "15 min"
 msgstr "15 min."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4207
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
 msgid "30 min"
 msgstr "30 min."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4216
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4434
 msgid "Ask for the password after sleep"
 msgstr "Bed om adgangskoden efter slumring"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4217
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4435
 msgid "Waking the PC shows the lock screen"
 msgstr "Når pc'en vækkes, vises låseskærmen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4226
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4444
 msgid "Lock now"
 msgstr "Lås nu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4227
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4445
 msgid "Or press the Windows key and L"
 msgstr "Eller tryk på Windows-tasten og L"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4237
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4457
+msgid "Fingerprint"
+msgstr "Fingeraftryk"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4459
+msgid ""
+"Your finger unlocks the screen and says yes when Monet asks for your password"
+msgstr ""
+"Din finger låser skærmen op og siger ja, når Monet beder om din adgangskode"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4460
+msgid ""
+"Set up a finger to unlock the screen and say yes when Monet asks for your password"
+msgstr ""
+"Konfigurer en finger, der låser skærmen op og siger ja, når Monet beder om din adgangskode"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4464
+msgid "Set up…"
+msgstr "Konfigurer…"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4471
 msgid "What Monet remembers"
 msgstr "Hvad Monet husker"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4245
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4479
 msgid "Remember recent files"
 msgstr "Husk seneste filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4246
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4480
 msgid "Files and the menu show what you opened lately"
 msgstr "Filer og menuen viser, hvad du har åbnet for nylig"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4255
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4489
 msgid "Forget recent files"
 msgstr "Glem seneste filer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4256
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4490
 msgid "The list of what you opened is cleared. Your files stay. Sure?"
 msgstr ""
 "Listen over det, du har åbnet, ryddes. Dine filer bliver. Er du sikker?"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4257
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4491
 msgid "Cleared. Your files are still there."
 msgstr "Ryddet. Dine filer er der stadig."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4258
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4492
 msgid "Clears the list, not the files"
 msgstr "Rydder listen, ikke filerne"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
-msgid "Forget"
-msgstr "Glem"
-
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4269
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4503
 msgid "Forget…"
 msgstr "Glem…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4286
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4520
 msgid "More lock screen settings…"
 msgstr "Flere indstillinger for låseskærm…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4291
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4525
 msgid "More recent files settings…"
 msgstr "Flere indstillinger for seneste filer…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4309
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4543
 msgid "Printers on your network show up by themselves."
 msgstr "Printere på dit netværk dukker op af sig selv."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4310
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4544
 msgid "%1 printer"
 msgid_plural "%1 printers"
 msgstr[0] "%1 printer"
 msgstr[1] "%1 printere"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4323
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4557
 msgid "Your default"
 msgstr "Din standardprinter"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
 msgid "Printing"
 msgstr "Udskriver"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4324
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
 msgid "Turned off"
 msgstr "Slukket"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4325 crates/monet/src/main.rs:252
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4559 crates/monet/src/main.rs:252
 msgid "Ready"
 msgstr "Klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4326
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4560
 msgid "%1 waiting"
 msgid_plural "%1 waiting"
 msgstr[0] "%1 venter"
 msgstr[1] "%1 venter"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4331
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4565
 msgid "Make default"
 msgstr "Gør til standard"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4573
 msgid "Another printer"
 msgstr "En anden printer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4339
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4573
 msgid "No printers yet"
 msgstr "Ingen printere endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4340
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4574
 msgid ""
 "Turn it on and join it to your Wi-Fi: Monet finds most printers by itself"
 msgstr ""
 "Tænd den, og forbind den til dit Wi-Fi: Monet finder selv de fleste printere"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4343
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4577
 msgid "Add…"
 msgstr "Tilføj…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4350
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4584
 msgid "More printer settings…"
 msgstr "Flere printerindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4369
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4603
 msgid "%1 controller connected"
 msgid_plural "%1 controllers connected"
 msgstr[0] "%1 controller tilsluttet"
 msgstr[1] "%1 controllere tilsluttet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4370
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4604
 msgid "Your controllers, and where your games are kept."
 msgstr "Dine controllere, og hvor dine spil ligger."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4374
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4608
 msgid "Controllers"
 msgstr "Controllere"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4386
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4620
 msgctxt "a controller, connected by its cable"
 msgid "Plugged in"
 msgstr "Tilsluttet med kabel"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4387
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4621
 msgid "%1% · charging"
 msgstr "%1 % · oplader"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4388
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4622
 msgid "%1% battery"
 msgstr "%1 % batteri"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4628
 msgid "Another controller"
 msgstr "En anden controller"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4394
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4628
 msgid "No controller connected"
 msgstr "Ingen controller tilsluttet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4395
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4629
 msgid "Plug one in, or pair one over Bluetooth"
 msgstr "Sæt en i, eller par en via Bluetooth"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4401
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4635
 msgid "Pair…"
 msgstr "Par…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4406
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4640
 msgid "Test buttons…"
 msgstr "Test knapper…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4415
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4649
 msgid "While you play"
 msgstr "Mens du spiller"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4425
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4659
 msgid "Performance overlay"
 msgstr "Ydeevne-overlay"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4426
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4660
 msgid ""
 "Frames per second and what the PC is doing, over every game, from your next sign-in. Right Shift+F12 hides it while you play."
 msgstr ""
 "Billeder pr. sekund, og hvad pc'en laver, oven på alle spil, fra næste gang du logger ind. Højre Shift+F12 skjuler det, mens du spiller."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4440
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4674
 msgid "Getting it ready…"
 msgstr "Gør klar…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4441
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4675
 msgid ""
 "It couldn't be installed. Check the internet connection, then try again."
 msgstr "Det kunne ikke installeres. Tjek internetforbindelsen, og prøv igen."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4442
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4676
 msgid ""
 "Windows key + Alt + G keeps the last 30 seconds on screen in Videos. The first time, choose the screen to record."
 msgstr ""
 "Windows-tasten + Alt + G gemmer de sidste 30 sekunder på skærmen i Videoer. Første gang skal du vælge den skærm, der skal optages."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4452
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4686
 msgid "Where your games are"
 msgstr "Hvor dine spil ligger"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4477
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4711
 msgid "No games yet"
 msgstr "Ingen spil endnu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4478
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4712
 msgid "Steam, Heroic and Lutris keep theirs here once you install one"
 msgstr ""
 "Steam, Heroic og Lutris lægger deres her, når du har installeret en af dem"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4485
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4719
 msgid "Needs Windows"
 msgstr "Kræver Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4499
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4733
 msgid "Its anti-cheat only allows Windows. It's there too."
 msgstr "Dets anti-cheat tillader kun Windows. Det er også der."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4500
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4734
 msgid ""
 "Its anti-cheat only allows Windows. Install it in Windows' Steam to play."
 msgstr ""
 "Dets anti-cheat tillader kun Windows. Installér det i Steam i Windows for at spille."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4504
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4738
 msgid "Play on Windows…"
 msgstr "Spil i Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4517
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4751
 msgid "Which games need Windows comes from AreWeAntiCheatYet."
 msgstr "Hvilke spil der kræver Windows, kommer fra AreWeAntiCheatYet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4524
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4758
 msgid "More controller settings…"
 msgstr "Flere controllerindstillinger…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4539
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4773
 msgid "Games that need Windows, a restart away."
 msgstr "Spil, der kræver Windows, kun en genstart væk."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4558
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4792
 msgid "Restarting in Windows…"
 msgstr "Genstarter i Windows…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4562
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4796
 msgid "The last trip didn't reach Windows"
 msgstr "Sidste tur nåede ikke frem til Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4563 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4797 linux/libexec/monet-prepare-windows:561 crates/monet/src/main.rs:823
 msgid "Getting Windows ready"
 msgstr "Gør Windows klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4564
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4798
 msgid "Windows is ready to install"
 msgstr "Windows er klar til installation"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4565 crates/monet/src/main.rs:738
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4799 crates/monet/src/main.rs:738
 msgid "Windows is ready"
 msgstr "Windows er klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4567
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4801
 msgid "Windows isn't ready"
 msgstr "Windows er ikke klar"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4576
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4810
 msgid "Your PC restarts in a moment."
 msgstr "Din pc genstarter om et øjeblik."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4579
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4813
 msgid ""
 "Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts."
 msgstr ""
 "Monet downloader Windows til dine spil. Brug bare din pc imens; Monet spørger, før den genstarter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4580
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4814
 msgid ""
 "Restart to install it. It takes about 10 minutes, then you're back in Monet."
 msgstr ""
 "Genstart for at installere det. Det tager omkring 10 minutter, og så er du tilbage i Monet."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4581
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4815
 msgid "Plug in the charger first."
 msgstr "Tilslut opladeren først."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4584
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4818
 msgid ""
 "Games that need Windows start there, and you come back here when you quit."
 msgstr ""
 "Spil, der kræver Windows, starter der, og du kommer tilbage hertil, når du afslutter."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4585
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4819
 msgid "Windows: %1. Check Monet below to see what's missing."
 msgstr "Windows: %1. Tjek Monet nedenfor for at se, hvad der mangler."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4603
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4837
 msgid "Restart and install"
 msgstr "Genstart og installer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4604
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4838
 msgid "Restart in Windows"
 msgstr "Genstart i Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4648
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4882
 msgid ""
 "Your Windows games show up here once Windows has started with Monet Bridge."
 msgstr ""
 "Dine Windows-spil dukker op her, når Windows er startet med Monet Bridge."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4658
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4892
 msgid "Check Monet"
 msgstr "Tjek Monet"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4659
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4893
 msgid "See that Windows, Secure Boot and switching are all set up"
 msgstr "Se, om Windows, Secure Boot og skiftet er sat op"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4760
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4896 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4994
 msgid "Checking…"
 msgstr "Tjekker…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4662
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4896
 msgid "Check"
 msgstr "Tjek"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4689
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4923
 msgid "Ready when you come back"
 msgstr "Klar, når du kommer tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4690
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4924
 msgid ""
 "After Windows, Monet starts your desktop behind the lock screen, so it's there as soon as you type your password."
 msgstr ""
 "Efter Windows starter Monet dit skrivebord bag låseskærmen, så det er klar, så snart du skriver din adgangskode."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4714
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4948
 msgid "Only when you ask."
 msgstr "Kun når du beder om det."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4715
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4949
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Monet og dine apps holder sig selv opdaterede."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4761 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5016
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4995 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5250
 msgid "Installing…"
 msgstr "Installerer…"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4762 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5019 setup/qml/Main.qml:215
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4996 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5253 setup/qml/Main.qml:215
 msgid "Install"
 msgstr "Installer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4763 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4902 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4953
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5017
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4997 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5187
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5251
 msgid "Restart now"
 msgstr "Genstart nu"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4764 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5018 setup/qml/Main.qml:743
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4998 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5252 setup/qml/Main.qml:796
 msgid "Try again"
 msgstr "Prøv igen"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4765
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4999
 msgid "Check for updates"
 msgstr "Søg efter opdateringer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4785
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5019
 msgid "Update automatically"
 msgstr "Opdater automatisk"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4787
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5021
 msgid "Monet and your apps update only when you choose Check for updates"
 msgstr "Monet og dine apps opdateres kun, når du vælger Søg efter opdateringer"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4788
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5022
 msgid ""
 "Once a day, in the background: your apps right away, Monet at your next restart"
 msgstr ""
 "En gang om dagen i baggrunden: dine apps med det samme, Monet ved din næste genstart"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4800
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5034
 msgid "New in Monet %1"
 msgstr "Nyt i Monet %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088 linux/libexec/monet-session:167
 msgid "Monet went back to %1"
 msgstr "Monet gik tilbage til %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4854 linux/libexec/monet-session:167
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088 linux/libexec/monet-session:167
 msgid "Monet went back"
 msgstr "Monet gik tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4856 linux/libexec/monet-session:169
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5090 linux/libexec/monet-session:169
 msgid ""
 "Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
 "Monet %1 startede ikke ordentligt på denne pc, så Monet gik tilbage af sig selv. Dine filer er som før, og den daglige opdatering venter på den næste."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4857 linux/libexec/monet-session:171
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5091 linux/libexec/monet-session:171
 msgid ""
 "The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
 "Den nye Monet startede ikke ordentligt på denne pc, så Monet gik tilbage af sig selv. Dine filer er som før, og den daglige opdatering venter på den næste."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4871
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5105
 msgid "%1 starts at your next restart"
 msgstr "%1 starter ved din næste genstart"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4872
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5106
 msgid "Go back to %1"
 msgstr "Gå tilbage til %1"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4873
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5107
 msgid "The one you're using now stays too, to come back to."
 msgstr "Den, du bruger nu, bliver også, så du kan vende tilbage til den."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4874
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5108
 msgid ""
 "It starts the next time you restart. Your files and apps stay as they are."
 msgstr ""
 "Den starter, næste gang du genstarter. Dine filer og apps forbliver, som de er."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4875
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5109
 msgid ""
 "From %1. If something stopped working after an update, the one before is still here."
 msgstr ""
 "Fra %1. Hvis noget holdt op med at virke efter en opdatering, er den forrige her stadig."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4876
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5110
 msgid ""
 "If something stopped working after an update, the one before is still here."
 msgstr ""
 "Hvis noget holdt op med at virke efter en opdatering, er den forrige her stadig."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4882 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4927
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5116 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5161
 msgid "Stay"
 msgstr "Bliv"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5122
 msgid "Go back at restart"
 msgstr "Gå tilbage ved genstart"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4888
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5122
 msgid "Go back"
 msgstr "Gå tilbage"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5152
 msgid "Monet resets itself at your next restart"
 msgstr "Monet nulstiller sig selv ved næste genstart"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4918
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5152
 msgid "Reset this PC"
 msgstr "Nulstil denne pc"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4919
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5153
 msgid ""
 "Everyone's settings go back to how Monet comes. Files, games and apps stay."
 msgstr ""
 "Alles indstillinger går tilbage til, hvordan Monet leveres. Filer, spil og apps bliver."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4920
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5154
 msgid ""
 "Monet's settings, the desktop's look and the changes made to the system go back to how Monet comes, for everyone. Files, games and apps stay, and so do accounts, Wi-Fi and printers. It happens at your next restart."
 msgstr ""
 "Monets indstillinger, skrivebordets udseende og ændringerne i systemet går tilbage til, hvordan Monet leveres, for alle. Filer, spil og apps bliver, og det gør konti, wi-fi og printere også. Det sker ved næste genstart."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4921
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5155
 msgid ""
 "For when something's wrong, and going back to the Monet from before didn't help."
 msgstr ""
 "Til når noget er galt, og det ikke hjalp at gå tilbage til Monet fra før."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5167
 msgid "Reset at restart"
 msgstr "Nulstil ved genstart"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4933
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5167
 msgid "Reset"
 msgstr "Nulstil"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:4946
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5180
 msgid "Don't reset"
 msgstr "Nulstil ikke"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5038
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5272
 msgid ""
 "A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case."
 msgstr ""
 "En ny Monet starter først, når du genstarter, aldrig midt i dit arbejde, og den forrige bliver i opstartsmenuen for en sikkerheds skyld."
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5322
 msgid "%1 · Impression"
 msgstr "%1 · Impression"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5088
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5322
 msgid "Impression"
 msgstr "Impression"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5098
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5332
 msgid "Graphics"
 msgstr "Grafik"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5099
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5333
 msgid "Processor"
 msgstr "Processor"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5100
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5334
 msgid "Memory"
 msgstr "Hukommelse"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5102
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5336
 msgid "Ready for games"
 msgstr "Klar til spil"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5128
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5362
 msgid "Last start"
 msgstr "Seneste start"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5130
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5364
 msgctxt "how long the PC's own start took, in seconds"
 msgid "The PC %1 s"
 msgstr "Pc'en %1 s"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5131
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5365
 msgctxt "how long Monet took to start, in seconds"
 msgid "Monet %1 s"
 msgstr "Monet %1 s"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5132
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5366
 msgctxt "from signing in until the desktop was there, in seconds"
 msgid "Your desktop %1 s"
 msgstr "Dit skrivebord %1 s"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5136
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5370
 msgctxt "a time in seconds"
 msgid "%1 s"
 msgstr "%1 s"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5382
+msgid "Save a report"
+msgstr "Gem en rapport"
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5383 linux/libexec/monet-quick:2528
+msgid "In Documents, as %1."
+msgstr "I Dokumenter, som %1."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5384
+msgid ""
+"What helps find out why something went wrong, in one file in Documents. It stays on this PC until you send it to someone."
+msgstr ""
+"Det, der hjælper med at finde ud af, hvorfor noget gik galt, i én fil i Dokumenter. Den bliver på denne pc, indtil du sender den til nogen."
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml:5387
+msgid "Saving…"
+msgstr "Gemmer…"
 
 #: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:105
 msgctxt "a dial's reading, in percent"
@@ -3278,174 +3407,198 @@ msgstr "Fortsæt"
 msgid "Erase & Install"
 msgstr "Slet & installer"
 
-#: setup/qml/Main.qml:242
+#: setup/qml/Main.qml:243
 msgid "Hello"
 msgstr "Hej"
 
-#: setup/qml/Main.qml:243
+#: setup/qml/Main.qml:244
 msgid ""
 "Let's set up Monet. It takes about 15 minutes, and Windows sets itself up afterwards."
 msgstr ""
 "Lad os sætte Monet op. Det tager omkring 15 minutter, og bagefter sætter Windows sig selv op."
 
-#: setup/qml/Main.qml:245
+#: setup/qml/Main.qml:246
 msgid "Language"
 msgstr "Sprog"
 
-#: setup/qml/Main.qml:299
+#: setup/qml/Main.qml:286
+msgid "It's %1 there now"
+msgstr "Klokken er %1 der nu"
+
+#: setup/qml/Main.qml:296
+msgid ""
+"Monet is already installed on this PC, but it can't start yet: the blue screen at its first start was skipped. Monet can ask again. Restart, and on the blue screen choose Enroll MOK, then Continue and Yes, type monetsetup, and choose Reboot."
+msgstr ""
+"Monet er allerede installeret på denne pc, men kan ikke starte endnu: den blå skærm ved første start blev sprunget over. Monet kan spørge igen. Genstart, og vælg Enroll MOK på den blå skærm, derefter Continue og Yes, skriv monetsetup, og vælg Reboot."
+
+#: setup/qml/Main.qml:300
+msgid "Ask again and restart"
+msgstr "Spørg igen og genstart"
+
+#: setup/qml/Main.qml:338
 msgid "You're online"
 msgstr "Du er online"
 
-#: setup/qml/Main.qml:299
+#: setup/qml/Main.qml:338
 msgid "Connect to Wi-Fi"
 msgstr "Opret forbindelse til Wi-Fi"
 
-#: setup/qml/Main.qml:300
+#: setup/qml/Main.qml:339
 msgid ""
 "Monet downloads itself and Windows while it installs. Windows will use this network too."
 msgstr ""
 "Monet downloader sig selv og Windows under installationen. Windows bruger også dette netværk."
 
-#: setup/qml/Main.qml:309
+#: setup/qml/Main.qml:348
 msgid "Connected with a cable"
 msgstr "Forbundet med kabel"
 
-#: setup/qml/Main.qml:340
+#: setup/qml/Main.qml:379
 msgctxt "a Wi-Fi network anyone can join, without a password"
 msgid "Open"
 msgstr "Åbent"
 
-#: setup/qml/Main.qml:349
+#: setup/qml/Main.qml:388
 msgid "No networks found"
 msgstr "Ingen netværk fundet"
 
-#: setup/qml/Main.qml:366
+#: setup/qml/Main.qml:405
 msgid "Looking…"
 msgstr "Søger…"
 
-#: setup/qml/Main.qml:366
+#: setup/qml/Main.qml:405
 msgid "Look again"
 msgstr "Søg igen"
 
-#: setup/qml/Main.qml:383
+#: setup/qml/Main.qml:426
 msgid "Who's using this PC?"
 msgstr "Hvem bruger denne pc?"
 
-#: setup/qml/Main.qml:384
+#: setup/qml/Main.qml:427
 msgid "This is your account in Monet and in Windows."
 msgstr "Det er din konto i både Monet og Windows."
 
-#: setup/qml/Main.qml:387
+#: setup/qml/Main.qml:430
 msgid "Name"
 msgstr "Navn"
 
-#: setup/qml/Main.qml:391
+#: setup/qml/Main.qml:434
 msgid "You sign in as %1"
 msgstr "Du logger ind som %1"
 
-#: setup/qml/Main.qml:397
-msgid "At least 6 characters"
-msgstr "Mindst 6 tegn"
+#: setup/qml/Main.qml:443
+msgid "Password again"
+msgstr "Adgangskode igen"
 
-#: setup/qml/Main.qml:411
+#: setup/qml/Main.qml:447 setup/monet_setup/app.py:369
+msgid "The passwords don't match."
+msgstr "Adgangskoderne er ikke ens."
+
+#: setup/qml/Main.qml:448
+msgid ""
+"No password: Monet signs you in by itself, and anyone who uses this PC can open your account and change its settings."
+msgstr ""
+"Ingen adgangskode: Monet logger dig ind af sig selv, og alle, der bruger denne pc, kan åbne din konto og ændre dens indstillinger."
+
+#: setup/qml/Main.qml:464
 msgid "Your apps"
 msgstr "Dine apps"
 
-#: setup/qml/Main.qml:412
+#: setup/qml/Main.qml:465
 msgid ""
 "Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in."
 msgstr ""
 "Fotos, Dokumenter, Video, Musik og Lommeregner er indbygget. Det, du tilføjer, kommer, når du har logget ind."
 
-#: setup/qml/Main.qml:414
+#: setup/qml/Main.qml:467
 msgctxt "the apps people use every day"
 msgid "Everyday"
 msgstr "Til hverdag"
 
-#: setup/qml/Main.qml:414
+#: setup/qml/Main.qml:467
 msgctxt "more apps to choose from"
 msgid "More"
 msgstr "Flere"
 
-#: setup/qml/Main.qml:515
+#: setup/qml/Main.qml:568
 msgid "Ready to install"
 msgstr "Klar til installation"
 
-#: setup/qml/Main.qml:528
+#: setup/qml/Main.qml:581
 msgid "Monet and Windows"
 msgstr "Monet og Windows"
 
-#: setup/qml/Main.qml:532
+#: setup/qml/Main.qml:585
 msgid "Erases this PC. Windows installs itself, only for games."
 msgstr "Sletter denne pc. Windows installerer sig selv, kun til spil."
 
-#: setup/qml/Main.qml:547
+#: setup/qml/Main.qml:600
 msgid "Monet next to my Windows"
 msgstr "Monet ved siden af mit Windows"
 
-#: setup/qml/Main.qml:551
+#: setup/qml/Main.qml:604
 msgid "Keeps Windows and your files. Monet makes room for itself."
 msgstr "Beholder Windows og dine filer. Monet laver selv plads."
 
-#: setup/qml/Main.qml:565 setup/qml/Main.qml:577 setup/monet_setup/disks.py:90
+#: setup/qml/Main.qml:618 setup/qml/Main.qml:630 setup/monet_setup/disks.py:90
 msgid "Disk"
 msgstr "Disk"
 
-#: setup/qml/Main.qml:569
+#: setup/qml/Main.qml:622
 msgid "Looking for disks…"
 msgstr "Søger efter diske…"
 
-#: setup/qml/Main.qml:592
+#: setup/qml/Main.qml:645
 msgid "Bring my files"
 msgstr "Tag mine filer med"
 
-#: setup/qml/Main.qml:601
+#: setup/qml/Main.qml:654
 msgid "Encrypt this PC"
 msgstr "Kryptér denne pc"
 
-#: setup/qml/Main.qml:602
+#: setup/qml/Main.qml:655
 msgid ""
 "Only this PC can read its disk: taken out, it's locked. Monet unlocks it by itself when it starts."
 msgstr ""
 "Kun denne pc kan læse sin disk: taget ud er den låst. Monet låser den op af sig selv, når den starter."
 
-#: setup/qml/Main.qml:615
+#: setup/qml/Main.qml:668
 msgid ""
 "Everything on this disk is erased, Windows and your files too. To keep them, choose Monet next to my Windows."
 msgstr ""
 "Alt på denne disk slettes, også Windows og dine filer. Vælg Monet ved siden af mit Windows for at beholde dem."
 
-#: setup/qml/Main.qml:630 setup/monet_setup/app.py:30
+#: setup/qml/Main.qml:683 setup/monet_setup/app.py:31
 msgid "Installing Monet"
 msgstr "Installerer Monet"
 
-#: setup/qml/Main.qml:644
+#: setup/qml/Main.qml:697
 msgid ""
 "You can leave it running. If the connection drops, Monet picks up where it stopped."
 msgstr ""
 "Du kan bare lade den køre. Hvis forbindelsen falder ud, fortsætter Monet, hvor den slap."
 
-#: setup/qml/Main.qml:656
+#: setup/qml/Main.qml:709
 msgid "All set"
 msgstr "Alt er klar"
 
-#: setup/qml/Main.qml:659
+#: setup/qml/Main.qml:712
 msgid ""
 "Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself."
 msgstr ""
 "Tag USB-stikket ud, og genstart. Når du har logget ind, gør Monet selv Windows klar til dine spil."
 
-#: setup/qml/Main.qml:660
+#: setup/qml/Main.qml:713
 msgid ""
 "Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away."
 msgstr ""
 "Tag USB-stikket ud, og genstart. Din pc starter i Monet, og Windows er kun et klik væk."
 
-#: setup/qml/Main.qml:677
+#: setup/qml/Main.qml:730
 msgid "Once, when it first starts"
 msgstr "Én gang, når den starter første gang"
 
-#: setup/qml/Main.qml:682
+#: setup/qml/Main.qml:735
 msgctxt ""
 "Enroll MOK, Continue, Yes, Reboot and monetsetup stay in English: the blue screen shows them that way"
 msgid ""
@@ -3453,183 +3606,179 @@ msgid ""
 msgstr ""
 "En blå skærm beder dig stole på Monet. Brug piletasterne og Enter til at vælge Enroll MOK og derefter Continue og Yes. Skriv monetsetup, og vælg Reboot. Markeringen står først på Continue boot: vælg ikke den, ellers kan Monet ikke starte."
 
-#: setup/qml/Main.qml:686
+#: setup/qml/Main.qml:739
 msgid ""
 "Take a photo of these steps with your phone first: this screen goes away when the PC restarts."
 msgstr ""
 "Tag et billede af trinnene med din telefon først: skærmen forsvinder, når pc'en genstarter."
 
-#: setup/qml/Main.qml:700
+#: setup/qml/Main.qml:753
 msgid "Your recovery key"
 msgstr "Din gendannelsesnøgle"
 
-#: setup/qml/Main.qml:702
+#: setup/qml/Main.qml:755
 msgid ""
 "This PC's disk is encrypted, and Monet unlocks it by itself. If it ever can't, after a big firmware update or with the disk in another PC, it asks for this key. Without it nobody can read the disk, not even you."
 msgstr ""
 "Denne pc's disk er krypteret, og Monet låser den op af sig selv. Hvis det en dag ikke kan lade sig gøre, efter en stor firmwareopdatering eller med disken i en anden pc, beder Monet om denne nøgle. Uden den kan ingen læse disken, ikke engang dig."
 
-#: setup/qml/Main.qml:722
+#: setup/qml/Main.qml:775
 msgid ""
 "Take a photo of it or write it down, and keep it somewhere other than this PC. It isn't shown again."
 msgstr ""
 "Tag et billede af den, eller skriv den ned, og opbevar den et andet sted end på denne pc. Den vises ikke igen."
 
-#: setup/qml/Main.qml:728
+#: setup/qml/Main.qml:781
 msgid "I've kept my recovery key"
 msgstr "Jeg har gemt min gendannelsesnøgle"
 
-#: setup/qml/Main.qml:739
+#: setup/qml/Main.qml:792
 msgid "That didn't work"
 msgstr "Det virkede ikke"
 
-#: setup/qml/Main.qml:744
+#: setup/qml/Main.qml:797
 msgid "Hide details"
 msgstr "Skjul detaljer"
 
-#: setup/qml/Main.qml:1010
+#: setup/qml/Main.qml:1068
 msgid "Hide"
 msgstr "Skjul"
 
-#: setup/monet_setup/app.py:28
+#: setup/monet_setup/app.py:29
 msgid "Preparing the disk"
 msgstr "Forbereder disken"
 
-#: setup/monet_setup/app.py:29
+#: setup/monet_setup/app.py:30
 msgid "Downloading Monet"
 msgstr "Downloader Monet"
 
-#: setup/monet_setup/app.py:31
+#: setup/monet_setup/app.py:32
 msgid "Setting up your account"
 msgstr "Opretter din konto"
 
-#: setup/monet_setup/app.py:32
+#: setup/monet_setup/app.py:33
 msgid "Bringing your files"
 msgstr "Henter dine filer"
 
-#: setup/monet_setup/app.py:33
+#: setup/monet_setup/app.py:34
 msgid "Finishing"
 msgstr "Afslutter"
 
-#: setup/monet_setup/app.py:41
+#: setup/monet_setup/app.py:42
 msgid "The web"
 msgstr "Nettet"
 
-#: setup/monet_setup/app.py:42
+#: setup/monet_setup/app.py:43
 msgid "Office"
 msgstr "Kontorpakke"
 
-#: setup/monet_setup/app.py:42
+#: setup/monet_setup/app.py:43
 msgid "Documents, sheets, slides"
 msgstr "Dokumenter, regneark, dias"
 
-#: setup/monet_setup/app.py:43
+#: setup/monet_setup/app.py:44
 msgid "Mail"
 msgstr "Mail"
 
-#: setup/monet_setup/app.py:43
+#: setup/monet_setup/app.py:44
 msgid "Email and calendars"
 msgstr "E-mail og kalendere"
 
-#: setup/monet_setup/app.py:44
+#: setup/monet_setup/app.py:45
 msgid "Talk while you play"
 msgstr "Snak, mens du spiller"
 
-#: setup/monet_setup/app.py:45
+#: setup/monet_setup/app.py:46
 msgid "Music to stream"
 msgstr "Musik at streame"
 
-#: setup/monet_setup/app.py:46
+#: setup/monet_setup/app.py:47
 msgid "Send files to your phone"
 msgstr "Send filer til din telefon"
 
-#: setup/monet_setup/app.py:47
+#: setup/monet_setup/app.py:48
 msgid "Epic and GOG games"
 msgstr "Spil fra Epic og GOG"
 
-#: setup/monet_setup/app.py:49
+#: setup/monet_setup/app.py:50
 msgid "Record and stream games"
 msgstr "Optag og stream spil"
 
-#: setup/monet_setup/app.py:50
+#: setup/monet_setup/app.py:51
 msgid "Paint and draw"
 msgstr "Mal og tegn"
 
-#: setup/monet_setup/app.py:57
+#: setup/monet_setup/app.py:58
 msgid "Documents"
 msgstr "Dokumenter"
 
-#: setup/monet_setup/app.py:60
+#: setup/monet_setup/app.py:61
 msgid "Calculator"
 msgstr "Lommeregner"
 
-#: setup/monet_setup/app.py:68
+#: setup/monet_setup/app.py:69
 msgid "about %1 minute left"
 msgid_plural "about %1 minutes left"
 msgstr[0] "ca. %1 minut tilbage"
 msgstr[1] "ca. %1 minutter tilbage"
 
-#: setup/monet_setup/app.py:279
-msgid "The password needs at least 6 characters."
-msgstr "Adgangskoden skal have mindst 6 tegn."
-
-#: setup/monet_setup/app.py:299
+#: setup/monet_setup/app.py:389
 msgid "Built in"
 msgstr "Indbygget"
 
-#: setup/monet_setup/app.py:352
+#: setup/monet_setup/app.py:442
 msgid ""
 "Monet makes room by shrinking Windows' drive from %1 to %2. Nothing in Windows is lost, and it checks its drive once the next time it starts."
 msgstr ""
 "Monet laver plads ved at gøre Windows' drev mindre fra %1 til %2. Intet i Windows går tabt, og det tjekker sit drev én gang, næste gang det starter."
 
-#: setup/monet_setup/app.py:363
+#: setup/monet_setup/app.py:453
 msgid ""
 "Your files in Windows (%1) don't fit next to Monet. Open them from Files once Monet is installed."
 msgstr ""
 "Dine filer i Windows (%1) kan ikke være ved siden af Monet. Åbn dem fra Filer, når Monet er installeret."
 
-#: setup/monet_setup/app.py:364
+#: setup/monet_setup/app.py:454
 msgid ""
 "Desktop, Documents, Pictures, Music, Videos and Downloads from Windows (%1). They stay in Windows too."
 msgstr ""
 "Skrivebord, Dokumenter, Billeder, Musik, Videoer og Overførsler fra Windows (%1). De bliver også i Windows."
 
-#: setup/monet_setup/app.py:408
+#: setup/monet_setup/app.py:498
 msgid "This PC has %1 GB of memory. Monet needs at least 4 GB."
 msgstr "Denne pc har %1 GB hukommelse. Monet kræver mindst 4 GB."
 
-#: setup/monet_setup/app.py:417
+#: setup/monet_setup/app.py:507
 msgid ""
 "This PC's NVIDIA graphics card is older than the RTX 20 series. Monet draws with its open driver, fine for everyday things; games run best in Windows."
 msgstr ""
 "Denne pc's NVIDIA-grafikkort er ældre end RTX 20-serien. Monet tegner med dets åbne driver, fint til hverdagsting; spil kører bedst i Windows."
 
-#: setup/monet_setup/app.py:419
+#: setup/monet_setup/app.py:509
 msgid ""
 "This PC's NVIDIA graphics chip is older than the RTX 20 series, so Monet uses the built-in graphics. Games run best in Windows."
 msgstr ""
 "Denne pc's NVIDIA-grafikchip er ældre end RTX 20-serien, så Monet bruger den indbyggede grafik. Spil kører bedst i Windows."
 
-#: setup/monet_setup/app.py:422
+#: setup/monet_setup/app.py:512
 msgid ""
 "This PC has %1 GB of memory. Monet runs, but slows down with many apps open: 8 GB is better."
 msgstr ""
 "Denne pc har %1 GB hukommelse. Monet kører, men bliver langsom med mange apps åbne: 8 GB er bedre."
 
-#: setup/monet_setup/app.py:431
+#: setup/monet_setup/app.py:521
 msgid "No disk found to install Monet on."
 msgstr "Der blev ikke fundet nogen disk at installere Monet på."
 
-#: setup/monet_setup/app.py:436
+#: setup/monet_setup/app.py:526
 msgid "This disk is too small for Monet (it needs 70 GB)."
 msgstr "Denne disk er for lille til Monet (der skal bruges 70 GB)."
 
-#: setup/monet_setup/app.py:511
+#: setup/monet_setup/app.py:602
 msgid "%1 of %2 GB"
 msgstr "%1 af %2 GB"
 
-#: setup/monet_setup/app.py:530
+#: setup/monet_setup/app.py:623
 msgid "The installer stopped unexpectedly."
 msgstr "Installationsprogrammet stoppede uventet."
 
@@ -3693,7 +3842,7 @@ msgstr "Den krypterede disk blev ikke fundet."
 msgid "Monet's system wasn't found after installing."
 msgstr "Monets system blev ikke fundet efter installationen."
 
-#: setup/monet_setup/install.py:625
+#: setup/monet_setup/install.py:659
 msgid "Something unexpected went wrong. The details say what."
 msgstr "Noget uventet gik galt. Detaljerne fortæller hvad."
 
@@ -3714,177 +3863,229 @@ msgid "Couldn't connect. Try again, or pick another network."
 msgstr ""
 "Kunne ikke oprette forbindelse. Prøv igen, eller vælg et andet netværk."
 
-#: setup/monet_setup/system.py:51
+#: setup/monet_setup/system.py:53
 msgid "English (US)"
 msgstr "Engelsk (USA)"
 
-#: setup/monet_setup/system.py:52
+#: setup/monet_setup/system.py:54
 msgid "English (US, international)"
 msgstr "Engelsk (USA, international)"
 
-#: setup/monet_setup/system.py:53
+#: setup/monet_setup/system.py:55
 msgid "English (UK)"
 msgstr "Engelsk (UK)"
 
-#: setup/monet_setup/system.py:54
+#: setup/monet_setup/system.py:56
 msgid "Swedish"
 msgstr "Svensk"
 
-#: setup/monet_setup/system.py:55
+#: setup/monet_setup/system.py:57
 msgid "German"
 msgstr "Tysk"
 
-#: setup/monet_setup/system.py:56
+#: setup/monet_setup/system.py:58
 msgid "French"
 msgstr "Fransk"
 
-#: setup/monet_setup/system.py:57
+#: setup/monet_setup/system.py:59
 msgid "Spanish"
 msgstr "Spansk"
 
-#: setup/monet_setup/system.py:58
+#: setup/monet_setup/system.py:60
 msgid "Italian"
 msgstr "Italiensk"
 
-#: setup/monet_setup/system.py:59
+#: setup/monet_setup/system.py:61
 msgid "Norwegian"
 msgstr "Norsk"
 
-#: setup/monet_setup/system.py:60
+#: setup/monet_setup/system.py:62
 msgid "Danish"
 msgstr "Dansk"
 
-#: setup/monet_setup/system.py:61
+#: setup/monet_setup/system.py:63
 msgid "Finnish"
 msgstr "Finsk"
 
-#: setup/monet_setup/system.py:62
+#: setup/monet_setup/system.py:64
 msgid "Polish"
 msgstr "Polsk"
 
-#: setup/monet_setup/system.py:63
+#: setup/monet_setup/system.py:65
 msgid "Czech"
 msgstr "Tjekkisk"
 
-#: setup/monet_setup/system.py:64
+#: setup/monet_setup/system.py:66
 msgid "Hungarian"
 msgstr "Ungarsk"
 
-#: setup/monet_setup/system.py:65
+#: setup/monet_setup/system.py:67
 msgid "Romanian"
 msgstr "Rumænsk"
 
-#: setup/monet_setup/system.py:66
+#: setup/monet_setup/system.py:68
 msgid "Greek"
 msgstr "Græsk"
 
-#: setup/monet_setup/system.py:67
+#: setup/monet_setup/system.py:69
 msgid "Portuguese (Brazil)"
 msgstr "Portugisisk (Brasilien)"
 
-#: setup/monet_setup/system.py:68
+#: setup/monet_setup/system.py:70
 msgid "Portuguese"
 msgstr "Portugisisk"
 
-#: setup/monet_setup/system.py:69
+#: setup/monet_setup/system.py:71
 msgid "Turkish"
 msgstr "Tyrkisk"
 
-#: setup/monet_setup/system.py:70
+#: setup/monet_setup/system.py:72
 msgid "Russian"
 msgstr "Russisk"
 
-#: setup/monet_setup/system.py:71
+#: setup/monet_setup/system.py:73
 msgid "Ukrainian"
 msgstr "Ukrainsk"
 
-#: setup/monet_setup/system.py:72
+#: setup/monet_setup/system.py:74
 msgid "Thai"
 msgstr "Thai"
 
-#: setup/monet_setup/system.py:73
+#: setup/monet_setup/system.py:75
 msgid "Arabic"
 msgstr "Arabisk"
 
-#: setup/monet_setup/system.py:74
+#: setup/monet_setup/system.py:76
 msgid "Hebrew"
 msgstr "Hebraisk"
 
-#: setup/monet_setup/system.py:75
+#: setup/monet_setup/system.py:77
 msgid "Japanese"
 msgstr "Japansk"
 
-#: setup/monet_setup/system.py:76
+#: setup/monet_setup/system.py:78
 msgid "Korean"
 msgstr "Koreansk"
 
-#: linux/libexec/monet-quick:1529
+#: setup/monet_setup/system.py:105
+msgid "Africa"
+msgstr "Afrika"
+
+#: setup/monet_setup/system.py:105
+msgid "America"
+msgstr "Amerika"
+
+#: setup/monet_setup/system.py:105
+msgid "Antarctica"
+msgstr "Antarktis"
+
+#: setup/monet_setup/system.py:105
+msgid "Arctic"
+msgstr "Arktis"
+
+#: setup/monet_setup/system.py:106
+msgid "Asia"
+msgstr "Asien"
+
+#: setup/monet_setup/system.py:106
+msgid "Atlantic"
+msgstr "Atlanterhavet"
+
+#: setup/monet_setup/system.py:106
+msgid "Australia"
+msgstr "Australien"
+
+#: setup/monet_setup/system.py:106
+msgid "Europe"
+msgstr "Europa"
+
+#: setup/monet_setup/system.py:107
+msgid "Indian Ocean"
+msgstr "Det Indiske Ocean"
+
+#: setup/monet_setup/system.py:107
+msgid "Pacific"
+msgstr "Stillehavet"
+
+#: setup/monet_setup/system.py:107
+msgid "Other"
+msgstr "Andet"
+
+#: linux/libexec/monet-quick:1421
+msgid "Send to your phone"
+msgstr "Send til din telefon"
+
+#: linux/libexec/monet-quick:1605
 msgid "Steam on %1"
 msgstr "Steam på %1"
 
-#: linux/libexec/monet-quick:1533
+#: linux/libexec/monet-quick:1609
 msgid "Games folder"
 msgstr "Spilmappe"
 
-#: linux/libexec/monet-quick:1603
+#: linux/libexec/monet-quick:1679
 msgid "Saved the last 30 seconds"
 msgstr "De sidste 30 sekunder er gemt"
 
-#: linux/libexec/monet-quick:1603
+#: linux/libexec/monet-quick:1679
 msgid "In Videos."
 msgstr "I Videoer."
 
-#: linux/libexec/monet-quick:1905
+#: linux/libexec/monet-quick:1981
 msgid "Open it again"
 msgstr "Åbn igen"
 
-#: linux/libexec/monet-quick:1905
+#: linux/libexec/monet-quick:1981
 msgid "%1 closed unexpectedly"
 msgstr "%1 lukkede uventet"
 
-#: linux/libexec/monet-quick:2329
+#: linux/libexec/monet-quick:2418
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB ledig af %2 GB"
 
-#: linux/libexec/monet-quick:2698
+#: linux/libexec/monet-quick:2528
+msgid "Saved a report"
+msgstr "Rapporten er gemt"
+
+#: linux/libexec/monet-quick:2894
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "Drevet kunne ikke åbnes. Prøv at sætte det i igen."
 
-#: linux/libexec/monet-quick:2702
+#: linux/libexec/monet-quick:2898
 msgid "earlier"
 msgstr "tidligere"
 
-#: linux/libexec/monet-quick:2706
+#: linux/libexec/monet-quick:2902
 msgid "Monet can't write on this drive."
 msgstr "Monet kan ikke skrive på dette drev."
 
-#: linux/libexec/monet-quick:2714 linux/libexec/monet-quick:2738
+#: linux/libexec/monet-quick:2910 linux/libexec/monet-quick:2934
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr ""
 "Kopieringen blev ikke færdig. Monet prøver igen, næste gang drevet sættes i."
 
-#: linux/libexec/monet-quick:2753
+#: linux/libexec/monet-quick:2949
 msgid "Your files haven't been copied for a week"
 msgstr "Dine filer er ikke blevet kopieret i en uge"
 
-#: linux/libexec/monet-quick:2754
+#: linux/libexec/monet-quick:2950
 msgid "Plug in %1 and Monet copies them."
 msgstr "Sæt %1 i, så kopierer Monet dem."
 
-#: linux/libexec/monet-quick:2754
+#: linux/libexec/monet-quick:2950
 msgid "your backup drive"
 msgstr "dit backupdrev"
 
-#: linux/libexec/monet-quick:2769
+#: linux/libexec/monet-quick:2965
 msgid "Open Files"
 msgstr "Åbn Filer"
 
-#: linux/libexec/monet-quick:2770
+#: linux/libexec/monet-quick:2966
 msgid "Your files from Windows are here"
 msgstr "Dine filer fra Windows er her"
 
-#: linux/libexec/monet-quick:2771
+#: linux/libexec/monet-quick:2967
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr ""
 "I Dokumenter, Billeder, Musik, Videoer, Overførsler og på skrivebordet."
@@ -3953,82 +4154,82 @@ msgid ""
 msgstr ""
 "Dine filer, spil og apps er her alle sammen. Dine tidligere indstillinger er gemt, hvis du vil have en tilbage."
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Files"
 msgstr "Filer"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Terminal"
 msgstr "Terminal"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Text Editor"
 msgstr "Teksteditor"
 
-#: linux/libexec/monet-look:81
+#: linux/libexec/monet-look:92
 msgctxt "an app's name in the menu"
 msgid "Photos"
 msgstr "Fotos"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Documents"
 msgstr "Dokumenter"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Archives"
 msgstr "Arkiver"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Screenshot"
 msgstr "Skærmbillede"
 
-#: linux/libexec/monet-look:82
+#: linux/libexec/monet-look:93
 msgctxt "an app's name in the menu"
 msgid "Calculator"
 msgstr "Lommeregner"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Music"
 msgstr "Musik"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Videos"
 msgstr "Videoer"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Disk Usage"
 msgstr "Diskforbrug"
 
-#: linux/libexec/monet-look:83
+#: linux/libexec/monet-look:94
 msgctxt "an app's name in the menu"
 msgid "Disks"
 msgstr "Diske"
 
-#: linux/libexec/monet-look:84
+#: linux/libexec/monet-look:95 linux/share/applications/monet-settings.desktop:228
 msgctxt "an app's name in the menu"
 msgid "Phone"
 msgstr "Telefon"
 
-#: linux/libexec/monet-look:84
+#: linux/libexec/monet-look:95
 msgctxt "an app's name in the menu"
 msgid "Phone Messages"
 msgstr "Telefonbeskeder"
 
-#: linux/libexec/monet-look:71 linux/libexec/monet-look:75
+#: linux/libexec/monet-look:82 linux/libexec/monet-look:86
 msgctxt "an app's name in the menu"
 msgid "Store"
 msgstr "Butik"
 
-#: linux/libexec/monet-look:71 linux/libexec/monet-look:75
+#: linux/libexec/monet-look:82 linux/libexec/monet-look:86
 msgctxt "an app's description in the menu"
 msgid "Apps and games for Monet"
 msgstr "Apps og spil til Monet"
@@ -4077,87 +4278,87 @@ msgctxt "an app's name in the menu"
 msgid "Bluetooth"
 msgstr "Bluetooth"
 
-#: linux/share/applications/monet-settings.desktop:228
+#: linux/share/applications/monet-settings.desktop:261
 msgctxt "an app's name in the menu"
 msgid "Printers"
 msgstr "Printere"
 
-#: linux/share/applications/monet-settings.desktop:261
+#: linux/share/applications/monet-settings.desktop:294
 msgctxt "an app's name in the menu"
 msgid "Display"
 msgstr "Skærm"
 
-#: linux/share/applications/monet-settings.desktop:294
+#: linux/share/applications/monet-settings.desktop:327
 msgctxt "an app's name in the menu"
 msgid "Sound"
 msgstr "Lyd"
 
-#: linux/share/applications/monet-settings.desktop:327
+#: linux/share/applications/monet-settings.desktop:360
 msgctxt "an app's name in the menu"
 msgid "Date & Time"
 msgstr "Dato & tid"
 
-#: linux/share/applications/monet-settings.desktop:360
+#: linux/share/applications/monet-settings.desktop:393
 msgctxt "an app's name in the menu"
 msgid "Accounts"
 msgstr "Konti"
 
-#: linux/share/applications/monet-settings.desktop:393
+#: linux/share/applications/monet-settings.desktop:426
 msgctxt "an app's name in the menu"
 msgid "Mouse & Keyboard"
 msgstr "Mus & tastatur"
 
-#: linux/share/applications/monet-settings.desktop:426
+#: linux/share/applications/monet-settings.desktop:459
 msgctxt "an app's name in the menu"
 msgid "Power & Sleep"
 msgstr "Strøm & slumre"
 
-#: linux/share/applications/monet-settings.desktop:459
+#: linux/share/applications/monet-settings.desktop:492
 msgctxt "an app's name in the menu"
 msgid "Lock & Privacy"
 msgstr "Lås & privatliv"
 
-#: linux/share/applications/monet-settings.desktop:492
+#: linux/share/applications/monet-settings.desktop:525
 msgctxt "an app's name in the menu"
 msgid "Notifications"
 msgstr "Notifikationer"
 
-#: linux/share/applications/monet-settings.desktop:525
+#: linux/share/applications/monet-settings.desktop:558
 msgctxt "an app's name in the menu"
 msgid "Accessibility"
 msgstr "Tilgængelighed"
 
-#: linux/share/applications/monet-settings.desktop:558
+#: linux/share/applications/monet-settings.desktop:591
 msgctxt "an app's name in the menu"
 msgid "Default Apps"
 msgstr "Standardapps"
 
-#: linux/share/applications/monet-settings.desktop:591
+#: linux/share/applications/monet-settings.desktop:624
 msgctxt "an app's name in the menu"
 msgid "Storage"
 msgstr "Lagerplads"
 
-#: linux/share/applications/monet-settings.desktop:624
+#: linux/share/applications/monet-settings.desktop:657
 msgctxt "an app's name in the menu"
 msgid "Backups"
 msgstr "Sikkerhedskopier"
 
-#: linux/share/applications/monet-settings.desktop:657
+#: linux/share/applications/monet-settings.desktop:690
 msgctxt "an app's name in the menu"
 msgid "Games & Controllers"
 msgstr "Spil & controllere"
 
-#: linux/share/applications/monet-settings.desktop:690
+#: linux/share/applications/monet-settings.desktop:723
 msgctxt "an app's name in the menu"
 msgid "Play on Windows"
 msgstr "Spil i Windows"
 
-#: linux/share/applications/monet-settings.desktop:723
+#: linux/share/applications/monet-settings.desktop:756
 msgctxt "an app's name in the menu"
 msgid "Updates"
 msgstr "Opdateringer"
 
-#: linux/share/applications/monet-settings.desktop:756
+#: linux/share/applications/monet-settings.desktop:789
 msgctxt "an app's name in the menu"
 msgid "About Monet"
 msgstr "Om Monet"

@@ -6,7 +6,8 @@
     - Copies monet-bridge.exe to C:\Program Files\Monet
     - Turns off Fast Startup, so Windows always shuts down fully and Monet
       can safely read its drive, and reads the PC's clock as UTC, as Monet does
-    - Creates three scheduled tasks under \Monet\ (agent, launcher, back)
+    - Creates four scheduled tasks under \Monet\ (agent, launcher, back, and
+      update: on the way back to Monet, Bridge brings itself up to date)
     - Adds "Back to Monet" to the Start menu and the desktop
 
     Nothing is removed from Windows. For the optional performance settings,
@@ -24,12 +25,16 @@
 .PARAMETER FromMonet
     Used when Monet prepared or installed Windows and this runs once at
     sign-in. Cleans up Monet's setup files and goes back to Monet.
+
+.PARAMETER Quiet
+    Used by Update-Monet.ps1: no questions, nothing to press at the end.
 #>
 param(
     [switch]$GameProfile,
     [switch]$RemoveApps,
     [switch]$InstallSteam,
-    [switch]$FromMonet
+    [switch]$FromMonet,
+    [switch]$Quiet
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,12 +48,14 @@ if (-not $isAdmin) {
     if ($RemoveApps) { $argList += '-RemoveApps' }
     if ($InstallSteam) { $argList += '-InstallSteam' }
     if ($FromMonet) { $argList += '-FromMonet' }
+    if ($Quiet) { $argList += '-Quiet' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
 }
 
 function Say($text) { Write-Host $text }
 function Done {
+    if ($Quiet) { return }
     Write-Host ''
     Read-Host 'Press Enter to close'
 }
@@ -77,8 +84,10 @@ $dataDir = Join-Path $env:ProgramData 'Monet'
 $exe = Join-Path $installDir 'monet-bridge.exe'
 $icon = Join-Path $installDir 'monet.ico'
 
-# Stop a running agent so the program file can be replaced.
-Get-ScheduledTask -TaskPath '\Monet\' -ErrorAction SilentlyContinue | Stop-ScheduledTask -ErrorAction SilentlyContinue
+# Stop a running agent so the program file can be replaced (not Update, which may be
+# what's running this).
+Get-ScheduledTask -TaskPath '\Monet\' -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -ne 'Update' } |
+    Stop-ScheduledTask -ErrorAction SilentlyContinue
 Get-Process monet-bridge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 
@@ -94,9 +103,11 @@ if (Test-Path $wifi) {
 
 # 1. Program files
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-Copy-Item -Force (Join-Path $source 'monet-bridge.exe') $exe
+# In one step: a copy cut short (the power going, say) never leaves half a program.
+Copy-Item -Force (Join-Path $source 'monet-bridge.exe') "$exe.new"
+Move-Item -Force "$exe.new" $exe
 Copy-Item -Force (Join-Path $source 'monet.ico') $icon
-foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1') {
+foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1') {
     Copy-Item -Force (Join-Path $source $file) (Join-Path $installDir $file)
 }
 Unblock-File -Path $exe -ErrorAction SilentlyContinue
@@ -137,6 +148,15 @@ Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'Back' `
     -Description 'Restarts in Monet.' `
     -Action (New-ScheduledTaskAction -Execute $exe -Argument 'back') `
     -Principal $admin -Settings $settings | Out-Null
+
+# Left as it is when it's what's running this (Update-Monet.ps1 -> -Quiet).
+if (-not $Quiet -or -not (Get-ScheduledTask -TaskPath '\Monet\' -TaskName 'Update' -ErrorAction SilentlyContinue)) {
+    $updater = Join-Path $installDir 'Update-Monet.ps1'
+    Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'Update' `
+        -Description 'On the way back to Monet: brings Monet Bridge up to date (once a day at most), then restarts in Monet.' `
+        -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$updater`"") `
+        -Principal $admin -Settings $settings | Out-Null
+}
 
 # 5. "Back to Monet" shortcuts
 Say '  Adding "Back to Monet" to Start and the desktop'
@@ -199,6 +219,23 @@ if ($GameProfile) {
 Start-ScheduledTask -TaskPath '\Monet\' -TaskName 'Agent'
 
 if ($FromMonet) {
+    # A Windows that Monet installed wears Monet's painting, so a trip there looks like
+    # home. A Windows kept from before keeps its own: its setup carries no wallpaper.jpg.
+    # Only a look: if Windows won't have it, setup carries on.
+    $painting = Join-Path $source 'wallpaper.jpg'
+    if (Test-Path $painting) {
+        try {
+            $wallpaper = Join-Path $dataDir 'wallpaper.jpg'
+            Copy-Item -Force $painting $wallpaper
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name WallpaperStyle -Value '10'
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name TileWallpaper -Value '0'
+            Add-Type -Namespace Monet -Name Desktop -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(int action, int param, string value, int flags);'
+            [Monet.Desktop]::SystemParametersInfo(0x14, 0, $wallpaper, 3) | Out-Null
+        } catch {
+            Say "  Windows kept its own wallpaper ($_)"
+        }
+    }
+
     # Setup ran once from the Startup folder; remove it and head back.
     $startup = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\StartUp\Finish Monet setup.cmd'
     Remove-Item -Force -ErrorAction SilentlyContinue $startup

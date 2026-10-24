@@ -51,7 +51,7 @@
         "Id": "monet",
         "License": "GPL-3.0-or-later",
         "Name": "Monet",
-        "Version": "0.9.1"
+        "Version": "0.9.2"
     },
     "X-Plasma-API": "5.0"
 }

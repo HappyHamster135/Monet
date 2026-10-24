@@ -19,7 +19,7 @@ You need:
 **Everything on the PC is erased.** About 20 minutes to install Monet, then
 Windows downloads in the background while you use it.
 
-> **Monet 0.6 is a preview** and hasn't been tested on real hardware yet.
+> **Monet is a preview.** Keep a copy of anything you can't lose before you install it.
 
 ---
 
@@ -27,7 +27,7 @@ Windows downloads in the background while you use it.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.1-Make-USB-Stick.exe** from the
+1. Download **Monet-0.9.2-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -40,23 +40,27 @@ On a Windows PC (this one, or any other):
    then says it's ready.
 
 The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.9.1-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.9.1-Installer.iso**). Monet Setup is in a release only once
+it (**Monet-0.9.2-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.9.2-Installer.iso**). Monet Setup is in a release only once
 it has installed Monet in a test PC.
 
-On Linux or a Mac, download **Monet-0.9.1-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.9.1-Installer.iso**) and write it with your disk
+On Linux or a Mac, download **Monet-0.9.2-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.9.2-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.1**).
-2. Monet Setup opens over the harbor at dawn. Choose your language and
-   keyboard, and click **Continue**.
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.2**).
+2. Monet Setup opens over the harbor at dawn. Choose your language,
+   keyboard and time zone (a region, then a city: Setup guesses it, and once
+   online, finds where the PC is), and click **Continue**.
 3. Connect to Wi-Fi (with a cable, this step is skipped).
-4. Enter your name and a password: your account in Monet, and in Windows.
+4. Enter your name and a password, twice: your account in Monet, and in
+   Windows. Any password will do. Or leave both empty: then Monet signs you
+   in by itself and the screen doesn't lock, but anyone who uses the PC can
+   open your account. Settings → Accounts gives it a password later.
 5. Choose **Monet and Windows** (everything on the PC is erased; about two
    thirds of the disk for Monet, one third for Windows) or **Monet next to my
    Windows** (Windows and your files stay; it needs free space). Check the
@@ -77,7 +81,7 @@ If something can't go ahead, the page says why in a sentence.
 7. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.9.1-Installer.iso)</summary>
+<summary>With Fedora's installer (Monet-0.9.2-Installer.iso)</summary>
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -103,7 +107,10 @@ yet). With the arrow keys and Enter:
 
 It opens on **Continue boot**: don't choose that. It skips this, and then
 Secure Boot won't let Monet start (it says "bad shim signature"). If that
-happened:
+happened, start from the USB stick again: Monet Setup notices and offers
+**Ask again and restart**, and the blue screen comes back at the next start.
+
+With Fedora's installer instead:
 
 1. Turn Secure Boot off in the PC's firmware settings, and start Monet.
 2. In Terminal, run `sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der`
@@ -139,6 +146,11 @@ Monet. Done.
 ## If something isn't right
 
 Open **Terminal** and run `monet doctor`. It says what's wrong and what to do.
+
+To ask for help, choose **Settings → About Monet → Save a report**. It puts
+one file in Documents with what helps find the problem (Monet's records, the
+PC's parts, and the errors of this start and the one before), and stays on the
+PC until you send it to someone.
 
 **"The Monet package on GitHub isn't public".** The installer can't download
 Monet. Make the package public (GitHub → your profile → **Packages** →
@@ -218,6 +230,12 @@ The first time you start a version with a new look, Monet freshens your
 desktop (the painting, the colors, the glass) and keeps your panels. Your
 files and apps aren't touched.
 
+Monet Bridge, Monet's part in Windows, updates itself on the way back to
+Monet, at most once a day: when a newer Monet is out, it installs that
+Monet's Bridge, then restarts into Monet as usual. A Bridge from before 0.9.2
+needs it once by hand: in Windows, open the release's
+**Monet-X-Windows.zip** and double-click **Install Monet**.
+
 ### If Play goes back to Monet
 
 Monet writes down every trip to Windows in `/var/lib/monet/switch.log`, and
@@ -251,6 +269,6 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.1-Linux.tar.gz** and run `./monet-0.9.1-linux/install.sh`,
+Download **Monet-0.9.2-Linux.tar.gz** and run `./monet-0.9.2-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).

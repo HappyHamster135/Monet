@@ -45,6 +45,9 @@ PlasmaCore.Dialog {
         { id: "bluetooth", name: i18n("Bluetooth"), glyph: "M7 7l10 10-5 5V2l5 5L7 17",
           words: i18nc("Settings search words, space-separated",
                       "bluetooth headphones controller gamepad mouse keyboard pair") },
+        { id: "phone", name: i18n("Phone"), glyph: "M8 3h8v18H8zM11 18h2",
+          words: i18nc("Settings search words, space-separated",
+                      "phone mobile android iphone kde connect texts messages sms notifications send files pair ring find") },
         { id: "printers", name: i18n("Printers"), glyph: "M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z",
           words: i18nc("Settings search words, space-separated",
                       "printers printer print scanner paper queue default add") },
@@ -70,7 +73,7 @@ PlasmaCore.Dialog {
                       "power sleep suspend screen off energy battery lid button shutdown performance saver mode") },
         { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
           words: i18nc("Settings search words, space-separated",
-                      "lock screen locker password wake sleep privacy recent files history forget remember away") },
+                      "lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger") },
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
           words: i18nc("Settings search words, space-separated",
@@ -78,7 +81,7 @@ PlasmaCore.Dialog {
         { id: "accessibility", name: i18n("Accessibility"),
           glyph: "M12 5h.01M5 8.5l7 1.5 7-1.5M12 10v4.5M8.5 20.5l3.5-6 3.5 6",
           words: i18nc("Settings search words, space-separated",
-                      "accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read") },
+                      "accessibility bigger larger text size scale zoom pointer cursor motion animation screen reader orca see read magnifier magnify") },
         { id: "apps", name: i18n("Default Apps"),
           glyph: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
           words: i18nc("Settings search words, space-separated",
@@ -102,7 +105,7 @@ PlasmaCore.Dialog {
                       "updates update version upgrade new reset restore rollback") },
         { id: "about", name: i18n("About Monet"), glyph: "M12 7.5h.01M12 11v6",
           words: i18nc("Settings search words, space-separated",
-                      "about pc computer specs graphics gpu processor cpu memory ram storage disk version") }
+                      "about pc computer specs graphics gpu processor cpu memory ram storage disk version report logs problem") }
     ]
 
     // What the helper reported.
@@ -159,6 +162,14 @@ PlasmaCore.Dialog {
     // Reset this PC: { pending } once it waits for the next restart.
     property var resetState: ({})
     property var accessInfo: ({})
+    // Phone: the phones KDE Connect knows ([{id, name, paired, near, battery, charging}]),
+    // whether it's here at all, and the one asked to pair (its answer is on the phone).
+    property var phoneList: []
+    property bool phoneApp: true
+    property string phoneAsked: ""
+    // About → Save a report: being written, and the name of the one saved.
+    property bool reporting: false
+    property string reportSaved: ""
     property bool dragging: false
 
     // Wi-Fi: the network being joined, and how it went.
@@ -304,6 +315,9 @@ PlasmaCore.Dialog {
         } else if (page === "backups") {
             ask("backup", out => sheet.backup = sheet.json(out, sheet.backup))
             ask("versions", out => sheet.earlier = sheet.json(out, {}))
+        } else if (page === "phone") {
+            phoneAsked = ""
+            loadPhones()
         } else if (page === "accessibility") {
             ask("access", out => sheet.accessInfo = sheet.json(out, sheet.accessInfo))
         } else if (page === "games") {
@@ -802,10 +816,20 @@ PlasmaCore.Dialog {
         return parts.join(" · ")
     }
 
+    function loadPhones() {
+        ask("phones", out => {
+            const found = sheet.json(out, [])
+            sheet.phoneApp = found !== null
+            sheet.phoneList = found || []
+            if (sheet.phoneList.some(p => p.id === sheet.phoneAsked && p.paired))
+                sheet.phoneAsked = ""
+        })
+    }
+
     function access(what, value) {
         accessInfo = changed(accessInfo, [what], value)
-        const said = what === "reduced" ? (value ? "reduced" : "normal") : what === "reader" ? (value ? "on" : "off") : value
-        ask("access-" + ({ scale: "scale", cursor: "cursor", reduced: "motion", reader: "reader" })[what] + " " + said)
+        const said = what === "reduced" ? (value ? "reduced" : "normal") : (what === "reader" || what === "zoom") ? (value ? "on" : "off") : value
+        ask("access-" + ({ scale: "scale", cursor: "cursor", reduced: "motion", reader: "reader", zoom: "zoom" })[what] + " " + said)
     }
 
     // A size on disk in words: 840 MB, 6.2 GB, 412 GB, 1.8 TB.
@@ -1849,7 +1873,7 @@ PlasmaCore.Dialog {
                     property real shift: 0
                     transform: Translate { y: pageLoader.shift }
                     sourceComponent: ({
-                        light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, display: displayPage,
+                        light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, phone: phonePage, display: displayPage,
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
                         storage: storagePage, backups: backupsPage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
@@ -2531,6 +2555,188 @@ PlasmaCore.Dialog {
                     visible: sheet.info.bluetooth === true
                     text: i18n("Pair a new device…")
                     onClicked: sheet.ask("kde bluetooth")
+                }
+            }
+        }
+
+        Component {
+            id: phonePage
+            ColumnLayout {
+                id: phoneColumn
+                spacing: 20
+                readonly property var paired: sheet.phoneList.filter(p => p.paired)
+                readonly property var near: sheet.phoneList.filter(p => !p.paired && p.near)
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("phone")
+                    art: sheet.art
+                    text: i18n("Phone")
+                    detail: i18n("Texts, notifications and files between your phone and this PC.")
+                }
+                // Phones come and go as they join the Wi-Fi, and a pairing is answered on the phone.
+                Timer {
+                    interval: 4000
+                    repeat: true
+                    running: sheet.page === "phone" && sheet.visible && sheet.phoneApp
+                    onTriggered: sheet.loadPhones()
+                }
+                // A pairing declined (or never seen) on the phone: Pair again after a while.
+                Timer {
+                    id: pairWait
+                    interval: 30000
+                    onTriggered: sheet.phoneAsked = ""
+                }
+                Card {
+                    tone: look
+                    visible: phoneColumn.paired.length > 0
+                    Repeater {
+                        model: phoneColumn.paired
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: !modelData.near ? i18n("Not nearby")
+                                : typeof modelData.battery !== "number" ? i18n("Connected")
+                                : modelData.charging ? i18n("Connected · charging, %1%", modelData.battery)
+                                : i18n("Connected · %1% battery", modelData.battery)
+                            lead: Rectangle {
+                                width: 34
+                                height: 34
+                                radius: 17
+                                color: modelData.near ? look.lily : look.wash2
+                                Behavior on color { ColorAnimation { duration: Math.round(180 * look.speed) } }
+                                Glyph {
+                                    anchors.centerIn: parent
+                                    width: 18
+                                    height: 18
+                                    path: sheet.deviceGlyph("phone")
+                                    color: modelData.near ? "#FFFFFF" : look.ink
+                                }
+                            }
+                            Row {
+                                spacing: 8
+                                Pill {
+                                    tone: look
+                                    visible: modelData.near
+                                    text: i18n("Ring")
+                                    onClicked: sheet.ask("phone-ring " + modelData.id)
+                                }
+                                Pill {
+                                    tone: look
+                                    visible: modelData.near
+                                    kind: "lily"
+                                    text: i18n("Send a file…")
+                                    onClicked: sheet.ask("phone-send " + modelData.id)
+                                }
+                                Pill {
+                                    tone: look
+                                    text: i18n("Forget")
+                                    onClicked: sheet.ask("phone-unpair " + modelData.id, () => sheet.loadPhones())
+                                }
+                            }
+                        }
+                    }
+                }
+                Row {
+                    spacing: 8
+                    visible: phoneColumn.paired.some(p => p.near)
+                    Pill {
+                        tone: look
+                        text: i18n("Texts")
+                        onClicked: sheet.ask("phone-texts")
+                    }
+                    Pill {
+                        tone: look
+                        text: i18n("Files on your phone")
+                        onClicked: sheet.ask("phone-files " + phoneColumn.paired.find(p => p.near).id)
+                    }
+                }
+                // Phones on the same Wi-Fi with KDE Connect open, to pair (the phone asks to accept).
+                Card {
+                    tone: look
+                    visible: phoneColumn.near.length > 0
+                    Repeater {
+                        model: phoneColumn.near
+                        SettingRow {
+                            tone: look
+                            divider: index > 0
+                            title: modelData.name
+                            detail: sheet.phoneAsked === modelData.id ? i18n("Accept on your phone") : i18n("Nearby, not paired")
+                            Pill {
+                                tone: look
+                                kind: "lily"
+                                text: sheet.phoneAsked === modelData.id ? i18n("Waiting…") : i18n("Pair")
+                                enabledPill: sheet.phoneAsked !== modelData.id
+                                onClicked: {
+                                    sheet.phoneAsked = modelData.id
+                                    pairWait.restart()
+                                    sheet.ask("phone-pair " + modelData.id)
+                                }
+                            }
+                        }
+                    }
+                }
+                // No phone yet: the app, a scan away.
+                Card {
+                    tone: look
+                    visible: phoneColumn.paired.length === 0 && sheet.phoneApp
+                    Item {
+                        Layout.fillWidth: true
+                        implicitHeight: Math.max(qr.height, getApp.implicitHeight) + 36
+                        Image {
+                            id: qr
+                            anchors.left: parent.left
+                            anchors.leftMargin: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 132
+                            height: 132
+                            source: sheet.art + "phone-qr.png"
+                            smooth: false
+                        }
+                        ColumnLayout {
+                            id: getApp
+                            anchors.left: qr.right
+                            anchors.leftMargin: 18
+                            anchors.right: parent.right
+                            anchors.rightMargin: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 6
+                            Text {
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
+                                text: i18n("Get the app on your phone")
+                                color: look.ink
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.WordWrap
+                            }
+                            Text {
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
+                                text: i18n("Point your phone's camera at this and install the app it shows. Open it on the same Wi-Fi as this PC, and your phone shows up here to pair.")
+                                color: look.dim
+                                font.pixelSize: 13
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    visible: !sheet.phoneApp
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        strong: false
+                        title: i18n("Phones can't connect to this PC yet")
+                        detail: i18n("The part of Monet that talks to phones is missing here.")
+                    }
+                }
+                Pill {
+                    tone: look
+                    visible: sheet.phoneApp
+                    text: i18n("More phone settings…")
+                    onClicked: sheet.ask("kde phone")
                 }
             }
         }
@@ -3802,6 +4008,18 @@ PlasmaCore.Dialog {
                             active: sheet.accessInfo.reader === true
                         }
                     }
+                    SettingRow {
+                        tone: look
+                        visible: typeof sheet.accessInfo.zoom === "boolean"
+                        tappable: true
+                        title: i18n("Magnifier")
+                        detail: i18n("The Windows key and + zooms in where the pointer is, the Windows key and − zooms out")
+                        onTapped: sheet.access("zoom", sheet.accessInfo.zoom !== true)
+                        Switch {
+                            tone: look
+                            active: sheet.accessInfo.zoom === true
+                        }
+                    }
                 }
                 Pill {
                     tone: look
@@ -4229,6 +4447,22 @@ PlasmaCore.Dialog {
                             tone: look
                             text: i18n("Lock")
                             onClicked: sheet.ask("lock-now")
+                        }
+                    }
+                    // With a fingerprint reader: a finger unlocks and says yes to administrator
+                    // questions. KDE's Accounts page sets one up (Configure Fingerprint).
+                    SettingRow {
+                        tone: look
+                        visible: !!sheet.privacyInfo.fingerprint
+                        title: i18n("Fingerprint")
+                        detail: sheet.privacyInfo.fingerprint && sheet.privacyInfo.fingerprint.enrolled
+                            ? i18n("Your finger unlocks the screen and says yes when Monet asks for your password")
+                            : i18n("Set up a finger to unlock the screen and say yes when Monet asks for your password")
+                        Pill {
+                            tone: look
+                            kind: sheet.privacyInfo.fingerprint && sheet.privacyInfo.fingerprint.enrolled ? "plain" : "lily"
+                            text: sheet.privacyInfo.fingerprint && sheet.privacyInfo.fingerprint.enrolled ? i18n("Change…") : i18n("Set up…")
+                            onClicked: sheet.ask("kde users")
                         }
                     }
                 }
@@ -5136,6 +5370,31 @@ PlasmaCore.Dialog {
                             text: i18nc("a time in seconds", "%1 s", sheet.secs(sheet.startup.total || 0))
                             color: look.ink
                             font.pixelSize: 14
+                        }
+                    }
+                }
+                // Everything that helps find out why something went wrong, in one file to send.
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Save a report")
+                        detail: sheet.reportSaved !== "" ? i18n("In Documents, as %1.", sheet.reportSaved)
+                            : i18n("What helps find out why something went wrong, in one file in Documents. It stays on this PC until you send it to someone.")
+                        Pill {
+                            tone: look
+                            text: sheet.reporting ? i18n("Saving…") : i18n("Save")
+                            enabledPill: !sheet.reporting
+                            onClicked: {
+                                if (sheet.reporting)
+                                    return
+                                sheet.reporting = true
+                                sheet.ask("report", out => {
+                                    sheet.reporting = false
+                                    sheet.reportSaved = sheet.json(out, {}).saved || ""
+                                })
+                            }
                         }
                     }
                 }

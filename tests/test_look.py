@@ -2044,7 +2044,7 @@ class MonetSettings(unittest.TestCase):
     def test_settings_search_speaks_every_language(self):
         # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
         settings = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
-        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 20)
+        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 21)
         self.assertNotIn('words: "', settings)
         self.assertIn('fold(entry.name + " " + entry.words).indexOf(words)', settings)
         german = (ROOT / "po/de.po").read_text(encoding="utf-8")
@@ -3579,6 +3579,193 @@ class PairingsFromWindows(unittest.TestCase):
         self.assertIn("linux/libexec/monet-pairings ", (ROOT / ".github/workflows/build.yml").read_text())
         # Read with ntfscat, which ships with Monet: Windows' drive is never mounted.
         self.assertIn(" ntfsprogs ", (ROOT / "image/Containerfile").read_text())
+
+
+class SaveAReport(unittest.TestCase):
+    """About → Save a report: what helps find out why something went wrong, in one file."""
+
+    def test_the_report_has_every_part_cut_to_size(self):
+        quick = quick_helper()
+        with tempfile_dir() as tmp:
+            log = Path(tmp) / "switch.log"
+            log.write_text("".join(f"trip {i}\n" for i in range(10)))
+            parts = (("Trips to Windows", log, ("tail", 3)), ("Missing", Path(tmp) / "none", None),
+                     ("Not here", ("no-such-program-anywhere",), None),
+                     ("Coloured", (sys.executable, "-c", "print('\\x1b[1mbold\\x1b[0m')"), None))
+            quick.DMI = Path(tmp) / "dmi"
+            text = quick.report_text(parts, now=(2026, 10, 24, 9, 30, 0, 5, 297, 0))
+        self.assertTrue(text.startswith("Monet report, 2026-10-24 09:30\n"))
+        self.assertIn("== Trips to Windows\ntrip 7\ntrip 8\ntrip 9\n", text)
+        self.assertIn("== Not here\n(no-such-program-anywhere isn't here)\n", text)
+        self.assertIn("== Coloured\nbold\n", text)       # without the terminal's colours
+        self.assertIn("== Missing\n(", text)
+        # Monet's own records, the start before, sleep and the hardware are all asked for.
+        headings = [part[0] for part in quick.REPORT_PARTS]
+        for heading in ("monet doctor", "Errors since this start", "Errors in the start before", "Sleep and waking",
+                        "Graphics and other devices", "Battery and power", "Bluetooth", "Trips to Windows",
+                        "Crashes in the last week", "Monet's services"):
+            self.assertIn(heading, headings)
+
+    def test_it_lands_in_documents_and_settings_says_so(self):
+        quick = quick_helper()
+        quick.report_text = lambda now=None: "Monet report\n"
+        with tempfile_dir() as tmp:
+            path = quick.save_report(Path(tmp) / "Dokument", now=(2026, 10, 24, 9, 30, 0, 5, 297, 0))
+            self.assertEqual(path.name, "Monet report 2026-10-24 09.30.txt")
+            self.assertEqual(path.read_text(encoding="utf-8"), "Monet report\n")
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('title: i18n("Save a report")', settings)
+        self.assertIn('sheet.ask("report", out => {', settings)
+        self.assertIn("report logs problem", settings)   # search finds it
+        script = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        self.assertIn('elif cmd == "report":', script)
+        self.assertIn('tr("Saved a report"), tr("In Documents, as %1.", Path(path).name)', script)
+
+
+class Magnifier(unittest.TestCase):
+    def test_kwins_zoom_turns_on_and_off(self):
+        from unittest import mock
+        quick = quick_helper()
+        calls = []
+        with mock.patch.object(quick, "busctl", lambda *a: calls.append(a) or "b true\n"), \
+                mock.patch.object(quick, "kwrite", lambda *a: calls.append(("kwrite",) + a)):
+            self.assertIs(quick.zoom_on(), True)
+            quick.set_zoom(False)
+        self.assertIn(("call", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects", "isEffectLoaded", "s", "zoom"), calls)
+        self.assertIn(("kwrite", "kwinrc", "Plugins", "zoomEnabled", "false"), calls)
+        self.assertIn(("call", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects", "unloadEffect", "s", "zoom"), calls)
+        with mock.patch.object(quick, "busctl", lambda *a: None):
+            self.assertIsNone(quick.zoom_on())       # no KWin to ask: Settings hides the switch
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('title: i18n("Magnifier")', settings)
+        self.assertIn('visible: typeof sheet.accessInfo.zoom === "boolean"', settings)
+        self.assertIn('reader: "reader", zoom: "zoom" })[what]', settings)
+
+
+class WindowsWearsThePainting(unittest.TestCase):
+    def test_only_a_windows_monet_installed(self):
+        package = (ROOT / "tools/package.sh").read_text()
+        self.assertIn('cp "$ROOT/linux/share/wallpapers/Monet/contents/hours/day.jpg" "$OUT/wallpaper.jpg"', package)
+        install = (ROOT / "windows/Install-Monet.ps1").read_text()
+        block = install[install.index("if ($FromMonet) {\n    # A Windows that Monet installed"):]
+        self.assertIn("if (Test-Path $painting) {", block)
+        self.assertIn("SystemParametersInfo(0x14, 0, $wallpaper, 3)", block)
+        # A Windows kept from before gets Bridge's files only, without the painting.
+        payload = (ROOT / "crates/monet/src/windows_setup.rs").read_text()
+        self.assertNotIn("wallpaper", payload)
+
+
+class YourPhone(unittest.TestCase):
+    """Settings → Phone: KDE Connect's phones, pairing, battery, ring, send, texts."""
+
+    LISTED = ("- Pixel 8: 1a2b3c4d_5e6f (paired and reachable)\n"
+              "- Old phone: 9f8e7d (paired)\n"
+              "- Galaxy S24: c0ffee_01 (reachable)\n"
+              "3 devices found\n")
+
+    def test_phones_as_kde_connect_lists_them(self):
+        quick = quick_helper()
+        found = quick.phones(self.LISTED, battery=lambda ident: (82, True))
+        self.assertEqual(found, [
+            {"id": "1a2b3c4d_5e6f", "name": "Pixel 8", "paired": True, "near": True, "battery": 82, "charging": True},
+            {"id": "9f8e7d", "name": "Old phone", "paired": True, "near": False, "battery": None, "charging": None},
+            {"id": "c0ffee_01", "name": "Galaxy S24", "paired": False, "near": True, "battery": None, "charging": None}])
+        self.assertEqual(quick.phones("0 devices found\n"), [])
+        # An id that isn't plain never reaches a command line: that phone is left out.
+        self.assertEqual(quick.phones("- Evil: x;reboot (reachable)\n- Evil2: $(id) (paired and reachable)\n"), [])
+
+    def test_the_battery_as_kde_connect_says_it(self):
+        from unittest import mock
+        quick = quick_helper()
+        said = {"charge": "i 64\n", "isCharging": "b false\n"}
+        with mock.patch.object(quick, "busctl", lambda *a: said[a[-1]]):
+            self.assertEqual(quick.phone_battery("x"), (64, False))
+        with mock.patch.object(quick, "busctl", lambda *a: None):
+            self.assertEqual(quick.phone_battery("x"), (None, None))
+
+    def test_the_page(self):
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('{ id: "phone", name: i18n("Phone")', settings)
+        self.assertIn("phone: phonePage", settings)
+        self.assertIn('source: sheet.art + "phone-qr.png"', settings)
+        self.assertTrue((SHARE / "monet/settings/phone-qr.png").is_file())
+        self.assertTrue((SHARE / "monet/settings/swatch-phone.png").is_file())
+        script = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        self.assertIn('"phone": "kcm_kdeconnect"', script)
+        self.assertIn('PAGES = ("light", "wifi", "bluetooth", "phone",', script)
+        # Ids from the helper only, checked: never anything else on the command line.
+        self.assertIn('elif cmd in ("phone-pair", "phone-unpair", "phone-ring") and args and re.fullmatch(r"[\\w-]+", args[0]):', script)
+
+
+class Fingerprint(unittest.TestCase):
+    def test_a_reader_and_whether_a_finger_is_set_up(self):
+        quick = quick_helper()
+        none = "found 0 devices\nNo devices available\n"
+        unset = ("found 1 devices\nDevice at /net/reactivated/Fprint/Device/0\nUsing device /net/reactivated/Fprint/Device/0\n"
+                 "User jon has no fingers enrolled for Goodix MOC Fingerprint Sensor.\n")
+        done = ("found 1 devices\nDevice at /net/reactivated/Fprint/Device/0\nUsing device /net/reactivated/Fprint/Device/0\n"
+                "Fingerprints for user jon on Goodix MOC Fingerprint Sensor (press):\n - #0: right-index-finger\n")
+        self.assertIsNone(quick.fingerprint_state(none))
+        self.assertEqual(quick.fingerprint_state(unset), {"enrolled": False})
+        self.assertEqual(quick.fingerprint_state(done), {"enrolled": True})
+        # The image turns authselect's fingerprint step on; Settings shows the row only with a reader.
+        image = (ROOT / "image/Containerfile").read_text()
+        self.assertIn("authselect enable-feature with-fingerprint ||", image)   # never stops the build
+        self.assertIn("dnf5 -y install fprintd-pam", image)
+        settings = (PLASMA / "plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn("visible: !!sheet.privacyInfo.fingerprint", settings)
+
+
+class TextFromAPicture(unittest.TestCase):
+    """Screenshot's Extract Text reads your language, and the image has every one Monet speaks."""
+
+    def test_your_language_and_english(self):
+        look = (ROOT / "linux/libexec/monet-look").read_text(encoding="utf-8")
+        function = look[look.index("ocr_language() {"):look.index("}", look.index("    esac")) + 1]
+        script = function + '\nfor l in sv_SE.UTF-8 pt_BR.UTF-8 zh_TW.UTF-8 zh_CN.UTF-8 nb_NO.UTF-8 "de:en" en_US.UTF-8; do echo "$(ocr_language "$l")"; done\n'
+        said = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True).stdout.split("\n")
+        self.assertEqual(said[:7], ["swe", "por", "chi_tra", "chi_sim", "nor", "deu", ""])
+        self.assertIn('kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"', look)
+        # Each of Monet's languages has its Tesseract name, and its language pack is in the image
+        # (Bazzite's own fifteen, then the rest).
+        bazzite = {"eng", "ces", "chi_sim", "chi_tra", "deu", "ell", "fra", "ita", "jpn", "nld", "pol", "por", "rus", "spa", "tur"}
+        image = (ROOT / "image/Containerfile").read_text()
+        named = set(re.findall(r"echo (\w+) ;;", function))
+        self.assertEqual(len(named), 28)
+        for code in named - bazzite:
+            self.assertIn(f"tesseract-langpack-{code}", image)
+
+
+class BridgeKeepsItselfUpToDate(unittest.TestCase):
+    """On the way back to Monet, Monet Bridge updates itself from the newest release, then restarts."""
+
+    def test_the_way_out_hands_the_restart_to_the_update(self):
+        bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
+        go_back = bridge[bridge.index("fn go_back("):bridge.index("fn back()")]
+        # The update first; the restart of its own only when the task didn't take over.
+        self.assertLess(go_back.index("if update_then_restart() {"), go_back.index('run_hidden("shutdown", &["/r", "/t", "0"])'))
+        self.assertIn('win::run_hidden("schtasks", &["/run", "/tn", "\\\\Monet\\\\Update"])', bridge)
+        self.assertIn("while started.elapsed() < Duration::from_secs(30)", bridge)
+        self.assertIn("fs::remove_file(&marker).is_err() && claimed.exists()", bridge)
+
+    def test_the_update_always_restarts_and_checks_what_it_installs(self):
+        update = (ROOT / "windows/Update-Monet.ps1").read_text(encoding="utf-8")
+        self.assertIn("Move-Item -Force $marker $claimed", update)
+        finally_block = update[update.index("} finally {"):]
+        self.assertIn("& shutdown.exe /r /t 0", finally_block)
+        self.assertIn("(Get-FileHash -Algorithm SHA256 $zip).Hash", update)
+        self.assertIn("releases?per_page=10", update)     # every Monet is a pre-release for now
+        self.assertIn("[timespan]::FromHours(20)", update)
+        self.assertIn("if (-not $CheckOnly -and -not $restart) { return }", update)   # too late: not while Windows goes down
+        self.assertIn("$ProgressPreference = 'SilentlyContinue'", update)
+        self.assertIn("elseif ((Get-Date) -gt $deadline)", update)
+        install = (ROOT / "windows/Install-Monet.ps1").read_text(encoding="utf-8")
+        self.assertIn("Where-Object { $_.TaskName -ne 'Update' }", install)   # never stops what's running it
+        self.assertIn("'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1'", install)
+        self.assertIn("if ($Quiet) { return }", install)
+        self.assertIn('Move-Item -Force "$exe.new" $exe', install)
+        self.assertIn('"Update-Monet.ps1",', (ROOT / "crates/monet/src/windows_setup.rs").read_text())
+        self.assertIn('"$ROOT"/windows/*.ps1', (ROOT / "tools/package.sh").read_text())
 
 
 class tempfile_dir:

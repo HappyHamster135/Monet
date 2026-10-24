@@ -143,8 +143,10 @@ jobs:
             exit 0
           fi
           cd dist && sha256sum * > SHA256SUMS.txt && cd ..
+          # This version's notes only: every version's at once made the Releases page slow.
+          python3 tools/release-notes.py RELEASE_NOTES.md > this-release.md
           gh release create "v$VERSION" dist/* \
             --title "Monet $VERSION" \
-            --notes-file RELEASE_NOTES.md \
+            --notes-file this-release.md \
             --prerelease \
             --target "$GITHUB_SHA"
