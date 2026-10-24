@@ -88,12 +88,15 @@ class VM:
         self.qmp({"execute": "screendump", "arguments": {"filename": str(ppm)}})
         return Image.open(ppm).convert("RGB")
 
-    def click(self, x, y):
+    def point(self, x, y):
         img = self.screen()
         ax, ay = int(x * 32767 / (img.width - 1)), int(y * 32767 / (img.height - 1))
         self.qmp({"execute": "input-send-event", "arguments": {"events": [
             {"type": "abs", "data": {"axis": "x", "value": ax}}, {"type": "abs", "data": {"axis": "y", "value": ay}}]}})
         time.sleep(0.3)
+
+    def click(self, x, y):
+        self.point(x, y)
         for down in (True, False):
             self.qmp({"execute": "input-send-event",
                       "arguments": {"events": [{"type": "btn", "data": {"down": down, "button": "left"}}]}})
@@ -320,6 +323,9 @@ def main():
         if not full:
             return 0
         vm.click(*NEXT)                                    # Erase & Install
+        # Off the buttons: resting on Restart, the pointer hid it (0.9.1's install was all set
+        # at 8 minutes, and the test waited the full hour).
+        vm.point(W - u(40), H // 2)
         start = time.time()
         while time.time() - start < 3600:
             time.sleep(60)
