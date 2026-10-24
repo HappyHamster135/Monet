@@ -4,6 +4,7 @@ a pretend PC (no disks are touched).
     python3 -m unittest discover -s tests
 """
 
+import importlib.util
 import io
 import json
 import os
@@ -710,6 +711,27 @@ class TheBlueScreenSkipped(unittest.TestCase):
         self.assertIsNone(self.run_with(secure_boot=True, has_key=True, enrolled=True))     # trusted: fine
         self.assertIsNone(self.run_with(secure_boot=False, has_key=True, enrolled=False))   # Secure Boot off: it starts
         self.assertIsNone(self.run_with(secure_boot=True, has_key=False, enrolled=False))   # no Monet here
+
+    def test_the_vm_test_knows_the_blue_screen(self):
+        # 0.9.3's VM test looked for blue across the whole screen; OVMF draws the blue screen as an
+        # 80-column box with black on either side, so it never saw it and 0.9.3 shipped without Setup.
+        try:
+            from PIL import Image, ImageDraw
+        except ImportError as e:
+            self.skipTest(f"no Pillow ({e})")
+        spec = importlib.util.spec_from_file_location("vm_test", ROOT / "tools/vm-test.py")
+        vm_test = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(vm_test)
+        boxed = Image.new("RGB", (1920, 1080))
+        ImageDraw.Draw(boxed).rectangle((640, 64, 1280, 996), fill=(0, 0, 168))
+        self.assertTrue(vm_test.blue_screen(boxed))
+        whole = Image.new("RGB", (1920, 1080), (0, 0, 168))
+        self.assertTrue(vm_test.blue_screen(whole))
+        # All set's pictures of it: blue, but small beside the sheet.
+        all_set = Image.new("RGB", (1920, 1080), (200, 200, 210))
+        ImageDraw.Draw(all_set).rectangle((830, 360, 1075, 512), fill=(0, 0, 170))
+        self.assertFalse(vm_test.blue_screen(all_set))
+        self.assertFalse(vm_test.blue_screen(Image.new("RGB", (1920, 1080))))
 
     def test_the_key_reaches_the_kernel_as_a_cpio(self):
         data = install.newc("monet-key.der", b"0\x82key!")

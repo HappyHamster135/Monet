@@ -146,9 +146,12 @@ def is_ink(img, point):
 
 
 def blue_screen(img):
-    """shim's blue screen (MokManager): EFI blue nearly everywhere."""
-    r, g, b = ImageStat.Stat(img.convert("RGB")).mean
-    return b > 90 and b > 2 * max(r, g)
+    """shim's blue screen (MokManager): EFI blue across the middle of the screen. OVMF draws it
+    as an 80-column box with black on either side, so most of the screen isn't blue; and All
+    set's pictures of it are small, never most of the middle."""
+    middle = img.convert("RGB").crop((W // 2 - 200, H // 2 - 300, W // 2 + 200, H // 2 + 300)).resize((80, 120))
+    blue = sum(1 for r, g, b in middle.getdata() if b > 100 and r < 60 and g < 60)
+    return blue > 0.6 * 80 * 120
 
 
 def setup_showing(img):
