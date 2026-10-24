@@ -126,6 +126,7 @@ NEXT = (u(540), H - u(123))                               # inside Continue, Res
 NAME_FIELD = (u(300), u(279))                             # person step: name entry
 PASSWORD_FIELD = (u(300), u(388))                         # person step: password entry
 TRY_AGAIN = (u(130), u(258))                              # failed step: Try again
+DETAILS = (u(279), u(258))                                # failed step: Details (the install's log)
 
 
 def brightness(img, box):
@@ -327,6 +328,9 @@ def main():
                 break
             if is_ink(img, TRY_AGAIN):
                 run.shot("failed")
+                vm.click(*DETAILS)
+                time.sleep(2)
+                run.shot("failed-details")
                 return 3
         else:
             return 4

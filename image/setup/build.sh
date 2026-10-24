@@ -3,7 +3,11 @@
 # Monet Setup, with Fedora's signed shim, GRUB and kernel, so it starts with
 # Secure Boot on. UEFI only (every PC that runs Windows 11 has it).
 #
-#   image/setup/build.sh VERSION IMAGE OUT.iso
+#   image/setup/build.sh VERSION IMAGE OUT.iso [BOOTC-SETTINGS.tar]
+#
+# BOOTC-SETTINGS.tar (bootc-settings.tar in the repository by default) holds the
+# image's own install settings for bootc, which reads them from the system it runs
+# on: .github/workflows/image.yml takes them out of the image it built.
 #
 # Runs as root in a Fedora container (.github/workflows/image.yml) with
 # --privileged, for the chroot that makes the initramfs.
@@ -12,8 +16,10 @@ set -euo pipefail
 VERSION=$1
 IMAGE=$2
 OUT=$3
+SETTINGS=${4:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
+SETTINGS=${SETTINGS:-$REPO/bootc-settings.tar}
 FEDORA=$(rpm -E %fedora)
 LABEL="Monet-$VERSION"
 W=/var/tmp/monet-live
@@ -32,6 +38,14 @@ dnf -y -q --installroot="$ROOT" --releasever="$FEDORA" --use-host-config \
 
 echo "== Monet Setup"
 cp -a "$HERE/files/." "$ROOT/"
+# bootc install reads prepare-root.conf and its install settings from here, as if
+# this were the image: the image's own (bootc's issues 1410 and 1438; Anaconda does
+# the same). The kernel arguments and the bootloader still come from the image.
+tar -xf "$SETTINGS" -C "$ROOT"
+if [ ! -e "$ROOT/usr/lib/ostree/prepare-root.conf" ] && [ ! -e "$ROOT/etc/ostree/prepare-root.conf" ]; then
+    echo "$SETTINGS has no prepare-root.conf: bootc couldn't install from this stick" >&2
+    exit 1
+fi
 APP=$ROOT/usr/share/monet-setup
 mkdir -p "$APP" "$ROOT/usr/share/fonts/monet"
 cp -a "$REPO/setup/monet-setup" "$REPO/setup/monet_setup" "$REPO/setup/qml" "$REPO/setup/art" "$REPO/setup/locale" "$APP/"

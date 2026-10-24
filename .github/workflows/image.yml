@@ -41,6 +41,21 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
           echo "Built $IMAGE $VERSION on Fedora $FEDORA"
+      # bootc reads its install settings (prepare-root.conf, install/*.toml) from the
+      # system it runs on, not from the image it installs: Monet Setup's USB stick
+      # carries this image's own (image/setup/build.sh).
+      - name: bootc's install settings, for Monet Setup
+        continue-on-error: true
+        env:
+          IMAGE: ${{ steps.build.outputs.image }}
+        run: |
+          sudo podman run --rm --entrypoint sh "$IMAGE:latest" -c 'cd / && tar -cf - $(ls -d usr/lib/ostree/prepare-root.conf etc/ostree/prepare-root.conf usr/lib/bootc/install usr/lib/bootc/bound-images.d 2>/dev/null)' > bootc-settings.tar
+          tar -tvf bootc-settings.tar
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: bootc-settings
+          path: bootc-settings.tar
       - name: Push
         env:
           IMAGE: ${{ steps.build.outputs.image }}
@@ -196,6 +211,9 @@ jobs:
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
+      - uses: actions/download-artifact@v4
+        with:
+          name: bootc-settings
       - name: Build Monet Setup's USB stick
         env:
           IMAGE: ${{ needs.image.outputs.image }}

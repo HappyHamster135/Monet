@@ -573,5 +573,25 @@ class Window(unittest.TestCase):
         self.assertNotIn("any key", done.lower())  # install's --timeout -1 skips shim's "Press any key"
 
 
+class TheStick(unittest.TestCase):
+    """0.9.1's Setup failed at bootc: it reads prepare-root.conf from the stick, not the image."""
+
+    def test_the_stick_carries_the_images_bootc_settings(self):
+        workflow = (ROOT / ".github/workflows/image.yml").read_text(encoding="utf-8")
+        self.assertIn("usr/lib/ostree/prepare-root.conf etc/ostree/prepare-root.conf usr/lib/bootc/install", workflow)
+        self.assertEqual(workflow.count("name: bootc-settings"), 2)   # uploaded by image, taken by setup
+        build = (ROOT / "image/setup/build.sh").read_text(encoding="utf-8")
+        self.assertIn('tar -xf "$SETTINGS" -C "$ROOT"', build)
+        self.assertIn('[ ! -e "$ROOT/usr/lib/ostree/prepare-root.conf" ]', build)
+
+    def test_why_an_install_stopped_is_easy_to_see(self):
+        qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
+        self.assertIn("onVisibleChanged: if (visible) logView.toEnd()", qml)
+        app = (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8")
+        self.assertEqual(app.count('print("install: " + '), 2)   # the journal, so a test PC's serial console
+        test = (ROOT / "tools/vm-test.py").read_text(encoding="utf-8")
+        self.assertIn('run.shot("failed-details")', test)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -747,11 +747,16 @@ ApplicationWindow {
                 id: details
                 visible: false
                 height: px(260)
+                // Opens at the end, where why it stopped is.
+                onVisibleChanged: if (visible) logView.toEnd()
                 Flickable {
+                    id: logView
                     anchors.fill: parent
                     anchors.margins: px(14)
                     clip: true
                     contentHeight: log.implicitHeight
+                    function toEnd() { contentY = Math.max(0, contentHeight - height) }
+                    onContentHeightChanged: toEnd()
                     Text {
                         horizontalAlignment: Text.AlignLeft
                         id: log

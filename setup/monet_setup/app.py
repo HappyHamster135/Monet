@@ -495,6 +495,7 @@ class Setup(QObject):
                 event = json.loads(line)
             except ValueError:
                 self._log.append(line)
+                print("install: " + line, file=sys.stderr, flush=True)
                 continue
             self.report(event)
 
@@ -516,6 +517,8 @@ class Setup(QObject):
         self._status = " · ".join(parts)
         if event.get("log"):
             self._log.append(event["log"])
+            # The journal too, where a test PC's serial console shows why an install stopped.
+            print("install: " + event["log"], file=sys.stderr, flush=True)
         if event.get("error"):
             self._error = event["error"]
         if event.get("recovery"):
