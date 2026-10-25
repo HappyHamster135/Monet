@@ -85,6 +85,20 @@ Test machines:
 - [ ] With no internet in Windows, quitting a game still restarts into Monet (at most about 20 seconds later)
 - [ ] `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Monet\Update-Monet.ps1" -CheckOnly` says whether a newer Bridge is out, and changes nothing
 
+### Security at a glance (after 0.9.3)
+
+- [ ] Settings → Security on a PC with Secure Boot on, an encrypted disk, the firewall on and updates by themselves: every row has a lily tick, and the title says Your PC is protected
+- [ ] Secure Boot off (turned off in the firmware, Monet's key trusted): Firmware settings… explains, Restart asks KDE's restart question, and the PC opens its firmware settings
+- [ ] Secure Boot off on a PC where Monet's key isn't trusted (`sudo mokutil --delete` it first, in a VM): the row says so and offers Trust Monet…, which asks for the password; the next restart shows the blue screen; after Enroll MOK the row offers Firmware settings…
+- [ ] `sudo systemctl disable --now firewalld`: the Firewall row says Off; Turn on asks for the password, and the row says On afterwards
+- [ ] Updates → auto updates off: the Updates row says so; Turn on brings the tick back. With an update downloaded, the row says it's ready and Restart restarts
+- [ ] Firmware: the row looks for updates as the page opens; with one available, Install installs it (fwupd asks for the password)
+- [ ] Backups → earlier versions off: Turn on brings them back; without a backup drive the row offers Add a drive…, which opens Backups
+- [ ] An unencrypted Monet (Fedora's installer): the Encryption row says Off, with no button
+- [ ] `firewall-cmd --get-default-zone` says `monet`; the Firewall row says only what Monet uses comes in, and the switch under it is on
+- [ ] With the switch on: the phone pairs and rings (Settings → Phone), Steam on another PC on the network finds this one for Remote Play and a local game transfer, a network printer shows up; from another PC, `nc -zv <this PC> 22` (or any other port) is refused
+- [ ] The switch off asks for the password; `firewall-cmd --get-default-zone` is Bazzite's zone again (`cat /usr/share/monet/firewall-zone-before`), and on turns Monet's back on
+
 ### A smoother trip to Windows (0.9.3)
 
 - [ ] Play a Windows game: from Windows' sign-in until the game is up, Monet's painting covers the screen with the game's name and Back to Monet now; a launcher that opens (Riot Client, say) comes up over it; a Windows that Monet installed shows no taskbar until the pointer touches the bottom edge

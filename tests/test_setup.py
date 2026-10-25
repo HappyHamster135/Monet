@@ -8,6 +8,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import types
@@ -815,6 +816,16 @@ class TheStick(unittest.TestCase):
         build = (ROOT / "image/setup/build.sh").read_text(encoding="utf-8")
         self.assertIn('tar -xf "$SETTINGS" -C "$ROOT"', build)
         self.assertIn('[ ! -e "$ROOT/usr/lib/ostree/prepare-root.conf" ]', build)
+
+    def test_monet_starts_behind_the_splash_like_the_stick(self):
+        # Setup's bootc install had none of these (Fedora's installer added rhgb quiet), so the
+        # Monet it installed started as scrolling text.
+        menu = (ROOT / "image/setup/grub.cfg").read_text(encoding="utf-8")
+        stick = re.search(r"menuentry 'Monet Setup' .*?\n\s*linux (.*)", menu).group(1).split()
+        for karg in install.QUIET:
+            self.assertIn(karg, stick)
+        source = (ROOT / "setup/monet_setup/install.py").read_text(encoding="utf-8")
+        self.assertIn('*(arg for karg in QUIET for arg in ("--karg", karg))', source)
 
     def test_why_an_install_stopped_is_easy_to_see(self):
         qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")

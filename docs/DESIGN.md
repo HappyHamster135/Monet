@@ -899,6 +899,50 @@ nowhere. A start the TPM can't vouch for asks for it; that start
 ask. The image's initramfs carries the TPM's libraries (`--add tpm2-tss`).
 Fedora's installer doesn't encrypt.
 
+## Security at a glance
+
+Settings → Security shows what keeps the PC safe, one row each, with a lily
+tick when it's as it should be, an amber "!" when it wants a look, and what
+would fix it; the title says "Your PC is protected" or how many things want a
+look. `monet-quick security` only looks, here and now: Secure Boot from the
+firmware's `SecureBoot` variable (none at all: not started in UEFI mode),
+whether the firmware trusts Monet's key (`mokutil --test-key`), encryption
+(the disk Monet runs from inside a `crypt` device, `lsblk -s`), the firewall
+(`firewall-cmd --state`), automatic updates and a staged update, and earlier
+versions of files (`monet-keep`) with the drive copies go to. Firmware updates
+are the Updates page's own question (`firmware-check`), asked as the page
+opens.
+
+The fixes: Secure Boot off and Monet's key not trusted yet → **Trust Monet…**
+(`monet-secure trust-key`: the import with the blue screen's `monetsetup`,
+waiting for an answer), then the blue screen at the next restart; trusted →
+**Firmware settings…**, which says what to do there and restarts into them
+(logind's `SetRebootToFirmwareSetup`, then KDE's restart question). Secure
+Boot is never sent on before Monet's key is trusted, or Monet wouldn't start.
+Firewall off → **Turn on** (`monet-secure firewall-on`). Updates only when
+asked → **Turn on**; an update waiting → **Restart**. Firmware → **Install**
+(fwupd asks for the password itself). Earlier versions off → **Turn on**; no
+drive → **Add a drive…** (Backups). Encryption has no fix: only Monet Setup
+encrypts, as it installs.
+
+The firewall's default zone is Monet's own (`linux/firewalld/monet.xml`,
+`target="default"`): from the network only what Monet uses comes in, as ports
+rather than firewalld's service names (a missing service would stop the zone):
+DHCPv6 (UDP 546), finding printers and devices (mDNS, UDP 5353), the phone
+(KDE Connect, TCP and UDP 1714-1764), and Steam on this network as Steam's help
+lists it: finding other PCs and Remote Play (UDP 27031-27036, TCP 27036-27037)
+and Local Network Game Transfers (TCP 27040). What the PC asks for itself gets
+its answers as always. The image installs it in `/usr/lib/firewalld/zones`,
+remembers Bazzite's default (`/usr/share/monet/firewall-zone-before`) and sets
+Monet's (`firewall-offline-cmd`, only warning if it can't); an existing system
+gets the zone in `/etc/firewalld/zones` and nothing changes. Settings →
+Security's switch, "Only what Monet uses comes in", sets it or goes back
+(`monet-secure firewall-strict on|off`, remembering the zone it leaves in
+`/var/lib/monet/firewall-zone-before`); a game hosted for others nearby may
+need it off. Uninstalling goes back to that zone before removing Monet's. `monet-secure` runs through pkexec and always asks
+for an administrator's password: it's not on the list Monet's polkit rule
+lets through.
+
 ## Bluetooth in both
 
 A Bluetooth device keeps one pairing key for the PC, and Monet and Windows

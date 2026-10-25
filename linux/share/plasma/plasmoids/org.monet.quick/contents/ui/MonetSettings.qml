@@ -74,6 +74,9 @@ PlasmaCore.Dialog {
         { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
           words: i18nc("Settings search words, space-separated",
                       "lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger") },
+        { id: "security", name: i18n("Security"), glyph: "M12 3l7.5 3v5.5c0 4.6-3.1 8.4-7.5 9.5-4.4-1.1-7.5-4.9-7.5-9.5V6zM9 12l2.2 2.2L15.5 10",
+          words: i18nc("Settings search words, space-separated",
+                      "security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups virus antivirus malware") },
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
           words: i18nc("Settings search words, space-separated",
@@ -191,6 +194,12 @@ PlasmaCore.Dialog {
     property var updateFound: ({})
     property string updateMessage: ""
     // Firmware for the PC's own parts (fwupd): the same states, and the updates.
+    // Security: what keeps the PC safe (monet-quick security), the fix that's running, asking
+    // before the restart into the firmware settings, and Monet's key asked for.
+    property var safety: ({})
+    property string securityFixing: ""
+    property bool askingFirmwareSetup: false
+    property bool keyAsked: false
     property string firmwareState: ""
     property var firmware: []
     property string firmwareMessage: ""
@@ -287,6 +296,12 @@ PlasmaCore.Dialog {
             ask("apps-sound", out => { if (!sheet.dragging) sheet.appsSound = sheet.json(out, []) })
         } else if (page === "about") {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
+        } else if (page === "security") {
+            askingFirmwareSetup = false
+            loadSecurity()
+            if (firmwareState !== "installing" && firmwareState !== "done") {
+                checkFirmware()
+            }
         } else if (page === "windows") {
             ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
             ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
@@ -509,6 +524,32 @@ PlasmaCore.Dialog {
             sheet.firmwareMessage = found.message || ""
             sheet.firmwareState = !found.ok ? "failed" : sheet.firmware.length > 0 ? "available" : "none"
         })
+    }
+
+    function loadSecurity() {
+        ask("security", out => sheet.safety = sheet.json(out, sheet.safety))
+    }
+
+    // A fix from the Security page; the ones that need an administrator ask for the password.
+    function fixSecurity(command) {
+        securityFixing = command
+        ask(command, out => {
+            const result = sheet.json(out, { ok: true })
+            sheet.securityFixing = ""
+            if (command === "trust-key" && result.ok) {
+                sheet.keyAsked = true
+            }
+            sheet.loadSecurity()
+        })
+    }
+
+    // How many things on the Security page want a look.
+    function securityProblems() {
+        const s = safety
+        return [s.secureBoot === "off", s.encrypted === false, s.firewall === "off",
+                s.autoUpdates === false || s.updateWaiting === true,
+                firmwareState === "available" || (firmwareState === "done" && firmwareRestart),
+                s.versions === false].filter(x => x).length
     }
 
     function installFirmware() {
@@ -1144,6 +1185,29 @@ PlasmaCore.Dialog {
             height: 12
             visible: tick.active
             path: "M5 12.4l4.8 4.6 9.2-10"
+            color: "#FFFFFF"
+        }
+    }
+
+    // Security's mark for each row: lily with a tick when it's as it should be, amber with "!"
+    // when it wants a look, an empty ring when Monet can't tell.
+    component Mark: Rectangle {
+        id: mark
+        property var tone
+        property bool good
+        property bool known: true
+        implicitWidth: 22
+        implicitHeight: 22
+        radius: 11
+        color: !known ? "transparent" : good ? "#357F72" : "#D9892E"
+        border.width: known ? 0 : 1.5
+        border.color: tone.dark ? Qt.rgba(1, 1, 1, 0.3) : Qt.rgba(0.11, 0.106, 0.098, 0.28)
+        Glyph {
+            anchors.centerIn: parent
+            width: 12
+            height: 12
+            visible: mark.known
+            path: mark.good ? "M5 12.4l4.8 4.6 9.2-10" : "M12 5v8M12 18.5v.5"
             color: "#FFFFFF"
         }
     }
@@ -1881,6 +1945,7 @@ PlasmaCore.Dialog {
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
                         storage: storagePage, backups: backupsPage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
+                        security: securityPage,
                         printers: printersPage, welcome: welcomePage,
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
@@ -4761,6 +4826,219 @@ PlasmaCore.Dialog {
                     tone: look
                     text: i18n("More controller settings…")
                     onClicked: sheet.ask("kde gamecontroller")
+                }
+            }
+        }
+
+        // Security: one look at what keeps this PC safe, each with what would fix it. Monet only
+        // looks here (monet-quick security); a fix that needs an administrator asks for the password.
+        Component {
+            id: securityPage
+            ColumnLayout {
+                spacing: 20
+                readonly property var s: sheet.safety
+                readonly property int problems: sheet.securityProblems()
+                PageTitle {
+                    tone: look
+                    entry: sheet.entry("security")
+                    art: sheet.art
+                    text: i18n("Security")
+                    detail: parent.s.secureBoot === undefined ? i18n("Looking…")
+                        : parent.problems === 0 ? i18n("Your PC is protected.")
+                        : i18np("One thing to look at.", "%1 things to look at.", parent.problems)
+                }
+                Card {
+                    id: safetyCard
+                    tone: look
+                    readonly property var s: sheet.safety
+                    // Secure Boot: only signed software starts. Before it goes on, the firmware has
+                    // to trust Monet's key (its blue screen), or Monet wouldn't start.
+                    SettingRow {
+                        id: bootRow
+                        tone: look
+                        title: i18n("Secure Boot")
+                        readonly property bool needsKey: safetyCard.s.secureBoot === "off" && safetyCard.s.keyTrusted !== true
+                        detail: safetyCard.s.secureBoot === "on" ? i18n("On: only software signed by its makers starts with the PC.")
+                            : safetyCard.s.secureBoot === "" ? i18n("This PC didn't start in UEFI mode, so Secure Boot can't be on.")
+                            : safetyCard.s.secureBoot === undefined ? ""
+                            : sheet.keyAsked ? i18n("At the next restart a blue screen asks to trust Monet: choose Enroll MOK, Continue and Yes, type monetsetup and choose Reboot. Then turn Secure Boot on in the firmware settings.")
+                            : bootRow.needsKey ? i18n("Off. Before it goes on, the PC has to trust Monet, or Monet won't start: a blue screen asks once, at the next restart.")
+                            : sheet.askingFirmwareSetup ? i18n("Your PC restarts into its firmware settings. Find Secure Boot (often under Boot or Security), turn it on, then save and exit.")
+                            : i18n("Off. Games with anti-cheat in Windows need it too. It's turned on in the PC's firmware settings.")
+                        lead: Mark {
+                            tone: look
+                            known: safetyCard.s.secureBoot === "on" || safetyCard.s.secureBoot === "off"
+                            good: safetyCard.s.secureBoot === "on"
+                        }
+                        Row {
+                            spacing: 8
+                            visible: safetyCard.s.secureBoot === "off"
+                            Pill {
+                                tone: look
+                                visible: sheet.askingFirmwareSetup && !sheet.keyAsked && !bootRow.needsKey
+                                text: i18n("Cancel")
+                                onClicked: sheet.askingFirmwareSetup = false
+                            }
+                            Pill {
+                                tone: look
+                                kind: sheet.askingFirmwareSetup || sheet.keyAsked ? "sun" : "plain"
+                                enabledPill: sheet.securityFixing === ""
+                                text: sheet.securityFixing === "trust-key" ? i18n("Asking…")
+                                    : sheet.keyAsked || sheet.askingFirmwareSetup ? i18n("Restart")
+                                    : bootRow.needsKey ? i18n("Trust Monet…")
+                                    : i18n("Firmware settings…")
+                                onClicked: {
+                                    if (sheet.keyAsked) {
+                                        sheet.ask("restart")
+                                    } else if (bootRow.needsKey) {
+                                        sheet.fixSecurity("trust-key")
+                                    } else if (sheet.askingFirmwareSetup) {
+                                        sheet.ask("firmware-setup")
+                                    } else {
+                                        sheet.askingFirmwareSetup = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Encryption")
+                        detail: safetyCard.s.encrypted === true ? i18n("On: only this PC can read Monet's disk.")
+                            : safetyCard.s.encrypted === false ? i18n("Off: someone who takes the disk out can read your files. Monet Setup encrypts the disk when it installs Monet.")
+                            : safetyCard.s.secureBoot === undefined ? "" : i18n("Monet couldn't tell.")
+                        lead: Mark {
+                            tone: look
+                            known: typeof safetyCard.s.encrypted === "boolean"
+                            good: safetyCard.s.encrypted === true
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Firewall")
+                        detail: safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === true
+                                ? i18n("On: only what Monet uses comes in from the network.")
+                            : safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === false
+                                ? i18n("On, with the system's usual openings for the network.")
+                            : safetyCard.s.firewall === "on" ? i18n("On: connections from the network go through it first.")
+                            : safetyCard.s.firewall === "off" ? i18n("Off: anything on the network can try to reach this PC.")
+                            : safetyCard.s.firewall === "" ? i18n("This Monet has no firewall.") : ""
+                        lead: Mark {
+                            tone: look
+                            known: safetyCard.s.firewall === "on" || safetyCard.s.firewall === "off"
+                            good: safetyCard.s.firewall === "on"
+                        }
+                        Pill {
+                            tone: look
+                            visible: safetyCard.s.firewall === "off"
+                            enabledPill: sheet.securityFixing === ""
+                            text: sheet.securityFixing === "firewall-on" ? i18n("Turning on…") : i18n("Turn on")
+                            onClicked: sheet.fixSecurity("firewall-on")
+                        }
+                    }
+                    // Monet's zone (linux/firewalld/monet.xml) or the system's own; asks for the password.
+                    SettingRow {
+                        tone: look
+                        strong: false
+                        tappable: sheet.securityFixing === ""
+                        visible: safetyCard.s.firewall === "on" && typeof safetyCard.s.firewallStrict === "boolean"
+                        title: i18n("Only what Monet uses comes in")
+                        detail: i18n("The phone, Steam's Remote Play and game transfers on this network, and finding printers. A game you host for others nearby may need it off.")
+                        onTapped: sheet.fixSecurity("firewall-strict " + (safetyCard.s.firewallStrict ? "off" : "on"))
+                        Switch {
+                            tone: look
+                            active: safetyCard.s.firewallStrict === true
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Updates")
+                        detail: safetyCard.s.autoUpdates === false ? i18n("Only when you ask, so fixes for security holes wait until then.")
+                            : safetyCard.s.updateWaiting === true ? i18n("An update is ready. It's used from the next restart.")
+                            : safetyCard.s.autoUpdates === true ? i18n("Monet and your apps update by themselves, with every fix for security holes.") : ""
+                        lead: Mark {
+                            tone: look
+                            known: typeof safetyCard.s.autoUpdates === "boolean"
+                            good: safetyCard.s.autoUpdates === true && safetyCard.s.updateWaiting !== true
+                        }
+                        Pill {
+                            tone: look
+                            visible: safetyCard.s.autoUpdates === false || safetyCard.s.updateWaiting === true
+                            enabledPill: sheet.securityFixing === ""
+                            text: safetyCard.s.autoUpdates === false ? i18n("Turn on") : i18n("Restart")
+                            onClicked: {
+                                if (safetyCard.s.autoUpdates === false) {
+                                    sheet.securityFixing = "updates"
+                                    sheet.ask("auto-updates on", () => { sheet.securityFixing = ""; sheet.loadSecurity() })
+                                } else {
+                                    sheet.ask("restart")
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Firmware")
+                        detail: sheet.firmwareState === "none" ? i18n("Up to date: this PC's own parts have no updates from their makers.")
+                            : sheet.firmwareState === "available" ? sheet.firmwareTitle() + ". " + sheet.firmwareDetail()
+                            : sheet.firmwareState === "checking" || sheet.firmwareState === "" ? i18n("Looking for updates for this PC's own parts…")
+                            : sheet.firmwareDetail()
+                        lead: Mark {
+                            tone: look
+                            known: sheet.firmwareState !== "checking" && sheet.firmwareState !== "" && sheet.firmwareState !== "failed"
+                            good: sheet.firmwareState === "none" || (sheet.firmwareState === "done" && !sheet.firmwareRestart)
+                        }
+                        Pill {
+                            tone: look
+                            visible: sheet.firmwareState === "available" || sheet.firmwareState === "installing"
+                                || sheet.firmwareState === "failed" || (sheet.firmwareState === "done" && sheet.firmwareRestart)
+                            enabledPill: sheet.firmwareState !== "installing" && (sheet.firmwareState !== "available" || sheet.firmware.some(f => !f.blocked))
+                            text: sheet.firmwareState === "installing" ? i18n("Installing…")
+                                : sheet.firmwareState === "done" ? i18n("Restart now")
+                                : sheet.firmwareState === "failed" ? i18n("Try again")
+                                : i18n("Install")
+                            onClicked: sheet.firmwareState === "done" ? sheet.ask("restart")
+                                : sheet.firmwareState === "failed" ? sheet.checkFirmware()
+                                : sheet.installFirmware()
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Backups")
+                        detail: safetyCard.s.versions === false ? i18n("Off: a file deleted or changed by mistake can't be brought back.")
+                            : safetyCard.s.versions === true && safetyCard.s.drive ? i18n("Earlier versions of your files every hour, and copies on %1.", safetyCard.s.drive)
+                            : safetyCard.s.versions === true ? i18n("Earlier versions of your files every hour. Copies on a USB drive keep them safe from a broken disk too.")
+                            : ""
+                        lead: Mark {
+                            tone: look
+                            known: typeof safetyCard.s.versions === "boolean"
+                            good: safetyCard.s.versions === true
+                        }
+                        Pill {
+                            tone: look
+                            visible: safetyCard.s.versions === false || (safetyCard.s.versions === true && !safetyCard.s.drive)
+                            enabledPill: sheet.securityFixing === ""
+                            text: safetyCard.s.versions === false ? (sheet.securityFixing === "keep" ? i18n("Turning on…") : i18n("Turn on"))
+                                : i18n("Add a drive…")
+                            onClicked: {
+                                if (safetyCard.s.versions === false) {
+                                    sheet.securityFixing = "keep"
+                                    sheet.ask("keep on", () => { sheet.securityFixing = ""; sheet.loadSecurity() })
+                                } else {
+                                    sheet.page = "backups"
+                                }
+                            }
+                        }
+                    }
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    text: i18n("In Windows, Windows Security keeps watch: Monet never turns it off.")
+                    color: look.dim
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
                 }
             }
         }

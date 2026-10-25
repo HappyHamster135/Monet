@@ -57,6 +57,8 @@ STATE = Path(os.environ.get("MONET_INSTALL_STATE", "/run/monet-setup/install.jso
 STALL = 240                     # seconds with no bytes before a download restarts
 MOK_PASSWORD = pc.MOK_PASSWORD  # the blue screen's, which All set tells
 SHIM = "\\EFI\\fedora\\shimx64.efi"
+# Monet starts behind its splash like the stick (image/setup/grub.cfg), not as scrolling text.
+QUIET = ["quiet", "splash", "loglevel=3", "rd.udev.log_level=3"]
 # The small start that asks for the blue screen again (image/setup/monet-trust), and how
 # GRUB falls back to it. bootupd's grub.cfg reads custom.cfg from its own folder.
 TRUST_INITRD = Path("/usr/share/monet-setup/trust-initrd.img")
@@ -339,6 +341,7 @@ def install(plan, parts):
         "--target-imgref", plan["image"],
         "--skip-fetch-check",
         "--karg", "rootflags=subvol=root",
+        *(arg for karg in QUIET for arg in ("--karg", karg)),
         *(luks_kargs(parts) if parts.get("fs") else []),
         TARGET, timeout=3600)
     emit(phase="install", fraction=0.9)

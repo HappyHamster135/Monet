@@ -2044,7 +2044,7 @@ class MonetSettings(unittest.TestCase):
     def test_settings_search_speaks_every_language(self):
         # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
         settings = (self.QUICK / "MonetSettings.qml").read_text(encoding="utf-8")
-        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 21)
+        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 22)
         self.assertNotIn('words: "', settings)
         self.assertIn('fold(entry.name + " " + entry.words).indexOf(words)', settings)
         german = (ROOT / "po/de.po").read_text(encoding="utf-8")
@@ -3653,6 +3653,130 @@ class WindowsWearsThePainting(unittest.TestCase):
         # A Windows kept from before gets Bridge's files only, without the painting.
         payload = (ROOT / "crates/monet/src/windows_setup.rs").read_text()
         self.assertNotIn("wallpaper", payload)
+
+
+class SecurityAtAGlance(unittest.TestCase):
+    """Settings → Security: Secure Boot, encryption, the firewall, updates, firmware and backups,
+    each with a fix; the ones that need an administrator ask for the password."""
+
+    def test_secure_boot_from_the_firmware(self):
+        quick = quick_helper()
+        with tempfile_dir() as tmp:
+            efivars = Path(tmp) / "efivars"
+            self.assertEqual(quick.secure_boot(efivars), "")            # not started in UEFI mode
+            efivars.mkdir()
+            self.assertEqual(quick.secure_boot(efivars), "off")         # no SecureBoot variable
+            (efivars / quick.SECURE_BOOT_VAR).write_bytes(b"\x06\x00\x00\x00\x01")
+            self.assertEqual(quick.secure_boot(efivars), "on")
+            (efivars / quick.SECURE_BOOT_VAR).write_bytes(b"\x06\x00\x00\x00\x00")
+            self.assertEqual(quick.secure_boot(efivars), "off")
+
+    def test_monets_key_before_secure_boot(self):
+        from unittest import mock
+        quick = quick_helper()
+        with tempfile_dir() as tmp:
+            key = Path(tmp) / "akmods-ublue.der"
+            key.write_bytes(b"0\x82key")
+            with mock.patch.object(quick.shutil, "which", return_value="/usr/bin/mokutil"):
+                for said, trusted in ((f"{key} is already enrolled\n", True), (f"{key} is not enrolled\n", False), ("", None)):
+                    with mock.patch.object(quick, "said", return_value=said):
+                        self.assertEqual(quick.key_trusted(key), trusted)
+            self.assertIsNone(quick.key_trusted(Path(tmp) / "missing.der"))
+
+    def test_encryption_firewall_and_a_waiting_update(self):
+        from unittest import mock
+        quick = quick_helper()
+
+        def disks(source, chain):
+            def run(*args, timeout=10):
+                return {"findmnt": source, "lsblk": chain}.get(args[0])
+            return run
+
+        for source, chain, expected in (("/dev/mapper/luks-1a2b\n", "crypt\npart\ndisk\n", True),
+                                        ("/dev/nvme0n1p3[/root]\n", "part\ndisk\n", False),
+                                        (None, None, None)):
+            with mock.patch.object(quick, "run", disks(source, chain)):
+                self.assertEqual(quick.encrypted(), expected)
+        with mock.patch.object(quick.shutil, "which", return_value=None):
+            self.assertEqual(quick.firewall(), "")
+        with mock.patch.object(quick.shutil, "which", return_value="/usr/bin/firewall-cmd"):
+            with mock.patch.object(quick, "run", return_value="running\n"):
+                self.assertEqual(quick.firewall(), "on")
+            with mock.patch.object(quick, "run", return_value=None):           # "not running" exits 252
+                self.assertEqual(quick.firewall(), "off")
+        staged = json.dumps({"deployments": [{"staged": True}, {"booted": True}]})
+        with mock.patch.object(quick, "run", return_value=staged):
+            self.assertTrue(quick.update_waiting())
+        with mock.patch.object(quick, "run", return_value=json.dumps({"deployments": [{"booted": True}]})):
+            self.assertFalse(quick.update_waiting())
+
+    def test_fixes_that_need_an_administrator(self):
+        secure = (ROOT / "linux/libexec/monet-secure").read_text(encoding="utf-8")
+        self.assertIn('["systemctl", "enable", "--now", "firewalld"]', secure)
+        self.assertIn('["mokutil", "--timeout", "-1"]', secure)
+        self.assertIn('input=f"{MOK_PASSWORD}\\n{MOK_PASSWORD}\\n"', secure)
+        self.assertIn('MOK_PASSWORD = "monetsetup"', secure)               # the blue screen's, as Setup's
+        quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
+        self.assertIn('ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, timeout=300)', quick)
+        install = (ROOT / "linux/install.sh").read_text(encoding="utf-8")
+        self.assertIn('put 755 "$SRC/libexec/monet-secure" "$LIBEXECDIR/monet-secure"', install)
+        # Never on the list Monet's polkit rule lets through without a password.
+        programs = next(line for line in install.splitlines() if line.startswith("programs="))
+        self.assertNotIn("monet-secure", programs)
+        self.assertIn("monet-secure", (ROOT / "linux/uninstall.sh").read_text(encoding="utf-8"))
+
+    def test_only_what_monet_uses_comes_in(self):
+        zone = ET.parse(SHARE.parent / "firewalld/monet.xml").getroot()
+        self.assertEqual(zone.get("target"), "default")                 # everything else is turned away
+        self.assertEqual(zone.findall("service"), [])                   # ports: a missing service stops a zone
+        ports = {(p.get("protocol"), p.get("port")) for p in zone.findall("port")}
+        self.assertEqual(ports, {("udp", "546"), ("udp", "5353"), ("tcp", "1714-1764"), ("udp", "1714-1764"),
+                                 ("udp", "27031-27036"), ("tcp", "27036-27037"), ("tcp", "27040")})
+        install = (ROOT / "linux/install.sh").read_text(encoding="utf-8")
+        image = install[install.index("# The firewall's Monet zone"):install.index("install -D -m 644 \"$SRC/firewalld/monet.xml\" /etc")]
+        self.assertIn('install -D -m 644 "$SRC/firewalld/monet.xml" /usr/lib/firewalld/zones/monet.xml', image)
+        self.assertIn('echo "$before" > "$DATADIR/monet/firewall-zone-before"', image)
+        # A firewall that won't take it never stops the image's build.
+        self.assertIn("firewall-offline-cmd --set-default-zone=monet >/dev/null \\\n            || echo", image)
+        uninstall = (ROOT / "linux/uninstall.sh").read_text(encoding="utf-8")
+        self.assertLess(uninstall.index("--set-default-zone="), uninstall.index("rm -f /etc/firewalld/zones/monet.xml"))
+
+    def test_the_switch_remembers_the_zone_before(self):
+        from unittest import mock
+        path = str(ROOT / "linux/libexec/monet-secure")
+        loader = importlib.machinery.SourceFileLoader("monet_secure", path)
+        secure = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_secure", loader))
+        loader.exec_module(secure)
+        with tempfile_dir() as tmp:
+            chosen, image = Path(tmp) / "chosen", Path(tmp) / "image"
+            self.assertEqual(secure.zone_before((chosen, image)), "public")
+            image.write_text("FedoraWorkstation\n")
+            self.assertEqual(secure.zone_before((chosen, image)), "FedoraWorkstation")
+            chosen.write_text("monet\n")                                  # never Monet's own as "before"
+            self.assertEqual(secure.zone_before((chosen, image)), "FedoraWorkstation")
+            chosen.write_text("home\n")
+            self.assertEqual(secure.zone_before((chosen, image)), "home")
+        quick = quick_helper()
+        for said, strict in (("monet\n", True), ("FedoraWorkstation\n", False), (None, None)):
+            with mock.patch.object(quick, "run", return_value=said):
+                self.assertEqual(quick.firewall_strict(), strict)
+        settings = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('sheet.fixSecurity("firewall-strict " + (safetyCard.s.firewallStrict ? "off" : "on"))', settings)
+        self.assertIn('ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, args[0], timeout=120)',
+                      (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8"))
+
+    def test_the_page(self):
+        settings = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('{ id: "security", name: i18n("Security")', settings)
+        self.assertIn("security: securityPage,", settings)
+        self.assertIn('ask("security", out => sheet.safety = sheet.json(out, sheet.safety))', settings)
+        for fix in ('sheet.fixSecurity("trust-key")', 'sheet.ask("firmware-setup")', 'sheet.fixSecurity("firewall-on")',
+                    'sheet.ask("auto-updates on"', "sheet.installFirmware()", 'sheet.ask("keep on"'):
+            self.assertIn(fix, settings)
+        # Secure Boot goes on only once Monet's key is trusted, or Monet wouldn't start.
+        self.assertIn('safetyCard.s.secureBoot === "off" && safetyCard.s.keyTrusted !== true', settings)
+        self.assertTrue((ROOT / "linux/share/monet/settings/swatch-security.png").exists())
+        self.assertIn('"security": ("dusk"', (ROOT / "tools/make-icons.py").read_text(encoding="utf-8"))
 
 
 class YourPhone(unittest.TestCase):

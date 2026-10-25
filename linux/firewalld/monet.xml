@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monet's firewall zone, the default one (Settings → Security can switch back to the
+     system's own): from the network, only what Monet itself uses comes in. Everything this
+     PC asks for (web pages, games, printing) gets its answers as always. Ports rather than
+     firewalld's service names, which a system may not have (a missing one stops the zone). -->
+<zone target="default">
+  <short>Monet</short>
+  <description>Only what Monet uses comes in: the phone, Steam's Remote Play and game transfers on this network, and finding printers.</description>
+  <!-- An IPv6 address from the network (firewalld's dhcpv6-client). -->
+  <port protocol="udp" port="546"/>
+  <!-- Finding printers, scanners and other devices nearby (mDNS). -->
+  <port protocol="udp" port="5353"/>
+  <!-- The phone (Settings → Phone): KDE Connect. -->
+  <port protocol="tcp" port="1714-1764"/>
+  <port protocol="udp" port="1714-1764"/>
+  <!-- Steam on this network: finding other PCs and Remote Play (UDP 27031-27036, TCP
+       27036-27037), and Local Network Game Transfers (TCP 27040), as Steam's help lists them. -->
+  <port protocol="udp" port="27031-27036"/>
+  <port protocol="tcp" port="27036-27037"/>
+  <port protocol="tcp" port="27040"/>
+</zone>

@@ -117,6 +117,11 @@
     monet-quick reset on|off             reset at the next restart, or don't (asks for an administrator's password)
     monet-quick firmware-check           firmware updates for this PC's own parts (fwupd), as JSON
     monet-quick firmware-update          install them
+    monet-quick security                 Secure Boot, encryption, the firewall, updates and backups, as JSON
+    monet-quick firewall-on|trust-key    turn the firewall on; trust Monet's key at the next restart (both
+                                         ask for an administrator's password: monet-secure)
+    monet-quick firewall-strict on|off   only what Monet uses comes in, or the system's own zone (the same)
+    monet-quick firmware-setup           restart into the PC's firmware settings
     monet-quick restart                  ask to restart, the way the app menu does
     monet-quick widgets                  open the widget gallery, as the desktop's Add Widgets does
     monet-quick music                    the apps that play music (the default first) and the Store, as JSON
@@ -125,7 +130,7 @@
     monet-quick zen                      dress Zen in Monet's look (its window, and new tabs on the painting)
     monet-quick kde PAGE                 open a page of KDE's System Settings
     monet-quick open [PAGE]              open Monet Settings (at light, wifi, bluetooth, printers,
-                                         display, sound, datetime, users, input, power, privacy,
+                                         display, sound, datetime, users, input, power, privacy, security,
                                          notifications, accessibility, apps, storage, games,
                                          windows, updates or about)
     monet-quick listen                   wait until someone asks to open Monet Settings
@@ -167,7 +172,7 @@ RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
 PAGES = ("light", "wifi", "bluetooth", "phone", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
-         "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
+         "security", "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -629,6 +634,95 @@ def restart():
     """KDE's own restart question, so open apps can save first."""
     if busctl("call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptReboot") is None:
         run("systemctl", "reboot")
+
+
+# Security: what keeps this PC safe, at a glance (Settings → Security). It only looks, here and
+# now; firmware updates are their own question (firmware-check), as they take a while.
+
+EFIVARS = Path("/sys/firmware/efi/efivars")
+SECURE_BOOT_VAR = "SecureBoot-8be4df61-93ca-11d0-aa0d-00e098032b8c"
+# Monet's kernel and NVIDIA's driver are signed with Universal Blue's key.
+MONET_KEY = Path("/etc/pki/akmods/certs/akmods-ublue.der")
+
+
+def secure_boot(efivars=EFIVARS):
+    """"on" or "off", or "" when the PC didn't start in UEFI mode (then it can't be on)."""
+    if not efivars.is_dir():
+        return ""
+    try:
+        data = (efivars / SECURE_BOOT_VAR).read_bytes()
+    except OSError:
+        return "off"
+    # Four bytes of attributes, then the value.
+    return "on" if len(data) > 4 and data[4] == 1 else "off"
+
+
+def key_trusted(key=MONET_KEY):
+    """Whether the firmware trusts Monet's key: it has to before Secure Boot goes on, or Monet
+    won't start. None when it can't tell."""
+    if not key.exists() or not shutil.which("mokutil"):
+        return None
+    out = said(("mokutil", "--test-key", str(key)))
+    return True if "already enrolled" in out else False if "not enrolled" in out else None
+
+
+def encrypted():
+    """Whether Monet's disk is encrypted: the disk it runs from sits inside a LUKS container.
+    None when it can't tell."""
+    source = (run("findmnt", "-n", "-o", "SOURCE", "/sysroot") or run("findmnt", "-n", "-o", "SOURCE", "/") or "").strip()
+    device = source.split("[", 1)[0]
+    if not device.startswith("/dev/"):
+        return None
+    chain = run("lsblk", "-s", "-n", "-o", "TYPE", device)
+    return None if chain is None else "crypt" in chain.split()
+
+
+def firewall():
+    """"on" or "off", or "" when this Monet has no firewall."""
+    if not shutil.which("firewall-cmd"):
+        return ""
+    return "on" if (run("firewall-cmd", "--state") or "").strip() == "running" else "off"
+
+
+def firewall_strict():
+    """Whether only what Monet uses comes in: the firewall's default zone is Monet's
+    (linux/firewalld/monet.xml). None when the firewall can't say."""
+    zone = (run("firewall-cmd", "--get-default-zone") or "").strip()
+    return zone == "monet" if zone else None
+
+
+def update_waiting():
+    """Whether an update is downloaded and used from the next restart."""
+    try:
+        status = json.loads(run("rpm-ostree", "status", "--json", timeout=30) or "{}")
+    except ValueError:
+        return False
+    return any(d.get("staged") for d in status.get("deployments", []))
+
+
+def security():
+    backups = backup_state()
+    return {
+        "secureBoot": secure_boot(),
+        "keyTrusted": key_trusted(),
+        "encrypted": encrypted(),
+        "firewall": firewall(),
+        "firewallStrict": firewall_strict(),
+        "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
+        "updateWaiting": update_waiting(),
+        "versions": backups["versions"],
+        "drive": backups["label"] if backups["drive"] else "",
+    }
+
+
+def firmware_setup():
+    """Restarts into the PC's firmware settings (where Secure Boot is turned on), through
+    KDE's restart question so open apps can save first."""
+    if run("busctl", "--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
+           "org.freedesktop.login1.Manager", "SetRebootToFirmwareSetup", "b", "true", timeout=10) is None:
+        return {"ok": False}
+    restart()
+    return {"ok": True}
 
 
 # Music ---------------------------------------------------------------------
@@ -3342,6 +3436,15 @@ def main(argv):
         subprocess.Popen(["kdeconnect-sms"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "privacy":
         emit(privacy_state())
+    elif cmd == "security":
+        emit(security())
+    # Fixes that ask for an administrator's password (monet-secure, through pkexec).
+    elif cmd in ("firewall-on", "trust-key"):
+        emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, timeout=300)})
+    elif cmd == "firewall-strict" and args and args[0] in ("on", "off"):
+        emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, args[0], timeout=120)})
+    elif cmd == "firmware-setup":
+        emit(firmware_setup())
     elif cmd == "lock-after" and args and args[0].isdigit() and int(args[0]) in LOCK_TIMES:
         set_lock_after(int(args[0]))
     elif cmd == "lock-resume" and args and args[0] in ("on", "off"):

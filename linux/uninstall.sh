@@ -77,10 +77,15 @@ systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc
     flatpak-system-update.timer >/dev/null 2>&1 || true
 systemctl --global unmask flatpak-user-update.timer >/dev/null 2>&1 || true
 rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desktop
+# The firewall goes back to the zone it had, before Monet's zone goes.
+if command -v firewall-cmd >/dev/null && [ "$(firewall-cmd --get-default-zone 2>/dev/null)" = monet ]; then
+    firewall-cmd --set-default-zone="$(cat /var/lib/monet/firewall-zone-before 2>/dev/null || echo public)" >/dev/null 2>&1 || true
+fi
+rm -f /etc/firewalld/zones/monet.xml /var/lib/monet/firewall-zone-before
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-prepare-windows; do
+for tool in monet-session monet-look monet-light monet-quick monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-prepare-windows; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do

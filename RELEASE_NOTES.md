@@ -43,6 +43,21 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   busy stick again. If writing still fails, it says so: the stick isn't
   broken, and Windows can format it again in Disk Management.
 
+- **Security at a glance.** Settings → Security shows what keeps the PC safe
+  in one place: Secure Boot, encryption, the firewall, updates, firmware and
+  earlier versions of your files. Each has a tick when it's as it should be,
+  or a "!" and the button that fixes it.
+
+- **Only what Monet uses comes in.** A new Monet's firewall lets in from the
+  network only what Monet itself uses: your phone, printers and devices
+  nearby, and Steam's Remote Play and game transfers between your PCs.
+  Everything else stays out. A Monet installed before keeps its firewall as
+  it was, and the switch on the Security page tightens it.
+
+- **Monet starts behind its start screen.** A Monet installed with Monet
+  Setup started as scrolling text; now it starts the way the stick does. One
+  installed with an earlier Setup keeps the text until it's installed again.
+
 Updating from 0.9.2: Monet updates by itself within a day (or Settings →
 Updates → Install, then restart), and Monet Bridge updates itself the next
 time you come back from Windows. For a new install, download the new

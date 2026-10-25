@@ -94,6 +94,25 @@ for tool in monet-boot monet-reset monet-seal; do
 done
 # A controller or headset paired in Windows works in Monet too: root's part.
 put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"
+# Settings → Security's fixes: root's part, always after an administrator's password.
+put 755 "$SRC/libexec/monet-secure" "$LIBEXECDIR/monet-secure"
+# The firewall's Monet zone: from the network, only what Monet uses comes in. A Monet image
+# makes it the default and remembers the system's own to go back to (Settings → Security);
+# added to an existing system it's only there for that switch, and nothing changes.
+if [ "$IMAGE" = 1 ]; then
+    install -D -m 644 "$SRC/firewalld/monet.xml" /usr/lib/firewalld/zones/monet.xml
+    if command -v firewall-offline-cmd >/dev/null; then
+        before="$(firewall-offline-cmd --get-default-zone 2>/dev/null || :)"
+        if [ -n "$before" ] && [ "$before" != monet ]; then
+            install -d "$DATADIR/monet"
+            echo "$before" > "$DATADIR/monet/firewall-zone-before"
+        fi
+        firewall-offline-cmd --set-default-zone=monet >/dev/null \
+            || echo "warning: the firewall keeps the system's own zone" >&2
+    fi
+else
+    install -D -m 644 "$SRC/firewalld/monet.xml" /etc/firewalld/zones/monet.xml
+fi
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
 install -D -m 644 "$SRC/icons/monet-windows.svg" "$DATADIR/icons/hicolor/scalable/apps/monet-windows.svg"

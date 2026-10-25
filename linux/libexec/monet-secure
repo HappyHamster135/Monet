@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Settings → Security's fixes that need an administrator. Runs as root through pkexec, which
+asks for the password: unlike monet-keep, Monet's polkit rule doesn't let this one through
+without it.
+
+    monet-secure firewall-on   the firewall on, now and at every start
+    monet-secure firewall-strict on|off
+                               only what Monet uses comes in from the network (the firewall's
+                               Monet zone, linux/firewalld/monet.xml), or the system's own zone
+    monet-secure trust-key     the firmware asked to trust Monet's key at the next restart (its
+                               blue screen, with the password monetsetup), so Secure Boot can
+                               be turned on without stopping Monet
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+# Monet's kernel and NVIDIA's driver are signed with Universal Blue's key.
+KEY = Path("/etc/pki/akmods/certs/akmods-ublue.der")
+MOK_PASSWORD = "monetsetup"   # the blue screen's, as Monet Setup and its first start use
+STRICT = "monet"
+# The system's own zone to go back to: remembered when the switch went on, or the one the
+# Monet image started from (install.sh).
+BEFORE = Path("/var/lib/monet/firewall-zone-before")
+IMAGE_BEFORE = Path("/usr/share/monet/firewall-zone-before")
+
+
+def said(*args):
+    return subprocess.run(args, capture_output=True, text=True).stdout.strip()
+
+
+def zone_before(places=(BEFORE, IMAGE_BEFORE)):
+    for place in places:
+        try:
+            zone = place.read_text().strip()
+        except OSError:
+            continue
+        if zone and zone != STRICT:
+            return zone
+    return "public"
+
+
+def firewall_strict(on):
+    subprocess.run(["systemctl", "enable", "--now", "firewalld"])
+    if on:
+        now = said("firewall-cmd", "--get-default-zone")
+        if now and now != STRICT:
+            BEFORE.parent.mkdir(parents=True, exist_ok=True)
+            BEFORE.write_text(now + "\n")
+        # Added to a running firewall (a Monet installed on an existing system): read it first.
+        if STRICT not in said("firewall-cmd", "--get-zones").split():
+            subprocess.run(["firewall-cmd", "--reload"])
+    zone = STRICT if on else zone_before()
+    return subprocess.run(["firewall-cmd", f"--set-default-zone={zone}"]).returncode
+
+
+def main(argv):
+    if argv == ["firewall-on"]:
+        return subprocess.run(["systemctl", "enable", "--now", "firewalld"]).returncode
+    if len(argv) == 2 and argv[0] == "firewall-strict" and argv[1] in ("on", "off"):
+        return firewall_strict(argv[1] == "on")
+    if argv == ["trust-key"] and KEY.exists():
+        # The blue screen waits for an answer instead of starting Monet after ten seconds.
+        subprocess.run(["mokutil", "--timeout", "-1"])
+        return subprocess.run(["mokutil", "--import", str(KEY)], input=f"{MOK_PASSWORD}\n{MOK_PASSWORD}\n",
+                              text=True).returncode
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
