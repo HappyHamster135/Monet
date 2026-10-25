@@ -233,8 +233,14 @@ def tour(vm, run):
     desktop, the app menu and its search, the restart and shut-down screen, the
     widget gallery, Files, Settings, and the lock screen, at rest, awake and
     unlocked. Returns whether the password unlocked it."""
+    # Monet's start screen is a still painting too: the sign-in screen is the settled one after it
+    # (0.9.3's test typed the password into the start screen).
+    splash = vm.screen()
+    end = time.time() + 600
     sign_in = settle(vm, 600, every=10)
-    if not sign_in:
+    while sign_in and changed(sign_in, splash) < 2 and time.time() < end:
+        sign_in = settle(vm, end - time.time(), every=10) or sign_in
+    if not sign_in or changed(sign_in, splash) < 2:
         run.shot("sign-in-timeout")
         return False
     # Never Setup's Hello for Monet's sign-in screen (0.9.2's test took one for the other).
