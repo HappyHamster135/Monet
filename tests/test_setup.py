@@ -733,6 +733,24 @@ class TheBlueScreenSkipped(unittest.TestCase):
         self.assertFalse(vm_test.blue_screen(all_set))
         self.assertFalse(vm_test.blue_screen(Image.new("RGB", (1920, 1080))))
 
+    def test_the_vm_test_knows_monet_from_the_stick(self):
+        # Up to 0.9.3 the VM started the stick again after the blue screen, and the "tour" was Setup's Hello.
+        try:
+            from PIL import Image, ImageDraw
+        except ImportError as e:
+            self.skipTest(f"no Pillow ({e})")
+        spec = importlib.util.spec_from_file_location("vm_test", ROOT / "tools/vm-test.py")
+        vm_test = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(vm_test)
+        self.assertTrue(vm_test.monet_started("[   3.1] monet systemd[1]: Reached target multi-user.target.\n"))
+        self.assertFalse(vm_test.monet_started("[   3.1] monet-setup systemd[1]: Reached target multi-user.target.\n"))
+        self.assertFalse(vm_test.monet_started("[   0.4] monet kernel: Secure boot enabled\n"))
+        self.assertTrue(vm_test.monet_on_screen(Image.new("RGB", (1920, 1080), (120, 110, 100))))
+        self.assertFalse(vm_test.monet_on_screen(Image.new("RGB", (1920, 1080))))
+        boxed = Image.new("RGB", (1920, 1080))
+        ImageDraw.Draw(boxed).rectangle((640, 64, 1280, 996), fill=(0, 0, 168))
+        self.assertFalse(vm_test.monet_on_screen(boxed))
+
     def test_the_key_reaches_the_kernel_as_a_cpio(self):
         data = install.newc("monet-key.der", b"0\x82key!")
         self.assertEqual(data[:6], b"070701")

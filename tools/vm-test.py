@@ -6,22 +6,28 @@
 QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's keys, like a
 real PC), a blank 96 GB disk and a wired network. Waits for Monet Setup,
 takes a screenshot of each step, and with --install goes on: types a name and
-password, chooses "Monet and Windows", installs, and on the firmware's blue
-screen first chooses Continue boot, as people do by mistake (exit code 6 if
-the blue screen doesn't come back: Monet was installed, but GRUB's fallback
-didn't ask again), then confirms Universal Blue's driver key and starts the
-installed Monet.
+password, chooses "Monet and Windows", installs, and restarts from the disk
+(QEMU would start the stick first). On the firmware's blue screen it first
+chooses Continue boot, as people do by mistake, and watches for the blue
+screen to come back (GRUB's fallback); if it doesn't, it starts the stick,
+where Setup offers Ask again and restart. Then it confirms Universal Blue's
+driver key, and Monet itself has to start (its journal on the serial port, or
+its screen).
 Then it looks around Monet the way someone would: signs in, and shows the
 desktop, the app menu, Files and Settings, then locks the screen, wakes it
 and unlocks it with the password (which says whether Monet's lock screen
 really lets people back in).
 Screenshots go to SCREENS/ (NN-name.png); the exit code says how far the
-install got. The look around never changes it: it prints what it saw.
+install got: 0 Monet started; 4 the install didn't finish; 5 no blue screen;
+6 neither the fallback nor the stick brought the blue screen back (Monet was
+installed; Setup still ships); 8 Monet didn't start after the blue screen.
+The look around never changes it: it prints what it saw.
 """
 
 import base64
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -49,8 +55,8 @@ class VM:
                "-m", "8192", "-global", "driver=cfi.pflash01,property=secure,value=on",
                "-drive", f"if=pflash,format=raw,unit=0,readonly=on,file={code}",
                "-drive", f"if=pflash,format=raw,unit=1,file={vars_}",
-               "-drive", f"file={iso},media=cdrom,readonly=on,if=none,id=cd", "-device", "ide-cd,drive=cd,bootindex=1",
-               "-drive", f"file={disk},if=none,id=hd,format=qcow2", "-device", "virtio-blk-pci,drive=hd,bootindex=2",
+               "-drive", f"file={iso},media=cdrom,readonly=on,if=none,id=cd", "-device", "ide-cd,drive=cd,bootindex=1,id=stick",
+               "-drive", f"file={disk},if=none,id=hd,format=qcow2", "-device", "virtio-blk-pci,drive=hd,bootindex=2,id=disk",
                "-device", f"VGA,edid=on,xres={W},yres={H},vgamem_mb=64",
                "-device", "qemu-xhci", "-device", "usb-tablet", "-device", "usb-kbd",
                "-nic", "user,model=virtio-net-pci", "-display", "none",
@@ -85,6 +91,23 @@ class VM:
                     break
         s.close()
         return out[1:]
+
+    def start_first(self, drive):
+        """The drive the firmware starts from at the next reset, "disk" or "stick": QEMU hands the
+        firmware the drives in bootindex order at every reset (the disk's is 2). A PC starts from
+        the stick only when asked; this one starts from it first unless told, and its own blue
+        screen and Setup would then stand in for Monet's."""
+        self.qmp({"execute": "qom-set", "arguments": {"path": "/machine/peripheral/stick", "property": "bootindex",
+                                                      "value": 1 if drive == "stick" else 3}})
+
+    def reset(self):
+        self.qmp({"execute": "system_reset"})
+
+    def serial(self):
+        try:
+            return (self.work / "serial.log").read_text(errors="replace")
+        except OSError:
+            return ""
 
     def screen(self):
         ppm = self.work / "now.ppm"
@@ -133,6 +156,7 @@ NAME_FIELD = (u(300), u(279))                             # person step: name en
 PASSWORD_FIELD = (u(300), u(388))                         # person step: password entry
 AGAIN_FIELD = (u(300), u(475))                            # person step: the password again
 TRY_AGAIN = (u(130), u(258))                              # failed step: Try again
+ASK_AGAIN = (u(214), u(656))                              # Hello, Monet here can't start: Ask again and restart
 DETAILS = (u(279), u(258))                                # failed step: Details (the install's log)
 
 
@@ -152,6 +176,29 @@ def blue_screen(img):
     middle = img.convert("RGB").crop((W // 2 - 200, H // 2 - 300, W // 2 + 200, H // 2 + 300)).resize((80, 120))
     blue = sum(1 for r, g, b in middle.getdata() if b > 100 and r < 60 and g < 60)
     return blue > 0.6 * 80 * 120
+
+
+def monet_started(journal):
+    """The installed Monet's journal on the serial port: its hostname is "monet", the stick's
+    "monet-setup"."""
+    return re.search(r"\] monet [^\s\[]+\[\d+\]: ", journal) is not None
+
+
+def monet_on_screen(img):
+    """A screen that's neither Monet Setup, nor the blue screen, nor dark: Monet's own."""
+    return not setup_showing(img) and not blue_screen(img) and brightness(img, (0, 0, W, H)) > 40
+
+
+def enroll(vm, run, name):
+    """On the blue screen: Enroll MOK, Continue, Yes, the password, then Reboot."""
+    for _ in range(3):
+        vm.keys("down", "ret")
+        time.sleep(2)
+    vm.type("monetsetup")
+    vm.keys("ret")
+    time.sleep(2)
+    run.shot(name)
+    vm.keys("ret")
 
 
 def setup_showing(img):
@@ -186,8 +233,13 @@ def tour(vm, run):
     desktop, the app menu and its search, the restart and shut-down screen, the
     widget gallery, Files, Settings, and the lock screen, at rest, awake and
     unlocked. Returns whether the password unlocked it."""
-    if not settle(vm, 600, every=10):
+    sign_in = settle(vm, 600, every=10)
+    if not sign_in:
         run.shot("sign-in-timeout")
+        return False
+    # Never Setup's Hello for Monet's sign-in screen (0.9.2's test took one for the other).
+    if setup_showing(sign_in):
+        run.shot("setup-not-monet")
         return False
     run.shot("sign-in")
     vm.type(PASSWORD)
@@ -356,36 +408,58 @@ def main():
         else:
             return 4
         run.shot("all-set")
+        # The stick taken out, as All set asks: from here the PC starts from its disk.
+        vm.start_first("disk")
         vm.click(*NEXT)
         # The firmware's blue screen for Universal Blue's driver key. First Continue boot, as
         # people choose by mistake: Secure Boot refuses Monet, GRUB waits 10 s on its error
-        # and falls back to monet-trust, which asks the firmware again and restarts.
+        # and falls back to monet-trust, which asks the firmware again and restarts by itself
+        # (half a minute after saying so). A picture every 6 s shows the way.
         if not run.wait(blue_screen, 120, name="mok"):
             return 5
         run.shot("mok")
         vm.keys("ret")                                     # Continue boot
         run.wait(lambda img: not blue_screen(img), 30)
-        time.sleep(25)
-        run.shot("asking-again")
-        vm.keys("ret")                                     # restart now, not in 30 s
-        if not run.wait(blue_screen, 150, name="mok-again"):
+        started, back = time.time(), False
+        while not back and time.time() - started < 150:
+            time.sleep(6)
+            back = blue_screen(run.shot(f"after-continue-{int(time.time() - started):03d}s"))
+        if back:
+            print("fallback: the blue screen came back after Continue boot", flush=True)
+        else:
             print("fallback: the blue screen did NOT come back after Continue boot", flush=True)
-            return 6
-        print("fallback: the blue screen came back after Continue boot", flush=True)
+            # The other way back: started from the stick, Setup sees a Monet that can't start yet
+            # and asks again (Ask again and restart), then the PC starts from its disk.
+            vm.start_first("stick")
+            vm.reset()
+            if not run.wait(setup_showing, 240, name="stick"):
+                return 6
+            time.sleep(5)
+            run.shot("stick-hello")
+            vm.start_first("disk")
+            vm.click(*ASK_AGAIN)
+            if not run.wait(blue_screen, 240, name="mok-asked-again"):
+                print("stick: Ask again and restart did NOT bring the blue screen back", flush=True)
+                return 6
+            print("stick: the blue screen came back after Ask again and restart", flush=True)
         run.shot("mok-again")
         # Now as All set shows it: Enroll MOK, Continue, Yes, the password, Reboot.
-        vm.keys("down", "ret")
-        time.sleep(2)
-        vm.keys("down", "ret")
-        time.sleep(2)
-        vm.keys("down", "ret")
-        time.sleep(2)
-        vm.type("monetsetup")
-        vm.keys("ret")
-        time.sleep(2)
-        run.shot("mok-done")
-        vm.keys("ret")
-        time.sleep(60)
+        mark = len(vm.serial())
+        enroll(vm, run, "mok-done")
+        # Monet itself must start now (its journal on the serial port, or a screen that's
+        # neither Setup nor the blue screen), or Setup doesn't ship.
+        # The screen only counts after three minutes: the start's splash is the stick's painting too.
+        rebooted = time.time()
+        end, up = rebooted + 600, False
+        while not up and time.time() < end:
+            time.sleep(10)
+            up = monet_started(vm.serial()[mark:]) or (time.time() - rebooted > 180 and monet_on_screen(vm.screen()))
+        if not up:
+            run.shot("monet-didnt-start")
+            print("monet: did NOT start after the blue screen", flush=True)
+            return 8
+        print("monet: " + ("its journal says it started" if monet_started(vm.serial()[mark:])
+                           else "its screen is up (no journal on the serial port)"), flush=True)
         run.shot("monet-starting")
         try:
             unlocked = tour(vm, run)

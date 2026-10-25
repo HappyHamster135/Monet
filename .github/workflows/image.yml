@@ -264,7 +264,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 tools/ci-screens.py push screens "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet:ci-screens" || :
-          grep -E '^(tour|fallback):' vm-test.log >> "$GITHUB_STEP_SUMMARY" || :
+          grep -E '^(fallback|stick|monet|tour):' vm-test.log >> "$GITHUB_STEP_SUMMARY" || :
+          # The whole serial log (every start's journal, Setup's install log among them) with the screenshots.
+          cp vm-work/serial.log screens/ || :
           tail -c 20000 vm-work/serial.log || :
       - uses: actions/upload-artifact@v4
         if: always()
