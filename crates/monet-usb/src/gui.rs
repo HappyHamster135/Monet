@@ -207,9 +207,10 @@ fn start(hwnd: HWND) {
                 let output = Command::new(curl()?).args(["-L", "--fail", "-s", "--max-time", "60",
                     &plan::release_url(VERSION, "SHA256SUMS.txt")]).creation_flags(NO_WINDOW).output().map_err(|e| e.to_string())?;
                 if !output.status.success() { return Err(tr("The release checksum could not be downloaded. Nothing was written.")); }
-                expected = Some(plan::checksum(&String::from_utf8_lossy(&output.stdout), &name)
-                    .ok_or_else(|| tr("This release has no valid installer checksum. Nothing was written."))?);
-                iso = std::env::temp_dir().join(name).to_string_lossy().to_string();
+                let hash = plan::checksum(&String::from_utf8_lossy(&output.stdout), &name)
+                    .ok_or_else(|| tr("This release has no valid installer checksum. Nothing was written."))?;
+                iso = std::env::temp_dir().join(plan::cache_name(&name, &hash)).to_string_lossy().to_string();
+                expected = Some(hash);
                 download(&url, &iso, total)
             }),
         };

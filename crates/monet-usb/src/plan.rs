@@ -6,6 +6,11 @@ pub fn release_url(version: &str, name: &str) -> String {
     format!("https://github.com/HappyHamster135/Monet/releases/download/v{version}/{name}")
 }
 
+/// A refreshed release must never resume bytes from the previous installer.
+pub fn cache_name(name: &str, checksum: &str) -> String {
+    format!("{checksum}-{name}")
+}
+
 /// This version's installers, best first: Monet Setup, Monet's own (in a
 /// release only once it has installed Monet in a test PC), then Fedora's
 /// installer dressed as Monet.
@@ -207,6 +212,16 @@ mod tests {
         ] {
             assert_eq!(checksum(&manifest, "Monet.iso"), None);
         }
+    }
+
+    #[test]
+    fn replaced_release_assets_get_separate_downloads() {
+        let name = "Monet-0.9.4-Setup.iso";
+        let old = cache_name(name, &"a".repeat(64));
+        let new = cache_name(name, &"b".repeat(64));
+        assert_ne!(old, new);
+        assert_ne!(old, name);
+        assert_eq!(new, cache_name(name, &"b".repeat(64)));
     }
 
     #[test]

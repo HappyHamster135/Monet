@@ -2545,3 +2545,9 @@ window suite passed all 16 tests. Windows bridge and USB tests passed (15 and 18
 respectively), and all six PowerShell scripts passed syntax checks. Logs are in
 `target/replacement094/`. Both OS images and the replacement installer still need
 their build and full installer VM checks before the release assets are replaced.
+
+The replacement also keys USB-maker downloads by the verified release checksum,
+so an interrupted older 0.9.4 image is never resumed into its replacement. All
+19 USB tests and Windows clippy pass. The first CI run exposed a missing Pillow
+guard in the new VM-command unit test; it now skips on the minimal CI host like
+the adjacent screenshot tests, while continuing to run in the configured VM.

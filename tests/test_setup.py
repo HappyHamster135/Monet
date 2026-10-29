@@ -833,6 +833,7 @@ class TheBlueScreenSkipped(unittest.TestCase):
         self.assertFalse(vm_test.blue_screen(all_set))
         self.assertFalse(vm_test.blue_screen(Image.new("RGB", (1920, 1080))))
 
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "requires Pillow in the VM test environment")
     def test_setup_vm_uses_the_usb_boot_path_with_secure_boot(self):
         from unittest import mock
         spec = importlib.util.spec_from_file_location("usb_vm_test", ROOT / "tools/vm-test.py")
