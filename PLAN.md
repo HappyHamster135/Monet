@@ -1,13 +1,23 @@
 # Monet: Project Plan
 
-## 0.9.4 replacement build — authorized — 2026-10-29
+## 0.9.4 replacement build — published — 2026-10-30
 
-The user now requests pushing these updates and replacing the existing 0.9.4
-release, superseding the earlier local-only restriction for 0.9.5. VERSION stays
-0.9.4; do not create a new release number. Rebuild both graphics images and the
-installer, require the installer VM check, then replace the existing release's
-assets, checksums, notes and tag. The following records the pre-rebuild evidence;
-physical laptop testing and the unresolved Razer freeze remain open.
+At the user's request, the existing [0.9.4 release](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.4)
+was replaced from tested commit `555443abe650007a1c38dc27b20fb4b8dd65bb90`.
+The release ID is unchanged; its assets, checksums, notes and tag now point to the
+replacement. VERSION remains 0.9.4 and no 0.9.5 release was created. This supersedes
+the earlier local-only restriction. App/package run 40955620065 and OS/installer
+run 40955632028 passed, including both graphics images and a fresh installation
+with the image attached as USB and Secure Boot enabled. All set, MOK recovery,
+installed-system boot and lock/unlock passed. The five payloads and checksum file
+match GitHub's server digests; fresh public USB-maker/checksum downloads also match.
+
+Download the refreshed USB maker and rewrite existing sticks to obtain the new
+installer. Its download cache now includes the release checksum so it cannot
+resume an older 0.9.4 image into the replacement. Hardware tests, the Razer freeze,
+the ThinkPad's firmware trust settings and encrypted NVIDIA installation remain
+open. See [Testing](docs/TESTING.md) for evidence and the CI app-tour limitations.
+The following records the pre-rebuild component verification.
 
 Setup's custom buttons now show keyboard focus and respond to Enter and keypad
 Enter. Tab/Shift+Tab reach Continue and Back; account fields advance with Enter

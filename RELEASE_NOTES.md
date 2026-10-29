@@ -14,7 +14,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.4: safer switching, more of your desktop comes back
 
-**Refreshed 29 October 2026:** download the USB maker again and rewrite the stick
+**Refreshed 30 October 2026:** download the USB maker again and rewrite the stick
 to get the installer fixes below. Existing sticks keep their old installer.
 The refreshed maker keeps downloads separate by checksum, so a partial download
 of the previous 0.9.4 installer cannot be resumed into the replacement.

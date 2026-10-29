@@ -2551,3 +2551,41 @@ so an interrupted older 0.9.4 image is never resumed into its replacement. All
 19 USB tests and Windows clippy pass. The first CI run exposed a missing Pillow
 guard in the new VM-command unit test; it now skips on the minimal CI host like
 the adjacent screenshot tests, while continuing to run in the configured VM.
+
+### 0.9.4 replacement build verification — 2026-10-30
+
+Source `555443abe650007a1c38dc27b20fb4b8dd65bb90` passed
+[app/package CI](https://github.com/HappyHamster135/Monet/actions/runs/40955620065)
+and [both OS images, installers and the full Setup VM job](https://github.com/HappyHamster135/Monet/actions/runs/40955632028).
+The Setup image passed the signed-payload and matching optical/USB EFI checks.
+The VM used the raw read-only USB device with Secure Boot enabled, reached All set
+after about seven minutes, recovered the MOK prompt after Continue boot, enrolled
+the key, booted the installed desktop, and locked/unlocked successfully. All set
+and desktop screenshots were inspected. This run used AMD/Intel without LUKS;
+it is not a physical USB, encrypted NVIDIA, or real Windows round-trip test.
+
+The CI app tour still has a known coverage gap: `37-settings.png` shows Steam
+and Terminal, so that screenshot does not validate Settings. The journal also
+records a foreground-booster startup failure and SELinux denials for later
+triage. Microsoft's informational download check was blocked from the CI host,
+and the first-run Windows preparation failed there; no working Windows install
+is claimed by this VM run. The Razer freeze and ThinkPad firmware trust setting
+remain unverified on hardware.
+
+The built Linux archive contains byte-identical copies of the tested LayoutGuard,
+gallery wrapper and desktop-menu defaults. Windows Defender found no threats in
+the built USB executable, SHA-256
+`8ef470c0160b3a3371bf96f48c9fb01a717bdcebc4128f32a592fdedc70829a2`.
+Logs, screenshots, original release metadata and replacement payload checksums
+are retained under `target/replacement094/`.
+
+The accepted `release-setup` artifact was independently downloaded and matches
+the candidate byte-for-byte by SHA-256:
+`ec5c269d62005f7ed8bb01de8f21a8788e8239076e0f54ff3586a5971d30e006`.
+The existing release ID `428126528` was retained; its five payloads, checksum
+manifest and notes were replaced, and tag `v0.9.4` moved from `9ffbf84` to the
+tested `555443a` commit with an explicit lease on the old tag value. All six
+GitHub asset digests and sizes match the prepared files. Fresh public downloads
+of the USB maker and manifest also match. The fallback installer SHA-256 is
+`b8560092d55f06b7da6ed4dc30931cc448a23f8b78ae9cd294cd9838a0630553`.
+No 0.9.5 release or physical USB write was made.
