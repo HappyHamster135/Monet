@@ -14,6 +14,21 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.4: safer switching, more of your desktop comes back
 
+**Refreshed 29 October 2026:** download the USB maker again and rewrite the stick
+to get the installer fixes below. Existing sticks keep their old installer.
+
+- **Widget edits stay saved.** Done keeps added, moved and resized widgets, including
+  after restarting the desktop. Adding widgets from Settings targets the right
+  desktop, and new accounts receive Monet's right-click menu defaults.
+- **Setup works better with a keyboard and basic graphics.** Tab and Enter activate
+  the buttons, selections keep focus, and small-screen dropdown labels are visible.
+  Installation shows live Details and handles worker completion and timeouts correctly.
+- **Stronger Secure Boot checks.** Installer builds check the signed boot files and
+  matching USB boot contents. Some firmware still needs Microsoft's third-party
+  UEFI CA enabled while Secure Boot stays on; see the install guide. These changes
+  do not establish the cause of the reported Razer laptop freeze.
+- **Clearer phone connection and sharing feedback.** Phone discovery updates properly
+  and file sharing reports when the request has been sent.
 - **One USB maker for supported PCs.** The same Make-USB-Stick.exe and installer
   serve Intel, AMD and NVIDIA PCs. The installer chooses drivers on the PC being
   installed, independently of the Windows PC that made the stick.

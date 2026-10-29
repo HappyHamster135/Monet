@@ -1,7 +1,7 @@
 # Install Monet
 
 One USB stick installs everything: Monet, and Windows for the games that need
-it. No preparation in Windows, no BitLocker keys, no settings to change.
+it. Some PCs need a firmware setting enabled to trust Linux boot media; see below.
 
 You need:
 
@@ -53,6 +53,21 @@ doesn't have it, **Monet-0.9.4-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
+
+Monet Setup uses signed boot files and can start with Secure Boot on when the
+firmware trusts Microsoft's third-party UEFI CA. Firmware set to trust only
+Windows can reject the USB before any installer code runs; Setup cannot change
+that firmware setting itself.
+
+If the USB shows a **Secure Boot error before Monet Setup opens**, check the
+firmware's Linux boot trust settings. On applicable ThinkPads, Lenovo documents
+**Security → Secure Boot → Allow Microsoft 3rd Party UEFI CA**; enabling this
+allows signed Linux bootloaders while Secure Boot stays on. See
+[Lenovo's instructions](https://download.lenovo.com/pccbbs/mobiles_pdf/Enable_Secure_Boot_for_Linux_Secured-core_PCs.pdf).
+The exact error matters: this setting does not fix every signature or revocation
+failure. This happens before the installed system's MOK enrollment described in
+step 3. If the PC already has an encrypted system, keep its recovery key available
+before changing firmware security settings.
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),

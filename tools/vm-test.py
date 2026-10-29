@@ -3,8 +3,8 @@
 
     python3 tools/vm-test.py Monet-X-Setup.iso SCREENS/ [--install]
 
-QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's keys, like a
-real PC), a blank 96 GB disk and a wired network. Waits for Monet Setup,
+QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's third-party CA),
+the ISO attached as a read-only USB disk, a blank 96 GB disk and a wired network. Waits for Monet Setup,
 takes a screenshot of each step, and with --install goes on: types a name and
 password, chooses "Monet and Windows", installs, and restarts from the disk
 (QEMU would start the stick first). On the firmware's blue screen it first
@@ -55,10 +55,12 @@ class VM:
                "-m", "8192", "-global", "driver=cfi.pflash01,property=secure,value=on",
                "-drive", f"if=pflash,format=raw,unit=0,readonly=on,file={code}",
                "-drive", f"if=pflash,format=raw,unit=1,file={vars_}",
-               "-drive", f"file={iso},media=cdrom,readonly=on,if=none,id=cd", "-device", "ide-cd,drive=cd,bootindex=1,id=stick",
                "-drive", f"file={disk},if=none,id=hd,format=qcow2", "-device", "virtio-blk-pci,drive=hd,bootindex=2,id=disk",
                "-device", f"VGA,edid=on,xres={W},yres={H},vgamem_mb=64",
-               "-device", "qemu-xhci", "-device", "usb-tablet", "-device", "usb-kbd",
+               "-device", "qemu-xhci",
+               "-drive", f"file={iso},format=raw,readonly=on,if=none,id=usb",
+               "-device", "usb-storage,drive=usb,removable=on,bootindex=1,id=stick",
+               "-device", "usb-tablet", "-device", "usb-kbd",
                "-nic", "user,model=virtio-net-pci", "-display", "none",
                "-qmp", f"unix:{self.sock},server,nowait", "-serial", f"file:{self.work / 'serial.log'}"]
         # The journal on the serial port too, so serial.log says why when a screen never comes.

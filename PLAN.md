@@ -1,5 +1,95 @@
 # Monet: Project Plan
 
+## 0.9.4 replacement build — authorized — 2026-10-29
+
+The user now requests pushing these updates and replacing the existing 0.9.4
+release, superseding the earlier local-only restriction for 0.9.5. VERSION stays
+0.9.4; do not create a new release number. Rebuild both graphics images and the
+installer, require the installer VM check, then replace the existing release's
+assets, checksums, notes and tag. The following records the pre-rebuild evidence;
+physical laptop testing and the unresolved Razer freeze remain open.
+
+Setup's custom buttons now show keyboard focus and respond to Enter and keypad
+Enter. Tab/Shift+Tab reach Continue and Back; account fields advance with Enter
+without bypassing validation. App selections retain focus when toggled, and
+built-in app labels no longer take a Tab stop. At 800×600, fixed Qt delegate
+padding consumed the entire dropdown text area. Scaling that padding with the
+rows restores the language, keyboard, region and city labels in software rendering.
+
+All 61 focused setup tests pass in the VM, including keyboard selection of Swedish,
+Europe and Stockholm, app choices, password validation and disabled-install guards.
+Dropdown rendering passes at 800×600, 1024×768 and 1440×900; the 800×600 screenshots
+were inspected. These are source-level VM checks, not a rebuilt ISO or a physical
+laptop retest. See [Testing](docs/TESTING.md) for evidence. The freeze below remains
+a separate, unresolved hardware investigation.
+
+Widget editing follow-up: pressing Done now captures the edited arrangement before
+the screen-resize guard can restore its old snapshot. Adding, moving, resizing and
+removing widgets survive Done and a desktop restart, including removal of the
+widget that owns the shared guard. The gallery opened from Settings now targets
+the current desktop when D-Bus provides no sender. Monet's desktop-menu defaults
+are installed before first sign-in, while explicit account choices still win.
+Focused VM suites passed (96 tests, then 19 overlapping follow-up tests); the live
+desktop retained a moved calendar and newly added widgets after restarting Plasma.
+
+Secure Boot follow-up: the published 0.9.4 Setup image reached Hello with Secure
+Boot on in a separate Hyper-V VM, both as optical media and through its GPT/EFI
+disk boot path. The same image was rejected with Windows-only firmware trust.
+The ISO build now checks expected signing identities and identical EFI payloads
+in both boot paths, and propagates image-creation failures. The release QEMU test
+now attaches Setup as a USB disk instead of a CD-ROM; that new QEMU configuration
+has a command-construction test but still needs a full run. This does not remove
+the firmware requirement to trust Microsoft's third-party UEFI CA, and does not
+establish the cause of the user's ThinkPad rejection. No replacement image has
+been built or published. Physical USB and laptop Secure Boot checks remain open.
+
+## USB installer freeze investigation — 2026-10-29
+
+The user reports about 30 minutes at Installing Monet after the 6.7 GB download,
+then an unresponsive laptop (Razer RZ09 family, reported 32 GB RAM and RTX 2080).
+The earlier statement that it booted the installed desktop was corrected: it
+returned to the USB installer. A second attempt with basic graphics also froze;
+the user now confirms the pointer stopped immediately when the download finished.
+This narrows the suspect interval to mounting the target and starting bootc, not
+the later completion/restart UI. The freeze's cause is still unknown.
+
+Hardware update: the user reports that installation worked on their ThinkPad
+only after disabling Secure Boot. With it enabled, a Secure Boot error appeared
+before Setup opened from the USB. Its exact model, graphics, encryption setting
+and error wording are not recorded. This gives us a reported successful physical
+installation with Secure Boot off, but does not validate the unpublished fixes
+or Secure Boot on that laptop, or identify the Razer's failure. The user
+suspects overheating; no temperature readings or thermal-shutdown evidence have
+been collected, so keep that as a hypothesis and the Razer issue open.
+
+Track the ThinkPad USB boot rejection separately for 0.9.5. The build uses Fedora's
+shim, GRUB and kernel; CI booted this chain with Secure Boot enabled in OVMF.
+Lenovo documents a third-party UEFI CA trust setting that can block Linux USB
+booting when disabled. That is a diagnostic lead, not a confirmed cause here.
+The exact error and firmware trust settings are still needed; the installed OS's
+later MOK enrollment flow does not explain a failure before USB Setup starts.
+The install guide now covers this distinction and links Lenovo's instructions.
+
+Unpublished source fixes avoid waiting for background descendants' output pipes
+after an install command exits, drain the final completion message before handling
+worker exit, reject nonzero exits, and expose Details during installation. The
+progress page explains that the downloaded image still needs installation.
+The follow-up audit also fixed hidden bootc output during long-running commands,
+lost output on timeout, and child processes surviving their parent's timeout.
+The new wrapper reports live bootc output to Details and kills the command's process
+group on timeout before allowing retry. All 61 focused VM tests pass, including
+live QProcess/QML diagnostics and real subprocess timeout checks. None establishes
+the laptop's freeze cause.
+
+The release's successful full-install VM test used the AMD/Intel image and no
+encryption; it did not cover the NVIDIA plus LUKS path on this laptop. A complete
+NVIDIA/encrypted installation remains a release gate for 0.9.5, along with a laptop
+retest. The current development VM has no usable KVM or QEMU installation, so this
+audit did not repeat a full isolated installation. Existing logs and the bootc
+1.17.1 source were reviewed; OCI downloads and OSTree imports use the destination
+disk, not a whole-image RAM buffer. No replacement ISO has been built or published.
+Evidence and limits are recorded in [Testing](docs/TESTING.md).
+
 ## Release 0.9.4 — 2026-10-29
 
 The user has now authorized committing, pushing and publishing 0.9.4 for a first

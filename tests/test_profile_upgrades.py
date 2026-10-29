@@ -259,3 +259,16 @@ class ProfileUpgrades(unittest.TestCase):
             subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=30)
         for line in expected.splitlines():
             if "=" in line: self.assertIn(line + "\n", rc.read_text())
+
+    def test_desktop_menu_defaults_exist_before_first_login_and_account_choices_win(self):
+        system = self.root / "system-defaults"
+        system.mkdir()
+        name = "plasma-org.kde.plasma.desktop-appletsrc"
+        (system / name).write_text((ROOT / "linux/share/monet/desktop-menu.conf").read_text())
+        env = dict(self.env, XDG_CONFIG_DIRS=str(system))
+        args = ["kreadconfig6", "--file", name, "--group", "ActionPlugins", "--group", "0",
+                "--group", "RightButton;NoModifier", "--key"]
+        for key, expected in [("configure", "false"), ("_wallpaper", "true"), ("add widgets", "true")]:
+            self.assertEqual(subprocess.check_output([*args, key], env=env, text=True).strip(), expected)
+        (self.config / name).write_text("[ActionPlugins][0][RightButton;NoModifier]\nconfigure=true\n")
+        self.assertEqual(subprocess.check_output([*args, "configure"], env=env, text=True).strip(), "true")

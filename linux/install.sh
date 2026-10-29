@@ -419,6 +419,8 @@ ABOUT
     # New accounts start with Monet's look, so Plasma lays out Monet's islands
     # and widgets itself as it first starts, instead of KDE's to be replaced.
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage org.monet.desktop
+    # Available before Plasma creates its first desktop; account mouse/menu choices still win.
+    install -m 644 "$SRC/share/monet/desktop-menu.conf" /etc/xdg/plasma-org.kde.plasma.desktop-appletsrc
     # And with Monet's sounds, from the first sign-in.
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group Sounds --key Theme monet
     # More settings' hidden pages, for everyone. Bazzite locks this group here ([$i], for its

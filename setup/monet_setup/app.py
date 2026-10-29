@@ -578,8 +578,8 @@ class Setup(QObject):
         self._proc.setWorkingDirectory(str(HERE))
         self._proc.start(sys.executable, ["-m", "monet_setup.install", path])
 
-    def _read(self):
-        while self._proc and self._proc.canReadLine():
+    def _read(self, final=False):
+        while self._proc and (self._proc.canReadLine() or (final and self._proc.bytesAvailable())):
             line = bytes(self._proc.readLine()).decode(errors="replace").strip()
             try:
                 event = json.loads(line)
@@ -617,8 +617,9 @@ class Setup(QObject):
         self.progressChanged.emit()
 
     def _finished(self, code, *_status):
+        self._read(final=True)
         self._proc = None
-        if self._phase != "done":
+        if code != 0 or self._phase != "done":
             self._phase = "failed"
             self._error = self._error or _("The installer stopped unexpectedly.")
         self.progressChanged.emit()

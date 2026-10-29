@@ -2369,3 +2369,179 @@ above. The published Setup ISO checksum is
 `2b92642fb9e0e122bdc407828000ba0dd8e6cb7b7c91a7a2cc6bdfab5e3af839`;
 the fallback Installer ISO checksum is
 `85270cf07d275518164ecec8b3c91f1989b5e5457a5cb7a484ba46b1cdb0b3a0`.
+
+### Installer completion and diagnostics follow-up — 2026-10-29
+
+A reported physical laptop freeze is not reproduced in the VM. The user clarified
+that the laptop returned to the USB installer after reboot, not the installed
+desktop. Basic graphics is responsive at Setup's first page; installation in that
+mode remains pending. The release CI log spent about six minutes in bootc after
+downloading, compared with the reported roughly 30 minutes before noticing the freeze.
+
+The new command regression reproduces a separate hang: the foreground helper exits
+successfully but its background child holds stdout/stderr open. The old wrapper
+times out; the new wrapper waits for the foreground command and reads a bounded
+snapshot of its output files. Input, stdout/stderr separation, nonzero status and
+genuine timeout behavior are checked. This does not establish the laptop's cause.
+
+`python tools/vm.py tests tests.test_setup tests.test_setup_window` passes all 53
+checks. Real QProcess/QML fixtures verify final output without a trailing newline,
+nonzero-exit rejection, visible Details during installation, All set/Restart, and
+the recovery-key page using a synthetic key. This is not an encrypted-disk install.
+Screenshots of progress, Details and All set were rendered and inspected;
+`target/setup-install-hang/visual-proof.tar` includes them and tested source hashes.
+No real disks were written, and no replacement installer ISO is published yet.
+
+### Setup keyboard navigation and basic-graphics menus — 2026-10-29
+
+Both reported UI defects were reproduced against the real QML in the Monet VM:
+Tab reached Continue without a focus cue, but Return did not activate the custom
+AbstractButton. At 800×600 with `QT_QUICK_BACKEND=software`, ComboBox rows became
+22 pixels high while inherited vertical padding consumed all their text height;
+their strings were correct but `Text.lineCount` was zero. Scaling the delegate
+padding leaves 16 pixels for text at that resolution. A further keyboard check
+found that toggling an app recreated its tile and lost focus; stable repeater counts
+now update the tile data without replacing the focused control.
+
+`python tools/vm.py tests tests.test_setup tests.test_setup_window` passes all 58
+checks. The eight QML/QProcess tests cover completion and recovery diagnostics,
+Tab/Shift+Tab and both Enter keys, account validation, all selectable app tiles,
+Space/Enter on encryption, refusal to install without a usable disk, and keyboard
+dropdown selection/cancellation. Swedish, Europe and Stockholm are selected with
+keyboard events. Popup text has positive height and rendered lines at 800×600,
+1024×768 and 1440×900. The test fixture uses demo data and a temporary state file
+throughout, so it does not change the VM's keyboard, network, account or disks.
+
+The VM's Qt version was 6.11.2. Software-rendered screenshots of all four dropdowns
+and the focused Continue button were captured and inspected at 800×600.
+`target/setup-keyboard-dropdown/before-fix.tar` preserves the blank-menu evidence;
+`target/setup-keyboard-dropdown/visual-proof.tar` contains the corrected screenshots,
+text geometry and tested source hashes. The run emitted Pillow deprecation warnings
+and a shutdown garbage-collection ResourceWarning, with no test failures or QML
+errors. No replacement ISO was built, no physical disk was written, and the laptop
+freeze is not resolved by these UI tests. Changes remain local for a future 0.9.5.
+
+### Immediate post-download freeze audit — 2026-10-29
+
+The user reproduced the freeze in basic graphics and confirmed that the pointer
+stopped immediately after download completion. Reviewed the download/mount/bootc
+handoff, encryption, subprocess handling, kiosk service, live-image build and the
+released install logs. Downloaded OCI layers are in `/mnt/monet-top/download` on
+the destination btrfs, and bootc's OSTree import uses the target repository.
+The release used bootc 1.17.1; its matching upstream install/import source is saved
+under `target/setup-freeze-audit/` for this investigation. No verified cause of
+the immediate laptop freeze was found.
+
+Two diagnostic/process-management problems were confirmed and fixed locally:
+bootc output was withheld until exit, and command timeout discarded diagnostics
+while killing only the direct process. `run(..., live=True)` now tails separate
+output files with independent read offsets, preserving the earlier inherited-pipe
+fix. Commands have their own process group; timeout kills that group and records
+the final output before reporting failure. Secret input still travels through
+stdin, not a temporary file or the command line. The timeout guard cannot repair
+a kernel/driver hang or terminate a process stuck in uninterruptible kernel I/O.
+
+`python tools/vm.py tests tests.test_setup tests.test_setup_window` passes **61
+tests**. New tests require log output before a waiting child can exit, keep the
+last unterminated diagnostic, verify that a timeout stops a real child process,
+and open the real QML Details panel while a live-output worker is still running.
+The same Pillow deprecation and Qt-fixture shutdown ResourceWarning remain.
+Existing input/output, failure, inherited handles, completion and keyboard tests
+also pass. No actual bootc install or disk formatting was run by these fixtures.
+
+Coverage gap: `target/full-image/release094/ci-screens/serial.log` shows the full
+release VM installation used `monet-amd:latest` without LUKS. It spent roughly six
+minutes in bootc and completed, but that is not evidence for an encrypted NVIDIA
+installation. The development VM has no usable KVM, QEMU or swtpm; no new nested
+installation was attempted. Both that full path and the Razer laptop remain to
+be tested before accepting 0.9.5. The existing USB still contains 0.9.4; no changes
+were pushed and no replacement ISO was built or released.
+
+### ThinkPad hardware report — 2026-10-29
+
+The user reports that installation worked on their ThinkPad using the existing
+installer, but clarified that Secure Boot had to be disabled. With Secure Boot on,
+an error appeared before Setup opened from the USB. This is user-reported
+physical-hardware success with Secure Boot off; no logs, exact model, error wording,
+graphics type or encryption setting were supplied. It does not validate the local
+0.9.5 changes, Secure Boot on that machine, or the encrypted NVIDIA path. The user suspects that
+the Razer overheats during installation. No temperature measurements or thermal
+shutdown evidence establish that cause; the Razer freeze remains unresolved.
+
+USB Secure Boot follow-up: source inspection confirms that Setup's ISO copies
+Fedora's shim to `EFI/BOOT/BOOTX64.EFI`, alongside its GRUB and MokManager, and
+uses Fedora's kernel. The 0.9.4 build log lists shim 16.1-7 and GRUB 2.12-66.fc44.
+The release VM used `OVMF_CODE_4M.ms.fd` and `OVMF_VARS_4M.ms.fd` and successfully
+booted the USB with Secure Boot. This does not establish compatibility with every
+physical firmware trust database or revocation state. Lenovo's documented
+[third-party UEFI CA setting](https://download.lenovo.com/pccbbs/mobiles_pdf/Enable_Secure_Boot_for_Linux_Secured-core_PCs.pdf)
+is a possible explanation for this ThinkPad, pending its actual setting and error.
+No bootloader replacement or firmware change has been made on that assumption.
+
+### Widget edits and desktop menu — 2026-10-29, local 0.9.5 changes
+
+Reproduced the reset on the installed desktop, including with KDE's own edit
+screen. A debugger trace identified Monet's shared LayoutGuard: edit mode changes
+the available desktop height, and its delayed resize handler restored the snapshot
+from before the edit. Done now captures the new positions before that handler
+runs, retaining the normal screen area's dimensions. The gallery also lacked a
+target when opened through Settings' D-Bus call; it now uses the current desktop.
+
+`python tools/vm.py tests tests.test_profile_upgrades tests.test_accessible_desktop
+tests.test_setup tests.test_look.EverydayScreens` passed **96 tests**. A follow-up
+`python tools/vm.py tests tests.test_setup_boot tests.test_accessible_desktop`
+passed **19 tests**, overlapping the first run. Real QML coverage includes adding,
+moving, resizing and removing widgets, Done during pending resize work, restart,
+and removal of the guard's leading widget. KConfig checks confirm the system menu
+defaults apply before first login and explicit user choices override them. The
+existing Pillow deprecation and Qt fixture shutdown warning remain; no tests failed.
+
+On the live VM desktop, the gallery opened through D-Bus showed existing widget
+counts, added Batteries successfully, and Done exited edit mode. Calendar moved
+from (1552,48) to (1360,512) and stayed there after Done and a Plasma restart;
+the new widgets also remained. Screenshots are under `target/widget-save/`, including
+`fixed-gallery-loaded.png`, `fixed-added.png`, `fixed-saved.png` and
+`final-desktop.png`. The desktop menu showed Monet's Display settings and Personalize
+entries after restart. This was not a graphical first-login test of a new account.
+Temporary user-level shell/plasmoid overrides and test layout changes were removed
+after verification; the VM's installed image was not replaced.
+
+### USB Secure Boot packaging and firmware trust — 2026-10-29
+
+Downloaded the published `Monet-0.9.4-Setup.iso` and verified its SHA-256:
+`2b92642fb9e0e122bdc407828000ba0dd8e6cb7b7c91a7a2cc6bdfab5e3af839`.
+Its shim lists both Microsoft 2011 and 2023 UEFI CA signatures. The new packaging
+gate passed against this actual ISO in a rootless Fedora 44 container: expected
+signer identities for shim, GRUB, MokManager and kernel; matching boot files and
+menu in the ISO tree, El Torito image and GPT EFI partition. Negative fixtures
+reject a missing signer or a mismatched USB MokManager. Signature listing is a
+packaging check, not cryptographic verification or a firmware revocation test.
+
+A dedicated Generation 2 Hyper-V VM reached Setup's Hello page with Secure Boot
+enabled and `MicrosoftUEFICertificateAuthority` trust, first using the ISO as a
+DVD and then a fixed VHD containing its unchanged raw disk payload. This exercises
+the GPT/EFI disk boot path used by the written USB. With the same ISO and
+`MicrosoftWindows` trust, firmware rejected it with “The signed image's hash is
+not allowed (DB)”. Evidence: `target/secureboot/setup.png`, `gpt-boot.png` and
+`windows-only.png`. The temporary VM was removed after the checks; no target
+installation disk or physical USB was written.
+
+The build no longer swallows xorriso failures. The release QEMU test now uses a
+read-only USB mass-storage device rather than a virtual optical drive; its
+construction and first-disk boot order pass the unit check, but that new QEMU
+configuration has not yet run end to end. The Hyper-V checks used the published
+image, not a rebuilt 0.9.5 candidate, and performed no OS installation. Firmware
+trust and revocation differences on the user's ThinkPad remain unverified; a
+Windows-only trust database is a demonstrated possible cause, not its diagnosis.
+No changes were pushed and no release was published.
+
+### 0.9.4 replacement preflight — 2026-10-29
+
+The user authorized pushing the accumulated fixes and replacing the existing
+0.9.4 release, with VERSION unchanged. The full VM run executed 983 tests with
+15 expected skips and found one stale translation-catalog failure. Regenerated
+the catalogs with the existing generator; the follow-up language and real Setup
+window suite passed all 16 tests. Windows bridge and USB tests passed (15 and 18
+respectively), and all six PowerShell scripts passed syntax checks. Logs are in
+`target/replacement094/`. Both OS images and the replacement installer still need
+their build and full installer VM checks before the release assets are replaced.

@@ -29,7 +29,7 @@ ISO=$W/iso
 rm -rf "$W"
 mkdir -p "$ROOT" "$ISO/LiveOS" "$ISO/images/pxeboot" "$ISO/EFI/BOOT"
 
-dnf -y -q install dracut squashfs-tools xorriso mtools dosfstools python3 >/dev/null
+dnf -y -q install dracut squashfs-tools xorriso mtools dosfstools python3 sbsigntools diffutils >/dev/null
 
 echo "== The live system (Fedora $FEDORA)"
 dnf -y -q --installroot="$ROOT" --releasever="$FEDORA" --use-host-config \
@@ -102,7 +102,7 @@ fi
 for fs in dev sys proc; do umount -R "$ROOT/$fs"; done
 trap - EXIT
 
-echo "== The USB stick's start: shim, GRUB (both signed by Fedora), Monet's menu"
+echo "== The USB stick's start: Microsoft-signed shim, Fedora-signed GRUB, Monet's menu"
 EFI=$ROOT/boot/efi/EFI/fedora
 sed "s|@LABEL@|$LABEL|g" "$HERE/grub.cfg" > "$W/grub.cfg"
 cp "$EFI/shimx64.efi" "$ISO/EFI/BOOT/BOOTX64.EFI"
@@ -121,17 +121,9 @@ xorriso -as mkisofs -o "$OUT" -V "$LABEL" -iso-level 3 -joliet -joliet-long -rat
     -partition_offset 16 \
     -append_partition 2 C12A7328-F81F-11D2-BA4B-00A0C93EC93B "$W/efiboot.img" -appended_part_as_gpt \
     -e --interval:appended_partition_2:all:: -no-emul-boot \
-    "$ISO" 2>&1 | grep -v "^xorriso : UPDATE" || :
+    "$ISO" 2>&1 | sed '/^xorriso : UPDATE/d'
 
-# Checks: the label, the menu in the EFI partition, the size GitHub allows.
-xorriso -indev "$OUT" -pvd_info 2>/dev/null | grep -q "$LABEL"
-rm -rf "$W/check" && mkdir "$W/check"
-xorriso -osirrox on -indev "$OUT" -extract_boot_images "$W/check/" >/dev/null 2>&1
-# Both the El Torito image and the GPT partition come out: check each.
-for img in "$W"/check/*efi*; do
-    mtype -i "$img" ::/EFI/BOOT/grub.cfg | grep -q "CDLABEL=$LABEL"
-    mdir -i "$img" ::/EFI/BOOT | grep -qi bootx64
-done
+bash "$HERE/check-boot.sh" "$OUT" "$LABEL"
 SIZE=$(stat -c %s "$OUT")
 test "$SIZE" -lt 2000000000
 echo "$OUT: $((SIZE / 1000000)) MB"

@@ -2511,6 +2511,8 @@ class EverydayScreens(unittest.TestCase):
         self.assertIn('text: i18n("Personalize")\n            icon.name: "preferences-desktop-wallpaper"\n'
                       '            onTriggered: root.settings("light")', wallpaper)
         self.assertIn('runner.connectSource("@LIBEXECDIR@/monet-quick open " + page)', wallpaper)
+        install = (ROOT / "linux/install.sh").read_text()
+        self.assertIn('"$SRC/share/monet/desktop-menu.conf" /etc/xdg/plasma-org.kde.plasma.desktop-appletsrc', install)
         # The runner only once asked for: the lock screen shows this painting and has none.
         imports = [line for line in wallpaper.splitlines() if line.startswith("import ")]
         self.assertNotIn("import org.kde.plasma.plasma5support as P5Support", imports)

@@ -225,6 +225,74 @@ Window { width:700; height:450; visible:true
             self.assertFalse(errors,'\n'.join(errors))
             window.close(); engine.deleteLater(); QTest.qWait(1)
 
+    def test_layout_guard_keeps_edits_on_done_and_after_restart(self):
+        errors=[]
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'edited.qml'
+            path.write_text('''import QtQuick
+import QtQuick.Layouts
+import "'''+QUrl.fromLocalFile(str(WIDGETS)).toString()+'''"
+Window { width:1920; height:1080
+ Item { id:board; objectName:"board"; width:1920; height:1004
+  property QtObject containmentItem: QtObject { property real height:1080 }
+  property bool editMode:false; property bool relayoutLock:false; property int cellWidth:16
+  property string configKey:"ItemGeometries-1920x1080"
+  function releaseSpace(item){} function save(){} function positionItem(item){}
+  Component { id:widget
+   Item { property int number; objectName:"widget"+number
+    property var applet:({plasmoid:{id:number,pluginName:"org.monet.notes",containment:{id:1}}})
+    Layout.minimumWidth:100; Layout.minimumHeight:100
+    LayoutGuard { storageFile:Qt.resolvedUrl("layouts.conf") }
+   }
+  }
+  function add(number,x,y,w,h) { widget.createObject(board,{number:number,x:x,y:y,width:w,height:h}) }
+  function edit() {
+   editMode=true; height=852
+   const first=children.find(c=>c.number===1)
+   first.x=320; first.y=320; first.width=320; first.height=256
+   children.find(c=>c.number===2).destroy()
+   add(3,800,400,224,224)
+  }
+  function done() { editMode=false; height=1004 }
+  function removeLeader() {
+   editMode=true; height=852
+   children.find(c=>c.number===1).destroy()
+   const remaining=children.find(c=>c.number===3)
+   remaining.x=640; remaining.y=336
+  }
+  Component.onCompleted: { add(1,48,48,224,224); add(2,1552,48,224,224) }
+ }
+}''')
+            def load():
+                engine=QQmlApplicationEngine()
+                engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+                engine.load(QUrl.fromLocalFile(str(path)))
+                self.assertTrue(engine.rootObjects(),errors)
+                return engine,engine.rootObjects()[0]
+            engine,window=load(); QTest.qWait(1500)
+            board=window.findChild(QObject,'board')
+            QMetaObject.invokeMethod(board,'edit'); QTest.qWait(50)
+            QMetaObject.invokeMethod(board,'done'); QTest.qWait(1700)
+            for name,expected in [('widget1',(320,320,320,256)),('widget3',(800,400,224,224))]:
+                item=window.findChild(QObject,name)
+                self.assertEqual(tuple(item.property(k) for k in ('x','y','width','height')),expected)
+            self.assertIsNone(window.findChild(QObject,'widget2'))
+            window.close(); engine.deleteLater(); QTest.qWait(20)
+            # Plasma reopens the same widget IDs; the guard must use the new snapshot.
+            path.write_text(path.read_text().replace('add(2,1552,48,224,224)', 'add(3,48,600,224,224)'))
+            engine,window=load(); QTest.qWait(1700)
+            item=window.findChild(QObject,'widget1')
+            self.assertEqual(tuple(item.property(k) for k in ('x','y','width','height')),(320,320,320,256))
+            self.assertEqual(window.findChild(QObject,'widget3').property('x'),800)
+            board=window.findChild(QObject,'board')
+            QMetaObject.invokeMethod(board,'removeLeader'); QTest.qWait(50)
+            QMetaObject.invokeMethod(board,'done'); QTest.qWait(1700)
+            self.assertIsNone(window.findChild(QObject,'widget1'))
+            item=window.findChild(QObject,'widget3')
+            self.assertEqual((item.property('x'),item.property('y')),(640,336))
+            self.assertFalse(errors,'\n'.join(errors))
+            window.close(); engine.deleteLater(); QTest.qWait(20)
+
     def test_layout_guard_bypasses_animations_and_restores_positions_after_restart(self):
         engine=QQmlApplicationEngine(); errors=[]
         engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))

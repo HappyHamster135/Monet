@@ -219,6 +219,7 @@ ApplicationWindow {
                 }
                 Item { Layout.fillWidth: true }
                 PillButton {
+                    objectName: "backButton"
                     text: tr("Back")
                     plain: true
                     visible: step > 0 && !installing
@@ -226,6 +227,7 @@ ApplicationWindow {
                 }
                 PillButton {
                     id: next
+                    objectName: "nextButton"
                     text: showingKey ? tr("Continue") : installing ? tr("Restart")
                         : step === 4 ? (setup.mode === "erase" ? tr("Erase & Install") : tr("Install"))
                         : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : tr("Continue")
@@ -351,6 +353,7 @@ ApplicationWindow {
             Field {
                 label: tr("Language")
                 Choice {
+                    objectName: "languageChoice"
                     width: parent.width
                     model: setup.languages
                     currentIndex: setup.language
@@ -360,6 +363,7 @@ ApplicationWindow {
             Field {
                 label: tr("Keyboard")
                 Choice {
+                    objectName: "keyboardChoice"
                     width: parent.width
                     model: setup.keyboards
                     currentIndex: setup.keyboard
@@ -374,12 +378,14 @@ ApplicationWindow {
                     width: parent.width
                     spacing: px(10)
                     Choice {
+                        objectName: "regionChoice"
                         width: Math.round((parent.width - parent.spacing) * 0.42)
                         model: setup.regions
                         currentIndex: setup.region
                         onActivated: (i) => setup.setRegion(i)
                     }
                     Choice {
+                        objectName: "cityChoice"
                         width: parent.width - parent.spacing - Math.round((parent.width - parent.spacing) * 0.42)
                         model: setup.cities
                         currentIndex: setup.city
@@ -502,7 +508,7 @@ ApplicationWindow {
                     id: password
                     width: parent.width
                     secret: true
-                    onAccepted: next.clicked()
+                    onAccepted: next.click()
                 }
             }
             Note { text: setup.wifiError; warm: true; visible: text !== "" }
@@ -533,7 +539,7 @@ ApplicationWindow {
             Body { text: tr("This is your account in Monet and in Windows.") }
             Field {
                 label: tr("Your name")
-                Entry { id: name; width: parent.width; placeholder: tr("Name"); focus: true; text: setup.personName }
+                Entry { id: name; objectName: "nameEntry"; width: parent.width; placeholder: tr("Name"); focus: true; text: setup.personName; onAccepted: pass.forceActiveFocus() }
                 Text {
                     horizontalAlignment: Text.AlignLeft
                     opacity: name.text.trim() !== "" ? 1 : 0     // keeps its place, so nothing jumps
@@ -543,11 +549,11 @@ ApplicationWindow {
             }
             Field {
                 label: tr("Password")
-                Entry { id: pass; width: parent.width; secret: true; text: setup.personPassword; onAccepted: again.forceActiveFocus() }
+                Entry { id: pass; objectName: "passwordEntry"; width: parent.width; secret: true; text: setup.personPassword; onAccepted: again.forceActiveFocus() }
             }
             Field {
                 label: tr("Password again")
-                Entry { id: again; width: parent.width; secret: true; text: setup.personPassword; onAccepted: next.clicked() }
+                Entry { id: again; objectName: "confirmEntry"; width: parent.width; secret: true; text: setup.personPassword; onAccepted: next.click() }
             }
             Note {
                 text: person.mismatch ? tr("The passwords don't match.")
@@ -599,15 +605,16 @@ ApplicationWindow {
                 Title { text: tr("Your apps") }
                 Body { text: tr("Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in.") }
                 Repeater {
-                    model: [[trc("the apps people use every day", "Everyday"), true], [trc("more apps to choose from", "More"), false]]
+                    model: 2
                     Column {
                         id: appSection
-                        required property var modelData
+                        required property int index
+                        readonly property var apps: setup.apps.filter(app => app.everyday === (appSection.index === 0))
                         width: parent.width
                         spacing: px(8)
                         Text {
                             horizontalAlignment: Text.AlignLeft
-                            text: appSection.modelData[0]
+                            text: appSection.index === 0 ? trc("the apps people use every day", "Everyday") : trc("more apps to choose from", "More")
                             font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
                         }
                         Grid {
@@ -616,12 +623,15 @@ ApplicationWindow {
                             columnSpacing: px(8)
                             rowSpacing: px(6)
                             Repeater {
-                                model: setup.apps.filter(app => app.everyday === appSection.modelData[1])
-                                AbstractButton {
+                                // Keep the focused tile alive when its selection changes.
+                                model: appSection.apps.length
+                                KeyboardButton {
                                     id: appTile
-                                    required property var modelData
+                                    required property int index
+                                    readonly property var modelData: appSection.apps[index]
                                     // Built in: there already, nothing to choose.
                                     readonly property bool builtIn: modelData.index < 0
+                                    focusPolicy: builtIn ? Qt.NoFocus : Qt.StrongFocus
                                     width: (appSection.width - px(8)) / 2
                                     height: px(50)
                                     hoverEnabled: !builtIn
@@ -637,7 +647,8 @@ ApplicationWindow {
                                         color: appTile.builtIn ? Qt.rgba(1, 1, 1, 0.5)
                                              : appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
                                              : appTile.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
-                                        border.color: appTile.modelData.picked && !appTile.builtIn ? lily : "transparent"
+                                        border.color: appTile.activeFocus ? "#1F5249"
+                                            : appTile.modelData.picked && !appTile.builtIn ? lily : "transparent"
                                         border.width: Math.max(2, px(2))
                                         Behavior on color { ColorAnimation { duration: 140 } }
                                     }
@@ -815,8 +826,8 @@ ApplicationWindow {
             property bool ready: false
             property bool busy: false
             spacing: px(22)
-            topPadding: px(70)
-            Ripple { anchors.horizontalCenter: parent.horizontalCenter }
+            topPadding: liveDetails.visible ? px(10) : px(70)
+            Ripple { anchors.horizontalCenter: parent.horizontalCenter; visible: !liveDetails.visible }
             Title { text: tr("Installing Monet"); anchors.horizontalCenter: parent.horizontalCenter }
             Bar { width: parent.width; value: setup.progress }
             Text {
@@ -829,11 +840,22 @@ ApplicationWindow {
             Text {
                 width: parent.width
                 topPadding: px(24)
+                visible: !liveDetails.visible
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                text: tr("You can leave it running. If the connection drops, Monet picks up where it stopped.")
+                text: phase === "install"
+                    ? tr("The download is complete. Monet is unpacking and writing the system to your disk. Keep the PC on and the USB stick connected until All set appears.")
+                    : tr("You can leave it running. If the connection drops, Monet picks up where it stopped.")
                 font.family: sans; font.pixelSize: px(13); lineHeight: px(19); lineHeightMode: Text.FixedHeight; color: dim
             }
+            PillButton {
+                objectName: "installDetailsButton"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: liveDetails.visible ? tr("Hide details") : tr("Details")
+                plain: true
+                onClicked: liveDetails.visible = !liveDetails.visible
+            }
+            InstallLog { id: liveDetails; objectName: "installDetails" }
         }
     }
 
@@ -906,34 +928,35 @@ ApplicationWindow {
                 PillButton { text: tr("Try again"); onClicked: setup.retry() }
                 PillButton { text: details.visible ? tr("Hide details") : tr("Details"); plain: true; onClicked: details.visible = !details.visible }
             }
-            Card {
-                id: details
-                visible: false
-                height: px(260)
-                // Opens at the end, where why it stopped is.
-                onVisibleChanged: if (visible) logView.toEnd()
-                Flickable {
-                    id: logView
-                    anchors.fill: parent
-                    anchors.margins: px(14)
-                    clip: true
-                    contentHeight: log.implicitHeight
-                    function toEnd() { contentY = Math.max(0, contentHeight - height) }
-                    onContentHeightChanged: toEnd()
-                    Text {
-                        horizontalAlignment: Text.AlignLeft
-                        id: log
-                        width: parent.width
-                        text: setup.details
-                        wrapMode: Text.WrapAnywhere
-                        font.family: "monospace"; font.pixelSize: px(11); color: ink
-                    }
-                }
-            }
+            InstallLog { id: details }
         }
     }
 
     // ---- Pieces ----
+
+    component InstallLog: Card {
+        visible: false
+        height: px(260)
+        // Opens at the end, where the current command or failure is.
+        onVisibleChanged: if (visible) logView.toEnd()
+        Flickable {
+            id: logView
+            anchors.fill: parent
+            anchors.margins: px(14)
+            clip: true
+            contentHeight: log.implicitHeight
+            function toEnd() { contentY = Math.max(0, contentHeight - height) }
+            onContentHeightChanged: toEnd()
+            Text {
+                horizontalAlignment: Text.AlignLeft
+                id: log
+                width: parent.width
+                text: setup.details
+                wrapMode: Text.WrapAnywhere
+                font.family: "monospace"; font.pixelSize: px(11); color: ink
+            }
+        }
+    }
 
     component Title: Text {
         readonly property real u: Window.window ? Window.window.u : 1
@@ -1086,7 +1109,13 @@ ApplicationWindow {
         }
     }
 
-    component Option: AbstractButton {
+    component KeyboardButton: AbstractButton {
+        focusPolicy: Qt.StrongFocus
+        Keys.onReturnPressed: event => { if (!event.isAutoRepeat) click() }
+        Keys.onEnterPressed: event => { if (!event.isAutoRepeat) click() }
+    }
+
+    component Option: KeyboardButton {
         id: option
         readonly property real u: Window.window ? Window.window.u : 1
         property bool picked: false
@@ -1095,7 +1124,7 @@ ApplicationWindow {
         background: Rectangle {
             radius: Math.round(16 * u)
             color: option.picked ? Qt.rgba(1, 1, 1, 0.85) : option.hovered ? Qt.rgba(1, 1, 1, 0.5) : "transparent"
-            border.color: option.picked ? "#357F72" : "transparent"
+            border.color: option.activeFocus ? "#1F5249" : option.picked ? "#357F72" : "transparent"
             border.width: Math.max(2, Math.round(2 * u))
             Behavior on color { ColorAnimation { duration: 140 } }
         }
@@ -1108,7 +1137,7 @@ ApplicationWindow {
     }
 
     // A choice to tick: a pebble of paper with a lily ring, and the check in a lily dot.
-    component Tick: AbstractButton {
+    component Tick: KeyboardButton {
         id: tick
         readonly property real u: Window.window ? Window.window.u : 1
         property string title
@@ -1123,7 +1152,7 @@ ApplicationWindow {
         background: Rectangle {
             radius: Math.round(16 * tick.u)
             color: tick.checked ? Qt.rgba(1, 1, 1, 0.85) : tick.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
-            border.color: tick.checked ? "#357F72" : "transparent"
+            border.color: tick.activeFocus ? "#1F5249" : tick.checked ? "#357F72" : "transparent"
             border.width: Math.max(2, Math.round(2 * tick.u))
             Behavior on color { ColorAnimation { duration: 140 } }
         }
@@ -1173,7 +1202,7 @@ ApplicationWindow {
         }
     }
 
-    component PillButton: AbstractButton {
+    component PillButton: KeyboardButton {
         id: pill
         readonly property real u: Window.window ? Window.window.u : 1
         property bool accent: false
@@ -1186,6 +1215,8 @@ ApplicationWindow {
         Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
         background: Rectangle {
             radius: height / 2
+            border.color: pill.activeFocus ? "#357F72" : "transparent"
+            border.width: Math.max(2, Math.round(2 * pill.u))
             color: pill.plain ? (pill.hovered ? Qt.rgba(1, 1, 1, 0.45) : "transparent")
                  : pill.accent ? (pill.hovered ? "#FF6A42" : "#F2552C")
                  : (pill.hovered ? "#34322E" : "#1C1B19")
@@ -1202,7 +1233,7 @@ ApplicationWindow {
         }
     }
 
-    component Link: AbstractButton {
+    component Link: KeyboardButton {
         id: link
         readonly property real u: Window.window ? Window.window.u : 1
         hoverEnabled: true
@@ -1213,6 +1244,7 @@ ApplicationWindow {
             font.family: "Inter"
             font.pixelSize: Math.round(13 * u)
             font.weight: Font.DemiBold
+            font.underline: link.activeFocus
         }
         background: null
     }
@@ -1240,7 +1272,8 @@ ApplicationWindow {
             border.color: entry.activeFocus ? "#357F72" : Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.08)
             border.width: entry.activeFocus ? Math.max(2, Math.round(2 * u)) : 1
         }
-        AbstractButton {
+        KeyboardButton {
+            id: reveal
             visible: entry.secret && entry.text !== ""
             anchors.right: parent.right
             anchors.rightMargin: Math.round(14 * u)
@@ -1253,6 +1286,7 @@ ApplicationWindow {
                 font.family: "Inter"
                 font.pixelSize: Math.round(12 * u)
                 font.weight: Font.DemiBold
+                font.underline: reveal.activeFocus
             }
             background: null
         }
@@ -1300,6 +1334,8 @@ ApplicationWindow {
             required property var modelData
             width: choice.width - Math.round(12 * u)
             height: Math.round(40 * u)
+            // Fixed style padding can leave zero text height on basic-graphics screens.
+            padding: Math.round(6 * choice.u)
             highlighted: choice.highlightedIndex === index
             contentItem: Text {
                 horizontalAlignment: Text.AlignLeft
@@ -1317,6 +1353,7 @@ ApplicationWindow {
             }
         }
         popup: Popup {
+            objectName: "choicePopup"
             y: choice.height + Math.round(6 * u)
             width: choice.width
             height: Math.min(contentItem.implicitHeight + 2 * Math.round(6 * u), Math.round(320 * u))

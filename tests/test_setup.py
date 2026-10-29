@@ -9,10 +9,12 @@ import io
 import json
 import os
 import re
+import signal
 import sys
 import tempfile
 import types
 import unittest
+from unittest import mock
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -307,6 +309,83 @@ class Install(unittest.TestCase):
                 self.assertIsNone(install.remembered({"disk": "/dev/sda", "mode": "keep"}))
             finally:
                 install.STATE = saved
+
+
+class InstallerCommands(unittest.TestCase):
+    def test_live_output_arrives_before_exit_and_keeps_the_final_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            observed = Path(tmp) / "observed"
+            lines = []
+
+            def log(line):
+                lines.append(line)
+                if "unpacking" in line:
+                    observed.touch()
+
+            script = ("import pathlib, sys, time; print('unpacking', flush=True); "
+                      f"marker = pathlib.Path({str(observed)!r})\n"
+                      "while not marker.exists(): time.sleep(0.02)\n"
+                      "sys.stderr.write('final diagnostic'); sys.stderr.flush()")
+            with mock.patch.object(install, "log", side_effect=log):
+                output = install.run(sys.executable, "-c", script, live=True, timeout=3, quiet=True)
+            self.assertEqual(output, "unpacking\n")
+            self.assertEqual(lines, ["  unpacking", "  final diagnostic"])
+
+    def test_timeout_stops_child_processes_and_keeps_diagnostics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pid = Path(tmp) / "child.pid"
+            script = ("import pathlib, subprocess, sys, time; "
+                      "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); "
+                      f"pathlib.Path({str(pid)!r}).write_text(str(child.pid)); "
+                      "print('last activity', flush=True); time.sleep(30)")
+            try:
+                with mock.patch.object(install, "LOG", Path(tmp) / "install.log"), redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(install.Stop, "took too long"):
+                        install.run(sys.executable, "-c", script, timeout=0.5, quiet=True)
+                    self.assertIn("last activity", install.LOG.read_text())
+                status = Path(f"/proc/{int(pid.read_text())}/stat")
+                if status.exists():
+                    self.assertEqual(status.read_text().split(")", 1)[1].split()[0], "Z",
+                                     "the timed-out command's child is still running")
+            finally:
+                if pid.exists():
+                    try:
+                        os.kill(int(pid.read_text()), signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
+    def test_input_output_and_failure_are_preserved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(install, "LOG", Path(tmp) / "install.log"), redirect_stdout(io.StringIO()):
+                result = install.run(sys.executable, "-c",
+                                     "import sys; print(sys.stdin.read()); print('warning', file=sys.stderr)",
+                                     input="test input", quiet=True)
+                self.assertEqual(result, "test input\n")
+                self.assertIn("warning", install.LOG.read_text())
+                with self.assertRaisesRegex(install.Stop, "exit 7"):
+                    install.run(sys.executable, "-c", "raise SystemExit(7)", quiet=True)
+                with self.assertRaisesRegex(install.Stop, "took too long"):
+                    install.run(sys.executable, "-c", "import time; time.sleep(30)", timeout=0.1, quiet=True)
+
+    def test_finished_command_does_not_wait_for_background_output_handles(self):
+        # A helper can leave a background process holding stdout/stderr after it exits.
+        with tempfile.TemporaryDirectory() as tmp:
+            pid = Path(tmp) / "background.pid"
+            script = (
+                "import pathlib, subprocess, sys; "
+                "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); "
+                f"pathlib.Path({str(pid)!r}).write_text(str(child.pid)); "
+                "print('installed', flush=True)"
+            )
+            try:
+                with mock.patch.object(install, "LOG", Path(tmp) / "install.log"), redirect_stdout(io.StringIO()):
+                    self.assertEqual(install.run(sys.executable, "-c", script, timeout=2, quiet=True), "installed\n")
+            finally:
+                if pid.exists():
+                    try:
+                        os.kill(int(pid.read_text()), signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
 
 
 class ThisPC(unittest.TestCase):
@@ -753,6 +832,27 @@ class TheBlueScreenSkipped(unittest.TestCase):
         ImageDraw.Draw(all_set).rectangle((830, 360, 1075, 512), fill=(0, 0, 170))
         self.assertFalse(vm_test.blue_screen(all_set))
         self.assertFalse(vm_test.blue_screen(Image.new("RGB", (1920, 1080))))
+
+    def test_setup_vm_uses_the_usb_boot_path_with_secure_boot(self):
+        from unittest import mock
+        spec = importlib.util.spec_from_file_location("usb_vm_test", ROOT / "tools/vm-test.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(module.subprocess, "run"), \
+                mock.patch.object(module.subprocess, "Popen") as start, mock.patch.object(module.shutil, "copy"):
+            (Path(tmp) / "qmp.sock").touch()
+            machine = module.VM("installer.iso", tmp)
+            command = start.call_args.args[0]
+            self.assertIn("file=installer.iso,format=raw,readonly=on,if=none,id=usb", command)
+            self.assertIn("usb-storage,drive=usb,removable=on,bootindex=1,id=stick", command)
+            self.assertIn("q35,smm=on", command)
+            self.assertTrue(any("OVMF_CODE_4M.ms.fd" in arg for arg in command))
+            self.assertFalse(any("ide-cd" in arg for arg in command))
+            # Reboot after installation still selects the installed disk ahead of the stick.
+            with mock.patch.object(machine, "qmp") as qmp:
+                machine.start_first("disk")
+                self.assertEqual(qmp.call_args.args[0]["arguments"]["value"], 3)
+            start.call_args.kwargs["stdout"].close()
 
     def test_the_vm_test_knows_monet_from_the_stick(self):
         # Up to 0.9.3 the VM started the stick again after the blue screen, and the "tour" was Setup's Hello.

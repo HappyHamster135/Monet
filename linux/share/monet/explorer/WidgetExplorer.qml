@@ -40,7 +40,8 @@ Item {
     }
 
     Component.onCompleted: {
-        const pieces = { containment: gallery.containment, sidePanel: gallery.sidePanel }
+        // D-Bus (Settings) has no sender; use this screen's desktop in that case.
+        const pieces = { containment: gallery.containment || root.containment.plasmoid, sidePanel: gallery.sidePanel }
         monet.setSource(Qt.resolvedUrl("MonetWidgetExplorer.qml"), pieces)
         if (monet.status === Loader.Error) {
             kde.setSource(Qt.resolvedUrl("KdeWidgetExplorer.qml"), pieces)

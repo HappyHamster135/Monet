@@ -42,8 +42,10 @@ import re
 import secrets
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -99,23 +101,67 @@ def log(text):
     emit(log=text)
 
 
-def run(*args, check=True, input=None, timeout=1800, quiet=False):
+def run(*args, check=True, input=None, timeout=1800, quiet=False, live=False):
     """Runs a command; its output goes to the log. Returns stdout."""
     if not quiet:
         log("$ " + " ".join(shlex.quote(str(a)) for a in args))
     try:
-        done = subprocess.run([str(a) for a in args], input=input, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        raise Stop(f"{args[0]} took too long.") from None
+        # Background descendants can keep pipes open after the command finishes.
+        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+            positions, pending = [0, 0], [b"", b""]
+
+            def show(final=False):
+                for i, stream in enumerate((stdout, stderr)):
+                    chunk = os.pread(stream.fileno(), os.fstat(stream.fileno()).st_size - positions[i], positions[i])
+                    positions[i] += len(chunk)
+                    lines = (pending[i] + chunk).replace(b"\r", b"\n").split(b"\n")
+                    pending[i] = lines.pop()
+                    if final:
+                        lines.append(pending[i])
+                    for line in lines:
+                        if line.strip():
+                            log("  " + line.decode("utf-8", "replace"))
+
+            expired = False
+            with subprocess.Popen([str(a) for a in args],
+                                  stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
+                                  stdout=stdout, stderr=stderr, text=True, start_new_session=True) as done:
+                deadline = time.monotonic() + timeout
+                try:
+                    while True:
+                        try:
+                            done.communicate(input=input,
+                                             timeout=min(0.25, max(0, deadline - time.monotonic())) if live else timeout)
+                            break
+                        except subprocess.TimeoutExpired:
+                            input = None
+                            if not live or time.monotonic() >= deadline:
+                                raise
+                            show()
+                except subprocess.TimeoutExpired:
+                    expired = True
+                    # Stop bootc's helpers too, before a retry can write to the same disk.
+                    try:
+                        os.killpg(done.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    done.wait()
+                if live:
+                    show(final=True)
+            output = os.pread(stdout.fileno(), os.fstat(stdout.fileno()).st_size, 0).decode("utf-8", "replace")
+            errors = os.pread(stderr.fileno(), os.fstat(stderr.fileno()).st_size, 0).decode("utf-8", "replace")
     except OSError as e:
         raise Stop(f"{args[0]} isn't available ({e.strerror}).") from None
-    out = (done.stdout or "") + (done.stderr or "")
-    for line in out.strip().splitlines()[-30:]:
-        if line.strip():
-            log("  " + line)
+    out = output + errors
+    if not live:
+        for line in out.strip().splitlines()[-30:]:
+            if line.strip():
+                log("  " + line)
+    if expired:
+        raise Stop(f"{args[0]} took too long.")
     if check and done.returncode != 0:
         raise Stop(f"{args[0]} failed (exit {done.returncode}).")
-    return done.stdout or ""
+    return output
 
 
 # -- 1. the disk --------------------------------------------------------------
@@ -343,7 +389,7 @@ def install(plan, parts):
         "--karg", "rootflags=subvol=root",
         *(arg for karg in QUIET for arg in ("--karg", karg)),
         *(luks_kargs(parts) if parts.get("fs") else []),
-        TARGET, timeout=3600)
+        TARGET, timeout=3600, live=True)
     emit(phase="install", fraction=0.9)
     boot_entry(plan, parts)
     emit(phase="install", fraction=1.0)
@@ -637,18 +683,18 @@ def seal(parts):
 def unmount_target():
     for path in (f"{TARGET}/boot/efi", f"{TARGET}/boot", TARGET):
         if os.path.ismount(path):
-            run("umount", "-R", path, check=False, quiet=True)
+            run("umount", "-R", path, check=False)
 
 
 def finish(parts=None):
     emit(phase="finish", fraction=0.2)
     unmount_target()
     run("btrfs", "subvolume", "delete", DOWNLOAD, check=False)
-    run("umount", TOP, check=False, quiet=True)
+    run("umount", TOP, check=False)
     if parts and parts.get("fs"):
-        run("cryptsetup", "close", MAPPED, check=False, quiet=True)
+        run("cryptsetup", "close", MAPPED, check=False)
         KEY.unlink(missing_ok=True)
-    run("sync", check=False, quiet=True)
+    run("sync", check=False)
     emit(phase="finish", fraction=1.0)
 
 

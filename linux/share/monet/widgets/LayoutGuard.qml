@@ -74,11 +74,14 @@ Item {
         saved.setValue(storageKey(), value);
         if (!flush.running) flush.start();
     }
-    function capture() {
-        if (!layout || !initialized || !leader() || pending || layout.editMode || layout.relayoutLock) return;
+    function capture(edited = false) {
+        if (!layout || !initialized || !leader()
+                || (!edited && (pending || layout.editMode || layout.relayoutLock))) return;
         const items = containers().map(c => ({id:c.applet.plasmoid.id,x:c.x,y:c.y,width:c.width,height:c.height,
                                               minWidth:Math.max(48,c.Layout.minimumWidth),minHeight:Math.max(48,c.Layout.minimumHeight)}));
-        const area = {width:layout.width,height:layout.height};
+        // Edit mode temporarily reserves room for the panels; keep the screen's saved area.
+        const previous = snapshots[layout.configKey];
+        const area = edited && previous ? previous.area : {width:layout.width,height:layout.height};
         last = {items:items,area:area};
         snapshots[layout.configKey] = last;
         persist();
@@ -135,6 +138,14 @@ Item {
     Timer { id: settle; interval: 650; onTriggered: guard.fit() }
     Connections {
         target: guard.layout
+        function onEditModeChanged() {
+            if (!guard.layout.editMode && guard.leader()) {
+                if (!guard.initialized) { guard.load(); guard.initialized = true; }
+                // Done is a new arrangement, not a screen resize to restore from the old snapshot.
+                guard.capture(true);
+                guard.schedule();
+            }
+        }
         function onWidthChanged() { guard.schedule(); }
         function onHeightChanged() { guard.schedule(); }
         function onConfigKeyChanged() { guard.schedule(); }
