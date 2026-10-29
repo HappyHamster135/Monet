@@ -104,7 +104,8 @@ class WindowFrame(unittest.TestCase):
         meta = self.window.metaObject()
         return QSignalSpy(self.window, meta.method(meta.indexOfSignal("backgroundMoveRequested()")))
 
-    def drag(self, start, end, modifiers=Qt.NoModifier):
+    def drag(self, start, end, modifiers=None):
+        modifiers = Qt.NoModifier if modifiers is None else modifiers
         QTest.mousePress(self.window, Qt.LeftButton, modifiers, QPoint(*start))
         QTest.mouseMove(self.window, QPoint(*end), 25)
         QTest.mouseRelease(self.window, Qt.LeftButton, modifiers, QPoint(*end))
