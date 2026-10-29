@@ -83,7 +83,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.9.3"
+current="$looks/look-0.9.4"
 # Repair old Store shortcuts even when this look version was already applied. An image can
 # gain the custom Store without another look stamp or another initial app download.
 # Content-based receipt: a changed migration runs once, including on images with

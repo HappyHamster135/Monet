@@ -95,11 +95,11 @@ class DesktopPlacement(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         try:
-            from PySide6.QtGui import QGuiApplication
+            from PySide6.QtCore import QCoreApplication
             from PySide6.QtQml import QJSEngine
         except ImportError:
             raise unittest.SkipTest("Qt JavaScript engine required")
-        cls.app = QGuiApplication.instance() or QGuiApplication([])
+        cls.app = QCoreApplication.instance() or QCoreApplication([])
         cls.Engine = QJSEngine
 
     def setUp(self):
