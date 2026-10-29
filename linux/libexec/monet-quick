@@ -2083,31 +2083,40 @@ def forget_recent():
 # near and the ones paired, their battery, and pairing, ringing, sending a file and texts.
 
 # Settings passes the id on a command line: a phone with any other kind of id is left out.
-PHONE_LISTED = re.compile(r"^- (.+): ([\w-]+) \((.+)\)$")
+PHONE_LISTED = re.compile(r"^- (.+): ([\w-]+)(?: on (.{1,1024}) via (.{1,256}))? \(([^()\r\n]{1,64})\)$")
 
 
 def phones(listed=None, battery=None):
     """[{id, name, paired, near, battery, charging}], or None when KDE Connect isn't here.
     listed: `kdeconnect-cli --list-devices` (in English, whatever the session's language)."""
-    if listed is None:
+    queried = listed is None
+    if queried:
         if not shutil.which("kdeconnect-cli"):
             return None
-        try:
-            done = subprocess.run(["kdeconnect-cli", "--list-devices"], capture_output=True, text=True, timeout=10,
-                                  env=dict(os.environ, LANGUAGE="C", LC_ALL="C.UTF-8"))
-        except (OSError, subprocess.TimeoutExpired):
-            return []
+        done = subprocess.run(["kdeconnect-cli", "--list-devices"], capture_output=True, text=True, timeout=10,
+                              env=dict(os.environ, LANGUAGE="C", LC_ALL="C.UTF-8"))
+        done.check_returncode()
+        if not done.stdout.strip() and done.stderr.strip() != "0 devices found":
+            raise ValueError("KDE Connect did not return a device list")
         listed = done.stdout
     found = []
     for line in listed.splitlines():
         match = PHONE_LISTED.match(line.strip())
+        if match and any(value is not None and (value != value.strip() or not value.isprintable())
+                         for value in match.group(3, 4)):
+            match = None
         if not match:
+            if queried and line.strip() and not re.fullmatch(r"\d+ devices found", line.strip()):
+                raise ValueError("KDE Connect returned an unreadable device list")
             continue
-        name, ident, state = match.groups()
+        name, ident, _addresses, _providers, state = match.groups()
+        state = re.findall(r"\b\w+\b", state)
         paired, near = "paired" in state, "reachable" in state
         charge, charging = (battery or phone_battery)(ident) if paired and near else (None, None)
         found.append({"id": ident, "name": name, "paired": paired, "near": near, "battery": charge,
                       "charging": charging})
+    if queried and not found and listed.strip() and listed.strip() != "0 devices found":
+        raise ValueError("KDE Connect returned no readable devices")
     return found
 
 
@@ -2117,15 +2126,25 @@ def phone_battery(ident):
     said = [busctl("get-property", "org.kde.kdeconnect", path, "org.kde.kdeconnect.device.battery", key) or ""
             for key in ("charge", "isCharging")]
     charge = re.fullmatch(r"i (-?\d+)", said[0].strip())
-    return (int(charge.group(1)) if charge and int(charge.group(1)) >= 0 else None,
-            said[1].strip() == "b true" if said[1].strip() else None)
+    return (int(charge.group(1)) if charge and 0 <= int(charge.group(1)) <= 100 else None,
+            {"b true": True, "b false": False}.get(said[1].strip()))
 
 
 def phone_send(ident):
-    """Picks a file (KDE's file dialog) and sends it to the phone."""
-    picked = run("kdialog", "--getopenfilename", str(Path.home()), "--title", tr("Send to your phone"), timeout=3600)
-    if picked and picked.strip():
-        run("kdeconnect-cli", "--share", picked.strip(), "-d", ident, timeout=60)
+    """Pick one file; CLI success is dispatch, not a delivery receipt."""
+    try:
+        picker = subprocess.run(["kdialog", "--getopenfilename", str(Path.home()), "--title", tr("Send to your phone")],
+                                capture_output=True, timeout=3600)
+    except (OSError, subprocess.SubprocessError):
+        return {"state": "failed"}
+    if picker.returncode == 1:
+        return {"state": "canceled"}
+    # kdialog adds one newline; spaces and newlines belonging to the filename stay intact.
+    picked = os.fsdecode(picker.stdout.removesuffix(b"\n"))
+    if picker.returncode != 0 or not picked:
+        return {"state": "failed"}
+    return {"state": "dispatched" if run("kdeconnect-cli", "--share", picked, "-d", ident, timeout=60) is not None
+            else "failed"}
 
 
 # Printers --------------------------------------------------------------------
@@ -6338,11 +6357,17 @@ def main(argv):
     elif cmd == "access-zoom" and args and args[0] in ("on", "off"):
         set_zoom(args[0] == "on")
     elif cmd == "phones":
-        emit(phones())
+        try:
+            emit(phones())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            print(tr("Couldn't check phones. Try again."), file=sys.stderr)
+            return 1
     elif cmd in ("phone-pair", "phone-unpair", "phone-ring") and args and re.fullmatch(r"[\w-]+", args[0]):
         run("kdeconnect-cli", "--" + cmd.split("-", 1)[1], "-d", args[0], timeout=30)
     elif cmd == "phone-send" and args and re.fullmatch(r"[\w-]+", args[0]):
-        phone_send(args[0])
+        result = phone_send(args[0])
+        emit(result)
+        return 1 if result["state"] == "failed" else 0
     elif cmd == "phone-files" and args and re.fullmatch(r"[\w-]+", args[0]):
         subprocess.Popen(["xdg-open", f"kdeconnect://{args[0]}/"], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

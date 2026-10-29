@@ -4968,6 +4968,11 @@ class YourPhone(unittest.TestCase):
               "- Old phone: 9f8e7d (paired)\n"
               "- Galaxy S24: c0ffee_01 (reachable)\n"
               "3 devices found\n")
+    # KDE 26.08.2: cli/kdeconnect-cli.cpp at 2a0a8c0cee6e2ae0c1ae842be9e1a9fb6cea2a69.
+    CURRENT_LISTED = ("- Pixel 8: pixel_01 on 192.0.2.10 via LAN (paired and reachable)\n"
+                      "- Galaxy S24: galaxy_02 on 2001:db8::7 via LAN (reachable)\n"
+                      "- Dual link: dual_03 on fe80::1%enp0s3, AA:BB:CC:DD:EE:FF via LAN, Bluetooth (beta) (paired and reachable)\n"
+                      "- Old phone: old_04 (paired)\n")
 
     def test_phones_as_kde_connect_lists_them(self):
         quick = quick_helper()
@@ -4979,6 +4984,67 @@ class YourPhone(unittest.TestCase):
         self.assertEqual(quick.phones("0 devices found\n"), [])
         # An id that isn't plain never reaches a command line: that phone is left out.
         self.assertEqual(quick.phones("- Evil: x;reboot (reachable)\n- Evil2: $(id) (paired and reachable)\n"), [])
+        self.assertEqual(quick.phones("- Away: abc (unpaired and unreachable)\n")[0],
+                         {"id": "abc", "name": "Away", "paired": False, "near": False, "battery": None, "charging": None})
+        current = quick.phones(self.CURRENT_LISTED, battery=lambda ident: (82, True))
+        self.assertEqual([(p["id"], p["paired"], p["near"], p["battery"]) for p in current],
+                         [("pixel_01", True, True, 82), ("galaxy_02", False, True, None),
+                          ("dual_03", True, True, 82), ("old_04", True, False, None)])
+
+    def test_discovery_empty_missing_and_failed_are_distinct(self):
+        from unittest import mock
+        quick = quick_helper()
+        with mock.patch.object(quick.shutil, "which", return_value=None), mock.patch.object(quick.subprocess, "run") as run:
+            self.assertIsNone(quick.phones())
+            run.assert_not_called()
+        with mock.patch.object(quick.shutil, "which", return_value="/usr/bin/kdeconnect-cli"):
+            with mock.patch.object(quick.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, self.LISTED, "")), \
+                    mock.patch.object(quick, "phone_battery", return_value=(82, True)):
+                self.assertEqual(len(quick.phones()), 3)
+            with mock.patch.object(quick.subprocess, "run", return_value=
+                    subprocess.CompletedProcess([], 0, self.CURRENT_LISTED, "4 devices found\n")), \
+                    mock.patch.object(quick, "phone_battery", return_value=(82, True)):
+                self.assertEqual([p["id"] for p in quick.phones()], ["pixel_01", "galaxy_02", "dual_03", "old_04"])
+            for stdout, stderr in (("", "0 devices found\n"), ("0 devices found\n", "")):
+                with self.subTest(stdout=stdout, stderr=stderr), mock.patch.object(quick.subprocess, "run", return_value=
+                        subprocess.CompletedProcess([], 0, stdout, stderr)):
+                    self.assertEqual(quick.phones(), [])
+            for failure in (OSError("missing"), subprocess.TimeoutExpired("kdeconnect-cli", 10)):
+                with self.subTest(failure=failure), mock.patch.object(quick.subprocess, "run", side_effect=failure):
+                    with self.assertRaises((OSError, subprocess.TimeoutExpired)):
+                        quick.phones()
+            with mock.patch.object(quick.subprocess, "run", return_value=
+                    subprocess.CompletedProcess([], 1, self.LISTED, "failed")), mock.patch.object(quick, "phone_battery") as battery:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    quick.phones()
+                battery.assert_not_called()
+            malformed = ["- Bad: id on 192.0.2.1 (reachable)", "- Bad: id via LAN (reachable)",
+                         "- Bad: id on  via LAN (reachable)", "- Bad: id on 192.0.2.1 via  (reachable)",
+                         "- Bad: id on 192.0.2.1  via LAN (reachable)", "- Bad: id on 192.0.2.1 via LAN\tbad (reachable)",
+                         "- Bad: id on " + "a" * 1025 + " via LAN (reachable)",
+                         "- Bad: id on 192.0.2.1 via " + "a" * 257 + " (reachable)",
+                         "- Bad: id on 192.0.2.1 via LAN (" + "a" * 256 + ") (reachable)",
+                         "- Bad: x;reboot on 192.0.2.1 via LAN (reachable)"]
+            failures = [("", ""), ("3 devices found\n", ""), ("service unavailable", ""), (self.LISTED + "broken row", "")]
+            failures += [(line + "\n", "1 device found\n") for line in malformed]
+            for stdout, stderr in failures:
+                with self.subTest(stdout=stdout), mock.patch.object(quick.subprocess, "run", return_value=
+                        subprocess.CompletedProcess([], 0, stdout, stderr)), mock.patch.object(quick, "phone_battery", return_value=(None, None)):
+                    with self.assertRaises(ValueError):
+                        quick.phones()
+
+    def test_discovery_failure_is_a_failed_helper_call(self):
+        import contextlib
+        import io
+        from unittest import mock
+        quick = quick_helper()
+        for failure in (OSError(), ValueError(), subprocess.TimeoutExpired("kdeconnect-cli", 10)):
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with self.subTest(failure=failure), mock.patch.object(quick, "phones", side_effect=failure), \
+                    contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                self.assertEqual(quick.main(["phones"]), 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("Couldn't check phones", stderr.getvalue())
 
     def test_the_battery_as_kde_connect_says_it(self):
         from unittest import mock
@@ -4988,6 +5054,104 @@ class YourPhone(unittest.TestCase):
             self.assertEqual(quick.phone_battery("x"), (64, False))
         with mock.patch.object(quick, "busctl", lambda *a: None):
             self.assertEqual(quick.phone_battery("x"), (None, None))
+        for charge, charging, expected in (("i -1", "b true", (None, True)), ("i 101", "b false", (None, False)),
+                                           ("i 0", "b false", (0, False)), ("i 100", "b true", (100, True)),
+                                           ("i 42", "unreadable", (42, None)), ("d 42.5", "", (None, None))):
+            said = {"charge": charge, "isCharging": charging}
+            with self.subTest(charge=charge, charging=charging), mock.patch.object(quick, "busctl", lambda *a: said[a[-1]]):
+                self.assertEqual(quick.phone_battery("x"), expected)
+
+    def test_file_dispatch_preserves_the_selected_path_and_recipient(self):
+        from unittest import mock
+        quick = quick_helper()
+        for path in ("/tmp/ Pictures /Lily – 東京 .jpg ", "/tmp/a picture\r\n"):
+            results = [subprocess.CompletedProcess([], 0, os.fsencode(path) + b"\n", b""), subprocess.CompletedProcess([], 0, "", "")]
+            with self.subTest(path=path), mock.patch.object(quick.shutil, "which", return_value="/usr/bin/kdeconnect-cli"), \
+                    mock.patch.object(quick.subprocess, "run", side_effect=results) as run:
+                self.assertEqual(quick.phone_send("second_phone"), {"state": "dispatched"})
+                self.assertEqual(run.call_args.args[0], ("kdeconnect-cli", "--share", path, "-d", "second_phone"))
+
+    def test_file_cancel_and_failure_do_not_claim_dispatch(self):
+        from unittest import mock
+        quick = quick_helper()
+        for code, stdout, expected in ((1, b"", "canceled"), (2, b"", "failed"), (0, b"", "failed")):
+            with self.subTest(code=code), mock.patch.object(quick.subprocess, "run", return_value=
+                    subprocess.CompletedProcess([], code, stdout, "")), mock.patch.object(quick, "run") as share:
+                self.assertEqual(quick.phone_send("phone"), {"state": expected})
+                share.assert_not_called()
+        for failure in (OSError(), subprocess.TimeoutExpired("kdialog", 3600)):
+            with self.subTest(failure=failure), mock.patch.object(quick.subprocess, "run", side_effect=failure):
+                self.assertEqual(quick.phone_send("phone"), {"state": "failed"})
+        with mock.patch.object(quick.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"/tmp/photo.jpg\n", b"")), \
+                mock.patch.object(quick, "run", return_value=None):
+            self.assertEqual(quick.phone_send("phone"), {"state": "failed"})
+
+    def test_file_helper_returns_the_dispatch_outcome(self):
+        import contextlib
+        import io
+        from unittest import mock
+        quick = quick_helper()
+        for state, code in (("canceled", 0), ("failed", 1), ("dispatched", 0)):
+            stdout = io.StringIO()
+            with self.subTest(state=state), mock.patch.object(quick, "phone_send", return_value={"state": state}), \
+                    contextlib.redirect_stdout(stdout):
+                self.assertEqual(quick.main(["phone-send", "phone"]), code)
+            self.assertEqual(json.loads(stdout.getvalue()), {"state": state})
+
+    def test_phone_page_callbacks_clear_stale_actions_and_report_dispatch_honestly(self):
+        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        functions = "\n".join(re.search(r"\n    (function " + name + r"\(.*?\n    })\n", settings, re.S).group(1)
+                              for name in ("loadPhones", "sendPhoneFile"))
+        source = '''
+function check(ok, message) { if (!ok) throw new Error(message); }
+var pending = [];
+function ask(command, callback) { pending.push({ command, callback }); }
+function reply(value, code) { pending.shift().callback(value, code); }
+var row = { id: "second", name: "Phone", paired: true, near: true, battery: 42, charging: false };
+var sheet = { phoneList: [row], phoneApp: true, phoneAsked: "second", phoneChecking: false,
+    phoneFailed: false, phoneSending: false, phoneFileState: "",
+    json: function(text, fallback) { try { return JSON.parse(text); } catch (_) { return fallback; } } };
+''' + functions + '''
+loadPhones(); loadPhones();
+check(pending.length === 1, "discovery requests overlap");
+reply(JSON.stringify([row]), 1);
+check(sheet.phoneFailed && !sheet.phoneChecking && sheet.phoneList.length === 0 && sheet.phoneAsked === "",
+      "failed discovery retained stale actions");
+for (var broken of ["", "{}", "[null]", JSON.stringify([Object.assign({}, row, { paired: 1 })]),
+                    JSON.stringify([Object.assign({}, row, { battery: 101 })])]) {
+    loadPhones(); reply(broken, 0);
+    check(sheet.phoneFailed && sheet.phoneList.length === 0, "invalid result became usable");
+}
+loadPhones(); reply("null", 0);
+check(!sheet.phoneFailed && !sheet.phoneApp && sheet.phoneList.length === 0, "missing transport became a discovery error");
+loadPhones(); reply("[]", 0);
+check(!sheet.phoneFailed && sheet.phoneApp && sheet.phoneList.length === 0, "valid empty discovery became an error");
+loadPhones(); reply(JSON.stringify([row]), 0);
+check(!sheet.phoneFailed && sheet.phoneList[0].id === "second", "retry did not recover");
+for (var item of [["dispatched", 0, "dispatched"], ["canceled", 0, "canceled"],
+                 ["dispatched", 1, "failed"], ["unknown", 0, "failed"]]) {
+    sendPhoneFile("second"); sendPhoneFile("first");
+    check(pending.length === 1 && pending[0].command === "phone-send second", "file target changed or requests overlapped");
+    reply(JSON.stringify({ state: item[0] }), item[1]);
+    check(!sheet.phoneSending && sheet.phoneFileState === item[2], "wrong file outcome");
+}
+sendPhoneFile("second"); reply("null", 0);
+check(sheet.phoneFileState === "failed", "null file result was accepted");
+'''
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError:
+            node = shutil.which("node")
+            if not node:
+                self.skipTest("no Qt JavaScript engine or Node")
+            result = subprocess.run([node, "-e", source], capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        else:
+            app = QCoreApplication.instance() or QCoreApplication([])  # noqa: F841
+            engine = QJSEngine()
+            result = engine.evaluate(source)
+            self.assertFalse(result.isError(), result.toString())
 
     def test_the_page(self):
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
@@ -4999,6 +5163,8 @@ class YourPhone(unittest.TestCase):
         script = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
         self.assertIn('"phone": "kcm_kdeconnect"', script)
         self.assertIn('PAGES = ("light", "wifi", "bluetooth", "phone",', script)
+        self.assertIn('sheet.ask("phone-files " + modelData.id)', settings)
+        self.assertNotIn('phoneColumn.paired.find(p => p.near).id', settings)
         # Ids from the helper only, checked: never anything else on the command line.
         self.assertIn('elif cmd in ("phone-pair", "phone-unpair", "phone-ring") and args and re.fullmatch(r"[\\w-]+", args[0]):', script)
 

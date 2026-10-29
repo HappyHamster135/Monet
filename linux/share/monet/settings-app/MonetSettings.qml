@@ -281,6 +281,10 @@ Shared.MonetWindow {
     property var phoneList: []
     property bool phoneApp: true
     property string phoneAsked: ""
+    property bool phoneChecking: false
+    property bool phoneFailed: false
+    property bool phoneSending: false
+    property string phoneFileState: ""
     // About → Save a report: being written, and the name of the one saved.
     property bool reporting: false
     // About → Command-line tools: BoxBuddy on its way from Flathub.
@@ -1160,12 +1164,37 @@ Shared.MonetWindow {
     }
 
     function loadPhones() {
-        ask("phones", out => {
-            const found = sheet.json(out, [])
+        if (sheet.phoneChecking) return
+        sheet.phoneChecking = true
+        ask("phones", (out, code) => {
+            const found = sheet.json(out, false)
+            const valid = found === null || (Array.isArray(found) && found.every(p => p
+                && typeof p.id === "string" && p.id !== "" && typeof p.name === "string"
+                && typeof p.paired === "boolean" && typeof p.near === "boolean"
+                && (p.battery === null || (Number.isInteger(p.battery) && p.battery >= 0 && p.battery <= 100))
+                && (p.charging === null || typeof p.charging === "boolean")))
+            sheet.phoneChecking = false
+            sheet.phoneFailed = code !== 0 || !valid
+            if (sheet.phoneFailed) {
+                sheet.phoneList = []
+                sheet.phoneAsked = ""
+                return
+            }
             sheet.phoneApp = found !== null
             sheet.phoneList = found || []
             if (sheet.phoneList.some(p => p.id === sheet.phoneAsked && p.paired))
                 sheet.phoneAsked = ""
+        })
+    }
+
+    function sendPhoneFile(ident) {
+        if (sheet.phoneSending) return
+        sheet.phoneSending = true
+        sheet.phoneFileState = ""
+        ask("phone-send " + ident, (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.phoneSending = false
+            sheet.phoneFileState = code === 0 && result && ["canceled", "dispatched"].includes(result.state) ? result.state : "failed"
         })
     }
 
@@ -3269,6 +3298,23 @@ Shared.MonetWindow {
                     text: i18n("Phone")
                     detail: i18n("Texts, notifications and files between your phone and this PC.")
                 }
+                Card {
+                    tone: look
+                    visible: sheet.phoneFailed
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Couldn't check phones")
+                        detail: i18n("The connection check didn't finish. Try again, or open More phone settings.")
+                        Accessible.role: Accessible.AlertMessage
+                        Pill {
+                            tone: look
+                            text: sheet.phoneChecking ? i18n("Checking…") : i18n("Try again")
+                            enabledPill: !sheet.phoneChecking
+                            onClicked: sheet.loadPhones()
+                        }
+                    }
+                }
                 // Phones come and go as they join the Wi-Fi, and a pairing is answered on the phone.
                 Timer {
                     interval: 4000
@@ -3322,7 +3368,14 @@ Shared.MonetWindow {
                                     visible: modelData.near
                                     kind: "lily"
                                     text: i18n("Send a file…")
-                                    onClicked: sheet.ask("phone-send " + modelData.id)
+                                    enabledPill: !sheet.phoneSending
+                                    onClicked: sheet.sendPhoneFile(modelData.id)
+                                }
+                                Pill {
+                                    tone: look
+                                    visible: modelData.near
+                                    text: i18n("Files")
+                                    onClicked: sheet.ask("phone-files " + modelData.id)
                                 }
                                 Pill {
                                     tone: look
@@ -3333,19 +3386,25 @@ Shared.MonetWindow {
                         }
                     }
                 }
-                Row {
-                    spacing: 8
+                Card {
+                    tone: look
+                    visible: sheet.phoneSending || sheet.phoneFileState !== ""
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: sheet.phoneSending ? i18n("Choose a file to share")
+                            : sheet.phoneFileState === "canceled" ? i18n("No file sent")
+                            : sheet.phoneFileState === "dispatched" ? i18n("Sharing requested") : i18n("The file couldn't be shared")
+                        detail: sheet.phoneFileState === "dispatched" ? i18n("Check your phone for the file. This PC can't confirm its arrival.")
+                            : sheet.phoneFileState === "failed" ? i18n("Check the connection and try again.") : ""
+                        Accessible.role: sheet.phoneFileState === "failed" ? Accessible.AlertMessage : Accessible.StaticText
+                    }
+                }
+                Pill {
+                    tone: look
                     visible: phoneColumn.paired.some(p => p.near)
-                    Pill {
-                        tone: look
-                        text: i18n("Texts")
-                        onClicked: sheet.ask("phone-texts")
-                    }
-                    Pill {
-                        tone: look
-                        text: i18n("Files on your phone")
-                        onClicked: sheet.ask("phone-files " + phoneColumn.paired.find(p => p.near).id)
-                    }
+                    text: i18n("Texts")
+                    onClicked: sheet.ask("phone-texts")
                 }
                 // Phones on the same Wi-Fi with KDE Connect open, to pair (the phone asks to accept).
                 Card {
@@ -3375,7 +3434,7 @@ Shared.MonetWindow {
                 // No phone yet: the app, a scan away.
                 Card {
                     tone: look
-                    visible: phoneColumn.paired.length === 0 && sheet.phoneApp
+                    visible: phoneColumn.paired.length === 0 && sheet.phoneApp && !sheet.phoneFailed
                     Item {
                         Layout.fillWidth: true
                         implicitHeight: Math.max(qr.height, getApp.implicitHeight) + 36
@@ -3430,7 +3489,7 @@ Shared.MonetWindow {
                 }
                 Pill {
                     tone: look
-                    visible: sheet.phoneApp
+                    visible: sheet.phoneApp || sheet.phoneFailed
                     text: i18n("More phone settings…")
                     onClicked: sheet.ask("kde phone")
                 }
