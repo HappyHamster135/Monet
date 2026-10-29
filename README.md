@@ -69,6 +69,10 @@ cargo build --release -p monet --target x86_64-unknown-linux-musl   # Linux
 cargo build --release -p monet-bridge                                # on Windows
 ```
 
+Run the Python and Qt checks on Linux with `python3 tools/test.py`, or send them
+to the configured test VM with `python tools/vm.py tests`. Each module has its own
+process so Qt fixtures cannot leave type registrations in another test app.
+
 Linux release packaging also needs CMake, a C++17 compiler and Qt 6 Widgets/Test
 development packages (`qt6-base-dev` on Debian/Ubuntu, `qt6-qtbase-devel` on Fedora).
 `tools/package.sh linux …` builds and tests More Settings' private layout style;

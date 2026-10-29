@@ -2306,3 +2306,27 @@ anyway, turn on **Glass** in Settings â†’ Light & Wallpaper: right, but slo
    fresh Monet is a click away.
 
 The screen size is set in Monet (Settings â†’ Display) once it's installed.
+
+
+### 0.9.4 release preflight — 2026-10-29
+
+The full checkout suite ran in the Monet VM with `tools/test.py`: 957 tests,
+945 passed and 12 skipped in the outer runner. Eight of those are intentionally
+run again on a private D-Bus by the passing notification subprocess test; the
+remaining four require Node or Windows PowerShell. The Windows
+PowerShell syntax check passed separately, as did 18 Windows USB safety tests,
+15 Bridge tests and Windows Clippy with warnings denied. No physical disk was written.
+
+The installer hardware matrix exercises both Setup's detector and the fallback
+kickstart detector against Intel, AMD, modern NVIDIA, hybrid graphics, older NVIDIA
+and no-display-controller fixtures. It confirms driver selection happens on the
+destination, independent of the PC making the USB stick. Both OS image builds must
+finish before either installer build starts. The USB binary remains common to all
+supported x86-64 UEFI machines. This is not a physical-hardware compatibility test.
+
+The combined Python process exposed a PySide assertion when unrelated QML fixtures
+were loaded in succession. Running each module in a separate process keeps the
+complete suite usable without disabling the affected UI tests. A JS-only test now
+uses QCoreApplication, and a Qt-optional fixture no longer evaluates Qt constants
+when Qt is unavailable. Full-image build and installation results are recorded
+separately; these preflight results alone do not establish a bootable release.
