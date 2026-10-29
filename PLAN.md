@@ -1,5 +1,26 @@
 # Monet: Project Plan
 
+## Release 0.9.4 — 2026-10-29
+
+The user has now authorized committing, pushing and publishing 0.9.4 for a first
+physical USB/laptop test, superseding the earlier unpublished-build restriction.
+The USB maker is common to supported x86-64 UEFI PCs; both installers choose the
+NVIDIA or AMD/Intel image on the destination PC. ARM and BIOS-only PCs remain
+unsupported. Both OS image jobs must finish before either installer build starts.
+
+Release [0.9.4](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.4)
+is published from `9ffbf84ac36618c724c1684c46459eaa1b1ff811` on `main`.
+Release run 40895588120 passed, including both graphics images, both installers,
+fresh installation, Secure Boot enrollment recovery, first boot and lock/unlock.
+The full VM suite and Windows safety checks passed; the complete local image and
+its installed PDF recovery helpers also passed the isolated native scenarios.
+The downloaded release USB executable matches both its published checksum and
+the exact binary scanned by Defender, which found no threats.
+See [Testing](docs/TESTING.md) for evidence and limits. Physical USB writing,
+laptop driver behavior and a real Windows round trip remain unverified.
+The CI desktop tour also needs stronger app checks: its Settings screenshot shows
+Steam instead, so that portion is inconclusive despite the successful boot test.
+
 ## Active integration and app-restoration goal — 2026-10-29
 
 1. Build this checkout as a complete Monet image, install and boot it in the VM, then

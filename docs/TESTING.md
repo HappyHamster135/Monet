@@ -2330,3 +2330,42 @@ complete suite usable without disabling the affected UI tests. A JS-only test no
 uses QCoreApplication, and a Qt-optional fixture no longer evaluates Qt constants
 when Qt is unavailable. Full-image build and installation results are recorded
 separately; these preflight results alone do not establish a bootable release.
+
+The complete local 0.9.4 image also built successfully, including every native
+bundle's runtime compatibility check. Its final image is
+`a641f65661a2f4df3fa34d814ca80b23f40faae532c959e48b0f9b8bfbfca7c5`.
+In an isolated VM desktop using that image, the installed Okular and installed
+`monet-resume`/`monet-pdf-session` passed both the native CLI restoration fixture
+and the return-controller fixture. These cover duplicate tabs, pages, independent
+windows, preferences, malformed and missing documents, protected close, cancellation,
+geometry, an already-open survivor and retry after controller interruption. Both
+fixtures exited zero; the runtime was stopped after evidence collection.
+Evidence: `target/full-image/release094/native-evidence.tar` and `native-summary.json`.
+This is packaged-app execution inside the VM, not a reboot into this image.
+
+The preceding image assembly passed `bootc container lint`: 12 checks passed, one
+skipped, and two warnings for DNF logs/state under `/var`. Microsoft Defender also
+found no threats in the USB executable from release run 40895588120, SHA-256
+`b13647e456facf8dcecd2489fe7a3841680b4e75a35de333580cfc1a61905fa0`.
+An antivirus scan does not validate physical USB writes or hardware reliability.
+
+Release run [40895588120](https://github.com/HappyHamster135/Monet/actions/runs/40895588120)
+completed successfully and published preview release `v0.9.4` from commit
+`9ffbf84ac36618c724c1684c46459eaa1b1ff811`. Both NVIDIA and AMD/Intel images,
+both installer ISOs, Linux/Windows packages and their checks passed. The fallback
+ISO's media checksum and embedded EFI menu checks passed. Monet Setup installed
+into a blank QEMU disk with Secure Boot enabled; mistakenly choosing Continue boot
+returned to enrollment, and the installed system subsequently booted. Its journal,
+desktop/Files screenshots and successful lock/unlock provide direct evidence.
+The optional tour's Settings screenshot shows Steam instead of Settings, so that
+app check is inconclusive. Windows preparation correctly refused the small test
+disk for lack of space; this run does not validate Windows installation or switching.
+Logs and 40 screenshots are under `target/full-image/release094/ci-screens/`
+and `ci-setup-vm.log`. Physical hardware and USB writes remain untested.
+
+All six release assets are published. Downloading the release USB executable and
+`SHA256SUMS.txt` again confirmed the executable's hash matches the scanned binary
+above. The published Setup ISO checksum is
+`2b92642fb9e0e122bdc407828000ba0dd8e6cb7b7c91a7a2cc6bdfab5e3af839`;
+the fallback Installer ISO checksum is
+`85270cf07d275518164ecec8b3c91f1989b5e5457a5cb7a484ba46b1cdb0b3a0`.
