@@ -1,0 +1,2249 @@
+#!/usr/bin/env python3
+"""Work checkpoints for a trip to Windows. Imported by monet-quick, never root.
+
+Version 3 binds recovery to a confirmed trip: saved local Kate/KWrite documents,
+PDF tabs/pages, Files tabs, Zen's native normal session and KWin placement. Other apps own their
+recovery. No window titles, credentials or document contents are copied here.
+"""
+import configparser
+import copy
+from collections import Counter
+from contextlib import contextmanager
+from functools import lru_cache
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import time
+import uuid
+from urllib.parse import unquote, urlsplit, quote
+
+APP_ID = re.compile(r"[\w.+-]+\.desktop\Z")
+LIMIT = 2 * 1024 * 1024
+MAX_APPS = 64
+EDITORS = {"org.kde.kate.desktop": "kate", "org.kde.kwrite.desktop": "kwrite"}
+FILES = "org.kde.dolphin.desktop"
+BROWSER = "app.zen_browser.zen.desktop"
+PDF = "org.kde.okular.desktop"
+TRIP_RETURN = Path(os.environ.get("MONET_STATE_DIR") or "/var/lib/monet") / "trip-return.json"
+
+
+@lru_cache(maxsize=1)
+def files_helper():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader("monet_files_session", str(Path(__file__).with_name("monet-files-session")))
+    module = module_from_spec(spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+@lru_cache(maxsize=1)
+def browser_helper():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader("monet_browser_session", str(Path(__file__).with_name("monet-browser-session")))
+    module = module_from_spec(spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+@lru_cache(maxsize=1)
+def editor_helper():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader("monet_editor_session", str(Path(__file__).with_name("monet-editor-session")))
+    module = module_from_spec(spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+@lru_cache(maxsize=1)
+def pdf_helper():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader("monet_pdf_session", str(Path(__file__).with_name("monet-pdf-session")))
+    module = module_from_spec(spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+def boot_id():
+    try:
+        return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    except OSError:
+        return ""
+
+
+def atomic_write(path, value):
+    """Private, crash-safe replacement: never truncate the last good checkpoint."""
+    text = json.dumps(value, ensure_ascii=False) + "\n"
+    if len(text) > LIMIT:
+        raise OSError("Work checkpoint exceeds the readable size limit")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".trip-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+    finally:
+        Path(name).unlink(missing_ok=True)
+
+
+def read_state(path):
+    try:
+        with path.open(encoding="utf-8") as stream:
+            text = stream.read(LIMIT + 1)
+        value = json.loads(text) if len(text) <= LIMIT else None
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def local_document(url):
+    """Only saved local files. In particular, never turn a URL into command options."""
+    if not isinstance(url, str) or len(url) > 8192 or any(ord(c) < 32 for c in url):
+        return None
+    parsed = urlsplit(url)
+    if parsed.scheme != "file" or parsed.netloc not in ("", "localhost") or parsed.query or parsed.fragment:
+        return None
+    path = unquote(parsed.path)
+    return path if path.startswith("/") and not any(ord(c) < 32 for c in path) else None
+
+
+def documents(text):
+    """KTextEditor's checkpoint lists saved documents, independently of recent files."""
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    try:
+        parser.read_string(text)
+        count = parser.getint("Open Documents", "Count", fallback=0)
+    except (configparser.Error, ValueError):
+        return []
+    found = []
+    # Auto-save can leave old Document N sections behind after closing a tab.
+    # The count, not the group names, describes the current session.
+    for index in range(min(max(count, 0), 100)):
+        section = f"Document {index}"
+        path = local_document(parser.get(section, "URL", fallback=""))
+        if path and path not in found:
+            found.append(path)
+    return found[:100]
+
+
+def dbus(service, path, interface, method, *args):
+    from PySide6.QtDBus import QDBusConnection, QDBusMessage
+    request = QDBusMessage.createMethodCall(service, path, interface, method)
+    request.setArguments(list(args))
+    reply = QDBusConnection.sessionBus().call(request, timeout=1500)
+    if reply.type() == QDBusMessage.ErrorMessage:
+        raise RuntimeError(reply.errorName())
+    return reply.arguments()
+
+
+WINDOWS_JS = r"""
+function appId(w) {
+    let id = String(w.desktopFileName || "");
+    return /^[\w.+-]+$/.test(id) ? (id.endsWith(".desktop") ? id : id + ".desktop") : "";
+}
+function rect(r) { return {x:r.x, y:r.y, width:r.width, height:r.height}; }
+function windows() {
+    return workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.transient && appId(w));
+}
+function capture(w) {
+    let area = workspace.clientArea(KWin.MaximizeArea, w);
+    let g = w.frameGeometry;
+    return {app:appId(w), id:String(w.internalId), pid:w.pid, role:String(w.windowRole || ""),
+            rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "",
+            outputs:workspace.screens.map(o => ({name:o.name, area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
+            maximized:Math.abs(g.x-area.x)<2 && Math.abs(g.y-area.y)<2 &&
+                      Math.abs(g.width-area.width)<2 && Math.abs(g.height-area.height)<2,
+            minimized:w.minimized, fullscreen:w.fullScreen,
+            desktops:w.desktops.map(d => ({id:d.id, name:d.name})), allDesktops:w.onAllDesktops,
+            above:w.keepAbove, below:w.keepBelow, active:w.active, stack:w.stackingOrder};
+}
+function scene() {
+    return {desktop:{id:workspace.currentDesktop.id, name:workspace.currentDesktop.name},
+            activity:workspace.currentActivity, cursor:{x:workspace.cursorPos.x, y:workspace.cursorPos.y}};
+}
+"""
+
+
+def kwin_script(body):
+    """One short-lived script; receive its result over the private session bus."""
+    from PySide6.QtCore import QCoreApplication, QEventLoop, QObject, QTimer, Slot, ClassInfo
+    from PySide6.QtDBus import QDBusConnection
+    app = QCoreApplication.instance() or QCoreApplication([])
+    loop = QEventLoop()
+    result = []
+
+    @ClassInfo(**{"D-Bus Interface": "org.monet.Resume"})
+    class Receiver(QObject):
+        @Slot(str)
+        def captured(self, text):
+            try:
+                result.append(json.loads(text))
+            except ValueError:
+                pass
+            loop.quit()
+
+    receiver = Receiver()
+    bus = QDBusConnection.sessionBus()
+    name = f"org.monet.Resume.p{os.getpid()}"
+    script_name = f"monet-resume-{os.getpid()}"
+    if not bus.registerService(name):
+        raise RuntimeError("Cannot receive KWin checkpoint")
+    if not bus.registerObject("/Resume", receiver, QDBusConnection.ExportAllSlots):
+        bus.unregisterService(name)
+        raise RuntimeError("Cannot receive KWin checkpoint")
+    source = WINDOWS_JS + "\nfunction reply(value) { callDBus(" + json.dumps(name) + "," \
+        '"/Resume", "org.monet.Resume", "captured", JSON.stringify(value)); }\n' + body
+    try:
+        with tempfile.TemporaryDirectory(prefix="monet-resume-") as folder:
+            script = Path(folder) / "main.js"
+            script.write_text(source, encoding="utf-8")
+            ident = dbus("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadScript", str(script), script_name)[0]
+            if ident < 0:
+                raise RuntimeError("Cannot load KWin checkpoint")
+            try:
+                dbus("org.kde.KWin", f"/Scripting/Script{ident}", "org.kde.kwin.Script", "run")
+                timer = QTimer()
+                timer.setSingleShot(True)
+                timer.timeout.connect(loop.quit)
+                timer.start(3500)
+                if not result:
+                    loop.exec()
+                timer.stop()
+                if not result:
+                    raise RuntimeError("KWin checkpoint timed out")
+                return result[0]
+            finally:
+                dbus("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript", script_name)
+    finally:
+        bus.unregisterObject("/Resume")
+        bus.unregisterService(name)
+
+
+def window_snapshot():
+    try:
+        result = kwin_script("reply(windows().map(capture).slice(0, 64));")
+    except (ImportError, OSError, RuntimeError) as error:
+        raise OSError("Could not check the open windows; try again.") from error
+    if not isinstance(result, list):
+        raise OSError("The open-window response was incomplete; try again.")
+    return result
+
+
+def desktop_snapshot():
+    try:
+        result = kwin_script("reply({windows:windows().map(capture).slice(0, 64), scene:scene()});")
+    except (ImportError, OSError, RuntimeError) as error:
+        raise OSError("Could not check the desktop; try again.") from error
+    if not isinstance(result, dict) or not isinstance(result.get("windows"), list):
+        raise OSError("The desktop response was incomplete; try again.")
+    return result
+
+
+def departure_windows(close=None):
+    """Normal close requests preserve each app's own Save/Discard/Cancel behavior."""
+    result = kwin_script("""
+const pending = workspace.windowList().filter(w => !w.deleted && (w.normalWindow || w.dialog)
+    && w.pid !== %s && !["org.kde.plasmashell", "org.kde.krunner", "org.kde.xwaylandvideobridge",
+        "org.kde.polkit-kde-authentication-agent-1"].includes(String(w.desktopFileName).replace(/\\.desktop$/, "")));
+const target = pending.find(w => String(w.internalId) === %s);
+if (target && target.closeable) target.closeWindow();
+reply(pending.map(w => ({id:String(w.internalId), app:appId(w), pid:w.pid, closeable:w.closeable, normal:w.normalWindow && !w.transient})));
+""" % (os.getpid(), json.dumps(close)))
+    if (not isinstance(result, list) or any(not isinstance(w, dict) or not isinstance(w.get("id"), str)
+            or type(w.get("closeable")) is not bool for w in result)):
+        raise RuntimeError("Could not check open windows")
+    return result
+
+
+def cancel_departure(path, ident):
+    """Only this cancelled attempt may reopen closed apps, and only on this boot."""
+    native = []
+    with restore_lock(path):
+        saved = read_state(path)
+        boot = boot_id()
+        if not boot or saved.get("id") != ident or saved.get("boot") != boot or saved.get("version") != 3:
+            return False
+        saved.update(cancelled_boot=boot, scene_finished=True)
+        if not isinstance(saved.get("groups", {}), dict):
+            raise ValueError("Invalid editor groups")
+        for app, groups in saved.get("groups", {}).items():
+            for group in groups if (app in EDITORS or app == PDF) and isinstance(groups, list) else []:
+                closing = group.pop("closing", None) if isinstance(group, dict) else None
+                if closing:
+                    if (isinstance(closing, dict) and closing.get("native") is True
+                            and type(closing.get("pid")) is int and closing["pid"] > 0):
+                        native.append((app, closing["pid"]))
+                    group["final_unverified"] = True
+        atomic_write(path, saved)
+    for app, pid in native:
+        if app == PDF:
+            try:
+                pdf_helper().arm(pid, ident, False)
+            except (ImportError, OSError, RuntimeError, ValueError):
+                pass  # The cancelled ID is no longer eligible for an automatic return.
+        else:
+            disarm_editor(app, pid, ident)
+    return True
+
+
+def arm_editor(app, pid, ident, armed=True, *, windows=False):
+    try:
+        result = dbus(f"org.kde.{EDITORS[app]}-{pid}", "/MainApplication", "org.kde.Kate.Application",
+                      "monetDepartureWindows" if windows else "monetDeparture", ident, armed)
+    except RuntimeError as error:
+        if str(error) == "org.freedesktop.DBus.Error.UnknownMethod":
+            return False  # Older/source installs retain the conservative native-file fallback.
+        raise
+    if not isinstance(result, list) or len(result) != 1 or result[0] is not True:
+        raise RuntimeError("Editor could not prepare private recovery")
+    return True
+
+
+def disarm_editor(app, pid, ident):
+    try:
+        arm_editor(app, pid, ident, False)
+    except (OSError, RuntimeError, ValueError):
+        pass  # The editor may already have exited; this cancelled ID is never replayed.
+
+
+def reopen_editor(app, pid, ident, documents, cursors=None, scrolls=None, selections=None, foldings=None):
+    """Add late files to an exact native window; None means an older editor API."""
+    helper = editor_helper()
+    if (app not in EDITORS or type(pid) is not int or pid <= 0
+            or not helper.valid_windows([{"id": ident, "editor": None}])
+            or not isinstance(documents, list) or not 1 <= len(documents) <= 200
+            or any(not helper.local(p) or not Path(p).is_file() for p in documents)
+            or len(set(documents)) != len(documents)
+            or (cursors is not None and (not isinstance(cursors, list) or len(cursors) != len(documents)
+                or any(n is not None and (type(n) is not int or not 0 <= n <= 2**31-1) for n in cursors)))
+            or (scrolls is not None and (not isinstance(scrolls, list) or len(scrolls) != len(documents)
+                or not all(helper.valid_scroll(position) for position in scrolls)))
+            or (selections is not None and (not isinstance(selections, list) or len(selections) != len(documents)
+                or not all(helper.valid_selection(selection) for selection in selections)))
+            or (foldings is not None and (not isinstance(foldings, list) or len(foldings) != len(documents)
+                or not all(helper.valid_folding(folding) for folding in foldings)))):
+        return False
+    request = {"id": ident, "documents": documents}
+    if cursors is not None:
+        request["cursors"] = cursors
+    if scrolls is not None and any(position is not None for position in scrolls):
+        request["scrolls"] = scrolls
+    if selections is not None and any(selection is not None for selection in selections):
+        request["selections"] = selections
+    if foldings is not None and any(folding is not None for folding in foldings):
+        request["foldings"] = foldings
+    try:
+        result = dbus(f"org.kde.{EDITORS[app]}-{pid}", "/MainApplication", "org.kde.Kate.Application",
+                      "monetReopenDocuments", json.dumps(request))
+    except RuntimeError as error:
+        if str(error) == "org.freedesktop.DBus.Error.UnknownMethod":
+            return None
+        return False
+    return isinstance(result, list) and len(result) == 1 and result[0] is True
+
+
+def valid_editor_replacement(request):
+    helper = editor_helper()
+    return (isinstance(request, dict) and set(request) in ({"id", "anchor", "editor"}, {"id", "anchor", "editor", "attempt"})
+            and ("attempt" not in request or (isinstance(request["attempt"], str) and re.fullmatch(r"[0-9a-f]{32}", request["attempt"])))
+            and helper.valid_windows([{"id": request["id"], "editor": None}, {"id": request["anchor"], "editor": None}])
+            and helper.valid(request["editor"]) and "layout" in request["editor"])
+
+
+def replace_editor(app, pid, request):
+    """Recreate a closed window in its surviving process, with native duplicate protection."""
+    if app not in EDITORS or type(pid) is not int or pid <= 0 or not valid_editor_replacement(request):
+        return None
+    try:
+        result = dbus(f"org.kde.{EDITORS[app]}-{pid}", "/MainApplication", "org.kde.Kate.Application",
+                      "monetReplaceWindow", json.dumps(request))
+    except RuntimeError:
+        return None
+    if result == ["closed"]:
+        return "closed"
+    if (isinstance(result, list) and len(result) == 1 and result[0] not in (request["id"], request["anchor"])
+            and editor_helper().valid_windows([{"id": result[0], "editor": None}])):
+        return result[0]
+    return None
+
+
+def editor_sessions(app, exclude=()):
+    names = dbus("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames")[0]
+    prefix = f"org.kde.{EDITORS[app]}-"
+    names = [n for n in names if isinstance(n, str) and n.startswith(prefix) and n[len(prefix):].isdigit()
+             and int(n[len(prefix):]) not in exclude]
+    if len(names) > MAX_APPS:
+        raise RuntimeError("Too many editor sessions")
+    sessions = {}
+    for name in names:
+        try:
+            session = dbus(name, "/MainApplication", "org.freedesktop.DBus.Properties", "Get", "org.kde.Kate.Application", "activeSession")[0]
+        except RuntimeError:
+            if not dbus("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner", name)[0]:
+                continue
+            raise
+        if hasattr(session, "variant"):
+            session = session.variant()
+        editor_helper().native_path(app, session)  # Validate before keeping any session name.
+        sessions[int(name[len(prefix):])] = session
+    return sessions
+
+
+def capture_editor_group(pid, frames):
+    states = editor_helper().capture(pid, windows=True)
+    return states if (editor_helper().valid_windows(states) and len(states) == len(frames)
+                      and {w["id"] for w in states} == {w.get("id") for w in frames}) else None
+
+
+def prepare_editor_group(path, ident, app, pid, own, previous):
+    helper = editor_helper()
+    if previous and "closing" in previous:
+        if not isinstance(previous["closing"], dict):
+            raise ValueError("Invalid editor close receipt")
+        states = previous.get("editor_windows")
+        if (previous["closing"].get("windows") is True and helper.valid_windows(states)
+                and {w["id"] for w in states} == {w.get("id") for w in own}):
+            return
+        raise RuntimeError("Editor window group changed during departure")
+    current = capture_editor_group(pid, own)
+    if current is None:
+        if previous and "editor_windows" in previous:
+            raise RuntimeError("Editor window identities are no longer available")
+        return  # Unpatched/unsupported groups retain app-owned recovery.
+    native, installed = False, False
+    try:
+        native = arm_editor(app, pid, ident, windows=True)
+        if not native:
+            raise RuntimeError("Editor cannot protect its window group")
+        frames = [w for w in window_snapshot() if w.get("app") == app and w.get("pid") == pid]
+        latest = capture_editor_group(pid, frames)
+        if latest is None or {w["id"] for w in latest} != {w["id"] for w in current}:
+            raise RuntimeError("Editor window group changed while arming")
+        with restore_lock(path):
+            saved = read_state(path)
+            if (saved.get("id") != ident or saved.get("boot") != boot_id() or saved.get("version") != 3
+                    or saved.get("cancelled_boot") or app not in saved.get("apps", [])):
+                return
+            if not isinstance(saved.get("groups", {}), dict) or not isinstance(saved.get("documents", {}), dict):
+                raise ValueError("Invalid editor checkpoint")
+            groups = saved.setdefault("groups", {}).setdefault(app, [])
+            if (not isinstance(groups, list) or len(groups) > MAX_APPS or any(not isinstance(g, dict) for g in groups)
+                    or not isinstance(saved.get("windows", []), list)
+                    or any(not isinstance(w, dict) for w in saved.get("windows", []))):
+                raise ValueError("Invalid editor group checkpoint")
+            group = next((g for g in groups if g == previous), None) if previous else None
+            if previous and group is None:
+                raise RuntimeError("Editor checkpoint changed while arming")
+            if group is None:
+                if len(groups) >= MAX_APPS:
+                    raise ValueError("Too many editor groups")
+                group = {}
+                groups.append(group)
+            group.pop("editor", None)
+            group.update(editor_windows=latest, windows=frames, closing={
+                "pid": pid, "session": "", "stamp": None, "shared": False, "native": True, "windows": True})
+            saved["windows"] = [w for w in saved.get("windows", []) if not (w.get("app") == app and w.get("pid") == pid)] + frames
+            saved.get("documents", {}).pop(app, None)
+            atomic_write(path, saved)
+            installed = True
+    finally:
+        if native and not installed:
+            disarm_editor(app, pid, ident)
+
+
+def prepare_editor_close(path, ident, target, windows):
+    """Watch an editor once, even while another app is deciding whether to close."""
+    app, pid = target.get("app"), target.get("pid")
+    if not ident or app not in EDITORS or type(pid) is not int or pid <= 0:
+        return
+    if target.get("normal") is False:
+        return
+    saved = read_state(path)
+    if (saved.get("id") != ident or saved.get("boot") != boot_id() or saved.get("version") != 3
+            or saved.get("cancelled_boot") or app not in saved.get("apps", [])):
+        return
+    groups = saved.get("groups", {}).get(app, []) if isinstance(saved.get("groups", {}), dict) else None
+    if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("windows", []), list)
+            or any(not isinstance(w, dict) for w in g.get("windows", [])) for g in groups):
+        raise ValueError("Invalid editor groups")
+    own = [w for w in windows if w.get("app") == app and w.get("pid") == pid and w.get("normal", True)]
+    previous = next((g for g in groups if any(w.get("pid") == pid for w in g.get("windows", []))), None)
+    if len(own) > 1 or (previous and "editor_windows" in previous):
+        prepare_editor_group(path, ident, app, pid, own, previous)
+        return
+    if len(own) != 1:
+        return
+    if any(isinstance(g.get("closing"), dict) and any(w.get("pid") == pid and w.get("id") == target.get("id")
+            for w in g.get("windows", [])) for g in groups):
+        return  # Keep the original file stamp; a repeated poll must not swallow the final write.
+    helper = editor_helper()
+    sessions = editor_sessions(app)
+    if pid not in sessions:
+        raise RuntimeError("Editor session disappeared before close")
+    session = sessions[pid]
+    current = helper.capture(pid)
+    source = helper.native_path(app, session)
+    stamp = helper.native_stamp(source)
+    native = arm_editor(app, pid, ident)
+    installed = False
+    try:
+        with restore_lock(path):
+            saved = read_state(path)
+            if (saved.get("id") != ident or saved.get("boot") != boot_id() or saved.get("version") != 3
+                    or saved.get("cancelled_boot")):
+                return
+            if app not in saved.get("apps", []):
+                return
+            if not isinstance(saved.get("groups", {}), dict) or not isinstance(saved.get("documents", {}), dict):
+                raise ValueError("Invalid editor checkpoint")
+            groups = saved.setdefault("groups", {}).setdefault(app, [])
+            if not isinstance(groups, list) or len(groups) > MAX_APPS or any(not isinstance(g, dict)
+                    or not isinstance(g.get("windows", []), list)
+                    or any(not isinstance(w, dict) for w in g.get("windows", [])) for g in groups):
+                raise ValueError("Invalid editor groups")
+            group = next((g for g in groups if any(w.get("pid") == pid and w.get("id") == target.get("id")
+                         for w in g.get("windows", []))), None)
+            if group is None:
+                if not isinstance(saved.get("windows", []), list) or any(not isinstance(w, dict) for w in saved.get("windows", [])):
+                    raise ValueError("Invalid editor windows")
+                frames = [w for w in saved.get("windows", []) if w.get("app") == app and w.get("pid") == pid
+                          and w.get("id") == target.get("id")]
+                old = saved.get("documents", {}).get(app, [])
+                if not isinstance(old, list):
+                    raise ValueError("Invalid editor documents")
+                old = [p for p in old[:100] if helper.local(p)]
+                if current is None and old:
+                    current = {"views": [{"documents": list(dict.fromkeys(old)), "active": 0, "cursor": 0}],
+                               "active": 0, "orientation": 1, "sizes": [800]}
+                group = {"editor": current, "windows": frames or [target]}
+                groups.append(group)
+            if current:
+                group["editor"] = current
+            group["closing"] = {"pid": pid, "session": session, "stamp": stamp,
+                                "shared": sum(value == session for value in sessions.values()) != 1}
+            if native:
+                group["closing"]["native"] = True
+            if group["closing"]["shared"]:
+                for other in groups:
+                    receipt = other.get("closing")
+                    if isinstance(receipt, dict) and receipt.get("session") == session:
+                        receipt["shared"] = True
+            saved.get("documents", {}).pop(app, None)
+            atomic_write(path, saved)
+            installed = True
+    finally:
+        if native and not installed:
+            disarm_editor(app, pid, ident)
+
+
+def prepare_pdf_close(path, ident, target, windows):
+    """Protect exact PDF windows, including siblings that close while their process survives."""
+    pid = target.get("pid")
+    if (not ident or target.get("app") != PDF or target.get("normal") is False
+            or type(pid) is not int or pid <= 0):
+        return
+    original = read_state(path)
+    if (original.get("id") != ident or original.get("boot") != boot_id() or original.get("version") != 3
+            or original.get("cancelled_boot") or PDF not in original.get("apps", [])):
+        return
+    groups = original.get("groups", {}).get(PDF, []) if isinstance(original.get("groups", {}), dict) else None
+    if (not isinstance(groups, list) or len(groups) > MAX_APPS or any(not isinstance(g, dict)
+            or not isinstance(g.get("windows"), list) or len(g["windows"]) != 1
+            or not isinstance(g["windows"][0], dict) for g in groups)):
+        raise ValueError("Invalid PDF groups")
+    own = [w for w in windows if w.get("app") == PDF and w.get("pid") == pid and w.get("normal", True)]
+    watched = {g["windows"][0].get("id") for g in groups if isinstance(g.get("closing"), dict) and g["closing"].get("pid") == pid}
+    if own and all(w["id"] in watched for w in own):
+        return
+    helper = pdf_helper()
+    current = helper.capture_windows(pid, own)
+    if not current:
+        if any(helper.valid(g.get("pdf")) and g["windows"][0].get("pid") == pid for g in groups):
+            raise RuntimeError("PDF window identities are no longer available")
+        return  # An unpatched document viewer retains app-owned recovery.
+    installed = False
+    if not helper.arm(pid, ident):
+        raise RuntimeError("PDF viewer could not protect its windows")
+    try:
+        frames = [w for w in window_snapshot() if w.get("app") == PDF and w.get("pid") == pid]
+        latest = helper.capture_windows(pid, frames)
+        if not latest or set(latest) != set(current):
+            raise RuntimeError("PDF windows changed while arming")
+        with restore_lock(path):
+            if read_state(path) != original:
+                return
+            saved = copy.deepcopy(original)
+            groups = saved.setdefault("groups", {}).setdefault(PDF, [])
+            for frame in frames:
+                group = next((g for g in groups if g["windows"][0].get("id") == frame["id"]), None)
+                if group is None:
+                    if len(groups) >= MAX_APPS:
+                        raise ValueError("Too many PDF windows")
+                    group = {}
+                    groups.append(group)
+                group.update(pdf=latest[frame["id"]], windows=[frame],
+                             closing={"pid": pid, "window": frame["id"], "native": True})
+            if not isinstance(saved.get("windows", []), list) or any(not isinstance(w, dict) for w in saved.get("windows", [])):
+                raise ValueError("Invalid PDF window checkpoint")
+            saved["windows"] = [w for w in saved.get("windows", []) if w.get("id") not in latest] + frames
+            atomic_write(path, saved)
+            installed = True
+    finally:
+        if not installed:
+            helper.arm(pid, ident, False)
+
+
+def refresh_pdf_departure(saved, ident, windows, final):
+    groups = saved.get("groups", {}).get(PDF, [])
+    if not isinstance(groups, list) or len(groups) > MAX_APPS or any(not isinstance(g, dict) for g in groups):
+        raise ValueError("Invalid PDF groups")
+    ready, changed = True, False
+    for group in groups:
+        closing = group.get("closing")
+        if closing is None:
+            continue
+        if (not isinstance(closing, dict) or set(closing) - {"pid", "window", "native", "closed_at"}
+                or type(closing.get("pid")) is not int or closing["pid"] <= 0 or closing.get("native") is not True
+                or not pdf_helper().window_id(closing.get("window"))
+                or ("closed_at" in closing and (type(closing["closed_at"]) not in (int, float) or not math.isfinite(closing["closed_at"])))):
+            raise ValueError("Invalid PDF departure receipt")
+        if any(w.get("app") == PDF and w.get("id") == closing["window"] for w in windows):
+            continue
+        try:
+            receipt = pdf_helper().departure(closing["pid"], ident, closing["window"])
+        except FileNotFoundError:
+            if final or time.monotonic() - closing.setdefault("closed_at", time.monotonic()) > 3:
+                raise RuntimeError("PDF viewer did not write its final document list")
+            ready, changed = False, True
+            continue
+        if receipt["supported"]:
+            group["pdf"] = receipt["document"]
+            group.pop("final_unverified", None)
+        else:
+            group["final_unverified"] = True
+        group.pop("closing", None)
+        changed = True
+    return ready, changed
+
+
+def refresh_departure(path, ident, windows, final=False):
+    """Commit final document references before reboot or cancelled-switch recovery."""
+    if not ident:
+        return True
+    original = read_state(path)
+    saved = copy.deepcopy(original)
+    if saved.get("id") != ident or saved.get("boot") != boot_id() or saved.get("version") != 3:
+        return True
+    if not isinstance(saved.get("groups", {}), dict):
+        raise ValueError("Invalid editor groups")
+    ready, changed = refresh_pdf_departure(saved, ident, windows, final)
+    for app, groups in saved.get("groups", {}).items():
+        if app not in EDITORS:
+            continue
+        if not isinstance(groups, list) or len(groups) > MAX_APPS or any(not isinstance(g, dict) for g in groups):
+            raise ValueError("Invalid editor groups")
+        for group in groups:
+            if "closing" not in group:
+                continue
+            closing = group["closing"]
+            if (not isinstance(closing, dict) or type(closing.get("pid")) is not int or closing["pid"] <= 0
+                    or not isinstance(closing.get("session"), str) or type(closing.get("shared")) is not bool
+                    or (closing.get("stamp") is not None and (not isinstance(closing["stamp"], list)
+                        or len(closing["stamp"]) != 4 or any(type(n) is not int for n in closing["stamp"])))
+                    or ("closed_at" in closing and (type(closing["closed_at"]) not in (int, float)
+                        or not math.isfinite(closing["closed_at"])))
+                    or ("native" in closing and type(closing["native"]) is not bool)
+                    or ("windows" in closing and (closing["windows"] is not True or closing.get("native") is not True
+                        or not editor_helper().valid_windows(group.get("editor_windows"))))):
+                raise ValueError("Invalid editor close receipt")
+        closed = {g["closing"]["pid"] for g in groups if isinstance(g.get("closing"), dict)
+                  and not any(w.get("pid") == g["closing"]["pid"] and w.get("app") == app for w in windows)}
+        fallback = [g["closing"] for g in groups if isinstance(g.get("closing"), dict) and not g["closing"].get("native")]
+        sessions = editor_sessions(app, exclude=closed) if fallback else {}
+        for closing in fallback:
+            if (closing["pid"] not in closed and closing["pid"] in sessions
+                    and sessions[closing["pid"]] != closing["session"]):
+                raise RuntimeError("Editor session changed during departure")
+            # Remember other writers while they are live; their exit can hide the ambiguity.
+            if not closing["shared"] and any(pid != closing["pid"] and session == closing["session"] for pid, session in sessions.items()):
+                closing["shared"] = True
+                changed = True
+        for group in groups:
+            closing = group.get("closing")
+            if not isinstance(closing, dict) or any(w.get("app") == app and w.get("pid") == closing.get("pid") for w in windows):
+                continue
+            if closing.get("native"):
+                try:
+                    receipt = (editor_helper().departure(app, closing["pid"], ident, windows=True) if closing.get("windows")
+                               else editor_helper().departure(app, closing["pid"], ident))
+                except FileNotFoundError:
+                    if final or time.monotonic() - closing.setdefault("closed_at", time.monotonic()) > 3:
+                        raise RuntimeError("Editor did not write its private final document list")
+                    ready, changed = False, True
+                    continue
+                if closing.get("windows"):
+                    if {w["id"] for w in receipt["windows"]} != {w["id"] for w in group["editor_windows"]}:
+                        raise ValueError("Final editor window identities changed")
+                    group["editor_windows"] = receipt["windows"]
+                    group.pop("final_unverified", None)
+                elif receipt["supported"]:
+                    group["editor"] = receipt["editor"]
+                    group.pop("final_unverified", None)
+                else:
+                    group["final_unverified"] = True
+                group.pop("closing", None)
+                changed = True
+                continue
+            if closing["shared"]:
+                # A shared anonymous file cannot prove which process saved these paths.
+                group["final_unverified"] = True
+                group.pop("closing", None)
+                changed = True
+                continue
+            helper = editor_helper()
+            source = helper.native_path(app, closing["session"])
+            stamp = helper.native_stamp(source)
+            if stamp is None or stamp == closing.get("stamp"):
+                if final or time.monotonic() - closing.setdefault("closed_at", time.monotonic()) > 3:
+                    raise RuntimeError("Editor did not write its final document list")
+                ready, changed = False, True
+                continue
+            with source.open(encoding="utf-8") as stream:
+                text = stream.read(LIMIT + 1)
+            if len(text) > LIMIT or helper.native_stamp(source) != stamp:
+                raise RuntimeError("Editor session changed during the final read")
+            try:
+                group["editor"] = helper.final_documents(text, group.get("editor"))
+            except configparser.Error as error:
+                raise ValueError("Invalid final editor session") from error
+            group.pop("closing", None)
+            group.pop("final_unverified", None)
+            changed = True
+    if changed:
+        # IPC can dispatch Cancel; never hold the file lock across those calls.
+        with restore_lock(path):
+            if read_state(path) != original:
+                return False
+            atomic_write(path, saved)
+    return ready
+
+
+def editor_documents(app, windows):
+    """Named sessions are per instance; anonymous sessions are shared, so skip ambiguity."""
+    editor = EDITORS.get(app)
+    visible = [w for w in windows if w.get("app") == app and w.get("pid")]
+    pids = {w["pid"] for w in visible}
+    if not editor or len(pids) != 1 or len(visible) != 1:
+        return []
+    try:
+        session = dbus(f"org.kde.{editor}-{next(iter(pids))}", "/MainApplication",
+                       "org.freedesktop.DBus.Properties", "Get", "org.kde.Kate.Application", "activeSession")[0]
+        if hasattr(session, "variant"):
+            session = session.variant()
+        if not isinstance(session, str):
+            return []
+        data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / editor
+        # Qt's session filenames also encode dots (urllib deliberately leaves them).
+        path = data / "sessions" / (quote(session, safe="").replace(".", "%2E") + ".katesession") if session else data / "anonymous.katesession"
+        if path.stat().st_size > LIMIT:
+            return []
+        return documents(path.read_text(encoding="utf-8"))
+    except (ImportError, OSError, RuntimeError):
+        return []
+
+
+def checkpoint(apps, windows, scene=None):
+    # Kate flushes its document list on a 5 s timer. Let pending changes reach its
+    # own checkpoint; don't ask it to save/overwrite the user's document contents.
+    # Zen normally writes changes on a 15 s timer. Let pending tab closures reach
+    # its own checkpoint too, especially when only private windows remain open.
+    delay = 16 if BROWSER in apps else (5.2 if any(app in EDITORS for app in apps) else 0)
+    if delay and windows:
+        time.sleep(delay)
+        # Use the arrangement at departure, not the one before the native save wait.
+        if scene is not None:
+            latest = desktop_snapshot()
+            if latest:
+                windows, scene = latest["windows"], latest.get("scene")
+    saved = {"version": 3, "id": uuid.uuid4().hex, "time": int(time.time()), "boot": boot_id(), "apps": apps,
+            "windows": [w for w in windows if w.get("app") in apps],
+            "documents": {app: paths for app in apps if (paths := editor_documents(app, windows))}, "done": []}
+    if isinstance(scene, dict):
+        saved["scene"] = scene
+    for app in apps:
+        if app not in EDITORS:
+            continue
+        groups = []
+        frames = [w for w in windows if w.get("app") == app]
+        for pid in dict.fromkeys(w.get("pid") for w in frames):
+            own = [w for w in frames if w.get("pid") == pid]
+            states = capture_editor_group(pid, own) if len(own) > 1 else None
+            state = editor_helper().capture(pid) if len(own) == 1 else None
+            groups.append(dict(editor_windows=states, windows=own) if states else {"editor": state, "windows": own})
+        if groups and any(g.get("editor") or g.get("editor_windows") for g in groups):
+            saved.setdefault("groups", {})[app] = groups
+            saved["documents"].pop(app, None)
+    # Each process/profile gets its own durable recovery receipt.
+    for app, key, helper in ((FILES, "files", files_helper), (BROWSER, "browser", browser_helper), (PDF, "pdf", pdf_helper)):
+        frames = [w for w in windows if w.get("app") == app]
+        if app not in apps:
+            continue
+        groups = []
+        for pid in dict.fromkeys(w.get("pid") for w in frames):
+            if type(pid) is not int or pid <= 0:
+                continue
+            own = [w for w in frames if w.get("pid") == pid]
+            if app in (FILES, PDF):
+                states = helper().capture_windows(pid, own)
+                groups.extend({key: states.get(w["id"]), "windows": [w]} for w in own)
+            else:
+                groups.append({key: helper().capture(own), "windows": own})
+        if groups:
+            saved.setdefault("groups", {})[app] = groups
+        elif app == BROWSER:
+            saved["browser"] = {"mode": "skip"}
+    return saved
+
+
+RETURN_STATES = {"waiting", "opening", "opened", "already-running", "unconfirmed", "missing-app", "documents-unconfirmed",
+                 "folders-restored", "folders-unavailable", "browser-restored", "browser-opened",
+                 "browser-unavailable", "browser-skipped", "documents-opened", "documents-missing", "expired",
+                 "trip-unconfirmed", "partly-restored"}
+
+
+def trip_id(saved):
+    """Stable identity also for checkpoints made before return summaries existed."""
+    ident = saved.get("id")
+    if isinstance(ident, str) and re.fullmatch(r"[0-9a-f]{32}", ident):
+        return ident
+    payload = json.dumps([saved.get("boot"), saved.get("time"), saved.get("apps")], sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()[:32]
+
+
+def return_path(path):
+    return path.with_suffix(".return.json")
+
+
+@contextmanager
+def restore_lock(path):
+    import fcntl
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path.with_suffix(".lock"), os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
+    with os.fdopen(fd, "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+
+
+def restoring(path):
+    try:
+        with restore_lock(path):
+            return False
+    except BlockingIOError:
+        return True
+
+
+def valid_return(value):
+    if (not isinstance(value, dict) or value.get("version") != 1
+            or not isinstance(value.get("id"), str) or not re.fullmatch(r"[0-9a-f]{32}", value["id"])
+            or not isinstance(value.get("items"), dict) or len(value["items"]) > MAX_APPS
+            or type(value.get("updated")) not in (int, float) or not math.isfinite(value["updated"])):
+        return False
+    for app, item in value["items"].items():
+        if (not isinstance(app, str) or not APP_ID.fullmatch(app) or not isinstance(item, dict)
+                or not isinstance(item.get("status"), str) or item["status"] not in RETURN_STATES
+                or type(item.get("documents", 0)) is not int or not 0 <= item.get("documents", 0) <= 100
+                or type(item.get("missingCount", 0)) is not int or not 0 <= item.get("missingCount", 0) <= 100
+                or not isinstance(item.get("missing", []), list) or len(item.get("missing", [])) > 20
+                or any(not isinstance(name, str) or len(name) > 1024 for name in item.get("missing", []))):
+            return False
+    return True
+
+
+def read_return(path, saved=None):
+    saved = read_state(path) if saved is None else saved
+    # The checkpoint is committed first. A crash before updating the summary
+    # must not hide its newest durable outcome or cause a completed app to retry.
+    current = saved.get("return")
+    if valid_return(current) and current["id"] == trip_id(saved):
+        return current
+    report = read_state(return_path(path))
+    if report and valid_return(report):
+        return report if not saved or trip_id(saved) == report["id"] else {}
+    if return_path(path).exists():
+        raise OSError("The return summary could not be read")
+    return {}
+
+
+def initial_return(saved):
+    apps = saved.get("apps", [])
+    done = saved.get("done", [])
+    done = done if isinstance(done, list) else []
+    apps = list(dict.fromkeys(a for a in apps[:MAX_APPS] if isinstance(a, str) and APP_ID.fullmatch(a))) \
+        if isinstance(apps, list) else []
+    return {"version": 1, "id": trip_id(saved), "updated": time.time(), "items": {
+        app: {"status": "opened" if app in done else "waiting"} for app in apps}}
+
+
+def return_status(path, off, freshness=12 * 3600):
+    if off.exists():
+        return {"available": False, "busy": False, "items": []}
+    saved = read_state(path)
+    # A cancelled switch is not a return. Keep its checkpoint without replaying it.
+    if saved and saved.get("boot") == boot_id() and saved.get("cancelled_boot") != boot_id():
+        return {"available": False, "busy": False, "items": []}
+    report = read_return(path, saved)
+    if not report and saved.get("version") in (2, 3):
+        report = initial_return(saved)
+    if not report:
+        return {"available": False, "busy": restoring(path), "items": []}
+    busy = restoring(path)
+    matches = bool(saved) and trip_id(saved) == report["id"]
+    eligible = matches and usable(saved, time.time(), boot_id(), freshness)
+    done = saved.get("done", []) if isinstance(saved.get("done"), list) else []
+    apps = saved.get("apps", []) if isinstance(saved.get("apps"), list) else []
+    items = []
+    for app, original in report["items"].items():
+        item = dict(original, app=app)
+        pending = matches and app in apps and app not in done
+        item["retry"] = bool(pending and eligible and not busy)
+        if item["status"] in ("opening", "waiting", "unconfirmed", "missing-app", "folders-unavailable", "trip-unconfirmed"):
+            if not eligible and not busy:
+                item["status"] = "trip-unconfirmed" if saved.get("version") == 3 else "expired"
+            elif item["status"] == "trip-unconfirmed":
+                item["status"] = "waiting"
+            elif item["status"] == "opening" and not busy:
+                item["status"] = "unconfirmed"
+        items.append(item)
+    return {"available": bool(items), "id": report["id"], "updated": report["updated"],
+            "busy": busy, "items": items, "retry": any(item["retry"] for item in items)}
+
+
+def clear_return(path, off, ident):
+    """An explicit dismissal forgets recovery metadata, never personal files."""
+    try:
+        with restore_lock(path):
+            saved = read_state(path)
+            report = read_return(path, saved)
+            if report.get("id") != ident or (saved and trip_id(saved) != ident):
+                return False
+            discard(path, saved)
+            return_path(path).unlink(missing_ok=True)
+            return True
+    except BlockingIOError:
+        return False
+
+
+def save_return(path, saved, report):
+    report["updated"] = time.time()
+    saved["return"] = report
+    # Keep durable launch receipts even if the separate summary write fails.
+    atomic_write(path, saved)
+    atomic_write(return_path(path), report)
+
+
+def document_counts(app, saved):
+    paths = saved.get("documents", {}).get(app, []) if isinstance(saved.get("documents"), dict) else []
+    paths = [p for p in paths[:100] if isinstance(p, str) and p.startswith("/")
+             and not any(ord(c) < 32 for c in p)] if isinstance(paths, list) else []
+    missing = [p for p in paths if not Path(p).is_file()]
+    return {"documents": len(paths) - len(missing), "missingCount": len(missing),
+            "missing": [Path(p).name[:1024] for p in missing[:20]]}
+
+
+def discard(path, saved):
+    if saved.get("files_launch"):
+        files_helper().cleanup(saved["files_launch"])
+    groups = saved.get("groups", {}).get(FILES, []) if isinstance(saved.get("groups"), dict) else []
+    if isinstance(groups, list):
+        for group in groups:
+            if isinstance(group, dict) and group.get("files_launch"):
+                files_helper().cleanup(group["files_launch"])
+    for app in EDITORS:
+        groups = saved.get("groups", {}).get(app, []) if isinstance(saved.get("groups"), dict) else []
+        for group in groups if isinstance(groups, list) else []:
+            if isinstance(group, dict):
+                editor_helper().cleanup(group.get("editor_launch", {}))
+    groups = saved.get("groups", {}).get(PDF, []) if isinstance(saved.get("groups"), dict) else []
+    for group in groups if isinstance(groups, list) else []:
+        if isinstance(group, dict):
+            pdf_helper().cleanup(group.get("pdf_launch", {}))
+    path.unlink(missing_ok=True)
+
+
+def confirmed_trip(saved):
+    """Match a system return receipt, or the copy retained for unfinished recovery."""
+    ident, source = saved.get("id"), saved.get("boot")
+    if (not isinstance(ident, str) or not re.fullmatch(r"[0-9a-f]{32}", ident)
+            or not isinstance(source, str) or not source):
+        return {}
+    for receipt in (saved.get("trip_return"), read_state(TRIP_RETURN)):
+        if (isinstance(receipt, dict) and receipt.get("id") == ident and receipt.get("boot") == source
+                and isinstance(receipt.get("returned_boot"), str) and receipt["returned_boot"]
+                and receipt["returned_boot"] != source):
+            return receipt
+    return {}
+
+
+def usable(saved, now, boot, freshness):
+    stamp = saved.get("time")
+    if (type(stamp) not in (float, int) or not math.isfinite(stamp) or not isinstance(saved.get("apps"), list) or not boot):
+        return False
+    if saved.get("cancelled_boot"):
+        return saved.get("version") == 3 and saved["cancelled_boot"] == saved.get("boot") == boot
+    if saved.get("boot") == boot:
+        return False
+    if saved.get("version") == 3:
+        return bool(confirmed_trip(saved))
+    return saved.get("version") == 2 and 0 <= now - stamp <= freshness
+
+
+def placed_rect(saved, area):
+    """Logical pixels; preserve offsets on the same screen, clamp after unplug/scaling."""
+    old = saved.get("area", area)
+    rect = saved.get("rect", {})
+    try:
+        vals = [float(v[k]) for v in (old, rect, area) for k in ("x", "y", "width", "height")]
+        if not all(math.isfinite(v) and abs(v) < 100000 for v in vals):
+            return None
+        if min(old["width"], old["height"], rect["width"], rect["height"], area["width"], area["height"]) <= 0:
+            return None
+        width = min(max(200, rect["width"]), area["width"])
+        height = min(max(120, rect["height"]), area["height"])
+        return {"x": round(max(area["x"], min(area["x"] + rect["x"] - old["x"], area["x"] + area["width"] - width))),
+                "y": round(max(area["y"], min(area["y"] + rect["y"] - old["y"], area["y"] + area["height"] - height))),
+                "width": round(width), "height": round(height)}
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def place_windows(saved, current, initial_ids, identities=None):
+    """Only touch newly launched windows; never move ones the user already had open."""
+    placements = []
+    used = set(initial_ids)
+    for previous in saved:
+        candidates = [w for w in current if w.get("app") == previous.get("app") and w.get("id") not in used]
+        if identities is not None:
+            candidates = [w for w in candidates if w.get("id") == identities.get(previous.get("id"))]
+        if not candidates:
+            continue
+        window = next((w for w in candidates if w.get("role") == previous.get("role")), candidates[0])
+        used.add(window["id"])
+        output = next((o for o in window.get("outputs", []) if o.get("name") == previous.get("screen")), {})
+        target = placed_rect(previous, output.get("area", window.get("area", {})))
+        if target:
+            placements.append({"id": window["id"], "saved": previous, "rect": target})
+    if not placements:
+        return []
+    # Screens can disappear during a trip. Find the old output when available;
+    # otherwise keep the window on an available screen. Never activate a window.
+    body = "const places = " + json.dumps(placements) + r""";
+let changed = [];
+for (const p of places) {
+    let w = windows().find(w => String(w.internalId) === p.id);
+    if (!w) continue;
+    let s = p.saved;
+    if (s.allDesktops === true) w.onAllDesktops = true;
+    else if (Array.isArray(s.desktops)) {
+        let desktops = s.desktops.map(old => workspace.desktops.find(d => d.id === old.id)
+            || (workspace.desktops.filter(d => d.name === old.name).length === 1
+                ? workspace.desktops.find(d => d.name === old.name) : null)).filter(Boolean);
+        if (desktops.length) w.desktops = desktops;
+    }
+    if (typeof s.above === "boolean") w.keepAbove = s.above;
+    if (typeof s.below === "boolean") w.keepBelow = s.below;
+    w.fullScreen = false;
+    w.setMaximize(false, false);
+    w.frameGeometry = p.rect;
+    if (s.maximized) w.setMaximize(true, true);
+    if (s.fullscreen) w.fullScreen = true;
+    w.minimized = !!s.minimized;
+    changed.push(p.id);
+}
+reply(changed);
+"""
+    try:
+        changed = kwin_script(body)
+        return [{"old": p["saved"].get("id"), "new": p["id"], "app": p["saved"].get("app")}
+                for p in placements if isinstance(changed, list) and p["id"] in changed]
+    except (ImportError, OSError, RuntimeError):
+        return []
+
+
+def remember_placement(saved, frames, current, initial_ids, identities=None):
+    mappings = (place_windows(frames, current, initial_ids, identities) if identities is not None
+                else place_windows(frames, current, initial_ids)) or []
+    saved.setdefault("window_map", []).extend(mappings)
+
+
+def finish_desktop(saved, before, initial_scene):
+    """Finish an automatic return once; manual recovery must not rearrange the desktop."""
+    if (not isinstance(saved.get("scene"), dict) or not isinstance(initial_scene, dict)
+            or any(not w.get("minimized", False) for w in before)):
+        return
+    mappings = saved.get("window_map", [])
+    frames = saved.get("windows", [])
+    if not isinstance(mappings, list) or not isinstance(frames, list):
+        return
+    body = "const saved = " + json.dumps({"scene": saved["scene"], "windows": frames,
+                                         "map": mappings, "initial": initial_scene}) + r""";
+const initial = saved.initial;
+const current = scene();
+const mapped = saved.map.map(m => ({old:saved.windows.find(w => w.id === m.old),
+    now:windows().find(w => String(w.internalId) === m.new && appId(w) === m.app)}))
+    .filter(m => m.old && m.now);
+// A person who has already started using the desktop owns its focus/order.
+const untouched = initial.cursor && current.cursor.x === initial.cursor.x && current.cursor.y === initial.cursor.y
+    && initial.desktop && current.desktop.id === initial.desktop.id
+    && current.activity === initial.activity
+    && !windows().some(w => !w.minimized && !mapped.some(m => m.now === w));
+if (untouched && mapped.length) {
+    mapped.sort((a,b) => (a.old.stack || 0) - (b.old.stack || 0));
+    for (const m of mapped) workspace.raiseWindow(m.now);
+    const oldDesktop = saved.scene.desktop;
+    const desktop = oldDesktop && (workspace.desktops.find(d => d.id === oldDesktop.id)
+        || (workspace.desktops.filter(d => d.name === oldDesktop.name).length === 1
+            ? workspace.desktops.find(d => d.name === oldDesktop.name) : null));
+    if (desktop) workspace.currentDesktop = desktop;
+    const active = mapped.find(m => m.old.active && !m.old.minimized);
+    if (active && (active.now.onAllDesktops || active.now.desktops.indexOf(workspace.currentDesktop) >= 0))
+        workspace.activeWindow = active.now;
+}
+reply(untouched);
+"""
+    try:
+        kwin_script(body)
+    except (ImportError, OSError, RuntimeError):
+        pass
+
+
+def start_app(app, saved, launch):
+    paths = saved.get("documents", {}).get(app, []) if isinstance(saved.get("documents"), dict) else []
+    if app in EDITORS and isinstance(paths, list):
+        paths = [p for p in paths[:100] if isinstance(p, str) and p.startswith("/")
+                 and not any(ord(c) < 32 for c in p) and Path(p).is_file()]
+        if paths:
+            command = [EDITORS[app]] + (["--new", "--startanon"] if EDITORS[app] == "kate" else [])
+            subprocess.Popen([*command, "--", *paths], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+    launch(app)
+
+
+def restore_files(path, saved, off, before, checkpoint=None):
+    """A Files process, confirmed by all its windows/tabs; slow launches are reused."""
+    helper = files_helper()
+    receipt = saved.get("files_launch", {})
+    receipt = receipt if isinstance(receipt, dict) else {}
+    if not (receipt.get("boot") == boot_id() and helper.alive(receipt)):
+        helper.cleanup(receipt)
+        try:
+            session, pid = helper.start(saved["files"])
+        except OSError:
+            return False
+        receipt = {"session": session.name, "pid": pid, "boot": boot_id()}
+        saved["files_launch"] = receipt
+        atomic_write(path, checkpoint if checkpoint is not None else saved)
+    initial = {w["id"] for w in before if w.get("pid") != receipt["pid"]}
+    deadline = time.monotonic() + 20
+    for _ in range(40):
+        yield  # Start every app before waiting for any one of their windows.
+        if off.exists() or time.monotonic() > deadline:
+            return False
+        current = window_snapshot()
+        fresh = [w for w in current if w.get("app") == FILES and w.get("pid") == receipt["pid"] and w["id"] not in initial]
+        if len(fresh) == 1 and helper.restored(saved["files"], helper.capture(receipt["pid"])):
+            if off.exists():
+                return False
+            frames = saved.get("windows", [])
+            frames = frames if isinstance(frames, list) else []
+            remember_placement(saved, [w for w in frames if isinstance(w, dict) and w.get("app") == FILES], fresh, initial)
+            helper.cleanup(receipt)
+            saved.pop("files_launch", None)
+            return True
+        if not helper.alive(receipt):
+            helper.cleanup(receipt)
+            saved.pop("files_launch", None)
+            return False
+    return False
+
+
+def restore_browser(path, saved, off, checkpoint=None):
+    """Native Zen session in its original profile; return None when no longer saved."""
+    helper = browser_helper()
+    state = saved["browser"]
+    receipt = saved.get("browser_launch", {})
+    receipt = receipt if isinstance(receipt, dict) else {}
+    continuing = receipt.get("boot") == boot_id() and helper.launching(state, receipt)
+    if not continuing:
+        expected = helper.prepare(state)
+        if not expected:
+            return None
+        started = time.time()
+        try:
+            pid = helper.launch(state)
+        except OSError:
+            return False
+        receipt = {"boot": boot_id(), "started": started, "pid": pid,
+                   "process_start": helper.process_start(pid), "expected": expected}
+        saved["browser_launch"] = receipt
+        atomic_write(path, checkpoint if checkpoint is not None else saved)
+    deadline = time.monotonic() + 25
+    for _ in range(50):
+        yield
+        if off.exists() or time.monotonic() > deadline:
+            return False
+        pid = helper.ready(state, receipt)
+        current = window_snapshot() if pid else []
+        fresh = [w for w in current if w.get("app") == BROWSER and w.get("pid") == pid]
+        expected_windows = receipt.get("expected", {}).get("windows", 1)
+        if fresh and len(fresh) >= expected_windows:
+            # Zen restores its own window grouping/geometry. Generic placement could
+            # otherwise assign a private window's frame to a normal browser window.
+            profile = helper.profile_path(state.get("profile"))
+            saved["browser_tabs_restored"] = bool(profile and helper.native_enabled(profile)
+                                                  and receipt.get("expected", {}).get("restore") is not False)
+            frames = saved.get("windows", [])
+            frames = [w for w in frames if isinstance(w, dict) and w.get("app") == BROWSER] if isinstance(frames, list) else []
+            # Only one captured/normal/restored window has an unambiguous identity.
+            # Private + normal or multiple normal windows remain native-browser-owned.
+            if saved["browser_tabs_restored"] and state.get("windows") == 1 and len(frames) == len(fresh) == 1:
+                remember_placement(saved, frames, fresh, set())
+            saved.pop("browser_launch", None)
+            return True
+    return False
+
+
+def restore_groups(path, saved, app, off, before):
+    """Recover independent profiles/processes without replaying a completed sibling."""
+    groups = saved["groups"][app]
+    if (not isinstance(groups, list) or not 1 <= len(groups) <= MAX_APPS
+            or any(not isinstance(g, dict) for g in groups)):
+        return False
+    jobs = []
+    used = set()
+    existing_files = {}
+    surviving = {}
+    if app == FILES:
+        for pid in {w.get("pid") for w in before if w.get("app") == FILES}:
+            own = [w for w in before if w.get("app") == FILES and w.get("pid") == pid]
+            existing_files.update(files_helper().capture_windows(pid, own))
+        if saved.get("boot") == boot_id():
+            # Cancellation preserves live window IDs even if the person changed tabs.
+            for index, group in enumerate(groups):
+                frames = group.get("windows", [])
+                ids = {w.get("id") for w in frames if isinstance(w, dict) and isinstance(w.get("id"), str)} \
+                    if isinstance(frames, list) else set()
+                live = [w for w in before if w.get("app") == FILES and w.get("id") in ids]
+                if len(live) == 1:
+                    surviving[index] = live[0]["id"]
+            used.update(surviving.values())
+        # A slow recovery window belongs to its receipt before any sibling can match it.
+        for group in groups:
+            receipt = group.get("files_launch", {})
+            if isinstance(receipt, dict) and receipt.get("boot") == boot_id() and files_helper().alive(receipt):
+                used.update(w["id"] for w in before if w.get("app") == FILES and w.get("pid") == receipt["pid"])
+
+    def missing_files(state):
+        match = next((wid for wid, live in existing_files.items() if wid not in used and files_helper().same_layout(state, live)), None)
+        if match is not None:
+            used.add(match)
+        return match is None
+
+    def finish(group, result):
+        if result:
+            group["status"] = ("browser-restored" if group.get("browser_tabs_restored") else "browser-opened") \
+                if app == BROWSER else "folders-restored"
+        elif result is None:
+            group["status"] = "browser-unavailable"
+        else:
+            group["status"] = "unconfirmed"
+        for mapping in group.pop("window_map", []):
+            if mapping not in saved.setdefault("window_map", []):
+                saved["window_map"].append(mapping)
+        atomic_write(path, saved)
+
+    def advance(group, job):
+        try:
+            next(job)
+            return True
+        except StopIteration as result:
+            finish(group, result.value)
+        except OSError:
+            finish(group, False)
+        return False
+
+    terminal = {"browser-restored", "browser-opened", "folders-restored", "already-running",
+                "browser-skipped", "browser-unavailable"}
+    # A completed sibling already owns its matching live window/profile.
+    for index, group in enumerate(groups):
+        if group.get("status") not in terminal:
+            continue
+        if app == BROWSER:
+            state = group.get("browser", {})
+            if isinstance(state, dict) and isinstance(state.get("profile"), str):
+                used.add(state["profile"])
+        elif index not in surviving:
+            missing_files(group.get("files"))
+    for index, group in enumerate(groups):
+        if off.exists():
+            return False
+        if group.get("status") in terminal:
+            continue
+        job = None
+        if app == BROWSER:
+            helper = browser_helper()
+            state = group.get("browser")
+            receipt = group.get("browser_launch", {})
+            if not helper.valid(state):
+                group["status"] = "browser-skipped"
+            elif state["profile"] in used:
+                group["status"] = "browser-skipped"
+            else:
+                used.add(state["profile"])
+                continuing = isinstance(receipt, dict) and receipt.get("boot") == boot_id() and helper.launching(state, receipt)
+                if helper.owner(state["profile"]) and not continuing:
+                    group["status"] = "already-running"
+                else:
+                    job = restore_browser(path, group, off, checkpoint=saved)
+        else:
+            helper = files_helper()
+            state = group.get("files")
+            receipt = group.get("files_launch", {})
+            if not helper.valid(state):
+                group["status"] = "unconfirmed"
+            else:
+                continuing = isinstance(receipt, dict) and receipt.get("boot") == boot_id() and helper.alive(receipt)
+                missing = index not in surviving and (continuing or missing_files(state))
+                if not missing and not continuing:
+                    group["status"] = "already-running"
+                    helper.cleanup(receipt)
+                    group.pop("files_launch", None)
+                else:
+                    job = restore_files(path, group, off, before, checkpoint=saved)
+        if job is not None and advance(group, job):
+            jobs.append((group, job))
+        atomic_write(path, saved)
+    while jobs:
+        yield
+        if off.exists():
+            return False
+        jobs = [(g, job) for g, job in jobs if advance(g, job)]
+    return all(g.get("status") in terminal for g in groups)
+
+
+def pdf_counts(groups):
+    helper, restored, missing = pdf_helper(), 0, []
+    for group in groups if isinstance(groups, list) else []:
+        if not isinstance(group, dict) or not helper.valid(group.get("pdf")):
+            continue
+        state = group["pdf"]
+        try:
+            pending = helper.pending_indexes(state, group.get("pending"))
+        except ValueError:
+            pending = list(range(len(state["tabs"])))
+        restored += len(state["tabs"]) - len(pending)
+        missing.extend(state["tabs"][i]["path"] for i in pending if not Path(state["tabs"][i]["path"]).is_file())
+    missing = list(dict.fromkeys(missing))
+    return {"documents": min(100, restored), "missingCount": min(100, len(missing)),
+            "missing": [Path(p).name[:1024] for p in missing[:20]]}
+
+
+def restore_pdf_window(path, saved, group, off, before, live, used, launch, manual):
+    helper, boot = pdf_helper(), boot_id()
+    state, frames = group.get("pdf"), group.get("windows", [])
+    if (not isinstance(frames, list) or len(frames) != 1 or not isinstance(frames[0], dict)
+            or frames[0].get("app") != PDF or not helper.window_id(frames[0].get("id"))
+            or type(frames[0].get("pid")) is not int):
+        group["status"] = "unconfirmed"
+        return False
+    if group.get("status") in ("documents-opened", "already-running", "opened"):
+        return True
+    survivor = next((w for w in before if saved.get("boot") == boot and w.get("app") == PDF
+                    and w.get("id") == frames[0]["id"] and w.get("pid") == frames[0]["pid"]), None)
+    if survivor:
+        group.update(status="already-running", pending=[], pdf_owner={"boot": boot, "pid": survivor["pid"], "id": survivor["id"]})
+        used.add(survivor["id"])
+        atomic_write(path, saved)
+        return True
+    if not helper.valid(state):
+        if any(w.get("app") == PDF for w in before):
+            group["status"] = "already-running"
+        else:
+            result = yield from restore_regular(PDF, group, off, launch, {w["id"] for w in before})
+            group["status"] = "opened" if result else "unconfirmed"
+        atomic_write(path, saved)
+        return group["status"] in ("already-running", "opened")
+    try:
+        pending = helper.pending_indexes(state, group.get("pending"))
+    except ValueError:
+        group["status"] = "unconfirmed"
+        return False
+    group["pending"] = pending
+    owner, receipt, retry = group.get("pdf_owner", {}), group.get("pdf_launch", {}), group.get("pdf_retry")
+    if (not isinstance(owner, dict) or (owner and (set(owner) != {"boot", "pid", "id"}
+            or not isinstance(owner["boot"], str) or type(owner["pid"]) is not int or owner["pid"] <= 0 or not helper.window_id(owner["id"])))
+            or not isinstance(receipt, dict)):
+        group["status"] = "unconfirmed"
+        return False
+    if receipt and (helper.session_path(receipt) is None or not isinstance(receipt.get("boot"), str)
+            or type(receipt.get("started", False)) is not bool
+            or not isinstance(receipt.get("indexes"), list) or any(i not in pending for i in receipt["indexes"])):
+        group["status"] = "unconfirmed"
+        return False
+    if receipt:
+        try:
+            if receipt.get("expected") != helper.subset(state, receipt["indexes"]):
+                raise ValueError("Changed PDF launch state")
+        except ValueError:
+            group["status"] = "unconfirmed"
+            return False
+    if retry is not None and (not isinstance(retry, dict) or set(retry) != {"index", "request"}
+            or type(retry["index"]) is not int or retry["index"] not in pending
+            or not helper.valid_append(retry["request"]) or retry["request"]["window"] != owner.get("id")
+            or retry["request"]["tab"] != dict(state["tabs"][retry["index"]], modified=False)):
+        group["status"] = "unconfirmed"
+        return False
+    if receipt and receipt["boot"] != boot:
+        helper.cleanup(receipt)
+        group.pop("pdf_launch", None)
+        receipt = {}
+    if owner.get("boot") != boot:
+        group.pop("pdf_retry", None)
+        retry = None
+    owned = next((w for w in before if owner.get("boot") == boot and w.get("app") == PDF
+                  and w.get("id") == owner.get("id") and w.get("pid") == owner.get("pid")), None)
+    if not owned and not receipt and retry is None and (not group.get("attempted") or manual):
+        expected = helper.available(state, pending)
+        match = next((w for w in before if w.get("app") == PDF and w["id"] not in used and
+                      (helper.same_documents(state, live.get(w["id"])) or
+                       (expected["tabs"] and helper.same_documents(expected, live.get(w["id"]))))), None)
+        if match:
+            owned = match
+            owner = group["pdf_owner"] = {"boot": boot, "pid": match["pid"], "id": match["id"]}
+            used.add(match["id"])
+    if group.get("attempted") and not manual and not receipt and retry is None:
+        return False
+    group["attempted"] = True
+    if owned and not receipt:
+        used.add(owned["id"])
+        deadline = time.monotonic() + 15
+        while pending:
+            if off.exists() or time.monotonic() > deadline:
+                return False
+            retry = group.get("pdf_retry")
+            current = helper.capture_windows(owned["pid"], [w for w in window_snapshot() if w.get("app") == PDF and w.get("pid") == owned["pid"]]).get(owned["id"])
+            if not helper.valid(current):
+                group["status"] = "unconfirmed"
+                return False
+            if retry is None:
+                # Count occurrences: equal paths can be intentional duplicate tabs.
+                spare = Counter(t["path"] for t in current["tabs"])
+                spare.subtract(t["path"] for i, t in enumerate(state["tabs"]) if i not in pending)
+                for i in pending[:]:
+                    if spare[state["tabs"][i]["path"]] > 0:
+                        spare[state["tabs"][i]["path"]] -= 1
+                        pending.remove(i)
+                atomic_write(path, saved)
+                index = next((i for i in pending if Path(state["tabs"][i]["path"]).is_file()), None)
+                if index is None:
+                    break
+                retry = {"index": index, "request": {"window": owned["id"], "attempt": uuid.uuid4().hex,
+                    "before": current, "tab": dict(state["tabs"][index], modified=False)}}
+                group["pdf_retry"] = retry
+                atomic_write(path, saved)
+            yield
+            if off.exists():
+                return False
+            result = helper.append(owned["pid"], retry["request"])
+            if result in ("opened", "closed"):
+                still_owned = any(w.get("app") == PDF and w.get("pid") == owned["pid"] and w.get("id") == owned["id"] for w in window_snapshot())
+                if not still_owned:
+                    group["status"] = "unconfirmed"
+                    return False
+                pending.remove(retry["index"])
+                group.pop("pdf_retry", None)
+                atomic_write(path, saved)
+            elif result in (None, "busy", "unconfirmed"):
+                continue  # A lost reply reuses this exact durable attempt.
+            else:
+                group.pop("pdf_retry", None)
+                group["status"] = "unconfirmed"
+                atomic_write(path, saved)
+                return False
+        group["status"] = "documents-missing" if pending else "documents-opened"
+        atomic_write(path, saved)
+        return not pending
+    if retry is not None:
+        # Its window closed. A later explicit Retry may open remaining tabs in a new window.
+        group.pop("pdf_retry", None)
+        group["status"] = "unconfirmed"
+        atomic_write(path, saved)
+        return False
+    indexes = [i for i in pending if Path(state["tabs"][i]["path"]).is_file()]
+    if not receipt and not indexes and state["tabs"]:
+        group["status"] = "documents-missing"
+        atomic_write(path, saved)
+        return False
+    if not receipt:
+        expected = helper.subset(state, indexes)
+        receipt = dict(helper.prepare(expected), boot=boot, indexes=indexes, expected=expected)
+        group["pdf_launch"] = receipt
+        try:
+            atomic_write(path, saved)
+        except OSError:
+            helper.cleanup(receipt)
+            raise
+    pid = helper.discover(receipt)
+    existing_launch = pid is not None and any(w.get("app") == PDF and w.get("pid") == pid for w in before)
+    if pid is None and not helper.launching(receipt):
+        if receipt.get("started") and not manual:
+            group["status"] = "unconfirmed"
+            return False  # A vanished unconfirmed window may have been closed deliberately.
+        if any(not Path(t["path"]).is_file() for t in receipt["expected"]["tabs"]):
+            group["status"] = "documents-missing"
+            atomic_write(path, saved)
+            return False
+        receipt["started"] = True
+        atomic_write(path, saved)
+        helper.start(receipt)
+    deadline = time.monotonic() + 20
+    for _ in range(40):
+        yield
+        if off.exists() or time.monotonic() > deadline:
+            return False
+        pid = helper.discover(receipt)
+        current = window_snapshot() if pid else []
+        windows = [w for w in current if w.get("app") == PDF and w.get("pid") == pid]
+        states = helper.capture_windows(pid, windows) if len(windows) == 1 else {}
+        if len(windows) == 1 and (helper.restored(receipt["expected"], states.get(windows[0]["id"]))
+                or (existing_launch and helper.same_documents(receipt["expected"], states.get(windows[0]["id"])))):
+            window = windows[0]
+            group.update(pending=[i for i in pending if i not in receipt["indexes"]],
+                         pdf_owner={"boot": boot, "pid": pid, "id": window["id"]})
+            group["status"] = "documents-missing" if group["pending"] else "documents-opened"
+            group.pop("pdf_launch", None)
+            used.add(window["id"])
+            atomic_write(path, saved)
+            if not existing_launch:
+                remember_placement(saved, frames, windows, set(), {frames[0]["id"]: window["id"]})
+            atomic_write(path, saved)
+            helper.cleanup(receipt)
+            return not group["pending"]
+    group["status"] = "unconfirmed"
+    return False
+
+
+def restore_pdfs(path, saved, off, before, launch, manual):
+    groups, helper = saved["groups"][PDF], pdf_helper()
+    if not isinstance(groups, list) or not 1 <= len(groups) <= MAX_APPS or any(not isinstance(g, dict) for g in groups):
+        return False
+    live, used = {}, set()
+    for pid in {w.get("pid") for w in before if w.get("app") == PDF}:
+        live.update(helper.capture_windows(pid, [w for w in before if w.get("app") == PDF and w.get("pid") == pid]))
+    for group in groups:
+        owner = group.get("pdf_owner", {})
+        if isinstance(owner, dict) and owner.get("boot") == boot_id():
+            used.add(owner.get("id"))
+        receipt = group.get("pdf_launch", {})
+        if isinstance(receipt, dict) and receipt.get("boot") == boot_id():
+            pid = helper.discover(receipt)
+            used.update(w["id"] for w in before if w.get("app") == PDF and w.get("pid") == pid)
+        if saved.get("boot") == boot_id():
+            frames = group.get("windows", [])
+            if isinstance(frames, list):
+                used.update(w.get("id") for w in frames if isinstance(w, dict))
+    jobs = []
+    def advance(group, job):
+        try:
+            next(job)
+            return True
+        except StopIteration:
+            pass
+        except OSError:
+            group["status"] = "unconfirmed"
+        atomic_write(path, saved)
+        return False
+    for group in groups:
+        if off.exists():
+            return False
+        job = restore_pdf_window(path, saved, group, off, before, live, used, launch, manual)
+        if advance(group, job):
+            jobs.append((group, job))
+    while jobs:
+        yield
+        if off.exists():
+            return False
+        jobs = [(g, job) for g, job in jobs if advance(g, job)]
+    return all(g.get("status") in ("documents-opened", "already-running", "opened") for g in groups)
+
+
+def editor_counts(groups):
+    helper = editor_helper()
+    entries = []
+    for group in groups if isinstance(groups, list) else []:
+        if not isinstance(group, dict):
+            continue
+        if helper.valid_windows(group.get("editor_windows")):
+            pending = group.get("pending_windows", {})
+            for item in group["editor_windows"]:
+                entries.append({"editor": item["editor"], "pending": pending.get(item["id"], helper.paths(item["editor"]))
+                                if isinstance(pending, dict) else helper.paths(item["editor"])})
+        elif helper.valid(group.get("editor")):
+            entries.append(group)
+    groups = entries
+    def remaining(group):
+        original = helper.paths(group["editor"])
+        pending = group.get("pending", original)
+        return pending if isinstance(pending, list) and all(p in original for p in pending) else original
+    pending = list(dict.fromkeys(p for g in groups for p in remaining(g)))
+    missing = [p for p in pending if helper.local(p) and not Path(p).is_file()]
+    restored = sum(len(helper.paths(g["editor"])) - len(remaining(g)) for g in groups)
+    return {"documents": min(100, max(0, restored)), "missingCount": min(100, len(missing)),
+            "missing": [Path(p).name[:1024] for p in missing[:20]]}
+
+
+def restore_replacement_focus(initial, ident):
+    """Undo compositor activation only while the person's desktop choice is unchanged."""
+    if not isinstance(initial, dict) or not isinstance(initial.get("scene"), dict) or not isinstance(initial.get("windows"), list):
+        return
+    active = next((w for w in initial["windows"] if isinstance(w, dict) and w.get("active")), None)
+    if not active:
+        return
+    body = "const prior = " + json.dumps({"scene": initial["scene"], "active": active["id"], "created": ident}) + r""";
+const current = scene(), old = prior.scene;
+const active = workspace.activeWindow;
+const previous = windows().find(w => String(w.internalId) === prior.active);
+const untouched = old.cursor && current.cursor && current.cursor.x === old.cursor.x && current.cursor.y === old.cursor.y
+    && old.desktop && current.desktop && current.desktop.id === old.desktop.id && current.activity === old.activity;
+if (untouched && active && String(active.internalId) === prior.created && previous && !previous.minimized)
+    workspace.activeWindow = previous;
+reply(true);
+"""
+    try:
+        kwin_script(body)
+    except (ImportError, OSError, RuntimeError):
+        pass
+
+
+def restore_editor_replacements(path, saved, app, group, off, before, owned, manual):
+    helper, boot = editor_helper(), boot_id()
+    owners, pending = group["editor_owners"], group["pending_windows"]
+    replacements = group.setdefault("editor_replacements", {})
+    for item in group["editor_windows"]:
+        key = item["id"]
+        if off.exists():
+            return
+        if key in owned or not pending[key]:
+            continue
+        receipt, focus = replacements.get(key), None
+        if receipt is None:
+            owner = owners.get(key, {})
+            anchor = next((o for o in owned.values() if o["pid"] == owner.get("pid") and o["boot"] == owner.get("boot") == boot), None)
+            expected = helper.available(item["editor"], pending[key])
+            if not manual or anchor is None or expected is None:
+                continue
+            receipt = {"boot": boot, "pid": owner["pid"], "request": {"id": owner["id"], "anchor": anchor["id"], "editor": expected,
+                                                                      "attempt": uuid.uuid4().hex}}
+            replacements[key] = receipt
+            atomic_write(path, saved)
+            focus = desktop_snapshot()
+        request, pid = receipt["request"], receipt["pid"]
+        deadline = time.monotonic() + 15
+        for _ in range(30):
+            if off.exists() or time.monotonic() > deadline:
+                return
+            ident = replace_editor(app, pid, request)
+            yield
+            if off.exists():
+                return
+            if ident is None:
+                continue
+            if ident == "closed":
+                replacements.pop(key)
+                atomic_write(path, saved)
+                break  # A later explicit Retry may start another attempt; this one must not resurrect it.
+            if focus is not None:
+                restore_replacement_focus(focus, ident)
+                focus = None
+            current = helper.capture(pid, windows=True)
+            target = next((w for w in current if w["id"] == ident), None) if helper.valid_windows(current) else None
+            if target is None or not set(helper.paths(request["editor"])).issubset(helper.paths(target["editor"])):
+                continue
+            fresh = [w for w in window_snapshot() if w.get("app") == app and w.get("pid") == pid]
+            if not any(w["id"] == ident for w in fresh):
+                continue
+            if off.exists():
+                return
+            # A resumed request may find a window the person has already moved or edited.
+            if ident not in {w["id"] for w in before} and helper.same_layout(target["editor"], request["editor"]):
+                if not helper.capture(pid, [{"id": ident, "editor": request["editor"]}], windows=True):
+                    continue
+                if off.exists():
+                    return
+                remember_placement(saved, group["windows"], fresh, {w["id"] for w in before}, {key: ident})
+            owners[key] = owned[key] = {"boot": boot, "pid": pid, "id": ident}
+            pending[key] = [p for p in pending[key] if p not in helper.paths(target["editor"])]
+            replacements.pop(key)
+            atomic_write(path, saved)
+            break
+
+
+def restore_editor_windows(path, saved, app, group, off, before, used, manual):
+    helper = editor_helper()
+    states = group.get("editor_windows")
+    if not helper.valid_windows(states):
+        return False
+    original = {w["id"]: helper.paths(w["editor"]) for w in states}
+    frames = group.get("windows", [])
+    if (not isinstance(frames, list) or any(not isinstance(w, dict) or not isinstance(w.get("id"), str)
+            or w.get("app") != app or type(w.get("pid")) is not int or w["pid"] <= 0 for w in frames)
+            or len(frames) != len(states) or {w["id"] for w in frames} != set(original)
+            or len({w["pid"] for w in frames}) != 1):
+        return False
+    pending = group.setdefault("pending_windows", copy.deepcopy(original))
+    owners = group.setdefault("editor_owners", {})
+    if (not isinstance(pending, dict) or set(pending) != set(original)
+            or any(not isinstance(paths, list) or any(p not in original[key] for p in paths)
+                   or len(set(paths)) != len(paths) for key, paths in pending.items())
+            or not isinstance(owners, dict) or not set(owners).issubset(original)
+            or any(not isinstance(o, dict) or set(o) != {"boot", "pid", "id"}
+                   or not isinstance(o["boot"], str) or type(o["pid"]) is not int or o["pid"] <= 0
+                   or not helper.valid_windows([{"id": o["id"], "editor": None}]) for o in owners.values())):
+        return False
+    if len({(o["boot"], o["pid"], o["id"]) for o in owners.values()}) != len(owners):
+        return False
+    replacements = group.get("editor_replacements", {})
+    if (not isinstance(replacements, dict) or not set(replacements).issubset(owners)
+            or any(not isinstance(r, dict) or set(r) != {"boot", "pid", "request"} or type(r["pid"]) is not int
+                or r["boot"] != owners[key]["boot"] or r["pid"] != owners[key]["pid"]
+                or not valid_editor_replacement(r["request"]) or r["request"]["id"] != owners[key]["id"]
+                or any(p not in original[key] for p in helper.paths(r["request"]["editor"])) for key, r in replacements.items())):
+        return False
+    if group.get("status") in ("documents-opened", "already-running"):
+        return True
+    boot = boot_id()
+    for key, receipt in list(replacements.items()):
+        if receipt["boot"] != boot or not any(w.get("app") == app and w.get("pid") == receipt["pid"] for w in before):
+            replacements.pop(key)
+    replacing = bool(replacements)
+    survivors = [w for w in before if w.get("app") == app and any(
+        w.get("id") == old.get("id") and w.get("pid") == old.get("pid") for old in frames)]
+    if saved.get("boot") == boot and survivors:
+        # Native group Quit keeps every sibling alive on Cancel; never replay over their buffers.
+        if {w["id"] for w in survivors} != set(original):
+            group["status"] = "unconfirmed"
+            atomic_write(path, saved)
+            return False
+        group.update(status="already-running", pending_windows={key: [] for key in original},
+                     editor_owners={w["id"]: {"boot": boot, "pid": w["pid"], "id": w["id"]} for w in survivors})
+        used.update(w["pid"] for w in survivors)
+        atomic_write(path, saved)
+        return True
+    owned = {key: owner for key, owner in owners.items() if owner["boot"] == boot and any(
+        w.get("app") == app and w.get("id") == owner["id"] and w.get("pid") == owner["pid"] for w in before)}
+    receipt = group.get("editor_launch", {})
+    continuing = isinstance(receipt, dict) and receipt.get("boot") == boot and helper.alive(receipt)
+    if not group.get("attempted") and not owned and not continuing and not replacing:
+        for pid in {w.get("pid") for w in before if w.get("app") == app} - used:
+            current = capture_editor_group(pid, [w for w in before if w.get("app") == app and w.get("pid") == pid])
+            if (current and len(current) == len(states) and all(
+                    (a["editor"] is None and b["editor"] is None) or helper.same_layout(a["editor"], b["editor"])
+                    for a, b in zip(current, states))):
+                group.update(status="already-running", pending_windows={key: [] for key in original},
+                    editor_owners={old["id"]: {"boot": boot, "pid": pid, "id": new["id"]} for old, new in zip(states, current)})
+                used.add(pid)
+                atomic_write(path, saved)
+                return True
+    if group.get("attempted") and not manual and not continuing and not replacing:
+        return False
+    group["attempted"] = True
+    if (owned or replacing) and not continuing:
+        for key, owner in owned.items():
+            if off.exists():
+                return False
+            if not pending[key] or not manual:
+                continue
+            current = helper.capture(owner["pid"], windows=True)
+            window = next((w for w in current if w["id"] == owner["id"]), None) if helper.valid_windows(current) else None
+            if window is None:
+                continue
+            pending[key] = [p for p in pending[key] if p not in helper.paths(window["editor"])]
+            available = [p for p in pending[key] if Path(p).is_file()]
+            if available:
+                if off.exists():
+                    return False
+                state = next(w["editor"] for w in states if w["id"] == key)
+                reopen_editor(app, owner["pid"], owner["id"], available,
+                              [helper.document_cursor(state, p) for p in available],
+                              [helper.document_scroll(state, p) for p in available],
+                              [helper.document_selection(state, p) for p in available],
+                              [helper.document_folding(state, p) for p in available])
+                for _ in range(30):
+                    yield
+                    if off.exists():
+                        return False
+                    current = helper.capture(owner["pid"], windows=True)
+                    window = next((w for w in current if w["id"] == owner["id"]), None) if helper.valid_windows(current) else None
+                    if window is None:
+                        break
+                    pending[key] = [p for p in pending[key] if p not in helper.paths(window["editor"])]
+                    if not any(p in pending[key] for p in available):
+                        break
+        yield from restore_editor_replacements(path, saved, app, group, off, before, owned, manual)
+        confirmed = all(not paths for paths in pending.values())
+    else:
+        expected = receipt.get("expected") if continuing else [dict(item, editor=helper.available(item["editor"], pending[item["id"]]))
+            for item in states if not owners or pending[item["id"]]]
+        if (not helper.valid_windows(expected) or not {w["id"] for w in expected}.issubset(original)
+                or any(p not in original[w["id"]] for w in expected for p in helper.paths(w["editor"]))):
+            return False
+        if any(pending.values()) and not any(w["editor"] for w in expected):
+            group["status"] = "documents-missing"
+            atomic_write(path, saved)
+            return False
+        if not continuing:
+            if off.exists():
+                return False
+            helper.cleanup(receipt)
+            receipt = dict(helper.start(app, expected, windows=True), boot=boot, expected=expected)
+            group["editor_launch"] = receipt
+            atomic_write(path, saved)
+        pid, confirmed = receipt["pid"], False
+        deadline = time.monotonic() + 15
+        for _ in range(30):
+            yield
+            if off.exists() or time.monotonic() > deadline:
+                break
+            current = helper.capture(pid, windows=True)
+            fresh = [w for w in window_snapshot() if w.get("app") == app and w.get("pid") == pid]
+            if (helper.valid_windows(current) and len(current) == len(expected) == len(fresh)
+                    and {w["id"] for w in current} == {w.get("id") for w in fresh}
+                    and all((a["editor"] is None and b["editor"] is None) or helper.same_layout(a["editor"], b["editor"])
+                            for a, b in zip(current, expected))):
+                cursors = [dict(now, editor=old["editor"]) for now, old in zip(current, expected) if old["editor"]]
+                if off.exists():
+                    return False
+                if cursors and not helper.capture(pid, cursors, windows=True):
+                    continue
+                if off.exists():
+                    return False
+                identities = {old["id"]: now["id"] for old, now in zip(expected, current)}
+                remember_placement(saved, frames, fresh, {w["id"] for w in before}, identities)
+                for old, now in zip(expected, current):
+                    owners[old["id"]] = {"boot": boot, "pid": pid, "id": now["id"]}
+                    replacements.pop(old["id"], None)
+                    pending[old["id"]] = [p for p in pending[old["id"]] if p not in helper.paths(now["editor"])]
+                helper.cleanup(receipt)
+                group.pop("editor_launch", None)
+                used.add(pid)
+                confirmed = not any(pending.values())
+                break
+            if not helper.alive(receipt):
+                break
+    group["status"] = "documents-opened" if confirmed else "documents-missing" if any(
+        not Path(p).is_file() for paths in pending.values() for p in paths) else "unconfirmed"
+    atomic_write(path, saved)
+    return confirmed
+
+
+def restore_editors(path, saved, app, off, before, launch, manual):
+    """Each editor window owns its receipt; late files only reopen on explicit Retry."""
+    groups, helper = saved["groups"][app], editor_helper()
+    if not isinstance(groups, list) or not 1 <= len(groups) <= MAX_APPS or any(not isinstance(g, dict) for g in groups):
+        return False
+    used, confirmed = set(), True
+    live = ({pid: helper.capture(pid) for pid in {w.get("pid") for w in before if w.get("app") == app}}
+            if any("editor_windows" not in g for g in groups) else {})
+    for group in groups:
+        replacements = group.get("editor_replacements", {})
+        for receipt in replacements.values() if isinstance(replacements, dict) else []:
+            if (isinstance(receipt, dict) and type(receipt.get("pid")) is int and receipt.get("boot") == boot_id()
+                    and any(w.get("app") == app and w.get("pid") == receipt["pid"] for w in before)):
+                used.add(receipt["pid"])
+        owners = group.get("editor_owners", {})
+        if isinstance(owners, dict):
+            used.update(o["pid"] for o in owners.values() if isinstance(o, dict) and type(o.get("pid")) is int and o.get("boot") == boot_id()
+                        and any(w.get("app") == app and w.get("id") == o.get("id") and w.get("pid") == o.get("pid") for w in before))
+        owner = group.get("editor_owner", {})
+        if isinstance(owner, dict) and owner.get("boot") == boot_id() and any(
+                w.get("id") == owner.get("id") and w.get("pid") == owner.get("pid") and w.get("app") == app for w in before):
+            used.add(owner["pid"])
+    for group in groups:
+        if off.exists():
+            return False
+        if "editor_windows" in group:
+            result = yield from restore_editor_windows(path, saved, app, group, off, before, used, manual)
+            confirmed = confirmed and result
+            continue
+        state = group.get("editor")
+        if group.get("status") in ("documents-opened", "already-running", "opened"):
+            owner = group.get("editor_owner", {})
+            if isinstance(owner, dict) and owner.get("boot") == boot_id():
+                used.add(owner.get("pid"))
+            continue
+        frames = group.get("windows", [])
+        ids = {w.get("id") for w in frames if isinstance(w, dict)} if isinstance(frames, list) else set()
+        survivor = next((w for w in before if w.get("app") == app and w.get("id") in ids), None)
+        if saved.get("boot") == boot_id() and survivor:
+            group.update(status="already-running", pending=[], editor_owner={"boot": boot_id(), "pid": survivor["pid"], "id": survivor["id"]})
+            used.add(survivor["pid"])
+            atomic_write(path, saved)
+            continue
+        if not helper.valid(state):
+            # Keep unsupported editors app-owned rather than inventing a document layout.
+            if any(w.get("app") == app for w in before):
+                group["status"] = "already-running"
+            else:
+                result = yield from restore_regular(app, group, off, launch, {w["id"] for w in before})
+                group["status"] = "opened" if result else "unconfirmed"
+            atomic_write(path, saved)
+            continue
+        original = helper.paths(state)
+        pending = group.setdefault("pending", original[:])
+        if not isinstance(pending, list) or any(p not in original for p in pending) or len(set(pending)) != len(pending):
+            return False
+        receipt = group.get("editor_launch", {})
+        continuing = isinstance(receipt, dict) and receipt.get("boot") == boot_id() and helper.alive(receipt)
+        owner = group.get("editor_owner", {})
+        owner = owner if isinstance(owner, dict) else {}
+        owned = next((w for w in before if owner.get("boot") == boot_id() and w.get("id") == owner.get("id")
+                      and w.get("pid") == owner.get("pid") and w.get("app") == app), None)
+        if not continuing and not owned and not group.get("attempted"):
+            match = next((pid for pid, current in live.items() if pid not in used and helper.paths(current) == original), None)
+            if match is not None:
+                used.add(match)
+                window = next(w for w in before if w.get("app") == app and w.get("pid") == match)
+                group.update(status="already-running", pending=[], editor_owner={"boot": boot_id(), "pid": match, "id": window["id"]})
+                atomic_write(path, saved)
+                continue
+        if group.get("attempted") and not manual and not continuing:
+            continue
+        if group.get("attempted") and manual and not continuing:
+            opened = {p for pid, current in live.items() if pid not in used or (owned and pid == owned["pid"])
+                      for p in helper.paths(current)}
+            pending = group["pending"] = [p for p in pending if p not in opened]
+            if not pending:
+                group["status"] = "documents-opened"
+                atomic_write(path, saved)
+                continue
+        expected = receipt.get("expected") if continuing else helper.available(state, pending)
+        group["attempted"] = True
+        if not expected:
+            group["status"] = "documents-missing"
+            atomic_write(path, saved)
+            continue
+        if owned and not continuing:
+            # Native openUrl reuses an existing document, including tabs the person reopened themselves.
+            current = live.get(owned["pid"])
+            if current is None:
+                group["status"] = "unconfirmed"
+                continue
+            documents = [p for p in helper.paths(expected) if p not in helper.paths(current) and Path(p).is_file()]
+            exact = helper.capture(owned["pid"], windows=True)
+            targeted = None
+            if helper.valid_windows(exact) and documents:
+                targeted = reopen_editor(app, owned["pid"], owned["id"], documents,
+                                         [helper.document_cursor(state, p) for p in documents],
+                                         [helper.document_scroll(state, p) for p in documents],
+                                         [helper.document_selection(state, p) for p in documents],
+                                         [helper.document_folding(state, p) for p in documents])
+            for document in documents if targeted is None else []:
+                if Path(document).is_file():
+                    try:
+                        dbus(f"org.kde.{EDITORS[app]}-{owned['pid']}", "/MainApplication",
+                             "org.kde.Kate.Application", "openUrl", Path(document).as_uri(), "")
+                    except (ImportError, RuntimeError):
+                        break
+            pid = owned["pid"]
+        else:
+            if not continuing:
+                helper.cleanup(receipt)
+                receipt = dict(helper.start(app, expected), boot=boot_id(), expected=expected)
+                group["editor_launch"] = receipt
+                atomic_write(path, saved)
+            pid = receipt["pid"]
+        deadline = time.monotonic() + 15
+        for _ in range(30):
+            yield
+            if off.exists() or time.monotonic() > deadline:
+                break
+            current = helper.capture(pid)
+            fresh = [w for w in window_snapshot() if w.get("app") == app and w.get("pid") == pid]
+            verified = all(p in helper.paths(current) for p in helper.paths(expected)) if owned else helper.same_layout(current, expected)
+            if current and len(fresh) == 1 and verified:
+                if off.exists():
+                    return False
+                if not owned:
+                    # Only the newly launched window gets its saved cursor and frame.
+                    if not helper.capture(pid, expected):
+                        continue
+                    remember_placement(saved, frames, fresh, {w["id"] for w in before if w.get("pid") != pid})
+                group["pending"] = [p for p in pending if p not in helper.paths(current)]
+                group["editor_owner"] = {"boot": boot_id(), "pid": pid, "id": fresh[0]["id"]}
+                helper.cleanup(receipt)
+                group.pop("editor_launch", None)
+                used.add(pid)
+                break
+            if not owned and not helper.alive(receipt):
+                break
+        group["status"] = "documents-opened" if not group["pending"] else \
+            "documents-missing" if any(not Path(p).is_file() for p in group["pending"]) else "unconfirmed"
+        atomic_write(path, saved)
+    return confirmed and all(g.get("status") in ("documents-opened", "already-running", "opened") for g in groups)
+
+
+def restore_regular(app, saved, off, launch, initial_ids):
+    start_app(app, saved, launch)
+    deadline = time.monotonic() + 8
+    frames = saved.get("windows", [])
+    frames = [w for w in frames if isinstance(w, dict) and w.get("app") == app] if isinstance(frames, list) else []
+    previous_shape = None
+    # Each app gets its own deadline; one failed launcher cannot hold up the others.
+    for _ in range(20):
+        yield
+        if off.exists() or time.monotonic() > deadline:
+            return False
+        current = window_snapshot()
+        fresh = [w for w in current if w["app"] == app and w["id"] not in initial_ids]
+        if fresh:
+            if any(w.get("rect") for w in frames):
+                # First paint can precede the app's own startup resize. Two stable
+                # observations keep that late configure from undoing our placement.
+                shape = [(w["id"], w.get("rect")) for w in fresh]
+                if shape != previous_shape:
+                    previous_shape = shape
+                    continue
+            remember_placement(saved, frames, current, initial_ids)
+            if app in EDITORS and len(fresh) == 1 and type(fresh[0].get("pid")) is int:
+                saved.setdefault("editor_owners", {})[app] = {"boot": boot_id(), "pid": fresh[0]["pid"], "id": fresh[0]["id"]}
+            if any(w.get("rect") for w in frames):
+                yield  # Wayland applies size requests asynchronously.
+            return True
+    return False
+
+
+def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None):
+    """A receipt per confirmed app survives interruption. Failed launches stay retryable."""
+    try:
+        with restore_lock(path):
+            return restore_locked(path, off, running, entry, launch, freshness, selected, request)
+    except BlockingIOError:
+        return []
+
+
+def restore_locked(path, off, running, entry, launch, freshness, selected, request):
+    saved = read_state(path)
+    if request is not None and (not saved or request != trip_id(saved)):
+        return []
+    if off.exists():
+        discard(path, saved)
+        return_path(path).unlink(missing_ok=True)
+        return []
+    if saved.get("version") == 3:
+        saved["trip_return"] = confirmed_trip(saved)
+    if (saved.get("version") == 3 and not saved.get("cancelled_boot") and not saved["trip_return"]) \
+            or not usable(saved, time.time(), boot_id(), freshness):
+        # Same-boot login after a cancelled switch must retain the checkpoint.
+        if saved.get("boot") != boot_id():
+            report = saved.get("return", {})
+            if not valid_return(report) and saved.get("version") in (2, 3):
+                report = initial_return(saved)
+            if valid_return(report):
+                done = saved.get("done", []) if isinstance(saved.get("done"), list) else []
+                for app, item in report["items"].items():
+                    if app not in done:
+                        item["status"] = "trip-unconfirmed" if saved.get("version") == 3 else "expired"
+                atomic_write(return_path(path), report)
+            # The system return service may not have finished yet. Never age out a bound trip.
+            if saved.get("version") != 3:
+                discard(path, saved)
+        return []
+    if saved.get("version") == 3:
+        atomic_write(path, saved)
+    initial_scene = None
+    try:
+        before = window_snapshot()
+        if selected is None and not saved.get("scene_finished") and isinstance(saved.get("scene"), dict):
+            initial_scene = desktop_snapshot().get("scene")
+    except OSError:
+        # An unavailable compositor is not evidence that existing work has closed.
+        report = read_return(path, saved) or initial_return(saved)
+        for app, item in report["items"].items():
+            if app not in saved.get("done", []):
+                item["status"] = "unconfirmed"
+        save_return(path, saved, report)
+        return []
+    initial_ids = {w["id"] for w in before}
+    existing = set(running()) | {w["app"] for w in before}
+    receipts = saved.get("done", [])
+    done = {a for a in receipts if isinstance(a, str)} if isinstance(receipts, list) else set()
+    apps = list(dict.fromkeys(a for a in saved["apps"][:MAX_APPS] if isinstance(a, str) and APP_ID.fullmatch(a)))
+    if selected is not None and selected not in apps:
+        return []
+    report = saved.get("return", {})
+    if not valid_return(report) or report["id"] != trip_id(saved):
+        report = initial_return(saved)
+    for app in apps:
+        report["items"].setdefault(app, {"status": "opened" if app in done else "waiting"})
+    save_return(path, saved, report)
+    started = []
+    jobs = {}
+
+    def completed(app, kind, result):
+        item = report["items"][app]
+        if result:
+            done.add(app)
+            if kind != "groups" or any(g.get("status") in ("browser-restored", "browser-opened", "folders-restored")
+                                       for g in saved["groups"][app]):
+                started.append(app)
+        if kind in ("editors", "pdf"):
+            groups = saved["groups"][app]
+            item.update(pdf_counts(groups) if kind == "pdf" else editor_counts(groups))
+            item["status"] = "documents-missing" if item["missingCount"] else \
+                "documents-opened" if result and all(g.get("status") == "documents-opened" for g in groups) else \
+                "already-running" if result and all(g.get("status") == "already-running" for g in groups) else \
+                "opened" if result else "partly-restored" if item["documents"] else "unconfirmed"
+            if not item["missingCount"] and isinstance(groups, list) and any(
+                    isinstance(g, dict) and g.get("final_unverified") and g.get("status") != "already-running" for g in groups):
+                item["status"] = "documents-unconfirmed"
+        elif kind == "groups":
+            groups = saved["groups"][app]
+            statuses = [g.get("status") if isinstance(g, dict) else None for g in groups] if isinstance(groups, list) else [None]
+            statuses = statuses or [None]
+            good = {"browser-restored", "browser-opened", "folders-restored", "already-running"}
+            if all(s == "already-running" for s in statuses):
+                item["status"] = "already-running"
+            elif not all(s in good for s in statuses):
+                item["status"] = "partly-restored" if any(s in good for s in statuses) else \
+                    "browser-skipped" if all(s == "browser-skipped" for s in statuses) else \
+                    "browser-unavailable" if all(s in ("browser-skipped", "browser-unavailable") for s in statuses) else "unconfirmed"
+            elif app == FILES:
+                item["status"] = "folders-restored"
+            else:
+                item["status"] = "browser-opened" if "browser-opened" in statuses else "browser-restored"
+        elif kind == "browser":
+            if result is None:
+                done.add(app)
+            item["status"] = ("browser-restored" if saved.get("browser_tabs_restored") else "browser-opened") if result \
+                else "browser-unavailable" if result is None else "unconfirmed"
+        elif kind == "files":
+            item["status"] = "folders-restored" if result else "folders-unavailable"
+        else:
+            item["status"] = ("documents-missing" if item.get("missingCount") else
+                              "documents-opened" if item.get("documents") else "opened") if result else "unconfirmed"
+            if result and app in EDITORS and item.get("missingCount"):
+                # Older or app-owned captures also retain their late files after the window opens.
+                paths = saved.get("documents", {}).get(app, [])
+                paths = list(dict.fromkeys(p for p in paths[:100] if editor_helper().local(p)))
+                if paths:
+                    state = {"views": [{"documents": paths, "active": 0, "cursor": 0}],
+                             "active": 0, "orientation": 1, "sizes": [800]}
+                    saved.setdefault("groups", {})[app] = [{"editor": state, "windows": [],
+                        "pending": [p for p in paths if not Path(p).is_file()], "attempted": True,
+                        "editor_owner": saved.get("editor_owners", {}).get(app, {}), "status": "documents-missing"}]
+                    done.discard(app)
+        saved["done"] = sorted(done)
+        save_return(path, saved, report)
+
+    def advance(app, kind, job):
+        try:
+            next(job)
+            return True
+        except StopIteration as result:
+            completed(app, kind, result.value)
+        except OSError:
+            completed(app, kind, False)
+        return False
+
+    for app in apps:
+        if off.exists():
+            discard(path, saved)
+            return_path(path).unlink(missing_ok=True)
+            return started
+        if app in done or (selected is not None and app != selected):
+            continue
+        item = report["items"][app] = {"status": "opening"}
+        save_return(path, saved, report)
+        if not entry(app):
+            item["status"] = "missing-app"
+            save_return(path, saved, report)
+            continue
+        browser = app == BROWSER and isinstance(saved.get("browser"), dict)
+        job = None
+        kind = "regular"
+        if app in EDITORS and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
+            kind, job = "editors", restore_editors(path, saved, app, off, before, launch, request is not None or selected is not None)
+        elif app == PDF and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
+            kind, job = "pdf", restore_pdfs(path, saved, off, before, launch, request is not None or selected is not None)
+        elif app in (FILES, BROWSER) and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
+            kind, job = "groups", restore_groups(path, saved, app, off, before)
+        elif browser:
+            helper = browser_helper()
+            state = saved["browser"]
+            receipt = saved.get("browser_launch", {})
+            receipt = receipt if isinstance(receipt, dict) else {}
+            continuing = receipt.get("boot") == boot_id() and helper.launching(state, receipt)
+            if state.get("mode") != "native" or not helper.valid(state):
+                item["status"] = "browser-skipped"
+                done.add(app)
+            elif helper.owner(state.get("profile")) and not continuing:
+                item["status"] = "already-running"
+                done.add(app)
+            else:
+                kind, job = "browser", restore_browser(path, saved, off)
+        else:
+            files = app == FILES and files_helper().valid(saved.get("files"))
+            pending = saved.get("files_launch", {}) if files else {}
+            pending = pending if isinstance(pending, dict) else {}
+            continuing = pending.get("boot") == boot_id() and files_helper().alive(pending) if pending else False
+            if app in existing and not continuing:
+                item["status"] = "already-running"
+                done.add(app)
+                if files:
+                    files_helper().cleanup(pending)
+                    saved.pop("files_launch", None)
+            elif files:
+                kind, job = "files", restore_files(path, saved, off, before)
+            else:
+                item.update(document_counts(app, saved) if app in EDITORS else {})
+                job = restore_regular(app, saved, off, launch, initial_ids)
+        if job is not None and advance(app, kind, job):
+            jobs[app] = (kind, job)
+        saved["done"] = sorted(done)
+        if off.exists():
+            discard(path, saved)
+            return_path(path).unlink(missing_ok=True)
+            return started
+        save_return(path, saved, report)
+    # Cooperative polling keeps KWin/Qt on this thread while launches overlap.
+    # A browser's native session write never delays opening the user's editor.
+    while jobs:
+        time.sleep(0.4)
+        for app, (kind, job) in list(jobs.items()):
+            if off.exists():
+                discard(path, saved)
+                return_path(path).unlink(missing_ok=True)
+                return started
+            if not advance(app, kind, job):
+                del jobs[app]
+        if off.exists():
+            discard(path, saved)
+            return_path(path).unlink(missing_ok=True)
+            return started
+    if initial_scene is not None:
+        finish_desktop(saved, before, initial_scene)
+        saved["scene_finished"] = True
+        save_return(path, saved, report)
+    if set(apps).issubset(done):
+        discard(path, saved)
+    return started

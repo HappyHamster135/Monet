@@ -42,6 +42,12 @@ FRAMES = {
 }
 SOLID = 0.96
 
+
+def matte(glass):
+    """Matte glass (Settings' Glass slider): most of the way to solid, so the painting's color
+    comes through it and its strokes don't."""
+    return round(glass + (SOLID - glass) * 0.7, 3)
+
 STYLE = """<style type="text/css" id="current-color-scheme">
 .ColorScheme-Background { color:#f3f1ec; }
 .ColorScheme-Text { color:#1c1b19; }
@@ -1011,11 +1017,13 @@ def write(path, text):
     path.write_text(text)
 
 
-def write_style(out, ident, name, description, solid=False):
+def write_style(out, ident, name, description, solid=False, matted=False):
     out.mkdir(parents=True, exist_ok=True)
     for frame, spec in FRAMES.items():
         if solid:
             spec = dict(spec, glass=SOLID)
+        elif matted:
+            spec = dict(spec, glass=matte(spec["glass"]))
         svg = frame_svg(**spec)
         for folder in ("", "translucent/"):
             write(out / f"{folder}{frame}.svg", svg)
@@ -1029,7 +1037,9 @@ def write_style(out, ident, name, description, solid=False):
     # glass. Plasma 6 reads it from metadata.json, older ones from plasmarc.
     contrast = {"enabled": True, "contrast": 0.18, "intensity": 1.05, "saturation": 1.7}
     (out / "metadata.json").write_text(json.dumps({
-        "AdaptiveTransparency": {"enabled": True},
+        # Not solid when a window touches the islands: they keep the glass Settings has, blur and
+        # all, even as they slide away (they turned white on the way down).
+        "AdaptiveTransparency": {"enabled": False},
         "BlurBehindEffect": {"enabled": True},
         "ContrastEffect": contrast,
         "KPlugin": {
@@ -1050,7 +1060,7 @@ intensity={contrast["intensity"]}
 saturation={contrast["saturation"]}
 
 [AdaptiveTransparency]
-enabled=true
+enabled=false
 
 [BlurBehindEffect]
 enabled=true
@@ -1060,6 +1070,8 @@ enabled=true
 
 def main():
     write_style(OUT, "monet", "Monet", "Glass islands and popovers over the painting")
+    write_style(OUT.parent / "monet-matte", "monet-matte", "Monet (matte)",
+                "Monet's islands and popovers in matte glass", matted=True)
     write_style(OUT.parent / "monet-solid", "monet-solid", "Monet (solid)",
                 "Monet's islands and popovers without the glass", solid=True)
 

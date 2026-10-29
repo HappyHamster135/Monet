@@ -1,0 +1,14 @@
+[Unit]
+Description=Monet: Windows' Games folder for Steam on both sides, and Wi-Fi in both, when Windows' drive is safe to write
+After=local-fs.target monet-windows-setup.service NetworkManager.service
+Before=display-manager.service plasmalogin.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=@LIBEXECDIR@/monet-windows-drive
+# Before the sign-in screen: a drive that doesn't answer never holds it up for long.
+TimeoutStartSec=50s
+
+[Install]
+WantedBy=multi-user.target

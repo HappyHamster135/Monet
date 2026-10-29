@@ -1,15 +1,16 @@
 //! Getting to Windows reliably: which boot entry to start, how, a log of
 //! every trip, and, at Monet's next start, what happened.
 
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
 use monet_core::boot::{self, BootEntry, Reach};
-use monet_core::efi::{EfiVars, GLOBAL_GUID, LAUNCH_VAR, MONET_GUID};
+use monet_core::efi::{EfiError, EfiVars, GLOBAL_GUID, LAUNCH_VAR, MONET_GUID};
 
 use crate::esp;
 
@@ -35,6 +36,10 @@ pub struct Trip {
     /// The entry Monet started from.
     pub monet: u16,
     pub method: Method,
+    #[serde(default)]
+    pub checkpoint: Option<String>,
+    #[serde(default)]
+    pub boot: String,
 }
 
 /// What happened on a trip, read at Monet's next start.
@@ -72,6 +77,9 @@ impl Paths {
     }
     fn trip(&self) -> PathBuf {
         self.dir.join("trip.json")
+    }
+    fn returned(&self) -> PathBuf {
+        self.dir.join("trip-return.json")
     }
     fn log(&self) -> PathBuf {
         self.dir.join("switch.log")
@@ -192,8 +200,42 @@ pub fn snapshot(efi: &dyn EfiVars) -> String {
 
 pub fn save(paths: &Paths, trip: &Trip) -> Result<(), String> {
     fs::create_dir_all(&paths.dir).map_err(|e| e.to_string())?;
-    let json = serde_json::to_vec(trip).map_err(|e| e.to_string())?;
-    fs::write(paths.trip(), json).map_err(|e| e.to_string())
+    save_json(&paths.trip(), trip).map_err(|e| e.to_string())
+}
+
+fn save_json(path: &Path, value: &impl Serialize) -> std::io::Result<()> {
+    let tmp = path.with_extension("json.tmp");
+    let mut file = File::create(&tmp)?;
+    serde_json::to_writer(&mut file, value)?;
+    // The signed-in account reads only opaque trip/boot IDs from this system receipt.
+    file.set_permissions(fs::Permissions::from_mode(0o644))?;
+    file.sync_all()?;
+    fs::rename(tmp, path)?;
+    File::open(path.parent().unwrap())?.sync_all()
+}
+
+fn cancel(paths: &Paths) -> Result<(), String> {
+    match fs::remove_file(paths.trip()) {
+        Ok(()) => File::open(&paths.dir).and_then(|dir| dir.sync_all()).map_err(|e| e.to_string()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+pub fn cancel_switch(efi: &mut dyn EfiVars, paths: &Paths, monet: u16) -> Result<(), String> {
+    // Remove the trip first: clearing its request must never look like a Windows return.
+    cancel(paths)?;
+    let request = monet_core::request::clear(efi);
+    let next = match efi.delete(GLOBAL_GUID, "BootNext") {
+        Ok(()) | Err(EfiError::NotFound) => Ok(()),
+        Err(e) => Err(e),
+    };
+    let order = boot::move_to_front(efi, monet);
+    request.and(next).and(order).map(|_| ()).map_err(|e| format!("Couldn't cancel the Windows boot target: {e}"))
+}
+
+pub fn valid_checkpoint(id: &str) -> bool {
+    id.len() == 32 && id.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
 
 /// Puts Windows first in BootOrder for a Method::First trip.
@@ -208,20 +250,40 @@ pub fn put_windows_first(efi: &mut dyn EfiVars, entry: u16) -> Result<(), String
 /// At Monet's start: if a trip to Windows just happened and Monet is back,
 /// find out why, tidy up, and remember what to do differently. Returns a
 /// sentence for the person when something went wrong.
-pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_done: bool) -> Option<String> {
+pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_done: bool, boot: &str) -> Option<String> {
     let trip: Trip = serde_json::from_slice(&fs::read(paths.trip()).ok()?).ok()?;
-    let _ = fs::remove_file(paths.trip());
+    if boot.is_empty() || trip.boot == boot {
+        return None;
+    }
     let before = snapshot(efi);
-
-    // Monet is running again: it goes back to being the default.
+    // Keep Monet bootable even if persisting the recovery receipt fails.
     if trip.method == Method::First {
         if let Ok(current) = boot::boot_current(efi) {
             let _ = boot::move_to_front(efi, current);
         }
     }
+    // Read errors are not evidence that Windows consumed the request. Keep it retryable.
+    let next_left = match boot::boot_next(efi) {
+        Ok(next) => next == Some(trip.entry),
+        Err(_) => return None,
+    };
+    let request_left = match efi.get(MONET_GUID, LAUNCH_VAR) {
+        Ok(_) => true,
+        Err(EfiError::NotFound) => false,
+        Err(_) => return None,
+    };
+    if let Some(id) = trip.checkpoint.as_deref().filter(|id| valid_checkpoint(id)) {
+        if !trip.boot.is_empty() {
+            let receipt = serde_json::json!({"id": id, "boot": trip.boot, "returned_boot": boot});
+            if let Err(e) = save_json(&paths.returned(), &receipt) {
+                log(paths, now, &format!("couldn't save the return receipt: {e}"));
+                return None;
+            }
+        }
+    }
+    // Commit the receipt before consuming the trip; a failed write can be retried.
+    let _ = cancel(paths);
 
-    let next_left = matches!(boot::boot_next(efi), Ok(Some(n)) if n == trip.entry);
-    let request_left = efi.get(MONET_GUID, LAUNCH_VAR).is_ok();
     let arrival = classify(next_left, request_left);
     let recent = now.saturating_sub(trip.created) < RECENT_SECS;
     log(paths, now, &format!("back in Monet after a trip to Boot{:04X} ({:?}): {arrival:?}; {before}", trip.entry, trip.method));
@@ -311,40 +373,136 @@ mod tests {
         assert_eq!(classify(false, true), Arrival::Failed);
     }
 
+    fn bound_trip() -> Trip {
+        Trip { created: 1000, entry: 4, monet: 1, method: Method::Once,
+               checkpoint: Some("a".repeat(32)), boot: "departure".into() }
+    }
+
+    #[test]
+    fn long_trips_and_clock_changes_keep_the_exact_return_identity() {
+        for now in [900, 1000 + 30 * 86400] {
+            let paths = Paths::new(temp());
+            save(&paths, &bound_trip()).unwrap();
+            let mut efi = pc(None, false);
+            assert!(check_after_boot(&mut efi, &paths, now, true, "return").is_none());
+            let receipt: serde_json::Value = serde_json::from_slice(&fs::read(paths.returned()).unwrap()).unwrap();
+            assert_eq!(receipt, serde_json::json!({"id": "a".repeat(32), "boot": "departure", "returned_boot": "return"}));
+            assert!(!paths.trip().exists());
+            check_after_boot(&mut efi, &paths, now + 100, true, "later");
+            assert_eq!(fs::read_to_string(paths.returned()).unwrap(), receipt.to_string());
+        }
+    }
+
+    #[test]
+    fn same_boot_does_not_consume_the_pending_switch() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        let mut efi = pc(Some(4), true);
+        for boot in ["departure", ""] {
+            assert!(check_after_boot(&mut efi, &paths, 2000, true, boot).is_none());
+            assert!(paths.trip().exists());
+            assert!(!paths.returned().exists());
+            assert_eq!(boot::boot_next(&efi).unwrap(), Some(4));
+        }
+    }
+
+    #[test]
+    fn failed_windows_start_still_restores_the_departed_workspace() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        let mut efi = pc(None, true);
+        assert!(check_after_boot(&mut efi, &paths, 1060, true, "return").is_some());
+        assert!(paths.returned().exists());
+        assert!(!paths.trip().exists());
+    }
+
+    #[test]
+    fn failed_return_write_preserves_trip_and_firmware_evidence_for_retry() {
+        let paths = Paths::new(temp());
+        save(&paths, &Trip { method: Method::First, ..bound_trip() }).unwrap();
+        fs::create_dir(paths.returned().with_extension("json.tmp")).unwrap();
+        let mut efi = pc(Some(4), true);
+        check_after_boot(&mut efi, &paths, 1060, true, "return");
+        assert!(paths.trip().exists());
+        assert!(efi.get(MONET_GUID, LAUNCH_VAR).is_ok());
+        assert_eq!(boot::boot_order(&efi).unwrap()[0], 1);
+        fs::remove_dir(paths.returned().with_extension("json.tmp")).unwrap();
+        check_after_boot(&mut efi, &paths, 1070, true, "return");
+        assert!(paths.returned().exists());
+        assert!(!paths.trip().exists());
+    }
+
+    #[test]
+    fn unreadable_firmware_is_not_a_confirmed_return() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        let mut efi = pc(None, false);
+        efi.set(GLOBAL_GUID, "BootNext", &[], ATTR_DEFAULT).unwrap();
+        check_after_boot(&mut efi, &paths, 1060, true, "return");
+        assert!(paths.trip().exists());
+        assert!(!paths.returned().exists());
+    }
+
+    #[test]
+    fn cancelled_switch_cannot_confirm_an_unrelated_reboot() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        let mut efi = pc(Some(4), true);
+        cancel_switch(&mut efi, &paths, 1).unwrap();
+        assert!(!paths.trip().exists());
+        assert_eq!(boot::boot_next(&efi).unwrap(), None);
+        assert!(matches!(efi.get(MONET_GUID, LAUNCH_VAR), Err(EfiError::NotFound)));
+        assert_eq!(boot::boot_order(&efi).unwrap()[0], 1);
+        check_after_boot(&mut efi, &paths, 2000, true, "unrelated");
+        assert!(!paths.returned().exists());
+        cancel_switch(&mut efi, &paths, 1).unwrap();
+    }
+
+    #[test]
+    fn checkpoint_ids_are_bounded_and_old_trip_files_still_load() {
+        assert!(valid_checkpoint(&"a".repeat(32)));
+        for id in ["", "../../trip", "not-an-id", &"a".repeat(33), &"A".repeat(32)] {
+            assert!(!valid_checkpoint(id));
+        }
+        let old: Trip = serde_json::from_str(r#"{"created":1000,"entry":4,"monet":1,"method":"once"}"#).unwrap();
+        assert_eq!(old.checkpoint, None);
+        assert!(old.boot.is_empty());
+    }
+
     #[test]
     fn firmware_that_skips_boot_next_gets_the_other_way() {
         let paths = Paths::new(temp());
-        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::Once }).unwrap();
+        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::Once, checkpoint: None, boot: String::new() }).unwrap();
         let mut efi = pc(Some(4), true);
-        let notice = check_after_boot(&mut efi, &paths, 1060, true).unwrap();
+        let notice = check_after_boot(&mut efi, &paths, 1060, true, "returned").unwrap();
         assert!(notice.contains("skipped"));
         assert!(firmware_skips_boot_next(&paths));
         assert!(boot::boot_next(&efi).unwrap().is_none(), "BootNext is cleared");
         assert!(efi.get(MONET_GUID, LAUNCH_VAR).is_err(), "the request is cleared");
         // Handled once.
-        assert!(check_after_boot(&mut efi, &paths, 1070, true).is_none());
+        assert!(check_after_boot(&mut efi, &paths, 1070, true, "returned").is_none());
     }
 
     #[test]
     fn an_entry_that_cant_start_is_not_used_again() {
         let paths = Paths::new(temp());
-        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::Once }).unwrap();
+        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::Once, checkpoint: None, boot: String::new() }).unwrap();
         let mut efi = pc(None, true);
-        assert!(check_after_boot(&mut efi, &paths, 1060, true).unwrap().contains("couldn't open its boot entry"));
+        assert!(check_after_boot(&mut efi, &paths, 1060, true, "returned").unwrap().contains("couldn't open its boot entry"));
         assert_eq!(bad_entries(&paths), vec![4]);
         // Once a trip works, the entry is trusted again.
-        save(&paths, &Trip { created: 2000, entry: 4, monet: 1, method: Method::Once }).unwrap();
+        save(&paths, &Trip { created: 2000, entry: 4, monet: 1, method: Method::Once, checkpoint: None, boot: String::new() }).unwrap();
         let mut efi = pc(None, false);
-        assert!(check_after_boot(&mut efi, &paths, 2060, true).is_none());
+        assert!(check_after_boot(&mut efi, &paths, 2060, true, "returned").is_none());
         assert!(bad_entries(&paths).is_empty());
     }
 
     #[test]
     fn a_windows_still_setting_up_is_not_blamed_and_monet_goes_first_again() {
         let paths = Paths::new(temp());
-        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::First }).unwrap();
+        save(&paths, &Trip { created: 1000, entry: 4, monet: 1, method: Method::First, checkpoint: None, boot: String::new() }).unwrap();
         let mut efi = pc(None, true);
-        let notice = check_after_boot(&mut efi, &paths, 1060, false).unwrap();
+        let notice = check_after_boot(&mut efi, &paths, 1060, false, "returned").unwrap();
         assert!(notice.contains("didn't finish"));
         assert!(bad_entries(&paths).is_empty());
         assert_eq!(boot::boot_order(&efi).unwrap(), vec![1, 4]);

@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+cmake_minimum_required(VERSION 3.22)
+project(MonetWindowIdentity LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+find_package(KWin CONFIG REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate DBus Widgets)
+add_library(monet_window_identity MODULE identity.cpp)
+target_link_libraries(monet_window_identity PRIVATE KWin::kwin Qt6::DBus)
+set_target_properties(monet_window_identity PROPERTIES PREFIX "")

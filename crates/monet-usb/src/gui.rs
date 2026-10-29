@@ -23,7 +23,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use crate::words::{tr, trf};
-use crate::{disk, plan};
+use crate::{disk, image, plan};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ID_STICKS: usize = 10;
@@ -38,7 +38,7 @@ static MAIN: AtomicIsize = AtomicIsize::new(0);
 static PAPER_BRUSH: AtomicIsize = AtomicIsize::new(0);
 static CONTROLS: Mutex<Vec<isize>> = Mutex::new(Vec::new()); // title, text, sticks, bar, status, make, close
 static NEWS: Mutex<News> = Mutex::new(News { text: String::new(), fraction: 0.0, finished: None, busy: false });
-static STICKS: Mutex<Vec<(u32, String)>> = Mutex::new(Vec::new());
+static STICKS: Mutex<Vec<disk::Stick>> = Mutex::new(Vec::new());
 
 struct News {
     text: String,
@@ -177,13 +177,13 @@ fn refresh_sticks() {
         let text = wide(&text);
         SetWindowTextW(control(4), text.as_ptr());
     }
-    *STICKS.lock().unwrap() = found.into_iter().map(|s| (s.number, s.label)).collect();
+    *STICKS.lock().unwrap() = found;
 }
 
 fn start(hwnd: HWND) {
     let choice = unsafe { SendMessageW(control(2), CB_GETCURSEL, 0, 0) };
-    let Some((number, label)) = STICKS.lock().unwrap().get(choice.max(0) as usize).cloned() else { return };
-    let question = wide(&trf("Everything on %1 will be erased.\n\nMake it a Monet USB stick?", &[label.as_str()]));
+    let Some(stick) = STICKS.lock().unwrap().get(choice.max(0) as usize).cloned() else { return };
+    let question = wide(&trf("Everything on %1 will be erased.\n\nMake it a Monet USB stick?", &[stick.label.as_str()]));
     let title = wide(&tr("Make a Monet USB stick"));
     let answer =
         unsafe { MessageBoxW(hwnd, question.as_ptr(), title.as_ptr(), MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2) };
@@ -200,16 +200,24 @@ fn start(hwnd: HWND) {
         // and checked before anything is erased.
         let given = std::env::args().nth(1);
         let mut iso = given.clone().unwrap_or_default();
+        let mut expected = None;
         let result = match &given {
             Some(path) => std::fs::metadata(path).map(|_| ()).map_err(|e| format!("{path}: {e}")),
             None => installer().and_then(|(name, url, total)| {
+                let output = Command::new(curl()?).args(["-L", "--fail", "-s", "--max-time", "60",
+                    &plan::release_url(VERSION, "SHA256SUMS.txt")]).creation_flags(NO_WINDOW).output().map_err(|e| e.to_string())?;
+                if !output.status.success() { return Err(tr("The release checksum could not be downloaded. Nothing was written.")); }
+                expected = Some(plan::checksum(&String::from_utf8_lossy(&output.stdout), &name)
+                    .ok_or_else(|| tr("This release has no valid installer checksum. Nothing was written."))?);
                 iso = std::env::temp_dir().join(name).to_string_lossy().to_string();
                 download(&url, &iso, total)
             }),
         };
         let result = result.and_then(|()| {
+            tell(tr("Checking the installer before writing…"), 0.0);
+            let mut source = image::open(&iso, expected.as_deref())?;
             tell(tr("Writing to the USB stick…"), 0.0);
-            disk::write(number, &iso, |phase, done, total| {
+            disk::write(&stick, &mut source, |phase, done, total| {
                 let f = done as f64 / total.max(1) as f64;
                 let gb = |b: u64| b as f64 / 1e9;
                 let (done, total) = (format!("{:.1}", gb(done)), format!("{:.1}", gb(total)));
@@ -220,8 +228,7 @@ fn start(hwnd: HWND) {
                 };
                 tell(line, f);
             })
-            // Written partly or not at all, the stick looks dead to Windows but only needs formatting.
-            .map_err(|e| format!("{}\n\n{}", tr(&e), tr("The USB stick isn't broken: Windows can format it again in Disk Management (right-click the Start button).")))
+            .map_err(|e| format!("{}\n\n{}", tr(&e), tr("The USB device is not ready to use. A partial write may require reformatting. This error does not establish whether the hardware is damaged. See Monet-USB-Stick.log in your temporary folder.")))
         });
         if result.is_ok() && given.is_none() {
             let _ = std::fs::remove_file(&iso);

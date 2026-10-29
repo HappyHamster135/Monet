@@ -7,16 +7,46 @@
  */
 import QtQuick
 import QtQuick.Window
+import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 
 WallpaperItem {
     id: root
 
-    // Which series (monet-light writes it, from Monet Settings): The Hours, Water
-    // Lilies or Haystacks, each in the same four lights. A change fades in like a new light.
+    // The desktop's right-click menu: Windows' two ways to the settings, as Monet Settings' own
+    // pages. KDE's Desktop and Wallpaper and Display Configuration are out of it (monet-fresh):
+    // they opened KDE's dialogs. A wallpaper's entries are the only ones Plasma's menu takes in.
+    contextualActions: [
+        PlasmaCore.Action {
+            text: i18n("Display settings")
+            icon.name: "preferences-desktop-display"
+            onTriggered: root.settings("display")
+        },
+        PlasmaCore.Action {
+            text: i18n("Personalize")
+            icon.name: "preferences-desktop-wallpaper"
+            onTriggered: root.settings("light")
+        }
+    ]
+    // Monet Settings at a page (monet-quick rings Quick Settings' doorbell). The runner only once
+    // asked for: the lock screen shows this painting too, and needn't have it.
+    function settings(page) {
+        const runner = Qt.createQmlObject('import org.kde.plasma.plasma5support as P5Support\n'
+                                          + 'P5Support.DataSource { engine: "executable" }', root, "settings")
+        runner.newData.connect(source => {
+            runner.disconnectSource(source)
+            runner.destroy()
+        })
+        runner.connectSource("@LIBEXECDIR@/monet-quick open " + page)
+    }
+
+    // Which series (monet-light writes it, from Monet Settings): The Hours, Water Lilies,
+    // Haystacks, The Magpie, or a photo of yours that monet-paint painted in the same four
+    // lights. A change fades in like a new light.
+    readonly property string photo: /^file:\/\/\/.+\/$/.test(root.configuration.PhotoFolder || "") ? root.configuration.PhotoFolder : ""
     readonly property string series: ["hours", "lilies", "haystacks", "magpie"].indexOf(root.configuration.Series) >= 0
-        ? root.configuration.Series : "hours"
-    readonly property string folder: "file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"
+        || (root.configuration.Series === "photo" && photo !== "") ? root.configuration.Series : "hours"
+    readonly property string folder: series === "photo" ? photo : "file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"
     onFolderChanged: update()
     // Each light starts at this minute of the day, then drifts into the next: these where
     // the place isn't known, or the sun doesn't rise and set today (far north and south).

@@ -3,7 +3,7 @@
  * and after (and back to today), the note on a sheet of paper, kept as you
  * type, and the next days that have a note, a click away. The Calendar
  * widget shows it in a panel beside the month; the bar's clock, beside its
- * month in the same popup.
+ * month in a separate inward-opening panel.
  *
  * install.sh copies this file into the Calendar's and the Clock's packages.
  */
@@ -23,11 +23,15 @@ ColumnLayout {
     property color lily
     // A way to put it away (the Calendar's panel); the clock's has its own.
     property bool closable: false
+    property string recurrence: "none"
     // To another day: the day before or after, today, or one coming up.
     signal moved(date day)
     signal closed()
 
     spacing: 8
+    Keys.onEscapePressed: { keepNow(); closed(); }
+    onVisibleChanged: if (!visible) keepNow()
+    Component.onDestruction: keepNow()
 
     function sameDay(a, b) {
         return a.toDateString() === b.toDateString();
@@ -41,7 +45,7 @@ ColumnLayout {
     function keepNow() {
         if (keep.running) {
             keep.stop();
-            store.write(note.written, note.text);
+            store.write(note.written, note.text, recurrence);
         }
     }
 
@@ -54,6 +58,7 @@ ColumnLayout {
     onDayChanged: {
         keepNow();
         note.written = day;
+        recurrence = store ? store.repeatFor(day) : "none";
         note.text = store ? store.noteFor(day) : "";
     }
     // Notes that arrive (from the helper, or the other calendar), unless they're being typed.
@@ -62,6 +67,7 @@ ColumnLayout {
         function onNotesChanged() {
             if (!note.activeFocus && !keep.running) {
                 note.text = page.store.noteFor(page.day);
+                page.recurrence = page.store.repeatFor(page.day);
             }
         }
     }
@@ -131,6 +137,11 @@ ColumnLayout {
             model: [-1, 1]
             Item {
                 id: stepper
+                activeFocusOnTab: true
+                Keys.onReturnPressed: page.step(stepper.modelData)
+                Keys.onEnterPressed: page.step(stepper.modelData)
+                Keys.onSpacePressed: page.step(stepper.modelData)
+                Accessible.onPressAction: page.step(stepper.modelData)
                 required property int modelData
                 Layout.preferredWidth: 26
                 Layout.preferredHeight: 26
@@ -139,8 +150,10 @@ ColumnLayout {
                 Rectangle {
                     anchors.fill: parent
                     radius: 13
-                    color: page.ink
-                    opacity: stepArea.pressed ? 0.14 : stepArea.containsMouse ? 0.08 : 0
+                    color: stepper.activeFocus ? "transparent" : page.ink
+                    border.width: stepper.activeFocus ? 2 : 0
+                    border.color: page.lily
+                    opacity: stepper.activeFocus ? 1 : stepArea.pressed ? 0.14 : stepArea.containsMouse ? 0.08 : 0
                 }
                 Text {
                     anchors.centerIn: parent
@@ -161,7 +174,12 @@ ColumnLayout {
         }
         // Put away.
         Item {
+            id: closeButton
             visible: page.closable
+            activeFocusOnTab: true
+            Keys.onReturnPressed: { page.keepNow(); page.closed(); }
+            Keys.onSpacePressed: { page.keepNow(); page.closed(); }
+            Accessible.onPressAction: { page.keepNow(); page.closed(); }
             Layout.preferredWidth: 26
             Layout.preferredHeight: 26
             Accessible.role: Accessible.Button
@@ -169,8 +187,10 @@ ColumnLayout {
             Rectangle {
                 anchors.fill: parent
                 radius: 13
-                color: page.ink
-                opacity: closeArea.pressed ? 0.14 : closeArea.containsMouse ? 0.08 : 0
+                color: closeButton.activeFocus ? "transparent" : page.ink
+                border.width: closeButton.activeFocus ? 2 : 0
+                border.color: page.lily
+                opacity: closeButton.activeFocus ? 1 : closeArea.pressed ? 0.14 : closeArea.containsMouse ? 0.08 : 0
             }
             Text {
                 anchors.centerIn: parent
@@ -212,7 +232,7 @@ ColumnLayout {
             QQC2.TextArea {
                 id: note
                 // The day this text belongs to, so a save on its way keeps to it.
-                property date written: page.day
+                property date written: new Date()
                 placeholderText: i18n("Nothing planned. Write something for this day…")
                 placeholderTextColor: page.dim
                 color: page.ink
@@ -222,21 +242,63 @@ ColumnLayout {
                 selectionColor: "#9FD3C4"
                 selectedTextColor: "#1C1B19"
                 background: null
+                Keys.onTabPressed: repeatChoice.forceActiveFocus()
                 Keys.onEscapePressed: {
                     page.keepNow();
                     page.closed();
                 }
                 onTextChanged: if (activeFocus) keep.restart()
                 onActiveFocusChanged: if (!activeFocus) page.keepNow()
-                Component.onCompleted: text = page.store ? page.store.noteFor(page.day) : ""
+                Accessible.name: i18n("Note for %1", Qt.formatDate(page.day, Qt.locale().dateFormat(Locale.LongFormat)))
+                KeyNavigation.tab: repeatChoice
+                Component.onCompleted: {
+                    written = page.day;
+                    text = page.store ? page.store.noteFor(page.day) : "";
+                    page.recurrence = page.store ? page.store.repeatFor(page.day) : "none";
+                }
             }
         }
 
         Timer {
             id: keep
             interval: 600
-            onTriggered: page.store.write(note.written, note.text)
+            onTriggered: page.store.write(note.written, note.text, page.recurrence)
         }
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        QQC2.ComboBox {
+            id: repeatChoice
+            objectName: "noteRepeat"
+            Layout.fillWidth: true
+            readonly property var intervals: ["none", "yearly", "monthly", "weekly", "daily"]
+            model: [i18n("Doesn't repeat"), i18n("Every year"), i18n("Every month"), i18n("Every week"), i18n("Every day")]
+            currentIndex: Math.max(0, intervals.indexOf(page.recurrence))
+            Accessible.name: i18n("Repeat note")
+            onActivated: {
+                page.keepNow();
+                page.recurrence = intervals[currentIndex];
+                if (note.text.trim()) page.store.write(note.written,note.text,page.recurrence);
+            }
+        }
+    }
+    Text {
+        Layout.fillWidth: true
+        visible: page.recurrence !== "none"
+        text: i18n("Changes apply to every occurrence.")
+            + (page.recurrence === "monthly" && page.day.getDate() > 28
+               ? " " + i18n("Months without this date are skipped.")
+               : page.recurrence === "yearly" && page.day.getMonth() === 1 && page.day.getDate() === 29
+               ? " " + i18n("29 February repeats in leap years.") : "")
+        color: page.dim; font.pixelSize: 11; wrapMode: Text.WordWrap
+    }
+    QQC2.Button {
+        Layout.fillWidth: true
+        visible: page.store && page.store.problem !== ""
+        text: i18n("Try saving again")
+        Accessible.description: page.store ? page.store.problem : ""
+        onClicked: page.store.retry()
     }
 
     // The next days with a note.
@@ -258,6 +320,10 @@ ColumnLayout {
         model: page.store ? page.store.after(page.day, 3) : []
         Item {
             id: soon
+            activeFocusOnTab: true
+            Keys.onReturnPressed: page.moved(soon.modelData.day)
+            Keys.onSpacePressed: page.moved(soon.modelData.day)
+            Accessible.onPressAction: page.moved(soon.modelData.day)
             required property var modelData
             Layout.fillWidth: true
             Layout.preferredHeight: 26
@@ -268,7 +334,9 @@ ColumnLayout {
                 anchors.fill: parent
                 radius: 9
                 color: page.ink
-                opacity: soonArea.pressed ? 0.12 : soonArea.containsMouse ? 0.07 : 0
+                border.width: soon.activeFocus ? 2 : 0
+                border.color: page.lily
+                opacity: soon.activeFocus ? 0.3 : soonArea.pressed ? 0.12 : soonArea.containsMouse ? 0.07 : 0
             }
             RowLayout {
                 anchors.fill: parent

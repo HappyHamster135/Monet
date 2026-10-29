@@ -8,6 +8,9 @@
 set -u
 
 BINDIR="@BINDIR@"
+LIBEXECDIR="@LIBEXECDIR@"
+failed=0
+kw() { "$LIBEXECDIR/monet-profile" put --default-only "$@" || { failed=1; return 1; }; }
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 stamp="$CACHE/monet-version"
@@ -19,40 +22,67 @@ version="$("$BINDIR/monet" --version 2>/dev/null)"
 if [ ! -e "$CONFIG/monet/menu-add-widgets" ] && command -v kwriteconfig6 >/dev/null; then
     rc=plasma-org.kde.plasma.desktop-appletsrc
     if [ -z "$(kreadconfig6 --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" 2>/dev/null)" ]; then
-        kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" org.kde.contextmenu
-        kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste
+        kw --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" org.kde.contextmenu
+        kw --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste
     fi
-    kwriteconfig6 --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" --key "add widgets" true
-    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-add-widgets"
+    kw --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" --key "add widgets" true
+    [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-add-widgets"
+fi
+# And as Windows has it (0.9.4): New, Paste, Undo, Icons, Open Terminal and the widgets, then
+# Display settings and Personalize, which The Hours adds and which open Monet Settings. Out:
+# KDE's Desktop and Wallpaper and Display Configuration (they opened KDE's dialogs), its edit
+# mode, Lock Screen and Show Logout Screen (Monet has its own places for them). Once per account.
+if [ ! -e "$CONFIG/monet/menu-monet" ] && command -v kwriteconfig6 >/dev/null; then
+    rc=plasma-org.kde.plasma.desktop-appletsrc
+    for entry in configure=false _display_settings=false "desktop edit mode=false" "edit mode=false" \
+        _lock_screen=false _logout=false _open_terminal=true _wallpaper=true; do
+        kw --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" \
+            --key "${entry%=*}" "${entry#*=}"
+    done
+    [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-monet"
 fi
 
-# Brightness and Night Light are in Quick Settings, beside Mist and Smoke: KDE's
-# own panel for them, with its Dark Mode switch, leaves the bar. Once per
-# account with a bar (a new one gets it from Monet's layout), here because
-# Plasma reads its tray only as it starts. Known but not chosen, or the tray
-# would add it back as new. Plasma 6 keeps the tray's items in the tray's own
+# Out of the bar's tray, once per account with a bar (a new one gets it from Monet's
+# layout), here because Plasma reads its tray only as it starts: KDE's own item for
+# something Monet has its own for, and Monet's in its place. Known but not chosen, or
+# the tray would add it back as new. Plasma 6 keeps the tray's items in the tray's own
 # settings, [Containments][bar][Applets][tray][General]; until a bar has a tray,
 # it's tried again at the next sign-in.
+#   tray_swap FLAG KDE'S [MONET'S]
 rc=plasma-org.kde.plasma.desktop-appletsrc
-if [ ! -e "$CONFIG/monet/tray-brightness-6" ] && [ -e "$CONFIG/$rc" ] && command -v kwriteconfig6 >/dev/null; then
+tray_swap() {
+    local flag="$CONFIG/monet/$1" out="$2" in="${3:-}" trays bar tray extra known item
+    [ ! -e "$flag" ] && [ -e "$CONFIG/$rc" ] && command -v kwriteconfig6 >/dev/null || return 0
     trays="$(awk '/^\[/ { tray = ""; if ($0 ~ /^\[Containments\]\[[0-9]+\]\[Applets\]\[[0-9]+\]$/) { tray = $0; gsub(/\]\[Applets\]\[/, " ", tray); gsub(/[^0-9 ]/, "", tray) } }
                   /^plugin=org\.kde\.plasma\.systemtray$/ && tray != "" { print tray }' "$CONFIG/$rc")"
     while read -r bar tray; do
         [ -n "$tray" ] || continue
         general=(--file "$rc" --group Containments --group "$bar" --group Applets --group "$tray" --group General)
-        extra="$(kreadconfig6 "${general[@]}" --key extraItems | tr ',' '\n' | grep -vx org.kde.plasma.brightness | paste -sd, -)"
+        extra="$(kreadconfig6 "${general[@]}" --key extraItems | tr ',' '\n' | grep -vx "$out" | paste -sd, -)"
         known="$(kreadconfig6 "${general[@]}" --key knownItems)"
-        case ",$known," in
-            *,org.kde.plasma.brightness,*) ;;
-            *) known="${known:+$known,}org.kde.plasma.brightness" ;;
-        esac
-        kwriteconfig6 "${general[@]}" --key extraItems "$extra"
-        kwriteconfig6 "${general[@]}" --key knownItems "$known"
+        for item in "$out" $in; do
+            case ",$known," in
+                *,"$item",*) ;;
+                *) known="${known:+$known,}$item" ;;
+            esac
+        done
+        if [ -n "$in" ]; then
+            case ",$extra," in
+                *,"$in",*) ;;
+                *) extra="${extra:+$extra,}$in" ;;
+            esac
+        fi
+        kw "${general[@]}" --key extraItems "$extra"
+        kw "${general[@]}" --key knownItems "$known"
     done <<< "$trays"
-    [ -n "$trays" ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/tray-brightness-6"
-fi
+    [ "$failed" = 0 ] && [ -n "$trays" ] && mkdir -p "$CONFIG/monet" && touch "$flag"
+    return 0
+}
+# Brightness and Night Light are in Quick Settings, beside Mist and Smoke: KDE's own
+# panel for them, with its Dark Mode switch, leaves the bar.
+tray_swap tray-brightness-6 org.kde.plasma.brightness
 
-[ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit 0
+[ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit "$failed"
 rm -f "$CACHE/ksvg-elements" "$CACHE"/plasma_theme_*.kcache "$CACHE"/plasma-svgelements* "$CACHE/icon-cache.kcache"
 mkdir -p "$CACHE" && printf '%s\n' "$version" > "$stamp"
-exit 0
+exit "$failed"

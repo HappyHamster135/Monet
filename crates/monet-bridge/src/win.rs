@@ -10,7 +10,7 @@ use std::ptr::{null, null_mut};
 use monet_core::efi::{EfiError, EfiVars, Result};
 use windows_sys::Win32::Foundation::{
     CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, ERROR_ENVVAR_NOT_FOUND, ERROR_INVALID_FUNCTION,
-    ERROR_NOT_ALL_ASSIGNED, ERROR_PRIVILEGE_NOT_HELD, HANDLE, INVALID_HANDLE_VALUE, LUID,
+    ERROR_NOT_ALL_ASSIGNED, ERROR_PRIVILEGE_NOT_HELD, HANDLE, HWND, INVALID_HANDLE_VALUE, LPARAM, LUID,
 };
 use windows_sys::Win32::Security::{
     AdjustTokenPrivileges, LookupPrivilegeValueW, LUID_AND_ATTRIBUTES, SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES,
@@ -21,7 +21,10 @@ use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
 };
-use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ};
+use windows_sys::Win32::System::Registry::{
+    RegCloseKey, RegEnumKeyExW, RegGetValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ,
+    RRF_RT_REG_DWORD, RRF_RT_REG_SZ,
+};
 use windows_sys::Win32::System::Threading::{
     CreateMutexW, GetCurrentProcess, OpenProcess, OpenProcessToken, QueryFullProcessImageNameW,
     PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
@@ -173,6 +176,7 @@ impl EfiVars for FirmwareVars {
 // ------------------------------------------------------------- processes
 
 pub struct Process {
+    pub pid: u32,
     pub exe_name: String,
     /// Full path, when Windows lets us read it.
     pub path: Option<PathBuf>,
@@ -193,7 +197,7 @@ pub fn processes() -> Vec<Process> {
         while more {
             let len = entry.szExeFile.iter().position(|c| *c == 0).unwrap_or(entry.szExeFile.len());
             let exe_name = String::from_utf16_lossy(&entry.szExeFile[..len]);
-            out.push(Process { exe_name, path: process_path(entry.th32ProcessID) });
+            out.push(Process { pid: entry.th32ProcessID, exe_name, path: process_path(entry.th32ProcessID) });
             more = Process32NextW(snapshot, &mut entry) != 0;
         }
         CloseHandle(snapshot);
@@ -241,6 +245,44 @@ pub fn reg_user(key: &str, value: &str) -> Option<String> {
     reg_string(HKEY_CURRENT_USER, key, value)
 }
 
+/// A number under HKEY_LOCAL_MACHINE (REG_DWORD), or None when there's none.
+pub fn reg_machine_dword(key: &str, value: &str) -> Option<u32> {
+    let (key, value) = (wide(key), wide(value));
+    let mut data = 0u32;
+    let mut size = 4u32;
+    // SAFETY: a four-byte buffer for a REG_DWORD, its size given in bytes.
+    let status = unsafe {
+        RegGetValueW(HKEY_LOCAL_MACHINE, key.as_ptr(), value.as_ptr(), RRF_RT_REG_DWORD, null_mut(), (&mut data as *mut u32).cast(), &mut size)
+    };
+    (status == 0).then_some(data)
+}
+
+/// The names of a key's subkeys, under HKEY_LOCAL_MACHINE.
+pub fn reg_machine_subkeys(key: &str) -> Vec<String> {
+    let key = wide(key);
+    let mut handle: HKEY = null_mut();
+    // SAFETY: the key name is NUL-terminated; the handle is closed below.
+    if unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, key.as_ptr(), 0, KEY_READ, &mut handle) } != 0 {
+        return Vec::new();
+    }
+    let mut names = Vec::new();
+    for index in 0.. {
+        let mut buf = [0u16; 256];
+        let mut len = buf.len() as u32;
+        // SAFETY: len is the buffer's size in characters, as RegEnumKeyExW expects.
+        let status = unsafe {
+            RegEnumKeyExW(handle, index, buf.as_mut_ptr(), &mut len, null(), null_mut(), null_mut(), null_mut())
+        };
+        if status != 0 {
+            break; // ERROR_NO_MORE_ITEMS, or one we can't read
+        }
+        names.push(String::from_utf16_lossy(&buf[..len as usize]));
+    }
+    // SAFETY: opened above.
+    unsafe { RegCloseKey(handle) };
+    names
+}
+
 // ------------------------------------------------------------- shell and UI
 
 /// Opens a URI (steam://, com.epicgames.launcher://) with its registered app.
@@ -278,9 +320,9 @@ pub fn ask_with_timeout(text: &str, seconds: u32) -> Answer {
     }
 }
 
-/// Bytes received so far by the network cards (not loopback, not the filter layers that
-/// count the same traffic again), for how busy the downloads are.
-pub fn received_bytes() -> u64 {
+/// Bytes through the network cards so far, both ways (not loopback, not the filter layers that
+/// count the same traffic again), for how busy downloads and uploads are.
+pub fn network_bytes() -> u64 {
     use windows_sys::Win32::NetworkManagement::IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2};
     let mut table: *mut MIB_IF_TABLE2 = null_mut();
     // SAFETY: GetIfTable2 allocates the table, read within its NumEntries and freed here.
@@ -290,9 +332,46 @@ pub fn received_bytes() -> u64 {
         }
         let rows = std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
         // Bit 0: a hardware interface; bit 1: a filter on one.
-        let total = rows.iter().filter(|r| r.InterfaceAndOperStatusFlags._bitfield & 0b11 == 0b01).map(|r| r.InOctets).sum();
+        let total = rows
+            .iter()
+            .filter(|r| r.InterfaceAndOperStatusFlags._bitfield & 0b11 == 0b01)
+            .map(|r| r.InOctets + r.OutOctets)
+            .sum();
         FreeMibTable(table.cast());
         total
+    }
+}
+
+/// Minimizes the visible windows of these processes, without bringing anything forward (a
+/// launcher's, once its game is up).
+pub fn minimize_windows_of(pids: &[u32]) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GetWindow, GetWindowThreadProcessId, IsWindowVisible, ShowWindowAsync, GW_OWNER, SW_SHOWMINNOACTIVE,
+    };
+    unsafe extern "system" fn each(hwnd: HWND, lparam: LPARAM) -> windows_sys::core::BOOL {
+        // SAFETY: lparam is the &[u32] below, alive for the whole EnumWindows call.
+        let pids = unsafe { &*(lparam as *const &[u32]) };
+        let mut pid = 0u32;
+        // SAFETY: plain queries on a window EnumWindows handed us.
+        unsafe {
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            if pids.contains(&pid) && IsWindowVisible(hwnd) != 0 && GetWindow(hwnd, GW_OWNER).is_null() {
+                ShowWindowAsync(hwnd, SW_SHOWMINNOACTIVE);
+            }
+        }
+        1
+    }
+    if pids.is_empty() {
+        return;
+    }
+    // SAFETY: the callback reads `pids` through lparam only during this call.
+    unsafe { EnumWindows(Some(each), &pids as *const &[u32] as LPARAM) };
+}
+
+/// Ends these processes (a launcher left running after its game).
+pub fn end_processes(pids: &[u32]) {
+    for pid in pids {
+        run_hidden("taskkill", &["/F", "/PID", &pid.to_string()]);
     }
 }
 

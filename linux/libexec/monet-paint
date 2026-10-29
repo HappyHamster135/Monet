@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""Your photo, painted: a photo becomes a painting in Monet's hand, in the same four lights as
+The Hours (dawn, midday, dusk and night), so the desktop drifts through the day with it.
+
+The brush is the one tools/make-paintings.py paints The Hours with: a loaded flat brush whose
+eighteen bristles each lay their own streak and run dry at their own point. It lays a
+blurred underpainting, then strokes from broad to fine, each along the picture's edges and
+in the color under it, the fine ones only where the picture still needs them. The four lights
+are the same strokes in four lights, colored after The Hours' own palettes.
+
+    monet-paint PHOTO FOLDER [WIDTHxHEIGHT]   paint into FOLDER/{dawn,day,dusk,night}.jpg and preview.png;
+                                              FOLDER/progress says how far it is (a percent)
+
+Needs NumPy and Pillow (both in Monet's image).
+"""
+
+import math
+import sys
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageFilter, ImageOps
+
+# The Hours' light, as a gradient map from shadow to highlight, and how much of it.
+LIGHTS = {
+    "dawn": (["#2E3550", "#7B7896", "#C9A9B0", "#F4D2B6"], 0.38, 1.0),
+    "day": (["#1E2C3A", "#5E7E92", "#BFD3D3", "#FFF6DE"], 0.12, 1.04),
+    "dusk": (["#252749", "#8A6683", "#E08D72", "#F7C27A"], 0.5, 0.94),
+    "night": (["#060A15", "#18264A", "#3C4F86", "#9FB2D8"], 0.72, 0.62),
+}
+# Broad to fine: the brush's width in canvas pixels at 2560 wide, how far apart, and how far
+# the canvas may stray from the picture before a stroke goes there (0: everywhere).
+LAYERS = ((54, 0.9, 0.0), (28, 0.8, 0.05), (14, 0.75, 0.07), (7, 0.7, 0.09))
+
+
+def rgb(h):
+    h = h.lstrip("#")
+    return np.array([int(h[i:i + 2], 16) for i in (0, 2, 4)], np.float32) / 255
+
+
+def say(folder, percent):
+    try:
+        (folder / "progress").write_text(f"{int(percent)}\n")
+    except OSError:
+        pass
+
+
+# The brush (as tools/make-paintings.py has it) ----------------------------------------
+
+BANK = []
+
+
+def bristles(n=8, length=320, width=64):
+    """Stamps of a loaded flat brush: eighteen bristles side by side, each laying its own streak and running
+    dry at its own point, so the tail of a stroke breaks up. Each is (alpha, tone), the tone 128 where even."""
+    if BANK:
+        return BANK
+    rng = np.random.default_rng(1868)
+    t = np.linspace(0, 1, length, dtype=np.float32)[None, :]
+    v = np.linspace(-1, 1, width, dtype=np.float32)[:, None]
+    for _ in range(n):
+        alpha = np.zeros((width, length), np.float32)
+        tone = np.zeros((width, length), np.float32)
+        bow = rng.uniform(-0.4, 0.4) * t * (1 - t)
+        for c in np.linspace(-0.88, 0.88, 18) + rng.normal(0, 0.03, 18):
+            start, end = rng.uniform(0, 0.05) + 0.14 * c * c, 1 - rng.uniform(0, 0.28) - 0.22 * c * c
+            thick, load, shade = rng.uniform(0.11, 0.16), rng.uniform(0.75, 1.0), rng.normal(0, 1)
+            wander = np.interp(t[0], np.linspace(0, 1, 6), rng.normal(0, 0.03, 6))[None, :]
+            dry = np.interp(t[0], np.linspace(0, 1, 24), rng.uniform(0, 1, 24))[None, :]
+            run = np.clip((t - start) * 30, 0, 1) * np.clip((end - t) * 8, 0, 1)
+            run *= np.clip((dry - (t - 0.55) * 1.8) * 3, 0, 1)
+            a = np.exp(-(((v - c - wander - bow) / thick) ** 2)) * run * load
+            alpha += a
+            tone += a * shade
+        tone /= alpha + 1e-6
+        BANK.append((Image.fromarray((np.clip(alpha * 1.8, 0, 1) * 255).astype(np.uint8), "L"),
+                     Image.fromarray((np.clip(tone, -1, 1) * 127 + 128).astype(np.uint8), "L")))
+    return BANK
+
+
+def lay(canvas, x, y, length, width, angle, color, alpha, streak=0.1):
+    """One stroke of the loaded brush centered at (x, y), composited onto the RGBA canvas."""
+    if length < 1 or width < 1:
+        return
+    bank = bristles()
+    mask, tone = bank[int(abs(x * 7.31 + y * 3.17)) % len(bank)]
+    ca, sa = math.cos(angle), math.sin(angle)
+    hx, hy = abs(ca) * length / 2 + abs(sa) * width / 2 + 2, abs(sa) * length / 2 + abs(ca) * width / 2 + 2
+    left, top = int(math.floor(x - hx)), int(math.floor(y - hy))
+    size = (int(math.ceil(x + hx)) - left, int(math.ceil(y + hy)) - top)
+    cw, ch = canvas.size
+    if left + size[0] <= 0 or top + size[1] <= 0 or left >= cw or top >= ch:
+        return
+    kx, ky, dx, dy = mask.width / length, mask.height / width, left - x, top - y
+    data = (ca * kx, sa * kx, (dx * ca + dy * sa) * kx + mask.width / 2,
+            -sa * ky, ca * ky, (dy * ca - dx * sa) * ky + mask.height / 2)
+    a = np.asarray(mask.transform(size, Image.AFFINE, data, Image.BILINEAR), np.float32) * alpha
+    t = np.asarray(tone.transform(size, Image.AFFINE, data, Image.BILINEAR, fillcolor=128), np.float32) / 128 - 1
+    paint = np.clip(np.asarray(color, np.float32) * (1 + streak * t[..., None]), 0, 1) * 255
+    patch = Image.fromarray(np.dstack([paint, a]).astype(np.uint8), "RGBA")
+    cl, ct = max(left, 0), max(top, 0)
+    patch = patch.crop((cl - left, ct - top, min(left + size[0], cw) - left, min(top + size[1], ch) - top))
+    canvas.alpha_composite(patch, (cl, ct))
+
+
+def grain(img, s):
+    """Canvas weave and a little uneven paint."""
+    w, h = img.size
+    rng = np.random.default_rng(1840)
+    a = np.asarray(img).astype(np.float32) / 255
+    noise = rng.normal(0, 1, (h, w)).astype(np.float32)
+    weave = (np.sin(np.arange(w) * 2.1 / max(s, 0.3))[None, :] * np.sin(np.arange(h) * 1.9 / max(s, 0.3))[:, None])
+    a *= 1 + (0.012 * noise + 0.01 * weave)[..., None]
+    return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
+
+
+# The picture --------------------------------------------------------------------------
+
+def fit(photo, w, h):
+    """The photo the right way up, cropped to the screen's shape at its size: around its middle,
+    a little higher in a tall one, where faces usually are."""
+    img = ImageOps.exif_transpose(photo).convert("RGB")
+    tall = img.height / img.width > h / w
+    return ImageOps.fit(img, (w, h), Image.LANCZOS, centering=(0.5, 0.3 if tall else 0.45))
+
+
+def box(a, r):
+    """A box blur of radius r (pixels) along both axes, three times over: close to a Gaussian."""
+    r = max(1, int(r))
+    a = a.astype(np.float64)
+    for _ in range(3):
+        c = np.cumsum(np.pad(a, ((r + 1, r), (0, 0)), mode="edge"), axis=0)
+        a = (c[2 * r + 1:] - c[:-2 * r - 1]) / (2 * r + 1)
+        c = np.cumsum(np.pad(a, ((0, 0), (r + 1, r)), mode="edge"), axis=1)
+        a = (c[:, 2 * r + 1:] - c[:, :-2 * r - 1]) / (2 * r + 1)
+    return a
+
+
+def edges(gray, sigma):
+    """The direction along the picture's edges at each point (radians), and how strong they are
+    there (0 to 1), from its smoothed structure tensor."""
+    g = np.asarray(gray.filter(ImageFilter.GaussianBlur(sigma)), np.float32) / 255
+    gx = np.zeros_like(g)
+    gy = np.zeros_like(g)
+    gx[:, 1:-1] = g[:, 2:] - g[:, :-2]
+    gy[1:-1, :] = g[2:, :] - g[:-2, :]
+    xx, yy, xy = (box(v, sigma * 2) for v in (gx * gx, gy * gy, gx * gy))
+    angle = 0.5 * np.arctan2(2 * xy, xx - yy) + math.pi / 2  # across the gradient: along the edge
+    strength = np.sqrt((xx - yy) ** 2 + 4 * xy ** 2)
+    return angle, np.clip(strength / (np.percentile(strength, 95) + 1e-9), 0, 1)
+
+
+def paint(photo, w, h, folder=None):
+    """The painting at midday, as an RGB image: underpainting, then broad to fine strokes."""
+    rng = np.random.default_rng(1874)
+    s = w / 2560
+    ref = np.asarray(photo, np.float32) / 255
+    # A painter's palette: a little more color, a little less detail.
+    mean = ref.mean(axis=2, keepdims=True)
+    ref = np.clip(mean + (ref - mean) * 1.18, 0, 1)
+    under = Image.fromarray((ref * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(16 * s))
+    canvas = under.convert("RGBA")
+    gray = photo.convert("L")
+    total = sum((w / (size * s * step)) * (h / (size * s * step)) for size, step, _ in LAYERS)
+    done = 0
+    for size, step, threshold in LAYERS:
+        width = size * s
+        angle, strength = edges(gray, max(1.0, width / 3))
+        blurred = np.asarray(Image.fromarray((ref * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(width / 3)),
+                             np.float32) / 255
+        now = np.asarray(canvas.convert("RGB"), np.float32) / 255
+        error = np.abs(now - blurred).mean(axis=2)
+        gap = width * step
+        points = [(x + rng.uniform(-gap / 2, gap / 2), y + rng.uniform(-gap / 2, gap / 2))
+                  for y in np.arange(gap / 2, h, gap) for x in np.arange(gap / 2, w, gap)]
+        rng.shuffle(points)
+        for x, y in points:
+            done += 1
+            if folder and done % 400 == 0:
+                say(folder, 5 + 80 * done / total)
+            xi, yi = int(min(max(x, 0), w - 1)), int(min(max(y, 0), h - 1))
+            y0, y1, x0, x1 = max(yi - int(gap / 2), 0), yi + int(gap / 2) + 1, max(xi - int(gap / 2), 0), xi + int(gap / 2) + 1
+            if threshold and error[y0:y1, x0:x1].mean() < threshold:
+                continue
+            color = blurred[yi, xi] * (1 + rng.normal(0, 0.035)) + rng.normal(0, 0.012, 3)
+            along = strength[yi, xi]
+            # Along the edges where there are some; where it's smooth (sky, water) loose, near-level strokes.
+            direction = angle[yi, xi] if along > 0.15 else rng.normal(0, 0.18)
+            length = width * rng.uniform(2.2, 3.6) * (1.25 - 0.5 * along)
+            lay(canvas, x, y, length, width * rng.uniform(0.8, 1.15), direction + rng.normal(0, 0.08),
+                np.clip(color, 0, 1), rng.uniform(0.55, 0.85), 0.12)
+    soft = canvas.filter(ImageFilter.GaussianBlur(2.5 * s))
+    canvas = Image.blend(canvas, soft, 0.08)
+    return grain(canvas.convert("RGB").filter(ImageFilter.GaussianBlur(0.5 * s)), s)
+
+
+def in_light(painting, light):
+    """The painting in one of The Hours' lights: its tones mapped onto that light's palette, blended
+    by how much that light colors things, and its brightness."""
+    stops, amount, brightness = LIGHTS[light]
+    a = np.asarray(painting, np.float32) / 255
+    lum = (a @ np.array([0.299, 0.587, 0.114], np.float32))[..., None]
+    pos = np.linspace(0, 1, len(stops))
+    cols = np.stack([rgb(c) for c in stops])
+    mapped = np.stack([np.interp(lum[..., 0], pos, cols[:, i]) for i in range(3)], axis=2)
+    out = (a * (1 - amount) + mapped * amount) * brightness
+    return Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8))
+
+
+def preview(lights, w=480, h=236):
+    """Light & Wallpaper's tile: a slice of each light side by side, as the series' own tiles are."""
+    strip = Image.new("RGB", (w, h))
+    for i, img in enumerate(lights):
+        cw = img.height * (w / 4) / h
+        x0 = int(img.width * (0.2 + 0.2 * i) - cw / 2)
+        x0 = min(max(x0, 0), int(img.width - cw))
+        strip.paste(img.crop((x0, 0, int(x0 + cw), img.height)).resize((w // 4, h), Image.LANCZOS), (i * w // 4, 0))
+    return strip
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    folder = Path(argv[1])
+    w, h = (int(n) for n in argv[2].split("x")) if len(argv) > 2 else (2560, 1440)
+    w, h = max(640, min(w, 3840)), max(360, min(h, 2400))
+    folder.mkdir(parents=True, exist_ok=True)
+    say(folder, 1)
+    try:
+        with Image.open(argv[0]) as photo:
+            photo.load()
+            picture = fit(photo, w, h)
+    except (OSError, ValueError, Image.DecompressionBombError) as e:
+        print(f"couldn't open the photo: {e}", file=sys.stderr)
+        return 3
+    painting = paint(picture, w, h, folder)
+    lights = []
+    for i, light in enumerate(("dawn", "day", "dusk", "night")):
+        img = in_light(painting, light)
+        img.save(folder / f"{light}.jpg", quality=90, optimize=True)
+        lights.append(img)
+        say(folder, 86 + 3 * i)
+    preview(lights).save(folder / "preview.png", optimize=True)
+    say(folder, 100)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

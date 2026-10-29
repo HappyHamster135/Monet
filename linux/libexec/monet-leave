@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""A cancellable Windows departure. No restart target until every app has closed."""
+import argparse
+import gettext
+import importlib.machinery
+import importlib.util
+import json
+from pathlib import Path
+import re
+import sys
+
+from PySide6.QtCore import QProcess, QTimer, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication, QDialog, QLabel, QPushButton, QVBoxLayout
+
+tr = gettext.translation("monet", localedir="@DATADIR@/locale", fallback=True).gettext
+
+
+def shutdown_blockers(raw):
+    if len(raw) > 256 * 1024:
+        raise ValueError("Inhibitor reply too large")
+    value = json.loads(raw)
+    if (not isinstance(value, dict) or value.get("type") != "a(ssssuu)"
+            or not isinstance(value.get("data"), list) or len(value["data"]) != 1
+            or not isinstance(value["data"][0], list) or len(value["data"][0]) > 1024):
+        raise ValueError("Invalid inhibitor reply")
+    result = []
+    for row in value["data"][0]:
+        if (not isinstance(row, list) or len(row) != 6
+                or any(not isinstance(s, str) or len(s) > 4096 for s in row[:4])
+                or any(type(n) is not int or not 0 <= n <= 2**32-1 for n in row[4:])
+                or row[3] not in ("block", "block-weak", "delay")):
+            raise ValueError("Invalid inhibitor")
+        if "shutdown" in row[0].split(":") and row[3] != "delay":
+            result.append((row[1], row[2]))
+    return result
+
+
+class Departure(QDialog):
+    def __init__(self, quick, monet, game=None, task=None):
+        super().__init__()
+        self.quick, self.resume = quick, quick.resume_helper()
+        self.monet, self.game, self.task = str(monet), game, task
+        self.ident, self.target = "", None
+        self.phase, self.cancelled, self.touched = "capture", False, False
+        self.error = ""
+        self.setWindowTitle(tr("Switch to Windows"))
+        self.setMinimumWidth(420)
+        layout = QVBoxLayout(self)
+        self.message = QLabel(tr("Saving your return session…"))
+        self.message.setWordWrap(True)
+        layout.addWidget(self.message)
+        self.instructions = tr("Your apps may ask you to save your work. Monet waits for them to close. Choose Cancel to stay in Monet.")
+        self.detail = QLabel(self.instructions)
+        self.detail.setTextFormat(Qt.PlainText)
+        self.detail.setWordWrap(True)
+        layout.addWidget(self.detail)
+        self.button = QPushButton(tr("Cancel"))
+        self.button.clicked.connect(self.reject)
+        layout.addWidget(self.button)
+        self.process = QProcess(self)
+        self.process.readyReadStandardOutput.connect(self.output)
+        self.process.finished.connect(self.process_finished)
+        self.process.errorOccurred.connect(self.process_error)
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.check_windows)
+        self.background = QProcess(self)
+        self.background.finished.connect(self.background_finished)
+        self.background.errorOccurred.connect(self.background_error)
+        self.background_timeout = QTimer(self)
+        self.background_timeout.setSingleShot(True)
+        self.background_timeout.timeout.connect(self.background.kill)
+        QTimer.singleShot(0, self.capture)
+
+    def capture(self):
+        if self.cancelled:
+            self.finish()
+            return
+        self.process.start(str(Path(__file__).with_name("monet-quick")), ["remember-apps"] + ([self.game] if self.game else []))
+
+    def output(self):
+        if self.phase == "capture":
+            return  # Keep the checkpoint ID for the completion handler.
+        while self.process.canReadLine():
+            line = bytes(self.process.readLine()).decode("utf-8", "replace").strip()
+            if line == "MONET-SWITCH-READY" and self.phase == "prepare" and not self.cancelled:
+                self.phase = "close"
+                self.timer.start(0)
+
+    def process_finished(self, code, status):
+        if self.phase == "capture":
+            self.ident = bytes(self.process.readAllStandardOutput()).decode("utf-8", "replace").strip()
+            if code or status != QProcess.NormalExit or (self.ident and not re.fullmatch(r"[0-9a-f]{32}", self.ident)):
+                self.error = tr("Monet couldn't save your return session. Your PC hasn't restarted. Try again before switching to Windows.")
+                self.finish()
+            elif self.cancelled:
+                self.finish()
+            else:
+                self.phase = "prepare"
+                try:
+                    self.watch_editors(self.resume.departure_windows())
+                except (ImportError, OSError, RuntimeError, ValueError):
+                    self.error = tr("Monet couldn't confirm your apps closed safely with their final document list. The switch was cancelled.")
+                    self.reject()
+                    return
+                if self.cancelled:
+                    return
+                self.message.setText(tr("Checking Windows before closing your apps…"))
+                args = [self.monet, "helper", "switch", "--guarded"]
+                for flag, value in (("--checkpoint", self.ident), ("--game", self.game), ("--task", self.task)):
+                    if value:
+                        args.extend([flag, value])
+                self.process.start("pkexec", args)
+            return
+        if self.phase == "restart" and not code and status == QProcess.NormalExit:
+            self.phase = "done"
+            self.accept()
+            return
+        if not self.cancelled and not self.error:
+            self.error = tr("Windows couldn't be started. Your PC hasn't restarted. Save your work and try again.")
+        self.finish()
+
+    def process_error(self, error):
+        if error == QProcess.FailedToStart:
+            self.error = tr("Monet couldn't start the safe switch. Your PC hasn't restarted. Try again from your desktop.")
+            self.finish()
+
+    def watch_editors(self, windows):
+        for target in windows:
+            if self.cancelled:
+                return
+            if self.ident and target.get("app") in self.resume.EDITORS:
+                self.touched = True
+                self.resume.prepare_editor_close(self.quick.TRIP_APPS, self.ident, target, windows)
+            elif self.ident and target.get("app") == self.resume.PDF:
+                self.touched = True
+                self.resume.prepare_pdf_close(self.quick.TRIP_APPS, self.ident, target, windows)
+
+    def check_windows(self):
+        if self.phase != "close" or self.cancelled or self.background.state() != QProcess.NotRunning:
+            return
+        self.background.start("busctl", ["--system", "--json=short", "--timeout=2", "call",
+                              "org.freedesktop.login1", "/org/freedesktop/login1",
+                              "org.freedesktop.login1.Manager", "ListInhibitors"])
+        self.background_timeout.start(2500)
+
+    def background_error(self, *_):
+        self.background_timeout.stop()
+        if self.phase == "close" and not self.cancelled:
+            self.error = tr("Monet couldn't check background work. The switch was cancelled.")
+            self.reject()
+
+    def background_finished(self, code, status):
+        self.background_timeout.stop()
+        if self.phase != "close" or self.cancelled:
+            return
+        try:
+            if code or status != QProcess.NormalExit:
+                raise ValueError("Inhibitor query failed")
+            blockers = shutdown_blockers(bytes(self.background.readAllStandardOutput()))
+        except (ValueError, UnicodeError, RecursionError):
+            self.background_error()
+            return
+        self.close_windows(blockers)
+
+    def close_windows(self, blockers):
+        if self.phase != "close" or self.cancelled:
+            return
+        try:
+            windows = self.resume.departure_windows()
+            # KWin calls run a nested event loop: Cancel may arrive during the read.
+            if self.cancelled:
+                return
+            self.watch_editors(windows)
+            if self.cancelled:
+                return
+            ready = self.resume.refresh_departure(self.quick.TRIP_APPS, self.ident, windows)
+            if self.cancelled:
+                return
+            if not ready:
+                self.message.setText(tr("Updating your saved document list…"))
+                self.timer.start(400)
+                return
+            if blockers:
+                self.message.setText(tr("Waiting for background work to finish…"))
+                names = [" — ".join(" ".join(part.split())[:120] for part in row if part.strip())
+                         or tr("An app") for row in blockers[:3]]
+                if len(blockers) > 3:
+                    names.append(tr("Other apps are also finishing work."))
+                self.detail.setText(tr("Finish or cancel the work in these apps, or cancel this switch:")
+                                    + "\n\n" + "\n".join(names))
+                self.timer.start(400)
+                return
+            self.detail.setText(self.instructions)
+            if not windows:
+                self.phase = "restart"
+                self.button.setEnabled(False)
+                self.message.setText(tr("Restarting in Windows…"))
+                self.process.write(b"continue\n")
+                self.process.closeWriteChannel()
+                return
+            if self.target not in {w["id"] for w in windows}:
+                self.target = windows[0]["id"]
+                target = windows[0]
+                self.touched = True
+                if (target.get("app") == self.resume.BROWSER and target.get("pid")
+                        and sum(w.get("app") == self.resume.BROWSER and w.get("pid") == target["pid"] for w in windows) > 1):
+                    # Closing browser windows separately can discard native window groups.
+                    self.message.setText(tr("Quit the browser from its menu to keep its windows together, or cancel this switch."))
+                    self.target = None
+                    self.timer.start(400)
+                    return
+                self.resume.departure_windows(self.target)
+            self.message.setText(tr("Finish saving or close your apps to continue. You can cancel this switch at any time."))
+            if not self.cancelled:
+                self.timer.start(400)
+        except (ImportError, OSError, RuntimeError, ValueError):
+            self.error = tr("Monet couldn't confirm your apps closed safely with their final document list. The switch was cancelled.")
+            self.reject()
+
+    def reject(self):
+        if self.phase == "done":
+            super().reject()
+        elif self.phase != "restart" and not self.cancelled:
+            self.cancelled = True
+            self.timer.stop()
+            self.background_timeout.stop()
+            self.background.kill()
+            self.button.setEnabled(False)
+            self.message.setText(tr("Cancelling the switch…"))
+            # EOF cancels root's preflight even if this window or its service dies.
+            if self.phase != "capture":
+                self.process.closeWriteChannel()
+            if self.process.state() == QProcess.NotRunning:
+                self.finish()
+
+    def finish(self):
+        if self.phase == "done":
+            return
+        self.timer.stop()
+        self.phase = "done"
+        self.background_timeout.stop()
+        self.background.kill()
+        self.detail.hide()
+        if self.ident:
+            try:
+                if self.touched:
+                    try:
+                        self.resume.refresh_departure(self.quick.TRIP_APPS, self.ident, self.resume.departure_windows(), final=True)
+                    except (OSError, RuntimeError, ValueError):
+                        self.error = tr("The switch was cancelled. The last saved document list could not be confirmed. Review your recovery list in Settings.")
+                if self.touched and self.resume.cancel_departure(self.quick.TRIP_APPS, self.ident):
+                    self.message.setText(tr("Opening apps that already closed…"))
+                    self.quick.trip_apps_again(request=self.ident)
+                else:
+                    # Never remove another attempt or a previously completed return.
+                    with self.resume.restore_lock(self.quick.TRIP_APPS):
+                        saved = self.resume.read_state(self.quick.TRIP_APPS)
+                        if saved.get("id") == self.ident and saved.get("boot") == self.resume.boot_id():
+                            self.resume.discard(self.quick.TRIP_APPS, saved)
+            except (OSError, RuntimeError, ValueError):
+                self.error = tr("The switch was cancelled. Some apps couldn't be reopened. Review your recovery list in Settings.")
+        self.message.setText(self.error or tr("The switch to Windows was cancelled."))
+        self.button.setText(tr("Close"))
+        self.button.setEnabled(True)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("monet", type=Path)
+    parser.add_argument("--game")
+    parser.add_argument("--task")
+    args = parser.parse_args()
+    loader = importlib.machinery.SourceFileLoader("monet_quick", str(Path(__file__).with_name("monet-quick")))
+    quick = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(quick)
+    app = QApplication(sys.argv[:1])
+    app.setDesktopFileName("monet-windows")
+    app.setWindowIcon(QIcon.fromTheme("monet-windows"))
+    window = Departure(quick, args.monet, args.game, args.task)
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

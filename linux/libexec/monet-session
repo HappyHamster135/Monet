@@ -6,6 +6,9 @@ BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
+# A guest (monet-guest) sees nothing of Windows: no games from it, no notes about it.
+GUEST=""
+[ "$(id -un)" = guest ] && GUEST=1
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 # Monet's words in your language (monet-quick says them), English if it can't.
@@ -35,11 +38,25 @@ if [ "${1:-}" = --later ]; then
     exit 0
 fi
 
-"$BINDIR/monet" shortcuts 2>/dev/null
+# Windows' Games folder, shared at this start when Windows' drive was safe to write
+# (monet-windows-drive): a library of Steam here while Steam is still closed, Heroic's Epic
+# games there made ready for Epic's launcher in Windows, the screenshots and clips that
+# came over from Windows said once, and the apps in Windows' Start menu in the app menu.
+if grep -q '"state": "open"' /run/monet/windows-drive.json 2>/dev/null; then
+    "$LIBEXECDIR/monet-quick" steam-share >/dev/null 2>&1
+    # Then, in the background: drive W: for Wine's launchers (and Ubisoft's games noted), the
+    # installers of launchers Windows will need, fetched now rather than in Windows.
+    ("$LIBEXECDIR/monet-quick" epic-share; "$LIBEXECDIR/monet-quick" windows-files; "$LIBEXECDIR/monet-quick" windows-apps
+     "$LIBEXECDIR/monet-quick" wine-share; "$LIBEXECDIR/monet-quick" launchers) >/dev/null 2>&1 &
+fi
+# Files' place for the folder shared with Windows: there while the folder is.
+[ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" files-place >/dev/null 2>&1
+
+[ -z "$GUEST" ] && "$BINDIR/monet" shortcuts 2>/dev/null
 
 # If Monet couldn't prepare Windows by itself, say once what to do.
 notice="$("$BINDIR/monet" setup-notice 2>/dev/null)"
-if [ -n "$notice" ] && command -v notify-send >/dev/null; then
+if [ -z "$GUEST" ] && [ -n "$notice" ] && command -v notify-send >/dev/null; then
     seen="${XDG_CONFIG_HOME:-$HOME/.config}/monet/notice-$(printf '%s' "$notice" | cksum | cut -d' ' -f1)"
     if [ ! -e "$seen" ]; then
         notify-send --app-name=Monet --icon=monet "$(say "Finish setting up Windows")" "$(say "$notice")"
@@ -50,9 +67,15 @@ fi
 # "Monet and Windows": Windows downloads after the first sign-in, with its
 # progress showing, then Monet asks before restarting to install it. In its
 # own unit, so it keeps going after this script ends.
-if [ "$(cat /var/lib/monet/windows-setup 2>/dev/null)" = waiting ] && command -v systemd-run >/dev/null; then
+if [ -z "$GUEST" ] && [ "$(cat /var/lib/monet/windows-setup 2>/dev/null)" = waiting ] && command -v systemd-run >/dev/null; then
     systemd-run --user --quiet --collect --unit=monet-windows-first-run --on-active=30 \
         "$BINDIR/monet" windows --first-run >/dev/null 2>&1 || true
+fi
+
+# Back from Windows: the apps that were open before the trip start again (monet-quick
+# remembered them just before it), once the desktop is up.
+if [ -e "${XDG_STATE_HOME:-$HOME/.local/state}/monet/trip-apps.json" ]; then
+    (sleep 5; "$LIBEXECDIR/monet-quick" trip-apps-again) >/dev/null 2>&1 &
 fi
 
 # Mist or smoke, for the time it is now.
@@ -61,18 +84,19 @@ fi
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
 current="$looks/look-0.9.3"
-if [ ! -e "$current" ]; then
-    # Plasma needs a moment after sign-in before it accepts changes.
-    sleep 4
-    if ls "$looks"/look-* >/dev/null 2>&1; then
-        # A newer look on an account that has Monet's already: freshen it (and
-        # mend anything a Breeze theme put back), but keep the panels.
-        "$LIBEXECDIR/monet-look" --keep
-    else
-        "$LIBEXECDIR/monet-look"
-    fi
+# Repair old Store shortcuts even when this look version was already applied. An image can
+# gain the custom Store without another look stamp or another initial app download.
+# Content-based receipt: a changed migration runs once, including on images with
+# the same marketing version. A failed run stays retryable; an older image's
+# already-applied migration cannot replay over preferences from a newer one.
+if "$LIBEXECDIR/monet-profile" run "$LIBEXECDIR/monet-look" --keep; then
     mkdir -p "$looks" && touch "$current"
 fi
+# Always repair old entry points, even when the content receipt already exists.
+"$LIBEXECDIR/monet-look" --store
+# Windows+A for Quick Settings and Windows+G for Games, once (the other Windows keys are
+# set before KWin starts, by monet-keys.service).
+[ -e "$looks/widget-keys" ] || "$LIBEXECDIR/monet-look" --widget-keys
 
 # Files Monet Setup brought from Windows: into this account's folders, once.
 if [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/monet/from-windows" ]; then
@@ -97,17 +121,21 @@ fi
 if [ "$older_pc" = yes ]; then
     mkdir -p "$looks" && : > "$looks/glass-lite"
     if [ ! -e "$looks/files-names" ]; then
-        [ -n "$(kreadconfig6 --file baloofilerc --group General --key 'only basic indexing' 2>/dev/null)" ] ||
-            kwriteconfig6 --file baloofilerc --group General --key 'only basic indexing' --type bool true
-        touch "$looks/files-names"
+        "$LIBEXECDIR/monet-profile" put --default-only --file baloofilerc --group General --key 'only basic indexing' true &&
+            touch "$looks/files-names"
     fi
     # Your own Steam autostart (or none) is left alone; Monet's copy says X-Monet.
     steam=/etc/xdg/autostart/steam.desktop
     if [ -e "$steam" ] && ! grep -q '^Hidden=true' "$steam" \
         && { [ ! -e "$steam_later" ] || grep -q '^X-Monet=true' "$steam_later"; }; then
         mkdir -p "$(dirname "$steam_later")"
-        printf '[Desktop Entry]\nType=Application\nName=Steam\nHidden=true\nX-Monet=true\n' > "$steam_later"
-        launch="$(sed -n 's/^Exec=//p' "$steam" | head -1 | sed 's/ %[A-Za-z]//g')"
+        temporary="$(mktemp "$looks/steam-autostart-XXXXXX")"
+        printf '[Desktop Entry]\nType=Application\nName=Steam\nHidden=true\nX-Monet=true\n' > "$temporary"
+        "$LIBEXECDIR/monet-profile" file "$steam_later" "$temporary"
+        launch=""
+        # An edited autostart entry controls its own timing and command.
+        cmp -s "$temporary" "$steam_later" && launch="$(sed -n 's/^Exec=//p' "$steam" | head -1 | sed 's/ %[A-Za-z]//g')"
+        rm -f "$temporary"
         if [ -n "$launch" ] && ! pgrep -x steam >/dev/null; then
             systemd-run --user --quiet --collect --unit=monet-steam-later --on-active=45 \
                 /bin/sh -c "$launch" >/dev/null 2>&1 || true
@@ -115,7 +143,7 @@ if [ "$older_pc" = yes ]; then
     fi
 else
     rm -f "$looks/glass-lite"
-    if grep -q '^X-Monet=true' "$steam_later" 2>/dev/null; then
+    if printf '[Desktop Entry]\nType=Application\nName=Steam\nHidden=true\nX-Monet=true\n' | cmp -s - "$steam_later"; then
         rm -f "$steam_later"
     fi
 fi
@@ -134,8 +162,8 @@ if [ /var/lib/monet/apps-done -nt "$looks/names" ]; then
 fi
 
 # A brand-new account (nothing seen yet): Monet's welcome, once, in Settings,
-# when the bar is up to open it.
-if [ ! -e "$looks/seen-version" ] && [ ! -e "$looks/welcomed" ] \
+# when the bar is up to open it. Not for a guest, who is brand-new every time.
+if [ ! -e "$looks/seen-version" ] && [ ! -e "$looks/welcomed" ] && [ -z "$GUEST" ] \
     && [ "$(ls -d "$looks"/look-* 2>/dev/null | wc -l)" -le 1 ]; then
     mkdir -p "$looks" && touch "$looks/welcomed"
     (sleep 8; "$LIBEXECDIR/monet-quick" open welcome) >/dev/null 2>&1 &

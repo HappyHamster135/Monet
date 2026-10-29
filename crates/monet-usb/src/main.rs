@@ -8,7 +8,6 @@
 
 /// Marks words the window shows, for tools/make-translations.py; they're said
 /// in Windows' language where they're shown (words::tr).
-#[cfg(windows)]
 macro_rules! t {
     ($text:literal) => {
         $text
@@ -17,6 +16,11 @@ macro_rules! t {
 
 #[cfg_attr(not(windows), allow(dead_code))]
 mod plan;
+#[cfg_attr(not(windows), allow(dead_code))]
+mod writer;
+
+#[cfg(windows)]
+mod image;
 
 #[cfg(windows)]
 mod disk;

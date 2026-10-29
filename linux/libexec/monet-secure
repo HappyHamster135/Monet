@@ -7,11 +7,18 @@ without it.
     monet-secure firewall-strict on|off
                                only what Monet uses comes in from the network (the firewall's
                                Monet zone, linux/firewalld/monet.xml), or the system's own zone
+    monet-secure firewall-allow games|localsend|syncthing|sunshine|deskflow on|off
+                               that app can accept connections from the network (its ports)
+    monet-secure firewall-allow-port NAME tcp/PORT on|off
+                               a program that asked can accept connections on that port (the
+                               question when it started listening, or its switch in Settings)
     monet-secure trust-key     the firmware asked to trust Monet's key at the next restart (its
                                blue screen, with the password monetsetup), so Secure Boot can
                                be turned on without stopping Monet
 """
 
+import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -55,7 +62,107 @@ def firewall_strict(on):
     return subprocess.run(["firewall-cmd", f"--set-default-zone={zone}"]).returncode
 
 
+# Settings → Security → Apps that can accept connections: each a fixed set of ports (never
+# anything typed), let in through a firewalld policy of its own, so Monet's zone file stays as
+# the image has it and an update can still change it. The names chosen are in ALLOWED_STATE,
+# which Settings reads.
+ALLOWED_POLICY = Path("/etc/firewalld/policies/monet-allowed.xml")
+ALLOWED_STATE = Path("/var/lib/monet/firewall-allowed.json")
+APPS = {
+    # Worlds others on this network join: Minecraft (Java, Bedrock), Terraria, Valheim, Factorio, Stardew Valley.
+    "games": ("tcp/25565", "udp/25565", "udp/19132-19133", "tcp/7777", "udp/2456-2458", "udp/34197", "udp/24642"),
+    "localsend": ("tcp/53317", "udp/53317"),
+    "syncthing": ("tcp/22000", "udp/22000", "udp/21027"),
+    # Sunshine, streaming this PC to Moonlight.
+    "sunshine": ("tcp/47984", "tcp/47989", "tcp/47990", "tcp/48010", "udp/47998-48000", "udp/48002", "udp/48010"),
+    "deskflow": ("tcp/24800",),
+}
+
+
+# A program's own port, let in when it asked (monet-quick's question when it starts accepting
+# connections): [{"name": what Settings calls it, "port": "tcp/8000"}], readable by everyone.
+PORTS_STATE = Path("/var/lib/monet/firewall-allowed-ports.json")
+PORT = re.compile(r"tcp/(\d{4,5})")
+NAME = re.compile(r"[^\x00-\x1f\x7f]{1,60}")
+
+
+def allowed_ports(state=PORTS_STATE):
+    try:
+        ports = json.loads(state.read_text())
+    except (OSError, ValueError):
+        return []
+    return [p for p in ports if isinstance(p, dict) and NAME.fullmatch(str(p.get("name"))) and port_ok(p.get("port"))] \
+        if isinstance(ports, list) else []
+
+
+def port_ok(port):
+    """Only a port a program of the person's can open (1024 and up), over TCP."""
+    found = PORT.fullmatch(str(port))
+    return bool(found) and 1024 <= int(found[1]) <= 65535
+
+
+def allowed(state=ALLOWED_STATE):
+    """The apps let in, in APPS' order."""
+    try:
+        names = json.loads(state.read_text())
+    except (OSError, ValueError):
+        names = []
+    return [name for name in APPS if isinstance(names, list) and name in names]
+
+
+def policy_xml(names, ports=()):
+    lines = ['<?xml version="1.0" encoding="utf-8"?>',
+             "<!-- Written by Monet (monet-secure firewall-allow): what Settings → Security lets in. -->",
+             '<policy target="CONTINUE" priority="-10">',
+             "  <short>Monet: apps that can accept connections</short>",
+             '  <ingress-zone name="ANY"/>',
+             '  <egress-zone name="HOST"/>']
+    for name in names:
+        lines += [f'  <port protocol="{port.split("/")[0]}" port="{port.split("/")[1]}"/>' for port in APPS[name]]
+    for port in sorted({p["port"] for p in ports}):
+        lines.append(f'  <port protocol="tcp" port="{port.split("/")[1]}"/>')
+    return "\n".join(lines + ["</policy>"]) + "\n"
+
+
+def firewall_allow(name, on, state=ALLOWED_STATE, policy=ALLOWED_POLICY, ports_state=PORTS_STATE):
+    chosen = set(allowed(state))
+    chosen = chosen | {name} if on else chosen - {name}
+    names = [n for n in APPS if n in chosen]
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(json.dumps(names) + "\n")
+    state.chmod(0o644)
+    return write_policy(names, allowed_ports(ports_state), policy)
+
+
+def firewall_allow_port(name, port, on, state=ALLOWED_STATE, policy=ALLOWED_POLICY, ports_state=PORTS_STATE):
+    """A program's port in (on) or out again: kept with what Settings calls it."""
+    ports = [p for p in allowed_ports(ports_state) if p["port"] != port]
+    if on:
+        ports.append({"name": name, "port": port})
+    ports_state.parent.mkdir(parents=True, exist_ok=True)
+    ports_state.write_text(json.dumps(ports, ensure_ascii=False) + "\n")
+    ports_state.chmod(0o644)
+    return write_policy(allowed(state), ports, policy)
+
+
+def write_policy(names, ports, policy=ALLOWED_POLICY):
+    if names or ports:
+        policy.parent.mkdir(parents=True, exist_ok=True)
+        policy.write_text(policy_xml(names, ports))
+        policy.chmod(0o644)
+    else:
+        policy.unlink(missing_ok=True)
+    if said("systemctl", "is-active", "firewalld") == "active":
+        return subprocess.run(["firewall-cmd", "--reload"]).returncode
+    return 0
+
+
 def main(argv):
+    if len(argv) == 3 and argv[0] == "firewall-allow" and argv[1] in APPS and argv[2] in ("on", "off"):
+        return firewall_allow(argv[1], argv[2] == "on")
+    if (len(argv) == 4 and argv[0] == "firewall-allow-port" and NAME.fullmatch(argv[1]) and port_ok(argv[2])
+            and argv[3] in ("on", "off")):
+        return firewall_allow_port(argv[1], argv[2], argv[3] == "on")
     if argv == ["firewall-on"]:
         return subprocess.run(["systemctl", "enable", "--now", "firewalld"]).returncode
     if len(argv) == 2 and argv[0] == "firewall-strict" and argv[1] in ("on", "off"):

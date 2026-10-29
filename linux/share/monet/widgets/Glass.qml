@@ -22,8 +22,11 @@ import org.kde.kirigami as Kirigami
 
 Item {
     id: glass
+    LayoutGuard {}
 
     property real radius: 24
+    // A panel popup already has KWin's themed glass; keep only our content there.
+    property bool drawBackground: true
     // Room the frost reaches beyond the card, so its edges don't darken.
     readonly property int bleed: 40
     // Mist or smoke, the way monet-light set the colors.
@@ -37,11 +40,15 @@ Item {
     property Item painting: null
     property rect patch: Qt.rect(0, 0, 1, 1)
     // The painting frosted behind it, unless glass is off (monet-light leaves glass-off).
-    readonly property bool frosted: painting !== null && glassOff.count === 0
+    readonly property bool frosted: drawBackground && painting !== null && glassOff.count === 0
                                     && GraphicsInfo.api !== GraphicsInfo.Software
 
     // On an older PC (monet-session leaves glass-lite) the frost reaches the edge, without the lens.
     readonly property bool lite: glassLite.count > 0
+    // Settings' Glass slider (monet-light leaves glass-frosted or glass-matte): 0 clear, 1 frosted,
+    // 2 matte, the painting softer each step and more washed over, until only its color is left.
+    readonly property int level: glassMatte.count > 0 ? 2 : glassFrosted.count > 0 ? 1 : 0
+    readonly property bool lensed: !lite && level < 2
 
     FolderListModel {
         id: glassOff
@@ -53,6 +60,18 @@ Item {
         id: glassLite
         folder: glassOff.folder
         nameFilters: ["glass-lite"]
+        showDirs: false
+    }
+    FolderListModel {
+        id: glassFrosted
+        folder: glassOff.folder
+        nameFilters: ["glass-frosted"]
+        showDirs: false
+    }
+    FolderListModel {
+        id: glassMatte
+        folder: glassOff.folder
+        nameFilters: ["glass-matte"]
         showDirs: false
     }
 
@@ -101,6 +120,7 @@ Item {
     // Its shadow, softer than a window's.
     Rectangle {
         id: shape
+        visible: glass.drawBackground
         anchors.fill: parent
         radius: glass.radius
         color: glass.smoke ? "#242321" : "#F3F1EC"
@@ -135,7 +155,7 @@ Item {
         visible: false
         sourceItem: glass.painting
         sourceRect: glass.lensPatch
-        live: glass.frosted && !glass.lite
+        live: glass.frosted && glass.lensed
         recursive: false
     }
     // The pane's shape, and its middle (inside the lens) with a soft edge.
@@ -157,7 +177,7 @@ Item {
         visible: false
         layer.enabled: true
         Rectangle {
-            readonly property real band: glass.lite ? 0 : glass.lensWidth
+            readonly property real band: glass.lensed ? glass.lensWidth : 0
             anchors.fill: parent
             anchors.margins: glass.bleed + band
             radius: Math.max(glass.radius - band, 4)
@@ -178,7 +198,7 @@ Item {
     MultiEffect {
         id: lens
         anchors.fill: frost
-        visible: glass.frosted && !glass.lite
+        visible: glass.frosted && glass.lensed
         source: lensGrab
         autoPaddingEnabled: false
         blurEnabled: true
@@ -202,7 +222,7 @@ Item {
         // painting's color up, and the glass is a touch brighter in mist, darker in smoke.
         blurEnabled: true
         blurMax: 32
-        blur: 0.35
+        blur: [0.35, 0.7, 1][glass.level]
         saturation: 0.25
         brightness: glass.smoke ? -0.06 : 0.07
         maskEnabled: true
@@ -214,13 +234,15 @@ Item {
 
     // The wash, heavier with nothing to frost.
     Rectangle {
+        visible: glass.drawBackground
         anchors.fill: parent
         radius: glass.radius
         readonly property color tone: glass.smoke ? "#201F1D" : "#F7F5F1"
-        color: Qt.rgba(tone.r, tone.g, tone.b, glass.frosted ? glass.wash : 0.86)
+        color: Qt.rgba(tone.r, tone.g, tone.b, glass.frosted ? Math.min(glass.wash + [0, 0.2, 0.52][glass.level], 0.86) : 0.86)
     }
     // The pane's body: light gathered at the top, a breath of shade at the foot.
     Rectangle {
+        visible: glass.drawBackground
         anchors.fill: parent
         radius: glass.radius
         gradient: Gradient {
@@ -233,6 +255,7 @@ Item {
     // The rim: light caught in the pane's edge, brightest where it falls on it (top left)
     // and where it leaves (bottom right), dim at the other two corners, as on Apple's glass.
     Shape {
+        visible: glass.drawBackground
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
@@ -262,6 +285,7 @@ Item {
     }
     // A hairline outside, so the pane keeps its edge on light paint.
     Rectangle {
+        visible: glass.drawBackground
         anchors.fill: parent
         anchors.margins: -1
         radius: glass.radius + 1

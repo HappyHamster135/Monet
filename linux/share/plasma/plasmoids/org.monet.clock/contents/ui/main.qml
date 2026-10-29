@@ -8,6 +8,7 @@
  * write: the same notes as the Calendar widget's.
  */
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
@@ -15,6 +16,7 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    ClockFormat { id: clockFormat }
 
     property date now: new Date()
     // The notes beside the month, out or away (it stays as it was left).
@@ -26,9 +28,9 @@ PlasmoidItem {
 
     Plasmoid.icon: "x-office-calendar"
     toolTipMainText: Qt.formatDate(now, Qt.locale().dateFormat(Locale.LongFormat))
-    toolTipSubText: Qt.formatTime(now, Qt.locale().timeFormat(Locale.ShortFormat))
+    toolTipSubText: clockFormat.time(now)
     // A fresh look at the notes whenever the page opens.
-    onExpandedChanged: if (expanded) noteStore.refresh()
+    onExpandedChanged: { if (expanded) noteStore.refresh(); else notesOpen=false; }
 
     NoteStore {
         id: noteStore
@@ -50,6 +52,17 @@ PlasmoidItem {
         // Room on both sides, so the bar's pebble (when the page is open) holds the time and date.
         Layout.minimumWidth: Math.max(time.implicitWidth, date.implicitWidth) + Kirigami.Units.largeSpacing * 3
         Layout.preferredWidth: Layout.minimumWidth
+        id: clockButton
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Button
+        Accessible.name: i18n("Calendar") + ", " + root.toolTipMainText
+        Accessible.onPressAction: root.expanded = !root.expanded
+        Keys.onReturnPressed: root.expanded = !root.expanded
+        Keys.onSpacePressed: root.expanded = !root.expanded
+        Rectangle {
+            anchors.fill: parent; anchors.margins: 2; radius: 10
+            color: "transparent"; border.width: clockButton.activeFocus ? 2 : 0; border.color: root.lily
+        }
         hoverEnabled: true
         onClicked: root.expanded = !root.expanded
 
@@ -60,7 +73,7 @@ PlasmoidItem {
                 horizontalAlignment: Text.AlignLeft
                 id: time
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: Qt.formatTime(root.now, Qt.locale().timeFormat(Locale.ShortFormat))
+                text: clockFormat.time(root.now)
                 color: root.ink
                 font.family: "Inter"
                 font.pixelSize: 14
@@ -83,11 +96,10 @@ PlasmoidItem {
         id: page
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
-        Layout.minimumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 33 : 16)
-        Layout.preferredWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 35 : 17)
-        // Back to the month's own width when the notes go away: Plasma keeps a popup as big
-        // as it once was otherwise.
-        Layout.maximumWidth: Kirigami.Units.gridUnit * (root.notesOpen ? 42 : 19)
+        Layout.minimumWidth: Kirigami.Units.gridUnit * 16
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 17
+        // Notes have their own inward-opening panel, so this month never shifts.
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 19
         Layout.preferredHeight: Kirigami.Units.gridUnit * 19
         spacing: Kirigami.Units.largeSpacing
 
@@ -104,7 +116,7 @@ PlasmoidItem {
 
         ColumnLayout {
             Layout.preferredWidth: Kirigami.Units.gridUnit * 17
-            Layout.fillWidth: !root.notesOpen
+            Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: Kirigami.Units.smallSpacing
 
@@ -156,7 +168,7 @@ PlasmoidItem {
                 lily: root.lily
                 titleSize: 19
                 notesShown: root.notesOpen
-                onNotesToggled: root.notesOpen = !root.notesOpen
+                onNotesToggled: { if (root.notesOpen) root.notesOpen=false; else { root.notesOpen=true; notes.write(); } }
                 onOpened: {
                     root.notesOpen = true;
                     notes.write();
@@ -164,28 +176,27 @@ PlasmoidItem {
             }
         }
 
-        // The notes, beside the month.
-        Rectangle {
-            visible: root.notesOpen
-            Layout.preferredWidth: 1
-            Layout.fillHeight: true
-            color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.12)
-        }
-        DayNotes {
+        NotesPopup {
             id: notes
-            visible: root.notesOpen
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            store: noteStore
-            day: month.chosen
-            today: root.now
-            ink: root.ink
-            dim: root.dim
-            lily: root.lily
-            closable: true
+            anchorItem: page
+            visible: root.notesOpen && root.expanded
+            store: noteStore; day: month.chosen; today: root.now
             onMoved: day => month.choose(day)
-            onClosed: root.notesOpen = false
+            onClosed: {
+                // Keep the calendar through the transient window's unmap;
+                // otherwise Plasma closes it before Wayland returns focus.
+                root.hideOnWindowDeactivate=false;
+                root.notesOpen=false;
+                root.expanded=true;
+                page.Window.window.requestActivate();
+                month.forceActiveFocus();
+                returnFocus.restart();
+            }
+        }
+        Timer {
+            id: returnFocus
+            interval: 250
+            onTriggered: root.hideOnWindowDeactivate=true
         }
     }
 }

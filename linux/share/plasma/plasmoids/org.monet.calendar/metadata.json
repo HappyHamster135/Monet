@@ -65,7 +65,7 @@
         "Name[vi]": "Lịch",
         "Name[zh_CN]": "日历",
         "Name[zh_TW]": "行事曆",
-        "Version": "0.9.3"
+        "Version": "0.9.4"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

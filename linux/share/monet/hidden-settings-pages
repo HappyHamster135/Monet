@@ -1,0 +1,35 @@
+# More settings' (KDE's System Settings) pages kept out of sight, one KDE page id a line:
+# what Monet's look and Monet Settings take care of (KDE's Global Theme with its Dark Mode and
+# Day-Night Cycle, colors, styles, frames, icons, splash and sign-in screens, effects, its
+# updater, its wallpaper page, and its own first page, Quick Settings, which repeated Monet
+# Settings), and the pages that only show how it's built. install.sh puts them in
+# /etc/xdg/kdeglobals for everyone; monet-look in each account's own (where nothing locks them).
+kcm_lookandfeel
+kcm_nighttime
+kcm_colors
+kcm_style
+kcm_desktoptheme
+kcm_kwindecoration
+kcm_kwindecoration_x11
+kcm_icons
+kcm_splashscreen
+kcm_sddm
+kcm_plasmalogin
+kcm_plymouth
+kcm_kwin_effects
+kcm_kwin_effects_x11
+kcm_kwin_scripts
+kcm_kwin_scripts_x11
+kcm_kwinxwayland
+kcm_activities
+kcm_plasmasearch
+kcm_updates
+kcm_feedback
+kcm_kwallet
+kcm_kwallet5
+kcm_kded
+kcm_qtquicksettings
+kcm_about-distro
+kcm_debugsettings
+kcm_landingpage
+kcm_wallpaper

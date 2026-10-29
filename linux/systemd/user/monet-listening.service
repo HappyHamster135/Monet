@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: asks, as Windows does, when one of your programs starts accepting connections from the network
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-quick listening
+Restart=on-failure
+RestartSec=30
+Nice=10
+
+[Install]
+WantedBy=graphical-session.target

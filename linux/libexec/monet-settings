@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+"""Settings: Monet's own, an app window like the others.
+
+    monet-settings [PAGE[#CONTROL]]   open Settings at a page and optional control
+                                      (or bring the open window there)
+
+The window (DATADIR/monet/settings-app/MonetSettings.qml) draws the settings; `monet-quick`
+does the work, as it did when Settings was a sheet of the bar. Monet Games' side of things
+(its words, its helper runner and its one-window rule) serves this one too.
+"""
+import importlib.util
+import os
+import sys
+from importlib.machinery import SourceFileLoader
+
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QGuiApplication, QIcon
+from PySide6.QtNetwork import QLocalServer
+from PySide6.QtQml import QQmlApplicationEngine
+
+LIBEXECDIR = "@LIBEXECDIR@"
+DATADIR = "@DATADIR@"
+# Games (the app) as a module: its helper, its words and its single window are Settings' too.
+_loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")
+games = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_games", _loader))
+_loader.exec_module(games)
+
+
+def main():
+    page = sys.argv[1] if len(sys.argv) > 1 else ""
+    app = QGuiApplication(sys.argv[:1])
+    # Monet's menu entry: its name, its icon, its place in the taskbar.
+    app.setDesktopFileName("monet-settings")
+    app.setApplicationName("settings")
+    app.setOrganizationName("monet")
+    words = games.Words()
+    app.setApplicationDisplayName(words.i18n("Settings"))
+    app.setWindowIcon(QIcon.fromTheme("monet-settings"))
+    name = f"monet-settings-{os.getuid()}"
+    if games.already_open(name, page):
+        return 0
+    QLocalServer.removeServer(name)
+    server = QLocalServer()
+    server.setSocketOptions(QLocalServer.UserAccessOption)
+    server.listen(name)
+    helper = games.Helper()
+    games.answer(server, helper)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextObject(words)
+    engine.rootContext().setContextProperty("helper", helper)
+    engine.rootContext().setContextProperty("pictures", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
+    engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
+    engine.rootContext().setContextProperty("firstPage", page)
+    engine.rootContext().setContextProperty("blurBehind", False)
+    engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/settings-app/MonetSettings.qml"))
+    if not engine.rootObjects():
+        return 1
+    games.glaze(engine.rootObjects()[0], engine.rootContext())
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

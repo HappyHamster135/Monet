@@ -11,6 +11,8 @@ import org.kde.coreaddons as KCoreAddons
 
 PlasmoidItem {
     id: root
+    ClockFormat { id: clockFormat }
+    LayoutGuard {}
 
     property date now: new Date()
     // Same hours as the wallpaper.
@@ -58,14 +60,17 @@ PlasmoidItem {
     }
 
     fullRepresentation: Item {
-        Layout.minimumWidth: card.implicitWidth
+        // The decorative clock fits its card; a wider time or a twelve-hour
+        // locale must not force neighbouring widgets off a scaled desktop.
+        Layout.minimumWidth: 320
         Layout.minimumHeight: card.implicitHeight
-        Layout.preferredWidth: card.implicitWidth
+        Layout.preferredWidth: 400
         Layout.preferredHeight: card.implicitHeight
 
         ColumnLayout {
             id: card
             anchors.left: parent.left
+            anchors.right: parent.right
             anchors.top: parent.top
             spacing: 0
             layer.enabled: true
@@ -77,6 +82,9 @@ PlasmoidItem {
             }
 
             Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignLeft
                 visible: root.firstName !== ""
                 text: root.greeting
@@ -88,6 +96,9 @@ PlasmoidItem {
             }
 
             Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignLeft
                 text: Qt.formatDate(root.now, "dddd, d MMMM")
                 color: root.textColor
@@ -98,8 +109,12 @@ PlasmoidItem {
             }
 
             Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: 32
                 horizontalAlignment: Text.AlignLeft
-                text: Qt.formatTime(root.now, Qt.locale().timeFormat(Locale.ShortFormat))
+                text: clockFormat.time(root.now)
                 color: root.textColor
                 font.family: "Fraunces 72pt SuperSoft"
                 font.weight: Font.Light
@@ -111,6 +126,7 @@ PlasmoidItem {
             }
 
             RowLayout {
+                Layout.fillWidth: true
                 spacing: 12
                 opacity: 0.9
 
@@ -122,6 +138,9 @@ PlasmoidItem {
                 }
 
                 Text {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: Plasmoid.configuration.Series === "lilies"
                         ? i18nc("the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", root.lightName)
@@ -129,6 +148,8 @@ PlasmoidItem {
                         ? i18nc("the wallpaper's name, after Monet's Haystacks; %1 is the light", "Haystacks, %1", root.lightName)
                         : Plasmoid.configuration.Series === "magpie"
                         ? i18nc("the wallpaper's name, after Monet's The Magpie (La Pie); %1 is the light", "The Magpie, %1", root.lightName)
+                        : Plasmoid.configuration.Series === "photo"
+                        ? i18nc("the wallpaper's name when it's a photo of yours, painted; %1 is the light", "Your photo, %1", root.lightName)
                         : i18nc("the wallpaper's name, after Monet's Impression, soleil levant", "Impression, %1", root.lightName)
                     color: root.textColor
                     font.family: "Fraunces 72pt SuperSoft"

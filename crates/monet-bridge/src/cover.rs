@@ -11,7 +11,7 @@
 
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
-use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::JoinHandle;
 
@@ -30,8 +30,9 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_RETURN};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW, GetSystemMetrics,
     GetWindowLongPtrW, LoadCursorW, PostMessageW, PostQuitMessage, RegisterClassW, SetCursor,
-    SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, GWLP_USERDATA, HWND_NOTOPMOST,
-    HWND_TOPMOST, IDC_ARROW, IDC_HAND, MA_NOACTIVATE, MSG, SM_CXSCREEN, SM_CYSCREEN, SWP_NOMOVE, SWP_NOSIZE,
+    SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, GWLP_USERDATA, HWND_BOTTOM,
+    HWND_NOTOPMOST, HWND_TOPMOST, IDC_ARROW, IDC_HAND, MA_NOACTIVATE, MSG, SM_CXSCREEN, SM_CYSCREEN, SWP_NOACTIVATE,
+    SWP_NOMOVE, SWP_NOSIZE,
     SW_SHOWNOACTIVATE, WM_APP, WM_CLOSE, WM_DESTROY, WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE,
     WM_PAINT, WM_SETCURSOR, WNDCLASSW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
 };
@@ -50,6 +51,8 @@ pub enum Scene {
     Launchers { rows: Vec<(String, bool)> },
     /// Bringing Windows and its games up to date, then switching off: how it's going.
     Updating { lines: Vec<String> },
+    /// Installing the launcher a game in the shared Games folder needs, before the game.
+    Preparing { launcher: String },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -320,6 +323,13 @@ fn lay_out(l: &mut Layout, scene: &Scene) {
             l.gap(32.0);
             l.buttons(&[(tr("Switch off now"), false, Press::SwitchOff)]);
         }
+        Scene::Preparing { launcher } => {
+            l.text(CAPTION, caption, &tr("Starting in Windows"));
+            l.gap(8.0);
+            l.text(TITLE, 0xFFFFFF, &trf("Getting %1 ready", &[launcher]));
+            l.gap(16.0);
+            l.text(BODY, body, &tr("Your game needs it here. Windows installs it once, from what Monet fetched for it, and then your game starts."));
+        }
     }
 }
 
@@ -329,6 +339,7 @@ fn title_of(scene: &Scene) -> String {
         Scene::Back { .. } => tr("Back to Monet"),
         Scene::Launchers { .. } => tr("Sign in to your game launchers"),
         Scene::Updating { .. } => tr("Updating your games"),
+        Scene::Preparing { launcher } => trf("Getting %1 ready", &[launcher]),
     }
 }
 
@@ -530,6 +541,8 @@ struct Shared {
     scene: Mutex<Scene>,
     press: Mutex<Option<Press>>,
     hwnd: AtomicIsize,
+    /// In front of everything while a launcher opens for its game (Cover::hold).
+    held: AtomicBool,
 }
 
 struct Window {
@@ -549,6 +562,7 @@ fn art_dir() -> PathBuf {
 }
 
 const SCENE_CHANGED: u32 = WM_APP + 1;
+const LET_GO: u32 = WM_APP + 2;
 
 fn in_front(scene: &Scene) -> bool {
     matches!(scene, Scene::Back { .. })
@@ -557,7 +571,12 @@ fn in_front(scene: &Scene) -> bool {
 impl Cover {
     /// Covers the screen with `scene`; None if Windows wouldn't make the window.
     pub fn open(scene: Scene) -> Option<Cover> {
-        let shared = Arc::new(Shared { scene: Mutex::new(scene), press: Mutex::new(None), hwnd: AtomicIsize::new(0) });
+        let shared = Arc::new(Shared {
+            scene: Mutex::new(scene),
+            press: Mutex::new(None),
+            hwnd: AtomicIsize::new(0),
+            held: AtomicBool::new(false),
+        });
         let (ready, made) = mpsc::channel();
         let for_thread = shared.clone();
         let thread = std::thread::spawn(move || run(for_thread, ready));
@@ -573,6 +592,14 @@ impl Cover {
     pub fn show(&self, scene: Scene) {
         *self.shared.scene.lock().unwrap() = scene;
         self.post(SCENE_CHANGED);
+    }
+
+    /// While a launcher opens for its game: the painting stays in front of it, so the game
+    /// seems to start from Monet. Let go once the game runs (or the launcher needs you): the
+    /// painting goes to the back, under the game and whatever else is open.
+    pub fn hold(&self, held: bool) {
+        self.shared.held.store(held, Ordering::SeqCst);
+        self.post(if held { SCENE_CHANGED } else { LET_GO });
     }
 
     /// The last button pressed, once.
@@ -658,15 +685,22 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
         }
         WM_ERASEBKGND => 1,
         SCENE_CHANGED => {
-            // The way back comes to the front (and takes the keyboard); the rest stays under
-            // whatever opens next, a launcher or the game.
+            // The way back comes to the front (and takes the keyboard); a held cover stays in
+            // front without the keyboard; the rest stays under whatever opens next.
             if front() {
                 SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                 SetForegroundWindow(hwnd);
+            } else if shared.held.load(Ordering::SeqCst) {
+                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             } else {
                 SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             }
             InvalidateRect(hwnd, null(), 0);
+            0
+        }
+        LET_GO if !front() => {
+            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             0
         }
         WM_MOUSEACTIVATE if !front() => MA_NOACTIVATE as LRESULT,

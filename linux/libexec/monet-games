@@ -1,0 +1,241 @@
+#!/usr/bin/python3
+"""Games: every game you have, Monet's and Windows', in one library of its own.
+
+    monet-games          open Games (or bring back the one that's open)
+
+The window (DATADIR/monet/games/Games.qml) lists what `monet-quick library` finds, plays a
+game where it plays, and asks before restarting in Windows (`monet play`). This side runs
+those for it, speaks the session's language with Monet's words (the same catalog as the
+widgets'), and keeps one window: opening Games again brings that one forward.
+"""
+import gettext
+import os
+import sys
+
+from PySide6.QtCore import QObject, QProcess, QRectF, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion
+from PySide6.QtNetwork import QLocalServer, QLocalSocket, QNetworkAccessManager, QNetworkDiskCache
+from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
+
+BINDIR = "@BINDIR@"
+LIBEXECDIR = "@LIBEXECDIR@"
+DATADIR = "@DATADIR@"
+# The only programs the window may run.
+PROGRAMS = {"helper": f"{LIBEXECDIR}/monet-quick", "monet": f"{BINDIR}/monet"}
+WORDS = gettext.translation("monet", localedir=f"{DATADIR}/locale", fallback=True)
+# Covers from the web (Steam's, Heroic's), kept: hundreds of games open without fetching them again.
+PICTURES = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "monet/games")
+
+
+def fill(text, values):
+    """%1, %2, ... filled in, as KDE's i18n does (the widgets' convention for translators)."""
+    for i, value in reversed(list(enumerate(values, 1))):
+        # QML's numbers arrive as floats: 157, not 157.0.
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        text = text.replace(f"%{i}", str(value))
+    return text
+
+
+class Words(QObject):
+    """KDE's i18n calls for the window's QML, so its words come from Monet's catalog as the
+    widgets' do (tools/make-translations.py finds them the same way)."""
+
+    @Slot(str, result=str)
+    @Slot(str, "QVariant", result=str)
+    @Slot(str, "QVariant", "QVariant", result=str)
+    @Slot(str, "QVariant", "QVariant", "QVariant", result=str)
+    def i18n(self, text, *values):
+        return fill(WORDS.gettext(text), values)
+
+    @Slot(str, str, result=str)
+    @Slot(str, str, "QVariant", result=str)
+    @Slot(str, str, "QVariant", "QVariant", result=str)
+    def i18nc(self, context, text, *values):
+        return fill(WORDS.pgettext(context, text), values)
+
+    @Slot(str, str, "QVariant", result=str)
+    @Slot(str, str, "QVariant", "QVariant", result=str)
+    @Slot(str, str, "QVariant", "QVariant", "QVariant", result=str)
+    def i18np(self, one, many, count, *values):
+        return fill(WORDS.ngettext(one, many, int(count)), (count, *values))
+
+
+class Helper(QObject):
+    """Runs monet-quick or monet for the window, and says how each went (done)."""
+
+    done = Signal(int, str, int, str)  # ticket, what it printed, its exit code, what it said wrong
+    # Opened again: this window comes forward instead, with what that start was asked (Settings: a page).
+    wanted = Signal(str)
+
+    def __init__(self):
+        super().__init__()
+        self._next = 0
+
+    @Slot("QVariantList", result=int)
+    def run(self, command):
+        self._next += 1
+        ticket = self._next
+        program = PROGRAMS.get(str(command[0]) if command else "")
+        if program is None:
+            self.done.emit(ticket, "", 1, f"not a program Games runs: {command[:1]}")
+            return ticket
+        self.start(ticket, program, [str(a) for a in command[1:]])
+        return ticket
+
+    def start(self, ticket, program, args):
+        process = QProcess(self)
+
+        def finished(code, _status):
+            out = bytes(process.readAllStandardOutput()).decode("utf-8", "replace")
+            err = bytes(process.readAllStandardError()).decode("utf-8", "replace")
+            process.deleteLater()
+            self.done.emit(ticket, out, code, err)
+
+        def failed(error):
+            # Never started, so never finishes either.
+            if error == QProcess.FailedToStart:
+                self.done.emit(ticket, "", 1, process.errorString())
+
+        process.finished.connect(finished)
+        process.errorOccurred.connect(failed)
+        process.start(program, args)
+
+
+class KeptPictures(QQmlNetworkAccessManagerFactory):
+    def create(self, parent):
+        manager = QNetworkAccessManager(parent)
+        cache = QNetworkDiskCache(manager)
+        cache.setCacheDirectory(PICTURES)
+        cache.setMaximumCacheSize(400 * 1024 * 1024)
+        manager.setCache(cache)
+        return manager
+
+
+def already_open(name, asked=""):
+    """Brings the window that's open forward (Games', or Settings' for monet-settings), with
+    this start's activation token so the desktop lets it, and what it was asked; True when
+    there was one."""
+    socket = QLocalSocket()
+    socket.connectToServer(name)
+    if not socket.waitForConnected(500):
+        return False
+    socket.write(os.environ.get("XDG_ACTIVATION_TOKEN", "").encode() + b"\n" + asked.encode() + b"\n")
+    socket.waitForBytesWritten(500)
+    socket.disconnectFromServer()
+    return True
+
+
+def answer(server, helper):
+    """The other end of already_open: the token for the window's next activation, and
+    helper.wanted with what was asked."""
+    def asked():
+        socket = server.nextPendingConnection()
+
+        def read():
+            token, _, rest = bytes(socket.readAll()).decode(errors="replace").partition("\n")
+            if token.strip():
+                # Qt hands it to the desktop with the window's next activation.
+                os.environ["XDG_ACTIVATION_TOKEN"] = token.strip()
+            helper.wanted.emit(rest.strip())
+            socket.deleteLater()
+
+        # Read once it's all there: the other start says it and goes.
+        if socket.state() == QLocalSocket.UnconnectedState:
+            read()
+        else:
+            socket.disconnected.connect(read)
+
+    server.newConnection.connect(asked)
+
+
+# KDE's own call for a blur behind a window (KWindowEffects), as Plasma's popups and Kvantum's
+# windows make it; Python has no binding for it, so it's called in the library itself.
+BLUR_BEHIND = 7  # KWindowEffects::BlurBehind
+KDE_WINDOWS = "libKF6WindowSystem.so.6"
+
+
+def window_region(width, height, radius):
+    """The same logical-pixel outline as MonetWindow, for blur and pointer input."""
+    radius = max(0, min(radius, width / 2, height / 2))
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(0, 0, width, height), radius, radius)
+    return QRegion(path.toFillPolygon().toPolygon())
+
+
+def glaze(window, context, tries=8):
+    """Monet's glass under one of its app windows (Games, Settings, the Store): KWin blurs what's
+    behind the window, once it says it can (a moment after the window's first frame), and the
+    window's `blurBehind` turns true, for WindowGlass to wash mist or smoke over the blur rather
+    than lay paper. Without KWin's blur (Glass on Solid, another desktop) it stays paper."""
+    import ctypes
+    try:
+        import shiboken6
+        kde = ctypes.CDLL(KDE_WINDOWS)
+        available = kde._ZN14KWindowEffects17isEffectAvailableENS_6EffectE
+        blur = kde._ZN14KWindowEffects16enableBlurBehindEP7QWindowbRK7QRegion
+    except (OSError, AttributeError, ImportError):
+        return
+    available.argtypes, available.restype = [ctypes.c_int], ctypes.c_bool
+    blur.argtypes, blur.restype = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_void_p], None
+    # A full rectangular blur would still show square corners outside the QML's rounded glass.
+    def outline():
+        region = window_region(window.width(), window.height(), window.property("frameRadius") or 0)
+        window.setMask(region)
+        blur(shiboken6.getCppPointer(window)[0], True, shiboken6.getCppPointer(region)[0])
+        window.update()
+
+    resize = QTimer(window)
+    resize.setSingleShot(True)
+    resize.timeout.connect(outline)
+    window.widthChanged.connect(lambda *_: resize.start(0))
+    window.heightChanged.connect(lambda *_: resize.start(0))
+    if hasattr(window, "frameRadiusChanged"):
+        window.frameRadiusChanged.connect(lambda: resize.start(0))
+
+    def ask(left):
+        if available(BLUR_BEHIND):
+            outline()
+            context.setContextProperty("blurBehind", True)
+            # KWin takes the blur with the window's next frame.
+            window.update()
+        elif left > 0:
+            QTimer.singleShot(400, lambda: ask(left - 1))
+    QTimer.singleShot(200, lambda: ask(tries))
+
+
+def main():
+    app = QGuiApplication(sys.argv)
+    # Monet's menu entry: its name, its icon, its place in the taskbar.
+    app.setDesktopFileName("monet-games")
+    app.setApplicationName("games")
+    app.setOrganizationName("monet")
+    words = Words()
+    app.setApplicationDisplayName(words.i18n("Games"))
+    app.setWindowIcon(QIcon.fromTheme("monet-windows"))
+    name = f"monet-games-{os.getuid()}"
+    if already_open(name):
+        return 0
+    QLocalServer.removeServer(name)
+    server = QLocalServer()
+    server.setSocketOptions(QLocalServer.UserAccessOption)
+    server.listen(name)
+    helper = Helper()
+    answer(server, helper)
+    engine = QQmlApplicationEngine()
+    pictures = KeptPictures()
+    engine.setNetworkAccessManagerFactory(pictures)
+    engine.rootContext().setContextObject(words)
+    engine.rootContext().setContextProperty("helper", helper)
+    engine.rootContext().setContextProperty("art", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
+    engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
+    engine.rootContext().setContextProperty("blurBehind", False)
+    engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/games/Games.qml"))
+    if not engine.rootObjects():
+        return 1
+    glaze(engine.rootObjects()[0], engine.rootContext())
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

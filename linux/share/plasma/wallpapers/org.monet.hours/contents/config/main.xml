@@ -8,9 +8,13 @@
     <entry name="Painting" type="String">
       <default>hours</default>
     </entry>
-    <!-- Which painting: The Hours, Water Lilies, Haystacks or The Magpie (each in four lights). -->
+    <!-- Which painting: The Hours, Water Lilies, Haystacks, The Magpie or a photo of yours (each in four lights). -->
     <entry name="Series" type="String">
       <default>hours</default>
+    </entry>
+    <!-- Where your photo, painted, is (monet-paint's four lights; a file:// folder, from monet-light). -->
+    <entry name="PhotoFolder" type="String">
+      <default></default>
     </entry>
     <!-- Where the PC is ("59.33,18.07"), from monet-light: the lights follow its sunrise and sunset. -->
     <entry name="Place" type="String">

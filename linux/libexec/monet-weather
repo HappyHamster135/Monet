@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""One weather preference and forecast cache for the desktop and bottom bar."""
+import contextlib
+import fcntl
+import json
+import math
+import os
+from pathlib import Path
+import sys
+import tempfile
+import time
+from urllib.parse import urlencode
+from urllib.request import urlopen
+
+HOME = Path.home()
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "monet/weather.json"
+CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "monet/weather.json"
+DEFAULT = {"place": "", "latitude": 0, "longitude": 0, "places": [], "fahrenheit": False}
+FORECAST_SCHEMA = 2
+
+
+def read(path, fallback):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return fallback
+
+
+def atomic(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=".weather-")
+    try:
+        with os.fdopen(fd, "w") as out:
+            json.dump(value, out, ensure_ascii=False, allow_nan=False)
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+@contextlib.contextmanager
+def lock(path, wait=True):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def place(value):
+    name = value.get("name", value.get("place", ""))
+    lat, lon = float(value.get("latitude", 0)), float(value.get("longitude", 0))
+    if not isinstance(name, str) or len(name) > 200 or not math.isfinite(lat + lon) or not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError("Invalid weather location")
+    return {"name": name.strip(), "latitude": lat, "longitude": lon}
+
+
+def normalize(value):
+    here = place(value)
+    places = []
+    for entry in value.get("places", [])[:20]:
+        p = place(json.loads(entry) if isinstance(entry, str) else entry)
+        if p["name"] and p not in places:
+            places.append(p)
+    if here["name"] and here not in places:
+        places.append(here)
+    return {"place": here["name"], "latitude": here["latitude"], "longitude": here["longitude"],
+            "places": places, "fahrenheit": value.get("fahrenheit") is True}
+
+
+def update(value, seed=False):
+    with lock(CONFIG.with_suffix(".lock")):
+        if seed and CONFIG.exists():
+            return
+        # Empty legacy panel configuration must not erase the desktop's location.
+        if seed and not value.get("place"):
+            return
+        current = dict(DEFAULT, **read(CONFIG, {}))
+        current.update(value)
+        atomic(CONFIG, normalize(current))
+
+
+def cache_key(config):
+    return f"{config['latitude']},{config['longitude']},{config['fahrenheit']}"
+
+
+def fetch(config):
+    query = urlencode({"latitude": config["latitude"], "longitude": config["longitude"],
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m",
+        "hourly": "temperature_2m,weather_code,is_day,precipitation_probability,wind_speed_10m",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,wind_speed_10m_max",
+        "timezone": "auto", "forecast_days": 7,
+        "wind_speed_unit": "mph" if config["fahrenheit"] else "kmh",
+        "temperature_unit": "fahrenheit" if config["fahrenheit"] else "celsius"})
+    with urlopen("https://api.open-meteo.com/v1/forecast?" + query, timeout=8) as response:
+        result = json.load(response)
+    temperature = result.get("current", {}).get("temperature_2m")
+    if not isinstance(temperature, (int, float)) or not math.isfinite(temperature):
+        raise ValueError("Incomplete weather")
+    for section, minimum, fields in (
+        ("daily", 7, ("weather_code", "temperature_2m_max", "temperature_2m_min",
+                       "precipitation_probability_max", "sunrise", "sunset", "wind_speed_10m_max")),
+        ("hourly", 24, ("temperature_2m", "weather_code", "is_day", "precipitation_probability", "wind_speed_10m")),
+    ):
+        data = result.get(section, {})
+        times = data.get("time", [])
+        if not isinstance(times, list) or len(times) < minimum or any(not isinstance(t, str) for t in times):
+            raise ValueError("Incomplete forecast")
+        if any(not isinstance(data.get(k), list) or len(data[k]) != len(times) for k in fields):
+            raise ValueError("Incomplete forecast")
+    return result
+
+
+def due(entry, now):
+    # Upgrade an old five-day cache promptly, but don't retry continuously offline.
+    if entry.get("error"):
+        return now - entry.get("attempt", 0) > 120
+    return entry.get("schema") != FORECAST_SCHEMA or now - entry.get("attempt", 0) > 1800
+
+
+def status(force=False):
+    config = dict(DEFAULT, **read(CONFIG, {}))
+    key = cache_key(config)
+    cache = read(CACHE, {})
+    entry = cache.get(key, {})
+    now = time.time()
+    if config["place"] and (force or due(entry, now)):
+        # One request even when several widgets refresh together. Preference writes
+        # use a separate lock, so a slow network never blocks a location change.
+        with lock(CACHE.with_suffix(".lock"), wait=False) as acquired:
+            if acquired:
+                cache = read(CACHE, {})
+                entry = cache.get(key, {})
+                if force or due(entry, now):
+                    entry = dict(entry, attempt=now)
+                    try:
+                        entry.update(weather=fetch(config), updated=now, error=False, schema=FORECAST_SCHEMA)
+                    except (OSError, ValueError, KeyError):
+                        entry["error"] = True
+                    cache[key] = entry
+                    # Bound the cache when people try many locations/units.
+                    cache = dict(sorted(cache.items(), key=lambda p: p[1].get("attempt", 0))[-40:])
+                    atomic(CACHE, cache)
+    # A location may have changed while the request was in flight.
+    config = dict(DEFAULT, **read(CONFIG, {}))
+    entry = read(CACHE, {}).get(cache_key(config), {})
+    return {"config": config, "weather": entry.get("weather"), "updated": entry.get("updated", 0),
+            "stale": bool(entry.get("error")), "problem": bool(entry.get("error"))}
+
+
+def main(args):
+    command = args[0] if args else "status"
+    if command in ("set", "seed"):
+        if len(args) != 2 or len(args[1]) > 32768:
+            raise ValueError("Invalid weather preferences")
+        update(json.loads(bytes.fromhex(args[1]).decode("utf-8")), seed=command == "seed")
+    elif command not in ("status", "refresh"):
+        raise ValueError("Unknown weather command")
+    print(json.dumps(status(command == "refresh"), ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv[1:])
+    except (OSError, ValueError, TypeError) as error:
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

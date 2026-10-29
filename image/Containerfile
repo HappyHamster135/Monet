@@ -11,7 +11,7 @@ ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
 
 FROM docker.io/library/rust:1 AS build
 RUN apt-get update \
- && apt-get install -y --no-install-recommends mingw-w64 \
+ && apt-get install -y --no-install-recommends mingw-w64 cmake qt6-base-dev \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
@@ -28,18 +28,25 @@ FROM ${BASE} AS password
 COPY image/password /src/password
 RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
 
-FROM ${BASE}
-# Monet's own version, which updates show ("Monet 0.9.3 is ready"), not Bazzite's.
-ARG VERSION=dev
-LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
+FROM ${BASE} AS runtime
 # Tools for installing Windows from Monet: splitting Windows' install image
-# (wimlib), formatting its partition (ntfsprogs), and boot entries; rsync for
-# the copies on a backup drive. Then the look: Kvantum draws Monet's glass app
-# windows, Inter is the reading font, and Plymouth's script plugin plays
-# Monet's boot screen.
+# (wimlib), formatting its partition (ntfsprogs), and boot entries; ntfs-3g's
+# probe, which says when Windows' drive is safe to write (its Games folder for
+# Steam on both sides); NumPy and Pillow, with which monet-paint paints your photo;
+# rsync for the copies on a backup drive; Qt for Python, which Games and the Store are
+# written in, as Monet Setup is, and the Store's way to Flatpak (PyGObject). Then the look:
+# Kvantum draws Monet's glass app windows, Inter is the reading font, and
+# Plymouth's script plugin plays Monet's boot screen; umu-launcher runs Windows programs
+# opened in Files through Proton, as Windows games run.
 # cryptsetup and tpm2-tss unlock a disk Monet Setup encrypted, with the PC's security chip.
-RUN dnf5 -y install wimlib-utils ntfsprogs dosfstools efibootmgr python3 rsync cryptsetup tpm2-tss \
- && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script \
+# Carlito and Caladea are as wide as Calibri and Cambria, so Word and PowerPoint files keep their
+# lines and pages in the office apps (the image has Liberation for Arial, Times and Courier).
+# rclone puts OneDrive in Files (Settings → Storage → OneDrive).
+RUN dnf5 -y install wimlib-utils ntfsprogs ntfs-3g dosfstools efibootmgr python3 python3-numpy python3-pillow rsync \
+    python3-pyside6 python3-gobject at-spi2-core lz4-libs binutils \
+    cryptsetup tpm2-tss rclone \
+ && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script umu-launcher \
+    google-carlito-fonts google-crosextra-caladea-fonts \
  && dnf5 clean all
 # The everyday apps, built in rather than downloaded: Photos, Documents, Video,
 # Music, Calculator and Archives. Built against the Plasma already here they
@@ -63,6 +70,54 @@ RUN dnf5 -y install --skip-unavailable tesseract-langpack-ara tesseract-langpack
 # way. (The sign-in screen, Plasma Login Manager, can't take a finger yet.)
 RUN dnf5 -y install fprintd-pam && dnf5 clean all \
  && { authselect enable-feature with-fingerprint || { echo "fingerprint left off: authselect refused" >&2; authselect current; }; }
+
+# Native build headers require matching util-linux and Brotli libraries. Update the shipped
+# runtime first, so adding development packages cannot silently change its ABI.
+RUN dnf5 -y upgrade libblkid libmount libuuid libbrotli && dnf5 clean all
+
+# Build the native notification applet against the fully assembled runtime.
+# Development packages stay in this stage; a mismatch fails rather than shipping
+# a plugin built against libraries absent from the actual image.
+FROM runtime AS notifications
+COPY image/notifications /src/notifications
+RUN sh /src/notifications/build.sh /out
+
+FROM runtime AS editor-recovery
+COPY image/editor-recovery /src/editor-recovery
+RUN sh /src/editor-recovery/build.sh /out
+
+FROM runtime AS files-recovery
+COPY image/files-recovery /src/files-recovery
+RUN sh /src/files-recovery/build.sh /out
+
+FROM runtime AS pdf-recovery
+COPY image/pdf-recovery /src/pdf-recovery
+RUN sh /src/pdf-recovery/build.sh /out
+
+FROM runtime AS window-identity
+COPY image/window-identity /src/window-identity
+COPY LICENSE /src/window-identity/LICENSE
+RUN sh /src/window-identity/build.sh /out
+
+FROM runtime
+# Keep version-only changes out of the native library build caches.
+ARG VERSION=dev
+LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
+COPY --from=pdf-recovery /out /tmp/monet-pdf-recovery
+RUN python3 /tmp/monet-pdf-recovery/bundle.py install /tmp/monet-pdf-recovery \
+ && rm -rf /tmp/monet-pdf-recovery
+COPY --from=files-recovery /out /tmp/monet-files-recovery
+RUN python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
+ && rm -rf /tmp/monet-files-recovery
+COPY --from=window-identity /out /tmp/monet-window-identity
+RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \
+ && rm -rf /tmp/monet-window-identity
+COPY --from=editor-recovery /out /tmp/monet-editor-recovery
+RUN python3 /tmp/monet-editor-recovery/bundle.py install /tmp/monet-editor-recovery \
+ && rm -rf /tmp/monet-editor-recovery
+COPY --from=notifications /out /tmp/monet-notifications
+RUN python3 /tmp/monet-notifications/bundle.py install /tmp/monet-notifications \
+ && rm -rf /tmp/monet-notifications
 COPY --from=build /out /tmp/monet
 COPY --from=password /out /tmp/monet/password
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the

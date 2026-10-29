@@ -90,6 +90,14 @@ SMOKE = Palette(
 )
 
 
+def matte(p: Palette, name):
+    """Matte glass: the painting's color comes through, its strokes don't (Settings' Glass
+    slider, for people who find the clear glass too clear)."""
+    from dataclasses import replace
+    return replace(p, name=name, glass_top=p.glass_top[:7] + "EE", glass_bottom=p.glass_bottom[:7] + "F2",
+                   menu=p.menu[:7] + "F7")
+
+
 def solid(p: Palette, name):
     """The same style without glass: for slower PCs, or people who prefer it."""
     from dataclasses import replace
@@ -455,6 +463,9 @@ def theme_svg(p: Palette):
     return s.svg()
 
 
+# splitter_width: Files' small status bar keeps two splitters' width of margin around its text but
+# gives only a character's width more room, so Kvantum's 7 cut "9 folders" to "9 f…ers" (found in
+# the test VM); KDE's own style has 1.
 GENERAL = """[%General]
 author=Monet
 comment=Monet's glass for Qt apps: see-through windows with the painting behind them.
@@ -473,10 +484,10 @@ menu_blur_radius=10
 tooltip_blur_radius=8
 spread_menuitems=false
 menu_separator_height=9
-scroll_width=10
+scroll_width=14
 scroll_arrows=false
 scroll_min_extent=36
-transient_scrollbar=true
+transient_scrollbar=false
 transient_groove=false
 slider_width=4
 slider_handle_width=18
@@ -510,6 +521,7 @@ joined_inactive_tabs=false
 remove_extra_frames=true
 layout_spacing=6
 layout_margin=9
+splitter_width=2
 submenu_overlap=0
 submenu_delay=250
 tooltip_delay=-1
@@ -520,7 +532,7 @@ no_window_pattern=false
 reduce_window_opacity=0
 reduce_menu_opacity=0
 respect_DE=true
-scrollbar_in_view=true
+scrollbar_in_view=false
 tree_branch_line=false
 no_inactiveness=false
 
@@ -604,6 +616,14 @@ min_height=+0.4font
 inherits=PanelButtonCommand
 frame.element=tbutton
 interior.element=tbutton
+# Kirigami headers reserve their own outer padding. Tool buttons must not
+# inherit the extra height of standalone action buttons: the Back highlight
+# in More settings would otherwise paint across the header's separator.
+frame.top=6
+frame.bottom=6
+text.margin.top=0
+text.margin.bottom=0
+min_height=0
 text.toggle.color={text}
 
 [ToolbarButton]
@@ -673,15 +693,17 @@ inherits=PanelButtonCommand
 interior.element=tab
 frame.element=tab
 indicator.element=tab
+frame.top=6
+frame.bottom=6
 text.normal.color={dim}
 text.focus.color={text}
 text.toggle.color={text}
 text.margin.left=12
 text.margin.right=12
-text.margin.top=4
-text.margin.bottom=4
+text.margin.top=2
+text.margin.bottom=2
 min_width=+2font
-min_height=+0.6font
+min_height=0
 
 [TabFrame]
 inherits=PanelButtonCommand
@@ -919,7 +941,8 @@ def kvconfig(p: Palette):
 
 
 def main():
-    for p in (MIST, SMOKE, solid(MIST, "MonetSolid"), solid(SMOKE, "MonetDarkSolid")):
+    for p in (MIST, SMOKE, matte(MIST, "MonetMatte"), matte(SMOKE, "MonetDarkMatte"),
+              solid(MIST, "MonetSolid"), solid(SMOKE, "MonetDarkSolid")):
         folder = OUT / p.name
         folder.mkdir(parents=True, exist_ok=True)
         (folder / f"{p.name}.svg").write_text(theme_svg(p))

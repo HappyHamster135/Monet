@@ -1,0 +1,13 @@
+[Unit]
+Description=Monet: the guest's home as new, before the sign-in screen
+ConditionPathExists=/var/lib/monet/guest
+After=local-fs.target monet-keep-prepare.service
+Before=display-manager.service plasmalogin.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-guest wipe
+TimeoutStartSec=2min
+
+[Install]
+WantedBy=multi-user.target

@@ -24,7 +24,9 @@ Monet installs itself, then downloads and installs a games-only Windows by
 itself. On Linux or a Mac, write the release's Setup.iso with your disk tool.
 The **[install guide](docs/INSTALL.md)** has every step.
 
-Monet is a preview for PCs with NVIDIA (RTX 20-series or newer), AMD or Intel graphics.
+The same USB maker works for supported x86-64 UEFI PCs with NVIDIA, AMD or Intel
+graphics. The installer detects the destination PC, not the PC used to make the stick.
+Monet is a preview; individual laptop hardware still needs testing.
 
 ## How it works
 
@@ -66,6 +68,12 @@ cargo test --workspace
 cargo build --release -p monet --target x86_64-unknown-linux-musl   # Linux
 cargo build --release -p monet-bridge                                # on Windows
 ```
+
+Linux release packaging also needs CMake, a C++17 compiler and Qt 6 Widgets/Test
+development packages (`qt6-base-dev` on Debian/Ubuntu, `qt6-qtbase-devel` on Fedora).
+`tools/package.sh linux …` builds and tests More Settings' private layout style;
+the installed OS does not need these development packages. For a source install,
+run `bash tools/build-settings-style.sh linux/lib/monet/qt` before `linux/install.sh`.
 
 Pushing a new version number in `VERSION` builds everything (the apps, the
 Monet OS image, and the installer ISO) and publishes a release.

@@ -1,0 +1,345 @@
+#!/usr/bin/env python3
+"""Zen's native normal-session recovery, without copying or editing its profile.
+
+Monet keeps only profile identity, counts, times and a verification digest. Zen
+owns tab URLs, spaces, history, cookies and its privacy rules. No debug interface
+is enabled by this helper. Other browsers require their own tested adapters.
+"""
+import ctypes
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import struct
+import subprocess
+import time
+
+APP = "app.zen_browser.zen.desktop"
+FLATPAK = "app.zen_browser.zen"
+LIMIT = 16 * 1024 * 1024
+
+
+def root():
+    return Path.home() / ".var/app" / FLATPAK / ".zen"
+
+
+def profile_path(name):
+    if not isinstance(name, str) or not name or len(name) > 1024 or any(ord(c) < 32 for c in name):
+        return None
+    part = Path(name)
+    if part.is_absolute() or ".." in part.parts:
+        return None
+    try:
+        path = (root() / part).resolve(strict=True)
+        path.relative_to(root().resolve())
+        return path if path.is_dir() and path != root().resolve() else None
+    except (OSError, ValueError):
+        return None
+
+
+def process_start(pid):
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        boot = next(int(line.split()[1]) for line in Path("/proc/stat").read_text().splitlines() if line.startswith("btime "))
+        return boot + int(fields[19]) / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError, StopIteration):
+        return 0
+
+
+def profile_for_pid(pid):
+    """The live profile lock FD is authoritative; profiles.ini only says default."""
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        process = Path(f"/proc/{pid}")
+        if process.stat().st_uid != os.getuid():
+            return None
+        args = (process / "cmdline").read_bytes().split(b"\0")
+        if Path(os.fsdecode(args[0])).name not in ("zen", "zen-bin") or b"-contentproc" in args:
+            return None
+        for descriptor in list((process / "fd").iterdir())[:512]:
+            try:
+                target = Path(os.readlink(descriptor))
+                if target.name != ".parentlock":
+                    continue
+                relative = target.parent.resolve().relative_to(root().resolve()).as_posix()
+                if profile_path(relative) == target.parent.resolve():
+                    return relative
+            except (OSError, ValueError):
+                continue
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def owner(name):
+    if not profile_path(name):
+        return None
+    for process in Path("/proc").iterdir():
+        if process.name.isdecimal() and profile_for_pid(int(process.name)) == name:
+            return int(process.name)
+    return None
+
+
+def read_session(path):
+    """Mozilla JSONLZ4, with a hard bound before allocating/decompressing."""
+    try:
+        with path.open("rb") as stream:
+            data = stream.read(LIMIT + 1)
+        if not 12 <= len(data) <= LIMIT or data[:8] != b"mozLz40\0":
+            return None
+        size = struct.unpack("<I", data[8:12])[0]
+        if not 1 <= size <= LIMIT:
+            return None
+        library = ctypes.CDLL("liblz4.so.1")
+        decompress = library.LZ4_decompress_safe
+        decompress.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+        decompress.restype = ctypes.c_int
+        output = ctypes.create_string_buffer(size)
+        if decompress(data[12:], output, len(data) - 12, size) != size:
+            return None
+        value = json.loads(output.raw)
+        return value if isinstance(value, dict) else None
+    except (OSError, ValueError, AttributeError, RecursionError):
+        return None
+
+
+def summary(state):
+    if not isinstance(state, dict) or not isinstance(state.get("windows"), list):
+        return None
+    windows = state["windows"]
+    session = state.get("session", {})
+    if len(windows) > 32 or not isinstance(session, dict):
+        return None
+    for key in ("startTime", "lastUpdate"):
+        value = session.get(key)
+        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+            return None
+    sequences = []
+    count = 0
+    for window in windows:
+        if not isinstance(window, dict) or window.get("isPrivate") or window.get("isZenUnsynced"):
+            return None  # Never ask native recovery to open a private/unsupported payload.
+        tabs = window.get("tabs")
+        if not isinstance(tabs, list) or len(tabs) > 1000:
+            return None
+        sequence = []
+        for tab in tabs:
+            if not isinstance(tab, dict) or tab.get("isPrivate"):
+                return None
+            # Zen inserts an internal empty-tab placeholder in every window.
+            if tab.get("zenIsEmpty") and not tab.get("groupId"):
+                continue
+            entries, index = tab.get("entries", []), tab.get("index", 1)
+            if not isinstance(entries, list) or type(index) is not int or index < 1 or index > max(1, len(entries)):
+                return None
+            entry = entries[index - 1] if entries else {}
+            url = entry.get("url", "about:blank") if isinstance(entry, dict) else None
+            if not isinstance(url, str) or len(url) > 65536:
+                return None
+            sequence.append([url, bool(tab.get("pinned"))])
+        if sequence:
+            sequences.append(sequence)
+        count += len(sequence)
+    if count > 2000:
+        return None
+    # Digest stays opaque. Never put URLs, titles, form state, cookies, closed tabs
+    # or the session blob in Monet's checkpoint or logs. Window order may change.
+    fingerprints = sorted(hashlib.sha256(json.dumps(s, ensure_ascii=True).encode()).hexdigest() for s in sequences)
+    return {"session": session["startTime"], "updated": session["lastUpdate"],
+            "windows": len(sequences), "tabs": count,
+            "digest": hashlib.sha256(json.dumps(fingerprints).encode()).hexdigest()}
+
+
+def restored_summary(profile, state):
+    """Zen restores synced windows from its sidebar file, not their stale tab copies."""
+    original = summary(state)
+    if not original or original["windows"] <= 1:
+        return original
+    preferences = {"zen.window-sync.enabled": True, "zen.window-sync.sync-only-pinned-tabs": False}
+    try:
+        for name in ("prefs.js", "user.js"):
+            path = profile / name
+            if not path.exists():
+                continue
+            with path.open(encoding="utf-8") as stream:
+                text = stream.read(LIMIT + 1)
+            if len(text) > LIMIT:
+                return None
+            for key in preferences:
+                values = re.findall(r'user_pref\(\s*"' + re.escape(key) + r'"\s*,\s*(true|false)\s*\)', text)
+                if values:
+                    preferences[key] = values[-1] == "true"
+        if not preferences["zen.window-sync.enabled"]:
+            return original
+        sidebar = read_session(profile / "zen-sessions.jsonlz4")
+        if (not isinstance(sidebar, dict) or sidebar.get("isPrivate") or not isinstance(sidebar.get("tabs"), list)
+                or type(sidebar.get("lastCollected")) not in (int, float)
+                or not math.isfinite(sidebar["lastCollected"]) or sidebar["lastCollected"] < original["session"]):
+            return None
+        tabs = sidebar["tabs"]
+        if any(not isinstance(t, dict) or t.get("isPrivate") for t in tabs):
+            return None
+        pinned = preferences["zen.window-sync.sync-only-pinned-tabs"]
+        windows = [dict(w, tabs=([t for t in tabs if t.get("pinned")]
+                                 + [t for t in w["tabs"] if not t.get("pinned")]) if pinned else tabs)
+                   for w in state["windows"]]
+        return summary(dict(state, windows=windows))
+    except (OSError, ValueError):
+        return None
+
+
+def snapshot(profile, live=False, restore=False):
+    candidates = ([profile / "sessionstore-backups/recovery.jsonlz4"] if live else
+                  [profile / "sessionstore.jsonlz4", profile / "sessionstore-backups/recovery.jsonlz4"])
+    try:
+        for path in candidates:
+            if path.exists():
+                state = read_session(path)
+                result = restored_summary(profile, state) if restore else summary(state)
+                if result:
+                    result["written"] = path.stat().st_mtime
+                return result  # Corruption must not silently revive an older backup.
+    except OSError:
+        pass
+    return None
+
+
+def private_start(pid, profile):
+    try:
+        args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+        if any(a.lower() in (b"-private", b"--private", b"-private-window", b"--private-window") for a in args):
+            return True
+        return private_profile(profile)
+    except OSError:
+        return True
+
+
+def private_profile(profile):
+    try:
+        for name in ("prefs.js", "user.js"):
+            path = profile / name
+            if not path.exists():
+                continue
+            with path.open(encoding="utf-8") as stream:
+                text = stream.read(LIMIT + 1)
+            if len(text) > LIMIT or re.search(r'user_pref\(\s*"browser.privatebrowsing.autostart"\s*,\s*true\s*\)', text):
+                return True
+            # A longer custom save interval is outside our bounded capture wait.
+            intervals = re.findall(r'user_pref\(\s*"browser.sessionstore.interval"\s*,\s*(\d+)\s*\)', text)
+            if intervals and int(intervals[-1]) > 15000:
+                return True
+        return False
+    except (OSError, ValueError):
+        return True
+
+
+def native_enabled(profile):
+    # Zen's shipped default is 3. user.js, when present, overrides prefs.js at
+    # startup. Keep this preference intact: Zen's own manager ignores the Firefox
+    # resume-once flag and removes unpinned tabs when this setting is disabled.
+    value = 3
+    try:
+        for name in ("prefs.js", "user.js"):
+            path = profile / name
+            if path.exists():
+                with path.open(encoding="utf-8") as stream:
+                    text = stream.read(LIMIT + 1)
+                if len(text) > LIMIT:
+                    return False
+                values = re.findall(r'user_pref\(\s*"browser.startup.page"\s*,\s*(\d+)\s*\)', text)
+                if values:
+                    value = int(values[-1])
+        return value == 3
+    except (OSError, ValueError):
+        return False
+
+
+def capture(windows):
+    pids = {w.get("pid") for w in windows if w.get("app") == APP and type(w.get("pid")) is int}
+    profiles = [(pid, profile_for_pid(pid)) for pid in pids]
+    if len(profiles) != 1 or not profiles[0][1]:
+        return {"mode": "skip"}
+    pid, name = profiles[0]
+    profile = profile_path(name)
+    try:
+        if not profile or private_start(pid, profile):
+            return {"mode": "skip"}
+        state = snapshot(profile, live=True)
+        # A private-only launch can leave a normal session from an earlier run on
+        # disk. Only accept a recovery write made by this running browser process.
+        started = process_start(pid)
+        if (not state or not started or state["written"] < started or not state["tabs"]
+                or profile_for_pid(pid) != name):
+            return {"mode": "skip"}
+        return {"mode": "native", "profile": name, "session": state["session"],
+                "updated": state["updated"], "windows": state["windows"], "tabs": state["tabs"],
+                "restore": native_enabled(profile)}
+    except OSError:
+        return {"mode": "skip"}
+
+
+def valid(saved):
+    return (isinstance(saved, dict) and saved.get("mode") == "native" and profile_path(saved.get("profile")) is not None
+            and all(type(saved.get(k)) in (int, float) and math.isfinite(saved[k]) and saved[k] > 0
+                    for k in ("session", "updated"))
+            and type(saved.get("windows")) is int and 1 <= saved["windows"] <= 32
+            and type(saved.get("tabs")) is int and 1 <= saved["tabs"] <= 2000)
+
+
+def prepare(saved):
+    """A current native session is required; deleted sessions stay deleted."""
+    if not valid(saved):
+        return None
+    profile = profile_path(saved["profile"])
+    if private_profile(profile):
+        return None
+    if not native_enabled(profile):
+        return {"restore": False}
+    state = snapshot(profile, restore=True)
+    if (not state or not state["tabs"] or state["windows"] < saved["windows"] or state["session"] != saved["session"]
+            or state["updated"] < saved["updated"]):
+        return None
+    return {k: state[k] for k in ("digest", "windows", "tabs")}
+
+
+def launch(saved):
+    profile = profile_path(saved.get("profile"))
+    if not profile or owner(saved["profile"]):
+        raise OSError("Browser profile unavailable or already open")
+    # Zen restores normal sessions itself. No one-shot prefs or startup settings
+    # need changing, and no URLs are passed to a shell or another profile.
+    process = subprocess.Popen(["flatpak", "run", FLATPAK, "--new-instance", "--profile", str(profile)],
+                               start_new_session=True, stdin=subprocess.DEVNULL,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return process.pid
+
+
+def ready(saved, receipt):
+    profile = profile_path(saved.get("profile"))
+    expected = receipt.get("expected", {})
+    if not profile or not isinstance(expected, dict) or type(receipt.get("started")) not in (int, float):
+        return None
+    pid = owner(saved["profile"])
+    if not pid:
+        return None
+    if expected.get("restore") is False or not native_enabled(profile):
+        return pid  # Reopen normally when the person disabled browser tab restore.
+    if not isinstance(expected.get("digest"), str):
+        return None
+    state = snapshot(profile, live=True)
+    if (state and state["written"] >= receipt["started"] and state["digest"] == expected["digest"]):
+        return pid
+    return None
+
+
+def launching(saved, receipt):
+    if not isinstance(receipt, dict):
+        return False
+    if owner(saved.get("profile")):
+        return True
+    pid, started = receipt.get("pid"), receipt.get("process_start")
+    return (type(pid) is int and type(started) in (int, float) and started > 0
+            and process_start(pid) == started)

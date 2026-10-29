@@ -33,6 +33,37 @@ PlasmoidItem {
     // Every app from A to Z, once KDE's model has read them.
     property var everyApp: null
     readonly property string firstName: (user.fullName || user.loginName || "").trim().split(" ")[0]
+    property var everydayResults: []
+    property string everydaySource: ""
+    property string everydayQuery: ""
+    property bool everydayPending: false
+    property string everydayError: ""
+    property string openingResult: ""
+    signal everydayReady()
+    Timer { id: everydayDelay; interval: 140; onTriggered: root.runEveryday() }
+
+    function findEveryday(query) {
+        everydayDelay.stop()
+        everydayQuery = query
+        everydayResults = []
+        everydayError = ""
+        everydayPending = query.trim() !== ""
+        everydaySource = ""
+        if (!everydayPending) { everydayReady(); return }
+        everydayDelay.restart()
+    }
+    function runEveryday() {
+        const bytes = unescape(encodeURIComponent(everydayQuery.trim().slice(0, 256)))
+        let encoded = ""
+        for (let i = 0; i < bytes.length; i++) encoded += bytes.charCodeAt(i).toString(16).padStart(2, "0")
+        everydaySource = "'@LIBEXECDIR@/monet-quick' search " + encoded
+        helper.connectSource(everydaySource)
+    }
+    function launchEveryday(entry) {
+        if (openingResult !== "" || !entry || !/^[a-z-]+$/.test(entry.id)) return
+        openingResult = "'@LIBEXECDIR@/monet-quick' search-open " + entry.id
+        helper.connectSource(openingResult)
+    }
 
     readonly property Kicker.RootModel apps: Kicker.RootModel {
         autoPopulate: false
@@ -120,7 +151,24 @@ PlasmoidItem {
         id: helper
         engine: "executable"
         connectedSources: []
-        onNewData: source => disconnectSource(source)
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            if (source === root.everydaySource) {
+                let result = {}
+                try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
+                const ok = data["exit code"] === 0 && Array.isArray(result.results)
+                root.everydayResults = ok ? result.results : []
+                root.everydayError = ok ? "" : i18n("Suggestions couldn't load. Other search results are still available.")
+                root.everydayPending = false
+                root.everydayReady()
+            } else if (source === root.openingResult) {
+                let result = {}
+                try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
+                root.openingResult = ""
+                if (data["exit code"] === 0 && result.ok === true) root.expanded = false
+                else root.everydayError = i18n("Couldn't open this result. Try again.")
+            }
+        }
     }
 
     PlasmaExtras.Menu {
@@ -155,6 +203,7 @@ PlasmoidItem {
         // Pinned apps and recent files, or all apps from A to Z; search results while there's a search.
         property bool everything: false
         property bool launchWhenFound: false
+        property int everydayIndex: 0
         readonly property bool searching: search.text.trim() !== ""
         readonly property var found: root.finder.count > 0 ? root.finder.modelForRow(0) : null
         readonly property Item shownView: searching ? results : everything ? allApps : pinned
@@ -173,7 +222,14 @@ PlasmoidItem {
 
         // Enter in the search opens the first result, as soon as there is one.
         function launchFirst() {
-            if (found && found.count > 0) {
+            if (root.everydayPending) {
+                launchWhenFound = true
+            } else if (root.everydayError !== "" && root.everydayResults.length === 0 && everydayIndex >= 0) {
+                launchWhenFound = true
+                root.findEveryday(search.text)
+            } else if (root.everydayResults.length > 0 && everydayIndex >= 0) {
+                root.launchEveryday(root.everydayResults[Math.min(everydayIndex, root.everydayResults.length - 1)])
+            } else if (found && found.count > 0) {
                 root.launch(found, Math.max(results.currentIndex, 0))
             } else if (root.finder.querying) {
                 launchWhenFound = true
@@ -209,6 +265,12 @@ PlasmoidItem {
 
         Connections {
             target: root
+            function onEverydayReady() {
+                if (page.launchWhenFound) {
+                    page.launchWhenFound = false
+                    if (root.everydayError === "") page.launchFirst()
+                }
+            }
             function onExpandedChanged() {
                 if (root.expanded) {
                     page.reset()
@@ -234,10 +296,13 @@ PlasmoidItem {
             // The search: a well with a lily ring while you type.
             T.TextField {
                 id: search
+                objectName: "menuSearch"
+                maximumLength: 256
                 Layout.fillWidth: true
                 implicitHeight: 42
-                leftPadding: 44
-                rightPadding: 16
+                // Room for the magnifier, on the right in a right-to-left language.
+                leftPadding: LayoutMirroring.enabled ? 16 : 44
+                rightPadding: LayoutMirroring.enabled ? 44 : 16
                 verticalAlignment: TextInput.AlignVCenter
                 color: page.ink
                 placeholderText: i18n("Search apps, files and settings")
@@ -248,12 +313,20 @@ PlasmoidItem {
                 font.pixelSize: 15
                 Accessible.name: i18n("Search")
                 onTextChanged: {
+                    page.launchWhenFound = false
+                    page.everydayIndex = 0
                     root.finder.query = text
+                    root.findEveryday(text)
                     results.currentIndex = 0
                 }
                 Keys.onReturnPressed: page.launchFirst()
                 Keys.onEnterPressed: page.launchFirst()
                 Keys.onDownPressed: {
+                    if (page.searching && root.everydayResults.length > 0) {
+                        results.headerItem.focusAt(0)
+                        return
+                    }
+                    page.everydayIndex = -1
                     page.shownView.forceActiveFocus()
                     if (page.shownView.currentIndex < 0) {
                         page.shownView.currentIndex = 0
@@ -305,14 +378,52 @@ PlasmoidItem {
                     font.family: "Fraunces 72pt SuperSoft"
                     font.pixelSize: 20
                 }
-                PlasmaComponents.ToolButton {
-                    text: page.everything ? i18n("Pinned") : i18n("All apps")
-                    icon.name: page.everything ? "go-previous" : "go-next"
-                    LayoutMirroring.enabled: !page.everything
-                    onClicked: {
+                // The way to the other list: a pebble of the glass, as Monet's buttons are, its
+                // arrow pointing where it goes ("All apps ›", "‹ Pinned").
+                Rectangle {
+                    id: otherList
+                    function go() {
                         page.everything = !page.everything
                         page.shownView.currentIndex = -1
                     }
+                    readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+                    implicitWidth: otherRow.implicitWidth + 24
+                    implicitHeight: 30
+                    radius: 11
+                    color: dark ? Qt.rgba(1, 1, 1, otherHover.hovered ? 0.16 : 0.1)
+                        : Qt.rgba(0.11, 0.106, 0.098, otherHover.hovered ? 0.11 : 0.07)
+                    scale: otherTap.pressed ? 0.96 : 1
+                    border.width: activeFocus ? 2 : 0
+                    border.color: dark ? "#4DB4A0" : "#357F72"
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: go()
+                    Keys.onEnterPressed: go()
+                    Keys.onSpacePressed: go()
+                    Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+                    Behavior on scale { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                    RowLayout {
+                        id: otherRow
+                        anchors.centerIn: parent
+                        spacing: 4
+                        layoutDirection: page.everything ? Qt.RightToLeft : Qt.LeftToRight
+                        Text {
+                            text: page.everything ? i18n("Pinned") : i18n("All apps")
+                            color: page.ink
+                            font.family: "Inter"
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                        }
+                        Kirigami.Icon {
+                            source: page.everything ? "go-previous" : "go-next"
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
+                        }
+                    }
+                    HoverHandler { id: otherHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { id: otherTap; onTapped: otherList.go() }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: page.everything ? i18n("Pinned") : i18n("All apps")
+                    Accessible.onPressAction: go()
                 }
             }
 
@@ -506,25 +617,94 @@ PlasmoidItem {
                     boundsBehavior: Flickable.StopAtBounds
                     Keys.onReturnPressed: root.launch(model, currentIndex)
                     Keys.onEnterPressed: root.launch(model, currentIndex)
+                    Keys.onDownPressed: incrementCurrentIndex()
                     Keys.onUpPressed: {
                         if (currentIndex <= 0) {
-                            search.forceActiveFocus()
+                            if (root.everydayResults.length > 0)
+                                headerItem.focusAt(root.everydayResults.length - 1)
+                            else search.forceActiveFocus()
                         } else {
                             decrementCurrentIndex()
                         }
                     }
                     Keys.onPressed: event => page.typeIntoSearch(event)
 
+                    header: Column {
+                        width: results.width
+                        // Suggestions arrive after native results and grow above the scroll origin.
+                        onHeightChanged: Qt.callLater(() => {
+                            if (search.activeFocus) {
+                                results.forceLayout()
+                                results.positionViewAtBeginning()
+                            }
+                        })
+                        function focusAt(index) {
+                            const item = everydayRepeater.itemAt(index)
+                            if (!item) return
+                            page.everydayIndex = index
+                            item.forceActiveFocus(Qt.TabFocusReason)
+                            const top = item.mapToItem(results.contentItem, 0, 0).y
+                            if (top < results.contentY) results.contentY = top
+                            else if (top + item.height > results.contentY + results.height)
+                                results.contentY = top + item.height - results.height
+                        }
+                        Repeater {
+                            id: everydayRepeater
+                            model: root.everydayResults
+                            AppRow {
+                                required property var modelData
+                                required property int index
+                                objectName: "menuSearchResult-" + modelData.id
+                                width: results.width
+                                icon: modelData.icon; name: modelData.name; detail: modelData.detail
+                                current: page.everydayIndex === index
+                                speed: root.speed
+                                activeFocusOnTab: true
+                                onActiveFocusChanged: if (activeFocus) page.everydayIndex = index
+                                onActivated: root.launchEveryday(modelData)
+                                Keys.onReturnPressed: root.launchEveryday(modelData)
+                                Keys.onEnterPressed: root.launchEveryday(modelData)
+                                Keys.onSpacePressed: root.launchEveryday(modelData)
+                                Keys.onUpPressed: {
+                                    if (index > 0) results.headerItem.focusAt(index - 1)
+                                    else search.forceActiveFocus(Qt.BacktabFocusReason)
+                                }
+                                Keys.onDownPressed: {
+                                    if (index + 1 < root.everydayResults.length) results.headerItem.focusAt(index + 1)
+                                    else if (results.count > 0) {
+                                        page.everydayIndex = -1
+                                        results.currentIndex = 0
+                                        results.positionViewAtIndex(0, ListView.Contain)
+                                        // ListView is a focus scope: focusing the view
+                                        // itself would restore focus to this header row.
+                                        if (results.currentItem) results.currentItem.forceActiveFocus(Qt.TabFocusReason)
+                                    }
+                                }
+                                Keys.onPressed: event => page.typeIntoSearch(event)
+                            }
+                        }
+                        Text {
+                            width: parent.width
+                            topPadding: 6
+                            bottomPadding: 6
+                            visible: root.everydayError !== ""
+                            text: root.everydayError
+                            color: page.ink; opacity: 0.7; font.pixelSize: 12
+                            wrapMode: Text.Wrap
+                        }
+                    }
+
                     delegate: AppRow {
                         id: resultRow
                         required property int index
                         required property var model
+                        objectName: "menuNativeResult-" + index
                         width: results.width
                         icon: model.decoration
                         name: model.display
                         detail: model.description || ""
                         // Lily on the result Enter opens.
-                        current: results.currentIndex === index
+                        current: (root.everydayResults.length === 0 || page.everydayIndex < 0) && results.currentIndex === index
                         speed: root.speed
                         onActivated: root.launch(results.model, index)
                         onMenuRequested: root.showAppMenu(resultRow, model.favoriteId || "")
@@ -535,7 +715,8 @@ PlasmoidItem {
                         anchors.top: parent.top
                         anchors.topMargin: Kirigami.Units.gridUnit * 2
                         width: parent.width - Kirigami.Units.gridUnit * 4
-                        visible: results.count === 0 && !root.finder.querying
+                        visible: results.count === 0 && root.everydayResults.length === 0
+                            && !root.finder.querying && !root.everydayPending && root.everydayError === ""
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
                         text: i18n("Nothing here by that name.")

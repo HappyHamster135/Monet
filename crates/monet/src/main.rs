@@ -15,7 +15,7 @@ mod trip;
 mod windows_setup;
 
 use std::fs;
-use std::io::IsTerminal;
+use std::io::{BufRead, IsTerminal, Write};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -64,7 +64,7 @@ fn main() -> ExitCode {
     let mut words = Vec::new();
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
-        if arg == "--game" || arg == "--iso" || arg == "--task" {
+        if arg == "--game" || arg == "--iso" || arg == "--task" || arg == "--checkpoint" {
             iter.next();
         } else if !arg.starts_with("--") {
             words.push(arg.as_str());
@@ -114,7 +114,8 @@ fn main() -> ExitCode {
         ["rollback"] => elevate(&["helper", "rollback"]),
         ["helper", "rollback"] => helper_rollback(),
         ["shortcuts"] => shortcuts(),
-        ["helper", "switch"] => helper_switch(option_value(&args, "--game"), option_value(&args, "--task")),
+        ["helper", "switch"] => helper_switch(option_value(&args, "--game"), option_value(&args, "--task"),
+            option_value(&args, "--checkpoint"), args.iter().any(|a| a == "--guarded")),
         ["helper", "check-switch"] => helper_check_switch(),
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
@@ -145,6 +146,12 @@ fn option_value(args: &[String], name: &str) -> Option<String> {
 
 fn now() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+fn boot_id() -> Res<String> {
+    fs::read_to_string("/proc/sys/kernel/random/boot_id")
+        .map(|id| id.trim().to_owned())
+        .map_err(|e| format!("Couldn't identify this boot: {e}"))
 }
 
 fn state_dir() -> PathBuf {
@@ -222,8 +229,8 @@ fn setup_notice() -> Option<&'static str> {
             Some(t!("Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."))
         }
         Outcome::BitLocker => Some(t!(
-            "Windows is encrypted with BitLocker, so Monet can't set it up for you. \
-             In Windows, open Monet for Windows and run Install Monet."
+            "Windows is encrypted with BitLocker. Type its recovery key in Settings › Games & Controllers, \
+             and Monet opens it and sets it up."
         )),
         Outcome::Hibernated => {
             Some(t!("Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."))
@@ -319,32 +326,49 @@ fn switch(game: Option<&str>, task: Option<&str>, confirm: bool) -> Res<()> {
 
     if confirm {
         let name = game.and_then(|id| all_games().find(id).map(|g| g.name.clone()));
+        // An app in Windows' Start menu (monet-quick's sheet asks first; this is for without it).
+        let app = game.is_some_and(|id| id.starts_with("app:"));
         let title = match (&name, game, task) {
             (Some(name), _, _) => say(t!("Play %1 on Windows?"), &[name.as_str()]),
+            (None, Some(_), _) if app => t!("Open in Windows?").to_string(),
             (None, Some(_), _) => t!("Play on Windows?").to_string(),
             (None, None, Some("launchers")) => t!("Sign in to your game launchers?").to_string(),
             (None, None, Some(_)) => t!("Update Windows games?").to_string(),
             (None, None, None) => t!("Restart in Windows?").to_string(),
         };
         let text = match (game, task) {
+            (Some(_), _) if app => t!("Your PC will restart in Windows and open it. Open apps will close."),
             (Some(_), _) => t!("Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."),
             (None, Some("launchers")) => t!("Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."),
             (None, Some(_)) => t!("Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."),
             (None, None) => t!("Your PC will restart in Windows. Open apps will close."),
         };
-        if !ask(&title, text, t!("Restart")) {
+        let text = format!("{}\n\n{}", text, t!("Save your work first. Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."));
+        if !ask(&title, &text, t!("Restart")) {
             return Ok(());
         }
     }
 
-    let mut args = vec!["helper", "switch"];
+    // A session service survives closing the terminal or app that requested the switch.
+    // Its single unit name also rejects overlapping requests before apps are touched.
+    let error = || t!("Monet couldn't start the safe switch. Your PC hasn't restarted. Try again from your desktop.").to_string();
+    let dir = windows_setup::libexec_dir().ok_or_else(error)?;
+    let exe = std::env::current_exe().map_err(|_| error())?;
+    let mut command = Command::new("systemd-run");
+    command.args(["--user", "--collect", "--quiet", "--unit=monet-switch", "--property=Type=exec"]);
+    for name in ["XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME"] {
+        if std::env::var_os(name).is_some() {
+            command.arg(format!("--setenv={name}"));
+        }
+    }
+    command.arg(dir.join("monet-leave")).arg(exe);
     if let Some(id) = game {
-        args.extend(["--game", id]);
+        command.args(["--game", id]);
     }
     if let Some(task) = task {
-        args.extend(["--task", task]);
+        command.args(["--task", task]);
     }
-    elevate(&args)
+    if command.status().map_err(|_| error())?.success() { Ok(()) } else { Err(error()) }
 }
 
 fn doctor() -> Res<()> {
@@ -509,8 +533,15 @@ fn require_root() -> Res<()> {
     }
 }
 
-fn helper_switch(game: Option<String>, task: Option<String>) -> Res<()> {
+fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<String>, guarded: bool) -> Res<()> {
     require_root()?;
+    if !guarded {
+        return Err("Start the switch with `monet windows` or `monet play` so apps can save their work.".into());
+    }
+    if checkpoint.as_deref().is_some_and(|id| !trip::valid_checkpoint(id)) {
+        return Err("Invalid return checkpoint.".into());
+    }
+    let boot = boot_id()?;
     // Windows is shut down right now, the safest moment to prepare it.
     if !windows_setup_status().is_some_and(Outcome::is_done) {
         let _ = helper_stage_windows();
@@ -543,35 +574,45 @@ fn helper_switch(game: Option<String>, task: Option<String>) -> Res<()> {
     let installed = windows_setup_status() == Some(Outcome::Installed);
     let method = if installed && !trip::firmware_skips_boot_next(&paths) { Method::Once } else { Method::First };
 
-    let request = LaunchRequest::new(game, current, now()).and_then(|r| r.with_task(task)).map_err(|e| e.to_string())?;
+    // Windows' clock in Monet's time zone (when Windows has a name for it).
+    let zone = windows_setup::libexec_dir()
+        .and_then(|dir| Command::new(dir.join("monet-prepare-windows")).arg("--windows-zone").output().ok())
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .filter(|zone| !zone.is_empty());
+    // No launch request or boot target exists while apps can still veto. If the
+    // desktop worker cancels or dies, EOF leaves the next boot unarmed.
+    await_saved_apps(&mut std::io::stdin().lock(), &mut std::io::stdout())?;
+    let request = LaunchRequest::new(game, current, now())
+        .and_then(|r| r.with_task(task))
+        .map(|r| r.with_zone(zone))
+        .map_err(|e| e.to_string())?;
     request::write(&mut efi, &request).map_err(|e| format!("Couldn't save the game request: {e}"))?;
-    let undo = |efi: &mut EfiVarFs| {
-        let _ = request::clear(efi);
-        let _ = efi.delete(GLOBAL_GUID, "BootNext");
-        let _ = boot::move_to_front(efi, current);
-    };
+    let undo = |efi: &mut EfiVarFs| trip::cancel_switch(efi, &paths, current);
     if let Err(e) = boot::set_boot_next(&mut efi, windows.number) {
-        undo(&mut efi);
+        undo(&mut efi)?;
         return Err(format!("Couldn't set Windows to start next: {e}"));
     }
     if method == Method::First {
         if let Err(e) = trip::put_windows_first(&mut efi, windows.number) {
-            undo(&mut efi);
+            undo(&mut efi)?;
             return Err(format!("Couldn't put Windows first: {e}"));
         }
     }
     // Make sure the firmware really has both before restarting.
     let next_ok = matches!(boot::boot_next(&efi), Ok(Some(n)) if n == windows.number);
     if !next_ok || efi.get(MONET_GUID, LAUNCH_VAR).is_err() {
-        undo(&mut efi);
+        undo(&mut efi)?;
         trip::log(&paths, now(), &format!("the firmware didn't keep the switch: {}", trip::snapshot(&efi)));
         return Err(
             t!("This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu.").into(),
         );
     }
 
-    let trip = Trip { created: now(), entry: windows.number, monet: current, method };
-    trip::save(&paths, &trip)?;
+    let trip = Trip { created: now(), entry: windows.number, monet: current, method, checkpoint, boot };
+    if let Err(e) = trip::save(&paths, &trip) {
+        undo(&mut efi)?;
+        return Err(e);
+    }
     trip::log(
         &paths,
         now(),
@@ -590,15 +631,26 @@ fn helper_switch(game: Option<String>, task: Option<String>) -> Res<()> {
     }
     // Through the firmware: a soft reboot or kexec would skip BootNext.
     let status = Command::new("systemctl")
-        .arg("reboot")
+        .args(["--check-inhibitors=yes", "reboot"])
         .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
         .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1")
-        .status()
-        .map_err(|e| e.to_string())?;
-    if status.success() {
+        .status();
+    if status.is_ok_and(|status| status.success()) {
         Ok(())
     } else {
-        Err(t!("The restart was blocked. Restart your PC to continue in Windows.").into())
+        undo(&mut efi)?;
+        Err(t!("The restart was blocked. The switch to Windows was cancelled. Save your work and try again.").into())
+    }
+}
+
+fn await_saved_apps(input: &mut impl BufRead, output: &mut impl Write) -> Res<()> {
+    writeln!(output, "MONET-SWITCH-READY").and_then(|_| output.flush()).map_err(|e| e.to_string())?;
+    let mut answer = String::new();
+    std::io::Read::take(input, 32).read_line(&mut answer).map_err(|e| e.to_string())?;
+    if answer == "continue\n" {
+        Ok(())
+    } else {
+        Err(t!("The switch to Windows was cancelled.").into())
     }
 }
 
@@ -609,7 +661,7 @@ fn helper_check_switch() -> Res<()> {
     let Ok(mut efi) = EfiVarFs::open() else { return Ok(()) };
     let paths = trip_paths();
     let setup_done = windows_setup_status() == Some(Outcome::Installed);
-    if let Some(notice) = trip::check_after_boot(&mut efi, &paths, now(), setup_done) {
+    if let Some(notice) = trip::check_after_boot(&mut efi, &paths, now(), setup_done, &boot_id()?) {
         println!("{notice}");
     }
     // Windows' boot manager is on an EFI partition but no entry can start it
@@ -1132,6 +1184,31 @@ fn show_error(message: &str, gui: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reboot_requires_the_live_desktop_workers_explicit_acceptance() {
+        for answer in ["", "cancel\n", "continue", "continue later\n", "continue\r\n", "anything else\n"] {
+            let mut input = std::io::Cursor::new(answer);
+            let mut output = Vec::new();
+            assert!(await_saved_apps(&mut input, &mut output).is_err());
+            assert_eq!(output, b"MONET-SWITCH-READY\n");
+        }
+        assert!(await_saved_apps(&mut std::io::Cursor::new("continue\n"), &mut Vec::new()).is_ok());
+    }
+
+    #[test]
+    fn a_lost_desktop_pipe_never_accepts_the_restart() {
+        struct Closed;
+        impl Write for Closed {
+            fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::ErrorKind::BrokenPipe.into())
+            }
+            fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+        }
+        let mut input = std::io::Cursor::new("continue\n");
+        assert!(await_saved_apps(&mut input, &mut Closed).is_err());
+        assert_eq!(input.position(), 0);
+    }
 
     #[test]
     fn finds_downloads_where_the_account_keeps_them() {

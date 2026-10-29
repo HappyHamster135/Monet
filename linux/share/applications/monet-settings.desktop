@@ -90,7 +90,8 @@ Comment[uk]=Світло й шпалери, Wi-Fi, Bluetooth, екран, зву
 Comment[vi]=Ánh sáng và hình nền, Wi-Fi, Bluetooth, màn hình, âm thanh, Windows và cập nhật
 Comment[zh_CN]=光线和壁纸、Wi-Fi、蓝牙、显示、声音、Windows 和更新
 Comment[zh_TW]=光線與桌布、Wi-Fi、Bluetooth、顯示器、聲音、Windows 和更新
-Exec=@LIBEXECDIR@/monet-quick open
+Exec=@LIBEXECDIR@/monet-settings
+X-KDE-Shortcuts=Meta+I
 Icon=monet-settings
 Categories=Settings;System;
 Keywords=settings;preferences;wifi;bluetooth;display;sound;wallpaper;dark;light;update;
@@ -124,6 +125,8 @@ Keywords[vi]=cài đặt;tùy chọn;wifi;bluetooth;màn hình;âm thanh;hình n
 Keywords[zh_CN]=设置;偏好设置;首选项;wifi;无线网络;蓝牙;bluetooth;显示;屏幕;声音;壁纸;深色;浅色;更新;
 Keywords[zh_TW]=設定;偏好設定;wifi;無線網路;bluetooth;藍牙;顯示器;螢幕;聲音;桌布;深色;淺色;更新;settings;
 Actions=light;wifi;bluetooth;phone;printers;display;sound;datetime;users;input;power;privacy;security;notifications;accessibility;apps;storage;backups;games;windows;updates;about;
+StartupNotify=true
+SingleMainWindow=true
 
 [Desktop Action light]
 Name=Light & Wallpaper
@@ -156,7 +159,7 @@ Name[uk]=Світло & шпалери
 Name[vi]=Ánh sáng & hình nền
 Name[zh_CN]=光线 & 壁纸
 Name[zh_TW]=光線與桌布
-Exec=@LIBEXECDIR@/monet-quick open light
+Exec=@LIBEXECDIR@/monet-settings light
 
 [Desktop Action wifi]
 Name=Wi-Fi
@@ -189,7 +192,7 @@ Name[uk]=Wi-Fi
 Name[vi]=Wi-Fi
 Name[zh_CN]=Wi-Fi
 Name[zh_TW]=Wi-Fi
-Exec=@LIBEXECDIR@/monet-quick open wifi
+Exec=@LIBEXECDIR@/monet-settings wifi
 
 [Desktop Action bluetooth]
 Name=Bluetooth
@@ -222,7 +225,7 @@ Name[uk]=Bluetooth
 Name[vi]=Bluetooth
 Name[zh_CN]=蓝牙
 Name[zh_TW]=Bluetooth
-Exec=@LIBEXECDIR@/monet-quick open bluetooth
+Exec=@LIBEXECDIR@/monet-settings bluetooth
 
 [Desktop Action phone]
 Name=Phone
@@ -255,7 +258,7 @@ Name[uk]=Телефон
 Name[vi]=Điện thoại
 Name[zh_CN]=手机
 Name[zh_TW]=手機
-Exec=@LIBEXECDIR@/monet-quick open phone
+Exec=@LIBEXECDIR@/monet-settings phone
 
 [Desktop Action printers]
 Name=Printers
@@ -288,7 +291,7 @@ Name[uk]=Принтери
 Name[vi]=Máy in
 Name[zh_CN]=打印机
 Name[zh_TW]=印表機
-Exec=@LIBEXECDIR@/monet-quick open printers
+Exec=@LIBEXECDIR@/monet-settings printers
 
 [Desktop Action display]
 Name=Display
@@ -321,7 +324,7 @@ Name[uk]=Екран
 Name[vi]=Màn hình
 Name[zh_CN]=显示
 Name[zh_TW]=顯示器
-Exec=@LIBEXECDIR@/monet-quick open display
+Exec=@LIBEXECDIR@/monet-settings display
 
 [Desktop Action sound]
 Name=Sound
@@ -354,7 +357,7 @@ Name[uk]=Звук
 Name[vi]=Âm thanh
 Name[zh_CN]=声音
 Name[zh_TW]=聲音
-Exec=@LIBEXECDIR@/monet-quick open sound
+Exec=@LIBEXECDIR@/monet-settings sound
 
 [Desktop Action datetime]
 Name=Date & Time
@@ -387,7 +390,7 @@ Name[uk]=Дата & час
 Name[vi]=Ngày & giờ
 Name[zh_CN]=日期 & 时间
 Name[zh_TW]=日期與時間
-Exec=@LIBEXECDIR@/monet-quick open datetime
+Exec=@LIBEXECDIR@/monet-settings datetime
 
 [Desktop Action users]
 Name=Accounts
@@ -420,7 +423,7 @@ Name[uk]=Облікові записи
 Name[vi]=Tài khoản
 Name[zh_CN]=账户
 Name[zh_TW]=帳號
-Exec=@LIBEXECDIR@/monet-quick open users
+Exec=@LIBEXECDIR@/monet-settings users
 
 [Desktop Action input]
 Name=Mouse & Keyboard
@@ -453,7 +456,7 @@ Name[uk]=Миша & клавіатура
 Name[vi]=Chuột & bàn phím
 Name[zh_CN]=鼠标 & 键盘
 Name[zh_TW]=滑鼠與鍵盤
-Exec=@LIBEXECDIR@/monet-quick open input
+Exec=@LIBEXECDIR@/monet-settings input
 
 [Desktop Action power]
 Name=Power & Sleep
@@ -486,7 +489,7 @@ Name[uk]=Живлення & сон
 Name[vi]=Nguồn & chế độ ngủ
 Name[zh_CN]=电源 & 睡眠
 Name[zh_TW]=電源與睡眠
-Exec=@LIBEXECDIR@/monet-quick open power
+Exec=@LIBEXECDIR@/monet-settings power
 
 [Desktop Action privacy]
 Name=Lock & Privacy
@@ -519,7 +522,7 @@ Name[uk]=Блокування & приватність
 Name[vi]=Khóa & quyền riêng tư
 Name[zh_CN]=锁屏 & 隐私
 Name[zh_TW]=鎖定與隱私
-Exec=@LIBEXECDIR@/monet-quick open privacy
+Exec=@LIBEXECDIR@/monet-settings privacy
 
 [Desktop Action security]
 Name=Security
@@ -552,7 +555,7 @@ Name[uk]=Безпека
 Name[vi]=Bảo mật
 Name[zh_CN]=安全
 Name[zh_TW]=安全性
-Exec=@LIBEXECDIR@/monet-quick open security
+Exec=@LIBEXECDIR@/monet-settings security
 
 [Desktop Action notifications]
 Name=Notifications
@@ -585,7 +588,7 @@ Name[uk]=Сповіщення
 Name[vi]=Thông báo
 Name[zh_CN]=通知
 Name[zh_TW]=通知
-Exec=@LIBEXECDIR@/monet-quick open notifications
+Exec=@LIBEXECDIR@/monet-settings notifications
 
 [Desktop Action accessibility]
 Name=Accessibility
@@ -618,7 +621,7 @@ Name[uk]=Спеціальні можливості
 Name[vi]=Trợ năng
 Name[zh_CN]=辅助功能
 Name[zh_TW]=無障礙
-Exec=@LIBEXECDIR@/monet-quick open accessibility
+Exec=@LIBEXECDIR@/monet-settings accessibility
 
 [Desktop Action apps]
 Name=Default Apps
@@ -651,7 +654,7 @@ Name[uk]=Типові застосунки
 Name[vi]=Ứng dụng mặc định
 Name[zh_CN]=默认应用
 Name[zh_TW]=預設 App
-Exec=@LIBEXECDIR@/monet-quick open apps
+Exec=@LIBEXECDIR@/monet-settings apps
 
 [Desktop Action storage]
 Name=Storage
@@ -684,7 +687,7 @@ Name[uk]=Сховище
 Name[vi]=Lưu trữ
 Name[zh_CN]=存储
 Name[zh_TW]=儲存空間
-Exec=@LIBEXECDIR@/monet-quick open storage
+Exec=@LIBEXECDIR@/monet-settings storage
 
 [Desktop Action backups]
 Name=Backups
@@ -717,7 +720,7 @@ Name[uk]=Резервні копії
 Name[vi]=Bản sao lưu
 Name[zh_CN]=备份
 Name[zh_TW]=備份
-Exec=@LIBEXECDIR@/monet-quick open backups
+Exec=@LIBEXECDIR@/monet-settings backups
 
 [Desktop Action games]
 Name=Games & Controllers
@@ -750,7 +753,7 @@ Name[uk]=Ігри & контролери
 Name[vi]=Trò chơi & tay cầm
 Name[zh_CN]=游戏 & 手柄
 Name[zh_TW]=遊戲與控制器
-Exec=@LIBEXECDIR@/monet-quick open games
+Exec=@LIBEXECDIR@/monet-settings games
 
 [Desktop Action windows]
 Name=Play on Windows
@@ -783,7 +786,7 @@ Name[uk]=Грати у Windows
 Name[vi]=Chơi trên Windows
 Name[zh_CN]=在 Windows 中玩
 Name[zh_TW]=在 Windows 上玩
-Exec=@LIBEXECDIR@/monet-quick open windows
+Exec=@LIBEXECDIR@/monet-settings windows
 
 [Desktop Action updates]
 Name=Updates
@@ -816,7 +819,7 @@ Name[uk]=Оновлення
 Name[vi]=Cập nhật
 Name[zh_CN]=更新
 Name[zh_TW]=更新
-Exec=@LIBEXECDIR@/monet-quick open updates
+Exec=@LIBEXECDIR@/monet-settings updates
 
 [Desktop Action about]
 Name=About Monet
@@ -849,4 +852,4 @@ Name[uk]=Про Monet
 Name[vi]=Giới thiệu về Monet
 Name[zh_CN]=关于 Monet
 Name[zh_TW]=關於 Monet
-Exec=@LIBEXECDIR@/monet-quick open about
+Exec=@LIBEXECDIR@/monet-settings about

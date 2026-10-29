@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.22)
+project(MonetWindowIdentity LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+set(MONET_IDENTITY_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../../image/window-identity" CACHE PATH "Monet window identity source")
+add_subdirectory("${MONET_IDENTITY_SOURCE}" identity)
+set_target_properties(monet_window_identity PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+find_package(Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate DBus Widgets)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET wayland-client)
+add_executable(identity_fixture fixture.cpp)
+target_link_libraries(identity_fixture PRIVATE Qt6::Widgets Qt6::GuiPrivate Qt6::DBus PkgConfig::WaylandClient)
+pkg_check_modules(WaylandProtocols REQUIRED wayland-protocols)
+pkg_get_variable(WaylandProtocols wayland-protocols pkgdatadir)
+find_program(WaylandScanner wayland-scanner REQUIRED)
+set(XdgShell "${WaylandProtocols}/stable/xdg-shell/xdg-shell.xml")
+add_custom_command(OUTPUT xdg-shell-client-protocol.h xdg-shell-protocol.c
+    COMMAND ${WaylandScanner} client-header ${XdgShell} xdg-shell-client-protocol.h
+    COMMAND ${WaylandScanner} private-code ${XdgShell} xdg-shell-protocol.c
+    DEPENDS ${XdgShell})
+add_executable(collision_fixture collision.cpp xdg-shell-protocol.c xdg-shell-client-protocol.h)
+target_include_directories(collision_fixture PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(collision_fixture PRIVATE Qt6::Core Qt6::DBus PkgConfig::WaylandClient)

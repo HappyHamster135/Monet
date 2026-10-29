@@ -1,6 +1,6 @@
 {
     "AdaptiveTransparency": {
-        "enabled": true
+        "enabled": false
     },
     "BlurBehindEffect": {
         "enabled": true
@@ -79,7 +79,7 @@
         "Name[vi]": "Monet (nền đặc)",
         "Name[zh_CN]": "Monet（不透明）",
         "Name[zh_TW]": "Monet（不透明）",
-        "Version": "0.9.3"
+        "Version": "0.9.4"
     },
     "X-Plasma-API": "5.0"
 }

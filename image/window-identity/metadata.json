@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet window identity",
+    "Description": "Read-only Wayland surface identity for window recovery",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}

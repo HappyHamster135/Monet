@@ -1,0 +1,602 @@
+#!/usr/bin/env python3
+"""Local editor tabs, cursor offsets and splitter trees; never document text."""
+import configparser
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import sys
+import time
+import uuid
+from urllib.parse import quote, unquote, urlsplit
+
+EDITORS = {"org.kde.kate.desktop": "kate", "org.kde.kwrite.desktop": "kwrite"}
+SESSION = re.compile(r"(kate|kwrite)_monet-[0-9a-f]{32}_\Z")
+
+
+def local(path):
+    return isinstance(path, str) and path.startswith("/") and len(path) <= 8192 and not any(ord(c) < 32 for c in path)
+
+
+def valid_scroll(value):
+    return value is None or (isinstance(value, list) and len(value) == 4
+                            and all(type(n) is int and 0 <= n <= 2**31-1 for n in value[:3])
+                            and (value[3] is None or type(value[3]) is bool))
+
+
+def valid_selection(value):
+    if value is None:
+        return True
+    def coordinates(value, count):
+        return (isinstance(value, list) and len(value) == count
+                and all(type(n) is int and 0 <= n <= 2**31-1 for n in value))
+    def point(item):
+        return (coordinates(item.get("cursor"), 2) and "range" in item
+                and (item["range"] is None or (coordinates(item["range"], 4) and item["range"][:2] <= item["range"][2:])))
+    if not isinstance(value, dict):
+        return False
+    multi = "secondary" in value
+    keys = {"block", "cursor", "range"} | ({"anchor", "secondary"} if multi else set())
+    if set(value) != keys or type(value["block"]) is not bool or not point(value):
+        return False
+    if not multi:
+        return True
+    if (value["block"] or (value["anchor"] is not None and not coordinates(value["anchor"], 2))
+            or not isinstance(value["secondary"], list) or not 1 <= len(value["secondary"]) <= 1023):
+        return False
+    cursors = {tuple(value["cursor"])}
+    for item in value["secondary"]:
+        if (not isinstance(item, dict) or set(item) != {"cursor", "range", "anchor"} or not point(item)
+                or (item["anchor"] is not None and not coordinates(item["anchor"], 2))
+                or (item["range"] is not None and item["anchor"] is None) or tuple(item["cursor"]) in cursors):
+            return False
+        cursors.add(tuple(item["cursor"]))
+    return True
+
+
+def valid_folding(value):
+    if value is None:
+        return True
+    if (not isinstance(value, dict) or set(value) != {"checksum", "ranges"}
+            or not isinstance(value["checksum"], str) or not re.fullmatch(r"[0-9a-f]{40}", value["checksum"])
+            or not isinstance(value["ranges"], list) or len(value["ranges"]) > 1024):
+        return False
+    parents, previous = [], None
+    for span in value["ranges"]:
+        if (not isinstance(span, dict) or set(span) != {"startLine", "startColumn", "endLine", "endColumn", "flags"}
+                or any(type(n) is not int or not 0 <= n <= 2**31-1 for n in span.values()) or span["flags"] > 3):
+            return False
+        start, end = (span["startLine"], span["startColumn"]), (span["endLine"], span["endColumn"])
+        if start >= end or (previous is not None and start < previous):
+            return False
+        while parents and start >= parents[-1][1]:
+            parents.pop()
+        if parents and (end > parents[-1][1] or (start, end) == parents[-1]):
+            return False
+        parents.append((start, end))
+        if len(parents) > 64:
+            return False
+        previous = start
+    return True
+
+
+def valid(state):
+    if not isinstance(state, dict) or not isinstance(state.get("views"), list) or not 1 <= len(state["views"]) <= 16:
+        return False
+    views = state["views"]
+    if type(state.get("active")) is not int or not 0 <= state["active"] < len(views):
+        return False
+    leaves = []
+    def tree(node, depth=0):
+        if depth > 16:
+            return False
+        if type(node) is int:
+            leaves.append(node)
+            return len(leaves) <= len(views)
+        if not isinstance(node, dict) or set(node) != {"orientation", "sizes", "children"}:
+            return False
+        sizes, children = node["sizes"], node["children"]
+        return (type(node["orientation"]) is int and node["orientation"] in (1, 2)
+                and isinstance(children, list) and 1 <= len(children) <= 16
+                and isinstance(sizes, list) and len(sizes) == len(children)
+                and all(type(n) is int and 1 <= n <= 100000 for n in sizes)
+                and all(tree(child, depth + 1) for child in children))
+    if "layout" in state:
+        if set(state) != {"views", "active", "layout"} or not tree(state["layout"]):
+            return False
+    elif set(state) != {"views", "active", "orientation", "sizes"} or not tree({
+            "orientation": state["orientation"], "sizes": state["sizes"], "children": list(range(len(views)))}):
+        return False
+    if leaves != list(range(len(views))):  # Qt restores and numbers panes in tree order.
+        return False
+    count = 0
+    for view in views:
+        if (not isinstance(view, dict) or not {"documents", "active", "cursor"} <= set(view)
+                or not set(view) <= {"documents", "active", "cursor", "cursors", "scrolls", "selections", "foldings"}
+                or not isinstance(view["documents"], list)):
+            return False
+        paths = view["documents"]
+        if (not 1 <= len(paths) <= 200 or not all(local(p) for p in paths) or len(set(paths)) != len(paths)
+                or type(view.get("active")) is not int or not 0 <= view["active"] < len(paths)
+                or type(view.get("cursor")) is not int or not 0 <= view["cursor"] <= 2**31-1):
+            return False
+        if "cursors" in view and (not isinstance(view["cursors"], list) or len(view["cursors"]) != len(paths)
+                or view["cursors"][view["active"]] is not None
+                or any(n is not None and (type(n) is not int or not 0 <= n <= 2**31-1) for n in view["cursors"])):
+            return False
+        if "scrolls" in view and (not isinstance(view["scrolls"], list) or len(view["scrolls"]) != len(paths)
+                or not all(valid_scroll(position) for position in view["scrolls"])):
+            return False
+        if "selections" in view and (not isinstance(view["selections"], list) or len(view["selections"]) != len(paths)
+                or not all(valid_selection(selection) for selection in view["selections"])):
+            return False
+        if "foldings" in view and (not isinstance(view["foldings"], list) or len(view["foldings"]) != len(paths)
+                or not all(valid_folding(folding) for folding in view["foldings"])):
+            return False
+        count += len(paths)
+    return count <= 200
+
+
+def layout(state, sizes=True):
+    """Normalize old flat checkpoints and redundant single-child splitters."""
+    def normalized(node):
+        if type(node) is int:
+            return node
+        children = [normalized(child) for child in node["children"]]
+        if len(children) == 1:
+            return children[0]
+        return dict(orientation=node["orientation"], children=children, **({"sizes": node["sizes"]} if sizes else {}))
+    return normalized(state["layout"] if "layout" in state else {
+        "orientation": state["orientation"], "sizes": state["sizes"], "children": list(range(len(state["views"])))})
+
+
+def valid_windows(states):
+    if not isinstance(states, list) or not 1 <= len(states) <= 16:
+        return False
+    seen, tabs = set(), 0
+    for item in states:
+        if not isinstance(item, dict) or set(item) != {"id", "editor"}:
+            return False
+        ident, state = item["id"], item["editor"]
+        if (not isinstance(ident, str) or not re.fullmatch(r"\{[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\}", ident)
+                or not uuid.UUID(ident).int or ident in seen or (state is not None and not valid(state))):
+            return False
+        seen.add(ident)
+        tabs += sum(len(v["documents"]) for v in state["views"]) if state else 0
+    return tabs <= 200
+
+
+def paths(state):
+    return list(dict.fromkeys(p for view in state["views"] for p in view["documents"])) if valid(state) else []
+
+
+def same_layout(left, right):
+    return valid(left) and valid(right) and layout(left, False) == layout(right, False) and left["active"] == right["active"] and [
+        (v["documents"], v["active"]) for v in left["views"]] == [(v["documents"], v["active"]) for v in right["views"]]
+
+
+def document_tab(state, path):
+    """Use the original active pane first when one file had several views."""
+    if not valid(state):
+        return None
+    views = state["views"]
+    for view in [views[state["active"]], *views[:state["active"]], *views[state["active"] + 1:]]:
+        if path in view["documents"]:
+            return view, view["documents"].index(path)
+    return None
+
+
+def document_cursor(state, path):
+    tab = document_tab(state, path)
+    if tab:
+        view, index = tab
+        return view["cursor"] if index == view["active"] else view.get("cursors", [None] * len(view["documents"]))[index]
+    return None
+
+
+def document_scroll(state, path):
+    tab = document_tab(state, path)
+    return tab[0].get("scrolls", [None] * len(tab[0]["documents"]))[tab[1]] if tab else None
+
+
+def document_selection(state, path):
+    tab = document_tab(state, path)
+    return tab[0].get("selections", [None] * len(tab[0]["documents"]))[tab[1]] if tab else None
+
+
+def document_folding(state, path):
+    tab = document_tab(state, path)
+    return tab[0].get("foldings", [None] * len(tab[0]["documents"]))[tab[1]] if tab else None
+
+
+def active_pane(views, focused, current):
+    if len(views) == 1:
+        return 0
+    matches = focused or [i for i, v in enumerate(views) if v["documents"][v["active"]] == current]
+    return matches[0] if len(matches) == 1 else None
+
+
+def native_path(app, session):
+    if app not in EDITORS or not isinstance(session, str) or len(session) > 256 or any(ord(c) < 32 for c in session):
+        raise ValueError("Invalid editor session")
+    root = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / EDITORS[app]
+    return root / "sessions" / (quote(session, safe="").replace(".", "%2E") + ".katesession") if session else root / "anonymous.katesession"
+
+
+def native_stamp(path):
+    try:
+        stat = path.stat()
+        return [stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size]
+    except FileNotFoundError:
+        return None
+
+
+def departure_path(app, pid, ident):
+    if app not in EDITORS or type(pid) is not int or pid <= 0 or not isinstance(ident, str) or not re.fullmatch(r"[0-9a-f]{32}", ident):
+        raise ValueError("Invalid editor departure identity")
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", ""))
+    if not runtime.is_absolute():
+        raise ValueError("Missing editor runtime directory")
+    root = runtime / "monet-editor"
+    for directory in (runtime, root):
+        info = directory.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+            raise ValueError("Editor recovery directory is not private")
+    return root / f"{ident}-{EDITORS[app]}-{pid}.json"
+
+
+def departure(app, pid, ident, *, windows=False):
+    """A receipt written by this process after its own native save prompts succeed."""
+    path = departure_path(app, pid, ident)
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), encoding="utf-8") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600:
+            raise ValueError("Editor recovery receipt is not private")
+        text = stream.read(2 * 1024 * 1024 + 1)
+    receipt = json.loads(text) if len(text) <= 2 * 1024 * 1024 else None
+    key, version = ("windows", 2) if windows else ("editor", 1)
+    if (not isinstance(receipt, dict) or set(receipt) != {"version", "id", "pid", "app", "supported", key}
+            or type(receipt["version"]) is not int or receipt["version"] != version or receipt["id"] != ident
+            or type(receipt["pid"]) is not int or receipt["pid"] != pid or receipt["app"] != app
+            or type(receipt["supported"]) is not bool):
+        raise ValueError("Mismatched editor recovery receipt")
+    state = receipt[key]
+    if (windows and (not valid_windows(state) or not receipt["supported"])) or (not windows and state is not None and not valid(state)):
+        raise ValueError("Invalid final editor layout")
+    if not receipt["supported"] and state is not None:
+        raise ValueError("Unsupported editor layout")
+    return receipt
+
+
+def final_documents(text, previous=None):
+    """Allowlisted metadata from the editor's final save, including new/renamed URLs."""
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    parser.read_string(text)
+    if parser.defaults():
+        raise ValueError("Unexpected editor defaults")
+    count = parser.getint("Open Documents", "Count")
+    if not 0 <= count <= 200 or parser.getint("Open MainWindows", "Count") != 1:
+        raise ValueError("Unsupported final editor session")
+    documents = {}
+    for i in range(count):
+        url = parser.get(f"Document {i}", "URL", fallback="")
+        parsed = urlsplit(url)
+        path = unquote(parsed.path)
+        if parsed.scheme == "file" and parsed.netloc in ("", "localhost") and not parsed.query and not parsed.fragment and local(path):
+            documents[str(i)] = path
+    if not documents:
+        return None  # Discarded untitled documents are deliberately not reopened.
+    base = "MainWindow0"
+    names = parser.get(base + "-Splitter 0", "Children", fallback="").split(",")
+    # shortcut: KWrite/complex Kate layouts lack simple view spaces; retain paths until those layouts have an adapter.
+    if not 1 <= len(names) <= 2 or any(not re.fullmatch(r"MainWindow0-ViewSpace \d{1,2}", n) for n in names):
+        paths = list(dict.fromkeys(documents.values()))
+        if valid(previous) and len(previous["views"]) == 1:
+            old = previous["views"][0]
+            removed, added = set(old["documents"]) - set(paths), set(paths) - set(old["documents"])
+            # Native document order need not match tab order; only infer an unambiguous rename.
+            if not removed and not added or len(removed) == len(added) == 1:
+                renamed = dict(zip(removed, added))
+                view = dict(old, documents=[renamed.get(p, p) for p in old["documents"]])
+                return dict(previous, views=[view])
+        return {"views": [{"documents": paths, "active": 0, "cursor": 0}], "active": 0, "orientation": 1, "sizes": [800]}
+    sizes = parser.get(base + "-Splitter 0", "Sizes").split(",")
+    if len(sizes) != len(names):
+        raise ValueError("Invalid final editor splitter")
+    active = parser.getint(base, "Active ViewSpace", fallback=0)
+    views, kept_sizes, selected_pane = [], [], 0
+    for name, size in zip(names, sizes):
+        ids = parser.get(name, "Documents", fallback="").split(",")
+        paths = list(dict.fromkeys(documents[i] for i in ids if i in documents))
+        if not paths:
+            continue
+        selected = documents.get(parser.get(name, "Active View", fallback=""))
+        cursor = 0
+        if valid(previous) and len(views) < len(previous["views"]):
+            old = previous["views"][len(views)]
+            if len(paths) == len(old["documents"]) and selected in paths and paths.index(selected) == old["active"]:
+                cursor = old["cursor"]
+        if name == f"{base}-ViewSpace {active}":
+            selected_pane = len(views)
+        views.append({"documents": paths, "active": paths.index(selected) if selected in paths else 0, "cursor": cursor})
+        kept_sizes.append(int(size))
+    state = {"views": views, "active": selected_pane, "orientation": parser.getint(base + "-Splitter 0", "Orientation"), "sizes": kept_sizes}
+    if not valid(state) or set(paths for view in views for paths in view["documents"]) != set(documents.values()):
+        raise ValueError("Incomplete final editor layout")
+    return state
+
+
+def capture(pid, cursors=None, *, windows=False):
+    """Bound IPC in a child, as Files does; cursor writes are only for our new window."""
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        result = subprocess.run([sys.executable, __file__, str(pid)] + (["--windows"] if windows else []),
+            input=json.dumps(cursors).encode() if cursors is not None else b"null",
+            capture_output=True, timeout=10, check=True)
+        state = json.loads(result.stdout) if len(result.stdout) <= 2 * 1024 * 1024 else None
+        return state if (valid_windows(state) if windows else valid(state)) else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def capture_ready(pid, cursors=None, *, windows=False):
+    # Retry transient metadata failures inside the child's existing ten-second bound.
+    for _ in range(3 if cursors is None else 1):
+        try:
+            result = capture_native(pid, cursors, windows=windows)
+            if result is not None:
+                return result
+        except Exception:
+            pass
+    return None
+
+
+def capture_native(pid, cursors=None, *, windows=False):
+    from gi.repository import Gio, GLib
+    editor = Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
+    if editor not in EDITORS.values():
+        return None
+    def expected_state(state):
+        expected = dict(state, layout=layout(state, False))
+        expected.pop("orientation", None); expected.pop("sizes", None)
+        return expected
+    if windows:
+        if cursors is not None and (not valid_windows(cursors) or any(item["editor"] is None for item in cursors)):
+            return None
+        expected = [dict(item, editor=expected_state(item["editor"])) for item in cursors] if cursors else None
+    else:
+        expected = expected_state(cursors) if valid(cursors) else None
+    try:
+        reply = Gio.bus_get_sync(Gio.BusType.SESSION, None).call_sync(
+            f"org.kde.{editor}-{pid}", "/MainApplication", "org.kde.Kate.Application", "monetEditorWindows" if windows else "monetEditorState",
+            GLib.Variant("(s)", (json.dumps(expected) if expected else "",)),
+            GLib.VariantType("(s)"), Gio.DBusCallFlags.NONE, 1500, None)
+    except GLib.Error as error:
+        if Gio.DBusError.get_remote_error(error) == "org.freedesktop.DBus.Error.UnknownMethod":
+            return None if windows else capture_tree(pid, cursors)  # Never guess a multi-window identity.
+        raise
+    text = reply.unpack()[0]
+    return json.loads(text) if len(text) <= 2 * 1024 * 1024 else None
+
+
+def capture_tree(pid, cursors=None):
+    import gi
+    gi.require_version("Atspi", "2.0")
+    from gi.repository import Atspi, Gio, GLib
+    Atspi.set_timeout(600, 800)
+    deadline, budget = time.monotonic() + 8, 2400
+
+    def children(node):
+        nonlocal budget
+        budget -= 1
+        count = node.get_child_count()
+        if budget < 0 or time.monotonic() > deadline or not 0 <= count <= 128:
+            raise ValueError("Editor capture exceeded its budget")
+        return [node.get_child_at_index(i) for i in range(count)]
+
+    def find(node, suffix, depth=0):
+        if depth > 16:
+            raise ValueError("Unexpected editor tree")
+        ident = node.get_accessible_id()
+        if ident.endswith(suffix):
+            return [node]
+        # Never traverse plugin contents, document text, menus or item lists.
+        if ".KateMDI::ToolView" in ident or node.get_role() not in (
+                Atspi.Role.FRAME, Atspi.Role.PANEL, Atspi.Role.FILLER,
+                Atspi.Role.SPLIT_PANE, Atspi.Role.LAYERED_PANE):
+            return []
+        return [match for child in children(node) for match in find(child, suffix, depth + 1)]
+
+    apps = [a for a in children(Atspi.get_desktop(0)) if a.get_process_id() == pid]
+    if len(apps) != 1:
+        return None
+    frames = [n for n in children(apps[0]) if n.get_role() == Atspi.Role.FRAME]
+    # shortcut: multiple frames in one process need a stable KWin/Qt window identity.
+    if len(frames) != 1:
+        return None
+    editor = Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
+    frame_id = re.fullmatch(r"QApplication\.MainWindow#(\d+)", frames[0].get_accessible_id())
+    if editor not in EDITORS.values() or not frame_id:
+        return None
+    connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    panes = find(frames[0], ".KateViewSpace")
+    if not 1 <= len(panes) <= 2:
+        return None
+    bounds = [(p.get_component_iface().get_extents(Atspi.CoordType.WINDOW), p) for p in panes]
+    orientation = 1 if len(bounds) == 1 or bounds[0][0].x != bounds[1][0].x else 2
+    bounds.sort(key=lambda pair: pair[0].x if orientation == 1 else pair[0].y)
+
+    def snapshot(write=False):
+        views, focused, sizes = [], [], []
+        for i, (rect, pane) in enumerate(bounds):
+            bars = find(pane, ".KateTabBar")
+            if len(bars) != 1:
+                return None
+            tabs = [t for t in children(bars[0]) if t.get_role() == Atspi.Role.PAGE_TAB]
+            documents = [t.get_description() for t in tabs]
+            selected = [n for n, t in enumerate(tabs) if t.get_state_set().contains(Atspi.StateType.SELECTED)]
+            if len(selected) != 1 or not all(local(p) for p in documents):
+                return None
+            texts = [t for t in find(pane, ".KateViewInternal") if t.get_state_set().contains(Atspi.StateType.VISIBLE)]
+            if len(texts) != 1:
+                return None
+            text = texts[0]
+            if text.get_state_set().contains(Atspi.StateType.FOCUSED):
+                focused.append(i)
+            view = {"documents": documents, "active": selected[0], "cursor": text.get_text_iface().get_caret_offset()}
+            if write and cursors and valid(cursors) and i < len(cursors["views"]):
+                expected = cursors["views"][i]
+                if documents == expected["documents"] and selected[0] == expected["active"] and view["cursor"] == 0:
+                    text.get_text_iface().set_caret_offset(min(expected["cursor"], text.get_text_iface().get_character_count()))
+                    view["cursor"] = text.get_text_iface().get_caret_offset()
+            views.append(view)
+            sizes.append(max(1, rect.width if orientation == 1 else rect.height))
+        # Qt marks a selected tab focused even in inactive panes. The window's
+        # current file identifies the active pane while the editor is in the background.
+        reply = connection.call_sync(f"org.kde.{editor}-{pid}", f"/{editor}/MainWindow_{frame_id[1]}",
+            "org.freedesktop.DBus.Properties", "Get", GLib.Variant("(ss)", ("org.qtproject.Qt.QWidget", "windowFilePath")),
+            GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 600, None)
+        active = active_pane(views, focused, reply.unpack()[0])
+        return {"views": views, "active": active, "orientation": orientation, "sizes": sizes} if active is not None else None
+
+    first = snapshot()
+    if first != snapshot():
+        return None
+    return snapshot(True) if cursors else first
+
+
+def available(state, pending=None):
+    """Only existing files go to the editor: missing paths must not become blank tabs."""
+    if not valid(state):
+        return None
+    views, indices, active = [], {}, 0
+    for i, view in enumerate(state["views"]):
+        docs = [p for p in view["documents"] if (pending is None or p in pending) and Path(p).is_file()]
+        if not docs:
+            continue
+        selected = view["documents"][view["active"]]
+        if i == state["active"]:
+            active = len(views)
+        indices[i] = len(views)
+        current = {"documents": docs, "active": docs.index(selected) if selected in docs else 0,
+                   "cursor": view["cursor"] if selected in docs else 0}
+        if "cursors" in view:
+            offsets = [view["cursors"][view["documents"].index(p)] for p in docs]
+            if selected not in docs:
+                current["cursor"] = offsets[0] or 0
+            offsets[current["active"]] = None
+            current["cursors"] = offsets
+        if "scrolls" in view:
+            current["scrolls"] = [view["scrolls"][view["documents"].index(p)] for p in docs]
+        if "selections" in view:
+            current["selections"] = [view["selections"][view["documents"].index(p)] for p in docs]
+        if "foldings" in view:
+            current["foldings"] = [view["foldings"][view["documents"].index(p)] for p in docs]
+        views.append(current)
+    def prune(node):
+        if type(node) is int:
+            return indices.get(node)
+        kept = [(prune(child), size) for child, size in zip(node["children"], node["sizes"])]
+        kept = [(child, size) for child, size in kept if child is not None]
+        if len(kept) == 1:
+            return kept[0][0]
+        return dict(orientation=node["orientation"], children=[c for c, _ in kept], sizes=[s for _, s in kept]) if kept else None
+    return {"views": views, "active": active, "layout": prune(layout(state))} if views else None
+
+
+def session_text(state, *, windows=False):
+    if not (valid_windows(state) if windows else valid(state)):
+        raise ValueError("Invalid editor checkpoint")
+    states = [item["editor"] for item in state] if windows else [state]
+    docs = list(dict.fromkeys(p for item in states for p in paths(item)))
+    lines = ["[Number]", f"NumberOfWindows={len(states)}", "[Open Documents]", f"Count={len(docs)}"]
+    for i, path in enumerate(docs):
+        lines += [f"[Document {i}]", "URL=file://" + quote(path, safe="/")]
+    for window, item in enumerate(states, 1):
+        lines += [f"[WindowProperties{window}]", "ClassName=KateMainWindow", f"ObjectName=MainWindow#{window}",
+                  f"[{window}]", f"Active ViewSpace={item['active'] if item else 0}"]
+        if item is None:
+            lines += [f"[{window}-Splitter 0]", "Orientation=1", "Sizes=800", f"Children={window}-ViewSpace 0",
+                      f"[{window}-ViewSpace 0]", "Count=0", "Documents=", "Active View=-1"]
+            continue
+        splitters = 0
+        def write_splitter(node):
+            nonlocal splitters
+            if type(node) is int:
+                return f"{window}-ViewSpace {node}"
+            name = f"{window}-Splitter {splitters}"
+            splitters += 1
+            children = [write_splitter(child) for child in node["children"]]
+            lines.extend([f"[{name}]", f"Orientation={node['orientation']}",
+                          "Sizes=" + ",".join(map(str, node["sizes"])), "Children=" + ",".join(children)])
+            return name
+        tree = layout(item)
+        write_splitter({"orientation": 1, "sizes": [800], "children": [tree]} if type(tree) is int else tree)
+        for i, view in enumerate(item["views"]):
+            ids = [docs.index(p) for p in view["documents"]]
+            lines += [f"[{window}-ViewSpace {i}]", f"Count={len(ids)}", "Documents=" + ",".join(map(str, ids)),
+                      f"Active View={ids[view['active']]}" ]
+            lines += [f"View {n}={ident}" for n, ident in enumerate(ids)]
+    return "\n".join(lines) + "\n"
+
+
+def start(app, state, *, windows=False):
+    if app not in EDITORS or not (valid_windows(state) if windows else valid(state)):
+        raise OSError("Invalid editor checkpoint")
+    states = [item["editor"] for item in state] if windows else [state]
+    if any(not Path(p).is_file() for item in states for p in paths(item)):
+        raise OSError("Saved editor documents are unavailable")
+    folder = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session"
+    folder.mkdir(parents=True, exist_ok=True)
+    token = "monet-" + uuid.uuid4().hex
+    path = folder / (EDITORS[app] + "_" + token + "_")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="ascii") as stream:
+            stream.write(session_text(state, windows=windows)); stream.flush(); os.fsync(stream.fileno())
+        command = [EDITORS[app]] + (["--block", "--new"] if EDITORS[app] == "kate" else [])
+        process = subprocess.Popen([*command, "--session", token],
+            env=dict(os.environ, QT_LINUX_ACCESSIBILITY_ALWAYS_ON="1"), start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"session": path.name, "pid": process.pid}
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+
+
+def session_path(receipt):
+    name = receipt.get("session") if isinstance(receipt, dict) else None
+    if isinstance(name, str) and SESSION.fullmatch(name):
+        return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session" / name
+
+
+def cleanup(receipt):
+    path = session_path(receipt)
+    if path:
+        path.unlink(missing_ok=True)
+
+
+def alive(receipt):
+    path, pid = session_path(receipt), receipt.get("pid") if isinstance(receipt, dict) else None
+    if not path or type(pid) is not int or pid <= 0:
+        return False
+    try:
+        args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+        editor, token = path.name[:-1].split("_", 1)
+        return Path(os.fsdecode(args[0])).name == editor and any(
+            args[i:i+2] == [b"--session", token.encode("ascii")] for i in range(len(args)-1))
+    except OSError:
+        return False
+
+
+if __name__ == "__main__":
+    try:
+        if sys.argv[2:] not in ([], ["--windows"]):
+            raise ValueError("Invalid editor capture arguments")
+        result = capture_ready(int(sys.argv[1]), json.loads(sys.stdin.read(2 * 1024 * 1024 + 1)), windows=bool(sys.argv[2:]))
+    except Exception:
+        result = None
+    print(json.dumps(result, ensure_ascii=False))

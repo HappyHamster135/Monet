@@ -106,13 +106,14 @@ def manager():
 
 
 def sessions():
-    """The sign-in screen's session, or someone's: the ids of those online, as a set."""
+    """Local graphical sessions only; SSH/TTY activity cannot restart the desktop trial."""
     found = set()
     for line in (run("loginctl", "list-sessions", "--no-legend") or "").splitlines():
         session = line.split()[0] if line.split() else ""
-        out = run("loginctl", "show-session", session, "-p", "Class", "-p", "State") or ""
+        out = run("loginctl", "show-session", session, "-p", "Class", "-p", "State", "-p", "Type", "-p", "Remote") or ""
         props = dict(item.split("=", 1) for item in out.splitlines() if "=" in item)
-        if props.get("Class") in ("greeter", "user") and props.get("State") in ("online", "active"):
+        if (props.get("Class") in ("greeter", "user") and props.get("State") in ("online", "active")
+                and props.get("Type") in ("x11", "wayland") and props.get("Remote") == "no"):
             found.add(session)
     return frozenset(found)
 
@@ -169,16 +170,18 @@ def check(status=None, up=None, env=None):
         if not deployment(status, "rollback")[0]:
             done()
             return "nothing to go back to"
+        if run("bootc", "rollback") is None:
+            raise OSError("Could not schedule rollback; keeping the boot trial without restarting")
         went_back(trial)
         done()
-        run("bootc", "rollback")
         run("systemctl", "reboot")
         return "went back"
     if env.get("boot_counter") == "-1":
         # GRUB gave up on it and started the one before: that one stays the one that starts.
+        if run("bootc", "rollback") is None:
+            raise OSError("Could not keep the rollback deployment; keeping the boot trial")
         went_back(trial)
         done()
-        run("bootc", "rollback")
         return "went back"
     if trial.get("digest") not in (deployment(status, "staged")[0], deployment(status, "rollback")[0]):
         # It never got onto the disk (the PC stopped while shutting down): nothing is on trial.
@@ -205,7 +208,11 @@ def main(args):
     if cmd == "arm":
         arm()
     elif cmd == "check":
-        check()
+        try:
+            check()
+        except OSError as error:
+            print(str(error), file=sys.stderr)
+            return 1
     elif cmd == "may-update":
         return may_update()
     else:

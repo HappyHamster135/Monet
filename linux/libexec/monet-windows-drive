@@ -1,0 +1,1569 @@
+#!/usr/bin/env python3
+"""Install a game once, play it in Monet or in Windows: Windows' drive keeps a Games folder
+that Steam uses on both sides. Steam in Monet downloads a game that needs Windows straight
+into it, so it's ready the first time Windows starts (and keeps it up to date from here),
+and Steam in Windows plays from the same files: Monet Bridge adds the folder to Windows'
+Steam. What's saved in Windows comes over: its screenshots and clips move into Monet's own
+Pictures and Videos, and its browsers' bookmarks go to Zen. And Wi-Fi works in both: a network joined in Monet is handed to Windows
+(Monet Bridge adds it), and one joined in Windows (Bridge exports it on the way back) to Monet.
+
+Windows' drive is only opened for writing when it's safe: Windows shut down fully (not
+hibernated or asleep with Fast Startup), its file system clean, and Monet Bridge installed.
+Encrypted with BitLocker, it opens once its recovery key has been typed in Settings (kept
+sealed by the PC's security chip). The drive itself is mounted where only root reaches it;
+only its Games folder is shared, at /run/media/Windows games, owned by the PC's first person.
+
+Runs as root, from monet-windows-drive.service before the sign-in screen and
+monet-windows-files.service after it:
+
+    monet-windows-drive                open Windows' drive and share its Games folder
+    monet-windows-drive bring          move what was saved in Windows into Monet's folders
+    monet-windows-drive unlock         a BitLocker drive's recovery key on stdin (Settings, by pkexec)
+    monet-windows-drive unlock-saved   open the BitLocker drives whose key was typed once
+"""
+
+import base64
+import json
+import os
+import random
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+LOCKED = Path("/run/monet/windows-drive")   # root's only (0700), with the whole drive in it:
+DRIVE = LOCKED / "c"                         # a mounted drive's own top folder lets everyone in
+SHARED = Path("/run/media/Windows games")    # its Games folder, for Steam on both sides
+FILES = Path("/run/media/Shared with Windows")  # its folder for files on both sides
+FILES_FOLDER = "Shared with Monet"           # C:\Shared with Monet in Windows
+# The game launchers Windows has (where their installers put them), for Monet to fetch the
+# installer of one a game in the Games folder needs (monet-quick launchers).
+LAUNCHERS = {"epic": ("Program Files (x86)/Epic Games/Launcher/Portal/Binaries/Win64/EpicGamesLauncher.exe",),
+             "battlenet": ("Program Files (x86)/Battle.net/Battle.net.exe", "Program Files (x86)/Battle.net/Battle.net Launcher.exe"),
+             "ubisoft": ("Program Files (x86)/Ubisoft/Ubisoft Game Launcher/UbisoftConnect.exe",
+                         "Program Files (x86)/Ubisoft/Ubisoft Game Launcher/upc.exe")}
+STATE = Path("/run/monet/windows-drive.json")
+BROUGHT = Path("/var/lib/monet/windows-files.json")
+STEAM_SEEN = Path("/var/lib/monet/windows-steam-shots.json")  # Steam's screenshots copied already
+GAMES = "Games"                              # C:\Games in Windows
+LIBRARY_MARK = "libraryfolder.vdf"
+# What Proton keeps beside a game: Linux names and links NTFS can't hold, so they stay on
+# Monet's own drive (Valve's advice for a library on NTFS).
+LINUX_ONLY = ("compatdata", "shadercache")
+# ntfs-3g.probe's answers (ntfs-3g's NTFS_VOLUME_* codes).
+PROBE = {0: "open", 14: "asleep", 15: "unclean", 16: "unclean", 13: "unclean"}
+# The drivers to try, newest first: the kernel's ntfs3 and the newer ntfs, then FUSE's.
+DRIVERS = ("ntfs3", "ntfs", "ntfs-3g")
+# What Windows' own capture tools fill: Windows+Print Screen, and Xbox Game Bar's clips.
+CAPTURES = (("Pictures/Screenshots", "PICTURES", "Screenshots"), ("Videos/Captures", "VIDEOS", ""))
+MEDIA = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".mkv", ".webm", ".mov"}
+# Steam's own screenshots (F12) in Windows: per Steam account and game, in its userdata.
+STEAM_SHOTS = "Program Files (x86)/Steam/userdata"
+NOT_PEOPLE = {"default", "default user", "public", "all users", "defaultapppool"}
+
+
+def run(*args, timeout=60):
+    """(exit code, stdout), or (None, "") when it couldn't run."""
+    try:
+        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, ""
+    return done.returncode, done.stdout
+
+
+def log(message):
+    print(message, flush=True)
+
+
+# ---------------------------------------------------------------- finding Windows
+
+def ntfs_volumes(lsblk=None):
+    """[(path, fstype)] of every partition, from lsblk."""
+    if lsblk is None:
+        code, out = run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE", timeout=30)
+        try:
+            lsblk = json.loads(out) if code == 0 else {}
+        except ValueError:
+            lsblk = {}
+    found, pending = [], list(lsblk.get("blockdevices") or [])
+    while pending:
+        dev = pending.pop(0)
+        pending[:0] = dev.get("children") or []
+        found.append((dev.get("path") or "", (dev.get("fstype") or "").lower()))
+    return found
+
+
+def listing(device, folder):
+    """The names in a folder on an NTFS drive, lowercased, read with ntfsls (never mounted)."""
+    code, out = run("ntfsls", "-p", folder, device, timeout=15)
+    return {line.strip().lower() for line in out.splitlines()} if code == 0 else set()
+
+
+def find_windows(volumes, ls=listing):
+    """(device, why): the Windows with Monet Bridge, or None and the reason there's none."""
+    why = "no-windows"
+    for device, fstype in volumes:
+        if fstype == "bitlocker":
+            why = "bitlocker" if why == "no-windows" else why
+        if fstype != "ntfs" or "winload.efi" not in ls(device, "/Windows/System32"):
+            continue
+        if "monet-bridge.exe" in ls(device, "/Program Files/Monet"):
+            return device, ""
+        why = "no-bridge"
+    return None, why
+
+
+# ---------------------------------------------------------------- BitLocker
+
+# Each BitLocker drive's recovery key, typed once in Settings and kept sealed (systemd-creds: by
+# the PC's security chip where there is one, and this system's own key), so it opens at every
+# start, before Windows' setup and the shared folders look for Windows.
+BITLOCKER_KEYS = Path("/var/lib/monet/bitlocker")
+CRED_NAME = "monet-bitlocker"
+MAPPER = "monet-windows-"
+
+
+def feed(args, data, timeout=60):
+    """(exit code, stdout) of a program given data on its stdin, never on a command line."""
+    try:
+        done = subprocess.run([str(a) for a in args], input=data, capture_output=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, b""
+    return done.returncode, done.stdout
+
+
+def recovery_key(text):
+    """A BitLocker recovery key as cryptsetup takes it (eight groups of six digits, each a
+    multiple of 11 below 720896), however it was typed; None when it can't be one."""
+    digits = re.sub(r"[\s-]", "", text or "")
+    if not re.fullmatch(r"[0-9]{48}", digits):
+        return None
+    groups = [digits[i:i + 6] for i in range(0, 48, 6)]
+    if any(int(g) % 11 or int(g) >= 720896 for g in groups):
+        return None
+    return "-".join(groups)
+
+
+def bitlocker_volumes(lsblk=None):
+    """[(path, uuid)] of the BitLocker drives here, from lsblk."""
+    if lsblk is None:
+        code, out = run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE,UUID", timeout=30)
+        try:
+            lsblk = json.loads(out) if code == 0 else {}
+        except ValueError:
+            lsblk = {}
+    found, pending = [], list(lsblk.get("blockdevices") or [])
+    while pending:
+        dev = pending.pop(0)
+        pending[:0] = dev.get("children") or []
+        uuid = (dev.get("uuid") or "").lower()
+        if (dev.get("fstype") or "").lower() == "bitlocker" and dev.get("path") and re.fullmatch(r"[0-9a-f-]{8,36}", uuid):
+            found.append((dev["path"], uuid))
+    return found
+
+
+def mapper_name(uuid):
+    return MAPPER + uuid.replace("-", "")[:12]
+
+
+def opens(device, key):
+    """Whether the key opens that BitLocker drive (cryptsetup reads BitLocker)."""
+    code, _ = feed(["cryptsetup", "open", "--type", "bitlk", "--test-passphrase", "--key-file=-", device], key.encode())
+    return code == 0
+
+
+def open_bitlocker(device, uuid, key):
+    """Opens a BitLocker drive with its recovery key as /dev/mapper/monet-windows-…, where
+    the rest finds Windows as on a drive that isn't encrypted. True when it's open."""
+    name = mapper_name(uuid)
+    if Path("/dev/mapper", name).exists():
+        return True
+    code, _ = feed(["cryptsetup", "open", "--type", "bitlk", "--key-file=-", device, name], key.encode())
+    return code == 0
+
+
+def seal_key(uuid, key, keys=BITLOCKER_KEYS):
+    keys.mkdir(parents=True, exist_ok=True)
+    os.chmod(keys, 0o700)
+    code, _ = feed(["systemd-creds", "encrypt", f"--name={CRED_NAME}", "-", keys / f"{uuid}.cred"], key.encode())
+    return code == 0
+
+
+def sealed_key(uuid, keys=BITLOCKER_KEYS):
+    path = keys / f"{uuid}.cred"
+    if not path.is_file():
+        return None
+    code, out = feed(["systemd-creds", "decrypt", f"--name={CRED_NAME}", path, "-"], b"")
+    return recovery_key(out.decode(errors="replace")) if code == 0 else None
+
+
+def unlock_saved(volumes=None):
+    """Opens each BitLocker drive whose recovery key was typed once, or that Windows handed
+    over (take_handed). How many are open."""
+    volumes = bitlocker_volumes() if volumes is None else volumes
+    opened = set()
+    for device, uuid in volumes:
+        key = sealed_key(uuid)
+        if key and open_bitlocker(device, uuid, key):
+            opened.add(uuid)
+        elif key:
+            log(f"the recovery key kept for {device} didn't open it")
+    if volumes:
+        try:
+            take_handed(volumes)
+        except Exception as e:  # a typed key opens it all the same
+            log(f"couldn't look for a recovery key from Windows: {e}")
+    return len(opened | {uuid for _, uuid in volumes if Path("/dev/mapper", mapper_name(uuid)).exists()})
+
+
+# ---------------------------------------------------------------- the key from Windows
+
+# Windows can be encrypted after Monet put Monet Bridge in (Windows 11 turns device encryption on
+# when someone signs in with a Microsoft account, or BitLocker is turned on). Then Bridge hands
+# the recovery key over by itself, so nobody types 48 digits:
+# - Monet leaves Bridge a lock while the drive is open: the public half of a key pair of its own,
+#   in a folder Bridge makes for administrators only (ProgramData\Monet\from-monet), so no other
+#   Windows account can leave one of its own there. The private half stays here, sealed as the
+#   typed keys are.
+# - Bridge locks the recovery key with it and leaves it on the EFI partition (EFI/Monet/
+#   bitlocker.json), which both can reach, once for each key.
+# - At Monet's next start it's opened here, tried, kept sealed as a typed one, and taken off the
+#   EFI partition.
+HANDOVER_CRED = "monet-handover"
+LOCK_FOLDER = "ProgramData/Monet/from-monet"
+LOCK_FILE = "monet-key.xml"
+HANDED = "EFI/Monet/bitlocker.json"
+ESP_TYPE = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+
+
+def handover_key(keys=BITLOCKER_KEYS):
+    """The private half of Monet's lock (PEM), made and sealed the first time; None without
+    openssl or systemd-creds."""
+    path = keys / "handover.cred"
+    if path.is_file():
+        code, out = feed(["systemd-creds", "decrypt", f"--name={HANDOVER_CRED}", path, "-"], b"")
+        return out if code == 0 and b"PRIVATE KEY" in out else None
+    code, pem = feed(["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:3072"], b"")
+    if code != 0 or b"PRIVATE KEY" not in pem:
+        return None
+    keys.mkdir(parents=True, exist_ok=True)
+    os.chmod(keys, 0o700)
+    code, _ = feed(["systemd-creds", "encrypt", f"--name={HANDOVER_CRED}", "-", path], pem)
+    return pem if code == 0 else None
+
+
+def public_lock(pem):
+    """The lock as Windows PowerShell's RSA reads it (an RSAKeyValue, not PEM), or None."""
+    code, out = feed(["openssl", "rsa", "-noout", "-modulus"], pem)
+    found = re.fullmatch(rb"Modulus=([0-9A-F]+)\s*", out or b"")
+    if code != 0 or not found:
+        return None
+    modulus = base64.b64encode(bytes.fromhex(found[1].decode())).decode()
+    return f"<RSAKeyValue><Modulus>{modulus}</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
+
+
+def give_lock(root, keys=BITLOCKER_KEYS):
+    """Monet's lock for Bridge, once Bridge has made its folder for it (administrators only:
+    the drivers here give a file they make its folder's permissions). Whether it's there."""
+    folder = walk(root, LOCK_FOLDER)
+    if not folder.is_dir() or not no_links(folder, root):
+        return False
+    pem = handover_key(keys)
+    lock = public_lock(pem) if pem else None
+    if lock is None:
+        return False
+    target = child(folder, LOCK_FILE)
+    try:
+        if not target.is_file() or target.read_text(encoding="utf-8").strip() != lock:
+            target.write_text(lock + "\n", encoding="utf-8")
+        (keys / "lock-given").touch()  # Settings says Windows hands its key over by itself
+    except OSError as e:
+        log(f"couldn't leave Monet Bridge its lock: {e}")
+        return False
+    return True
+
+
+def opened_with(pem, sealed):
+    """What Bridge locked with Monet's lock (RSA-OAEP, as .NET's Encrypt(data, true) makes it),
+    or None. The private half reaches openssl through a pipe, never a file or a command line."""
+    read, write = os.pipe()
+    try:
+        os.write(write, pem)
+        os.close(write)
+        done = subprocess.run(["openssl", "pkeyutl", "-decrypt", "-inkey", f"/dev/fd/{read}", "-pkeyopt",
+                               "rsa_padding_mode:oaep"], input=sealed, capture_output=True, pass_fds=(read,), timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    finally:
+        os.close(read)
+    return done.stdout.decode("ascii", "replace") if done.returncode == 0 else None
+
+
+def esp_roots():
+    """[(the EFI partition's top folder, whether it was mounted here for this)]: the mounted
+    ones (/boot/efi), else each EFI partition mounted for the moment it takes."""
+    found = []
+    try:
+        lines = Path("/proc/self/mountinfo").read_text().splitlines()
+    except OSError:
+        lines = []
+    for line in lines:
+        left, _, right = line.partition(" - ")
+        place = left.split(" ")[4] if len(left.split(" ")) > 4 else ""
+        if right.split(" ")[:1] == ["vfat"] and place and Path(place, "EFI").is_dir():
+            found.append((Path(place.replace("\\040", " ")), False))
+    if found:
+        return found
+    code, out = run("lsblk", "-nrp", "-o", "PATH,PARTTYPE", timeout=30)
+    for n, line in enumerate((out or "").splitlines() if code == 0 else []):
+        path, _, kind = line.partition(" ")
+        if kind.strip().lower() == ESP_TYPE:
+            place = LOCKED.parent / f"esp-{n}"
+            try:
+                place.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                continue
+            if run("mount", "-t", "vfat", "-o", "rw,nosuid,nodev,noexec,umask=077", path, place)[0] == 0:
+                found.append((place, True))
+    return found
+
+
+def take_handed(volumes, roots=None, keys=BITLOCKER_KEYS):
+    """Opens the BitLocker drives with the recovery keys Bridge left on the EFI partition, keeps
+    each that fits sealed, and takes the file away. How many keys fitted."""
+    fitted = 0
+    for root, mounted in esp_roots() if roots is None else roots:
+        handed = walk(root, HANDED)
+        try:
+            data = json.loads(handed.read_bytes()[:64 << 10]) if handed.is_file() else None
+        except (OSError, ValueError):
+            data = {}
+        if data is not None:
+            pem = handover_key(keys)
+            for entry in (data.get("keys") or []) if isinstance(data, dict) and pem else []:
+                try:
+                    sealed = base64.b64decode(str(entry.get("key", "")), validate=True)
+                except (ValueError, AttributeError):
+                    continue
+                text = opened_with(pem, sealed)
+                if text and unlock(text, volumes) == "open":
+                    fitted += 1
+            handed.unlink(missing_ok=True)
+            log(f"took the recovery key Windows handed over ({fitted} fitted)")
+        if mounted:
+            run("umount", root)
+    return fitted
+
+
+def unlock(text, volumes=None):
+    """Settings' recovery key (or one Windows handed over): opens the BitLocker drive it fits and keeps it sealed for every
+    start. "open", "bad-key" (that's no recovery key) or "wrong-key" (it fits no drive here)."""
+    key = recovery_key(text)
+    if key is None:
+        return "bad-key"
+    for device, uuid in bitlocker_volumes() if volumes is None else volumes:
+        if opens(device, key) and open_bitlocker(device, uuid, key):
+            if not seal_key(uuid, key):
+                log("couldn't keep the recovery key sealed: Settings asks for it again next time")
+            return "open"
+    return "wrong-key"
+
+
+def safe_to_write(device):
+    """"open" when Windows shut down fully and its drive is clean; "asleep" (hibernated, or
+    Fast Startup), "unclean" (Windows wants to check it) or "unknown" otherwise."""
+    code, _ = run("ntfs-3g.probe", "--readwrite", device, timeout=20)
+    if code is None:
+        return "unknown"  # no probe, no writing
+    return PROBE.get(code, "unknown")
+
+
+# ---------------------------------------------------------------- the person
+
+def owner(passwd=Path("/etc/passwd")):
+    """(name, uid, gid, home) of the PC's first person, or None.
+    shortcut: one owner for the shared games (Steam's libraries are each person's own); a
+    shared group would let several people install there."""
+    try:
+        lines = passwd.read_text().splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        f = line.split(":")
+        if (len(f) >= 7 and f[2].isdigit() and 1000 <= int(f[2]) < 60000 and not f[6].endswith(("nologin", "false"))
+                and f[0] != "guest"):  # monet-guest's, never anyone's games
+            return f[0], int(f[2]), int(f[3]), Path(f[5])
+    return None
+
+
+def steam_root(home):
+    """Where the person's own Steam keeps its games (native Steam, Monet's)."""
+    return home / ".local/share/Steam"
+
+
+# ---------------------------------------------------------------- the shared folder
+
+def child(folder, name):
+    """folder/name in any case, as Windows sees it; folder/name when there's none."""
+    try:
+        return next((p for p in folder.iterdir() if p.name.lower() == name.lower()), folder / name)
+    except OSError:
+        return folder / name
+
+
+def prepare_games(root, steam):
+    """Windows' Games folder as a Steam library both sides can use: steamapps, the library's
+    own mark (as Steam writes it when it adds a folder), and Proton's Linux-only folders
+    pointing at Monet's own Steam. Returns the folder."""
+    games = child(root, GAMES)
+    apps = child(games, "steamapps")
+    # A junction someone made in Windows (C:\Games leading to their own folder, say) is never
+    # followed, nor shared.
+    if not no_links(apps, root):
+        raise OSError(f"{apps} leads somewhere else")
+    apps.mkdir(parents=True, exist_ok=True)
+    mark = child(games, LIBRARY_MARK)
+    if not os.path.lexists(mark):
+        contentid = random.randrange(1 << 62, 1 << 63)
+        made = os.open(mark, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+        with os.fdopen(made, "w") as f:
+            f.write(f'"libraryfolder"\n{{\n\t"contentid"\t\t"{contentid}"\n\t"label"\t\t""\n}}\n')
+    for name in LINUX_ONLY:
+        target, here = steam / "steamapps" / name, child(apps, name)
+        if here.is_symlink():
+            if os.readlink(here) == str(target):
+                continue
+            here.unlink()
+        elif here.is_dir():
+            try:
+                here.rmdir()  # an empty one Steam made before: the link instead
+            except OSError:
+                log(f"{here} has files in it: left as it is")
+                continue
+        os.symlink(target, here)
+    return games
+
+
+def mount(device, person):
+    """Mounts Windows' drive at DRIVE for writing, owned by the person. True when it did."""
+    name, uid, gid, _ = person
+    DRIVE.mkdir(parents=True, exist_ok=True)
+    os.chmod(LOCKED.parent, 0o755)
+    os.chmod(LOCKED, 0o700)
+    if os.path.ismount(DRIVE):
+        return True
+    # No setuid or device files. Names found in any case, as Windows finds them, where the
+    # driver can (ntfs3's nocase): no second "steamapps" beside Windows' "SteamApps". Not
+    # windows_names: Steam may put Proton beside the first game that needs it, and Proton's
+    # files include names like "c:" (its prefixes, which hold far more, stay on Monet's drive).
+    # The person's alone (umask 077): no other account here reads Windows' files, not even its games.
+    options = f"rw,nosuid,nodev,uid={uid},gid={gid},umask=077"
+    for driver in DRIVERS:
+        for extra in (",nocase", ""):
+            code, _ = run("mount", "-t", driver, "-o", options + extra, device, DRIVE, timeout=25)
+            if code == 0 and os.statvfs(DRIVE).f_flag & os.ST_RDONLY:
+                # Newer kernels' "ntfs" can be ntfs3 standing in for the old driver: read-only.
+                run("umount", DRIVE, timeout=25)
+            elif code == 0:
+                log(f"opened Windows' drive {device} with {driver}{extra} for {name}")
+                return True
+    return False
+
+
+def share(games, person):
+    """Windows' Games folder at SHARED, and nothing else of the drive."""
+    _, uid, gid, home = person
+    SHARED.parent.mkdir(parents=True, exist_ok=True)
+    SHARED.mkdir(exist_ok=True)
+    if not os.path.ismount(SHARED):
+        code, _ = run("mount", "--bind", games, SHARED)
+        if code != 0:
+            return False
+    # Monet's Steam keeps Proton's folders for these games: there before Steam's first look.
+    for name in LINUX_ONLY:
+        with person_rights(uid, gid):
+            try:
+                (steam_root(home) / "steamapps" / name).mkdir(parents=True, exist_ok=True)
+            except OSError as e:  # Steam makes it itself; the folder is shared all the same
+                log(f"couldn't make Steam's {name} folder: {e}")
+    return True
+
+
+# ---------------------------------------------------------------- Wi-Fi in both
+
+WIFI_GIVEN = Path("/var/lib/monet/wifi-given.json")  # what Windows was given: a hash of each profile
+NM_KEYFILES = Path("/etc/NetworkManager/system-connections")
+
+
+def prepare_windows():
+    """monet-prepare-windows (beside this), whose Wi-Fi profiles Windows gets when Monet installs it."""
+    import importlib.machinery
+    import importlib.util
+    loader = importlib.machinery.SourceFileLoader("monet_prepare_windows", str(Path(__file__).resolve().parent / "monet-prepare-windows"))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def give_wifi(root, profiles=None, given_path=WIFI_GIVEN):
+    """Wi-Fi networks Monet knows that Windows wasn't given yet (or since their password
+    changed), as WLAN profiles in ProgramData\\Monet\\wifi: Monet Bridge adds them for everyone
+    at its next start and removes the files, which hold the passwords. How many."""
+    import hashlib
+    if profiles is None:
+        try:
+            profiles = prepare_windows().wifi_profiles()
+        except Exception as e:  # Monet's own networks still work; only Windows waits
+            log(f"couldn't read Monet's Wi-Fi networks: {e}")
+            return 0
+    try:
+        given = set(json.loads(given_path.read_text()))
+    except (OSError, ValueError, TypeError):
+        given = set()
+    new = [(hashlib.sha256(xml.encode()).hexdigest()[:20], xml) for xml in profiles]
+    new = [(h, xml) for h, xml in new if h not in given]
+    if not new:
+        return 0
+    folder = child(child(child(root, "ProgramData"), "Monet"), "wifi")
+    # Monet Bridge makes it, for administrators only, and the drivers here give a file they make
+    # its folder's permissions: one made here would let every Windows account read the passwords.
+    if not folder.is_dir() or folder.is_symlink():
+        log("Windows gets Monet's Wi-Fi networks once Monet Bridge has made their folder")
+        return 0
+    try:
+        for h, xml in new:
+            (folder / f"monet-{h}.xml").write_text(xml, encoding="utf-8")
+            given.add(h)
+    except OSError as e:
+        log(f"couldn't give Windows Monet's Wi-Fi networks: {e}")
+        return 0
+    given_path.parent.mkdir(parents=True, exist_ok=True)
+    given_path.write_text(json.dumps(sorted(given)) + "\n")
+    given_path.chmod(0o600)
+    log(f"gave Windows {len(new)} Wi-Fi network(s) Monet knows")
+    return len(new)
+
+
+def windows_network(xml):
+    """(name, ssid, key-mgmt or "", password, hidden) of a WLAN profile Windows exported with its
+    key in the clear, or None for one Monet doesn't take (work and school ones, no password)."""
+    import xml.etree.ElementTree as ET
+    try:
+        tree = ET.fromstring(xml)
+    except ET.ParseError:
+        return None
+    # Windows writes its profiles in its WLAN namespace.
+    ns = {"w": tree.tag[1:].split("}")[0]} if tree.tag.startswith("{") else None
+
+    def text(path, default=""):
+        path = "/".join(f"w:{part}" for part in path.split("/")) if ns else path
+        return (tree.findtext(path, default=default, namespaces=ns) or default).strip()
+
+    ssid = text("SSIDConfig/SSID/name")
+    auth = text("MSM/security/authEncryption/authentication")
+    key = text("MSM/security/sharedKey/keyMaterial")
+    protected = text("MSM/security/sharedKey/protected", "false")
+    hidden = text("SSIDConfig/nonBroadcast", "false") == "true"
+    if not ssid or any(ord(c) < 32 for c in ssid):
+        return None
+    mgmt = {"open": "", "WPA2PSK": "wpa-psk", "WPAPSK": "wpa-psk", "WPA3SAE": "sae"}.get(auth)
+    if mgmt is None or (mgmt and (not key or protected == "true")):
+        return None
+    return ssid, mgmt, key, hidden
+
+
+def known_ssids(folder=NM_KEYFILES):
+    """The Wi-Fi networks NetworkManager has a profile for."""
+    import configparser
+    found = set()
+    for path in folder.glob("*.nmconnection") if folder.is_dir() else []:
+        conf = configparser.ConfigParser(interpolation=None)
+        try:
+            conf.read(path, encoding="utf-8")
+        except (configparser.Error, UnicodeDecodeError):
+            continue
+        found.add(conf.get("wifi", "ssid", fallback=""))
+    return found
+
+
+def take_wifi(root, folder=NM_KEYFILES):
+    """The Wi-Fi networks Windows joined that Monet doesn't know (Monet Bridge exports them on
+    the way back, keys and all, into a folder only administrators read): each a NetworkManager
+    profile for everyone, then the exported files removed. How many."""
+    import uuid
+    out = child(child(child(root, "ProgramData"), "Monet"), "wifi-out")
+    try:
+        files = sorted(out.glob("*.xml"))
+    except OSError:
+        return 0
+    known, taken = known_ssids(folder), 0
+    for path in files:
+        try:
+            network = windows_network(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            network = None
+        if network and network[0] not in known:
+            ssid, mgmt, key, hidden = network
+            clean = lambda s: s.replace("\\", "\\\\").replace("\n", "\\n")
+            text = (f"[connection]\nid={clean(ssid)}\nuuid={uuid.uuid4()}\ntype=wifi\n\n"
+                    f"[wifi]\nmode=infrastructure\nssid={clean(ssid)}\n" + ("hidden=true\n" if hidden else "")
+                    + (f"\n[wifi-security]\nkey-mgmt={mgmt}\npsk={clean(key)}\n" if mgmt else "")
+                    + "\n[ipv4]\nmethod=auto\n\n[ipv6]\nmethod=auto\n")
+            name = re.sub(r"[^\w.-]+", "-", ssid).strip("-") or "wifi"
+            target = folder / f"{name}.nmconnection"
+            n = 2
+            while target.exists():
+                target, n = folder / f"{name}-{n}.nmconnection", n + 1
+            try:
+                folder.mkdir(parents=True, exist_ok=True)
+                descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as f:
+                    f.write(text)
+                known.add(ssid)
+                taken += 1
+            except OSError as e:
+                log(f"couldn't take Windows' Wi-Fi network {ssid}: {e}")
+        try:
+            path.unlink()  # it holds a password
+        except OSError:
+            pass
+    if taken:
+        run("nmcli", "connection", "reload", timeout=30)
+        log(f"took {taken} Wi-Fi network(s) Windows joined")
+    return taken
+
+
+HIDDEN = Path("/run/udev/rules.d/90-monet-windows.rules")
+
+
+def hide(device):
+    """Windows' own drive left out of Files' devices: Monet shares what's for you in it (its
+    Games folder), and opening it there would ask for an administrator's password, or, while
+    Windows is asleep, risk its files."""
+    code, out = run("blkid", "-s", "UUID", "-o", "value", device, timeout=15)
+    uuid = out.strip()
+    if code != 0 or not re.fullmatch(r"[0-9A-Fa-f-]{4,36}", uuid):
+        return
+    HIDDEN.parent.mkdir(parents=True, exist_ok=True)
+    HIDDEN.write_text(f'# Monet: Windows\' own drive isn\'t one of Files\' devices.\n'
+                      f'ENV{{ID_FS_UUID}}=="{uuid}", ENV{{UDISKS_IGNORE}}="1"\n')
+    run("udevadm", "control", "--reload", timeout=30)
+    run("udevadm", "trigger", "--action=change", device, timeout=30)
+
+
+def write_state(state, **more):
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    temp = STATE.with_suffix(".tmp")
+    temp.write_text(json.dumps({"state": state, **more}) + "\n")
+    temp.chmod(0o644)
+    temp.replace(STATE)
+
+
+def share_files(root):
+    """Windows' folder for files on both sides (C:\\Shared with Monet) at FILES: a download, a
+    mod or an installer saved there once is there in Windows too. Whether it's shared."""
+    folder = child(root, FILES_FOLDER)
+    if not no_links(folder, root):
+        log(f"{folder} leads somewhere else: not shared")
+        return False
+    try:
+        folder.mkdir(exist_ok=True)
+        FILES.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        log(f"couldn't make the folder for files on both sides: {e}")
+        return False
+    if os.path.ismount(FILES):
+        return True
+    code, _ = run("mount", "--bind", folder, FILES)
+    return code == 0
+
+
+def windows_launchers(root, person_name=None):
+    """The game launchers Windows has, by their programs on its drive; and Discord, which
+    each Windows account installs for itself, when the person's own has it."""
+    def found(path, top=root):
+        place = top
+        for part in path.split("/"):
+            place = child(place, part)
+        return place.is_file()
+    have = {key for key, paths in LAUNCHERS.items() if any(found(path) for path in paths)}
+    if person_name and any(found("AppData/Local/Discord/Update.exe", account) for account in own_windows(root, person_name)):
+        have.add("discord")
+    return sorted(have)
+
+
+def open_drive():
+    person = owner()
+    if person is None:
+        write_state("no-person")
+        return 0
+    unlocked = unlock_saved()
+    device, why = find_windows(ntfs_volumes())
+    if device is None:
+        # An opened BitLocker drive without Monet Bridge yet: Windows' setup puts it in.
+        write_state(why, unlocked=unlocked > 0, handover=(BITLOCKER_KEYS / "lock-given").exists())
+        return 0
+    hide(device)
+    state = "open" if os.path.ismount(DRIVE) else safe_to_write(device)
+    if state != "open":
+        log(f"Windows' drive {device} isn't safe to write ({state}): not shared this time")
+        write_state(state)
+        return 0
+    if not mount(device, person):
+        write_state("failed")
+        return 1
+    try:
+        games = prepare_games(DRIVE, steam_root(person[3]))
+    except OSError as e:
+        log(f"couldn't make Windows' Games folder: {e}")
+        write_state("failed")
+        return 1
+    if not share(games, person):
+        write_state("failed")
+        return 1
+    files = share_files(DRIVE)
+    write_state("open", path=str(SHARED), owner=person[0], files=str(FILES) if files else "",
+                launchers=windows_launchers(DRIVE, person[0]))
+    # Wi-Fi in both: what Monet joined for Windows, what Windows joined for Monet.
+    try:
+        give_wifi(DRIVE)
+        take_wifi(DRIVE)
+    except Exception as e:  # the Games folder is shared all the same
+        log(f"Wi-Fi in both didn't finish: {e}")
+    # The lock Monet Bridge locks the recovery key with, should Windows get encrypted.
+    give_lock(DRIVE)
+    return 0
+
+
+# ---------------------------------------------------------------- what was saved in Windows
+
+class person_rights:
+    """Acts as the person (their user and group) inside the block, so nothing root writes
+    in their home can be led somewhere else by a link of theirs."""
+
+    def __init__(self, uid, gid):
+        self.uid, self.gid, self.groups = uid, gid, None
+
+    def __enter__(self):
+        if os.geteuid() == 0:
+            # Root's own groups go too, or a link could still reach what group root may write.
+            self.groups = os.getgroups()
+            os.setgroups([self.gid])
+            os.setegid(self.gid)
+            os.seteuid(self.uid)
+
+    def __exit__(self, *_):
+        if os.getuid() == 0 and self.groups is not None:
+            os.seteuid(0)
+            os.setegid(0)
+            os.setgroups(self.groups)
+            self.groups = None
+
+
+def user_dir(home, key, fallback):
+    """The person's own folder for PICTURES or VIDEOS (named in their language), from
+    user-dirs.dirs as xdg-user-dir reads it."""
+    try:
+        text = (home / ".config/user-dirs.dirs").read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    found = re.search(rf'^XDG_{key}_DIR="([^"]+)"', text, re.M)
+    path = found.group(1).replace("$HOME", str(home)) if found else ""
+    return Path(path) if path.startswith(str(home) + "/") else home / fallback
+
+
+def free_name(folder, name):
+    """name, or "name (2).png" and so on when folder has a different file by that name."""
+    stem, suffix = os.path.splitext(name)
+    for n in range(1, 1000):
+        candidate = folder / (name if n == 1 else f"{stem} ({n}){suffix}")
+        if not candidate.exists():
+            return candidate
+    return None
+
+
+def windows_people(root):
+    """Each Windows account's folder (Users\\NAME, with its registry file)."""
+    users = child(root, "Users")
+    try:
+        folders = sorted(users.iterdir())
+    except OSError:
+        return []
+    return [f for f in folders if f.is_dir() and not f.is_symlink() and f.name.lower() not in NOT_PEOPLE
+            and child(f, "NTUSER.DAT").exists()]
+
+
+def own_windows(root, name):
+    """The person's own Windows accounts: the one called as they are here (Monet's Windows names
+    it so), or the only one there is. Nobody else's screenshots move into their Pictures."""
+    people = windows_people(root)
+    mine = [p for p in people if p.name.lower() == name.lower()]
+    return mine or (people if len(people) == 1 else [])
+
+
+def steam_accounts(home):
+    """The Steam accounts the person uses here (their Steam's userdata folders)."""
+    try:
+        return {p.name for p in (steam_root(home) / "userdata").iterdir() if p.name.isdigit()}
+    except OSError:
+        return set()
+
+
+def steam_shots(root, accounts):
+    """Steam's screenshots in Windows (userdata/ACCOUNT/760/remote/GAME/screenshots/*.jpg) of
+    those Steam accounts, by their place under userdata."""
+    userdata = root
+    for part in STEAM_SHOTS.split("/"):
+        userdata = child(userdata, part)
+    try:
+        found = sorted(userdata.glob("*/760/remote/*/screenshots/*.jpg"))
+    except OSError:
+        return []
+    return [(p.relative_to(userdata).as_posix(), p) for p in found
+            if p.relative_to(userdata).parts[0] in accounts and p.is_file() and no_links(p, root)]
+
+
+def no_links(path, root):
+    """Whether nothing from root down to path is a link: a junction a Windows account made
+    (the drivers show one as a link) could lead to another account's files."""
+    parts = path.relative_to(root).parts
+    return not any(root.joinpath(*parts[:n]).is_symlink() for n in range(1, len(parts) + 1))
+
+
+def open_plain(path):
+    """path to read, but never through a link in its last step."""
+    return os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb")
+
+
+def bring(root, person, seen_path=STEAM_SEEN):
+    """Moves what Windows' capture tools saved into the person's Pictures › Screenshots and
+    Videos, and copies Steam's screenshots there (Steam in Windows keeps its own list of them).
+    {"pictures": n, "videos": n}."""
+    person_name, uid, gid, home = person
+    counts = {"PICTURES": 0, "VIDEOS": 0}
+    try:
+        seen = set(json.loads(seen_path.read_text()))
+    except (OSError, ValueError, TypeError):
+        seen = set()
+    with person_rights(uid, gid):
+        accounts = steam_accounts(home)
+    shots = [(name, path) for name, path in steam_shots(root, accounts) if name not in seen]
+    if shots:
+        with person_rights(uid, gid):
+            target = user_dir(home, "PICTURES", "Pictures") / "Screenshots"
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                log(f"couldn't make {target}: {e}")
+                shots = []
+        for name, source in shots:
+            try:
+                src = open_plain(source)
+            except OSError:
+                continue
+            with src, person_rights(uid, gid):
+                copied = copy_open(src, source.name, target)
+            if copied:
+                seen.add(name)
+                counts["PICTURES"] += 1
+        seen_path.parent.mkdir(parents=True, exist_ok=True)
+        seen_path.write_text(json.dumps(sorted(seen)) + "\n")
+    for profile in own_windows(root, person_name):
+        for where, key, sub in CAPTURES:
+            folder = profile
+            for part in where.split("/"):
+                folder = child(folder, part)
+            if not no_links(folder, root):
+                continue
+            try:
+                files = sorted(p for p in folder.iterdir()
+                               if p.is_file() and not p.is_symlink() and p.suffix.lower() in MEDIA)
+            except OSError:
+                continue
+            if not files:
+                continue
+            with person_rights(uid, gid):
+                target = user_dir(home, key, key.title())
+                target = target / sub if sub else target
+                try:
+                    target.mkdir(parents=True, exist_ok=True)
+                except OSError as e:
+                    log(f"couldn't make {target}: {e}")
+                    continue
+            for source in files:
+                # Read as root (Windows' drive is root's), written as the person, then the
+                # copy in Windows removed as root once it's closed.
+                try:
+                    src = open_plain(source)
+                except OSError:
+                    continue
+                with src, person_rights(uid, gid):
+                    copied = copy_open(src, source.name, target)
+                if copied:
+                    try:
+                        source.unlink()
+                    except OSError as e:
+                        log(f"brought {source.name}, but couldn't remove it from Windows: {e}")
+                    counts[key] += 1
+    return {"pictures": counts["PICTURES"], "videos": counts["VIDEOS"]}
+
+
+def same_bytes(src, path):
+    """Whether the open file holds what path does (src is back at its start after)."""
+    try:
+        with open(path, "rb") as other:
+            while True:
+                a, b = src.read(1 << 20), other.read(1 << 20)
+                if a != b:
+                    return False
+                if not a:
+                    return True
+    except OSError:
+        return False
+    finally:
+        src.seek(0)
+
+
+def copy_open(src, name, folder):
+    """Copies the open file into folder (as the person: nothing follows a link) and checks
+    the copy. True when it's there, now or from before; a copy that went wrong is removed."""
+    size = os.fstat(src.fileno()).st_size
+    existing = folder / name
+    if existing.is_file() and existing.stat().st_size == size and same_bytes(src, existing):
+        return True  # brought before, but not removed then
+    target = free_name(folder, name)
+    if target is None:
+        return False
+    part = folder / f".{target.name}.part"
+    try:
+        data = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+        with os.fdopen(data, "wb") as out:
+            shutil.copyfileobj(src, out, 4 << 20)
+            out.flush()
+            os.fsync(out.fileno())
+        if part.stat().st_size != size:
+            raise OSError("the copy is short")
+        stat = os.fstat(src.fileno())
+        os.utime(part, (stat.st_atime, stat.st_mtime))
+        os.replace(part, target)
+    except OSError as e:
+        log(f"couldn't bring {name}: {e}")
+        part.unlink(missing_ok=True)
+        return False
+    return True
+
+
+# ---------------------------------------------------------------- bookmarks from Windows' browsers
+
+# Each browser's bookmarks, in the person's own Windows account: Chromium's kind keep a Bookmarks
+# file (JSON) in each of their profiles' folders (Opera in its one folder), Firefox its places.sqlite.
+CHROMIUMS = (("Edge", "AppData/Local/Microsoft/Edge/User Data"), ("Chrome", "AppData/Local/Google/Chrome/User Data"),
+             ("Brave", "AppData/Local/BraveSoftware/Brave-Browser/User Data"), ("Vivaldi", "AppData/Local/Vivaldi/User Data"),
+             ("Opera", "AppData/Roaming/Opera Software/Opera Stable"))
+FIREFOX_PROFILES = "AppData/Roaming/Mozilla/Firefox/Profiles"
+# What Zen gets (monet-quick zen puts it in a profile Zen hasn't started yet, where Zen takes
+# it in on its first start), and what Settings says about it.
+BOOKMARKS_HTML = ".local/share/monet/windows-bookmarks.html"
+BOOKMARKS_JSON = ".local/share/monet/windows-bookmarks.json"
+WEB = ("http://", "https://", "ftp://")
+TOO_BIG = 256 << 20  # a browser's file bigger than this isn't anyone's bookmarks
+
+
+def walk(folder, path):
+    for part in path.split("/"):
+        folder = child(folder, part)
+    return folder
+
+
+def chromium_tree(node):
+    """A Chromium bookmark folder's children as [{title, url, added} | {title, children}]."""
+    items = []
+    for item in node.get("children") or []:
+        if not isinstance(item, dict):
+            continue
+        added = int(item.get("date_added") or 0) // 1_000_000 - 11644473600  # microseconds since 1601
+        if item.get("type") == "url" and str(item.get("url", "")).startswith(WEB):
+            items.append({"title": str(item.get("name") or item["url"]), "url": item["url"], "added": max(added, 0)})
+        elif item.get("type") == "folder":
+            inside = chromium_tree(item)
+            if inside:
+                items.append({"title": str(item.get("name") or ""), "children": inside})
+    return items
+
+
+def chromium_bookmarks(data):
+    """(the bar's bookmarks, the rest) from a Chromium Bookmarks file's text."""
+    try:
+        roots = json.loads(data).get("roots") or {}
+    except (ValueError, AttributeError):
+        return [], []
+    other = chromium_tree(roots.get("other") or {}) + chromium_tree(roots.get("synced") or {})
+    return chromium_tree(roots.get("bookmark_bar") or {}), other
+
+
+def firefox_bookmarks(places):
+    """(the toolbar's bookmarks, the menu's and the rest) from a copy of Firefox's places.sqlite."""
+    import sqlite3
+    try:
+        db = sqlite3.connect(f"file:{places}?mode=ro", uri=True)
+        rows = db.execute("SELECT b.id, b.parent, b.type, b.title, b.dateAdded, b.guid, p.url FROM moz_bookmarks b "
+                          "LEFT JOIN moz_places p ON p.id = b.fk ORDER BY b.parent, b.position").fetchall()
+        db.close()
+    except sqlite3.Error:
+        return [], []
+    by_parent, guid_ids = {}, {}
+    for row in rows:
+        by_parent.setdefault(row[1], []).append(row)
+        guid_ids[row[5]] = row[0]
+
+    def tree(parent, depth=0):
+        items = []
+        for folder, _parent, kind, title, added, _guid, url in by_parent.get(parent, []) if depth < 40 else []:
+            if kind == 1 and url and url.startswith(WEB):
+                items.append({"title": title or url, "url": url, "added": (added or 0) // 1_000_000})
+            elif kind == 2:
+                inside = tree(folder, depth + 1)
+                if inside:
+                    items.append({"title": title or "", "children": inside})
+        return items
+
+    def root(guid):
+        return tree(guid_ids[guid]) if guid in guid_ids else []
+    return root("toolbar_____"), root("menu________") + root("unfiled_____") + root("mobile______")
+
+
+def read_plain(path, root):
+    """A file's bytes, read as root without following links, or None."""
+    if not path.is_file() or not no_links(path, root):
+        return None
+    try:
+        with open_plain(path) as f:
+            if os.fstat(f.fileno()).st_size > TOO_BIG:
+                return None
+            return f.read()
+    except OSError:
+        return None
+
+
+def windows_bookmarks(root, person_name):
+    """[(browser, bar, rest)] with each browser profile's bookmarks in the person's own Windows
+    accounts, the one with most bookmarks first."""
+    import tempfile
+    found = []
+    for profile in own_windows(root, person_name):
+        for name, where in CHROMIUMS:
+            folder = walk(profile, where)
+            try:
+                places = [folder] + sorted(p for p in folder.iterdir() if p.is_dir() and not p.is_symlink()
+                                           and (p.name == "Default" or p.name.startswith("Profile ")))
+            except OSError:
+                continue
+            for place in places:
+                data = read_plain(child(place, "Bookmarks"), root)
+                bar, rest = chromium_bookmarks(data) if data else ([], [])
+                if bar or rest:
+                    found.append((name, bar, rest))
+        folder = walk(profile, FIREFOX_PROFILES)
+        try:
+            places = sorted(p for p in folder.iterdir() if p.is_dir() and not p.is_symlink())
+        except OSError:
+            places = []
+        for place in places:
+            data = read_plain(child(place, "places.sqlite"), root)
+            if not data:
+                continue
+            with tempfile.TemporaryDirectory() as tmp:
+                copy = Path(tmp) / "places.sqlite"
+                copy.write_bytes(data)
+                # What Firefox wrote last may still be in its journal beside it.
+                wal = read_plain(child(place, "places.sqlite-wal"), root)
+                if wal:
+                    (Path(tmp) / "places.sqlite-wal").write_bytes(wal)
+                bar, rest = firefox_bookmarks(copy)
+            if bar or rest:
+                found.append(("Firefox", bar, rest))
+    found.sort(key=lambda f: -(count_bookmarks(f[1]) + count_bookmarks(f[2])))
+    return found
+
+
+def count_bookmarks(items):
+    return sum(count_bookmarks(i["children"]) if "children" in i else 1 for i in items)
+
+
+def bookmarks_html(found):
+    """One bookmarks file for Zen (Netscape's, as every browser imports it). One browser: its
+    bar is Zen's toolbar and the rest its bookmarks. Several: a folder for each."""
+    from html import escape
+
+    def items(entries, indent):
+        lines = []
+        for e in entries:
+            if "children" in e:
+                lines += [f'{indent}<DT><H3>{escape(e["title"])}</H3>', f"{indent}<DL><p>",
+                          *items(e["children"], indent + "    "), f"{indent}</DL><p>"]
+            else:
+                lines.append(f'{indent}<DT><A HREF="{escape(e["url"])}" ADD_DATE="{e["added"]}">{escape(e["title"])}</A>')
+        return lines
+
+    if len(found) == 1:
+        _, bar, rest = found[0]
+        top = ([{"title": "Bookmarks Toolbar", "children": bar, "toolbar": True}] if bar else []) + rest
+    else:
+        names = [name for name, _, _ in found]
+        top = [{"title": name if names.count(name) == 1 else f"{name} {names[:n + 1].count(name)}", "children": bar + rest}
+               for n, (name, bar, rest) in enumerate(found)]
+    lines = ["<!DOCTYPE NETSCAPE-Bookmark-file-1>",
+             '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+             "<TITLE>Bookmarks</TITLE>", "<H1>Bookmarks</H1>", "<DL><p>"]
+    for e in top:
+        if e.get("toolbar"):
+            lines += ['    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">Bookmarks Toolbar</H3>', "    <DL><p>",
+                      *items(e["children"], "        "), "    </DL><p>"]
+        else:
+            lines += items([e], "    ")
+    return "\n".join(lines + ["</DL><p>"]) + "\n"
+
+
+def bring_bookmarks(root, person):
+    """Writes what the person's Windows browsers keep as bookmarks where Zen finds it
+    (BOOKMARKS_HTML, as the person), and says which browsers (BOOKMARKS_JSON). How many."""
+    person_name, uid, gid, home = person
+    found = windows_bookmarks(root, person_name)
+    if not found:
+        return 0
+    html = bookmarks_html(found).encode()
+    count = sum(count_bookmarks(bar) + count_bookmarks(rest) for _, bar, rest in found)
+    said = {"browsers": sorted({name for name, _, _ in found}), "count": count}
+    with person_rights(uid, gid):
+        target, summary = home / BOOKMARKS_HTML, home / BOOKMARKS_JSON
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            changed = not target.is_file() or target.read_bytes() != html
+            if changed:
+                write_own(target, html)
+            if changed or not summary.is_file():
+                write_own(summary, (json.dumps({**said, "time": int(time.time())}) + "\n").encode())
+        except OSError as e:
+            log(f"couldn't keep the bookmarks from Windows: {e}")
+            return 0
+    return count
+
+
+# ---------------------------------------------------------------- the person's Windows apps
+
+# What the person's Start menu in Windows has (theirs and everyone's), for Monet's app menu, where
+# each opens in Windows: Monet Bridge opens the same shortcut there (app:<slug of its place under
+# Programs>). Not Windows' own tools, games (Games has them) or their launchers, browsers (Zen has
+# their bookmarks), OneDrive (Files has it), uninstallers or help. The icon is the program's own, taken from it here.
+START_MENU = "Microsoft/Windows/Start Menu/Programs"
+APPS_JSON = ".local/share/monet/windows-apps.json"
+# In the person's icon theme, so the app menu names them and Monet frames them as it does any app's.
+APPS_ICONS = ".local/share/icons/hicolor/256x256/apps"
+APP_ICON = "monet-windows-app-{}.png"
+NOT_APPS = re.compile(r"\b(uninstall\w*|unins\d*|read ?me|help|manual|documentation|release notes|licen[cs]e|"
+                      r"web ?site|safe mode|repair|reset|support|feedback|what'?s new|changelog|check for updates|monet)\b", re.I)
+NOT_APP_FOLDERS = {"windows system", "windows accessories", "accessibility", "accessories", "administrative tools",
+                   "windows administrative tools", "windows powershell", "windows tools", "system tools",
+                   "maintenance", "startup", "monet"}
+NOT_APP_PLACES = re.compile(r"^([a-z]:\\windows|%(systemroot|windir)%)\\|\\(steamapps|games|epic games|riot games|ubisoft|ea games|"
+                            r"electronic arts|gog galaxy|battle\.net|rockstar games|origin( games)?|steam|monet|opera( gx)?)\\"
+                            r"|\\(msedge|chrome|firefox|brave|vivaldi|zen|private_browsing|onedrive)\.exe$", re.I)
+WINDOWS_FOLDERS = {"programfiles": "Program Files", "programfiles(x86)": "Program Files (x86)",
+                   "programw6432": "Program Files", "commonprogramfiles": "Program Files/Common Files",
+                   "systemroot": "Windows", "windir": "Windows", "programdata": "ProgramData"}
+ACCOUNT_FOLDERS = {"localappdata": "AppData/Local", "appdata": "AppData/Roaming", "userprofile": ""}
+
+
+def shortcut_target(data):
+    """Where a Windows shortcut (.lnk) leads, as Windows writes it ("C:\\...\\app.exe", or with
+    %ProgramFiles% and the like): its LinkInfo's path, else the one kept with environment
+    variables. "" for one without either (an installer's advertised shortcut)."""
+    if len(data) < 0x4C or data[:4] != b"L\0\0\0":
+        return ""
+    word = lambda at, n=4: int.from_bytes(data[at:at + n], "little")
+
+    def text(start, wide):
+        if wide:
+            end = start
+            while end + 1 < len(data) and data[end:end + 2] != b"\0\0":
+                end += 2
+            return data[start:end].decode("utf-16-le", "replace")
+        end = data.find(b"\0", start)
+        return data[start:end if end >= 0 else len(data)].decode("cp1252", "replace")
+
+    flags, at, path = word(0x14), 0x4C, ""
+    if flags & 0x01:  # the target as the shell names it: skipped
+        at += 2 + word(at, 2)
+    if flags & 0x02 and at + 0x1C <= len(data):  # LinkInfo
+        size, header, info = word(at), word(at + 4), word(at + 8)
+        if info & 0x01:  # a path on a drive of this PC
+            if header >= 0x24 and at + 0x24 <= len(data):
+                path = text(at + word(at + 0x1C), True) + text(at + word(at + 0x20), True)
+            else:
+                path = text(at + word(at + 0x10), False) + text(at + word(at + 0x18), False)
+        at += size
+    wide = flags & 0x80
+    for kept in (0x04, 0x08, 0x10, 0x20, 0x40):  # name, relative path, folder, arguments, icon
+        if flags & kept:
+            at += 2 + word(at, 2) * (2 if wide else 1)
+    while not path and at + 8 <= len(data):
+        size, signature = word(at), word(at + 4)
+        if size < 8:
+            break
+        if signature == 0xA0000001 and size >= 0x314:  # the path with environment variables
+            path = text(at + 8 + 260, True) or text(at + 8, False)
+        at += size
+    return path.strip()
+
+
+# The Store's apps, which have no shortcut: Monet Bridge lists the person's (Get-StartApps, as
+# them, at each sign-in) in the shared Games folder. Windows' own apps (Calculator, Photos,
+# Settings), Xbox's and the like are left out, as they have Monet's own here.
+STORE_APPS = "Games/.monet/store-apps.json"
+STORE_APP = re.compile(r"([\w.-]+)_([a-z0-9]{13})!([\w.-]+)")
+NOT_STORE_APPS = re.compile(r"(Microsoft\.(Windows|Xbox|Gaming|Zune|Bing|GetHelp|Getstarted|Paint|ScreenSketch|SecHealthUI|"
+                            r"YourPhone|People|MicrosoftEdge|Edge|549981C3F5F10|MicrosoftStickyNotes|PowerAutomateDesktop|"
+                            r"MicrosoftOfficeHub|Copilot|StorePurchaseApp|OneDrive|MicrosoftSolitaireCollection|"
+                            r"WidgetsPlatformRuntime)|MicrosoftWindows\.|MicrosoftCorporationII\.|windows\.)", re.I)
+
+
+def store_apps(root):
+    """[(name, app id, family name, publisher id, app)] of the Store's apps Bridge listed."""
+    data = read_plain(walk(root, STORE_APPS), root)
+    try:
+        listed = json.loads(data or b"[]")
+    except ValueError:
+        return []
+    found = []
+    for item in listed if isinstance(listed, list) else []:
+        if not isinstance(item, dict):
+            continue
+        name, app_id = " ".join(str(item.get("name") or "").split())[:80], str(item.get("id") or "")
+        parts = STORE_APP.fullmatch(app_id)
+        if name and parts and not NOT_STORE_APPS.match(app_id):
+            found.append((name, app_id, *parts.groups()))
+    return found
+
+
+def store_logo(root, family, publisher, app):
+    """A Store app's own logo (its manifest's Square44x44Logo, the biggest file of it, an
+    unplated one first), as PNG bytes, or None."""
+    from pathlib import PureWindowsPath
+    packages = walk(root, "Program Files/WindowsApps")
+    folder_name = re.compile(rf"{re.escape(family)}_([\d.]+)_[a-z0-9]+__{publisher}", re.I)
+    try:
+        folders = [f for f in packages.iterdir() if folder_name.fullmatch(f.name) and f.is_dir() and not f.is_symlink()]
+    except OSError:
+        return None
+    if not folders:
+        return None
+    folder = max(folders, key=lambda f: [int(n) for n in folder_name.fullmatch(f.name)[1].split(".") if n.isdigit()])
+    manifest = read_plain(child(folder, "AppxManifest.xml"), root)
+    found = re.search(rf'<Application\b[^>]*\bId="{re.escape(app)}".*?</Application>', (manifest or b"").decode("utf-8", "replace"), re.S)
+    logo = found and (re.search(r'Square44x44Logo="([^"]+)"', found[0]) or re.search(r'Square150x150Logo="([^"]+)"', found[0]))
+    if not logo:
+        return None
+    place = PureWindowsPath(logo[1])
+    if place.is_absolute() or ".." in place.parts:
+        return None
+    where = walk(folder, "/".join(place.parent.parts)) if place.parent.parts else folder
+    stem, base = place.stem.lower(), int(m[1]) if (m := re.search(r"(\d+)x\d+", place.stem)) else 44
+    try:
+        files = [f for f in where.iterdir() if f.name.lower().startswith(stem) and f.suffix.lower() == ".png" and f.is_file()]
+    except OSError:
+        return None
+
+    def pixels(f):
+        size = re.search(r"targetsize-(\d+)", f.name.lower())
+        scale = re.search(r"scale-(\d+)", f.name.lower())
+        return int(size[1]) if size else base * int(scale[1]) // 100 if scale else base
+    big = [f for f in files if pixels(f) >= 64] or files
+    best = max(big, key=lambda f: ("unplated" in f.name.lower(), pixels(f)), default=None)
+    data = read_plain(best, root) if best and no_links(best, root) else None
+    return data if data and data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) < 4 << 20 else None
+
+
+def windows_path(target, root, profile):
+    """A shortcut's target on Windows' drive here, or None (another drive, or unknown)."""
+    def folder(match):
+        name = match.group(1).lower()
+        if name in WINDOWS_FOLDERS:
+            return "C:/" + WINDOWS_FOLDERS[name]
+        if name in ACCOUNT_FOLDERS and profile is not None:
+            return "C:/" + profile.relative_to(root).as_posix() + ("/" + ACCOUNT_FOLDERS[name]).rstrip("/")
+        return match.group(0)
+    path = re.sub(r"%([^%]+)%", folder, target).replace("\\", "/")
+    if not re.match(r"^[Cc]:/", path) or "%" in path or "/../" in f"{path}/":
+        return None
+    return walk(root, path[3:].strip("/"))
+
+
+def program_icon(f):
+    """The biggest icon a Windows program keeps (in its PE resources): a PNG as it is, a bitmap
+    as an .ico of one (png_of turns it into a PNG, never as root), or None."""
+    def at(offset, n):
+        f.seek(offset)
+        b = f.read(n)
+        if len(b) != n:
+            raise ValueError("short")
+        return b
+    u16 = lambda b, o=0: int.from_bytes(b[o:o + 2], "little")
+    u32 = lambda b, o=0: int.from_bytes(b[o:o + 4], "little")
+    try:
+        if at(0, 2) != b"MZ":
+            return None
+        pe = u32(at(0x3C, 4))
+        head = at(pe, 24)
+        if head[:4] != b"PE\0\0":
+            return None
+        sections, size = u16(head, 6), u16(head, 20)
+        optional = at(pe + 24, size)
+        dirs = {0x10B: 96, 0x20B: 112}.get(u16(optional))
+        if dirs is None or size < dirs + 24:
+            return None
+        table = at(pe + 24 + size, 40 * min(sections, 96))
+        spans = [(u32(table, s + 12), max(u32(table, s + 8), u32(table, s + 16)), u32(table, s + 20))
+                 for s in range(0, len(table), 40)]
+
+        def place(rva):
+            for start, length, raw in spans:
+                if start <= rva < start + length:
+                    return rva - start + raw
+            raise ValueError("outside")
+        base = place(u32(optional, dirs + 16))  # the resources' directory
+
+        def entries(directory):
+            d = at(base + directory, 16)
+            n = min(u16(d, 12) + u16(d, 14), 4096)
+            raw = at(base + directory + 16, 8 * n)
+            return [(u32(raw, i * 8), u32(raw, i * 8 + 4)) for i in range(n)]
+
+        def data(entry, depth=0):
+            while entry & 0x80000000 and depth < 4:  # a folder: its first (language)
+                inside = entries(entry & 0x7FFFFFFF)
+                if not inside:
+                    raise ValueError("empty")
+                entry, depth = inside[0][1], depth + 1
+            d = at(base + entry, 8)
+            if u32(d, 4) > 8 << 20:
+                raise ValueError("too big")
+            return at(place(u32(d)), u32(d, 4))
+        kinds = dict(entries(0))
+        if not (kinds.get(14, 0) & kinds.get(3, 0) & 0x80000000):  # icon groups and icons
+            return None
+        groups = entries(kinds[14] & 0x7FFFFFFF)
+        group = data(groups[0][1]) if groups else b""
+        sizes = [group[6 + i * 14:20 + i * 14] for i in range(u16(group, 4)) if len(group) >= 20 + i * 14]
+        if not sizes:
+            return None
+        best = max(sizes, key=lambda e: (e[0] or 256, u16(e, 6)))
+        icons = dict(entries(kinds[3] & 0x7FFFFFFF))
+        image = data(icons[u16(best, 12)])
+    except (ValueError, OSError, KeyError):
+        return None
+    if image[:8] == b"\x89PNG\r\n\x1a\n":
+        return image
+    # A bitmap: an .ico of one, which Pillow reads.
+    return b"\0\0\1\0\1\0" + best[:8] + len(image).to_bytes(4, "little") + (22).to_bytes(4, "little") + image
+
+
+def png_of(icon):
+    """An icon from program_icon as PNG, or None. Pillow decodes what came from Windows' drive,
+    so this runs only in as_person's child."""
+    if not icon or icon[:8] == b"\x89PNG\r\n\x1a\n":
+        return icon or None
+    try:
+        import io
+        from PIL import Image
+        out = io.BytesIO()
+        Image.open(io.BytesIO(icon)).save(out, "PNG")
+        return out.getvalue()
+    except Exception:  # Pillow's own errors are many; an app without its icon still opens
+        return None
+
+
+def as_person(uid, gid, work, items, seconds=60):
+    """[work(item)] worked out in a child process that becomes the person for good (never root
+    again, and stopped after a minute), for decoding what came from Windows' drive. A None
+    for each item it couldn't do."""
+    import signal
+    read, write = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # the child
+        os.close(read)
+        try:
+            if os.getuid() == 0:
+                os.setgroups([])
+                os.setgid(gid)
+                os.setuid(uid)
+            signal.alarm(seconds)
+            with os.fdopen(write, "wb") as pipe:
+                for item in items:
+                    out = work(item) or b""
+                    pipe.write(len(out).to_bytes(4, "little") + out)
+        finally:
+            os._exit(0)
+    os.close(write)
+    with os.fdopen(read, "rb") as pipe:
+        data = pipe.read()
+    os.waitpid(pid, 0)
+    results, at = [], 0
+    while at + 4 <= len(data) and len(results) < len(items):
+        size = int.from_bytes(data[at:at + 4], "little")
+        results.append(data[at + 4:at + 4 + size] or None)
+        at += 4 + size
+    return results + [None] * (len(items) - len(results))
+
+
+def windows_apps(root, person_name):
+    """[{id, name, icon (PNG bytes or None)}] of the apps in the Start menu of the person's own
+    Windows account and everyone's, theirs first."""
+    profiles = own_windows(root, person_name)
+    menus = [(walk(p, "AppData/Roaming/" + START_MENU), p) for p in profiles]
+    menus.append((walk(root, "ProgramData/" + START_MENU), profiles[0] if profiles else None))
+    found, seen = [], set()
+    for menu, profile in menus:
+        if not menu.is_dir() or not no_links(menu, root):
+            continue
+        for link in sorted(menu.glob("**/*.lnk"))[:2000]:
+            place = link.relative_to(menu)
+            if len(place.parts) > 4 or any(part.lower() in NOT_APP_FOLDERS for part in place.parts[:-1]):
+                continue
+            name = " ".join(link.stem.split())
+            slug = slug_of(place.with_suffix("").as_posix())
+            if not slug or f"app:{slug}" in seen or name.lower() in seen or NOT_APPS.search(name):
+                continue
+            data = read_plain(link, root)
+            target = shortcut_target(data) if data and len(data) < 1 << 20 else ""
+            if not target.lower().endswith(".exe") or NOT_APPS.search(target) or NOT_APP_PLACES.search(target):
+                continue
+            program = windows_path(target, root, profile)  # None on another drive: kept, without its icon
+            if program is not None and not program.is_file():
+                continue  # on Windows' drive, but gone: an app that was uninstalled
+            icon = None
+            if program is not None and no_links(program, root):
+                try:
+                    with open_plain(program) as f:
+                        icon = program_icon(f)
+                except OSError:
+                    pass
+            seen |= {f"app:{slug}", name.lower()}  # one of each, the person's own first
+            found.append({"id": f"app:{slug}", "name": name, "icon": icon})
+    for name, app_id, family, publisher, app in store_apps(root):
+        slug = slug_of(app_id)
+        if f"app:{slug}" in seen or name.lower() in seen or NOT_APPS.search(name):
+            continue
+        seen |= {f"app:{slug}", name.lower()}
+        found.append({"id": f"app:{slug}", "name": name, "icon": store_logo(root, family, publisher, app)})
+    return sorted(found, key=lambda a: a["name"].lower())
+
+
+def slug_of(name):
+    """As Monet Bridge's parse::slug: lowercase letters, digits and dashes (Monet's app ids)."""
+    out = ""
+    for c in name:
+        if c.isascii() and c.isalnum():
+            out += c.lower()
+        elif out and not out.endswith("-"):
+            out += "-"
+    return out.rstrip("-")[:64]
+
+
+def bring_apps(root, person):
+    """Writes the person's Windows apps where monet-quick makes app menu entries of them
+    (APPS_JSON, and their icons in APPS_ICONS), as the person. How many."""
+    person_name, uid, gid, home = person
+    found = windows_apps(root, person_name)
+    for app, png in zip(found, as_person(uid, gid, png_of, [a["icon"] for a in found])):
+        app["icon"] = png
+    listed = [{"id": a["id"], "name": a["name"], "icon": bool(a["icon"])} for a in found]
+    with person_rights(uid, gid):
+        icons, summary = home / APPS_ICONS, home / APPS_JSON
+        try:
+            icons.mkdir(parents=True, exist_ok=True)
+            summary.parent.mkdir(parents=True, exist_ok=True)
+            for app in found:
+                target = icons / APP_ICON.format(app["id"].split(":", 1)[1])
+                if app["icon"] and (not target.is_file() or target.read_bytes() != app["icon"]):
+                    write_own(target, app["icon"])
+            wanted = {APP_ICON.format(a["id"].split(":", 1)[1]) for a in found if a["icon"]}
+            for old in icons.glob(APP_ICON.format("*")):
+                if old.name not in wanted:
+                    old.unlink()
+            text = (json.dumps(listed, ensure_ascii=False) + "\n").encode()
+            if not summary.is_file() or summary.read_bytes() != text:
+                write_own(summary, text)
+        except OSError as e:
+            log(f"couldn't keep the list of Windows' apps: {e}")
+            return 0
+    return len(found)
+
+
+def write_own(path, data):
+    """Writes path whole or not at all (beside it first), never through a link."""
+    part = path.with_name(f".{path.name}.part")
+    part.unlink(missing_ok=True)
+    with os.fdopen(os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), "wb") as out:
+        out.write(data)
+    os.replace(part, path)
+
+
+def bring_files():
+    try:
+        state = json.loads(STATE.read_text())
+    except (OSError, ValueError):
+        return 0
+    person = owner()
+    if state.get("state") != "open" or person is None or not os.path.ismount(DRIVE):
+        return 0
+    bookmarks = bring_bookmarks(DRIVE, person)
+    if bookmarks:
+        log(f"kept {bookmarks} bookmarks from Windows' browsers for {person[0]}")
+    apps = bring_apps(DRIVE, person)
+    if apps:
+        log(f"listed {apps} of {person[0]}'s Windows apps for the app menu")
+    counts = bring(DRIVE, person)
+    if counts["pictures"] or counts["videos"]:
+        log(f"brought {counts['pictures']} screenshots and {counts['videos']} clips from Windows for {person[0]}")
+        BROUGHT.parent.mkdir(parents=True, exist_ok=True)
+        BROUGHT.write_text(json.dumps({**counts, "user": person[0], "time": int(time.time())}) + "\n")
+        BROUGHT.chmod(0o644)
+    return 0
+
+
+def unlock_from_settings():
+    """`unlock`, the recovery key on stdin (Settings, through monet-quick and pkexec): opens the
+    drive, lets Windows' setup put Monet Bridge in if it isn't there yet, and shares what it can
+    now. Prints {"result": "open" | "bad-key" | "wrong-key", "state": ...}."""
+    result = unlock(sys.stdin.read(200))
+    if result == "open":
+        run("systemctl", "start", "monet-windows-setup.service", timeout=600)
+        open_drive()
+        run("systemctl", "start", "--no-block", "monet-windows-files.service", timeout=30)
+    try:
+        state = json.loads(STATE.read_text()).get("state", "")
+    except (OSError, ValueError):
+        state = ""
+    print(json.dumps({"result": result, "state": state}), flush=True)
+    return 0
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        print("monet-windows-drive runs as root (monet-windows-drive.service).", file=sys.stderr)
+        return 1
+    if argv[:1] == ["bring"]:
+        return bring_files()
+    if argv[:1] == ["unlock"]:
+        return unlock_from_settings()
+    if argv[:1] == ["unlock-saved"]:
+        unlock_saved()
+        return 0
+    return open_drive()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

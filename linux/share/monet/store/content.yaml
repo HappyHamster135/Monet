@@ -1,6 +1,6 @@
 # The Store's front page (Bazaar's curated page): Monet's picks, each row
-# under a strip of The Hours, by daylight in Mist and by night in Smoke
-# (tools/make-store.py cuts them). Installed over Bazzite's page.
+# under a detail from a real Claude Monet painting. See ARTWORK-CREDITS.txt.
+# tools/make-store.py packages the art. Installed over Bazzite's page.
 rows:
   - banner:
       height: 300
@@ -101,7 +101,7 @@ rows:
   - section:
       title: "Work & make"
       subtitle:
-        string: "Writing, drawing, editing, sending."
+        string: "Writing, drawing, editing, sending, and tools for the command line."
       appids:
         list:
           - org.libreoffice.LibreOffice
@@ -116,6 +116,7 @@ rows:
           - org.kde.kdenlive
           - org.audacityteam.Audacity
           - org.ardour.Ardour
+          - io.github.dvlv.boxbuddyrs
 
   - banner:
       height: 300

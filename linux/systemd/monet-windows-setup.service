@@ -4,6 +4,8 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
+# A BitLocker drive whose recovery key was typed in Settings opens first, so Windows' setup finds it.
+ExecStartPre=-@LIBEXECDIR@/monet-windows-drive unlock-saved
 ExecStart=@BINDIR@/monet helper stage-windows
 StateDirectory=monet
 StateDirectoryMode=0755

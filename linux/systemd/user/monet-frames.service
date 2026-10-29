@@ -1,7 +1,12 @@
 [Unit]
 Description=Monet: a painted canvas for each app Monet hasn't painted, and games on a laptop's NVIDIA chip
+# Run on each change of what it watches, which often come several at once: never
+# turned away for running often (systemd's limit would stop it for the session).
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
+# A burst of changes becomes one run.
+ExecStartPre=/usr/bin/sleep 2
 ExecStart=@LIBEXECDIR@/monet-quick frames
 ExecStart=@LIBEXECDIR@/monet-look --games-gpu

@@ -25,6 +25,8 @@ PlasmoidItem {
     // Plein-air focus: while it runs, notifications are quiet and the painting goes from
     // dawn to night (monet-quick focus), so the light shows the time passing.
     readonly property bool focusSession: Plasmoid.configuration.focus === true
+    property string focusPending: ""
+    property string focusActive: ""
     property real now: Date.now()
     // What's left, in milliseconds: counting down, held, or all of it.
     readonly property real remaining: running ? Math.max(0, Plasmoid.configuration.ends - now)
@@ -41,7 +43,26 @@ PlasmoidItem {
         id: runner
         engine: "executable"
         connectedSources: []
-        onNewData: source => disconnectSource(source)
+        onNewData: source => {
+            disconnectSource(source)
+            if (source === root.focusActive) {
+                root.focusActive = ""
+                root.sendFocus()
+            }
+        }
+    }
+
+    // Start/pause/resume can happen faster than a helper finishes. Send the latest
+    // intent in order, so an older pause cannot turn off a newly resumed timer.
+    function requestFocus(command) {
+        focusPending = helper + " focus " + command + " " + Plasmoid.id
+        sendFocus()
+    }
+    function sendFocus() {
+        if (focusActive !== "" || focusPending === "") return
+        focusActive = focusPending
+        focusPending = ""
+        runner.connectSource(focusActive)
     }
 
     Timer {
@@ -85,14 +106,14 @@ PlasmoidItem {
         Plasmoid.configuration.left = 0;
         done = false;
         if (focusSession) {
-            runner.connectSource(helper + " focus " + Math.round(Plasmoid.configuration.ends / 1000));
+            requestFocus(String(Math.round(Plasmoid.configuration.ends / 1000)));
         }
     }
 
     // The painting and the notifications back as they were.
     function unfocus() {
         if (focusSession) {
-            runner.connectSource(helper + " focus off");
+            requestFocus("off");
         }
     }
 

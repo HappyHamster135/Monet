@@ -46,6 +46,16 @@ Monet's words are written in English in the code and translated in `po/`
   apps' plain names (`linux/share/monet/names.tsv`, which `monet-look` gives
   the apps it renames) and the USB stick maker's table (it picks Windows'
   display language).
+- `linux/share/locale/<language>@monet/LC_MESSAGES/<app>.mo`: KDE's apps
+  that Monet renames (Files, Terminal, Photos...) say their own name through
+  their translations, and Qt ends every window title with it ("Home —
+  Dolphin"). These small catalogs, one language of Monet's own for each of
+  its languages and English, hold only those names (`APP_NAMES`, from the apps'
+  own catalogs), and `monet-names.sh` (Plasma sources it as it starts, from
+  `plasma-workspace/env`) puts that language before the session's: "Home —
+  Files", in Swedish "Filer", and every other word as before. A display
+  language picked in KDE's own Region settings comes later in Plasma's start
+  and wins: then the titles are KDE's again.
 - Scripts say things through `monet-quick say TEXT VALUE...`; the Windows
   setup's progress lines carry their values beside the text.
 
@@ -103,19 +113,29 @@ No menu bar, no dock. Three floating glass islands along the bottom:
 
 | Island | What |
 |---|---|
-| Left | The Monet menu (the sun) and Windows Games (the sun as a play button) |
+| Left | The Monet menu (the sun) and Games (the sun as a play button) |
 | Middle | Apps and open windows, then Trash. Running apps get a small dab of sun under them: longer for the window you're in, faint when it's minimized, with a warm wash when an app asks for you. Pointing at one raises a pebble of glass |
-| Right | Quick Settings, status icons, the clock. Brightness and Night Light live in Quick Settings, beside Mist and Smoke, so KDE's own Brightness panel (with its second "Dark Mode" switch) stays out. The open icon's pebble keeps to its own cell: Plasma grows it by the island's margins on every side, so the style draws it inset by them |
+| Right | Quick Settings, Sound, status icons, the clock. Brightness and Night Light live in Quick Settings, beside Mist and Smoke, so KDE's own Brightness panel (with its second "Dark Mode" switch) stays out. Sound (`org.monet.sound`) is Monet's own, beside Quick Settings rather than in the tray, where KDE gives every item's popover its own header and box: the icon follows the volume, the wheel turns it, a middle click mutes, and its popover has the volume, where the sound plays and the apps playing (wpctl, `monet-quick sound`). KDE's volume item is known but not chosen in the tray; the volume keys and their on-screen level are KDE's audio shortcuts service, which needs no item. The open icon's pebble keeps to its own cell: Plasma grows it by the island's margins on every side, so the style draws it inset by them |
 
-The islands stay in view. Light & Wallpaper's "Bar steps aside" makes each a
-"dodge windows" panel, so it slides away when a window comes over it and back
-when you point at the bottom edge (KWin's sliding popups, 240 ms going and
-200 ms coming). 0.9.0 made that the default, and it left the bar hidden on
-some PCs: any mapped app window over an island counts, even one that draws
-nothing, and KWin brings a hidden island back only for a pointer pushed
-against the last row of pixels under it (in a VM, practically never). So
-0.9.1's layout has `hiding: none` again, and `monet-look` turns 0.9.0's
-change back once (`bar-shown`), with the switch off to match.
+The islands step aside: each is a "dodge windows" panel, so it slides away
+when a window comes over it and back when the pointer touches the bottom edge
+(KWin's sliding popups, 240 ms going and 200 ms coming). Light & Wallpaper's
+"Bar steps aside" keeps them in view. 0.9.0 made it the default and 0.9.1 took
+it back: KWin brings a hidden island back only for a pointer pushed past the
+last row of pixels, which a pen, a touchscreen or a VM's mouse can't do. Since
+0.9.4 `monet-look` sets KWin's `ElectricBorderPushbackPixels=0`, so touching
+the edge is enough, the layout has `hiding: dodgewindows` again, and accounts
+that hadn't chosen get it once (`bar-steps-aside`). Kept in view, all three
+islands are alike: "windows go below" panels, over windows, none keeping room
+of its own. Plasma gives an always-shown panel room of its own and KWin stacks
+those rooms, so islands stood a bar's height above each other, and the middle
+one alone sat flat on the edge (found by the test bench and the owner).
+
+Where the processor draws the screen (a VM, a graphics card whose driver
+didn't load: no render node in /dev/dri) KWin leaves every animation out, the
+islands' slide too. With 6 or more processor threads Monet keeps them:
+`/etc/xdg/plasma-workspace/env/monet-motion.sh` exports
+`KWIN_EFFECTS_FORCE_ANIMATIONS=1` before KWin starts.
 
 The placard sits on the painting, top left.
 
@@ -168,33 +188,88 @@ hairline reads as a second box inside the first.
 
 | Where | How |
 |---|---|
-| Islands, popovers, tooltips | Plasma style `monet` (`tools/make-plasma-style.py`), radius 22 / 20 / 12, soft shadow that sits lower than the glass. A solid copy of each (`solid/`) for when a window touches the islands, and an opaque one (`opaque/`) without compositing, so they never turn into Breeze |
+| Islands, popovers, tooltips | Plasma style `monet` (`tools/make-plasma-style.py`), radius 22 / 20 / 12, soft shadow that sits lower than the glass. A solid copy of each (`solid/`) and an opaque one (`opaque/`) without compositing, so they never turn into Breeze. Adaptive transparency is off: a window touching the islands leaves them in the glass Settings has, blur and all, even as they slide away (they turned white on the way down) |
 | On the glass | The same style draws everything Plasma puts on it, so the app menu, search, the popovers, notifications, the lock screen and Alt+Tab are Monet's too: pebble buttons (radius 8, so check boxes stay round), a well with a lily ring for typing, soft highlights (an ink wash to point, lily for what's chosen), Monet Settings' switch and slider, glass tabs, hairline headings, a lily progress bar and a lily arc for "working" |
 | App windows (Files, Kate, ...) | Kvantum themes `Monet` and `MonetDark` (`tools/make-kvantum.py`): glass at the edges (title, toolbar, sidebar), paper or smoke under the content, rounded controls, a soft Lily selection. Menus and tooltips cast a soft shadow, blur with rounded corners, part groups with a hairline and highlight the item in lily, inset from the edge |
-| GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables |
+| GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables. GTK 4 apps draw their own title bar, so they also get Monet's window buttons: the sign alone, and under the pointer the title bars' dab (lily, ochre, the sun). Their page and section titles are in Fraunces. `monet-light` puts the sheet in place of KDE's own `gtk.css`, which for GTK 4 also imports KDE's window shape (`kde_window_geometry.css`); Monet's imports it too. Until 0.9.4 that second import made KDE's file look like someone's own, so GTK 4 apps never got Monet's sheet |
 | Zen, the browser | `linux/share/monet/zen`, which `monet-quick zen` copies into each Zen profile and imports from `userChrome.css` and `userContent.css` (at sign-in, and as Zen arrives or makes its profile: `monet-zen.path`; before Zen's first start, Monet makes its profile, already dressed). Behind the sidebar and around the page, the painting blurred and washed in paper or smoke (`tools/make-zen.py`); lily for the accent; Monet's paper and smoke for what pops up; radius 12. Tabs: an ink wash under the pointer, the open one on a pebble of paper. The address field is a well with a lily ring while you type; on a page it floats as a sheet with Monet's soft shadow. The space's name in Fraunces. Zen's welcome and its default-browser question are skipped: Monet makes it the browser. A new tab opens on the painting itself, by daylight in Mist and by night in Smoke. Zen follows the PC's light. Its own theme picker can't override Monet's colors; uninstalling Monet gives Zen its own look back |
-| Monet Settings | The Plasma style's dialog glass around a solid paper page |
+| Monet Settings | An app window in Monet's frame, as Games: the list on glass, a solid paper page |
 | Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
 
 Two global themes carry this into KDE's settings: **Mist** and **Smoke**
 (`org.monet.desktop`, `org.monet.smoke.desktop`), KDE's Light and Dark. They
-differ only in colors and never set the app style or the wallpaper, so
-choosing one keeps the glass and The Hours. Picking one on the first page of
+differ only in colors, name Monet's glass app style (`widgetStyle=kvantum`) and
+never the wallpaper, so choosing one keeps the glass and The Hours. Until
+0.9.4 they named no style, and KDE then wrote Qt's plain Windows style as the
+default and dropped the account's: every window and menu turned plain (found by
+the owner). `monet-light` puts the glass style back too, at every apply and
+right after KDE's buttons (`sync`), unless the account set a style of its own;
+and `monet-look` found Kvantum at all only from 0.9.4: it asked with one `ls`
+of two library folders, which fails when either is missing (Fedora has only
+lib64), so until then KDE's own style drew every app. Picking one on the first page of
 KDE's settings keeps Mist or Smoke, and its Automatic is Follow the hours
 (`monet-light sync`); KDE's own Global Theme page, with its "Dark Mode", is
-hidden. The painting goes with the light: Mist drifts between dawn and
-midday, Smoke between dusk and night (`monet-light paint`).
+hidden. Mist and Smoke are the colors; the painting goes through the whole
+day, dawn to night, whatever colors were picked, while Light & Wallpaper's
+Through the day is on (and through the seasons with Through the year). Off,
+it stays: on midday with Mist, on night with Smoke (`monet-light paint`).
+Until 0.9.4, Mist drifted only between dawn and midday and Smoke between dusk
+and night; people wanted the day on the wall with the colors they'd picked.
 
-Glass is for edges; anything you read sits on paper (or smoke). Turning
-**Glass** off in Settings switches to `monet-solid` and the `MonetSolid` /
-`MonetDarkSolid` app themes: the same shapes and colors, without the
-see-through. Monet turns it off by itself where the processor draws the
-screen (no graphics driver, or a virtual machine), until it's chosen.
-`monet-light` then leaves `~/.config/monet/glass-off`: the desktop widgets
-(`Glass.qml`) sit on paper instead of frosting the painting live, and the
-lock screen skips its full-screen blur, the two heaviest things to draw on
-an old PC.
+When something in More settings changed how Monet looks, Light & Wallpaper's
+**Monet's look → Put back** brings it back for that account in a few seconds,
+no restart: `monet-quick look-reset` runs `monet-look --reset` (an update's
+pass, keeping the panels, but every one of Monet's settings again, what was
+changed since included) and `monet-light paint wall`, which also brings The
+Hours back to a desktop where KDE's dialog put another wallpaper (choosing a
+painting in Settings does that too: it used to do nothing there). While it works
+the card says Putting it back…, then its pill says Done in lily for a few
+seconds (it had looked as if nothing happened). Reset this PC
+is the heavier way, for every account at the next start.
+
+KDE's System Settings, opened as More settings, says so in its windows' titles
+("Display Configuration — More settings"), through the same `<lang>@monet`
+catalogs that call Dolphin Files (`APP_NAMES` in `make-translations.py`, which
+takes a name that isn't a menu's from Monet Settings' own words).
+
+Switching takes about a second (it took three, and held up the bar): the
+switch reads KDE's settings from the files themselves rather than a
+`kreadconfig6` for each, the colors, app style, frames and terminal change side
+by side, and the painting goes to Plasma only when something about it changed
+(`$XDG_RUNTIME_DIR/monet-painted`), so Mist to Smoke doesn't reload it.
+
+Glass is for edges; anything you read sits on paper (or smoke). **Glass** in
+Light & Wallpaper is a slider of four steps (`monet-quick glass LEVEL`, saved
+as `"glass"` in prefs.json; 0.9.3's true and false are Clear and Solid):
+
+| Step | Panels and popovers | Apps | Frames | KWin's blur | Desktop widgets |
+|---|---|---|---|---|---|
+| Clear | `monet` | `Monet` | `Monet` | strength 3, no grain | the painting's strokes softened, with the lens |
+| Frosted | `monet` | `Monet` | `Monet` | strength 8, grain 3 | blurred twice as much, a heavier wash (`glass-frosted`) |
+| Matte | `monet-matte` | `MonetMatte` | `MonetMatte` | strength 12, grain 5 | only the painting's color, no lens (`glass-matte`) |
+| Solid | `monet-solid` | `MonetSolid` | `MonetSolid` | (no glass) | paper (`glass-off`) |
+
+Matte's themes are the glass ones taken 70% of the way to solid
+(`tools/make-plasma-style.py`, `make-kvantum.py`, `make-decoration.py`): the
+painting's color comes through, its strokes don't, and KWin's grain makes it
+read as etched glass rather than a grey film. `monet-light` loads KWin's blur
+whenever there's glass: on the first sign-in KWin can start without it, and
+glass without blur is a sharp see-through window (found by the test bench).
+
+Monet's own app windows (Games, Settings, the Store) are glass too, the way
+Settings' column was while it was a sheet of Quick Settings: each window is
+see-through, `glaze` (monet-games) asks KWin to blur behind it through KDE's own
+library (`KWindowEffects::enableBlurBehind`, called with ctypes, as there's no
+Python binding; the request is taken with the window's next frame), and
+`WindowGlass.qml` washes mist or smoke over the blur: 42% on Clear, 56%
+Frosted, 80% Matte, paper on Solid, following the slider at once through the
+same flags as the desktop widgets. The pages stay all paper. Without KWin's
+blur (another desktop, a PC whose processor draws the screen) they're paper.
+Monet picks Solid by itself where the processor draws the screen (no graphics
+driver, or a virtual machine), until it's chosen. `glass-off` also makes the
+lock screen skip its full-screen blur: with the widgets' live frost, the two
+heaviest things to draw on an old PC.
 
 An older PC (8 GB of memory or less, or `/sysroot` on a spinning disk:
 `monet-quick older-pc`) gets three things at each sign-in from
@@ -245,7 +320,7 @@ Settings in front of it.
 ## Icons
 
 - **Monet**: the sun and three strokes of its reflection. No container.
-- **Windows Games**: the same, with the sun turned into a play button.
+- **Games**: the same, with the sun turned into a play button.
 - **Every icon is a small oil painting** (`tools/make-icons.py`): short
   strokes of unmixed color side by side, shadows in violet and blue instead
   of grey, light in warm cream, and paint thick enough to catch the light
@@ -427,12 +502,17 @@ is tried again at the next sign-in.
   temperature (or the memory used) beneath and the network along the foot.
   KDE's own sensors (`org.kde.ksysguard.sensors`, as System Monitor); of two
   graphics chips the busier counts, and a part the PC can't measure leaves.
-- **Recently Played**: the Steam games played last (`monet-quick played`:
-  the appmanifests and each account's localconfig, newest first, Steam's
-  tools left out), each its tall cover from Steam's picture cache or a
-  painted card with its name, and when it was played; the sun comes up over
-  a cover under the pointer, and a click starts it the way Steam's Play
-  does (`monet-quick play`). As many as the card is wide.
+- **Recently Played**: the games played last (`monet-quick played`, newest
+  first): Steam's (the appmanifests and each account's localconfig, Steam's
+  tools left out), Heroic's (its `store/timestamp.json`), Lutris' (`lastplayed`
+  in its pga.db) and the ones Monet sent to Windows (`monet` records each
+  trip's game in `~/.local/state/monet/played-windows.json`); the latest of a
+  game played on both sides counts. Each its tall cover (Steam's picture cache
+  or its store's, Lutris' cover art) or a painted card with its name, and
+  when it was played; the sun comes up over a cover under the pointer, and a
+  click starts it the way its launcher does (`monet-quick play`), or, for one
+  played in Windows last, asks before restarting there (`monet play …
+  --confirm`, as the app menu's games). As many as the card is wide.
 - **Timer**: the sun goes round a ring as the time runs out; 3, 5, 10 or 25
   minutes, or the wheel over the time. The end is kept, not the count, so it
   keeps going if Plasma starts again; when it's up, `monet-quick ring` says
@@ -490,6 +570,17 @@ is tried again at the next sign-in.
   does, a picture of it, + Add in lily, and "On your desktop" with Remove for
   the ones out already. Everyone else's widgets (KDE's too) are a plain list
   under More widgets. Click a card to add it, or drag it where you want it.
+- **The desktop's right-click menu**, as Windows has it: Create New, Paste,
+  Undo and Icons (Files' part), Open Terminal and Add or Manage Widgets, then
+  **Display settings** and **Personalize**, which open Monet Settings' Display
+  and Light & Wallpaper pages, in Windows' own words in each language. The
+  Hours adds those two (a wallpaper's entries are the only ones Plasma's menu
+  takes in), with the runner that opens Settings made only when one is clicked,
+  as the lock screen shows The Hours too. KDE's Desktop and Wallpaper and
+  Display Configuration (they opened KDE's dialogs), its edit mode, Lock Screen
+  and Show Logout Screen are out (`monet-fresh`, once per account, again after
+  a fresh layout). With a wallpaper other than The Hours, Light & Wallpaper's
+  Put back brings it and the two entries back.
   The pictures are just the widget, cut out with its shadow: its glass as
   it frosts The Hours, but no painting around it. In mist and in smoke
   (`contents/screenshot.png` and `screenshot-smoke.png`, which KDE's
@@ -505,7 +596,13 @@ is tried again at the next sign-in.
   Done. KDE's edit mode blurs the whole desktop behind the frame and draws it
   twice, at every change, which stutters wherever the processor draws the
   screen (as in a virtual machine); the wash doesn't. Shell file, kept KDE's
-  and swapped as with the gallery (`DesktopEditMode.qml`).
+  and swapped as with the gallery (`DesktopEditMode.qml`). The bar's islands
+  stay on one row: while editing, Plasma gives each its own strip of the screen,
+  and KWin used to pile them up a bar's height apart. Monet Snap moves each one
+  back down. Plasma widens the islands for editing a moment after it piles them
+  up, so the move uses the new width (worked out from where KWin put the
+  island), not the one it still has; using that would have sent Plasma's
+  width back to it.
 
 ## The menu
 
@@ -531,8 +628,8 @@ sidebar; the files on paper; folders big enough to see their paintings
 (80 px, previews on); a soft Lily wash for the selection instead of a solid
 block.
 
-**Monet Settings** (`org.monet.quick/contents/ui/MonetSettings.qml`): one
-glass sheet, about 1000 × 700. What other systems have, Monet's way: Sound
+**Monet Settings** (`monet-settings`, its window `share/monet/settings-app/MonetSettings.qml`):
+one window, about 1000 × 780. What other systems have, Monet's way: Sound
 lists the apps playing and gives each its own volume (`wpctl` streams, as
 Windows' mixer does); Quick Settings picks where sound plays under its
 volume; Wi-Fi offers a hotspot (NetworkManager's own, named after the PC
@@ -640,7 +737,16 @@ the rest, and `monet-look` sets Spectacle's `ocrLanguages` to your language
 and English once (`ocr_language`: `sv_SE.UTF-8` is `swe`), unless you've
 chosen others. Storage shows what fills the disk in one bar (games,
 apps, your files, Monet) and makes room: the Trash, asked once more before
-it's emptied, and Downloads, opened in Files. Updates offers the Monet
+it's emptied, and Downloads, opened in Files. Its OneDrive card puts OneDrive in
+Files: `monet-quick onedrive-connect` answers rclone's setup questions with their
+defaults (`rclone config create --non-interactive`, then `config update
+--continue` for each step) except that the sign-in happens in the browser here,
+then `monet-onedrive.service` mounts it at `~/OneDrive` at each sign-in, with a
+place of its own in Files (`files_place`'s `monet-onedrive`). Files come down as
+they're opened and stay cached a month (up to 20 GB). While the browser's
+sign-in waits, Cancel stops rclone (`onedrive-cancel`), and whatever rclone kept
+of the unfinished sign-in is deleted. Disconnect stops the
+mount, forgets the account here and takes the place away. Updates offers the Monet
 before the last update, kept by bootc: Go back, asked once more, starts it
 at the next restart, and lists what's new in this Monet (the newest "New in"
 section of the release notes, which the package carries); once after an
@@ -657,9 +763,23 @@ shows each printer (the ones on the network turn up by themselves), its
 state and what's waiting, and makes one your default (yours alone, no
 password); adding one is KDE's page. Mouse & Keyboard ends with the keys to
 learn by, as key caps, the Windows key as its four panes. The `monet-quick`
-helper does the work. Settings in the dock and the app menu runs `monet-quick open [page]`,
-which rings Quick Settings to open the sheet; without Quick Settings it opens
-KDE's System Settings instead. Pictures come from `make-icons.py` into
+helper does the work. Settings is an app of its own (`monet-settings`, since
+0.9.4; a sheet of Quick Settings before), built from Games' pieces: Qt for
+Python, Monet's words through KDE's i18n calls (`Words`), `helper.run` for
+monet-quick and monet, and one window (a local socket hands a second start's
+page and activation token to the open one, which goes to that page). Its
+window is `linux/share/monet/settings-app/MonetSettings.qml`, in Monet's frame:
+KWin resizes it, fills the screen with it and snaps it, a bar restart doesn't
+close it, it keeps its size (QtCore's Settings), and it takes the keyboard (its
+search, Esc to close). The menu, the dock and Windows+I start it directly;
+Quick Settings, the desktop's menu, links and notifications go through
+`monet-quick open [page]`, which starts it in a scope of its own (systemd-run,
+app.slice), or KDE's System Settings where it isn't installed. Opened again
+from the bar, an open Settings has no token of the desktop's to come forward
+with, so Monet Snap lets Monet's own apps (Settings, Games) forward when they
+ask (KWin only flashed them in the taskbar). It opens in about 1.3 seconds in
+the test VM, which draws on the processor; the sheet was there at once, as
+part of the bar. Pictures come from `make-icons.py` into
 `linux/share/monet/settings`.
 
 **More settings** is KDE's System Settings, one click away from Monet
@@ -670,8 +790,27 @@ paintings with a white sign, one painting per part of the list
 and light take care of (KDE's Global Theme with its Dark Mode, Day-Night
 Cycle, colors, styles, window frames, icons, splash and sign-in screens,
 effects), KDE's updater, and the pages about what's inside, like About
-this System. Help menus don't offer About KDE (KDE's kiosk settings,
-written by `monet-look`).
+this System. KDE's own first page (Quick Settings, with its own theme
+buttons and wallpaper), its wallpaper page, Activities and KDE Wallet go
+too. The list is one file, `share/monet/hidden-settings-pages`: `install.sh`
+adds it to `/etc/xdg/kdeglobals` for everyone, since Bazzite locks that
+group there (`[$i]`) and KDE then ignores an account's own copy, which
+`monet-look` still writes for systems without the lock. Without its first
+page KDE's settings would open on a page saying Plasma, so Monet always
+opens them at a page: the one for where you are in Monet Settings (Light &
+Wallpaper goes to Fonts), otherwise General Behavior (`KDE_PAGES` in
+`monet-quick`, `kdePage()` in Settings, and the hidden menu entry's `Exec`).
+Its groups say what Monet Settings says (Display, Sound, Default Apps,
+Desktop): user-level copies of KDE's group files, which it reads first. The
+pages keep KDE's names, which are built into each page. Help menus don't
+offer About KDE (KDE's kiosk settings, written by `monet-look`).
+
+An update runs `monet-look` again (`--keep`, once per Monet version). It writes
+a setting only where it still holds what Monet wrote last time
+(`~/.config/monet/look-written`), so a font, pointer, sound or screen edge
+someone picked since stays theirs; the global theme's pointer is kept around
+its re-apply too. An account from before that record gets Monet's values once
+more, as every update did before.
 
 **Built in** (`image/Containerfile`): the everyday apps are part of Monet,
 not downloads: Photos, Documents, Video, Music, Calculator and Archives,
@@ -682,14 +821,23 @@ kind of file opens in its app from the start (`/etc/xdg/mimeapps.list`,
 written by install.sh): pictures in Photos, PDFs and e-books in Documents,
 films in Video, songs in Music, archives in Archives, text in the Text
 Editor, rather than in whichever app claims it first. Zen and the big apps
-come from Flathub (`monet-apps`), which skips anything built in.
+come from Flathub (`monet-apps`), which skips anything built in. Carlito and
+Caladea, as wide as Calibri and Cambria, keep Word and PowerPoint files' lines
+and pages in the office apps (the base has Liberation for Arial, Times New
+Roman and Courier New).
+
+Files lists only what people open under Devices: USB sticks, other disks and
+Windows' drive. Monet's own disk (Setup's `monet`, btrfs or its encrypted
+container) and its start-up files (`boot`) are left out by
+`90-monet-system.rules`, and the read-only system root, which Files showed as
+a nameless drive with a full red bar, by a hidden place (`monet-quick
+files-place` at sign-in, as Files' own Hide does it).
 
 Apps go by what they are, not their project names: Files, Terminal, Text
 Editor, Photos, Documents, Screenshot, Store. KDE's and Bazzite's own tools
 (Info Center, Welcome Center, Bazzite's portal, links and updater, the
-input-method and app-style tools) stay out of the menu, and nothing greets you from Bazzite or KDE. The Store's front page
-is Monet's picks under strips of The Hours, by daylight in Mist and by
-night in Smoke (`make-store.py`).
+input-method and app-style tools) stay out of the menu, and nothing greets you from Bazzite or KDE. The Store is
+Monet's own (below).
 
 When an app closes unexpectedly, a short note says so, with its name and
 picture and **Open it again** (`monet-crash@.service`, which install.sh
@@ -710,6 +858,86 @@ isn't in the menu. KDE's crash reporter isn't there: Bazzite leaves it out.
 
 Desktop animation speed 0.8x. Windows scale gently in and out. With
 animations turned off in More settings, Monet's widgets fade or cut.
+
+## Windows, snapped as in Windows
+
+Monet Snap (a KWin script, `share/kwin/scripts/monet-snap`) does what Windows 11
+does with a window you drag, in Monet's glass. Settings → Light & Wallpaper →
+**Snap layouts** turns it off (`monet-quick pref snap`). Off, the script's
+snapping stops (kwinrc `[Script-monet-snap] Snapping`), KWin's own edges and
+top take a window again (half the screen, all of it), and Windows+Z leaves the
+shortcut list. The script itself stays loaded, since it also keeps the bar's
+islands on one row while widgets are edited. An update keeps the choice
+(`monet-look`'s record), and Put back does too.
+
+- **Snap layouts.** While a window is dragged, a sliver of glass waits at the top
+  of its screen (rise). Bring the window up to it and it opens into five layouts
+  (halves; two thirds and a third; thirds; a half and two quarters; quarters).
+  The part under the pointer lights in lily and a pane of lily-tinted glass shows
+  where the window goes (glide between parts); let go and it's there.
+- **Edges and corners.** The left and right edges take halves, the corners
+  quarters, the top the whole screen, with the same preview. KWin's own edge
+  tiling and top-edge maximizing are off (`monet-look`), as they'd answer the
+  same drags with KDE's outline.
+- **Snap Assist.** After a snap, from a drag, Windows+Left/Right or Windows+Z,
+  the rest of the layout offers the other windows as pictures on a pane of glass,
+  one part at a time; a picked window takes its part and comes to the front; a
+  click anywhere else, the pane's empty glass too, and it's gone. The arrows
+  and Tab walk the pictures (a lily ring), Enter or Space picks, Esc closes it.
+- **Windows+Z** shows the layouts for the window you're in, to click, or to
+  walk with the keys: left and right go part by part through all the layouts,
+  up and down from layout to layout, Enter or Space chooses, Esc puts them away.
+  Or Windows' numbers: each layout has its number under it, and once one is
+  picked (its number turns lily), its parts show theirs, and a part's number
+  puts the window there. Monet Snap borrows 1 to 9 too while it's up.
+- **Notifications inside the screen.** Plasma places a notification by its
+  content's width, which Monet's glass frame is wider than, so Monet Snap moves
+  one that reaches past its screen's edge back inside (`keepInside`, on every
+  change of its geometry). It then ends where the islands do.
+- **Its own size back.** A window Monet Snap put somewhere goes back to its own
+  size when it's dragged away, held where it was held.
+- **Edges shared.** Snapped windows share their edges, as in Windows: one made
+  bigger or smaller by an edge moves the edge
+  of each snapped window beside it, so neither goes over the other (Settings,
+  made wider, went under the store beside it). Dragged away, a window leaves
+  the group.
+- **Full height.** A window stretched by its top or bottom edge to the screen's
+  takes the whole height.
+- **Edge to edge.** Snapped windows meet each other and the screen's edges, with
+  no gap: each frame fills its part exactly, including apps that draw their own
+  title bar. Resizing a shared edge uses those same frame rectangles.
+- **Easy to take hold of.** KWin draws Monet's frames with no borders of its own
+  (`BorderSize=None`, `monet-look`), so it gives every window room to resize
+  outside it, all along the sides and bottom. The theme's padding matches the
+  shadow's actual size (`make-decoration.py`). Adding four pixels to it painted
+  a pale outline outside Settings and required compensating gaps when snapping;
+  that extra rim is gone. Apps using system decorations retain that frame.
+- **A continuous frame for Monet's apps.** Settings, Store and Games use the shared
+  `monet/games/MonetWindow.qml`: one glass surface behind their title and sidebar,
+  following the user's Clear, Frosted, Matte or Solid choice. Its outer corners and
+  KWin blur region use the same 14-pixel radius; maximized windows have square corners.
+  The title moves the window and double-clicking it maximizes/restores. Eight grips
+  cover every edge and corner, including the top, and hand resizing to KWin so snap
+  layouts keep working. Minimize, maximize/restore and close have keyboard focus,
+  accessible names and tooltips. These apps draw their own frame instead of adding
+  an Aurorae title strip with a different opacity.
+
+Monet Motion (a KWin effect, `share/kwin/effects/monet-motion`, in place of
+KWin's Stretch) makes windows glide where they're put: maximized and restored,
+snapped (just let go of, or moved and resized at once by KWin or a script),
+stretched to full height. The old picture grows into the new place and fades
+into the new one (300 ms, out cubic). Never a window held by hand, nor one an
+app resizes in place: on Wayland an app can resize its window but not move it.
+
+KWin never gives a script's own windows the keyboard (`InternalWindow`
+doesn't take focus), so while Snap Assist or Windows+Z is up, Monet Snap makes
+KWin shortcuts for the arrows, Tab, Enter, Space and Esc, and removes them
+200 ms after both are gone. Gone, KDE switches them off and the keys reach apps
+again. The pause is for the layouts handing over to Snap Assist: removing the
+old shortcuts while making the new ones switched the new ones off. KDE's
+shortcut list (More settings) shows them as "While Snap Assist or the snap
+layouts are open". (A full-screen QML effect could have taken the keyboard, but
+it replaces the whole picture of the desktop.)
 
 ## Sound
 
@@ -849,6 +1077,41 @@ for every quarter of an hour), at most once a day, rsync copies the home to
 copy replaces or deletes is kept beside it by date for three months. A week
 without a copy says so once.
 
+## A guest
+
+Settings → Accounts → **Guest** (after an administrator's password: `monet-guest`
+isn't on Monet's polkit list) adds a `guest` account with no password, called
+Guest in the language Settings speaks ("Gast", "Invité"), a face
+from Monet's avatars (through AccountsService) and no screen lock. Its home is a
+btrfs subvolume of its own, so the hourly earlier versions of everyone's files
+never hold one guest's things for the next (and the guest's Backups page has
+none). When the guest signs out, a drop-in on its `user@UID.service`
+(`ExecStopPost=+…monet-guest wipe`, as root) ends what they left running,
+deletes the subvolume and makes a new one from `/etc/skel`, labelled for
+SELinux as useradd would; `monet-guest-wipe.service` does the same before every
+sign-in screen, after a crash say, and never while they're signed in. Monet's
+own no-password helpers don't apply to a guest (the polkit rule leaves the
+`guest` user out): Play on Windows and the rest ask for an administrator.
+Settings → Accounts' other people leave the guest out; turning Guest off removes
+the account and all it holds. `/var/lib/monet/guest` keeps the uid monet-guest
+gave it, and only that account is ever wiped or removed: someone's own account
+that happens to be called `guest` is left alone (Guest then doesn't turn on).
+A guest can't keep things running after signing out: logind ends what they
+left running (`KillUserProcesses` for `guest` only, in `logind.conf.d`), the
+polkit rule refuses them lingering, and a wipe ends whatever's left. `su`
+never becomes the guest (`pam_succeed_if` in `/etc/pam.d/su`: their empty
+password is for the sign-in screen, not for another account here). A wipe
+first moves the last guest's home aside, root's only (`/var/home/.guest-…`),
+puts a new one in its place, built root's only under another name and given to
+the guest when it's ready, and only then removes the old one, subvolumes or
+snapshots they made inside it first, deepest first; one that won't all go stays
+root's only until the next wipe. What a guest left in `/tmp`, `/var/tmp` and
+`/dev/shm`, their mail and their timed jobs go too. Turning Guest off ends the
+guest's sessions, waits until nothing of theirs runs, and only forgets the
+account when `userdel` has removed it. Windows' Games folder is never the
+guest's, and a guest sees nothing of Windows: no games from it in Games or the
+menu, no notes about it.
+
 ## Safety and recovery
 
 **A new Monet that doesn't start goes back by itself** (`monet-boot`). At
@@ -938,8 +1201,37 @@ Monet's (`firewall-offline-cmd`, only warning if it can't); an existing system
 gets the zone in `/etc/firewalld/zones` and nothing changes. Settings →
 Security's switch, "Only what Monet uses comes in", sets it or goes back
 (`monet-secure firewall-strict on|off`, remembering the zone it leaves in
-`/var/lib/monet/firewall-zone-before`); a game hosted for others nearby may
-need it off. Uninstalling goes back to that zone before removing Monet's. `monet-secure` runs through pkexec and always asks
+`/var/lib/monet/firewall-zone-before`). Under it, while Monet's zone is on,
+**Apps that can accept connections** lets in one at a time: games you host
+(Minecraft, Terraria, Valheim, Factorio, Stardew Valley), LocalSend, Syncthing,
+streaming this PC with Sunshine, and Deskflow. Each is a fixed set of ports in
+`monet-secure` (`firewall-allow NAME on|off`: names only, never typed ports),
+written as a firewalld policy of its own (`/etc/firewalld/policies/monet-allowed.xml`,
+ANY → HOST, CONTINUE, priority -10, the shape of firewalld's own allow-host-ipv6),
+so Monet's zone stays as the image has it and an update can still change it. The
+names chosen are in `/var/lib/monet/firewall-allowed.json` for Settings to read.
+
+**Windows' question** comes from `monet-listening.service`, a user unit running
+`monet-quick listening`.
+- **What it watches:** every 5 seconds it reads `ss -Hltnp`. That lists TCP ports
+  waiting for others; for anyone but root, only the person's own processes have
+  names. It ignores this PC's own addresses, ports below 1024, and ports the
+  network reaches already (Monet's zone, the apps above, ports allowed before).
+- **When:** only while Monet's zone is the default, checked each minute.
+- **What it asks:** once per program and port, it posts a critical notification,
+  so it stays until answered: "%1 wants to accept connections", with Allow and
+  Keep blocked. The program is named by its app menu entry (from its systemd
+  unit, Flatpaks too), otherwise by its process.
+- **Allow:** runs `monet-secure firewall-allow-port NAME tcp/PORT on`, which asks
+  for an administrator as Windows' shield does. It checks the name and the port
+  (TCP, 1024 and up). The port joins the same policy, and the list in
+  `/var/lib/monet/firewall-allowed-ports.json`.
+- **Afterwards:** the answer, either one, is kept in
+  `~/.config/monet/listening.json`. Security lists each program asked about,
+  with a switch to let it in or out again.
+
+UDP isn't watched: a UDP socket doesn't say whether it waits for others.
+Uninstalling goes back to that zone before removing Monet's. `monet-secure` runs through pkexec and always asks
 for an administrator's password: it's not on the list Monet's polkit rule
 lets through.
 
@@ -965,9 +1257,30 @@ at a later start. So: pair in Monet, then once in
 Windows, and the device works in both. Monet doesn't write Windows' registry:
 Windows only learns a device by pairing it itself.
 
+Wi-Fi works in both the same way. Whenever Windows' drive is open
+(`monet-windows-drive`, at start), the networks Monet knows that Windows
+wasn't given yet, or whose password changed (a hash of each profile in
+`/var/lib/monet/wifi-given.json`), go to `C:\ProgramData\Monet\wifi` as
+WLAN profiles, made as Monet Setup makes them for a Windows it installs
+(`monet-prepare-windows`' `wifi_profiles`); Monet Bridge adds them for
+everyone at its next start (`netsh wlan add profile … user=all`) and removes
+the files, which hold the passwords. Bridge makes that folder for
+administrators only, and Monet writes there only when it's there: Linux's
+NTFS drivers give a file they make its folder's permissions (ntfs3 does), so
+one Monet made itself would let every Windows account read them. The other way, Bridge exports Windows'
+networks on the way back (`netsh wlan export profile key=clear`) into
+`wifi-out`, a folder only administrators can read, and at Monet's next start
+each one NetworkManager doesn't know (by name) becomes a profile for
+everyone (`system-connections`, 0600: WPA, WPA3 or open; work and school
+ones need more than a password and stay in Windows); the exported files go.
+
 The PC's clock keeps UTC for both: Monet Bridge's installer sets Windows'
 `RealTimeIsUniversal`, so Windows' clock isn't off by the time zone after a
-switch.
+switch. And each trip's request carries Monet's time zone as Windows names it
+(`tz`, from `monet-prepare-windows --windows-zone`'s list, checked to be a
+name Windows could have; a Bridge from before it ignores it), and Bridge sets
+it with `tzutil` when Windows' differs, so after a journey both show the
+same time.
 
 A Windows that Monet installed wears The Hours (`wallpaper.jpg` in the
 Windows package, set by `Install-Monet.ps1 -FromMonet`); a Windows kept from
@@ -1036,6 +1349,18 @@ done, `games-updated` goes into the games list (`games_updated`) and Settings
 says when it was last done. Switch off now stops it there. A Monet Bridge
 from before tasks reads either request as opening Windows.
 
+**Your apps again.** A trip restarts the PC, so open apps close. Just before
+it, `monet` (the person's side, before it asks the helper to switch) runs
+`monet-quick remember-apps`: the apps running now, from the systemd units
+Plasma starts each app in (`app-[LAUNCHER-]ID@RANDOM.service` or
+`app-[LAUNCHER-]ID-RANDOM.scope`, the menu entry's name with its dashes
+escaped), without Steam, Monet's own, the hidden ones and those that start at
+every sign-in anyway, at most twelve, into `~/.local/state/monet/trip-apps.json`.
+At the next sign-in within twelve hours `monet-session` starts them again,
+once, those not running yet. Browsers and the like reopen their own windows
+and tabs. Settings → Play on Windows → **Open your apps again** turns it off
+(`~/.config/monet/trip-apps-off`).
+
 ## The last 30 seconds
 
 Games & Controllers turns on `monet-replay.service` (per person): GPU Screen
@@ -1051,10 +1376,510 @@ saves an MP4 in Videos.
 `monet-quick game-marks` reads AreWeAntiCheatYet's list (MIT, fetched at most
 every three days, kept as Steam ids and a word): Supported and Running play in
 Monet, Broken, Denied and Planned need Windows; games it doesn't list mostly
-have no anti-cheat and get no mark. Play on Windows' covers and the Windows
-Games widget mark those that play here too, and Games & Controllers lists the
-games installed here that need Windows, with Play on Windows when they're
-there too.
+have no anti-cheat and get no mark. Epic's games are marked by their
+namespace, which Heroic's library knows too. Play on Windows' covers mark
+those that play here too, and Games & Controllers lists the games installed
+here that need Windows, with Play on Windows when they're there too.
+
+Players' reports count too, from ProtonDB: a Steam game installed here that
+ProtonDB rates borked, overall and by its recent reports, plays on Windows as
+an anti-cheat one does (AreWeAntiCheatYet's word wins where it has one), and
+its sheet says players report it doesn't run in Monet. Only the Steam games
+installed here are asked about (its summaries, one per game), each at most once
+a week, by `monet-quick protondb-refresh` in the background after the gallery
+opens, at most every ten minutes when it couldn't get through; nothing waits on
+it. Reports can be out of date, so the game's menu has Play in Monet. They
+speak for Proton only, so they count only for a game whose Windows build Steam
+installed here (a program for Windows in its folder); one with a Linux build of
+its own runs that.
+
+## Windows' keys
+
+Hands that learned Windows find its keys here: Ctrl+Shift+Esc shows what's
+running (System Monitor), Windows+I opens Settings, Windows+A Quick Settings,
+Windows+G Games (Windows' Game Bar), Windows+R runs or finds
+something, Windows+E opens Files, Windows+Shift+S takes part of the screen, and
+Windows+Up and Down maximize and minimize a window (KWin had them tile to the
+top and bottom), Windows+Z shows the snap layouts, and Windows+Space switches to
+the next keyboard layout (beside KDE's Meta+Alt+K; since 0.9.4, once for every
+account, `keys-094`), and Windows+Tab shows all the windows, as Windows' Task View (it was a second Alt+Tab). Each adds to the keys a tool has: its own stay.
+`monet-keys.service` sets them once per account before KWin reads its keys
+(`monet-look --keys`, into `kglobalshortcutsrc`), so they work from the first
+sign-in; Windows+A and Windows+G are the widgets' own keys, given once Plasma's
+running (`monet-look --widget-keys`). A key someone changes afterwards stays
+theirs. Settings → Mouse & Keyboard lists them to learn them by.
+
+## Windows programs
+
+A Windows program or installer opened in Files (an `.exe` or `.msi`; Monet's entry
+is the default for them) brings up Monet's sheet, which Quick Settings shows as
+it shows Settings (`monet-quick windows-program` rings the same doorbell): the
+program's name and a choice. **Run in Monet** runs it through Proton, as Windows
+games run here (`umu-run`, in the image, in a Windows of Monet's own for
+programs, `~/.local/share/monet/windows-programs`, with Steam's Proton when
+Steam has one and umu's own otherwise; the first time, a note says umu is
+getting ready). It runs in a user unit of its own, and afterwards each program
+an installer put in the Start menu becomes an entry in Monet's app menu (its
+shortcut's target, read from the `.lnk`'s LinkInfo; uninstallers left out,
+entries whose program is gone removed). **Open in Windows** copies it into the
+folder for files on both sides (`C:\Shared with Monet` in Windows, where it
+stays to open again; one saved there already isn't copied at all) and restarts
+with `program:<its place there>`; Monet Bridge finds it there and starts it as you, never as administrator, and Windows stays, as when
+it's opened from Monet. When Windows' drive isn't open this time, is someone
+else's, or has no room, the sheet says so and Open in Windows waits. Files'
+menu on a Windows program has Run in Monet and Open in Windows… too.
+
+**Your Windows apps** (Word, Photoshop, iCloud's, G Hub) are in Monet's app menu
+and its search, each saying "Opens in Windows". When Windows' drive opens,
+`monet-windows-drive bring` reads the Start menu (the person's own Windows
+account's, then everyone's). It reads each shortcut's target from its LinkInfo,
+or from the path it keeps with environment variables. It leaves out:
+- Windows' own tools, and its system folders in the menu.
+- Games and their launchers: Games has them.
+- Browsers, since Zen has their bookmarks, and OneDrive, since Files has it.
+- Uninstallers and help, and shortcuts whose program is gone.
+
+Each app's icon comes from its program's own resources (PE icon groups, a PNG or
+a bitmap turned into one with Pillow). The icons go into the person's icon theme
+(`hicolor/256x256/apps/monet-windows-app-*.png`), where Monet frames them as it
+frames any app's. The list goes beside them (`~/.local/share/monet/windows-apps.json`).
+
+At sign-in, `monet-quick windows-apps` turns the list into entries
+(`monet-windows-app-*.desktop`), unless Monet has an app of that name itself
+(Discord, Spotify). Choosing one rings the same doorbell as a program
+(`windows-app`): the sheet shows the app with its icon and one bright Open in
+Windows, and the restart carries `app:<slug of the shortcut's place under
+Programs>`. Monet Bridge looks the id up as the person (`scan_apps`, so their own
+Start menu counts) and opens the shortcut itself, so its arguments and folder are
+Windows' own. Windows stays, as for programs. Without Quick Settings, `monet play
+app:… --confirm` asks instead.
+
+**Microsoft Store apps** (iCloud, WhatsApp, the new Teams) have no shortcut on
+the drive, so Windows lists them itself.
+- **Listing them:** at each sign-in, Monet Bridge's Agent (which runs as the
+  person) asks `Get-StartApps` for the apps whose ids are a Store app's
+  (`Family_PublisherId!App`). It keeps a checked list in the shared Games
+  folder's `.monet/store-apps.json` (`parse::store_apps`).
+- **Reading them here:** `monet-windows-drive` reads that list, leaving out
+  Windows' own apps (Calculator, Photos, Settings), Xbox's and the like.
+- **Logos:** each logo comes from the app's package on the drive (`Program
+  Files/WindowsApps`, the newest version). That's its manifest's
+  `Square44x44Logo`, the biggest file of it, unplated first.
+- **Opening one:** Bridge opens it with `explorer.exe shell:AppsFolder\<id>`.
+
+Advertised shortcuts (an older Office's), which lead to no program, aren't
+listed. The app menu's search finds them, and so does the Store's.
+
+## The Store
+
+The Store is Monet's own window (`monet-store`, Qt for Python as Games and
+Settings are), in place of Bazaar, which couldn't take results from outside and
+didn't look like Monet. It's built from what's on the PC already:
+- **The catalog** is Flathub's AppStream file, which Flatpak keeps up to date
+  (`/var/lib/flatpak/appstream/flathub/x86_64/active`), read with ElementTree in
+  under a second: names, summaries, descriptions, keywords and screenshot
+  captions in the nearest language (each is given once per language), its
+  cached icons, whether Flathub checked the developer, the licence and the last
+  release. A new Monet without the file asks Flatpak for it first.
+- **What's kept out:** Bazzite's blocklist (`/usr/share/ublue-os/bazaar/
+  blocklist.yaml`, the blocks without conditions and the ones for KDE), runtimes,
+  and anything without a proper app id.
+- **Hung like a gallery**, so it isn't one more grid of cards:
+  - **Today's pick** opens the front page: a screenshot hung in a paper mat on
+    the painting of what the app is for, with a placard to install it from (one
+    of Monet's picks, another each day).
+  - **Rooms:** each row of Monet's picks (`store/content.yaml`) is a strip of
+    The Hours with its placard pinned to the edge, the first apps framed (their
+    screenshot in a mat, the app's picture pinned to it, the label under it),
+    the rest as a wall of small tiles that say what they're for under the
+    pointer.
+  - **Most installed this month**, numbered in Fraunces, after the first room;
+    **Fresh paint** (apps people use with a release in the last 30 days) on a
+    band of brushstrokes after the third.
+  - **Sections** each have their own painting, cut from all four series by
+    daylight and by night (`make-store.py`), with the section's name on a
+    placard. They sort by Popular (Flathub's monthly installs, kept a day in
+    `~/.cache/monet/store/popular.json`), Recently updated or Name (kept for next
+    time), narrow to a kind of app (`KINDS`: Strategy, Emulators, Making music,
+    Code editors…, each with how many), and to the apps Flathub checked. In the
+    Popular order the top three stand on a podium, framed and numbered.
+  - **An app's page** is under its section's painting, fading into the paper,
+    with its picture on a paper tile over the painting's edge; its screenshots
+    as a gallery (one big in a mat, a caption in Fraunces, the rest to pick
+    from), and More like this at the end (the most AppStream categories in
+    common, a kind counting more than a section).
+- **Scrolling** glides: Kirigami's WheelHandler on every page (a notch is 96
+  pixels, as smooth scrolling is set in Plasma), and no sideways list on a page
+  catches the wheel.
+- **Search** wants every word somewhere (name first, then keywords, the id and
+  the summary) and breaks ties by installs. It also looks through the apps in
+  the person's Windows (`windows-apps.json`, opening there). An app only made
+  for Windows (Photoshop, Office, Premiere) gets a note with what does the same
+  here; when it's in their Windows, it's listed under it.
+- **An app's page:** screenshots (Flathub's own copies, kept on disk), the
+  description, what it can reach (its Flatpak metadata from `flatpak
+  remote-info`, said plainly: programs outside, all files, the home folder,
+  devices, the internet), download and disk sizes, version and website.
+- **Install and remove** run `monet-store --do` in a process of its own, which
+  uses libflatpak (PyGObject) and prints its progress as lines of JSON.
+  Flatpak's polkit rule lets an administrator in without a password; anyone
+  else is told only an administrator can.
+- **Everywhere:** the bar's and the menu's Store, `appstream://` links
+  (`mimeapps.list`), and a Bazaar or Discover pinned before: `monet-look` leaves
+  each a hidden menu entry that opens the Store.
+
+## One game library
+
+Games is an app of its own (`monet-games`, Qt for Python as Monet Setup is, with
+its window in `linux/share/monet/games`), opened by the Games button in the bar
+(the sun as a play button, left island, now only a launcher), Windows+G, or the
+menu; opening it again brings its window forward (one window, by a local
+socket that also hands over the desktop's activation token). It's a library the
+size of Settings, after Steam's but in Monet's look: down the glass side, the
+name, search, the sections (All games, Favorites, Recently played, Plays on
+Monet and Plays on Windows when there are both) and under Stores each store with
+games, each with its count and a swatch or the launcher's picture; on the paper,
+the section's covers, tall (Steam's 600×900 library art, from its cache or its
+CDN; Lutris' cover art; Heroic's square art; otherwise a glaze from the
+paintings with the game's banner hung on it and its name), sorted by Recent,
+Name, Play time or Size (kept with the window's size, QtCore's Settings).
+Above every game, Continue playing shows the four played last, wide. A cover
+opens its game's page: its wide hero picture with the name, Play (Play on
+Windows for one that needs it), where it plays, when it was last played, the
+play time and the size on disk, the star and a menu, and a note about where it
+plays (installed once for both, its anti-cheat, players' reports) or its
+download. Hovering a cover shows the star (favorites keep it) and the sun,
+which plays it without the page. Favorites are kept in
+`~/.config/monet/favorite-games.json` (`monet-quick favorite GAME on|off`).
+Play time comes from each launcher's own count (Steam's localconfig Playtime,
+which covers every PC the account plays on; Heroic's timestamps; Lutris'
+hours) and, for Windows, from Monet Bridge, which times each game a trip
+started from when it appears until it closes (`playtime.json` in
+ProgramData\Monet, `minutes` in the games list); a Steam game counts the larger
+of the two, anything else both added. The size is Steam's SizeOnDisk or
+Heroic's install size. The window uses nothing of Plasma's: Kirigami's colors
+only, its own pills, menu and sheets, and Monet's words through KDE's i18n
+calls answered from the same catalog (`Words`), so the translation tools find
+them as they find the widgets'. Pictures from the web are kept in a disk cache.
+
+The library (`monet-quick library`) has Steam's games installed here (its appmanifests),
+Heroic's (Epic through legendary, GOG, Amazon through nile and games added by
+hand: what each store's file says is installed, titles and covers from
+Heroic's `store_cache`, in `~/.config/heroic` or the Flatpak's), Lutris'
+(its `pga.db`, read-only, without the games it plays through Steam; its
+banners as covers, started with `lutris:rungameid/…`), and the
+games Play on Windows offers (Monet Bridge's list and the extras; an Epic or
+GOG game only Windows has takes its cover from Heroic's library cache, which
+lists every game you own). A game on
+both sides is one: Steam's by its id, Epic's by its app name, the same in
+Heroic and in Windows. Each says where it plays: **Plays on Monet** when it's
+installed here and its anti-cheat doesn't want Windows, otherwise **Plays on
+Windows**. Play starts a Monet game right away, the way Steam's Play or
+Heroic's own shortcuts do (`steam://rungameid/…`, `heroic://launch?…`), and a
+Windows game the way Play on Windows always has: asked once, the sun sets,
+the PC restarts in Windows with it. A game installed here that needs Windows
+but isn't there yet says so, and Restart opens Windows to install it. Only
+ids of letters, digits, dots, dashes and underscores are listed, as they go
+on a command line. Find a game, at the top of the side (or Ctrl+F), finds one
+by name, accents and capitals aside, and Enter plays the only one it finds. A game that needs
+Windows and is still in Monet's own Steam folder, while Steam here has Windows
+games, asks to be moved there instead (Show in Steam opens its page:
+Properties, Installed Files, Move install folder), so it plays in Windows with
+nothing to download. A right-click (or the Menu key) on a game offers Play on
+Windows for one that plays on both sides, and Show in Steam and Uninstall…
+(Steam's own question, `steam://uninstall/…`) for Steam's. A game
+Steam is downloading says how far it is, with a lily line along its cover,
+looked at again every few seconds while Games is in front; with none yet,
+Open Steam is there to get some. It works from the keys too: typing on the
+covers finds a game; the arrows move a ring between games, Enter or Space opens
+the page of the one it's on (where Enter plays), Esc goes back, the Menu key
+opens its menu, and Up from the top row goes back to the search. A game that
+plays on both sides says so on its cover (Monet · Windows), as Windows' do.
+The list itself puts the games played in the last 30 days first, newest first,
+then the rest by name (when each was played, as Recently played knows it).
+AreWeAntiCheatYet's list is fetched again in the background when it's three
+days old, so opening Games never waits on the internet but the first time.
+
+Monet Bridge's list of Windows' games has Steam's, Epic's, Riot's, GOG's in the
+shared folder, and, found as Playnite finds them: Ubisoft Connect's (its own
+`Ubisoft\Launcher\Installs` key, started with `uplay://launch/ID`), Battle.net's
+(Blizzard's uninstaller is given the game's uid, which names the code its client
+starts it by: `Battle.net.exe --exec="launch AUKS"` for Call of Duty) and
+Rockstar's (its uninstaller's `-uninstall=gta5`, started with the Rockstar Games
+Launcher's `-launchTitleInFolder`) and EA's: every folder the EA app installs
+a game in has `__Installer\installerdata.xml`, which names the game and the
+offer ids the EA app starts it by (`origin2://game/launch?offerIds=…&autoDownload=1`,
+as Lutris starts them), found where Windows' list of programs says EA's games
+are, in `Program Files\EA Games` and in the shared Games folder. So those play
+on Windows from Games with nothing added by hand.
+
+A game a launcher starts seems to start from Monet. While the EA app (or
+Battle.net, Ubisoft Connect, Epic's, Rockstar's or the Riot Client) opens and
+starts the game, Monet's painting stays in front of it (the cover, held
+topmost without taking the keyboard); as soon as the game's own program runs,
+the painting goes to the back, under the game, and the launcher's windows are
+minimized. If the game hasn't started within a minute the launcher must want
+something (signing in the first time, an update), so the painting steps aside
+and lets it be seen. When the game closes, the trip back to Monet restarts the
+PC, which closes everything; if you stay in Windows instead, the launcher is
+closed for you once the network has been quiet for a few seconds (its cloud
+saves done), every program in its own folder but its Windows services and the
+game's. Steam isn't closed: it's where friends and chat are. In Monet the same
+idea goes as far as the launchers allow: Play starts Steam in its tray
+(`-silent`) when it wasn't running, and Heroic without its window (`--no-gui`).
+
+## Install a game once
+
+**BitLocker.** Device encryption is on by default on many Windows 11 laptops.
+Settings → Games & Controllers → Shared with Windows asks for the drive's
+recovery key (48 digits) once, with where to find it (the Microsoft account,
+aka.ms/myrecoverykey, or Windows' Manage BitLocker). How it travels and is used:
+- **From Settings to root:** sealed with the helper's one-time pad, as a
+  password is, then handed to root's `monet-windows-drive unlock` on its stdin
+  (pkexec, no password, as Settings' other helpers), never on a command line.
+- **Checking it:** the key is first tested against each BitLocker partition
+  (`cryptsetup open --type bitlk --test-passphrase`). The one it fits opens as
+  `/dev/mapper/monet-windows-…`, where everything else finds Windows as on a
+  drive that isn't encrypted.
+- **Keeping it:** sealed with `systemd-creds` (the PC's TPM where there is one,
+  and the system's own key) in `/var/lib/monet/bitlocker/<uuid>.cred`, root's
+  only. At every start it opens the drive before Windows' setup
+  (`ExecStartPre` of `monet-windows-setup.service`, which can then put Monet
+  Bridge in) and before the shared folders look for Windows.
+- **No Bridge yet:** Settings says Bridge installs itself at Windows' next start.
+
+**Windows hands its key over** when it gets encrypted after Monet put Monet
+Bridge in. That happens when Windows 11 turns device encryption on as someone
+signs in with a Microsoft account, or when BitLocker is turned on. Nobody types
+48 digits then:
+- **Monet's lock:** a 3072-bit RSA key pair, made the first time and sealed with
+  `systemd-creds` as the typed keys are (`/var/lib/monet/bitlocker/handover.cred`).
+  While Windows' drive is open, `monet-windows-drive` leaves the public half, as
+  .NET's `RSAKeyValue` XML, in `ProgramData\Monet\from-monet`. Bridge makes that
+  folder for administrators only, so no other Windows account can leave a lock of
+  its own there.
+- **In Windows:** at each sign-in, Bridge's Agent (the person, as administrator)
+  asks BitLocker's own WMI class (`Win32_EncryptableVolume`) for the system
+  drive's numerical-password protectors, once the drive is fully encrypted.
+  Windows PowerShell's RSA locks each one (OAEP), and Bridge leaves them on the
+  EFI partition (`EFI/Monet/bitlocker.json`), once for each protector (noted in
+  the same folder). Only locked keys leave PowerShell.
+- **At Monet's next start:** `unlock_saved` reads that file. The private half
+  reaches openssl through a pipe, never a file or a command line. Each key is
+  tried and kept sealed as a typed one, then the file is deleted from the EFI
+  partition.
+- **Settings:** once the lock has been left, the BitLocker card says to start
+  Windows once, or type the key.
+- **Not covered:** a Monet installed beside a Windows that was already
+  encrypted. Bridge isn't in it yet, so the key is typed once; after that Bridge
+  is put in and hands over later keys (a new one after Windows changes it).
+
+cryptsetup can't open Vista's BitLocker or a partly decrypted drive, and it
+never changes BitLocker's header. A Windows whose encryption is only waiting
+for activation has no recovery key yet: that one stays closed.
+
+Windows can't read Monet's drive, but Monet can write Windows' when Windows has
+shut down fully, so a game lives on Windows' drive and both sides play it from
+there. At every start `monet-windows-drive.service` (before the sign-in screen)
+looks for a Windows with Monet Bridge (`ntfsls`, nothing mounted), opens one
+encrypted with BitLocker whose recovery key was typed once (below), and asks
+`ntfs-3g.probe --readwrite` whether its
+drive is safe to write: not hibernated or asleep with Fast Startup (Bridge's
+installer turns that off), no unfinished journal after a crash. Only then is it
+mounted, with the kernel's ntfs3 (the newer ntfs, then ntfs-3g, if it can't),
+finding names in any case as Windows does where the driver can (`nocase`), at
+`/run/monet/windows-drive/c`, inside a folder only root can enter (the drive's
+own top folder would let everyone in; not `windows_names`:
+Steam may put Proton beside the first game that needs it, and Proton's own
+files have names like `c:`). Only its `Games` folder (`C:\Games`) is shared,
+bound at `/run/media/Windows games` and owned by the PC's first person, for
+them alone (`umask=077`: no other account here reads Windows' files). A
+`C:\Games` that leads somewhere else (a junction a Windows account made) is
+neither followed nor shared, and Steam's library mark is made without
+following links.
+Shutting down unmounts it cleanly before any trip. Files doesn't list that
+drive among its devices (a udev rule in `/run/udev/rules.d` sets
+`UDISKS_IGNORE` for it): opening it there would ask for an administrator,
+or, with Windows asleep, put its files at risk.
+
+The folder is a Steam library: `libraryfolder.vdf` as Steam writes one, and
+`steamapps/compatdata` and `shadercache` as links to Monet's own Steam, since
+Proton's prefixes hold names and links NTFS can't (Valve's advice). Just before
+Steam starts with the session (an `ExecStartPre` drop-in on its autostart unit,
+`app-steam@autostart.service`), and at sign-in when it isn't running,
+`monet-quick steam-share` adds it to Steam here
+(`libraryfolders.vdf`, both copies) and gives every game in it Proton
+Experimental unless one was chosen (`CompatToolMapping` in `config.vdf`), so
+Steam here keeps Windows' build, the one Windows plays, and never swaps in a
+Linux one (what breaks a library shared by hand). Steam's files are edited in
+place (KeyValues blocks found by their keys, entries added as Steam writes
+them), each kept once as `.before-monet`. Settings → Games & Controllers →
+**Add to Steam** does it now, closing Steam for a moment. In Windows, Monet
+Bridge adds `C:\Games` to Windows' Steam as the person, before Steam starts for
+a trip (`share_with_steam`, asking a running Steam to quit first), and scans
+it even before Steam lists it. Files Linux makes there let everyone write, so
+Steam in Windows can update them. The Games widget marks such a game as on
+both sides (`shared`): installed here, and Play on Windows starts it there
+without a download. One that needs Windows and is still in Monet's own library
+says how to move it (Steam's Move install folder).
+
+Heroic's games can live there too. An Epic game Heroic (legendary) installed
+in Windows games is made ready for Epic's own launcher the way legendary's EGL
+sync does it: at sign-in `monet-quick epic-share` copies the install's
+manifest into the game's `.egstore` with its `.mancpn`, and leaves a note in
+`Games\.monet\epic\APP.json` (the catalog ids, version, program, a stable
+installation GUID); notes for games no longer there go. At its start Monet
+Bridge writes the launcher's `.item` for each note it hasn't got (legendary's
+template, `bNeedsValidation` so the launcher checks the files once), and again
+when Heroic updated the game while the launcher's entry is still the one Bridge
+wrote (`epic-written.json`); one the launcher updated itself, or has elsewhere,
+is left alone. It forgets an `.item` in Games whose folder is gone, and closes
+a running launcher so it reads them. On the first trip for such a game, a
+Windows without Epic's launcher gets it first (`Install-Launcher.ps1`, with no
+questions; see Downloading once). GOG's games are DRM-free:
+Bridge finds each one's
+`goggame-<id>.info` a folder or two into Games and starts its primary play task
+itself, as `gog:<id>`, the id Heroic's GOG games have in Monet too.
+Without Heroic, the card offers Get Heroic: Flathub's
+(`com.heroicgameslauncher.hgl`, installed as Monet installs the replay
+recorder) and opened to sign in (`monet-quick get-heroic`).
+
+## Downloading once
+
+A game or a file is downloaded once, for both. Besides the Games folder,
+Windows' drive keeps a folder for files on both sides, `C:\Shared with Monet`:
+`monet-windows-drive` shares it at `/run/media/Shared with Windows` (the
+person's alone, as the Games folder; a junction there is never followed), Files
+lists it with your places while it's there ("Shared with Windows", in
+`user-places.xbel`, gone again when the drive isn't open), and Explorer's Quick
+Access has it in Windows (Bridge pins it once, as you). A download, a mod or an
+installer saved there once is in both, and Open in Windows on a program in it
+copies nothing.
+
+Folders Monet makes on Windows' drive get its root's permissions from Linux's
+NTFS drivers, which let Windows' accounts add folders but not write in them, so
+Bridge grants Windows' accounts Modify on the Games folder and the shared one
+once, everything in them then (`icacls … /T`, in the background, a marker in
+`ProgramData\Monet`): Steam in Windows installs and updates games there.
+
+Launchers come ready: when a game in the Games folder needs a launcher Windows
+hasn't got (Epic's for one Heroic put there, Ubisoft Connect or Battle.net for
+one theirs in Monet did), `monet-quick launchers` fetches its installer from its
+maker into `Games\.monet\installers` while you're in Monet (about 250 MB each
+for Epic's and Ubisoft's, Battle.net's a small one), so the first trip installs
+it with nothing to download; `monet-windows-drive` notes which launchers
+Windows has (by their programs on its drive), and an installer goes once
+Windows has the launcher. In Windows, `Install-Launcher.ps1` runs only an
+installer its maker signed (Epic Games, Ubisoft, Blizzard Entertainment, by
+Authenticode), else fetches it itself: Epic's and Ubisoft's install with no
+questions as administrator; Battle.net's shows its own window, so it runs as
+you, and Bridge waits for it.
+
+Discord comes along the same way, for calls during a trip:
+- **Fetched here:** someone who uses it in Monet (Discord's or Vesktop's
+  Flatpak) gets its Windows installer fetched too (`DiscordSetup.exe`, signed by
+  Discord).
+- **Installed there:** on the trip to sign in to launchers, Bridge puts it in
+  first, as the person, since Discord installs for one account
+  (`%LOCALAPPDATA%\Discord`). Then it's on the list to sign in to.
+- **After that:** Windows starts it at every sign-in, so a call carries on after
+  the switch. `monet-windows-drive` sees it in the person's own Windows account
+  (`AppData\Local\Discord\Update.exe`), and Bridge opens it through its
+  updater (`--processStart Discord.exe`).
+
+Battle.net's and Ubisoft's games install once too, through their launchers in
+Monet (Lutris, Wine): in each Wine prefix in `~/Games`, drive W: is the Games
+folder (`dosdevices/w:`, one someone made stays), and Lutris and Heroic from
+Flathub are let see it (`flatpak override --filesystem`). A Battle.net game
+installed on W: has the `.build.info` Battle.net writes, which names it; Bridge
+lists it from there (`battlenet:CODE`), and Windows' Battle.net, asked to play
+it the first time, offers to locate it (the Play sheet says where:
+`C:\Games\…`, from the games list's `locate`). A Ubisoft game's install
+(the Wine prefix's `system.reg`, `Ubisoft\Launcher\Installs\ID`) is noted
+in `Games\.monet\ubisoft\ID.json`, and Bridge writes the same key in
+Windows (the folder in `C:\Games`) for Ubisoft Connect, leaving one it has
+already alone.
+
+The EA app works the same way (Lutris' `ea-app`, on drive W: too). Its games
+need nothing noted: Monet Bridge reads their `installerdata.xml` in the shared
+Games folder. The EA app in Windows has no Locate, so for one it doesn't know
+yet Play opens its page without downloading and the sheet in Monet says to
+choose Download with `C:\Games` as the place: the EA app finds the game there
+and only checks it.
+
+Getting them is one tap: Settings' Get Battle.net, Get Ubisoft Connect and Get EA app have
+Lutris (Flathub's, when there's none) install them with its own installers
+(`lutris:battlenet`, `lutris:ubisoft-connect`), and Monet gives the new prefix
+drive W: as soon as it's there (`monet-quick wine-watch`); once one's here, the
+button opens it. The gallery lists a Battle.net game on W: before Windows has
+(Monet reads its `.build.info` as Bridge does, with the same table of codes),
+and opening the gallery runs the sharing steps again in the background (at
+most every ten minutes), so a game installed since sign-in has its launcher's
+installer fetched before the trip. While Windows installs a launcher, Monet's
+cover says so ("Getting Battle.net ready") instead of Windows' desktop.
+
+What Windows' own capture tools saved comes over too: after the drive is open,
+`monet-windows-files.service` moves the person's own Windows account's
+`Pictures\Screenshots` and `Videos\Captures` (pictures and videos only; their
+account is the one called as they are here, as Monet's Windows names it, or the
+only one there is, never someone else's) into
+the first person's Pictures › Screenshots and Videos, named in their language
+(`user-dirs.dirs`). Read as root, written as the person (so a link of theirs
+can't send it elsewhere), checked, then removed from Windows; a file of the
+same name gets a number unless it's the same one. Steam's own screenshots (F12)
+in Windows' Steam are copied there too, not moved, as Steam in Windows lists
+them, each once (`/var/lib/monet/windows-steam-shots.json`), only those of the
+Steam accounts the person uses in Monet too. The next sign-in
+says so once.
+
+So do the browsers' bookmarks. The same service reads what Edge, Chrome, Brave,
+Vivaldi and Opera keep (each profile's `Bookmarks`, JSON) and Firefox
+(`places.sqlite`, copied first with its journal and read read-only) in the
+person's own Windows account. Only web addresses are kept, and empty folders
+are left out. It writes them as the person into one bookmarks file
+(`~/.local/share/monet/windows-bookmarks.html`, Netscape's format, which every
+browser imports), with a note of which browsers and how many
+(`windows-bookmarks.json`):
+- **One browser:** its bar becomes Zen's toolbar, and the rest Zen's bookmarks.
+- **Several:** a folder for each, the one with most bookmarks first.
+
+`monet-quick zen` (at sign-in, and when that file changes: `monet-zen.path`)
+puts it in a Zen profile that hasn't started yet as `bookmarks.html`.
+Firefox's own first start imports that file into a new profile in place of its
+few default bookmarks, so nothing of Monet writes Zen's database. A Zen
+already in use is never touched. For it, Settings → Default Apps → From Windows
+has Add to Zen: the file goes into Downloads as "Bookmarks from Windows", and
+Zen's bookmarks window opens (`-chrome
+chrome://browser/content/places/places.xhtml`), where Import and Backup adds
+it beside Zen's own.
+
+History doesn't come over: a bookmarks file can't carry it, and writing Zen's
+database by hand isn't safe. Passwords can't either: Windows seals them
+(DPAPI, and Chrome's app-bound keys), so the card says how. Export them from
+Edge or Chrome into Shared with Monet, then use Zen's about:logins → Import
+from a File, with Show the folder.
+
+## Your photo, painted
+
+Light & Wallpaper's sixth painting is a photo of yours, in Monet's hand and in
+The Hours' four lights, so the desktop still drifts from dawn to night with it.
+**Choose a photo…** (Qt's file dialog) hands it to `monet-quick paint-photo`,
+which paints it in its own unit (`monet-paint.service`, nice 10, idle I/O)
+while Settings shows how far it is; the wall changes to it by itself when it's
+done, and the last one stays until the new one has all four lights.
+`monet-paint` (NumPy and Pillow, in the image) uses the brush The Hours were
+painted with (`tools/make-paintings.py`' bristle stamps): the photo the right
+way up and cropped to the screen's shape (2560 × 1440, or 3840 × 2160 for a 4K
+screen), a little more color, a blurred underpainting, then four layers of
+strokes from broad to fine, each along the picture's edges (its smoothed
+structure tensor) or level where it's smooth, in the color under it, the finer
+ones only where the canvas still strays from the picture. The four lights are
+the same strokes, each mapped onto that light's palette from The Hours (rose
+and lavender at dawn, near the photo at midday, orange and violet at dusk,
+moonlit blue at night), into `~/.local/share/monet/paintings/photo/` with a
+preview tile beside them. `monet-light` hands the wallpaper the folder
+(`PhotoFolder`), on the desktop and the lock screen, and falls back to The
+Hours if it's gone; the placard calls it "Your photo, dusk".
 
 ## Not Apple
 

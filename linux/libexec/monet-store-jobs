@@ -1,0 +1,221 @@
+#!/usr/bin/python3
+"""Durable Store queue. Flatpak owns downloaded objects and atomic deployments.
+
+The UI only submits/observes work. A separate user-service process holds the worker
+lock and runs transactions, so closing the window cannot kill a download. A lost
+worker becomes Interrupted, never a guessed success or an automatic removal retry.
+"""
+from contextlib import contextmanager
+import fcntl
+import gettext
+import json
+import math
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import time
+import uuid
+
+ACTIVE = {"queued", "running", "cancelling"}
+STATES = ACTIVE | {"done", "failed", "cancelled", "interrupted"}
+REF = re.compile(r"app/([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,})/[\w]+/[\w.-]+\Z")
+LIMIT = 256 * 1024
+tr = gettext.translation("monet", localedir="@DATADIR@/locale", fallback=True).gettext
+
+
+def directory():
+    return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/store"
+
+
+class Queue:
+    def __init__(self, folder=None):
+        self.folder = Path(folder) if folder is not None else directory()
+        self.path = self.folder / "downloads.json"
+
+    @contextmanager
+    def lock(self, name="queue", blocking=True):
+        self.folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+        fd = os.open(self.folder / (name + ".lock"), os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+            yield
+        finally:
+            os.close(fd)
+
+    def read(self):
+        try:
+            with self.path.open("rb") as stream:
+                raw = stream.read(LIMIT + 1)
+        except FileNotFoundError:
+            return []
+        try:
+            value = json.loads(raw)
+            jobs = value["jobs"]
+            if len(raw) > LIMIT or value["version"] != 1 or not isinstance(jobs, list) or len(jobs) > 100:
+                raise ValueError()
+            ids = set()
+            for job in jobs:
+                match = REF.fullmatch(job.get("ref", ""))
+                if (not match or match[1] != job.get("id") or job["id"] in ids
+                        or job.get("action") not in ("install", "remove")
+                        or job.get("installation") not in ("system", "user")
+                        or job.get("state") not in STATES
+                        or not isinstance(job.get("token"), str) or not re.fullmatch(r"[0-9a-f]{32}", job["token"])
+                        or any(not isinstance(job.get(k), str) or len(job[k]) > 1024 for k in ("name", "error"))
+                        or any(type(job.get(k)) not in (int, float) or not math.isfinite(job[k]) for k in ("updated", "progress"))
+                        or not 0 <= job["progress"] <= 1):
+                    raise ValueError()
+                ids.add(job["id"])
+            return jobs
+        except (ValueError, KeyError, TypeError, AttributeError, RecursionError) as error:
+            # Keep the original file. Never silently replace unreadable requests.
+            raise OSError("The saved download list could not be read") from error
+
+    def write(self, jobs):
+        data = json.dumps({"version": 1, "jobs": jobs}, ensure_ascii=True).encode()
+        if len(data) > LIMIT:
+            raise OSError("The download list is full")
+        fd, name = tempfile.mkstemp(prefix=".downloads-", dir=self.folder)
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(name, self.path)
+            parent = os.open(self.folder, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(parent)
+            finally:
+                os.close(parent)
+        finally:
+            Path(name).unlink(missing_ok=True)
+
+    def submit(self, app, action, installation="system"):
+        match = REF.fullmatch(app.get("ref", ""))
+        if not match or match[1] != app.get("id") or action not in ("install", "remove") or installation not in ("system", "user"):
+            raise ValueError("Invalid Store request")
+        with self.lock():
+            jobs = self.read()
+            old = next((j for j in jobs if j["id"] == app["id"]), None)
+            if old and old["state"] in ACTIVE:
+                return None
+            jobs = [j for j in jobs if j["id"] != app["id"]]
+            if len(jobs) >= 100:
+                terminal = [j for j in jobs if j["state"] == "done"]
+                if not terminal:
+                    raise OSError("The download list is full")
+                jobs.remove(min(terminal, key=lambda j: j["updated"]))
+            job = {"id": app["id"], "name": str(app.get("name") or app["id"])[:1024],
+                   "ref": app["ref"], "action": action, "installation": installation,
+                   "token": uuid.uuid4().hex, "state": "queued", "progress": 0,
+                   "error": "", "updated": time.time()}
+            jobs.append(job)
+            self.write(jobs)
+            return job
+
+    def change(self, app_id, command):
+        with self.lock():
+            jobs = self.read()
+            job = next((j for j in jobs if j["id"] == app_id), None)
+            if job is None:
+                return None
+            if command == "cancel" and job["state"] in ACTIVE:
+                job["state"] = "cancelled" if job["state"] == "queued" else "cancelling"
+            elif command == "retry" and job["state"] in {"failed", "cancelled", "interrupted"}:
+                job.update(state="queued", progress=0, error="", token=uuid.uuid4().hex)
+            elif command == "dismiss" and job["state"] not in ACTIVE:
+                jobs.remove(job)
+            else:
+                return None
+            job["updated"] = time.time()
+            self.write(jobs)
+            return job
+
+    def update(self, token, **values):
+        with self.lock():
+            jobs = self.read()
+            job = next((j for j in jobs if j["token"] == token), None)
+            if job:
+                job.update(values, updated=time.time())
+                self.write(jobs)
+
+    def recover(self):
+        try:
+            with self.lock("worker", blocking=False), self.lock():
+                jobs = self.read()
+                changed = False
+                for job in jobs:
+                    if job["state"] in {"running", "cancelling"} or (job["state"] == "queued" and time.time() - job["updated"] > 10):
+                        job.update(state="cancelled" if job["state"] == "cancelling" else "interrupted",
+                                   error="interrupted", updated=time.time())
+                        changed = True
+                if changed:
+                    self.write(jobs)
+        except BlockingIOError:
+            pass  # The real worker is alive, even if progress has stalled.
+
+    def run(self, execute):
+        # A worker per submission waits here. This also closes the race between
+        # the previous worker finding an empty queue and a newly submitted job.
+        with self.lock("worker"):
+            with self.lock():
+                jobs = self.read()
+                for job in jobs:
+                    if job["state"] in {"running", "cancelling"}:
+                        job.update(state="cancelled" if job["state"] == "cancelling" else "interrupted", error="interrupted")
+                self.write(jobs)
+            while True:
+                with self.lock():
+                    jobs = self.read()
+                    job = next((j for j in jobs if j["state"] == "queued"), None)
+                    if job is None:
+                        return
+                    job.update(state="running", updated=time.time())
+                    self.write(jobs)  # Durable receipt before any external mutation.
+                token = job["token"]
+                last = [0.0]
+                storage_failed = [False]
+
+                def cancelled():
+                    try:
+                        current = next((j for j in self.read() if j["token"] == token), None)
+                        return storage_failed[0] or current is None or current["state"] == "cancelling"
+                    except OSError:
+                        storage_failed[0] = True
+                        return True
+
+                def progress(value):
+                    if time.monotonic() - last[0] < 0.75:
+                        return
+                    last[0] = time.monotonic()
+                    try:
+                        self.update(token, progress=max(0, min(1, value)))
+                    except OSError:
+                        storage_failed[0] = True
+
+                try:
+                    result = execute(job, progress, cancelled)
+                except Exception:
+                    result = {"error": "failed"}
+                if storage_failed[0]:
+                    result = {"error": "storage"}
+                # A successful deployment wins a cancellation requested too late.
+                state = "done" if result.get("ok") else "cancelled" if result.get("cancelled") else "failed"
+                self.update(token, state=state, error=result.get("error", ""),
+                            progress=1 if state == "done" else next((j["progress"] for j in self.read() if j["token"] == token), 0))
+
+
+def start_worker(script):
+    # A separate systemd unit survives the Store window and its service exiting.
+    result = subprocess.run(["systemd-run", "--user", "--quiet", "--collect",
+                             "--unit=monet-store-downloads-" + uuid.uuid4().hex,
+                             "--property=TimeoutStopSec=30", "--setenv=LC_ALL=C",
+                             "--setenv=XDG_STATE_HOME=" + str(directory().parent.parent.resolve()),
+                             "systemd-inhibit", "--what=shutdown", "--mode=block", "--who=" + tr("Store"),
+                             "--why=" + tr("Installing or removing apps"), "--no-ask-password",
+                             "/usr/bin/python3", str(Path(script).resolve()), "--worker"],
+                            capture_output=True, timeout=10)
+    if result.returncode:
+        raise OSError("Download worker could not start")

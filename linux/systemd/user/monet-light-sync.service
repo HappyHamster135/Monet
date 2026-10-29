@@ -1,6 +1,11 @@
 [Unit]
 Description=Keep Monet's light in step with KDE's Light or Dark
+# Run on each change of what it watches, which often come several at once: never
+# turned away for running often (systemd's limit would stop it for the session).
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
+# A burst of changes becomes one run.
+ExecStartPre=/usr/bin/sleep 1
 ExecStart=@LIBEXECDIR@/monet-light sync

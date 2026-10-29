@@ -1,0 +1,355 @@
+#!/usr/bin/env python3
+"""Okular metadata, protected departure and private restoration primitives.
+
+Capture, departure and return are connected to the switching controller.
+Only metadata is retained; unsaved content belongs to the native application.
+"""
+import json
+import fcntl
+import os
+from pathlib import Path
+import posixpath
+import re
+import stat
+import subprocess
+import sys
+import uuid
+import xml.etree.ElementTree as ET
+
+APP = "org.kde.okular.desktop"
+LIMIT = 2 * 1024 * 1024
+SESSION = re.compile(r"okular_monet-[0-9a-f]{32}_\Z")
+
+
+def local(path):
+    return (isinstance(path, str) and path.startswith("/") and not path.startswith("//")
+            and len(path) <= 4096 and posixpath.normpath(path) == path
+            and not any(ord(c) < 32 or ord(c) == 127 for c in path))
+
+
+def valid(state):
+    if (not isinstance(state, dict) or set(state) != {"tabs", "active"}
+            or not isinstance(state["tabs"], list) or len(state["tabs"]) > 32
+            or type(state["active"]) is not int
+            or not (-1 == state["active"] if not state["tabs"] else 0 <= state["active"] < len(state["tabs"]))):
+        return False
+    for tab in state["tabs"]:
+        if (not isinstance(tab, dict) or set(tab) != {"path", "page", "modified"} or not local(tab["path"])
+                or type(tab["page"]) is not int or not 1 <= tab["page"] <= 1000000
+                or type(tab["modified"]) is not bool):
+            return False
+    try:
+        return len(json.dumps(state, ensure_ascii=False).encode("utf-8")) <= 600000
+    except UnicodeError:
+        return False
+
+
+def valid_windows(states):
+    if not isinstance(states, list) or not 1 <= len(states) <= 16:
+        return False
+    ids = []
+    for state in states:
+        if (not isinstance(state, dict) or set(state) != {"id", "document"} or not valid(state["document"])
+                or not window_id(state["id"])):
+            return False
+        ids.append(uuid.UUID(state["id"]))
+    return len(set(ids)) == len(ids) and len(json.dumps(states, ensure_ascii=False).encode("utf-8")) <= LIMIT
+
+
+def window_id(value):
+    return (isinstance(value, str)
+            and re.fullmatch(r"\{[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}\}", value) is not None
+            and uuid.UUID(value).int != 0)
+
+
+def endpoint(pid):
+    from gi.repository import Gio, GLib
+    if type(pid) is not int or pid <= 0 or Path(f"/proc/{pid}").stat().st_uid != os.getuid():
+        return None
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    flags = Gio.DBusCallFlags.NO_AUTO_START
+    for service in (f"org.kde.okular-{pid}", "org.kde.okular"):
+        try:
+            owner = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+                                  "GetConnectionUnixProcessID", GLib.Variant("(s)", (service,)),
+                                  GLib.VariantType("(u)"), flags, 800, None).unpack()[0]
+            if owner != pid:
+                continue
+            text = bus.call_sync(service, "/MonetDocuments", "org.freedesktop.DBus.Introspectable", "Introspect", None,
+                                 GLib.VariantType("(s)"), flags, 800, None).unpack()[0]
+            if len(text) > 65536:
+                return None
+            paths = ["/MonetDocuments/" + n.get("name") for n in ET.fromstring(text).findall("node")
+                     if re.fullmatch(r"window[1-9][0-9]{0,19}", n.get("name", ""))]
+            if not 1 <= len(paths) <= 16 or len(set(paths)) != len(paths):
+                return None
+            return service, paths
+        except GLib.Error:
+            continue
+    return None
+
+
+def native(pid, *, windows=False):
+    from gi.repository import Gio, GLib
+    target = endpoint(pid)
+    if not target or (not windows and len(target[1]) != 1):
+        return None
+    service, paths = target
+    try:
+        text = Gio.bus_get_sync(Gio.BusType.SESSION, None).call_sync(service, paths[0], "org.kde.okular",
+            "monetDocumentWindows" if windows else "monetDocumentState", None,
+            GLib.VariantType("(s)"), Gio.DBusCallFlags.NO_AUTO_START, 1200, None).unpack()[0]
+        state = json.loads(text) if len(text.encode("utf-8")) <= (LIMIT if windows else 600000) else None
+        return state if (valid_windows(state) if windows else valid(state)) else None
+    except GLib.Error:
+        return None
+
+
+def valid_append(request):
+    return (isinstance(request, dict) and set(request) == {"window", "attempt", "before", "tab"}
+            and window_id(request["window"]) and isinstance(request["attempt"], str)
+            and re.fullmatch(r"[0-9a-f]{32}", request["attempt"]) is not None and valid(request["before"])
+            and valid({"tabs": [request["tab"]], "active": 0}) and request["tab"]["modified"] is False)
+
+
+def append(pid, request):
+    """Reuse the persisted request after an interrupted reply; never invent another attempt."""
+    from gi.repository import Gio, GLib
+    if not valid_append(request):
+        raise ValueError("Invalid PDF retry request")
+    try:
+        target = endpoint(pid)
+    except (OSError, ValueError, ET.ParseError):
+        return None
+    if not target:
+        return None
+    service, paths = target
+    try:
+        result = Gio.bus_get_sync(Gio.BusType.SESSION, None).call_sync(service, paths[0], "org.kde.okular",
+            "monetAppendDocument", GLib.Variant("(s)", (json.dumps(request, ensure_ascii=False),)),
+            GLib.VariantType("(s)"), Gio.DBusCallFlags.NO_AUTO_START, 1500, None).unpack()[0]
+        return result if result in {"opened", "closed", "conflict", "busy", "limit", "unavailable", "unconfirmed", "invalid"} else None
+    except GLib.Error:
+        return None
+
+
+def arm(pid, ident, armed=True):
+    """The caller's Qt bus connection owns the watch until it explicitly cancels or exits."""
+    from PySide6.QtDBus import QDBusConnection, QDBusMessage
+    if not isinstance(ident, str) or not re.fullmatch(r"[0-9a-f]{32}", ident) or type(armed) is not bool:
+        raise ValueError("Invalid PDF departure identity")
+    target = endpoint(pid)
+    if not target:
+        return False
+    service, paths = target
+    request = QDBusMessage.createMethodCall(service, paths[0], "org.kde.okular", "monetDocumentDeparture")
+    request.setArguments([ident, armed])
+    reply = QDBusConnection.sessionBus().call(request, timeout=1500)
+    if reply.type() == QDBusMessage.ErrorMessage:
+        raise RuntimeError(reply.errorName())
+    return reply.arguments() == [True]
+
+
+def departure_path(pid, ident, window):
+    if (type(pid) is not int or pid <= 0 or not isinstance(ident, str)
+            or not re.fullmatch(r"[0-9a-f]{32}", ident) or not window_id(window)):
+        raise ValueError("Invalid PDF departure identity")
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", ""))
+    if not runtime.is_absolute():
+        raise ValueError("Missing PDF runtime directory")
+    root = runtime / "monet-pdf"
+    for directory in (runtime, root):
+        info = directory.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+            raise ValueError("PDF recovery directory is not private")
+    return root / f"{ident}-{pid}-{uuid.UUID(window)}.json"
+
+
+def departure(pid, ident, window):
+    path = departure_path(pid, ident, window)
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600:
+            raise ValueError("PDF recovery receipt is not private")
+        raw = stream.read(600001)
+    receipt = json.loads(raw) if len(raw) <= 600000 else None
+    if (not isinstance(receipt, dict) or set(receipt) != {"version", "id", "pid", "window", "app", "supported", "document"}
+            or type(receipt["version"]) is not int or receipt["version"] != 1 or receipt["id"] != ident
+            or type(receipt["pid"]) is not int or receipt["pid"] != pid or receipt["window"] != window
+            or receipt["app"] != APP or type(receipt["supported"]) is not bool
+            or (not valid(receipt["document"]) if receipt["supported"] else receipt["document"] is not None)):
+        raise ValueError("Invalid final PDF document list")
+    return receipt
+
+
+def pending_indexes(state, pending=None):
+    if not valid(state):
+        raise ValueError("Invalid PDF checkpoint")
+    pending = list(range(len(state["tabs"]))) if pending is None else pending
+    if (not isinstance(pending, list) or any(type(i) is not int or not 0 <= i < len(state["tabs"]) for i in pending)
+            or pending != sorted(set(pending))):
+        raise ValueError("Invalid pending PDF tabs")
+    return pending
+
+
+def subset(state, indexes):
+    indexes = pending_indexes(state, indexes)
+    active = indexes.index(state["active"]) if state["active"] in indexes else (0 if indexes else -1)
+    return {"tabs": [dict(state["tabs"][i], modified=False) for i in indexes], "active": active}
+
+
+def available(state, pending=None):
+    return subset(state, [i for i in pending_indexes(state, pending) if Path(state["tabs"][i]["path"]).is_file()])
+
+
+def same_documents(saved, current):
+    return (valid(saved) and valid(current)
+            and [t["path"] for t in saved["tabs"]] == [t["path"] for t in current["tabs"]])
+
+
+def restored(saved, current):
+    return (same_documents(saved, current) and saved["active"] == current["active"]
+            and [t["page"] for t in saved["tabs"]] == [t["page"] for t in current["tabs"]])
+
+
+def session_text(state):
+    if not valid(state):
+        raise ValueError("Invalid PDF checkpoint")
+    # KConfig decodes backslash escapes before the native adapter reads the JSON.
+    encoded = json.dumps(state, ensure_ascii=True, separators=(",", ":")).replace("\\", "\\\\")
+    return ("[1]\nMonetDocumentState=" + encoded + "\n\n[Number]\nNumberOfWindows=1\n"
+            "\n[WindowProperties1]\nClassName=Shell\nObjectName=okular#1\n")
+
+
+def prepare(state):
+    """Create the launch identity before the controller records and starts it."""
+    if not valid(state) or any(not Path(t["path"]).is_file() for t in state["tabs"]):
+        raise OSError("A saved PDF is unavailable")
+    folder = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / ("okular_monet-" + uuid.uuid4().hex + "_")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="ascii") as stream:
+            stream.write(session_text(state))
+            stream.flush()
+            os.fsync(stream.fileno())
+        return {"session": path.name}
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+
+
+def session_path(receipt):
+    name = receipt.get("session") if isinstance(receipt, dict) else None
+    if not isinstance(name, str) or not SESSION.fullmatch(name):
+        return None
+    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session" / name
+
+
+def start(receipt):
+    path = session_path(receipt)
+    if path is None:
+        raise OSError("Missing private PDF session")
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600:
+            raise OSError("PDF launch session is not private")
+        if launching(receipt):
+            return None
+        # Competing launchers arbitrate before starting Okular, including after controller loss.
+        return subprocess.Popen(["flock", "--nonblock", str(path), "okular", "--session", path.name[len("okular_"):-1]],
+            start_new_session=True, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).pid
+
+
+def launching(receipt):
+    path = session_path(receipt)
+    if path is None:
+        return False
+    try:
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                return False
+            try:
+                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+    except OSError:
+        pass
+    return False
+
+
+def discover(receipt):
+    """Recover the native PID even if the controller stopped before recording it."""
+    if session_path(receipt) is None:
+        return None
+    found = [int(p.name) for p in Path("/proc").iterdir() if p.name.isdigit() and alive(dict(receipt, pid=int(p.name)))]
+    if len(found) > 1:
+        raise OSError("Ambiguous private PDF session")
+    return found[0] if found else None
+
+
+def alive(receipt):
+    path = session_path(receipt)
+    pid = receipt.get("pid") if isinstance(receipt, dict) else None
+    if path is None or type(pid) is not int or pid <= 0:
+        return False
+    try:
+        if Path(f"/proc/{pid}").stat().st_uid != os.getuid():
+            return False
+        args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+        token = path.name[len("okular_"):-1].encode("ascii")
+        return (Path(os.fsdecode(args[0])).name == "okular"
+                and any(args[i:i+2] == [b"--session", token] for i in range(len(args)-1)))
+    except OSError:
+        return False
+
+
+def cleanup(receipt):
+    path = session_path(receipt)
+    if path is not None:
+        path.unlink(missing_ok=True)
+
+
+def capture(pid, *, windows=False):
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        result = subprocess.run([sys.executable, __file__, "windows" if windows else "capture", str(pid)],
+                                capture_output=True, timeout=6, check=True)
+        state = json.loads(result.stdout) if len(result.stdout) <= LIMIT else None
+        return state if (valid_windows(state) if windows else valid(state)) else None
+    except (OSError, ValueError, RecursionError, subprocess.SubprocessError):
+        return None
+
+
+def capture_ready(pid, *, windows=False):
+    # Retry only metadata reads; the parent still bounds the whole child to six seconds.
+    for _ in range(3):
+        try:
+            result = native(pid, windows=windows)
+            if result is not None:
+                return result
+        except (OSError, ValueError, RecursionError, ET.ParseError):
+            pass
+    return None
+
+
+def capture_windows(pid, frames):
+    states = capture(pid, windows=True)
+    if (not valid_windows(states) or not isinstance(frames, list) or len(states) != len(frames)
+            or any(not isinstance(w, dict) or w.get("app") != APP or w.get("pid") != pid for w in frames)
+            or {w["id"] for w in states} != {w.get("id") for w in frames}):
+        return {}
+    return {w["id"]: w["document"] for w in states}
+
+
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) != 3 or sys.argv[1] not in {"capture", "windows"}:
+            raise ValueError("Expected capture or windows and a process ID")
+        result = capture_ready(int(sys.argv[2]), windows=sys.argv[1] == "windows")
+    except (OSError, ValueError, RecursionError, ET.ParseError):
+        result = None
+    print(json.dumps(result))

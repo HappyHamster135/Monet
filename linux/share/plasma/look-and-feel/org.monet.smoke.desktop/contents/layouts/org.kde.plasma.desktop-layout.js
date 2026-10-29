@@ -1,7 +1,7 @@
 // Monet's desktop: the painting, a placard with the time, and three glass
 // islands along the bottom.
 //
-//   left:    the Monet menu and Windows Games
+//   left:    the Monet menu and Games
 //   middle:  your apps and open windows, then Trash
 //   right:   quick settings, status icons and the clock
 
@@ -17,9 +17,9 @@ function island(alignment) {
     p.alignment = alignment
     set(p, "lengthMode", "fit")
     set(p, "floating", true)
-    // Always in view. Light & Wallpaper's "Bar steps aside" lets it slide away when a window
-    // comes over it (not by default: hidden, it's hard to bring back, and in a VM impossible).
-    set(p, "hiding", "none")
+    // Out of the way when a window comes over it, back when you point at the bottom of the
+    // screen (with any pointer: monet-look). Light & Wallpaper's "Bar steps aside" keeps it in view.
+    set(p, "hiding", "dodgewindows")
     return p
 }
 
@@ -53,7 +53,7 @@ tasks.writeConfig("launchers", [
     "preferred://browser",
     "applications:steam.desktop",
     "applications:org.kde.konsole.desktop",
-    "applications:org.kde.discover.desktop",
+    "applications:monet-store.desktop",
     "applications:monet-settings.desktop"
 ])
 tasks.writeConfig("showOnlyCurrentDesktop", false)
@@ -63,21 +63,32 @@ middle.addWidget("org.kde.plasma.marginsseparator")
 middle.addWidget("org.kde.plasma.trash")
 
 var right = island("right")
+right.addWidget("org.monet.weather")
 right.addWidget("org.monet.quick")
+right.addWidget("org.monet.sound")
 var tray = right.addWidget("org.kde.plasma.systemtray")
-// Brightness and Night Light are in Quick Settings, beside Mist and Smoke: KDE's
-// own panel for them, with its Dark Mode switch, stays out of the bar. Known but
-// not chosen, so the tray doesn't add it back as new. (Plasma 6 keeps the tray's
-// items in its own settings, no longer in a containment of their own.)
-try {
-    tray.currentConfigGroup = ["General"]
-    var listed = function (key) {
-        return String(tray.readConfig(key, "")).split(",").filter(function (item) { return item !== "" })
-    }
-    var known = listed("knownItems")
-    if (known.indexOf("org.kde.plasma.brightness") < 0) known.push("org.kde.plasma.brightness")
-    tray.writeConfig("knownItems", known)
-    tray.writeConfig("extraItems", listed("extraItems").filter(function (item) { return item !== "org.kde.plasma.brightness" }))
-    tray.reloadConfig()
-} catch (e) {}
+// Everyday controls in view; specialist tools remain in Settings and Configure System Tray.
+// Applied once when adopting Monet's look, never on --keep upgrades.
+function monetTray(tray) {
+    tray.currentConfigGroup = ["General"];
+    function list(key) { return String(tray.readConfig(key, "")).split(",").filter(Boolean); }
+    function union(a, b) { return a.concat(b.filter(function (id) { return a.indexOf(id) < 0; })); }
+    var removed = ["org.kde.plasma.brightness", "org.kde.plasma.volume", "org.kde.plasma.weather",
+        "org.kde.kscreen", "org.kde.plasma.manage-inputmethod", "org.kde.plasma.keyboardindicator",
+        "org.kde.plasma.vault"];
+    // Keyboard layout switching stays available for multilingual users. Camera/privacy
+    // indicators, print jobs and other apps retain their normal active/passive behavior.
+    var visible = ["org.kde.plasma.networkmanagement", "org.kde.plasma.bluetooth"];
+    var enabled = visible.concat(["org.kde.plasma.notifications", "org.kde.plasma.battery",
+        "org.kde.plasma.devicenotifier", "org.kde.plasma.clipboard"]);
+    tray.writeConfig("knownItems", union(list("knownItems"), removed.concat(enabled)));
+    tray.writeConfig("extraItems", union(list("extraItems").filter(function (id) { return removed.indexOf(id) < 0; }), enabled));
+    tray.writeConfig("shownItems", union(list("shownItems").filter(function (id) { return removed.indexOf(id) < 0; }), visible));
+    tray.writeConfig("hiddenItems", union(list("hiddenItems").filter(function (id) { return visible.indexOf(id) < 0; }), ["org.kde.plasma.clipboard"]));
+    // Hide only its status icon; the compatibility service continues screen sharing.
+    tray.writeConfig("disabledStatusNotifiers", union(list("disabledStatusNotifiers"), ["Xwayland Video Bridge"]));
+    tray.reloadConfig();
+}
+
+monetTray(tray)
 right.addWidget("org.monet.clock")

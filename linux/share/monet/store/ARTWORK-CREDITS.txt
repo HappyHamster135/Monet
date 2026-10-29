@@ -1,0 +1,48 @@
+Claude Monet â€” Store paintings
+
+Courtesy National Gallery of Art, Washington
+Museum reproductions released under CC0-1.0.
+https://www.nga.gov/terms-and-notices#open-access-policy
+
+Banners show selected details. Colors and brushwork are unchanged.
+Full reproductions and crop coordinates: branding/store in the source tree.
+
+play: The Bridge at Argenteuil, 1874 (detail)
+Claude Monet; National Gallery of Art, Washington; 1983.1.24
+https://www.nga.gov/artworks/61374-bridge-argenteuil
+
+talk: The Japanese Footbridge, 1899 (detail)
+Claude Monet; National Gallery of Art, Washington; 1992.9.1
+https://www.nga.gov/artworks/74796-japanese-footbridge
+
+watch: The Seine at Giverny, 1897 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.180
+https://www.nga.gov/artworks/46655-seine-giverny
+
+work: The Artist's Garden in Argenteuil (A Corner of the Garden with Dahlias), 1873 (detail)
+Claude Monet; National Gallery of Art, Washington; 1991.27.1
+https://www.nga.gov/artworks/72138-artists-garden-argenteuil-corner-garden-dahlias
+
+everyday: Jerusalem Artichoke Flowers, 1880 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.181
+https://www.nga.gov/artworks/46656-jerusalem-artichoke-flowers
+
+venice: Palazzo da Mula, Venice, 1908 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.182
+https://www.nga.gov/artworks/46657-palazzo-da-mula-venice
+
+waterloo: Waterloo Bridge, Gray Day, 1903 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.183
+https://www.nga.gov/artworks/46658-waterloo-bridge-gray-day
+
+parliament: The Houses of Parliament, Sunset, 1903 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.48
+https://www.nga.gov/artworks/46523-houses-parliament-sunset
+
+cathedral: Rouen Cathedral, West Façade, 1894 (detail)
+Claude Monet; National Gallery of Art, Washington; 1963.10.49
+https://www.nga.gov/artworks/46524-rouen-cathedral-west-facade
+
+vetheuil: The Artist's Garden at Vétheuil, 1881 (detail)
+Claude Monet; National Gallery of Art, Washington; 1970.17.45
+https://www.nga.gov/artworks/52189-artists-garden-vetheuil

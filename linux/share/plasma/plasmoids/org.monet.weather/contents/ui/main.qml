@@ -7,6 +7,7 @@
  * arrows beside the name go through them.
  */
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Templates as T
@@ -17,28 +18,23 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
-    readonly property bool placed: Plasmoid.configuration.place !== ""
-    readonly property bool fahrenheit: Plasmoid.configuration.fahrenheit
-    // The place shown, and every place in the order the arrows go (the one shown
-    // is always among them, as it is when there was only ever one).
-    readonly property var here: ({name: Plasmoid.configuration.place, latitude: Plasmoid.configuration.latitude,
-                                   longitude: Plasmoid.configuration.longitude})
-    readonly property var places: {
-        const list = Array.from(Plasmoid.configuration.places || []).map(text => {
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                return null;
-            }
-        }).filter(place => place && place.name);
-        return placed && !list.some(place => same(place, here)) ? list.concat([here]) : list;
-    }
+    readonly property bool inPanel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+        || Plasmoid.formFactor === PlasmaCore.Types.Vertical
+    readonly property var preferences: shared.config
+    readonly property bool placed: preferences.place !== ""
+    readonly property bool fahrenheit: preferences.fahrenheit
+    readonly property var here: ({name: preferences.place, latitude: preferences.latitude, longitude: preferences.longitude})
+    readonly property var places: preferences.places || []
     readonly property int at: places.findIndex(place => same(place, here))
-    // The last weather of each place, so going back to one shows it at once.
-    property var weathers: ({})
-    readonly property string key: here.latitude + "," + here.longitude
-    readonly property var weather: weathers[key] || null
-    property string problem: ""
+    readonly property var weather: shared.weather
+    readonly property string problem: shared.problem
+
+    WeatherStore {
+        id: shared
+        Component.onCompleted: seed({place: Plasmoid.configuration.place,
+            latitude: Plasmoid.configuration.latitude, longitude: Plasmoid.configuration.longitude,
+            places: Array.from(Plasmoid.configuration.places || []), fahrenheit: Plasmoid.configuration.fahrenheit})
+    }
 
     // Choosing the place on the card: a town, then one of Open-Meteo's matches.
     property bool choosing: false
@@ -78,46 +74,29 @@ PlasmoidItem {
     }
 
     function show(place) {
-        Plasmoid.configuration.place = place.name;
-        Plasmoid.configuration.latitude = place.latitude;
-        Plasmoid.configuration.longitude = place.longitude;
+        shared.write({place: place.name, latitude: place.latitude, longitude: place.longitude});
     }
-
-    function keep(list) {
-        Plasmoid.configuration.places = list.map(place => JSON.stringify(
-            {name: place.name, latitude: place.latitude, longitude: place.longitude}));
-    }
-
-    // A place from the search: added after the others, and shown.
     function choose(place) {
-        if (!placed) {
-            // The first place: degrees the way this PC's region counts them.
-            Plasmoid.configuration.fahrenheit = Qt.locale().measurementSystem === Locale.ImperialUSSystem;
-        }
-        if (!places.some(known => same(known, place))) {
-            keep(places.concat([place]));
-        }
-        show(place);
+        const list = places.some(known => same(known, place)) ? places : places.concat([place]);
+        shared.write({place: place.name, latitude: place.latitude, longitude: place.longitude,
+            places: list.map(p => ({name: p.name, latitude: p.latitude, longitude: p.longitude})),
+            fahrenheit: placed ? fahrenheit : Qt.locale().measurementSystem === Locale.ImperialUSSystem});
         found = [];
         choosing = false;
     }
-
-    // The next place (1) or the one before (-1), round and round.
     function step(by) {
-        if (places.length > 1) {
-            show(places[(Math.max(at, 0) + by + places.length) % places.length]);
-        }
+        if (places.length > 1) show(places[(Math.max(at, 0) + by + places.length) % places.length]);
     }
-
-    // The place shown leaves the list; its neighbour is shown, or none is.
     function forget() {
         const rest = places.filter((place, i) => i !== at);
-        keep(rest);
-        if (rest.length > 0) {
-            show(rest[Math.min(Math.max(at, 0), rest.length - 1)]);
-        } else {
-            Plasmoid.configuration.place = "";
-        }
+        const next = rest.length ? rest[Math.min(Math.max(at, 0), rest.length - 1)] : {name: "", latitude: 0, longitude: 0};
+        shared.write({place: next.name, latitude: next.latitude, longitude: next.longitude, places: rest});
+    }
+    function refresh() { shared.retry(); }
+    function openDetails() {
+        shared.refresh();
+        if (inPanel) expanded = true;
+        else detailsPopup.visible = true;
     }
 
     function words(code) {
@@ -128,56 +107,84 @@ PlasmoidItem {
             : code === 85 || code === 86 ? i18n("Snow showers") : code >= 95 ? i18n("Thunderstorm") : ""
     }
 
-    function refresh() {
-        if (!placed) {
-            return;
-        }
-        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + Plasmoid.configuration.latitude
-            + "&longitude=" + Plasmoid.configuration.longitude
-            + "&current=temperature_2m,weather_code,is_day"
-            + "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5"
-            + (fahrenheit ? "&temperature_unit=fahrenheit" : "");
-        // The answer belongs to the place asked about, even if another is shown by then.
-        const wanted = key;
-        const request = new XMLHttpRequest();
-        request.onreadystatechange = () => {
-            if (request.readyState !== XMLHttpRequest.DONE) {
-                return;
-            }
-            try {
-                if (request.status !== 200) {
-                    throw new Error(String(request.status));
-                }
-                const answer = JSON.parse(request.responseText);
-                const all = Object.assign({}, weathers);
-                all[wanted] = answer;
-                weathers = all;
-                problem = "";
-            } catch (e) {
-                // Keep the last weather; say why only when there's none.
-                problem = i18n("The weather can't be reached right now. Click to try again.");
-            }
-        };
-        request.open("GET", url);
-        request.send();
-    }
-
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "monet-weather"
-    preferredRepresentation: fullRepresentation
-    toolTipMainText: Plasmoid.configuration.place || i18n("Weather")
+    preferredRepresentation: inPanel ? compactRepresentation : fullRepresentation
+    toolTipMainText: preferences.place || i18n("Weather")
+    toolTipSubText: weather ? Math.round(weather.current.temperature_2m) + (fahrenheit ? "°F" : "°C")
+        + " · " + words(weather.current.weather_code) : i18n("Choose a place")
+    onExpandedChanged: if (root.expanded) shared.refresh()
+
+    compactRepresentation: T.AbstractButton {
+        id: weatherButton
+        activeFocusOnTab: true
+        hoverEnabled: true
+        // The panel's themed active highlight is inset eight pixels horizontally.
+        // Leave another eight around the contents inside that highlight.
+        leftPadding: 16
+        rightPadding: 16
+        topPadding: 3
+        bottomPadding: 3
+        Layout.minimumWidth: panelContents.implicitWidth + leftPadding + rightPadding
+        Layout.preferredWidth: Layout.minimumWidth
+        Accessible.name: i18n("Weather") + ", " + root.toolTipMainText + ", " + root.toolTipSubText
+        onClicked: root.expanded = !root.expanded
+        background: Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
+            radius: 10
+            // Plasma supplies the expanded highlight; don't paint a second one.
+            color: weatherButton.hovered && !root.expanded ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent"
+            border.width: weatherButton.visualFocus ? 2 : 0
+            border.color: Kirigami.Theme.highlightColor
+        }
+        // Control owns this item's padded geometry; center the natural-sized row
+        // inside it so the icon and temperature share the whole highlighted area.
+        contentItem: Item {
+            implicitWidth: panelContents.implicitWidth
+            implicitHeight: panelContents.implicitHeight
+            Row {
+                id: panelContents
+                spacing: 4
+                anchors.centerIn: parent
+                Sky {
+                    anchors.verticalCenter: parent.verticalCenter
+                    size: 26
+                    code: root.weather ? root.weather.current.weather_code : 2
+                    day: root.weather ? root.weather.current.is_day === 1 : true
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.weather ? Math.round(root.weather.current.temperature_2m) + "°" : ""
+                    font.family: "Inter"; font.pixelSize: 13; font.weight: Font.Medium
+                    color: Kirigami.Theme.textColor
+                }
+            }
+        }
+    }
 
     Plasmoid.contextualActions: [
         PlasmaCore.Action {
             text: i18n("Add a place…")
             icon.name: "list-add"
-            onTriggered: root.choosing = true
+            onTriggered: { root.choosing = true; if (root.inPanel) root.expanded = true; }
         },
         PlasmaCore.Action {
-            text: i18nc("%1 is a town", "Forget %1", Plasmoid.configuration.place)
+            text: i18nc("%1 is a town", "Forget %1", preferences.place)
             icon.name: "list-remove"
             visible: root.placed
             onTriggered: root.forget()
+        },
+        PlasmaCore.Action {
+            text: root.fahrenheit ? i18n("Use Celsius") : i18n("Use Fahrenheit")
+            icon.name: "monet-weather"
+            onTriggered: shared.write({fahrenheit: !root.fahrenheit})
+        },
+        PlasmaCore.Action {
+            text: i18n("Refresh weather")
+            icon.name: "view-refresh"
+            onTriggered: shared.retry()
         }
     ]
 
@@ -212,33 +219,97 @@ PlasmoidItem {
         }
     }
 
-    // A new place or other degrees: look again.
-    readonly property string asked: [Plasmoid.configuration.place, Plasmoid.configuration.latitude,
-                                     Plasmoid.configuration.longitude, fahrenheit].join("|")
-    onAskedChanged: refresh()
-
-    Timer {
-        interval: 30 * 60 * 1000
-        running: root.placed
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.refresh()
+    fullRepresentation: Loader {
+        id: representation
+        readonly property bool details: root.inPanel && root.placed && !root.choosing
+        Layout.minimumWidth: Math.min(Kirigami.Units.gridUnit * (details ? 30 : 14), Screen.width - 48)
+        Layout.minimumHeight: Math.min(Kirigami.Units.gridUnit * (details ? 38 : 10), Screen.height - 112)
+        Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * (details ? 30 : 19), Screen.width - 48)
+        Layout.preferredHeight: Math.min(Kirigami.Units.gridUnit * (details ? 38 : 10), Screen.height - 112)
+        Layout.maximumWidth: root.inPanel ? Layout.preferredWidth : Infinity
+        Layout.maximumHeight: root.inPanel ? Layout.preferredHeight : Infinity
+        sourceComponent: details ? forecastComponent : summaryComponent
+        onLoaded: if (details && item && root.expanded) item.opened()
+        Connections {
+            target: root
+            function onExpandedChanged() {
+                if (root.expanded && representation.details && representation.item) representation.item.opened();
+            }
+        }
     }
 
-    fullRepresentation: Item {
+    Component {
+        id: forecastComponent
+        WeatherDetails {
+            store: shared
+            describe: root.words
+            onClosed: root.expanded = false
+            onPlacesRequested: root.choosing = true
+        }
+    }
+
+    PlasmaCore.Dialog {
+        id: detailsPopup
+        location: PlasmaCore.Types.Floating
+        hideOnWindowDeactivate: true
+        transientParent: root.Window.window
+        flags: Qt.Tool | Qt.WindowStaysOnTopHint
+        function place() {
+            const at = root.mapToGlobal(0, 0);
+            const sx = root.Screen.virtualX, sy = root.Screen.virtualY;
+            const sw = root.Screen.width, sh = root.Screen.height;
+            const beside = at.x + root.width + 12;
+            x = Math.round(Math.max(sx + 12, Math.min(sx + sw - width - 12,
+                beside + width < sx + sw - 12 ? beside : at.x - width - 12)));
+            y = Math.round(Math.max(sy + 12, Math.min(at.y, sy + sh - height - 80)));
+        }
+        onVisibleChanged: if (visible) Qt.callLater(function() { place(); requestActivate(); desktopDetails.opened(); })
+        onWidthChanged: if (visible) Qt.callLater(place)
+        onHeightChanged: if (visible) Qt.callLater(place)
+        mainItem: WeatherDetails {
+            id: desktopDetails
+            width: Math.min(Kirigami.Units.gridUnit * 30, root.Screen.width - 48)
+            height: Math.min(Kirigami.Units.gridUnit * 38, root.Screen.height - 112)
+            store: shared
+            describe: root.words
+            onClosed: detailsPopup.visible = false
+            onPlacesRequested: { detailsPopup.visible = false; root.choosing = true; }
+        }
+    }
+
+    Component {
+      id: summaryComponent
+      Item {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 14
-        Layout.minimumHeight: Kirigami.Units.gridUnit * 8
+        Layout.minimumHeight: Kirigami.Units.gridUnit * 10
         Layout.preferredWidth: Kirigami.Units.gridUnit * 19
         Layout.preferredHeight: Kirigami.Units.gridUnit * 10
+        Layout.maximumWidth: root.inPanel ? Kirigami.Units.gridUnit * 21 : Infinity
+        Layout.maximumHeight: root.inPanel ? Kirigami.Units.gridUnit * 12 : Infinity
 
         Glass {
             id: card
             anchors.fill: parent
+            drawBackground: !root.inPanel
 
             readonly property var now: root.weather ? root.weather.current : null
             readonly property var days: root.weather ? root.weather.daily : null
             readonly property bool asking: root.choosing || !root.placed
             readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
+
+            T.AbstractButton {
+                anchors.fill: parent
+                visible: !card.asking && !root.inPanel
+                activeFocusOnTab: true
+                Accessible.name: i18n("Open hourly and weekly weather for %1", root.preferences.place)
+                onClicked: root.openDetails()
+                background: Rectangle {
+                    radius: card.radius
+                    color: "transparent"
+                    border.width: parent.visualFocus ? 2 : 0
+                    border.color: card.lily
+                }
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -266,13 +337,13 @@ PlasmoidItem {
                                 horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: implicitWidth
-                                text: Plasmoid.configuration.place
+                                text: preferences.place
                                 color: card.ink
                                 elide: Text.ElideRight
                                 font.family: "Inter"
                                 font.pixelSize: 13
                                 font.weight: Font.DemiBold
-                                font.underline: placeArea.containsMouse
+                                font.underline: placeArea.containsMouse || placeArea.activeFocus
 
                                 // Another place: click its name.
                                 PlasmaCore.ToolTipArea {
@@ -283,6 +354,12 @@ PlasmoidItem {
                                         id: placeArea
                                         anchors.fill: parent
                                         hoverEnabled: true
+                                        activeFocusOnTab: true
+                                        Accessible.role: Accessible.Button
+                                        Accessible.name: i18n("Add a place")
+                                        Accessible.onPressAction: root.choosing = true
+                                        Keys.onReturnPressed: root.choosing = true
+                                        Keys.onSpacePressed: root.choosing = true
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: root.choosing = true
                                     }
@@ -342,6 +419,12 @@ PlasmoidItem {
                     }
                 }
 
+                Text {
+                    Layout.fillWidth: true
+                    visible: shared.stale
+                    text: i18n("Last update: %1", Qt.formatDateTime(new Date(shared.updated * 1000), "ddd HH:mm"))
+                    color: card.dim; font.pixelSize: 10; elide: Text.ElideRight
+                }
                 Item { Layout.fillHeight: true }
 
                 // The next four days, a quarter of the card each.
@@ -404,12 +487,14 @@ PlasmoidItem {
                     font.pixelSize: 17
                 }
                 // Out of reach: a click tries again now, not in half an hour.
-                TapHandler {
-                    enabled: root.problem !== ""
-                    onTapped: {
-                        root.problem = "";
-                        root.refresh();
-                    }
+                T.AbstractButton {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: root.problem !== ""
+                    implicitWidth: 110; implicitHeight: 30
+                    Accessible.name: i18n("Try again")
+                    onClicked: root.refresh()
+                    background: Rectangle { radius: 8; color: Qt.rgba(0.5, 0.5, 0.5, 0.15) }
+                    contentItem: Text { text: i18n("Try again"); color: card.ink; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 }
             }
 
@@ -586,7 +671,7 @@ PlasmoidItem {
                     T.AbstractButton {
                         id: forgetPlace
                         visible: root.placed && field.text.trim().length === 0
-                        text: i18nc("%1 is a town", "Forget %1", Plasmoid.configuration.place)
+                        text: i18nc("%1 is a town", "Forget %1", preferences.place)
                         implicitWidth: Math.min(parent.width, forgetLabel.implicitWidth + 18)
                         implicitHeight: 26
                         onClicked: {
@@ -623,5 +708,6 @@ PlasmoidItem {
                 }
             }
         }
+      }
     }
 }

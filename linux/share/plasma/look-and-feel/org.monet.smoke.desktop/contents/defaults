@@ -7,6 +7,9 @@ ColorScheme=MonetDark
 [kdeglobals][Icons]
 Theme=Monet
 
+[kdeglobals][KDE]
+widgetStyle=kvantum
+
 [plasmarc][Theme]
 name=monet
 

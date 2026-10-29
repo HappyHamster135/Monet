@@ -107,7 +107,7 @@ New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 Copy-Item -Force (Join-Path $source 'monet-bridge.exe') "$exe.new"
 Move-Item -Force "$exe.new" $exe
 Copy-Item -Force (Join-Path $source 'monet.ico') $icon
-foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1', 'Update-Windows.ps1') {
+foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1', 'Update-Windows.ps1', 'Install-Launcher.ps1') {
     Copy-Item -Force (Join-Path $source $file) (Join-Path $installDir $file)
 }
 # The cover over Windows during a trip (the painting, the mark, Monet's serif): without them

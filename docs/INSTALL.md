@@ -5,7 +5,7 @@ it. No preparation in Windows, no BitLocker keys, no settings to change.
 
 You need:
 
-- Any graphics: NVIDIA, AMD or Intel. The installer picks the Monet for your
+- An x86-64 PC with NVIDIA, AMD or Intel graphics. The installer picks the Monet for your
   PC's graphics by itself. With an NVIDIA card older than the RTX 20 series
   (or GTX 16), Monet draws with an open driver: fine for everyday things,
   while games run best in Windows.
@@ -25,9 +25,13 @@ Windows downloads in the background while you use it.
 
 ## 1. Make the USB stick
 
+The same USB maker and stick support Intel, AMD and NVIDIA PCs. Graphics are
+detected on the PC you boot from the stick; the PC making it does not choose them.
+ARM PCs, Apple Silicon Macs and BIOS-only machines are not supported.
+
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.3-Make-USB-Stick.exe** from the
+1. Download **Monet-0.9.4-Make-USB-Stick.exe** from the
    [Monet release](https://github.com/HappyHamster135/Monet/releases) and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
@@ -40,19 +44,19 @@ On a Windows PC (this one, or any other):
    then says it's ready.
 
 The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.9.3-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.9.3-Installer.iso**). Monet Setup is in a release only once
+it (**Monet-0.9.4-Setup.iso**), and otherwise Fedora's installer dressed as
+Monet (**Monet-0.9.4-Installer.iso**). Monet Setup is in a release only once
 it has installed Monet in a test PC.
 
-On Linux or a Mac, download **Monet-0.9.3-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.9.3-Installer.iso**) and write it with your disk
+On Linux or a Mac, download **Monet-0.9.4-Setup.iso** (or, if the release
+doesn't have it, **Monet-0.9.4-Installer.iso**) and write it with your disk
 tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.3**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.4**).
 2. Monet Setup opens over the harbor at dawn. Choose your language,
    keyboard and time zone (a region, then a city: Setup guesses it, and once
    online, finds where the PC is), and click **Continue**.
@@ -81,7 +85,7 @@ If something can't go ahead, the page says why in a sentence.
 7. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.9.3-Installer.iso)</summary>
+<summary>With Fedora's installer (Monet-0.9.4-Installer.iso)</summary>
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -139,9 +143,29 @@ Monet. Done.
 - **Windows** has an account with your name and no password, so it starts
   straight into your games. If the PC came with Windows, Windows activates by
   itself. If not, it runs unactivated, with a small watermark.
-- **Play a Windows game:** click **Windows Games** in the panel and press
-  **Play**. While Windows starts the game you see Monet's painting, not
-  Windows. When you quit, the PC comes back to Monet.
+- **Play a game:** click **Games** in the panel (the sun as a play button).
+  Every game is there, Steam's, Heroic's and Lutris' in Monet and the ones in
+  Windows, each saying where it plays. **Play** on a Windows game restarts in
+  Windows; while Windows starts the game you see Monet's painting, not Windows.
+  When you quit, the PC comes back to Monet.
+- **Install a game once:** in Steam, choose **Windows games** when you install
+  a game. It goes on Windows' drive, in its Games folder, and Steam in Monet
+  and Steam in Windows both play it from there. A game that needs Windows
+  downloads while you keep using Monet, and Monet keeps it up to date. Settings
+  → Games & Controllers → **Add to Steam** sets it up, if Steam hasn't got it yet.
+  In Heroic, choose the same folder for Epic and GOG games: Epic's launcher in
+  Windows takes them over, and GOG's games start by themselves.
+- **Your own photo, painted:** Settings → Light & Wallpaper → **Your photo**
+  paints a photo of yours in Monet's hand, in the same four lights as The
+  Hours, and puts it on the wall.
+- **A guest:** Settings → Accounts → **Guest** lets someone use the PC without
+  a password and without seeing your files, games or Windows; everything they
+  do is gone when they sign out.
+- **Your apps come back:** the apps you had open before a trip to Windows
+  open again when you're back in Monet.
+- **Screenshots and clips from Windows** (Windows key + Print Screen, Game
+  Bar's clips) move into Monet's Pictures › Screenshots and Videos when you
+  come back.
 - **Sign in to your game launchers once:** Settings → Play on Windows →
   **Game launchers** → **Sign in…**. Windows opens with your launchers listed;
   sign in to each with *Remember me* ticked, then choose **Back to Monet**.
@@ -150,6 +174,8 @@ Monet. Done.
   updates itself and your games, then switches the PC off (within an hour and a
   half), so the next Play starts the game, not a download.
 - **Windows' language and keyboard** match the ones you picked for Monet.
+- **Wi-Fi in both:** a network you join in Monet works in Windows on your
+  next trip, and one you join in Windows works in Monet when you're back.
 - **A Bluetooth controller or headset:** pair it in Monet, then once in
   Windows. Monet picks up Windows' pairing by itself at the next start, and
   from then on it works in both.
@@ -280,6 +306,6 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.3-Linux.tar.gz** and run `./monet-0.9.3-linux/install.sh`,
+Download **Monet-0.9.4-Linux.tar.gz** and run `./monet-0.9.4-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).

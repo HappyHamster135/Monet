@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+"""Read-only Dolphin view capture and private, native session restoration.
+
+Native metadata includes inactive tabs; older builds use the accessibility tree.
+Never use Dolphin's delayed global session file, enumerate directory contents,
+change tabs, or enable a user's screen reader.
+Unsupported/ambiguous trees fail closed. See docs/RESTORATION.md for the contract.
+"""
+import json
+import os
+from pathlib import Path
+import posixpath
+import re
+import struct
+import subprocess
+import sys
+import time
+from urllib.parse import quote
+import uuid
+import xml.etree.ElementTree as ET
+
+APP = "org.kde.dolphin.desktop"
+MAX_TABS = 32
+SESSION = re.compile(r"dolphin_monet-[a-f0-9]{32}_\Z")
+
+
+def local_folder(path):
+    return (isinstance(path, str) and path.startswith("/") and len(path) <= 8192
+            and not any(ord(c) < 32 for c in path))
+
+
+def valid(state):
+    if not isinstance(state, dict) or set(state) != {"tabs", "active"} or not isinstance(state.get("tabs"), list):
+        return False
+    tabs = state["tabs"]
+    if not 1 <= len(tabs) <= MAX_TABS or type(state.get("active")) is not int or not 0 <= state["active"] < len(tabs):
+        return False
+    for tab in tabs:
+        if not isinstance(tab, dict) or not isinstance(tab.get("folders"), list):
+            return False
+        paths = tab["folders"]
+        if (not 1 <= len(paths) <= 2 or not all(local_folder(p) for p in paths)
+                or type(tab.get("active")) is not int or not 0 <= tab["active"] < len(paths)):
+            return False
+        if set(tab) == {"folders", "active"}:
+            continue
+        if (set(tab) != {"folders", "active", "views", "sizes", "label"}
+                or not isinstance(tab["label"], str) or len(tab["label"]) > 1024 or "\0" in tab["label"]
+                or not isinstance(tab["sizes"], list) or len(tab["sizes"]) != len(paths)
+                or any(type(n) is not int or not 1 <= n <= 100000 for n in tab["sizes"])
+                or not isinstance(tab["views"], list) or len(tab["views"]) != len(paths)):
+            return False
+        for folder, view in zip(paths, tab["views"]):
+            def within(path):
+                return (local_folder(path) and posixpath.normpath(path) == path and path != folder
+                        and path.startswith(folder.rstrip("/") + "/"))
+            if (posixpath.normpath(folder) != folder or not isinstance(view, dict)
+                    or set(view) != {"current", "selected", "expanded", "scroll", "maximum"}
+                    or (view["current"] is not None and not within(view["current"]))):
+                return False
+            for key, limit in (("selected", 4096), ("expanded", 256)):
+                values = view[key]
+                if (not isinstance(values, list) or len(values) > limit or not all(within(p) for p in values)
+                        or len(set(values)) != len(values)):
+                    return False
+            for key in ("scroll", "maximum"):
+                if (not isinstance(view[key], list) or len(view[key]) != 2
+                        or any(type(n) is not int or not 0 <= n <= 2147483647 for n in view[key])):
+                    return False
+            if any(n > maximum for n, maximum in zip(view["scroll"], view["maximum"])):
+                return False
+    try:
+        size = len(json.dumps(state, ensure_ascii=False).encode("utf-8"))
+    except UnicodeError:
+        return False
+    if size > 600000:
+        return False
+    return True
+
+
+def same_layout(saved, current):
+    """Matching an existing window must not reset its later selections or scrolling."""
+    return (valid(saved) and valid(current) and saved["active"] == current["active"]
+            and [(t["folders"], t["active"]) for t in saved["tabs"]]
+            == [(t["folders"], t["active"]) for t in current["tabs"]])
+
+
+def restored(saved, current):
+    if not same_layout(saved, current):
+        return False
+    for old, live in zip(saved["tabs"], current["tabs"]):
+        if "views" not in old:
+            continue
+        if "views" not in live or old["label"] != live["label"]:
+            return False
+        if abs(old["sizes"][0] / sum(old["sizes"]) - live["sizes"][0] / sum(live["sizes"])) * sum(live["sizes"]) > 2:
+            return False
+        for before, after in zip(old["views"], live["views"]):
+            if (set(after["selected"]) != {p for p in before["selected"] if os.path.lexists(p)}
+                    or set(after["expanded"]) != {p for p in before["expanded"] if Path(p).is_dir()}
+                    or (before["current"] is not None and os.path.lexists(before["current"])
+                        and before["current"] != after["current"])
+                    or after["scroll"] != [min(n, maximum) for n, maximum in zip(before["scroll"], after["maximum"])]):
+                return False
+    return True
+
+
+def capture(pid, *, windows=False):
+    """Isolate AT-SPI IPC in a bounded child; a stuck app cannot block switching."""
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        result = subprocess.run([sys.executable, __file__, "capture-windows" if windows else "capture", str(pid)],
+                                capture_output=True, timeout=10, check=True)
+        state = json.loads(result.stdout) if len(result.stdout) <= (2 * 1024 * 1024 if windows else 600000) else None
+        return state if (valid_windows(state) if windows else valid(state)) else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def valid_windows(states):
+    if not isinstance(states, list) or not 1 <= len(states) <= 16:
+        return False
+    ids = []
+    for state in states:
+        if (not isinstance(state, dict) or set(state) != {"id", "files"} or not valid(state["files"])
+                or not isinstance(state["id"], str)
+                or not re.fullmatch(r"\{[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}\}", state["id"])
+                or uuid.UUID(state["id"]).int == 0):
+            return False
+        ids.append(state["id"])
+    return len(set(ids)) == len(ids)
+
+
+def capture_ready(pid, *, windows=False):
+    # A busy compositor/app may miss one read; the capture child still has ten seconds total.
+    for _ in range(3):
+        try:
+            result = capture_native(pid, windows=True)[1] if windows else capture_tree(pid)
+            if result is not None:
+                return result
+        except Exception:
+            pass
+    return None
+
+
+def capture_windows(pid, frames):
+    """Only native surface identity may associate sibling windows with their frames."""
+    if len(frames) == 1:
+        return {frames[0]["id"]: capture(pid)}
+    states = capture(pid, windows=True)
+    if states and {s["id"] for s in states} == {w["id"] for w in frames}:
+        return {s["id"]: s["files"] for s in states}
+    return {}
+
+
+def native_paths(pid, connection, Gio, GLib):
+    reply = connection.call_sync(f"org.kde.dolphin-{pid}", "/dolphin",
+                                 "org.freedesktop.DBus.Introspectable", "Introspect", None,
+                                 GLib.VariantType("(s)"), Gio.DBusCallFlags.NONE, 800, None)
+    text = reply.unpack()[0]
+    if len(text) > 65536:
+        raise ValueError("Files object list is too large")
+    paths = ["/dolphin/" + n.get("name") for n in ET.fromstring(text).findall("node")
+             if re.fullmatch(r"Dolphin_[0-9]+", n.get("name", ""))]
+    if not 1 <= len(paths) <= 16 or len(set(paths)) != len(paths):
+        raise ValueError("Unsupported Files window objects")
+    return paths
+
+
+def capture_native(pid, *, windows=False):
+    import gi
+    from gi.repository import Gio, GLib
+    connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    paths = native_paths(pid, connection, Gio, GLib)
+    if not windows and len(paths) != 1:
+        return True, None
+    try:
+        reply = connection.call_sync(f"org.kde.dolphin-{pid}", paths[0],
+                                     "org.kde.dolphin.MainWindow", "monetFilesWindows" if windows else "monetFilesState", None,
+                                     GLib.VariantType("(s)"), Gio.DBusCallFlags.NONE, 800, None)
+    except GLib.Error as error:
+        if Gio.DBusError.get_remote_error(error) == "org.freedesktop.DBus.Error.UnknownMethod":
+            return False, None
+        raise
+    text = reply.unpack()[0]
+    state = json.loads(text) if len(text.encode("utf-8")) <= (2 * 1024 * 1024 if windows else 600000) else None
+    return True, state if (valid_windows(state) if windows else valid(state)) else None
+
+
+def capture_tree(pid):
+    supported, state = capture_native(pid)
+    if supported:
+        return state
+    import gi
+    gi.require_version("Atspi", "2.0")
+    from gi.repository import Atspi, Gio, GLib
+    from PySide6.QtCore import QLocale, Qt, QUrl
+    Atspi.set_timeout(600, 800)
+    deadline = time.monotonic() + 8
+    budget = 2400
+
+    def children(node):
+        nonlocal budget
+        budget -= 1
+        if budget < 0 or time.monotonic() > deadline:
+            raise ValueError("Files capture exceeded its budget")
+        count = node.get_child_count()
+        if not 0 <= count <= 128:
+            raise ValueError("Unexpected Files tree")
+        return [node.get_child_at_index(i) for i in range(count)]
+
+    def find(node, roles, depth=0):
+        if depth > 12:
+            raise ValueError("Unexpected Files tree depth")
+        role = node.get_role()
+        if role in roles:
+            return [node]
+        # Do not inspect file names, places, menus, terminal content or item data.
+        if role not in (Atspi.Role.FRAME, Atspi.Role.FILLER, Atspi.Role.SPLIT_PANE,
+                        Atspi.Role.SCROLL_PANE, Atspi.Role.LAYERED_PANE):
+            return []
+        return [match for child in children(node) for match in find(child, roles, depth + 1)]
+
+    desktop = Atspi.get_desktop(0)
+    apps = [a for a in children(desktop) if a.get_process_id() == pid]
+    if len(apps) != 1:
+        return None
+    frames = [n for n in children(apps[0]) if n.get_role() == Atspi.Role.FRAME]
+    if len(frames) != 1:
+        return None
+    frame = frames[0]
+    layers = find(frame, (Atspi.Role.LAYERED_PANE,))
+    bars = find(frame, (Atspi.Role.PAGE_TAB_LIST,))
+    if len(layers) != 1 or len(bars) != 1:
+        return None
+
+    def tab_info():
+        tabs = [n for n in children(bars[0]) if n.get_role() == Atspi.Role.PAGE_TAB]
+        return [(n.get_description(), n.get_state_set().contains(Atspi.StateType.SELECTED)) for n in tabs]
+
+    connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    verified = set()
+
+    def folder(node):
+        description = node.get_description()
+        # Dolphin puts the full URL last. Do not depend on the translated prefix.
+        # If a translation/tree doesn't follow that contract, DBus validation below
+        # rejects it. More than one URL is ambiguous (including URL-like filenames).
+        if description.count("file://") != 1:
+            raise ValueError("Unsupported Files location")
+        url = QUrl(description[description.index("file://"):])
+        path = url.toLocalFile()
+        if (not url.isLocalFile() or url.host() or url.hasQuery() or url.hasFragment()
+                or not local_folder(path)):
+            raise ValueError("Only unambiguous local folders are supported")
+        encoded = url.toString(QUrl.FullyEncoded)
+        if encoded not in verified:
+            paths = native_paths(pid, connection, Gio, GLib)
+            if len(paths) != 1:
+                raise ValueError("Files has more than one window")
+            reply = connection.call_sync(f"org.kde.dolphin-{pid}", paths[0],
+                                         "org.kde.dolphin.MainWindow", "isUrlOpen",
+                                         GLib.Variant("(s)", (encoded,)), GLib.VariantType("(b)"),
+                                         Gio.DBusCallFlags.NONE, 600, None)
+            if not reply.unpack()[0]:
+                raise ValueError("Files no longer has this folder open")
+            verified.add(encoded)
+        return path
+
+    def snapshot():
+        info = tab_info()
+        pages = children(layers[0])
+        if not 1 <= len(info) <= MAX_TABS or len(pages) != len(info):
+            raise ValueError("Files tab pages don't match")
+        selected = [i for i, (_, active) in enumerate(info) if active]
+        if len(selected) != 1:
+            raise ValueError("Files has no unique current tab")
+        tabs = []
+        for page, (tooltip, _) in zip(pages, info):
+            views = find(page, (Atspi.Role.LIST, Atspi.Role.TABLE, Atspi.Role.TREE_TABLE))
+            if not 1 <= len(views) <= 2:
+                raise ValueError("Files has an unsupported view")
+            if len(views) == 2:
+                # Qt's child order follows stacking/focus, not splitter order.
+                # Cached view extents are also available for inactive tabs.
+                positions = [(v.get_component_iface().get_extents(Atspi.CoordType.WINDOW), v) for v in views]
+                if any(p.width <= 0 for p, _ in positions) or positions[0][0].x == positions[1][0].x:
+                    raise ValueError("Files split geometry is not ready")
+                rtl = QLocale.system().textDirection() == Qt.RightToLeft
+                views = [v for _, v in sorted(positions, key=lambda pv: pv[0].x, reverse=rtl)]
+            paths = [folder(view) for view in views]
+            # The tooltip is the active side's URL, independent of custom tab names.
+            prefer_local = QUrl.ComponentFormattingOption(QUrl.PreferLocalFile.value)
+            display = [QUrl.fromLocalFile(p).toDisplayString(prefer_local) for p in paths]
+            if tooltip not in display:
+                raise ValueError("Files location changed during capture")
+            tabs.append({"folders": paths, "active": display.index(tooltip)})
+        return {"tabs": tabs, "active": selected[0]}
+
+    first = snapshot()
+    # A tab switch, navigation or animation during capture must not mix two states.
+    return first if first == snapshot() else None
+
+
+def tab_bytes(tab):
+    """Dolphin tab format 2 + view format 1 (supported by Dolphin 26.08.1).
+
+    Only validated coordinates and paths enter the native stream, never opaque data.
+    """
+    def uint(value):
+        return struct.pack(">I", value)
+
+    def url(path):
+        encoded = ("file://" + quote(path, safe="/")).encode("ascii") if path is not None else None
+        return uint(len(encoded)) + encoded if encoded is not None else uint(0xffffffff)
+
+    def urls(paths):
+        return uint(len(paths)) + b"".join(url(p) for p in paths)
+
+    def view(path, metadata):
+        return (url(path) + b"\0" + uint(1) + url(metadata.get("current"))
+                + urls(metadata.get("selected", [])) + struct.pack(">ii", *metadata.get("scroll", [0, 0]))
+                + urls(metadata.get("expanded", [])))
+
+    splitter, label = b"", b""
+    if "views" in tab:
+        # QSplitter format 1: horizontal, non-collapsible, native style defaults.
+        splitter = (uint(0xff) + uint(1) + uint(len(tab["sizes"])) + b"".join(uint(n) for n in tab["sizes"])
+                    + b"\0" + struct.pack(">i", -1) + b"\1" + uint(1) + b"\0")
+        label = tab["label"].encode("utf-16-be")
+        label = uint(len(label)) + label
+
+    return (uint(2) + bytes([len(tab["folders"]) == 2])
+            + b"".join(view(p, v) for p, v in zip(tab["folders"], tab.get("views", [{}] * len(tab["folders"]))))
+            + bytes([tab["active"] == 0]) + uint(len(splitter)) + splitter + label)
+
+
+def session_text(state):
+    if not valid(state):
+        raise ValueError("Invalid Files checkpoint")
+    lines = ["[1]", f"Active Tab Index={state['active']}", f"Tab Count={len(state['tabs'])}"]
+    for i, tab in enumerate(state["tabs"]):
+        escaped = "".join(f"\\x{b:02x}" for b in tab_bytes(tab))
+        lines.append(f"Tab Data {i}={escaped}")
+    return "\n".join(lines) + "\n\n[Number]\nNumberOfWindows=1\n\n[WindowProperties1]\nClassName=DolphinMainWindow\nObjectName=Dolphin#1\n"
+
+
+def start(state):
+    if not valid(state) or not all(Path(p).is_dir() for t in state["tabs"] for p in t["folders"]):
+        raise OSError("A saved Files folder is unavailable")
+    folder = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session"
+    folder.mkdir(parents=True, exist_ok=True)
+    # Never overwrite Dolphin's normal session or change rememberOpenedTabs.
+    # Qt Wayland keeps the session ID but drops the session key. An empty key
+    # works on both Wayland and X11; supplying a key silently opens Home instead.
+    token = "monet-" + uuid.uuid4().hex
+    path = folder / ("dolphin_" + token + "_")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="ascii") as stream:
+            stream.write(session_text(state))
+            stream.flush()
+            os.fsync(stream.fileno())
+        environment = dict(os.environ, QT_LINUX_ACCESSIBILITY_ALWAYS_ON="1")
+        process = subprocess.Popen(["dolphin", "--new-window", "--session", token], env=environment, start_new_session=True,
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return path, process.pid
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+
+
+def session_path(receipt):
+    name = receipt.get("session") if isinstance(receipt, dict) else None
+    if not isinstance(name, str) or not SESSION.fullmatch(name):
+        return None
+    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "session" / name
+
+
+def cleanup(receipt):
+    path = session_path(receipt)
+    if path:
+        path.unlink(missing_ok=True)
+
+
+def alive(receipt):
+    """PID reuse must not mistake an unrelated process for our pending launch."""
+    path = session_path(receipt)
+    pid = receipt.get("pid") if isinstance(receipt, dict) else None
+    if not path or type(pid) is not int or pid <= 0:
+        return False
+    try:
+        args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+        token = path.name[len("dolphin_"):-1].encode("ascii")
+        return (Path(os.fsdecode(args[0])).name == "dolphin"
+                and any(args[i:i+2] == [b"--session", token] for i in range(len(args)-1)))
+    except OSError:
+        return False
+
+
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) != 3 or sys.argv[1] not in ("capture", "capture-windows"):
+            raise ValueError("Invalid Files capture arguments")
+        result = capture_ready(int(sys.argv[2]), windows=sys.argv[1] == "capture-windows")
+    except Exception:
+        result = None
+    print(json.dumps(result, ensure_ascii=False))

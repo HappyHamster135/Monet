@@ -37,6 +37,10 @@ FocusScope {
     signal notesToggled()
 
     activeFocusOnTab: true
+    Accessible.role: Accessible.Table
+    Accessible.name: i18n("Calendar")
+    Accessible.description: Qt.formatDate(chosen, Qt.locale().dateFormat(Locale.LongFormat))
+        + ". " + i18n("Arrow keys change the day. Enter opens its note. Home returns to today.")
 
     function sameDay(a, b) {
         return a.toDateString() === b.toDateString();
@@ -84,6 +88,18 @@ FocusScope {
     Keys.onDownPressed: move(7)
     Keys.onReturnPressed: opened(chosen)
     Keys.onEnterPressed: opened(chosen)
+    Keys.onSpacePressed: opened(chosen)
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Home) {
+            choose(today);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown) {
+            const by = event.key === Qt.Key_PageUp ? -1 : 1;
+            const lastDay = new Date(shown.getFullYear(), shown.getMonth()+by+1, 0).getDate();
+            choose(new Date(shown.getFullYear(), shown.getMonth()+by, Math.min(chosen.getDate(),lastDay)));
+            event.accepted = true;
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -110,6 +126,9 @@ FocusScope {
             // Notes: the day's note beside the month, out or away.
             PlasmaCore.ToolTipArea {
                 id: notesTab
+                activeFocusOnTab: true
+                Keys.onReturnPressed: month.notesToggled()
+                Keys.onSpacePressed: month.notesToggled()
                 visible: month.notesButton
                 Layout.preferredWidth: 26
                 Layout.preferredHeight: 26
@@ -123,7 +142,9 @@ FocusScope {
                     anchors.fill: parent
                     radius: 13
                     color: month.notesShown ? month.lily : month.ink
-                    opacity: month.notesShown ? 0.18 : notesArea.pressed ? 0.14 : notesArea.containsMouse ? 0.08 : 0
+                    border.width: notesTab.activeFocus ? 2 : 0
+                    border.color: month.lily
+                    opacity: notesTab.activeFocus ? 0.5 : month.notesShown ? 0.18 : notesArea.pressed ? 0.14 : notesArea.containsMouse ? 0.08 : 0
                 }
                 // A page with lines on it.
                 Shape {
@@ -163,6 +184,10 @@ FocusScope {
                 model: [-1, 1]
                 Item {
                     id: arrow
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: month.turn(arrow.modelData)
+                    Keys.onSpacePressed: month.turn(arrow.modelData)
+                    Accessible.onPressAction: month.turn(arrow.modelData)
                     required property int modelData
                     Layout.preferredWidth: 26
                     Layout.preferredHeight: 26
@@ -173,7 +198,9 @@ FocusScope {
                         anchors.fill: parent
                         radius: 13
                         color: month.ink
-                        opacity: arrowArea.pressed ? 0.14 : arrowArea.containsMouse ? 0.08 : 0
+                        border.width: arrow.activeFocus ? 2 : 0
+                        border.color: month.lily
+                        opacity: arrow.activeFocus ? 0.5 : arrowArea.pressed ? 0.14 : arrowArea.containsMouse ? 0.08 : 0
                     }
                     Text {
                         anchors.centerIn: parent
@@ -248,6 +275,7 @@ FocusScope {
                     active: note !== ""
                     mainText: Qt.locale().toString(modelData, Qt.locale().dateFormat(Locale.LongFormat))
                     subText: note.split("\n").slice(0, 4).join("\n")
+                    Accessible.onPressAction: { month.choose(cell.modelData); month.opened(cell.modelData); }
                     Accessible.role: Accessible.Button
                     Accessible.name: mainText + (note !== "" ? ", " + note.split("\n")[0] : "")
 
@@ -330,6 +358,10 @@ FocusScope {
         // The chosen day's note, in a line: a click opens it.
         Item {
             id: peek
+            activeFocusOnTab: true
+            Keys.onReturnPressed: month.opened(month.chosen)
+            Keys.onSpacePressed: month.opened(month.chosen)
+            Accessible.onPressAction: month.opened(month.chosen)
             readonly property string note: month.store ? month.store.noteFor(month.chosen) : ""
             readonly property int radius: 9
             visible: month.peekLine
@@ -339,7 +371,9 @@ FocusScope {
                 anchors.fill: parent
                 radius: parent.radius
                 color: month.ink
-                opacity: peekArea.pressed ? 0.12 : peekArea.containsMouse ? 0.08 : 0.04
+                border.width: peek.activeFocus ? 2 : 0
+                border.color: month.lily
+                opacity: peek.activeFocus ? 0.5 : peekArea.pressed ? 0.12 : peekArea.containsMouse ? 0.08 : 0.04
             }
             Accessible.role: Accessible.Button
             Accessible.name: i18nc("%1 is a day, like Today or Fri 30 Oct", "Notes for %1", month.dayName(month.chosen))

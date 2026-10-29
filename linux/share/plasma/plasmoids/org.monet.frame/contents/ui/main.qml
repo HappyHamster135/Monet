@@ -14,6 +14,7 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    LayoutGuard {}
 
     readonly property string painting: "file://@DATADIR@/wallpapers/Monet/contents/hours/dusk.jpg"
     property int index: 0

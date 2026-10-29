@@ -26,14 +26,14 @@ jobs:
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Shell scripts
-        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh image/setup/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh tools/build-settings-style.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure tools/*.py setup/monet-setup setup/monet_setup/*.py image/installer/product/usr/libexec/monet-download
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
           sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi >/dev/null
-          python3 -m unittest discover -s tests -v
+          python3 tools/test.py
 
   linux:
     needs: test
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rust (version from rust-toolchain.toml)
         run: |
-          sudo apt-get install -y -q mingw-w64 >/dev/null
+          sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev >/dev/null
           rustup toolchain install && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu
       - name: Build
         run: |
@@ -74,9 +74,11 @@ jobs:
       - name: Rust (version from rust-toolchain.toml)
         run: rustup toolchain install
       - name: Build
-        run: cargo build --release -p monet-bridge
+        run: cargo build --release -p monet-bridge -p monet-usb
+      - name: Windows bridge and USB safety tests (temporary files and simulated disks)
+        run: cargo test -p monet-bridge -p monet-usb
       - name: Lint
-        run: cargo clippy -p monet-bridge -- -D warnings
+        run: cargo clippy -p monet-bridge -p monet-usb --all-targets -- -D warnings
       - name: Check PowerShell scripts
         shell: pwsh
         run: ./tools/check-powershell.ps1

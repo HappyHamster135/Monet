@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""Prepare a reviewed HTML import. Zen alone writes its bookmark database."""
+import configparser
+from contextlib import contextmanager
+import fcntl
+import hashlib
+from html import escape
+from html.parser import HTMLParser
+import json
+import os
+from pathlib import Path
+import re
+import sqlite3
+import stat
+import tempfile
+import time
+from urllib.parse import unquote, urlsplit
+import uuid
+
+LIMIT = 16 * 1024 * 1024
+MAX_LINKS = 25000
+ZEN = "app.zen_browser.zen"
+LIBRARY = "chrome://browser/content/places/places.xhtml"
+
+
+class ImportError(ValueError):
+    pass
+
+
+def profile_root():
+    return Path.home() / ".var/app" / ZEN / ".zen"
+
+
+def state_root():
+    return Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "monet/bookmark-imports"
+
+
+def profiles():
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    try:
+        parser.read(profile_root() / "profiles.ini", encoding="utf-8")
+        root = profile_root().resolve()
+        result = []
+        for section in parser.sections():
+            if not section.startswith("Profile") or not parser.has_option(section, "Path"):
+                continue
+            value = parser[section]
+            path = Path(value["Path"])
+            if value.get("IsRelative", "1") == "1":
+                path = root / path
+            try:
+                path = path.resolve(strict=True)
+                name = path.relative_to(root).as_posix()
+                if name != "." and path.is_dir() and path.stat().st_uid == os.getuid():
+                    result.append({"id": name, "name": value.get("Name", name)[:256]})
+            except (OSError, ValueError):
+                continue
+        return list({p["id"]: p for p in result}.values())
+    except (OSError, UnicodeError, configparser.Error):
+        return []
+
+
+def profile_path(ident):
+    if ident not in {p["id"] for p in profiles()}:
+        raise ImportError("profile")
+    return (profile_root() / ident).resolve()
+
+
+@contextmanager
+def bookmarks(ident):
+    path = profile_path(ident)
+    lock = None
+    connection = None
+    try:
+        # Firefox's profile lock also protects a profile without a database yet.
+        if (path / ".parentlock").exists():
+            lock = os.open(path / ".parentlock", os.O_RDWR | os.O_NOFOLLOW)
+            fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        database = path / "places.sqlite"
+        if not database.exists():
+            yield None
+            return
+        if database.is_symlink() or not database.is_file():
+            raise ImportError("database")
+        connection = sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=0.2)
+        connection.execute("PRAGMA query_only=ON")
+        connection.execute("BEGIN")
+        yield connection
+    except BlockingIOError:
+        raise ImportError("busy") from None
+    except sqlite3.Error as error:
+        raise ImportError("busy" if "locked" in str(error) or "busy" in str(error) else "database") from None
+    finally:
+        if connection:
+            connection.close()
+        if lock is not None:
+            os.close(lock)
+
+
+class BookmarksHTML(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.tree = []
+        self.stack = []
+        self.capture = ""
+        self.text = ""
+        self.url = ""
+        self.folder = None
+        self.count = 0
+        self.skipped = 0
+        self.recognized = False
+        self.saw_list = False
+
+    def handle_decl(self, declaration):
+        self.recognized = "netscape-bookmark-file" in declaration.lower()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "dl":
+            self.saw_list = True
+            if len(self.stack) >= 64:
+                raise ImportError("large")
+            target = self.stack[-1] if self.stack else self.tree
+            if self.folder is not None:
+                children = []
+                target.append({"title": self.folder, "children": children})
+                target = children
+                self.folder = None
+            self.stack.append(target)
+        elif tag in ("a", "h3"):
+            if self.capture:
+                raise ImportError("invalid")
+            self.capture, self.text = tag, ""
+            self.url = dict(attrs).get("href") or ""
+
+    def handle_data(self, text):
+        if self.capture:
+            self.text = (self.text + text)[:4096]
+
+    def handle_endtag(self, tag):
+        if tag == "dl":
+            if not self.stack:
+                raise ImportError("invalid")
+            self.stack.pop()
+        elif tag == self.capture:
+            if tag == "h3":
+                self.folder = self.text.strip()
+            else:
+                self.count += 1
+                if self.count > MAX_LINKS:
+                    raise ImportError("large")
+                try:
+                    valid = (self.stack and len(self.url) <= 8192 and
+                             not any(ord(c) < 32 for c in self.url) and
+                             urlsplit(self.url).scheme.lower() in ("http", "https", "ftp") and
+                             bool(urlsplit(self.url).hostname))
+                except ValueError:
+                    valid = False
+                if valid:
+                    self.stack[-1].append({"title": self.text.strip() or self.url, "url": self.url})
+                else:
+                    self.skipped += 1
+            self.capture = ""
+
+
+def source_path(source, windows):
+    if source == "windows":
+        return windows
+    if not isinstance(source, str) or len(source) > 16384:
+        raise ImportError("source")
+    parts = urlsplit(source)
+    if parts.scheme != "file" or parts.netloc not in ("", "localhost") or parts.query or parts.fragment:
+        raise ImportError("source")
+    path = unquote(parts.path)
+    if not path.startswith("/") or any(ord(c) < 32 for c in path):
+        raise ImportError("source")
+    return Path(path)
+
+
+def read_source(path):
+    try:
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NONBLOCK), "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise ImportError("source")
+            raw = stream.read(LIMIT + 1)
+    except OSError:
+        raise ImportError("source") from None
+    if len(raw) > LIMIT:
+        raise ImportError("large")
+    try:
+        parser = BookmarksHTML()
+        parser.feed(raw.decode("utf-8-sig"))
+        parser.close()
+        if not parser.recognized or not parser.saw_list or parser.stack or parser.capture:
+            raise ImportError("invalid")
+        return raw, parser
+    except UnicodeError:
+        raise ImportError("invalid") from None
+
+
+def plan(request, windows):
+    if not isinstance(request, dict) or not isinstance(request.get("profile"), str):
+        raise ImportError("profile")
+    ident = request["profile"]
+    raw, parser = read_source(source_path(request.get("source"), windows))
+    with bookmarks(ident) as database:
+        existing = {row[0] for row in database.execute(
+            "SELECT p.url FROM moz_bookmarks b JOIN moz_places p ON b.fk=p.id WHERE b.type=1")} if database else set()
+    seen = set(existing)
+    added = []
+
+    def keep(items):
+        result = []
+        for item in items:
+            if "children" in item:
+                children = keep(item["children"])
+                if children:
+                    result.append({"title": item["title"], "children": children})
+            elif item["url"] not in seen:
+                seen.add(item["url"])
+                added.append(item["url"])
+                result.append(item)
+        return result
+
+    tree = keep(parser.tree)
+    token = hashlib.sha256(raw + json.dumps([ident, sorted(existing)], ensure_ascii=False).encode()).hexdigest()
+    return {"ok": True, "token": token, "count": parser.count, "new": len(added),
+            "duplicates": parser.count - parser.skipped - len(added), "unsupported": parser.skipped,
+            "sample": added[:5]}, tree, added
+
+
+def html(tree, folder):
+    def render(items):
+        lines = []
+        for item in items:
+            if "children" in item:
+                lines += [f'<DT><H3>{escape(item["title"])}</H3><DL><p>', *render(item["children"]), '</DL><p>']
+            else:
+                lines.append(f'<DT><A HREF="{escape(item["url"], quote=True)}">{escape(item["title"])}</A>')
+        return lines
+    return "\n".join(['<!DOCTYPE NETSCAPE-Bookmark-file-1>', '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+                      '<TITLE>Bookmarks</TITLE><H1>Bookmarks</H1><DL><p>',
+                      *render([{"title": folder, "children": tree}]), '</DL><p>']).encode()
+
+
+def prepare(request, windows, downloads, label, launch):
+    result, tree, urls = plan(request, windows)
+    if request.get("token") != result["token"]:
+        raise ImportError("changed")
+    if not urls:
+        return {**result, "state": "nothing"}
+    ident = uuid.uuid4().hex
+    folder = f"{label} — {time.strftime('%Y-%m-%d')} — {ident[:6]}"
+    downloads.mkdir(parents=True, exist_ok=True)
+    data = html(tree, folder)
+    fd, name = tempfile.mkstemp(prefix="Monet-bookmarks-", suffix=".html", dir=downloads)
+    receipt = None
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        record = {"profile": request["profile"], "folder": folder, "file": name, "urls": urls}
+        state_root().mkdir(parents=True, exist_ok=True, mode=0o700)
+        path = state_root() / f"{ident}.json"
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        receipt = path
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(record, stream, ensure_ascii=False)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError:
+        Path(name).unlink(missing_ok=True)
+        if receipt:
+            receipt.unlink(missing_ok=True)
+        raise
+    try:
+        launch(["flatpak", "run", ZEN, "--new-instance", "--profile", str(profile_path(request["profile"])), "-chrome", LIBRARY])
+        opened = True
+    except OSError:
+        opened = False
+    return {"ok": True, "state": "prepared", "id": ident, "folder": folder, "file": name,
+            "count": len(urls), "opened": opened}
+
+
+def read_record(ident):
+    if not isinstance(ident, str) or not re.fullmatch(r"[0-9a-f]{32}", ident):
+        raise ImportError("request")
+    try:
+        path = state_root() / f"{ident}.json"
+        with path.open("rb") as stream:
+            raw = stream.read(LIMIT + 1)
+        if len(raw) > LIMIT:
+            raise ImportError("request")
+        record = json.loads(raw)
+        if (not isinstance(record, dict) or
+                not all(isinstance(record.get(k), str) and record[k] for k in ("profile", "folder", "file")) or
+                not isinstance(record.get("urls"), list) or not 0 < len(record["urls"]) <= MAX_LINKS or
+                not all(isinstance(url, str) and url for url in record["urls"])):
+            raise ImportError("request")
+        return record
+    except (OSError, ValueError) as error:
+        if isinstance(error, ImportError):
+            raise
+        raise ImportError("request") from None
+
+
+def recent():
+    candidates = []
+    for path in state_root().glob("*.json"):
+        try:
+            candidates.append((path.stat().st_mtime, path.stem))
+        except OSError:
+            continue
+    result = []
+    choices = {p["id"] for p in profiles()}
+    for _, ident in sorted(candidates, reverse=True)[:20]:
+        try:
+            record = read_record(ident)
+            if record["profile"] not in choices:
+                continue
+            result.append({"id": ident, "profile": record["profile"], "folder": record["folder"],
+                           "file": record["file"], "count": len(record["urls"])})
+        except ImportError:
+            continue
+    return result
+
+
+def verify(ident):
+    record = read_record(ident)
+    try:
+        with bookmarks(record["profile"]) as database:
+            rows = list(database.execute("""WITH RECURSIVE folders(id,depth) AS (
+                SELECT id,0 FROM moz_bookmarks WHERE type=2 AND title=?
+                UNION ALL SELECT b.id,f.depth+1 FROM moz_bookmarks b JOIN folders f ON b.parent=f.id
+                WHERE b.type=2 AND f.depth<64)
+                SELECT p.url FROM moz_bookmarks b JOIN folders f ON b.parent=f.id
+                JOIN moz_places p ON p.id=b.fk WHERE b.type=1""", (record["folder"],))) if database else []
+        expected = set(record["urls"])
+        found = {row[0] for row in rows}
+        count = len(expected & found)
+        return {"ok": True, "state": "verified" if count == len(expected) else "partial" if count else "not-imported",
+                "count": count, "expected": len(expected), "duplicates": len(rows) - len(found), "folder": record["folder"]}
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        if isinstance(error, ImportError):
+            raise
+        raise ImportError("request") from None

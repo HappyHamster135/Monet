@@ -1,9 +1,10 @@
 /*
- * Recently Played: the games played last, on Monet's glass, each its tall
- * cover from Steam's own picture cache (or a painted card with its name), and
- * when it was played. A click starts it the way Steam's Play does; the sun
- * comes up over a cover under the pointer. As many as the card is wide; Monet's
- * helper looks again every minute, so a game just played comes first.
+ * Recently Played: the games played last, here (Steam, Heroic, Lutris) and in
+ * Windows, on Monet's glass, each its tall cover (or a painted card with its
+ * name), and when it was played. A click starts it the way its launcher does,
+ * or, for one played in Windows last, asks before the PC restarts there; the
+ * sun comes up over a cover under the pointer. As many as the card is wide;
+ * Monet's helper looks again every minute, so a game just played comes first.
  */
 import QtQuick
 import QtQuick.Effects
@@ -19,7 +20,8 @@ PlasmoidItem {
     id: root
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
-    // [{ id, name, last (Unix time), art (file URL or "") }], newest first.
+    readonly property string monet: "@BINDIR@/monet"
+    // [{ id, name, last (Unix time), art (a URL or ""), play (here) or windows (there) }], newest first.
     property var games: []
     property bool looked: false
 
@@ -51,8 +53,14 @@ PlasmoidItem {
         onTriggered: runner.connectSource(root.helper + " played")
     }
 
-    function play(id) {
-        runner.connectSource(helper + " play " + id);
+    // Ids only contain letters, digits, ":", ".", "_" and "-" (monet-quick lists no others).
+    function play(game) {
+        if (game.play) {
+            runner.connectSource(helper + " play " + game.play);
+        } else if (game.windows) {
+            // Asked first, as the app menu's games are: the PC restarts in Windows.
+            runner.connectSource(monet + " play '" + game.windows + "' --confirm");
+        }
     }
 
     // Steam itself, from its menu entry (the helper takes the entry's name as hex).
@@ -268,7 +276,7 @@ PlasmoidItem {
                                 ink: glass.ink
                                 dim: glass.dim
                                 lily: glass.lily
-                                onClicked: root.play(modelData.id)
+                                onClicked: root.play(modelData)
                             }
                         }
                     }
@@ -286,7 +294,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
-                        text: i18n("The games you play in Steam show up here.")
+                        text: i18n("The games you play show up here, in Monet and in Windows.")
                         color: glass.ink
                         font.family: "Fraunces 72pt SuperSoft"
                         font.italic: true

@@ -66,8 +66,8 @@ PlasmoidItem {
 
     fullRepresentation: Item {
         id: face
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 11
-        Layout.minimumHeight: Kirigami.Units.gridUnit * 11
+        Layout.minimumWidth: Kirigami.Units.gridUnit * 13
+        Layout.minimumHeight: Kirigami.Units.gridUnit * 14
         Layout.preferredWidth: Kirigami.Units.gridUnit * 12
         Layout.preferredHeight: Kirigami.Units.gridUnit * 13
         // Right to left, the month runs from the right and the notes come out on its left.
@@ -75,40 +75,13 @@ PlasmoidItem {
         LayoutMirroring.childrenInherit: true
 
         readonly property bool mirrored: LayoutMirroring.enabled
-        readonly property bool wide: width >= Kirigami.Units.gridUnit * 20
+        readonly property bool wide: width >= Kirigami.Units.gridUnit * 36
         readonly property int margin: Math.round(Kirigami.Units.gridUnit * 0.8)
 
-        // The panel beside the card, on the side the month reads towards (the other one near the screen's edge).
-        function placeNotes() {
-            const at = card.mapToGlobal(0, 0);
-            const left = face.Screen.virtualX, top = face.Screen.virtualY;
-            const right = left + face.Screen.width, bottom = top + face.Screen.height;
-            const after = at.x + card.width + 12, before = at.x - side.width - 12;
-            let x = face.mirrored ? before : after;
-            if (x + side.width > right - 8 || x < left + 8) {
-                x = x === after ? before : after;
-            }
-            side.x = Math.round(Math.max(left + 8, Math.min(x, right - side.width - 8)));
-            side.y = Math.round(Math.max(top + 8, Math.min(at.y, bottom - side.height - 8)));
-        }
-
         function openNotes() {
-            if (face.wide) {
-                inline.write();
-                return;
-            }
-            placeNotes();
+            if (face.wide) { inline.write(); return; }
             root.notesOpen = true;
-            notes.write();
-        }
-
-        Connections {
-            target: root
-            function onNotesOpenChanged() {
-                if (root.notesOpen) {
-                    face.placeNotes();
-                }
-            }
+            side.write();
         }
 
         Glass {
@@ -174,37 +147,13 @@ PlasmoidItem {
             }
         }
 
-        // The notes, brought out beside the card.
-        PlasmaCore.Dialog {
+        NotesPopup {
             id: side
+            anchorItem: card
             visible: root.notesOpen && !face.wide
-            location: PlasmaCore.Types.Floating
-            hideOnWindowDeactivate: false
-            onVisibleChanged: if (!visible) root.notesOpen = false
-
-            mainItem: Item {
-                width: Kirigami.Units.gridUnit * 18
-                height: Math.max(Kirigami.Units.gridUnit * 17, card.height)
-                // Mist or smoke, from the colors Monet's light chose.
-                readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
-                LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
-                LayoutMirroring.childrenInherit: true
-
-                DayNotes {
-                    id: notes
-                    anchors.fill: parent
-                    anchors.margins: Kirigami.Units.smallSpacing
-                    store: noteStore
-                    day: month.chosen
-                    today: root.today
-                    ink: Kirigami.Theme.textColor
-                    dim: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.62)
-                    lily: parent.smoke ? "#4DB4A0" : "#357F72"
-                    closable: true
-                    onMoved: day => month.choose(day)
-                    onClosed: root.notesOpen = false
-                }
-            }
+            store: noteStore; day: month.chosen; today: root.today
+            onMoved: day => month.choose(day)
+            onClosed: { root.notesOpen=false; month.forceActiveFocus(); }
         }
     }
 }

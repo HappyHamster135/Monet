@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Location on the EFI system partition, with `/` separators.
 pub const ESP_PATH: &str = "EFI/Monet/games.json";
 
-pub const STORES: &[&str] = &["steam", "epic", "riot", "custom"];
+pub const STORES: &[&str] = &["steam", "epic", "riot", "gog", "battlenet", "ubisoft", "rockstar", "ea", "custom", "program", "app"];
 
 const MAX_GAMES: usize = 2000;
 const MAX_NAME: usize = 120;
@@ -18,6 +18,18 @@ pub struct Game {
     /// `store:key`, for example `steam:1172470` or `riot:valorant`.
     pub id: String,
     pub name: String,
+    /// Where it is in Windows when its launcher there may not know it yet (a game another
+    /// launcher in Monet installed in the shared Games folder): the folder to point it at once.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub locate: String,
+    /// How long it's been played in Windows, in minutes, as Monet Bridge measured it (the
+    /// trips it started there), for Monet's Games.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub minutes: u64,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 impl Game {
@@ -56,6 +68,10 @@ impl GameList {
         list.games.retain(|g| is_valid_id(&g.id));
         for game in &mut list.games {
             game.name = clean_name(&game.name);
+            // Only ever shown, never run: a plain Windows path, or nothing.
+            if game.locate.len() > 260 || game.locate.chars().any(|c| c.is_control()) {
+                game.locate.clear();
+            }
         }
         list.games.retain(|g| !g.name.is_empty());
         Ok(list)
@@ -99,10 +115,10 @@ mod tests {
 
     #[test]
     fn ids() {
-        for ok in ["steam:730", "riot:valorant", "epic:Fortnite", "custom:my-game_2.0"] {
+        for ok in ["steam:730", "riot:valorant", "epic:Fortnite", "gog:1207658924", "battlenet:Pro", "ubisoft:635", "rockstar:gta5", "ea:Origin.OFR.50.0005831", "custom:my-game_2.0"] {
             assert!(is_valid_id(ok), "{ok}");
         }
-        for bad in ["730", "steam:", "gog:1", "steam:7 30", "steam:a/b", "riot:..", "steam:$(x)", "custom:a'b"] {
+        for bad in ["730", "steam:", "uplay:1", "steam:7 30", "steam:a/b", "riot:..", "steam:$(x)", "custom:a'b"] {
             assert!(!is_valid_id(bad), "{bad}");
         }
     }
@@ -125,14 +141,17 @@ mod tests {
     fn new_sorts_and_dedups() {
         let list = GameList::new(
             vec![
-                Game { id: "steam:2".into(), name: "beta".into() },
-                Game { id: "steam:1".into(), name: "Alpha".into() },
-                Game { id: "steam:1".into(), name: "Alpha".into() },
+                Game { id: "steam:2".into(), name: "beta".into(), locate: String::new(), minutes: 95 },
+                Game { id: "steam:1".into(), name: "Alpha".into(), locate: String::new(), minutes: 0 },
+                Game { id: "steam:1".into(), name: "Alpha".into(), locate: String::new(), minutes: 0 },
             ],
             9,
         );
         assert_eq!(list.games.iter().map(|g| g.id.as_str()).collect::<Vec<_>>(), ["steam:1", "steam:2"]);
         assert_eq!(GameList::parse(list.to_json().as_bytes()).unwrap(), list);
+        // An older Monet's list, without minutes, still reads; none played is left out.
+        assert!(!list.to_json().contains("\"minutes\": 0"));
+        assert_eq!(GameList::parse(br#"{"v":1,"updated":1,"games":[{"id":"steam:1","name":"A"}]}"#).unwrap().games[0].minutes, 0);
     }
 
     #[test]

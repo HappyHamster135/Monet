@@ -3,8 +3,8 @@
  * brightness and Monet's light, in the clock island. The `monet-quick`
  * helper does the work; this draws it.
  *
- * It also owns Monet Settings (MonetSettings.qml), which opens from here or
- * from Settings in the app menu (`monet-quick open` rings the doorbell below).
+ * Its tiles open Monet Settings, an app of its own (monet-settings, through
+ * `monet-quick open`), at their page.
  */
 import QtQuick
 import QtQuick.Layouts
@@ -18,6 +18,8 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    ClockFormat { id: clockFormat }
+    PanelFit { helper: root.helper }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property real speed: Kirigami.Units.longDuration / 200
@@ -26,6 +28,9 @@ PlasmoidItem {
     property var info: ({})
     // Speakers, headphones, a screen: where the sound can play.
     property var outputs: []
+    property bool quietBusy: false
+    property string quietError: ""
+    property string quietRequest: ""
     // While a slider is held, don't let a status refresh move it.
     property bool dragging: false
 
@@ -45,9 +50,25 @@ PlasmoidItem {
                 }
             } else if (source === root.helper + " outputs") {
                 try {
-                    root.outputs = JSON.parse(data["stdout"])
+                    // PipeWire's stand-in on a PC with no speakers isn't a place to play.
+                    root.outputs = JSON.parse(data["stdout"]).filter(o => !o.none)
                 } catch (e) {
                 }
+            } else if (source.startsWith(root.helper + " quiet ")) {
+                root.quietBusy = false
+                try {
+                    const result = JSON.parse(data["stdout"] || "{}")
+                    if (result.state && typeof result.state.quiet === "boolean")
+                        root.info = Object.assign({}, root.info, {
+                            quiet: result.state.quiet, quietUntil: result.state.quietUntil,
+                            quietIndefinite: result.state.quietIndefinite
+                        })
+                    root.quietError = result.ok === true && result.state && data["exit code"] === 0
+                        ? "" : i18n("Do Not Disturb could not be changed. Try again.")
+                } catch (e) {
+                    root.quietError = i18n("Do Not Disturb could not be changed. Try again.")
+                }
+                refresh()
             } else {
                 refresh()
             }
@@ -97,7 +118,7 @@ PlasmoidItem {
     // A page of Settings, in place of this popup.
     function openSettings(page) {
         expanded = false
-        settings.open(page)
+        run("open " + page)
     }
 
     function flip(key, command) {
@@ -108,22 +129,36 @@ PlasmoidItem {
         run(command + (on ? " on" : " off"))
     }
 
-    MonetSettings {
-        id: settings
-        helper: root.helper
-        speed: root.speed
-        // The screen this panel is on.
-        area: Qt.rect(root.Screen.virtualX, root.Screen.virtualY, root.Screen.width, root.Screen.height)
-        // The size people gave it, kept for next time.
-        chosenWidth: Plasmoid.configuration.SettingsWidth
-        chosenHeight: Plasmoid.configuration.SettingsHeight
-        onResized: (width, height) => {
-            Plasmoid.configuration.SettingsWidth = Math.round(width)
-            Plasmoid.configuration.SettingsHeight = Math.round(height)
-        }
+    function changeQuiet(mode) {
+        if (quietBusy) return
+        quietBusy = true
+        quietError = ""
+        quietRequest = mode
+        run("quiet " + mode)
     }
 
-    // Waits for `monet-quick open [PAGE]`, opens Settings, and waits again.
+    function quietCaption() {
+        if (quietBusy) return i18n("Changing…")
+        if (!info.quiet) return i18n("Off")
+        if (info.quietIndefinite) return i18n("On")
+        const end = new Date(info.quietUntil * 1000), now = new Date()
+        const days = (Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
+                      - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000
+        if (days === 1) return i18n("Until tomorrow")
+        return i18n("Until %1", days === 0 ? clockFormat.time(end)
+                    : Qt.formatDate(end, Qt.locale().dateFormat(Locale.ShortFormat)))
+    }
+
+    // A Windows program opened in Files: run it here or open it in Windows (`monet-quick
+    // windows-program` rings the doorbell below with "program").
+    WindowsProgram {
+        id: program
+        helper: root.helper
+        speed: root.speed
+        area: Qt.rect(root.Screen.virtualX, root.Screen.virtualY, root.Screen.width, root.Screen.height)
+    }
+
+    // Waits for `monet-quick windows-program`, asks, and waits again.
     property double armed: 0
     P5Support.DataSource {
         id: doorbell
@@ -132,8 +167,8 @@ PlasmoidItem {
         onNewData: (source, data) => {
             disconnectSource(source)
             const asked = (data["stdout"] || "").trim().split(" ")
-            if (asked[0] === "open") {
-                settings.open(asked[1] || "")
+            if (asked[0] === "program") {
+                program.open()
             }
             // If listening fails straight away, don't spin: try again later.
             rearm.interval = asked[0] === "" && Date.now() - root.armed < 5000 ? 30000 : 100
@@ -147,7 +182,11 @@ PlasmoidItem {
             doorbell.connectSource(root.helper + " listen")
         }
     }
-    Component.onCompleted: rearm.start()
+    // Known before the first opening, so tiles for what the PC hasn't got never show and go.
+    Component.onCompleted: {
+        rearm.start()
+        refresh()
+    }
 
     Timer {
         interval: 3000
@@ -171,6 +210,7 @@ PlasmoidItem {
         id: tile
         property string title
         property string detail
+        property string description: detail
         property string icon
         property bool active
         property bool available: true
@@ -252,6 +292,11 @@ PlasmoidItem {
                 Accessible.role: Accessible.Button
                 Accessible.name: i18nc("%1 is a quick setting, like Wi-Fi", "%1 settings", tile.title)
                 Accessible.onPressAction: tile.opened()
+                activeFocusOnTab: visible
+                Keys.onSpacePressed: tile.opened()
+                Keys.onReturnPressed: tile.opened()
+                border.width: activeFocus ? 2 : 0
+                border.color: "#357F72"
 
                 Shape {
                     anchors.centerIn: parent
@@ -286,8 +331,9 @@ PlasmoidItem {
         }
         Accessible.role: Accessible.CheckBox
         Accessible.name: tile.title
+        Accessible.description: tile.description
         Accessible.checked: tile.active
-        Accessible.onToggleAction: tile.toggled()
+        Accessible.onToggleAction: if (available) tile.toggled()
     }
 
     fullRepresentation: PlasmaExtras.Representation {
@@ -312,6 +358,8 @@ PlasmoidItem {
                 Tile {
                     Layout.fillWidth: true
                     speed: root.speed
+                    // Not there at all on a PC without Wi-Fi (the helper says null), as in Windows.
+                    visible: root.info.wifi !== null
                     title: i18n("Wi-Fi")
                     icon: "network-wireless"
                     active: root.info.wifi === true
@@ -324,6 +372,7 @@ PlasmoidItem {
                 Tile {
                     Layout.fillWidth: true
                     speed: root.speed
+                    visible: root.info.bluetooth !== null
                     title: i18n("Bluetooth")
                     icon: "network-bluetooth"
                     active: root.info.bluetooth === true
@@ -350,10 +399,29 @@ PlasmoidItem {
                     title: i18n("Do Not Disturb")
                     icon: "notifications-disabled"
                     active: root.info.quiet === true
-                    detail: active ? i18n("On") : i18n("Off")
+                    available: !root.quietBusy
+                    detail: root.quietCaption()
+                    description: !active || root.quietBusy ? detail : root.info.quietIndefinite ? i18n("Until you turn it off")
+                        : i18n("Until %1", Qt.formatDateTime(new Date(root.info.quietUntil * 1000), Qt.locale().dateTimeFormat(Locale.ShortFormat)))
                     page: "notifications"
-                    onToggled: root.flip("quiet", "quiet")
+                    onToggled: root.changeQuiet(root.info.quiet ? "off" : "on")
                     onOpened: root.openSettings(page)
+                }
+            }
+
+            RowLayout {
+                visible: root.quietError !== ""
+                Layout.fillWidth: true
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    text: root.quietError
+                    wrapMode: Text.Wrap
+                    Accessible.name: text
+                }
+                ActionButton {
+                    text: i18n("Try again")
+                    enabled: !root.quietBusy
+                    onClicked: root.changeQuiet(root.quietRequest)
                 }
             }
 
@@ -362,7 +430,7 @@ PlasmoidItem {
                 Layout.preferredHeight: sliders.implicitHeight + 28
                 radius: 18
                 color: root.smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
-                visible: root.info.volume !== null || root.info.brightness !== null
+                visible: typeof root.info.volume === "number" || typeof root.info.brightness === "number"
 
                 GlassRim {
                     smoke: root.smoke
@@ -565,8 +633,8 @@ PlasmoidItem {
                     Layout.leftMargin: 2
                     opacity: 0.66
                     font: Kirigami.Theme.smallFont
-                    text: root.info.light === "mist" ? i18n("Always light")
-                        : root.info.light === "smoke" ? i18n("Always dark") : i18n("Mist by day, smoke after dark")
+                    text: root.info.light === "mist" ? i18n("Light colors all day")
+                        : root.info.light === "smoke" ? i18n("Dark colors all day") : i18n("Mist by day, smoke after dark")
                 }
             }
 

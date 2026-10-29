@@ -17,6 +17,7 @@ import org.kde.plasma.private.digitalclock
 
 PlasmoidItem {
     id: root
+    ClockFormat { id: clockFormat }
 
     readonly property var zones: Array.from(Plasmoid.configuration.zones || [])
 
@@ -168,7 +169,7 @@ PlasmoidItem {
                         }
                         Text {
                             horizontalAlignment: Text.AlignLeft
-                            text: Qt.locale().toString(clock.dateTime, Qt.locale().timeFormat(Locale.ShortFormat))
+                            text: clockFormat.time(clock.dateTime)
                             color: card.ink
                             font.family: "Fraunces 72pt SuperSoft"
                             font.pixelSize: 24

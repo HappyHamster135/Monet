@@ -563,96 +563,127 @@ ApplicationWindow {
     // They arrive after the first sign-in; the Store has everything else.
     Component {
         id: appsStep
-        Column {
+        // More apps than a short screen has room for: the list scrolls, with a bar beside it to say so.
+        Flickable {
+            id: appsList
+            objectName: "appsScroll"
             property bool ready: true
             property bool busy: false
-            spacing: px(16)
-            Title { text: tr("Your apps") }
-            Body { text: tr("Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in.") }
-            Repeater {
-                model: [[trc("the apps people use every day", "Everyday"), true], [trc("more apps to choose from", "More"), false]]
-                Column {
-                    id: appSection
-                    required property var modelData
-                    width: parent.width
-                    spacing: px(8)
-                    Text {
-                        horizontalAlignment: Text.AlignLeft
-                        text: appSection.modelData[0]
-                        font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
-                    }
-                    Grid {
+            clip: true
+            contentHeight: appsColumn.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
+
+            function reveal(item) {
+                const at = item.mapToItem(appsColumn, 0, 0).y
+                if (at < contentY)
+                    contentY = at
+                else if (at + item.height > contentY + height)
+                    contentY = Math.min(contentHeight - height, at + item.height - height)
+            }
+
+            // In the sheet's margin, beside the tiles rather than over them.
+            ScrollBar.vertical: ScrollBar {
+                parent: appsList.parent
+                anchors.top: appsList.top
+                anchors.bottom: appsList.bottom
+                anchors.left: appsList.right
+                anchors.leftMargin: px(16)
+                policy: appsList.interactive ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            }
+
+            Column {
+                id: appsColumn
+                width: appsList.width
+                spacing: px(12)
+                Title { text: tr("Your apps") }
+                Body { text: tr("Photos, Documents, Video, Music and Calculator are built in. What you add arrives after you sign in.") }
+                Repeater {
+                    model: [[trc("the apps people use every day", "Everyday"), true], [trc("more apps to choose from", "More"), false]]
+                    Column {
+                        id: appSection
+                        required property var modelData
                         width: parent.width
-                        columns: 2
-                        columnSpacing: px(8)
-                        rowSpacing: px(8)
-                        Repeater {
-                            model: setup.apps.filter(app => app.everyday === appSection.modelData[1])
-                            AbstractButton {
-                                id: appTile
-                                required property var modelData
-                                // Built in: there already, nothing to choose.
-                                readonly property bool builtIn: modelData.index < 0
-                                width: (appSection.width - px(8)) / 2
-                                height: px(54)
-                                hoverEnabled: !builtIn
-                                leftPadding: px(12)
-                                rightPadding: px(10)
-                                onClicked: if (!builtIn) setup.toggleApp(modelData.index)
-                                Accessible.role: Accessible.CheckBox
-                                Accessible.name: modelData.name
-                                Accessible.checked: modelData.picked
-                                background: Rectangle {
-                                    radius: px(14)
-                                    color: appTile.builtIn ? Qt.rgba(1, 1, 1, 0.5)
-                                         : appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
-                                         : appTile.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
-                                    border.color: appTile.modelData.picked && !appTile.builtIn ? lily : "transparent"
-                                    border.width: Math.max(2, px(2))
-                                    Behavior on color { ColorAnimation { duration: 140 } }
-                                }
-                                contentItem: RowLayout {
-                                    spacing: px(10)
-                                    // The tick: lily when it's coming.
-                                    Rectangle {
-                                        Layout.preferredWidth: px(20)
-                                        Layout.preferredHeight: px(20)
-                                        radius: width / 2
-                                        color: appTile.modelData.picked ? lily : "transparent"
-                                        border.width: appTile.modelData.picked ? 0 : Math.max(1, px(1.5))
-                                        border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
-                                        Shape {
-                                            visible: appTile.modelData.picked
-                                            anchors.centerIn: parent
-                                            width: 24
-                                            height: 24
-                                            scale: px(12) / 24
-                                            ShapePath {
-                                                strokeColor: "#FFFFFF"
-                                                strokeWidth: 3
-                                                fillColor: "transparent"
-                                                capStyle: ShapePath.RoundCap
-                                                joinStyle: ShapePath.RoundJoin
-                                                PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
+                        spacing: px(8)
+                        Text {
+                            horizontalAlignment: Text.AlignLeft
+                            text: appSection.modelData[0]
+                            font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
+                        }
+                        Grid {
+                            width: parent.width
+                            columns: 2
+                            columnSpacing: px(8)
+                            rowSpacing: px(6)
+                            Repeater {
+                                model: setup.apps.filter(app => app.everyday === appSection.modelData[1])
+                                AbstractButton {
+                                    id: appTile
+                                    required property var modelData
+                                    // Built in: there already, nothing to choose.
+                                    readonly property bool builtIn: modelData.index < 0
+                                    width: (appSection.width - px(8)) / 2
+                                    height: px(50)
+                                    hoverEnabled: !builtIn
+                                    leftPadding: px(12)
+                                    rightPadding: px(10)
+                                    onClicked: if (!builtIn) setup.toggleApp(modelData.index)
+                                    onActiveFocusChanged: if (activeFocus) appsList.reveal(appTile)
+                                    Accessible.role: Accessible.CheckBox
+                                    Accessible.name: modelData.name
+                                    Accessible.checked: modelData.picked
+                                    background: Rectangle {
+                                        radius: px(14)
+                                        color: appTile.builtIn ? Qt.rgba(1, 1, 1, 0.5)
+                                             : appTile.modelData.picked ? Qt.rgba(1, 1, 1, 0.85)
+                                             : appTile.hovered ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.3)
+                                        border.color: appTile.modelData.picked && !appTile.builtIn ? lily : "transparent"
+                                        border.width: Math.max(2, px(2))
+                                        Behavior on color { ColorAnimation { duration: 140 } }
+                                    }
+                                    contentItem: RowLayout {
+                                        spacing: px(10)
+                                        // The tick: lily when it's coming.
+                                        Rectangle {
+                                            Layout.preferredWidth: px(20)
+                                            Layout.preferredHeight: px(20)
+                                            radius: width / 2
+                                            color: appTile.modelData.picked ? lily : "transparent"
+                                            border.width: appTile.modelData.picked ? 0 : Math.max(1, px(1.5))
+                                            border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
+                                            Shape {
+                                                visible: appTile.modelData.picked
+                                                anchors.centerIn: parent
+                                                width: 24
+                                                height: 24
+                                                scale: px(12) / 24
+                                                ShapePath {
+                                                    strokeColor: "#FFFFFF"
+                                                    strokeWidth: 3
+                                                    fillColor: "transparent"
+                                                    capStyle: ShapePath.RoundCap
+                                                    joinStyle: ShapePath.RoundJoin
+                                                    PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
+                                                }
                                             }
                                         }
-                                    }
-                                    Column {
-                                        Layout.fillWidth: true
-                                        spacing: px(1)
-                                        Text {
-                                            horizontalAlignment: Text.AlignLeft
-                                            width: parent.width
-                                            text: appTile.modelData.name
-                                            elide: Text.ElideRight
-                                            font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink
-                                        }
-                                        Text {
-                                            horizontalAlignment: Text.AlignLeft
-                                            width: parent.width
-                                            text: appTile.modelData.detail
-                                            elide: Text.ElideRight
-                                            font.family: sans; font.pixelSize: px(12); color: dim
+                                        Column {
+                                            Layout.fillWidth: true
+                                            spacing: px(1)
+                                            Text {
+                                                horizontalAlignment: Text.AlignLeft
+                                                width: parent.width
+                                                text: appTile.modelData.name
+                                                elide: Text.ElideRight
+                                                font.family: sans; font.pixelSize: px(14); font.weight: Font.DemiBold; color: ink
+                                            }
+                                            Text {
+                                                horizontalAlignment: Text.AlignLeft
+                                                width: parent.width
+                                                text: appTile.modelData.detail
+                                                elide: Text.ElideRight
+                                                font.family: sans; font.pixelSize: px(12); color: dim
+                                            }
                                         }
                                     }
                                 }

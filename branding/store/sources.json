@@ -1,0 +1,165 @@
+{
+  "artist": "Claude Monet",
+  "museum": "National Gallery of Art, Washington",
+  "credit": "Courtesy National Gallery of Art, Washington",
+  "license": "CC0-1.0",
+  "license_url": "https://www.nga.gov/terms-and-notices#open-access-policy",
+  "retrieved": "2026-10-27",
+  "treatment": "Selected details from museum reproductions. Crop only; preserve the embedded color profile. No generated paint, recoloring, retouching, filters or added objects. Identical artwork in Mist and Smoke.",
+  "size": [
+    2400,
+    800
+  ],
+  "paintings": {
+    "play": {
+      "title": "The Bridge at Argenteuil",
+      "date": "1874",
+      "accession": "1983.1.24",
+      "page": "https://www.nga.gov/artworks/61374-bridge-argenteuil",
+      "image": "https://api.nga.gov/iiif/7372b15a-3830-43bf-8c41-4836619312b7/full/2400,/0/default.jpg",
+      "file": "sources/play.jpg",
+      "crop": [
+        0,
+        740,
+        2400,
+        1540
+      ],
+      "connection": "Sailing and leisure on the river."
+    },
+    "talk": {
+      "title": "The Japanese Footbridge",
+      "date": "1899",
+      "accession": "1992.9.1",
+      "page": "https://www.nga.gov/artworks/74796-japanese-footbridge",
+      "image": "https://api.nga.gov/iiif/0b9cefb5-1ee4-401a-8154-8d4039191a28/full/2400,/0/default.jpg",
+      "file": "sources/talk.jpg",
+      "crop": [
+        0,
+        0,
+        2400,
+        800
+      ],
+      "connection": "A bridge as a quiet metaphor for connection."
+    },
+    "watch": {
+      "title": "The Seine at Giverny",
+      "date": "1897",
+      "accession": "1963.10.180",
+      "page": "https://www.nga.gov/artworks/46655-seine-giverny",
+      "image": "https://api.nga.gov/iiif/9b536eb8-6b53-42d5-aa3c-5e8b02f0b37a/full/2400,/0/default.jpg",
+      "file": "sources/watch.jpg",
+      "crop": [
+        0,
+        600,
+        2400,
+        1400
+      ],
+      "connection": "Quiet reflections and color for listening and watching."
+    },
+    "work": {
+      "title": "The Artist's Garden in Argenteuil (A Corner of the Garden with Dahlias)",
+      "date": "1873",
+      "accession": "1991.27.1",
+      "page": "https://www.nga.gov/artworks/72138-artists-garden-argenteuil-corner-garden-dahlias",
+      "image": "https://api.nga.gov/iiif/4196f97b-1edb-4fae-aa9f-882afe35978b/full/2400,/0/default.jpg",
+      "file": "sources/work.jpg",
+      "crop": [
+        0,
+        400,
+        2400,
+        1200
+      ],
+      "connection": "The artist's home and cultivated garden for work and making."
+    },
+    "everyday": {
+      "title": "Jerusalem Artichoke Flowers",
+      "date": "1880",
+      "accession": "1963.10.181",
+      "page": "https://www.nga.gov/artworks/46656-jerusalem-artichoke-flowers",
+      "image": "https://api.nga.gov/iiif/5bfb4c45-feb8-4dbb-8b77-519c0560dcaf/full/2400,/0/default.jpg",
+      "file": "sources/everyday.jpg",
+      "crop": [
+        0,
+        650,
+        2400,
+        1450
+      ],
+      "connection": "A familiar household bouquet for everyday tools."
+    },
+    "venice": {
+      "title": "Palazzo da Mula, Venice",
+      "date": "1908",
+      "accession": "1963.10.182",
+      "page": "https://www.nga.gov/artworks/46657-palazzo-da-mula-venice",
+      "image": "https://api.nga.gov/iiif/f339a180-c87a-446b-8605-060f7b53f1a3/full/2400,/0/default.jpg",
+      "file": "sources/venice.jpg",
+      "crop": [
+        0,
+        100,
+        2400,
+        900
+      ],
+      "connection": "The palace windows give Windows apps a distinct architectural detail."
+    },
+    "waterloo": {
+      "title": "Waterloo Bridge, Gray Day",
+      "date": "1903",
+      "accession": "1963.10.183",
+      "page": "https://www.nga.gov/artworks/46658-waterloo-bridge-gray-day",
+      "image": "https://api.nga.gov/iiif/5f0f2f71-1428-4fc7-a951-0fab4fe39ffd/full/2400,/0/default.jpg",
+      "file": "sources/waterloo.jpg",
+      "crop": [
+        0,
+        480,
+        2400,
+        1280
+      ],
+      "connection": "Building and connection, for developer tools."
+    },
+    "parliament": {
+      "title": "The Houses of Parliament, Sunset",
+      "date": "1903",
+      "accession": "1963.10.48",
+      "page": "https://www.nga.gov/artworks/46523-houses-parliament-sunset",
+      "image": "https://api.nga.gov/iiif/9eae6258-ec1c-442f-b353-a89cff510113/full/2400,/0/default.jpg",
+      "file": "sources/parliament.jpg",
+      "crop": [
+        0,
+        650,
+        2400,
+        1450
+      ],
+      "connection": "A place of civic work, for office apps."
+    },
+    "cathedral": {
+      "title": "Rouen Cathedral, West Façade",
+      "date": "1894",
+      "accession": "1963.10.49",
+      "page": "https://www.nga.gov/artworks/46524-rouen-cathedral-west-facade",
+      "image": "https://api.nga.gov/iiif/413faf9b-5d86-468a-8363-eea43c7fe9ba/full/2400,/0/default.jpg",
+      "file": "sources/cathedral.jpg",
+      "crop": [
+        0,
+        1000,
+        2400,
+        1800
+      ],
+      "connection": "Architecture and history, for learning."
+    },
+    "vetheuil": {
+      "title": "The Artist's Garden at Vétheuil",
+      "date": "1881",
+      "accession": "1970.17.45",
+      "page": "https://www.nga.gov/artworks/52189-artists-garden-vetheuil",
+      "image": "https://api.nga.gov/iiif/9fc88734-2f9a-4da8-8d46-2b570b201223/full/2400,/0/default.jpg",
+      "file": "sources/vetheuil.jpg",
+      "crop": [
+        0,
+        600,
+        2400,
+        1400
+      ],
+      "connection": "A tended home garden, for the apps in your collection."
+    }
+  }
+}

@@ -13,6 +13,7 @@ import base64
 import importlib.util
 import io
 import math
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -36,10 +37,12 @@ K = 3  # pictures are kept at three times the size, sharp on HiDPI screens
 # Glass and ink as in the app style (tools/make-kvantum.py), so the title bar
 # runs into the window without a seam.
 LIGHTS = {
-    "Monet": dict(name="Monet Mist", glass=(247, 245, 241, 196), solid=(243, 241, 236, 255), text="28,27,25",
+    "Monet": dict(name="Monet Mist", glass=(247, 245, 241, 196), matte=(247, 245, 241, 238),
+                  solid=(243, 241, 236, 255), text="28,27,25",
                   dim="107,102,94", line=(0, 0, 0, 26), rim=(255, 255, 255, 120), sign=(28, 27, 25, 200),
                   sign_dim=(107, 102, 94, 170)),
-    "MonetSmoke": dict(name="Monet Smoke", glass=(34, 33, 31, 196), solid=(36, 35, 33, 255), text="239,236,230",
+    "MonetSmoke": dict(name="Monet Smoke", glass=(34, 33, 31, 196), matte=(34, 33, 31, 240),
+                       solid=(36, 35, 33, 255), text="239,236,230",
                        dim="180,174,165", line=(255, 255, 255, 26), rim=(255, 255, 255, 30),
                        sign=(239, 236, 230, 215), sign_dim=(180, 174, 165, 160)),
 }
@@ -158,7 +161,7 @@ def shadow_image(active):
     return Image.fromarray(rgba, "RGBA")
 
 
-def frame(sheet, prefix, light, active, solid, mask=False):
+def frame(sheet, prefix, light, active, fill, mask=False):
     """The nine pieces: each shows the part of the shadow and the glass inside its box."""
     (left, top, right, bottom), w, h = frame_size()
     spec = LIGHTS[light]
@@ -167,7 +170,7 @@ def frame(sheet, prefix, light, active, solid, mask=False):
     rim = [(SIDE + RADIUS, TOP + 1), (w - SIDE - RADIUS, TOP + 1), (w - SIDE - RADIUS, TOP + 2), (SIDE + RADIUS, TOP + 2)]
     rim_color = spec["rim"] if active else spec["rim"][:3] + (spec["rim"][3] * 3 // 5,)
     layers = [(body, None, 'fill="#000000"')] if mask else [
-        (body, None, paint(spec["solid" if solid else "glass"])),
+        (body, None, paint(spec[fill])),
         (body, inside, paint(spec["line"])),  # the hairline edge
         (rim, None, paint(rim_color)),        # light along the top
     ]
@@ -201,12 +204,13 @@ def flat(sheet, prefix, how):
         sheet.element(f"{prefix}-{piece}", 4, 4, lambda x, y: f'<rect x="{x}" y="{y}" width="4" height="4" {how}/>')
 
 
-def decoration_svg(light, solid):
+def decoration_svg(light, fill):
+    """fill: "glass", "matte" or "solid", as Settings' Glass slider has it."""
     sheet = Sheet(f"Monet's window frame, {LIGHTS[light]['name']}.")
-    frame(sheet, "decoration", light, True, solid)
-    frame(sheet, "decoration-inactive", light, False, solid)
-    frame(sheet, "mask", light, True, solid, mask=True)
-    glass = paint(LIGHTS[light]["solid" if solid else "glass"])
+    frame(sheet, "decoration", light, True, fill)
+    frame(sheet, "decoration-inactive", light, False, fill)
+    frame(sheet, "mask", light, True, fill, mask=True)
+    glass = paint(LIGHTS[light][fill])
     flat(sheet, "decoration-maximized", glass)
     flat(sheet, "decoration-maximized-inactive", glass)
     flat(sheet, "mask-maximized", 'fill="#000000"')
@@ -276,8 +280,27 @@ def button_svg(ps, kind, light, dabs):
     return sheet.svg()
 
 
+def button_asset(svg, state):
+    """The exact Aurorae brushwork as one image for QML and GTK title controls."""
+    # Qt's SVG image plugin sniffs an unprefixed <svg> root.
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    ns = "{http://www.w3.org/2000/svg}"
+    source = ET.fromstring(svg)
+    group = next(g for g in source if g.get("id") == f"{state}-center")
+    bounds = group.find(ns + "rect")
+    image = ET.Element(ns + "svg", width=str(BUTTON), height=str(BUTTON),
+                       viewBox=f"{bounds.get('x')} {bounds.get('y')} {BUTTON} {BUTTON}")
+    image.append(group)
+    return ET.tostring(image, encoding="unicode") + "\n"
+
+
 # The themes ---------------------------------------------------------------
 
+# KWin draws these frames with no borders (BorderSize=None, monet-look): Aurorae then gives
+# every window room to resize all along its sides and bottom, outside it and not part of it,
+# as Windows does (snapped windows still meet). Padding must match the shadow in the picture:
+# adding BORDER here paints a pale four-pixel frame outside even a borderless window.
 def rc(light):
     s = LIGHTS[light]
     return f"""[General]
@@ -342,15 +365,20 @@ def main():
         dabs[kind] = paint_dab(mi, color, accents, 70 + n)
         dabs[kind + "-pressed"] = paint_dab(mi, color, accents, 70 + n, dark=0.8)
     for light, spec in LIGHTS.items():
-        for solid in (False, True):
-            ident = light + ("Solid" if solid else "")
-            name = spec["name"] + (" (solid)" if solid else "")
+        buttons = {kind: button_svg(ps, kind, light, dabs) for kind in BUTTONS}
+        for kind, svg in buttons.items():
+            for state in ("active", "inactive", "hover", "pressed"):
+                write(ROOT / "linux/share/monet/window-buttons" / f"{light}-{kind}-{state}.svg",
+                      button_asset(svg, state))
+        for fill, suffix in (("glass", ""), ("matte", "Matte"), ("solid", "Solid")):
+            ident = light + suffix
+            name = spec["name"] + (f" ({fill})" if suffix else "")
             folder = OUT / ident
             write(folder / "metadata.desktop", metadata(ident, name))
             write(folder / f"{ident}rc", rc(light))
-            write(folder / "decoration.svg", decoration_svg(light, solid))
+            write(folder / "decoration.svg", decoration_svg(light, fill))
             for kind in BUTTONS:
-                write(folder / f"{kind}.svg", button_svg(ps, kind, light, dabs))
+                write(folder / f"{kind}.svg", buttons[kind])
             print("wrote", folder.relative_to(ROOT))
 
 

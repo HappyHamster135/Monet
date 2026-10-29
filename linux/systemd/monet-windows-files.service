@@ -1,0 +1,15 @@
+[Unit]
+Description=Monet: screenshots and clips saved in Windows move into Monet's Pictures and Videos
+After=monet-windows-drive.service
+Requires=monet-windows-drive.service
+ConditionPathIsMountPoint=/run/monet/windows-drive/c
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-windows-drive bring
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

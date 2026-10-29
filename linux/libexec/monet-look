@@ -4,9 +4,13 @@
 # it once, at the first sign-in after the look changes.
 #
 #   monet-look           apply everything, including a fresh panel layout
-#   monet-look --keep    apply everything but keep the panels as they are
+#   monet-look --keep    update owned defaults, preserving this account's choices
+#   monet-look --reset   the same, and what someone changed since goes back to Monet's (Settings' Put back)
 #   monet-look --names   only give the apps their plain names
+#   monet-look --store   repair old Store shortcuts without changing the desktop's look
 #   monet-look --games-gpu  only start games on a laptop's NVIDIA chip
+#   monet-look --keys    only Windows' keyboard shortcuts (monet-keys.service, before KWin reads them)
+#   monet-look --widget-keys  only Windows+A for Quick Settings and Windows+G for Games (Plasma running)
 set -u
 
 DATADIR="@DATADIR@"
@@ -15,11 +19,20 @@ CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 has() { command -v "$1" >/dev/null 2>&1; }
-kw() { kwriteconfig6 "$@" 2>/dev/null; }
-# Like kw, but leaves a setting someone already chose alone.
-kw_default() { # kw_default <file> <group> <key> <value>
-    [ -n "$(kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null)" ] || kw --file "$1" --group "$2" --key "$3" "$4"
-}
+failed=0
+keep_profile=1
+[ "$#" = 0 ] && keep_profile=0
+PROFILE="$LIBEXECDIR/monet-profile"
+# Maintenance adds defaults; owned appearance values can evolve, but user choices stay.
+kw() { "$PROFILE" put --default-only "$@" || { failed=1; return 1; }; }
+kw_default() { kw --file "$1" --group "$2" --key "$3" "$4"; }
+look() { "$PROFILE" put "$@" || { failed=1; return 1; }; }
+reset=0
+if [ "${1:-}" = --reset ]; then
+    reset=1
+    export MONET_PROFILE_FORCE=1
+    set -- --keep
+fi
 
 # Tesseract's name for one of Monet's languages ("sv_SE.UTF-8" -> swe), or nothing for English.
 ocr_language() {
@@ -46,6 +59,65 @@ entry() { # entry <id>: where the app keeps its menu entry
     return 1
 }
 
+stand_in() { # stand_in <id> <entry>: an old shortcut opens Monet's app, out of the menu
+    entry "$1" >/dev/null || [ -f "$DATA/applications/$1.desktop" ] || return 1
+    mkdir -p "$DATA/applications"
+    local target="$DATA/applications/$1.desktop" temporary="$DATA/applications/$1.desktop.monet.$$"
+    sed -e '/^NoDisplay=/d' -e '/^MimeType=/d' -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nNoDisplay=true\nX-Monet=true/' \
+        "$2" > "$temporary" || { failed=1; return 1; }
+    local before="$(sha256sum "$target" 2>/dev/null)"
+    "$PROFILE" file "$target" "$temporary" --alias || { failed=1; rm -f "$temporary"; return 1; }
+    # Only replace a dock target when its launcher now opens the standard Store.
+    if [ "$(sed -n 's/^Exec=//p' "$target" | head -1)" = "$(sed -n 's/^Exec=//p' "$temporary" | head -1)" ] &&
+        cmp -s <(grep -E '^(Name(\[[^]]+\])?|Icon)=' "$target" | sort) <(grep -E '^(Name(\[[^]]+\])?|Icon)=' "$temporary" | sort); then
+        store_aliases="${store_aliases:-}|$1.desktop"
+    fi
+    rm -f "$temporary"
+    [ "$before" = "$(sha256sum "$target" 2>/dev/null)" ] || store_changed=1
+}
+
+store_shortcuts() {
+    [ -f "$DATADIR/applications/monet-store.desktop" ] || return 1
+    store=monet-store
+    store_aliases=monet-store.desktop
+    store_changed=0
+    stand_in io.github.kolunmi.Bazaar "$DATADIR/applications/monet-store.desktop" || true
+    stand_in org.kde.discover "$DATADIR/applications/monet-store.desktop" || true
+    # KDE may still have Bazaar's D-Bus activation cached, bypassing the new Exec line.
+    if [ "$store_changed" = 1 ] && has kbuildsycoca6; then
+        kbuildsycoca6 --noincremental >/dev/null 2>&1
+    fi
+    return 0
+}
+
+dock_shortcuts() {
+    # Kept panels can still hold either old Store id, including a desktop file's full URL.
+    # Settings aliases with a custom command are also left in place.
+    local settings_alias=systemsettings.desktop settings_file="$DATA/applications/systemsettings.desktop"
+    if [ -f "$settings_file" ] && ! grep -qxE 'Exec=(/usr/bin/)?systemsettings( kcm_workspace)?' "$settings_file"; then
+        settings_alias=""
+    fi
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS' | sed -e "s@STORE@${store:+$store.desktop}@g" -e "s@ALIASES@${store_aliases:-}@g" -e "s@SETTINGS_ALIAS@$settings_alias@g"
+panels().forEach(function (panel) {
+    panel.widgets("org.kde.plasma.icontasks").forEach(function (tasks) {
+        tasks.currentConfigGroup = ["General"];
+        var before = String(tasks.readConfig("launchers", ""));
+        var launchers = before.split(",").map(function (launcher) {
+            var id = launcher.substring(launcher.lastIndexOf("/") + 1).replace(/^applications:/, "");
+            // An arbitrary file with the same basename belongs to its author.
+            if (launcher.indexOf("applications:") !== 0 && launcher.indexOf("file:///usr/share/applications/") !== 0) return launcher;
+            if (id === "SETTINGS_ALIAS") return "applications:monet-settings.desktop";
+            if ("ALIASES".split("|").indexOf(id) >= 0 && "STORE" !== "")
+                return "applications:STORE";
+            return launcher;
+        });
+        if (launchers.join(",") !== before) tasks.writeConfig("launchers", launchers);
+    });
+});
+JS
+)" >/dev/null 2>&1
+}
+
 plain_names() {
     # The plain words in every language Monet speaks (names.tsv: English, language,
     # translation; tools/make-translations.py), put under the entry's own mark.
@@ -56,37 +128,73 @@ plain_names() {
         rm -f "$1.words"
     }
     rename() { # rename <id> <name> [comment]
-        local f
+        local f old target work
         f="$(entry "$1")" || return 1
         mkdir -p "$DATA/applications"
+        target="$DATA/applications/$1.desktop"
+        work="$(mktemp "$DATA/applications/.monet-name-XXXXXX")" || { failed=1; return 1; }
+        old="$(sed -n 's/^Name=//p' "$f" | head -1)"
         sed -e '/^Name\[/d' -e '/^GenericName/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
-            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$DATA/applications/$1.desktop"
-        localized "$DATA/applications/$1.desktop" Name "$2"
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$work" || { failed=1; rm -f "$work"; return 1; }
+        # Its own name still finds it in the menu's search, in every language (guides online say
+        # Dolphin and KCalc).
+        case "$old" in
+            "" | "$2" | *[\|\&\\]*) ;;
+            *) if grep -q '^Keywords' "$work"; then
+                   sed -i "s|^\(Keywords[^=]*=\)|\1$old;|" "$work"
+               else
+                   sed -i "/^X-Monet=true$/a Keywords=$old;" "$work"
+               fi ;;
+        esac
+        localized "$work" Name "$2"
         if [ -n "${3:-}" ]; then
-            sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$DATA/applications/$1.desktop"
-            localized "$DATA/applications/$1.desktop" Comment "$3"
+            sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$work"
+            localized "$work" Comment "$3"
         fi
+        "$PROFILE" file "$target" "$work" || failed=1
+        rm -f "$work" "$work.words"
+    }
+    group_name() { # group_name <file> <name>: a group of KDE's settings, in Monet's word
+        local dir f="" out="$DATA/systemsettings/categories/$1" work
+        for dir in $(printf '%s' "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr ':' ' '); do
+            [ -f "$dir/systemsettings/categories/$1" ] && { f="$dir/systemsettings/categories/$1"; break; }
+        done
+        [ -n "$f" ] || return 1
+        mkdir -p "$DATA/systemsettings/categories"
+        work="$(mktemp "$DATA/systemsettings/categories/.monet-group-XXXXXX")" || { failed=1; return 1; }
+        sed -e '/^Name\[/d' -e "0,/^Name=/s/^Name=.*/Name=$2/" \
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true/' "$f" > "$work" || { failed=1; rm -f "$work"; return 1; }
+        localized "$work" Name "$2"
+        "$PROFILE" file "$out" "$work" || failed=1
+        rm -f "$work" "$work.words"
     }
     hide() { # hide <id>
-        local f
+        local f work
         f="$(entry "$1")" || return 1
         mkdir -p "$DATA/applications"
+        work="$(mktemp "$DATA/applications/.monet-hide-XXXXXX")" || { failed=1; return 1; }
         sed -e '/^NoDisplay=/d' -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nNoDisplay=true\nX-Monet=true/' \
-            "$f" > "$DATA/applications/$1.desktop"
+            "$f" > "$work" || { failed=1; rm -f "$work"; return 1; }
+        [ "$1" = systemsettings ] && sed -i 's/^Exec=systemsettings$/Exec=systemsettings kcm_workspace/' "$work"
+        "$PROFILE" file "$DATA/applications/$1.desktop" "$work" || failed=1
+        rm -f "$work"
     }
 
-    # The store is called Store: Bazaar (Bazzite's) when it's there, otherwise
-    # Discover. It doesn't pop up about updates: those are in Monet Settings,
-    # when you ask.
+    # The store is Monet's own Store (monet-store), and Bazaar (Bazzite's) and Discover
+    # stay out of the menu. Without it, Bazaar is called Store, otherwise Discover. None
+    # pops up about updates: those are in Monet Settings, when you ask.
+    # Either pinned before (in the menu, say) opens the Store too.
     store=io.github.kolunmi.Bazaar
-    if rename "$store" Store "Apps and games for Monet"; then
+    if store_shortcuts; then
+        :
+    elif rename "$store" Store "Apps and games for Monet"; then
         hide org.kde.discover
     else
         store=org.kde.discover
         rename "$store" Store "Apps and games for Monet" || store=""
     fi
     mkdir -p "$CONFIG/autostart"
-    printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG/autostart/org.kde.discover.notifier.desktop"
+    kw --file "$CONFIG/autostart/org.kde.discover.notifier.desktop" --group "Desktop Entry" --key Hidden true
     kw --file PlasmaDiscoverUpdates --group Global --key UseUnattendedUpdates false
 
     for app in "org.kde.dolphin:Files" "org.kde.konsole:Terminal" "org.kde.kate:Text Editor" "org.kde.gwenview:Photos" \
@@ -100,16 +208,26 @@ plain_names() {
         org.kde.kwalletmanager5 org.kde.kwalletmanager org.kde.kdeconnect-settings org.kde.kuserfeedback-console \
         bazzite-documentation discourse bbrew waydroid-container-restart bazzite-portal io.github.ublue_os.yafti_gtk \
         htop btop nvtop \
-        io.github.rfrench3.bazzite-updater fcitx5-configtool kvantummanager org.kde.kdebugsettings yad-icon-browser; do
+        io.github.rfrench3.bazzite-updater fcitx5-configtool kvantummanager org.kde.kdebugsettings yad-icon-browser \
+        input-remapper-gtk; do
         hide "$app" || :
+    done
+    # Opened anyhow (it's out of the menu), KDE's settings start at a page, not at the one
+    # saying Plasma that shows without their own first page (hidden: below).
+    # More settings' groups in Monet Settings' words where they're the same thing: user-level
+    # copies of KDE's group files, which KDE's settings read first. (Its pages keep KDE's names:
+    # those are built into each page, with nothing to put Monet's in their place.)
+    for group in "settings-hardware-display.desktop:Display" "settings-hardware-multimedia.desktop:Sound" \
+        "settings-applications-defaults.desktop:Default Apps" "settings-workspace.desktop:Desktop"; do
+        group_name "${group%%:*}" "${group#*:}" || :
     done
     # One text editor is enough.
     entry org.kde.kate >/dev/null && { hide org.kde.kwrite || :; }
     # Bazzite's setup portal, in accounts made before Monet's image left it out
     # (and closed, if it opened at this sign-in).
     if [ -f "$CONFIG/autostart/bazzite-portal.desktop" ]; then
-        printf '[Desktop Entry]\nHidden=true\nX-Monet=true\n' > "$CONFIG/autostart/bazzite-portal.desktop"
-        pkill -u "$(id -u)" -f yafti_gtk >/dev/null 2>&1 || :
+        kw --file "$CONFIG/autostart/bazzite-portal.desktop" --group "Desktop Entry" --key Hidden true
+        [ "$keep_profile" = 0 ] && pkill -u "$(id -u)" -f yafti_gtk >/dev/null 2>&1 || :
     fi
     # The app menu's favorites stay even for apps that left the menu (Bazzite
     # seeds KDE's settings and its portal there): Monet Settings instead.
@@ -117,6 +235,7 @@ plain_names() {
         busctl --user call org.kde.ActivityManager /ActivityManager/Resources/Linking \
             org.kde.ActivityManager.ResourcesLinking "$1" sss org.kde.plasma.favorites.applications "applications:$2" "$3" 2>/dev/null
     }
+    if [ "$keep_profile" = 0 ]; then
     for activity in :global :current; do
         if favorite IsResourceLinkedToActivity systemsettings.desktop "$activity" | grep -q true; then
             favorite UnlinkResourceFromActivity systemsettings.desktop "$activity" >/dev/null
@@ -124,6 +243,7 @@ plain_names() {
         fi
         favorite UnlinkResourceFromActivity io.github.ublue_os.yafti_gtk.desktop "$activity" >/dev/null
     done
+    fi
 }
 
 # A laptop with an NVIDIA chip beside its built-in graphics, NVIDIA's driver loaded.
@@ -144,7 +264,7 @@ hybrid_nvidia() {
 # launchers that stay open in the tray too, which saves the battery; Proton's
 # games choose the NVIDIA chip by themselves. At sign-in and as apps arrive.
 games_gpu() {
-    local app f mine
+    local app f mine work
     hybrid_nvidia || return 0
     for app in org.prismlauncher.PrismLauncher org.vinegarhq.Sober org.libretro.RetroArch net.retrodeck.retrodeck \
         org.DolphinEmu.dolphin-emu net.pcsx2.PCSX2 net.rpcs3.RPCS3 org.ppsspp.PPSSPP info.cemu.Cemu sh.ppy.osu \
@@ -156,20 +276,107 @@ games_gpu() {
             grep -q '^X-Monet=true$' "$mine" && [ "$f" -nt "$mine" ] || continue
         fi
         mkdir -p "$DATA/applications"
+        work="$(mktemp "$DATA/applications/.monet-gpu-XXXXXX")" || { failed=1; return 1; }
         sed -e '/^PrefersNonDefaultGPU=/d' \
-            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nPrefersNonDefaultGPU=true/' "$f" > "$mine"
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nPrefersNonDefaultGPU=true/' "$f" > "$work" || { failed=1; rm -f "$work"; return 1; }
+        "$PROFILE" file "$mine" "$work" || failed=1
+        rm -f "$work"
     done
 }
 
 if [ "${1:-}" = --games-gpu ]; then
     games_gpu
-    exit 0
+    exit "$failed"
+fi
+
+# Windows' keys, for hands that learned them there: Ctrl+Shift+Esc for what's running,
+# Windows+I for Settings, Windows+R to run something, Windows+E for Files, Windows+Shift+S
+# for part of the screen, Windows+Up and Down for a window's size. Each adds to the keys
+# the tool has (its own stay); KWin's Up and Down move from tiling to maximize and minimize.
+# Once per account, before KWin reads them (monet-keys.service), so they work at once.
+# Settings → Mouse & Keyboard lists them, and Change shortcuts… changes them.
+SHORTCUTS=kglobalshortcutsrc
+# The keys a menu entry (or one of its actions) comes with: X-KDE-Shortcuts, tab-separated.
+desktop_keys() { # desktop_keys <desktop id> <_launch or action>
+    for dir in "$DATA/applications" "$DATADIR/applications" /usr/share/applications; do
+        [ -f "$dir/$1" ] || continue
+        awk -v want="$([ "$2" = _launch ] && echo "[Desktop Entry]" || echo "[Desktop Action $2]")" '
+            /^\[/ { here = ($0 == want) }
+            here && /^X-KDE-Shortcuts=/ { sub(/^X-KDE-Shortcuts=/, ""); gsub(/,/, "\t"); print; exit }' "$dir/$1"
+        return
+    done
+}
+add_launch() { # add_launch <desktop id> <_launch or action> <key>
+    now="$(kreadconfig6 --file "$SHORTCUTS" --group services --group "$1" --key "$2" 2>/dev/null)"
+    [ -n "$now" ] || now="$(desktop_keys "$1" "$2")"
+    tab="$(printf '\t')"
+    case "$tab$now$tab" in *"$tab$3$tab"*) return ;; esac
+    kw --file "$SHORTCUTS" --group services --group "$1" --key "$2" "${now:+$now$tab}$3"
+}
+kwin_keys() { # kwin_keys <action> <keys, tab-separated> <its default and name, if KWin hasn't written them>
+    now="$(kreadconfig6 --file "$SHORTCUTS" --group kwin --key "$1" 2>/dev/null)"
+    rest="${now#*,}"
+    [ -n "$now" ] && [ "$rest" != "$now" ] || rest="$3"
+    kw --file "$SHORTCUTS" --group kwin --key "$1" "$2,$rest"
+}
+add_keys() { # add_keys <component> <action> <key> <its default and name, if KDE hasn't written them>
+    now="$(kreadconfig6 --file "$SHORTCUTS" --group "$1" --key "$2" 2>/dev/null)"
+    keys="${now%%,*}" rest="${now#*,}"
+    [ -n "$now" ] && [ "$rest" != "$now" ] || { keys="${4%%,*}"; rest="$4"; }
+    tab="$(printf '\t')"
+    case "$tab$keys$tab" in *"$tab$3$tab"*) return ;; esac
+    kw --file "$SHORTCUTS" --group "$1" --key "$2" "${keys:+$keys$tab}$3,$rest"
+}
+if [ "${1:-}" = --keys ]; then
+    # 0.9.4, once for every account (those that had Windows' keys already too): Windows+Space for
+    # the next keyboard layout beside KDE's own key, and Windows+Tab for the overview of the
+    # windows, as Windows' Task View (it was a second Alt+Tab here).
+    if [ ! -e "$CONFIG/monet/keys-094" ]; then
+        add_keys "KDE Keyboard Layout Switcher" "Switch to Next Keyboard Layout" "Meta+Space" \
+            "Meta+Alt+K,Switch to Next Keyboard Layout"
+        kwin_keys "Walk Through Windows" "Alt+Tab" "Alt+Tab,Walk Through Windows"
+        kwin_keys "Overview" "Meta+W$(printf '\t')Meta+Tab" "Meta+W,Toggle Overview"
+        # Windows+G is Games, as Windows' Game Bar (--widget-keys gives it to the bar's button):
+        # KWin's Grid View held it, so the button never got it.
+        kwin_keys "Grid View" "none" "Meta+G,Toggle Grid View"
+        [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/keys-094"
+    fi
+    [ -e "$CONFIG/monet/keys-windows" ] && exit "$failed"
+    add_launch org.kde.plasma-systemmonitor.desktop _launch "Ctrl+Shift+Esc"
+    add_launch monet-settings.desktop _launch "Meta+I"
+    add_launch org.kde.krunner.desktop _launch "Meta+R"
+    add_launch org.kde.dolphin.desktop _launch "Meta+E"
+    add_launch org.kde.spectacle.desktop RectangularRegionScreenShot "Meta+Shift+S"
+    kwin_keys "Window Maximize" "Meta+Up$(printf '\t')Meta+PgUp" "Meta+PgUp,Maximize Window"
+    kwin_keys "Window Quick Tile Top" "none" "Meta+Up,Quick Tile Window to the Top"
+    kwin_keys "Window Minimize" "Meta+Down$(printf '\t')Meta+PgDown" "Meta+PgDown,Minimize Window"
+    kwin_keys "Window Quick Tile Bottom" "none" "Meta+Down,Quick Tile Window to the Bottom"
+    [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/keys-windows"
+    exit "$failed"
+fi
+# Windows+A opens Quick Settings and Windows+G Games (the bar's button opens the app), as Windows' quick settings
+# and Game Bar (once, when Plasma's running; a key someone gave them stays).
+if [ "${1:-}" = --widget-keys ]; then
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+panels().forEach(function (panel) {
+    panel.widgets("org.monet.quick").forEach(function (w) { if (!w.globalShortcut) w.globalShortcut = "Meta+A"; });
+    panel.widgets("org.monet.games").forEach(function (w) { if (!w.globalShortcut) w.globalShortcut = "Meta+G"; });
+});
+JS
+)" >/dev/null 2>&1 && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/widget-keys"
+    exit "$failed"
+fi
+
+if [ "${1:-}" = --store ]; then
+    store_shortcuts && dock_shortcuts
+    exit "$failed"
 fi
 
 if [ "${1:-}" = --names ]; then
     plain_names
-    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
-    exit 0
+    dock_shortcuts
+    [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
+    exit "$failed"
 fi
 
 # Whether the panels are Monet's islands already: on Monet's image a new
@@ -183,35 +390,39 @@ monets_panels() {
 # fresh layout only when the panels aren't Monet's yet: laying it out again
 # would race Plasma's own first start, and forgets the desktop's menu settings.
 if has plasma-apply-lookandfeel; then
-    if [ "${1:-}" = --keep ] || monets_panels; then
-        plasma-apply-lookandfeel --apply org.monet.desktop >/dev/null 2>&1
+    if [ "${1:-}" = --keep ]; then
+        # Applying a global theme resets more than our tracked keys (colors, icons,
+        # fonts, switchers and cursor). Only an explicit Put back may do that here.
+        if [ "$reset" = 1 ]; then
+            plasma-apply-lookandfeel --apply org.monet.desktop >/dev/null 2>&1 || failed=1
+        fi
+    elif monets_panels; then
+        plasma-apply-lookandfeel --apply org.monet.desktop >/dev/null 2>&1 || failed=1
     else
-        plasma-apply-lookandfeel --apply org.monet.desktop --resetLayout >/dev/null 2>&1
-        # It forgot the right-click menu's Add Widgets too: monet-fresh puts it back
-        # before Plasma starts next time.
-        rm -f "$CONFIG/monet/menu-add-widgets"
+        plasma-apply-lookandfeel --apply org.monet.desktop --resetLayout >/dev/null 2>&1 || failed=1
+        rm -f "$CONFIG/monet/menu-add-widgets" "$CONFIG/monet/menu-monet"
     fi
 fi
 
 # KDE's Light and Dark buttons pick Mist and Smoke, not Breeze.
-kw --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.monet.desktop
-kw --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.desktop
+look --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.monet.desktop
+look --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.desktop
 
 # Lily, Monet's accent, instead of one picked from the wallpaper.
-kw --file kdeglobals --group General --key AccentColor "53,127,114"
-kw --file kdeglobals --group General --key accentColorFromWallpaper false
-kw --file kdeglobals --group Icons --key Theme Monet
-kw --file kcminputrc --group Mouse --key cursorTheme Monet-cursors
+look --file kdeglobals --group General --key AccentColor "53,127,114"
+look --file kdeglobals --group General --key accentColorFromWallpaper false
+look --file kdeglobals --group Icons --key Theme Monet
+look --file kcminputrc --group Mouse --key cursorTheme Monet-cursors
 # Monet's sounds: felt and glass, instead of KDE's Ocean.
-kw --file kdeglobals --group Sounds --key Theme monet
+look --file kdeglobals --group Sounds --key Theme monet
 
 # Inter for reading; Fraunces is used by Monet's own pieces.
 if fc-list : family 2>/dev/null | grep -qx "Inter"; then
-    kw --file kdeglobals --group General --key font "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    kw --file kdeglobals --group General --key menuFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    kw --file kdeglobals --group General --key toolBarFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    kw --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    kw --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key font "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key menuFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key toolBarFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
 fi
 # Windows+Alt+G saves the last 30 seconds of a game, as Xbox Game Bar has it
 # (Settings → Games & Controllers turns the keeping on), unless it's been set.
@@ -220,81 +431,104 @@ fi
 
 # Window titles in Fraunces, like the placard and Monet Settings.
 if fc-list : family 2>/dev/null | grep -qx "Fraunces 72pt SuperSoft"; then
-    kw --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 fi
 
 # Motion: a touch quicker than KDE's default, so things feel light.
 [ "$(kreadconfig6 --file kdeglobals --group KDE --key AnimationDurationFactor 2>/dev/null)" = 0 ] ||
-    kw --file kdeglobals --group KDE --key AnimationDurationFactor 0.8
+    look --file kdeglobals --group KDE --key AnimationDurationFactor 0.8
 
 # Glass: blur with a little grain and color behind panels, popovers and
 # see-through windows; windows scale gently in and out.
-kw --file kwinrc --group Plugins --key blurEnabled true
-kw --file kwinrc --group Plugins --key contrastEnabled true
-kw --file kwinrc --group Plugins --key scaleEnabled true
+look --file kwinrc --group Plugins --key blurEnabled true
+look --file kwinrc --group Plugins --key contrastEnabled true
+look --file kwinrc --group Plugins --key scaleEnabled true
 # The bar slides away and back (KWin's sliding popups): unhurried going, quick coming.
-kw --file kwinrc --group Plugins --key slidingpopupsEnabled true
-kw --file kwinrc --group Effect-slidingpopups --key SlideOutTime 240
-kw --file kwinrc --group Effect-slidingpopups --key SlideInTime 200
-kw --file kwinrc --group Plugins --key glideEnabled false
-kw --file kwinrc --group Plugins --key fadeEnabled false
-# Clear rather than frosted, as Apple's glass is: the painting's strokes still show,
-# about as softened as through the desktop widgets' glass (Glass.qml), and no grain,
-# which read as matte.
-kw --file kwinrc --group Effect-blur --key BlurStrength 3
-kw --file kwinrc --group Effect-blur --key NoiseStrength 0
+look --file kwinrc --group Plugins --key slidingpopupsEnabled true
+# Windows dragged to the top, the edges and the corners, stretched to full height, and
+# gliding there: Monet Snap and Monet Motion (share/kwin), in place of KWin's own edge
+# tiling, top-edge maximizing and Stretch effect, which would answer the same drags.
+look --file kwinrc --group Plugins --key monet-snapEnabled true
+look --file kwinrc --group Plugins --key monet-motionEnabled true
+look --file kwinrc --group Plugins --key maximizeEnabled false
+look --file kwinrc --group Windows --key ElectricBorderMaximize false
+look --file kwinrc --group Windows --key ElectricBorderTiling false
+# And comes back as the pointer touches the bottom: KWin waits for a push past the edge,
+# which a pen, a touchscreen or a virtual machine's mouse can't give (found by the test bench).
+look --file kwinrc --group Windows --key ElectricBorderPushbackPixels 0
+look --file kwinrc --group Effect-slidingpopups --key SlideOutTime 240
+look --file kwinrc --group Effect-slidingpopups --key SlideInTime 200
+look --file kwinrc --group Plugins --key glideEnabled false
+look --file kwinrc --group Plugins --key fadeEnabled false
+# How strong the blur is, and its grain, goes with Settings' Glass slider (monet-light).
 # The painting's colors a little richer through the glass (KWin 6.7 does it in
 # the blur, no longer from the Plasma style's contrast settings).
-kw --file kwinrc --group Effect-blur --key Saturation 170
+look --file kwinrc --group Effect-blur --key Saturation 170
 
 # Window frames: Monet's own (tools/make-decoration.py), a glass title bar
 # with the title in the middle and three dabs of paint on the right, and a
 # soft ink shadow. monet-light picks the one for mist or smoke.
-kw --file kwinrc --group org.kde.kdecoration2 --key library org.kde.kwin.aurorae
-kw --file kwinrc --group org.kde.kdecoration2 --key theme __aurorae__svg__Monet
-kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
-kw --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
+look --file kwinrc --group org.kde.kdecoration2 --key library org.kde.kwin.aurorae
+look --file kwinrc --group org.kde.kdecoration2 --key theme __aurorae__svg__Monet
+# No painted side or bottom borders. KWin still gives room to resize outside the window,
+# all along the sides and bottom; the shadow's padding must not add another visible rim.
+look --file kwinrc --group org.kde.kdecoration2 --key BorderSize None
+look --file kwinrc --group org.kde.kdecoration2 --key BorderSizeAuto false
+look --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
+look --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
 
-# The glass app style for Qt apps, when Kvantum is installed.
-if ls /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so >/dev/null 2>&1; then
+# The glass app style for Qt apps, when Kvantum is installed. (Asked as one `ls` of both
+# places, it never was: ls fails when either is missing, and Fedora has only lib64. So no
+# account got it until 0.9.4: KDE's style drew every window, found by the owner.)
+kvantum_here() {
+    local plugin
+    for plugin in /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so; do
+        [ -e "$plugin" ] && return 0
+    done
+    return 1
+}
+if kvantum_here; then
     if [ ! -d /usr/share/Kvantum/Monet ] && [ -d "$DATADIR/Kvantum/Monet" ]; then
         # Kvantum only looks in /usr/share and in your own settings.
         mkdir -p "$CONFIG/Kvantum"
         for theme in Monet MonetDark MonetSolid MonetDarkSolid; do
-            rm -rf "${CONFIG:?}/Kvantum/$theme"
-            cp -r "$DATADIR/Kvantum/$theme" "$CONFIG/Kvantum/"
+            # Locally edited themes belong to this account too.
+            [ -e "$CONFIG/Kvantum/$theme" ] || cp -r "$DATADIR/Kvantum/$theme" "$CONFIG/Kvantum/" || failed=1
         done
     fi
-    kw --file kdeglobals --group KDE --key widgetStyle kvantum
+    look --file kdeglobals --group KDE --key widgetStyle kvantum
 fi
 
 # The terminal: glass too, with room around the text and a thin cursor, and
 # its menu behind a button instead of a menu bar (like Files).
 if [ -f "$DATADIR/konsole/Monet.profile" ]; then
     mkdir -p "$DATA/konsole"
-    [ -f "$DATA/konsole/Monet.profile" ] || cp "$DATADIR/konsole/Monet.profile" "$DATA/konsole/Monet.profile"
+    [ -f "$DATA/konsole/Monet.profile" ] || cp "$DATADIR/konsole/Monet.profile" "$DATA/konsole/Monet.profile" || failed=1
     kw_default "$DATA/konsole/Monet.profile" "Cursor Options" CursorShape 1
     kw_default "$DATA/konsole/Monet.profile" General TerminalCenter true
-    kw --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
+    look --file konsolerc --group "Desktop Entry" --key DefaultProfile Monet.profile
     kw_default konsolerc MainWindow MenuBar Disabled
 fi
+# Documents and the text editor the same way: their menus behind the ≡ button at the end of
+# the toolbar, not a File Edit … Help bar (Ctrl+M brings it back). Not the Calculator: it has
+# no such button.
+kw_default okularrc MainWindow MenuBar Disabled
+kw_default katerc General "Show Menu Bar" false
 
 # GTK apps from Flathub read Monet's colors (monet-light writes them).
 flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro 2>/dev/null || :
 
 plain_names
-mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
+[ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/names"
 # KDE's welcome doesn't come back after Plasma updates to say what's new.
 kw --file plasma-welcomerc --group General --key ShowUpdatePage false
 
-# More settings (KDE's): the pages for what Monet's look and Monet Settings
-# take care of (KDE's Global Theme with its Dark Mode and Day-Night Cycle,
-# colors, styles, frames, icons, splash and sign-in screens, effects, its
-# updater), and the ones that only show how it's built, stay out of sight.
-for kcm in kcm_lookandfeel kcm_nighttime kcm_colors kcm_style kcm_desktoptheme kcm_kwindecoration \
-    kcm_kwindecoration_x11 kcm_icons kcm_splashscreen kcm_sddm kcm_plasmalogin kcm_plymouth kcm_kwin_effects \
-    kcm_kwin_effects_x11 kcm_kwin_scripts kcm_kwin_scripts_x11 kcm_kwinxwayland kcm_activities kcm_plasmasearch \
-    kcm_updates kcm_feedback kcm_kwallet kcm_kded kcm_qtquicksettings kcm_about-distro kcm_debugsettings; do
+# More settings (KDE's): the pages for what Monet's look and Monet Settings take care of, and
+# the ones that only show how it's built, stay out of sight (share/monet/hidden-settings-pages
+# says which). install.sh puts them in /etc/xdg/kdeglobals for everyone, as Bazzite locks that
+# group there; here for a system where nothing locks it. (Without KDE's own first page, its
+# settings show a page saying Plasma: Monet always opens them at a page, monet-quick's KDE_PAGES.)
+for kcm in $(grep -v '^#' "$DATADIR/monet/hidden-settings-pages" 2>/dev/null); do
     kw --file kdeglobals --group "KDE Control Module Restrictions" --key "$kcm" false
 done
 # And Help menus don't offer KDE's About, bug reports or donations.
@@ -302,40 +536,37 @@ for action in help_about_kde help_report_bug help_donate; do
     kw --file kdeglobals --group "KDE Action Restrictions" --key "action/$action" false
 done
 
+# Num Lock on at sign-in on a desktop PC, as Windows has it (the number pad did nothing until
+# pressed), unless it's been chosen. Not on laptops: some carry their number pad on letter keys.
+case "$(hostnamectl chassis 2>/dev/null)" in
+    desktop|server) kw_default kcminputrc Keyboard NumLock 0 ;;
+esac
+
 # Files: big painted folders with previews, on paper; a calm sidebar.
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22
 kw_default dolphinrc General ShowZoomSlider false
-# The full status bar, with how much room is left on the drive (Dolphin's
-# small one leaves that out).
-kw_default dolphinrc General ShowStatusBar FullWidth
+# Dolphin's small status bar. Its full one says how much room is left on the drive, but KDE
+# reads that from the system's read-only layer here ("0 B free" in every folder, found in a
+# test VM; Settings, Storage has it right). Monet had picked the full one: back once.
+if [ ! -e "$CONFIG/monet/files-small-bar" ]; then
+    [ "$(kreadconfig6 --file dolphinrc --group General --key ShowStatusBar 2>/dev/null)" = FullWidth ] &&
+        kw --file dolphinrc --group General --key ShowStatusBar Small
+    mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/files-small-bar"
+fi
 
 # Screenshot's Extract Text reads your language as well as English (Tesseract's
 # names; the image has them all), unless you've chosen others.
 ocr="$(ocr_language "${LANGUAGE:-${LANG:-en}}")"
 kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"
 
-# Settings in the dock opens Monet Settings, not KDE's, and the store button
-# opens the Store (kept panels too).
-busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS' | sed "s|STORE|${store:+$store.desktop}|g"
-panels().forEach(function (panel) {
-    panel.widgets("org.kde.plasma.icontasks").forEach(function (tasks) {
-        tasks.currentConfigGroup = ["General"];
-        var launchers = String(tasks.readConfig("launchers", "")).split(",");
-        var i = launchers.indexOf("applications:systemsettings.desktop");
-        if (i >= 0)
-            launchers[i] = "applications:monet-settings.desktop";
-        var store = launchers.indexOf("applications:org.kde.discover.desktop");
-        if (store >= 0 && "STORE" !== "org.kde.discover.desktop" && "STORE" !== "")
-            launchers[store] = "applications:STORE";
-        tasks.writeConfig("launchers", launchers);
-    });
-});
-JS
-)" >/dev/null 2>&1
+# Settings and Store in kept panels open Monet's own apps too.
+dock_shortcuts
 
 # Monet's clock in the panel instead of KDE's, on kept panels too (once).
+# Existing layouts belong to the person: automatic upgrades only repair target IDs.
+if [ "${1:-}" != --keep ]; then
 swapped="$CONFIG/monet/clock-placed"
 if [ ! -e "$swapped" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
 panels().forEach(function (panel) {
@@ -348,19 +579,61 @@ JS
 )" >/dev/null 2>&1; then
     mkdir -p "$CONFIG/monet" && touch "$swapped"
 fi
-# 0.9.0 made the bar's islands step aside for everyone; on some PCs a window Plasma counts
-# kept them hidden, and pointing at the bottom edge rarely brought them back (in a VM, never).
-# In view again, once: Settings → Light & Wallpaper → Bar steps aside turns it back on.
-shown="$CONFIG/monet/bar-shown"
-if [ ! -e "$shown" ] && busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+# The bar's islands step aside again by default (0.9.4), now that pointing at the bottom
+# brings them back on every PC (below). Once, for whoever hasn't chosen to keep them in view
+# (0.9.1 to 0.9.3 kept them there for everyone).
+aside="$CONFIG/monet/bar-steps-aside"
+if [ ! -e "$aside" ]; then
+    # Kept in view by choice: over windows, all three alike, none keeping room of its own (or
+    # KWin stacks those rooms: set_dodge in monet-quick).
+    hiding=dodgewindows
+    grep -q '"dodge": false' "$CONFIG/monet/prefs.json" 2>/dev/null && hiding=windowsgobelow
+    if busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<JS
 panels().forEach(function (panel) {
-    if (panel.location === "bottom" && panel.hiding === "dodgewindows") panel.hiding = "none";
+    if (panel.location === "bottom") panel.hiding = "$hiding";
 });
 JS
 )" >/dev/null 2>&1; then
-    [ -f "$CONFIG/monet/prefs.json" ] && sed -i 's/"dodge": true/"dodge": false/' "$CONFIG/monet/prefs.json"
-    rm -f "$CONFIG/monet/bar-dodges"
-    mkdir -p "$CONFIG/monet" && touch "$shown"
+        mkdir -p "$CONFIG/monet" && touch "$aside"
+    fi
+fi
+
+# Sound is Monet's own (0.9.4): beside Quick Settings, in glass like it, and KDE's volume
+# item out of the tray (known but not chosen, or it comes back as new). The volume keys
+# and their on-screen level stay: they're KDE's audio shortcuts service, not the item. Once.
+sound="$CONFIG/monet/sound-placed"
+# Only with the widget there to place: without it, the speaker went and an unknown one came.
+if [ ! -e "$sound" ] && { [ -d "$DATADIR/plasma/plasmoids/org.monet.sound" ] || [ -d "$DATA/plasma/plasmoids/org.monet.sound" ]; } &&
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat <<'JS'
+panels().forEach(function (panel) {
+    panel.widgets("org.monet.quick").forEach(function (quick) {
+        if (panel.widgets("org.monet.sound").length > 0) return;
+        var sound = panel.addWidget("org.monet.sound");
+        sound.index = quick.index + 1;
+    });
+    panel.widgets("org.kde.plasma.systemtray").forEach(function (tray) {
+        tray.currentConfigGroup = ["General"];
+        var listed = function (key) {
+            return String(tray.readConfig(key, "")).split(",").filter(function (item) { return item !== "" });
+        };
+        var known = listed("knownItems");
+        if (known.indexOf("org.kde.plasma.volume") < 0) known.push("org.kde.plasma.volume");
+        tray.writeConfig("knownItems", known);
+        tray.writeConfig("extraItems", listed("extraItems").filter(function (item) { return item !== "org.kde.plasma.volume"; }));
+        tray.reloadConfig();
+    });
+});
+JS
+)" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$sound"
+fi
+
+# The everyday bar, once when adopting the look. Upgrades with --keep never
+# replace a person's tray choices or add widgets back after they remove them.
+bar="$CONFIG/monet/everyday-bar-v1"
+if [ ! -e "$bar" ] && [ -r "$DATADIR/monet/bar-defaults.js" ] &&
+    busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "$(cat "$DATADIR/monet/bar-defaults.js")" >/dev/null 2>&1; then
+    mkdir -p "$CONFIG/monet" && touch "$bar"
 fi
 
 # And Monet's menu instead of KDE's, in its place and with its shortcut
@@ -382,13 +655,15 @@ JS
     mkdir -p "$CONFIG/monet" && touch "$menu"
 fi
 
+fi
+
 # The lock screen shows the same painting, in the same light.
 kw --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.monet.hours
 
 # Mist or smoke, depending on the time, and keep it that way; a fresh layout
 # also needs the painting that goes with the light.
-"$LIBEXECDIR/monet-light" paint
+"$LIBEXECDIR/monet-light" paint || failed=1
 has systemctl && systemctl --user enable --now monet-light.timer monet-light-sync.path >/dev/null 2>&1
 
 busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
-exit 0
+exit "$failed"

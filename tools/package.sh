@@ -18,6 +18,7 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        bash "$ROOT/tools/build-settings-style.sh" "$OUT/lib/monet/qt"
         # What's new, for Settings → Updates and the note after an update (monet-quick whats-new).
         cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"
         mkdir -p "$OUT/icons"

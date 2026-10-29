@@ -29,7 +29,8 @@ FLAG = Path("/run/monet/ready-auto")  # this start signs in by itself: lock at o
 NO_PASSWORD = Path("/etc/plasmalogin.conf.d/50-monet-no-password.conf")
 SHADOW = Path("/etc/shadow")
 EFIVARS = Path("/sys/firmware/efi/efivars")
-GLOBAL = "8be4df61-93ca-11d0-aa6c-00e098032b8c"
+# UEFI's own variables (EFI_GLOBAL_VARIABLE, as monet-core's GLOBAL_GUID; a test keeps them the same).
+GLOBAL = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
 # A trip lasts as long as the games; longer than a day and the sign-in screen asks again.
 # Generous both ways, as Windows may keep the clock in local time.
 FRESH = 24 * 3600

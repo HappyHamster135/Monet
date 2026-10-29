@@ -1,6 +1,6 @@
 {
     "AdaptiveTransparency": {
-        "enabled": true
+        "enabled": false
     },
     "BlurBehindEffect": {
         "enabled": true
@@ -51,7 +51,7 @@
         "Id": "monet",
         "License": "GPL-3.0-or-later",
         "Name": "Monet",
-        "Version": "0.9.3"
+        "Version": "0.9.4"
     },
     "X-Plasma-API": "5.0"
 }

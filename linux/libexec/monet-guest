@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""A guest on this PC: someone can sign in as Guest, with no password, and use the PC
+without seeing anyone's files, games or Windows; everything they did is gone when they
+sign out. Their home is a btrfs subvolume of its own, so the hourly earlier versions of
+everyone's files (monet-keep) never keep one guest's things for the next.
+
+Runs as root. Settings → Accounts turns it on and off through pkexec, which asks an
+administrator's password (this program isn't one Monet's polkit rule lets through), and
+a guest isn't let through for Monet's own helpers either (they ask an administrator);
+the wipes run from systemd: when the guest's session ends (a drop-in on its user@ unit)
+and before every sign-in screen (monet-guest-wipe.service).
+
+    monet-guest on [NAME]  add the Guest account (NAME, as hex of its UTF-8, what the sign-in
+                           screen calls it, in the PC's language)
+    monet-guest off        remove it and everything in it
+    monet-guest wipe       the guest's home as new (not while they're signed in)
+    monet-guest status     whether there is one, as JSON
+"""
+
+import json
+import os
+import pwd
+import shutil
+import stat
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+GUEST = "guest"
+MARK = Path("/var/lib/monet/guest")  # the guest's uid: there is one, and monet-guest-wipe.service runs
+LINGER = Path("/var/lib/systemd/linger")
+HOMES = Path("/var/home")
+DROPIN = "/etc/systemd/system/user@{uid}.service.d/monet-guest.conf"
+DATADIR = "@DATADIR@"
+LIBEXECDIR = "@LIBEXECDIR@"
+ICON = f"{DATADIR}/plasma/avatars/Monet/Parasol.jpg"
+# A guest has no password, so no screen lock to type one into.
+SETTINGS = {".config/kscreenlockerrc": "[Daemon]\nAutolock=false\nLockOnResume=false\n"}
+
+
+def run(*args, timeout=120):
+    try:
+        return subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def account():
+    try:
+        return pwd.getpwnam(GUEST)
+    except KeyError:
+        return None
+
+
+def guest():
+    """The guest monet-guest added (MARK keeps its uid), or None: never someone's own
+    account that happens to be called guest."""
+    entry = account()
+    try:
+        return entry if entry is not None and MARK.read_text().strip() == str(entry.pw_uid) else None
+    except OSError:
+        return None
+
+
+def signed_in(uid):
+    """Whether the guest has a session now (then their home stays as it is)."""
+    out = subprocess.run(["loginctl", "show-user", str(uid), "-p", "State", "--value"], capture_output=True, text=True)
+    return out.returncode == 0 and out.stdout.strip() in ("active", "online")
+
+
+def remove(home):
+    """home and everything in it, subvolumes the guest made inside it too (deepest first), as
+    far as it goes: a tree too deep or too odd stays, root's only, for the next try."""
+    try:
+        inner = []
+        for top, dirs, _ in os.walk(home, onerror=lambda e: None):
+            for name in dirs:
+                try:
+                    st = os.lstat(os.path.join(top, name))
+                except OSError:
+                    continue
+                if stat.S_ISDIR(st.st_mode) and st.st_ino == 256:  # a btrfs subvolume's own top folder
+                    inner.append(Path(top, name))
+        for sub in sorted(inner, key=lambda p: len(p.parts), reverse=True) + [home]:
+            run("btrfs", "subvolume", "delete", sub)
+        shutil.rmtree(home, ignore_errors=True)  # what wasn't a subvolume (rmtree never follows a link)
+    except Exception as e:  # RecursionError on a very deep tree, say
+        print(f"{home} wouldn't all go ({e}): left, root's only", file=sys.stderr)
+
+
+def put_aside(home):
+    """The last guest's home out of the way at once, root's only, to be removed after: the next
+    guest's is new even when removing this one takes long or doesn't finish."""
+    aside = home.with_name(f".{GUEST}-{time.time_ns()}")
+    os.rename(home, aside)
+    os.lchown(aside, 0, 0)
+    os.chmod(aside, 0o700)
+    return aside
+
+
+def leftovers(uid):
+    """What the guest left outside their home: files in the shared temporary folders, mail
+    and timed jobs. A guest with the same uid would otherwise find them."""
+    run("find", "/tmp", "/var/tmp", "/dev/shm", "-xdev", "-depth", "-user", str(uid), "-delete")
+    try:
+        os.close(os.open(f"/var/spool/mail/{GUEST}", os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW))
+    except OSError:
+        pass
+    run("crontab", "-r", "-u", GUEST)
+
+
+def safe_home(entry, homes=HOMES):
+    """The guest's home, when it's where a home should be: right under /var/home, by its name."""
+    home = Path(entry.pw_dir).resolve()
+    return home if home.parent == homes.resolve() and home.name == GUEST else None
+
+
+def fresh(home, uid, gid):
+    """An empty home: a subvolume of its own where it can be (else a plain folder), the PC's
+    starting files in it, and the guest's settings. Made root's only under another name and
+    given to the guest when it's ready, so nothing of theirs can lead root's writing elsewhere."""
+    new = home.with_name(f".{GUEST}-new-{time.time_ns()}")
+    if not run("btrfs", "subvolume", "create", new):
+        new.mkdir()
+    os.chmod(new, 0o700)
+    shutil.copytree("/etc/skel", new, symlinks=True, dirs_exist_ok=True)
+    for rel, text in SETTINGS.items():
+        (new / rel).parent.mkdir(parents=True, exist_ok=True)
+        (new / rel).write_text(text)
+    for path in [new, *new.rglob("*")]:
+        os.lchown(path, uid, gid)
+    os.rename(new, home)
+    # SELinux: a home's own labels, as useradd would have given them.
+    run("restorecon", "-RF", home)
+
+
+def wipe(homes=HOMES):
+    """The guest's home as new; nothing when they're signed in (or there's no guest)."""
+    entry = guest()
+    if entry is None:
+        return 0
+    # Kept running after signing out (lingering, which Monet's polkit rule refuses them): no more.
+    if (LINGER / GUEST).exists():
+        run("loginctl", "disable-linger", GUEST)
+    if signed_in(entry.pw_uid):
+        return 0
+    home = safe_home(entry, homes)
+    if home is None:
+        print(f"the guest's home isn't where it should be ({entry.pw_dir}): left as it is", file=sys.stderr)
+        return 1
+    # Whatever they left running goes first, then what they left outside their home.
+    run("pkill", "-KILL", "-u", str(entry.pw_uid))
+    leftovers(entry.pw_uid)
+    # Never the last guest's things for the next: their home goes aside at once, a new one
+    # takes its place, and only then is the old one removed (with any earlier leftovers).
+    if os.path.lexists(home):
+        put_aside(home)
+    fresh(home, entry.pw_uid, entry.pw_gid)
+    for left in home.parent.glob(f".{GUEST}-*"):
+        remove(left)
+    return 0
+
+
+def turn_on(name="Guest"):
+    """name: what the sign-in screen calls the guest, in the PC's language (passwd keeps it,
+    where ':' and ',' separate things)."""
+    if not 0 < len(name) <= 32 or any(c in name for c in ":,\\") or any(ord(c) < 32 for c in name):
+        name = "Guest"
+    if guest() is None:
+        if account() is not None:
+            print("there's already an account called guest: left as it is", file=sys.stderr)
+            return 1
+        if not run("useradd", "--comment", name, "--shell", "/bin/bash", "--no-create-home",
+                   "--home-dir", str(HOMES / GUEST), GUEST):
+            print("couldn't add the guest account", file=sys.stderr)
+            return 1
+        MARK.parent.mkdir(parents=True, exist_ok=True)
+        MARK.write_text(f"{account().pw_uid}\n")
+        run("passwd", "-d", GUEST)
+    entry = guest()
+    dropin = Path(DROPIN.format(uid=entry.pw_uid))
+    dropin.parent.mkdir(parents=True, exist_ok=True)
+    # When the guest's session ends, as root ("+"), not as the guest.
+    dropin.write_text(f"[Service]\nExecStopPost=+{LIBEXECDIR}/monet-guest wipe\n")
+    run("systemctl", "daemon-reload")
+    # A face for the sign-in screen, Monet's painting of a walk with a parasol, through
+    # AccountsService, which keeps its own copy.
+    found = subprocess.run(["busctl", "--json=short", "call", "org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                            "org.freedesktop.Accounts", "FindUserByName", "s", GUEST], capture_output=True, text=True)
+    try:
+        path = json.loads(found.stdout)["data"][0]
+    except (ValueError, KeyError, IndexError):
+        path = ""
+    if path and os.path.isfile(ICON):
+        run("busctl", "call", "org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User", "SetIconFile", "s", ICON)
+    return wipe()
+
+
+def turn_off():
+    entry = guest()
+    if entry is not None:
+        if signed_in(entry.pw_uid):
+            print("the guest is signed in: sign them out first", file=sys.stderr)
+            return 1
+        uid = str(entry.pw_uid)
+        run("loginctl", "disable-linger", GUEST)
+        run("loginctl", "terminate-user", GUEST)
+        run("pkill", "-KILL", "-u", uid)
+        # Until their user manager has stopped (its own wipe done) and nothing of theirs runs:
+        # userdel won't remove an account that still has processes.
+        for _ in range(60):
+            if not run("systemctl", "is-active", "--quiet", f"user@{uid}.service") and not run("pgrep", "-u", uid):
+                break
+            time.sleep(0.5)
+        if not run("userdel", GUEST):
+            print("couldn't remove the guest account: Guest stays on", file=sys.stderr)
+            return 1
+        leftovers(entry.pw_uid)
+        Path(f"/var/spool/mail/{GUEST}").unlink(missing_ok=True)
+        home = safe_home(entry)
+        if home is not None:
+            for left in [*home.parent.glob(f".{GUEST}-*"), home]:
+                if os.path.lexists(left):
+                    remove(left)
+        Path(DROPIN.format(uid=entry.pw_uid)).unlink(missing_ok=True)
+        run("systemctl", "daemon-reload")
+    MARK.unlink(missing_ok=True)
+    return 0
+
+
+def main(argv):
+    if argv[:1] == ["status"]:
+        print(json.dumps({"on": guest() is not None}))
+        return 0
+    if os.geteuid() != 0:
+        print("monet-guest runs as root (Settings asks for an administrator's password).", file=sys.stderr)
+        return 1
+    if argv[:1] == ["on"]:
+        name = bytes.fromhex(argv[1]).decode("utf-8", "replace") if len(argv) > 1 and all(
+            c in "0123456789abcdef" for c in argv[1]) and len(argv[1]) % 2 == 0 else "Guest"
+        return turn_on(name)
+    return {"off": turn_off, "wipe": wipe}.get(argv[0] if argv else "", lambda: 2)()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

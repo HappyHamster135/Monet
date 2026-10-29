@@ -6,11 +6,42 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.3-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.3-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.3-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.3-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.3-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.4-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.4-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.4-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.4-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.4-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.4: safer switching, more of your desktop comes back
+
+- **One USB maker for supported PCs.** The same Make-USB-Stick.exe and installer
+  serve Intel, AMD and NVIDIA PCs. The installer chooses drivers on the PC being
+  installed, independently of the Windows PC that made the stick.
+- **USB writes are checked before and after.** The maker verifies the release's
+  checksum, checks the selected device again before writing, refuses a busy or
+  changed device, and reads the written image back before reporting success.
+  Errors leave a diagnostic log in Windows' temporary folder. These safeguards
+  cannot guarantee a faulty USB stick will keep working.
+- **Safer trips to Windows.** Apps can cancel a switch to protect unsaved work.
+  Supported editors and PDF windows report their final documents after Save As,
+  so recovery follows the saved name. Cancelled switches keep surviving windows
+  and avoid reopening them twice.
+- **More of your workspace returns.** Recovery now handles more browser profiles,
+  separate editor and Files windows, tabs, editor view state, and PDF pages.
+  Missing files stay pending for an explicit retry instead of silently disappearing.
+  Exact recovery still depends on the app; see the restoration backlog.
+- **Everyday desktop improvements.** Settings and the Store have received layout,
+  search and feedback fixes. Switching between 12-hour and 24-hour clocks updates
+  the desktop immediately. Native notifications and window controls fit Monet's look.
+- **Rollback failures stay visible.** A failed rollback request keeps the recovery
+  record and reports an error, instead of marking recovery complete and restarting.
+
+This is still a preview. VM restoration and rollback checks do not replace physical
+USB, laptop-driver, multi-monitor or real Windows round-trip testing. The in-house
+Passwords app remains a development prototype and is not included in the installed OS.
+
+For a new install, use **Monet-0.9.4-Make-USB-Stick.exe**. Existing installs update
+through Settings → Updates. Keep a backup before installing or changing systems.
 
 ### New in 0.9.3: Windows looks like Monet, sticks that work
 

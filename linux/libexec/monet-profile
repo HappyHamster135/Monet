@@ -1,0 +1,327 @@
+#!/usr/bin/python3
+"""Owned profile defaults, three-way launcher updates, and conflict-safe undo.
+
+Never runs as root. Settings and launchers are written only after a private,
+durable journal entry. Existing choices (including empty values) stay untouched.
+"""
+import base64
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+DATA = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/profile"
+LIMIT = 8 * 1024 * 1024
+MISSING = "__MONET_MISSING_9c77104e__"
+
+
+def atomic(path, data, mode=0o600):
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temporary = tempfile.mkstemp(prefix=".monet-", dir=path.parent)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data); stream.flush(); os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try: os.fsync(fd)
+        finally: os.close(fd)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+@contextmanager
+def lock(name="state"):
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / (name + ".lock")).open("a") as stream:
+        os.chmod(stream.name, 0o600)
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        yield
+
+
+def load():
+    try:
+        with (STATE / "state.json").open("rb") as stream: raw = stream.read(LIMIT + 1)
+    except FileNotFoundError:
+        return {"version": 1, "owned": {}, "runs": {}, "applied": [], "blocked": []}
+    state = json.loads(raw)
+    if (len(raw) > LIMIT or state.get("version") != 1
+            or any(not isinstance(state.get(k), dict) for k in ("owned", "runs"))
+            or any(not isinstance(state.get(k), list) for k in ("applied", "blocked"))):
+        raise ValueError("Unreadable profile record; the original has been kept")
+    return state
+
+
+def save(state):
+    raw = json.dumps(state, ensure_ascii=True).encode()
+    if len(raw) > LIMIT: raise OSError("Profile record is full")
+    atomic(STATE / "state.json", raw)
+
+
+def safe_path(file, base=CONFIG):
+    path = Path(file)
+    if not path.is_absolute(): path = base / path
+    # Profile tools never follow a shortcut/config symlink into an unrelated file.
+    if path.is_symlink(): raise ValueError("Symlinked profile file is left alone")
+    resolved = path.resolve()
+    if not any(resolved.is_relative_to(root.resolve()) for root in (CONFIG, DATA)):
+        raise ValueError("Outside this account's profile")
+    return resolved
+
+
+def read_key(args, *, inherited=False):
+    # KConfig also reads kdeglobals from /etc/xdg, even for an absolute filename.
+    # Inherited system defaults are not a choice in this account's own file.
+    path = Path(args[1]); groups = args[3:-2:2]; key = args[-1]
+    wanted = "".join("[" + group + "]" for group in groups)
+    group = ""; present = False
+    try:
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                group = line.removesuffix("[$i]")
+            elif group == wanted and "=" in line:
+                name = re.sub(r"\[\$[a-z]+\]$", "", line.split("=", 1)[0])
+                if name == key: present = True; break
+    except FileNotFoundError: pass
+    if not present and not inherited: return None
+    result = subprocess.run(["kreadconfig6", *args, "--default", MISSING], capture_output=True, text=True, timeout=10)
+    if result.returncode: raise OSError("Could not read preference")
+    value = result.stdout.removesuffix("\n")
+    return None if value == MISSING else value
+
+
+def write_key(args, value):
+    command = ["kwriteconfig6", *args, "--delete"] if value is None else ["kwriteconfig6", *args, value]
+    subprocess.run(command, check=True, timeout=10)
+
+
+def journal(state, key, kind, target, before, after):
+    token = os.environ.get("MONET_PROFILE_RUN")
+    if token:
+        run = state["runs"][token]
+        change = run["changes"].setdefault(key, {"kind": kind, "target": target, "before": before,
+                                               "owner": state["owned"].get(key)})
+        change.update(after=after, pending=True)
+    save(state)  # Write-ahead: no mutation without a recoverable record.
+
+
+def finish(state, key, owner, after):
+    state["owned"][key] = owner
+    token = os.environ.get("MONET_PROFILE_RUN")
+    if token:
+        state["runs"][token]["changes"][key].update(after=after, pending=False)
+    save(state)
+
+
+def put(args, default=False, force=False):
+    value, spec = args[-1], args[:-1]
+    if len(spec) < 6 or spec[0] != "--file" or spec[-2] != "--key": raise ValueError("Invalid preference")
+    if len(spec[2:-2]) % 2 or any(spec[i] != "--group" for i in range(2, len(spec) - 2, 2)):
+        raise ValueError("Invalid preference groups")
+    legacy_id = " ".join(spec)
+    raw_path = Path(spec[1]) if Path(spec[1]).is_absolute() else CONFIG / spec[1]
+    if raw_path.is_symlink(): return
+    spec[1] = str(safe_path(spec[1]))
+    key = "key:" + json.dumps(spec)
+    with lock():
+        state = load(); current = read_key(spec)
+        owner = state["owned"].get(key)
+        if not force:
+            if default and current is not None: return
+            if owner is not None and current != owner["value"]: return
+            if owner is None and current is not None:
+                # Import the former ledger only when it proves the current value is Monet's.
+                previous = None
+                try:
+                    for line in (CONFIG / "monet/look-written").read_text().splitlines():
+                        name, _, old = line.partition("\t")
+                        if name == legacy_id: previous = old
+                except FileNotFoundError: pass
+                if current != previous: return
+        if owner == {"value": current} and current == value: return
+        # System defaults may be locked; matching them needs no write or ownership claim.
+        if current is None and read_key(spec, inherited=True) == value: return
+        journal(state, key, "key", spec, current, value)
+        write_key(spec, value)
+        actual = read_key(spec)
+        # KConfig can omit an explicit value equal to a system default.
+        if actual not in (None, value): raise OSError("Preference did not take effect")
+        finish(state, key, {"value": actual}, actual)
+
+
+def fields(raw):
+    group = ""; found = {}
+    for line in raw.decode("utf-8").splitlines():
+        if line.startswith("[") and line.endswith("]"): group = line
+        elif "=" in line and not line.lstrip().startswith("#"):
+            key, value = line.split("=", 1); found[group + "\n" + key] = value
+    return found
+
+
+def merge(current, wanted, old):
+    """Retain customized, added and deliberately removed desktop-entry fields."""
+    now = fields(current); new = fields(wanted); edits = {}
+    for key in old.keys() | new.keys():
+        if now.get(key) == old.get(key): edits[key] = new.get(key)
+    group = ""; lines = []
+    for line in current.decode("utf-8").splitlines():
+        if line.startswith("[") and line.endswith("]"): group = line
+        key = group + "\n" + line.split("=", 1)[0]
+        if "=" in line and key in edits:
+            value = edits.pop(key)
+            if value is not None: lines.append(line.split("=", 1)[0] + "=" + value)
+        else: lines.append(line)
+    for key, value in edits.items():
+        if value is None: continue
+        group, name = key.split("\n", 1)
+        if group in lines:
+            lines.insert(lines.index(group) + 1, name + "=" + value)
+        else: lines.extend([group, name + "=" + value])
+    return ("\n".join(lines) + "\n").encode()
+
+
+def file_update(target, candidate, alias=False):
+    if Path(target).is_symlink(): return
+    path = safe_path(target, DATA); wanted = Path(candidate).read_bytes()
+    if len(wanted) > 256 * 1024: raise ValueError("Oversized launcher")
+    with lock():
+        state = load(); key = "file:" + str(path)
+        before = path.read_bytes() if path.exists() else None
+        if before is not None and len(before) > 256 * 1024: raise ValueError("Oversized launcher")
+        owner = state["owned"].get(key)
+        if owner is not None and before is None:
+            return  # A launcher the person removed must stay removed.
+        after = wanted
+        if before is not None:
+            now = fields(before)
+            command = now.get("[Desktop Entry]\nExec", "")
+            stale = bool(re.fullmatch(r"(?:/[^ ]*/)?(?:bazaar|plasma-discover|monet-store)(?:\s+%[uUfF])?\s*", command)
+                         or re.fullmatch(r"(?:/usr/bin/)?flatpak run (?:--[\w=-]+ )*io.github.kolunmi.Bazaar(?:\s+%[uUfF])?\s*", command))
+            if not owner and now.get("[Desktop Entry]\nX-Monet") != "true" and not (alias and stale):
+                return  # The user's own launcher is never claimed by a naming job.
+            baseline = owner["fields"] if owner else fields(wanted)
+            after = merge(before, wanted, baseline)
+            if alias:
+                # Repair only known stale Store launchers; keep custom names/icons/shortcuts.
+                if stale:
+                    changes = fields(wanted)
+                    names = {"Exec", "DBusActivatable", "MimeType", "X-Monet"}
+                    if now.get("[Desktop Entry]\nNoDisplay") != "false": names.add("NoDisplay")
+                    keys = {"[Desktop Entry]\n" + name for name in names}
+                    forced = {k: v for k, v in now.items() if k in keys}
+                    selected = {k: v for k, v in changes.items() if k in keys}
+                    after = merge(after, ("[Desktop Entry]\n" + "\n".join(k.split("\n", 1)[1] + "=" + v for k, v in selected.items()) + "\n").encode(), forced)
+                    # Obsolete Bazaar/Discover actions must not reopen the replaced Store.
+                    obsolete = {k.split("\n")[0] for k, v in now.items() if k.startswith("[Desktop Action ") and k.endswith("\nExec")
+                                and re.match(r"(?:/[^ ]*/)?(?:bazaar|plasma-discover)(?:\s|$)", v)}
+                    group = ""; lines = []
+                    for line in after.decode().splitlines():
+                        if line.startswith("[") and line.endswith("]"): group = line
+                        if group == "[Desktop Entry]" and line.startswith("Actions="):
+                            names = [name for name in line[8:].split(";") if name and "[Desktop Action " + name + "]" not in obsolete]
+                            if not names: continue
+                            line = "Actions=" + ";".join(names) + ";"
+                        if group not in obsolete: lines.append(line)
+                    after = ("\n".join(lines) + "\n").encode()
+        if after == before and owner == {"fields": fields(wanted)}: return
+        encode = lambda b: None if b is None else base64.b64encode(b).decode()
+        journal(state, key, "file", str(path), encode(before), encode(after))
+        if after != before: atomic(path, after, path.stat().st_mode & 0o777 if path.exists() else 0o644)
+        finish(state, key, {"fields": fields(wanted)}, encode(after))
+
+
+def run(command):
+    sources = [Path(__file__), Path(command[0]), Path(__file__).with_name("monet-light")]
+    revision = hashlib.sha256(b"\0".join([*(p.read_bytes() for p in sources),
+                                         json.dumps(command[1:]).encode()])).hexdigest()
+    with lock("run"):
+        with lock():
+            state = load()
+            if revision in state["applied"] or revision in state["blocked"]: return 0
+            token = uuid.uuid4().hex
+            state["runs"][token] = {"revision": revision, "time": time.time(), "status": "running", "changes": {}}
+            # Keep recent recovery history; ownership and revision receipts remain.
+            finished = [k for k, v in state["runs"].items() if v["status"] in ("done", "rolled-back")]
+            for old in finished[:-4]: del state["runs"][old]
+            save(state)
+        result = subprocess.run(command, env={**os.environ, "MONET_PROFILE_RUN": token})
+        with lock():
+            state = load(); record = state["runs"][token]
+            success = result.returncode == 0 and not record.get("error") and not any(c["pending"] for c in record["changes"].values())
+            record["status"] = "done" if success else "failed"
+            if success: state["applied"].append(revision)
+            save(state)
+        return 0 if success else 1
+
+
+def rollback(token):
+    with lock("run"), lock():
+        state = load(); record = state["runs"][token]; conflicts = []
+        for key, change in reversed(list(record["changes"].items())):
+            if change.get("undone"): continue
+            target = change["target"][1] if change["kind"] == "key" else change["target"]
+            try: safe_path(target)
+            except ValueError:
+                conflicts.append(key); continue
+            if change["kind"] == "key":
+                args = list(change["target"]); args[1] = str(safe_path(args[1]))
+                current = read_key(args)
+                if current != change["after"] and current != change["before"]:
+                    conflicts.append(key); continue
+                write_key(args, change["before"])
+            else:
+                path = safe_path(change["target"], DATA)
+                current = base64.b64encode(path.read_bytes()).decode() if path.exists() else None
+                if current != change["after"] and current != change["before"]:
+                    conflicts.append(key); continue
+                if change["before"] is None: path.unlink(missing_ok=True)
+                else: atomic(path, base64.b64decode(change["before"]), path.stat().st_mode & 0o777 if path.exists() else 0o644)
+            if change["owner"] is None: state["owned"].pop(key, None)
+            else: state["owned"][key] = change["owner"]
+            change["undone"] = True
+            save(state)
+        record["status"] = "conflicts" if conflicts else "rolled-back"
+        revision = record["revision"]
+        state["applied"] = [r for r in state["applied"] if r != revision]
+        if revision not in state["blocked"]: state["blocked"].append(revision)
+        save(state)
+        print(json.dumps({"restored": not conflicts, "conflicts": conflicts}))
+        return 1 if conflicts else 0
+
+
+def main(args):
+    if args[0] == "put":
+        default = "--default-only" in args; force = os.environ.get("MONET_PROFILE_FORCE") == "1"
+        put([a for a in args[1:] if a != "--default-only"], default, force)
+    elif args[0] == "file": file_update(args[1], args[2], "--alias" in args)
+    elif args[0] == "run": return run(args[1:])
+    elif args[0] == "rollback": return rollback(args[1])
+    elif args[0] == "status":
+        with lock(): print(json.dumps(load()["runs"]))
+    else: raise ValueError("Unknown profile operation")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+        token = os.environ.get("MONET_PROFILE_RUN")
+        if token:
+            try:
+                with lock():
+                    state = load(); state["runs"][token]["error"] = True; save(state)
+            except Exception: pass
+        print("Monet profile update failed: " + str(error), file=sys.stderr)
+        sys.exit(1)

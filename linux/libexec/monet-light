@@ -3,7 +3,8 @@
 #
 #   monet-light                       apply the chosen light (at sign-in, and when the hour turns)
 #   monet-light set hours|mist|smoke  choose: follow the hours, or keep one
-#   monet-light paint                 the chosen light again, and the painting that goes with it
+#   monet-light paint [wall]          the chosen light again, and the painting that goes with it
+#                                     (wall: Monet's wallpaper back where another one replaced it)
 #   monet-light sync                  KDE's Light or Dark was picked: keep Mist or Smoke
 #   monet-light focus [START,END]     plein-air focus: a whole day on the painting from START to END
 #                                     (Unix seconds); nothing when it's over
@@ -46,19 +47,48 @@ now() {
     fi
 }
 
-# Glass can be turned off in Monet Settings (Light & Wallpaper). Until it's
-# chosen there, it's off when nothing but the processor draws the screen (a
-# virtual machine, or a graphics driver that didn't load): blurring there
-# makes everything lag.
+# The glass, as Monet Settings' Glass slider has it (Light & Wallpaper): clear,
+# frosted, matte or solid (0.9.3 kept true or false). Until it's chosen there,
+# solid when nothing but the processor draws the screen (a virtual machine, or a
+# graphics driver that didn't load): blurring there makes everything lag.
 glass() {
-    local prefs="$CONFIG/monet/prefs.json"
-    if grep -q '"glass": false' "$prefs" 2>/dev/null; then
-        echo off
-    elif grep -q '"glass": true' "$prefs" 2>/dev/null || ! drawn_by_processor; then
-        echo on
-    else
-        echo off
-    fi
+    case "$(sed -n 's/.*"glass": *"\{0,1\}\([a-z]*\).*/\1/p' "$CONFIG/monet/prefs.json" 2>/dev/null)" in
+        clear|true) echo clear ;;
+        frosted) echo frosted ;;
+        matte) echo matte ;;
+        solid|false) echo solid ;;
+        *) if drawn_by_processor; then echo solid; else echo clear; fi ;;
+    esac
+}
+
+# A setting from the person's own file: ini FILE GROUP... KEY (a name in ~/.config, or a path).
+# kreadconfig6 took a fifth of a second each, and Mist to Smoke read a dozen (found by the test
+# bench); Monet's own defaults in /etc/xdg read as nothing, which apply() takes as Monet's.
+ini() {
+    local file="$1" key="${!#}" header="" group
+    shift
+    for group in "${@:1:$#-1}"; do header="$header[$group]"; done
+    case "$file" in /*) ;; *) file="$CONFIG/$file" ;; esac
+    awk -v h="$header" -v k="$key" '
+        /^\[/ { inside = ($0 == h); next }
+        inside { i = index($0, "="); if (i > 1 && substr($0, 1, i - 1) == k) v = substr($0, i + 1) }
+        END { printf "%s", v }' "$file" 2>/dev/null
+}
+
+# Monet's glass app style (Kvantum), if KDE took it away: applying a global theme (KDE's Light
+# and Dark buttons) put Qt's plain Windows style in every window and menu, and nothing brought
+# Monet's back (found by the owner). A style set in someone's own file stays theirs.
+keep_app_style() {
+    [ -n "$(ini kdeglobals KDE widgetStyle)" ] && return 0
+    [ "$(ini kdedefaults/kdeglobals KDE widgetStyle)" = kvantum ] && return 0
+    local plugin here=no
+    for plugin in /usr/lib*/qt6/plugins/styles/libkvantum.so /usr/lib*/*/qt6/plugins/styles/libkvantum.so; do
+        [ -e "$plugin" ] && here=yes
+    done
+    [ "$here" = yes ] || return 0
+    kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle kvantum
+    # Open windows take it at once: KDE's own notice that the style changed (StyleChanged).
+    busctl --user emit /KGlobalSettings org.kde.KGlobalSettings notifyChange ii 2 0 >/dev/null 2>&1
 }
 
 drawn_by_processor() {
@@ -71,14 +101,15 @@ drifts() {
     grep -q '"hours": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
 }
 
-# The painting that goes with the light: drifting through the lights it
-# allows (mist keeps to dawn and day, smoke to dusk and night), or the one it
-# stays on. The wallpaper's lights start at 5, 10, 17 and 21.
+# The painting: through the whole day, dawn to night, whatever Mist or Smoke the colors keep
+# (people wanted the day and the seasons on the wall with the colors they picked; Mist kept
+# to dawn and day before, Smoke to dusk and night), or, when it stays, the light that goes
+# with them. The wallpaper's lights start at 5, 10, 17 and 21.
 painting() {
     local chosen hour
     chosen="$(choice)"
     if [ "$(drifts)" = on ]; then
-        echo "$chosen"
+        echo hours
         return
     fi
     case "$chosen" in
@@ -100,14 +131,17 @@ painting() {
 }
 
 # Which of Monet's series is on the wall (Monet Settings, Light & Wallpaper):
-# The Hours, Water Lilies, Haystacks or The Magpie, each in the same four lights, or one
-# for each season, as Monet painted them (seasons).
+# The Hours, Water Lilies, Haystacks or The Magpie, each in the same four lights, one
+# for each season, as Monet painted them (seasons), or a photo of yours, painted in the
+# same four lights (monet-paint), while it's there.
+PHOTO="${XDG_DATA_HOME:-$HOME/.local/share}/monet/paintings/photo"
 series() {
     case "$(sed -n 's/.*"series": *"\([a-z]*\)".*/\1/p' "$CONFIG/monet/prefs.json" 2>/dev/null)" in
         lilies) echo lilies ;;
         haystacks) echo haystacks ;;
         magpie) echo magpie ;;
         seasons) season_series ;;
+        photo) if [ -f "$PHOTO/night.jpg" ]; then echo photo; else echo hours; fi ;;
         *) echo hours ;;
     esac
 }
@@ -137,13 +171,20 @@ weather() {
     grep -q '"weather": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo false || echo true
 }
 
-# On every screen's desktop and on the lock screen.
+# On every screen's desktop and on the lock screen. Only when something about it changed
+# since this Plasma last had it: reloading it held up the bar and Settings for two seconds at
+# every Mist and Smoke (found by the test bench).
+# Asked for the painting by name (Settings' Light & Wallpaper, "Put back"), a desktop that wears
+# another wallpaper since (picked in KDE's dialog) gets Monet's again: choosing one did nothing.
 paint() {
-    local name set where sky
+    local wall="${1:-}" name set where sky said these
     name="$(painting)"
     set="$(series)"
     where="$(place)"
     sky="$(weather)"
+    said="${XDG_RUNTIME_DIR:-/tmp}/monet-painted"
+    these="$(pgrep -o -x plasmashell) $name $set $where $sky"
+    [ "$wall" != wall ] && [ "$(cat "$said" 2>/dev/null)" = "$these" ] && return 0
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
         --group General --key Painting "$name"
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
@@ -152,14 +193,20 @@ paint() {
         --group General --key Place "$where"
     kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
         --group General --key Weather "$sky"
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.monet.hours \
+        --group General --key PhotoFolder "file://$PHOTO/"
     busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s "
         desktops().forEach(function (d) {
-            if (d.wallpaperPlugin !== 'org.monet.hours') return;
+            if (d.wallpaperPlugin !== 'org.monet.hours') {
+                if ('$wall' !== 'wall') return;
+                d.wallpaperPlugin = 'org.monet.hours';
+            }
             d.currentConfigGroup = ['Wallpaper', 'org.monet.hours', 'General'];
             d.writeConfig('Painting', '$name');
             d.writeConfig('Series', '$set');
             d.writeConfig('Place', '$where');
             d.writeConfig('Weather', $sky);
+            d.writeConfig('PhotoFolder', 'file://$PHOTO/');
             d.reloadConfig();
         });
         desktops().forEach(function (d) {
@@ -167,7 +214,7 @@ paint() {
                 w.currentConfigGroup = ['General'];
                 w.writeConfig('Series', '$set');
             });
-        })" >/dev/null 2>&1
+        })" >/dev/null 2>&1 && printf '%s' "$these" >"$said"
 }
 
 # One change at a time: quick hours-mist-smoke taps repaint once each, in
@@ -179,6 +226,7 @@ lock() {
 
 apply() {
     local light scheme kvantum style theme current
+    keep_app_style
     light="$(now)"
     if [ "$light" = mist ]; then
         scheme=MonetLight kvantum=Monet theme=$MIST_THEME
@@ -186,17 +234,38 @@ apply() {
         scheme=MonetDark kvantum=MonetDark theme=$SMOKE_THEME
     fi
     style=monet
-    # Monet's desktop widgets look for glass-off: without it they frost the
-    # painting live, which is the heaviest thing on an old PC's screen.
-    if [ "$(glass)" = off ]; then
-        kvantum="${kvantum}Solid" style=monet-solid
-        mkdir -p "$CONFIG/monet" && : > "$CONFIG/monet/glass-off"
-    else
-        rm -f "$CONFIG/monet/glass-off"
+    local level flag strength=3 noise=0
+    level="$(glass)"
+    case "$level" in
+        matte) kvantum="${kvantum}Matte" style=monet-matte strength=12 noise=5 ;;
+        frosted) strength=8 noise=3 ;;
+        solid) kvantum="${kvantum}Solid" style=monet-solid ;;
+    esac
+    # Monet's desktop widgets look for these: with glass-off they don't frost the
+    # painting live, the heaviest thing on an old PC's screen; frosted and matte
+    # soften it more and wash more over it. Only what changed, so they don't flicker.
+    mkdir -p "$CONFIG/monet"
+    for flag in off frosted matte; do
+        case "$level/$flag" in
+            solid/off|frosted/frosted|matte/matte) [ -e "$CONFIG/monet/glass-$flag" ] || : > "$CONFIG/monet/glass-$flag" ;;
+            *) rm -f "$CONFIG/monet/glass-$flag" ;;
+        esac
+    done
+    # KWin's blur behind the panels, popovers and see-through windows: clear as Apple's glass
+    # (the strokes still show, about as softened as through the desktop widgets), or frosted
+    # and matte with a fine grain, as etched glass has.
+    if [ "$(ini kwinrc Effect-blur BlurStrength)" != "$strength" ] ||
+        [ "$(ini kwinrc Effect-blur NoiseStrength)" != "$noise" ]; then
+        kwriteconfig6 --file kwinrc --group Effect-blur --key BlurStrength "$strength"
+        kwriteconfig6 --file kwinrc --group Effect-blur --key NoiseStrength "$noise"
+        busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects reconfigureEffect s blur >/dev/null 2>&1
     fi
+    # And the blur there at all: KWin may leave it out until it starts again, and the glass
+    # is then as clear as a window (found by the test bench).
+    [ "$level" = solid ] || busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects loadEffect s blur >/dev/null 2>&1
 
     # KDE's settings show Light or Dark to match (first, so sync sees it).
-    current="$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null)"
+    current="$(ini kdeglobals KDE LookAndFeelPackage)"
     case "$current" in
         ""|"$MIST_THEME"|"$SMOKE_THEME")
             [ "$current" = "$theme" ] || kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage "$theme"
@@ -204,18 +273,20 @@ apply() {
     esac
 
     # Only change what's Monet's: someone who picked their own colors keeps them.
-    current="$(kreadconfig6 --file kdeglobals --group General --key ColorScheme 2>/dev/null)"
+    current="$(ini kdeglobals General ColorScheme)"
     case "$current" in
         ""|MonetLight|MonetDark)
+            # (Each tool below takes a moment to start, so the colors, the app style, the
+            # frames and the terminal change side by side, and apply waits for them all.)
             if [ "$current" != "$scheme" ] && command -v plasma-apply-colorscheme >/dev/null; then
-                plasma-apply-colorscheme "$scheme" >/dev/null 2>&1
+                plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 &
             fi
             ;;
     esac
 
-    current="$(kreadconfig6 --file plasmarc --group Theme --key name 2>/dev/null)"
+    current="$(ini plasmarc Theme name)"
     case "$current" in
-        ""|monet|monet-solid)
+        ""|monet|monet-matte|monet-solid)
             if [ "$current" != "$style" ] && command -v plasma-apply-desktoptheme >/dev/null; then
                 plasma-apply-desktoptheme "$style" >/dev/null 2>&1
             fi
@@ -223,57 +294,78 @@ apply() {
     esac
 
     local kvconfig="$CONFIG/Kvantum/kvantum.kvconfig"
-    current="$(kreadconfig6 --file "$kvconfig" --group General --key theme 2>/dev/null)"
+    current="$(ini "$kvconfig" General theme)"
     case "$current" in
-        ""|Monet|MonetDark|MonetSolid|MonetDarkSolid)
+        ""|Monet|MonetDark|MonetMatte|MonetDarkMatte|MonetSolid|MonetDarkSolid)
             if [ "$current" != "$kvantum" ]; then
                 mkdir -p "$CONFIG/Kvantum"
-                kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum"
+                kwriteconfig6 --file "$kvconfig" --group General --key theme "$kvantum" &
             fi
             ;;
     esac
 
-    # Window frames, mist or smoke, glass or solid.
+    # Window frames, mist or smoke, glass, matte or solid.
     local frame=__aurorae__svg__Monet
     [ "$light" = smoke ] && frame="${frame}Smoke"
     [ "$style" = monet-solid ] && frame="${frame}Solid"
-    current="$(kreadconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme 2>/dev/null)"
+    [ "$style" = monet-matte ] && frame="${frame}Matte"
+    current="$(ini kwinrc org.kde.kdecoration2 theme)"
     case "$current" in
         __aurorae__svg__Monet*)
             if [ "$current" != "$frame" ]; then
-                kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme "$frame"
-                busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1
+                { kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme "$frame"
+                  busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1; } &
             fi
             ;;
     esac
 
-    local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile"
-    if [ -f "$profile" ] && [ "$(kreadconfig6 --file "$profile" --group Appearance --key ColorScheme 2>/dev/null)" != "${kvantum%Solid}" ]; then
-        kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "${kvantum%Solid}"
+    local profile="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Monet.profile" colors="${kvantum%Solid}"
+    colors="${colors%Matte}"
+    if [ -f "$profile" ]; then
+        current="$(ini "$profile" Appearance ColorScheme)"
+        case "$current" in
+            ""|Monet|MonetDark) [ "$current" = "$colors" ] || kwriteconfig6 --file "$profile" --group Appearance --key ColorScheme "$colors" & ;;
+        esac
     fi
 
     # GTK apps (Flatpak ones too: monet-look lets them read these) in the
-    # same light. KDE's own gtk.css, only its colors.css import, becomes
-    # Monet's (which imports it too); a gtk.css someone wrote is left alone.
-    local gtk=light version src dir
+    # same light. KDE's own gtk.css, only its imports (its colors, and for
+    # GTK 4 its window shape), becomes Monet's (which imports them too); a
+    # gtk.css someone wrote is left alone.
+    local gtk=light version src dir written digest owned
     case "$kvantum" in *Dark*) gtk=dark ;; esac
     for version in 3.0 4.0; do
         src="$DATADIR/monet/gtk/gtk-$version/$gtk.css"
         dir="$CONFIG/gtk-$version"
         [ -f "$src" ] || continue
-        if [ ! -s "$dir/gtk.css" ] || head -1 "$dir/gtk.css" | grep -q '^/\* Monet:' ||
-            ! grep -qv -e '^[[:space:]]*$' -e "^@import 'colors.css';\$" "$dir/gtk.css"; then
-            cmp -s "$src" "$dir/gtk.css" || { mkdir -p "$dir" && cp "$src" "$dir/gtk.css"; }
+        written="$CONFIG/monet/gtk-$version-written"
+        digest="$(sha256sum "$dir/gtk.css" 2>/dev/null | cut -d ' ' -f 1)"
+        owned=no
+        if [ -n "$digest" ] && { [ "$digest" = "$(cat "$written" 2>/dev/null)" ] ||
+            cmp -s "$dir/gtk.css" "$DATADIR/monet/gtk/gtk-$version/light.css" ||
+            cmp -s "$dir/gtk.css" "$DATADIR/monet/gtk/gtk-$version/dark.css"; }; then owned=yes; fi
+        # A Monet header alone is not proof: someone may have added their own CSS.
+        if [ ! -e "$dir/gtk.css" ] || [ "$owned" = yes ] || {
+            grep -q "^@import 'colors.css';\$" "$dir/gtk.css" &&
+            ! grep -qv -e '^[[:space:]]*$' -e "^@import 'colors.css';\$" -e "^@import 'kde_window_geometry.css';\$" "$dir/gtk.css"; }; then
+            [ -L "$dir/gtk.css" ] && continue
+            if cmp -s "$src" "$dir/gtk.css" || { mkdir -p "$dir" && cp "$src" "$dir/gtk.css"; }; then
+                mkdir -p "$CONFIG/monet"
+                sha256sum "$src" | cut -d ' ' -f 1 > "$written.tmp" && mv -f "$written.tmp" "$written"
+            fi
         fi
     done
+    wait
 }
 
 # Someone picked Light or Dark in KDE's settings (or a Monet global theme):
 # that's a choice of Mist or Smoke, so keep it instead of following the hours.
 sync() {
     local picked
+    # Whatever KDE's buttons picked, the glass app style stays.
+    keep_app_style
     # KDE's Automatic is Monet's Follow the hours, and only Monet switches.
-    if [ "$(kreadconfig6 --file kdeglobals --group KDE --key AutomaticLookAndFeel 2>/dev/null)" = true ]; then
+    if [ "$(ini kdeglobals KDE AutomaticLookAndFeel)" = true ]; then
         kwriteconfig6 --file kdeglobals --group KDE --key AutomaticLookAndFeel false
         mkdir -p "$(dirname "$CHOICE")"
         echo hours > "$CHOICE"
@@ -281,7 +373,7 @@ sync() {
         paint
         return 0
     fi
-    case "$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null)" in
+    case "$(ini kdeglobals KDE LookAndFeelPackage)" in
         "$MIST_THEME") picked=mist ;;
         "$SMOKE_THEME") picked=smoke ;;
         *) return 0 ;;
@@ -332,7 +424,7 @@ case "${1:-apply}" in
     paint)
         lock
         apply
-        paint
+        paint "${2:-}"
         ;;
     sync)
         lock

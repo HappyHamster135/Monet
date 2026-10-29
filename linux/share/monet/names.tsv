@@ -85,6 +85,64 @@ Calculator	uk	Калькулятор
 Calculator	vi	Máy tính
 Calculator	zh_CN	计算器
 Calculator	zh_TW	計算機
+Default Apps	ar	التطبيقات الافتراضية
+Default Apps	cs	Výchozí aplikace
+Default Apps	da	Standardapps
+Default Apps	de	Standard-Apps
+Default Apps	el	Προεπιλεγμένες εφαρμογές
+Default Apps	es	Apps predeterminadas
+Default Apps	fi	Oletussovellukset
+Default Apps	fr	Apps par défaut
+Default Apps	he	אפליקציות ברירת מחדל
+Default Apps	hi	डिफ़ॉल्ट ऐप
+Default Apps	hu	Alapértelmezett alkalmazások
+Default Apps	id	Aplikasi default
+Default Apps	it	App predefinite
+Default Apps	ja	デフォルトのアプリ
+Default Apps	ko	기본 앱
+Default Apps	nb	Standardapper
+Default Apps	nl	Standaard-apps
+Default Apps	pl	Aplikacje domyślne
+Default Apps	pt	Apps predefinidas
+Default Apps	pt_BR	Apps padrão
+Default Apps	ro	Aplicații implicite
+Default Apps	ru	Приложения по умолчанию
+Default Apps	sv	Standardappar
+Default Apps	th	แอปเริ่มต้น
+Default Apps	tr	Varsayılan uygulamalar
+Default Apps	uk	Типові застосунки
+Default Apps	vi	Ứng dụng mặc định
+Default Apps	zh_CN	默认应用
+Default Apps	zh_TW	預設 App
+Desktop	ar	سطح المكتب
+Desktop	cs	Plocha
+Desktop	da	Skrivebord
+Desktop	de	Desktop
+Desktop	el	Επιφάνεια εργασίας
+Desktop	es	Escritorio
+Desktop	fi	Työpöytä
+Desktop	fr	Bureau
+Desktop	he	שולחן העבודה
+Desktop	hi	डेस्कटॉप
+Desktop	hu	Asztal
+Desktop	id	Desktop
+Desktop	it	Desktop
+Desktop	ja	デスクトップ
+Desktop	ko	바탕 화면
+Desktop	nb	Skrivebord
+Desktop	nl	Bureaublad
+Desktop	pl	Pulpit
+Desktop	pt	Ambiente de trabalho
+Desktop	pt_BR	Área de trabalho
+Desktop	ro	Desktop
+Desktop	ru	Рабочий стол
+Desktop	sv	Skrivbord
+Desktop	th	เดสก์ท็อป
+Desktop	tr	Masaüstü
+Desktop	uk	Стільниця
+Desktop	vi	Màn hình nền
+Desktop	zh_CN	桌面
+Desktop	zh_TW	桌面
 Disk Usage	ar	استخدام القرص
 Disk Usage	cs	Využití disku
 Disk Usage	da	Diskforbrug
@@ -143,6 +201,35 @@ Disks	uk	Диски
 Disks	vi	Ổ đĩa
 Disks	zh_CN	磁盘
 Disks	zh_TW	磁碟
+Display	ar	الشاشة
+Display	cs	Displej
+Display	da	Skærm
+Display	de	Bildschirm
+Display	el	Οθόνη
+Display	es	Pantalla
+Display	fi	Näyttö
+Display	fr	Écran
+Display	he	תצוגה
+Display	hi	डिसप्ले
+Display	hu	Kijelző
+Display	id	Layar
+Display	it	Schermo
+Display	ja	ディスプレイ
+Display	ko	디스플레이
+Display	nb	Skjerm
+Display	nl	Beeldscherm
+Display	pl	Ekran
+Display	pt	Ecrã
+Display	pt_BR	Tela
+Display	ro	Afișaj
+Display	ru	Экран
+Display	sv	Skärm
+Display	th	จอภาพ
+Display	tr	Ekran
+Display	uk	Екран
+Display	vi	Màn hình
+Display	zh_CN	显示
+Display	zh_TW	顯示器
 Documents	ar	المستندات
 Documents	cs	Dokumenty
 Documents	da	Dokumenter
@@ -346,6 +433,35 @@ Screenshot	uk	Знімок екрана
 Screenshot	vi	Chụp màn hình
 Screenshot	zh_CN	截图
 Screenshot	zh_TW	螢幕截圖
+Sound	ar	الصوت
+Sound	cs	Zvuk
+Sound	da	Lyd
+Sound	de	Ton
+Sound	el	Ήχος
+Sound	es	Sonido
+Sound	fi	Ääni
+Sound	fr	Son
+Sound	he	קול
+Sound	hi	आवाज़
+Sound	hu	Hang
+Sound	id	Suara
+Sound	it	Audio
+Sound	ja	サウンド
+Sound	ko	소리
+Sound	nb	Lyd
+Sound	nl	Geluid
+Sound	pl	Dźwięk
+Sound	pt	Som
+Sound	pt_BR	Som
+Sound	ro	Sunet
+Sound	ru	Звук
+Sound	sv	Ljud
+Sound	th	เสียง
+Sound	tr	Ses
+Sound	uk	Звук
+Sound	vi	Âm thanh
+Sound	zh_CN	声音
+Sound	zh_TW	聲音
 Store	ar	المتجر
 Store	cs	Obchod
 Store	da	Butik

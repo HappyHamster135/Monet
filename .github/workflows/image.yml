@@ -92,7 +92,7 @@ jobs:
           sudo podman push "$IMAGE:$(cat VERSION)"
 
   iso:
-    needs: image
+    needs: [image, image-amd]
     if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     steps:
@@ -202,7 +202,7 @@ jobs:
   # Monet Setup: Monet's own installer, on a small live Fedora (image/setup).
   # It's released only after it has installed Monet in a VM (setup-vm).
   setup:
-    needs: image
+    needs: [image, image-amd]
     if: github.event_name != 'schedule'
     continue-on-error: true
     runs-on: ubuntu-24.04

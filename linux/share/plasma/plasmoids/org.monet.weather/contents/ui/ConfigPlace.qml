@@ -23,6 +23,27 @@ KCM.SimpleKCM {
     property var cfg_placesDefault: []
     property bool cfg_fahrenheitDefault
 
+    // The dialog edits a draft. Apply/OK updates the shared preference; Cancel
+    // discards it, just like the other Plasma configuration pages.
+    WeatherStore { id: shared }
+    property bool initialized: false
+    Connections {
+        target: shared
+        function onLoadedChanged() {
+            if (!shared.loaded || page.initialized) return;
+            page.initialized = true;
+            page.cfg_place = shared.config.place;
+            page.cfg_latitude = shared.config.latitude;
+            page.cfg_longitude = shared.config.longitude;
+            page.cfg_places = shared.config.places.map(p => JSON.stringify(p));
+            page.cfg_fahrenheit = shared.config.fahrenheit;
+        }
+    }
+    function saveConfig() {
+        shared.write({place: cfg_place, latitude: cfg_latitude, longitude: cfg_longitude,
+            places: Array.from(cfg_places), fahrenheit: cfg_fahrenheit});
+    }
+
     property var found: []
     property bool searching: false
 
@@ -173,7 +194,7 @@ KCM.SimpleKCM {
             Layout.maximumWidth: Kirigami.Units.gridUnit * 22
             wrapMode: Text.WordWrap
             opacity: 0.7
-            text: i18n("The weather comes from Open-Meteo. Only the places are sent. The arrows beside a place's name on the card go through them.")
+            text: i18n("The desktop and bar share these places and degrees. Weather comes from Open-Meteo; only the places are sent.")
         }
     }
 }

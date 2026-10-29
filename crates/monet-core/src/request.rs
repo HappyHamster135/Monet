@@ -28,6 +28,18 @@ pub struct LaunchRequest {
     pub return_to: u16,
     /// Unix time the request was made.
     pub created: u64,
+    /// Monet's time zone as Windows names it ("W. Europe Standard Time"), so Windows' clock
+    /// shows the same time. A Monet Bridge from before it leaves Windows' own.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tz: Option<String>,
+}
+
+/// A Windows time zone's name: letters, digits, spaces and a little punctuation, as tzutil
+/// lists them ("Central Standard Time (Mexico)", "UTC+12").
+pub fn is_windows_zone(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '.' | '(' | ')' | '+' | '-' | '_'))
 }
 
 /// "launchers": sign in to the game launchers once, then back. "update": bring Windows and its
@@ -41,7 +53,13 @@ impl LaunchRequest {
                 return Err(EfiError::Invalid(format!("not a valid game id: {id}")));
             }
         }
-        Ok(LaunchRequest { v: 1, game, task: None, return_to, created: now })
+        Ok(LaunchRequest { v: 1, game, task: None, return_to, created: now, tz: None })
+    }
+
+    /// With Monet's time zone, when it's a name Windows could have.
+    pub fn with_zone(mut self, tz: Option<String>) -> Self {
+        self.tz = tz.filter(|z| is_windows_zone(z));
+        self
     }
 
     pub fn with_task(mut self, task: Option<String>) -> Result<Self> {
@@ -73,6 +91,9 @@ impl LaunchRequest {
         if req.task.as_deref().is_some_and(|t| !TASKS.contains(&t)) {
             return Err(EfiError::Invalid("unknown task".into()));
         }
+        // A time zone that isn't one is dropped, not the trip.
+        let mut req = req;
+        req.tz = req.tz.filter(|z| is_windows_zone(z));
         Ok(req)
     }
 
@@ -162,6 +183,20 @@ mod tests {
             game: Option<String>,
         }
         assert!(serde_json::from_slice::<Older>(&req.encode()).unwrap().game.is_none());
+    }
+
+    #[test]
+    fn monets_time_zone_goes_along() {
+        let req = LaunchRequest::new(Some("steam:730".into()), 3, 1000).unwrap().with_zone(Some("W. Europe Standard Time".into()));
+        assert_eq!(LaunchRequest::decode(&req.encode()).unwrap().tz.as_deref(), Some("W. Europe Standard Time"));
+        assert!(req.encode().len() < 120);
+        assert!(LaunchRequest::new(None, 3, 0).unwrap().with_zone(Some("\"; tzutil /s x".into())).tz.is_none());
+        assert!(is_windows_zone("Central Standard Time (Mexico)") && is_windows_zone("UTC+12"));
+        // One that isn't a zone is dropped, and the trip still goes.
+        let odd = LaunchRequest::decode(br#"{"v":1,"return_to":3,"created":0,"tz":"a&b"}"#).unwrap();
+        assert_eq!(odd.tz, None);
+        // Without one, nothing about it is written.
+        assert!(!String::from_utf8(LaunchRequest::new(None, 3, 0).unwrap().encode()).unwrap().contains("tz"));
     }
 
     #[test]

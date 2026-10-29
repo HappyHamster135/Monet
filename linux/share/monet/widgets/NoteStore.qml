@@ -7,6 +7,7 @@
  *
  * install.sh copies this file into the Calendar's and the Clock's packages.
  */
+import "NoteLogic.js" as NoteLogic
 import QtCore
 import QtQuick
 import QtQml.Models
@@ -21,7 +22,10 @@ QtObject {
     property var notes: ({})
     property bool loaded: false
     // Writes the helper hasn't kept yet: a look meanwhile could bring back an older note.
-    property int writing: 0
+    property var queue: []
+    property string inFlight: ""
+    property string problem: ""
+    readonly property int writing: queue.length + (inFlight ? 1 : 0)
 
     readonly property P5Support.DataSource runner: P5Support.DataSource {
         engine: "executable"
@@ -37,7 +41,15 @@ QtObject {
                 }
                 store.loaded = true;
             } else if (source.startsWith(store.helper + " note ")) {
-                store.writing = Math.max(0, store.writing - 1);
+                store.inFlight = "";
+                if (data["exit code"] !== 0) {
+                    store.problem = i18n("The note could not be saved. Try again.");
+                } else {
+                    store.queue = store.queue.slice(1);
+                    store.problem = "";
+                    store.sendNext();
+                    if (store.queue.length === 0) store.refresh();
+                }
             }
         }
     }
@@ -66,7 +78,7 @@ QtObject {
     }
 
     function noteFor(day) {
-        return notes[key(day)] || "";
+        return NoteLogic.text(notes, day);
     }
 
     function hex(text) {
@@ -82,16 +94,20 @@ QtObject {
         runner.connectSource(helper + " notes");
     }
 
-    function write(day, text) {
-        const all = Object.assign({}, notes);
-        if (text.trim() === "") {
-            delete all[key(day)];
-        } else {
-            all[key(day)] = text;
-        }
-        notes = all;
-        writing += 1;
-        runner.connectSource(helper + " note " + key(day) + (text.trim() === "" ? "" : " " + hex(text)));
+    function repeatFor(day) { return NoteLogic.repeat(notes, day); }
+
+    function sendNext() {
+        if (inFlight || !queue.length || problem) return;
+        inFlight = queue[0];
+        runner.connectSource(inFlight);
+    }
+    function retry() { problem = ""; sendNext(); }
+
+    function write(day, text, recurrence) {
+        recurrence = recurrence || repeatFor(day);
+        notes = NoteLogic.updated(notes,day,text,recurrence);
+        queue = queue.concat([helper + " note " + key(day) + " '" + hex(text) + "' " + recurrence]);
+        sendNext();
     }
 
     // Notes kept before they were shared (the Calendar's own settings), handed over once.
@@ -104,10 +120,6 @@ QtObject {
 
     // The next days with a note, from the day given: [{day, text}].
     function after(day, count) {
-        const from = key(day);
-        return Object.keys(notes).filter(k => k > from).sort().slice(0, count).map(k => {
-            const parts = k.split("-");
-            return { day: new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])), text: notes[k] };
-        });
+        return NoteLogic.after(notes,day,count);
     }
 }

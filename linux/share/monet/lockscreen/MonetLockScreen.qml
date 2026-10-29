@@ -28,6 +28,7 @@ import org.kde.breeze.components
 
 Item {
     id: monetLock
+    ClockFormat { id: clockFormat }
     focus: true
 
     // If we're using software rendering, there's no blur: a heavier wash instead.
@@ -71,7 +72,7 @@ Item {
     readonly property string userName: String(typeof kscreenlocker_userName === "undefined" ? "" : kscreenlocker_userName)
     readonly property string userImage: String(typeof kscreenlocker_userImage === "undefined" ? "" : kscreenlocker_userImage)
     readonly property string firstName: userName.trim().split(" ")[0]
-    readonly property string timeText: Qt.formatTime(now, Qt.locale().timeFormat(Locale.ShortFormat))
+    readonly property string timeText: clockFormat.time(now)
 
     function handleMessage(msg) {
         if (!msg) {

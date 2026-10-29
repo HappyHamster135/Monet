@@ -105,6 +105,7 @@ const PAYLOAD: &[&str] = &[
     "GameProfile.ps1",
     "Update-Monet.ps1",
     "Update-Windows.ps1",
+    "Install-Launcher.ps1",
     "monet.ico",
     // The cover Monet Bridge puts over Windows on a trip. (Not the desktop's painting: a
     // Windows kept from before keeps its own.)

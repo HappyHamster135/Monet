@@ -318,6 +318,26 @@ class ThisPC(unittest.TestCase):
                 (dev / name).write_text(value + "\n")
         return Path(root)
 
+    def test_both_installers_detect_the_destination_pc(self):
+        # Exercise Setup and the fallback installer's actual detector with the same sysfs fixtures.
+        ks = (ROOT / "image/monet.ks").read_text(encoding="utf-8")
+        detector = ks.split('from pathlib import Path\n\ndef newer_nvidia', 1)[1].split('\nimage = "@IMAGE@"', 1)[0]
+        scope = {"Path": Path}
+        exec("def newer_nvidia" + detector, scope)
+        intel, amd = ("8086", "9bc4"), ("1002", "744c")
+        rtx, gtx16, old = ("10de", "2684"), ("10de", "1f82"), ("10de", "1c03")
+        for cards, nvidia in (([intel], False), ([amd], False), ([rtx], True),
+                              ([intel, rtx], True), ([amd, gtx16], True),
+                              ([old], False), ([intel, old], False), ([], False)):
+            with self.subTest(cards=cards), tempfile.TemporaryDirectory() as tmp:
+                devices = self.sysfs(tmp, [("0x030000", *card) for card in cards]
+                                     + [("0x020000", "10de", "2684")])
+                facts = pc.check(pc.graphics(devices), 16, False)
+                self.assertEqual(facts["newNvidia"], nvidia)
+                self.assertEqual(scope["newer_nvidia"](devices), nvidia)
+                self.assertEqual(pc.image_for("ghcr.io/x/monet:latest", facts),
+                                 "ghcr.io/x/monet" + ("" if nvidia else "-amd") + ":latest")
+
     def test_graphics_and_memory(self):
         from monet_setup import pc
         with tempfile.TemporaryDirectory() as tmp:

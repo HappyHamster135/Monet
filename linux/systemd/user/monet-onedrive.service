@@ -1,0 +1,17 @@
+[Unit]
+Description=Monet: OneDrive in Files, at ~/OneDrive (Settings → Storage connects it)
+After=network-online.target
+ConditionPathExists=%h/.config/rclone/rclone.conf
+
+[Service]
+# rclone tells systemd once the folder is there. Each file comes down as it's opened and stays
+# a month (or until 20 GB of them), so opening it again needs no network.
+Type=notify
+ExecStartPre=/usr/bin/mkdir -p %h/OneDrive
+ExecStart=/usr/bin/rclone mount OneDrive: %h/OneDrive --vfs-cache-mode full --vfs-cache-max-age 720h --vfs-cache-max-size 20G --dir-cache-time 5m --poll-interval 1m
+ExecStop=/usr/bin/fusermount3 -u %h/OneDrive
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

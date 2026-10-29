@@ -1370,8 +1370,8 @@ ICONS = {
     "settings": (palette_icon, ["apps/preferences-system", "apps/systemsettings", "apps/monet-settings",
                                 "categories/applications-graphics", "categories/preferences-system"]),
     "terminal": (easel_icon, ["apps/utilities-terminal", "apps/org.kde.konsole", "categories/applications-development"]),
-    # Store is Bazaar when Bazzite has it, otherwise Discover: the same bouquet either way.
-    "store": (bouquet_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar"]),
+    # The Store (monet-store), and Bazaar and Discover in case either is opened: the same bouquet.
+    "store": (bouquet_icon, ["apps/plasmadiscover", "apps/org.kde.discover", "apps/io.github.kolunmi.Bazaar", "apps/monet-store"]),
     "monitor": (harbor_icon, ["apps/utilities-system-monitor", "apps/org.kde.plasma-systemmonitor", "categories/applications-system"]),
     # In a bar, Plasma's Trash asks for the "-symbolic" names: the painting there too.
     "trash": (lambda: pot_icon(False), ["places/user-trash", "places/user-trash-symbolic"]),

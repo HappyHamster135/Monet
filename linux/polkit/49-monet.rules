@@ -1,9 +1,17 @@
 // Monet: switching to Windows is one click, like restarting.
-// Allows the signed-in user to run Monet's helper as root without a password.
+// Allows the signed-in user to run Monet's helper as root without a password; not a guest
+// (monet-guest), for whom an administrator says yes.
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.policykit.exec" &&
         @PROGRAMS@.indexOf(action.lookup("program")) >= 0 &&
-        subject.local && subject.active) {
+        subject.local && subject.active && subject.user != "guest") {
         return polkit.Result.YES;
+    }
+});
+
+// A guest's things go when they sign out: they can't keep their session running after it.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.login1.set-self-linger" && subject.user == "guest") {
+        return polkit.Result.NO;
     }
 });

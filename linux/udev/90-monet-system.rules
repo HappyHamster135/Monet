@@ -1,0 +1,7 @@
+# Monet's start-up files (the ext4 partition Monet Setup calls boot) stay out of Files' Devices:
+# nobody opens them. Only on the PC's own disks: a USB stick shows as it is. (The PC's firmware
+# partition, EFI, is out already: udisks leaves those out itself.)
+SUBSYSTEM=="block", ENV{ID_BUS}!="usb", ENV{ID_FS_TYPE}=="ext4", ENV{ID_FS_LABEL}=="boot", ENV{UDISKS_IGNORE}="1"
+# Nor Monet's own disk (Setup's "monet": the system and everyone's files, encrypted or not), which
+# Files listed as a drive called monet; people's files are in Home and the places under it.
+SUBSYSTEM=="block", ENV{ID_BUS}!="usb", ENV{ID_FS_TYPE}=="btrfs|crypto_LUKS", ENV{ID_FS_LABEL}=="monet", ENV{UDISKS_IGNORE}="1"

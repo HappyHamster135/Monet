@@ -35,6 +35,28 @@ POT = PO / "monet.pot"
 LOCALE = ROOT / "linux" / "share" / "locale"
 SETUP_LOCALE = ROOT / "setup" / "locale"
 NAMES = ROOT / "linux" / "share" / "monet" / "names.tsv"
+# KDE's apps that Monet names in its own words, with the messages each names itself with
+# (KAboutData's display name, which Qt adds to every window title): their catalog domain ->
+# (Monet's name, [(context, text)]). Read from the apps' own catalogs; the same in every language.
+APP_NAMES = {
+    "dolphin": ("Files", [(None, "Dolphin")]),
+    "konsole": ("Terminal", [("@title", "Konsole"), (None, "Konsole")]),
+    "kate": ("Text Editor", [(None, "Kate")]),
+    "gwenview": ("Photos", [(None, "Gwenview")]),
+    "okular": ("Documents", [(None, "Okular")]),
+    "ark": ("Archives", [(None, "Ark")]),
+    "spectacle": ("Screenshot", [(None, "Spectacle")]),
+    "kcalc": ("Calculator", [(None, "KCalc")]),
+    "elisa": ("Music", [("@title", "Elisa"), ("@title:window", "Elisa")]),
+    "haruna": ("Videos", [("@title:window", "Haruna"), ("application title/display name", "Haruna")]),
+    "kdeconnect-app": ("Phone", [(None, "KDE Connect")]),
+    "kdeconnect-sms": ("Phone Messages", [(None, "KDE Connect SMS")]),
+    # KDE's settings, opened from Monet Settings' "More settings": its windows say so too.
+    "systemsettings": ("More settings", [(None, "System Settings")]),
+}
+# Where they go: a language of Monet's own before the session's (linux/share/plasma-workspace/env/monet-names.sh).
+APP_NAMES_LANGUAGE = "{}@monet"
+
 # The Windows programs whose words are built into them (crate -> who), each with its own table.
 TABLES = {"monet-usb": "The USB stick maker", "monet-bridge": "Monet Bridge"}
 
@@ -214,7 +236,7 @@ def gather():
         scan(p.read_text(encoding="utf-8"), QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "qml").glob("*.qml")):
         scan(p.read_text(encoding="utf-8"), SETUP_QML_CALLS, js_string, rel(p), add)
-    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick"]:
+    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave"]:
         scan(p.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(p), add)
     # The Windows helper's progress lines, which the person's dialog says.
     prep = ROOT / "linux/libexec/monet-prepare-windows"
@@ -225,6 +247,8 @@ def gather():
             add(None, args[0], None, f"{rel(prep)}:{line_of(text, m.start())}")
     # The scripts' notifications.
     for p in sorted((ROOT / "linux/libexec").iterdir()):
+        if not p.is_file():
+            continue
         text = p.read_text(encoding="utf-8", errors="replace")
         for m in re.finditer(r'(?<![\w-])say "', text):
             value, _ = js_string(text, m.end() - 1)
@@ -259,7 +283,8 @@ def gather():
 
 
 def plugin_metadata():
-    return sorted(p for p in (ROOT / "linux/share/plasma").glob("*/*/metadata.json"))
+    # Plasma's (widgets, styles, looks) and KWin's (Monet Snap, Monet Motion), as KDE's lists show them.
+    return sorted([*(ROOT / "linux/share/plasma").glob("*/*/metadata.json"), *(ROOT / "linux/share/kwin").glob("*/*/metadata.json")])
 
 
 # po files -------------------------------------------------------------------------
@@ -382,6 +407,8 @@ def write_mo(path, catalog, language):
 def build(entries):
     names, tables = [], {crate: {} for crate in TABLES}
     menus = {}  # (context, English) -> {language: translation}
+    plain = {}  # (English, language) -> translation, for an app's name that isn't a menu's
+    # ("More settings", KDE's System Settings, is Monet Settings' word)
     for language in LANGUAGES:
         po = PO / f"{language}.po"
         if not po.exists():
@@ -393,6 +420,8 @@ def build(entries):
             if translation is None:
                 continue
             everything[key] = (entry["plural"], translation)
+            if key[0] is None and not entry["plural"]:
+                plain[(key[1], language)] = translation
             if any(r.startswith("setup/") for r in entry["refs"]):
                 setup[key] = (entry["plural"], translation)
             if key[0] in (MENU_NAME, *MENU_KEYS.values(), *PLUGIN_KEYS.values()):
@@ -407,6 +436,7 @@ def build(entries):
         write_mo(LOCALE / language / "LC_MESSAGES" / "monet.mo", everything, language)
         write_mo(SETUP_LOCALE / language / "LC_MESSAGES" / "monet-setup.mo", setup, language)
     NAMES.write_text("".join(f"{e}\t{l}\t{t}\n" for e, l, t in sorted(names)), encoding="utf-8", newline="\n")
+    write_app_names({**plain, **{(e, l): t for e, l, t in names}})
     for crate, table in tables.items():
         write_table(crate, table)
     localize_menu_entries(menus)
@@ -481,6 +511,17 @@ def localize_plugins(menus):
 
 
 # Checking -------------------------------------------------------------------------
+
+def write_app_names(said):
+    """Each KDE app's own name in Monet's words, in each language (English as en), as its catalog
+    in Monet's language before the session's: so a window title says Files, never Dolphin."""
+    for language in ["en", *LANGUAGES]:
+        for domain, (name, messages) in APP_NAMES.items():
+            ours = said.get((name, language), name)
+            catalog = {(context, text): (None, ours) for context, text in messages}
+            write_mo(LOCALE / APP_NAMES_LANGUAGE.format(language) / "LC_MESSAGES" / f"{domain}.mo", catalog,
+                     language if language in LANGUAGES else None)
+
 
 def check(entries):
     """Problems: a catalog behind its sources, or a translation that drops or invents a %1."""

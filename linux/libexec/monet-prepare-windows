@@ -14,6 +14,7 @@ works, and choosing Windows in the app menu runs it again.
 4. Starts the setup partition once, at the next restart.
 
     monet-prepare-windows [--iso FILE]
+    monet-prepare-windows --windows-zone     Monet's time zone as Windows names it (for a trip)
 """
 
 import json
@@ -275,6 +276,15 @@ def read_conf(path, key):
     except OSError:
         pass
     return ""
+
+
+def windows_zone():
+    """Monet's time zone as Windows names it, or "" for one this list doesn't know."""
+    try:
+        zone = os.readlink("/etc/localtime").split("zoneinfo/", 1)[1]
+    except (OSError, IndexError):
+        return ""
+    return TIMEZONES.get(zone, "")
 
 
 def region():
@@ -549,6 +559,10 @@ def boot_setup_once(disk, partn):
 
 def main():
     args = sys.argv[1:]
+    if "--windows-zone" in args:
+        # For a trip: Windows' clock in Monet's time zone (monet's request carries it).
+        print(windows_zone())
+        return 0
     iso = Path(args[args.index("--iso") + 1]) if "--iso" in args else None
     if os.geteuid() != 0:
         print("monet-prepare-windows needs to run as root.", file=sys.stderr)
