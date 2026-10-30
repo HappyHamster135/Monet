@@ -152,6 +152,8 @@ def plan(monitor_bundle=None):
         for helper in ('monet-quick', 'monet-light'):
             text = text.replace('/usr/libexec/' + helper, str(HELPERS / helper))
         add(CONFIG / 'systemd/user' / name, text.encode())
+    nvidia = Path(r'app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf')
+    add(CONFIG / 'systemd/user' / nvidia, (ROOT / 'linux/systemd/user' / nvidia).read_bytes())
     return files
 
 

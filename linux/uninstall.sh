@@ -87,6 +87,7 @@ rm -f /etc/systemd/system/monet-guest-wipe.service /etc/systemd/logind.conf.d/50
 [ -f /etc/pam.d/su ] && sed -i '/pam_succeed_if\.so user != guest quiet/d' /etc/pam.d/su
 # Windows' Games folder stays on Windows' drive, with its games; Monet stops sharing it.
 rm -f "/etc/systemd/user/app-steam@autostart.service.d/monet-steam-share.conf"
+rm -f '/etc/systemd/user/app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf'
 systemctl disable monet-windows-drive.service monet-windows-files.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-windows-files.service \
     /var/lib/monet/windows-files.json /var/lib/monet/windows-steam-shots.json

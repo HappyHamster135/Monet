@@ -81,7 +81,7 @@ The laptop runs Monet 0.9.4 on the Bazzite/Fedora 44 NVIDIA image, kernel `7.2.1
 | Background tasks | Monet's light and backup timers are active; this does not establish successful backup or restore |
 | Secure Boot | Off; firmware trust and game compatibility still need hardware validation |
 
-The failed NVIDIA settings autostart is separate from the working NVIDIA driver and Vulkan enumeration. Its exit status and the prior Bluetooth wizard failure warrant follow-up if the corresponding features misbehave; neither alone establishes a broken GPU or Bluetooth stack. Audio endpoint detection does not replace listening/recording tests.
+The NVIDIA settings autostart is separate from the working NVIDIA driver and Vulkan enumeration. Later investigation reproduced exit 1 because this fresh account has no saved settings file; a conditional startup fix is recorded in backlog 095-15. The Bluetooth wizard's exit 1 does not by itself establish failure: [KDE's wizard source](https://github.com/KDE/bluedevil/blob/Plasma/6.7/src/wizard/bluewizard.cpp) returns its Accepted dialog result (1) on successful completion too. Actual pairing still needs verification. Audio endpoint detection does not replace listening/recording tests.
 
 ## Remaining acceptance checks
 
