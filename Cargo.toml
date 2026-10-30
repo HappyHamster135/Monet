@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/monet-core", "crates/monet", "crates/monet-bridge", "crates/monet-usb"]
+members = ["crates/monet-core", "crates/monet", "crates/monet-bridge", "crates/monet-usb", "crates/monet-setup-check"]
 
 [workspace.package]
 version = "0.9.5"

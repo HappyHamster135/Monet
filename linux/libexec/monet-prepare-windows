@@ -43,6 +43,7 @@ WINDOWS_LABEL = "Monet Windows"
 SETUP_LABEL = "Monet Setup"
 BOOT_ENTRY = "Monet Windows Setup"
 BASIC_DATA = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+EFI_SYSTEM = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 SETUP_MIB = 8 * 1024
 MIN_WINDOWS_MIB = 64 * 1024
 
@@ -365,6 +366,44 @@ def make_partitions(disk):
         win, setup = current
         prepare_filesystem(current[index], wanted, plan)
     return win["path"], setup["path"], setup["partn"]
+
+
+def deployment_manifest(disk):
+    """Read-only handoff for native WinPE identity checks; no letter or label selects a disk."""
+    plan = json.loads((STATE / "windows-partitions.json").read_text())
+    table = partition_table(disk)
+    if check_partition_plan(table, plan) or any(p["phase"] != "formatted" for p in plan["owned"]):
+        raise Stop("failed", "Windows partitions are not ready for a verified deployment")
+    devices = mapped_partitions(disk, plan)
+    if len(devices) != 2:
+        raise Stop("failed", "the prepared Windows partition devices are unavailable")
+    efi = [p for p in table["partitions"] if (p.get("type") or "").upper() == EFI_SYSTEM]
+    if len(efi) != 1 or not efi[0].get("node"):
+        raise Stop("failed", "the shared EFI partition cannot be identified uniquely")
+    candidates = [p for p in partitions(disk) if (p.get("partuuid") or "").lower() == efi[0]["uuid"].lower()]
+    if (len(candidates) != 1 or not candidates[0].get("path")
+            or candidates[0].get("size") != efi[0]["size"] * plan["sector_size"]
+            or os.path.realpath(candidates[0]["path"]) != os.path.realpath(efi[0]["node"])):
+        raise Stop("failed", "the kernel's shared EFI identity does not match the partition table")
+    esp = filesystem(efi[0]["node"])
+    if esp.get("TYPE") != "vfat" or esp.get("VERSION") != "FAT32" or not esp.get("UUID"):
+        raise Stop("failed", "the shared EFI partition has no verified FAT32 filesystem")
+
+    def entry(part, kind, serial):
+        pattern = r"[a-fA-F0-9]{16}" if kind == "ntfs" else r"[a-fA-F0-9]{4}-?[a-fA-F0-9]{4}"
+        if not isinstance(serial, str) or not re.fullmatch(pattern, serial):
+            raise Stop("failed", "a prepared filesystem has an invalid identity")
+        return dict(guid=part["uuid"].lower(), offset=part["start"] * plan["sector_size"],
+                    length=part["size"] * plan["sector_size"], filesystem=kind, filesystem_id=serial)
+
+    manifest = dict(version=1, disk_guid=plan["disk_id"], efi=entry(efi[0], "vfat", esp["UUID"]))
+    for name, part, wanted in zip(("windows", "setup"), devices, plan["owned"]):
+        found = filesystem(part["path"])
+        check_filesystem(found, wanted)
+        if wanted["fstype"] == "vfat" and found.get("VERSION") != "FAT32":
+            raise Stop("failed", "the Windows setup partition has no verified FAT32 filesystem")
+        manifest[name] = entry(wanted, wanted["fstype"], found["UUID"])
+    return manifest
 
 
 def first_user():

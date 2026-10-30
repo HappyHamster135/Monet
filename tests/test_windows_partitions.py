@@ -76,7 +76,9 @@ class Recovery(unittest.TestCase):
                 raise self.p.Stop("failed", "fixture: interrupted format")
             kind = "ntfs" if args[0] == "mkfs.ntfs" else "vfat"
             label = "MONETWIN" if kind == "ntfs" else "MONETSETUP"
-            self.fs[args[-1]] = dict(TYPE=kind, LABEL=label, UUID=kind + "-fixture-id")
+            self.fs[args[-1]] = dict(TYPE=kind, LABEL=label,
+                                   UUID="0123456789ABCDEF" if kind == "ntfs" else "1234-ABCD",
+                                   VERSION="3.1" if kind == "ntfs" else "FAT32")
             if self.fail_format == args[0]:
                 raise self.p.Stop("failed", "fixture: formatter exited after writing")
             return ""
@@ -259,6 +261,50 @@ class Recovery(unittest.TestCase):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.assertEqual(self.p.main(), 2)
             main.assert_not_called()
+
+    def test_deployment_handoff_binds_both_filesystems_and_the_existing_shared_efi(self):
+        esp = self.table["partitions"][0]
+        esp["type"] = self.p.EFI_SYSTEM
+        self.fs[esp["node"]] = dict(TYPE="vfat", VERSION="FAT32", UUID="CAFE-1234")
+        self.p.make_partitions(self.disk)
+        count = len(self.formats())
+        manifest = self.p.deployment_manifest(self.disk)
+        self.assertEqual(manifest["disk_guid"], self.table["id"])
+        self.assertEqual(manifest["efi"]["guid"], esp["uuid"])
+        self.assertEqual(manifest["efi"]["filesystem_id"], "CAFE-1234")
+        self.assertEqual(manifest["windows"]["offset"], self.table["partitions"][1]["start"] * 512)
+        self.assertEqual(manifest["setup"]["filesystem_id"], "1234-ABCD")
+        self.assertEqual(len(self.formats()), count)
+        self.fs[esp["node"]]["VERSION"] = "FAT16"
+        with self.assertRaisesRegex(self.p.Stop, "verified FAT32"):
+            self.p.deployment_manifest(self.disk)
+
+    def test_handoff_rejects_missing_or_ambiguous_efi(self):
+        self.p.make_partitions(self.disk)
+        with self.assertRaisesRegex(self.p.Stop, "identified uniquely"):
+            self.p.deployment_manifest(self.disk)
+
+    def test_handoff_rejects_stale_efi_device_and_invalid_filesystem_ids(self):
+        esp = self.table["partitions"][0]
+        esp["type"] = self.p.EFI_SYSTEM
+        self.fs[esp["node"]] = dict(TYPE="vfat", VERSION="FAT32", UUID="CAFE-1234")
+        self.p.make_partitions(self.disk)
+        original = self.p.partitions
+        def stale(disk):
+            rows = original(disk)
+            rows[0]["path"] = "/dev/not-the-shared-efi"
+            return rows
+        with patch.object(self.p, "partitions", side_effect=stale):
+            with self.assertRaisesRegex(self.p.Stop, "shared EFI identity"):
+                self.p.deployment_manifest(self.disk)
+        self.fs[esp["node"]]["UUID"] = "not-a-volume-id"
+        with self.assertRaisesRegex(self.p.Stop, "invalid identity"):
+            self.p.deployment_manifest(self.disk)
+        self.fs[esp["node"]]["UUID"] = "CAFE-1234"
+        setup = self.table["partitions"][-1]["node"]
+        self.fs[setup]["VERSION"] = "FAT16"
+        with self.assertRaisesRegex(self.p.Stop, "verified FAT32"):
+            self.p.deployment_manifest(self.disk)
 
 
 class FilesystemProbe(unittest.TestCase):

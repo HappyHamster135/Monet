@@ -50,6 +50,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "monet-setup-check"
+version = "0.9.5"
+dependencies = [
+ "serde",
+ "serde_json",
+ "windows-sys",
+]
+
+[[package]]
 name = "monet-usb"
 version = "0.9.5"
 dependencies = [

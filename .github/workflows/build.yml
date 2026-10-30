@@ -21,6 +21,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rust (version from rust-toolchain.toml)
         run: rustup toolchain install
+      - name: Native storage test tools
+        run: sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools >/dev/null
       - name: Tests
         run: cargo test --workspace
       - name: Lint
@@ -32,7 +34,7 @@ jobs:
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi cryptsetup-bin fdisk ntfs-3g dosfstools >/dev/null
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi >/dev/null
           python3 tools/test.py
 
   linux:
@@ -74,11 +76,11 @@ jobs:
       - name: Rust (version from rust-toolchain.toml)
         run: rustup toolchain install
       - name: Build
-        run: cargo build --release -p monet-bridge -p monet-usb
-      - name: Windows bridge and USB safety tests (temporary files and simulated disks)
-        run: cargo test -p monet-bridge -p monet-usb
+        run: cargo build --release -p monet-bridge -p monet-usb -p monet-setup-check
+      - name: Windows bridge, USB and setup identity tests (temporary files and simulated disks)
+        run: cargo test -p monet-bridge -p monet-usb -p monet-setup-check
       - name: Lint
-        run: cargo clippy -p monet-bridge -p monet-usb --all-targets -- -D warnings
+        run: cargo clippy -p monet-bridge -p monet-usb -p monet-setup-check --all-targets -- -D warnings
       - name: Check PowerShell scripts
         shell: pwsh
         run: ./tools/check-powershell.ps1
