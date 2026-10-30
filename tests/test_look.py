@@ -1454,12 +1454,17 @@ class SoundInTheBar(unittest.TestCase):
         self.assertIn("org.monet.sound", (ROOT / "linux/install.sh").read_text())
         self.assertIn("plasmoids/org.monet.sound", (ROOT / "linux/uninstall.sh").read_text())
         qml = (self.WIDGET / "contents/ui/main.qml").read_text(encoding="utf-8")
-        for line in ('readonly property string level: "wpctl get-volume @DEFAULT_AUDIO_SINK@"', 'runner.connectSource(helper + " sound")',
+        for line in ('AudioLevel {', 'request(helper + " sound")',
                      'run("mute " + (muted ? "on" : "off"))', 'root.queue("app-volume " + modelData.id, value)',
                      "acceptedButtons: Qt.LeftButton | Qt.MiddleButton", 'run("open sound")',
                      'i18n("No speakers or headphones")'):
             self.assertIn(line, qml)
-        self.assertNotIn("org.kde.plasma.private.volume", qml)  # KDE's insides change; wpctl doesn't
+        # The optional native reader is isolated: hosts without KDE's private
+        # interface still load Sound and use its wpctl fallback.
+        self.assertNotIn("org.kde.plasma.private.volume", qml)
+        reader = (self.WIDGET / "contents/ui/AudioLevel.qml").read_text()
+        self.assertIn('wpctl get-volume @DEFAULT_AUDIO_SINK@', reader)
+        self.assertIn('running: !level.nativeReady', reader)
 
     def test_the_helper_answers_it(self):
         from unittest import mock

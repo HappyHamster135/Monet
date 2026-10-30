@@ -57,11 +57,23 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-47 | Medium | Task Manager sidebar and custom page deletion | Applied locally as a matched native build. Hamburger collapses/expands on left click. Right-click empty sidebar opens the full menu, including confirmed Remove Current Page for custom pages. Navigation leaves the deleted controller first and repairs its start-page preference. Built-in Monet pages are protected from direct deletion. Native Edit or Remove Pages remains available. |
 | 095-48 | Medium | Newly created Task Manager pages fail to save | Fixed during native testing. KDE 6.7.5 Main.qml called nonexistent savePage(); use its actual save() API. Rebuild patch is anchored against the installed source RPM and fails closed on incompatible source/runtime changes. No replacement process/sensor backend. |
 | 095-49 | Low | Refresh races and glass startup errors | Fixed locally. System Details and Storage give each explicit refresh a unique executable source, avoiding immediate replay of the previous cached result. Double refreshes still coalesce. Shared glass gradient binds to a stable ShapePath ID instead of a temporarily null parent. Weather search restores keyboard focus when its panel popup activates. |
+| 095-50 | Medium | Stop Sound's closed-panel command polling | Applied locally on the separate follow-up branch after the 0.9.5 candidate was prepared; not part of candidate `8407f02`. Native audio notifications update the level, mute state and default output. The old two-second wpctl polling is retained only as a fallback while the native interface is unavailable. Closed panels no longer repeatedly fetch the full sound snapshot. Fresh request identifiers and coalescing avoid stale replies and overlapping reads. The standalone Sound view also has a readable minimum width. |
+| 095-51 | Low | Review native tray heading warnings | Observed on the desktop reload: Network, Clipboard and Bluetooth report a leftInset binding loop in KDE's own headings/toolbars. The new Monet audio components report no such errors. Determine whether these are only startup warnings or cause visible layout/work before changing native styles. |
 
 
 
 
 Evidence and development previews belong under `target/release095/` (ignored by Git). Source changes, laptop previews, and release acceptance are recorded separately below.
+
+## Local follow-up after preparing the release candidate
+
+The 0.9.5 candidate is committed as `8407f02` on `work/0.9.5-laptop-polish`. GitHub authentication is still required before pushing it; the initial device sign-in expired. Further work stays on `codex/backlog-after-095`, so it cannot silently alter that candidate.
+
+Sound now follows [KDE's native default-device notifications](https://github.com/KDE/plasma-pa/blob/master/src/preferreddevice.cpp) behind an optional loader. A missing native module or audio-service disconnect falls back to wpctl; reconnection stops polling again. This removes the scheduled 30 volume-reader invocations per minute per healthy closed widget, plus its periodic full sound snapshots. It adds no separate background daemon. This is a command-count reduction, not a measured whole-OS RAM/CPU or battery-life improvement.
+
+Four native acceptance cases use an isolated PipeWire server with virtual outputs, private configuration and a private D-Bus session. They cover immediate volume/mute changes, a changed/removed default output, missing-module fallback, fresh/coalesced reads, failure/retry, late fallback replies, service disconnect/reconnect and the complete rendered Sound widget. The final layout rerun also verifies a minimum usable width; 15 focused desktop/audio regressions, translation freshness, syntax and whitespace checks passed. The apparent full-widget startup failure was a test logging issue: setting `QT_FORCE_STDERR_LOGGING=1` made Qt's successful state changes observable. The fixture now cleans up its whole private process group.
+
+The three Sound QML files were installed with a reversible receipt under `~/.local/state/monet/desktop-preview/20261030T174019.656534Z/receipt.json`, then Plasma was reloaded. Its native audio module is loaded, desktop widget geometry is unchanged, and the real output volume is unchanged. Evidence is under `target/backlog-after-095/audio/`. No push or release has happened yet.
 
 ## Local changes and verification
 

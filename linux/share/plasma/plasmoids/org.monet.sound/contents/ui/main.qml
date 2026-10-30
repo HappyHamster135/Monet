@@ -3,7 +3,7 @@
  * (a middle click mutes), and a glass popover with the volume, where the sound plays and the
  * apps playing. In place of KDE's own item in the tray, whose popover is KDE's (the volume
  * keys and their on-screen level are KDE's audio shortcuts service, which needs no item).
- * wpctl and the `monet-quick` helper do the work; this draws it.
+ * Native audio events supply the level; wpctl and monet-quick perform changes.
  */
 import QtQuick
 import QtQuick.Window
@@ -21,11 +21,10 @@ PlasmoidItem {
     id: root
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
-    readonly property string level: "wpctl get-volume @DEFAULT_AUDIO_SINK@"
     readonly property real speed: Kirigami.Units.longDuration / 200
     // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
-    // How loud (0-100; null with no sound at all) and whether it's muted: wpctl, every two seconds.
+    // Updated immediately by the audio service; the legacy reader is a fallback.
     property var volume: null
     property bool muted: false
     // Where it can play and the apps playing (monet-quick sound): while open, and now and then.
@@ -39,8 +38,21 @@ PlasmoidItem {
     // While a slider is held, don't let a refresh move it.
     property bool dragging: false
     // Nowhere to play: PipeWire's stand-in only (monet-quick leaves it out).
-    readonly property bool silent: soundKnown && sound.outputs.length === 0
-    readonly property string playing: (sound.outputs.find(o => o.default) || {}).name || ""
+    readonly property bool silent: audioLevel.nativeReady ? !audioLevel.hasOutput : soundKnown && sound.outputs.length === 0
+    readonly property string playing: audioLevel.nativeReady ? audioLevel.description : (sound.outputs.find(o => o.default) || {}).name || ""
+
+    AudioLevel {
+        id: audioLevel
+        onVolumeChanged: if (!root.dragging) root.volume = volume
+        onMutedChanged: if (!root.dragging) root.muted = muted
+    }
+    property int requestSerial: 0
+    property string soundRequest: ""
+    function request(command) {
+        const source = command + " # monet-sound-" + (++requestSerial);
+        runner.connectSource(source);
+        return source;
+    }
 
     Plasmoid.icon: silent || muted || !volume ? "audio-volume-muted"
         : volume < 34 ? "audio-volume-low" : volume < 67 ? "audio-volume-medium" : "audio-volume-high"
@@ -56,14 +68,11 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
+            const command = source.replace(/ # monet-sound-\d+$/, "")
             const out = data["stdout"] || ""
-            if (source === root.level) {
-                const found = out.match(/Volume:\s*([0-9.]+)/)
-                if (!root.dragging) {
-                    root.volume = found ? Math.round(parseFloat(found[1]) * 100) : null
-                    root.muted = out.indexOf("[MUTED]") !== -1
-                }
-            } else if (source === root.helper + " sound") {
+            if (command === root.helper + " sound") {
+                if (source !== root.soundRequest) return
+                root.soundRequest = ""
                 try {
                     const next = JSON.parse(out)
                     if (!root.dragging) {
@@ -76,7 +85,7 @@ PlasmoidItem {
                     root.soundKnown = true
                 } catch (e) {
                 }
-            } else if (source.startsWith(root.helper + " output ")) {
+            } else if (command.startsWith(root.helper + " output ")) {
                 root.outputBusy = false
                 try {
                     const result = JSON.parse(out)
@@ -87,7 +96,7 @@ PlasmoidItem {
                     root.outputMessage = i18n("The sound output could not be changed. Try again.")
                 }
                 root.refresh()
-            } else if (source.startsWith(root.helper + " mic-mute ") || source.startsWith(root.helper + " input ")) {
+            } else if (command.startsWith(root.helper + " mic-mute ") || command.startsWith(root.helper + " input ")) {
                 root.microphoneBusy = false
                 try {
                     const result = JSON.parse(out)
@@ -101,20 +110,21 @@ PlasmoidItem {
                 root.look()
             } else {
                 root.refresh()
-                root.look()
+                if (root.expanded) root.look()
             }
         }
     }
 
     function refresh() {
-        runner.connectSource(level)
+        audioLevel.refresh()
+        if (!dragging) { volume = audioLevel.volume; muted = audioLevel.muted; }
     }
     function look() {
-        runner.connectSource(helper + " sound")
+        if (!soundRequest) soundRequest = request(helper + " sound")
     }
     // Arguments are fixed words or numbers, never anyone's text.
     function run(args) {
-        runner.connectSource(helper + " " + args)
+        request(helper + " " + args)
     }
 
     // Sliders send their latest value at most every 120 ms, not every step.
@@ -167,19 +177,12 @@ PlasmoidItem {
         run("input " + input.id)
     }
 
-    Timer {
-        interval: 2000
-        repeat: true
-        running: true
-        triggeredOnStart: true
-        onTriggered: if (!root.dragging) root.refresh()
-    }
-    // Open: where it plays and the apps, kept up to date. Closed: now and then, so the icon
-    // knows when there's nowhere to play.
+    // The native reader keeps the closed icon current. Probe the app/output list
+    // while it is open, or occasionally on older hosts using the fallback.
     Timer {
         interval: root.expanded ? 3000 : 60000
         repeat: true
-        running: true
+        running: root.expanded || !audioLevel.nativeReady
         triggeredOnStart: true
         onTriggered: if (!root.dragging) root.look()
     }
@@ -272,6 +275,7 @@ PlasmoidItem {
     fullRepresentation: PlasmaExtras.Representation {
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
+        Layout.minimumWidth: Math.min(Kirigami.Units.gridUnit * 19, Screen.width - 48)
         Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 21, Screen.width - 48)
         Layout.preferredHeight: Math.min(column.implicitHeight + Kirigami.Units.largeSpacing * 2, Screen.height - 112)
         Layout.maximumWidth: Layout.preferredWidth
