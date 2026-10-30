@@ -3240,10 +3240,11 @@ Audio
 
     def test_windows_setup_can_be_tried_again(self):
         deploy = (SHARE / "monet/winpe/deploy.cmd").read_text()
-        self.assertLess(deploy.index("format %TARGET%:"), deploy.index("dism /apply-image"))
+        self.assertIn('monet-setup-check.exe" --deploy', deploy)
+        self.assertNotIn("format %TARGET%:", deploy)
         prepare = (ROOT / "linux/libexec/monet-prepare-windows").read_text()
-        self.assertIn('run("ntfslabel", win["path"], "MONETWIN"', prepare)
-        self.assertIn("if not has_windows(win[\"path\"])", prepare)
+        self.assertIn("resume_staged_setup(disk)", prepare)
+        self.assertNotIn('run("ntfslabel", win["path"], "MONETWIN"', prepare)
 
     def test_no_game_is_listed_that_windows_doesnt_have(self):
         # Slay the Spire was, for testing; found by the test bench in a Monet with no Windows at all.
@@ -5726,10 +5727,20 @@ class OneGamesFolderForBoth(unittest.TestCase):
         self.assertLess(add.index('"/inheritance:r"'), add.index("fs::read_dir(&dir)"))
 
     def test_windows_clock_follows_monets_time_zone(self):
-        prepare = (ROOT / "linux/libexec/monet-prepare-windows").read_text(encoding="utf-8")
-        main = prepare[prepare.index("def main():"):]
         # Asked for on a trip, as the person's helper: before the checks the installer needs.
-        self.assertLess(main.index('"--windows-zone" in args'), main.index("os.geteuid() != 0"))
+        import contextlib
+        import io
+        from unittest.mock import patch
+        from tests.test_installer import load
+        prepare = load("linux/libexec/monet-prepare-windows", "zone_before_install_checks")
+        output = io.StringIO()
+        with patch.object(prepare.sys, "argv", ["monet-prepare-windows", "--windows-zone"]), \
+                patch.object(prepare.os, "geteuid", return_value=1000), \
+                patch.object(prepare, "windows_zone", return_value="W. Europe Standard Time"), \
+                patch.object(prepare, "root_disk", side_effect=AssertionError("no disk access")), \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(prepare.main(), 0)
+        self.assertEqual(output.getvalue().strip(), "W. Europe Standard Time")
         monet = (ROOT / "crates/monet/src/main.rs").read_text(encoding="utf-8")
         self.assertIn('.arg("--windows-zone")', monet)
         self.assertIn(".map(|r| r.with_zone(zone))", monet)

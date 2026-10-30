@@ -1,6 +1,6 @@
 [package]
 name = "monet-setup-check"
-description = "Read-only Windows Setup target identity verification"
+description = "Verified Windows Setup deployment and partition identity checks"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+sha2 = "0.10.9"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.61"
@@ -17,4 +18,6 @@ features = [
   "Win32_Storage_FileSystem",
   "Win32_System_IO",
   "Win32_System_Ioctl",
+  "Win32_System_Registry",
+  "Win32_System_SystemInformation",
 ]

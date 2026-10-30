@@ -5,6 +5,29 @@ use monet_setup_check::{fat32_id, select, Manifest, Volume, BASIC_DATA, EFI_SYST
 use std::path::Path;
 use std::process::Command;
 
+#[test]
+fn linux_full_job_and_checkpoint_use_the_same_hash_contract() {
+    let json = python(
+        r#"
+import json
+from tests.test_winpe_deployment import Handoff
+fixture = Handoff()
+fixture.setUp()
+try:
+    fixture.saved_fixture()
+    print(json.dumps(dict(data=(fixture.setup / 'monet/deployment.json').read_text(), sha256=fixture.hash)))
+finally:
+    fixture.doCleanups()
+"#,
+    );
+    let data = json["data"].as_str().unwrap().as_bytes();
+    monet_setup_check::deployment::Job::parse(data).unwrap();
+    assert_eq!(
+        monet_setup_check::deployment::digest(data),
+        json["sha256"].as_str().unwrap()
+    );
+}
+
 fn python(source: &str) -> serde_json::Value {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let output = Command::new("python3")

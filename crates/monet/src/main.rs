@@ -810,6 +810,7 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
     }
     let reason = fs::read_to_string(WINDOWS_PROGRESS).ok().and_then(|p| stop_reason(&p));
     match windows_setup_status() {
+        Some(Outcome::Staged | Outcome::Installed) if code == Some(0) => Ok(()),
         Some(Outcome::Pending) if code == Some(0) => {
             if ask(
                 t!("Windows is ready"),

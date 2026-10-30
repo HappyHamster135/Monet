@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assembles the downloadable folders for a release.
 #
-#   tools/package.sh linux   <monet binary>        <output dir> [<monet-bridge.exe>]
+#   tools/package.sh linux   <monet binary> <output dir> [<monet-bridge.exe> <monet-setup-check.exe>]
 #   tools/package.sh windows <monet-bridge.exe>    <output dir>
 #
 # With a monet-bridge.exe, the Linux package also carries the Windows files,
@@ -9,7 +9,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KIND="$1" BIN="$2" OUT="$3" BRIDGE="${4:-}"
+KIND="$1" BIN="$2" OUT="$3" BRIDGE="${4:-}" SETUP_CHECK="${5:-}"
+
+if [ "$KIND" = linux ] && [ -n "$BRIDGE" ] && { [ -z "$SETUP_CHECK" ] || [ ! -f "$SETUP_CHECK" ]; }; then
+    echo "Windows setup packaging requires monet-setup-check.exe." >&2
+    exit 1
+fi
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -27,6 +32,7 @@ case "$KIND" in
         chmod 755 "$OUT/install.sh" "$OUT/uninstall.sh" "$OUT"/libexec/*
         if [ -n "$BRIDGE" ]; then
             "$0" windows "$BRIDGE" "$OUT/windows" >/dev/null
+            install -m 644 "$SETUP_CHECK" "$OUT/share/monet/winpe/monet-setup-check.exe"
         fi
         ;;
     windows)

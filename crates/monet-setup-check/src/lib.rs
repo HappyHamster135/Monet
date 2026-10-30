@@ -1,7 +1,9 @@
 //! Match the recorded Linux preparation to native Windows volume identities.
-//! This library never formats, mounts, relabels, repairs or writes a volume.
+//! Identity selection is read-only. Explicit deployment uses a verified job and durable phases.
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+pub mod deployment;
 
 pub const BASIC_DATA: &str = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7";
 pub const EFI_SYSTEM: &str = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b";
@@ -42,7 +44,7 @@ pub struct Volume {
     pub read_only: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Selection {
     pub setup: char,
     pub windows: char,

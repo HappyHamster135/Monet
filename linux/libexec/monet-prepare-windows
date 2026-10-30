@@ -18,9 +18,11 @@ works, and choosing Windows in the app menu runs it again.
 """
 
 import fcntl
+import hashlib
 import json
 import os
 import re
+import resource
 import shutil
 import subprocess
 import sys
@@ -170,7 +172,7 @@ def part_identity(part):
             for key in ("uuid", "start", "size", "type", "name")}
 
 
-def save_partition_plan(plan):
+def save_state(name, plan):
     """A root-owned receipt precedes partition creation and every filesystem transition."""
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(prefix=".windows-partitions-", dir=STATE)
@@ -179,7 +181,7 @@ def save_partition_plan(plan):
             json.dump(plan, output, sort_keys=True)
             output.flush()
             os.fsync(output.fileno())
-        os.replace(temporary, STATE / "windows-partitions.json")
+        os.replace(temporary, STATE / name)
         for directory in (STATE, STATE.parent):
             fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
             try:
@@ -188,6 +190,10 @@ def save_partition_plan(plan):
                 os.close(fd)
     finally:
         Path(temporary).unlink(missing_ok=True)
+
+
+def save_partition_plan(plan):
+    save_state("windows-partitions.json", plan)
 
 
 def new_partition_plan(disk, table):
@@ -685,7 +691,122 @@ def fill(template, values):
     return text
 
 
-def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
+def require_setup_payload():
+    for path in (SHARE / "winpe/monet-setup-check.exe", SHARE / "windows/monet-bridge.exe",
+                 SHARE / "windows/Install-Monet.ps1"):
+        if not path.is_file():
+            raise Stop("no-payload", "this copy of Monet does not include the verified Windows setup files")
+
+
+def file_digest(path):
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def write_setup_handoff(setup_dir, identities):
+    """Seal the exact payload and run only the copy embedded in the RAM boot image."""
+    files = sorted([*setup_dir.glob("sources/install*.swm"), setup_dir / "monet/unattend.xml",
+                    *(p for p in (setup_dir / "monet/bridge").rglob("*") if p.is_file())])
+    job = dict(version=1, id=str(uuid.uuid4()), partitions=identities, files=[
+        dict(path=p.relative_to(setup_dir).as_posix(), size=p.stat().st_size, sha256=file_digest(p)) for p in files])
+    data = json.dumps(job, sort_keys=True, separators=(",", ":"))
+    (setup_dir / "monet/deployment.json").write_text(data)
+    with tempfile.TemporaryDirectory(prefix="monet-winpe-", dir=WORK) as tmp:
+        trusted = Path(tmp)
+        (trusted / "deployment.json").write_text(data)
+        for name in ("deploy.cmd", "monet-setup-check.exe"):
+            shutil.copyfile(SHARE / "winpe" / name, trusted / name)
+        # wimlib's script has its own quoting rules; controlled paths must not inject commands.
+        def quoted(path):
+            value = str(path)
+            if any(c in value for c in ('"', '\n', '\r')):
+                raise Stop("failed", "the Windows setup work path cannot be quoted safely")
+            return '"' + value + '"'
+        commands = ("delete --force /Windows/System32/winpeshl.ini\n"
+                    f"add {quoted(SHARE / 'winpe/winpeshl.ini')} /Windows/System32/winpeshl.ini\n"
+                    f"add {quoted(SHARE / 'winpe/monet-start.cmd')} /monet-start.cmd\n"
+                    "delete --force --recursive /monet\n"
+                    f"add {quoted(trusted)} /monet\n")
+        boot = setup_dir / "sources/boot.wim"
+        run("wimlib-imagex", "update", boot, "2", stdin=commands, capture=True)
+        run("wimlib-imagex", "verify", boot, capture=True)
+        embedded = run("wimlib-imagex", "extract", boot, "2", "/monet/deployment.json", "--to-stdout", capture=True)
+        if embedded != data:
+            raise Stop("failed", "the Windows boot image did not preserve its installation record")
+        # Root-owned Linux receipt is published last; a torn staging attempt is never booted.
+        save_state("windows-staging.json", dict(version=1, job=job,
+                   manifest_sha256=hashlib.sha256(data.encode()).hexdigest(), boot_sha256=file_digest(boot)))
+
+
+def resume_staged_setup(disk):
+    """Resume the same immutable payload; never erase/re-stage an in-progress installation."""
+    receipt = STATE / "windows-staging.json"
+    if not receipt.exists():
+        return None
+    if receipt.stat().st_size > 1024 * 1024:
+        raise Stop("failed", "the saved Windows staging record is too large")
+    saved = json.loads(receipt.read_text())
+    identities = deployment_manifest(disk)
+    job = saved.get("job", {})
+    if saved.get("version") != 1 or job.get("partitions") != identities:
+        raise Stop("failed", "the staged Windows installation no longer matches this disk")
+    plan = json.loads((STATE / "windows-partitions.json").read_text())
+    win, setup = mapped_partitions(disk, plan)
+    mount = MOUNT / "setup-resume"
+    mount.mkdir(parents=True, exist_ok=True)
+    run("mount", "-o", "ro", setup["path"], mount)
+    try:
+        manifest = mount / "monet/deployment.json"
+        if manifest.stat().st_size > 1024 * 1024:
+            raise Stop("failed", "the staged Windows installation record is too large")
+        data = manifest.read_bytes()
+        if (hashlib.sha256(data).hexdigest() != saved.get("manifest_sha256") or json.loads(data) != job
+                or file_digest(mount / "sources/boot.wim") != saved.get("boot_sha256")):
+            raise Stop("failed", "the staged Windows boot image or installation record changed")
+        for item in job.get("files", []):
+            name = item.get("path", "")
+            if (not name or not name.isascii() or any(c in name for c in ('\\', ':', '\n', '\r'))
+                    or any(p in ("", ".", "..") for p in name.split("/"))):
+                raise Stop("failed", "the Windows staging record contains an unsafe file path")
+            path = mount / name
+            if not path.is_file() or path.stat().st_size != item["size"] or file_digest(path) != item["sha256"]:
+                raise Stop("failed", "a staged Windows installation file changed; refusing to resume it")
+    finally:
+        run("umount", mount)
+    listing = subprocess.run(["ntfsls", "-a", "-p", "/", win["path"]], capture_output=True, text=True, timeout=30)
+    if listing.returncode:
+        raise Stop("failed", "the prepared Windows filesystem could not be inspected")
+    names = {n.strip().lower() for n in listing.stdout.splitlines()} - {"", ".", ".."}
+    phase = "applying"
+    if ".monet-setup.json" in names:
+        # A damaged/foreign file must not turn a tiny checkpoint read into an
+        # unbounded RAM allocation. Limit the child output file before reading.
+        def limit_record():
+            resource.setrlimit(resource.RLIMIT_FSIZE, (4097, 4097))
+            resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+        with tempfile.TemporaryFile() as output:
+            out = subprocess.run(["ntfscat", win["path"], "/.monet-setup.json"], stdout=output,
+                                 stderr=subprocess.PIPE, timeout=30, preexec_fn=limit_record)
+            output.seek(0)
+            data = output.read(4097)
+        if out.returncode or len(data) > 4096:
+            raise Stop("failed", "the Windows installation checkpoint could not be read")
+        checkpoint = json.loads(data)
+        if (checkpoint.get("version") != 1 or checkpoint.get("job_id") != job["id"]
+                or checkpoint.get("manifest_sha256") != saved["manifest_sha256"]
+                or checkpoint.get("phase") not in ("applying", "applied", "complete")):
+            raise Stop("failed", "the Windows installation checkpoint belongs to another preparation")
+        phase = checkpoint["phase"]
+    elif names - {"system volume information", "$recycle.bin", ".monet-setup.next"}:
+        raise Stop("failed", "the Windows target contains unrecorded files; refusing to resume it")
+    if phase == "complete" and not has_windows(win["path"]):
+        raise Stop("failed", "the completed Windows installation is missing its boot loader")
+    return setup["partn"], phase
+
+
+def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone, identities):
+    require_setup_payload()
+    WORK.mkdir(parents=True, exist_ok=True)
     iso_dir, setup_dir = MOUNT / "iso", MOUNT / "setup"
     for d in (iso_dir, setup_dir):
         d.mkdir(parents=True, exist_ok=True)
@@ -715,18 +836,9 @@ def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
             run("wimlib-imagex", "split", single, setup_dir / "sources" / "install.swm", "3800", capture=True)
             single.unlink(missing_ok=True)
 
-            # Run Monet's install script instead of the Setup wizard.
             winpe = SHARE / "winpe"
-            commands = (
-                "delete --force /Windows/System32/winpeshl.ini\n"
-                f"add {winpe / 'winpeshl.ini'} /Windows/System32/winpeshl.ini\n"
-                f"add {winpe / 'monet-start.cmd'} /monet-start.cmd\n"
-            )
-            run("wimlib-imagex", "update", setup_dir / "sources" / "boot.wim", "2", stdin=commands, capture=True)
-
             monet = setup_dir / "monet"
             monet.mkdir(exist_ok=True)
-            shutil.copyfile(winpe / "deploy.cmd", monet / "deploy.cmd")
             user, full = first_user()
             values = {
                 "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": "MONET-GAMES",
@@ -740,6 +852,7 @@ def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone):
                 for i, xml in enumerate(profiles):
                     (monet / "bridge" / "wifi" / f"wifi{i}.xml").write_text(xml)
                 log(f"carried {len(profiles)} Wi-Fi network(s) over to Windows")
+            write_setup_handoff(setup_dir, identities)
             log(f"staged {name} for {values['USER']} ({ui_lang}, {keyboard}, {timezone})")
         finally:
             run("sync", check=False)
@@ -793,7 +906,20 @@ def prepare_main():
     downloaded = False
     try:
         disk = root_disk()
+        require_setup_payload()
+        resume = resume_staged_setup(disk)
+        if resume:
+            partn, phase = resume
+            if phase == "complete":
+                set_status("staged")
+                progress(100, "Windows is ready to start")
+                return 0
+            boot_setup_once(disk, partn)
+            set_status("pending")
+            progress(100, "Windows setup continues at the next restart")
+            return 0
         win_dev, setup_dev, partn = make_partitions(disk)
+        identities = deployment_manifest(disk)
         ms_lang, ui, locale, keyboard, timezone = region()
 
         if iso is None:
@@ -806,7 +932,9 @@ def prepare_main():
             iso = WORK / "windows.iso"
             downloaded = True
             download(url, iso)
-        stage(iso, setup_dev, ui, locale, keyboard, timezone)
+        stage(iso, setup_dev, ui, locale, keyboard, timezone, identities)
+        if deployment_manifest(disk) != identities:
+            raise Stop("failed", "the prepared Windows disk changed while copying setup")
         progress(97, "Getting ready to restart")
         boot_setup_once(disk, partn)
         set_status("pending")

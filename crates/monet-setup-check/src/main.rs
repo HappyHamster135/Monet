@@ -1,11 +1,16 @@
 #[cfg(windows)]
 mod native;
+#[cfg(windows)]
+mod win_deploy;
 
 #[cfg(windows)]
 fn run() -> Result<(), String> {
     use monet_setup_check::{select, Manifest};
     use std::io::Read;
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.len() == 2 && args[0] == "--deploy" {
+        return win_deploy::run(std::path::Path::new(&args[1]));
+    }
     if args.len() != 2 || args[1].len() != 1 {
         return Err("Usage: monet-setup-check.exe <preparation.json> <setup drive letter>".into());
     }

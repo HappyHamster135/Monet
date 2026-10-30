@@ -171,6 +171,15 @@ pub fn is_windows_root(root: &Path) -> bool {
     resolve(root, &["Windows", "System32"], false).is_some_and(|p| p.is_dir())
 }
 
+/// A partially applied WIM already contains Windows/System32. Do not mistake it
+/// for an installed system or write Bridge into it before its verified job completes.
+pub fn unfinished_install(root: &Path) -> bool {
+    let Some(path) = resolve(root, &[".monet-setup.json"], false) else { return false };
+    if !fs::metadata(&path).is_ok_and(|m| m.is_file() && m.len() <= 4096) { return true; }
+    let record = fs::read(path).ok().and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    !record.is_some_and(|value| value["version"] == 1 && value["phase"] == "complete")
+}
+
 /// Windows writes "hibr" at the start of hiberfil.sys while it is hibernated,
 /// including the hybrid shutdown that Fast Startup uses.
 pub fn is_hibernated(root: &Path) -> bool {
@@ -268,6 +277,10 @@ pub fn stage(payload: Option<&Path>) -> Result<Outcome, String> {
             continue;
         }
         let root = Path::new(MOUNT_POINT);
+        if unfinished_install(root) {
+            unmount();
+            return Ok(Outcome::Pending);
+        }
         if !is_windows_root(root) {
             unmount();
             continue;
@@ -341,6 +354,21 @@ mod tests {
         assert!(!is_hibernated(&root));
         fs::write(root.join("hiberfil.sys"), b"HIBRrest").unwrap();
         assert!(is_hibernated(&root));
+    }
+
+    #[test]
+    fn partial_wim_and_damaged_receipt_are_not_completed_windows() {
+        let root = fake_windows("deployment-checkpoint");
+        assert!(!unfinished_install(&root));
+        for phase in ["applying", "applied", "unknown"] {
+            fs::write(root.join(".monet-setup.json"), format!(r#"{{"version":1,"phase":"{phase}"}}"#)).unwrap();
+            assert!(unfinished_install(&root));
+        }
+        fs::write(root.join(".monet-setup.json"), "partial json").unwrap();
+        assert!(unfinished_install(&root));
+        fs::write(root.join(".monet-setup.json"), r#"{"version":1,"phase":"complete"}"#).unwrap();
+        assert!(!unfinished_install(&root));
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]
