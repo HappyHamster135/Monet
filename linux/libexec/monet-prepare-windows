@@ -17,12 +17,14 @@ works, and choosing Windows in the app menu runs it again.
     monet-prepare-windows --windows-zone     Monet's time zone as Windows names it (for a trip)
 """
 
+import fcntl
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -93,10 +95,13 @@ def progress(percent, text, *values):
     log(f"[{int(percent)}%] {said}")
 
 
-def run(*cmd, check=True, capture=False, stdin=None):
+def run(*cmd, check=True, capture=False, stdin=None, timeout=None):
     log("$ " + " ".join(str(c) for c in cmd))
-    result = subprocess.run([str(c) for c in cmd], input=stdin, text=True,
-                            stdout=subprocess.PIPE if capture else None, stderr=subprocess.PIPE)
+    try:
+        result = subprocess.run([str(c) for c in cmd], input=stdin, text=True, timeout=timeout,
+                                stdout=subprocess.PIPE if capture else None, stderr=subprocess.PIPE)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise Stop("failed", f"{cmd[0]} could not finish: {error}") from error
     if check and result.returncode != 0:
         raise Stop("failed", f"{cmd[0]} failed: {result.stderr.strip()[:300]}")
     return result.stdout if capture else result.returncode == 0
@@ -105,7 +110,7 @@ def run(*cmd, check=True, capture=False, stdin=None):
 # ----------------------------------------------------------------- this PC
 
 def lsblk(*args):
-    return json.loads(run("lsblk", "-J", "-b", *args, capture=True))["blockdevices"]
+    return json.loads(run("lsblk", "-J", "-b", *args, capture=True, timeout=5))["blockdevices"]
 
 
 def root_disk():
@@ -123,7 +128,7 @@ def root_disk():
 
 
 def partitions(disk):
-    return lsblk("-o", "PATH,PARTLABEL,PARTN,SIZE,FSTYPE", disk)[0].get("children", [])
+    return lsblk("-o", "PATH,PARTLABEL,PARTN,SIZE,FSTYPE,PARTUUID,MOUNTPOINTS", disk)[0].get("children", [])
 
 
 def find_partition(disk, label):
@@ -131,13 +136,13 @@ def find_partition(disk, label):
 
 
 def sector_size(disk):
-    return int(run("blockdev", "--getss", disk, capture=True))
+    return int(run("blockdev", "--getss", disk, capture=True, timeout=5))
 
 
 def largest_free(disk):
     """(start, sectors) of the largest free area, from `sfdisk -F`."""
     best = (0, 0)
-    for line in run("sfdisk", "-F", "-q", disk, capture=True).splitlines():
+    for line in run("sfdisk", "-F", "-q", disk, capture=True, timeout=10).splitlines():
         fields = line.split()
         if len(fields) >= 3 and fields[0].isdigit():
             start, end = int(fields[0]), int(fields[1])
@@ -148,19 +153,47 @@ def largest_free(disk):
 
 def has_windows(path):
     """True if a whole Windows is on the NTFS partition at path."""
-    out = subprocess.run(["ntfsls", "-p", "/Windows/System32", path], capture_output=True, text=True)
+    out = subprocess.run(["ntfsls", "-p", "/Windows/System32", path], capture_output=True, text=True, timeout=30)
     return out.returncode == 0 and "winload.efi" in out.stdout.lower()
 
 
-def make_partitions(disk):
-    """Creates the Windows and setup partitions in the free space at the end."""
-    win, setup = find_partition(disk, WINDOWS_LABEL), find_partition(disk, SETUP_LABEL)
-    if win and setup:
-        # A try that stopped halfway renamed Windows' partition; name it
-        # again so the installer finds it. A finished Windows is left alone.
-        if not has_windows(win["path"]):
-            run("ntfslabel", win["path"], "MONETWIN", check=False)
-        return win["path"], setup["path"], setup["partn"]
+def partition_table(disk):
+    table = json.loads(run("sfdisk", "--json", disk, capture=True, timeout=10)).get("partitiontable", {})
+    if table.get("label") != "gpt" or table.get("unit") != "sectors" or not table.get("id"):
+        raise Stop("failed", "Windows preparation needs a readable GPT partition table")
+    return table
+
+
+def part_identity(part):
+    return {key: str(part.get(key, "")).lower() if key in ("uuid", "type") else part.get(key)
+            for key in ("uuid", "start", "size", "type", "name")}
+
+
+def save_partition_plan(plan):
+    """A root-owned receipt precedes partition creation and every filesystem transition."""
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temporary = tempfile.mkstemp(prefix=".windows-partitions-", dir=STATE)
+    try:
+        with os.fdopen(fd, "w") as output:
+            json.dump(plan, output, sort_keys=True)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, STATE / "windows-partitions.json")
+        for directory in (STATE, STATE.parent):
+            fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def new_partition_plan(disk, table):
+    """Do not adopt old partitions based on a friendly name or a missing signature."""
+    before = [part_identity(p) for p in table.get("partitions", [])]
+    if any(p["name"] in (WINDOWS_LABEL, SETUP_LABEL) for p in before):
+        raise Stop("failed", "existing Windows setup partitions have no ownership record; recovery must verify them before formatting")
 
     mib = 1024 * 1024 // sector_size(disk)
     free_start, free_sectors = largest_free(disk)
@@ -171,21 +204,166 @@ def make_partitions(disk):
     if win_sectors < MIN_WINDOWS_MIB * mib:
         raise Stop("no-space", "there isn't enough free space on the disk for Windows")
 
-    layout = (
-        f'start={start}, size={win_sectors}, type={BASIC_DATA}, name="{WINDOWS_LABEL}"\n'
-        f'start={start + win_sectors}, size={setup_sectors}, type={BASIC_DATA}, name="{SETUP_LABEL}"\n'
-    )
-    progress(2, "Making room for Windows")
-    run("sfdisk", "--append", "--no-reread", "--no-tell-kernel", disk, stdin=layout)
-    run("partx", "-a", disk, check=False)
-    run("udevadm", "settle", check=False)
-    time.sleep(1)
+    owned = [dict(uuid=str(uuid.uuid4()), start=start, size=win_sectors, type=BASIC_DATA.lower(),
+                  name=WINDOWS_LABEL, fstype="ntfs", fslabel="MONETWIN", phase="planned"),
+             dict(uuid=str(uuid.uuid4()), start=start + win_sectors, size=setup_sectors, type=BASIC_DATA.lower(),
+                  name=SETUP_LABEL, fstype="vfat", fslabel="MONETSETUP", phase="planned")]
+    return dict(version=1, disk_id=table["id"].lower(), sector_size=1024 * 1024 // mib, before=before, owned=owned)
 
-    win, setup = find_partition(disk, WINDOWS_LABEL), find_partition(disk, SETUP_LABEL)
-    if not (win and setup):
-        raise Stop("failed", "the new partitions didn't show up")
-    run("mkfs.ntfs", "-Q", "-F", "-L", "MONETWIN", win["path"], capture=True)
-    run("mkfs.vfat", "-F", "32", "-n", "MONETSETUP", setup["path"], capture=True)
+
+def check_partition_plan(table, plan):
+    if (not isinstance(plan, dict) or plan.get("version") != 1 or plan.get("disk_id") != table["id"].lower()
+            or plan.get("sector_size") != table.get("sectorsize", 512)
+            or not isinstance(plan.get("before"), list) or not isinstance(plan.get("owned"), list)
+            or len(plan["owned"]) != 2):
+        raise Stop("failed", "the saved Windows partition plan does not match this disk")
+    for part, name, fstype, label in zip(plan["owned"], (WINDOWS_LABEL, SETUP_LABEL), ("ntfs", "vfat"), ("MONETWIN", "MONETSETUP")):
+        if (not isinstance(part, dict) or part.get("name") != name or part.get("fstype") != fstype
+                or part.get("fslabel") != label or part.get("type") != BASIC_DATA.lower()
+                or part.get("phase") not in ("planned", "formatting", "formatted")
+                or not isinstance(part.get("uuid"), str) or not re.fullmatch(r"[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}", part["uuid"])
+                or type(part.get("start")) is not int or type(part.get("size")) is not int
+                or part["start"] <= 0 or part["size"] <= 0):
+            raise Stop("failed", "the saved Windows partition identity is invalid")
+    wanted = {p["uuid"]: p for p in plan["owned"]}
+    win, setup = plan["owned"]
+    if (win["start"] < table.get("firstlba", 34)
+            or win["start"] + win["size"] != setup["start"] or win["size"] * plan["sector_size"] < MIN_WINDOWS_MIB * 1024**2
+            or setup["size"] * plan["sector_size"] != SETUP_MIB * 1024**2
+            or setup["start"] + setup["size"] - 1 > table.get("lastlba", 0)):
+        raise Stop("failed", "the saved Windows partition sizes or boundaries are invalid")
+    actual = [part_identity(p) for p in table.get("partitions", [])]
+    if len(wanted) != 2 or len({p["uuid"] for p in actual}) != len(actual):
+        raise Stop("failed", "duplicate partition identities prevent safe Windows preparation")
+    other = [p for p in actual if p["uuid"] not in wanted]
+    if sorted(other, key=lambda p: p["start"]) != sorted(plan["before"], key=lambda p: p["start"]):
+        raise Stop("failed", "the disk layout changed since Windows preparation; no partitions were formatted")
+    for part in actual:
+        if part["uuid"] in wanted and part != part_identity(wanted[part["uuid"]]):
+            raise Stop("failed", "a Windows setup partition changed; refusing to format it")
+    # A missing owned partition may only be recreated while its exact planned area remains free.
+    missing = [p for p in plan["owned"] if p["uuid"] not in {a["uuid"] for a in actual}]
+    for part in missing:
+        if part["phase"] != "planned" or any(part["start"] < a["start"] + a["size"]
+                                              and a["start"] < part["start"] + part["size"] for a in actual):
+            raise Stop("failed", "a saved Windows partition is missing or its space is now occupied")
+    return missing
+
+
+def mapped_partitions(disk, plan):
+    table = partition_table(disk)
+    if check_partition_plan(table, plan):
+        raise Stop("failed", "a Windows partition disappeared before formatting; nothing more was formatted")
+    nodes = {p["uuid"].lower(): p.get("node") for p in table["partitions"]}
+    found = []
+    rows = partitions(disk)
+    for wanted in plan["owned"]:
+        matches = [p for p in rows if (p.get("partuuid") or "").lower() == wanted["uuid"]]
+        if len(matches) > 1:
+            raise Stop("failed", "duplicate Windows partition devices were reported")
+        if matches:
+            part = matches[0]
+            if (part.get("size") != wanted["size"] * plan["sector_size"] or not part.get("path")
+                    or not part.get("partn") or part.get("partlabel") != wanted["name"]
+                    or not nodes.get(wanted["uuid"])
+                    or os.path.realpath(part["path"]) != os.path.realpath(nodes[wanted["uuid"]])):
+                raise Stop("failed", "the kernel's Windows partition identity does not match the saved plan")
+            if any(part.get("mountpoints") or []) or part.get("children"):
+                raise Stop("failed", "a Windows setup partition is in use; close it before trying again")
+            found.append(part)
+    return found
+
+
+def discover_partitions(disk, plan, attempts=6):
+    """Bounded kernel/udev discovery; never append again just because a node is late."""
+    for command in (("partx", "-a", disk), ("udevadm", "settle", "--timeout=5")):
+        run(*command, check=False, timeout=7)
+    for attempt in range(attempts):
+        found = mapped_partitions(disk, plan)
+        if len(found) == 2:
+            return found
+        if attempt + 1 < attempts:
+            time.sleep(1)
+    raise Stop("failed", "the new Windows partition devices did not appear; the saved plan will be reused on retry")
+
+
+def filesystem(path):
+    # Probe directly, not lsblk's possibly stale udev filesystem cache. A failed
+    # read must never be confused with an unformatted partition.
+    try:
+        with open(path, "rb") as disk:
+            if len(disk.read(4096)) != 4096:
+                raise OSError("short partition read")
+        out = subprocess.run(["blkid", "--probe", "--no-part-details", "--output", "export", str(path)],
+                             capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise Stop("failed", f"could not inspect the Windows partition: {error}") from error
+    if out.returncode == 2 and not out.stderr.strip() and not out.stdout.strip():
+        return {}
+    if out.returncode != 0:
+        raise Stop("failed", "the Windows partition has unreadable or conflicting filesystem signatures")
+    return dict(line.split("=", 1) for line in out.stdout.splitlines() if "=" in line)
+
+
+def check_filesystem(found, wanted):
+    if found:
+        if (found.get("TYPE") != wanted["fstype"] or found.get("LABEL") != wanted["fslabel"]
+                or not found.get("UUID") or (wanted.get("fs_uuid") and wanted["fs_uuid"] != found["UUID"])
+                or (wanted["phase"] == "formatted" and not wanted.get("fs_uuid"))
+                or wanted["phase"] == "planned"):
+            raise Stop("failed", "a Windows setup partition contains an unexpected filesystem; it was not formatted")
+    elif wanted["phase"] == "formatted" or wanted.get("fs_uuid"):
+        raise Stop("failed", "a previously prepared Windows filesystem is missing; refusing to format it again")
+
+
+def prepare_filesystem(part, wanted, plan):
+    found = filesystem(part["path"])
+    check_filesystem(found, wanted)
+    if not found:
+        wanted["phase"] = "formatting"
+        save_partition_plan(plan)
+        if wanted["fstype"] == "ntfs":
+            run("mkfs.ntfs", "-Q", "-L", wanted["fslabel"], part["path"], capture=True)
+        else:
+            run("mkfs.vfat", "-F", "32", "-n", wanted["fslabel"], part["path"], capture=True)
+        found = filesystem(part["path"])
+        if found.get("TYPE") != wanted["fstype"] or found.get("LABEL") != wanted["fslabel"] or not found.get("UUID"):
+            raise Stop("failed", "the Windows filesystem could not be verified after formatting")
+    wanted.update(phase="formatted", fs_uuid=found["UUID"])
+    save_partition_plan(plan)
+
+
+def make_partitions(disk):
+    """Resume only the exact GPT partitions created by this recorded operation."""
+    table = partition_table(disk)
+    receipt = STATE / "windows-partitions.json"
+    if receipt.exists():
+        plan = json.loads(receipt.read_text())
+    else:
+        plan = new_partition_plan(disk, table)
+        check_partition_plan(table, plan)
+        save_partition_plan(plan)
+    missing = check_partition_plan(table, plan)
+    if missing:
+        layout = "".join(f'start={p["start"]}, size={p["size"]}, type={p["type"]}, uuid={p["uuid"]}, name="{p["name"]}"\n'
+                         for p in missing)
+        progress(2, "Making room for Windows")
+        run("sfdisk", "--append", "--lock=yes", "--no-reread", "--no-tell-kernel", disk, stdin=layout, timeout=30)
+    if check_partition_plan(partition_table(disk), plan):
+        raise Stop("failed", "the Windows partition table is incomplete; the saved plan will be reused on retry")
+    win, setup = discover_partitions(disk, plan)
+    # Validate both before the first format, so an unexpected second filesystem
+    # cannot cause a needless first-partition mutation.
+    for part, wanted in zip((win, setup), plan["owned"]):
+        check_filesystem(filesystem(part["path"]), wanted)
+    if plan["owned"][0]["phase"] != "planned" and has_windows(win["path"]):
+        raise Stop("failed", "Windows already exists on this partition; refusing an automatic reinstall")
+    for index, wanted in enumerate(plan["owned"]):
+        current = mapped_partitions(disk, plan)
+        if len(current) != 2:
+            raise Stop("failed", "a Windows partition device disappeared before formatting")
+        win, setup = current
+        prepare_filesystem(current[index], wanted, plan)
     return win["path"], setup["path"], setup["partn"]
 
 
@@ -557,7 +735,7 @@ def boot_setup_once(disk, partn):
 
 # ----------------------------------------------------------------- main
 
-def main():
+def prepare_main():
     args = sys.argv[1:]
     if "--windows-zone" in args:
         # For a trip: Windows' clock in Monet's time zone (monet's request carries it).
@@ -608,6 +786,19 @@ def main():
         if downloaded and iso and iso.exists() and STATUS.read_text() == "pending":
             iso.unlink(missing_ok=True)
         shutil.rmtree(STATE / "wifi", ignore_errors=True)
+
+
+def main():
+    if "--windows-zone" in sys.argv[1:] or os.geteuid() != 0:
+        return prepare_main()
+    MOUNT.mkdir(parents=True, exist_ok=True)
+    with (MOUNT / "windows-setup.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("Windows preparation is already running.", file=sys.stderr)
+            return 2
+        return prepare_main()
 
 
 if __name__ == "__main__":

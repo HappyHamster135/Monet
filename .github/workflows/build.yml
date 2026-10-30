@@ -32,7 +32,7 @@ jobs:
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi cryptsetup-bin >/dev/null
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi cryptsetup-bin fdisk ntfs-3g dosfstools >/dev/null
           python3 tools/test.py
 
   linux:
