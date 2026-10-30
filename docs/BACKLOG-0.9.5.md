@@ -1,6 +1,6 @@
 # Monet 0.9.5 laptop backlog
 
-The owner authorized pushing and releasing 0.9.5 on 30 October 2026. Release preparation is in progress. The local-only notes below record earlier development stages; remaining hardware acceptance work stays open and is not implied by publication.
+The owner authorized pushing and releasing 0.9.5 on 30 October 2026. Candidate `8407f02` is pushed to main; its [release workflow](https://github.com/HappyHamster135/Monet/actions/runs/41112429830) has passed tests and Linux/Windows packaging, with OS image builds still running. Follow-up commits remain local on `codex/backlog-after-095`. The local-only notes below record earlier development stages; remaining hardware acceptance work stays open and is not implied by publication.
 
 This backlog combines the owner's 30 October 2026 laptop feedback with the [laptop assessment](ASSESSMENT-2026-10-30.md). “Verified” means the stated check passed; it does not imply release acceptance.
 
@@ -59,7 +59,7 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-49 | Low | Refresh races and glass startup errors | Fixed locally. System Details and Storage give each explicit refresh a unique executable source, avoiding immediate replay of the previous cached result. Double refreshes still coalesce. Shared glass gradient binds to a stable ShapePath ID instead of a temporarily null parent. Weather search restores keyboard focus when its panel popup activates. |
 | 095-50 | Medium | Stop Sound's closed-panel command polling | Applied locally on the separate follow-up branch after the 0.9.5 candidate was prepared; not part of candidate `8407f02`. Native audio notifications update the level, mute state and default output. The old two-second wpctl polling is retained only as a fallback while the native interface is unavailable. Closed panels no longer repeatedly fetch the full sound snapshot. Fresh request identifiers and coalescing avoid stale replies and overlapping reads. The standalone Sound view also has a readable minimum width. |
 | 095-51 | Low | Review native tray heading warnings | Observed on the desktop reload: Network, Clipboard and Bluetooth report a leftInset binding loop in KDE's own headings/toolbars. The new Monet audio components report no such errors. Determine whether these are only startup warnings or cause visible layout/work before changing native styles. |
-| 095-52 | High | Bind Windows deployment to recorded partition identities | Source integration implemented on the follow-up branch; WinPE acceptance remains open. Setup embeds its program/script/manifest in boot.wim, verifies partition IDs and payload hashes, records application/completion phases, resumes the same payload without formatting, and selects the shared EFI partition explicitly. Real disposable WIM/NTFS fixtures and injected transaction failures pass. Native DISM, driver discovery, file-sharing/durability and EFI boot restoration still need an actual WinPE VM. Nothing was installed on the laptop or added to the prepared 0.9.5 candidate. |
+| 095-52 | High | Bind Windows deployment to recorded partition identities | Follow-up implementation and basic native WinPE acceptance pass. Setup binds its payload and checkpoints to recorded partition/filesystem identities, never reformats on retry, and selects the shared EFI partition explicitly. The real VM exposed and verified a fix for assigned EFI letters missing from volume-GUID enumeration. Twenty-two Windows tests plus native DISM, failed-boot retries, payload sharing locks and fallback/user-file preservation pass. Full Windows boot, alternate storage drivers and power-loss acceptance remain open. Nothing was installed on the laptop or added to candidate `8407f02`. |
 
 
 
@@ -104,7 +104,36 @@ Four native acceptance cases use an isolated PipeWire server with virtual output
 
 The three Sound QML files were installed with a reversible receipt under `~/.local/state/monet/desktop-preview/20261030T174019.656534Z/receipt.json`, then Plasma was reloaded. Its native audio module is loaded, desktop widget geometry is unchanged, and the real output volume is unchanged. Evidence is under `target/backlog-after-095/audio/`. No push or release has happened yet.
 
-## Local changes and verification
+## Native Windows follow-up verification
+
+The later native WinPE run closes part of the acceptance gap described above.
+Microsoft's amd64 ADK WinPE 10.0.26100.1 was booted under KVM/OVMF with networking
+disabled and only disposable file-backed disks. No laptop partitions, keys or
+boot entries were passed through or changed. All **22 Windows tests** pass,
+including actual Windows sharing violations when another handle tries to write,
+rename or delete a verified setup payload.
+
+The VM identified the recorded GPT/NTFS/FAT32 volumes and rejected a changed
+filesystem serial. It exposed a real EFI discovery defect: DiskPart's assigned
+letter did not appear in volume-GUID enumeration. Read-only DOS volume queries
+now check the full extent, GPT identity and filesystem before accepting that
+letter. Conflicting observations remain an error. Linux fixture tests and
+Linux/Windows-target Clippy with warnings denied pass; the release executable
+cross-builds successfully.
+
+[tools/test-winpe.py](../tools/test-winpe.py) reproduces the test using externally
+supplied ADK files and a new scratch directory. Native DISM applies a deliberately
+non-bootable tiny WIM, then BCDBoot is expected to fail. The `applied` checkpoint,
+original EFI fallback and user files survive. A second attempt performs no
+second DISM application, and preserves a modified loader file. The automated
+runner verifies all of these results from the resulting FAT32/NTFS image files.
+Evidence: `target/backlog-after-095/winpe-vm/acceptance/`.
+
+This is not a successful full Windows installation, Secure Boot or power-loss
+test. Those remain open. The helper and this fix remain source-only on the local
+follow-up branch, outside the 0.9.5 release candidate.
+
+## Earlier local desktop checks (before release preparation)
 
 Changes are local and uncommitted on `work/0.9.5-laptop-polish`. VERSION is still 0.9.4. Nothing was pushed, tagged, published or installed as a replacement OS. Preview windows used separate configuration/data folders, were closed afterward, and the temporary test service/container was removed. No encryption keys, disk partitions or boot settings were changed.
 

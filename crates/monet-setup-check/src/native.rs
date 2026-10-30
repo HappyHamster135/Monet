@@ -11,9 +11,10 @@ use windows_sys::Win32::Foundation::{
     HANDLE, INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, GetVolumeInformationByHandleW,
-    GetVolumePathNamesForVolumeNameW, ReadFile, SetFilePointerEx, FILE_BEGIN, FILE_SHARE_READ,
-    FILE_SHARE_WRITE, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, OPEN_EXISTING,
+    CreateFileW, FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, GetLogicalDrives,
+    GetVolumeInformationByHandleW, GetVolumePathNamesForVolumeNameW, ReadFile, SetFilePointerEx,
+    FILE_BEGIN, FILE_SHARE_READ, FILE_SHARE_WRITE, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+    OPEN_EXISTING,
 };
 use windows_sys::Win32::System::Ioctl::{
     DRIVE_LAYOUT_INFORMATION_EX, FSCTL_GET_NTFS_VOLUME_DATA, GPT_BASIC_DATA_ATTRIBUTE_READ_ONLY,
@@ -319,7 +320,7 @@ fn filesystem(handle: &Handle) -> (String, String) {
     }
 }
 
-fn volume(path: &str, disks: &mut HashMap<u32, Disk>) -> io::Result<Volume> {
+fn volume(path: &str, letter: Option<char>, disks: &mut HashMap<u32, Disk>) -> io::Result<Volume> {
     let handle = open(path.trim_end_matches('\\'))?;
     let mut extents = VOLUME_DISK_EXTENTS::default();
     let bytes = query(
@@ -357,7 +358,10 @@ fn volume(path: &str, disks: &mut HashMap<u32, Disk>) -> io::Result<Volume> {
     let (filesystem, filesystem_id) = filesystem(&handle);
     Ok(Volume {
         volume_path: path.into(),
-        letters: letters(path)?,
+        letters: match letter {
+            Some(letter) => vec![letter],
+            None => letters(path)?,
+        },
         disk_number: extent.DiskNumber,
         partition_number: part.number,
         disk_guid: disk.guid.clone(),
@@ -447,6 +451,60 @@ fn add_hidden_efi(
     Ok(())
 }
 
+fn merge_efi_letter(found: &mut Vec<Volume>, mounted: Volume) -> io::Result<()> {
+    if let Some(existing) = found.iter_mut().find(|v| {
+        v.disk_number == mounted.disk_number && v.partition_guid == mounted.partition_guid
+    }) {
+        let mut comparable = mounted.clone();
+        comparable.volume_path = existing.volume_path.clone();
+        comparable.letters = existing.letters.clone();
+        if *existing != comparable {
+            return Err(bad(
+                "The EFI identity changed while inspecting its drive letter.",
+            ));
+        }
+        for letter in mounted.letters {
+            if !existing.letters.contains(&letter) {
+                existing.letters.push(letter);
+            }
+        }
+    } else {
+        found.push(mounted);
+    }
+    Ok(())
+}
+
+fn add_lettered_efi(
+    found: &mut Vec<Volume>,
+    disks: &mut HashMap<u32, Disk>,
+    expected_disk: &str,
+    expected_efi: &str,
+) -> io::Result<()> {
+    // FindFirstVolume omits a WinPE EFI mount even after DiskPart assigns its letter.
+    // Probe DOS volume handles read-only and require the same complete GPT identity.
+    let mask = unsafe { GetLogicalDrives() };
+    if mask == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    for letter in 'A'..='Z' {
+        if letter == 'X'
+            || mask & (1 << (letter as u8 - b'A')) == 0
+            || found.iter().any(|v| v.letters.contains(&letter))
+        {
+            continue;
+        }
+        if let Ok(mounted) = volume(&format!(r"\\.\{letter}:"), Some(letter), disks) {
+            if mounted.partition_type == monet_setup_check::EFI_SYSTEM
+                && mounted.disk_guid.eq_ignore_ascii_case(expected_disk)
+                && mounted.partition_guid.eq_ignore_ascii_case(expected_efi)
+            {
+                merge_efi_letter(found, mounted)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn volumes(expected_disk: &str, expected_efi: &str) -> io::Result<Vec<Volume>> {
     let mut buffer = [0u16; 1024];
     let handle = unsafe { FindFirstVolumeW(buffer.as_mut_ptr(), buffer.len() as u32) };
@@ -463,12 +521,13 @@ pub fn volumes(expected_disk: &str, expected_efi: &str) -> io::Result<Vec<Volume
         }
         // Windows also lists optical media, RAM disks and unsupported/locked filesystems.
         // They cannot satisfy a required identity. A missing required volume fails selection.
-        if let Ok(volume) = volume(&path, &mut disks) {
+        if let Ok(volume) = volume(&path, None, &mut disks) {
             found.push(volume);
         }
         if unsafe { FindNextVolumeW(search.0, buffer.as_mut_ptr(), buffer.len() as u32) } == 0 {
             let error = io::Error::last_os_error();
             if error.raw_os_error() == Some(ERROR_NO_MORE_FILES as i32) {
+                add_lettered_efi(&mut found, &mut disks, expected_disk, expected_efi)?;
                 check_disk_identities(&disks)?;
                 add_hidden_efi(&mut found, &disks, expected_disk, expected_efi)?;
                 return Ok(found);
@@ -482,6 +541,43 @@ pub fn volumes(expected_disk: &str, expected_efi: &str) -> io::Result<Vec<Volume
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merges_efi_letter_only_when_every_observed_identity_field_matches() {
+        let mounted = Volume {
+            volume_path: r"\\.\Z:".into(),
+            letters: vec!['Z'],
+            disk_number: 0,
+            partition_number: 1,
+            disk_guid: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee".into(),
+            partition_guid: "11111111-2222-3333-4444-555555555555".into(),
+            partition_type: monet_setup_check::EFI_SYSTEM.into(),
+            offset: 1024 * 1024,
+            length: 128 * 1024 * 1024,
+            filesystem: "vfat".into(),
+            filesystem_id: "1234ABCD".into(),
+            read_only: false,
+        };
+        let mut existing = mounted.clone();
+        existing.volume_path = r"\\?\Volume{22222222-3333-4444-5555-666666666666}\".into();
+        existing.letters.clear();
+        let mut found = vec![existing.clone()];
+        merge_efi_letter(&mut found, mounted.clone()).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].letters, ['Z']);
+        assert_eq!(found[0].volume_path, existing.volume_path);
+        for field in 0..4 {
+            let mut changed = mounted.clone();
+            match field {
+                0 => changed.filesystem_id = "FFFFFFFF".into(),
+                1 => changed.offset += 512,
+                2 => changed.read_only = true,
+                _ => changed.disk_guid = "bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee".into(),
+            }
+            assert!(merge_efi_letter(&mut found, changed).is_err());
+        }
+    }
+
     fn layout() -> (Vec<u64>, usize) {
         let header = offset_of!(DRIVE_LAYOUT_INFORMATION_EX, PartitionEntry);
         let bytes = header + 2 * size_of::<PARTITION_INFORMATION_EX>();

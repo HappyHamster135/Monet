@@ -28,7 +28,7 @@ pub struct Manifest {
     pub efi: Partition,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Volume {
     pub volume_path: String,
     pub letters: Vec<char>,
@@ -188,11 +188,15 @@ pub fn select(
     let mut partitions = HashSet::new();
     let mut letters = HashSet::new();
     for volume in volumes {
-        let hidden_efi = volume.partition_type.eq_ignore_ascii_case(EFI_SYSTEM)
-            && volume.volume_path.is_empty()
-            && volume.letters.is_empty()
-            && volume.partition_number > 0;
-        if !volume_path(&volume.volume_path) && !hidden_efi {
+        // WinPE can assign an EFI letter without creating a volume GUID path.
+        // Native discovery verifies that DOS device's complete GPT extent and filesystem.
+        let efi_device = volume.partition_type.eq_ignore_ascii_case(EFI_SYSTEM)
+            && volume.partition_number > 0
+            && ((volume.volume_path.is_empty() && volume.letters.is_empty())
+                || matches!(volume.letters.as_slice(), [letter]
+                    if letter.is_ascii_uppercase() && *letter != 'X'
+                    && volume.volume_path == format!(r"\\.\{letter}:")));
+        if !volume_path(&volume.volume_path) && !efi_device {
             return Err("Windows returned an invalid volume path.".into());
         }
         for letter in &volume.letters {
@@ -391,6 +395,24 @@ mod tests {
         assert!(!volume_path(
             r"\\?\Volume{00000000-0000-0000-0000-000000000000}\"
         ));
+    }
+
+    #[test]
+    fn accepts_verified_efi_dos_device_but_not_aliases_or_other_partition_types() {
+        let (m, mut v) = fixture();
+        v[2].volume_path = r"\\.\Z:".into();
+        v[2].letters = vec!['Z'];
+        assert!(select(&m, 'D', &v).is_ok());
+        for path in [r"\\.\Y:", r"\\.\Z:\", r"\\.\z:", r"\\.\Z:extra"] {
+            v[2].volume_path = path.into();
+            assert!(select(&m, 'D', &v).is_err());
+        }
+        v[2].volume_path = r"\\.\Z:".into();
+        v[2].filesystem_id = "FFFF-FFFF".into();
+        assert!(select(&m, 'D', &v).is_err());
+        let (m, mut v) = fixture();
+        v[0].volume_path = r"\\.\C:".into();
+        assert!(select(&m, 'D', &v).is_err());
     }
 
     #[test]

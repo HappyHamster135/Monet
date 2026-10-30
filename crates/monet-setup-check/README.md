@@ -3,7 +3,7 @@
 This program verifies prepared partitions and, in its explicit `--deploy` mode,
 installs Windows inside WinPE. The integration is on the local follow-up branch;
 it is not in the prepared 0.9.5 candidate or installed on this laptop. Actual
-WinPE acceptance remains open in backlog item 095-52. It adds no daemon or
+Full installation acceptance remains open in backlog item 095-52. It adds no daemon or
 background work to the installed desktop.
 
 `monet-setup-check.exe preparation.json D` inspects native Windows storage and
@@ -23,6 +23,12 @@ structures. NTFS identity uses its full 64-bit filesystem serial; FAT32 uses the
 32-bit serial. A hidden shared EFI partition need not have a mounted volume:
 its recorded GPT entry and FAT32 boot sector are read directly, without mounting
 it. Only that recorded EFI partition is probed this way.
+
+In the native WinPE fixture, an EFI partition remains absent from volume-GUID
+enumeration even after DiskPart assigns it a drive letter. Discovery therefore
+also checks unlisted drive-letter device handles, read-only, against the complete
+GPT extent and filesystem identity. A conflicting observation stops selection;
+the existence of a drive letter alone never establishes a match.
 
 Relevant API definitions:
 
@@ -69,13 +75,31 @@ paths; actual temporary directories prove preservation and retry behavior. Pytho
 tests embed/extract a real disposable WIM and read checkpoints from a real NTFS
 file image. None of these tests formats a block device.
 
-Actual WinPE storage discovery, locked/offline disks, driver behavior and the
-complete Windows installation/retry round trip still need VM acceptance. The
-checker cannot prove that an offline, unenumerated clone is absent.
+The isolated WinPE 10.0.26100.1 fixture now passes 22 Windows tests, including
+native SDK layouts and Windows payload-sharing locks. Real SATA GPT/NTFS/FAT32
+queries accept the recorded partitions and reject a changed serial. Native DISM
+applies a tiny non-bootable test image; BCDBoot then deliberately fails. The
+helper keeps the `applied` checkpoint, preserves the original EFI fallback and
+user files, and retries without reapplying the image. The EFI letter discovery
+fix was found by this fixture, rather than by the simulated backend tests.
+
+Run [the repeatable fixture](../../tools/test-winpe.py) with an independently
+obtained amd64 ADK WinPE Media directory and winpe.wim, the release checker,
+Windows executables from `cargo test -p monet-setup-check --target
+x86_64-pc-windows-gnu --no-run`, and OVMF firmware. `--test-exe` is repeatable;
+`--work` must name a new directory. `--help` lists dependencies and arguments.
+Only ordinary files created inside that directory become VM disks. The VM has
+no network interface and shuts down automatically; logs and images remain there
+for inspection. Windows/ADK images are not bundled or downloaded by the tool.
+
+Locked/offline disks, alternate storage drivers and the complete Windows
+installation/retry round trip still need VM acceptance. The checker cannot prove
+that an offline, unenumerated clone is absent.
 
 A successful identity match alone is **not permission to erase a volume**.
 The program has no format operation. Do not infer ownership of legacy partitions
-that have no Linux preparation receipt. Physical power-loss durability, native
-Windows file-sharing/rename semantics, DISM retries, hidden-ESP assignment,
-BCDBoot's exact changes and restoration of Monet's boot path need actual WinPE
-VM tests before enabling this follow-up on a real install.
+that have no Linux preparation receipt. Physical power-loss durability,
+successful BCDBoot behavior and restoration of Monet's boot path across a full
+installation still need acceptance before enabling this follow-up on a real
+install. A passing deliberately failed boot configuration does not establish
+that Windows can boot, or that a complete installation survives power loss.

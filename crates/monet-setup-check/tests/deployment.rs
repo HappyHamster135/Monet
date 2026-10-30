@@ -134,6 +134,41 @@ impl Backend for Fake {
     }
 }
 
+#[cfg(windows)]
+#[test]
+fn verified_payloads_cannot_be_replaced_or_deleted_while_windows_is_applying() {
+    struct Locked(Fake);
+    impl Backend for Locked {
+        fn recheck(&mut self) -> Result<(), String> {
+            self.0.recheck()
+        }
+        fn apply(&mut self, setup: &Path, target: &Path) -> Result<(), String> {
+            let file = setup.join("sources/install.swm");
+            let write = fs::OpenOptions::new().write(true).open(&file).unwrap_err();
+            assert_eq!(write.raw_os_error(), Some(32)); // ERROR_SHARING_VIOLATION
+            assert_eq!(fs::remove_file(&file).unwrap_err().raw_os_error(), Some(32));
+            assert_eq!(
+                fs::rename(&file, setup.join("sources/replaced.swm"))
+                    .unwrap_err()
+                    .raw_os_error(),
+                Some(32)
+            );
+            self.0.apply(setup, target)
+        }
+        fn boot(&mut self, target: &Path) -> Result<(), String> {
+            self.0.boot(target)
+        }
+    }
+    let f = Fixture::new();
+    deployment::deploy(&f.data, &f.setup, &f.target, &mut Locked(Fake::default())).unwrap();
+    // Handles are released once the transaction returns, including for later cleanup.
+    fs::write(
+        f.setup.join("sources/install.swm"),
+        "unlocked after completion",
+    )
+    .unwrap();
+}
+
 #[test]
 fn fresh_install_verifies_copies_and_becomes_an_idempotent_completed_job() {
     let f = Fixture::new();
