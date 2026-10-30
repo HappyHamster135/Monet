@@ -50,12 +50,16 @@ if QT:
             super().__init__(); self.ticket = 0; self.reply = ('{"done":true}', 0); self.resets = 0
             self.commands = []; self.hold_status = False; self.pending_status = []; self.scale_ticket = None
             self.hold_history = False; self.pending_history = []
+            self.replies = {}; self.held_commands = set(); self.pending_commands = []
 
         @Slot("QVariantList", result=int)
         def run(self, command):
             self.ticket += 1
             ticket = self.ticket
             self.commands.append(list(command))
+            if command[1] in self.held_commands:
+                self.pending_commands.append(ticket)
+                return ticket
             if command[1] == "update-history" and self.hold_history:
                 self.pending_history.append(ticket)
                 return ticket
@@ -70,7 +74,8 @@ if QT:
                 out, code = self.reply
                 QTimer.singleShot(60, lambda: self.done.emit(ticket, out, code, ""))
             else:
-                QTimer.singleShot(1, lambda: self.done.emit(ticket, "{}", 0, ""))
+                out = self.replies.get(command[1], "{}")
+                QTimer.singleShot(1, lambda: self.done.emit(ticket, out, 0, ""))
             return ticket
 
 
@@ -192,6 +197,7 @@ class LookFeedback(unittest.TestCase):
             QMetaObject.invokeMethod(self.window, "loadUpdateHistory")
             QMetaObject.invokeMethod(self.window, "refresh")
         self.assertEqual(self.helper.commands.count(["helper", "update-history"]), 1)
+        self.assertNotIn(["helper", "status", "updates"], self.helper.commands)
         self.assertTrue(self.window.property("updateHistoryBusy"))
         ticket = self.helper.pending_history.pop()
         self.helper.done.emit(ticket, '{"ok":true,"items":[{"time":1793352638000,"result":"failed"}],"state":"idle"}', 0, "")
@@ -211,3 +217,40 @@ class LookFeedback(unittest.TestCase):
             self.helper.done.emit(self.helper.pending_history.pop(), response, code, "")
             QTest.qWait(20)
             self.assertEqual(self.window.property("updateHistory").toVariant()["ok"], expected)
+
+    def test_detail_reads_coalesce_until_the_previous_reply_finishes(self):
+        self.window.setProperty("page", "about"); QTest.qWait(20)
+        for method, command, response in (("loadAppsSound", "apps-sound", "[]"),
+                                           ("loadBackup", "backup", "{}"),
+                                           ("loadPhotoState", "paint-state", '{"state":"ready"}')):
+            with self.subTest(command=command):
+                self.helper.commands.clear(); self.helper.held_commands = {command}
+                for _ in range(8): QMetaObject.invokeMethod(self.window, method)
+                self.assertEqual(self.helper.commands, [["helper", command]])
+                self.helper.done.emit(self.helper.pending_commands.pop(), response, 0, "")
+                QTest.qWait(10)
+                QMetaObject.invokeMethod(self.window, method)
+                self.assertEqual(self.helper.commands, [["helper", command]] * 2)
+                self.helper.done.emit(self.helper.pending_commands.pop(), response, 0, "")
+                self.helper.held_commands.clear(); QTest.qWait(10)
+
+    def test_detail_timers_pause_when_minimized_and_refresh_on_restore(self):
+        self.helper.replies.update({"phones": "[]", "apps-sound": "[]",
+            "backup": '{"copying":true,"drives":[]}', "paint-state": '{"state":"painting"}',
+            "return-status": '{"items":[],"busy":false,"available":false}'})
+        for page, command in (("sound", "apps-sound"), ("phone", "phones"),
+                               ("windows", "return-status"), ("light", "paint-state"), ("backups", "backup")):
+            with self.subTest(page=page):
+                self.window.setProperty("page", page); QTest.qWait(100)
+                self.assertIn(["helper", command], self.helper.commands)
+                self.window.setVisibility(QWindow.Minimized); QTest.qWait(20)
+                self.helper.commands.clear()
+                QTest.qWait(4200)  # Beyond the longest detail refresh interval.
+                self.assertEqual(self.helper.commands, [])
+                self.window.showNormal(); QTest.qWait(100)
+                self.assertIn(["helper", command], self.helper.commands)
+        # A painting can continue in the background without polling its progress
+        # from unrelated Settings pages.
+        self.window.setProperty("page", "about"); QTest.qWait(50)
+        self.helper.commands.clear(); QTest.qWait(1600)
+        self.assertEqual(self.helper.commands, [])

@@ -49,7 +49,8 @@ Shared.MonetWindow {
     property string outputProblem: ""
     property bool statusBusy: false
     readonly property bool pollingActive: visible && visibility !== Window.Minimized
-    readonly property bool statusPage: ["light", "wifi", "bluetooth", "display", "sound", "power", "updates"].includes(page)
+    readonly property var statusPages: ["light", "wifi", "bluetooth", "display", "sound", "power"]
+    readonly property bool statusPage: statusPages.includes(page)
     onPollingActiveChanged: { if (pollingActive) refresh() }
     // Also acknowledge changes made in another display settings window.
     Screen.onDevicePixelRatioChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
@@ -229,6 +230,7 @@ Shared.MonetWindow {
     property var prefs: ({ hours: true, placard: true, glass: "clear", weather: true, dodge: true })
     // Your photo, painted (monet-paint): {state: "" | "painting" | "ready", percent, preview, failed}.
     property var photoInfo: ({ state: "" })
+    property bool photoLoading: false
     property var nets: []
     // Whether a look for networks has come back yet (until then: looking).
     property bool netsLoaded: false
@@ -236,6 +238,7 @@ Shared.MonetWindow {
     property var outputs: []
     // The apps playing sound, each with its own volume.
     property var appsSound: []
+    property bool appsSoundLoading: false
     // Battery care: whether the battery can stop at 80%, and where it stops.
     property var batteryCare: ({ supported: false, limit: 100 })
     // This PC's own Wi-Fi network for phones and tablets.
@@ -282,6 +285,7 @@ Shared.MonetWindow {
     property var screenInfo: []
     // Backups: earlier versions, and the copy on a drive.
     property var backup: ({ versions: true, drives: [], lookBack: {} })
+    property bool backupLoading: false
     // The earlier versions of one file, when Files asked for them.
     property var earlier: ({})
     // Games & Controllers: { controllers, overlay, pair, libraries }.
@@ -394,7 +398,8 @@ Shared.MonetWindow {
     Timer {
         interval: 1800
         repeat: true
-        running: sheet.visible && sheet.page === "windows"
+        triggeredOnStart: true
+        running: sheet.pollingActive && sheet.page === "windows"
         onTriggered: sheet.loadReturn()
     }
     // Updates: "", "checking", "none", "available", "installing", "done" or
@@ -498,7 +503,8 @@ Shared.MonetWindow {
     }
 
     function refresh() {
-        if (!pollingActive || !statusPage || statusBusy) return
+        // onPageChanged can run before the statusPage binding re-evaluates.
+        if (!pollingActive || !statusPages.includes(page) || statusBusy) return
         statusBusy = true
         const requestedPage = page
         ask("status " + requestedPage, out => {
@@ -512,7 +518,7 @@ Shared.MonetWindow {
         refresh()
         if (page === "light") {
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))
-            ask("paint-state", out => sheet.photoInfo = sheet.json(out, sheet.photoInfo))
+            loadPhotoState()
         } else if (page === "wifi") {
             ask("wifi-list", out => { sheet.nets = sheet.json(out, []); sheet.netsLoaded = true })
             ask("hotspot", out => sheet.hotspot = sheet.json(out, sheet.hotspot))
@@ -520,7 +526,7 @@ Shared.MonetWindow {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
             ask("outputs", out => sheet.outputs = sheet.json(out, []))
-            ask("apps-sound", out => { if (!sheet.dragging) sheet.appsSound = sheet.json(out, []) })
+            loadAppsSound()
         } else if (page === "about") {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
         } else if (page === "security") {
@@ -577,7 +583,7 @@ Shared.MonetWindow {
             ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))
             ask("shared-files", out => sheet.windowsFiles = sheet.json(out, {}))
         } else if (page === "backups") {
-            ask("backup", out => sheet.backup = sheet.json(out, sheet.backup))
+            loadBackup()
             ask("versions", out => sheet.earlier = sheet.json(out, {}))
         } else if (page === "phone") {
             phoneAsked = ""
@@ -606,6 +612,36 @@ Shared.MonetWindow {
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
         }
+    }
+
+    function loadAppsSound() {
+        if (appsSoundLoading || dragging) return
+        appsSoundLoading = true
+        ask("apps-sound", out => {
+            sheet.appsSoundLoading = false
+            if (!sheet.dragging) sheet.appsSound = sheet.json(out, sheet.appsSound)
+        })
+    }
+
+    function loadBackup() {
+        if (backupLoading) return
+        backupLoading = true
+        ask("backup", out => {
+            sheet.backupLoading = false
+            sheet.backup = sheet.json(out, sheet.backup)
+        })
+    }
+
+    function loadPhotoState() {
+        if (photoLoading) return
+        photoLoading = true
+        ask("paint-state", out => {
+            sheet.photoLoading = false
+            const was = sheet.photoInfo.state
+            sheet.photoInfo = sheet.json(out, sheet.photoInfo)
+            if (was === "painting" && sheet.photoInfo.state === "ready")
+                sheet.ask("prefs", more => sheet.prefs = sheet.json(more, sheet.prefs))
+        })
     }
 
     function flip(key, command) {
@@ -1988,7 +2024,7 @@ Shared.MonetWindow {
                 radius: 2
                 color: meter.tone.lily
                 NumberAnimation on x {
-                    running: meter.visible
+                    running: meter.visible && sheet.pollingActive
                     loops: Animation.Infinite
                     from: -stroke.width
                     to: meter.width
@@ -2659,13 +2695,9 @@ Shared.MonetWindow {
         Timer {
             interval: 1500
             repeat: true
-            running: sheet.visible && sheet.photoInfo.state === "painting"
-            onTriggered: sheet.ask("paint-state", out => {
-                const was = sheet.photoInfo.state
-                sheet.photoInfo = sheet.json(out, sheet.photoInfo)
-                if (was === "painting" && sheet.photoInfo.state === "ready")
-                    sheet.ask("prefs", more => sheet.prefs = sheet.json(more, sheet.prefs))
-            })
+            triggeredOnStart: true
+            running: sheet.pollingActive && sheet.page === "light" && sheet.photoInfo.state === "painting"
+            onTriggered: sheet.loadPhotoState()
         }
 
         Timer {
@@ -3486,7 +3518,8 @@ Shared.MonetWindow {
                 Timer {
                     interval: 4000
                     repeat: true
-                    running: sheet.page === "phone" && sheet.visible && sheet.phoneApp
+                    triggeredOnStart: true
+                    running: sheet.page === "phone" && sheet.pollingActive && sheet.phoneApp
                     onTriggered: sheet.loadPhones()
                 }
                 // A pairing declined (or never seen) on the phone: Pair again after a while.
@@ -3857,8 +3890,9 @@ Shared.MonetWindow {
                 Timer {
                     interval: 3000
                     repeat: true
-                    running: sheet.page === "sound" && sheet.visible
-                    onTriggered: sheet.ask("apps-sound", out => { if (!sheet.dragging) sheet.appsSound = sheet.json(out, sheet.appsSound) })
+                    triggeredOnStart: true
+                    running: sheet.page === "sound" && sheet.pollingActive
+                    onTriggered: sheet.loadAppsSound()
                 }
                 Card {
                     tone: look
@@ -3898,7 +3932,8 @@ Shared.MonetWindow {
                 spacing: 20
                 Timer {
                     interval: 1000
-                    running: true
+                    running: sheet.pollingActive
+                    triggeredOnStart: true
                     repeat: true
                     onTriggered: datetimeColumn.now = new Date()
                 }
@@ -5524,8 +5559,9 @@ Shared.MonetWindow {
                 Timer {
                     interval: 2000
                     repeat: true
-                    running: sheet.backup.copying === true
-                    onTriggered: sheet.ask("backup", out => sheet.backup = sheet.json(out, sheet.backup))
+                    triggeredOnStart: true
+                    running: sheet.pollingActive && sheet.backup.copying === true
+                    onTriggered: sheet.loadBackup()
                 }
                 PageTitle {
                     tone: look

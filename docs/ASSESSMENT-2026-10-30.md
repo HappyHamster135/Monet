@@ -100,3 +100,7 @@ This records the initial assessment before the owner requested 0.9.5 fixes. At t
 ## Automatic update visibility follow-up
 
 The installed Settings preview now shows recent automatic update outcomes without background polling or starting an update. It displays this laptop's recorded DNS failure at 10:30:38 CET, while preserving the distinction between failed, completed and skipped attempts. Native systemd/Qt tests and Mist/Smoke/narrow-window renders pass; details and local evidence are recorded under backlog 095-12. Only the user-level Settings helper and QML were replaced, with a reversible receipt. The proposed privileged retry service and Rust updater remain source-only, and real OS-update acceptance remains open.
+
+## Hidden Settings work follow-up
+
+The local preview now pauses all recurring detail reads when minimized, then refreshes on restore. Sound, Phone, the Windows return summary, photo/backup progress, Date & Time and busy animations are covered. Updates also stops polling unused battery state. All 37 focused Settings/return checks and three isolated Phone checks pass. A native Sound comparison dropped from two helpers/215.2 ms child CPU over 6.5 seconds minimized to no helpers/zero child CPU. This is a bounded helper measurement, not a whole-system memory or battery benchmark. See backlog 095-25 for evidence and the reversible installation receipt.
