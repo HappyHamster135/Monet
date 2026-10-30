@@ -20,6 +20,10 @@ it in root's kernel keyring for a couple of minutes), so the next ones don't ask
 """
 
 import ctypes
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import json
 import os
 import re
 import subprocess
@@ -28,6 +32,7 @@ import tempfile
 from pathlib import Path
 
 FIRST_KEY = Path("/boot/monet-firstboot.key")
+STATE = Path("/var/lib/monet/firstboot-seal.json")
 CMDLINE = Path("/proc/cmdline")
 RUNDIR = "/run"  # where a typed key waits, in memory, while the chip learns it
 PCRS = "7"  # Secure Boot's state: the same through kernel updates and trips to Windows
@@ -36,18 +41,26 @@ PCRS = "7"  # Secure Boot's state: the same through kernel updates and trips to 
 def run(*args, timeout=300):
     """Everything it said, or None when it failed."""
     try:
-        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run([str(a) for a in args], capture_output=True, text=True, timeout=timeout,
+                              stdin=subprocess.DEVNULL, env=dict(os.environ, LC_ALL="C"))
     except (OSError, subprocess.TimeoutExpired):
         return None
     return (done.stdout or "") + (done.stderr or "") if done.returncode == 0 else None
 
 
-def disk(cmdline=None):
+def disk(cmdline=None, preferred_uuid=""):
     """The encrypted disk (/dev/disk/by-uuid/...) and the rd.luks.key argument, from the kernel's
     command line: (None, "") when Monet isn't encrypted."""
     words = (CMDLINE.read_text() if cmdline is None else cmdline).split()
-    uuid = next((w.split("=", 1)[1] for w in words if w.startswith("rd.luks.uuid=")), "").removeprefix("luks-")
-    key = next((w for w in words if w.startswith("rd.luks.key=")), "")
+    uuids = [w.split("=", 1)[1].removeprefix("luks-") for w in words if w.startswith("rd.luks.uuid=")]
+    keys = [(w, re.fullmatch(r"rd\.luks\.key=([a-fA-F0-9-]+)=/monet-firstboot\.key:UUID=[a-fA-F0-9-]+", w))
+            for w in words if w.startswith("rd.luks.key=")]
+    keys = [(w, match[1]) for w, match in keys if match]
+    if len(keys) > 1:
+        raise ValueError("More than one Monet start-up key is configured")
+    key, uuid = keys[0] if keys else ("", preferred_uuid or (uuids[0] if uuids else ""))
+    if uuid and (uuid not in uuids or not re.fullmatch(r"[a-fA-F0-9-]+", uuid)):
+        raise ValueError("The encrypted disk does not match Monet's start-up key")
     return (Path("/dev/disk/by-uuid") / uuid if uuid else None), key
 
 
@@ -64,32 +77,194 @@ def key_slot(said):
 
 
 def wipe(path):
-    """A key file overwritten, then deleted."""
-    try:
-        size = path.stat().st_size
-        with open(path, "r+b") as f:
-            f.write(b"\0" * size)
+    """Best-effort media erasure is not enough: its LUKS slot must already be revoked."""
+    if path.exists():
+        with path.open("r+b") as f:
+            f.write(b"\0" * path.stat().st_size)
             f.flush()
             os.fsync(f.fileno())
-    except OSError:
-        pass
-    path.unlink(missing_ok=True)
+        path.unlink()
+        sync_dir(path.parent)
+
+
+def sync_dir(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def required(*args, timeout=300):
+    out = run(*args, timeout=timeout)
+    if out is None:
+        raise RuntimeError(f"{args[0]} {args[1]} failed; cleanup remains pending")
+    return out
+
+
+def metadata(device):
+    data = json.loads(required("cryptsetup", "luksDump", "--dump-json-metadata", device))
+    if not isinstance(data, dict) or not all(isinstance(data.get(key), dict) for key in ("keyslots", "tokens", "digests")):
+        raise ValueError("The disk did not report valid LUKS2 metadata")
+    if any(not isinstance(value, dict) for group in ("keyslots", "tokens", "digests") for value in data[group].values()):
+        raise ValueError("The disk reported malformed LUKS2 metadata")
+    return data
+
+
+def fingerprint(slot):
+    return hashlib.sha256(json.dumps(slot, sort_keys=True).encode()).hexdigest()
+
+
+def check_slots(data, state):
+    """Never retire a reused slot, a token-owned slot or the last independent recovery slot."""
+    slot = state["slot"]
+    current = data["keyslots"].get(slot)
+    if current is not None and fingerprint(current) != state["fingerprint"]:
+        raise ValueError("The start-up key slot changed; refusing to remove it")
+    owned = {s for token in data["tokens"].values() for s in token.get("keyslots", [])}
+    if slot in owned:
+        raise ValueError("The start-up key slot belongs to a token; refusing to remove it")
+    bound = {s for digest in data["digests"].values() if digest.get("segments") for s in digest.get("keyslots", [])}
+    recovery = {s for token in data["tokens"].values() if token.get("type") == "systemd-recovery"
+                for s in token.get("keyslots", [])}
+    fallback = ((set(data["keyslots"]) - owned | recovery) & bound) - {slot}
+    if not fallback:
+        raise ValueError("No independent recovery/passphrase slot remains; keeping the start-up key")
+
+
+def tpm_unlocks(device, data):
+    for ident, token in data["tokens"].items():
+        if token.get("type") == "systemd-tpm2" and token.get("keyslots"):
+            if run("cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", ident,
+                   device, timeout=60) is not None:
+                return True
+    return False
+
+
+def boot_read_only():
+    data = json.loads(required("findmnt", "--json", "--mountpoint", FIRST_KEY.parent,
+                               "--output", "TARGET,VFS-OPTIONS"))
+    mounts = data.get("filesystems", []) if isinstance(data, dict) else []
+    if (not isinstance(mounts, list) or len(mounts) != 1 or not isinstance(mounts[0], dict)
+            or mounts[0].get("target") != str(FIRST_KEY.parent)
+            or not isinstance(mounts[0].get("vfs-options"), str)):
+        raise ValueError("The boot partition is not a separate mounted filesystem")
+    options = mounts[0].get("vfs-options", "").split(",")
+    if ("ro" in options) == ("rw" in options):
+        raise ValueError("Could not determine whether the boot partition is writable")
+    return "ro" in options
+
+
+@contextmanager
+def writable_boot(restore_read_only):
+    # The receipt remembers the original setting even after a power loss while rw.
+    restore_read_only = restore_read_only or boot_read_only()
+    try:
+        if boot_read_only():
+            required("mount", "-o", "remount,rw", FIRST_KEY.parent)
+        if boot_read_only():
+            raise RuntimeError("The boot partition is still read-only")
+        with tempfile.TemporaryFile(dir=FIRST_KEY.parent) as probe:
+            probe.write(b"Monet boot cleanup\n")
+            probe.flush()
+            os.fsync(probe.fileno())
+        yield
+    finally:
+        if restore_read_only:
+            required("mount", "-o", "remount,ro", FIRST_KEY.parent)
+            if not boot_read_only():
+                raise RuntimeError("Could not restore the boot partition to read-only; cleanup remains pending")
+
+
+def save_state(state):
+    STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    sync_dir(STATE.parent.parent)
+    fd, name = tempfile.mkstemp(dir=STATE.parent, prefix=".firstboot-seal-")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(state, f, sort_keys=True)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(name, STATE)
+        sync_dir(STATE.parent)
+    finally:
+        Path(name).unlink(missing_ok=True)
+
+
+def finish_first_start():
+    state = json.loads(STATE.read_text()) if STATE.exists() else None
+    if STATE.exists() and (not isinstance(state, dict) or not isinstance(state.get("uuid"), str)):
+        raise ValueError("The pending boot cleanup record is invalid")
+    device, karg = disk(preferred_uuid=state.get("uuid", "") if state else "")
+    if not device:
+        if STATE.exists() or FIRST_KEY.exists():
+            raise ValueError("Cannot identify the encrypted disk; keeping pending cleanup")
+        return
+    if not STATE.exists() and not FIRST_KEY.exists():
+        return
+    if FIRST_KEY.is_symlink():
+        raise ValueError("The start-up key is a symbolic link; refusing to change it")
+    uuid = required("cryptsetup", "luksUUID", device).strip()
+    if uuid != device.name:
+        raise ValueError("The encrypted disk UUID changed; keeping pending cleanup")
+    data = metadata(device)
+    if STATE.exists():
+        if (state.get("version") != 1 or state.get("uuid") != uuid
+                or not isinstance(state.get("slot"), str) or not state["slot"].isdigit()
+                or not isinstance(state.get("fingerprint"), str)
+                or not re.fullmatch("[a-f0-9]{64}", state["fingerprint"])
+                or not isinstance(state.get("boot_read_only"), bool)
+                or not isinstance(state.get("karg"), str)
+                or not re.fullmatch(r"rd\.luks\.key=" + re.escape(uuid)
+                                    + r"=/monet-firstboot\.key:UUID=[a-fA-F0-9-]+", state.get("karg", ""))):
+            raise ValueError("The pending boot cleanup record does not match this disk")
+    else:
+        if not karg or not FIRST_KEY.is_file():
+            raise ValueError("Cannot identify Monet's start-up key safely")
+        slot = key_slot(run("cryptsetup", "open", "--test-passphrase", "--disable-external-tokens", "-v",
+                            "--key-file", FIRST_KEY, device))
+        if slot is None or str(slot) not in data["keyslots"]:
+            raise ValueError("The start-up key no longer unlocks a known slot; legacy cleanup needs recovery verification")
+        state = dict(version=1, uuid=uuid, karg=karg, slot=str(slot),
+                     fingerprint=fingerprint(data["keyslots"][str(slot)]), boot_read_only=boot_read_only())
+        check_slots(data, state)
+        save_state(state)
+    with writable_boot(state["boot_read_only"]):
+        check_slots(data, state)
+        if not tpm_unlocks(device, data):
+            if state["slot"] not in data["keyslots"] or not FIRST_KEY.is_file():
+                raise RuntimeError("The TPM cannot unlock the disk; recovery verification is required")
+            # Preserve previous TPM enrollments until the new one is actually proven usable.
+            required("systemd-cryptenroll", f"--unlock-key-file={FIRST_KEY}", "--tpm2-device=auto",
+                     f"--tpm2-pcrs={PCRS}", device)
+            data = metadata(device)
+            if not tpm_unlocks(device, data):
+                raise RuntimeError("The TPM enrollment could not unlock the disk; keeping the start-up key")
+        required("rpm-ostree", "kargs", f"--delete-if-present={state['karg']}", timeout=900)
+        if state["karg"] in required("rpm-ostree", "kargs").split():
+            raise RuntimeError("The start-up key is still in the next boot's arguments")
+        data = metadata(device)
+        check_slots(data, state)
+        if state["slot"] in data["keyslots"]:
+            if not tpm_unlocks(device, data):
+                raise RuntimeError("The TPM stopped unlocking the disk; keeping the start-up key")
+            required("cryptsetup", "luksKillSlot", "-q", device, state["slot"])
+            if state["slot"] in metadata(device)["keyslots"]:
+                raise RuntimeError("The start-up key slot was not retired; cleanup remains pending")
+        wipe(FIRST_KEY)
+    STATE.unlink()
+    sync_dir(STATE.parent)
 
 
 def first_start():
-    device, karg = disk()
-    if not device or not FIRST_KEY.exists():
-        return 0
-    if not enroll(device, FIRST_KEY):
-        print("The security chip couldn't learn the disk's key; trying again at the next start", file=sys.stderr)
+    try:
+        # One receipt and one cleanup at a time. No secret key material is persisted here.
+        with open(Path(RUNDIR) / "monet-seal.lock", "a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            finish_first_start()
+    except (OSError, ValueError, RuntimeError) as error:
+        print(f"Encrypted boot cleanup: {error}. Will retry at the next start.", file=sys.stderr)
         return 1
-    # Then the start-up key goes: its slot, the file, and the command line's mention of it.
-    slot = key_slot(run("cryptsetup", "open", "--test-passphrase", "-v", "--key-file", FIRST_KEY, device))
-    if slot is not None:
-        run("cryptsetup", "luksKillSlot", "-q", device, slot)
-    wipe(FIRST_KEY)
-    if karg:
-        run("rpm-ostree", "kargs", f"--delete-if-present={karg}", timeout=900)
     return 0
 
 

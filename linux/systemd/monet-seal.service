@@ -1,6 +1,7 @@
 [Unit]
 Description=Monet: the encrypted disk's key goes into the PC's security chip (at the first start)
-ConditionPathExists=/boot/monet-firstboot.key
+ConditionPathExists=|/boot/monet-firstboot.key
+ConditionPathExists=|/var/lib/monet/firstboot-seal.json
 After=local-fs.target
 RequiresMountsFor=/boot
 

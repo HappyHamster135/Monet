@@ -3,6 +3,7 @@ Description=Monet: after a start that needed the recovery key, the PC's security
 # Only an encrypted Monet, past its first start.
 ConditionKernelCommandLine=rd.luks.uuid
 ConditionPathExists=!/boot/monet-firstboot.key
+ConditionPathExists=!/var/lib/monet/firstboot-seal.json
 After=local-fs.target cryptsetup.target monet-seal.service
 RequiresMountsFor=/boot
 

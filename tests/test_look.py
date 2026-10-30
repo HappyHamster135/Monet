@@ -4410,36 +4410,17 @@ class EncryptedDisk(unittest.TestCase):
         self.assertEqual(self.seal.key_slot("No usable token is available.\nKey slot 2 unlocked.\n"), 2)
         self.assertIsNone(self.seal.key_slot(None))
 
-    def test_the_first_start_hands_the_key_to_the_tpm(self):
-        from contextlib import redirect_stderr
-        import io
+    def test_first_start_leaves_an_unencrypted_install_alone(self):
         with tempfile_dir() as tmp:
             key = Path(tmp) / "monet-firstboot.key"
-            key.write_bytes(b"k" * 64)
             self.seal.FIRST_KEY, self.seal.CMDLINE = key, Path(tmp) / "cmdline"
-            self.seal.CMDLINE.write_text(self.CMDLINE)
+            self.seal.STATE, self.seal.RUNDIR = Path(tmp) / "state.json", tmp
+            self.seal.CMDLINE.write_text("root=UUID=cafe rw")
             ran = []
-
-            def run(*args, timeout=300):
-                ran.append([str(a) for a in args])
-                return "Key slot 0 unlocked.\n" if args[0] == "cryptsetup" else ""
-
-            self.seal.run = run
+            self.seal.run = lambda *args, **kwargs: ran.append(args)
             self.assertEqual(self.seal.first_start(), 0)
-            device = str(Path("/dev/disk/by-uuid/ab12"))
-            self.assertEqual(ran[0], ["systemd-cryptenroll", f"--unlock-key-file={key}", "--wipe-slot=tpm2",
-                                      "--tpm2-device=auto", "--tpm2-pcrs=7", device])
-            self.assertIn(["cryptsetup", "luksKillSlot", "-q", device, "0"], ran)
-            self.assertIn(["rpm-ostree", "kargs", "--delete-if-present=rd.luks.key=ab12=/monet-firstboot.key:UUID=cd34"], ran)
+            self.assertEqual(ran, [])
             self.assertFalse(key.exists())
-            # When the chip can't learn it, the start-up key stays for the next start.
-            key.write_bytes(b"k")
-            ran.clear()
-            self.seal.run = lambda *args, timeout=300: ran.append(args) and None
-            with redirect_stderr(io.StringIO()):
-                self.assertEqual(self.seal.first_start(), 1)
-            self.assertTrue(key.exists())
-            self.assertEqual(len(ran), 1)
 
     def test_after_the_recovery_key_the_tpm_learns_the_pc_again(self):
         from contextlib import redirect_stdout
@@ -4465,10 +4446,11 @@ class EncryptedDisk(unittest.TestCase):
 
     def test_the_image_unlocks_by_itself(self):
         first = (ROOT / "linux/systemd/monet-seal.service").read_text()
-        self.assertIn("ConditionPathExists=/boot/monet-firstboot.key", first)
+        self.assertIn("ConditionPathExists=|/boot/monet-firstboot.key", first)
+        self.assertIn("ConditionPathExists=|/var/lib/monet/firstboot-seal.json", first)
         again = (ROOT / "linux/systemd/monet-seal-relearn.service").read_text()
         for line in ("ConditionKernelCommandLine=rd.luks.uuid", "ConditionPathExists=!/boot/monet-firstboot.key",
-                     "KeyringMode=shared"):
+                     "ConditionPathExists=!/var/lib/monet/firstboot-seal.json", "KeyringMode=shared"):
             self.assertIn(line, again)
         image = (ROOT / "image/Containerfile").read_text()
         self.assertIn("--add tpm2-tss", image)
