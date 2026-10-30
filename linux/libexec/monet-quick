@@ -817,17 +817,24 @@ def went_back(path=WENT_BACK):
 
 def update_check():
     """What `monet update --check --json` found, plus whether it worked."""
-    result = subprocess.run([f"{BINDIR}/monet", "update", "--check", "--json"],
-                            capture_output=True, text=True, timeout=300)
-    for line in reversed(result.stdout.splitlines()):
-        try:
-            found = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(found, dict):
-            return dict(found, ok=True)
+    failure = tr("Monet couldn't look for updates. Check your internet connection and try again.")
+    try:
+        result = subprocess.run([f"{BINDIR}/monet", "update", "--check", "--json"],
+                                capture_output=True, text=True, timeout=300)
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "message": failure}
+    if result.returncode == 0:
+        for line in reversed(result.stdout.splitlines()):
+            try:
+                found = json.loads(line)
+            except ValueError:
+                continue
+            if (isinstance(found, dict) and isinstance(found.get("system"), bool)
+                    and type(found.get("apps")) is int and found["apps"] >= 0
+                    and (found.get("version") is None or isinstance(found["version"], str))):
+                return dict(found, ok=True)
     message = (result.stderr or result.stdout).strip().splitlines()
-    return {"ok": False, "message": message[-1] if message else ""}
+    return {"ok": False, "message": message[-1] if message and result.returncode != 0 else failure}
 
 
 # Firmware: the PC's own parts (its UEFI, disks, docks), from LVFS through

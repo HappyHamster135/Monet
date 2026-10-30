@@ -982,11 +982,15 @@ fn check_for_updates() -> Res<UpdateCheck> {
         }
     };
     let apps = if has("flatpak") {
-        Command::new("flatpak")
+        let failed = "App updates couldn't be checked. Check your internet connection and try again.";
+        let out = Command::new("flatpak")
             .args(["remote-ls", "--updates", "--columns=application"])
             .output()
-            .map(|o| count_app_updates(&String::from_utf8_lossy(&o.stdout)))
-            .unwrap_or(0)
+            .map_err(|_| failed.to_string())?;
+        if !out.status.success() {
+            return Err(failed.into());
+        }
+        count_app_updates(&String::from_utf8_lossy(&out.stdout))
     } else {
         0
     };
@@ -1069,7 +1073,14 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
     if has("flatpak") {
         println!("Updating your apps…");
         // Apps that fail to update keep working as they are.
-        let _ = Command::new("flatpak").args(["update", "-y", "--noninteractive"]).status();
+        let failed = "Some apps couldn't update. They still work as before. Restart to apply any downloaded system update, then try again.";
+        let status = Command::new("flatpak")
+            .args(["update", "-y", "--noninteractive"])
+            .status()
+            .map_err(|_| failed.to_string())?;
+        if !status.success() {
+            return Err(failed.into());
+        }
         // And what no app uses anymore (old runtimes) makes room.
         let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y", "--noninteractive"]).status();
     }

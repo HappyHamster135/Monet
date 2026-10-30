@@ -4,15 +4,22 @@ Wants=network-online.target
 After=network-online.target
 # Settings → Updates → Update automatically, off.
 ConditionPathExists=!/var/lib/monet/auto-updates-off
+# A transient network failure gets two retries, without looping all day.
+StartLimitIntervalSec=6h
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
-# Not over a metered connection (a phone's hotspot): NetworkManager's Metered, 1 yes or 3 guessed yes.
+# Check again before every retry. Only known/guessed unmetered networks (2/4);
+# unavailable or unknown state skips this automatic run. Manual checks still work.
+# Automatic restarts do not re-evaluate the unit's initial ConditionPathExists.
 # A day skipped is tried again at the next. ($$ is systemd's way to write $.)
-ExecCondition=/bin/sh -c 'case "$$(busctl get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null)" in "u 1"|"u 3") exit 1;; esac'
+ExecCondition=/bin/sh -c '[ ! -e /var/lib/monet/auto-updates-off ] || exit 1; metered="$$(busctl get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null)" || exit 1; case "$$metered" in "u 2"|"u 4") exit 0;; *) exit 1;; esac'
 # The new Monet is put in place for the next restart; nothing changes under you.
 # Not an update that already failed to start on this PC (monet-boot): the next one, then.
 ExecCondition=@LIBEXECDIR@/monet-boot may-update
 ExecStart=@BINDIR@/monet helper update
+Restart=on-failure
+RestartSec=30min
 Nice=19
 IOSchedulingClass=idle
