@@ -27,7 +27,7 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker system prune -af >/dev/null
           df -h /
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
@@ -51,11 +51,12 @@ jobs:
         run: |
           sudo podman run --rm --entrypoint sh "$IMAGE:latest" -c 'cd / && tar -cf - $(ls -d usr/lib/ostree/prepare-root.conf etc/ostree/prepare-root.conf usr/lib/bootc/install usr/lib/bootc/bound-images.d 2>/dev/null)' > bootc-settings.tar
           tar -tvf bootc-settings.tar
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         continue-on-error: true
         with:
           name: bootc-settings
           path: bootc-settings.tar
+          if-no-files-found: error
       - name: Push
         env:
           IMAGE: ${{ steps.build.outputs.image }}
@@ -74,7 +75,7 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker system prune -af >/dev/null
           df -h /
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
@@ -96,7 +97,7 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
@@ -193,10 +194,11 @@ jobs:
           uri, lang = pw.windows_download_link("English")
           print("Microsoft offered:", lang, uri.split("?")[0])
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-iso
           path: Monet-*-Installer.iso
+          if-no-files-found: error
           compression-level: 0
 
   # Monet Setup: Monet's own installer, on a small live Fedora (image/setup).
@@ -207,11 +209,11 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bootc-settings
       - name: Build Monet Setup's USB stick
@@ -223,10 +225,11 @@ jobs:
           docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA" \
             image/setup/build.sh "$VERSION" "$IMAGE:latest" "/work/Monet-$VERSION-Setup.iso"
           sudo chown "$(id -u)" Monet-*-Setup.iso
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: setup-candidate
           path: Monet-*-Setup.iso
+          if-no-files-found: error
           compression-level: 0
 
   setup-vm:
@@ -234,11 +237,11 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: setup-candidate
       - name: A virtual machine with Secure Boot
@@ -268,13 +271,14 @@ jobs:
           # The whole serial log (every start's journal, Setup's install log among them) with the screenshots.
           cp vm-work/serial.log screens/ || :
           tail -c 20000 vm-work/serial.log || :
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: setup-screens
           path: screens
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-setup
           path: Monet-*-Setup.iso
+          if-no-files-found: error
           compression-level: 0
