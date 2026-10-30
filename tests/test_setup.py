@@ -344,9 +344,12 @@ class InstallerCommands(unittest.TestCase):
                         install.run(sys.executable, "-c", script, timeout=0.5, quiet=True)
                     self.assertIn("last activity", install.LOG.read_text())
                 status = Path(f"/proc/{int(pid.read_text())}/stat")
-                if status.exists():
-                    self.assertEqual(status.read_text().split(")", 1)[1].split()[0], "Z",
-                                     "the timed-out command's child is still running")
+                try:
+                    state = status.read_text().split(")", 1)[1].split()[0]
+                except FileNotFoundError:
+                    pass  # The child was already reaped between timeout and inspection.
+                else:
+                    self.assertEqual(state, "Z", "the timed-out command's child is still running")
             finally:
                 if pid.exists():
                     try:

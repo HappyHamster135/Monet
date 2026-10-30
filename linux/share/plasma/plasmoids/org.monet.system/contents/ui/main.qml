@@ -25,11 +25,15 @@ PlasmoidItem {
     }
 
     function ready(sensor) {
-        return sensor.status === Sensors.Sensor.Ready;
+        return sensor.status === Sensors.Sensor.Ready && typeof sensor.value === "number"
+            && Number.isFinite(sensor.value);
     }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "utilities-system-monitor"
+    Plasmoid.contextualActions: [TaskManagerAction { id: taskManager }]
+    toolTipMainText: i18nd("monet", "System")
+    toolTipSubText: i18nd("monet", "Double-click to open Task Manager")
     preferredRepresentation: fullRepresentation
 
     component Reading: Sensors.Sensor {
@@ -55,6 +59,7 @@ PlasmoidItem {
     component Dial: ColumnLayout {
         id: dial
         property real value: 0
+        property bool available: false
         property string label
         property string detail
         property color ink
@@ -102,7 +107,8 @@ PlasmoidItem {
                 horizontalAlignment: Text.AlignLeft
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 21
-                text: i18nc("a dial's reading, in percent", "%1%", Math.round(dial.value))
+                text: dial.available ? i18nc("a dial's reading, in percent", "%1%", Math.round(dial.value)) : "—"
+                Accessible.name: dial.available ? text : i18nd("monet", "Not reported")
                 color: dial.ink
                 font.family: "Fraunces 72pt SuperSoft"
                 font.pixelSize: 17
@@ -139,6 +145,12 @@ PlasmoidItem {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 19
         Layout.preferredHeight: Kirigami.Units.gridUnit * 9
 
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            enabled: !Plasmoid.containment || !Plasmoid.containment.corona.editMode
+            onDoubleTapped: taskManager.trigger()
+        }
+
         Glass {
             id: card
             anchors.fill: parent
@@ -162,6 +174,7 @@ PlasmoidItem {
                     Dial {
                         width: dials.width / dials.count
                         value: root.ready(cpu) ? cpu.value : 0
+                        available: root.ready(cpu)
                         label: i18nc("the computer's main chip", "Processor")
                         detail: root.ready(cpuHeat) && cpuHeat.value > 0 ? root.degrees(cpuHeat.value) : ""
                         ink: card.ink
@@ -172,6 +185,7 @@ PlasmoidItem {
                         width: dials.width / dials.count
                         visible: root.ready(root.gpu)
                         value: visible ? root.gpu.value : 0
+                        available: root.ready(root.gpu)
                         label: i18nc("the computer's graphics chip", "Graphics")
                         detail: root.ready(root.gpuHeat) && root.gpuHeat.value > 0 ? root.degrees(root.gpuHeat.value) : ""
                         ink: card.ink
@@ -181,6 +195,7 @@ PlasmoidItem {
                     Dial {
                         width: dials.width / dials.count
                         value: root.ready(memory) ? memory.value : 0
+                        available: root.ready(memory)
                         label: i18nc("the computer's working memory (RAM)", "Memory")
                         detail: root.ready(memoryUsed) ? memoryUsed.formattedValue : ""
                         ink: card.ink

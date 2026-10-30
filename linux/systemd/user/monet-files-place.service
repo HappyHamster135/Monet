@@ -1,0 +1,10 @@
+[Unit]
+Description=Monet: keep the system layer out of Files devices
+ConditionUser=!guest
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+# Coalesce a burst of bookmark writes before reading the final file.
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=@LIBEXECDIR@/monet-quick files-place

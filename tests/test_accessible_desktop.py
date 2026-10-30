@@ -225,6 +225,129 @@ Window { width:700; height:450; visible:true
             self.assertFalse(errors,'\n'.join(errors))
             window.close(); engine.deleteLater(); QTest.qWait(1)
 
+    def test_glass_flags_follow_same_count_renames_and_disable(self):
+        errors=[]
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)/'flags'; folder.mkdir()
+            path=Path(tmp)/'flags.qml'
+            path.write_text('import QtQuick\nimport "'+QUrl.fromLocalFile(str(WIDGETS)).toString()+'"\n'
+                'Item { GlassSettings { objectName:"flags"; directory:Qt.resolvedUrl("flags") } }')
+            engine=QQmlApplicationEngine()
+            engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+            engine.load(QUrl.fromLocalFile(str(path))); self.assertTrue(engine.rootObjects(),errors)
+            root=engine.rootObjects()[0]; flags=root.findChild(QObject,'flags')
+            def wait_for(key,value):
+                for _ in range(100):
+                    if flags.property(key)==value: break
+                    QTest.qWait(20)
+                self.assertEqual(flags.property(key),value)
+            QTest.qWait(100)
+            (folder/'glass-frosted').touch(); wait_for('level',1)
+            (folder/'glass-frosted').rename(folder/'glass-matte'); wait_for('level',2)
+            (folder/'glass-lite').touch(); wait_for('lite',True)
+            (folder/'glass-off').touch(); wait_for('off',True)
+            (folder/'glass-matte').unlink(); wait_for('level',0)
+            flags.setProperty('enabled',False); wait_for('off',False); wait_for('lite',False)
+            flags.setProperty('enabled',True); wait_for('off',True); wait_for('lite',True)
+            self.assertFalse(errors,'\n'.join(errors))
+            engine.deleteLater(); QTest.qWait(20)
+
+    def test_wallpaper_keeps_one_idle_image_and_waits_for_transition_loading(self):
+        from PySide6.QtGui import QImage, QColor
+        errors=[]
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            for name,color in [('night','black'),('dawn','red'),('day','blue'),('dusk','green')]:
+                picture=QImage(128,80,QImage.Format_RGB32); picture.fill(QColor(color))
+                self.assertTrue(picture.save(str(folder/(name+'.jpg'))))
+            wallpaper=(ROOT/'linux/share/plasma/wallpapers/org.monet.hours/contents/ui/main.qml').read_text()
+            # Exercise the shipped transition functions and real asynchronous
+            # Image items. The containment, weather and clock are unrelated.
+            body=wallpaper[wallpaper.index('    function source(i)'):wallpaper.index('    // Each minute;')]
+            body=body.replace('duration: 1500','duration: 30')
+            body=body.replace('property Image below:', 'property QtObject below:').replace('property Image above:', 'property QtObject above:')
+            body=body.replace('id: first', 'id: first; property int loadStatus: status').replace('id: second', 'id: second; property int loadStatus: status')
+            path=folder/'paintings.qml'
+            path.write_text('''import QtQuick
+import QtQuick.Window
+Window { id:root; width:320; height:200; visible:true
+ property string folder:Qt.resolvedUrl(".").toString()
+ property var hours:[{name:"night"},{name:"dawn"},{name:"day"},{name:"dusk"}]
+ property int fromLight:0; property int toLight:1; property real blend:0
+ function apply() { show(fromLight,toLight,blend) }
+'''+body+'}')
+            engine=QQmlApplicationEngine()
+            engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+            engine.load(QUrl.fromLocalFile(str(path))); self.assertTrue(engine.rootObjects(),errors)
+            root=engine.rootObjects()[0]
+            def show(start,end,blend):
+                root.setProperty('fromLight',start); root.setProperty('toLight',end); root.setProperty('blend',blend)
+                QMetaObject.invokeMethod(root,'apply')
+            def ready(item):
+                for _ in range(100):
+                    if item.property('loadStatus')==1: break
+                    QTest.qWait(10)
+                self.assertEqual(item.property('loadStatus'),1)
+                QTest.qWait(60)
+            show(0,1,0)
+            below=root.property('below'); ready(below)
+            self.assertTrue(root.property('above').property('source').isEmpty())
+            show(0,1,.5)
+            above=root.property('above'); ready(above)
+            self.assertAlmostEqual(above.property('opacity'),.5)
+            self.assertEqual(root.property('below'),below)
+            show(1,2,0)
+            self.assertEqual(root.property('below'),above)  # Reuse the loaded painting.
+            self.assertTrue(root.property('above').property('source').isEmpty())
+            show(1,1,0)  # Pinned light must not allocate a duplicate image.
+            self.assertTrue(root.property('above').property('source').isEmpty())
+            show(3,3,0)  # Manual jump waits for the new light and then fades.
+            jumping=root.property('above'); ready(jumping)
+            self.assertAlmostEqual(jumping.property('opacity'),1)
+            show(3,3,0)
+            self.assertEqual(root.property('below'),jumping)
+            self.assertTrue(root.property('above').property('source').isEmpty())
+            self.assertFalse(errors,'\n'.join(errors))
+            root.close(); engine.deleteLater(); QTest.qWait(20)
+
+    def test_layout_guard_discovers_reparenting_and_has_no_idle_timers(self):
+        errors=[]
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'events.qml'
+            path.write_text('''import QtQuick
+import QtQuick.Layouts
+import "'''+QUrl.fromLocalFile(str(WIDGETS)).toString()+'''"
+Item { width:1920; height:1080
+ Item { id:board; objectName:"board"; width:1920; height:1004
+  property QtObject containmentItem: QtObject { property real height:1080 }
+  property bool editMode:false; property bool relayoutLock:false; property int cellWidth:16
+  property string configKey:"1920x1080"
+  function releaseSpace(item){} function save(){} function positionItem(item){}
+ }
+ Item { id:widget; x:48; y:48; width:224; height:224
+  property var applet:({plasmoid:{id:1,pluginName:"org.monet.notes",containment:{id:1}}})
+  Layout.minimumWidth:100; Layout.minimumHeight:100
+  LayoutGuard { objectName:"guard"; storageFile:Qt.resolvedUrl("layouts.conf") }
+ }
+ function attach() { widget.parent=board }
+ function move() { widget.x=160; widget.width=352 }
+}''')
+            engine=QQmlApplicationEngine()
+            engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+            engine.load(QUrl.fromLocalFile(str(path))); self.assertTrue(engine.rootObjects(),errors)
+            root=engine.rootObjects()[0]; guard=root.findChild(QObject,'guard')
+            def idle():
+                self.assertFalse([obj for obj in guard.findChildren(QObject)
+                    if 'Timer' in obj.metaObject().className() and obj.property('running')])
+            QTest.qWait(100); idle()  # No desktop container: no retry polling.
+            QMetaObject.invokeMethod(root,'attach'); QTest.qWait(1500); idle()
+            self.assertTrue(guard.property('initialized'))
+            QMetaObject.invokeMethod(root,'move'); QTest.qWait(1200); idle()
+            item=guard.property('last').toVariant()['items'][0]
+            self.assertEqual((item['x'],item['width']),(160,352))
+            self.assertFalse(errors,'\n'.join(errors))
+            engine.deleteLater(); QTest.qWait(20)
+
     def test_layout_guard_keeps_edits_on_done_and_after_restart(self):
         errors=[]
         with tempfile.TemporaryDirectory() as tmp:

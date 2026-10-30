@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.hardware",
+        "Name": "Hardware readings",
+        "Description": "Temperatures, video memory and fan speeds, with unavailable readings clearly marked",
+        "Icon": "utilities-system-monitor",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.5"
+    }
+}

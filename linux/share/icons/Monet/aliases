@@ -165,6 +165,9 @@ apps/scalable/libreoffice-impress.svg org.libreoffice.LibreOffice.impress.svg
 apps/scalable/thunderbird.svg org.mozilla.Thunderbird.svg
 apps/scalable/google-chrome.svg com.google.Chrome.svg
 apps/scalable/chrome.svg com.google.Chrome.svg
+apps/scalable/google-chrome-stable.svg com.google.Chrome.svg
+apps/scalable/google-chrome-beta.svg com.google.Chrome.svg
+apps/scalable/google-chrome-unstable.svg com.google.Chrome.svg
 apps/scalable/vlc.svg org.videolan.VLC.svg
 apps/scalable/telegram.svg org.telegram.desktop.svg
 apps/scalable/telegram-desktop.svg org.telegram.desktop.svg
@@ -181,5 +184,8 @@ apps/scalable/code.svg com.visualstudio.code.svg
 apps/scalable/vscode.svg com.visualstudio.code.svg
 apps/scalable/visual-studio-code.svg com.visualstudio.code.svg
 apps/scalable/obsidian.svg md.obsidian.Obsidian.svg
+apps/scalable/ChatGPT.svg chatgpt.svg
+apps/scalable/inkscape.svg org.inkscape.Inkscape.svg
+apps/scalable/keepassxc.svg org.keepassxc.KeePassXC.svg
 apps/scalable/signal.svg org.signal.Signal.svg
 apps/scalable/signal-desktop.svg org.signal.Signal.svg

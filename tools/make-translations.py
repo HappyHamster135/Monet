@@ -51,6 +51,7 @@ APP_NAMES = {
     "haruna": ("Videos", [("@title:window", "Haruna"), ("application title/display name", "Haruna")]),
     "kdeconnect-app": ("Phone", [(None, "KDE Connect")]),
     "kdeconnect-sms": ("Phone Messages", [(None, "KDE Connect SMS")]),
+    "plasma-systemmonitor": ("Task Manager", [(None, "System Monitor")]),
     # KDE's settings, opened from Monet Settings' "More settings": its windows say so too.
     "systemsettings": ("More settings", [(None, "System Settings")]),
 }
@@ -232,11 +233,13 @@ def gather():
         return p.relative_to(ROOT).as_posix()
 
     qml = sorted(set((ROOT / "linux").rglob("*.qml")) | set((ROOT / "image").rglob("*.qml")))
+    # The native sidebar patch embeds QML in a fail-closed source transform.
+    qml.append(ROOT / "image/task-manager/patch.py")
     for p in qml:
         scan(p.read_text(encoding="utf-8"), QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "qml").glob("*.qml")):
         scan(p.read_text(encoding="utf-8"), SETUP_QML_CALLS, js_string, rel(p), add)
-    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave"]:
+    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave", ROOT / "linux/libexec/monet-files-tools"]:
         scan(p.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(p), add)
     # The Windows helper's progress lines, which the person's dialog says.
     prep = ROOT / "linux/libexec/monet-prepare-windows"
@@ -273,6 +276,10 @@ def gather():
         for key, context in PLUGIN_KEYS.items():
             if plugin.get(key):
                 add(context, plugin[key], None, rel(p))
+    for p in monitor_pages():
+        for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("Title="):
+                add(MENU_NAME, line[6:], None, f"{rel(p)}:{n}")
     # The monet tool and the USB stick maker.
     for crate in ("monet", *TABLES):
         for p in sorted((ROOT / "crates" / crate / "src").glob("*.rs")):
@@ -284,7 +291,12 @@ def gather():
 
 def plugin_metadata():
     # Plasma's (widgets, styles, looks) and KWin's (Monet Snap, Monet Motion), as KDE's lists show them.
-    return sorted([*(ROOT / "linux/share/plasma").glob("*/*/metadata.json"), *(ROOT / "linux/share/kwin").glob("*/*/metadata.json")])
+    return sorted([*(ROOT / "linux/share/plasma").glob("*/*/metadata.json"), *(ROOT / "linux/share/kwin").glob("*/*/metadata.json"),
+                   *(ROOT / "linux/share/ksysguard/sensorfaces").glob("*/metadata.json")])
+
+
+def monitor_pages():
+    return sorted((ROOT / "linux/share/plasma-systemmonitor").glob("monet-*.page"))
 
 
 # po files -------------------------------------------------------------------------
@@ -441,6 +453,7 @@ def build(entries):
         write_table(crate, table)
     localize_menu_entries(menus)
     localize_plugins(menus)
+    localize_monitor_pages(menus)
 
 
 def rust_quote(text):
@@ -478,6 +491,20 @@ def localize_menu_entries(menus):
             if key in MENU_KEYS and value:
                 for language, said in sorted(menus.get((MENU_KEYS[key], value), {}).items()):
                     out.append(f"{key}[{language}]={said}")
+        p.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")
+
+
+def localize_monitor_pages(menus):
+    """KConfig reads localized titles for both pages and their sensor faces."""
+    for p in monitor_pages():
+        out = []
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.startswith("Title["):
+                continue
+            out.append(line)
+            if line.startswith("Title="):
+                for language, said in sorted(menus.get((MENU_NAME, line[6:]), {}).items()):
+                    out.append(f"Title[{language}]={said}")
         p.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")
 
 

@@ -32,6 +32,7 @@ def qml_files():
             + list((SHARE / "monet/explorer").glob("*.qml")) + list((SHARE / "monet/editmode").glob("*.qml"))
             + list((SHARE / "monet/games").glob("*.qml"))
             + list((SHARE / "monet/settings-app").glob("*.qml"))
+            + list((SHARE / "ksysguard/sensorfaces").rglob("*.qml"))
             + list((ROOT / "image/password").glob("*.qml")) + list((ROOT / "setup/qml").rglob("*.qml")))
 PLASMA = SHARE / "plasma"
 GAMES_APP = SHARE / "monet/games/Games.qml"
@@ -427,7 +428,7 @@ class Paintings(unittest.TestCase):
         light = (ROOT / "linux/libexec/monet-light").read_text()
         self.assertIn("DAY_FROM=5", light)
         self.assertIn("DAY_UNTIL=17", light)
-        self.assertIn("05,17:00:00", (ROOT / "linux/systemd/user/monet-light.timer").read_text())
+        self.assertIn("OnCalendar=*-*-* *:*:00", (ROOT / "linux/systemd/user/monet-light.timer").read_text())
 
 
 class FakeKDE:
@@ -520,6 +521,20 @@ class Light(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_open_windows_get_one_style_reload_only_when_kvantum_changes(self):
+        kde = FakeKDE(self.tmp.name, hour=12)
+        kde.light("set", "mist")
+        signal = "notifyChange ii 2 0"
+        count = kde.told_plasma().count(signal)
+        kde.light("set", "smoke")
+        self.assertEqual(kde.told_plasma().count(signal), count + 1)
+        self.assertEqual(kde.settings()["kvantum.kvconfig|General|theme"], "MonetDark")
+        kde.light("set", "smoke")
+        self.assertEqual(kde.told_plasma().count(signal), count + 1)
+        kde.set("kdeglobals|KDE|widgetStyle", "Breeze")
+        kde.light("set", "mist")
+        self.assertEqual(kde.told_plasma().count(signal), count + 1)
 
     def test_hours_follow_the_time_and_kde_shows_it(self):
         kde = FakeKDE(self.tmp.name, hour=12)
@@ -921,7 +936,8 @@ class Icons(unittest.TestCase):
                 "com.google.Chrome", "org.videolan.VLC", "org.telegram.desktop",
                 "com.heroicgameslauncher.hgl", "org.prismlauncher.PrismLauncher", "org.libretro.RetroArch",
                 "com.usebottles.bottles", "org.gimp.GIMP", "org.blender.Blender", "org.kde.kdenlive",
-                "org.audacityteam.Audacity", "com.visualstudio.code", "md.obsidian.Obsidian", "org.signal.Signal")
+                "org.audacityteam.Audacity", "com.visualstudio.code", "md.obsidian.Obsidian", "org.signal.Signal",
+                "chatgpt", "org.inkscape.Inkscape", "org.keepassxc.KeePassXC")
         categories = ("applications-games", "applications-graphics", "applications-internet", "applications-multimedia",
                       "applications-office", "applications-system", "applications-utilities")
         for context, names in (("places", places), ("apps", apps), ("categories", categories)):
@@ -989,6 +1005,15 @@ class Icons(unittest.TestCase):
             # Unchanged: nothing written, KDE not bothered. An app gone, or painted since: its frame goes.
             self.assertEqual(quick.frames(), ["flatapp", "vectorapp"])
             self.assertEqual(len(told), 1)
+            # Compressed SVGs are common in native packages; corrupt data is ignored.
+            import gzip
+            packed = share / "icons/hicolor/scalable/apps/vectorapp.svgz"
+            packed.write_bytes(gzip.compress((share / "icons/hicolor/scalable/apps/vectorapp.svg").read_bytes()))
+            (share / "icons/hicolor/scalable/apps/vectorapp.svg").unlink()
+            self.assertEqual(quick.frames(), ["flatapp", "vectorapp"])
+            self.assertEqual((out / "vectorapp.svg").read_text(), vector)
+            packed.write_bytes(b"broken gzip")
+            self.assertEqual(quick.frames(), ["flatapp"])
             (apps / "flat.desktop").unlink()
             (painted / "vectorapp.svg").write_text("<svg/>")
             mine = out / "mine.svg"
@@ -1002,6 +1027,8 @@ class Icons(unittest.TestCase):
         self.assertIn('"$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1\n', (ROOT / "linux/libexec/monet-session").read_text())
         self.assertIn("PathChanged=/var/lib/flatpak/exports/share/applications",
                       (ROOT / "linux/systemd/user/monet-frames.path").read_text())
+        for directory in ("%h/.local/share/applications", "/usr/share/applications", "/usr/local/share/applications"):
+            self.assertIn("PathChanged=" + directory, (ROOT / "linux/systemd/user/monet-frames.path").read_text())
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick frames", (ROOT / "linux/systemd/user/monet-frames.service").read_text())
         install = (ROOT / "linux/install.sh").read_text()
         self.assertEqual(install.count("monet-names.path monet-frames.path"), 2)
@@ -1454,7 +1481,7 @@ class DesktopWidgets(unittest.TestCase):
     """Weather, Calendar, Now Playing, Note, Photo Frame, System, Recently Played, Timer and World Clock,
     on the desktop."""
     WIDGETS = ("org.monet.weather", "org.monet.calendar", "org.monet.nowplaying", "org.monet.notes", "org.monet.frame",
-               "org.monet.system", "org.monet.played", "org.monet.timer", "org.monet.worldclock", "org.monet.batteries")
+               "org.monet.system", "org.monet.played", "org.monet.timer", "org.monet.worldclock", "org.monet.batteries", "org.monet.network", "org.monet.storage")
 
     def test_installed_and_removed(self):
         install = (ROOT / "linux/install.sh").read_text()
@@ -1488,9 +1515,11 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn('*) rm -f "$CONFIG/monet/glass-$flag"', light)
         glass = (SHARE / "monet/widgets/Glass.qml").read_text()
         lock = (SHARE / "monet/lockscreen/MonetLockScreen.qml").read_text()
-        for qml in (glass, lock):
-            self.assertIn('nameFilters: ["glass-off"]', qml)
+        flags = (SHARE / "monet/widgets/GlassSettings.qml").read_text()
+        for qml in (flags, lock):
+            self.assertIn('"glass-off"', qml)
             self.assertIn('StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/monet"', qml)
+        self.assertIn('!appearance.off', glass)
         self.assertIn("live: glass.frosted", glass)
         self.assertIn("visible: glass.frosted", glass)
         self.assertIn("visible: monetLock.blurred && opacity > 0", lock)
@@ -1539,17 +1568,19 @@ class DesktopWidgets(unittest.TestCase):
             self.assertIn(piece, clock)
 
     def test_files_never_says_the_drive_is_full(self):
-        # Found by the test bench: Dolphin's full status bar said "0 B free" in every folder (KDE
-        # reads the room left from the read-only system layer), so Files keeps the small one.
+        # Only the image's patched Files may expose the free-space display.
         look = (ROOT / "linux/libexec/monet-look").read_text()
-        self.assertNotIn("ShowStatusBar FullWidth", look)
+        self.assertIn('if [ -e "$DATADIR/monet/files-free-space-v1" ]; then\n'
+                      '    # Evolve Monet\'s old Small default; preserve a bar the person chose to hide.\n'
+                      '    look --file dolphinrc --group General --key ShowStatusBar FullWidth', look)
         self.assertIn("kw --file dolphinrc --group General --key ShowStatusBar Small", look)
 
     def test_weather_place_is_chosen_on_the_card(self):
         # Never KDE's settings window: a search right on the widget, and the place's name for another.
         weather = (PLASMA / "plasmoids/org.monet.weather/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertNotIn('internalAction("configure")', weather)
-        self.assertIn("geocoding-api.open-meteo.com/v1/search", weather)
+        self.assertIn("PlaceSearch {", weather)
+        self.assertIn("geocoding-api.open-meteo.com/v1/search", (PLASMA / "plasmoids/org.monet.weather/contents/ui/PlaceSearch.qml").read_text())
         self.assertIn("shared.write({place: place.name", weather)
         self.assertIn("onClicked: root.choosing = true", weather)
 
@@ -1716,7 +1747,11 @@ class GlassSlider(unittest.TestCase):
                      "reconfigureEffect s blur", '[ "$level" = solid ] || busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects loadEffect s blur'):
             self.assertIn(line, light)
         glass = (SHARE / "monet/widgets/Glass.qml").read_text()
-        for line in ('nameFilters: ["glass-frosted"]', 'nameFilters: ["glass-matte"]', "blur: [0.35, 0.7, 1][glass.level]",
+        flags = (SHARE / "monet/widgets/GlassSettings.qml").read_text()
+        for flag in ('glass-frosted', 'glass-matte'):
+            self.assertIn('"' + flag + '"', flags)
+        self.assertIn('readonly property int level: appearance.level', glass)
+        for line in ("blur: [0.35, 0.7, 1][glass.level]",
                      "readonly property bool lensed: !lite && level < 2"):
             self.assertIn(line, glass)
 
@@ -3384,7 +3419,8 @@ class EasierOnOlderPCs(unittest.TestCase):
 
     def test_lighter_glass_without_the_lens(self):
         glass = (ROOT / "linux/share/monet/widgets/Glass.qml").read_text(encoding="utf-8")
-        self.assertIn('nameFilters: ["glass-lite"]', glass)
+        self.assertIn('"glass-lite"', (SHARE / "monet/widgets/GlassSettings.qml").read_text())
+        self.assertIn('readonly property bool lite: appearance.lite', glass)
         # Nor on matte glass (Settings' Glass slider): only the painting's color comes through it.
         self.assertIn("readonly property bool lensed: !lite && level < 2", glass)
         self.assertIn("visible: glass.frosted && glass.lensed", glass)
@@ -7028,6 +7064,9 @@ class WindowsPrograms(unittest.TestCase):
             self.assertIn("<IsHidden>true</IsHidden>", text)
             ET.fromstring(text)
             self.assertFalse(q.hide_system_root(places))                  # once: shown again, it stays
+            places.write_text(text.replace("<IsHidden>true</IsHidden>", "<IsHidden>false</IsHidden>"))
+            self.assertFalse(q.hide_system_root(places))
+            self.assertIn("<IsHidden>false</IsHidden>", places.read_text())
         self.assertIn("        hide_system_root()", (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8"))
         rules = (ROOT / "linux/udev/90-monet-system.rules").read_text()
         self.assertIn('ENV{ID_FS_TYPE}=="btrfs|crypto_LUKS", ENV{ID_FS_LABEL}=="monet", ENV{UDISKS_IGNORE}="1"', rules)

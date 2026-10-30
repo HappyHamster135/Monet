@@ -67,7 +67,7 @@
         "Name[vi]": "Bố cục cửa sổ của Monet",
         "Name[zh_CN]": "Monet 窗口布局",
         "Name[zh_TW]": "Monet 視窗版面配置",
-        "Version": "0.9.4"
+        "Version": "0.9.5"
     },
     "X-Plasma-API": "declarativescript",
     "X-Plasma-MainScript": "ui/main.qml"

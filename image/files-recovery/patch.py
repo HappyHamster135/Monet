@@ -30,3 +30,17 @@ for target, source in [('src/dolphinmainwindow.cpp','window-state.cpp'), ('src/v
     path.write_text(text+'\n'+(here/source).read_text())
 for folder in ('src','src/views'):
     (root/folder/'monetfiles.h').write_bytes((here/'monetfiles.h').read_bytes())
+
+# Solid maps the home path to the read-only overlay root on Atomic systems.
+# Qt reads the actual mount table, including /var's writable bind mount. Keep
+# pooling observers per filesystem, and leave remote URLs/failure fallback alone.
+patch('src/statusbar/mountpointobservercache.cpp', '#include <QTimer>',
+      '#include <QTimer>\n#include <QStorageInfo>')
+patch('src/statusbar/mountpointobservercache.cpp', '''        // Use Solid (rather than KMountPoint) which will likely already have the info from KFilePlacesModel.
+        const auto device = Solid::Device::storageAccessFromPath(url.toLocalFile());
+        const auto *deviceAccess = device.as<Solid::StorageAccess>();
+        if (deviceAccess) {
+            cachedObserverUrl = QUrl::fromLocalFile(deviceAccess->filePath());''',
+      '''        const QStorageInfo storage(url.toLocalFile());
+        if (storage.isValid() && storage.isReady() && !storage.rootPath().isEmpty()) {
+            cachedObserverUrl = QUrl::fromLocalFile(storage.rootPath());''')

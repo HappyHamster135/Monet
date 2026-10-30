@@ -1,0 +1,300 @@
+#!/usr/bin/python3
+"""On-demand Files actions. No index, background service or downloaded-code execution."""
+import gettext
+import json
+import os
+from pathlib import Path
+import shlex
+import stat
+import subprocess
+import sys
+import time
+
+DATADIR = "@DATADIR@"
+WORDS = gettext.translation("monet", localedir=f"{DATADIR}/locale", fallback=True)
+
+
+def tr(text, *args):
+    text = WORDS.gettext(text)
+    for number, value in reversed(list(enumerate(args, 1))):
+        text = text.replace(f"%{number}", str(value))
+    return text
+
+
+def drive_space(path):
+    """The selected filesystem's capacity, not a recursive folder-size calculation."""
+    path = Path(path).resolve(strict=True)
+    info = os.statvfs(path)
+    return dict(path=str(path), total=info.f_blocks * info.f_frsize,
+                used=(info.f_blocks - info.f_bfree) * info.f_frsize,
+                free=info.f_bavail * info.f_frsize,
+                reserved=max(0, info.f_bfree - info.f_bavail) * info.f_frsize,
+                readonly=bool(info.f_flag & os.ST_RDONLY))
+
+
+def scan_apps(folder, max_entries=6000, max_depth=6, seconds=2.0):
+    """Bounded breadth-first search. Desktop commands are naming hints, never executed.
+
+    Follow file links only within the selected folder; never traverse directory links.
+    Deduplicate wrapper links, favour launchers over their bundled helper processes.
+    """
+    root = Path(folder).resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError(tr("Choose a folder to search."))
+    deadline = time.monotonic() + seconds
+    pending, candidates, hints = [(root, 0)], [], {}
+    seen, limited, unreadable = 0, False, False
+    skipped = {".git", ".cache", ".venv", "node_modules", "__pycache__"}
+    while pending and seen < max_entries and time.monotonic() < deadline:
+        directory, depth = pending.pop(0)
+        try:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    if seen >= max_entries or time.monotonic() >= deadline:
+                        limited = True
+                        break
+                    seen += 1
+                    path = Path(entry.path)
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name in skipped:
+                            continue
+                        if depth < max_depth:
+                            pending.append((path, depth + 1))
+                        else:
+                            limited = True
+                        continue
+                    # stat follows a file link, but resolved containment is checked first.
+                    try:
+                        resolved = path.resolve(strict=True)
+                        if not resolved.is_relative_to(root) or not stat.S_ISREG(resolved.stat().st_mode):
+                            continue
+                        suffix = path.suffix.lower()
+                        executable = os.access(path, os.X_OK)
+                        if suffix == ".desktop":
+                            if path.stat().st_size > 65536:
+                                continue
+                            fields, inside = {}, False
+                            for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+                                if line.startswith("["):
+                                    inside = line == "[Desktop Entry]"
+                                elif inside and "=" in line:
+                                    key, value = line.split("=", 1)
+                                    fields.setdefault(key, value)
+                            command = shlex.split(fields.get("Exec", ""))
+                            if fields.get("Type") == "Application" and command and fields.get("Name"):
+                                # A basename can identify the app, but no arguments, shell
+                                # expressions, MIME handlers or permissions are imported.
+                                hints[Path(command[0]).name.casefold()] = fields["Name"][:128]
+                            continue
+                        if not executable and suffix not in {".exe", ".msi", ".appimage"}:
+                            continue
+                        if ".so" in path.name or path.name.startswith("."):
+                            continue
+                        with path.open("rb") as stream:
+                            header = stream.read(4)
+                        if suffix == ".exe" and header[:2] == b"MZ" or suffix == ".msi" and header == b"\xd0\xcf\x11\xe0":
+                            kind = "windows"
+                        elif header == b"\x7fELF" or header[:2] == b"#!":
+                            kind = "native" if executable else "permission"
+                        else:
+                            continue
+                        candidates.append(dict(path=str(path), target=str(resolved), name=path.name,
+                                               relative=str(path.relative_to(root)), kind=kind))
+                    except (OSError, ValueError, RuntimeError):
+                        unreadable = True
+        except OSError:
+            unreadable = True
+    limited = limited or bool(pending)
+    for candidate in candidates:
+        path = Path(candidate["path"])
+        hint = hints.get(path.name.casefold())
+        candidate["name"] = hint or path.stem
+        candidate["score"] = (100 if hint else 0) + (40 if path.parent.name == "bin" else 0)
+        candidate["score"] += 20 if path.parent == root else 0
+        if any(word in path.name.casefold() for word in ("crashpad", "chrome-sandbox", "uninstall", "unins0")):
+            candidate["score"] -= 100
+    candidates.sort(key=lambda item: (-item["score"], item["name"].casefold(), item["relative"]))
+    unique = {}
+    recommended_names = set()
+    for candidate in candidates:
+        unique.setdefault(candidate.pop("target"), candidate)
+    items = list(unique.values())
+    for item in items:
+        name = item["name"].casefold()
+        item["recommended"] = item["score"] >= 100 and name not in recommended_names
+        if item["recommended"]: recommended_names.add(name)
+    return dict(items=items[:100], limited=limited or len(items) > 100, unreadable=unreadable, visited=seen)
+
+
+def make_dialog(mode, path):
+    # Qt is loaded only for the short-lived window, never by the scan worker.
+    from PySide6.QtCore import QProcess, QTimer, Qt
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
+                                  QInputDialog, QLabel, QLineEdit, QMessageBox, QProgressBar,
+                                  QTreeWidget, QTreeWidgetItem, QVBoxLayout)
+
+    dialog = QDialog()
+    dialog.setWindowTitle(tr("Drive space") if mode == "space" else tr("Find applications"))
+    dialog.setWindowIcon(QIcon.fromTheme("drive-harddisk" if mode == "space" else "system-file-manager"))
+    dialog.resize(560 if mode == "space" else 780, 330 if mode == "space" else 460)
+    layout = QVBoxLayout(dialog)
+    layout.setContentsMargins(20, 20, 20, 20)
+    layout.setSpacing(12)
+
+    def label(text):
+        widget = QLabel(text)
+        widget.setTextFormat(Qt.PlainText)
+        widget.setWordWrap(True)
+        widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        layout.addWidget(widget)
+        return widget
+
+    if mode == "space":
+        label(tr("Space on the drive containing this folder"))
+        location = label(str(Path(path).absolute()))
+        bar = QProgressBar(); bar.setObjectName("driveUsage"); layout.addWidget(bar)
+        form = QFormLayout(); layout.addLayout(form)
+        values = {}
+        for key, name in (("free", tr("Available")), ("used", tr("Used")), ("total", tr("Capacity")), ("reserved", tr("Reserved"))):
+            value = QLabel(); value.setObjectName("space_" + key)
+            values[key] = value; form.addRow(name, value)
+        state = label("")
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        refresh = buttons.addButton(tr("Refresh"), QDialogButtonBox.ActionRole)
+        refresh.setObjectName("refreshSpace")
+        buttons.rejected.connect(dialog.reject); layout.addWidget(buttons)
+
+        def measure():
+            try:
+                result = drive_space(path)
+                location.setText(result["path"])
+                for key, value in values.items():
+                    value.setText(tr("%1 GiB", f'{result[key] / 2**30:,.1f}'))
+                    value.setToolTip(tr("%1 bytes", f'{result[key]:,}'))
+                percent = round(100 * (result["total"] - result["free"]) / max(1, result["total"]))
+                bar.setValue(percent); bar.setFormat(tr("%1% occupied", percent))
+                state.setText(tr("This drive is read-only.") if result["readonly"] else tr("Available space can be used by your account."))
+            except OSError as error:
+                bar.setValue(0)
+                for value in values.values(): value.setText("—")
+                state.setText(tr("The drive is unavailable. Reconnect it and try again.") + "\n" + str(error))
+        refresh.clicked.connect(measure)
+        measure()
+        return dialog
+
+    label(tr("Find an app inside an extracted download, then add it to the menu or show its file."))
+    label(str(Path(path).absolute()))
+    search = QLineEdit(); search.setPlaceholderText(tr("Filter applications…")); search.setObjectName("filterApps")
+    layout.addWidget(search)
+    tree = QTreeWidget(); tree.setObjectName("foundApps"); tree.setRootIsDecorated(False)
+    tree.setHeaderLabels([tr("Application"), tr("Type"), tr("Location")]); layout.addWidget(tree, 1)
+    tree.setColumnWidth(0, 170); tree.setColumnWidth(1, 150)
+    helpers = QCheckBox(tr("Show helper executables")); helpers.setObjectName("showHelpers")
+    helpers.hide(); layout.addWidget(helpers)
+    status = label(tr("Searching this folder…")); status.setObjectName("scanStatus")
+    buttons = QDialogButtonBox(QDialogButtonBox.Close)
+    add = buttons.addButton(tr("Add to apps…"), QDialogButtonBox.ActionRole); add.setObjectName("addApp")
+    show = buttons.addButton(tr("Show in Files"), QDialogButtonBox.ActionRole); show.setObjectName("showApp")
+    buttons.rejected.connect(dialog.reject); layout.addWidget(buttons)
+    add.setEnabled(False); show.setEnabled(False)
+
+    def selected():
+        item = tree.currentItem()
+        return item.data(0, Qt.UserRole) if item and not item.isHidden() else None
+
+    def changed():
+        item = selected()
+        add.setEnabled(bool(item and item["kind"] == "native"))
+        show.setEnabled(bool(item))
+        show.setToolTip(item["path"] if item else "")
+        add.setToolTip(tr("Windows programs use Run in Monet in Files.") if item and item["kind"] == "windows"
+                       else tr("Use Properties → Permissions to allow this application to run.") if item and item["kind"] == "permission" else "")
+    tree.currentItemChanged.connect(changed)
+
+    def filtered(text):
+        for index in range(tree.topLevelItemCount()):
+            item = tree.topLevelItem(index)
+            detail = item.data(0, Qt.UserRole)
+            item.setHidden((helpers.isVisible() and not helpers.isChecked() and not detail["recommended"])
+                           or text.casefold() not in " ".join(item.text(i) for i in range(3)).casefold())
+        changed()
+    search.textChanged.connect(filtered)
+    helpers.toggled.connect(lambda _: filtered(search.text()))
+
+    def reveal():
+        item = selected()
+        if item:
+            try:
+                subprocess.Popen(["dolphin", "--select", item["path"]], start_new_session=True)
+            except OSError as error:
+                QMessageBox.warning(dialog, tr("Couldn't open Files"), str(error))
+    show.clicked.connect(reveal)
+    tree.itemDoubleClicked.connect(reveal)
+
+    def register():
+        item = selected()
+        if not item or item["kind"] != "native": return
+        name, accepted = QInputDialog.getText(dialog, tr("Add to apps"), tr("Keep the application folder in place.\n\nName:"), text=item["name"])
+        if not accepted: return
+        try:
+            from importlib.machinery import SourceFileLoader
+            from importlib.util import module_from_spec, spec_from_loader
+            loader = SourceFileLoader("monet_quick", str(Path(__file__).with_name("monet-quick")))
+            quick = module_from_spec(spec_from_loader(loader.name, loader)); loader.exec_module(quick)
+            quick.native_shortcut(item["path"], name)
+            # KDE's file watcher rebuilds incrementally; do not block the dialog on a full cache rebuild.
+            status.setText(tr("%1 was added to your application menu.", name))
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(dialog, tr("Couldn't add application"), str(error))
+    add.clicked.connect(register)
+
+    worker = QProcess(dialog); worker.setObjectName("appScanner")
+    names = {"native": tr("Linux application"), "windows": tr("Windows program"), "permission": tr("Needs permission")}
+
+    def finished(code, _status):
+        if code != 0:
+            status.setText(tr("Couldn't search this folder. Check that it is available and readable."))
+            return
+        try:
+            result = json.loads(bytes(worker.readAllStandardOutput()))
+            for app in result["items"]:
+                item = QTreeWidgetItem([app["name"], names[app["kind"]], app["relative"]])
+                item.setData(0, Qt.UserRole, app); item.setToolTip(2, app["path"])
+                item.setIcon(0, QIcon.fromTheme("application-x-executable")); tree.addTopLevelItem(item)
+            helpers.setVisible(any(item["recommended"] for item in result["items"]))
+            if tree.topLevelItemCount(): tree.setCurrentItem(tree.topLevelItem(0))
+            text = tr("Choose an application. Double-click shows its file without running it.") if result["items"] else tr("No applications found. Extract archives first, or open a folder closer to the application.")
+            if result["limited"]: text += "\n" + tr("Search limit reached. Open a more specific folder to find more applications.")
+            if result["unreadable"]: text += "\n" + tr("Some files could not be read.")
+            status.setText(text); filtered(search.text())
+        except (ValueError, KeyError):
+            status.setText(tr("Couldn't read the application search results."))
+    worker.finished.connect(finished)
+    worker.errorOccurred.connect(lambda _: status.setText(tr("Couldn't start the application search.")))
+    dialog.finished.connect(worker.kill)
+    QTimer.singleShot(0, lambda: worker.start(sys.executable, [str(Path(__file__).resolve()), "--scan", str(Path(path).absolute())]))
+    return dialog
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "--scan", "--space"}:
+        return 2
+    mode, path = sys.argv[1:]
+    if mode in {"--scan", "--space"}:
+        try:
+            print(json.dumps(drive_space(path) if mode == "--space" else scan_apps(path), ensure_ascii=False))
+            return 0
+        except (OSError, ValueError, RuntimeError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+    from PySide6.QtWidgets import QApplication
+    app = QApplication(sys.argv[:1]); app.setApplicationName("monet-files-tools")
+    app.setApplicationDisplayName(tr("Files")); app.setDesktopFileName("org.kde.dolphin")
+    dialog = make_dialog(mode, path)
+    dialog.exec()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

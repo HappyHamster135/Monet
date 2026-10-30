@@ -38,36 +38,10 @@ PlasmoidItem {
 
     // Choosing the place on the card: a town, then one of Open-Meteo's matches.
     property bool choosing: false
-    property var found: []
-    property bool searching: false
-    property int lookup: 0
-
-    function search(name) {
-        name = name.trim();
-        const mine = ++lookup;
-        if (name.length < 2) {
-            found = [];
-            searching = false;
-            return;
-        }
-        searching = true;
-        const request = new XMLHttpRequest();
-        request.onreadystatechange = () => {
-            // Only the answer to the latest letters counts.
-            if (request.readyState !== XMLHttpRequest.DONE || mine !== lookup) {
-                return;
-            }
-            searching = false;
-            try {
-                found = JSON.parse(request.responseText).results || [];
-            } catch (e) {
-                found = [];
-            }
-        };
-        request.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=3&format=json&name="
-                     + encodeURIComponent(name) + "&language=" + Qt.locale().name.split("_")[0]);
-        request.send();
-    }
+    PlaceSearch { id: placeSearch }
+    property alias found: placeSearch.results
+    readonly property bool searching: placeSearch.busy
+    function search(name) { placeSearch.find(name) }
 
     function same(a, b) {
         return Math.abs(a.latitude - b.latitude) < 0.0001 && Math.abs(a.longitude - b.longitude) < 0.0001;
@@ -512,7 +486,7 @@ PlasmoidItem {
                     field.text = "";
                     root.found = [];
                     if (visible && root.choosing) {
-                        field.forceActiveFocus();
+                        Qt.callLater(() => field.forceActiveFocus());
                     }
                 }
 
@@ -567,10 +541,16 @@ PlasmoidItem {
                     font.family: "Inter"
                     font.pixelSize: 13
                     Accessible.name: i18n("Find a place for the weather")
-                    onTextChanged: typing.restart()
+                    onTextChanged: { placeSearch.cancel(); typing.restart() }
                     Keys.onReturnPressed: field.takeFirst()
                     Keys.onEnterPressed: field.takeFirst()
                     Keys.onEscapePressed: root.choosing = false
+                    Connections {
+                        target: field.Window.window
+                        function onActiveChanged() {
+                            if (field.Window.window.active && card.asking) field.forceActiveFocus();
+                        }
+                    }
 
                     // Enter takes the first match, once the matches are for what's typed.
                     function takeFirst() {
@@ -662,10 +642,18 @@ PlasmoidItem {
                         visible: root.found.length === 0 && field.text.trim().length >= 2 && !root.searching && !typing.running
                         leftPadding: 8
                         topPadding: 4
-                        text: i18n("No place by that name.")
+                        text: placeSearch.problem || i18n("No place by that name.")
+                        wrapMode: Text.Wrap
                         color: card.dim
                         font.family: "Inter"
                         font.pixelSize: 12
+                    }
+                    T.AbstractButton {
+                        visible: placeSearch.problem !== "" && !root.searching
+                        implicitHeight: 30
+                        implicitWidth: parent.width
+                        onClicked: root.search(field.text)
+                        contentItem: Text { text: i18nd("monet", "Try again"); color: card.lily; verticalAlignment: Text.AlignVCenter }
                     }
                     // The place on the card, taken off it (the one before or after shows).
                     T.AbstractButton {

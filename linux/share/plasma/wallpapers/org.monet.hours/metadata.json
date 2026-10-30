@@ -65,7 +65,7 @@
         "Name[vi]": "Những giờ khắc",
         "Name[zh_CN]": "时光",
         "Name[zh_TW]": "時辰",
-        "Version": "0.9.4"
+        "Version": "0.9.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

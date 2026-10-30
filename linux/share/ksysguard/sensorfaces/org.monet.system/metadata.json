@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.system",
+        "Name": "System Details",
+        "Description": "Hardware identity, processor topology, drivers and device diagnostics",
+        "Icon": "documentinfo",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.5"
+    }
+}

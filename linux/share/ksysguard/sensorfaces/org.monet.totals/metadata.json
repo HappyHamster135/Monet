@@ -1,0 +1,8 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.totals", "Name": "System totals",
+        "Description": "Overall resource use above the application and process lists",
+        "Icon": "utilities-system-monitor", "License": "GPL-3.0-or-later", "Version": "0.9.5"
+    }
+}

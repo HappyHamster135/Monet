@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Offline daylight at the weather location (or the time-zone's city).
+
+Solar position follows NOAA's solar calculator equations. Checking the current
+altitude, rather than comparing wall-clock hours, also handles polar day/night,
+the date line and daylight-saving changes. No resident process or network call.
+"""
+from datetime import datetime, timezone
+import json
+import math
+import os
+from pathlib import Path
+import re
+
+
+def location(config, zone=None, zone_tab=Path('/usr/share/zoneinfo/zone1970.tab')):
+    try:
+        saved = json.loads((config / 'monet/weather.json').read_text())
+        lat, lon = float(saved['latitude']), float(saved['longitude'])
+        if saved.get('place') and -90 <= lat <= 90 and -180 <= lon <= 180:
+            return lat, lon
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    if zone is None:
+        try:
+            zone = os.readlink('/etc/localtime').split('zoneinfo/', 1)[1]
+        except (OSError, IndexError):
+            return None
+    def degrees(value, digits):
+        number = value[1:]
+        result = int(number[:digits]) + int(number[digits:digits+2]) / 60
+        if len(number) > digits + 2:
+            result += int(number[digits+2:]) / 3600
+        return result * (-1 if value[0] == '-' else 1)
+    lines = []
+    for table in dict.fromkeys([zone_tab, zone_tab.with_name('zone.tab')]):
+        try:
+            lines.extend(table.read_text().splitlines())
+        except OSError:
+            pass
+    for line in lines:
+        fields = line.split('\t')
+        if len(fields) >= 3 and fields[2] == zone:
+            match = re.fullmatch(r'([+-]\d{4,6})([+-]\d{5,7})', fields[1])
+            if match:
+                return degrees(match[1], 2), degrees(match[2], 3)
+    return None
+
+
+def light_at(instant, where):
+    if where is None:
+        return 'mist' if 5 <= instant.hour < 17 else 'smoke'
+    latitude, longitude = where
+    utc = instant.astimezone(timezone.utc)
+    # Fractional year, equation of time (minutes), and declination (radians).
+    year_days = 366 if utc.year % 4 == 0 and (utc.year % 100 != 0 or utc.year % 400 == 0) else 365
+    hour = utc.hour + utc.minute / 60 + utc.second / 3600
+    gamma = 2 * math.pi / year_days * (utc.timetuple().tm_yday - 1 + (hour - 12) / 24)
+    equation = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma)
+                         - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))
+    declination = (0.006918 - 0.399912 * math.cos(gamma) + 0.070257 * math.sin(gamma)
+                   - 0.006758 * math.cos(2 * gamma) + 0.000907 * math.sin(2 * gamma)
+                   - 0.002697 * math.cos(3 * gamma) + 0.00148 * math.sin(3 * gamma))
+    angle = math.radians((hour * 60 + equation + 4 * longitude) / 4 - 180)
+    latitude = math.radians(latitude)
+    sine_altitude = math.sin(latitude) * math.sin(declination) + math.cos(latitude) * math.cos(declination) * math.cos(angle)
+    # The sun's upper edge at the horizon, including standard refraction.
+    return 'mist' if sine_altitude > math.sin(math.radians(-0.833)) else 'smoke'
+
+
+if __name__ == '__main__':
+    config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
+    print(light_at(datetime.now().astimezone(), location(config)))

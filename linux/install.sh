@@ -97,7 +97,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-profile monet-light monet-quick monet-weather monet-resume monet-leave monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-store monet-store-jobs; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-store monet-store-jobs; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
@@ -167,6 +167,8 @@ put 644 "$SRC/share/applications/monet-windows-program.desktop" "$DATADIR/applic
 # Earlier versions, in Files' menu.
 put 644 "$SRC/share/kio/servicemenus/monet-earlier.desktop" "$DATADIR/kio/servicemenus/monet-earlier.desktop"
 put 644 "$SRC/share/kio/servicemenus/monet-windows-program.desktop" "$DATADIR/kio/servicemenus/monet-windows-program.desktop"
+put 644 "$SRC/share/kio/servicemenus/monet-local-app.desktop" "$DATADIR/kio/servicemenus/monet-local-app.desktop"
+put 644 "$SRC/share/kio/servicemenus/monet-folder-tools.desktop" "$DATADIR/kio/servicemenus/monet-folder-tools.desktop"
 
 # The look: paintings, the Plasma style and global theme, Monet's widgets,
 # colors, the glass app style, the terminal's colors and the fonts.
@@ -185,13 +187,13 @@ done
 tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"
 for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
     org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame org.monet.system org.monet.played \
-    org.monet.timer org.monet.worldclock org.monet.batteries org.monet.sound; do
+    org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.sound; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
-    org.monet.played org.monet.timer org.monet.worldclock org.monet.batteries; do
+    org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
 done
 # The Calendar and the bar's clock share the month, the day's note and the notes themselves.
@@ -205,12 +207,23 @@ for applet in org.monet.sound org.monet.quick; do
     install -m 644 "$SRC/share/monet/widgets/ActionButton.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/ActionButton.qml"
 done
 for applet in "$DATADIR"/plasma/plasmoids/org.monet.*; do
-    for part in LayoutGuard.qml LayoutMath.js NoteLogic.js PanelFit.qml ClockFormat.qml; do
+    for part in LayoutGuard.qml LayoutMath.js NoteLogic.js PanelFit.qml ClockFormat.qml TaskManagerAction.qml GlassSettings.qml; do
         install -m 644 "$SRC/share/monet/widgets/$part" "$applet/contents/ui/$part"
     done
 done
-fill "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/main.qml" \
+install -m 644 "$SRC/share/monet/widgets/TaskManagerAction.qml" "$DATADIR/plasma/wallpapers/org.monet.hours/contents/ui/TaskManagerAction.qml"
+fill "$DATADIR"/plasma/wallpapers/org.monet.hours/contents/ui/*.qml \
     "$DATADIR"/plasma/plasmoids/org.monet.*/contents/ui/*.qml
+# Add Monet pages without replacing KDE's pages or the person's layouts.
+install -d "$DATADIR/plasma-systemmonitor"
+install -m 644 "$SRC"/share/plasma-systemmonitor/monet-*.page "$DATADIR/plasma-systemmonitor/"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.hardware" "$DATADIR/ksysguard/sensorfaces/org.monet.hardware"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.totals" "$DATADIR/ksysguard/sensorfaces/org.monet.totals"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.performance" "$DATADIR/ksysguard/sensorfaces/org.monet.performance"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.system" "$DATADIR/ksysguard/sensorfaces/org.monet.system"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.applications" "$DATADIR/ksysguard/sensorfaces/org.monet.applications"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.processes" "$DATADIR/ksysguard/sensorfaces/org.monet.processes"
+fill "$DATADIR"/ksysguard/sensorfaces/org.monet.*/contents/ui/*.qml
 install -d "$DATADIR/color-schemes" "$DATADIR/konsole"
 install -m 644 "$SRC"/share/color-schemes/*.colors "$DATADIR/color-schemes/"
 install -m 644 "$SRC"/share/konsole/* "$DATADIR/konsole/"
@@ -270,6 +283,8 @@ put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.servic
 put 644 "$SRC/systemd/user/monet-keys.service" "$USERUNITDIR/monet-keys.service"
 put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
 put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
+put 644 "$SRC/systemd/user/monet-files-place.path" "$USERUNITDIR/monet-files-place.path"
+put 644 "$SRC/systemd/user/monet-files-place.service" "$USERUNITDIR/monet-files-place.service"
 put 644 "$SRC/systemd/user/monet-frames.path" "$USERUNITDIR/monet-frames.path"
 put 644 "$SRC/systemd/user/monet-frames.service" "$USERUNITDIR/monet-frames.service"
 put 644 "$SRC/systemd/user/monet-zen.path" "$USERUNITDIR/monet-zen.path"
@@ -378,7 +393,7 @@ chmod 644 /etc/polkit-1/rules.d/49-monet.rules
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
     systemctl enable monet-keep-prepare.service monet-keep.timer
@@ -418,7 +433,12 @@ Website=https://github.com/HappyHamster135/Monet
 ABOUT
     # New accounts start with Monet's look, so Plasma lays out Monet's islands
     # and widgets itself as it first starts, instead of KDE's to be replaced.
+    install -d /etc/skel/.config/monet
+    printf 'Monet display defaults v1\n' > /etc/skel/.config/monet/display-defaults-pending
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage org.monet.desktop
+    # KWin applies this to existing and newly plugged-in devices unless an account
+    # has explicitly chosen a per-device setting. No device IDs need guessing.
+    kwriteconfig6 --file /etc/xdg/kcminputrc --group Libinput --group Defaults --key NaturalScroll true
     # Available before Plasma creates its first desktop; account mouse/menu choices still win.
     install -m 644 "$SRC/share/monet/desktop-menu.conf" /etc/xdg/plasma-org.kde.plasma.desktop-appletsrc
     # And with Monet's sounds, from the first sign-in.
@@ -556,7 +576,7 @@ else
     for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
+    systemctl --global enable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
     systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service monet-listening.service >/dev/null 2>&1 || true

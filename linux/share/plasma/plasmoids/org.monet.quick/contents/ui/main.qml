@@ -35,6 +35,7 @@ PlasmoidItem {
     property bool dragging: false
 
     Plasmoid.icon: "monet-quick-symbolic"
+    Plasmoid.contextualActions: [TaskManagerAction {}]
     toolTipMainText: i18n("Quick Settings")
 
     P5Support.DataSource {

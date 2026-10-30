@@ -1,0 +1,11 @@
+[Unit]
+Description=Monet: initialize Files places when KDE creates them
+ConditionUser=!guest
+
+[Path]
+# On first sign-in the session helper can run before KDE creates this file.
+# Also catches atomic replacements. The helper is idempotent and keeps unhide choices.
+PathChanged=%h/.local/share/user-places.xbel
+
+[Install]
+WantedBy=default.target

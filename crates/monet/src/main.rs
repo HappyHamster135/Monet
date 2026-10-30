@@ -455,13 +455,17 @@ fn doctor() -> Res<()> {
         warn("The games sync service isn't enabled. Run the Monet installer again.");
     }
 
-    if fs::read_dir("/etc/polkit-1/rules.d")
-        .map(|d| d.filter_map(|e| e.ok()).any(|e| e.file_name().to_string_lossy().contains("monet")))
-        .unwrap_or(false)
+    match fs::read_dir("/etc/polkit-1/rules.d")
+        .and_then(|d| d.map(|e| e.map(|e| e.file_name())).collect::<std::io::Result<Vec<_>>>())
     {
-        ok("One-click switching is allowed without a password");
-    } else {
-        warn("Switching will ask for your password. Run the Monet installer again to fix it.");
+        Ok(names) if names.iter().any(|n| n.to_string_lossy().contains("monet")) => {
+            ok("Monet's password-free switching rule is installed");
+        }
+        Ok(_) => warn("Monet's switching rule wasn't found. Switching may ask for your password."),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            warn("Switching permissions could not be checked: the system rules are readable only by an administrator.");
+        }
+        Err(e) => warn(&format!("Switching permissions could not be checked: {e}")),
     }
 
     if let Ok(version) = fs::read_to_string("/proc/driver/nvidia/version") {

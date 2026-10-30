@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.performance",
+        "Name": "Performance",
+        "Description": "Explore CPU, memory, graphics, network and storage one task at a time",
+        "Icon": "utilities-system-monitor",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.5"
+    }
+}

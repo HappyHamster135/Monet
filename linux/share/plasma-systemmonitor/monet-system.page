@@ -1,0 +1,31 @@
+# A focused resource inspector; the app and process tables remain separate pages.
+[Face-monet-system][Appearance]
+chartFace=org.monet.system
+showTitle=false
+
+[Face-monet-system][Sensors]
+highPrioritySensorIds=[]
+lowPrioritySensorIds=[]
+
+[page]
+Title=System Details
+actionsFace=Face-monet-system
+icon=documentinfo
+version=2
+margin=2
+loadType=
+
+[page][row-0]
+name=row-0
+heightMode=balanced
+isTitle=false
+
+[page][row-0][column-0]
+name=column-0
+showBackground=false
+noMargins=false
+
+[page][row-0][column-0][section-0]
+name=section-0
+face=Face-monet-system
+isSeparator=false

@@ -3,4 +3,4 @@ Description=Monet's light: mist by day, smoke after dark
 
 [Service]
 Type=oneshot
-ExecStart=@LIBEXECDIR@/monet-light apply
+ExecStart=@LIBEXECDIR@/monet-light auto

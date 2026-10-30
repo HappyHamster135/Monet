@@ -9,15 +9,14 @@
 #   monet-light focus [START,END]     plein-air focus: a whole day on the painting from START to END
 #                                     (Unix seconds); nothing when it's over
 #
-# Panels and KDE apps change right away. Apps that use the glass app style
-# (Files, Kate, ...) change the next time they open.
+# Panels and open KDE/Kvantum windows change together after the settings are written.
 set -u
 
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATADIR="@DATADIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 CHOICE="$CONFIG/monet/light"
-# Same hours as the wallpaper: dawn and midday are light, dusk and night dark.
+# Fallback hours when this PC has neither a weather place nor a time-zone city.
 DAY_FROM=5
 DAY_UNTIL=17
 # KDE's global themes for Monet's two lights (its Light and Dark buttons).
@@ -37,6 +36,10 @@ now() {
     chosen="$(choice)"
     if [ "$chosen" != hours ]; then
         echo "$chosen"
+        return
+    fi
+    if [ -x "$LIBEXECDIR/monet-daylight" ]; then
+        "$LIBEXECDIR/monet-daylight"
         return
     fi
     hour=$((10#$(date +%H)))
@@ -356,6 +359,24 @@ apply() {
         fi
     done
     wait
+    # Plasma 6.7 ignores a StyleChanged notice when the style name is unchanged.
+    # Kvantum's two supported styles recreate it on Mist/Smoke transitions, after
+    # the palette and theme writes finish. Explicit non-Monet themes stay theirs.
+    case "$(ini "$kvconfig" General theme)" in
+        Monet|MonetDark|MonetMatte|MonetDarkMatte|MonetSolid|MonetDarkSolid)
+            local app_style=kvantum
+            [ "$light" = smoke ] && app_style=kvantum-dark
+            current="$(ini kdeglobals KDE widgetStyle)"
+            case "$current" in
+                ""|kvantum|Kvantum|kvantum-dark)
+                    if [ "$current" != "$app_style" ]; then
+                        kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle "$app_style" &&
+                            busctl --user emit /KGlobalSettings org.kde.KGlobalSettings notifyChange ii 2 0 >/dev/null 2>&1
+                    fi
+                    ;;
+            esac
+            ;;
+    esac
 }
 
 # Someone picked Light or Dark in KDE's settings (or a Monet global theme):
@@ -403,6 +424,16 @@ focus() {
 }
 
 case "${1:-apply}" in
+    auto)
+        # The timer does almost no work between transitions. Manual choices and
+        # custom color schemes stay untouched; full theme application runs only
+        # when the sun crosses the horizon.
+        [ "$(choice)" = hours ] || exit 0
+        lock
+        case "$(now)/$(ini kdeglobals General ColorScheme)" in
+            mist/MonetDark|smoke/MonetLight) apply ;;
+        esac
+        ;;
     focus)
         focus "${2:-}"
         ;;

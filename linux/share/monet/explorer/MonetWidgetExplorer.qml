@@ -44,7 +44,7 @@ Item {
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
     // Adding to a panel: the bar's widgets; to the desktop: the desktop's.
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
-    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound" : "batteries|calendar|frame|notes|nowplaying|placard|played|system|timer|weather|worldclock"
+    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|storage|system|timer|weather|worldclock"
 
     signal closed()
 

@@ -151,6 +151,7 @@ if QT:
                 code = 1 if self.fail else 0
             else:
                 result = {"access": {"scale": 125, "cursor": 24, "reduced": False},
+                    "display-sizes": [{"name": "eDP-1", "scale": 125, "width": 1920, "height": 1080, "highDensity": False}],
                     "status": {"volume": 50, "mic": 80}, "outputs": [{"name": "Speakers", "id": "1", "default": True}],
                     "shared-files": {"state": "asleep", "available": False, "path": ""},
                     "apps-sound": [], "bt-list": [], "wifi-list": [], "defaults": []}.get(verb, {})
@@ -248,7 +249,10 @@ class SettingsSearchUI(unittest.TestCase):
         self.window.setWidth(760)
         self.type_query("make text bigger")
         QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(250)
-        row = self.item("search-size")
+        row = self.item("screenSizeRow-eDP-1")
+        help_text = self.item("displaySizeHelp")
+        self.assertGreater(help_text.property("lineCount"), 1)
+        self.assertLessEqual(help_text.width(), row.width())
         parts = {child.objectName(): child for child in row.childItems()}
         label, controls = parts["settingRowText"], parts["settingRowControls"]
         self.assertGreater(label.width(), 250)
@@ -358,6 +362,7 @@ Window {
         property string openingResult: ""
         property string launched: ""
         property var sent: []
+        property var appendResult: function(row) { nativeResults.append(row) }
         signal everydayReady()
         function i18n(text) { return text }
         function i18nc(context, text) { return text }
@@ -370,6 +375,7 @@ Window {
             function refresh() {}
         }
         property var finder: QtObject {
+            objectName: "testFinder"
             property string query: ""
             property int count: 1
             property bool querying: false
@@ -378,8 +384,9 @@ Window {
         }
         ListModel { id: empty }
         ListModel { id: nativeResults
+            objectName: "testNativeResults"
             Component.onCompleted: {
-                for (let i = 0; i < 20; i++) append({display: "Native result " + i, description: "App", decoration: "system-run"})
+                for (let i = 0; i < 20; i++) append({display: "Native result " + i, description: "Folder", decoration: "folder", favoriteId: ""})
             }
         }
         QtObject { id: user; property string fullName: "Test"; property string loginName: "test"; property string faceIconUrl: "" }
@@ -413,6 +420,8 @@ Window {
         self.window = self.engine.rootObjects()[0]; QTest.qWait(100)
         self.root = self.item("testRoot"); self.search = self.item("menuSearch")
         self.page = self.item("testPage"); self.results = self.item("testResults")
+        self.native = self.root.findChild(QObject, "testNativeResults")
+        self.finder = self.root.findChild(QObject, "testFinder")
 
     def tearDown(self):
         self.window.close(); self.engine.deleteLater(); QTest.qWait(5)
@@ -492,3 +501,61 @@ Window {
         self.assertTrue(self.root.property("everydayPending"))
         self.deliver(self.root.property("everydaySource"), quick_helper().everyday_search("headphones"))
         self.assertTrue(self.root.property("openingResult").endswith("search-open headphones"))
+
+    def add_app(self, name="ChatGPT", ident="applications:chatgpt.desktop"):
+        # The folder deliberately ranks ahead of the application in KRunner.
+        row = {"display": name, "description": "Application", "decoration": "system-run", "favoriteId": ident}
+        self.root.property("appendResult").call([self.engine.toScriptValue(row)])
+        QTest.qWait(20)
+
+    def test_application_precedes_same_name_folder_and_launches_source_row(self):
+        self.query("chatgpt")
+        self.add_app()
+        self.assertEqual(self.results.property("count"), 20)  # no duplicate app among files
+        app = self.item("menuApplicationResult-0")
+        self.assertEqual(app.property("name"), "ChatGPT")
+        self.assertTrue(app.property("current"))
+        self.assertGreaterEqual(app.mapToItem(self.results, 0, 0).y(), 0)
+        # An app can open without waiting for the unrelated suggestions helper.
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-20")
+        self.assertEqual(self.root.property("openingResult"), "")
+
+    def test_windows_apps_and_keyboard_cross_all_sections(self):
+        source = self.query("chatgpt")
+        self.add_app("ChatGPT.exe", "applications:wine-chatgpt.desktop")
+        self.add_app("ChatGPT tools")
+        self.deliver(source, quick_helper().everyday_search("headphones"))
+        QTest.keyClick(self.window, Qt.Key_Down)
+        self.assertTrue(self.item("menuApplicationResult-0").hasActiveFocus())
+        QTest.keyClick(self.window, Qt.Key_Down)
+        self.assertTrue(self.item("menuApplicationResult-1").hasActiveFocus())
+        QTest.keyClick(self.window, Qt.Key_Down)
+        self.assertTrue(self.item("menuSearchResult-headphones").hasActiveFocus())
+        QTest.keyClick(self.window, Qt.Key_Up)
+        self.assertTrue(self.item("menuApplicationResult-1").hasActiveFocus())
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-21")
+
+    def test_early_enter_waits_for_app_query_and_changed_query_cancels_launch(self):
+        self.query("chatgpt")
+        self.add_app()
+        self.finder.setProperty("querying", True)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "")
+        self.query("different")
+        self.finder.setProperty("querying", False)
+        self.finder.queryFinished.emit()
+        self.assertEqual(self.root.property("launched"), "")
+        self.finder.setProperty("querying", True)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.finder.setProperty("querying", False)
+        self.finder.queryFinished.emit()
+        QTest.qWait(20)
+        self.assertEqual(self.root.property("launched"), "native-20")
+
+    def test_no_application_keeps_folder_launch_mapping(self):
+        source = self.query("folder")
+        self.deliver(source)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-0")

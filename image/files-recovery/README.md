@@ -1,5 +1,10 @@
 # Native Files recovery metadata
 
+The same paired build fixes local free-space lookup on Atomic systems: the
+status bar shares observers using `QStorageInfo`'s actual mount root. Solid's
+storage-device lookup can associate `/var/home` with the read-only overlay and
+report 0 B free. Remote locations retain Dolphin's existing KIO handling.
+
 The image's Dolphin exposes a read-only `monetFilesState` method on its existing
 `org.kde.dolphin.MainWindow` interface. It captures local folders, active tab/split side,
 selected and current paths, expanded directories, scroll offsets/limits, splitter sizes

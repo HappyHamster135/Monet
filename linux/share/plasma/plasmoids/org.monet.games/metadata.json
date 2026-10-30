@@ -65,7 +65,7 @@
         "Name[vi]": "Trò chơi",
         "Name[zh_CN]": "游戏",
         "Name[zh_TW]": "遊戲",
-        "Version": "0.9.4"
+        "Version": "0.9.5"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

@@ -86,6 +86,10 @@ FROM runtime AS editor-recovery
 COPY image/editor-recovery /src/editor-recovery
 RUN sh /src/editor-recovery/build.sh /out
 
+FROM runtime AS task-manager
+COPY image/task-manager /src/task-manager
+RUN sh /src/task-manager/build.sh /out
+
 FROM runtime AS files-recovery
 COPY image/files-recovery /src/files-recovery
 RUN sh /src/files-recovery/build.sh /out
@@ -106,8 +110,13 @@ LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.ope
 COPY --from=pdf-recovery /out /tmp/monet-pdf-recovery
 RUN python3 /tmp/monet-pdf-recovery/bundle.py install /tmp/monet-pdf-recovery \
  && rm -rf /tmp/monet-pdf-recovery
+COPY --from=task-manager /out /tmp/monet-task-manager
+RUN python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager \
+ && rm -rf /tmp/monet-task-manager
+
 COPY --from=files-recovery /out /tmp/monet-files-recovery
 RUN python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
+ && mkdir -p /usr/share/monet && touch /usr/share/monet/files-free-space-v1 \
  && rm -rf /tmp/monet-files-recovery
 COPY --from=window-identity /out /tmp/monet-window-identity
 RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \

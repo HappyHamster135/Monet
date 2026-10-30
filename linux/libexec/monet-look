@@ -128,7 +128,7 @@ plain_names() {
         rm -f "$1.words"
     }
     rename() { # rename <id> <name> [comment]
-        local f old target work
+        local f old target work interfaces monitor_bin monitor_exec
         f="$(entry "$1")" || return 1
         mkdir -p "$DATA/applications"
         target="$DATA/applications/$1.desktop"
@@ -147,6 +147,23 @@ plain_names() {
                fi ;;
         esac
         localized "$work" Name "$2"
+        if [ "$1" = org.kde.plasma-systemmonitor ]; then
+            # KWin requires this declaration before exposing window state on
+            # Wayland. Task Manager uses it to suspend work while minimized.
+            interfaces="$(kreadconfig6 --file "$work" --group 'Desktop Entry' --key X-KDE-Wayland-Interfaces)"
+            case ",$interfaces," in
+                *,org_kde_plasma_window_management,*) ;;
+                *) kwriteconfig6 --file "$work" --group 'Desktop Entry' --key X-KDE-Wayland-Interfaces "${interfaces:+$interfaces,}org_kde_plasma_window_management" ;;
+            esac
+            monitor_bin="$(command -v plasma-systemmonitor || :)"
+            monitor_exec="$(kreadconfig6 --file "$work" --group 'Desktop Entry' --key Exec)"
+            if [ -n "$monitor_bin" ]; then
+                case "$monitor_exec" in
+                    plasma-systemmonitor|plasma-systemmonitor\ *)
+                        kwriteconfig6 --file "$work" --group 'Desktop Entry' --key Exec "$(readlink -f "$monitor_bin")${monitor_exec#plasma-systemmonitor}" ;;
+                esac
+            fi
+        fi
         if [ -n "${3:-}" ]; then
             sed -i -e '/^Comment\[/d' -e "s/^Comment=.*/Comment=$3/" "$work"
             localized "$work" Comment "$3"
@@ -200,6 +217,7 @@ plain_names() {
     for app in "org.kde.dolphin:Files" "org.kde.konsole:Terminal" "org.kde.kate:Text Editor" "org.kde.gwenview:Photos" \
         "org.kde.okular:Documents" "org.kde.ark:Archives" "org.kde.spectacle:Screenshot" "org.kde.kcalc:Calculator" \
         "org.kde.elisa:Music" "org.kde.haruna:Videos" "org.kde.filelight:Disk Usage" "org.kde.partitionmanager:Disks" \
+        "org.kde.plasma-systemmonitor:Task Manager" \
         "org.kde.kdeconnect.app:Phone" "org.kde.kdeconnect.sms:Phone Messages"; do
         rename "${app%%:*}" "${app#*:}" || :
     done
@@ -418,11 +436,11 @@ look --file kdeglobals --group Sounds --key Theme monet
 
 # Inter for reading; Fraunces is used by Monet's own pieces.
 if fc-list : family 2>/dev/null | grep -qx "Inter"; then
-    look --file kdeglobals --group General --key font "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    look --file kdeglobals --group General --key menuFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    look --file kdeglobals --group General --key toolBarFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    look --file kdeglobals --group General --key smallestReadableFont "Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    look --file kdeglobals --group WM --key activeFont "Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key font "Inter,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key menuFont "Inter,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key toolBarFont "Inter,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group General --key smallestReadableFont "Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group WM --key activeFont "Inter,12,-1,5,600,0,0,0,0,0,0,0,0,0,0,1"
 fi
 # Windows+Alt+G saves the last 30 seconds of a game, as Xbox Game Bar has it
 # (Settings → Games & Controllers turns the keeping on), unless it's been set.
@@ -431,7 +449,7 @@ fi
 
 # Window titles in Fraunces, like the placard and Monet Settings.
 if fc-list : family 2>/dev/null | grep -qx "Fraunces 72pt SuperSoft"; then
-    look --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    look --file kdeglobals --group WM --key activeFont "Fraunces 72pt SuperSoft,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 fi
 
 # Motion: a touch quicker than KDE's default, so things feel light.
@@ -543,14 +561,23 @@ case "$(hostnamectl chassis 2>/dev/null)" in
 esac
 
 # Files: big painted folders with previews, on paper; a calm sidebar.
+kw --file kcminputrc --group Libinput --group Defaults --key NaturalScroll true
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22
 kw_default dolphinrc General ShowZoomSlider false
-# Dolphin's small status bar. Its full one says how much room is left on the drive, but KDE
-# reads that from the system's read-only layer here ("0 B free" in every folder, found in a
-# test VM; Settings, Storage has it right). Monet had picked the full one: back once.
-if [ ! -e "$CONFIG/monet/files-small-bar" ]; then
+kw_default dolphinrc General AlwaysShowTabBar true
+kw_default dolphinrc General ShowFullPath true
+# KDE adds our page to customized layouts itself; only order an untouched profile.
+kw_default systemmonitorrc General pageOrder monet-applications.page,monet-performance.page,monet-processes.page,monet-system.page,applications.page,processes.page,overview.page,history.page
+kw_default systemmonitorrc General startPage monet-applications.page
+kw_default systemmonitorrc General hiddenPages applications.page,processes.page,overview.page,history.page
+# The paired image build fixes Atomic mount lookup. Never enable the full space
+# display on an older/unpatched Dolphin, where home incorrectly reads 0 B free.
+if [ -e "$DATADIR/monet/files-free-space-v1" ]; then
+    # Evolve Monet's old Small default; preserve a bar the person chose to hide.
+    look --file dolphinrc --group General --key ShowStatusBar FullWidth
+elif [ ! -e "$CONFIG/monet/files-small-bar" ]; then
     [ "$(kreadconfig6 --file dolphinrc --group General --key ShowStatusBar 2>/dev/null)" = FullWidth ] &&
         kw --file dolphinrc --group General --key ShowStatusBar Small
     mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/files-small-bar"
@@ -559,6 +586,8 @@ fi
 # Screenshot's Extract Text reads your language as well as English (Tesseract's
 # names; the image has them all), unless you've chosen others.
 ocr="$(ocr_language "${LANGUAGE:-${LANG:-en}}")"
+# Keep screenshots immediately pasteable, while retaining a chosen clipboard policy.
+kw_default spectaclerc General clipboardGroup PostScreenshotCopyImage
 kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"
 
 # Settings and Store in kept panels open Monet's own apps too.

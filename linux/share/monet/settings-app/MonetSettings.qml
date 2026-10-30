@@ -45,6 +45,26 @@ Shared.MonetWindow {
     property string pendingAnchor: ""
     property int anchorAttempts: 0
     property var windowsFiles: ({})
+    property bool outputBusy: false
+    property string outputProblem: ""
+    property bool statusBusy: false
+    readonly property bool pollingActive: visible && visibility !== Window.Minimized
+    readonly property bool statusPage: ["light", "wifi", "bluetooth", "display", "sound", "power", "updates"].includes(page)
+    onPollingActiveChanged: { if (pollingActive) refresh() }
+    // Also acknowledge changes made in another display settings window.
+    Screen.onDevicePixelRatioChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
+    // Wayland's screen DPR is rounded to an integer; fractional changes also
+    // change the logical screen geometry even when that rounded DPR stays 2.
+    Screen.onDesktopAvailableWidthChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
+    Screen.onDesktopAvailableHeightChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
+    Timer {
+        id: displayChanged
+        interval: 300
+        onTriggered: if (!sheet.scaleBusy) sheet.ask("display-sizes", out => {
+            const sizes = sheet.json(out, [])
+            sheet.displaySizes = Array.isArray(sizes) ? sizes : []
+        })
+    }
 
     Timer {
         id: searchDelay
@@ -249,6 +269,8 @@ Shared.MonetWindow {
     // Default Apps' From Windows: the bookmarks kept from Windows' browsers (monet-quick windows-browsers).
     property var browserInfo: ({})
     property var storageInfo: ({})
+    property bool storageBusy: false
+    property string storageProblem: ""
     // Storage → OneDrive (monet-quick onedrive): its state, what's being done, and a sign-in that didn't finish.
     property var oneDrive: ({})
     property string oneDriveBusy: ""
@@ -276,6 +298,9 @@ Shared.MonetWindow {
     // Reset this PC: { pending } once it waits for the next restart.
     property var resetState: ({})
     property var accessInfo: ({})
+    property var displaySizes: []
+    property bool scaleBusy: false
+    property string scaleProblem: ""
     // Phone: the phones KDE Connect knows ([{id, name, paired, near, battery, charging}]),
     // whether it's here at all, and the one asked to pair (its answer is on the phone).
     property var phoneList: []
@@ -471,7 +496,14 @@ Shared.MonetWindow {
     }
 
     function refresh() {
-        ask("status", out => { if (!sheet.dragging) sheet.info = sheet.json(out, sheet.info) })
+        if (!pollingActive || !statusPage || statusBusy) return
+        statusBusy = true
+        const requestedPage = page
+        ask("status " + requestedPage, out => {
+            sheet.statusBusy = false
+            if (sheet.page !== requestedPage) { sheet.refresh(); return }
+            if (!sheet.dragging) sheet.info = Object.assign({}, sheet.info, sheet.json(out, {}))
+        })
     }
 
     function load() {
@@ -530,9 +562,16 @@ Shared.MonetWindow {
             })
             ask("windows-browsers", out => sheet.browserInfo = sheet.json(out, sheet.browserInfo))
         } else if (page === "display") {
-            ask("screens", out => sheet.screenInfo = sheet.json(out, []))
+            ask("screens", out => {
+                const screens = sheet.json(out, [])
+                sheet.screenInfo = Array.isArray(screens) ? screens : []
+            })
+            ask("display-sizes", out => {
+                const sizes = sheet.json(out, [])
+                sheet.displaySizes = Array.isArray(sizes) ? sizes : []
+            })
         } else if (page === "storage") {
-            ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
+            if (!storageBusy) ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
             ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))
             ask("shared-files", out => sheet.windowsFiles = sheet.json(out, {}))
         } else if (page === "backups") {
@@ -543,6 +582,10 @@ Shared.MonetWindow {
             loadPhones()
         } else if (page === "accessibility") {
             ask("access", out => sheet.accessInfo = sheet.json(out, sheet.accessInfo))
+            ask("display-sizes", out => {
+                const sizes = sheet.json(out, [])
+                sheet.displaySizes = Array.isArray(sizes) ? sizes : []
+            })
         } else if (page === "games") {
             ask("gaming", out => sheet.gameInfo = sheet.json(out, sheet.gameInfo))
             ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
@@ -698,11 +741,18 @@ Shared.MonetWindow {
     }
 
     function pickOutput(output) {
-        if (!Number.isInteger(output.id)) {
+        if (!Number.isInteger(output.id) || outputBusy) {
             return
         }
-        outputs = outputs.map(o => Object.assign({}, o, { default: o.id === output.id }))
-        ask("output " + output.id, () => sheet.ask("outputs", out => sheet.outputs = sheet.json(out, sheet.outputs)))
+        outputBusy = true
+        outputProblem = ""
+        ask("output " + output.id, (out, code) => {
+            const result = sheet.json(out, {})
+            if (Array.isArray(result.outputs)) sheet.outputs = result.outputs
+            sheet.outputBusy = false
+            sheet.outputProblem = code === 0 && result.ok === true ? ""
+                : i18n("The sound output could not be changed. Check its connection and try again.")
+        })
     }
 
     // Game ids only contain letters, digits, ":", ".", "_" and "-"; tasks are fixed words.
@@ -1134,7 +1184,18 @@ Shared.MonetWindow {
 
     function emptyTrash() {
         storageInfo = changed(storageInfo, ["trash"], 0)
-        ask("empty-trash", () => ask("storage", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
+        ask("empty-trash", () => ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
+    }
+    function measureStorage() {
+        if (storageBusy) return
+        storageBusy = true
+        storageProblem = ""
+        ask("storage", (out, code) => {
+            sheet.storageBusy = false
+            const result = sheet.json(out, {})
+            if (code === 0 && result.measured === true) sheet.storageInfo = result
+            else sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+        })
     }
     function privacy(what, value) {
         privacyInfo = changed(privacyInfo, [what], value)
@@ -1202,6 +1263,19 @@ Shared.MonetWindow {
         accessInfo = changed(accessInfo, [what], value)
         const said = what === "reduced" ? (value ? "reduced" : "normal") : (what === "reader" || what === "zoom") ? (value ? "on" : "off") : value
         ask("access-" + ({ scale: "scale", cursor: "cursor", reduced: "motion", reader: "reader", zoom: "zoom" })[what] + " " + said)
+    }
+
+    function changeScreenSize(name, value) {
+        if (scaleBusy) return
+        scaleBusy = true
+        scaleProblem = ""
+        ask("access-scale " + value + " " + hex(name), (out, code) => {
+            scaleBusy = false
+            const result = sheet.json(out, {})
+            if (Array.isArray(result.displays)) displaySizes = result.displays
+            if (code !== 0 || result.ok !== true)
+                scaleProblem = result.error || i18n("The screen size couldn't be changed. Try again.")
+        })
     }
 
     // A size on disk in words: 840 MB, 6.2 GB, 412 GB, 1.8 TB.
@@ -1340,7 +1414,7 @@ Shared.MonetWindow {
                 visible: heading.detail !== ""
                 text: heading.detail
                 color: heading.tone.dim
-                font.pixelSize: 14
+                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                 wrapMode: Text.Wrap
             }
         }
@@ -1351,10 +1425,69 @@ Shared.MonetWindow {
         Layout.fillWidth: true
         Layout.bottomMargin: -10
         color: tone.dim
-        font.pixelSize: 12
+        font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
         font.weight: Font.DemiBold
         font.letterSpacing: 0.7
         font.capitalization: Font.AllUppercase
+    }
+
+    component ScreenSizes: ColumnLayout {
+        id: sizes
+        property var tone
+        property var displays: []
+        property bool busy: false
+        property string problem: ""
+        signal picked(string name, int percent)
+        Layout.fillWidth: true
+        spacing: 10
+        objectName: "search-size"
+        Caption {
+            tone: sizes.tone
+            text: i18n("Size of text, apps and windows")
+        }
+        Text {
+            objectName: "displaySizeHelp"
+            Layout.fillWidth: true
+            color: sizes.tone.ink
+            opacity: 0.7
+            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: i18n("Choose a comfortable size for this screen. 125% is a starting point for standard displays; high-density screens usually need 175–200%. Each screen keeps its own size.")
+        }
+        Repeater {
+            model: sizes.displays
+            Card {
+                id: sizeCard
+                required property var modelData
+                tone: sizes.tone
+                SettingRow {
+                    tone: sizes.tone
+                    divider: false
+                    title: sizeCard.modelData.name
+                    objectName: "screenSizeRow-" + sizeCard.modelData.name
+                    detail: i18n("%1 × %2 · Current size: %3%", sizeCard.modelData.width, sizeCard.modelData.height, sizeCard.modelData.scale)
+                        + (sizeCard.modelData.highDensity ? "\n" + i18n("High-density display") : "")
+                    Segments {
+                        tone: sizes.tone
+                        objectName: "displaySize-" + sizeCard.modelData.name
+                        enabled: !sizes.busy
+                        options: [100, 125, 150, 175, 200].map(s => [s, s + "%"])
+                        current: sizeCard.modelData.scale
+                        onPicked: value => sizes.picked(sizeCard.modelData.name, value)
+                    }
+                }
+            }
+        }
+        Text {
+            Layout.fillWidth: true
+            color: sizes.tone.ink
+            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            visible: sizes.busy || sizes.problem !== "" || sizes.displays.length === 0
+            text: sizes.busy ? i18n("Changing screen size…") : sizes.problem || i18n("No display information available. Open the display settings to try again.")
+        }
     }
 
     component Card: Rectangle {
@@ -1448,7 +1581,7 @@ Shared.MonetWindow {
                 text: row.title
                 textFormat: Text.PlainText
                 color: row.tone.ink
-                font.pixelSize: 14
+                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                 font.weight: row.strong ? Font.DemiBold : Font.Medium
                 wrapMode: row.stacked ? Text.Wrap : Text.NoWrap
                 elide: row.stacked ? Text.ElideNone : Text.ElideRight
@@ -1460,7 +1593,7 @@ Shared.MonetWindow {
                 text: row.detail
                 textFormat: Text.PlainText
                 color: row.tone.dim
-                font.pixelSize: 13
+                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                 wrapMode: Text.Wrap
             }
         }
@@ -1579,7 +1712,7 @@ Shared.MonetWindow {
         property bool enabledPill: true
         signal clicked()
         implicitWidth: label.implicitWidth + (kind === "sun" ? 40 : 32)
-        implicitHeight: kind === "sun" ? 40 : 36
+        implicitHeight: Math.max(kind === "sun" ? 44 : 40, label.implicitHeight + 18)
         radius: kind === "sun" ? 20 : 12
         opacity: enabledPill ? 1 : 0.5
         color: kind === "sun" ? (hover.hovered ? "#FF6A42" : "#F2552C")
@@ -1599,7 +1732,7 @@ Shared.MonetWindow {
             anchors.centerIn: parent
             text: pill.text
             color: pill.kind === "plain" ? pill.tone.ink : "#FFFFFF"
-            font.pixelSize: pill.kind === "sun" ? 15 : 14
+            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3))
             font.weight: Font.DemiBold
         }
         HoverHandler { id: hover }
@@ -1632,7 +1765,7 @@ Shared.MonetWindow {
             visible: keyCap.keyName !== "Meta"
             text: keyCap.keyName
             color: keyCap.tone.ink
-            font.pixelSize: 12
+            font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
             font.weight: Font.DemiBold
         }
         Grid {
@@ -1659,7 +1792,7 @@ Shared.MonetWindow {
         property var current
         signal picked(var value)
         implicitWidth: segmentRow.implicitWidth + 6
-        implicitHeight: 34
+        implicitHeight: segmentRow.implicitHeight + 6
         radius: 11
         color: tone.wash2
         Row {
@@ -1673,7 +1806,7 @@ Shared.MonetWindow {
                     required property var modelData
                     readonly property bool chosen: segments.current === modelData[0]
                     width: segmentLabel.implicitWidth + 22
-                    height: 28
+                    height: Math.max(34, segmentLabel.implicitHeight + 14)
                     radius: 9
                     color: chosen ? (segments.tone.dark ? Qt.rgba(1, 1, 1, 0.17) : "#FFFFFF")
                         : segmentHover.hovered ? segments.tone.press : "transparent"
@@ -1688,7 +1821,7 @@ Shared.MonetWindow {
                         anchors.centerIn: parent
                         text: segment.modelData[1]
                         color: segments.tone.ink
-                        font.pixelSize: 13
+                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         font.weight: segment.chosen ? Font.DemiBold : Font.Medium
                     }
                     HoverHandler { id: segmentHover }
@@ -1736,7 +1869,7 @@ Shared.MonetWindow {
                 elide: Text.ElideRight
                 text: sliderRow.title
                 color: sliderRow.tone.ink
-                font.pixelSize: 14
+                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                 font.weight: Font.DemiBold
             }
             Slide {
@@ -1856,7 +1989,7 @@ Shared.MonetWindow {
             verticalAlignment: TextInput.AlignVCenter
             echoMode: field.secret ? TextInput.Password : TextInput.Normal
             color: field.tone.ink
-            font.pixelSize: 14
+            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
             clip: true
             selectByMouse: true
             selectionColor: field.tone.lily
@@ -1870,7 +2003,7 @@ Shared.MonetWindow {
                 visible: input.text === ""
                 text: field.hint
                 color: field.tone.dim
-                font.pixelSize: 14
+                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
             }
         }
     }
@@ -1969,7 +2102,7 @@ Shared.MonetWindow {
                     anchors.centerIn: parent
                     text: i18n("Plays here too")
                     color: "#FFFFFF"
-                    font.pixelSize: 11
+                    font.pixelSize: Math.max(13, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 3)
                     font.weight: Font.DemiBold
                 }
             }
@@ -2068,7 +2201,7 @@ Shared.MonetWindow {
                             Layout.fillWidth: true
                             maximumLength: 256
                             color: look.ink
-                            font.pixelSize: 14
+                            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                             clip: true
                             selectByMouse: true
                             selectionColor: look.lily
@@ -2207,12 +2340,12 @@ Shared.MonetWindow {
                                     spacing: 3
                                     Text {
                                         width: parent.width; text: suggestion.modelData.name
-                                        color: look.ink; font.pixelSize: 13; font.weight: Font.DemiBold
+                                        color: look.ink; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); font.weight: Font.DemiBold
                                         wrapMode: Text.Wrap; textFormat: Text.PlainText
                                     }
                                     Text {
                                         width: parent.width; text: suggestion.modelData.detail
-                                        color: look.dim; font.pixelSize: 11
+                                        color: look.dim; font.pixelSize: Math.max(13, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 3)
                                         wrapMode: Text.Wrap; textFormat: Text.PlainText
                                     }
                                 }
@@ -2225,7 +2358,7 @@ Shared.MonetWindow {
                             Layout.margins: 8
                             visible: sheet.searchBusy || sheet.searchProblem !== ""
                             text: sheet.searchBusy ? i18n("Searching…") : sheet.searchProblem
-                            color: look.dim; font.pixelSize: 12; wrapMode: Text.Wrap
+                            color: look.dim; font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2); wrapMode: Text.Wrap
                             Accessible.role: Accessible.StaticText
                         }
                         Pill {
@@ -2242,7 +2375,7 @@ Shared.MonetWindow {
                                 id: navItem
                                 readonly property bool current: sheet.page === modelData.id
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: visible ? 32 : 0
+                                Layout.preferredHeight: visible ? Math.max(38, Kirigami.Theme.defaultFont.pointSize * 4 / 3 + 18) : 0
                                 // A little air between Monet's pages, KDE's, and Windows'.
                                 Layout.topMargin: modelData.gap ? 10 : 0
                                 visible: side.matches(modelData)
@@ -2293,7 +2426,7 @@ Shared.MonetWindow {
                                         text: modelData.name
                                         color: look.ink
                                         opacity: navItem.current ? 1 : 0.88
-                                        font.pixelSize: 14
+                                        font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                         font.weight: navItem.current ? Font.DemiBold : Font.Normal
                                         elide: Text.ElideRight
                                     }
@@ -2326,7 +2459,7 @@ Shared.MonetWindow {
                                      && !sheet.pages.some(p => side.matches(p))
                             text: i18n("Nothing here by that name. Try More settings.")
                             color: look.dim
-                            font.pixelSize: 13
+                            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                             wrapMode: Text.Wrap
                         }
                     }
@@ -2345,7 +2478,7 @@ Shared.MonetWindow {
                         text: i18n("More settings ›")
                         color: look.ink
                         opacity: 0.78
-                        font.pixelSize: 13
+                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         font.weight: Font.Medium
                     }
                     HoverHandler { id: kdeHover }
@@ -2463,7 +2596,7 @@ Shared.MonetWindow {
                         Layout.fillWidth: true
                         color: look.ink
                         text: sheet.notifyBusy !== "" ? i18n("Changing…") : sheet.notifyMessage
-                        font.pixelSize: 13
+                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         wrapMode: Text.Wrap
                         Accessible.role: sheet.notifyFailed ? Accessible.AlertMessage : Accessible.StaticText
                         Accessible.name: text
@@ -2504,7 +2637,7 @@ Shared.MonetWindow {
         Timer {
             interval: 4000
             repeat: true
-            running: sheet.visible
+            running: sheet.pollingActive && (sheet.statusPage || sheet.page === "notifications")
             onTriggered: {
                 sheet.refresh()
                 if (sheet.page === "bluetooth" && sheet.busyDevice === "") {
@@ -2541,7 +2674,7 @@ Shared.MonetWindow {
             id: look
             readonly property bool dark: frame.dark
             readonly property color ink: dark ? "#F1EEE8" : "#1C1B19"
-            readonly property color dim: dark ? Qt.rgba(0.945, 0.933, 0.91, 0.62) : Qt.rgba(0.11, 0.106, 0.098, 0.6)
+            readonly property color dim: dark ? Qt.rgba(0.945, 0.933, 0.91, 0.76) : Qt.rgba(0.11, 0.106, 0.098, 0.74)
             readonly property color wash: dark ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(0.11, 0.106, 0.098, 0.035)
             readonly property color wash2: dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0.11, 0.106, 0.098, 0.07)
             readonly property color press: dark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0.11, 0.106, 0.098, 0.11)
@@ -2576,7 +2709,7 @@ Shared.MonetWindow {
                         Layout.fillWidth: true
                         text: i18n("A few things worth knowing, then it's yours.")
                         color: look.dim
-                        font.pixelSize: 15
+                        font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
                         wrapMode: Text.Wrap
                     }
                 }
@@ -2689,7 +2822,7 @@ Shared.MonetWindow {
                                     Layout.leftMargin: 4
                                     text: modelData[1]
                                     color: look.ink
-                                    font.pixelSize: 14
+                                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -2699,7 +2832,7 @@ Shared.MonetWindow {
                                     Layout.leftMargin: 4
                                     text: modelData[2]
                                     color: look.dim
-                                    font.pixelSize: 13
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     elide: Text.ElideRight
                                 }
                             }
@@ -2790,7 +2923,7 @@ Shared.MonetWindow {
                                                 text: sheet.photoInfo.state === "painting"
                                                     ? i18n("Painting… %1%", sheet.photoInfo.percent || 0) : i18n("Choose a photo…")
                                                 color: look.dim
-                                                font.pixelSize: 12
+                                                font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
                                             }
                                         }
                                     }
@@ -2801,7 +2934,7 @@ Shared.MonetWindow {
                                     Layout.leftMargin: 4
                                     text: modelData[1]
                                     color: look.ink
-                                    font.pixelSize: 14
+                                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -2811,7 +2944,7 @@ Shared.MonetWindow {
                                     Layout.leftMargin: 4
                                     text: modelData[2]
                                     color: look.dim
-                                    font.pixelSize: 13
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     // Four side by side: room for two lines rather than cutting the words off.
                                     wrapMode: Text.WordWrap
                                     maximumLineCount: 2
@@ -2902,7 +3035,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: i18n("Glass")
                                 color: look.ink
-                                font.pixelSize: 14
+                                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                 font.weight: Font.DemiBold
                             }
                             Text {
@@ -2913,7 +3046,7 @@ Shared.MonetWindow {
                                        i18n("Frosted glass: the painting's light and color, softened."),
                                        i18n("Clear glass: the painting shows through panels, windows and widgets.")][glassRow.step]
                                 color: look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                             Slide {
@@ -2944,7 +3077,7 @@ Shared.MonetWindow {
                                         x: Math.max(0, Math.min(parent.width - width, at - width / 2))
                                         text: modelData
                                         color: index === glassRow.step ? look.ink : look.dim
-                                        font.pixelSize: 12
+                                        font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
                                         font.weight: index === glassRow.step ? Font.DemiBold : Font.Normal
                                         TapHandler {
                                             onTapped: sheet.chooseGlass(glassRow.levels[index])
@@ -3097,7 +3230,7 @@ Shared.MonetWindow {
                                         visible: parent.busy
                                         text: i18n("Joining…")
                                         color: look.dim
-                                        font.pixelSize: 13
+                                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     }
                                     // A lock for networks that ask for a password.
                                     Glyph {
@@ -3133,7 +3266,7 @@ Shared.MonetWindow {
                                         verticalAlignment: TextInput.AlignVCenter
                                         echoMode: TextInput.Password
                                         color: look.ink
-                                        font.pixelSize: 14
+                                        font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                         clip: true
                                         Accessible.role: Accessible.EditableText
                                         Accessible.name: i18n("Password for %1", modelData.name)
@@ -3146,7 +3279,7 @@ Shared.MonetWindow {
                                             visible: password.text === ""
                                             text: sheet.joinState === "failed" ? i18n("That didn't work. Check the password.") : i18n("Password")
                                             color: sheet.joinState === "failed" ? "#E0603A" : look.dim
-                                            font.pixelSize: 14
+                                            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                         }
                                     }
                                 }
@@ -3461,7 +3594,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: i18n("Get the app on your phone")
                                 color: look.ink
-                                font.pixelSize: 15
+                                font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.WordWrap
                             }
@@ -3470,7 +3603,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: i18n("Point your phone's camera at this and install the app it shows. Open it on the same Wi-Fi as this PC, and your phone shows up here to pair.")
                                 color: look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.WordWrap
                             }
                         }
@@ -3505,7 +3638,14 @@ Shared.MonetWindow {
                     entry: sheet.entry("display")
                     art: sheet.art
                     text: i18n("Display")
-                    detail: i18n("Brightness, and warmer colors at night.")
+                    detail: i18n("Screen size, brightness and warmer colors at night.")
+                }
+                ScreenSizes {
+                    tone: look
+                    displays: sheet.displaySizes
+                    busy: sheet.scaleBusy
+                    problem: sheet.scaleProblem
+                    onPicked: (name, percent) => sheet.changeScreenSize(name, percent)
                 }
                 Card {
                     tone: look
@@ -3634,7 +3774,7 @@ Shared.MonetWindow {
                         SettingRow {
                             tone: look
                             divider: index > 0
-                            tappable: true
+                            tappable: !sheet.outputBusy
                             strong: false
                             title: modelData.name
                             onTapped: sheet.pickOutput(modelData)
@@ -3653,6 +3793,11 @@ Shared.MonetWindow {
                     }
                 }
                 // Each app's own volume, as Windows' mixer has it (apps come and go as they play).
+                Caption {
+                    tone: look
+                    visible: sheet.outputBusy || sheet.outputProblem !== ""
+                    text: sheet.outputBusy ? i18n("Changing sound output…") : sheet.outputProblem
+                }
                 Caption {
                     tone: look
                     visible: sheet.appsSound.length > 0
@@ -3754,7 +3899,7 @@ Shared.MonetWindow {
                             text: datetimeColumn.now.toLocaleDateString(sheet.timeLocale(), Locale.LongFormat)
                                 + ((sheet.clock.zone || "") !== "" ? " · " + sheet.zoneCity(sheet.clock.zone) : "")
                             color: look.dim
-                            font.pixelSize: 14
+                            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                             elide: Text.ElideRight
                         }
                     }
@@ -3892,7 +4037,7 @@ Shared.MonetWindow {
                                     : usersColumn.you.admin ? i18n("%1 · Administrator", usersColumn.you.login)
                                     : i18n("%1 · Standard account", usersColumn.you.login)
                                 color: look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 elide: Text.ElideRight
                             }
                         }
@@ -3946,7 +4091,7 @@ Shared.MonetWindow {
                             visible: sheet.nameProblem !== ""
                             text: sheet.nameProblem
                             color: "#E0603A"
-                            font.pixelSize: 13
+                            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                             wrapMode: Text.Wrap
                         }
                     }
@@ -4011,7 +4156,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: sheet.passwordState === "failed" ? sheet.passwordMessage : ""
                                 color: "#E0603A"
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                             Pill {
@@ -4232,7 +4377,7 @@ Shared.MonetWindow {
                     visible: inputColumn.codes.length > 1
                     text: i18n("The bar shows which one you're typing in. Click it to switch.")
                     color: look.dim
-                    font.pixelSize: 13
+                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                     wrapMode: Text.Wrap
                 }
                 // Plasma's own keys (and Monet's menu, on the Windows key), to learn them by.
@@ -4277,7 +4422,7 @@ Shared.MonetWindow {
                                     Layout.fillWidth: true
                                     text: shortcutRow.modelData[0]
                                     color: look.ink
-                                    font.pixelSize: 13
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     elide: Text.ElideRight
                                 }
                                 Row {
@@ -4408,7 +4553,7 @@ Shared.MonetWindow {
                                     Layout.fillWidth: true
                                     text: modeChoice.modelData[1]
                                     color: look.ink
-                                    font.pixelSize: 14
+                                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -4417,7 +4562,7 @@ Shared.MonetWindow {
                                     Layout.fillWidth: true
                                     text: modeChoice.modelData[2]
                                     color: look.dim
-                                    font.pixelSize: 13
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     wrapMode: Text.Wrap
                                 }
                             }
@@ -4889,7 +5034,7 @@ Shared.MonetWindow {
                             Text {
                                 text: bookmarkProfile.checked ? i18n("Selected") : i18n("Choose")
                                 color: bookmarkProfile.checked ? look.lily : look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 font.weight: bookmarkProfile.checked ? Font.DemiBold : Font.Normal
                             }
                         }
@@ -5000,25 +5145,18 @@ Shared.MonetWindow {
                     text: i18n("Accessibility")
                     detail: i18n("Make Monet easier to see, read and use.")
                 }
+                ScreenSizes {
+                    tone: look
+                    displays: sheet.displaySizes
+                    busy: sheet.scaleBusy
+                    problem: sheet.scaleProblem
+                    onPicked: (name, percent) => sheet.changeScreenSize(name, percent)
+                }
                 Card {
                     tone: look
                     SettingRow {
                         tone: look
                         divider: false
-                        visible: typeof sheet.accessInfo.scale === "number"
-                        objectName: "search-size"
-                        title: i18n("Size of everything")
-                        detail: i18n("Text, pictures and windows, on every screen")
-                        Segments {
-                            tone: look
-                            options: [100, 125, 150, 175, 200].map(s => [s, s + "%"])
-                            current: sheet.accessInfo.scale
-                            onPicked: value => sheet.access("scale", value)
-                        }
-                    }
-                    SettingRow {
-                        tone: look
-                        divider: typeof sheet.accessInfo.scale === "number"
                         title: i18n("Pointer size")
                         objectName: "search-pointer"
                         Segments {
@@ -5078,10 +5216,10 @@ Shared.MonetWindow {
             ColumnLayout {
                 id: storageColumn
                 // What fills the disk, each in a color of The Hours.
-                readonly property var parts: [
+                readonly property var parts: sheet.storageInfo.measured ? [
                     ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
                     ["files", i18n("Your files"), "#357F72"], ["system", i18n("Monet"), "#9C7BC0"]
-                ]
+                ] : [["used", i18n("Used"), "#357F72"]]
                 readonly property real total: sheet.storageInfo.total || 0
                 // Emptying the Trash asks once more.
                 property bool askingTrash: false
@@ -5148,7 +5286,7 @@ Shared.MonetWindow {
                                 visible: storageColumn.total > 0
                                 text: i18n("of %1", sheet.bytes(storageColumn.total))
                                 color: look.dim
-                                font.pixelSize: 14
+                                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                             }
                         }
                         // The disk as one bar: each part its share, free space left plain.
@@ -5194,9 +5332,27 @@ Shared.MonetWindow {
                                         horizontalAlignment: Text.AlignLeft
                                         text: parent.modelData[1] + "  " + sheet.bytes(sheet.storageInfo[parent.modelData[0]])
                                         color: look.dim
-                                        font.pixelSize: 13
+                                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     }
                                 }
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                Layout.fillWidth: true
+                                text: sheet.storageProblem || (sheet.storageBusy ? i18n("Measuring folder sizes…")
+                                    : i18n("Folder sizes are measured only when you ask, to keep disk activity low."))
+                                color: look.dim
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                                wrapMode: Text.Wrap
+                            }
+                            Pill {
+                                objectName: "measureStorageButton"
+                                tone: look
+                                text: sheet.storageBusy ? i18n("Measuring…") : i18n("Measure folder sizes")
+                                enabled: !sheet.storageBusy
+                                onClicked: sheet.measureStorage()
                             }
                         }
                     }
@@ -5212,6 +5368,7 @@ Shared.MonetWindow {
                         divider: false
                         title: i18n("Trash")
                         detail: storageColumn.askingTrash ? i18n("Everything in it is gone for good. Sure?")
+                            : !sheet.storageInfo.measured ? i18n("Not measured")
                             : (sheet.storageInfo.trash || 0) > 0 ? sheet.bytes(sheet.storageInfo.trash) : i18n("Empty")
                         Row {
                             spacing: 8
@@ -5239,7 +5396,7 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         title: i18n("Downloads")
-                        detail: (sheet.storageInfo.downloads || 0) > 0
+                        detail: !sheet.storageInfo.measured ? i18n("Open Downloads to review your files") : (sheet.storageInfo.downloads || 0) > 0
                             ? i18n("%1 · look through them in Files", sheet.bytes(sheet.storageInfo.downloads)) : i18n("Empty")
                         Pill {
                             tone: look
@@ -5254,7 +5411,7 @@ Shared.MonetWindow {
                     Layout.fillWidth: true
                     text: i18n("What apps leave behind when they update is cleared away with each update, by itself.")
                     color: look.dim
-                    font.pixelSize: 14
+                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     lineHeight: 1.3
                     wrapMode: Text.Wrap
                 }
@@ -5392,7 +5549,7 @@ Shared.MonetWindow {
                     visible: (sheet.earlier.file || "") !== "" && backupsColumn.versions.length > 0
                     text: i18n("Put back keeps both: the earlier version goes beside it, with its time in the name.")
                     color: look.dim
-                    font.pixelSize: 14
+                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     lineHeight: 1.3
                     wrapMode: Text.Wrap
                 }
@@ -5524,7 +5681,7 @@ Shared.MonetWindow {
                     Layout.fillWidth: true
                     text: i18n("Games aren't copied: Steam and the other stores download them again. Neither is the Trash.")
                     color: look.dim
-                    font.pixelSize: 14
+                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     lineHeight: 1.3
                     wrapMode: Text.Wrap
                 }
@@ -5898,7 +6055,7 @@ Shared.MonetWindow {
                             text: sheet.unlockProblem !== "" ? sheet.unlockProblem
                                 : i18n("It's in your Microsoft account, or in Windows: search for Manage BitLocker, then Back up your recovery key.")
                             color: sheet.unlockProblem !== "" ? "#E0603A" : look.dim
-                            font.pixelSize: 13
+                            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                             wrapMode: Text.Wrap
                         }
                         Pill {
@@ -6046,7 +6203,7 @@ Shared.MonetWindow {
                     visible: (sheet.gameMarks.blocked || []).length > 0
                     text: i18n("Which games need Windows comes from AreWeAntiCheatYet and ProtonDB.")
                     color: look.dim
-                    font.pixelSize: 13
+                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                     wrapMode: Text.Wrap
                 }
                 Pill {
@@ -6318,7 +6475,7 @@ Shared.MonetWindow {
                     Layout.fillWidth: true
                     text: i18n("In Windows, Windows Security keeps watch: Monet never turns it off.")
                     color: look.dim
-                    font.pixelSize: 13
+                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                     wrapMode: Text.Wrap
                 }
             }
@@ -6370,7 +6527,7 @@ Shared.MonetWindow {
                                     : (sheet.pc.windows || "") === "" ? i18n("Windows")
                                     : i18n("Windows isn't ready")
                                 color: look.ink
-                                font.pixelSize: 15
+                                font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                             }
@@ -6392,7 +6549,7 @@ Shared.MonetWindow {
                                     : sheet.pc.windows === "Ready" || (sheet.pc.windows || "") === "" ? i18n("Games that need Windows start there, and you come back here when you quit.")
                                     : i18n("Windows: %1. Check Monet below to see what's missing.", i18n(sheet.pc.windows))
                                 color: look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                             Text {
@@ -6400,7 +6557,7 @@ Shared.MonetWindow {
                                 visible: sheet.asking !== null && !sheet.switching
                                 text: i18n("Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return.")
                                 color: look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                         }
@@ -6461,7 +6618,7 @@ Shared.MonetWindow {
                     visible: sheet.games.length === 0 && !windowsColumn.noWindows
                     text: i18n("Your Windows games show up here once Windows has started with Monet Bridge.")
                     color: look.dim
-                    font.pixelSize: 14
+                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     wrapMode: Text.Wrap
                 }
                 // Trips that make the next ones smoother: signed in everywhere, everything up to date.
@@ -6585,7 +6742,7 @@ Shared.MonetWindow {
                         visible: sheet.returnInfo.available === true
                         text: i18n("Dismiss forgets this recovery list, not your files. Apps already running are left alone.")
                         color: look.dim
-                        font.pixelSize: 12
+                        font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
                         wrapMode: Text.Wrap
                     }
                     SettingRow {
@@ -6626,7 +6783,7 @@ Shared.MonetWindow {
                         textFormat: Text.StyledText
                         text: sheet.report(sheet.doctorReport)
                         color: look.ink
-                        font.pixelSize: 13
+                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         lineHeight: 1.35
                         wrapMode: Text.Wrap
                     }
@@ -6702,7 +6859,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: sheet.updateTitle()
                                 color: look.ink
-                                font.pixelSize: 15
+                                font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                             }
@@ -6711,7 +6868,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: sheet.updateDetail()
                                 color: sheet.updateState === "failed" ? "#E0603A" : look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                             // Still working: there's no number to show, so it just moves.
@@ -6797,7 +6954,7 @@ Shared.MonetWindow {
                                     Layout.fillWidth: true
                                     text: parent.modelData.title
                                     color: look.ink
-                                    font.pixelSize: 14
+                                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
                                     wrapMode: Text.Wrap
                                 }
@@ -6806,7 +6963,7 @@ Shared.MonetWindow {
                                     Layout.fillWidth: true
                                     text: parent.modelData.text
                                     color: look.dim
-                                    font.pixelSize: 13
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                     lineHeight: 1.25
                                     wrapMode: Text.Wrap
                                 }
@@ -6960,7 +7117,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: sheet.firmwareTitle()
                                 color: look.ink
-                                font.pixelSize: 15
+                                font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                             }
@@ -6969,7 +7126,7 @@ Shared.MonetWindow {
                                 Layout.fillWidth: true
                                 text: sheet.firmwareDetail()
                                 color: sheet.firmwareState === "failed" ? "#E0603A" : look.dim
-                                font.pixelSize: 13
+                                font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
                             }
                             Busy {
@@ -7008,7 +7165,7 @@ Shared.MonetWindow {
                     Layout.fillWidth: true
                     text: i18n("A new Monet starts the next time you restart, never while you work, and the one before stays in the start menu, just in case.")
                     color: look.dim
-                    font.pixelSize: 14
+                    font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     lineHeight: 1.3
                     wrapMode: Text.Wrap
                 }
@@ -7058,7 +7215,7 @@ Shared.MonetWindow {
                             horizontalAlignment: Text.AlignLeft
                             text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.monet) : i18n("Impression")
                             color: "#E6FFFFFF"
-                            font.pixelSize: 14
+                            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                         }
                     }
                 }
@@ -7082,7 +7239,7 @@ Shared.MonetWindow {
                                 width: Math.min(implicitWidth, 380)
                                 text: modelData[1]
                                 color: look.ink
-                                font.pixelSize: 14
+                                font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                 elide: Text.ElideRight
                             }
                         }
@@ -7106,7 +7263,7 @@ Shared.MonetWindow {
                             horizontalAlignment: Text.AlignLeft
                             text: i18nc("a time in seconds", "%1 s", sheet.secs(sheet.startup.total || 0))
                             color: look.ink
-                            font.pixelSize: 14
+                            font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                         }
                     }
                 }

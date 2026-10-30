@@ -195,8 +195,8 @@ Window {
         required property color paint
         required property bool dark
         required property bool windowActive
-        width: 30
-        height: 28
+        width: 40
+        height: 32
         hoverEnabled: true
         focusPolicy: Qt.TabFocus
         Accessible.name: text
@@ -211,6 +211,8 @@ Window {
         }
         contentItem: Item {
             Image {
+                id: artwork
+                objectName: "windowButtonArtwork-" + button.paintAction
                 anchors.centerIn: parent
                 width: 26
                 height: 26
@@ -220,6 +222,17 @@ Window {
                 source: Qt.resolvedUrl("../window-buttons/" + (button.dark ? "MonetSmoke" : "Monet")
                     + "-" + button.paintAction + "-" + appearance + ".svg")
                 opacity: button.enabled ? 1 : 0.35
+            }
+            // A packaging or artwork error must never make a frameless window
+            // impossible to close. Keep the action recognizable without assets.
+            Text {
+                objectName: "windowButtonFallback-" + button.paintAction
+                anchors.centerIn: parent
+                visible: artwork.status !== Image.Ready
+                text: button.paintAction === "close" ? "×" : button.paintAction === "minimize" ? "−" : "□"
+                color: button.dark ? "#F1EEE8" : "#1C1B19"
+                font.pixelSize: 24
+                Accessible.ignored: true
             }
         }
     }

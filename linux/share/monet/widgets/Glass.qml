@@ -17,7 +17,6 @@ import QtCore
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
-import Qt.labs.folderlistmodel
 import org.kde.kirigami as Kirigami
 
 Item {
@@ -40,40 +39,17 @@ Item {
     property Item painting: null
     property rect patch: Qt.rect(0, 0, 1, 1)
     // The painting frosted behind it, unless glass is off (monet-light leaves glass-off).
-    readonly property bool frosted: drawBackground && painting !== null && glassOff.count === 0
+    readonly property bool frosted: drawBackground && painting !== null && !appearance.off
                                     && GraphicsInfo.api !== GraphicsInfo.Software
 
     // On an older PC (monet-session leaves glass-lite) the frost reaches the edge, without the lens.
-    readonly property bool lite: glassLite.count > 0
+    readonly property bool lite: appearance.lite
     // Settings' Glass slider (monet-light leaves glass-frosted or glass-matte): 0 clear, 1 frosted,
     // 2 matte, the painting softer each step and more washed over, until only its color is left.
-    readonly property int level: glassMatte.count > 0 ? 2 : glassFrosted.count > 0 ? 1 : 0
+    readonly property int level: appearance.level
     readonly property bool lensed: !lite && level < 2
 
-    FolderListModel {
-        id: glassOff
-        folder: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/monet"
-        nameFilters: ["glass-off"]
-        showDirs: false
-    }
-    FolderListModel {
-        id: glassLite
-        folder: glassOff.folder
-        nameFilters: ["glass-lite"]
-        showDirs: false
-    }
-    FolderListModel {
-        id: glassFrosted
-        folder: glassOff.folder
-        nameFilters: ["glass-frosted"]
-        showDirs: false
-    }
-    FolderListModel {
-        id: glassMatte
-        folder: glassOff.folder
-        nameFilters: ["glass-matte"]
-        showDirs: false
-    }
+    GlassSettings { id: appearance; enabled: glass.drawBackground }
 
     // The Hours: the item with its two lights, wherever the scene keeps it.
     function findPainting() {
@@ -259,6 +235,7 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
+            id: rimPath
             readonly property real w: Math.max(glass.width, 1)
             readonly property real h: Math.max(glass.height, 1)
             strokeWidth: -1
@@ -267,8 +244,8 @@ Item {
             fillGradient: LinearGradient {
                 x1: 0
                 y1: 0
-                x2: 2 * parent.w * parent.h * parent.h / (parent.w * parent.w + parent.h * parent.h)
-                y2: 2 * parent.w * parent.w * parent.h / (parent.w * parent.w + parent.h * parent.h)
+                x2: 2 * rimPath.w * rimPath.h * rimPath.h / (rimPath.w * rimPath.w + rimPath.h * rimPath.h)
+                y2: 2 * rimPath.w * rimPath.w * rimPath.h / (rimPath.w * rimPath.w + rimPath.h * rimPath.h)
                 GradientStop { position: 0; color: Qt.rgba(1, 1, 1, glass.smoke ? 0.42 : 0.92) }
                 GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, glass.smoke ? 0.07 : 0.24) }
                 GradientStop { position: 1; color: Qt.rgba(1, 1, 1, glass.smoke ? 0.24 : 0.62) }

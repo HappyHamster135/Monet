@@ -1,0 +1,19 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Live download and upload speeds, and totals since the connection started",
+        "Icon": "preferences-system-network",
+        "Id": "org.monet.network",
+        "License": "GPL-3.0-or-later",
+        "Name": "Network",
+        "Version": "0.9.5",
+        "Website": "https://github.com/HappyHamster135/Monet"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

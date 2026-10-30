@@ -44,8 +44,9 @@ KCM.SimpleKCM {
             places: Array.from(cfg_places), fahrenheit: cfg_fahrenheit});
     }
 
-    property var found: []
-    property bool searching: false
+    PlaceSearch { id: placeSearch }
+    property alias found: placeSearch.results
+    readonly property bool searching: placeSearch.busy
 
     // The card's list: the place it shows is always in it.
     readonly property var shown: ({name: cfg_place, latitude: cfg_latitude, longitude: cfg_longitude})
@@ -99,30 +100,10 @@ KCM.SimpleKCM {
         }
     }
 
-    function search() {
-        const name = query.text.trim();
-        if (name.length < 2) {
-            return;
-        }
-        searching = true;
-        const request = new XMLHttpRequest();
-        request.onreadystatechange = () => {
-            if (request.readyState !== XMLHttpRequest.DONE) {
-                return;
-            }
-            searching = false;
-            try {
-                found = JSON.parse(request.responseText).results || [];
-            } catch (e) {
-                found = [];
-            }
-        };
-        request.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=8&format=json&name="
-                     + encodeURIComponent(name) + "&language=" + Qt.locale().name.split("_")[0]);
-        request.send();
-    }
+    function search() { placeSearch.find(query.text) }
 
     Kirigami.FormLayout {
+        QQC2.Label { text: placeSearch.problem; visible: text !== ""; wrapMode: Text.Wrap; Layout.fillWidth: true }
         ColumnLayout {
             Kirigami.FormData.label: i18n("Places:")
             spacing: 0
@@ -159,6 +140,7 @@ KCM.SimpleKCM {
             Kirigami.FormData.label: i18n("Add a place:")
             QQC2.TextField {
                 id: query
+                onTextChanged: placeSearch.cancel()
                 placeholderText: i18n("A town or a city")
                 onAccepted: page.search()
             }

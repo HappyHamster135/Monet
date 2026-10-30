@@ -211,6 +211,8 @@ class ProfileUpgrades(unittest.TestCase):
             file = tools / name; file.write_text("#!/bin/sh\n" + body + "\n"); file.chmod(0o755)
         self.env["PATH"] = str(tools) + os.pathsep + self.env["PATH"]
         share = self.root / "share"; (share / "applications").mkdir(parents=True)
+        (share / "monet").mkdir()
+        (share / "monet/files-free-space-v1").touch()
         (share / "applications/monet-store.desktop").write_text("[Desktop Entry]\nName=Store\nType=Application\nExec=monet-store %u\n")
         system = self.root / "system-apps"; system.mkdir()
         (system / "org.kde.dolphin.desktop").write_text("[Desktop Entry]\nType=Application\nName=Dolphin\nExec=dolphin %u\n")
@@ -218,7 +220,9 @@ class ProfileUpgrades(unittest.TestCase):
         (local / "org.kde.dolphin.desktop").write_text("[Desktop Entry]\nName=My Files\nExec=dolphin --new-window %u\nIcon=my-folder\nX-KDE-Shortcuts=Ctrl+Alt+F\n")
         config = {
             "kdeglobals": "[General]\nfont=My Font,13\nColorScheme=MyColors\nAccentColor=1,2,3\n[KDE]\nLookAndFeelPackage=org.example.desktop\nwidgetStyle=Fusion\nAnimationDurationFactor=0\n[Icons]\nTheme=MyIcons\n",
-            "kcminputrc": "[Mouse]\ncursorTheme=MyCursor\n",
+            "kcminputrc": "[Mouse]\ncursorTheme=MyCursor\n[Libinput][123][456][My Touchpad]\nNaturalScroll=false\n",
+            "dolphinrc": "[General]\nAlwaysShowTabBar=false\nShowFullPath=false\nShowStatusBar=Disabled\n",
+            "systemmonitorrc": "[General]\npageOrder=processes.page,custom.page,overview.page\nstartPage=custom.page\nhiddenPages=history.page\n",
             "kwinrc": "[org.kde.kdecoration2]\nlibrary=org.example.decoration\ntheme=MyFrame\nButtonsOnLeft=\nButtonsOnRight=AX\n",
             "kglobalshortcutsrc": "[kwin]\nOverview=Ctrl+Alt+O,Meta+W,Toggle Overview\nGrid View=none,Meta+G,Toggle Grid View\n",
         }
@@ -240,9 +244,21 @@ class ProfileUpgrades(unittest.TestCase):
                 if "=" in line: self.assertIn(line + "\n", (self.config / name).read_text(), (name, line))
         self.assertEqual(prefs.read_text(), '{"glass":"matte","dodge":false,"snap":false}')
         self.assertEqual(light.read_text(), "smoke\n")
+        # New devices get the requested default without overwriting that touchpad.
+        natural = subprocess.check_output(["kreadconfig6", "--file", str(self.config / "kcminputrc"),
+                                            "--group", "Libinput", "--group", "Defaults", "--key", "NaturalScroll"],
+                                           env=self.env, text=True).strip()
+        self.assertEqual(natural, "true")
         # Shortcut migration service also leaves custom/disabled bindings intact.
         self.call("run", str(look), "--keys")
         self.assertIn("Overview=Ctrl+Alt+O,", (self.config / "kglobalshortcutsrc").read_text())
+
+        # An earlier Monet-owned compact bar must evolve when the patched
+        # Files bundle arrives. The explicitly Disabled bar above was kept.
+        (self.config / "dolphinrc").write_text("[General]\n")
+        self.call("put", "--file", "dolphinrc", "--group", "General", "--key", "ShowStatusBar", "Small")
+        subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
+        self.assertIn("ShowStatusBar=FullWidth", (self.config / "dolphinrc").read_text())
 
     def test_before_desktop_job_keeps_menu_and_tray_choices_without_old_stamps(self):
         rc = self.config / "plasma-org.kde.plasma.desktop-appletsrc"

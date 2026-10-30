@@ -17,6 +17,7 @@ WallpaperItem {
     // pages. KDE's Desktop and Wallpaper and Display Configuration are out of it (monet-fresh):
     // they opened KDE's dialogs. A wallpaper's entries are the only ones Plasma's menu takes in.
     contextualActions: [
+        TaskManagerAction {},
         PlasmaCore.Action {
             text: i18n("Display settings")
             icon.name: "preferences-desktop-display"
@@ -158,9 +159,9 @@ WallpaperItem {
         return folder + hours[i].name + ".jpg"
     }
 
-    // Two images take turns: the one below shows the light we're in, the one
-    // above fades in the next light. When it's fully in, they swap roles
-    // without reloading anything that's on screen.
+    // Two images take turns during a transition. Between transitions keep
+    // only the displayed painting decoded, rather than a second 4K image
+    // waiting for hours. Swapping retains the image already on screen.
     property Image below: first
     property Image above: second
     // A jump to another light waits for its painting to load, so nothing blinks.
@@ -190,6 +191,13 @@ WallpaperItem {
                 return
             }
         }
+        if (t <= 0 || from === to) {
+            fade.stop()
+            arriving = false
+            above.opacity = 0
+            above.source = ""
+            return
+        }
         if (above.source.toString() !== source(to)) {
             fade.stop()
             arriving = false
@@ -198,7 +206,8 @@ WallpaperItem {
         }
         fade.target = above
         fade.to = t
-        fade.restart()
+        if (above.status === Image.Ready)
+            fade.restart()
     }
 
     function swap() {
@@ -213,7 +222,7 @@ WallpaperItem {
     }
 
     function loaded(image) {
-        if (arriving && image === above && image.status !== Image.Loading) {
+        if (image === above && image.status !== Image.Loading) {
             arriving = false
             if (image.status === Image.Ready)
                 fade.restart()

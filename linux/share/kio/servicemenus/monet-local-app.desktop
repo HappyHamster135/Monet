@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/x-executable;application/x-pie-executable;application/x-shellscript;application/x-appimage;
+Actions=add
+X-KDE-Priority=TopLevel
+X-KDE-RequiredNumberOfUrls=1
+X-Monet=true
+
+[Desktop Action add]
+Name=Add to apps…
+Icon=list-add
+Exec=@LIBEXECDIR@/monet-quick native-shortcut %f

@@ -6,11 +6,53 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.4-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.4-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.4-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.4-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.4-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.5-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.5-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.5-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.5-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.5-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.5: a clearer, lighter desktop
+
+- **Task Manager is more useful at a glance.** Applications and Processes show
+  system-wide CPU, memory, graphics, network and disk totals above their tables.
+  Performance keeps live readings beside each resource; System Details is its own
+  sidebar page with processor cores and clocks, memory, drives, interfaces and
+  supported hardware sensors. Missing readings say so instead of pretending to be zero.
+- **Simpler Task Manager controls.** Open it from the desktop right-click menu.
+  One click folds the sidebar; right-click its empty space for page tools. New
+  custom pages save correctly and can be removed with confirmation.
+- **Files and downloaded apps are easier to find.** Files keeps its tabs visible,
+  shows full breadcrumbs and reports usable disk space correctly on the OS image.
+  Folder actions show drive capacity and find launchable apps in extracted downloads.
+  Add a Linux app to the menu without launching it; installed apps then rank ahead
+  of folders in Start search, including ChatGPT.
+- **More readable controls and more painted icons.** Larger default text, clear
+  Settings window buttons, per-screen scale choices and additional painted app icons.
+  New accounts start at 125% on suitable lower-density displays, while dense panels
+  keep their higher scale. Existing display preferences are preserved.
+- **Widgets keep their place.** Moving and resizing survive leaving edit mode and
+  restarting the desktop. Storage and Network join the widget gallery. Weather
+  search handles failed requests and retries correctly; Stockholm was checked in
+  both the desktop widget and the bottom-right popup.
+- **Light follows the sun.** Automatic Mist and Smoke changes use local sunrise
+  and sunset, calculated offline from the weather location or time-zone city.
+  Explicit appearance choices remain in control, and open apps update more reliably.
+- **Less work in the background.** Widgets share appearance watchers, layout saves
+  respond to changes instead of polling, and the wallpaper releases its spare image
+  after fading. Settings and Task Manager stop unnecessary hidden work. In a short
+  laptop comparison, Plasma shell proportional memory fell from about 350 to 304 MiB;
+  this is a desktop-shell measurement, not a whole-OS or battery-life benchmark.
+- **Everyday fixes.** Screenshots copy automatically by default, new touchpads use
+  natural scrolling, audio selection gives clearer feedback and disconnected outputs
+  no longer crowd the list. Existing explicit preferences are kept.
+
+This is still a preview. Encrypted boot cleanup and interrupted Windows preparation
+remain open, and physical Secure Boot, sleep/resume, Bluetooth, backup restoration
+and Windows/game round trips still need acceptance testing. The native Task Manager
+and Files fixes ship in the OS images; the Linux add-on package keeps the host's
+native KDE executables. See the [0.9.5 backlog](https://github.com/HappyHamster135/Monet/blob/main/docs/BACKLOG-0.9.5.md)
+for verification details and remaining work.
 
 ### New in 0.9.4: safer switching, more of your desktop comes back
 

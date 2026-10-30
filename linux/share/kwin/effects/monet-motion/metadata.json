@@ -67,7 +67,7 @@
         "Name[vi]": "Chuyển động cửa sổ của Monet",
         "Name[zh_CN]": "Monet 窗口动效",
         "Name[zh_TW]": "Monet 視窗動效",
-        "Version": "0.9.4"
+        "Version": "0.9.5"
     },
     "X-KDE-Ordering": 60,
     "X-KWin-Exclusive-Category": "maximize",

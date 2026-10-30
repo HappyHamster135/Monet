@@ -1288,6 +1288,48 @@ def obsidian_icon():
     return c.finish()
 
 
+def chatgpt_icon():
+    """ChatGPT: six interlaced pale loops on a deep green canvas."""
+    c = Canvas(541)
+    disc = circle(64, 64, 54)
+    c.paint(disc, lit("#397F71", "#17483F", y0=10, y1=118, warm="#B3D3BE", cool="#19384C"),
+            4.0, around(64, 64), accents=["#467E73", "#315D5C"], accent_rate=0.2, thick=1.3)
+    for turn in range(6):
+        angle = math.radians(turn * 60)
+        points = [(64 + x * math.cos(angle) - y * math.sin(angle),
+                   64 + x * math.sin(angle) + y * math.cos(angle))
+                  for x, y in [(0, -17), (15, -26), (29, -18), (33, -6), (27, 8), (12, 17), (0, 10)]]
+        c.mark(points, 7, "#F5F0DC", disc, thick=1.5)
+    return c.finish()
+
+
+def inkscape_icon():
+    """Inkscape: a snowy ink-black mountain and its scattered droplets."""
+    c = Canvas(551)
+    mountain = poly([(18, 91), (61, 18), (70, 18), (112, 91), (78, 103), (45, 101)])
+    c.paint(mountain, lit("#394050", "#171A29", y0=18, y1=103, warm="#9295AE", cool="#151C37"),
+            3.0, flat(75), accents=["#4B425F"], accent_rate=0.16, thick=1.5)
+    snow = poly([(61, 18), (70, 18), (84, 44), (72, 40), (64, 52), (53, 43), (43, 49)])
+    c.paint(snow, one("#F6F1DC"), 2.0, flat(35), layers=2, thick=1.6)
+    for x, y, radius in [(25, 105, 4), (98, 109, 5), (57, 114, 3)]:
+        c.paint(circle(x, y, radius), one("#292C40"), 1.5, flat(20), thick=1.4)
+    return c.finish()
+
+
+def keepassxc_icon():
+    """KeePassXC: a silver key on a green round canvas."""
+    c = Canvas(561)
+    disc = circle(64, 64, 54)
+    c.paint(disc, lit("#7AAE58", "#396A35", y0=10, y1=118, warm="#D2D9A6", cool="#285348"),
+            4.0, around(64, 64), accents=["#9BB66A"], accent_rate=0.15, thick=1.4)
+    key = join(cut(circle(49, 49, 20), circle(49, 49, 10)),
+               band([(62, 62), (93, 93)], 12), band([(80, 78), (91, 67)], 9),
+               band([(89, 87), (100, 76)], 9))
+    c.paint(key, lit("#FFF9E7", "#BBBEC8", y0=29, y1=100, warm="#FFFFFF", cool="#8B89A9"),
+            2.3, flat(45), layers=2, thick=1.6)
+    return c.finish()
+
+
 def signal_icon():
     """Signal: a pale speech bubble in its ring of dashes, on blue."""
     c = Canvas(531)
@@ -1467,7 +1509,7 @@ FILES = {
     "calc": (lambda: office_icon("calc"), "apps/org.libreoffice.LibreOffice.calc", ["libreoffice-calc"]),
     "impress": (lambda: office_icon("impress"), "apps/org.libreoffice.LibreOffice.impress", ["libreoffice-impress"]),
     "thunderbird": (thunderbird_icon, "apps/org.mozilla.Thunderbird", ["thunderbird"]),
-    "chrome": (chrome_icon, "apps/com.google.Chrome", ["google-chrome", "chrome"]),
+    "chrome": (chrome_icon, "apps/com.google.Chrome", ["google-chrome", "chrome", "google-chrome-stable", "google-chrome-beta", "google-chrome-unstable"]),
     "vlc": (vlc_icon, "apps/org.videolan.VLC", ["vlc"]),
     "telegram": (telegram_icon, "apps/org.telegram.desktop", ["telegram", "telegram-desktop"]),
     "heroic": (heroic_icon, "apps/com.heroicgameslauncher.hgl", ["heroic"]),
@@ -1480,6 +1522,9 @@ FILES = {
     "audacity": (audacity_icon, "apps/org.audacityteam.Audacity", ["audacity"]),
     "vscode": (vscode_icon, "apps/com.visualstudio.code", ["code", "vscode", "visual-studio-code"]),
     "obsidian": (obsidian_icon, "apps/md.obsidian.Obsidian", ["obsidian"]),
+    "chatgpt": (chatgpt_icon, "apps/chatgpt", ["ChatGPT"]),
+    "inkscape": (inkscape_icon, "apps/org.inkscape.Inkscape", ["inkscape"]),
+    "keepassxc": (keepassxc_icon, "apps/org.keepassxc.KeePassXC", ["keepassxc"]),
     "signal": (signal_icon, "apps/org.signal.Signal", ["signal", "signal-desktop"]),
     # Monet's own widgets, in the widget gallery.
     "weather": (weather_icon, "apps/monet-weather", []),

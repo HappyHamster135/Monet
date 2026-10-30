@@ -28,7 +28,7 @@ if [ "$(id -u)" -ne 0 ]; then
         sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
-    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
     # Zen back to its own look (monet-quick zen): Monet's folder, its two imports and its part of user.js.
@@ -44,6 +44,10 @@ if [ "$(id -u)" -ne 0 ]; then
     command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file kdeglobals --group Sounds --key Theme ocean
     echo "Removing Monet. You may be asked for your password."
     exec sudo "$0" "$@"
+fi
+
+if [ "$(cat /etc/skel/.config/monet/display-defaults-pending 2>/dev/null || true)" = "Monet display defaults v1" ]; then
+    rm -f /etc/skel/.config/monet/display-defaults-pending
 fi
 
 systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service >/dev/null 2>&1 || true
@@ -88,10 +92,11 @@ rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-
     /var/lib/monet/windows-files.json /var/lib/monet/windows-steam-shots.json
 systemctl daemon-reload
 
-systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path >/dev/null 2>&1 || true
+systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service /etc/systemd/user/monet-keys.service \
     /etc/systemd/user/monet-names.path /etc/systemd/user/monet-names.service \
+    /etc/systemd/user/monet-files-place.path /etc/systemd/user/monet-files-place.service \
     /etc/systemd/user/monet-frames.path /etc/systemd/user/monet-frames.service \
     /etc/systemd/user/monet-zen.path /etc/systemd/user/monet-zen.service /etc/systemd/user/monet-onedrive.service
 # Background updates come back the way Bazzite has them.
@@ -119,17 +124,27 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-profile monet-light monet-quick monet-weather monet-resume monet-leave monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-store monet-store-jobs; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-store monet-store-jobs; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
 rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" \
+    "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
+    "$PREFIX/share/kio/servicemenus/monet-folder-tools.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-earlier.desktop" "$PREFIX/share/applications/monet-replay.desktop" \
     "$PREFIX/share/applications/monet-windows-program.desktop" "$PREFIX/share/kio/servicemenus/monet-windows-program.desktop" \
     "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-store.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
+rm -f "$PREFIX/share/plasma-systemmonitor/monet-performance.page"
+rm -f "$PREFIX/share/plasma-systemmonitor/monet-applications.page" "$PREFIX/share/plasma-systemmonitor/monet-processes.page"
+rm -f "$PREFIX/share/plasma-systemmonitor/monet-system.page"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.system"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.applications" "$PREFIX/share/ksysguard/sensorfaces/org.monet.processes"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.totals"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.hardware"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.performance"
 rm -f "$PREFIX"/share/konsole/Monet.profile "$PREFIX"/share/konsole/Monet.colorscheme "$PREFIX"/share/konsole/MonetDark.colorscheme
 rm -f "$PREFIX"/share/locale/*/LC_MESSAGES/monet.mo "$PREFIX"/share/locale/*/LC_MESSAGES/plasma_applet_org.monet.*.mo \
     "$PREFIX"/share/locale/*/LC_MESSAGES/plasma_wallpaper_org.monet.hours.mo
@@ -140,7 +155,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" "$PREFIX/share/plasma/avatars/Monet" \
     "$PREFIX/share/plasma/plasmoids/org.monet.system" "$PREFIX/share/plasma/plasmoids/org.monet.played" \
-    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" "$PREFIX/share/plasma/plasmoids/org.monet.network" "$PREFIX/share/plasma/plasmoids/org.monet.storage"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
     "$PREFIX/share/plasma/plasmoids/org.monet.sound" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
     "$PREFIX/share/plasma/desktoptheme/monet-matte" \

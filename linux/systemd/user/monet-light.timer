@@ -1,8 +1,9 @@
 [Unit]
-Description=Change Monet's light when the hour turns
+Description=Follow sunrise and sunset for Monet's light
 
 [Timer]
-OnCalendar=*-*-* 05,17:00:00
+OnCalendar=*-*-* *:*:00
+AccuracySec=5s
 Persistent=true
 
 [Install]

@@ -1,0 +1,19 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Available space on the drive that holds your files",
+        "Icon": "drive-harddisk",
+        "Id": "org.monet.storage",
+        "License": "GPL-3.0-or-later",
+        "Name": "Storage",
+        "Version": "0.9.5",
+        "Website": "https://github.com/HappyHamster135/Monet"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

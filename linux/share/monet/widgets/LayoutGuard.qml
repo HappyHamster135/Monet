@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtCore
+import QtQml.Models
 import "LayoutMath.js" as LayoutMath
 
 Item {
@@ -11,6 +12,8 @@ Item {
     property var last: null
     property bool pending: false
     property bool initialized: false
+    property var ancestors: []
+    readonly property bool isLeader: leader()
     property url storageFile: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet/widget-layouts.conf"
     property string savedValue: ""
     Settings { id: saved; location: guard.storageFile }
@@ -75,7 +78,7 @@ Item {
         if (!flush.running) flush.start();
     }
     function capture(edited = false) {
-        if (!layout || !initialized || !leader()
+        if (!layout || !initialized || !isLeader
                 || (!edited && (pending || layout.editMode || layout.relayoutLock))) return;
         const items = containers().map(c => ({id:c.applet.plasmoid.id,x:c.x,y:c.y,width:c.width,height:c.height,
                                               minWidth:Math.max(48,c.Layout.minimumWidth),minHeight:Math.max(48,c.Layout.minimumHeight)}));
@@ -88,8 +91,8 @@ Item {
     }
     function schedule() { pending = true; settle.restart(); }
     function fit() {
-        if (!layout || !leader()) { pending=false; return; }
-        if (!initialized || layout.relayoutLock || layout.editMode) { settle.restart(); return; }
+        if (!layout || !isLeader) { pending=false; return; }
+        if (!initialized || layout.relayoutLock || layout.editMode) return;
         const source = snapshots[layout.configKey] || last;
         if (!source) { pending=false; capture(); return; }
         const area = {width:layout.width,height:Math.min(layout.height,layout.containmentItem.height-80)};
@@ -114,32 +117,62 @@ Item {
         pending=false;
         Qt.callLater(capture);
     }
-    Timer {
-        interval: 500; running: true; repeat: true
-        onTriggered: {
-            if (!guard.layout) {
-                let item=guard.parent;
-                while(item && !(item.positionItem && item.releaseSpace && item.containmentItem)) item=item.parent;
-                guard.layout=item;
-            }
-            if (guard.layout && guard.leader() && !guard.initialized) {
-                if (guard.layout.relayoutLock) return;
-                guard.load();
-                guard.initialized = true;
-                guard.pending = false;
-                // Never overwrite a saved arrangement with Plasma's temporary
-                // startup/scaling geometry before it has been restored.
-                if (!guard.last) guard.capture();
-                guard.schedule();
-            }
-            guard.capture();
+    function discover() {
+        const chain = [];
+        let item = guard.parent;
+        while (item && !(item.positionItem && item.releaseSpace && item.containmentItem)) {
+            chain.push(item);
+            item = item.parent;
+        }
+        ancestors = chain;
+        if (layout !== item) { initialized = false; layout = item; }
+        initialize();
+    }
+    function initialize() {
+        if (!layout || !isLeader || initialized || layout.relayoutLock) return;
+        load();
+        initialized = true;
+        pending = false;
+        // Restore before capturing Plasma's temporary startup geometry.
+        if (!last) capture();
+        schedule();
+    }
+    // Plasma reparents representations after construction. Watch that lifecycle
+    // instead of walking every widget's scene tree twice per second forever.
+    Timer { id: discoverLater; interval: 0; onTriggered: guard.discover() }
+    onParentChanged: discoverLater.restart()
+    Component.onCompleted: discoverLater.restart()
+    onIsLeaderChanged: {
+        if (isLeader) initialize();
+        else { initialized = false; pending = false; settle.stop(); captureLater.stop(); }
+    }
+    Instantiator {
+        model: guard.ancestors
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onParentChanged() { discoverLater.restart(); }
         }
     }
+    // Only the desktop's leader listens to geometry; panel widgets own no
+    // layout timers or geometry subscriptions. Dragging coalesces into one save.
+    Instantiator {
+        model: guard.isLeader ? guard.containers() : []
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onXChanged() { captureLater.restart(); }
+            function onYChanged() { captureLater.restart(); }
+            function onWidthChanged() { captureLater.restart(); }
+            function onHeightChanged() { captureLater.restart(); }
+        }
+    }
+    Timer { id: captureLater; interval: 250; onTriggered: guard.capture() }
     Timer { id: settle; interval: 650; onTriggered: guard.fit() }
     Connections {
         target: guard.layout
         function onEditModeChanged() {
-            if (!guard.layout.editMode && guard.leader()) {
+            if (!guard.layout.editMode && guard.isLeader) {
                 if (!guard.initialized) { guard.load(); guard.initialized = true; }
                 // Done is a new arrangement, not a screen resize to restore from the old snapshot.
                 guard.capture(true);
@@ -149,6 +182,10 @@ Item {
         function onWidthChanged() { guard.schedule(); }
         function onHeightChanged() { guard.schedule(); }
         function onConfigKeyChanged() { guard.schedule(); }
-        function onRelayoutLockChanged() { if (!guard.layout.relayoutLock && guard.pending) settle.restart(); }
+        function onChildrenChanged() { captureLater.restart(); }
+        function onRelayoutLockChanged() {
+            guard.initialize();
+            if (!guard.layout.relayoutLock && guard.pending) settle.restart();
+        }
     }
 }

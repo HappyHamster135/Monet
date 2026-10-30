@@ -198,6 +198,21 @@ class WindowFrame(unittest.TestCase):
         self.assertEqual(self.item("windowResize" + str(Qt.LeftEdge.value)).property("x"), 0)
         self.assertEqual(self.item("windowResize" + str(Qt.TopEdge.value)).property("y"), 0)
 
+    def test_visible_controls_and_missing_artwork_fallback(self):
+        from PySide6.QtCore import QPointF
+        artwork = self.item("windowButtonArtwork-close")
+        self.assertFalse(any("Cannot open" in warning for warning in self.qml_errors))
+        fallback = self.item("windowButtonFallback-close")
+        self.assertFalse(fallback.property("visible"))
+        artwork.setProperty("source", QUrl.fromLocalFile("/nonexistent/monet-close.svg"))
+        QTest.qWait(20)
+        self.assertTrue(fallback.property("visible"))
+        button = self.item("windowClose")
+        self.assertGreaterEqual(button.width(), 40)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier,
+                         button.mapToScene(QPointF(button.width() / 2, button.height() / 2)).toPoint())
+        self.assertFalse(self.window.isVisible())
+
     def test_maximize_restore_buttons_change_outline_and_grips(self):
         button = self.item("windowMaximize")
         self.assertTrue(QMetaObject.invokeMethod(button, "clicked"))

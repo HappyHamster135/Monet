@@ -33,6 +33,8 @@ PlasmoidItem {
     readonly property var microphone: sound.microphone || null
     property bool microphoneBusy: false
     property string microphoneMessage: ""
+    property bool outputBusy: false
+    property string outputMessage: ""
     property bool soundKnown: false
     // While a slider is held, don't let a refresh move it.
     property bool dragging: false
@@ -43,6 +45,7 @@ PlasmoidItem {
     Plasmoid.icon: silent || muted || !volume ? "audio-volume-muted"
         : volume < 34 ? "audio-volume-low" : volume < 67 ? "audio-volume-medium" : "audio-volume-high"
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    Plasmoid.contextualActions: [TaskManagerAction {}]
     toolTipMainText: i18n("Sound")
     toolTipSubText: silent ? i18n("No speakers or headphones") : muted ? i18n("Muted")
         : typeof volume === "number" ? i18n("Volume %1%", volume) : ""
@@ -73,6 +76,17 @@ PlasmoidItem {
                     root.soundKnown = true
                 } catch (e) {
                 }
+            } else if (source.startsWith(root.helper + " output ")) {
+                root.outputBusy = false
+                try {
+                    const result = JSON.parse(out)
+                    if (Array.isArray(result.outputs)) root.sound = Object.assign({}, root.sound, { outputs: result.outputs })
+                    root.outputMessage = result.ok === true && data["exit code"] === 0 ? ""
+                        : i18n("The sound output could not be changed. Check its connection and try again.")
+                } catch (e) {
+                    root.outputMessage = i18n("The sound output could not be changed. Try again.")
+                }
+                root.refresh()
             } else if (source.startsWith(root.helper + " mic-mute ") || source.startsWith(root.helper + " input ")) {
                 root.microphoneBusy = false
                 try {
@@ -133,10 +147,11 @@ PlasmoidItem {
         run("mute " + (muted ? "on" : "off"))
     }
     function playThrough(output) {
-        if (!Number.isInteger(output.id)) {
+        if (!Number.isInteger(output.id) || outputBusy) {
             return
         }
-        sound = Object.assign({}, sound, { outputs: sound.outputs.map(o => Object.assign({}, o, { default: o.id === output.id })) })
+        outputBusy = true
+        outputMessage = ""
         run("output " + output.id)
     }
     function muteMicrophone() {
@@ -376,6 +391,12 @@ PlasmoidItem {
             }
 
             // Where the sound plays, when it could play in more than one place: a tap moves it.
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                visible: root.outputBusy || root.outputMessage !== ""
+                wrapMode: Text.Wrap
+                text: root.outputBusy ? i18n("Changing sound output…") : root.outputMessage
+            }
             PlasmaComponents.Label {
                 Layout.leftMargin: 2
                 visible: root.sound.outputs.length > 1

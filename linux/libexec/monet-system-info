@@ -1,0 +1,165 @@
+#!/usr/bin/python3
+"""Read a bounded, unprivileged hardware snapshot. No probes or resident process.
+
+Identity comes from procfs/sysfs and the installed PCI names database. In
+particular, identifying a GPU must not run nvidia-smi or open the device.
+"""
+import datetime
+import json
+from pathlib import Path
+import platform
+import re
+import shlex
+
+
+def read(path, limit=65536):
+    try:
+        with path.open('rb') as stream:
+            return stream.read(limit).decode('utf-8', 'replace').strip()
+    except OSError:
+        return ''
+
+
+def number(value):
+    try:
+        result = int(value)
+        return result if result >= 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def cpu_list(value):
+    result = set()
+    for part in value.split(','):
+        match = re.fullmatch(r'(\d+)(?:-(\d+))?', part)
+        if not match:
+            continue
+        start, end = int(match[1]), int(match[2] or match[1])
+        if 0 <= start <= end < 8192:
+            result.update(range(start, end + 1))
+    return sorted(result)
+
+
+def cpu_info(root):
+    base = root / 'sys/devices/system/cpu'
+    records = []
+    for block in read(root / 'proc/cpuinfo', 2 * 1024 * 1024).split('\n\n'):
+        records.append(dict(line.split(':', 1) for line in block.splitlines() if ':' in line))
+    records = [{key.strip(): value.strip() for key, value in row.items()} for row in records]
+    models = list(dict.fromkeys(row.get('model name') or row.get('Processor') or row.get('Hardware')
+                               for row in records))
+    models = [model for model in models if model]
+    online = cpu_list(read(base / 'online'))
+    present = cpu_list(read(base / 'present'))
+    if not present:
+        present = sorted(int(p.name[3:]) for p in base.glob('cpu[0-9]*') if re.fullmatch(r'cpu\d+', p.name))[:8192]
+    topology, caches, speeds = [], {}, []
+    for ident in present:
+        path = base / f'cpu{ident}'
+        package = number(read(path / 'topology/physical_package_id'))
+        core = number(read(path / 'topology/core_id'))
+        siblings = cpu_list(read(path / 'topology/thread_siblings_list'))
+        topology.append(dict(id=ident, package=package, core=core, siblings=siblings, online=ident in online))
+        speed = number(read(path / 'cpufreq/cpuinfo_max_freq'))
+        if speed:
+            speeds.append(speed)
+        for cache in sorted(path.glob('cache/index*'))[:16]:
+            level, kind = read(cache / 'level'), read(cache / 'type')
+            sharing = read(cache / 'shared_cpu_list')
+            # Count shared caches once, including multi-socket and hybrid CPUs.
+            key = (level, kind, sharing or f'{package}:{read(cache / "id")}')
+            size = re.fullmatch(r'(\d+)([KMG]?)', read(cache / 'size'))
+            if not sharing and not read(cache / 'id'):
+                continue  # No trustworthy way to deduplicate this cache.
+            if size and level in {'1', '2', '3', '4'}:
+                caches[key] = int(size[1]) * 1024 ** ('KMG'.find(size[2]) + 1 if size[2] else 0)
+    cache_totals = {}
+    for (level, kind, _), size in caches.items():
+        item = cache_totals.setdefault((level, kind), dict(level=int(level), kind=kind, bytes=0, instances=0))
+        item['bytes'] += size
+        item['instances'] += 1
+    known = [item for item in topology if item['package'] is not None and item['core'] is not None]
+    complete = bool(topology) and len(known) == len(topology)
+    flags = set(' '.join(row.get('flags', row.get('Features', '')) for row in records).split())
+    return dict(models=models, logical=len(present) or None, online=len(online) if online else None,
+                cores=len({(p['package'], p['core']) for p in known}) if complete else None,
+                sockets=len({p['package'] for p in known}) if complete else None,
+                maxMHz=max(speeds) / 1000 if speeds else None,
+                virtualization='VT-x' if 'vmx' in flags else 'AMD-V' if 'svm' in flags else '',
+                topology=topology, caches=[cache_totals[key] for key in sorted(cache_totals)])
+
+
+def driver_info(device):
+    driver = device / 'driver'
+    if not driver.is_symlink():
+        return dict(driver='', driverVersion='')
+    return dict(driver=driver.resolve().name, driverVersion=read(driver / 'module/version'))
+
+
+def pci_names(root, wanted):
+    names, vendor = {}, ''
+    # Read the installed database once, never query hardware or the network.
+    for line in read(root / 'usr/share/hwdata/pci.ids', 4 * 1024 * 1024).splitlines():
+        if re.match(r'^[0-9a-f]{4}  ', line):
+            vendor = line[:4]
+        elif vendor and re.match(r'^\t[0-9a-f]{4}  ', line):
+            key = (vendor, line[1:5])
+            if key in wanted:
+                names[key] = line[7:].strip()
+    return names
+
+
+def snapshot(root=Path('/')):
+    graphics = []
+    for card in sorted((root / 'sys/class/drm').glob('card[0-9]*'))[:64]:
+        if not re.fullmatch(r'card\d+', card.name):
+            continue
+        device = card / 'device'
+        vendor, product = read(device / 'vendor').removeprefix('0x'), read(device / 'device').removeprefix('0x')
+        graphics.append(dict(id=card.name, pci=device.resolve().name, vendor=vendor, product=product,
+                             runtime=read(device / 'power/runtime_status'), **driver_info(device)))
+    names = pci_names(root, {(p['vendor'], p['product']) for p in graphics}) if graphics else {}
+    for gpu in graphics:
+        gpu['model'] = names.get((gpu['vendor'], gpu['product']), '')
+    memory = {}
+    for line in read(root / 'proc/meminfo').splitlines():
+        match = re.fullmatch(r'(MemTotal|SwapTotal):\s+(\d+) kB', line)
+        if match:
+            memory[match[1]] = int(match[2]) * 1024
+    networks = []
+    for path in sorted((root / 'sys/class/net').iterdir())[:128] if (root / 'sys/class/net').exists() else []:
+        if path.name == 'lo':
+            continue
+        networks.append(dict(id=path.name, state=read(path / 'operstate'), mtu=number(read(path / 'mtu')),
+                             speedMbps=number(read(path / 'speed')) if read(path / 'carrier') == '1' else None,
+                             **driver_info(path / 'device')))
+    disks = []
+    for path in sorted((root / 'sys/class/block').iterdir())[:256] if (root / 'sys/class/block').exists() else []:
+        if (path / 'partition').exists() or not (path / 'device').exists():
+            continue
+        sectors = number(read(path / 'size'))
+        rotational = read(path / 'queue/rotational')
+        disks.append(dict(id=path.name, model=read(path / 'device/model'), vendor=read(path / 'device/vendor'),
+                          firmware=read(path / 'device/firmware_rev') or read(path / 'device/rev'),
+                          bytes=sectors * 512 if sectors is not None else None,
+                          rotational=rotational == '1' if rotational in {'0', '1'} else None,
+                          **driver_info(path / 'device')))
+    release = {}
+    for line in read(root / 'etc/os-release').splitlines():
+        if '=' in line:
+            key, value = line.split('=', 1)
+            try:
+                release[key] = ' '.join(shlex.split(value))
+            except ValueError:
+                pass
+    dmi = root / 'sys/class/dmi/id'
+    return dict(version=1, captured=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                system=dict(os=release.get('PRETTY_NAME', ''), kernel=read(root / 'proc/sys/kernel/osrelease'),
+                            architecture=platform.machine(), vendor=read(dmi / 'sys_vendor'),
+                            model=read(dmi / 'product_name'), firmware=read(dmi / 'bios_version'),
+                            firmwareDate=read(dmi / 'bios_date')),
+                cpu=cpu_info(root), memory=memory, graphics=graphics, networks=networks, disks=disks)
+
+
+if __name__ == '__main__':
+    print(json.dumps(snapshot(), ensure_ascii=True, allow_nan=False))

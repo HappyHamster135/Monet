@@ -116,7 +116,9 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick notify-time 3|5|10       seconds a popup stays
     monet-quick notify-app ID on|off     an app's popups (ID as hex of its UTF-8)
     monet-quick access                   the size of everything, the pointer, motion, the screen reader and the magnifier, as JSON
-    monet-quick access-scale 100|125|150|175|200
+    monet-quick display-sizes             each screen's actual size, scale and density
+    monet-quick display-defaults          starting size, once for a new image account
+    monet-quick access-scale 100|125|150|175|200 [SCREEN_HEX]
     monet-quick access-cursor 24|36|48
     monet-quick access-motion reduced|normal
     monet-quick access-reader on|off     Orca, when it's there
@@ -197,11 +199,13 @@ import contextlib
 import datetime
 import getpass
 import gettext
+import gzip
 import html
 import json
 import os
 import re
 import select
+import shlex
 import shutil
 import signal
 import subprocess
@@ -424,13 +428,49 @@ def sinks(status):
 
 
 def outputs():
-    """sinks(), with PipeWire's stand-in on a PC with no speakers marked "none": its name is
-    translated, the node's own name isn't (found by the test bench: Settings said "Playing through
-    Dummy Output")."""
+    """Playable outputs, excluding ports explicitly reported as disconnected.
+
+    Pulse indexes are object serials, not wpctl IDs. Match object.id instead.
+    Unknown availability is normal for built-in speakers and virtual outputs.
+    One JSON snapshot replaces a separate inspect process for every output.
+    """
     found = sinks(run("wpctl", "status") or "")
+    try:
+        raw = json.loads(run("pactl", "--format=json", "list", "sinks") or "null")
+    except (ValueError, TypeError):
+        raw = None
+    metadata = {}
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict) or not isinstance(item.get("properties"), dict):
+                continue
+            ident = str(item["properties"].get("object.id", ""))
+            if ident.isdigit():
+                metadata[int(ident)] = item
+    playable = []
     for sink in found:
-        sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
-    return found
+        item = metadata.get(sink["id"])
+        if item is not None:
+            ports = item.get("ports", [])
+            port = next((p for p in ports if isinstance(p, dict) and p.get("name") == item.get("active_port")), {}) \
+                if isinstance(ports, list) else {}
+            if port.get("availability") in ("not available", "no"):
+                continue
+            sink["none"] = item["properties"].get("node.name") == "auto_null"
+        else:
+            sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
+        playable.append(sink)
+    return playable
+
+
+def output_action(ident):
+    """Only select a current playback device, and acknowledge the observed default."""
+    before = outputs()
+    if not any(o["id"] == ident and not o["none"] for o in before):
+        return {"ok": False, "outputs": before}
+    changed = ok("wpctl", "set-default", str(ident))
+    after = outputs()
+    return {"ok": bool(changed and any(o["id"] == ident and o["default"] for o in after)), "outputs": after}
 
 
 def app_streams(status):
@@ -1156,6 +1196,128 @@ def desktop_entry(text):
     return entry
 
 
+def native_executable(path):
+    """An explicitly selected native executable; registering it never runs it."""
+    path = Path(path).absolute()
+    if not path.is_file() or not os.access(path, os.X_OK):
+        raise ValueError(tr("Choose an executable application file."))
+    with path.open("rb") as stream:
+        header = stream.read(4)
+    if header != b"\x7fELF" and not header.startswith(b"#!"):
+        raise ValueError(tr("Choose a Linux application or script. Windows programs use Run in Monet."))
+    return path
+
+
+def native_shortcut(path, name, apps=None):
+    """Create one menu entry, without importing downloaded desktop commands or MIME defaults."""
+    path = native_executable(path)
+    name = name.strip()
+    if not name or len(name) > 128 or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise ValueError(tr("Choose a short application name without line breaks."))
+    apps = apps if apps is not None else DATA_HOME / "applications"
+    apps.mkdir(parents=True, exist_ok=True)
+    token = str(path).encode("utf-8").hex()
+    import hashlib
+    entry = apps / ("monet-local-" + hashlib.sha256(str(path).encode()).hexdigest()[:24] + ".desktop")
+    icon = native_icon(path, apps.parent, entry.stem)
+    # The path is data, not a shell command or a Desktop Entry field code.
+    text = ("[Desktop Entry]\nType=Application\nName=" + name.replace("\\", "\\\\") + "\n"
+            f'Exec="{LIBEXECDIR}/monet-quick" native-run {token}\n'
+            f"Icon={icon}\nTerminal=false\nStartupNotify=false\nCategories=Utility;\nX-Monet=true\n")
+    if entry.exists():
+        if entry.read_text(encoding="utf-8") != text:
+            raise FileExistsError(tr("A shortcut for this application already exists. Edit it in the application menu."))
+        return entry
+    # Exclusive creation preserves any existing personal menu entry.
+    with entry.open("x", encoding="utf-8") as stream:
+        stream.write(text)
+    return entry
+
+
+def native_icon(path, data_home, identity):
+    """Keep a selected app's packaged icon, without importing its desktop command.
+
+    Only inspect nearby standard package locations. Copy to a named theme icon so
+    the menu, dock and Monet's frame service can all use it. No recursive scan.
+    """
+    roots = list(path.parents)[:4]
+    for root in roots:
+        if root in (Path.home(), Path("/")):
+            break
+        candidates = [("", path.with_suffix(ext)) for ext in (".png", ".svg", ".svgz")]
+        app_dir = root / "share/applications"
+        try:
+            entries = sorted(app_dir.glob("*.desktop"))[:128]
+            for desktop in entries:
+                if desktop.stat().st_size > 65536 or not desktop.resolve().is_relative_to(root.resolve()):
+                    continue
+                fields = desktop_entry(desktop.read_text(encoding="utf-8", errors="replace"))
+                command = shlex.split(fields.get("Exec", ""))
+                if fields.get("Type") != "Application" or not command or Path(command[0]).name.casefold() != path.name.casefold():
+                    continue
+                name = fields.get("Icon", "")
+                if Path(name).is_absolute():
+                    candidates.append(("", Path(name)))
+                elif ICON_NAME.fullmatch(name):
+                    # Existing hand-painted icons take precedence over generated frames.
+                    if any((base / "icons/Monet/apps/scalable" / (name + ".svg")).is_file()
+                           for base in data_dirs() + [Path(DATADIR)]):
+                        return name
+                    for ext in (".png", ".svg", ".svgz"):
+                        candidates.append((name, root / "share/pixmaps" / (name + ext)))
+                        candidates.extend((name, item) for item in sorted(
+                            (root / "share/icons/hicolor").glob("*/apps/" + name + ext))[:32])
+        except (OSError, ValueError):
+            continue
+        for _, candidate in candidates:
+            try:
+                if not candidate.resolve().is_relative_to(root.resolve()) or candidate.stat().st_size > 8 * 1024 * 1024:
+                    continue
+                data = icon_data(candidate)
+                if not data or not (framed_png(data) if candidate.suffix.lower() == ".png"
+                                    else framed_svg(data.decode("utf-8", "replace"))):
+                    continue
+                ext = ".png" if candidate.suffix.lower() == ".png" else ".svg"
+                target = data_home / "icons/hicolor" / ("256x256" if ext == ".png" else "scalable") / "apps" / (identity + ext)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.exists():
+                    with target.open("xb") as stream:
+                        stream.write(data)
+                return identity
+            except (OSError, ValueError):
+                continue
+    return "application-x-executable"
+
+
+def native_shortcut_dialog(path):
+    try:
+        executable = native_executable(path)
+        name = run("kdialog", "--title", tr("Add to apps"), "--inputbox",
+                   tr("Add this application to the menu. Keep its folder in place.\n\n%1\n\nName:", str(executable)),
+                   executable.stem, timeout=600)
+        if name is None:
+            return False
+        native_shortcut(executable, name)
+    except (OSError, ValueError) as error:
+        run("kdialog", "--title", tr("Add to apps"), "--error", tr(str(error)), timeout=600)
+        return False
+    run("kbuildsycoca6", "--noincremental", timeout=30)
+    run("notify-send", "--app-name=Monet", "--icon=application-x-executable",
+        tr("Added to apps"), name)
+    return True
+
+
+def native_run(token):
+    try:
+        executable = native_executable(unhex(token))
+        subprocess.Popen([str(executable)], cwd=executable.parent, start_new_session=True)
+        return True
+    except (OSError, ValueError) as error:
+        run("kdialog", "--title", tr("Application couldn't open"), "--error",
+            tr("Check that the application folder is still in place, then add it to apps again.") + "\n\n" + str(error), timeout=600)
+        return False
+
+
 def music_apps(entries, default=""):
     """The apps that play music, from (file name, entry) pairs, nearest first: the
     nearest copy of an entry decides (a hidden local copy hides the app). The PC's
@@ -1273,7 +1435,7 @@ def icon_files(names):
         for folder, _, files in os.walk(root):
             for f in files:
                 stem, ext = os.path.splitext(f)
-                if stem in names and ext in (".png", ".svg"):
+                if stem in names and ext.lower() in (".png", ".svg", ".svgz"):
                     size = icon_size(Path(folder).relative_to(root).parts)
                     found.setdefault(stem, []).append((rank, size, Path(folder) / f))
     return found
@@ -1284,8 +1446,8 @@ def own_icon(candidates):
     if not candidates:
         return None
     nearest = min(rank for rank, _, _ in candidates)
-    pngs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix == ".png")
-    svgs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix == ".svg")
+    pngs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix.lower() == ".png")
+    svgs = sorted((size, str(path)) for rank, size, path in candidates if rank == nearest and path.suffix.lower() in (".svg", ".svgz"))
     if pngs and (pngs[-1][0] >= 128 or not svgs):
         return Path(pngs[-1][1])
     return Path(svgs[-1][1]) if svgs else None
@@ -1334,13 +1496,23 @@ def framed_svg(text):
             f"{text[root.end():end]}</g>"), spaces
 
 
+def icon_data(path):
+    """Bound compressed and plain icon reads; a broken icon mustn't break app search."""
+    limit = 8 * 1024 * 1024
+    try:
+        with (gzip.open(path, "rb") if path.suffix.lower() == ".svgz" else path.open("rb")) as stream:
+            data = stream.read(limit + 1)
+        return data if len(data) <= limit else b""
+    except (OSError, EOFError):
+        return b""
+
+
 def frame_svg(name, path, art):
     """The framed icon's SVG, or "" if the app's own can't be framed safely."""
-    try:
-        data = path.read_bytes()
-    except OSError:
+    data = icon_data(path)
+    if not data:
         return ""
-    made = framed_png(data) if path.suffix == ".png" else framed_svg(data.decode("utf-8", "replace"))
+    made = framed_png(data) if path.suffix.lower() == ".png" else framed_svg(data.decode("utf-8", "replace"))
     if not made or made[1].get("xlink", XLINK) != XLINK:
         return ""
     icon, spaces = made
@@ -2004,6 +2176,12 @@ def downloads_dir():
     return path if path and path.is_absolute() and path != HOME else HOME / "Downloads"
 
 
+def storage_capacity():
+    """Show free space immediately; folder breakdowns are a separate explicit scan."""
+    disk = shutil.disk_usage(HOME)
+    return dict(total=disk.total, free=disk.free, used=disk.used, measured=False, downloadsPath=str(downloads_dir()))
+
+
 def storage():
     disk = shutil.disk_usage(HOME)
     games = du(DATA_HOME / "Steam/steamapps", HOME / "Games")
@@ -2011,7 +2189,7 @@ def storage():
     parts = storage_parts(disk.total, disk.free, du(HOME), games, du("/var/lib/flatpak"),
                           du(DATA_HOME / "flatpak", HOME / ".var/app"), trash)
     downloads = downloads_dir()
-    return dict(parts, total=disk.total, trash=trash, downloads=du(downloads), downloadsPath=str(downloads))
+    return dict(parts, total=disk.total, trash=trash, downloads=du(downloads), downloadsPath=str(downloads), measured=True)
 
 
 def empty_trash():
@@ -4361,6 +4539,58 @@ def screens():
     return [(o.get("name", ""), o.get("scale", 1)) for o in outputs if o.get("enabled") and o.get("name")]
 
 
+def display_sizes():
+    """Read real per-output scale and pixel density; never infer scale from resolution alone."""
+    try:
+        outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
+    except (ValueError, AttributeError):
+        return []
+    shown = []
+    for output in outputs:
+        try:
+            name = output.get("name", "")
+            if not output.get("enabled") or not isinstance(name, str) or not re.fullmatch(r"[\w.-]+", name):
+                continue
+            scale = float(output.get("scale", 1))
+            size, mm = output.get("size", {}), output.get("sizeMM", {})
+            width, height = int(size.get("width", 0)), int(size.get("height", 0))
+            mm_width, mm_height = float(mm.get("width", 0)), float(mm.get("height", 0))
+            dpi = min(width * 25.4 / mm_width, height * 25.4 / mm_height) if mm_width >= 3 and mm_height >= 3 else 0
+            if not 0.5 <= scale <= 5 or width < 0 or height < 0:
+                continue
+            shown.append(dict(name=name, scale=round(scale * 100), width=width, height=height,
+                              highDensity=dpi >= 180, densityKnown=dpi > 0))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            continue
+    return shown
+
+
+def initial_display_sizes():
+    """One first-sign-in default for new image accounts, never an upgrade migration.
+
+    The image's /etc/skel marker is absent from existing accounts. Only replace
+    an unscaled, lower-density starting screen where at least 800 logical pixels
+    remain on each axis. Keep KWin's higher scales and unknown-size displays.
+    """
+    pending = CONFIG / "monet/display-defaults-pending"
+    if not pending.is_file():
+        return {"ok": True, "changed": []}
+    shown = display_sizes()
+    if not shown:
+        return {"ok": False, "changed": []}
+    # Consume before applying: never replay a default over a later personal choice.
+    pending.unlink()
+    changed, success = [], True
+    for screen in shown:
+        if (screen["scale"] == 100 and screen["densityKnown"] and not screen["highDensity"]
+                and min(screen["width"], screen["height"]) >= 1000):
+            result = set_scale(125, screen["name"])
+            success = success and result["ok"]
+            if result["ok"]:
+                changed.append(screen["name"])
+    return {"ok": success, "changed": changed}
+
+
 def access_state():
     shown = screens()
     try:
@@ -4606,10 +4836,19 @@ panels().forEach(function(p){
 });""")
 
 
-def set_scale(percent):
-    for name, _ in screens():
-        if re.fullmatch(r"[\w.-]+", name):
-            run("kscreen-doctor", f"output.{name}.scale.{percent / 100:g}", timeout=30)
+def set_scale(percent, name=None):
+    """Change only the selected screen; confirm what the compositor actually accepted."""
+    before = display_sizes()
+    if name is None and len(before) == 1:
+        name = before[0]["name"]
+    selected = next((screen for screen in before if screen["name"] == name), None)
+    if percent not in SCALES or selected is None:
+        return {"ok": False, "displays": before, "error": tr("Choose a connected screen and a supported size.")}
+    result = run("kscreen-doctor", f"output.{name}.scale.{percent / 100:g}", timeout=30)
+    after = display_sizes()
+    accepted = result is not None and any(screen["name"] == name and screen["scale"] == percent for screen in after)
+    return {"ok": accepted, "displays": after,
+            "error": "" if accepted else tr("The screen size couldn't be changed. Check the display connection and try again.")}
 
 
 def set_cursor_size(size):
@@ -5185,8 +5424,8 @@ def search_catalog():
          N_("file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"), "org.kde.dolphin.desktop", "system-file-manager"),
         ("text-editor", tr("Text Editor"), tr("Edit plain text and code"),
          N_("notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"), "org.kde.kate.desktop", "accessories-text-editor"),
-        ("system-monitor", tr("System Monitor"), tr("See running apps, memory and processor use"),
-         N_("task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes"), "org.kde.plasma-systemmonitor.desktop", "utilities-system-monitor"),
+        ("system-monitor", tr("Task Manager"), tr("See running apps, CPU, graphics, memory, network and temperatures"),
+         N_("task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"), "org.kde.plasma-systemmonitor.desktop", "utilities-system-monitor"),
         ("screenshot", tr("Screenshot"), tr("Capture your screen or a selected area"),
          N_("snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"), "org.kde.spectacle.desktop", "spectacle"),
         ("archives", tr("Archives"), tr("Open and extract compressed files"),
@@ -6014,24 +6253,34 @@ def battery_state(upower):
     return {"battery": None, "charging": False, "plugged": True, "minutes": None}
 
 
-def status():
-    upower = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/DisplayDevice",
-                     "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.UPower.Device")
-    return {
-        "wifi": wifi_state(), "network": wifi_name(), "bluetooth": bluetooth_state(),
-        "night": kread("kwinrc", "NightColor", "Active", "false") == "true",
-        **quiet_state(),
-        "volume": volume("@DEFAULT_AUDIO_SINK@"), "mic": volume("@DEFAULT_AUDIO_SOURCE@"),
-        "brightness": brightness_state(), "keyboard": keyboard_light(),
-        **battery_state(upower[0] if upower else None), "light": light_state(),
-    }
+def status(scope="all"):
+    """Quick Settings needs the whole snapshot; Settings only reads its open page."""
+    result = {}
+    if scope in ("all", "wifi"):
+        result.update(wifi=wifi_state(), network=wifi_name())
+    if scope in ("all", "bluetooth"):
+        result["bluetooth"] = bluetooth_state()
+    if scope in ("all", "display"):
+        result.update(night=kread("kwinrc", "NightColor", "Active", "false") == "true", brightness=brightness_state())
+    if scope == "all":
+        result.update(quiet_state())
+        result["keyboard"] = keyboard_light()
+    if scope in ("all", "sound"):
+        result.update(volume=volume("@DEFAULT_AUDIO_SINK@"), mic=volume("@DEFAULT_AUDIO_SOURCE@"))
+    if scope in ("all", "power", "updates"):
+        upower = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/DisplayDevice",
+                        "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.UPower.Device")
+        result.update(battery_state(upower[0] if upower else None))
+    if scope in ("all", "light"):
+        result["light"] = light_state()
+    return result
 
 
 def main(argv):
     cmd, args = (argv[0] if argv else "status"), argv[1:]
     on = bool(args) and args[0] == "on"
     if cmd == "status":
-        emit(status())
+        emit(status(args[0] if args else "all"))
     elif cmd == "wifi":
         run("nmcli", "radio", "wifi", "on" if on else "off")
     elif cmd == "wifi-list":
@@ -6206,7 +6455,7 @@ def main(argv):
     elif cmd == "app-volume" and len(args) == 2 and args[0].isdigit() and args[1].isdigit():
         run("wpctl", "set-volume", args[0], f"{min(int(args[1]), 100)}%")
     elif cmd == "output" and args and args[0].isdigit():
-        run("wpctl", "set-default", args[0])
+        emit(output_action(int(args[0])))
     elif cmd == "brightness" and args and args[0].isdigit():
         set_brightness(max(1, min(int(args[0]), 100)))
     elif cmd == "keyboard" and args and args[0].isdigit():
@@ -6344,10 +6593,18 @@ def main(argv):
         emit(change_notifications(cmd, args))
     elif cmd == "access":
         emit(access_state())
+    elif cmd == "display-sizes":
+        emit(display_sizes())
+    elif cmd == "display-defaults":
+        emit(initial_display_sizes())
     elif cmd == "bar-layout":
         fit_bars()
     elif cmd == "access-scale" and args and args[0].isdigit() and int(args[0]) in SCALES:
-        set_scale(int(args[0]))
+        try:
+            name = unhex(args[1]) if len(args) == 2 else None
+        except (ValueError, UnicodeError):
+            name = ""
+        emit(set_scale(int(args[0]), name if len(args) <= 2 else ""))
     elif cmd == "access-cursor" and args and args[0].isdigit() and int(args[0]) in CURSOR_SIZES:
         set_cursor_size(int(args[0]))
     elif cmd == "access-motion" and args and args[0] in ("reduced", "normal"):
@@ -6436,6 +6693,8 @@ def main(argv):
         subprocess.Popen(["bluedevil-wizard"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "storage":
         emit(storage())
+    elif cmd == "storage-capacity":
+        emit(storage_capacity())
     elif cmd == "empty-trash":
         emit({"ok": empty_trash()})
     elif cmd == "defaults":
@@ -6557,6 +6816,10 @@ def main(argv):
     elif cmd == "files-place":
         files_place(shared_here() and os.path.ismount(FILES))
         hide_system_root()
+    elif cmd == "native-shortcut" and len(args) == 1:
+        return 0 if native_shortcut_dialog(args[0]) else 1
+    elif cmd == "native-run" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        return 0 if native_run(args[0]) else 1
     elif cmd == "windows-files":
         windows_files_note()
     elif cmd == "played":
