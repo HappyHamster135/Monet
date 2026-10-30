@@ -176,7 +176,8 @@ def blue_screen(img):
     as an 80-column box with black on either side, so most of the screen isn't blue; and All
     set's pictures of it are small, never most of the middle."""
     middle = img.convert("RGB").crop((W // 2 - 200, H // 2 - 300, W // 2 + 200, H // 2 + 300)).resize((80, 120))
-    blue = sum(1 for r, g, b in middle.getdata() if b > 100 and r < 60 and g < 60)
+    pixels = middle.get_flattened_data() if hasattr(middle, "get_flattened_data") else middle.getdata()
+    blue = sum(1 for r, g, b in pixels if b > 100 and r < 60 and g < 60)
     return blue > 0.6 * 80 * 120
 
 
