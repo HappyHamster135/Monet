@@ -93,14 +93,16 @@ class LookFeedback(unittest.TestCase):
 
     def setUp(self):
         self.engine = QQmlApplicationEngine(); self.words = self.games.Words(); self.helper = FakeHelper()
+        self.activity = self.games.WindowActivity()
         context = self.engine.rootContext(); context.setContextObject(self.words)
-        for name, value in {"helper": self.helper, "firstPage": "light", "blurBehind": False,
+        for name, value in {"helper": self.helper, "windowActivity": self.activity, "firstPage": "light", "blurBehind": False,
                             "pictures": QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings") + "/").toString(),
                             "brush": QUrl.fromLocalFile(str(ROOT / "linux/share/monet/textures/brush.png")).toString()}.items():
             context.setContextProperty(name, value)
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects())
-        self.window = self.engine.rootObjects()[0]; QTest.qWait(100)
+        self.window = self.engine.rootObjects()[0]
+        self.activity.watch(self.window); QTest.qWait(100)
 
     def tearDown(self):
         self.window.close(); self.engine.deleteLater(); QTest.qWait(1)

@@ -44,10 +44,12 @@ def main():
     server.setSocketOptions(QLocalServer.UserAccessOption)
     server.listen(name)
     helper = games.Helper()
+    activity = games.WindowActivity()
     games.answer(server, helper)
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextObject(words)
     engine.rootContext().setContextProperty("helper", helper)
+    engine.rootContext().setContextProperty("windowActivity", activity)
     engine.rootContext().setContextProperty("pictures", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
     engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
     engine.rootContext().setContextProperty("firstPage", page)
@@ -55,6 +57,7 @@ def main():
     engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/settings-app/MonetSettings.qml"))
     if not engine.rootObjects():
         return 1
+    activity.watch(engine.rootObjects()[0])
     games.glaze(engine.rootObjects()[0], engine.rootContext())
     return app.exec()
 

@@ -49,6 +49,7 @@ Shared.MonetWindow {
     property string outputProblem: ""
     property bool statusBusy: false
     readonly property bool pollingActive: visible && visibility !== Window.Minimized
+        && (typeof windowActivity === "undefined" || windowActivity.active)
     readonly property var statusPages: ["light", "wifi", "bluetooth", "display", "sound", "power"]
     readonly property bool statusPage: statusPages.includes(page)
     onPollingActiveChanged: { if (pollingActive) refresh() }

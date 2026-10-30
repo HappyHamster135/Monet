@@ -12,8 +12,8 @@ import gettext
 import os
 import sys
 
-from PySide6.QtCore import QObject, QProcess, QRectF, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion
+from PySide6.QtCore import QEvent, QObject, Property, QProcess, QRectF, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket, QNetworkAccessManager, QNetworkDiskCache
 from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
 
@@ -59,6 +59,52 @@ class Words(QObject):
     @Slot(str, str, "QVariant", "QVariant", "QVariant", result=str)
     def i18np(self, one, many, count, *values):
         return fill(WORDS.ngettext(one, many, int(count)), (count, *values))
+
+
+class WindowActivity(QObject):
+    """Native exposure follows external Wayland minimization without polling."""
+
+    activeChanged = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._window = None
+        self._active = True  # Keep standalone QML previews usable before watch().
+        self._scheduled = False
+
+    @Property(bool, notify=activeChanged)
+    def active(self):
+        return self._active
+
+    def watch(self, window):
+        self._window = window
+        window.installEventFilter(self)
+        window.visibleChanged.connect(self._schedule)
+        window.visibilityChanged.connect(self._schedule)
+        window.destroyed.connect(self._gone)
+        self._refresh()
+
+    def eventFilter(self, watched, event):
+        if watched is self._window and event.type() == QEvent.Expose:
+            self._schedule()
+        return False
+
+    def _schedule(self, *_args):
+        if not self._scheduled:
+            self._scheduled = True
+            QTimer.singleShot(0, self._refresh)
+
+    def _gone(self, *_args):
+        self._window = None
+        self._refresh()
+
+    def _refresh(self):
+        self._scheduled = False
+        active = bool(self._window and self._window.isVisible() and self._window.isExposed()
+                      and self._window.visibility() != QWindow.Minimized)
+        if active != self._active:
+            self._active = active
+            self.activeChanged.emit()
 
 
 class Helper(QObject):

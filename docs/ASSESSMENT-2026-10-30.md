@@ -104,3 +104,5 @@ The installed Settings preview now shows recent automatic update outcomes withou
 ## Hidden Settings work follow-up
 
 The local preview now pauses all recurring detail reads when minimized, then refreshes on restore. Sound, Phone, the Windows return summary, photo/backup progress, Date & Time and busy animations are covered. Updates also stops polling unused battery state. All 37 focused Settings/return checks and three isolated Phone checks pass. A native Sound comparison dropped from two helpers/215.2 ms child CPU over 6.5 seconds minimized to no helpers/zero child CPU. This is a bounded helper measurement, not a whole-system memory or battery benchmark. See backlog 095-25 for evidence and the reversible installation receipt.
+
+External Wayland minimization is now covered too: native exposure events stop Settings polling even when Qt still reports Windowed. A second native comparison drops four minimized probes/465.9 ms child CPU over 6.5 seconds to none, with immediate refresh after restore. The final local installation and evidence are recorded in backlog 095-25. This adds no polling daemon or window-list model.
