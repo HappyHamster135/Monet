@@ -1,5 +1,6 @@
 """Automatic retries obey the network gate; no real updater is invoked."""
 import os
+import json
 from pathlib import Path
 import shlex
 import subprocess
@@ -40,6 +41,73 @@ class UpdateFeedback(unittest.TestCase):
                 self.assertTrue(result["message"])
 
 
+class UpdateHistory(unittest.TestCase):
+    def setUp(self):
+        self.helper = quick_helper()
+
+    def entry(self, outcome, invocation=1, seconds=1000):
+        return {"MESSAGE_ID": getattr(self.helper, "UPDATE_" + outcome),
+                "INVOCATION_ID": f"{invocation:032x}", "__REALTIME_TIMESTAMP": str(seconds * 1000000)}
+
+    def parse(self, *entries):
+        return self.helper.recent_update_results("\n".join(json.dumps(entry) for entry in entries))
+
+    def test_recovery_is_newest_and_each_attempt_is_shown_once(self):
+        entries = [self.entry("FAILED", 1, 1000), self.entry("FAILED", 1, 1001),
+                   self.entry("FINISHED", 2, 1100)]
+        self.assertEqual(self.parse(*entries), [{"time": 1100000, "result": "done"},
+                                               {"time": 1001000, "result": "failed"}])
+
+    def test_a_successful_job_message_after_a_skip_is_not_an_update(self):
+        self.assertEqual(self.parse(self.entry("SKIPPED"), self.entry("FINISHED")),
+                         [{"time": 1000000, "result": "skipped"}])
+        self.assertEqual(self.parse(self.entry("FINISHED"), self.entry("SKIPPED")),
+                         [{"time": 1000000, "result": "skipped"}])
+
+    def test_history_is_bounded_and_ignores_runs_that_never_started(self):
+        entries = [self.entry("FINISHED", i, 1000 + i) for i in range(30)]
+        items = self.parse(*entries)
+        self.assertEqual(len(items), 10)
+        self.assertEqual(items[0]["time"], 1029000)
+        self.assertEqual(items[-1]["time"], 1020000)
+        entry = self.entry("FINISHED")
+        del entry["INVOCATION_ID"]
+        self.assertEqual(self.parse(entry), [])
+
+    def test_dates_and_malformed_entries_cannot_turn_into_success(self):
+        for value in (None, [], "bad", "-1", "0", "9" * 25):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.parse(dict(self.entry("FINISHED"), __REALTIME_TIMESTAMP=value))
+        with self.assertRaises(ValueError):
+            self.helper.recent_update_results("not json")
+        with self.assertRaises(ValueError):
+            self.parse([])
+
+    def test_unavailable_history_is_distinct_from_no_saved_history(self):
+        for output, code, expected in (("", 0, True), ("", 1, False), ("bad", 0, False)):
+            with patch.object(self.helper, "run", return_value="LoadState=loaded\nActiveState=failed\nSubState=failed"), \
+                    patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess([], code, output, "")):
+                self.assertEqual(self.helper.update_history(), {"ok": expected, "items": [], "state": "idle"})
+        for error in (OSError("missing"), subprocess.TimeoutExpired("journalctl", 5)):
+            with patch.object(self.helper, "run", return_value=None), \
+                    patch.object(self.helper.subprocess, "run", side_effect=error):
+                self.assertEqual(self.helper.update_history(), {"ok": False, "items": [], "state": "unknown"})
+
+    def test_active_and_retry_state_does_not_hide_the_previous_failure(self):
+        for active, sub, state in (("activating", "start", "running"),
+                                   ("activating", "auto-restart", "retry"),
+                                   ("activating", "auto-restart-queued", "retry")):
+            with patch.object(self.helper, "run", return_value=f"LoadState=loaded\nActiveState={active}\nSubState={sub}"), \
+                    patch.object(self.helper.subprocess, "run", return_value=subprocess.CompletedProcess(
+                        [], 0, json.dumps(self.entry("FAILED")), "")) as read:
+                result = self.helper.update_history()
+                self.assertEqual(result["state"], state)
+                self.assertEqual(result["items"][0]["result"], "failed")
+                args = read.call_args.args[0]
+                self.assertIn("_PID=1", args)
+                self.assertIn("UNIT=monet-update.service", args)
+
+
 class NetworkGate(unittest.TestCase):
     def test_metered_unknown_missing_and_invalid_network_states_skip_automatic_work(self):
         with tempfile.TemporaryDirectory(prefix="monet-network-fixture-") as tmp:
@@ -59,6 +127,29 @@ class NetworkGate(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get("MONET_NATIVE_SYSTEMD_TESTS") == "1", "opt-in transient user-service fixture")
 class NativeRetry(unittest.TestCase):
+    def test_native_success_failure_and_skip_events_keep_their_meaning(self):
+        helper = quick_helper()
+        for mode, expected in (("success", "done"), ("failure", "failed"), ("skip", "skipped")):
+            name = "monet-history-fixture-" + uuid.uuid4().hex + ".service"
+            args = ["systemd-run", "--user", "--quiet", "--wait", "--unit=" + name, "--property=Type=oneshot"]
+            if mode == "skip":
+                args.append("--property=ExecCondition=/bin/false")
+            args.append("/bin/false" if mode == "failure" else "/bin/true")
+            try:
+                subprocess.run(args, capture_output=True, timeout=10)
+                journal = subprocess.run(["journalctl", "--user", "-u", name, "--no-pager", "-o", "json"],
+                                         capture_output=True, text=True, timeout=5, check=True)
+                entries = [json.loads(line) for line in journal.stdout.splitlines()]
+                # A disposable user unit exercises the same native events without
+                # starting the laptop's real privileged updater.
+                for entry in entries:
+                    entry["INVOCATION_ID"] = entry.get("USER_INVOCATION_ID")
+                items = helper.recent_update_results("\n".join(json.dumps(entry) for entry in entries))
+                self.assertEqual([item["result"] for item in items], [expected])
+            finally:
+                subprocess.run(["systemctl", "--user", "stop", name], capture_output=True, timeout=10)
+                subprocess.run(["systemctl", "--user", "reset-failed", name], capture_output=True, timeout=10)
+
     def scenario(self, behavior, expected, final_state):
         with tempfile.TemporaryDirectory(prefix="monet-retry-fixture-") as tmp:
             root = Path(tmp)

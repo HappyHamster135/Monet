@@ -8889,3 +8889,58 @@ msgid ""
 "Your game needs it here. Windows installs it once, from what Monet fetched for it, and then your game starts."
 msgstr ""
 "आपके गेम को यहाँ इसकी ज़रूरत है। Monet ने जो लाकर रखा है, उससे Windows इसे एक बार इंस्टॉल करता है, फिर आपका गेम शुरू होता है।"
+
+#: linux/share/monet/settings-app/MonetSettings.qml:811 linux/share/monet/settings-app/MonetSettings.qml:6977
+msgid "Loading…"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:812
+msgid "An automatic update is in progress."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:813
+msgid "Waiting to retry an automatic update."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:814
+msgid "Recent update results couldn't load. Try refreshing."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:816
+msgid "No recent automatic update results are available."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:817
+msgid ""
+"The last automatic update didn't finish. Check your connection, then choose Check for updates."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:818
+msgid ""
+"The last automatic update was skipped because its conditions weren't met."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:819
+msgid ""
+"Recent attempts saved by this PC. Older results may no longer be available."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:963
+msgid "Automatic updates are on. You can also check now."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:6968
+msgid "Recent automatic updates"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7004
+msgid "Didn't finish"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7005
+msgid "Skipped"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7005
+msgid "Completed"
+msgstr ""

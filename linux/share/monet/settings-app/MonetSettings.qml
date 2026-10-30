@@ -402,6 +402,8 @@ Shared.MonetWindow {
     property string updateState: ""
     property var updateFound: ({})
     property string updateMessage: ""
+    property var updateHistory: ({ ok: false, items: [], state: "unknown" })
+    property bool updateHistoryBusy: false
     // Firmware for the PC's own parts (fwupd): the same states, and the updates.
     // Security: what keeps the PC safe (monet-quick security), the fix that's running, asking
     // before the restart into the firmware settings, and Monet's key asked for.
@@ -595,6 +597,7 @@ Shared.MonetWindow {
             ask("printers", out => sheet.printerInfo = sheet.json(out, sheet.printerInfo))
         }
         if (page === "updates") {
+            loadUpdateHistory()
             ask("previous", out => sheet.previous = sheet.json(out, {}))
             ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))
             ask("went-back", out => sheet.wentBack = sheet.json(out, {}))
@@ -788,6 +791,34 @@ Shared.MonetWindow {
     }
 
     // When asked: first look, then install. By itself (once a day, unless that's off) the helper does both.
+    function loadUpdateHistory() {
+        if (updateHistoryBusy) return
+        updateHistoryBusy = true
+        ask("update-history", (out, code) => {
+            const found = sheet.json(out, {})
+            sheet.updateHistoryBusy = false
+            sheet.updateHistory = code === 0 && typeof found.ok === "boolean" && Array.isArray(found.items)
+                && found.items.length <= 10 && found.items.every(item => item
+                    && ["done", "failed", "skipped"].includes(item.result)
+                    && typeof item.time === "number" && Number.isFinite(item.time) && item.time > 0
+                    && item.time <= 8640000000000000)
+                && ["unknown", "idle", "running", "retry"].includes(found.state)
+                ? found : { ok: false, items: [], state: "unknown" }
+        })
+    }
+
+    function updateHistoryDetail() {
+        if (updateHistoryBusy && updateHistory.items.length === 0) return i18n("Loading…")
+        if (updateHistory.state === "running") return i18n("An automatic update is in progress.")
+        if (updateHistory.state === "retry") return i18n("Waiting to retry an automatic update.")
+        if (!updateHistory.ok) return i18n("Recent update results couldn't load. Try refreshing.")
+        const latest = updateHistory.items[0]
+        if (!latest) return i18n("No recent automatic update results are available.")
+        if (latest.result === "failed") return i18n("The last automatic update didn't finish. Check your connection, then choose Check for updates.")
+        if (latest.result === "skipped") return i18n("The last automatic update was skipped because its conditions weren't met.")
+        return i18n("Recent attempts saved by this PC. Older results may no longer be available.")
+    }
+
     function checkUpdates() {
         updateState = "checking"
         ask("update-check", out => {
@@ -795,6 +826,7 @@ Shared.MonetWindow {
             sheet.updateFound = found
             sheet.updateMessage = found.message || ""
             sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
+            sheet.loadUpdateHistory()
         })
         checkFirmware()
     }
@@ -892,6 +924,7 @@ Shared.MonetWindow {
             const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
             sheet.updateMessage = lines.length > 0 ? lines[lines.length - 1] : ""
             sheet.updateState = result.ok ? "done" : "failed"
+            sheet.loadUpdateHistory()
         })
     }
 
@@ -926,7 +959,8 @@ Shared.MonetWindow {
         case "installing": return i18n("Downloading and installing. You can keep using your PC.")
         case "done": return updateFound.system ? i18n("The new Monet starts the next time you restart.") : i18n("Everything is installed.")
         case "failed": return updateMessage || i18n("Monet couldn't look for updates. Check your internet connection and try again.")
-        default: return i18n("Monet only updates when you ask it to.")
+        default: return pc.autoUpdates === false ? i18n("Monet only updates when you ask it to.")
+            : i18n("Automatic updates are on. You can also check now.")
         }
     }
 
@@ -6917,6 +6951,69 @@ Shared.MonetWindow {
                         Switch {
                             tone: look
                             active: sheet.pc.autoUpdates !== false
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    objectName: "updateHistoryCard"
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        spacing: 12
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                Layout.fillWidth: true
+                                text: i18n("Recent automatic updates")
+                                color: look.ink
+                                font.pixelSize: Math.max(17, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 1)
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                            }
+                            Pill {
+                                tone: look
+                                objectName: "refreshUpdateHistoryButton"
+                                text: sheet.updateHistoryBusy ? i18n("Loading…") : i18n("Refresh")
+                                enabledPill: !sheet.updateHistoryBusy
+                                onClicked: sheet.loadUpdateHistory()
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            objectName: "updateHistoryDetail"
+                            text: sheet.updateHistoryDetail()
+                            color: look.dim
+                            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                            wrapMode: Text.Wrap
+                        }
+                        Repeater {
+                            model: sheet.updateHistory.items
+                            delegate: RowLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Kirigami.Icon {
+                                    Layout.preferredWidth: 20
+                                    Layout.preferredHeight: 20
+                                    source: modelData.result === "failed" ? "dialog-warning"
+                                        : modelData.result === "skipped" ? "media-playback-pause" : "dialog-ok-apply"
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.result === "failed" ? i18n("Didn't finish")
+                                        : modelData.result === "skipped" ? i18n("Skipped") : i18n("Completed")
+                                    color: look.ink
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                                    wrapMode: Text.Wrap
+                                }
+                                Text {
+                                    objectName: "updateHistoryTime"
+                                    text: new Date(modelData.time).toLocaleString(Qt.locale(), Locale.ShortFormat)
+                                    color: look.dim
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                                }
+                            }
                         }
                     }
                 }

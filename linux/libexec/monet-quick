@@ -155,6 +155,7 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick report                   save a report (logs, the PC, Monet's records) in Documents; its name as JSON
     monet-quick doctor                   run `monet doctor`
     monet-quick update-check             is there a newer Monet, or app updates? as JSON
+    monet-quick update-history           recent automatic results, read-only and on demand
     monet-quick update                   install them now (by itself, it does once a day)
     monet-quick auto-updates on|off      update by itself, or only when asked
     monet-quick previous                 the Monet before the last update, to go back to, as JSON
@@ -835,6 +836,76 @@ def update_check():
                 return dict(found, ok=True)
     message = (result.stderr or result.stdout).strip().splitlines()
     return {"ok": False, "message": message[-1] if message and result.returncode != 0 else failure}
+
+
+# systemd's stable message IDs, not the (possibly translated) MESSAGE text.
+# For this Type=oneshot service UNIT_STARTED means the job finished. A skipped
+# ExecCondition also emits it, so UNIT_SKIPPED takes precedence for that run.
+UPDATE_FINISHED = "39f53479d3a045ac8e11786248231fbf"
+UPDATE_FAILED = "be02cf6855d2428ba40df7e9d022f03d"
+UPDATE_SKIPPED = "0e4284a0caca4bfc81c0bb6786972673"
+
+
+def recent_update_results(output):
+    """At most ten completed automatic attempts, newest first; no log text."""
+    attempts = {}
+    outcomes = {UPDATE_FINISHED: "done", UPDATE_FAILED: "failed", UPDATE_SKIPPED: "skipped"}
+    for line in output.splitlines():
+        entry = json.loads(line)
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid journal entry")
+        message = entry.get("MESSAGE_ID")
+        if not isinstance(message, str) or message not in outcomes:
+            continue
+        invocation = entry.get("INVOCATION_ID")
+        # A failed initial condition may have no invocation: no updater ran.
+        if not isinstance(invocation, str) or not re.fullmatch(r"[0-9a-f]{32}", invocation):
+            continue
+        stamp = entry.get("__REALTIME_TIMESTAMP")
+        if not isinstance(stamp, str) or not re.fullmatch(r"[0-9]{1,17}", stamp):
+            raise ValueError("Invalid journal timestamp")
+        stamp = int(stamp) // 1000  # JavaScript Date's milliseconds
+        if stamp <= 0 or stamp > 8640000000000000:
+            raise ValueError("Invalid journal timestamp")
+        previous = attempts.get(invocation)
+        outcome = outcomes[message]
+        if previous:
+            stamp = max(stamp, previous["time"])
+            # The subsequent successful start-job message must not turn a skip
+            # (or failure) into an installed update.
+            if previous["result"] != "done" and outcome == "done":
+                outcome = previous["result"]
+        attempts[invocation] = {"time": stamp, "result": outcome}
+    return sorted(attempts.values(), key=lambda item: item["time"], reverse=True)[:10]
+
+
+def update_history():
+    """Read existing records on demand; never check, install or poll updates."""
+    state = "unknown"
+    shown = run("systemctl", "show", "monet-update.service",
+                "--property=LoadState,ActiveState,SubState", timeout=5)
+    if shown:
+        properties = dict(line.split("=", 1) for line in shown.splitlines() if "=" in line)
+        if properties.get("LoadState") == "loaded":
+            active, sub = properties.get("ActiveState"), properties.get("SubState", "")
+            state = "retry" if sub in ("auto-restart", "auto-restart-queued") else (
+                "running" if active in ("active", "activating", "deactivating") else "idle")
+    try:
+        result = subprocess.run([
+            "journalctl", "--no-pager", "--quiet", "--output=json", "--lines=40",
+            "--output-fields=MESSAGE_ID,INVOCATION_ID,__REALTIME_TIMESTAMP",
+            # Only the system manager's records for this unit. Applications
+            # cannot spoof _PID, even if they emit the same public message ID.
+            "_PID=1", "UNIT=monet-update.service",
+            "MESSAGE_ID=" + UPDATE_FINISHED, "MESSAGE_ID=" + UPDATE_FAILED,
+            "MESSAGE_ID=" + UPDATE_SKIPPED,
+        ], capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            raise ValueError("History unavailable")
+        items = recent_update_results(result.stdout)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return {"ok": False, "items": [], "state": state}
+    return {"ok": True, "items": items, "state": state}
 
 
 # Firmware: the PC's own parts (its UEFI, disks, docks), from LVFS through
@@ -6574,6 +6645,8 @@ def main(argv):
         emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
     elif cmd == "update-check":
         emit(update_check())
+    elif cmd == "update-history":
+        emit(update_history())
     elif cmd == "previous":
         try:
             emit(previous_monet(json.loads(run("rpm-ostree", "status", "--json", timeout=30) or "{}")))

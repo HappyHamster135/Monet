@@ -49,12 +49,16 @@ if QT:
         def __init__(self):
             super().__init__(); self.ticket = 0; self.reply = ('{"done":true}', 0); self.resets = 0
             self.commands = []; self.hold_status = False; self.pending_status = []; self.scale_ticket = None
+            self.hold_history = False; self.pending_history = []
 
         @Slot("QVariantList", result=int)
         def run(self, command):
             self.ticket += 1
             ticket = self.ticket
             self.commands.append(list(command))
+            if command[1] == "update-history" and self.hold_history:
+                self.pending_history.append(ticket)
+                return ticket
             if command[1] == "access-scale":
                 self.scale_ticket = ticket
                 return ticket
@@ -180,3 +184,30 @@ class LookFeedback(unittest.TestCase):
         QTest.qWait(20)
         self.assertFalse(self.window.property("storageBusy"))
         self.assertTrue(self.window.property("storageProblem"))  # malformed worker response is retryable
+
+    def test_update_history_loads_on_demand_coalesces_and_recovers(self):
+        self.helper.hold_history = True
+        self.window.setProperty("page", "updates"); QTest.qWait(30)
+        for _ in range(6):
+            QMetaObject.invokeMethod(self.window, "loadUpdateHistory")
+            QMetaObject.invokeMethod(self.window, "refresh")
+        self.assertEqual(self.helper.commands.count(["helper", "update-history"]), 1)
+        self.assertTrue(self.window.property("updateHistoryBusy"))
+        ticket = self.helper.pending_history.pop()
+        self.helper.done.emit(ticket, '{"ok":true,"items":[{"time":1793352638000,"result":"failed"}],"state":"idle"}', 0, "")
+        QTest.qWait(30)
+        state = self.window.property("updateHistory").toVariant()
+        self.assertEqual(state["items"][0]["result"], "failed")
+        self.assertFalse(self.window.property("updateHistoryBusy"))
+        QTest.qWait(2100)
+        self.assertEqual(self.helper.commands.count(["helper", "update-history"]), 1)
+        for response, code, expected in (("{}", 0, False),
+                                          ('{"ok":true,"items":[null],"state":"idle"}', 0, False),
+                                          ('{"ok":true,"items":[{"time":1,"result":"unknown"}],"state":"idle"}', 0, False),
+                                          ('{"ok":true,"items":[{"time":"today","result":"done"}],"state":"idle"}', 0, False),
+                                          ('{"ok":true,"items":[],"state":"idle"}', 1, False),
+                                          ('{"ok":true,"items":[],"state":"idle"}', 0, True)):
+            QMetaObject.invokeMethod(self.window, "loadUpdateHistory")
+            self.helper.done.emit(self.helper.pending_history.pop(), response, code, "")
+            QTest.qWait(20)
+            self.assertEqual(self.window.property("updateHistory").toVariant()["ok"], expected)

@@ -96,3 +96,7 @@ Logs, the mock reproduction script, screenshots and build output are retained lo
 Rust 1.97.0, Clippy and the musl target are installed only under `target/assessment/toolchain/`. For subsequent Rust commands, set `RUSTUP_HOME` to that directory's `rustup`, `CARGO_HOME` to its `cargo`, and prepend `$CARGO_HOME/bin` to PATH. The Python entry point is `python3 tools/test.py`; use a disposable HOME/XDG and D-Bus session as in this assessment when testing on a daily-use desktop.
 
 This records the initial assessment before the owner requested 0.9.5 fixes. At that point production source files and the installed system were unchanged. Subsequent local implementation and verification are tracked in [the 0.9.5 backlog](BACKLOG-0.9.5.md). No disk formatting, encryption repair, reboot, update staging, commit, push or release occurred during the assessment.
+
+## Automatic update visibility follow-up
+
+The installed Settings preview now shows recent automatic update outcomes without background polling or starting an update. It displays this laptop's recorded DNS failure at 10:30:38 CET, while preserving the distinction between failed, completed and skipped attempts. Native systemd/Qt tests and Mist/Smoke/narrow-window renders pass; details and local evidence are recorded under backlog 095-12. Only the user-level Settings helper and QML were replaced, with a reversible receipt. The proposed privileged retry service and Rust updater remain source-only, and real OS-update acceptance remains open.
