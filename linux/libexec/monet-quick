@@ -1042,18 +1042,43 @@ def let_in(zone_files=ZONE_FILES, secure=None):
     return ports
 
 
-def listening_now():
+def listening_now(ignore_ports=None):
     """[(port, pid, process)] of the TCP ports this person's programs wait on for other devices
     (not for this PC alone). ss names the processes of the person's own sockets only."""
+    def port_of(fields):
+        if len(fields) < 5:
+            return None
+        address, _, port = fields[3].rpartition(":")
+        if port.isdigit() and not LOOPBACK.match(address) and "%lo" not in address:
+            value = int(port)
+            if 0 < value <= 65535:
+                return value
+        return None
+
+    if ignore_ports is not None:
+        # ss -p walks process file descriptors. Most desktops only expose an
+        # already-allowed KDE Connect port; a cheap socket-only query is enough
+        # until an unrecognized listener appears. Recheck every normal poll.
+        # Extended socket metadata identifies other accounts without a /proc
+        # scan (for example systemd-resolved's LLMNR listener). Missing UID
+        # metadata stays eligible, so older ss output cannot hide a new listener.
+        candidates = []
+        for line in (run("ss", "-Hltne") or "").splitlines():
+            uid = re.search(r'\buid:(\d+)\b', line)
+            if uid and int(uid[1]) != os.getuid():
+                continue
+            candidates.append(port_of(line.split()))
+        if not any(port is not None and port >= 1024 and port not in ignore_ports for port in candidates):
+            return []
     found = []
     for line in (run("ss", "-Hltnp") or "").splitlines():
         fields = line.split()
         program = re.search(r'users:\(\("([^"]*)",pid=(\d+)', line)
-        if len(fields) < 5 or not program:
+        port = port_of(fields)
+        if port is None or not program:
             continue
-        address, _, port = fields[3].rpartition(":")
-        if port.isdigit() and not LOOPBACK.match(address) and "%lo" not in address:
-            found.append((int(port), int(program[2]), program[1]))
+        if ignore_ports is None or (port >= 1024 and port not in ignore_ports):
+            found.append((port, int(program[2]), program[1]))
     return found
 
 
@@ -1118,10 +1143,12 @@ def listening_watch(every=LISTEN_EVERY, rounds=None):
         if strict:
             with lock:
                 known = read_json(LISTENING)
-            for port, pid, process in listening_now():
+            for port, pid, process in listening_now(open_ports):
+                if port < 1024 or port in open_ports:
+                    continue
                 key, name = program_of(pid, process)
                 key = f"{key} {port}"
-                if port < 1024 or port in open_ports or key in asked or key in (known if isinstance(known, dict) else {}):
+                if key in asked or key in (known if isinstance(known, dict) else {}):
                     continue
                 asked.add(key)
                 threading.Thread(target=ask_listening, args=(key, name, port, lock), daemon=True).start()

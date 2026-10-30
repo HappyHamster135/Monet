@@ -4832,6 +4832,36 @@ class SecurityAtAGlance(unittest.TestCase):
         self.assertIn('visible: safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === true', settings)
         self.assertIn("rm -f /etc/firewalld/policies/monet-allowed.xml", (ROOT / "linux/uninstall.sh").read_text(encoding="utf-8"))
 
+    def test_allowed_or_local_listeners_do_not_trigger_process_scans(self):
+        from unittest import mock
+        quick = quick_helper()
+        sockets = ("LISTEN 0 50 *:1716 *:*\n"
+                   "LISTEN 0 10 127.0.0.1:8765 0.0.0.0:*\n"
+                   "LISTEN 0 10 [::1]:9000 [::]:*\n"
+                   "LISTEN 0 10 [::ffff:127.0.0.1]:9001 [::]:*\n"
+                   "LISTEN 0 10 0.0.0.0:80 0.0.0.0:*\n"
+                   f"LISTEN 0 10 *:5355 *:* uid:{os.getuid() + 1} ino:100 sk:1\n")
+        for snapshot in (sockets, "", None):
+            with mock.patch.object(quick, "run", return_value=snapshot) as command:
+                self.assertEqual(quick.listening_now({1716}), [])
+                command.assert_called_once_with("ss", "-Hltne")
+
+    def test_a_new_listener_still_resolves_its_owner_after_the_cheap_probe(self):
+        from unittest import mock
+        quick = quick_helper()
+        probe = f"LISTEN 0 10 [::]:8765 [::]:* uid:{os.getuid()} ino:200 sk:2\n"
+        owned = ('LISTEN 0 10 [::]:8765 [::]:* users:(("python3",pid=41,fd=3))\n'
+                 'LISTEN 0 50 *:1716 *:* users:(("kdeconnectd",pid=42,fd=17))\n'
+                 'LISTEN 0 10 0.0.0.0:80 0.0.0.0:* users:(("httpd",pid=43,fd=4))\n'
+                 'LISTEN 0 10 127.0.0.1:9000 0.0.0.0:* users:(("node",pid=44,fd=5))\n')
+        with mock.patch.object(quick, "run", side_effect=[probe, owned]) as command:
+            self.assertEqual(quick.listening_now({1716}), [(8765, 41, "python3")])
+            self.assertEqual(command.call_args_list, [mock.call("ss", "-Hltne"), mock.call("ss", "-Hltnp")])
+        with mock.patch.object(quick, "run", side_effect=[probe, ""]):
+            self.assertEqual(quick.listening_now(set()), [])  # closed between the two snapshots
+        with mock.patch.object(quick, "run", side_effect=["LISTEN 0 10 [::]:8765 [::]:*\n", owned]):
+            self.assertEqual(quick.listening_now({1716}), [(8765, 41, "python3")])  # unknown UID stays eligible
+
     def test_a_program_that_starts_accepting_connections_is_asked_about(self):
         # As Windows asks: the program's own port let in when the person allows it, by name.
         from unittest import mock

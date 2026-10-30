@@ -60,6 +60,7 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-50 | Medium | Stop Sound's closed-panel command polling | Applied locally on the separate follow-up branch after the 0.9.5 candidate was prepared; not part of candidate `8407f02`. Native audio notifications update the level, mute state and default output. The old two-second wpctl polling is retained only as a fallback while the native interface is unavailable. Closed panels no longer repeatedly fetch the full sound snapshot. Fresh request identifiers and coalescing avoid stale replies and overlapping reads. The standalone Sound view also has a readable minimum width. |
 | 095-51 | Low | Review native tray heading warnings | Observed on the desktop reload: Network, Clipboard and Bluetooth report a leftInset binding loop in KDE's own headings/toolbars. The new Monet audio components report no such errors. Determine whether these are only startup warnings or cause visible layout/work before changing native styles. |
 | 095-52 | High | Bind Windows deployment to recorded partition identities | Follow-up implementation and basic native WinPE acceptance pass. Setup binds its payload and checkpoints to recorded partition/filesystem identities, never reformats on retry, and selects the shared EFI partition explicitly. The real VM exposed and verified a fix for assigned EFI letters missing from volume-GUID enumeration. Twenty-two Windows tests plus native DISM, failed-boot retries, payload sharing locks and fallback/user-file preservation pass. Full Windows boot, alternate storage drivers and power-loss acceptance remain open. Nothing was installed on the laptop or added to candidate `8407f02`. |
+| 095-53 | Medium | Avoid repeated process scans for already allowed listeners | Applied locally after the 0.9.5 candidate. The network-permission watcher checks socket metadata first and resolves processes only for a possible new listener belonging to this account; unknown UID metadata remains eligible. It skips app identity reads for allowed/privileged ports. Ten alternating laptop samples reduce the median poll from 162.36 ms to 19.75 ms. New/closed listeners pass a private native network fixture, and 18 focused security/preview checks pass. This is polling wall time, not a measured whole-OS RAM or battery improvement. |
 
 
 
@@ -132,6 +133,27 @@ Evidence: `target/backlog-after-095/winpe-vm/acceptance/`.
 This is not a successful full Windows installation, Secure Boot or power-loss
 test. Those remain open. The helper and this fix remain source-only on the local
 follow-up branch, outside the 0.9.5 release candidate.
+
+## Desktop polling follow-up
+
+A 15-second live sample found browser media and ChatGPT work active; it is not a
+clean-login idle baseline. The network-permission service itself was roughly
+39 MiB RSS, while its periodic `ss -p` subprocess scans were avoidable. A simple
+socket-only probe still encountered systemd-resolved's LLMNR listener, so the
+final probe uses socket UID metadata to distinguish another account's sockets.
+Missing metadata remains eligible for the full owner lookup. The firewall rules,
+permission prompts and five-second detection interval are unchanged.
+
+The final complete-helper measurement alternated ten old/new polls on this
+laptop: median **162.359 ms → 19.747 ms**. A private user/network namespace with
+a real bound TCP socket verifies allowed-port suppression, detection of a newly
+opened listener and removal after close. Eighteen focused tests, translation
+freshness and whitespace checks pass. The preview installer now includes the
+user service so it runs the tested local helper. Its unit/helper receipt is
+`20261030T192336.399605Z`; the final helper receipt is
+`20261030T192502.840023Z`, both under `~/.local/state/monet/desktop-preview/`.
+The service was restarted and is active. Evidence is in
+`target/backlog-after-095/listening-*.log` and `listening-final.json`.
 
 ## Earlier local desktop checks (before release preparation)
 

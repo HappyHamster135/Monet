@@ -147,7 +147,7 @@ def plan(monitor_bundle=None):
     for name in ('monet-folder-tools.desktop', 'monet-local-app.desktop'):
         add(DATA / 'kio/servicemenus' / name, render(ROOT / 'linux/share/kio/servicemenus' / name, local_helpers=True))
     add(DATA / 'applications/monet-settings.desktop', render(ROOT / 'linux/share/applications/monet-settings.desktop', local_helpers=True))
-    for name in ('monet-frames.path', 'monet-frames.service', 'monet-light.timer', 'monet-light.service', 'monet-light-sync.service'):
+    for name in ('monet-frames.path', 'monet-frames.service', 'monet-light.timer', 'monet-light.service', 'monet-light-sync.service', 'monet-listening.service'):
         text = render(ROOT / 'linux/systemd/user' / name).decode()
         for helper in ('monet-quick', 'monet-light'):
             text = text.replace('/usr/libexec/' + helper, str(HELPERS / helper))
