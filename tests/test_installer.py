@@ -330,6 +330,14 @@ class PrepareWindows(unittest.TestCase):
         self.assertEqual(prepare.windows_name("[]:"), "Player")
         self.assertEqual(len(prepare.windows_name("x" * 40)), 20)
 
+    def test_windows_computer_name_does_not_shadow_the_account(self):
+        for user in ("monet-games", "MONET-GAMES", "Monet- Games", "anna", "monet-play", "[]:"):
+            with self.subTest(user=user):
+                computer = prepare.windows_computer_name(user)
+                self.assertNotEqual(computer.casefold(), prepare.windows_name(user).casefold())
+                self.assertLessEqual(len(computer), 15)
+        self.assertEqual(prepare.windows_computer_name("anna"), "MONET-GAMES")
+
     def test_edition(self):
         images = [(1, "Windows 11 Home"), (2, "Windows 11 Home N"), (6, "Windows 11 Pro")]
         self.assertIn(prepare.pick_edition(images), [(1, "Windows 11 Home"), (6, "Windows 11 Pro")])

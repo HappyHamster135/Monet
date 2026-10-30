@@ -2,8 +2,8 @@
 
 This program verifies prepared partitions and, in its explicit `--deploy` mode,
 installs Windows inside WinPE. The integration is on the local follow-up branch;
-it is not in the prepared 0.9.5 candidate or installed on this laptop. Actual
-Full installation acceptance remains open in backlog item 095-52. It adds no daemon or
+it is not in the prepared 0.9.5 candidate or installed on this laptop.
+Remaining installation acceptance is tracked in backlog item 095-52. It adds no daemon or
 background work to the installed desktop.
 
 `monet-setup-check.exe preparation.json D` inspects native Windows storage and
@@ -92,14 +92,39 @@ Only ordinary files created inside that directory become VM disks. The VM has
 no network interface and shuts down automatically; logs and images remain there
 for inspection. Windows/ADK images are not bundled or downloaded by the tool.
 
-Locked/offline disks, alternate storage drivers and the complete Windows
-installation/retry round trip still need VM acceptance. The checker cannot prove
-that an offline, unenumerated clone is absent.
+[The full-image fixture](../../tools/test-windows-install.py) additionally checks
+DISM and successful BCDBoot, a completed retry, the original EFI fallback and a
+user file, then boots Windows and checks the automatic first-logon handoff. It
+uses a fresh 64 GiB file-backed GPT disk, private OVMF variables and a virtual TPM.
+Supply independently verified **en-US x64**, single-image installation and WinPE
+WIMs, matching WinPE media, the release checker and OVMF firmware. `--help` lists
+the required tools. No Microsoft images are downloaded or included in the repo.
+
+The original ESP remains on the target. A boot entry in the fixture's OVMF file
+selects `EFI/Microsoft/Boot/bootmgfw.efi`; the host firmware is never accessed.
+The fixture records the actual account, computer, administrator token and four
+first-logon flags instead of installing Bridge, the Game Profile or Steam. Its
+test account deliberately matches Monet's usual computer name, exercising the
+preparation helper's account-domain collision guard. It keeps the production
+answer-file template and renders it through the production escaping helper.
+
+The complete fixture passes with Microsoft's en-US x64 Windows 11 Enterprise
+Evaluation, build 26300: successful BCDBoot, completed retry, preserved fallback
+and user file, automatic account creation and elevated first-logon execution.
+The result records `Monet-Games` on `MONET-PLAY`, the expected job/checkpoint and
+all four handoff flags. Windows' setup log confirms membership in Users and
+Administrators. An earlier account/computer-name collision had prevented those
+group assignments and the first-logon task; the preparation helper now chooses
+a different computer name while preserving the requested account name.
+
+Locked/offline disks, alternate storage drivers, consumer Windows editions and
+the complete return-to-Monet round trip still need acceptance. The checker cannot
+prove that an offline, unenumerated clone is absent.
 
 A successful identity match alone is **not permission to erase a volume**.
 The program has no format operation. Do not infer ownership of legacy partitions
 that have no Linux preparation receipt. Physical power-loss durability,
-successful BCDBoot behavior and restoration of Monet's boot path across a full
-installation still need acceptance before enabling this follow-up on a real
-install. A passing deliberately failed boot configuration does not establish
-that Windows can boot, or that a complete installation survives power loss.
+restoration of Monet's boot path across a full installation still need acceptance
+before enabling this follow-up on a real install. Successful image application
+and boot do not establish that a complete installation survives physical power
+loss, or that a real Windows game/Bridge round trip works.

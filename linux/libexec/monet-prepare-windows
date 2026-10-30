@@ -428,6 +428,11 @@ def windows_name(name):
     return clean or "Player"
 
 
+def windows_computer_name(user):
+    """Keep the local account distinct from Windows' account-domain name."""
+    return "MONET-PLAY" if windows_name(user).casefold() == "monet-games" else "MONET-GAMES"
+
+
 # ------------------------------------------------------- language and region
 
 # Monet's language -> (Microsoft's ISO language name, Windows language tag).
@@ -841,7 +846,7 @@ def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone, identities):
             monet.mkdir(exist_ok=True)
             user, full = first_user()
             values = {
-                "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": "MONET-GAMES",
+                "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": windows_computer_name(user),
                 "TIMEZONE": timezone, "UILANG": ui_lang, "LOCALE": locale, "INPUT": keyboard,
             }
             (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))

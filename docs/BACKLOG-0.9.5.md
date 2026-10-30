@@ -59,9 +59,10 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-49 | Low | Refresh races and glass startup errors | Fixed locally. System Details and Storage give each explicit refresh a unique executable source, avoiding immediate replay of the previous cached result. Double refreshes still coalesce. Shared glass gradient binds to a stable ShapePath ID instead of a temporarily null parent. Weather search restores keyboard focus when its panel popup activates. |
 | 095-50 | Medium | Stop Sound's closed-panel command polling | Applied locally on the separate follow-up branch after the 0.9.5 candidate was prepared; not part of candidate `8407f02`. Native audio notifications update the level, mute state and default output. The old two-second wpctl polling is retained only as a fallback while the native interface is unavailable. Closed panels no longer repeatedly fetch the full sound snapshot. Fresh request identifiers and coalescing avoid stale replies and overlapping reads. The standalone Sound view also has a readable minimum width. |
 | 095-51 | Low | Review native tray heading warnings | Historic reload logs place the observed leftInset warnings around Plasma shutdown. No recurrence appeared in the latest 30-minute journal sample. The new Monet audio components report no such errors. A visible layout defect or ongoing idle work has not been established; native-style investigation remains open. |
-| 095-52 | High | Bind Windows deployment to recorded partition identities | Follow-up implementation and basic native WinPE acceptance pass. Setup binds its payload and checkpoints to recorded partition/filesystem identities, never reformats on retry, and selects the shared EFI partition explicitly. The real VM exposed and verified a fix for assigned EFI letters missing from volume-GUID enumeration. Twenty-two Windows tests plus native DISM, failed-boot retries, payload sharing locks and fallback/user-file preservation pass. Full Windows boot, alternate storage drivers and power-loss acceptance remain open. Nothing was installed on the laptop or added to candidate `8407f02`. |
+| 095-52 | High | Bind Windows deployment to recorded partition identities | Follow-up implementation, 22 native Windows tests and full-image VM acceptance pass. Real DISM/BCDBoot, failed-boot and completed retries, payload locks, fallback/user-file preservation and elevated first-logon handoff are verified. The fixture selects the original Windows EFI loader through private OVMF variables. Consumer editions, other storage drivers, physical power loss, Secure Boot and the real Bridge/game/return-to-Monet round trip remain open. Nothing was installed on the laptop or added to candidate `8407f02`. |
 | 095-53 | Medium | Avoid repeated process scans for already allowed listeners | Applied locally after the 0.9.5 candidate. The network-permission watcher checks socket metadata first and resolves processes only for a possible new listener belonging to this account; unknown UID metadata remains eligible. It skips app identity reads for allowed/privileged ports. Ten alternating laptop samples reduce the median poll from 162.36 ms to 19.75 ms. New/closed listeners pass a private native network fixture, and 18 focused security/preview checks pass. This is polling wall time, not a measured whole-OS RAM or battery improvement. |
 | 095-54 | Low | Update CI actions and make runner migration explicit | Prepared locally. Checkout 7.0.1, upload-artifact 7.0.2 and download-artifact 8.0.2 use verified full commit pins and Node 24. Linux jobs explicitly use Ubuntu 24.04. Missing release payloads fail their upload step; optional job/error handling stays unchanged. actionlint and a parsed comparison of permissions, gates, commands and artifact contracts pass. Hosted Linux/Windows/reusable-image execution remains pending a future push; the running 0.9.5 workflow is unchanged. |
+| 095-55 | Medium | Keep the Windows account distinct from its computer name | Fixed in source after the candidate. A sanitized account name matching MONET-GAMES now keeps its name while the computer becomes MONET-PLAY. A native VM exposed failed administrator-group assignment when both names matched. The corrected full fixture verifies Users/Administrators membership and the elevated first-logon task. Name/case/sanitization regressions pass. Not installed on this laptop. |
 
 
 
@@ -156,6 +157,54 @@ Evidence: `target/backlog-after-095/winpe-vm/acceptance/`.
 This is not a successful full Windows installation, Secure Boot or power-loss
 test. Those remain open. The helper and this fix remain source-only on the local
 follow-up branch, outside the 0.9.5 release candidate.
+
+## Full Windows deployment and first-logon acceptance
+
+The new [full-image fixture](../tools/test-windows-install.py) passes from a fresh
+file-backed disk through native DISM, successful BCDBoot, completed retry and
+Windows first logon. Microsoft’s [evaluation media](https://www.microsoft.com/en-us/evalcenter/download-windows-11-enterprise)
+was checked against its published SHA-256:
+`bc3f24086ebadc94489066b5ad78089e2cf5c3491e90e790bb81a2b199c10e38`.
+No Microsoft image is committed or redistributed.
+
+The guest reports Windows 11 Enterprise Evaluation build **26300**, account
+`Monet-Games`, computer `MONET-PLAY`, the correct job and `complete` checkpoint,
+and an elevated administrator token. All four production first-logon arguments
+arrive. Windows' setup log confirms membership in Users and Administrators. The
+fixture script records this evidence and shuts the guest down; it substitutes
+for actual Bridge, Game Profile and Steam installation, which remain untested.
+Networking is disabled, and only newly created ordinary files are VM disks.
+
+The existing EFI fallback and a user sentinel survive application, retry and
+first boot. The retry performs no second DISM application. OVMF's private
+variable file selects Microsoft's explicit loader on the target's original ESP;
+no host firmware variables or laptop partitions are accessed. This proves the
+Windows boot/handoff portion, not Monet's complete BootNext/game/return flow,
+Secure Boot, consumer editions, other controllers or physical power loss.
+
+The first prototype reached the desktop but its account and computer names
+matched case-insensitively. Windows logged failed group assignments, and the
+first-logon task did not run. The production preparation helper now avoids this
+collision too: it preserves the account and chooses `MONET-PLAY` if the sanitized
+account name matches the usual `MONET-GAMES` computer name. The fresh final VM
+exercises this exact case. The helper remains source-only, outside 0.9.5.
+
+Harness defects found during the work were corrected before acceptance: sparse
+extraction must not mix buffered reads with descriptor-level seeks, standalone
+NTFS image files need explicit partition geometry, the original ESP must be used
+instead of a copied BCD USB, and wrapper paths must remain absolute after changing
+working directories. Regression tests cover sparse offsets/holes, kernel-copy
+fallback and refusing to overwrite prior evidence. A paused disposable QEMU
+instance verifies that timeout cleanup also stops a guest behind a killed
+container wrapper and retains a screenshot.
+
+Verification: **34 focused installer/harness tests passed, one PowerShell-host
+check skipped**; the actual first-logon PowerShell payload ran successfully in
+Windows. Translation freshness, Python/shell syntax, preview preservation and
+whitespace checks pass. Successful evidence is under
+`target/backlog-after-095/windows-full-vm/acceptance-identity/`, with the complete
+CLI run in `full-tool-identity.log`. Earlier failed/cancelled fixture logs are
+retained separately and are not reported as successful runs.
 
 ## Desktop polling follow-up
 

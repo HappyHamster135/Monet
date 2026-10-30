@@ -10,8 +10,10 @@ This does not replace full Windows install, Secure Boot or power-loss acceptance
 """
 
 import argparse
+import errno
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -34,15 +36,56 @@ def sparse(path, size):
         stream.truncate(size)
 
 
+def copy_sparse(source, destination, offset=0, length=None, source_offset=0):
+    """Copy into a newly zeroed fixture region without allocating source holes."""
+    limit = source.stat().st_size if length is None else source_offset + length
+    if source_offset < 0 or offset < 0 or limit < source_offset or limit > source.stat().st_size:
+        raise ValueError("Invalid disposable image region")
+    # SEEK_DATA/HOLE changes the descriptor position outside Python's buffering.
+    # Keep reads unbuffered so a seek cannot reuse bytes from an obsolete buffer.
+    with source.open("rb", buffering=0) as src, destination.open("r+b", buffering=0) as dst:
+        position = source_offset
+        while position < limit:
+            try:
+                start = os.lseek(src.fileno(), position, os.SEEK_DATA)
+                end = min(os.lseek(src.fileno(), start, os.SEEK_HOLE), limit)
+            except OSError as error:
+                if error.errno == errno.ENXIO:
+                    break
+                if error.errno not in (errno.EINVAL, errno.ENOTSUP):
+                    raise
+                start, end = position, limit
+            if start >= limit:
+                break
+            src.seek(start)
+            dst.seek(offset + start - source_offset)
+            while start < end:
+                try:
+                    copied = os.copy_file_range(src.fileno(), dst.fileno(), min(end - start, 32 * MIB),
+                                                start, offset + start - source_offset)
+                except OSError as error:
+                    if error.errno not in (errno.EXDEV, errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP):
+                        raise
+                    copied = None
+                if copied is not None:
+                    if not copied:
+                        raise RuntimeError("The disposable disk image was truncated")
+                    start += copied
+                    continue
+                src.seek(start)
+                dst.seek(offset + start - source_offset)
+                data = src.read(min(end - start, MIB))
+                if not data:
+                    raise RuntimeError("The disposable disk image was truncated")
+                if dst.write(data) != len(data):
+                    raise RuntimeError("The disposable disk image write was incomplete")
+                start += len(data)
+            position = end
+
+
 def copy_region(source, destination, offset, length):
-    with source.open("rb") as src, destination.open("xb") as dst:
-        src.seek(offset)
-        while length:
-            data = src.read(min(length, MIB))
-            if not data:
-                raise RuntimeError("The disposable disk image was truncated")
-            dst.write(data)
-            length -= len(data)
+    sparse(destination, length)
+    copy_sparse(source, destination, length=length, source_offset=offset)
 
 
 def mdrive(path, offset=0):
@@ -151,10 +194,11 @@ exit /b
     (injected / "tests.cmd").write_bytes(script.replace("\n", "\r\n").encode("ascii"))
 
 
-def prepare(args, work):
+def prepare(args, work, disk_factory=make_disk, payload_factory=make_payload,
+            script_factory=make_script):
     injected = work / "injected"
     injected.mkdir()
-    disk, manifest = make_disk(work)
+    disk, manifest = disk_factory(work)
     (injected / "manifest.json").write_text(json.dumps(manifest))
     changed = json.loads(json.dumps(manifest))
     changed["windows"]["filesystem_id"] = "FFFFFFFFFFFFFFFF"
@@ -162,8 +206,8 @@ def prepare(args, work):
     shutil.copy2(args.checker, injected / "check.exe")
     for index, test in enumerate(args.test_exe):
         shutil.copy2(test, injected / f"test-{index}.exe")
-    make_script(injected)
-    staged, job = make_payload(work, manifest, injected)
+    script_factory(injected)
+    staged, job = payload_factory(work, manifest, injected)
     for item in staged.iterdir():
         mcopy(disk, item, offset=manifest["setup"]["offset"])
     marker = work / "monet-vm-setup.marker"
@@ -269,7 +313,8 @@ def main():
         parser.error("--media must be the amd64 ADK WinPE Media directory")
     if not 30 <= args.timeout <= 900:
         parser.error("--timeout must be between 30 and 900 seconds")
-    args.qemu = shutil.which(args.qemu) or parser.error("QEMU executable not found")
+    executable = shutil.which(args.qemu) or parser.error("QEMU executable not found")
+    args.qemu = str(Path(executable).resolve())
     for command in ("sfdisk", "mkfs.vfat", "mkfs.ntfs", "blkid", "mcopy", "mmd", "mtype",
                     "ntfscat", "wimlib-imagex"):
         if not shutil.which(command):
