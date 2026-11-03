@@ -285,6 +285,33 @@ class Recovery(unittest.TestCase):
                     prepare.assert_not_called()
                 self.assertFalse(self.receipt.exists())
 
+    def test_unavailable_media_stops_before_recovery_receipt_or_any_storage_changes(self):
+        plan = self.legacy_plan()
+        file = self.root / "reviewed-plan.json"
+        file.write_text(json.dumps(plan))
+        self.p.STATUS = self.p.STATE / "windows-setup"
+        self.p.WORK = self.root / "downloads"
+        for kind in ("blocked", "interrupted", "missing-iso", "empty-iso"):
+            with self.subTest(kind=kind):
+                iso = self.root / "input.iso"
+                iso.unlink(missing_ok=True)
+                if kind == "empty-iso": iso.touch()
+                args = ["monet-prepare-windows", "--recover-plan", str(file)]
+                if kind.endswith("iso"): args += ["--iso", str(iso)]
+                with patch.object(self.p.sys, "argv", args), \
+                        patch.object(self.p.os, "geteuid", return_value=0), \
+                        patch.object(self.p.Path, "is_dir", return_value=True), \
+                        patch.object(self.p, "root_disk", return_value=self.disk), \
+                        patch.object(self.p, "require_setup_payload"), \
+                        patch.object(self.p, "resume_staged_setup", return_value=None), \
+                        patch.object(self.p, "windows_download_link", side_effect=self.p.Stop("download-failed", "blocked") if kind == "blocked" else None,
+                                     return_value=("https://example.invalid/windows.iso", "English")), \
+                        patch.object(self.p, "download", side_effect=self.p.Stop("download-failed", "interrupted")):
+                    self.assertEqual(self.p.prepare_main(), 2)
+                self.assertFalse(self.receipt.exists())
+                self.assertFalse(self.formats())
+                self.assertFalse(self.appends())
+
     def test_legacy_recovery_refuses_preformatted_input_and_existing_record_changes(self):
         plan = self.legacy_plan()
         wrong = copy.deepcopy(plan)

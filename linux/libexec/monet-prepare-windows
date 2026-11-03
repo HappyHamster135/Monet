@@ -978,8 +978,9 @@ def prepare_main():
     try:
         disk = root_disk()
         require_setup_payload()
-        if args.recover_plan:
-            log(recover_partition_plan(disk, json.loads(args.recover_plan.read_text()), adopt=True))
+        recovery_plan = json.loads(args.recover_plan.read_text()) if args.recover_plan else None
+        if recovery_plan is not None:
+            log(recover_partition_plan(disk, recovery_plan))
         resume = resume_staged_setup(disk)
         if resume:
             partn, phase = resume
@@ -991,8 +992,6 @@ def prepare_main():
             set_status("pending")
             progress(100, "Windows setup continues at the next restart")
             return 0
-        win_dev, setup_dev, partn = make_partitions(disk)
-        identities = deployment_manifest(disk)
         ms_lang, ui, locale, keyboard, timezone = region()
 
         if iso is None:
@@ -1005,6 +1004,14 @@ def prepare_main():
             iso = WORK / "windows.iso"
             downloaded = True
             download(url, iso)
+        # Obtain the media before creating or formatting anything. Microsoft can
+        # reject automatic downloads; that failure must leave storage untouched.
+        if not iso.is_file() or iso.stat().st_size == 0:
+            raise Stop("download-failed", "the Windows ISO file is missing or empty")
+        if recovery_plan is not None:
+            log(recover_partition_plan(disk, recovery_plan, adopt=True))
+        win_dev, setup_dev, partn = make_partitions(disk)
+        identities = deployment_manifest(disk)
         stage(iso, setup_dev, ui, locale, keyboard, timezone, identities)
         if deployment_manifest(disk) != identities:
             raise Stop("failed", "the prepared Windows disk changed while copying setup")
