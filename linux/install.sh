@@ -157,6 +157,7 @@ while read -r alias name; do
 done < "$SRC/share/icons/Monet-cursors/aliases"
 put 644 "$SRC/share/applications/monet-windows.desktop" "$DATADIR/applications/monet-windows.desktop"
 put 644 "$SRC/share/applications/monet-settings.desktop" "$DATADIR/applications/monet-settings.desktop"
+put 644 "$SRC/share/applications/monet-passwords.desktop" "$DATADIR/applications/monet-passwords.desktop"
 # Games, the app with every game (the panel's Games button and Windows+G open it).
 put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/monet-games.desktop"
 # The Store, Monet's own: Flathub's apps, and the Windows apps on the PC.

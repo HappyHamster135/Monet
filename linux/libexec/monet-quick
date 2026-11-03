@@ -237,7 +237,7 @@ PREFS = CONFIG / "monet" / "prefs.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
-PAGES = ("light", "wifi", "bluetooth", "phone", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy",
+PAGES = ("light", "wifi", "bluetooth", "phone", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy", "passwords",
          "security", "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
@@ -2363,7 +2363,9 @@ def wallet_status():
             "policy": minutes if idle else "session", "idleMinutes": minutes,
             "unlocked": opened.strip() == "b true" if opened is not None else None,
             "automaticLogin": "autologin" in service if service is not None else None,
-            "manager": bool(shutil.which("kwalletmanager5"))}
+            "manager": bool(shutil.which("kwalletmanager5")),
+            "preferences": bool(shutil.which("kcmshell6")),
+            "browser": wallet_browser_target() is not None}
 
 
 def wallet_policy(value):
@@ -2392,6 +2394,44 @@ def wallet_lock():
 def wallet_manage():
     try:
         subprocess.Popen(["kwalletmanager5"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except OSError:
+        return {"ok": False}
+
+
+def wallet_access():
+    """Open the native preferences; never read vault contents or access rules here."""
+    try:
+        subprocess.Popen(["kcmshell6", "kcm_kwallet5"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except OSError:
+        return {"ok": False}
+
+
+def wallet_browser_target():
+    """Only documented password pages of known browsers; no arbitrary command/URL."""
+    browser = (run("xdg-settings", "get", "default-web-browser", timeout=3) or "").strip()
+    routes = {name: "about:logins" for name in
+              ("app.zen_browser.zen.desktop", "zen.desktop", "firefox.desktop", "org.mozilla.firefox.desktop")}
+    routes.update({name: "chrome://password-manager/passwords" for name in
+                   ("org.chromium.Chromium.desktop", "chromium-browser.desktop", "google-chrome.desktop")})
+    if browser not in routes or not shutil.which("gio"):
+        return None
+    entry = entry_by_id(browser) or {}
+    if entry.get("Type") != "Application" or not entry.get("Exec") or entry.get("Hidden") == "true":
+        return None
+    path = next((folder / browser for folder in app_dirs() if (folder / browser).is_file()), None)
+    return ["gio", "launch", str(path), routes[browser]] if path else None
+
+
+def wallet_browser():
+    command = wallet_browser_target()
+    if not command:
+        return {"ok": False}
+    try:
+        subprocess.Popen(command, start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"ok": True}
     except OSError:
@@ -5538,8 +5578,8 @@ def open_settings(page):
 def search_catalog():
     N_ = lambda text: text  # Extract aliases now, translate them when matching.
     rows = [
-        ("saved-passwords", tr("Saved passwords"), tr("Lock & Privacy · Password vault and automatic filling"),
-         N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "privacy#passwords", "wallet-open"),
+        ("saved-passwords", tr("Passwords"), tr("Saved logins, app access and vault unlocking"),
+         N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "passwords", "wallet-open"),
         ("text-size", tr("Make text and windows bigger"), tr("Accessibility · Size of everything"),
          N_("make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"), "accessibility#size", "preferences-desktop-accessibility"),
         ("pointer-size", tr("Make the pointer easier to see"), tr("Accessibility · Pointer size"),
@@ -6795,6 +6835,10 @@ def main(argv):
         emit(wallet_lock())
     elif cmd == "wallet-manage":
         emit(wallet_manage())
+    elif cmd == "wallet-access":
+        emit(wallet_access())
+    elif cmd == "wallet-browser":
+        emit(wallet_browser())
     elif cmd == "security":
         emit(security())
     # Fixes that ask for an administrator's password (monet-secure, through pkexec).

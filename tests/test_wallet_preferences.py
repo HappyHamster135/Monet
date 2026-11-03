@@ -62,3 +62,24 @@ class WalletPreferences(unittest.TestCase):
             self.assertIn('--auto-start=no', run.call_args.args)
             run.return_value = ''
             self.assertTrue(self.q.wallet_lock()['ok'])
+
+    def test_access_opens_native_preferences_without_reading_passwords(self):
+        with patch.object(self.q.subprocess, 'Popen') as launch, patch.object(self.q, 'run') as run:
+            self.assertTrue(self.q.wallet_access()['ok'])
+            self.assertEqual(launch.call_args.args[0], ['kcmshell6', 'kcm_kwallet5'])
+            run.assert_not_called()
+
+    def test_browser_link_uses_only_known_local_application_and_fixed_page(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)
+            browser=folder/'app.zen_browser.zen.desktop'
+            browser.write_text('[Desktop Entry]\nType=Application\nExec=fixture %u\n')
+            with patch.object(self.q, 'run', return_value=browser.name), patch.object(self.q, 'app_dirs', return_value=(folder,)), \
+                    patch.object(self.q.shutil, 'which', return_value='/usr/bin/gio'), patch.object(self.q.subprocess, 'Popen') as launch:
+                self.assertTrue(self.q.wallet_browser()['ok'])
+                self.assertEqual(launch.call_args.args[0], ['gio','launch',str(browser),'about:logins'])
+                browser.write_text(browser.read_text()+'Hidden=true\n')
+                self.assertFalse(self.q.wallet_browser()['ok'])
+                self.q.run.return_value='../../unsafe.desktop'
+                self.assertFalse(self.q.wallet_browser()['ok'])
+                self.assertEqual(launch.call_count,1)

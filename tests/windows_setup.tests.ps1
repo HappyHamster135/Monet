@@ -18,6 +18,15 @@ foreach ($path in Get-ChildItem (Join-Path $root 'windows') -Filter '*.ps1') {
     Assert (-not $errors) "Syntax error in $($path.Name): $errors"
 }
 . (Join-Path $root 'windows/Setup-Functions.ps1')
+$update = [pscustomobject]@{Type=2;DriverClass='Display';DriverHardwareID='PCI\VEN_10DE&DEV_25BB';InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false}}
+Assert (Test-MonetMissingDriver $update @('PCI\VEN_10DE&DEV_25BB')) 'Matching missing graphics driver must be eligible'
+Assert (-not (Test-MonetMissingDriver $update @('PCI\VEN_8086&DEV_51F1'))) 'Working/unrelated graphics driver must not be replaced'
+$update.DriverClass='Firmware'
+Assert (-not (Test-MonetMissingDriver $update @($update.DriverHardwareID))) 'Firmware must not be installed'
+$update.DriverClass='System';$update.Type=1
+Assert (-not (Test-MonetMissingDriver $update @($update.DriverHardwareID))) 'Software updates must not enter hardware-only repair'
+$update.Type=2;$update.InstallationBehavior.CanRequestUserInput=$true
+Assert (-not (Test-MonetMissingDriver $update @($update.DriverHardwareID))) 'Interactive updates must not be installed silently'
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('monet-setup-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp | Out-Null
 try {

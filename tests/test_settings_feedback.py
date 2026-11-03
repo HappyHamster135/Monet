@@ -198,6 +198,7 @@ class LookFeedback(unittest.TestCase):
         self.window.setProperty('page', 'privacy'); QTest.qWait(40)
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'privacy#passwords'))
         QTest.qWait(200)
+        self.assertEqual(self.window.property('page'), 'passwords')
         self.assertEqual(self.window.property('pendingAnchor'), '')
         self.assertEqual(self.window.property('walletInfo').toVariant()['policy'], 'session')
         self.helper.held_commands.add('wallet-policy')
@@ -219,6 +220,25 @@ class LookFeedback(unittest.TestCase):
         self.assertTrue(self.window.property('walletChanged'))
         self.helper.commands.clear(); QTest.qWait(2200)
         self.assertFalse(any(c[1].startswith('wallet-') for c in self.helper.commands))
+
+    def test_passwords_page_opens_native_managers_without_reading_entries(self):
+        state = dict(enabled=True, policy='session', unlocked=False, manager=True, preferences=True, browser=True)
+        self.helper.replies['wallet-status'] = json.dumps(state)
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'passwords'))
+        QTest.qWait(80)
+        pending = [self.window.contentItem()]; buttons = {}
+        while pending:
+            item = pending.pop()
+            if item.objectName().startswith('wallet') and item.objectName().endswith('Button'):
+                buttons[item.objectName()] = item
+            pending.extend(item.childItems())
+        for name, action in (('walletManageButton','manage'), ('walletAccessButton','access'), ('walletBrowserButton','browser')):
+            self.assertTrue(buttons[name].property('enabled'), name)
+            self.helper.replies['wallet-' + action] = '{"ok":true}'
+            self.assertTrue(QMetaObject.invokeMethod(buttons[name], 'clicked'))
+            QTest.qWait(20)
+            self.assertEqual(self.helper.commands[-1][1], 'wallet-' + action)
+        self.assertFalse(any(any(word in str(command) for word in ('readPassword', 'readEntry', 'folderList')) for command in self.helper.commands))
 
     def test_update_history_loads_on_demand_coalesces_and_recovers(self):
         self.helper.hold_history = True

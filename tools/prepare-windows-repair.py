@@ -71,16 +71,19 @@ def build(output, extractor, cache):
     # and publisher too; this hash detects changes after this bundle was prepared.
     manifest["steam"] = {"path": steam.name, "sha256": digest(steam), "url": STEAM_URL}
     (output / "repair-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    for name in ("Repair-Windows.ps1", "Setup-Functions.ps1", "Install-Launcher.ps1", "GameProfile.ps1"):
+    for name in ("Repair-Windows.ps1", "Finish-WindowsHardware.ps1", "Setup-Functions.ps1", "Install-Launcher.ps1", "GameProfile.ps1"):
         shutil.copy2(ROOT / "windows" / name, output / name)
     (output / "Repair Windows.cmd").write_bytes(
         b'@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Repair-Windows.ps1"\r\n')
+    (output / "Finish Windows hardware setup.cmd").write_bytes(
+        b'@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Finish-WindowsHardware.ps1"\r\n')
     (output / "README.txt").write_text(
         "Monet Windows repair - ThinkPad P16s Gen 2 Intel (21HK/21HL)\n\n"
         "Open Repair Windows.cmd and accept Windows' administrator prompt.\n"
         "Installs signed OEM drivers offline, installs Steam, imports saved Wi-Fi,\n"
         "and removes optional preinstalled apps. Never restarts automatically.\n"
         "Afterwards, restart Windows normally and check input, Wi-Fi, Ethernet and Bluetooth.\n"
+        "Then run Finish Windows hardware setup.cmd to find drivers for remaining missing devices.\n"
         "Steam needs internet for its first client update and sign-in.\n"
         "Pair Bluetooth devices once in Windows. Monet imports supported Windows\n"
         "pairings on return for devices already paired in Monet. FACEIT/Riot are not installed.\n"

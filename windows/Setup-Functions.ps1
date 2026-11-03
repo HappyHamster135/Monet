@@ -1,4 +1,14 @@
 # Shared setup operations. Dot-sourcing this file has no side effects.
+function Test-MonetMissingDriver($Update, [string[]]$MissingHardwareIds) {
+    # Repair missing devices only. Never replace a working graphics/storage
+    # driver or select firmware from an ordinary hardware completion action.
+    $classes = @('Display', 'Net', 'Bluetooth', 'HIDClass', 'Mouse', 'Keyboard', 'System', 'Media', 'USB', 'Biometric',
+                 'Ports', 'Sensor', 'Camera', 'Image', 'SmartCardReader', 'SoftwareComponent', 'Extension')
+    return $Update.Type -eq 2 -and $Update.DriverClass -in $classes -and
+        $Update.DriverHardwareID -in $MissingHardwareIds -and
+        -not $Update.InstallationBehavior.CanRequestUserInput
+}
+
 function Resolve-MonetBundleFile([string]$Root, [string]$Relative) {
     # Bundle manifests never name absolute paths, streams or parent directories.
     if (-not $Relative -or $Relative -match '(^[/\\]|:|(^|[/\\])\.\.?([/\\]|$))') {

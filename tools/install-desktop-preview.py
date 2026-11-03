@@ -20,6 +20,7 @@ HELPERS = Path.home() / '.local/libexec/monet-desktop-preview'
 PRIVATE = DATA / 'monet-desktop-preview'
 LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-files-tools', 'monet-system-info', 'monet-weather', 'monet-light', 'monet-daylight'}
 LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
+LOCAL |= {'monet-session'}
 
 
 def digest(path):
@@ -35,6 +36,7 @@ def render(source, *, private_data=False, local_helpers=False, bindir='/usr/bin'
     if not local_helpers:
         for name in LOCAL:
             text = text.replace('{LIBEXECDIR}/' + name, str(HELPERS / name))
+            text = text.replace('"$LIBEXECDIR/' + name + '"', '"' + str(HELPERS / name) + '"')
     return (text.replace('@BINDIR@', str(bindir))
             .replace('@DATADIR@', str(PRIVATE) if private_data else '/usr/share')
             .replace('@LIBEXECDIR@', str(HELPERS) if local_helpers else '/usr/libexec')).encode()
@@ -188,6 +190,10 @@ def plan(monitor_bundle=None, monet_prefix=None):
     for name in ('monet-folder-tools.desktop', 'monet-local-app.desktop'):
         add(DATA / 'kio/servicemenus' / name, render(ROOT / 'linux/share/kio/servicemenus' / name, local_helpers=True))
     add(DATA / 'applications/monet-settings.desktop', render(ROOT / 'linux/share/applications/monet-settings.desktop', local_helpers=True))
+    add(DATA / 'applications/monet-passwords.desktop', render(ROOT / 'linux/share/applications/monet-passwords.desktop', local_helpers=True))
+    # Session restore/return notifications must use the same Settings runtime
+    # as search. Otherwise the old system instance captures all later opens.
+    add(CONFIG / 'autostart/monet-session.desktop', render(ROOT / 'linux/autostart/monet-session.desktop', local_helpers=True))
     for name in ('monet-frames.path', 'monet-frames.service', 'monet-light.timer', 'monet-light.service', 'monet-light-sync.service', 'monet-listening.service'):
         text = render(ROOT / 'linux/systemd/user' / name).decode()
         for helper in ('monet-quick', 'monet-light'):

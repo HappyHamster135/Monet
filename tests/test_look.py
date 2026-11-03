@@ -2769,7 +2769,10 @@ class MonetSettings(unittest.TestCase):
             self.assertIn(kde, quick_helper().KDE_PAGES)
             self.assertTrue((art / f"swatch-{swatch}.png").is_file(), swatch)
         for page in pages:
-            self.assertTrue((art / f"swatch-{page}.png").is_file(), page)
+            entry = re.search(r'\{ id: "' + page + r'",[^}]*\}', qml).group(0)
+            override = re.search(r'swatch: "(\w+)"', entry)
+            swatch = override.group(1) if override else page
+            self.assertTrue((art / f"swatch-{swatch}.png").is_file(), page)
             self.assertIn(f"{page}: {page}Page", qml)
         for picture in ("light-hours.png", "light-mist.png", "light-smoke.png", "about.jpg"):
             self.assertTrue((art / picture).is_file(), picture)
@@ -2837,7 +2840,7 @@ class MonetSettings(unittest.TestCase):
     def test_settings_search_speaks_every_language(self):
         # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
-        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), 22)
+        self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), len(quick_helper().PAGES))
         self.assertNotIn('words: "', settings)
         self.assertIn('const all = fold(entry.name + " " + entry.words)', settings)
         self.assertIn('words.every(word => all.indexOf(word) !== -1)', settings)

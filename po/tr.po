@@ -8962,18 +8962,8 @@ msgstr ""
 msgid "Your desktop account could not be found. The switch was cancelled."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:186
-msgctxt "Settings search words, space-separated"
-msgid ""
-"lock screen locker password passwords wallet autofill vault wake sleep privacy recent files history forget remember away fingerprint finger"
-msgstr ""
-
 #: linux/share/monet/settings-app/MonetSettings.qml:1291
 msgid "Password settings couldn't finish. Try again."
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:5858 linux/libexec/monet-quick:5541
-msgid "Saved passwords"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5866
@@ -9031,19 +9021,6 @@ msgid ""
 "Separate passwords are supported: unlock the vault once when first needed. To unlock automatically at password sign-in, give kdewallet the same password as your login. Fingerprint sign-in may still need a vault unlock."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5900
-msgid "Manage saved passwords"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:5901
-msgid ""
-"Open the encrypted vault to manage passwords and app access. Websites and apps must support saving and filling passwords."
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:5904
-msgid "Open password manager"
-msgstr ""
-
 #: linux/share/monet/settings-app/MonetSettings.qml:5911
 msgid "Lock saved passwords now"
 msgstr ""
@@ -9057,11 +9034,95 @@ msgid ""
 "Saved. The unlock policy takes full effect at your next sign-in. Lock now works immediately."
 msgstr ""
 
-#: linux/libexec/monet-quick:5541
-msgid "Lock & Privacy · Password vault and automatic filling"
-msgstr ""
-
 #: linux/libexec/monet-quick:5542
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:186
+msgctxt "Settings search words, space-separated"
+msgid ""
+"lock screen locker wake sleep privacy recent files history forget remember away fingerprint finger"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:189
+msgctxt "Settings search words, space-separated"
+msgid ""
+"password passwords wallet vault autofill saved logins app access unlock password manager"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5796 linux/share/monet/settings-app/MonetSettings.qml:5995 linux/libexec/monet-quick:5581
+msgid "Saved logins, app access and vault unlocking"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5803
+msgid "Saved desktop passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5804
+msgid ""
+"KWallet Manager's Contents tab shows saved entries. Its Applications tab shows connected apps."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5808
+msgid "View saved passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5815
+msgid "App access and prompts"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5816
+msgid ""
+"Open the wallet's native preferences and available access controls. New apps may ask for permission."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5820
+msgid "Manage access"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5827
+msgid "Website passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5828
+msgid ""
+"Browsers can keep website logins separately. Choose which sites to save and fill in your browser's password settings."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5832
+msgid "Browser passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5840
+msgid "Unlocking"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5905
+msgid "Sign-in options"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5906
+msgid ""
+"Until sign-out does not carry over a restart. Password sign-in can unlock kdewallet automatically when both passwords match. Separate passwords still work with one vault unlock each session."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5998
+msgid "Open Passwords"
+msgstr ""
+
+#: linux/share/applications/monet-passwords.desktop:3 linux/share/applications/monet-settings.desktop:528
+msgctxt "an app's name in the menu"
+msgid "Passwords"
+msgstr ""
+
+#: linux/share/applications/monet-passwords.desktop:4
+msgctxt "an app's description in the menu"
+msgid "Saved logins, app access and vault unlocking"
+msgstr ""
+
+#: linux/share/applications/monet-passwords.desktop:8
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid "password;passwords;wallet;vault;autofill;logins;"
 msgstr ""
