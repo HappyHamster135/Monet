@@ -65,7 +65,7 @@ def cli_prefix(requested=None):
     return prefix
 
 
-def plan(monitor_bundle=None, monet_prefix=None):
+def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
     files = {}
     prefix = cli_prefix(monet_prefix)
     bindir = prefix / 'bin' if prefix else Path('/usr/bin')
@@ -80,6 +80,18 @@ def plan(monitor_bundle=None, monet_prefix=None):
 
     def add(target, data, mode=0o644):
         files[target] = (data, mode)
+    if dock_bundle:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('dock_bundle', ROOT / 'image/dock/bundle.py')
+        bundle = importlib.util.module_from_spec(spec); spec.loader.exec_module(bundle)
+        plugin = bundle.verified_binary(Path(dock_bundle))
+        dock = PRIVATE / 'dock'
+        add(dock / 'plugins/plasma/applets' / plugin.name, plugin.read_bytes(), 0o755)
+        add(dock / 'runtime.json', (Path(dock_bundle) / 'runtime.json').read_bytes())
+        for name in ('preview.py', 'bundle.py'):
+            add(dock / name, (ROOT / 'image/dock' / name).read_bytes())
+        add(CONFIG / 'systemd/user/plasma-plasmashell.service.d/monet-dock.conf',
+            ('[Service]\nExecStart=\nExecStart=/usr/bin/python3 "' + str(dock / 'preview.py') + '"\n').encode())
     if prefix:
         add(STATE / 'monet/desktop-preview/cli-prefix', (str(prefix) + '\n').encode(), 0o600)
         shortcut = Path('applications/monet-windows.desktop')
@@ -248,8 +260,9 @@ if __name__ == '__main__':
     group.add_argument('--apply', action='store_true')
     group.add_argument('--restore', type=Path)
     parser.add_argument('--task-manager-bundle', type=Path)
+    parser.add_argument('--dock-bundle', type=Path)
     parser.add_argument('--monet-prefix', type=Path, help='Root-owned tested CLI preview; remembered for future previews')
     args = parser.parse_args()
     if args.restore: restore(args.restore)
-    elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix))
-    else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))
+    elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle))
+    else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))

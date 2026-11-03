@@ -8,6 +8,7 @@ import json
 import re
 import secrets
 import struct
+from threading import Event
 
 APP_ID = 'Monet Passwords'
 PERSONAL_FOLDER = 'Monet Logins'
@@ -127,6 +128,23 @@ def category(folder):
     return 'Apps'
 
 
+def internal_entry(folder, key):
+    """Identify infrastructure by metadata, never by inspecting its secret."""
+    if folder.casefold() == 'xdg-desktop-portal':
+        return N_('An app encryption key supplied by the desktop portal. This is not a website login. The app manages this key automatically.')
+    if key.casefold().endswith(' safe storage') or folder.casefold().endswith(' keys'):
+        return N_('A browser encryption key, not a saved login. Your website passwords are managed inside the browser. Leave this key in place so the browser can read its data.')
+    return ''
+
+
+def entry_title(folder, key):
+    if folder.casefold() == 'xdg-desktop-portal' and key == 'app.zen_browser.zen':
+        return 'Zen Browser'
+    if key.endswith(' Safe Storage'):
+        return key.removesuffix(' Safe Storage')
+    return key
+
+
 def display_label(key):
     labels = {'psk': 'Wi-Fi password', 'password': 'Password', 'passwd': 'Password',
               'username': 'Username', 'user': 'Username', 'url': 'Website', 'notes': 'Notes',
@@ -234,6 +252,8 @@ class Vault:
         self.handle = -1
         self.wallet = ''
         self.selected = None
+        self.pending_import = []
+        self.import_cancelled = Event()
 
     def call(self, method, *args):
         return self.transport.call(method, *args)
@@ -258,6 +278,8 @@ class Vault:
 
     def forget(self):
         self.handle, self.wallet, self.selected = -1, '', None
+        self.pending_import.clear()
+        self.import_cancelled.set()
 
     def release(self):
         wallet = self.wallet
@@ -271,11 +293,12 @@ class Vault:
     def list_entries(self):
         self.check()
         rows = []
-        for folder in self.call('folderList', self.handle, APP_ID):
+        for folder in dict.fromkeys(self.call('folderList', self.handle, APP_ID)):
             folder = str(folder)
-            for key in self.call('entryList', self.handle, folder, APP_ID):
+            for key in dict.fromkeys(self.call('entryList', self.handle, folder, APP_ID)):
                 key = str(key)
-                rows.append({'folder': folder, 'key': key, 'title': key, 'category': category(folder)})
+                rows.append({'folder': folder, 'key': key, 'title': entry_title(folder, key),
+                             'category': category(folder), 'internal': bool(internal_entry(folder, key))})
         if any(row['category'] == 'Network' for row in rows) and hasattr(self.transport, 'connection_names'):
             names = self.transport.connection_names()
             for row in rows:
@@ -286,6 +309,10 @@ class Vault:
         self.check()
         if not self.call('hasEntry', self.handle, folder, key, APP_ID):
             raise VaultError('This entry no longer exists. Refresh the list.')
+        note = internal_entry(folder, key)
+        if note:
+            return {'folder': folder, 'key': key, 'kind': 0, 'fields': {}, 'note': note,
+                    'editable': False, 'signature': b'', 'internal': True}
         kind = int(self.call('entryType', self.handle, folder, key, APP_ID))
         if kind == 2:
             value = str(self.call('readPassword', self.handle, folder, key, APP_ID))
@@ -340,6 +367,62 @@ class Vault:
         if saved['fields'] != fields:
             raise VaultError('The saved values could not be verified. Reopen the entry before retrying.')
         return saved
+
+    def prepare_import(self, path):
+        from login_import import read_csv
+        self.check()
+        self.pending_import.clear()
+        self.import_cancelled.clear()
+        records, skipped = read_csv(path)
+        self.check()
+        self.pending_import = records
+        return {'count': len(records), 'skipped': skipped}
+
+    def cancel_import(self):
+        self.pending_import.clear()
+        return None
+
+    def import_logins(self):
+        """Explicit CSV import reads only Monet's own logins to avoid duplicates.
+
+        Never overwrite existing records. Interrupted imports can be retried;
+        verified entries already saved are skipped on the next attempt.
+        """
+        self.check()
+        records, self.pending_import = self.pending_import, []
+        existing = set()
+        for key in dict.fromkeys(self.call('entryList', self.handle, PERSONAL_FOLDER, APP_ID)):
+            if self.import_cancelled.is_set():
+                return {'added': 0, 'skipped': 0, 'incomplete': True, 'rows': []}
+            fields = self.read(PERSONAL_FOLDER, str(key))['fields']
+            existing.add(tuple(fields.get(k, '') for k in ('Username', 'Password', 'Website', 'Notes')))
+        added = skipped = 0
+        incomplete = False
+        try:
+            for record in records:
+                if self.import_cancelled.is_set():
+                    incomplete = True
+                    break
+                identity = tuple(record[k] for k in ('username', 'password', 'website', 'notes'))
+                if identity in existing:
+                    skipped += 1
+                    continue
+                title = record['title']
+                suffix = 1
+                while self.call('hasEntry', self.handle, PERSONAL_FOLDER, title, APP_ID):
+                    suffix += 1
+                    if suffix > 10000:
+                        raise VaultError('Too many logins have the same title.')
+                    title = record['title'][:185] + ' (' + str(suffix) + ')'
+                self.add(title, *identity)
+                added += 1
+                existing.add(identity)
+        except VaultError:
+            incomplete = True
+        finally:
+            records.clear(); existing.clear(); self.selected = None
+        return {'added': added, 'skipped': skipped, 'incomplete': incomplete,
+                'rows': self.list_entries() if not incomplete else []}
 
     def add(self, title, username, password, website, notes):
         self.check()

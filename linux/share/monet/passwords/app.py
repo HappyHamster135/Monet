@@ -7,17 +7,48 @@ import secrets
 import subprocess
 import sys
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot, Qt, QEvent, QMimeData, QSize, SLOT
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot, Qt, QEvent, QMimeData, QSize, SLOT, QRectF
 from PySide6.QtDBus import QDBusConnection, QDBusServiceWatcher
-from PySide6.QtGui import QFont, QIcon, QGuiApplication, QKeySequence, QShortcut, QPalette
+from PySide6.QtGui import QFont, QIcon, QGuiApplication, QKeySequence, QShortcut, QPalette, QColor, QPainter, QPainterPath, QPixmap, QPen
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QListWidget, QListWidgetItem, QComboBox, QStackedWidget,
-    QScrollArea, QFormLayout, QDialog, QDialogButtonBox, QMessageBox, QFrame, QSplitter)
+    QScrollArea, QFormLayout, QDialog, QDialogButtonBox, QMessageBox, QFrame, QSplitter, QFileDialog, QStyledItemDelegate, QStyle, QPlainTextEdit)
 from vault import NativeWallet, Vault, VaultError, display_label
 
 WORDS = gettext.translation('monet', fallback=True)
 tr = WORDS.gettext
+
+
+def navigation_icon(index, color):
+    """Small native outline icons stay legible in both Monet palettes."""
+    pixmap = QPixmap(48, 48); pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap); painter.scale(2, 2)
+    painter.setRenderHint(QPainter.Antialiasing)
+    pen = QPen(QColor(color), 1.6); pen.setCapStyle(Qt.RoundCap); pen.setJoinStyle(Qt.RoundJoin)
+    painter.setPen(pen); painter.setBrush(Qt.NoBrush)
+    path = QPainterPath()
+    if index == 0:
+        painter.drawRoundedRect(QRectF(5, 10, 14, 11), 2, 2)
+        path.moveTo(8, 10); path.lineTo(8, 7); path.cubicTo(8, 2, 16, 2, 16, 7); path.lineTo(16, 10)
+        painter.drawLine(12, 14, 12, 17)
+    elif index == 1:
+        for x, y in ((2, 8), (5, 12), (8, 16)):
+            path.moveTo(x, y); path.quadTo(12, y - (12 - x), 24 - x, y)
+        painter.drawEllipse(QRectF(11, 19, 2, 2))
+    elif index == 2:
+        for x, y in ((4, 4), (14, 4), (4, 14), (14, 14)):
+            painter.drawRoundedRect(QRectF(x, y, 6, 6), 1, 1)
+    elif index == 3:
+        path.moveTo(9, 8); path.lineTo(5, 8); path.cubicTo(0, 8, 0, 16, 5, 16); path.lineTo(9, 16)
+        path.moveTo(15, 8); path.lineTo(19, 8); path.cubicTo(24, 8, 24, 16, 19, 16); path.lineTo(15, 16)
+        painter.drawLine(8, 12, 16, 12)
+    else:
+        for y, knob in ((6, 9), (12, 16), (18, 7)):
+            painter.drawLine(3, y, knob - 2, y); painter.drawLine(knob + 2, y, 21, y)
+            painter.drawEllipse(QRectF(knob - 2, y - 2, 4, 4))
+    painter.drawPath(path); painter.end()
+    return QIcon(pixmap)
 
 
 class Worker(QObject):
@@ -36,7 +67,7 @@ class Worker(QObject):
                 self.vault = Vault(self.factory())
             if action == 'forget':
                 self.vault.release()
-            elif action in ('available', 'unlock', 'list_entries', 'select', 'add', 'save', 'delete', 'apps', 'disconnect', 'lock', 'check'):
+            elif action in ('available', 'unlock', 'list_entries', 'select', 'add', 'save', 'delete', 'apps', 'disconnect', 'lock', 'check', 'prepare_import', 'import_logins', 'cancel_import'):
                 result = getattr(self.vault, action)(*args)
             else:
                 raise VaultError('This action is not available.')
@@ -83,10 +114,41 @@ class SecretClipboard(QObject):
         self.token = b''
 
 
+class EntryDelegate(QStyledItemDelegate):
+    """Compact account rows; no secret reads, favicons or network requests."""
+    def paint(self, painter, option, index):
+        row = index.data(Qt.UserRole) or {}
+        painter.save()
+        rect = option.rect.adjusted(1, 1, -1, -1)
+        dark = QApplication.palette().color(QPalette.Window).lightness() < 128
+        selected = bool(option.state & (QStyle.State_Selected | QStyle.State_MouseOver))
+        ink = QColor('#eeeae2' if dark else '#252b29')
+        muted = QColor('#b4bdb6' if dark else '#67766d')
+        painter.setRenderHint(QPainter.Antialiasing)
+        if selected:
+            painter.setPen(Qt.NoPen); painter.setBrush(QColor('#34544f' if dark else '#d9e6e0'))
+            painter.drawRoundedRect(rect, 8, 8)
+        badge = QRectF(rect.x() + 10, rect.y() + 15, 34, 34)
+        painter.setPen(Qt.NoPen); painter.setBrush(QColor('#444c4b' if dark else '#e7ebe5'))
+        painter.drawRoundedRect(badge, 9, 9)
+        painter.setPen(ink); painter.setFont(QFont('Inter', 13, QFont.DemiBold))
+        painter.drawText(badge, Qt.AlignCenter, row.get('title', '?')[:1].upper())
+        text_rect = rect.adjusted(54, 10, -10, -34)
+        painter.setFont(QFont('Inter', 10, QFont.DemiBold))
+        painter.drawText(text_rect, Qt.AlignVCenter, painter.fontMetrics().elidedText(row.get('title', ''), Qt.ElideRight, text_rect.width()))
+        subtitle = tr('App encryption key') if row.get('internal') else tr('Saved login') if row.get('category') == 'Logins' else row.get('folder', '')
+        painter.setPen(muted); painter.setFont(QFont('Inter', 9))
+        painter.drawText(rect.adjusted(54, 34, -10, -8), Qt.AlignVCenter,
+                         painter.fontMetrics().elidedText(subtitle, Qt.ElideRight, text_rect.width()))
+        painter.restore()
+
+
 class SecretField(QWidget):
     def __init__(self, key, value, clipboard, parent=None):
         super().__init__(parent)
         self.value = value
+        self.public = key.casefold() in ('username', 'user', 'website', 'url', 'notes')
+        self.setObjectName('secretField')
         self.shown = False
         self.clipboard = clipboard
         layout = QVBoxLayout(self); layout.setContentsMargins(0, 6, 0, 10)
@@ -106,6 +168,8 @@ class SecretField(QWidget):
         self.timer.timeout.connect(self.hide_value)
         self.copy_timer = QTimer(self); self.copy_timer.setSingleShot(True)
         self.copy_timer.timeout.connect(lambda: self.copy_button.setText(tr('Copy')))
+        self.reveal.setVisible(not self.public and bool(value)); self.copy_button.setEnabled(bool(value))
+        self.hide_value()
 
     def copy_value(self):
         self.clipboard.copy(self.value)
@@ -121,11 +185,12 @@ class SecretField(QWidget):
 
     def hide_value(self):
         self.timer.stop(); self.shown = False
-        self.display.setText('••••••••••••'); self.display.setAccessibleName(tr('Hidden saved value'))
+        self.display.setText(self.value if self.public else '••••••••••••' if self.value else tr('Not saved'))
+        self.display.setAccessibleName(tr('Saved value') if self.public else tr('Hidden saved value'))
         self.reveal.setText(tr('Show'))
 
     def forget(self):
-        self.hide_value(); self.copy_timer.stop(); self.value = ''
+        self.value = ''; self.hide_value(); self.copy_timer.stop()
 
 
 class Editor(QDialog):
@@ -144,6 +209,12 @@ class Editor(QDialog):
         self.title.setReadOnly(entry is not None); form.addRow(tr('Title'), self.title)
         fields = entry['fields'] if entry else {'Username': '', 'Password': '', 'Website': '', 'Notes': ''}
         for key, value in fields.items():
+            if key == 'Notes':
+                edit = QPlainTextEdit(value); edit.setMaximumHeight(100)
+                edit.setContextMenuPolicy(Qt.NoContextMenu)
+                self.fields[key] = edit
+                form.addRow(tr('Notes'), edit)
+                continue
             edit = QLineEdit(); edit.setMaxLength(65536)
             if '\n' in value or '\r' in value or len(value.encode('utf-16-be')) > 131072:
                 self.preserved[key] = value
@@ -175,7 +246,8 @@ class Editor(QDialog):
         self.resize(560, min(650, 230 + len(fields) * 60))
 
     def values(self):
-        return {key: self.preserved.get(key, edit.text()) for key, edit in self.fields.items()}
+        return {key: self.preserved.get(key, edit.toPlainText() if isinstance(edit, QPlainTextEdit) else edit.text())
+                for key, edit in self.fields.items()}
 
     def wipe(self):
         self.preserved.clear()
@@ -201,11 +273,12 @@ class PasswordsWindow(QMainWindow):
         self.entry = None
         self.fields = []
         self.editor = None
+        self.import_dialog = None
         self.pending_refresh = False
         self.pending_check = False
         self.setWindowTitle(tr('Passwords'))
         self.setWindowIcon(QIcon.fromTheme('preferences-desktop-user-password'))
-        self.resize(1060, 740); self.setMinimumSize(820, 540)
+        self.resize(1080, 720); self.setMinimumSize(900, 580)
         self.clipboard = SecretClipboard(QApplication.clipboard(), self)
         self.thread = QThread(self)
         self.worker = Worker(factory); self.worker.moveToThread(self.thread)
@@ -231,14 +304,15 @@ class PasswordsWindow(QMainWindow):
     def build(self):
         root = QWidget(); self.setCentralWidget(root)
         outer = QHBoxLayout(root); outer.setContentsMargins(0, 0, 0, 0); outer.setSpacing(0)
-        sidebar = QWidget(); sidebar.setObjectName('sidebar'); sidebar.setFixedWidth(210)
-        side = QVBoxLayout(sidebar); side.setContentsMargins(18, 24, 18, 18); side.setSpacing(16)
-        title = QLabel(tr('Passwords')); title.setFont(QFont('Fraunces 72pt SuperSoft', 24))
+        sidebar = QWidget(); sidebar.setObjectName('sidebar'); sidebar.setFixedWidth(192)
+        side = QVBoxLayout(sidebar); side.setContentsMargins(16, 26, 16, 18); side.setSpacing(12)
+        title = QLabel(tr('Passwords')); title.setObjectName('brandTitle'); title.setFont(QFont('Fraunces 72pt SuperSoft', 21))
         side.addWidget(title)
-        subtitle = QLabel(tr('Your logins, clearly.')); side.addWidget(subtitle)
+        subtitle = QLabel(tr('Your personal vault')); subtitle.setObjectName('muted'); side.addWidget(subtitle)
         self.navigation = QListWidget(); self.navigation.setObjectName('passwordNavigation')
-        for label in (tr('All saved entries'), tr('My logins'), tr('Network'), tr('Apps'), tr('Connected apps'), tr('Preferences')):
-            item = QListWidgetItem(label); item.setSizeHint(QSize(170, 42))
+        self.navigation.setIconSize(QSize(18, 18))
+        for label in (tr('Saved logins'), tr('Wi-Fi & VPN'), tr('App data'), tr('Connected apps'), tr('Preferences')):
+            item = QListWidgetItem(label); item.setSizeHint(QSize(156, 44))
             self.navigation.addItem(item)
         self.navigation.setCurrentRow(0); self.navigation.currentRowChanged.connect(self.page_changed)
         side.addWidget(self.navigation, 1)
@@ -249,9 +323,9 @@ class PasswordsWindow(QMainWindow):
         outer.addWidget(sidebar)
         self.pages = QStackedWidget(); outer.addWidget(self.pages, 1)
         main = QWidget(); layout = QVBoxLayout(main); layout.setContentsMargins(26, 22, 26, 18)
-        self.page_title = QLabel(tr('All saved entries')); self.page_title.setFont(QFont('Inter', 20, QFont.DemiBold))
+        self.page_title = QLabel(tr('Saved logins')); self.page_title.setObjectName('pageTitle'); self.page_title.setFont(QFont('Inter', 20, QFont.DemiBold))
         layout.addWidget(self.page_title)
-        line = QHBoxLayout(); self.wallets = QComboBox(); self.wallets.setMinimumWidth(150)
+        line = QHBoxLayout(); self.wallets = QComboBox(); self.wallets.setMinimumWidth(110); self.wallets.setAccessibleName(tr('Encrypted vault'))
         self.wallets.currentTextChanged.connect(self.wallet_changed)
         line.addWidget(self.wallets)
         self.unlock_button = QPushButton(tr('Open vault')); self.unlock_button.setObjectName('unlockVault')
@@ -259,20 +333,23 @@ class PasswordsWindow(QMainWindow):
         line.addWidget(self.unlock_button)
         self.refresh_button = QPushButton(tr('Refresh')); self.refresh_button.clicked.connect(lambda: self.dispatch('list_entries'))
         self.refresh_button.setEnabled(False); line.addWidget(self.refresh_button); line.addStretch()
+        self.import_button = QPushButton(tr('Import…')); self.import_button.clicked.connect(self.choose_import)
+        self.import_button.setEnabled(False); line.addWidget(self.import_button)
         self.add_button = QPushButton(tr('Add login')); self.add_button.setObjectName('addLogin')
         self.add_button.setEnabled(False); self.add_button.clicked.connect(self.add_login); line.addWidget(self.add_button)
         layout.addLayout(line)
-        self.search = QLineEdit(); self.search.setPlaceholderText(tr('Search by name or app')); self.search.setClearButtonEnabled(True)
+        self.search = QLineEdit(); self.search.setPlaceholderText(tr('Search saved logins')); self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(self.filter_rows); layout.addWidget(self.search)
         self.message = QLabel(tr('Open your vault to view saved entries. Your existing vault password still works.'))
         self.message.setWordWrap(True); self.message.setTextFormat(Qt.PlainText); layout.addWidget(self.message)
-        split = QSplitter(Qt.Horizontal); self.list = QListWidget(); self.list.setObjectName('savedEntries')
+        split = QSplitter(Qt.Horizontal); self.list = QListWidget(); self.list.setObjectName('savedEntries'); self.list.setItemDelegate(EntryDelegate(self.list))
+        self.list.setMinimumWidth(225); self.list.setSpacing(3)
         self.list.currentItemChanged.connect(self.select_item); split.addWidget(self.list)
         self.details = QScrollArea(); self.details.setWidgetResizable(True); self.details.setFrameShape(QFrame.NoFrame)
-        split.addWidget(self.details); split.setSizes([260, 450]); layout.addWidget(split, 1)
+        split.addWidget(self.details); split.setChildrenCollapsible(False); split.setHandleWidth(16); split.setSizes([265, 475]); layout.addWidget(split, 1)
         self.clear_details()
         foot = QLabel(tr('Passwords stay hidden until you show them. Copies clear after 30 seconds.'))
-        foot.setWordWrap(True); layout.addWidget(foot)
+        foot.setObjectName('muted'); foot.setWordWrap(True); layout.addWidget(foot)
         self.pages.addWidget(main)
         apps = QWidget(); app_layout = QVBoxLayout(apps); app_layout.setContentsMargins(26, 26, 26, 26)
         title = QLabel(tr('Connected apps')); title.setFont(QFont('Inter', 20, QFont.DemiBold)); app_layout.addWidget(title)
@@ -309,26 +386,39 @@ class PasswordsWindow(QMainWindow):
         dark = QApplication.palette().color(QPalette.Window).lightness() < 128
         paper, side, ink, border, accent = ('#242828', '#1e2323', '#eeeae2', '#444c4b', '#34544f') if dark else (
             '#faf9f6', '#efefea', '#252b29', '#d8dcd6', '#d9e6e0')
-        self.setStyleSheet('''
-            QMainWindow, QDialog { font-family: Inter; font-size: 14px; }
-            QMainWindow, QDialog, QLabel, QScrollArea, QScrollArea > QWidget > QWidget {
-                background: PAPER; color: INK;
-            }
-            QMainWindow > QWidget { background: PAPER; }
-            QListWidget { border: none; background: transparent; color: INK; font-size: 14px; }
-            QListWidget::item { padding: 10px 8px; border-radius: 7px; }
-            QListWidget::item:selected { background: ACCENT; color: INK; }
-            QListWidget::item:hover { background: ACCENT; }
-            QLabel#fieldLabel { font-weight: 600; }
-            QPushButton { padding: 8px 13px; border: 1px solid BORDER; border-radius: 8px;
-                background: PAPER; color: INK; font-size: 14px; }
+        muted = '#b4bdb6' if dark else '#67766d'
+        card = '#2d3331' if dark else '#ffffff'
+        for index in range(self.navigation.count()):
+            item = self.navigation.item(index)
+            item.setIcon(navigation_icon(index, ink))
+        self.setStyleSheet("""
+            QWidget { font-family: Inter; font-size: 14px; color: INK; background: PAPER; }
+            QMainWindow, QDialog { background: PAPER; }
+            QLabel { background: transparent; border: none; }
+            QLabel#brandTitle { font-family: 'Fraunces 72pt SuperSoft'; font-size: 28px; }
+            QLabel#pageTitle { font-size: 25px; font-weight: 600; padding-bottom: 8px; }
+            QLabel#entryTitle { font-size: 22px; font-weight: 600; padding-bottom: 4px; }
+            QLabel#muted { color: MUTED; font-size: 12px; }
+            QWidget#sidebar { background: SIDE; border-right: 1px solid BORDER; }
+            QWidget#sidebar QLabel { background: transparent; }
+            QWidget#detailSurface { background: CARD; border-radius: 12px; }
+            QListWidget { border: none; background: transparent; outline: none; }
+            QListWidget::item { padding: 7px; border-radius: 8px; }
+            QListWidget::item:selected, QListWidget::item:hover { background: ACCENT; color: INK; }
+            QScrollArea, QScrollArea > QWidget, QScrollArea > QWidget > QWidget { background: CARD; border: none; }
+            QLabel#fieldLabel { color: MUTED; font-size: 12px; font-weight: 500; }
+            QWidget#secretField { background: CARD; border-bottom: 1px solid BORDER; }
+            QPushButton { padding: 8px 12px; border: 1px solid BORDER; border-radius: 8px;
+                background: CARD; color: INK; }
             QPushButton:hover { background: ACCENT; }
-            QPushButton:disabled { color: #858b87; }
-            QPushButton:focus, QLineEdit:focus { border: 1px solid #60988a; }
-            QLineEdit, QComboBox { padding: 8px; border: 1px solid BORDER; border-radius: 8px;
-                background: PAPER; color: INK; font-size: 14px; }
-            QWidget#sidebar, QWidget#sidebar QLabel { background: SIDE; color: INK; }
-        '''.replace('PAPER', paper).replace('SIDE', side).replace('INK', ink).replace('BORDER', border).replace('ACCENT', accent))
+            QPushButton:disabled { color: MUTED; }
+            QPushButton#addLogin { background: ACCENT; font-weight: 600; }
+            QPushButton:focus, QLineEdit:focus, QPlainTextEdit:focus { border: 1px solid #60988a; }
+            QLineEdit, QPlainTextEdit, QComboBox { padding: 8px; border: 1px solid BORDER; border-radius: 8px;
+                background: CARD; color: INK; selection-background-color: ACCENT; selection-color: INK; }
+            QSplitter::handle { background: PAPER; }
+        """.replace('PAPER', paper).replace('SIDE', side).replace('INK', ink).replace('BORDER', border)
+            .replace('ACCENT', accent).replace('MUTED', muted).replace('CARD', card))
 
     def dispatch(self, action, args=None):
         if self.busy:
@@ -336,7 +426,7 @@ class PasswordsWindow(QMainWindow):
         self.busy = True
         self.wallets.setEnabled(False); self.unlock_button.setEnabled(False)
         self.search.setEnabled(False); self.navigation.setEnabled(False)
-        self.add_button.setEnabled(False); self.refresh_button.setEnabled(False); self.list.setEnabled(False)
+        self.import_button.setEnabled(False); self.add_button.setEnabled(False); self.refresh_button.setEnabled(False); self.list.setEnabled(False)
         if action in ('unlock', 'list_entries'):
             self.message.setText(tr('Opening vault…') if action == 'unlock' else tr('Refreshing…'))
         self.request.emit(self.token, action, args or [])
@@ -344,7 +434,7 @@ class PasswordsWindow(QMainWindow):
     @Slot(int, str, object, str)
     def finished(self, token, action, result, error):
         # Background connection cleanup must not finish a newer unlock request.
-        if token != self.token or action == 'forget':
+        if token != self.token or action in ('forget', 'cancel_import'):
             return
         self.busy = False
         if error:
@@ -353,6 +443,8 @@ class PasswordsWindow(QMainWindow):
             self.message.setText(error); self.app_message.setText(error)
             if self.editor:
                 self.editor.error.setText(error); self.editor.buttons.setEnabled(True)
+            if action == 'import_logins' and self.import_dialog:
+                self.import_dialog.reject()
             if action == 'unlock':
                 self.unlocked = False
         elif action == 'available':
@@ -360,14 +452,22 @@ class PasswordsWindow(QMainWindow):
             self.wallets.setCurrentText(result['default']); self.wallets.blockSignals(False)
         elif action in ('unlock', 'list_entries', 'delete'):
             self.unlocked = True; self.rows = result; self.clear_details(); self.filter_rows()
-            self.message.setText(tr('Choose an entry to view its saved fields.') if result else tr('No saved entries yet. Add your first login.'))
+            self.message.setText(tr('Your vault is open.'))
+        elif action == 'prepare_import':
+            self.confirm_import(result)
+        elif action == 'import_logins':
+            if self.import_dialog: self.import_dialog.accept(); self.import_dialog = None
+            self.rows = result['rows']; self.navigation.setCurrentRow(0); self.filter_rows()
+            self.message.setText(tr('Imported %1 logins. Skipped %2 identical logins.').replace('%1', str(result['added'])).replace('%2', str(result['skipped'])))
+            if result['incomplete']:
+                self.message.setText(tr('Import stopped. %1 logins were saved. Unlock and import the file again to finish; identical logins will be skipped.').replace('%1', str(result['added'])))
         elif action in ('select', 'add', 'save'):
             if self.editor and action in ('add', 'save'):
                 self.editor.accept(); self.editor = None
             self.show_entry(result)
             if action == 'add':
                 row = {'folder': result['folder'], 'key': result['key'], 'title': result['key'], 'category': 'Logins'}
-                self.rows.append(row); self.filter_rows()
+                self.rows.append(row); self.navigation.setCurrentRow(0); self.search.clear(); self.filter_rows()
                 self.show_entry(result)
             self.message.setText(tr('Saved in your encrypted vault.') if action in ('add', 'save') else '')
         elif action in ('apps', 'disconnect'):
@@ -386,6 +486,7 @@ class PasswordsWindow(QMainWindow):
         self.unlock_button.setText(tr('Close view') if self.unlocked else tr('Open vault'))
         self.refresh_button.setEnabled(not self.busy and self.unlocked)
         self.add_button.setEnabled(not self.busy and self.unlocked)
+        self.import_button.setEnabled(not self.busy and self.unlocked)
         self.lock_button.setEnabled(self.unlocked)
         self.list.setEnabled(not self.busy)
         self.search.setEnabled(not self.busy); self.navigation.setEnabled(not self.busy)
@@ -403,14 +504,15 @@ class PasswordsWindow(QMainWindow):
 
     def filter_rows(self, *_):
         query = self.search.text().casefold().strip()
-        group = {1: 'Logins', 2: 'Network', 3: 'Apps'}.get(self.navigation.currentRow())
+        group = {0: 'Logins', 1: 'Network', 2: 'Apps'}.get(self.navigation.currentRow())
         self.list.blockSignals(True); self.list.clear()
         for row in self.rows:
             if group and row['category'] != group:
                 continue
             if query and query not in (row['title'] + ' ' + row['folder']).casefold():
                 continue
-            item = QListWidgetItem(row['title'] + '\n' + row['folder'])
+            item = QListWidgetItem(row['title'])
+            item.setSizeHint(QSize(220, 68))
             item.setData(Qt.UserRole, row); item.setToolTip(row['title']); self.list.addItem(item)
         self.list.blockSignals(False)
         self.clear_details()
@@ -429,30 +531,73 @@ class PasswordsWindow(QMainWindow):
         old = self.details.takeWidget()
         if old:
             old.deleteLater()
-        content = QWidget(); box = QVBoxLayout(content)
-        label = QLabel(tr('Select a saved entry')); label.setWordWrap(True)
-        box.addWidget(label); box.addStretch(); self.details.setWidget(content)
+        content = QWidget(); content.setObjectName('detailSurface'); box = QVBoxLayout(content)
+        box.setContentsMargins(28, 32, 28, 28); box.setSpacing(16)
+        box.addStretch()
+        label = QLabel(tr('Your logins, in one place') if self.navigation.currentRow() == 0 else tr('Select an entry'))
+        label.setObjectName('entryTitle'); label.setFont(QFont('Inter', 18, QFont.DemiBold)); label.setWordWrap(True); box.addWidget(label)
+        text = (tr('Add a login or import your saved website passwords from Zen, Firefox or Chromium. Browser encryption keys are kept separately in App data.')
+                if self.navigation.currentRow() == 0 else tr('Choose an item from the list to see its details.'))
+        hint = QLabel(text); hint.setObjectName('muted'); hint.setWordWrap(True); box.addWidget(hint)
+        if self.navigation.currentRow() == 0:
+            browser = QPushButton(tr('Open browser passwords')); browser.clicked.connect(lambda: self.helper_action('wallet-browser'))
+            box.addWidget(browser, alignment=Qt.AlignLeft)
+        box.addStretch(); self.details.setWidget(content)
 
     def show_entry(self, entry):
         self.clear_details(); self.entry = entry
-        content = QWidget(); layout = QVBoxLayout(content); layout.setContentsMargins(20, 10, 8, 10)
+        content = QWidget(); content.setObjectName('detailSurface'); layout = QVBoxLayout(content); layout.setContentsMargins(24, 24, 24, 24); layout.setSpacing(12)
         name = next((row['title'] for row in self.rows if row['folder'] == entry['folder'] and row['key'] == entry['key']), entry['key'])
         title = QLabel(name); title.setTextFormat(Qt.PlainText); title.setWordWrap(True)
-        title.setFont(QFont('Inter', 18, QFont.DemiBold)); layout.addWidget(title)
-        folder = QLabel(entry['folder']); folder.setTextFormat(Qt.PlainText); folder.setWordWrap(True); layout.addWidget(folder)
+        title.setObjectName('entryTitle'); title.setFont(QFont('Inter', 18, QFont.DemiBold)); layout.addWidget(title)
+        folder = QLabel(tr('Saved login') if entry['folder'] == 'Monet Logins' else tr('Managed by the app') if entry.get('internal') else entry['folder']); folder.setObjectName('muted'); folder.setTextFormat(Qt.PlainText); folder.setWordWrap(True); layout.addWidget(folder)
         if entry['note']:
             note = QLabel(tr(entry['note'])); note.setWordWrap(True); layout.addWidget(note)
-        for key, value in entry['fields'].items():
+        for key in sorted(entry['fields'], key=lambda k: ({'Username': 0, 'Website': 1, 'Password': 2, 'Notes': 3}.get(k, 4), k)):
+            value = entry['fields'][key]
+            if not value and key in ('Notes', 'Username', 'Website'): continue
             field = SecretField(key, value, self.clipboard, content)
             self.fields.append(field); layout.addWidget(field)
         actions = QHBoxLayout()
         if entry['editable']:
-            edit = QPushButton(tr('Edit')); edit.clicked.connect(self.edit_login); actions.addWidget(edit)
+            edit = QPushButton(tr('Edit')); edit.clicked.connect(self.edit_login); actions.addWidget(edit); actions.addStretch()
             delete = QPushButton(tr('Delete entry')); delete.clicked.connect(self.delete_entry); actions.addWidget(delete)
         layout.addLayout(actions); layout.addStretch()
         old = self.details.takeWidget()
         if old: old.deleteLater()
         self.details.setWidget(content)
+
+    def choose_import(self):
+        if self.busy or not self.unlocked: return
+        self.conceal()
+        path, _ = QFileDialog.getOpenFileName(self, tr('Import browser passwords'), '', tr('Browser CSV exports (*.csv)'))
+        if path: self.dispatch('prepare_import', [path])
+
+    def confirm_import(self, summary):
+        dialog = QDialog(self); self.import_dialog = dialog
+        dialog.setWindowTitle(tr('Import browser passwords')); dialog.setMinimumWidth(460)
+        layout = QVBoxLayout(dialog); layout.setContentsMargins(24, 24, 24, 24); layout.setSpacing(16)
+        title = QLabel(tr('%1 logins ready to import').replace('%1', str(summary['count'])))
+        title.setObjectName('entryTitle'); title.setFont(QFont('Inter', 18, QFont.DemiBold)); layout.addWidget(title)
+        text = QLabel(tr('Identical logins are skipped. Existing passwords are never overwritten. Browser autofill stays in your browser.'))
+        text.setWordWrap(True); layout.addWidget(text)
+        text = QLabel(tr('%1 empty or repeated rows were skipped. The exported CSV is unencrypted; delete it when you no longer need it.').replace('%1', str(summary['skipped'])))
+        text.setWordWrap(True); layout.addWidget(text)
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText(tr('Import logins'))
+        buttons.button(QDialogButtonBox.Save).setEnabled(summary['count'] > 0)
+        def commit():
+            if self.busy: return
+            buttons.setEnabled(False); self.dispatch('import_logins')
+        buttons.accepted.connect(commit); buttons.rejected.connect(dialog.reject)
+        dialog.rejected.connect(lambda: self.request.emit(self.token, 'cancel_import', []))
+        dialog.finished.connect(lambda _: setattr(self, 'import_dialog', None))
+        layout.addWidget(buttons); dialog.open()
+
+    def cancel_import_view(self):
+        if self.worker.vault: self.worker.vault.import_cancelled.set()
+        if self.import_dialog:
+            self.import_dialog.reject(); self.import_dialog = None
 
     def add_login(self):
         if not self.unlocked or self.busy: return
@@ -499,13 +644,15 @@ class PasswordsWindow(QMainWindow):
 
     def page_changed(self, page):
         self.conceal()
-        if page < 4:
+        if page < 3:
             self.pages.setCurrentIndex(0)
-            self.page_title.setText(self.navigation.item(page).text()); self.filter_rows()
-        elif page == 4:
+            self.page_title.setText(self.navigation.item(page).text())
+            self.search.setPlaceholderText(tr('Search saved logins') if page == 0 else tr('Search by name or app'))
+            self.filter_rows()
+        elif page == 3:
             self.pages.setCurrentIndex(1)
             if self.unlocked: self.dispatch('apps')
-            else: self.app_message.setText(tr('Open a vault from All saved entries first.'))
+            else: self.app_message.setText(tr('Open your vault from Saved logins first.'))
         else:
             self.pages.setCurrentIndex(2); self.load_policy()
 
@@ -553,6 +700,7 @@ class PasswordsWindow(QMainWindow):
     def clear_session(self):
         self.token += 1; self.busy = False; self.unlocked = False
         self.pending_check = False
+        self.cancel_import_view()
         if self.editor: self.editor.reject(); self.editor = None
         self.clear_details(); self.rows = []; self.list.clear(); self.app_list.clear()
         self.clipboard.clear()
@@ -581,6 +729,7 @@ class PasswordsWindow(QMainWindow):
         if not self.unlocked: return
         # Clear displayed values immediately, including a late in-flight read.
         self.token += 1; self.busy = False
+        self.cancel_import_view()
         if self.editor: self.editor.reject(); self.editor = None
         self.clear_details(); self.clipboard.clear()
         self.rows = []; self.list.clear(); self.unlocked = False; self.update_controls()
@@ -614,7 +763,7 @@ def main(data, helper):
     tr = WORDS.gettext
     import resource
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    app = QApplication(sys.argv[:1]); app.setApplicationName('monet-passwords')
+    app = QApplication(sys.argv[:1]); app.setStyle('Fusion'); app.setApplicationName('monet-passwords')
     app.setApplicationDisplayName(tr('Passwords')); app.setDesktopFileName('monet-passwords')
     app.setOrganizationName('monet')
     page = 'connections' if '--connections' in sys.argv else 'preferences' if '--preferences' in sys.argv else ''
@@ -628,7 +777,7 @@ def main(data, helper):
     window = PasswordsWindow(helper)
     def show_page(page):
         if page in ('connections', 'preferences'):
-            window.navigation.setCurrentRow(4 if page == 'connections' else 5)
+            window.navigation.setCurrentRow(3 if page == 'connections' else 4)
         window.showNormal(); window.raise_(); window.activateWindow()
     def activate():
         peer = server.nextPendingConnection()
@@ -640,6 +789,6 @@ def main(data, helper):
     server.newConnection.connect(activate)
     if page:
         # Discovery is asynchronous; navigation can still be selected programmatically.
-        window.navigation.setCurrentRow(4 if page == 'connections' else 5)
+        window.navigation.setCurrentRow(3 if page == 'connections' else 4)
     window.show()
     return app.exec()

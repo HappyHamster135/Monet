@@ -83,6 +83,10 @@ FROM runtime AS notifications
 COPY image/notifications /src/notifications
 RUN sh /src/notifications/build.sh /out
 
+FROM runtime AS dock
+COPY image/dock /src/dock
+RUN sh /src/dock/build.sh /out
+
 FROM runtime AS editor-recovery
 COPY image/editor-recovery /src/editor-recovery
 RUN sh /src/editor-recovery/build.sh /out
@@ -128,6 +132,9 @@ RUN python3 /tmp/monet-editor-recovery/bundle.py install /tmp/monet-editor-recov
 COPY --from=notifications /out /tmp/monet-notifications
 RUN python3 /tmp/monet-notifications/bundle.py install /tmp/monet-notifications \
  && rm -rf /tmp/monet-notifications
+COPY --from=dock /out /tmp/monet-dock
+RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
+ && rm -rf /tmp/monet-dock
 COPY --from=build /out /tmp/monet
 COPY --from=password /out /tmp/monet/password
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the

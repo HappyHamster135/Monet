@@ -8959,18 +8959,6 @@ msgstr ""
 msgid "Generate strong password"
 msgstr ""
 
-#: linux/share/monet/passwords/app.py:238
-msgid "Your logins, clearly."
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:240 linux/share/monet/passwords/app.py:252
-msgid "All saved entries"
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:240
-msgid "My logins"
-msgstr ""
-
 #: linux/share/monet/passwords/app.py:240 linux/share/monet/passwords/app.py:278
 msgid "Connected apps"
 msgstr ""
@@ -9068,14 +9056,6 @@ msgstr ""
 msgid "Refreshing…"
 msgstr ""
 
-#: linux/share/monet/passwords/app.py:362
-msgid "Choose an entry to view its saved fields."
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:362
-msgid "No saved entries yet. Add your first login."
-msgstr ""
-
 #: linux/share/monet/passwords/app.py:371
 msgid "Saved in your encrypted vault."
 msgstr ""
@@ -9090,10 +9070,6 @@ msgstr ""
 
 #: linux/share/monet/passwords/app.py:391
 msgid "Vault open"
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:432
-msgid "Select a saved entry"
 msgstr ""
 
 #: linux/share/monet/passwords/app.py:449
@@ -9119,10 +9095,6 @@ msgstr ""
 
 #: linux/share/monet/passwords/app.py:495
 msgid "Close this app’s current vault connection? It may reconnect later."
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:507
-msgid "Open a vault from All saved entries first."
 msgstr ""
 
 #: linux/share/monet/passwords/app.py:517
@@ -9297,4 +9269,154 @@ msgstr ""
 
 #: linux/share/monet/passwords/vault.py:387
 msgid "This connection could not be closed."
+msgstr ""
+
+
+#: linux/share/monet/passwords/app.py:108
+msgid "App encryption key"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:108 linux/share/monet/passwords/app.py:530
+msgid "Saved login"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:157
+msgid "Not saved"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:158
+msgid "Saved value"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:280
+msgid "Your personal vault"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:283 linux/share/monet/passwords/app.py:298
+msgid "Saved logins"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:283
+msgid "Wi-Fi & VPN"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:284
+msgid "App data"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:300
+msgid "Encrypted vault"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:308
+msgid "Import…"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:313 linux/share/monet/passwords/app.py:627
+msgid "Search saved logins"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:432
+msgid "Your vault is open."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:438
+msgid "Imported %1 logins. Skipped %2 identical logins."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:440
+msgid ""
+"Import stopped. %1 logins were saved. Unlock and import the file again to finish; identical logins will be skipped."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:514
+msgid "Your logins, in one place"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:514
+msgid "Select an entry"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:516
+msgid ""
+"Add a login or import your saved website passwords from Zen, Firefox or Chromium. Browser encryption keys are kept separately in App data."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:517
+msgid "Choose an item from the list to see its details."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:520
+msgid "Open browser passwords"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:530
+msgid "Managed by the app"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:550 linux/share/monet/passwords/app.py:555
+msgid "Import browser passwords"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:550
+msgid "Browser CSV exports (*.csv)"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:557
+msgid "%1 logins ready to import"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:559
+msgid ""
+"Identical logins are skipped. Existing passwords are never overwritten. Browser autofill stays in your browser."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:561
+msgid ""
+"%1 empty or repeated rows were skipped. The exported CSV is unencrypted; delete it when you no longer need it."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:564
+msgid "Import logins"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:632
+msgid "Open your vault from Saved logins first."
+msgstr ""
+
+#: linux/share/monet/passwords/login_import.py:19
+msgid "Choose a regular CSV file exported by your browser."
+msgstr ""
+
+#: linux/share/monet/passwords/login_import.py:22 linux/share/monet/passwords/login_import.py:30
+msgid ""
+"This export is too large. Import up to 2,000 logins at a time, in a file smaller than 4 MB."
+msgstr ""
+
+#: linux/share/monet/passwords/login_import.py:26
+msgid ""
+"Choose a browser CSV export with url, username and password columns. Zen, Firefox and Chromium exports are supported."
+msgstr ""
+
+#: linux/share/monet/passwords/login_import.py:33 linux/share/monet/passwords/login_import.py:43
+msgid ""
+"This export contains an unsupported or incomplete row. Nothing has been imported."
+msgstr ""
+
+#: linux/share/monet/passwords/login_import.py:48
+msgid "The export could not be read. Choose a valid UTF-8 browser CSV file."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:134
+msgid ""
+"An app encryption key supplied by the desktop portal. This is not a website login. The app manages this key automatically."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:136
+msgid ""
+"A browser encryption key, not a saved login. Your website passwords are managed inside the browser. Leave this key in place so the browser can read its data."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:415
+msgid "Too many logins have the same title."
 msgstr ""

@@ -4,16 +4,26 @@ The installed desktop manager is Monet's own native Qt application. Search **pas
 
 ## Desktop manager
 
-- Searchable views for all saved entries, personal logins, network credentials and apps, with a separate connected-apps view and preferences.
-- A selected entry shows labelled fields with Show/Hide and Copy. Passwords are concealed initially, revealed for 15 seconds, and concealed when the window loses focus. Copies carry KDE's password-manager MIME hint and clear after 30 seconds only if the clipboard still contains that copy.
+- Saved logins is the default view. Wi-Fi & VPN, App data, Connected apps and Preferences have separate sections. Repeated folder/key metadata appears once without changing stored entries. Known portal/browser encryption keys are explained in App data; their secret values are never read or offered for editing.
+- A selected entry shows readable usernames/websites and labelled secret fields with Show/Hide and Copy. Passwords are concealed initially, revealed for 15 seconds, and concealed when the window loses focus. Copies carry KDE's password-manager MIME hint and clear after 30 seconds only if the clipboard still contains that copy.
 - Add logins, generate random passwords, edit supported password/map entries and delete with confirmation. Another app's intervening change is checked before editing/deleting; the API does not offer an atomic compare-and-swap transaction.
 - Known QDataStream string maps, UTF-8 and text JSON fields are decoded for display. Unknown binary records are explained as app-managed data and cannot be edited or deleted here. Multiline existing fields are preserved during edits of other fields.
-- Network profile names replace matching UUIDs without requesting network secrets. Listings contain metadata; only the selected credential is read.
+- Network profile names replace matching UUIDs without requesting network secrets. Ordinary listings contain metadata; only the selected credential is read. An explicitly confirmed CSV import also reads Monet-owned login records to skip identical accounts.
 - Close view releases Monet's connection and clears displayed values. Lock vault calls the encrypted storage provider and verifies its Locked property. Screen-lock and provider-lock notifications clear the view. Settings uses the same verified lock/status path.
 - Connected apps can be disconnected from the current vault session. This is not a permanent deny policy, nor a universal website autofill controller. Browser password/autofill controls are linked from Preferences. New logins created here are available for manual copying, not automatically enrolled in browser autofill.
 - Session/idle preferences preserve separate login and vault passwords. Automatic desktop sign-in still requires the initial encrypted-vault unlock. No polling daemon, secret file export, external network requests or password command-line arguments are added. Python/Qt retain transient values in process memory; guaranteed zeroization is not claimed.
 
 Source: `linux/libexec/monet-passwords`, `linux/share/monet/passwords/app.py` and `vault.py`. Installer/uninstaller and account preview include the app and its desktop entry; the image explicitly carries python3-dbus.
+
+### Importing actual website logins
+
+Choose **Import…**, select a CSV exported by Zen/Firefox or Chromium, then confirm the count. The importer accepts UTF-8/BOM and quoted CSV, limits the file to 4 MB and 2,000 rows, skips empty-password/repeated rows and exact existing logins, and never overwrites another record. Changed passwords for the same account are kept as separately named entries. Verified partial imports can be retried safely. Screen lock cancels remaining writes and clears the review. Values stay on the worker; the review shows counts only. No export or temporary plaintext file is created by Monet. The original user-selected CSV remains where the user placed it; the review reminds them to delete this unencrypted export when finished.
+
+Browser autofill still belongs to the browser. Importing creates a copy in Monet's encrypted vault; it is not live browser synchronization or a browser extension. **Open browser passwords** opens the browser's own account management page. [Mozilla documents CSV export](https://support.mozilla.org/en-US/kb/export-login-data-firefox).
+
+The duplicate Zen entries in the reported screenshot were app metadata, not two website accounts. KWallet's compatibility folder enumeration can contain repeated folders, so Monet deduplicates `(folder, key)` display identities. The [Secret portal provides per-application keys](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Secret.html); [Chromium Safe Storage is an encryption key](https://chromium.googlesource.com/chromium/src/+/3f85aea3bf92db168ea7d3f8a286d77651d751b1/components/os_crypt/sync/key_storage_linux.cc). No attempt is made to interpret these values as user logins or to delete duplicates in storage.
+
+The native UI uses Fusion controls with Monet's Mist/Smoke colors, opaque surfaces, compact account rows and explicit type sizes. This avoids Kvantum's translucent child-widget backgrounds seen in the report. Native Wayland renders were checked at the laptop's 200% scale using synthetic accounts only.
 
 ### Compatibility details and validation — 3 November 2026
 

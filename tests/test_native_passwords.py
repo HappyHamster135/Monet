@@ -160,6 +160,7 @@ if os.environ.get('MONET_PASSWORDS_QT_TESTS') == '1':
 
         def select(self, key='Account'):
             self.unlock()
+            self.window.navigation.setCurrentRow(2)
             item = next(self.window.list.item(i) for i in range(self.window.list.count())
                         if self.window.list.item(i).data(Qt.UserRole)['key'] == key)
             self.window.list.setCurrentItem(item); self.wait()
@@ -173,6 +174,7 @@ if os.environ.get('MONET_PASSWORDS_QT_TESTS') == '1':
             self.assertEqual(field.display.text(), 'synthetic-login-only')
             QApplication.sendEvent(self.window, QEvent(QEvent.WindowDeactivate))
             self.assertNotIn('synthetic', field.display.text())
+            self.window.navigation.setCurrentRow(1)
             self.window.search.setText('Wi-Fi')
             self.assertEqual(self.window.list.count(), 2)
             self.assertIsNone(self.window.entry)
@@ -250,13 +252,47 @@ if os.environ.get('MONET_PASSWORDS_QT_TESTS') == '1':
             self.assertIn('binary', self.window.entry['note'])
             self.assertFalse(self.window.entry['editable'])
 
+        def test_default_is_logins_and_internal_records_have_no_secret_fields(self):
+            self.backend.entries[('Chromium Keys', 'Chromium Safe Storage')] = (2, 'internal-test-only')
+            self.unlock()
+            self.assertEqual(self.window.list.count(), 0)
+            self.assertFalse(any(c.startswith('read') for c in self.backend.calls))
+            self.window.navigation.setCurrentRow(2)
+            item = next(self.window.list.item(i) for i in range(self.window.list.count())
+                        if self.window.list.item(i).data(Qt.UserRole)['key'] == 'Chromium Safe Storage')
+            self.window.list.setCurrentItem(item); self.wait()
+            self.assertEqual(self.window.fields, [])
+            self.assertFalse(any(c.startswith('read') for c in self.backend.calls))
+
+        def test_import_review_cancel_commit_and_lock_clear_pending_values(self):
+            import tempfile
+            from PySide6.QtWidgets import QDialogButtonBox
+            self.unlock()
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'fixture.csv'
+                path.write_text('url,username,password\nhttps://example.invalid,tester,synthetic-only\n')
+                self.window.dispatch('prepare_import', [str(path)]); self.wait()
+                self.assertIsNotNone(self.window.import_dialog)
+                self.assertNotIn('writeMap', self.backend.calls)
+                self.window.import_dialog.reject(); QTest.qWait(80)
+                self.assertEqual(self.window.worker.vault.pending_import, [])
+                self.window.dispatch('prepare_import', [str(path)]); self.wait()
+                buttons = self.window.import_dialog.findChild(QDialogButtonBox)
+                QTest.mouseClick(buttons.button(QDialogButtonBox.Save), Qt.LeftButton); self.wait()
+                self.assertIsNone(self.window.import_dialog)
+                self.assertEqual(self.window.list.count(), 1)
+                self.window.dispatch('prepare_import', [str(path)]); self.wait()
+                self.window.screen_locked(True); QTest.qWait(80)
+                self.assertIsNone(self.window.import_dialog)
+                self.assertEqual(self.window.worker.vault.pending_import, [])
+
         def test_palette_change_keeps_list_text_readable(self):
             from PySide6.QtGui import QPalette, QColor
             old = self.app.palette()
             try:
                 palette = QPalette(old); palette.setColor(QPalette.Window, QColor('#202424'))
                 self.app.setPalette(palette); QTest.qWait(30)
-                self.assertIn('color: #eeeae2; font-size: 14px;', self.window.styleSheet())
+                self.assertIn('color: #eeeae2;', self.window.styleSheet())
             finally:
                 self.app.setPalette(old)
 
