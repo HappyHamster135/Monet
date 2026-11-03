@@ -1,5 +1,32 @@
 # Monet Passwords
 
+The installed desktop manager is Monet's own native Qt application. Search **passwords** or **wallet**, or use **Settings → Passwords → Open Monet Passwords**. It reads the existing encrypted desktop vault through its supported APIs. Existing Wi-Fi and app credentials remain in place; no migration or new cryptographic format is introduced.
+
+## Desktop manager
+
+- Searchable views for all saved entries, personal logins, network credentials and apps, with a separate connected-apps view and preferences.
+- A selected entry shows labelled fields with Show/Hide and Copy. Passwords are concealed initially, revealed for 15 seconds, and concealed when the window loses focus. Copies carry KDE's password-manager MIME hint and clear after 30 seconds only if the clipboard still contains that copy.
+- Add logins, generate random passwords, edit supported password/map entries and delete with confirmation. Another app's intervening change is checked before editing/deleting; the API does not offer an atomic compare-and-swap transaction.
+- Known QDataStream string maps, UTF-8 and text JSON fields are decoded for display. Unknown binary records are explained as app-managed data and cannot be edited or deleted here. Multiline existing fields are preserved during edits of other fields.
+- Network profile names replace matching UUIDs without requesting network secrets. Listings contain metadata; only the selected credential is read.
+- Close view releases Monet's connection and clears displayed values. Lock vault calls the encrypted storage provider and verifies its Locked property. Screen-lock and provider-lock notifications clear the view. Settings uses the same verified lock/status path.
+- Connected apps can be disconnected from the current vault session. This is not a permanent deny policy, nor a universal website autofill controller. Browser password/autofill controls are linked from Preferences. New logins created here are available for manual copying, not automatically enrolled in browser autofill.
+- Session/idle preferences preserve separate login and vault passwords. Automatic desktop sign-in still requires the initial encrypted-vault unlock. No polling daemon, secret file export, external network requests or password command-line arguments are added. Python/Qt retain transient values in process memory; guaranteed zeroization is not claimed.
+
+Source: `linux/libexec/monet-passwords`, `linux/share/monet/passwords/app.py` and `vault.py`. Installer/uninstaller and account preview include the app and its desktop entry; the image explicitly carries python3-dbus.
+
+### Compatibility details and validation — 3 November 2026
+
+KWallet 6.31's compatibility `close()`/`closeAllWallets()` drop app handles without locking the underlying Secret Service collection. Monet therefore uses [Secret Service Lock](https://specifications.freedesktop.org/secret-service/latest/unlocking.html) and verifies the collection's actual Locked property. Its compatibility disconnect method also returns false after successfully dropping a connection; Monet checks the resulting connected-app list instead. The source was checked against [KDE 6.31](https://github.com/KDE/kwallet/blob/v6.31.0/src/runtime/kwalletd/kwalletd.cpp). An unrelated app disconnect no longer clears a still-valid Monet view.
+
+The [KWallet map API](https://github.com/KDE/kwallet/blob/v6.31.0/src/api/KWallet/kwallet.cpp), [NetworkManager's non-secret GetSettings API](https://networkmanager.dev/docs/api/latest/gdbus-org.freedesktop.NetworkManager.Settings.Connection.html) and [Klipper's clipboard filtering](https://github.com/KDE/plasma-workspace/blob/Plasma/6.5/klipper/historymodel.cpp) were checked. Generated maps match native Qt serialization. Typed D-Bus tests use an isolated bus and synthetic providers, including actual Qt lock-signal delivery, verified collection locking and misleading compatibility return values.
+
+On the laptop, an explicitly scoped temporary synthetic login was created, read back, edited, read back and deleted through the real encrypted vault. The test refused reads or changes to any other entry. Existing credentials were not opened or modified. The real user's vault was not locked by the tests. Light/Smoke rendering, clipboard expiry, stale read rejection, editor cancellation, lossless field preservation and a slow-provider UI responsiveness fixture pass. Current evidence and local deployment receipts are recorded in the 0.9.5 backlog and under `target/monet-passwords-2026-11-03/`.
+
+The earlier KeePassXC-based browser-integration experiment below remains separate. Its prototype-only caveats do not describe the new desktop manager, and its browser extension has not been installed into the user's normal browser by this change.
+
+# Earlier browser-integration prototype
+
 Passwords is a development preview of a local vault with Monet's native interface.
 The first prototype adapts KeePassXC 2.8.0, using its existing Qt application,
 KDBX storage, cryptography, file locking, atomic saves, recovery, clipboard clearing

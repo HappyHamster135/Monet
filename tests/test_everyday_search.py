@@ -31,7 +31,7 @@ class EverydaySearch(unittest.TestCase):
 
     def test_password_queries_open_the_dedicated_page(self):
         for query in ('wallet', 'password', 'passwords', 'password manager', 'autofill'):
-            self.assertEqual(self.q.everyday_search(query)[0]['target'], 'passwords')
+            self.assertEqual(self.q.everyday_search(query)[0]['target'], 'monet-passwords.desktop')
 
     def test_translated_aliases_accent_folding_and_english_fallback(self):
         alias = next(e["terms"] for e in self.q.search_catalog() if e["id"] == "text-size")

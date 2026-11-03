@@ -241,6 +241,8 @@ def gather():
         scan(p.read_text(encoding="utf-8"), SETUP_QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave", ROOT / "linux/libexec/monet-files-tools"]:
         scan(p.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(p), add)
+    for p in sorted((ROOT / "linux/share/monet/passwords").glob("*.py")):
+        scan(p.read_text(encoding="utf-8"), {**PYTHON_CALLS, "VaultError": "s"}, python_string, rel(p), add)
     # The Windows helper's progress lines, which the person's dialog says.
     prep = ROOT / "linux/libexec/monet-prepare-windows"
     text = prep.read_text(encoding="utf-8")

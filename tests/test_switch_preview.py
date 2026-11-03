@@ -39,7 +39,8 @@ class SwitchPreview(unittest.TestCase):
             session = plan[p.HELPERS/'monet-session'][0].decode()
             self.assertIn(f'"{p.HELPERS}/monet-quick" trip-apps-again', session)
             self.assertIn('"$LIBEXECDIR/monet-profile"', session)  # image-owned helpers stay installed
-            self.assertIn(f'Exec={p.HELPERS}/monet-settings passwords', plan[p.DATA/'applications/monet-passwords.desktop'][0].decode())
+            self.assertIn(f'Exec={p.HELPERS}/monet-passwords', plan[p.DATA/'applications/monet-passwords.desktop'][0].decode())
+            self.assertIn(f'DATADIR = \'{p.PRIVATE}\'', plan[p.HELPERS/'monet-passwords'][0].decode())
             played=p.DATA/'plasma/plasmoids/org.monet.played/contents/ui/main.qml'
             self.assertIn(f'{prefix}/bin/monet',plan[played][0].decode())
             for name in ('monet-quick','monet-resume','monet-files-session','monet-editor-session','monet-browser-session','monet-pdf-session'):

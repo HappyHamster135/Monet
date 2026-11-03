@@ -2354,17 +2354,19 @@ WALLET_BUS = ("org.kde.kwalletd6", "/modules/kwalletd6", "org.kde.KWallet")
 def wallet_status():
     idle = kread("kwalletrc", "Wallet", "Close When Idle", "false") == "true"
     minutes = kread("kwalletrc", "Wallet", "Idle Timeout", "10")
-    wallet = kread("kwalletrc", "Wallet", "Default Wallet", "kdewallet")
-    opened = run("busctl", "--user", "--auto-start=no", "--timeout=3s", "call", *WALLET_BUS,
-                 "isOpen", "s", wallet, timeout=4)
+    opened = run(f"{LIBEXECDIR}/monet-passwords", "--status", timeout=15)
+    try:
+        unlocked = json.loads(opened or "{}").get("unlocked")
+    except (ValueError, AttributeError):
+        unlocked = None
     session = os.environ.get("XDG_SESSION_ID", "")
     service = run("loginctl", "show-session", session, "-p", "Service", "--value", timeout=3) if session else None
     return {"enabled": kread("kwalletrc", "Wallet", "Enabled", "true") != "false",
             "policy": minutes if idle else "session", "idleMinutes": minutes,
-            "unlocked": opened.strip() == "b true" if opened is not None else None,
+            "unlocked": unlocked if isinstance(unlocked, bool) else None,
             "automaticLogin": "autologin" in service if service is not None else None,
-            "manager": bool(shutil.which("kwalletmanager5")),
-            "preferences": bool(shutil.which("kcmshell6")),
+            "manager": Path(f"{LIBEXECDIR}/monet-passwords").is_file(),
+            "preferences": Path(f"{LIBEXECDIR}/monet-passwords").is_file(),
             "browser": wallet_browser_target() is not None}
 
 
@@ -2386,14 +2388,17 @@ def wallet_policy(value):
 
 
 def wallet_lock():
-    done = run("busctl", "--user", "--auto-start=no", "--timeout=3s", "call", *WALLET_BUS,
-               "closeAllWallets", timeout=4)
-    return {"ok": done is not None, "state": wallet_status()}
+    done = run(f"{LIBEXECDIR}/monet-passwords", "--lock", timeout=20)
+    try:
+        locked = json.loads(done or "{}").get("ok") is True
+    except (ValueError, AttributeError):
+        locked = False
+    return {"ok": locked, "state": wallet_status()}
 
 
 def wallet_manage():
     try:
-        subprocess.Popen(["kwalletmanager5"], start_new_session=True,
+        subprocess.Popen([f"{LIBEXECDIR}/monet-passwords"], start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"ok": True}
     except OSError:
@@ -2401,9 +2406,9 @@ def wallet_manage():
 
 
 def wallet_access():
-    """Open the native preferences; never read vault contents or access rules here."""
+    """Open Monet's connected-app view; never read vault contents here."""
     try:
-        subprocess.Popen(["kcmshell6", "kcm_kwallet5"], start_new_session=True,
+        subprocess.Popen([f"{LIBEXECDIR}/monet-passwords", "--connections"], start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"ok": True}
     except OSError:
@@ -5579,7 +5584,7 @@ def search_catalog():
     N_ = lambda text: text  # Extract aliases now, translate them when matching.
     rows = [
         ("saved-passwords", tr("Passwords"), tr("Saved logins, app access and vault unlocking"),
-         N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "passwords", "wallet-open"),
+         N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "monet-passwords.desktop", "wallet-open"),
         ("text-size", tr("Make text and windows bigger"), tr("Accessibility · Size of everything"),
          N_("make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"), "accessibility#size", "preferences-desktop-accessibility"),
         ("pointer-size", tr("Make the pointer easier to see"), tr("Accessibility · Pointer size"),

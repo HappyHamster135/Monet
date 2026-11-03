@@ -5801,11 +5801,11 @@ Shared.MonetWindow {
                         tone: look
                         divider: false
                         title: i18n("Saved desktop passwords")
-                        detail: i18n("KWallet Manager's Contents tab shows saved entries. Its Applications tab shows connected apps.")
+                        detail: i18n("Open Monet Passwords to search, show, copy and manage saved logins and app credentials.")
                         Pill {
                             objectName: "walletManageButton"
                             tone: look
-                            text: i18n("View saved passwords")
+                            text: i18n("Open Monet Passwords")
                             enabled: !sheet.walletBusy && sheet.walletInfo.manager === true
                             onClicked: sheet.walletAction("manage")
                         }
@@ -5813,7 +5813,7 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         title: i18n("App access and prompts")
-                        detail: i18n("Open the wallet's native preferences and available access controls. New apps may ask for permission.")
+                        detail: i18n("See connected desktop apps and disconnect a current connection. Website autofill is managed in your browser.")
                         Pill {
                             objectName: "walletAccessButton"
                             tone: look

@@ -9058,22 +9058,8 @@ msgstr ""
 msgid "Saved desktop passwords"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5804
-msgid ""
-"KWallet Manager's Contents tab shows saved entries. Its Applications tab shows connected apps."
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:5808
-msgid "View saved passwords"
-msgstr ""
-
 #: linux/share/monet/settings-app/MonetSettings.qml:5815
 msgid "App access and prompts"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:5816
-msgid ""
-"Open the wallet's native preferences and available access controls. New apps may ask for permission."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5820
@@ -9124,4 +9110,412 @@ msgstr ""
 msgctxt ""
 "words the menu's search finds an app by; keep the semicolons between them"
 msgid "password;passwords;wallet;vault;autofill;logins;"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5804
+msgid ""
+"Open Monet Passwords to search, show, copy and manage saved logins and app credentials."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5808
+msgid "Open Monet Passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5816
+msgid ""
+"See connected desktop apps and disconnect a current connection. Website autofill is managed in your browser."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:42
+msgid "This action is not available."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:47
+msgid ""
+"The vault operation failed. Your passwords have not been exported. Try unlocking again."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:98 linux/share/monet/passwords/app.py:124
+msgid "Hidden saved value"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:102 linux/share/monet/passwords/app.py:108
+msgid "Copy"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:112
+msgid "Copied"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:118
+msgid "Empty value"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:119
+msgid "Revealed saved value"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:134
+msgid "Edit login"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:134 linux/share/monet/passwords/app.py:262
+msgid "Add login"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:139
+msgid ""
+"Changes are saved in the encrypted desktop vault. Website autofill is managed by your browser."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:144
+msgid "Title"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:150
+msgid "Multiline app data is preserved. Edit it in its original app."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:167
+msgid "Generate strong password"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:238
+msgid "Your logins, clearly."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:240 linux/share/monet/passwords/app.py:252
+msgid "All saved entries"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:240
+msgid "My logins"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:240 linux/share/monet/passwords/app.py:278
+msgid "Connected apps"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:240 linux/share/monet/passwords/app.py:289
+msgid "Preferences"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:245 linux/share/monet/passwords/app.py:391
+msgid "View locked"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:246
+msgid "Lock vault"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:247
+msgid "Lock saved passwords for all apps until the vault is unlocked again."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:257 linux/share/monet/passwords/app.py:385
+msgid "Open vault"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:265
+msgid "Search by name or app"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:267
+msgid ""
+"Open your vault to view saved entries. Your existing vault password still works."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:274
+msgid ""
+"Passwords stay hidden until you show them. Copies clear after 30 seconds."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:279
+msgid ""
+"Apps currently connected through the desktop vault. Disconnect closes that connection; it does not permanently block the app. Browser autofill is controlled in the browser."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:282
+msgid "Refresh connections"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:284
+msgid "Disconnect selected app"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:290
+msgid ""
+"Monet Passwords uses your existing encrypted desktop vault. Separate login and vault passwords work. Automatic desktop sign-in still requires one vault unlock each session."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:292
+msgid "Keep saved passwords unlocked"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:294
+msgid "Lock after 10 minutes idle"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:294
+msgid "Lock after 30 minutes idle"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:296
+msgid "Apply unlocking preference"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:297
+msgid "Some vault settings take effect at your next sign-in."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:299
+msgid "Browser passwords and autofill"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:301
+msgid "Sign-in settings"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:303
+msgid ""
+"App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. New logins added here can be copied into apps; they do not automatically appear in browser autofill."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:341
+msgid "Opening vault…"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:341
+msgid "Refreshing…"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:362
+msgid "Choose an entry to view its saved fields."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:362
+msgid "No saved entries yet. Add your first login."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:371
+msgid "Saved in your encrypted vault."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:374
+msgid "No connected desktop apps reported."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:385
+msgid "Close view"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:391
+msgid "Vault open"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:432
+msgid "Select a saved entry"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:449
+msgid "Edit"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:450
+msgid "Delete entry"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:485
+msgid "Delete saved entry?"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:486
+msgid ""
+"This permanently removes the selected entry. Its app may ask you to sign in again, and any data protected by this entry may become unreadable."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:495
+msgid "Disconnect app?"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:495
+msgid "Close this app’s current vault connection? It may reconnect later."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:507
+msgid "Open a vault from All saved entries first."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:517
+msgid "These settings could not be opened."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:539
+msgid "Saved. Some vault settings take effect at your next sign-in."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:540
+msgid "The unlocking preference could not be saved."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:559
+msgid "Password view locked. Open your vault to continue."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:64
+msgid "Too many fields to save."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:68
+msgid "This entry contains an unsupported field."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:74
+msgid "This entry is too large to save."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:82
+msgid "This app entry is too large to display."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:84
+msgid "Saved fields from this app. Edit them in the app that created them."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:113
+msgid "Saved app fields. Edit them in the app that created them."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:115
+msgid "This entry contains structured app data, not a readable login."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:118
+msgid "Saved text used by this app."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:119
+msgid ""
+"App-managed binary data. This may be an encryption key, not a password. Manage it in the app that created it."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:164
+msgid ""
+"The vault did not respond or access was denied. Unlock it and try again."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:183
+msgid "The encrypted vault could not be identified safely."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:200
+msgid ""
+"The encrypted storage service is unavailable. Locking was not confirmed."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:205
+msgid ""
+"The encrypted vault did not confirm locking. The password view has been cleared."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:246
+msgid ""
+"Choose an existing vault. Create a vault in desktop vault settings first."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:249
+msgid "The vault was not unlocked. You can try again."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:257
+msgid "The vault is locked. Unlock it to continue."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:288
+msgid "This entry no longer exists. Refresh the list."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:293
+msgid "This password is too large or is not readable text."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:300
+msgid ""
+"This app uses an unsupported field format. Its saved data has been left untouched."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:306
+msgid ""
+"This entry has an unsupported type. Its saved data has been left untouched."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:319
+msgid "Select an entry first."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:323
+msgid "Another app changed this entry. Reopen it before editing or deleting."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:329
+msgid "This entry cannot be changed here."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:333
+msgid "This password is too large."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:338
+msgid "The vault could not save this entry. Your change was not confirmed."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:341
+msgid ""
+"The saved values could not be verified. Reopen the entry before retrying."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:348
+msgid "Enter a title between 1 and 200 characters."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:350
+msgid "Enter or generate a password."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:355
+msgid "The vault could not create a place for your logins."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:357
+msgid ""
+"A login already has that title. Choose another title or edit the existing login."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:359
+msgid "The vault could not save this login."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:362
+msgid "The saved login could not be verified. Refresh before retrying."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:368
+msgid ""
+"App-managed binary data cannot be deleted here. Manage it in the original app."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:370
+msgid "The vault could not remove this entry."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:372
+msgid "The entry is still present. Refresh before retrying."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:382
+msgid "This app is no longer connected."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:387
+msgid "This connection could not be closed."
 msgstr ""

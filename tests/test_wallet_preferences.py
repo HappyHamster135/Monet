@@ -20,6 +20,7 @@ class WalletPreferences(unittest.TestCase):
             path.write_text('[Wallet]\nDefault Wallet=personal\nEnabled=true\n[Other]\nKeep=unchanged\n')
             original = self.q.run
             def command(*args, **kwargs):
+                if args[0].endswith('/monet-passwords'): return '{"unlocked": true}'
                 if args[0] == 'busctl': return 'b true\n' if 'isOpen' in args else ''
                 if args[0] == 'loginctl': return 'plasmalogin-autologin\n'
                 return original(*args, **kwargs)
@@ -58,15 +59,14 @@ class WalletPreferences(unittest.TestCase):
     def test_lock_uses_native_lock_only_and_reports_failure(self):
         with patch.object(self.q, 'wallet_status', return_value={}), patch.object(self.q, 'run', return_value=None) as run:
             self.assertFalse(self.q.wallet_lock()['ok'])
-            self.assertEqual(run.call_args.args[-1], 'closeAllWallets')
-            self.assertIn('--auto-start=no', run.call_args.args)
-            run.return_value = ''
+            self.assertEqual(run.call_args.args, (f'{self.q.LIBEXECDIR}/monet-passwords', '--lock'))
+            run.return_value = '{"ok": true}'
             self.assertTrue(self.q.wallet_lock()['ok'])
 
-    def test_access_opens_native_preferences_without_reading_passwords(self):
+    def test_access_opens_monet_connections_without_reading_passwords(self):
         with patch.object(self.q.subprocess, 'Popen') as launch, patch.object(self.q, 'run') as run:
             self.assertTrue(self.q.wallet_access()['ok'])
-            self.assertEqual(launch.call_args.args[0], ['kcmshell6', 'kcm_kwallet5'])
+            self.assertEqual(launch.call_args.args[0], [f'{self.q.LIBEXECDIR}/monet-passwords', '--connections'])
             run.assert_not_called()
 
     def test_browser_link_uses_only_known_local_application_and_fixed_page(self):

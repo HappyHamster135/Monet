@@ -97,7 +97,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-store monet-store-jobs; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-store monet-store-jobs; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
@@ -350,7 +350,7 @@ fi
 # The Windows half, which Monet copies into Windows by itself, and the
 # scripts Monet uses to install a fresh Windows.
 rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures" "$DATADIR/monet/settings" \
-    "$DATADIR/monet/gtk" "$DATADIR/monet/zen" "$DATADIR/monet/games" "$DATADIR/monet/settings-app" "$DATADIR/monet/store-app"
+    "$DATADIR/monet/gtk" "$DATADIR/monet/zen" "$DATADIR/monet/games" "$DATADIR/monet/settings-app" "$DATADIR/monet/passwords" "$DATADIR/monet/store-app"
 install -d "$DATADIR/monet"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
 cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
@@ -360,6 +360,8 @@ cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
 cp -r "$SRC/share/monet/games" "$DATADIR/monet/games"
 tree "$SRC/share/monet/window-buttons" "$DATADIR/monet/window-buttons"
 cp -r "$SRC/share/monet/settings-app" "$DATADIR/monet/settings-app"
+install -d "$DATADIR/monet/passwords"
+install -m 644 "$SRC/share/monet/passwords/"*.py "$DATADIR/monet/passwords/"
 # The Store's window (monet-store), and its front page: Monet's picks under strips of The Hours.
 cp -r "$SRC/share/monet/store-app" "$DATADIR/monet/store-app"
 tree "$SRC/share/monet/store" "$DATADIR/monet/store"
