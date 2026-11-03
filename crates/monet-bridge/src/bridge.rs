@@ -409,19 +409,20 @@ fn add_wifi() {
     // driver gives each file it makes its folder's permissions.
     if fs::create_dir_all(&dir).is_ok() {
         let folder = dir.to_string_lossy().into_owned();
-        win::run_hidden("icacls", &[&folder, "/inheritance:r", "/grant:r", "*S-1-5-32-544:(OI)(CI)F", "*S-1-5-18:(OI)(CI)F"]);
-    }
-    let Ok(entries) = fs::read_dir(&dir) else { return };
-    let mut added = 0;
-    for path in entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("xml"))) {
-        let file = format!("filename={}", path.display());
-        if win::run_hidden("netsh", &["wlan", "add", "profile", &file, "user=all"]) {
-            added += 1;
+        if !win::run_hidden("icacls", &[&folder, "/inheritance:r", "/grant:r", "*S-1-5-32-544:(OI)(CI)F", "*S-1-5-18:(OI)(CI)F"]) {
+            log("could not protect pending Wi-Fi profiles; import deferred");
+            return;
         }
-        let _ = fs::remove_file(&path);
     }
+    let (added, pending) = crate::wifi::import_profiles(&dir, |path| {
+        let file = format!("filename={}", path.display());
+        win::run_hidden("netsh", &["wlan", "add", "profile", &file, "user=all"])
+    });
     if added > 0 {
         log(&format!("added {added} Wi-Fi network(s) from Monet"));
+    }
+    if pending > 0 {
+        log(&format!("kept {pending} Wi-Fi profile(s) for retry at the next sign-in"));
     }
 }
 

@@ -91,23 +91,13 @@ Get-ScheduledTask -TaskPath '\Monet\' -ErrorAction SilentlyContinue | Where-Obje
 Get-Process monet-bridge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 
-# 0. Wi-Fi from Monet, so Windows is online right away.
-$wifi = Join-Path $source 'wifi'
-if (Test-Path $wifi) {
-    Say '  Connecting to Wi-Fi'
-    foreach ($wlan in Get-ChildItem -Path $wifi -Filter *.xml) {
-        & netsh.exe wlan add profile filename="$($wlan.FullName)" user=all | Out-Null
-    }
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $wifi
-}
-
 # 1. Program files
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 # In one step: a copy cut short (the power going, say) never leaves half a program.
 Copy-Item -Force (Join-Path $source 'monet-bridge.exe') "$exe.new"
 Move-Item -Force "$exe.new" $exe
 Copy-Item -Force (Join-Path $source 'monet.ico') $icon
-foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1', 'Update-Windows.ps1', 'Install-Launcher.ps1') {
+foreach ($file in 'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1', 'Update-Windows.ps1', 'Install-Launcher.ps1', 'Setup-Functions.ps1') {
     Copy-Item -Force (Join-Path $source $file) (Join-Path $installDir $file)
 }
 # The cover over Windows during a trip (the painting, the mark, Monet's serif): without them
@@ -121,6 +111,13 @@ Unblock-File -Path $exe -ErrorAction SilentlyContinue
 # 2. Data folder: administrators write, everyone else only reads.
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 & icacls.exe $dataDir /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Could not protect the Monet data directory.' }
+
+. (Join-Path $installDir 'Setup-Functions.ps1')
+$wifiResult = Import-MonetWifi -Source (Join-Path $source 'wifi') -Pending (Join-Path $dataDir 'wifi')
+if ($wifiResult.Pending -gt 0) {
+    Say '  Wi-Fi is not ready. Saved profiles will be retried by Monet Bridge after the network driver is installed.'
+}
 
 # 3. Fast Startup off: it leaves Windows' drive half asleep, and Monet restarts
 #    Windows instead of hibernating it.
@@ -182,21 +179,12 @@ foreach ($folder in $startMenu, $desktop) {
 $steamExe = Join-Path ${env:ProgramFiles(x86)} 'Steam\steam.exe'
 if ($InstallSteam -and -not (Test-Path $steamExe)) {
     Say '  Installing Steam'
-    $setup = Join-Path $env:TEMP 'SteamSetup.exe'
-    $url = 'https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe'
-    for ($try = 1; $try -le 10 -and -not (Test-Path $setup); $try++) {
-        try {
-            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $setup -ErrorAction Stop
-        } catch {
-            Remove-Item -Force -ErrorAction SilentlyContinue $setup
-            Start-Sleep -Seconds 15   # Wi-Fi may still be connecting
-        }
-    }
-    if (Test-Path $setup) {
-        Start-Process -FilePath $setup -ArgumentList '/S' -Wait
-        Remove-Item -Force -ErrorAction SilentlyContinue $setup
-    } else {
-        Say "  Steam couldn't be downloaded. Install it from store.steampowered.com."
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $installDir 'Install-Launcher.ps1') `
+        -Launcher steam -Installer (Join-Path $source 'SteamSetup.exe')
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $steamExe)) {
+        Say '  Steam still needs installing. Connect to the internet, then open Install Steam on the desktop.'
+        $retry = '@echo off' + "`r`n" + 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ProgramFiles%\Monet\Install-Launcher.ps1" -Launcher steam' + "`r`npause`r`n"
+        Set-Content -LiteralPath (Join-Path $desktop 'Install Steam.cmd') -Value $retry -Encoding ASCII
     }
 }
 

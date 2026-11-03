@@ -7,6 +7,9 @@
 #[cfg_attr(not(windows), allow(dead_code))]
 mod parse;
 
+#[cfg_attr(not(windows), allow(dead_code))]
+mod wifi;
+
 #[cfg(windows)]
 mod bridge;
 #[cfg(windows)]

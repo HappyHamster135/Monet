@@ -4,12 +4,12 @@
 
 .DESCRIPTION
     Default (safe, nothing is removed):
-      - Full CPU speed while plugged in (battery behavior is unchanged)
+      - Let the CPU idle while plugged in (battery behavior is unchanged)
       - Windows Game Mode and hardware-accelerated GPU scheduling on
       - Fewer tips, ads and suggestions; Widgets and Copilot off
 
     Never touched: Windows Update, Windows Security (Defender), TPM, Secure
-    Boot, WebView2, DirectX and Visual C++ runtimes, Xbox / Gaming Services.
+    Boot, WebView2, DirectX and Visual C++ runtimes, Xbox identity / Gaming Services.
 
 .PARAMETER RemoveApps
     Also uninstall preinstalled apps that games never need (news, weather,
@@ -26,7 +26,8 @@ param(
     [switch]$NoPause
 )
 
-$ErrorActionPreference = 'Continue'
+$ErrorActionPreference = 'Stop'
+$cleanupFailed = $false
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $isAdmin = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -34,6 +35,7 @@ if (-not $isAdmin) {
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
     if ($RemoveApps) { $argList += '-RemoveApps' }
     if ($DisableMemoryIntegrity) { $argList += '-DisableMemoryIntegrity' }
+    if ($NoPause) { $argList += '-NoPause' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
 }
@@ -45,9 +47,13 @@ function Set-Value($path, $name, $value) {
 
 Write-Host 'Applying the Monet Game Profile...'
 
-Write-Host '  Full CPU speed while plugged in'
-& powercfg.exe /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 100
+Write-Host '  Letting the CPU idle between games'
+# The previous 100% minimum needlessly kept laptops hot at the desktop. Keep
+# the maximum and boost policy as they are, so games can still use full speed.
+& powercfg.exe /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 5
+if ($LASTEXITCODE -ne 0) { throw 'Windows could not change the processor idle policy.' }
 & powercfg.exe /setactive SCHEME_CURRENT
+if ($LASTEXITCODE -ne 0) { throw 'Windows could not activate the power policy.' }
 
 Write-Host '  Game Mode and GPU scheduling on'
 Set-Value 'HKCU:\Software\Microsoft\GameBar' 'AutoGameModeEnabled' 1
@@ -65,6 +71,11 @@ Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests' 0
 Set-Value 'HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot' 1
 Set-Value 'HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications' 'GlobalUserDisabled' 1
 
+# Keep the browser and WebView2 available to game sign-in pages, but don't
+# prelaunch Edge at sign-in or leave background apps running after it closes.
+Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' 'StartupBoostEnabled' 0
+Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' 'BackgroundModeEnabled' 0
+
 if ($RemoveApps) {
     Write-Host '  Removing apps games never need'
     $apps = @(
@@ -74,6 +85,9 @@ if ($RemoveApps) {
         'Microsoft.GetHelp',
         'Microsoft.Getstarted',
         'Microsoft.MicrosoftOfficeHub',
+        'Microsoft.OutlookForWindows',
+        'Microsoft.GamingApp',
+        'Microsoft.XboxApp',
         'Microsoft.MicrosoftSolitaireCollection',
         'Microsoft.People',
         'Microsoft.PowerAutomateDesktop',
@@ -85,7 +99,12 @@ if ($RemoveApps) {
         'MSTeams'
     )
     foreach ($app in $apps) {
-        Get-AppxPackage -Name $app -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+        try {
+            Get-AppxPackage -Name $app -ErrorAction Stop | Remove-AppxPackage -ErrorAction Stop
+        } catch {
+            $cleanupFailed = $true
+            Write-Warning "Could not remove $app. $($_.Exception.Message)"
+        }
     }
 }
 
@@ -95,8 +114,10 @@ if ($DisableMemoryIntegrity) {
 }
 
 Write-Host ''
-Write-Host 'Done. Some changes take effect after a restart.' -ForegroundColor Green
+if ($cleanupFailed) { Write-Warning 'Some optional apps could not be removed. Run the profile again to retry.' }
+else { Write-Host 'Done. Some changes take effect after a restart.' -ForegroundColor Green }
 if (-not $NoPause) {
     Write-Host ''
     Read-Host 'Press Enter to close'
 }
+if ($cleanupFailed) { exit 1 }

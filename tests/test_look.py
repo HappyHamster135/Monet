@@ -5754,7 +5754,7 @@ class OneGamesFolderForBoth(unittest.TestCase):
         back = bridge[bridge.index("fn go_back("):bridge.index("/// Hands the restart to")]
         self.assertLess(back.index("export_wifi();"), back.index("boot::set_boot_next"))
         add = bridge[bridge.index("fn add_wifi("):bridge.index("fn export_wifi(")]
-        self.assertLess(add.index('"/inheritance:r"'), add.index("fs::read_dir(&dir)"))
+        self.assertLess(add.index('"/inheritance:r"'), add.index("crate::wifi::import_profiles"))
 
     def test_windows_clock_follows_monets_time_zone(self):
         # Asked for on a trip, as the person's helper: before the checks the installer needs.

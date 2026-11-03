@@ -106,6 +106,7 @@ const PAYLOAD: &[&str] = &[
     "Update-Monet.ps1",
     "Update-Windows.ps1",
     "Install-Launcher.ps1",
+    "Setup-Functions.ps1",
     "monet.ico",
     // The cover Monet Bridge puts over Windows on a trip. (Not the desktop's painting: a
     // Windows kept from before keeps its own.)
@@ -213,10 +214,17 @@ pub fn stage_into(root: &Path, payload: &Path) -> Result<Outcome, String> {
         true,
     )
     .ok_or("couldn't find the Windows Startup folder")?;
-    let script = "@echo off\r\n\
+    // The fallback must finish the same setup as WinPE's FirstLogon command.
+    // Existing Windows installations keep their apps and performance settings.
+    let options = if resolve(root, &[".monet-setup.json"], false).is_some() && !unfinished_install(root) {
+        " -GameProfile -RemoveApps -InstallSteam"
+    } else {
+        ""
+    };
+    let script = format!("@echo off\r\n\
         rem Added by Monet. Installs Monet Bridge once, then removes itself.\r\n\
         start \"\" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden \
-        -File \"%ProgramData%\\Monet\\Setup\\Install-Monet.ps1\" -FromMonet\r\n";
+        -File \"%ProgramData%\\Monet\\Setup\\Install-Monet.ps1\" -FromMonet{options}\r\n");
     fs::write(startup.join(STARTUP_SCRIPT), script).map_err(|e| format!("couldn't add the setup script: {e}"))?;
     Ok(Outcome::Staged)
 }
@@ -386,6 +394,31 @@ mod tests {
         fs::create_dir_all(root.join("Program Files/Monet")).unwrap();
         fs::write(root.join("Program Files/Monet/monet-bridge.exe"), b"x").unwrap();
         assert_eq!(stage_into(&root, &payload).unwrap(), Outcome::Installed);
+    }
+
+    #[test]
+    fn fallback_finishes_defaults_only_for_completed_monet_installations() {
+        let payload = fake_payload("fallback-defaults-payload");
+        for (index, receipt, expected) in [
+            (0, None, false),
+            (1, Some(r#"{"version":1,"phase":"complete"}"#), true),
+            (2, Some(r#"{"version":1,"phase":"applying"}"#), false),
+            (3, Some("damaged receipt"), false),
+            (4, Some(r#"{"version":2,"phase":"complete"}"#), false),
+        ] {
+            let root = fake_windows(&format!("fallback-defaults-{index}"));
+            if let Some(receipt) = receipt {
+                fs::write(root.join(".monet-setup.json"), receipt).unwrap();
+            }
+            assert_eq!(stage_into(&root, &payload).unwrap(), Outcome::Staged);
+            let script = fs::read_to_string(root.join(
+                "ProgramData/Microsoft/Windows/Start Menu/Programs/StartUp/Finish Monet setup.cmd",
+            )).unwrap();
+            assert_eq!(script.contains(" -GameProfile -RemoveApps -InstallSteam"), expected);
+            assert!(root.join("ProgramData/Monet/Setup/Setup-Functions.ps1").is_file());
+            let _ = fs::remove_dir_all(root);
+        }
+        let _ = fs::remove_dir_all(payload);
     }
 
     #[test]

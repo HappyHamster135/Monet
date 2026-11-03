@@ -13,13 +13,13 @@
     Nothing happens when the launcher is there already. Exits 0 when it's installed afterwards.
 
 .PARAMETER Launcher
-    epic, ubisoft, battlenet, ea or discord.
+    steam, epic, ubisoft, battlenet, ea or discord.
 
 .PARAMETER Installer
     The installer Monet fetched, if there is one.
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('epic', 'ubisoft', 'battlenet', 'ea', 'discord')][string]$Launcher,
+    [Parameter(Mandatory)][ValidateSet('steam', 'epic', 'ubisoft', 'battlenet', 'ea', 'discord')][string]$Launcher,
     [string]$Installer
 )
 
@@ -27,6 +27,9 @@ $ErrorActionPreference = 'Stop'
 $x86 = ${env:ProgramFiles(x86)}
 $x64 = $env:ProgramFiles
 $known = @{
+    steam     = @{ Installed = (Join-Path $x86 'Steam\steam.exe');
+                   Url = 'https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe';
+                   File = 'SteamSetup.exe'; Signer = 'O="?Valve Corp(?:oration)?\.?(?:"|,|$)' }
     epic      = @{ Installed = (Join-Path $env:ProgramData 'Epic\EpicGamesLauncher\Data');
                    Url = 'https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi';
                    File = 'EpicGamesLauncherInstaller.msi'; Signer = 'O="?Epic Games' }
@@ -55,20 +58,35 @@ function Signed([string]$path) {
 $setup = $Installer
 $fetched = $false
 if (-not (Signed $setup)) {
-    $setup = Join-Path $env:TEMP $known.File
+    # Never run an installer out of a predictable, pre-existing temporary file.
+    $downloadDir = Join-Path $env:TEMP ('monet-launcher-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $downloadDir | Out-Null
+    $setup = Join-Path $downloadDir $known.File
     for ($try = 1; $try -le 5 -and -not (Signed $setup); $try++) {
         try {
-            Invoke-WebRequest -UseBasicParsing -Uri $known.Url -OutFile $setup -ErrorAction Stop
+            Invoke-WebRequest -UseBasicParsing -Uri $known.Url -OutFile $setup -TimeoutSec 45 -ErrorAction Stop
         } catch {
             Remove-Item -Force -ErrorAction SilentlyContinue $setup
             Start-Sleep -Seconds 10   # Wi-Fi may still be connecting
         }
     }
-    if (-not (Signed $setup)) { exit 1 }
+    if (-not (Signed $setup)) {
+        Remove-Item -LiteralPath $downloadDir -Recurse -Force
+        Write-Error "The signed $Launcher installer could not be downloaded. Connect to the internet and try again."
+        exit 1
+    }
     $fetched = $true
 }
 
 switch ($Launcher) {
+    'steam' {
+        $install = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+        if ($install.ExitCode -notin @(0, 3010)) {
+            if ($fetched) { Remove-Item -LiteralPath $downloadDir -Recurse -Force }
+            Write-Error "Steam setup failed (exit $($install.ExitCode))."
+            exit 1
+        }
+    }
     'epic' {
         $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i', "`"$setup`"", '/qn', '/norestart' -Wait -PassThru
         # The launcher makes its data folder on its first start; it's installed when msiexec says so.
@@ -86,6 +104,6 @@ switch ($Launcher) {
     # the installer alone (-Wait would wait for Discord too, which stays open).
     'discord' { (Start-Process -FilePath $setup -PassThru).WaitForExit() }
 }
-if ($fetched) { Remove-Item -Force -ErrorAction SilentlyContinue $setup }
+if ($fetched) { Remove-Item -LiteralPath $downloadDir -Recurse -Force -ErrorAction SilentlyContinue }
 if (Test-Path $known.Installed) { exit 0 }
 exit 1

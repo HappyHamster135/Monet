@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "vendor": "LENOVO",
+  "models": [
+    "21HK",
+    "21HL"
+  ],
+  "packages": [
+    {
+      "name": "Intel(R) Chipset Device Software - 10 (20H2 or Later)/11 (21H2 or Later)",
+      "file": "nzaic03w.exe",
+      "version": "10.1.19900.8599",
+      "sha256": "1573393032397deed254e372fc6b2719ec86cf3cef9fabbd89e6165b707c5e69",
+      "size": 1017448,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzaic03w.exe"
+    },
+    {
+      "name": "Intel Serial IO Driver - 10 (20H2 or Later)/11 (21H2 or Later)",
+      "file": "nzali02w.exe",
+      "version": "30.100.2417.30",
+      "sha256": "f730c3d7c41265b2f0cccc085c3b41900026fe6b0aad3ec6350e05b24ddf41b9",
+      "size": 1183304,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzali02w.exe"
+    },
+    {
+      "name": "Intel AX211 WLAN Driver - 10 (1809 or Later)/11",
+      "file": "nzawl13w.exe",
+      "version": "24.40.0.4",
+      "sha256": "bec83eb87409ff9b62271f962ac4709f2a8c521c2cc1bc765cc1f7fd99bb8ce0",
+      "size": 15925960,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzawl13w.exe"
+    },
+    {
+      "name": "Intel PRO1000 LAN Adapter Software - 10 (21H2 or Later)/11",
+      "file": "nzarw04w.exe",
+      "version": "12.19.2.66",
+      "sha256": "e1ece2af82cc9ec2a9abcd3808d55cb128fb1847d0f7b8843b1c4649fe59bb79",
+      "size": 1234960,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzarw04w.exe"
+    },
+    {
+      "name": "Intel AX211 Bluetooth Driver - 10 (20H2 or Later)/11",
+      "file": "nzawv01w.exe",
+      "version": "24.40.10.3",
+      "sha256": "5074acead81cc75cef673d1df12a91c4e564830b2310460f42b70c9f6dec67b1",
+      "size": 3839600,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzawv01w.exe"
+    },
+    {
+      "name": "ELAN TrackPoint Driver - 10 (20H2 or Later)/11",
+      "file": "nzag208w.exe",
+      "version": "31.21.60.1",
+      "sha256": "2ba3fa2a87dbe41096d16332019341706b1a2da755e755ea27b9e6b22f082924",
+      "size": 1780800,
+      "url": "https://download.lenovo.com/pccbbs/mobiles/nzag208w.exe"
+    }
+  ],
+  "catalog": "https://download.lenovo.com/catalog/21HL_Win11.xml",
+  "checked": "2026-11-03"
+}
