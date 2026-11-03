@@ -35,6 +35,12 @@ On the laptop, an explicitly scoped temporary synthetic login was created, read 
 
 The earlier KeePassXC/KDBX experiment below remains separate. The current connection uses the signed browser connector with Monet's existing desktop vault, without running that prototype or creating a KDBX database.
 
+## Automatic native approval — installed locally, 3 November 2026
+
+The laptop uses the permanent signed Monet connector 0.1.0: submitting a login automatically opens Monet’s Save login or Update password dialog. No New/Update banner click is needed. Cancel preserves existing values; unchanged passwords do not prompt. Repeated submissions are suppressed briefly, and locked/disconnected attempts can retry after recovery. Saving still requires approval, and form auto-submit stays off.
+
+The connector has its own add-on identity and received **private, unlisted Mozilla approval/signing** with owner authorization. Normal browser restart, saved pairing, automatic approval and autofill are verified. The old signed KeePassXC connector is disabled with its settings retained for rollback. Signing and normal browser protections remain enabled. Build source, privacy/data categories and preview limitations are in [the connector README](../browser/monet-passwords/README.md). No CSV export/import is required. Connect Zen prefers the installed local signed Monet package. The older instructions below describe the upstream fallback on installations without this package; distributing the connector in an OS image is separate release work.
+
 ## Zen save and autofill — 3 November 2026
 
 **Applied locally, not released.** Open **Preferences → Connect Zen for save and autofill** (also available from the Saved logins empty view). This registers the Monet native host for the default Zen Flatpak profile and opens the official [KeePassXC-Browser extension](https://addons.mozilla.org/firefox/addon/keepassxc-browser/). Install it, restart Zen, then choose Connect in the connector and approve Monet's connection dialog. The laptop's normal profile is already installed and paired. The connector retains its upstream name and branding; the full KeePassXC desktop app is not required.

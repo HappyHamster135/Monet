@@ -16,12 +16,18 @@ class DockPreview(unittest.TestCase):
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as directory:
             here=Path(directory);module.__file__=str(here/'preview.py')
+            plugins=here/'plugins/plasma/applets';plugins.mkdir(parents=True)
+            (plugins/'fixture.so').touch()
             (here/'runtime.json').write_text(json.dumps({'files':{'fixture.so':'verified'}}))
-            bundle=types.SimpleNamespace(PLUGIN='fixture.so',verify=lambda _:None,digest=lambda _:'verified')
+            bundle=types.SimpleNamespace(plugin_names=lambda _:('fixture.so',),verify=lambda _:None,digest=lambda _:'verified')
             with patch.dict(sys.modules,{'bundle':bundle}),patch.dict(os.environ,{},clear=True),patch.object(module.os,'execv') as execute:
                 module.main()
                 self.assertEqual(os.environ['QT_PLUGIN_PATH'],str(here/'plugins'))
                 execute.assert_called_with('/usr/bin/plasmashell',['plasmashell','--no-respawn'])
+            (plugins/'stale-trash.so').touch()
+            with patch.dict(sys.modules,{'bundle':bundle}),patch.dict(os.environ,{},clear=True),patch.object(module.os,'execv') as execute:
+                module.main();self.assertNotIn('QT_PLUGIN_PATH',os.environ)
+                execute.assert_called_once()
             def mismatch(_):raise ValueError('Different runtime')
             bundle.verify=mismatch
             with patch.dict(sys.modules,{'bundle':bundle}),patch.dict(os.environ,{},clear=True),patch.object(module.os,'execv') as execute:

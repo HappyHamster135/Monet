@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 
 EXTENSION = 'keepassxc-browser@keepassxc.org'
+MONET_EXTENSION = '{d6b46926-af45-4fa5-b746-bd36f68af460}'
 HOST = 'org.keepassxc.keepassxc_browser'
 ADDON_PAGE = 'https://addons.mozilla.org/firefox/addon/keepassxc-browser/'
 BEGIN = '// Monet Passwords browser connection — begin'
@@ -34,7 +35,7 @@ def plan(host, home=Path.home()):
         if current.get('path') != str(host):
             raise ValueError('Another password manager already owns this browser connector. Disconnect it before connecting Monet.')
     files={manifest:json.dumps({'name':HOST,'description':'Monet Passwords — Zen browser connection',
-                 'path':str(host),'type':'stdio','allowed_extensions':[EXTENSION]},indent=2)+'\n'}
+                 'path':str(host),'type':'stdio','allowed_extensions':[EXTENSION,MONET_EXTENSION]},indent=2)+'\n'}
     root=home/'.var/app/app.zen_browser.zen/.zen'
     config=configparser.ConfigParser();config.read(root/'profiles.ini')
     sections=[s for s in config if s.startswith('Profile') and config[s].get('Default')=='1']
@@ -91,8 +92,13 @@ def main(host):
     app=QApplication([]);app.setStyle('Fusion')
     try:
         apply(host)
-        subprocess.Popen(['flatpak','run','app.zen_browser.zen',ADDON_PAGE],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        QMessageBox.information(None,tr('Connect Zen'),tr('Install the signed KeePassXC-Browser connector in Zen, then restart Zen. Open the connector and choose Connect; approve the connection in Monet Passwords. Enable single-account autofill in the connector’s settings if you want fields filled automatically.'))
+        connector = Path(__file__).with_name('connector.xpi')
+        command = (['flatpak','run','--file-forwarding','app.zen_browser.zen','@@u',connector.as_uri(),'@@']
+                   if connector.is_file() else ['flatpak','run','app.zen_browser.zen',ADDON_PAGE])
+        subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        message = (tr('Install the signed Monet Passwords connector in Zen. Open the connector and choose Connect, then approve Monet’s connection prompt. Enable single-account autofill in the connector’s settings if you want fields filled automatically.')
+                   if connector.is_file() else tr('Install the signed KeePassXC-Browser connector in Zen, then restart Zen. Open the connector and choose Connect; approve the connection in Monet Passwords. Enable single-account autofill in the connector’s settings if you want fields filled automatically.'))
+        QMessageBox.information(None,tr('Connect Zen'),message)
         return 0
     except Exception as exc:
         # Our setup errors contain configuration instructions only, never credentials.

@@ -84,9 +84,10 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
         import importlib.util
         spec = importlib.util.spec_from_file_location('dock_bundle', ROOT / 'image/dock/bundle.py')
         bundle = importlib.util.module_from_spec(spec); spec.loader.exec_module(bundle)
-        plugin = bundle.verified_binary(Path(dock_bundle))
+        plugins = bundle.verified_binaries(Path(dock_bundle))
         dock = PRIVATE / 'dock'
-        add(dock / 'plugins/plasma/applets' / plugin.name, plugin.read_bytes(), 0o755)
+        for plugin in plugins:
+            add(dock / 'plugins/plasma/applets' / plugin.name, plugin.read_bytes(), 0o755)
         add(dock / 'runtime.json', (Path(dock_bundle) / 'runtime.json').read_bytes())
         for name in ('preview.py', 'bundle.py'):
             add(dock / name, (ROOT / 'image/dock' / name).read_bytes())

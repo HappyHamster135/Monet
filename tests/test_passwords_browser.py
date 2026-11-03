@@ -47,6 +47,19 @@ class BrowserStorage(unittest.TestCase):
         self.store.put_connection(self.identifier,{'Name':'Test Zen','Sites':'[]'})
         with self.assertRaises(BrowserError):self.store.authenticate(self.identifier,'')
 
+    def test_automatic_submission_still_requires_native_approval(self):
+        result=self.store.save(dict(self.data,monetAutomatic=True))
+        self.assertEqual(result,{'error':'cancelled','monetPrompted':True})
+        self.assertNotIn('writeMap',self.transport.calls)
+        self.answer={'approved':True}
+        self.assertTrue(self.store.save(dict(self.data,monetAutomatic=True))['monetPrompted'])
+        key=next(k for f,k in self.transport.entries if f==PERSONAL_FOLDER)
+        before=self.transport.entries[(PERSONAL_FOLDER,key)]
+        self.answer={'approved':False}
+        result=self.store.save(dict(self.data,monetAutomatic=True,password='new-test-only'))
+        self.assertEqual(result['error'],'cancelled')
+        self.assertEqual(self.transport.entries[(PERSONAL_FOLDER,key)],before)
+
     def test_approved_save_update_and_identical_retry_use_one_account(self):
         self.answer={'approved':True};self.store.save(self.data);prompts=len(self.proposals)
         self.store.save(self.data);self.assertEqual(len(self.proposals),prompts)

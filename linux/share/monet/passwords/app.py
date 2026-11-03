@@ -553,7 +553,7 @@ class PasswordsWindow(QMainWindow):
         box.addStretch()
         label = QLabel(tr('Your logins, in one place') if self.navigation.currentRow() == 0 else tr('Select an entry'))
         label.setObjectName('entryTitle'); label.setFont(QFont('Inter', 18, QFont.DemiBold)); label.setWordWrap(True); box.addWidget(label)
-        text = ((tr('Zen is connected. After signing in to a website, choose New or Update in the browser banner and approve Monet’s prompt. Your saved logins will appear here.') if self.browser_connected else tr('Connect Zen to save and autofill your website logins. You can also add an account manually or import an existing export.'))
+        text = ((tr('Zen is connected. Monet asks before saving or updating a website login. Your saved logins will appear here.') if self.browser_connected else tr('Connect Zen to save and autofill your website logins. You can also add an account manually or import an existing export.'))
                 if self.navigation.currentRow() == 0 else tr('Choose an item from the list to see its details.'))
         hint = QLabel(text); hint.setObjectName('muted'); hint.setWordWrap(True); box.addWidget(hint)
         if self.navigation.currentRow() == 0 and not self.browser_connected:

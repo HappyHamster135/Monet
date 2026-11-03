@@ -12,6 +12,7 @@ from browser_store import BrowserStore
 from vault import NativeWallet, Vault
 
 EXTENSION = 'keepassxc-browser@keepassxc.org'
+MONET_EXTENSION = '{d6b46926-af45-4fa5-b746-bd36f68af460}'
 
 
 class LockWatcher:
@@ -84,7 +85,7 @@ def main(launcher, factory=NativeWallet):
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     # Firefox supplies manifest path and initiating add-on ID. A shell invocation
     # without the expected ID is not a browser connection.
-    if len(sys.argv) < 3 or sys.argv[-1] != EXTENSION:
+    if len(sys.argv) < 3 or sys.argv[-1] not in (EXTENSION, MONET_EXTENSION):
         return 1
     write_lock = threading.Lock()
     transport = None

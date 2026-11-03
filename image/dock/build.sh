@@ -30,10 +30,12 @@ cmake -S "$here" -B "$work/build" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_RPATH=ON
 cmake --build "$work/build" --parallel "$(nproc)"
 DESTDIR="$work/installed" cmake --install "$work/build"
-plugin="$(find "$work/installed" -name org.kde.plasma.taskmanager.so -type f)"
-test "$(printf '%s\n' "$plugin" | wc -l)" -eq 1
-test -f "$plugin"
-install -m 755 "$plugin" "$out/org.kde.plasma.taskmanager.so"
+for name in org.kde.plasma.taskmanager.so org.kde.plasma.trash.so; do
+    plugin="$(find "$work/installed" -name "$name" -type f)"
+    test "$(printf '%s\n' "$plugin" | wc -l)" -eq 1
+    test -f "$plugin"
+    install -m 755 "$plugin" "$out/$name"
+done
 
 # Ship the complete corresponding source, licenses and build instructions with
 # the image. The archive contains the patched source plus Monet's build inputs.

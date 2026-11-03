@@ -202,6 +202,8 @@ class BrowserStore:
         answer = self.prompt({'kind': 'update' if before else 'save', 'site': site, 'username': username})
         self.guard(); self.authorized(data)
         if not answer.get('approved'):
+            if data.get('monetAutomatic') is True:
+                return {'error': 'cancelled', 'monetPrompted': True}
             raise BrowserError('Saving cancelled. Your saved login was not changed.', 6)
         if before:
             # Optimistic concurrency check covers changes made while consent is open.
@@ -226,4 +228,4 @@ class BrowserStore:
         if isinstance(sites, list) and site not in sites and len(sites) < 1000:
             self.put_connection(self.associated[0], dict(current, Sites=json.dumps(sites + [site])))
         self.vault.selected = None
-        return {'error': 'success'}
+        return {'error': 'success', 'monetPrompted': True}

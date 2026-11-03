@@ -97,7 +97,7 @@ class Protocol:
                 if not isinstance(data, dict) or data.get('action') != action:
                     raise BrowserError('Browser action mismatch.', 4)
             db_hash = self.store.open(request.get('triggerUnlock') is True)
-            result = {'hash': db_hash}
+            result = {'hash': db_hash, 'monet': {'nativeConsent': True}}
             if action == 'get-databasehash':
                 pass
             elif action == 'associate':

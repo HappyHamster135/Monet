@@ -24,10 +24,10 @@ class DockMotion(unittest.TestCase):
     def test_hover_lifts_and_magnifies_then_settles_without_changing_layout(self):
         self.motion.setProperty('width',64);self.motion.setProperty('height',64)
         self.motion.setProperty('distance',0);self.motion.setProperty('hovering',True);self.settle()
-        center=self.motion.property('iconScale');self.assertAlmostEqual(center,1.10,places=2)
+        center=self.motion.property('iconScale');self.assertAlmostEqual(center,1.28,places=2)
         self.assertGreater(self.motion.property('lift'),3)
         self.motion.setProperty('distance',1);self.settle()
-        self.assertGreater(self.motion.property('iconScale'),.94);self.assertLess(self.motion.property('iconScale'),center)
+        self.assertGreater(self.motion.property('iconScale'),1);self.assertLess(self.motion.property('iconScale'),center)
         self.motion.setProperty('hovering',False);self.settle()
         self.assertAlmostEqual(self.motion.property('lift'),0);self.assertEqual(self.motion.property('width'),64)
         self.assertEqual(self.motion.property('height'),64)
@@ -42,7 +42,7 @@ class DockMotion(unittest.TestCase):
         self.motion.setProperty('hovering',True)
         for distance in (0,.2,1,2,1,0,3):
             self.motion.setProperty('distance',distance);QTest.qWait(5)
-            self.assertLessEqual(self.motion.property('iconScale'),1.101)
+            self.assertLessEqual(self.motion.property('iconScale'),1.281)
         self.settle();self.assertAlmostEqual(self.motion.property('amount'),0)
 
 if __name__=='__main__':unittest.main()

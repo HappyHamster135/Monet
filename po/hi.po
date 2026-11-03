@@ -9687,11 +9687,6 @@ msgstr ""
 msgid "Allow autofill on this website?"
 msgstr ""
 
-#: linux/share/monet/passwords/browser_prompt.py:29
-msgid ""
-"Zen uses the signed KeePassXC-Browser connector to talk to Monet. Saving and updating logins requires your approval. You can revoke this browser connection at any time."
-msgstr ""
-
 #: linux/share/monet/passwords/browser_prompt.py:31
 msgid "Browser connection name"
 msgstr ""
@@ -9939,8 +9934,17 @@ msgstr ""
 msgid "The browser connection could not be revoked."
 msgstr ""
 
-
 #: linux/share/monet/passwords/app.py:556
 msgid ""
-"Zen is connected. After signing in to a website, choose New or Update in the browser banner and approve Monet’s prompt. Your saved logins will appear here."
+"Zen is connected. Monet asks before saving or updating a website login. Your saved logins will appear here."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:29
+msgid ""
+"Zen can save and autofill your Monet logins. Monet asks before saving or changing a password. You can revoke this browser connection at any time."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:98
+msgid ""
+"Install the signed Monet Passwords connector in Zen. Open the connector and choose Connect, then approve Monet’s connection prompt. Enable single-account autofill in the connector’s settings if you want fields filled automatically."
 msgstr ""

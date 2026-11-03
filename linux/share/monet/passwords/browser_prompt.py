@@ -26,7 +26,7 @@ def main():
     title = QLabel(headings[kind]); title.setObjectName('title'); title.setWordWrap(True); box.addWidget(title)
     name = None; remember = None
     if kind == 'connect':
-        text = tr('Zen uses the signed KeePassXC-Browser connector to talk to Monet. Saving and updating logins requires your approval. You can revoke this browser connection at any time.')
+        text = tr('Zen can save and autofill your Monet logins. Monet asks before saving or changing a password. You can revoke this browser connection at any time.')
         label = QLabel(text); label.setWordWrap(True); box.addWidget(label)
         name = QLineEdit('Zen'); name.setMaxLength(60); name.setAccessibleName(tr('Browser connection name'))
         box.addWidget(name)
