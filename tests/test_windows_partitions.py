@@ -12,6 +12,44 @@ from unittest.mock import patch
 from tests.test_installer import load
 
 
+class PartitionDiscovery(unittest.TestCase):
+    def setUp(self):
+        self.p = load("linux/libexec/monet-prepare-windows", "partition_discovery_fixture")
+        self.p.log = lambda message: None
+
+    def test_explicit_tree_finds_partitions_when_path_omits_name_and_excludes_mapper(self):
+        child = dict(path="/dev/fixturep1", type="part", children=[dict(path="/dev/mapper/fixture", type="crypt")])
+        def command(*args, **kwargs):
+            # Reproduce lsblk's native flat output contract, rather than always
+            # supplying the tree shape the caller expects.
+            rows = [dict(path="/dev/mapper/fixture", type="crypt"), child, dict(path="/dev/fixture", type="disk")]
+            if "--tree" in args:
+                rows = [dict(path="/dev/fixture", type="disk", children=[child])]
+            return json.dumps(dict(blockdevices=rows))
+        self.p.run = command
+        self.assertEqual(self.p.partitions("/dev/fixture"), [child])
+
+    def test_missing_ambiguous_and_malformed_disk_roots_are_rejected(self):
+        for rows in (None, [], [dict(path="/dev/foreign")],
+                     [dict(path="/dev/fixture", children={})],
+                     [dict(path="/dev/fixture"), dict(path="/dev/fixture")]):
+            with self.subTest(rows=rows), patch.object(self.p, "lsblk", return_value=rows):
+                with self.assertRaisesRegex(self.p.Stop, "partition list"):
+                    self.p.partitions("/dev/fixture")
+
+    @unittest.skipUnless(shutil.which("lsblk"), "native lsblk unavailable")
+    def test_native_read_only_discovery_includes_kernel_partitions(self):
+        candidates = [p for p in Path("/sys/class/block").glob("*") if (p / "partition").exists()]
+        candidates = [p for p in candidates if Path("/dev", p.name).exists()]
+        if not candidates:
+            self.skipTest("no native partition devices exposed")
+        part = candidates[0]
+        parent = part.resolve().parent.name
+        found = self.p.partitions(str(Path("/dev", parent)))
+        self.assertIn(str(Path("/dev", part.name)), [row["path"] for row in found])
+        self.assertTrue(all(row["type"] == "part" for row in found))
+
+
 class Recovery(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="monet-windows-partitions-")
@@ -34,6 +72,7 @@ class Recovery(unittest.TestCase):
         self.mounted = False
         self.children = False
         self.windows = False
+        self.signatures = []
         self.p.run = self.command
         self.p.sector_size = lambda disk: 512
         self.p.largest_free = lambda disk: (4096, self.table["lastlba"] - 4096 + 1)
@@ -71,6 +110,8 @@ class Recovery(unittest.TestCase):
             return True
         if args[0] in ("partx", "udevadm"):
             return False  # An already-known kernel partition is harmless.
+        if args[:3] == ("wipefs", "--no-act", "--json"):
+            return json.dumps(dict(signatures=self.signatures))
         if args[0].startswith("mkfs."):
             if self.fail_format == args[0] and not self.fail_after_format:
                 raise self.p.Stop("failed", "fixture: interrupted format")
@@ -165,6 +206,97 @@ class Recovery(unittest.TestCase):
         self.delays = 6
         with self.assertRaises(self.p.Stop):
             self.p.make_partitions(self.disk)
+
+    def legacy_plan(self):
+        self.pending()
+        plan = json.loads(self.receipt.read_text())
+        self.receipt.unlink()
+        self.delays = 0
+        self.calls.clear()
+        return plan
+
+    def test_legacy_inspection_changes_nothing_and_explicit_recovery_reuses_exact_partitions(self):
+        plan = self.legacy_plan()
+        before = copy.deepcopy(self.table)
+        self.p.recover_partition_plan(self.disk, plan)
+        self.assertFalse(self.receipt.exists())
+        self.assertFalse(self.formats())
+        self.assertFalse(self.appends())
+        self.p.recover_partition_plan(self.disk, plan, adopt=True)
+        self.assertEqual(json.loads(self.receipt.read_text()), plan)
+        self.p.make_partitions(self.disk)
+        self.assertEqual(self.table, before)
+        self.assertFalse(self.appends())
+        self.assertEqual(len(self.formats()), 2)
+        # Re-running the explicit repair preserves both formatted filesystems.
+        self.p.recover_partition_plan(self.disk, plan, adopt=True)
+        self.p.make_partitions(self.disk)
+        self.assertEqual(len(self.formats()), 2)
+
+    def test_legacy_recovery_rejects_signatures_mounts_missing_and_changed_partitions(self):
+        plan = self.legacy_plan()
+        original = copy.deepcopy(self.table)
+        cases = ("filesystem", "signature", "mounted", "holder", "missing", "changed", "other-disk", "staged")
+        for case in cases:
+            with self.subTest(case=case):
+                self.table = copy.deepcopy(original)
+                self.fs.clear()
+                self.signatures = []
+                self.mounted = self.children = False
+                (self.p.STATE / "windows-staging.json").unlink(missing_ok=True)
+                if case == "filesystem": self.fs[self.table["partitions"][2]["node"]] = dict(TYPE="ext4")
+                if case == "signature": self.signatures = [dict(type="gpt")]
+                if case == "mounted": self.mounted = True
+                if case == "holder": self.children = True
+                if case == "missing": self.table["partitions"].pop()
+                if case == "changed": self.table["partitions"][0]["size"] += 1
+                if case == "other-disk": self.table["id"] = "foreign"
+                if case == "staged": (self.p.STATE / "windows-staging.json").write_text("{}")
+                with self.assertRaises(self.p.Stop):
+                    self.p.recover_partition_plan(self.disk, plan, adopt=True)
+                self.assertFalse(self.receipt.exists())
+                self.assertFalse(self.formats())
+                self.assertFalse(self.appends())
+
+    def test_legacy_probe_failure_cannot_authorize_recovery(self):
+        plan = self.legacy_plan()
+        with patch.object(self.p, "filesystem", side_effect=self.p.Stop("failed", "unreadable")):
+            with self.assertRaisesRegex(self.p.Stop, "unreadable"):
+                self.p.recover_partition_plan(self.disk, plan, adopt=True)
+        self.assertFalse(self.receipt.exists())
+        self.assertFalse(self.formats())
+
+    def test_inspection_entry_point_does_not_change_status_or_start_preparation(self):
+        plan = self.legacy_plan()
+        file = self.root / "reviewed-plan.json"
+        file.write_text(json.dumps(plan))
+        for invalid in (False, True):
+            with self.subTest(invalid=invalid):
+                if invalid:
+                    self.signatures = [dict(type="ntfs")]
+                with patch.object(self.p.sys, "argv", ["monet-prepare-windows", "--inspect-recovery", str(file)]), \
+                        patch.object(self.p.os, "geteuid", return_value=0), \
+                        patch.object(self.p.Path, "is_dir", return_value=True), \
+                        patch.object(self.p, "root_disk", return_value=self.disk), \
+                        patch.object(self.p, "set_status") as status, \
+                        patch.object(self.p, "make_partitions") as prepare:
+                    self.assertEqual(self.p.prepare_main(), 2 if invalid else 0)
+                    status.assert_not_called()
+                    prepare.assert_not_called()
+                self.assertFalse(self.receipt.exists())
+
+    def test_legacy_recovery_refuses_preformatted_input_and_existing_record_changes(self):
+        plan = self.legacy_plan()
+        wrong = copy.deepcopy(plan)
+        wrong["owned"][0]["phase"] = "formatted"
+        with self.assertRaisesRegex(self.p.Stop, "unformatted partition plan"):
+            self.p.recover_partition_plan(self.disk, wrong, adopt=True)
+        self.p.save_partition_plan(wrong)
+        self.table["partitions"][1]["size"] -= 1
+        with self.assertRaises(self.p.Stop):
+            self.p.recover_partition_plan(self.disk, plan, adopt=True)
+        self.assertEqual(json.loads(self.receipt.read_text()), wrong)
+        self.assertFalse(self.formats())
 
     def test_changed_disk_reused_partition_or_new_user_partition_is_never_formatted(self):
         self.pending()

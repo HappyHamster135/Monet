@@ -17,6 +17,7 @@ works, and choosing Windows in the app menu runs it again.
     monet-prepare-windows --windows-zone     Monet's time zone as Windows names it (for a trip)
 """
 
+import argparse
 import fcntl
 import hashlib
 import json
@@ -131,7 +132,17 @@ def root_disk():
 
 
 def partitions(disk):
-    return lsblk("-o", "PATH,PARTLABEL,PARTN,SIZE,FSTYPE,PARTUUID,MOUNTPOINTS", disk)[0].get("children", [])
+    # Without NAME, lsblk's JSON is flat unless --tree is explicit. Assuming
+    # children then hides every existing partition and incorrectly reports that
+    # previously allocated Windows space is unavailable.
+    devices = lsblk("--tree", "-o", "PATH,TYPE,PARTLABEL,PARTN,SIZE,FSTYPE,PARTUUID,MOUNTPOINTS", disk)
+    if not isinstance(devices, list):
+        raise Stop("failed", "the disk's partition list could not be read")
+    roots = [item for item in devices if isinstance(item, dict) and isinstance(item.get("path"), str)
+             and os.path.realpath(item["path"]) == os.path.realpath(disk)]
+    if len(roots) != 1 or not isinstance(roots[0].get("children", []), list):
+        raise Stop("failed", "the disk's partition list could not be read")
+    return [part for part in roots[0].get("children", []) if isinstance(part, dict) and part.get("type") == "part"]
 
 
 def find_partition(disk, label):
@@ -321,6 +332,47 @@ def check_filesystem(found, wanted):
             raise Stop("failed", "a Windows setup partition contains an unexpected filesystem; it was not formatted")
     elif wanted["phase"] == "formatted" or wanted.get("fs_uuid"):
         raise Stop("failed", "a previously prepared Windows filesystem is missing; refusing to format it again")
+
+
+def recover_partition_plan(disk, plan, *, adopt=False):
+    """Explicit recovery of legacy, unformatted partitions against a reviewed full-disk plan.
+
+    Labels alone never select targets. Inspection is read-only; adoption records
+    ownership only, leaving all formatting to the normal, resumable preparation.
+    """
+    table = partition_table(disk)
+    if check_partition_plan(table, plan):
+        raise Stop("failed", "recovery requires both reserved partitions to exist already")
+    if any(p["phase"] != "planned" or p.get("fs_uuid") for p in plan["owned"]):
+        raise Stop("failed", "recovery requires an unformatted partition plan")
+    receipt = STATE / "windows-partitions.json"
+    if receipt.exists():
+        saved = json.loads(receipt.read_text())
+        check_partition_plan(table, saved)
+        if (saved.get("before") != plan["before"]
+                or [part_identity(p) for p in saved["owned"]] != [part_identity(p) for p in plan["owned"]]):
+            raise Stop("failed", "a different Windows preparation already owns these partitions")
+        return "The matching Windows preparation is already recorded; retry can resume it."
+    if (STATE / "windows-staging.json").exists():
+        raise Stop("failed", "a previous Windows deployment exists without its partition record")
+    targets = mapped_partitions(disk, plan)
+    if len(targets) != 2:
+        raise Stop("failed", "both reserved Windows partition devices must be available")
+    for target in targets:
+        # blkid checks filesystem contents directly; wipefs additionally detects
+        # partition-table/RAID signatures that are never safe to adopt as empty.
+        if filesystem(target["path"]):
+            raise Stop("failed", "a reserved partition contains data; recovery will not format it")
+        signatures = json.loads(run("wipefs", "--no-act", "--json", target["path"], capture=True, timeout=15))
+        if not isinstance(signatures, dict) or signatures.get("signatures") != []:
+            raise Stop("failed", "a reserved partition has signatures or could not be inspected safely")
+    if adopt:
+        # Recheck disk and kernel identities immediately before publishing the
+        # receipt. make_partitions repeats these and both filesystem checks.
+        if len(mapped_partitions(disk, plan)) != 2:
+            raise Stop("failed", "the reserved Windows devices changed during recovery")
+        save_partition_plan(plan)
+    return "Verified the two reserved Windows partitions; existing Monet partitions are preserved."
 
 
 def prepare_filesystem(part, wanted, plan):
@@ -893,12 +945,18 @@ def boot_setup_once(disk, partn):
 # ----------------------------------------------------------------- main
 
 def prepare_main():
-    args = sys.argv[1:]
-    if "--windows-zone" in args:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--iso", type=Path)
+    parser.add_argument("--windows-zone", action="store_true")
+    recovery = parser.add_mutually_exclusive_group()
+    recovery.add_argument("--inspect-recovery", type=Path, metavar="PLAN", help="check a reviewed legacy partition plan without changing storage")
+    recovery.add_argument("--recover-plan", type=Path, metavar="PLAN", help="adopt verified unformatted legacy partitions and prepare Windows")
+    args = parser.parse_args()
+    if args.windows_zone:
         # For a trip: Windows' clock in Monet's time zone (monet's request carries it).
         print(windows_zone())
         return 0
-    iso = Path(args[args.index("--iso") + 1]) if "--iso" in args else None
+    iso = args.iso
     if os.geteuid() != 0:
         print("monet-prepare-windows needs to run as root.", file=sys.stderr)
         return 1
@@ -906,12 +964,22 @@ def prepare_main():
         print("This PC didn't start in UEFI mode.", file=sys.stderr)
         return 1
 
+    if args.inspect_recovery:
+        try:
+            print(recover_partition_plan(root_disk(), json.loads(args.inspect_recovery.read_text())))
+            return 0
+        except (Stop, OSError, ValueError) as error:
+            print(f"Recovery inspection stopped: {error}", file=sys.stderr)
+            return 2
+
     set_status("preparing")
     progress(0, "Getting Windows ready")
     downloaded = False
     try:
         disk = root_disk()
         require_setup_payload()
+        if args.recover_plan:
+            log(recover_partition_plan(disk, json.loads(args.recover_plan.read_text()), adopt=True))
         resume = resume_staged_setup(disk)
         if resume:
             partn, phase = resume
