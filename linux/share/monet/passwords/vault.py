@@ -130,6 +130,8 @@ def category(folder):
 
 def internal_entry(folder, key):
     """Identify infrastructure by metadata, never by inspecting its secret."""
+    if folder == 'Monet Browser Connections':
+        return N_('Browser authorization data. Manage or revoke this connection in Connected apps; this is not a website password.')
     if folder.casefold() == 'xdg-desktop-portal':
         return N_('An app encryption key supplied by the desktop portal. This is not a website login. The app manages this key automatically.')
     if key.casefold().endswith(' safe storage') or folder.casefold().endswith(' keys'):
@@ -247,8 +249,9 @@ class NativeWallet:
 
 
 class Vault:
-    def __init__(self, transport):
+    def __init__(self, transport, app_id=APP_ID):
         self.transport = transport
+        self.app_id = app_id
         self.handle = -1
         self.wallet = ''
         self.selected = None
@@ -261,14 +264,14 @@ class Vault:
     def available(self):
         return {'wallets': [str(x) for x in self.call('wallets')], 'default': str(self.call('localWallet'))}
 
-    def unlock(self, wallet):
+    def unlock(self, wallet, listing=True):
         if wallet not in [str(x) for x in self.call('wallets')]:
             raise VaultError('Choose an existing vault. Create a vault in desktop vault settings first.')
-        handle = int(self.call('open', wallet, 0, APP_ID))
+        handle = int(self.call('open', wallet, 0, self.app_id))
         if handle < 0:
             raise VaultError('The vault was not unlocked. You can try again.')
         self.handle, self.wallet, self.selected = handle, wallet, None
-        return self.list_entries()
+        return self.list_entries() if listing else None
 
     def check(self):
         if (self.handle < 0 or not self.call('isOpen', self.handle)
@@ -286,16 +289,18 @@ class Vault:
         self.forget()
         if wallet:
             try:
-                self.call('disconnectApplication', wallet, APP_ID)
+                self.call('disconnectApplication', wallet, self.app_id)
             except VaultError:
                 pass  # Local values are cleared even if the provider disappeared.
 
     def list_entries(self):
         self.check()
         rows = []
-        for folder in dict.fromkeys(self.call('folderList', self.handle, APP_ID)):
+        for folder in dict.fromkeys(self.call('folderList', self.handle, self.app_id)):
             folder = str(folder)
-            for key in dict.fromkeys(self.call('entryList', self.handle, folder, APP_ID)):
+            if folder == 'Monet Browser Connections':
+                continue  # Authorization material belongs only in connection management.
+            for key in dict.fromkeys(self.call('entryList', self.handle, folder, self.app_id)):
                 key = str(key)
                 rows.append({'folder': folder, 'key': key, 'title': entry_title(folder, key),
                              'category': category(folder), 'internal': bool(internal_entry(folder, key))})
@@ -307,27 +312,27 @@ class Vault:
 
     def read(self, folder, key):
         self.check()
-        if not self.call('hasEntry', self.handle, folder, key, APP_ID):
+        if not self.call('hasEntry', self.handle, folder, key, self.app_id):
             raise VaultError('This entry no longer exists. Refresh the list.')
         note = internal_entry(folder, key)
         if note:
             return {'folder': folder, 'key': key, 'kind': 0, 'fields': {}, 'note': note,
                     'editable': False, 'signature': b'', 'internal': True}
-        kind = int(self.call('entryType', self.handle, folder, key, APP_ID))
+        kind = int(self.call('entryType', self.handle, folder, key, self.app_id))
         if kind == 2:
-            value = str(self.call('readPassword', self.handle, folder, key, APP_ID))
+            value = str(self.call('readPassword', self.handle, folder, key, self.app_id))
             if not readable(value):
                 raise VaultError('This password is too large or is not readable text.')
             raw, fields, note = value.encode('utf-8'), {'Password': value}, ''
         elif kind == 3:
-            raw = bytes(self.call('readMap', self.handle, folder, key, APP_ID))
+            raw = bytes(self.call('readMap', self.handle, folder, key, self.app_id))
             try:
                 fields = unpack_map(raw)
             except (ValueError, UnicodeError, struct.error):
                 raise VaultError('This app uses an unsupported field format. Its saved data has been left untouched.') from None
             note = ''
         elif kind == 1:
-            raw = bytes(self.call('readEntry', self.handle, folder, key, APP_ID))
+            raw = bytes(self.call('readEntry', self.handle, folder, key, self.app_id))
             fields, note = decode_stream(raw)
         else:
             raise VaultError('This entry has an unsupported type. Its saved data has been left untouched.')
@@ -358,9 +363,9 @@ class Vault:
             value = fields['Password']
             if not readable(value):
                 raise VaultError('This password is too large.')
-            result = self.call('writePassword', self.handle, before['folder'], before['key'], value, APP_ID)
+            result = self.call('writePassword', self.handle, before['folder'], before['key'], value, self.app_id)
         else:
-            result = self.call('writeMap', self.handle, before['folder'], before['key'], pack_map(fields), APP_ID)
+            result = self.call('writeMap', self.handle, before['folder'], before['key'], pack_map(fields), self.app_id)
         if int(result) != 0:
             raise VaultError('The vault could not save this entry. Your change was not confirmed.')
         saved = self.select(before['folder'], before['key'])
@@ -391,7 +396,7 @@ class Vault:
         self.check()
         records, self.pending_import = self.pending_import, []
         existing = set()
-        for key in dict.fromkeys(self.call('entryList', self.handle, PERSONAL_FOLDER, APP_ID)):
+        for key in dict.fromkeys(self.call('entryList', self.handle, PERSONAL_FOLDER, self.app_id)):
             if self.import_cancelled.is_set():
                 return {'added': 0, 'skipped': 0, 'incomplete': True, 'rows': []}
             fields = self.read(PERSONAL_FOLDER, str(key))['fields']
@@ -409,7 +414,7 @@ class Vault:
                     continue
                 title = record['title']
                 suffix = 1
-                while self.call('hasEntry', self.handle, PERSONAL_FOLDER, title, APP_ID):
+                while self.call('hasEntry', self.handle, PERSONAL_FOLDER, title, self.app_id):
                     suffix += 1
                     if suffix > 10000:
                         raise VaultError('Too many logins have the same title.')
@@ -433,12 +438,12 @@ class Vault:
             raise VaultError('Enter or generate a password.')
         fields = {'Username': username, 'Password': password, 'Website': website, 'Notes': notes}
         raw = pack_map(fields)
-        if not self.call('hasFolder', self.handle, PERSONAL_FOLDER, APP_ID):
-            if not self.call('createFolder', self.handle, PERSONAL_FOLDER, APP_ID):
+        if not self.call('hasFolder', self.handle, PERSONAL_FOLDER, self.app_id):
+            if not self.call('createFolder', self.handle, PERSONAL_FOLDER, self.app_id):
                 raise VaultError('The vault could not create a place for your logins.')
-        if self.call('hasEntry', self.handle, PERSONAL_FOLDER, title, APP_ID):
+        if self.call('hasEntry', self.handle, PERSONAL_FOLDER, title, self.app_id):
             raise VaultError('A login already has that title. Choose another title or edit the existing login.')
-        if int(self.call('writeMap', self.handle, PERSONAL_FOLDER, title, raw, APP_ID)) != 0:
+        if int(self.call('writeMap', self.handle, PERSONAL_FOLDER, title, raw, self.app_id)) != 0:
             raise VaultError('The vault could not save this login.')
         saved = self.select(PERSONAL_FOLDER, title)
         if saved['fields'] != fields:
@@ -449,16 +454,40 @@ class Vault:
         before = self.unchanged()
         if not before['editable']:
             raise VaultError('App-managed binary data cannot be deleted here. Manage it in the original app.')
-        if int(self.call('removeEntry', self.handle, before['folder'], before['key'], APP_ID)) != 0:
+        if int(self.call('removeEntry', self.handle, before['folder'], before['key'], self.app_id)) != 0:
             raise VaultError('The vault could not remove this entry.')
-        if self.call('hasEntry', self.handle, before['folder'], before['key'], APP_ID):
+        if self.call('hasEntry', self.handle, before['folder'], before['key'], self.app_id):
             raise VaultError('The entry is still present. Refresh before retrying.')
         self.selected = None
         return self.list_entries()
 
     def apps(self):
         self.check()
-        return sorted(str(x) for x in self.call('users', self.wallet) if str(x) != APP_ID)
+        return sorted(str(x) for x in self.call('users', self.wallet) if str(x) != self.app_id)
+
+    def browser_connections(self):
+        self.check()
+        folder = 'Monet Browser Connections'
+        result = []
+        for key in dict.fromkeys(self.call('entryList', self.handle, folder, self.app_id)):
+            fields = unpack_map(self.call('readMap', self.handle, folder, str(key), self.app_id))
+            try: sites = json.loads(fields.get('Sites', '[]'))
+            except ValueError: sites = []
+            result.append({'id': str(key), 'name': fields.get('Name', 'Zen'),
+                           'sites': [s for s in sites if isinstance(s, str)] if isinstance(sites, list) else []})
+        return result
+
+    def connections(self):
+        return {'apps': self.apps(), 'browsers': self.browser_connections()}
+
+    def revoke_browser(self, identifier):
+        self.check()
+        if identifier not in [row['id'] for row in self.browser_connections()]:
+            raise VaultError('This browser connection no longer exists.')
+        folder = 'Monet Browser Connections'
+        if int(self.call('removeEntry', self.handle, folder, identifier, self.app_id)) != 0 or self.call('hasEntry', self.handle, folder, identifier, self.app_id):
+            raise VaultError('The browser connection could not be revoked.')
+        return self.connections()
 
     def disconnect(self, app):
         if app not in self.apps():

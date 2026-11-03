@@ -67,7 +67,7 @@ class Worker(QObject):
                 self.vault = Vault(self.factory())
             if action == 'forget':
                 self.vault.release()
-            elif action in ('available', 'unlock', 'list_entries', 'select', 'add', 'save', 'delete', 'apps', 'disconnect', 'lock', 'check', 'prepare_import', 'import_logins', 'cancel_import'):
+            elif action in ('available', 'unlock', 'list_entries', 'select', 'add', 'save', 'delete', 'apps', 'disconnect', 'lock', 'check', 'prepare_import', 'import_logins', 'cancel_import', 'connections', 'revoke_browser'):
                 result = getattr(self.vault, action)(*args)
             else:
                 raise VaultError('This action is not available.')
@@ -201,7 +201,7 @@ class Editor(QDialog):
         self.fields = {}
         self.preserved = {}
         layout = QVBoxLayout(self)
-        info = QLabel(tr('Changes are saved in the encrypted desktop vault. Website autofill is managed by your browser.'))
+        info = QLabel(tr('Changes are saved in your encrypted vault. Connected browsers can fill logins on matching websites.'))
         info.setWordWrap(True); layout.addWidget(info)
         form = QFormLayout(); form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.title = QLineEdit(entry['key'] if entry else '')
@@ -269,6 +269,7 @@ class PasswordsWindow(QMainWindow):
         self.token = 0
         self.busy = False
         self.unlocked = False
+        self.browser_connected = False
         self.rows = []
         self.entry = None
         self.fields = []
@@ -355,8 +356,13 @@ class PasswordsWindow(QMainWindow):
         title = QLabel(tr('Connected apps')); title.setFont(QFont('Inter', 20, QFont.DemiBold)); app_layout.addWidget(title)
         text = QLabel(tr('Apps currently connected through the desktop vault. Disconnect closes that connection; it does not permanently block the app. Browser autofill is controlled in the browser.'))
         text.setWordWrap(True); app_layout.addWidget(text)
+        self.browser_list = QListWidget(); self.browser_list.setMaximumHeight(180)
+        label = QLabel(tr('Saved browser connections')); app_layout.addWidget(label); app_layout.addWidget(self.browser_list)
+        forget_browser = QPushButton(tr('Revoke selected browser')); forget_browser.clicked.connect(self.revoke_browser)
+        app_layout.addWidget(forget_browser)
+        label = QLabel(tr('Current desktop connections')); app_layout.addWidget(label)
         self.app_list = QListWidget(); app_layout.addWidget(self.app_list, 1)
-        reload_apps = QPushButton(tr('Refresh connections')); reload_apps.clicked.connect(lambda: self.dispatch('apps'))
+        reload_apps = QPushButton(tr('Refresh connections')); reload_apps.clicked.connect(lambda: self.dispatch('connections'))
         app_layout.addWidget(reload_apps)
         disconnect = QPushButton(tr('Disconnect selected app')); disconnect.clicked.connect(self.disconnect_app)
         app_layout.addWidget(disconnect)
@@ -373,11 +379,11 @@ class PasswordsWindow(QMainWindow):
         apply = QPushButton(tr('Apply unlocking preference')); apply.clicked.connect(self.apply_policy); pref.addWidget(apply)
         self.pref_message = QLabel(tr('Some vault settings take effect at your next sign-in.'))
         self.pref_message.setWordWrap(True); pref.addWidget(self.pref_message)
-        browser = QPushButton(tr('Browser passwords and autofill')); browser.clicked.connect(lambda: self.helper_action('wallet-browser'))
+        browser = QPushButton(tr('Connect Zen for save and autofill')); browser.clicked.connect(self.connect_zen)
         pref.addWidget(browser)
         accounts = QPushButton(tr('Sign-in settings')); accounts.clicked.connect(lambda: self.helper_action('open', 'users'))
         pref.addWidget(accounts)
-        text = QLabel(tr('App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. New logins added here can be copied into apps; they do not automatically appear in browser autofill.'))
+        text = QLabel(tr('App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. Connect Zen to save logins with your approval and autofill matching websites. Browser connections can be revoked in Connected apps.'))
         text.setWordWrap(True); pref.addWidget(text); pref.addStretch()
         self.pages.addWidget(prefs)
         self.apply_theme()
@@ -470,6 +476,15 @@ class PasswordsWindow(QMainWindow):
                 self.rows.append(row); self.navigation.setCurrentRow(0); self.search.clear(); self.filter_rows()
                 self.show_entry(result)
             self.message.setText(tr('Saved in your encrypted vault.') if action in ('add', 'save') else '')
+        elif action in ('connections', 'revoke_browser'):
+            self.browser_connected = bool(result['browsers'])
+            self.app_list.clear(); self.app_list.addItems(result['apps'])
+            self.browser_list.clear()
+            for row in result['browsers']:
+                item = QListWidgetItem(row['name'] + ' · ' + tr('%1 allowed websites').replace('%1', str(len(row['sites']))))
+                item.setData(Qt.UserRole, row['id']); self.browser_list.addItem(item)
+            self.app_message.setText(tr('Revoked browsers must connect again. Saved logins are kept.') if action == 'revoke_browser' else '')
+            if not self.entry and self.navigation.currentRow() == 0: self.clear_details()
         elif action in ('apps', 'disconnect'):
             self.app_list.clear(); self.app_list.addItems(result)
             self.app_message.setText('' if result else tr('No connected desktop apps reported.'))
@@ -479,6 +494,8 @@ class PasswordsWindow(QMainWindow):
         if self.pending_check and action != 'check' and self.unlocked:
             self.pending_check = False
             self.dispatch('check')
+        elif action in ('unlock', 'list_entries') and not error and self.unlocked:
+            self.dispatch('connections')
 
     def update_controls(self):
         self.wallets.setEnabled(not self.busy)
@@ -536,11 +553,11 @@ class PasswordsWindow(QMainWindow):
         box.addStretch()
         label = QLabel(tr('Your logins, in one place') if self.navigation.currentRow() == 0 else tr('Select an entry'))
         label.setObjectName('entryTitle'); label.setFont(QFont('Inter', 18, QFont.DemiBold)); label.setWordWrap(True); box.addWidget(label)
-        text = (tr('Add a login or import your saved website passwords from Zen, Firefox or Chromium. Browser encryption keys are kept separately in App data.')
+        text = ((tr('Zen is connected. After signing in to a website, choose New or Update in the browser banner and approve Monet’s prompt. Your saved logins will appear here.') if self.browser_connected else tr('Connect Zen to save and autofill your website logins. You can also add an account manually or import an existing export.'))
                 if self.navigation.currentRow() == 0 else tr('Choose an item from the list to see its details.'))
         hint = QLabel(text); hint.setObjectName('muted'); hint.setWordWrap(True); box.addWidget(hint)
-        if self.navigation.currentRow() == 0:
-            browser = QPushButton(tr('Open browser passwords')); browser.clicked.connect(lambda: self.helper_action('wallet-browser'))
+        if self.navigation.currentRow() == 0 and not self.browser_connected:
+            browser = QPushButton(tr('Connect Zen')); browser.clicked.connect(self.connect_zen)
             box.addWidget(browser, alignment=Qt.AlignLeft)
         box.addStretch(); self.details.setWidget(content)
 
@@ -635,6 +652,25 @@ class PasswordsWindow(QMainWindow):
         if dialog.exec() == QMessageBox.Yes:
             self.dispatch('delete')
 
+    def connect_zen(self):
+        # Setup opens only the official signed connector page and registers the native host.
+        program = str(Path(self.helper).with_name('monet-passwords'))
+        try:
+            subprocess.Popen([program, '--connect-zen'], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            self.pref_message.setText(tr('Finish connecting in Zen. If Zen was already open, restart it to enable the native connection.'))
+        except OSError:
+            self.pref_message.setText(tr('Zen connection setup could not be opened.'))
+
+    def revoke_browser(self):
+        item = self.browser_list.currentItem()
+        if not item or not self.unlocked or self.busy: return
+        self.conceal()
+        if QMessageBox.question(self, tr('Revoke browser connection?'),
+                tr('This browser will lose access to Monet passwords until you connect it again. Your saved logins will be kept.'),
+                QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel) == QMessageBox.Yes:
+            self.dispatch('revoke_browser', [item.data(Qt.UserRole)])
+
     def disconnect_app(self):
         item = self.app_list.currentItem()
         if not item or not self.unlocked or self.busy: return
@@ -651,7 +687,7 @@ class PasswordsWindow(QMainWindow):
             self.filter_rows()
         elif page == 3:
             self.pages.setCurrentIndex(1)
-            if self.unlocked: self.dispatch('apps')
+            if self.unlocked: self.dispatch('connections')
             else: self.app_message.setText(tr('Open your vault from Saved logins first.'))
         else:
             self.pages.setCurrentIndex(2); self.load_policy()
@@ -699,10 +735,11 @@ class PasswordsWindow(QMainWindow):
 
     def clear_session(self):
         self.token += 1; self.busy = False; self.unlocked = False
+        self.browser_connected = False
         self.pending_check = False
         self.cancel_import_view()
         if self.editor: self.editor.reject(); self.editor = None
-        self.clear_details(); self.rows = []; self.list.clear(); self.app_list.clear()
+        self.clear_details(); self.rows = []; self.list.clear(); self.app_list.clear(); self.browser_list.clear()
         self.clipboard.clear()
         self.request.emit(self.token, 'forget', [])
         self.message.setText(tr('Password view locked. Open your vault to continue.'))
@@ -740,6 +777,11 @@ class PasswordsWindow(QMainWindow):
             self.conceal()
         if event.type() == QEvent.ApplicationPaletteChange and hasattr(self, 'pages'):
             self.apply_theme()
+        if (event.type() == QEvent.WindowActivate and hasattr(self, 'pages')
+                and self.unlocked and not self.busy and not self.editor and not self.import_dialog):
+            # Refresh browser saves when returning to the app, without polling or
+            # replacing a form the user is editing.
+            self.dispatch('connections' if self.navigation.currentRow() == 3 else 'list_entries')
         return super().event(event)
 
     def closeEvent(self, event):

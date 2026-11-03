@@ -31,11 +31,11 @@ jobs:
       - name: Shell scripts
         run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh tools/build-settings-style.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile linux/libexec/monet-passwords linux/libexec/monet-passwords-browser linux/share/monet/passwords/*.py tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi >/dev/null
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl >/dev/null
           python3 tools/test.py
 
   linux:

@@ -1,8 +1,10 @@
 """Actual typed D-Bus calls, isolated from the desktop vault in dbus-run-session."""
 import os
+import importlib.util
 from pathlib import Path
 import subprocess
 import sys
+import time
 import unittest
 from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,12 +55,33 @@ class PasswordsBus(unittest.TestCase):
             if not window.unlocked: break
         self.assertFalse(window.unlocked)
         window.dispatch('unlock', ['fixture']); wait()
+        watcher = None
+        if importlib.util.find_spec('nacl'):
+            from browser_host import LockWatcher
+            notifications = []
+            watcher = LockWatcher(notifications.append)
+            watcher.collection_path = '/org/freedesktop/secrets/collection/fixture'
+            self.addCleanup(watcher.close)
+            for _ in range(100):
+                time.sleep(.01)  # Let the GLib watcher thread run alongside Qt.
+                QTest.qWait(10)
+                if not watcher.blocked.is_set(): break
+            self.assertFalse(watcher.blocked.is_set())
+            transport.call('emitOtherLock'); time.sleep(.1); QTest.qWait(20)
+            self.assertFalse(watcher.vault_blocked.is_set())
         transport.lock_wallet('fixture')
         for _ in range(200):
             QTest.qWait(10)
             if not window.unlocked: break
         self.assertFalse(window.unlocked)
         self.assertTrue(transport.wallet_locked('fixture'))
+        if watcher:
+            for _ in range(100):
+                time.sleep(.01)
+                QTest.qWait(10)
+                if watcher.vault_blocked.is_set(): break
+            self.assertTrue(watcher.vault_blocked.is_set())
+            self.assertIn({'action': 'database-locked'}, notifications)
         window.close(); window.thread.wait(2000)
         vault.lock()
 

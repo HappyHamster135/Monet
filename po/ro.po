@@ -9194,11 +9194,6 @@ msgstr ""
 msgid "Add login"
 msgstr ""
 
-#: linux/share/monet/passwords/app.py:139
-msgid ""
-"Changes are saved in the encrypted desktop vault. Website autofill is managed by your browser."
-msgstr ""
-
 #: linux/share/monet/passwords/app.py:144
 msgid "Title"
 msgstr ""
@@ -9287,17 +9282,8 @@ msgstr ""
 msgid "Some vault settings take effect at your next sign-in."
 msgstr ""
 
-#: linux/share/monet/passwords/app.py:299
-msgid "Browser passwords and autofill"
-msgstr ""
-
 #: linux/share/monet/passwords/app.py:301
 msgid "Sign-in settings"
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:303
-msgid ""
-"App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. New logins added here can be copied into apps; they do not automatically appear in browser autofill."
 msgstr ""
 
 #: linux/share/monet/passwords/app.py:341
@@ -9589,17 +9575,8 @@ msgstr ""
 msgid "Select an entry"
 msgstr ""
 
-#: linux/share/monet/passwords/app.py:516
-msgid ""
-"Add a login or import your saved website passwords from Zen, Firefox or Chromium. Browser encryption keys are kept separately in App data."
-msgstr ""
-
 #: linux/share/monet/passwords/app.py:517
 msgid "Choose an item from the list to see its details."
-msgstr ""
-
-#: linux/share/monet/passwords/app.py:520
-msgid "Open browser passwords"
 msgstr ""
 
 #: linux/share/monet/passwords/app.py:530
@@ -9671,4 +9648,344 @@ msgstr ""
 
 #: linux/share/monet/passwords/vault.py:415
 msgid "Too many logins have the same title."
+msgstr ""
+
+
+#: linux/share/monet/passwords/app.py:204
+msgid ""
+"Changes are saved in your encrypted vault. Connected browsers can fill logins on matching websites."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:359
+msgid "Saved browser connections"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:360
+msgid "Revoke selected browser"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:362
+msgid "Current desktop connections"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:381
+msgid "Connect Zen for save and autofill"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:385
+msgid ""
+"App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. Connect Zen to save logins with your approval and autofill matching websites. Browser connections can be revoked in Connected apps."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:482
+msgid "%1 allowed websites"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:484
+msgid "Revoked browsers must connect again. Saved logins are kept."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:551
+msgid ""
+"Connect Zen to save and autofill your website logins. You can also add an account manually or import an existing export."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:555 linux/share/monet/passwords/browser_setup.py:95
+msgid "Connect Zen"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:656
+msgid ""
+"Finish connecting in Zen. If Zen was already open, restart it to enable the native connection."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:658
+msgid "Zen connection setup could not be opened."
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:664
+msgid "Revoke browser connection?"
+msgstr ""
+
+#: linux/share/monet/passwords/app.py:665
+msgid ""
+"This browser will lose access to Monet passwords until you connect it again. Your saved logins will be kept."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:20
+msgid "Monet Passwords"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:24
+msgid "Connect Zen to your passwords?"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:24
+msgid "Save this login?"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:25
+msgid "Update this password?"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:25
+msgid "Allow autofill on this website?"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:29
+msgid ""
+"Zen uses the signed KeePassXC-Browser connector to talk to Monet. Saving and updating logins requires your approval. You can revoke this browser connection at any time."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:31
+msgid "Browser connection name"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:39
+msgid "No username"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:40
+msgid ""
+"The new password will replace this account’s saved password. Nothing changes until you approve."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:40
+msgid ""
+"Store this login in your encrypted Monet vault and offer it on this website next time."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:43
+msgid ""
+"Only logins saved for this exact website will be shared. Monet never submits the sign-in form for you."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:45
+msgid "Remember this website for this browser"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:48
+msgid "Save login"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:48
+msgid "Update password"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_prompt.py:48
+msgid "Allow autofill"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:21 linux/share/monet/passwords/browser_protocol.py:23
+msgid "Invalid browser message."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:25
+msgid "Invalid browser message size."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:39 linux/share/monet/passwords/browser_protocol.py:45
+msgid "Incomplete native message."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:41
+msgid "Native message exceeds the limit."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:48 linux/share/monet/passwords/browser_protocol.py:49
+msgid "Invalid native message."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:55
+msgid "Too many matching accounts."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:89
+msgid "Connect this browser again."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:91
+msgid "Browser nonce was reused. Reconnect the browser."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:98
+msgid "Browser action mismatch."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:115
+msgid "Browser identity was not provided."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_protocol.py:130
+msgid "This browser feature is not supported by Monet Passwords."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:22
+msgid "The existing Monet browser preference block needs review."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:30
+msgid "Install the Monet browser helper first."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:35
+msgid ""
+"Another password manager already owns this browser connector. Disconnect it before connecting Monet."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:42
+msgid ""
+"Open your default Zen profile once, then connect it from Monet Passwords."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:44
+msgid "This Zen profile location needs manual setup."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:46
+msgid "Invalid Zen profile location."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:49
+msgid "The Zen preference file is too large to update safely."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:56
+msgid ""
+"The browser connector is not installed completely. Update Monet and try again."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:84
+msgid "Zen could not be connected. The previous configuration was restored."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:95
+msgid ""
+"Install the signed KeePassXC-Browser connector in Zen, then restart Zen. Open the connector and choose Connect; approve the connection in Monet Passwords. Enable single-account autofill in the connector’s settings if you want fields filled automatically."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:99
+msgid "Zen setup could not finish"
+msgstr ""
+
+#: linux/share/monet/passwords/browser_setup.py:99
+msgid "Zen setup failed. Your saved logins were not changed."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:24
+msgid "This website address is not supported."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:41
+msgid ""
+"Autofill requires an exact HTTPS website match. Local development addresses are also supported."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:47
+msgid "The form submits to a different website. Autofill was blocked."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:65
+msgid "The screen is locked. Unlock Monet to use saved passwords."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:70
+msgid "The screen is locked."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:76
+msgid "Open Monet Passwords and unlock your vault."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:87
+msgid "This browser is not connected."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:89
+msgid ""
+"This browser connection has been revoked. Connect it again in Monet Passwords."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:93
+msgid "This browser connection could not be read."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:99 linux/share/monet/passwords/browser_store.py:101
+msgid "The browser connection could not be saved."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:103
+msgid "The browser connection could not be verified."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:108
+msgid "The browser key changed. Connect again."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:113
+msgid "Invalid browser identification key."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:117
+msgid "Browser connection cancelled."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:129
+msgid "This browser is not authorized."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:135
+msgid "Connect this browser before using passwords."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:152
+msgid "Too many matching logins. Open Monet Passwords to choose an account."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:170
+msgid "Browser permissions changed. Try again."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:187
+msgid "Enter a valid username and password."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:192
+msgid "The selected login does not belong to this website."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:194
+msgid ""
+"More than one login matches. Choose the account to update in the browser."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:201
+msgid "Saving cancelled. Your saved login was not changed."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:210
+msgid "This login was saved elsewhere. Refresh before trying again."
+msgstr ""
+
+#: linux/share/monet/passwords/browser_store.py:215
+msgid "Too many logins with the same title."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:134
+msgid ""
+"Browser authorization data. Manage or revoke this connection in Connected apps; this is not a website password."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:486
+msgid "This browser connection no longer exists."
+msgstr ""
+
+#: linux/share/monet/passwords/vault.py:489
+msgid "The browser connection could not be revoked."
+msgstr ""
+
+
+#: linux/share/monet/passwords/app.py:556
+msgid ""
+"Zen is connected. After signing in to a website, choose New or Update in the browser banner and approve Monet’s prompt. Your saved logins will appear here."
 msgstr ""

@@ -16,10 +16,20 @@ bus = dbus.SessionBus()
 assert not bus.name_has_owner('org.kde.kwalletd6') and not bus.name_has_owner('org.freedesktop.secrets'), 'Refuse a real desktop vault bus'
 name = dbus.service.BusName('org.kde.kwalletd6', bus)
 secret_name = dbus.service.BusName('org.freedesktop.secrets', bus)
+screen_name = dbus.service.BusName('org.freedesktop.ScreenSaver', bus)
+class Screen(dbus.service.Object):
+    def __init__(self): super().__init__(bus, '/ScreenSaver'); self.active = False
+    @dbus.service.method('org.freedesktop.ScreenSaver', out_signature='b')
+    def GetActive(self): return self.active
+    @dbus.service.signal('org.freedesktop.ScreenSaver', signature='b')
+    def ActiveChanged(self, active): pass
+    @dbus.service.method('org.monet.Test', in_signature='b')
+    def SetActive(self, active): self.active = bool(active); self.ActiveChanged(active)
+screen = Screen()
 collection_path = '/org/freedesktop/secrets/collection/fixture'
 class Collection(dbus.service.Object):
-    def __init__(self):
-        super().__init__(bus, collection_path); self.locked = False
+    def __init__(self, path=collection_path):
+        super().__init__(bus, path); self.locked = False
     @dbus.service.method('org.freedesktop.DBus.Properties', in_signature='ss', out_signature='v')
     def Get(self, interface, prop):
         return dbus.String('fixture') if prop == 'Label' else dbus.Boolean(self.locked)
@@ -36,6 +46,7 @@ class SecretService(dbus.service.Object):
         collection.PropertiesChanged('org.freedesktop.Secret.Collection', {'Locked': dbus.Boolean(True)}, [])
         return paths, dbus.ObjectPath('/')
 collection = Collection(); secret_service = SecretService()
+other_collection = Collection('/org/freedesktop/secrets/collection/other')
 api = 'org.kde.KWallet'
 class Service(dbus.service.Object):
     def __init__(self):
@@ -44,10 +55,14 @@ class Service(dbus.service.Object):
     def wallets(self): return ['fixture']
     @dbus.service.method(api, out_signature='s')
     def localWallet(self): return 'fixture'
+    @dbus.service.method(api)
+    def emitOtherLock(self):
+        other_collection.PropertiesChanged('org.freedesktop.Secret.Collection', {'Locked': dbus.Boolean(True)}, [])
     @dbus.service.method(api, in_signature='sxs', out_signature='i')
     def open(self, wallet, window, app):
-        assert int(window) == 0 and app == 'Monet Passwords'
+        assert int(window) == 0 and app in ('Monet Passwords', 'Monet Passwords for Zen')
         collection.locked = False
+        collection.PropertiesChanged('org.freedesktop.Secret.Collection', {'Locked': dbus.Boolean(False)}, [])
         return self.data.call('open', wallet, window, app)
     @dbus.service.method(api, in_signature='i', out_signature='b')
     def isOpen(self, handle): return self.data.call('isOpen', handle)
@@ -72,9 +87,17 @@ class Service(dbus.service.Object):
     @dbus.service.method(api, in_signature='issss', out_signature='i')
     def writePassword(self, handle, folder, key, value, app): return self.data.call('writePassword', handle, folder, key, value, app)
     @dbus.service.method(api, in_signature='issays', out_signature='i')
-    def writeMap(self, handle, folder, key, value, app): return self.data.call('writeMap', handle, folder, key, bytes(value), app)
+    def writeMap(self, handle, folder, key, value, app):
+        result = self.data.call('writeMap', handle, folder, key, bytes(value), app)
+        self.folderUpdated('fixture', folder)
+        return result
+    @dbus.service.signal(api, signature='ss')
+    def folderUpdated(self, wallet, folder): pass
     @dbus.service.method(api, in_signature='isss', out_signature='i')
-    def removeEntry(self, handle, folder, key, app): return self.data.call('removeEntry', handle, folder, key, app)
+    def removeEntry(self, handle, folder, key, app):
+        result = self.data.call('removeEntry', handle, folder, key, app)
+        self.folderUpdated('fixture', folder)
+        return result
     @dbus.service.method(api, in_signature='sb', out_signature='i')
     def close(self, wallet, force): return self.data.call('close', wallet, force)
     @dbus.service.method(api, in_signature='s', out_signature='as')

@@ -44,7 +44,7 @@ FROM ${BASE} AS runtime
 # lines and pages in the office apps (the image has Liberation for Arial, Times and Courier).
 # rclone puts OneDrive in Files (Settings → Storage → OneDrive).
 RUN dnf5 -y install wimlib-utils ntfsprogs ntfs-3g dosfstools efibootmgr python3 python3-numpy python3-pillow rsync \
-    python3-pyside6 python3-dbus python3-gobject at-spi2-core lz4-libs binutils \
+    python3-pyside6 python3-pynacl python3-dbus python3-gobject at-spi2-core lz4-libs binutils \
     cryptsetup tpm2-tss rclone \
  && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script umu-launcher \
     google-carlito-fonts google-crosextra-caladea-fonts \

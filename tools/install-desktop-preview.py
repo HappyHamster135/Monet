@@ -20,7 +20,7 @@ HELPERS = Path.home() / '.local/libexec/monet-desktop-preview'
 PRIVATE = DATA / 'monet-desktop-preview'
 LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-files-tools', 'monet-system-info', 'monet-weather', 'monet-light', 'monet-daylight'}
 LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
-LOCAL |= {'monet-session', 'monet-passwords'}
+LOCAL |= {'monet-session', 'monet-passwords', 'monet-passwords-browser'}
 
 
 def digest(path):
@@ -110,8 +110,8 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
             add(PRIVATE / 'task-manager' / name, (monitor_bundle / name).read_bytes())
     for name in LOCAL:
         add(HELPERS / name, render(ROOT / 'linux/libexec' / name,
-            private_data=name in {'monet-settings', 'monet-games', 'monet-passwords'},
-            local_helpers=name in {'monet-settings', 'monet-games', 'monet-light', 'monet-passwords'}), 0o755)
+            private_data=name in {'monet-settings', 'monet-games', 'monet-passwords', 'monet-passwords-browser'},
+            local_helpers=name in {'monet-settings', 'monet-games', 'monet-light', 'monet-passwords', 'monet-passwords-browser'}), 0o755)
     # Preserve the installed launch command and all existing desktop metadata.
     # KWin's supported per-application declaration enables minimized-window
     # notifications; it does not disable compositor permission checks.
