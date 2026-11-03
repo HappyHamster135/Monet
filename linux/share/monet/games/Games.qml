@@ -339,7 +339,7 @@ MonetWindow {
 
     // Under the item it's for (a cover, or a page's "more"), or where the pointer is.
     function showMenu(game, item, below) {
-        const items = [["play", game.plays === "windows" && game.windows !== "" ? i18n("Play on Windows") : i18n("Play")]]
+        const items = [["play", game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")]]
         if (current === null)
             items.push(["page", i18n("Open its page")])
         if (game.plays === "monet" && game.windows !== "")

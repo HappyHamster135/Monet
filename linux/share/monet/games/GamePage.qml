@@ -205,7 +205,7 @@ Flickable {
                     id: play
                     size: 17
                     speed: page.tone.speed
-                    text: page.game.plays === "windows" && page.game.windows !== "" ? i18n("Play on Windows") : i18n("Play")
+                    text: page.game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")
                     onClicked: page.app.play(page.game)
                 }
                 Item { Layout.fillWidth: true }

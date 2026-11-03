@@ -15,6 +15,7 @@ mod trip;
 mod windows_setup;
 
 use std::fs;
+use std::ffi::CStr;
 use std::io::{BufRead, IsTerminal, Write};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -545,6 +546,9 @@ fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<
     if checkpoint.as_deref().is_some_and(|id| !trip::valid_checkpoint(id)) {
         return Err("Invalid return checkpoint.".into());
     }
+    // Boot variables need root, but reboot checks must run as the desktop user.
+    // Otherwise systemctl mistakes that user's own session for another user.
+    let mut restart = desktop_restart_command()?;
     let boot = boot_id()?;
     // Windows is shut down right now, the safest moment to prepare it.
     if !windows_setup_status().is_some_and(Outcome::is_done) {
@@ -634,17 +638,39 @@ fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<
         return Ok(());
     }
     // Through the firmware: a soft reboot or kexec would skip BootNext.
-    let status = Command::new("systemctl")
-        .args(["--check-inhibitors=yes", "reboot"])
-        .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
-        .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1")
-        .status();
+    let status = restart.status();
     if status.is_ok_and(|status| status.success()) {
         Ok(())
     } else {
         undo(&mut efi)?;
         Err(t!("The restart was blocked. The switch to Windows was cancelled. Save your work and try again.").into())
     }
+}
+
+fn restart_command_for(user: &str) -> Command {
+    // runuser establishes the user's primary/supplementary groups as well as
+    // UID. Keep inhibitor and other-user checks; never use reboot -i/--force.
+    let mut command = Command::new("runuser");
+    command.args(["--user", user, "--", "systemctl", "--check-inhibitors=yes", "reboot"])
+        .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
+        .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1");
+    command
+}
+
+fn desktop_restart_command() -> Res<Command> {
+    let uid = std::env::var("PKEXEC_UID").ok().and_then(|value| value.parse::<u32>().ok())
+        .filter(|uid| *uid != 0)
+        .ok_or_else(|| t!("Monet couldn't identify your desktop account. Start Windows from your desktop and try again.").to_string())?;
+    // SAFETY: getpwuid returns a libc-owned record; copy its name immediately,
+    // before any other account lookup. This command-line helper is single-threaded.
+    let user = unsafe {
+        let entry = libc::getpwuid(uid);
+        if entry.is_null() || (*entry).pw_name.is_null() {
+            return Err(t!("Your desktop account could not be found. The switch was cancelled.").into());
+        }
+        CStr::from_ptr((*entry).pw_name).to_str().map_err(|e| e.to_string())?.to_owned()
+    };
+    Ok(restart_command_for(&user))
 }
 
 fn await_saved_apps(input: &mut impl BufRead, output: &mut impl Write) -> Res<()> {
@@ -1200,6 +1226,17 @@ fn show_error(message: &str, gui: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn restart_uses_the_desktop_identity_and_retains_inhibitor_checks() {
+        let command = restart_command_for("desktop-user");
+        assert_eq!(command.get_program(), "runuser");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["--user", "desktop-user", "--", "systemctl", "--check-inhibitors=yes", "reboot"]);
+        let env: Vec<_> = command.get_envs().collect();
+        assert!(env.iter().any(|(key, value)| *key == "SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT" && *value == Some(std::ffi::OsStr::new("1"))));
+        assert!(env.iter().any(|(key, value)| *key == "SYSTEMCTL_SKIP_AUTO_KEXEC" && *value == Some(std::ffi::OsStr::new("1"))));
+    }
 
     #[test]
     fn reboot_requires_the_live_desktop_workers_explicit_acceptance() {

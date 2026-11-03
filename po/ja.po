@@ -8783,3 +8783,12 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:7005
 msgid "Completed"
 msgstr ""
+
+#: crates/monet/src/main.rs:663
+msgid ""
+"Monet couldn't identify your desktop account. Start Windows from your desktop and try again."
+msgstr ""
+
+#: crates/monet/src/main.rs:669
+msgid "Your desktop account could not be found. The switch was cancelled."
+msgstr ""

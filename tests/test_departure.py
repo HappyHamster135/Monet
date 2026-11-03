@@ -48,7 +48,9 @@ class CancelledDeparture(unittest.TestCase):
         helper = main[main.index("fn helper_switch("):main.index("fn await_saved_apps(")]
         self.assertLess(helper.index("await_saved_apps("), helper.index("request::write("))
         self.assertLess(helper.index("await_saved_apps("), helper.index("boot::set_boot_next("))
-        self.assertIn('"--check-inhibitors=yes"', helper)
+        restart = main[main.index("fn restart_command_for("):main.index("fn desktop_restart_command(")]
+        self.assertIn('"--check-inhibitors=yes"', restart)
+        self.assertIn('Command::new("runuser")', restart)
         self.assertNotIn('"--force"', helper)
 
     def test_ui_safety_paths_in_separate_qt_process(self):
@@ -87,6 +89,7 @@ if os.environ.get("MONET_DEPARTURE_UI_TEST") == "1":
             self.addCleanup(self.capture.stop)
             self.window = leave.Departure(self.quick, "/test/monet")
             self.window.process = Mock()
+            self.window.process.readAllStandardError.return_value = b""
             self.window.phase = "close"
             self.window.ident = "a" * 32
             self.window.show()
@@ -100,6 +103,18 @@ if os.environ.get("MONET_DEPARTURE_UI_TEST") == "1":
             self.window.close()
             self.window.deleteLater()
             QTest.qWait(5)
+
+        def test_actual_helper_failure_is_visible_as_bounded_plain_text(self):
+            self.window.phase = "prepare"
+            self.window.ident = ""
+            self.window.process.readAllStandardError.return_value = b"x" * 10000 + b"\nUser <b>another</b> is logged in."
+            self.window.process_finished(1, QProcess.NormalExit)
+            self.assertLessEqual(len(self.window.helper_error), 8192)
+            self.assertLessEqual(len(self.window.detail.text()), 2000)
+            self.assertIn("User <b>another</b> is logged in.", self.window.detail.text())
+            self.assertEqual(self.window.detail.textFormat(), Qt.PlainText)
+            self.assertFalse(self.window.detail.isHidden())
+            self.window.process.write.assert_not_called()
 
         def test_wayland_save_dialog_blocks_departure_without_becoming_an_editor_window(self):
             from PySide6.QtQml import QJSEngine

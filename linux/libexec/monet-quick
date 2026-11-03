@@ -4909,8 +4909,8 @@ def set_screen_feature(name, what, on):
 
 def fit_bars():
     # Only Monet's three bottom islands on the same screen are coordinated.
-    # First measure their natural content width, then constrain the centre to
-    # the free interval. Panel lengths and offsets use logical pixels.
+    # A range lets Plasma resize with its live contents. Fixing both limits to
+    # a snapshot left an empty task-sized hole whenever an app closed.
     select = """
 var groups={};
 panels().forEach(function(p){
@@ -4925,19 +4925,14 @@ panels().forEach(function(p){
     def script(body):
         return run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell",
                    "org.kde.PlasmaShell", "evaluateScript", "s", select + body, timeout=5)
-    script("""Object.keys(groups).forEach(function(id){var g=groups[id];
- if(g.left && g.middle && g.right) g.middle.lengthMode="fit"; });""")
-    time.sleep(0.2)
     script("""Object.keys(groups).forEach(function(id){
  var g=groups[id]; if(!g.left || !g.middle || !g.right) return;
  var width=screenGeometry(Number(id)).width, gap=16;
- var available=Math.max(80,width-g.left.length-g.right.length-4*gap);
- var length=Math.min(g.middle.length,available);
- var start=Math.max(g.left.length+2*gap,Math.min((width-length)/2,width-g.right.length-2*gap-length));
+ var available=Math.max(80,width-2*Math.max(g.left.length,g.right.length)-4*gap);
  g.left.offset=gap; g.right.offset=gap;
- g.middle.alignment="left"; g.middle.offset=Math.round(start);
- g.middle.minimumLength=Math.round(length); g.middle.maximumLength=Math.round(length);
- g.middle.lengthMode="custom"; g.middle.length=Math.round(length);
+ g.middle.alignment="center"; g.middle.offset=0;
+ g.middle.minimumLength=80; g.middle.maximumLength=Math.floor(available);
+ g.middle.lengthMode="custom";
 });""")
 
 

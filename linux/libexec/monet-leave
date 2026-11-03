@@ -44,6 +44,7 @@ class Departure(QDialog):
         self.ident, self.target = "", None
         self.phase, self.cancelled, self.touched = "capture", False, False
         self.error = ""
+        self.helper_error = ""
         self.setWindowTitle(tr("Switch to Windows"))
         self.setMinimumWidth(420)
         layout = QVBoxLayout(self)
@@ -60,6 +61,7 @@ class Departure(QDialog):
         layout.addWidget(self.button)
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.output)
+        self.process.readyReadStandardError.connect(self.error_output)
         self.process.finished.connect(self.process_finished)
         self.process.errorOccurred.connect(self.process_error)
         self.timer = QTimer(self)
@@ -88,7 +90,13 @@ class Departure(QDialog):
                 self.phase = "close"
                 self.timer.start(0)
 
+    def error_output(self):
+        # Preserve the actual helper/restart failure instead of hiding it behind
+        # a generic dialog. Bound output and render it only as plain text.
+        self.helper_error = (self.helper_error + bytes(self.process.readAllStandardError()).decode("utf-8", "replace"))[-8192:]
+
     def process_finished(self, code, status):
+        self.error_output()
         if self.phase == "capture":
             self.ident = bytes(self.process.readAllStandardOutput()).decode("utf-8", "replace").strip()
             if code or status != QProcess.NormalExit or (self.ident and not re.fullmatch(r"[0-9a-f]{32}", self.ident)):
@@ -262,6 +270,10 @@ class Departure(QDialog):
             except (OSError, RuntimeError, ValueError):
                 self.error = tr("The switch was cancelled. Some apps couldn't be reopened. Review your recovery list in Settings.")
         self.message.setText(self.error or tr("The switch to Windows was cancelled."))
+        if self.error and self.helper_error.strip() and not self.cancelled:
+            self.detail.setText(self.helper_error.strip()[-2000:])
+            self.detail.show()
+            print(self.helper_error.strip(), file=sys.stderr, flush=True)
         self.button.setText(tr("Close"))
         self.button.setEnabled(True)
 

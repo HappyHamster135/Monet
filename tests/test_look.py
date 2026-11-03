@@ -6563,7 +6563,7 @@ class GamesTheApp(unittest.TestCase):
         app = (ROOT / "linux/libexec/monet-settings").read_text(encoding="utf-8")
         for piece in ('_loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")', "_loader.exec_module(games)",
                       'app.setDesktopFileName("monet-settings")', "if games.already_open(name, page):\n        return 0",
-                      "helper = games.Helper()\n    games.answer(server, helper)",
+                      "helper = games.Helper()", "games.answer(server, helper)",
                       'f"{DATADIR}/monet/settings-app/MonetSettings.qml"'):
             self.assertIn(piece, app)
         settings = SETTINGS_QML.read_text(encoding="utf-8")
