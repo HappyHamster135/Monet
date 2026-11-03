@@ -184,7 +184,7 @@ Shared.MonetWindow {
                       "power sleep suspend screen off energy battery lid button shutdown performance saver mode") },
         { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
           words: i18nc("Settings search words, space-separated",
-                      "lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger") },
+                      "lock screen locker password passwords wallet autofill vault wake sleep privacy recent files history forget remember away fingerprint finger") },
         { id: "security", name: i18n("Security"), glyph: "M12 3l7.5 3v5.5c0 4.6-3.1 8.4-7.5 9.5-4.4-1.1-7.5-4.9-7.5-9.5V6zM9 12l2.2 2.2L15.5 10",
           words: i18nc("Settings search words, space-separated",
                       "security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups virus antivirus malware") },
@@ -295,6 +295,10 @@ Shared.MonetWindow {
     property var whatsNew: ({})
     // Lock & Privacy: { lockAfter, lockOnResume, remember }; Printers: { printers, cups }.
     property var privacyInfo: ({})
+    property var walletInfo: ({})
+    property bool walletBusy: false
+    property string walletProblem: ""
+    property bool walletChanged: false
     property var printerInfo: ({})
     // The Monet before the last update: { version, date, pending }, or {}.
     property var previous: ({})
@@ -600,6 +604,7 @@ Shared.MonetWindow {
             ask("game-marks", out => sheet.gameMarks = sheet.json(out, sheet.gameMarks))
         } else if (page === "privacy") {
             ask("privacy", out => sheet.privacyInfo = sheet.json(out, sheet.privacyInfo))
+            walletAction("status")
         } else if (page === "printers") {
             ask("printers", out => sheet.printerInfo = sheet.json(out, sheet.printerInfo))
         }
@@ -1272,6 +1277,23 @@ Shared.MonetWindow {
         privacyInfo = changed(privacyInfo, [what], value)
         ask(what === "lockAfter" ? "lock-after " + value
             : (what === "lockOnResume" ? "lock-resume " : "remember ") + (value ? "on" : "off"))
+    }
+
+    function walletAction(action, value) {
+        if (walletBusy) return
+        walletBusy = true
+        walletProblem = ""
+        ask("wallet-" + action + (value ? " " + value : ""), (out, code) => {
+            walletBusy = false
+            const result = sheet.json(out, {})
+            if (result.state && typeof result.state.enabled === "boolean") walletInfo = result.state
+            if (code !== 0 || (action === "status" ? typeof result.enabled !== "boolean" : result.ok !== true)) {
+                walletProblem = i18n("Password settings couldn't finish. Try again.")
+                return
+            }
+            if (action === "status") walletInfo = result
+            if (action === "policy") walletChanged = true
+        })
     }
 
     function printerDefault(name) {
@@ -5830,6 +5852,79 @@ Shared.MonetWindow {
                             onClicked: sheet.ask("kde users")
                         }
                     }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Saved passwords")
+                }
+                Card {
+                    objectName: "search-passwords"
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Encrypted password vault")
+                        detail: sheet.walletInfo.enabled === false ? i18n("The desktop password vault is disabled.")
+                            : sheet.walletInfo.unlocked === true ? i18n("Unlocked. Apps can use your saved passwords.")
+                            : sheet.walletInfo.unlocked === false ? i18n("Locked. Unlock it when an app first needs a saved password.")
+                            : i18n("Refresh to check whether the vault is unlocked.")
+                        Pill {
+                            tone: look
+                            text: i18n("Refresh")
+                            enabled: !sheet.walletBusy
+                            onClicked: sheet.walletAction("status")
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Keep passwords unlocked")
+                        detail: i18n("After the first unlock, apps can fill saved passwords without asking again. New apps may still ask for access.")
+                        Segments {
+                            objectName: "walletPolicy"
+                            tone: look
+                            enabled: !sheet.walletBusy && sheet.walletInfo.enabled === true
+                            options: [["session", i18n("Until sign-out")], ["10", i18n("10 min idle")], ["30", i18n("30 min idle")]]
+                            current: sheet.walletInfo.policy || ""
+                            onPicked: value => sheet.walletAction("policy", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Your login and vault passwords")
+                        detail: sheet.walletInfo.automaticLogin === true
+                            ? i18n("Automatic sign-in needs one vault unlock each session. You can keep a separate vault password. For automatic unlocking at password sign-in, give kdewallet the same password as your login.")
+                            : i18n("Separate passwords are supported: unlock the vault once when first needed. To unlock automatically at password sign-in, give kdewallet the same password as your login. Fingerprint sign-in may still need a vault unlock.")
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Manage saved passwords")
+                        detail: i18n("Open the encrypted vault to manage passwords and app access. Websites and apps must support saving and filling passwords.")
+                        Pill {
+                            tone: look
+                            text: i18n("Open password manager")
+                            enabled: !sheet.walletBusy && sheet.walletInfo.manager === true
+                            onClicked: sheet.walletAction("manage")
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Lock saved passwords now")
+                        detail: i18n("Apps will need to unlock the vault before using saved passwords again.")
+                        Pill {
+                            tone: look
+                            text: i18n("Lock")
+                            enabled: !sheet.walletBusy && sheet.walletInfo.unlocked === true
+                            onClicked: sheet.walletAction("lock")
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: sheet.walletChanged || sheet.walletProblem !== ""
+                    text: sheet.walletProblem || i18n("Saved. The unlock policy takes full effect at your next sign-in. Lock now works immediately.")
+                    color: sheet.walletProblem ? look.sun : look.dim
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
                 }
                 Caption {
                     tone: look

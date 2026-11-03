@@ -2347,6 +2347,57 @@ def reload_locker():
     busctl("call", "org.kde.screensaver", "/ScreenSaver", "org.kde.screensaver", "configure")
 
 
+# Read policy/status only. Passwords remain inside the desktop's encrypted vault.
+WALLET_BUS = ("org.kde.kwalletd6", "/modules/kwalletd6", "org.kde.KWallet")
+
+
+def wallet_status():
+    idle = kread("kwalletrc", "Wallet", "Close When Idle", "false") == "true"
+    minutes = kread("kwalletrc", "Wallet", "Idle Timeout", "10")
+    wallet = kread("kwalletrc", "Wallet", "Default Wallet", "kdewallet")
+    opened = run("busctl", "--user", "--auto-start=no", "--timeout=3s", "call", *WALLET_BUS,
+                 "isOpen", "s", wallet, timeout=4)
+    session = os.environ.get("XDG_SESSION_ID", "")
+    service = run("loginctl", "show-session", session, "-p", "Service", "--value", timeout=3) if session else None
+    return {"enabled": kread("kwalletrc", "Wallet", "Enabled", "true") != "false",
+            "policy": minutes if idle else "session", "idleMinutes": minutes,
+            "unlocked": opened.strip() == "b true" if opened is not None else None,
+            "automaticLogin": "autologin" in service if service is not None else None,
+            "manager": bool(shutil.which("kwalletmanager5"))}
+
+
+def wallet_policy(value):
+    if value not in ("session", "10", "30"):
+        return {"ok": False}
+    # Older KWallet also supports closing on screen lock / last-client exit.
+    # Keep it open after the first unlock until the chosen idle timer or logout.
+    values = {"Close When Idle": "false" if value == "session" else "true",
+              "Leave Open": "true", "Close on Screensaver": "false"}
+    if value != "session":
+        values["Idle Timeout"] = value
+    written = all(kwrite("kwalletrc", "Wallet", key, val) for key, val in values.items())
+    verified = all(kread("kwalletrc", "Wallet", key) == val for key, val in values.items())
+    # Legacy daemon applies this live. New KSecretD reads its timer policy at
+    # sign-in; never restart it here, which would relock everybody's passwords.
+    run("busctl", "--user", "--auto-start=no", "--timeout=3s", "call", *WALLET_BUS, "reconfigure", timeout=4)
+    return {"ok": written and verified, "state": wallet_status()}
+
+
+def wallet_lock():
+    done = run("busctl", "--user", "--auto-start=no", "--timeout=3s", "call", *WALLET_BUS,
+               "closeAllWallets", timeout=4)
+    return {"ok": done is not None, "state": wallet_status()}
+
+
+def wallet_manage():
+    try:
+        subprocess.Popen(["kwalletmanager5"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except OSError:
+        return {"ok": False}
+
+
 def set_lock_after(minutes):
     kwrite("kscreenlockerrc", "Daemon", "Autolock", "true" if minutes else "false")
     if minutes:
@@ -5487,6 +5538,8 @@ def open_settings(page):
 def search_catalog():
     N_ = lambda text: text  # Extract aliases now, translate them when matching.
     rows = [
+        ("saved-passwords", tr("Saved passwords"), tr("Lock & Privacy · Password vault and automatic filling"),
+         N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "privacy#passwords", "wallet-open"),
         ("text-size", tr("Make text and windows bigger"), tr("Accessibility · Size of everything"),
          N_("make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"), "accessibility#size", "preferences-desktop-accessibility"),
         ("pointer-size", tr("Make the pointer easier to see"), tr("Accessibility · Pointer size"),
@@ -6734,6 +6787,14 @@ def main(argv):
         subprocess.Popen(["kdeconnect-sms"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "privacy":
         emit(privacy_state())
+    elif cmd == "wallet-status":
+        emit(wallet_status())
+    elif cmd == "wallet-policy":
+        emit(wallet_policy(args[0]) if len(args) == 1 else {"ok": False})
+    elif cmd == "wallet-lock":
+        emit(wallet_lock())
+    elif cmd == "wallet-manage":
+        emit(wallet_manage())
     elif cmd == "security":
         emit(security())
     # Fixes that ask for an administrator's password (monet-secure, through pkexec).

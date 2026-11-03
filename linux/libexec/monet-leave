@@ -79,7 +79,7 @@ class Departure(QDialog):
         if self.cancelled:
             self.finish()
             return
-        self.process.start(str(Path(__file__).with_name("monet-quick")), ["remember-apps"] + ([self.game] if self.game else []))
+        self.process.start(str(Path(__file__).with_name("monet-quick").resolve()), ["remember-apps"] + ([self.game] if self.game else []))
 
     def output(self):
         if self.phase == "capture":
@@ -278,15 +278,24 @@ class Departure(QDialog):
         self.button.setEnabled(True)
 
 
+def load_quick():
+    # A versioned CLI preview can link to the installed helper. Resolve the
+    # link before importing so its sibling session helpers come from that same
+    # installation, rather than the preview's incomplete libexec directory.
+    path = Path(__file__).with_name("monet-quick").resolve(strict=True)
+    loader = importlib.machinery.SourceFileLoader("monet_quick", str(path))
+    quick = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(quick)
+    return quick
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("monet", type=Path)
     parser.add_argument("--game")
     parser.add_argument("--task")
     args = parser.parse_args()
-    loader = importlib.machinery.SourceFileLoader("monet_quick", str(Path(__file__).with_name("monet-quick")))
-    quick = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
-    loader.exec_module(quick)
+    quick = load_quick()
     app = QApplication(sys.argv[:1])
     app.setDesktopFileName("monet-windows")
     app.setWindowIcon(QIcon.fromTheme("monet-windows"))

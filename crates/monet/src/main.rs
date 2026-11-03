@@ -648,12 +648,13 @@ fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<
 }
 
 fn restart_command_for(user: &str) -> Command {
-    // runuser establishes the user's primary/supplementary groups as well as
-    // UID. Keep inhibitor and other-user checks; never use reboot -i/--force.
-    let mut command = Command::new("runuser");
-    command.args(["--user", user, "--", "systemctl", "--check-inhibitors=yes", "reboot"])
-        .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
-        .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1");
+    // Run in the existing desktop user manager. Merely dropping UID with
+    // runuser creates an inactive session and can trigger a second password
+    // prompt after apps have closed. Keep all native shutdown safety checks.
+    let mut command = Command::new("systemd-run");
+    command.args(["--user", &format!("--machine={user}@.host"), "--wait", "--pipe", "--quiet", "--collect",
+        "--setenv=SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT=1", "--setenv=SYSTEMCTL_SKIP_AUTO_KEXEC=1",
+        "systemctl", "--check-inhibitors=yes", "reboot"]);
     command
 }
 
@@ -1230,12 +1231,11 @@ mod tests {
     #[test]
     fn restart_uses_the_desktop_identity_and_retains_inhibitor_checks() {
         let command = restart_command_for("desktop-user");
-        assert_eq!(command.get_program(), "runuser");
+        assert_eq!(command.get_program(), "systemd-run");
         let args: Vec<_> = command.get_args().collect();
-        assert_eq!(args, ["--user", "desktop-user", "--", "systemctl", "--check-inhibitors=yes", "reboot"]);
-        let env: Vec<_> = command.get_envs().collect();
-        assert!(env.iter().any(|(key, value)| *key == "SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT" && *value == Some(std::ffi::OsStr::new("1"))));
-        assert!(env.iter().any(|(key, value)| *key == "SYSTEMCTL_SKIP_AUTO_KEXEC" && *value == Some(std::ffi::OsStr::new("1"))));
+        assert_eq!(args, ["--user", "--machine=desktop-user@.host", "--wait", "--pipe", "--quiet", "--collect",
+            "--setenv=SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT=1", "--setenv=SYSTEMCTL_SKIP_AUTO_KEXEC=1",
+            "systemctl", "--check-inhibitors=yes", "reboot"]);
     }
 
     #[test]

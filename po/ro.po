@@ -1331,13 +1331,6 @@ msgstr ""
 msgid "Lock & Privacy"
 msgstr "Blocare & confidențialitate"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:184
-msgctxt "Settings search words, space-separated"
-msgid ""
-"lock screen locker password wake sleep privacy recent files history forget remember away fingerprint finger"
-msgstr ""
-"blocare ecran de blocare parolă trezire repaus confidențialitate fișiere recente istoric uitare amintire amprentă deget"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:186 linux/share/monet/settings-app/MonetSettings.qml:6229
 msgid "Security"
 msgstr "Securitate"
@@ -8997,4 +8990,108 @@ msgstr ""
 
 #: crates/monet/src/main.rs:669
 msgid "Your desktop account could not be found. The switch was cancelled."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:186
+msgctxt "Settings search words, space-separated"
+msgid ""
+"lock screen locker password passwords wallet autofill vault wake sleep privacy recent files history forget remember away fingerprint finger"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1291
+msgid "Password settings couldn't finish. Try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5858 linux/libexec/monet-quick:5541
+msgid "Saved passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5866
+msgid "Encrypted password vault"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5867
+msgid "The desktop password vault is disabled."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5868
+msgid "Unlocked. Apps can use your saved passwords."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5869
+msgid "Locked. Unlock it when an app first needs a saved password."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5870
+msgid "Refresh to check whether the vault is unlocked."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5880
+msgid "Keep passwords unlocked"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5881
+msgid ""
+"After the first unlock, apps can fill saved passwords without asking again. New apps may still ask for access."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5886
+msgid "Until sign-out"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5886
+msgid "10 min idle"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5886
+msgid "30 min idle"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5893
+msgid "Your login and vault passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5895
+msgid ""
+"Automatic sign-in needs one vault unlock each session. You can keep a separate vault password. For automatic unlocking at password sign-in, give kdewallet the same password as your login."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5896
+msgid ""
+"Separate passwords are supported: unlock the vault once when first needed. To unlock automatically at password sign-in, give kdewallet the same password as your login. Fingerprint sign-in may still need a vault unlock."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5900
+msgid "Manage saved passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5901
+msgid ""
+"Open the encrypted vault to manage passwords and app access. Websites and apps must support saving and filling passwords."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5904
+msgid "Open password manager"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5911
+msgid "Lock saved passwords now"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5912
+msgid "Apps will need to unlock the vault before using saved passwords again."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:5924
+msgid ""
+"Saved. The unlock policy takes full effect at your next sign-in. Lock now works immediately."
+msgstr ""
+
+#: linux/libexec/monet-quick:5541
+msgid "Lock & Privacy · Password vault and automatic filling"
+msgstr ""
+
+#: linux/libexec/monet-quick:5542
+msgid ""
+"password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""

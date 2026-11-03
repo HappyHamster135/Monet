@@ -192,6 +192,34 @@ class LookFeedback(unittest.TestCase):
         self.assertFalse(self.window.property("storageBusy"))
         self.assertTrue(self.window.property("storageProblem"))  # malformed worker response is retryable
 
+    def test_wallet_policy_waits_for_confirmation_and_does_not_poll(self):
+        state = dict(enabled=True, policy="session", unlocked=True, manager=True, automaticLogin=True)
+        self.helper.replies['wallet-status'] = json.dumps(state)
+        self.window.setProperty('page', 'privacy'); QTest.qWait(40)
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'privacy#passwords'))
+        QTest.qWait(200)
+        self.assertEqual(self.window.property('pendingAnchor'), '')
+        self.assertEqual(self.window.property('walletInfo').toVariant()['policy'], 'session')
+        self.helper.held_commands.add('wallet-policy')
+        QMetaObject.invokeMethod(self.window, 'walletAction', Q_ARG('QVariant', 'policy'), Q_ARG('QVariant', '10'))
+        QMetaObject.invokeMethod(self.window, 'walletAction', Q_ARG('QVariant', 'policy'), Q_ARG('QVariant', '30'))
+        self.assertTrue(self.window.property('walletBusy'))
+        self.assertEqual(self.window.property('walletInfo').toVariant()['policy'], 'session')
+        self.assertEqual(sum(c[1] == 'wallet-policy' for c in self.helper.commands), 1)
+        ticket = self.helper.pending_commands.pop()
+        self.helper.done.emit(ticket, '{"ok":false}', 0, ''); QTest.qWait(10)
+        self.assertFalse(self.window.property('walletBusy'))
+        self.assertTrue(self.window.property('walletProblem'))
+        self.assertFalse(self.window.property('walletChanged'))
+        self.helper.held_commands.clear()
+        self.helper.replies['wallet-policy'] = json.dumps(dict(ok=True, state=dict(state, policy='10')))
+        QMetaObject.invokeMethod(self.window, 'walletAction', Q_ARG('QVariant', 'policy'), Q_ARG('QVariant', '10'))
+        QTest.qWait(40)
+        self.assertEqual(self.window.property('walletInfo').toVariant()['policy'], '10')
+        self.assertTrue(self.window.property('walletChanged'))
+        self.helper.commands.clear(); QTest.qWait(2200)
+        self.assertFalse(any(c[1].startswith('wallet-') for c in self.helper.commands))
+
     def test_update_history_loads_on_demand_coalesces_and_recovers(self):
         self.helper.hold_history = True
         self.window.setProperty("page", "updates"); QTest.qWait(30)

@@ -14,6 +14,24 @@ from tests.test_resume import r, ROOT
 
 
 class CancelledDeparture(unittest.TestCase):
+    def test_symlinked_preview_loads_the_complete_installed_helper_family(self):
+        loader = importlib.machinery.SourceFileLoader("departure_loader", str(ROOT / "linux/libexec/monet-leave"))
+        leave = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+        loader.exec_module(leave)
+        with tempfile.TemporaryDirectory() as tmp:
+            preview = Path(tmp)
+            (preview / "monet-quick").symlink_to(ROOT / "linux/libexec/monet-quick")
+            with patch.object(leave, "__file__", str(preview / "monet-leave")):
+                quick = leave.load_quick()
+                resume = quick.resume_helper()
+                for helper in (resume.files_helper, resume.browser_helper, resume.editor_helper, resume.pdf_helper):
+                    self.assertTrue(Path(helper().__file__).is_file())
+                departure = Mock()
+                departure.cancelled = False
+                departure.game = None
+                leave.Departure.capture(departure)
+                departure.process.start.assert_called_once_with(str(ROOT / "linux/libexec/monet-quick"), ["remember-apps"])
+
     def test_bad_window_inspection_fails_closed(self):
         for result in (None, {}, [{"id": "one"}], [{"id": 1, "closeable": True}]):
             with patch.object(r, "kwin_script", return_value=result):
@@ -50,7 +68,8 @@ class CancelledDeparture(unittest.TestCase):
         self.assertLess(helper.index("await_saved_apps("), helper.index("boot::set_boot_next("))
         restart = main[main.index("fn restart_command_for("):main.index("fn desktop_restart_command(")]
         self.assertIn('"--check-inhibitors=yes"', restart)
-        self.assertIn('Command::new("runuser")', restart)
+        self.assertIn('Command::new("systemd-run")', restart)
+        self.assertIn('--machine={user}@.host', restart)
         self.assertNotIn('"--force"', helper)
 
     def test_ui_safety_paths_in_separate_qt_process(self):

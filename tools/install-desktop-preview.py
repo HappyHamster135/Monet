@@ -19,6 +19,7 @@ STATE = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state'))
 HELPERS = Path.home() / '.local/libexec/monet-desktop-preview'
 PRIVATE = DATA / 'monet-desktop-preview'
 LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-files-tools', 'monet-system-info', 'monet-weather', 'monet-light', 'monet-daylight'}
+LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
 
 
 def digest(path):
@@ -27,20 +28,47 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
 
 
-def render(source, *, private_data=False, local_helpers=False):
+def render(source, *, private_data=False, local_helpers=False, bindir='/usr/bin'):
     text = source.read_text()
     # Keep privileged and image-bound helpers at their installed system paths.
     # Route only these user-facing helpers to the preview, including self calls.
     if not local_helpers:
         for name in LOCAL:
             text = text.replace('{LIBEXECDIR}/' + name, str(HELPERS / name))
-    return (text.replace('@BINDIR@', '/usr/bin')
+    return (text.replace('@BINDIR@', str(bindir))
             .replace('@DATADIR@', str(PRIVATE) if private_data else '/usr/share')
             .replace('@LIBEXECDIR@', str(HELPERS) if local_helpers else '/usr/libexec')).encode()
 
 
-def plan(monitor_bundle=None):
+def cli_prefix(requested=None):
+    """Keep a tested CLI preview attached to every desktop entry point."""
+    marker = STATE / 'monet/desktop-preview/cli-prefix'
+    prefix = requested or (Path(marker.read_text().strip()) if marker.exists() else None)
+    if prefix is None:
+        return None
+    prefix = Path(prefix).resolve(strict=True)
+    required = [prefix / 'bin/monet', prefix / 'libexec/monet-leave', prefix / 'libexec/monet-quick',
+                prefix / 'libexec/monet-prepare-windows']
+    siblings = (prefix / 'libexec/monet-quick').resolve(strict=True).parent
+    required += [siblings / name for name in ('monet-resume', 'monet-files-session', 'monet-browser-session',
+                                             'monet-editor-session', 'monet-pdf-session')]
+    for path in required:
+        path = path.resolve(strict=True)
+        for part in (path, *path.parents):
+            info = part.stat()
+            if info.st_uid != 0 or info.st_mode & 0o022:
+                raise ValueError(f'CLI preview must be root-owned and not writable by other users: {part}')
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise ValueError(f'CLI preview helper is not executable: {path}')
+    return prefix
+
+
+def plan(monitor_bundle=None, monet_prefix=None):
     files = {}
+    prefix = cli_prefix(monet_prefix)
+    bindir = prefix / 'bin' if prefix else Path('/usr/bin')
+    def render(source, **kwargs):
+        return globals()['render'](source, bindir=bindir, **kwargs)
     monitor_binary = None
     if monitor_bundle:
         import importlib.util
@@ -50,13 +78,26 @@ def plan(monitor_bundle=None):
 
     def add(target, data, mode=0o644):
         files[target] = (data, mode)
+    if prefix:
+        add(STATE / 'monet/desktop-preview/cli-prefix', (str(prefix) + '\n').encode(), 0o600)
+        shortcut = Path('applications/monet-windows.desktop')
+        source = DATA / shortcut if (DATA / shortcut).exists() else Path('/usr/share') / shortcut
+        if source.exists():
+            lines = source.read_text().splitlines(keepends=True)
+            for i, line in enumerate(lines):
+                if line.startswith('Exec=') and ' windows' in line:
+                    command, args = line.split(' windows', 1)
+                    if command.endswith('/monet') or command == 'Exec=monet':
+                        lines[i] = f'Exec={bindir}/monet windows{args}'
+            add(DATA / shortcut, ''.join(lines).encode())
     if monitor_binary:
         add(HELPERS / 'plasma-systemmonitor', monitor_binary.read_bytes(), 0o755)
         for name in ('runtime.json', 'source.tar.xz', 'README.md'):
             add(PRIVATE / 'task-manager' / name, (monitor_bundle / name).read_bytes())
     for name in LOCAL:
         add(HELPERS / name, render(ROOT / 'linux/libexec' / name,
-            private_data=name == 'monet-settings', local_helpers=name in {'monet-settings', 'monet-games', 'monet-light'}), 0o755)
+            private_data=name in {'monet-settings', 'monet-games'},
+            local_helpers=name in {'monet-settings', 'monet-games', 'monet-light'}), 0o755)
     # Preserve the installed launch command and all existing desktop metadata.
     # KWin's supported per-application declaration enables minimized-window
     # notifications; it does not disable compositor permission checks.
@@ -199,7 +240,8 @@ if __name__ == '__main__':
     group.add_argument('--apply', action='store_true')
     group.add_argument('--restore', type=Path)
     parser.add_argument('--task-manager-bundle', type=Path)
+    parser.add_argument('--monet-prefix', type=Path, help='Root-owned tested CLI preview; remembered for future previews')
     args = parser.parse_args()
     if args.restore: restore(args.restore)
-    elif args.apply: apply(plan(args.task_manager_bundle))
-    else: print(json.dumps({'files': len(plan(args.task_manager_bundle)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))
+    elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix))
+    else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))
