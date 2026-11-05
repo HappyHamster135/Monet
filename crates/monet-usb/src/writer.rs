@@ -29,7 +29,7 @@ impl DerefMut for Buffer {
 pub trait Destination: Read + Write + Seek {
     /// Validate identity/capacity and obtain every volume lock before writing anything.
     fn prepare(&mut self, total: u64) -> io::Result<()>;
-    /// Clear the old partition layout only after preparation succeeds; retain the locks.
+    /// Clear the old partition layout only after preparation succeeds and validate the reopened device.
     fn reset_layout(&mut self, total: u64) -> io::Result<()>;
     fn sync_media(&mut self) -> io::Result<()>;
 }

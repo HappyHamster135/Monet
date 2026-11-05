@@ -8,7 +8,8 @@ use std::os::windows::fs::OpenOptionsExt;
 use std::os::windows::io::AsRawHandle;
 use std::ptr::null_mut;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, ERROR_NO_MORE_FILES, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+    CloseHandle, GetLastError, ERROR_ACCESS_DENIED, ERROR_LOCK_VIOLATION, ERROR_NOT_READY, ERROR_NO_MORE_FILES,
+    ERROR_SHARING_VIOLATION, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, FILE_FLAG_NO_BUFFERING, FILE_SHARE_READ,
@@ -199,13 +200,15 @@ fn lock_volumes(number: u32) -> io::Result<Vec<Handle>> {
         let path = String::from_utf16_lossy(&name[..len]);
         let path = path.trim_end_matches('\\');
         // Query before requesting write access: unrelated protected volumes are not locked.
-        let volume = open(path, 0, 0)?;
+        let volume = open(path, 0, 0).map_err(|e| io::Error::other(format!("Opening {path}: {e}")))?;
         if device_number(volume.0)? == number {
-            let volume = open(path, GENERIC_READ | GENERIC_WRITE, 0)?;
+            let volume = open(path, GENERIC_READ | GENERIC_WRITE, 0)
+                .map_err(|e| io::Error::other(format!("Opening {path} for locking: {e}")))?;
             if device_number(volume.0)? != number {
                 return Err(io::Error::other("The device changed while locking it."));
             }
-            control(volume.0, FSCTL_LOCK_VOLUME).map_err(|e| {
+            when_available(&[ERROR_ACCESS_DENIED, ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION],
+                || control(volume.0, FSCTL_LOCK_VOLUME)).map_err(|e| {
                 io::Error::other(format!(
                     "{} {e}",
                     t!("The USB device is in use or protected. Close its files and try again. Nothing was written.")
@@ -224,54 +227,99 @@ fn lock_volumes(number: u32) -> io::Result<Vec<Handle>> {
 }
 
 struct Disk {
-    file: File,
+    file: Option<File>,
     selected: plan::Target,
     volumes: Vec<Handle>,
 }
 impl Read for Disk {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.file.read(buf)
+        self.file.as_mut().unwrap().read(buf)
+            .map_err(|e| io::Error::new(e.kind(), format!("Reading the USB device: {e}")))
     }
 }
 impl Write for Disk {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.file.write(buf)
+        self.file.as_mut().unwrap().write(buf)
+            .map_err(|e| io::Error::new(e.kind(), format!("Writing the USB device: {e}")))
     }
     fn flush(&mut self) -> io::Result<()> {
-        self.file.flush()
+        self.file.as_mut().unwrap().flush()
     }
 }
 impl Seek for Disk {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
-        self.file.seek(pos)
+        self.file.as_mut().unwrap().seek(pos)
+            .map_err(|e| io::Error::new(e.kind(), format!("Seeking on the USB device: {e}")))
     }
 }
+fn validate(file: &File, selected: plan::Target, total: u64) -> io::Result<()> {
+    let current = describe(file.as_raw_handle() as HANDLE)?.target;
+    plan::check_target(selected, current, system_disk().ok(), total).map_err(io::Error::other)
+}
+
+fn when_available<T>(transient: &[u32], mut operation: impl FnMut() -> io::Result<T>) -> io::Result<T> {
+    for attempt in 0..50 {
+        match operation() {
+            Err(error) if error.raw_os_error().is_some_and(|code| transient.contains(&(code as u32))) && attempt < 49 => {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            result => return result,
+        }
+    }
+    unreachable!()
+}
+
+fn open_disk(selected: plan::Target, total: u64) -> io::Result<File> {
+    when_available(&[ERROR_NOT_READY], || {
+        // Deny other raw writers, including on a blank device with no volumes to lock.
+        let file = OpenOptions::new().read(true).write(true).share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_NO_BUFFERING)
+            .open(format!("\\\\.\\PhysicalDrive{}", selected.number))?;
+        validate(&file, selected, total)?;
+        Ok(file)
+    }).map_err(|e| io::Error::other(format!("Opening and validating physical Disk {}: {e}", selected.number)))
+}
+
 impl Disk {
-    fn validate(&self, total: u64) -> io::Result<()> {
-        let current = describe(self.file.as_raw_handle() as HANDLE)?.target;
-        plan::check_target(self.selected, current, system_disk().ok(), total).map_err(io::Error::other)
+    fn reopen(&mut self, total: u64) -> io::Result<()> {
+        self.volumes.clear();
+        self.file.take();
+        self.file = Some(open_disk(self.selected, total)?);
+        Ok(())
     }
 }
 impl writer::Destination for Disk {
     fn prepare(&mut self, total: u64) -> io::Result<()> {
-        self.validate(total)?;
+        validate(self.file.as_ref().unwrap(), self.selected, total)?;
         self.volumes = lock_volumes(self.selected.number)?;
-        self.validate(total)
+        validate(self.file.as_ref().unwrap(), self.selected, total)
     }
     fn reset_layout(&mut self, total: u64) -> io::Result<()> {
-        self.validate(total)?;
-        let handle = self.file.as_raw_handle() as HANDLE;
+        validate(self.file.as_ref().unwrap(), self.selected, total)?;
+        let handle = self.file.as_ref().unwrap().as_raw_handle() as HANDLE;
         // Locked volumes already permit raw writes; ISO/Linux partitions need not support dismount.
         // Windows clears both GPT headers too, so an old backup table cannot revive stale partitions.
         control(handle, IOCTL_DISK_DELETE_DRIVE_LAYOUT).map_err(|e| {
             io::Error::other(format!("Clearing Disk {}'s old partition layout: {e}", self.selected.number))
         })?;
+        self.volumes.clear();
+        // Removable disks can reject writes with ERROR_NOT_READY until an empty MBR is initialized.
+        let empty = CREATE_DISK {
+            PartitionStyle: PARTITION_STYLE_MBR,
+            Anonymous: CREATE_DISK_0 {
+                Mbr: CREATE_DISK_MBR { Signature: (self.selected.id as u32).max(1) },
+            },
+        };
+        ioctl(handle, IOCTL_DISK_CREATE_DISK, &empty as *const _ as _, size_of::<CREATE_DISK>(), null_mut(), 0)
+            .map_err(|e| io::Error::other(format!("Initializing Disk {} for writing: {e}", self.selected.number)))?;
         control(handle, IOCTL_DISK_UPDATE_PROPERTIES).map_err(|e| {
             io::Error::other(format!("Refreshing Disk {} after clearing its partition layout: {e}", self.selected.number))
-        })
+        })?;
+        // Partition refresh invalidates old volume handles; wait for the same physical device to return.
+        self.reopen(total)
     }
     fn sync_media(&mut self) -> io::Result<()> {
-        self.file.sync_all().map_err(|e| {
+        self.file.as_ref().unwrap().sync_all().map_err(|e| {
             io::Error::other(format!(
                 "{} {e}",
                 t!("Windows could not finish writing the USB device. It is not ready to use.")
@@ -283,20 +331,16 @@ impl writer::Destination for Disk {
 pub fn write(stick: &Stick, image: &mut File, progress: impl FnMut(u32, u64, u64)) -> Result<(), String> {
     let result = (|| -> io::Result<()> {
         let total = image.metadata()?.len();
-        // Deny other raw writers even when a blank device has no volumes to lock.
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .share_mode(FILE_SHARE_READ)
-            .custom_flags(FILE_FLAG_NO_BUFFERING)
-            .open(format!("\\\\.\\PhysicalDrive{}", stick.target.number))?;
+        let file = open_disk(stick.target, total)?;
         let mut disk = Disk {
-            file,
+            file: Some(file),
             selected: stick.target,
             volumes: Vec::new(),
         };
         writer::write(image, &mut disk, total, progress)?;
-        control(disk.file.as_raw_handle() as HANDLE, IOCTL_DISK_UPDATE_PROPERTIES)?;
+        disk.reopen(total)?;
+        control(disk.file.as_ref().unwrap().as_raw_handle() as HANDLE, IOCTL_DISK_UPDATE_PROPERTIES)
+            .map_err(|e| io::Error::other(format!("Refreshing Disk {} after verification: {e}", stick.target.number)))?;
         Ok(())
     })();
     if let Err(error) = &result {
@@ -309,4 +353,39 @@ pub fn write(stick: &Stick, image: &mut File, progress: impl FnMut(u32, u64, u64
         }
     }
     result.map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reenumeration_waits_for_readiness_but_never_ignores_a_changed_or_protected_disk() {
+        let mut attempts = 0;
+        let ready = when_available(&[ERROR_NOT_READY], || {
+            attempts += 1;
+            if attempts == 1 { Err(io::Error::from_raw_os_error(ERROR_NOT_READY as i32)) }
+            else { Ok(42) }
+        }).unwrap();
+        assert_eq!((ready, attempts), (42, 2));
+        for error in [io::Error::from_raw_os_error(5), io::Error::other("selected device changed")] {
+            let mut error = Some(error);
+            let mut attempts = 0;
+            assert!(when_available::<()>(&[ERROR_NOT_READY], || {
+                attempts += 1;
+                Err(error.take().expect("permission and identity failures must not be retried"))
+            }).is_err());
+            assert_eq!(attempts, 1);
+        }
+        let mut attempts = 0;
+        when_available(&[ERROR_ACCESS_DENIED, ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION], || {
+            attempts += 1;
+            match attempts {
+                1 => Err(io::Error::from_raw_os_error(ERROR_ACCESS_DENIED as i32)),
+                2 => Err(io::Error::from_raw_os_error(ERROR_SHARING_VIOLATION as i32)),
+                _ => Ok(()),
+            }
+        }).unwrap();
+        assert_eq!(attempts, 3);
+    }
 }

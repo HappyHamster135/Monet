@@ -594,13 +594,21 @@ Test machines:
 
 2026-11-05 USB rewrite repair: volume locks and target validation precede a native
 `IOCTL_DISK_DELETE_DRIVE_LAYOUT` reset, which removes stale MBR/GPT metadata including the
-backup GPT at the device's end. Locked ISO/Linux volumes no longer have to implement
-`FSCTL_DISMOUNT_VOLUME`. Transfer tests require successful preparation and layout reset
-before any image write, and a failed reset prevents writing or verification. All 19 native
-Windows GNU tests, the USB discovery regression and Clippy with warnings denied pass.
-The release executable's administrator manifest was checked. The window and confirmation
-flow are unchanged. Physical USB rewrite and boot qualification are pending. The reset's
-MBR/GPT behavior is documented by [Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntdddisk/ni-ntdddisk-ioctl_disk_delete_drive_layout).
+backup GPT at the device's end. An empty MBR is then initialized with `IOCTL_DISK_CREATE_DISK`:
+the tested removable disk otherwise accepted reads but rejected all data writes with error 21.
+After partition refresh, old handles are closed and the reopened physical device must pass
+the same identity, USB, system-disk and capacity checks. Readiness and busy volume locks
+have bounded retries; a persistent lock failure still stops before modifying the disk.
+Locked ISO/Linux volumes no longer have to implement `FSCTL_DISMOUNT_VOLUME`.
+
+All 20 native Windows GNU unit tests, the USB discovery regression and Clippy with warnings
+denied pass. A hardware harness using the production `disk::write` completed two consecutive
+writes of Monet 0.9.6 Setup to the same Kingston DataTraveler 3.0 (61.9 GB), with a device
+flush, full byte-for-byte read-back and final partition refresh on both rounds. Results are
+in `target/usb-repeat-test.log`. The release executable's administrator manifest was checked.
+The window and confirmation flow are unchanged. Booting the rewritten stick and other USB
+controllers are not qualified by this test. The reset's MBR/GPT behavior is documented by
+[Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntdddisk/ni-ntdddisk-ioctl_disk_delete_drive_layout).
 
 2026-10-28 software evidence: `cargo test -p monet-usb` passes all 18 Windows tests, including
 native SHA-256 against a known vector and a temporary source file that cannot be changed or
