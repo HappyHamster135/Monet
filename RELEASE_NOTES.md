@@ -12,6 +12,20 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 | Monet-0.9.6-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
 | Monet-0.9.6-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
+### USB maker refresh — 5 November 2026
+
+The one-click USB maker now replaces a previously written installer stick's old
+partitions automatically. It initializes cleared media before writing and waits
+for Windows to release newly mounted volumes, fixing the reported repeat-write
+failures. The installer image normally exposes multiple partitions in Windows.
+
+Twenty native Windows unit tests and two consecutive Kingston DataTraveler
+rewrites passed, with a full byte-for-byte read-back after each write. This
+refresh replaces only `Monet-0.9.6-Make-USB-Stick.exe`; the OS images, ISO files
+and other downloads keep their original bytes. The updated maker's
+[source commit](https://github.com/HappyHamster135/Monet/commit/031fdfd) and
+qualification details are identified in the release verification record.
+
 ### New in 0.9.6: a smoother desktop, clearer recovery
 
 - **Choose the installation drive explicitly.** Setup shows each drive and what

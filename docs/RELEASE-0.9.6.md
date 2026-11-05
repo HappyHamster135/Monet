@@ -360,6 +360,22 @@ use host loop devices. The adapter changes the build mechanism, not the boot
 files. Its checks and boot evidence are recorded beside the build log. Setup
 uses the normal production builder in a private container.
 
+## USB maker refresh — 5 November 2026
+
+The Windows USB maker is refreshed independently of the frozen RC13 OS images
+and installers. Its source is commit `031fdfd`; the release verification record
+contains the replacement executable's SHA-256, size, build inputs and hardware
+qualification. The original source snapshot remains the provenance of the
+unchanged OS images and other release downloads.
+
+The maker clears stale partition tables, initializes cleared removable media,
+reopens and validates the physical device after Windows re-enumeration, and
+retries busy volume locks for a bounded interval. An unsuccessful lock still
+prevents writing. The one-click interface, device protections and full read-back
+verification remain in place. All 20 Windows unit tests and two consecutive
+production-writer rewrites of the same Kingston DataTraveler 3.0 passed. Booting
+the rewritten physical stick and the wider USB hardware matrix remain untested.
+
 ## Remaining qualification and scope
 
 - Publication is authorized for the exact qualified RC13 image/media set. The
