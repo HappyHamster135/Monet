@@ -588,6 +588,19 @@ Test machines:
 - [ ] Unplug/replace the selected stick while downloading: the replacement receives no writes.
 - [ ] Keep a file open on the target: an unsuccessful volume lock stops before any dismount/write.
 - [ ] An oversized/corrupt image and a failed device flush never produce a Ready message.
+- [ ] Rewrite a previously flashed installer stick (ISO/Linux partitions, an EFI partition,
+      multiple drive letters and an extra NTFS volume). One click clears the old layout,
+      writes and verifies the image, and boots Setup without manual Disk Management steps.
+
+2026-11-05 USB rewrite repair: volume locks and target validation precede a native
+`IOCTL_DISK_DELETE_DRIVE_LAYOUT` reset, which removes stale MBR/GPT metadata including the
+backup GPT at the device's end. Locked ISO/Linux volumes no longer have to implement
+`FSCTL_DISMOUNT_VOLUME`. Transfer tests require successful preparation and layout reset
+before any image write, and a failed reset prevents writing or verification. All 19 native
+Windows GNU tests, the USB discovery regression and Clippy with warnings denied pass.
+The release executable's administrator manifest was checked. The window and confirmation
+flow are unchanged. Physical USB rewrite and boot qualification are pending. The reset's
+MBR/GPT behavior is documented by [Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntdddisk/ni-ntdddisk-ioctl_disk_delete_drive_layout).
 
 2026-10-28 software evidence: `cargo test -p monet-usb` passes all 18 Windows tests, including
 native SHA-256 against a known vector and a temporary source file that cannot be changed or

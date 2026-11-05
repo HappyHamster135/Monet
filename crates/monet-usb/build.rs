@@ -9,12 +9,12 @@ fn main() {
     println!("cargo:rerun-if-changed=monet-usb.manifest");
     println!("cargo:rerun-if-changed=../../windows/monet.ico");
     let dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    // Test binaries use temporary files, so they must not request administrator privileges.
+    if std::env::var("PROFILE").as_deref() != Ok("release") {
+        return;
+    }
     if target.contains("windows-msvc") {
         // Built on Windows itself: the same manifest through Microsoft's linker (no icon, that needs rc.exe).
-        // Release builds only: `cargo test` couldn't start a test program that asks for administrator.
-        if std::env::var("PROFILE").as_deref() != Ok("release") {
-            return;
-        }
         println!("cargo:rustc-link-arg-bins=/MANIFEST:EMBED");
         println!("cargo:rustc-link-arg-bins=/MANIFESTUAC:NO");
         println!("cargo:rustc-link-arg-bins=/MANIFESTINPUT:{}", dir.join("monet-usb.manifest").display());

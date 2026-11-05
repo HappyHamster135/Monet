@@ -185,7 +185,7 @@ pub fn sticks() -> Vec<Stick> {
     found
 }
 
-/// Lock everything first. A veto must never be followed by a forced dismount.
+/// Lock every old volume before changing anything, including partitions without a drive letter.
 fn lock_volumes(number: u32) -> io::Result<Vec<Handle>> {
     let mut name = [0u16; 64];
     let h = unsafe { FindFirstVolumeW(name.as_mut_ptr(), name.len() as u32) };
@@ -219,9 +219,6 @@ fn lock_volumes(number: u32) -> io::Result<Vec<Handle>> {
             }
             break;
         }
-    }
-    for volume in &locked {
-        control(volume.0, FSCTL_DISMOUNT_VOLUME)?;
     }
     Ok(locked)
 }
@@ -260,6 +257,18 @@ impl writer::Destination for Disk {
         self.validate(total)?;
         self.volumes = lock_volumes(self.selected.number)?;
         self.validate(total)
+    }
+    fn reset_layout(&mut self, total: u64) -> io::Result<()> {
+        self.validate(total)?;
+        let handle = self.file.as_raw_handle() as HANDLE;
+        // Locked volumes already permit raw writes; ISO/Linux partitions need not support dismount.
+        // Windows clears both GPT headers too, so an old backup table cannot revive stale partitions.
+        control(handle, IOCTL_DISK_DELETE_DRIVE_LAYOUT).map_err(|e| {
+            io::Error::other(format!("Clearing Disk {}'s old partition layout: {e}", self.selected.number))
+        })?;
+        control(handle, IOCTL_DISK_UPDATE_PROPERTIES).map_err(|e| {
+            io::Error::other(format!("Refreshing Disk {} after clearing its partition layout: {e}", self.selected.number))
+        })
     }
     fn sync_media(&mut self) -> io::Result<()> {
         self.file.sync_all().map_err(|e| {

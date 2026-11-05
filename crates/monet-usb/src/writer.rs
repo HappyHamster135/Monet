@@ -29,6 +29,8 @@ impl DerefMut for Buffer {
 pub trait Destination: Read + Write + Seek {
     /// Validate identity/capacity and obtain every volume lock before writing anything.
     fn prepare(&mut self, total: u64) -> io::Result<()>;
+    /// Clear the old partition layout only after preparation succeeds; retain the locks.
+    fn reset_layout(&mut self, total: u64) -> io::Result<()>;
     fn sync_media(&mut self) -> io::Result<()>;
 }
 
@@ -48,6 +50,7 @@ pub fn write(
     let mut head = Buffer::new(first);
     image.read_exact(&mut head[..first])?;
     disk.prepare(total)?;
+    disk.reset_layout(total)?;
     let mut buf = Buffer::new(CHUNK);
     let mut back = Buffer::new(CHUNK);
     // Leave the partition table until last so Windows cannot mount an unfinished new image.
@@ -99,6 +102,8 @@ mod tests {
         writes: Vec<u64>,
         reads: usize,
         synced: bool,
+        prepared: bool,
+        layout_reset: bool,
     }
     impl FakeDisk {
         fn new(fault: &'static str) -> Self {
@@ -108,6 +113,8 @@ mod tests {
                 writes: Vec::new(),
                 reads: 0,
                 synced: false,
+                prepared: false,
+                layout_reset: false,
             }
         }
     }
@@ -116,6 +123,16 @@ mod tests {
             if self.fault == "lock" || total > self.bytes.get_ref().len() as u64 {
                 return Err(io::Error::other("preflight veto"));
             }
+            self.prepared = true;
+            Ok(())
+        }
+        fn reset_layout(&mut self, _total: u64) -> io::Result<()> {
+            assert!(self.prepared, "all locks and validation must precede clearing the layout");
+            assert!(self.writes.is_empty(), "old partitions must be removed before writing the image");
+            if self.fault == "reset" {
+                return Err(io::Error::other("layout reset failed"));
+            }
+            self.layout_reset = true;
             Ok(())
         }
         fn sync_media(&mut self) -> io::Result<()> {
@@ -142,6 +159,7 @@ mod tests {
     }
     impl Write for FakeDisk {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            assert!(self.layout_reset, "never write through the old partition layout");
             assert_eq!(bytes.as_ptr() as usize % 4096, 0);
             assert_eq!(bytes.len() % 4096, 0);
             assert_eq!(self.bytes.position() % 4096, 0);
@@ -176,6 +194,7 @@ mod tests {
             .all(|b| *b == 0));
         assert_eq!(disk.bytes.get_ref()[crate::plan::padded(bytes.len())], 0xa5);
         assert_eq!(disk.reads, 3);
+        assert!(disk.layout_reset);
     }
 
     #[test]
@@ -185,21 +204,26 @@ mod tests {
             let mut image = Cursor::new(vec![0x33; CHUNK]);
             assert!(write(&mut image, &mut disk, total, |_, _, _| {}).is_err());
             assert!(disk.writes.is_empty());
+            assert!(!disk.layout_reset);
             assert!(disk.bytes.get_ref().iter().all(|b| *b == 0xa5));
         }
     }
 
     #[test]
     fn every_write_flush_or_verification_failure_prevents_success() {
-        for fault in ["write", "zero", "flush", "read", "corrupt"] {
+        for fault in ["reset", "write", "zero", "flush", "read", "corrupt"] {
             let mut disk = FakeDisk::new(fault);
             let mut image = Cursor::new(vec![0x33; CHUNK * 2]);
             assert!(
                 write(&mut image, &mut disk, CHUNK as u64 * 2, |_, _, _| {}).is_err(),
                 "{fault}"
             );
-            if matches!(fault, "write" | "zero" | "flush") {
+            if matches!(fault, "reset" | "write" | "zero" | "flush") {
                 assert_eq!(disk.reads, 0);
+            }
+            if fault == "reset" {
+                assert!(disk.writes.is_empty());
+                assert!(!disk.layout_reset);
             }
         }
     }
