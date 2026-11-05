@@ -20,6 +20,14 @@ class LaptopNative(unittest.TestCase):
             root = Path(temp)
             for folder in ("config", "data", "state", "cache", "runtime"):
                 (root / folder).mkdir(mode=0o700)
+            # Native widgets do not need desktop service activation. In a host
+            # run it could otherwise mount a document portal inside this temp
+            # home, leaving a disconnected FUSE mount during cleanup.
+            bus_config = root / "bus.conf"
+            bus_config.write_text('<busconfig><type>session</type><auth>EXTERNAL</auth>'
+                '<listen>unix:path=' + str(root / 'runtime/bus') + '</listen>'
+                '<policy context="default"><allow send_destination="*"/>'
+                '<allow receive_sender="*"/><allow own="*"/></policy></busconfig>')
             env = dict(os.environ, HOME=temp, XDG_CONFIG_HOME=str(root / "config"),
                        XDG_DATA_HOME=str(root / "data"), XDG_STATE_HOME=str(root / "state"),
                        XDG_CACHE_HOME=str(root / "cache"), XDG_RUNTIME_DIR=str(root / "runtime"),
@@ -29,7 +37,7 @@ class LaptopNative(unittest.TestCase):
             # Wait for the fixture itself, not for every inherited pipe to close.
             output = root / "fixture.log"
             with output.open("w") as log:
-                process = subprocess.Popen(["dbus-run-session", "--", "python3",
+                process = subprocess.Popen(["dbus-run-session", "--config-file=" + str(bus_config), "--", "python3",
                     str(ROOT / "tests/fixtures/laptop-native.py"), name],
                     env=env, cwd=ROOT, stdout=log, stderr=log, start_new_session=True)
                 try:

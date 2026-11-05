@@ -68,7 +68,7 @@ class Isolation(unittest.TestCase):
                 path = Path(f"/proc/{child}/stat")
                 try:
                     if path.read_text().split()[2] == "Z": break
-                except FileNotFoundError:
+                except (FileNotFoundError, ProcessLookupError):
                     break  # Reaped between the timeout and this observation.
                 time.sleep(.01)
             else: self.fail("Timed-out module left its child running")
