@@ -1,0 +1,10 @@
+{
+  "name": "@monet/app-logins-electron",
+  "version": "0.9.6",
+  "private": true,
+  "description": "Opt-in Monet login integration for an Electron app's trusted main process",
+  "main": "index.cjs",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {"dbus-next": "0.10.2"},
+  "overrides": {"xml2js": "0.6.2"}
+}

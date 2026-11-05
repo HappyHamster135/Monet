@@ -14,7 +14,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QListWidget, QListWidgetItem, QComboBox, QStackedWidget,
     QScrollArea, QFormLayout, QDialog, QDialogButtonBox, QMessageBox, QFrame, QSplitter, QFileDialog, QStyledItemDelegate, QStyle, QPlainTextEdit)
-from vault import NativeWallet, Vault, VaultError, display_label
+from vault import NativeWallet, Vault, VaultError, display_label, entry_title
 
 WORDS = gettext.translation('monet', fallback=True)
 tr = WORDS.gettext
@@ -43,6 +43,10 @@ def navigation_icon(index, color):
         path.moveTo(9, 8); path.lineTo(5, 8); path.cubicTo(0, 8, 0, 16, 5, 16); path.lineTo(9, 16)
         path.moveTo(15, 8); path.lineTo(19, 8); path.cubicTo(24, 8, 24, 16, 19, 16); path.lineTo(15, 16)
         painter.drawLine(8, 12, 16, 12)
+    elif index == 5:
+        painter.drawEllipse(QRectF(3, 3, 18, 18))
+        painter.drawEllipse(QRectF(8, 3, 8, 18))
+        painter.drawLine(3, 12, 21, 12)
     else:
         for y, knob in ((6, 9), (12, 16), (18, 7)):
             painter.drawLine(3, y, knob - 2, y); painter.drawLine(knob + 2, y, 21, y)
@@ -63,16 +67,33 @@ class Worker(QObject):
     def perform(self, token, action, args):
         result, error = None, ''
         try:
-            if self.vault is None:
+            if action in ('browser_status', 'browser_enable'):
+                from browser_setup import inspect, apply
+                if action == 'browser_enable': apply(*args)
+                result = inspect(*args)
+            elif self.vault is None:
                 self.vault = Vault(self.factory())
-            if action == 'forget':
+            if action in ('browser_status', 'browser_enable'):
+                pass
+            elif action == 'forget':
                 self.vault.release()
             elif action in ('available', 'unlock', 'list_entries', 'select', 'add', 'save', 'delete', 'apps', 'disconnect', 'lock', 'check', 'prepare_import', 'import_logins', 'cancel_import', 'connections', 'revoke_browser'):
                 result = getattr(self.vault, action)(*args)
+                if action == 'select' and result.get('folder') == 'Monet App Logins':
+                    # Opening a legacy app entry explicitly makes its app eligible
+                    # for quiet suggestions too; this never opens another entry.
+                    from app_logins import AppIdentity, change_policy, valid_text
+                    fields = result['fields']
+                    if valid_text(fields.get('Application ID'), 4096, False):
+                        try: change_policy(saved=AppIdentity(fields['Application ID'], fields.get('Application', ''), ''))
+                        except Exception: pass
             else:
                 raise VaultError('This action is not available.')
         except VaultError as exc:
             error = tr(str(exc))
+        except ValueError as exc:
+            error = (tr(str(exc)) if action.startswith('browser_') and type(exc) is ValueError else
+                     tr('The vault operation failed. Your passwords have not been exported. Try unlocking again.'))
         except Exception:
             # Never log provider exceptions: messages can include entry values.
             error = tr('The vault operation failed. Your passwords have not been exported. Try unlocking again.')
@@ -147,7 +168,7 @@ class SecretField(QWidget):
     def __init__(self, key, value, clipboard, parent=None):
         super().__init__(parent)
         self.value = value
-        self.public = key.casefold() in ('username', 'user', 'website', 'url', 'notes')
+        self.public = key.casefold() in ('username', 'user', 'website', 'url', 'notes', 'application', 'service')
         self.setObjectName('secretField')
         self.shown = False
         self.clipboard = clipboard
@@ -201,14 +222,17 @@ class Editor(QDialog):
         self.fields = {}
         self.preserved = {}
         layout = QVBoxLayout(self)
-        info = QLabel(tr('Changes are saved in your encrypted vault. Connected browsers can fill logins on matching websites.'))
+        info = QLabel(tr('Changes are saved in your encrypted vault. App logins stay separate from website logins.'))
         info.setWordWrap(True); layout.addWidget(info)
         form = QFormLayout(); form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.title = QLineEdit(entry['key'] if entry else '')
+        self.title = QLineEdit(entry_title(entry.get('folder', ''), entry['key']) if entry else '')
         self.title.setObjectName('loginTitle'); self.title.setMaxLength(200)
         self.title.setReadOnly(entry is not None); form.addRow(tr('Title'), self.title)
         fields = entry['fields'] if entry else {'Username': '', 'Password': '', 'Website': '', 'Notes': ''}
         for key, value in fields.items():
+            if key == 'Application ID':
+                self.preserved[key] = value
+                continue
             if key == 'Notes':
                 edit = QPlainTextEdit(value); edit.setMaximumHeight(100)
                 edit.setContextMenuPolicy(Qt.NoContextMenu)
@@ -224,7 +248,7 @@ class Editor(QDialog):
                 edit.setText(value)
             edit.setObjectName('edit-' + key)
             # All provider fields are concealed, including unrecognized secret names.
-            public = key.casefold() in ('username', 'user', 'website', 'url', 'notes')
+            public = key.casefold() in ('username', 'user', 'website', 'url', 'notes', 'application', 'service')
             edit.setEchoMode(QLineEdit.Normal if public else QLineEdit.Password)
             edit.setContextMenuPolicy(Qt.NoContextMenu)
             edit.setInputMethodHints(Qt.ImhNoPredictiveText | Qt.ImhSensitiveData)
@@ -312,12 +336,12 @@ class PasswordsWindow(QMainWindow):
         subtitle = QLabel(tr('Your personal vault')); subtitle.setObjectName('muted'); side.addWidget(subtitle)
         self.navigation = QListWidget(); self.navigation.setObjectName('passwordNavigation')
         self.navigation.setIconSize(QSize(18, 18))
-        for label in (tr('Saved logins'), tr('Wi-Fi & VPN'), tr('App data'), tr('Connected apps'), tr('Preferences')):
+        for label in (tr('Saved logins'), tr('Wi-Fi & VPN'), tr('App data'), tr('Connected apps'), tr('Preferences'), tr('Zen autofill')):
             item = QListWidgetItem(label); item.setSizeHint(QSize(156, 44))
             self.navigation.addItem(item)
         self.navigation.setCurrentRow(0); self.navigation.currentRowChanged.connect(self.page_changed)
         side.addWidget(self.navigation, 1)
-        self.state_label = QLabel(tr('View locked')); side.addWidget(self.state_label)
+        self.state_label = QLabel(tr('View closed')); side.addWidget(self.state_label)
         self.lock_button = QPushButton(tr('Lock vault')); self.lock_button.setEnabled(False)
         self.lock_button.setToolTip(tr('Lock saved passwords for all apps until the vault is unlocked again.'))
         self.lock_button.clicked.connect(self.lock_vault); side.addWidget(self.lock_button)
@@ -367,6 +391,8 @@ class PasswordsWindow(QMainWindow):
         disconnect = QPushButton(tr('Disconnect selected app')); disconnect.clicked.connect(self.disconnect_app)
         app_layout.addWidget(disconnect)
         self.app_message = QLabel(); self.app_message.setWordWrap(True); self.app_message.setTextFormat(Qt.PlainText); app_layout.addWidget(self.app_message)
+        self.apps_unlock = QPushButton(tr('Open vault')); self.apps_unlock.clicked.connect(self.open_or_hide)
+        app_layout.addWidget(self.apps_unlock)
         self.pages.addWidget(apps)
         prefs = QWidget(); pref = QVBoxLayout(prefs); pref.setContentsMargins(26, 26, 26, 26); pref.setSpacing(18)
         title = QLabel(tr('Preferences')); title.setFont(QFont('Inter', 20, QFont.DemiBold)); pref.addWidget(title)
@@ -379,13 +405,19 @@ class PasswordsWindow(QMainWindow):
         apply = QPushButton(tr('Apply unlocking preference')); apply.clicked.connect(self.apply_policy); pref.addWidget(apply)
         self.pref_message = QLabel(tr('Some vault settings take effect at your next sign-in.'))
         self.pref_message.setWordWrap(True); pref.addWidget(self.pref_message)
-        browser = QPushButton(tr('Connect Zen for save and autofill')); browser.clicked.connect(self.connect_zen)
+        offers = QPushButton(tr('App login settings')); offers.clicked.connect(lambda: self.helper_action('open', 'passwords'))
+        pref.addWidget(offers)
+        browser = QPushButton(tr('Optional Zen connection')); browser.clicked.connect(self.connect_zen)
         pref.addWidget(browser)
         accounts = QPushButton(tr('Sign-in settings')); accounts.clicked.connect(lambda: self.helper_action('open', 'users'))
         pref.addWidget(accounts)
         text = QLabel(tr('App-managed keys remain available to their apps. Unknown binary formats are labelled clearly and are never converted or overwritten. Connect Zen to save logins with your approval and autofill matching websites. Browser connections can be revoked in Connected apps.'))
         text.setWordWrap(True); pref.addWidget(text); pref.addStretch()
         self.pages.addWidget(prefs)
+        from browser_ui import BrowserPage
+        self.browser_page = BrowserPage(tr, self)
+        self.browser_page.requested.connect(self.browser_action)
+        self.pages.addWidget(self.browser_page)
         self.apply_theme()
 
     def apply_theme(self):
@@ -433,6 +465,9 @@ class PasswordsWindow(QMainWindow):
         self.wallets.setEnabled(False); self.unlock_button.setEnabled(False)
         self.search.setEnabled(False); self.navigation.setEnabled(False)
         self.import_button.setEnabled(False); self.add_button.setEnabled(False); self.refresh_button.setEnabled(False); self.list.setEnabled(False)
+        self.apps_unlock.setEnabled(False)
+        self.browser_page.set_busy(True)
+        for button in self.details.findChildren(QPushButton, 'emptyUnlock'): button.setEnabled(False)
         if action in ('unlock', 'list_entries'):
             self.message.setText(tr('Opening vault…') if action == 'unlock' else tr('Refreshing…'))
         self.request.emit(self.token, action, args or [])
@@ -447,6 +482,7 @@ class PasswordsWindow(QMainWindow):
             if action == 'check':
                 self.clear_session()
             self.message.setText(error); self.app_message.setText(error)
+            if action.startswith('browser_'): self.browser_page.feedback.setText(error)
             if self.editor:
                 self.editor.error.setText(error); self.editor.buttons.setEnabled(True)
             if action == 'import_logins' and self.import_dialog:
@@ -456,6 +492,10 @@ class PasswordsWindow(QMainWindow):
         elif action == 'available':
             self.wallets.blockSignals(True); self.wallets.clear(); self.wallets.addItems(result['wallets'])
             self.wallets.setCurrentText(result['default']); self.wallets.blockSignals(False)
+        elif action in ('browser_status', 'browser_enable'):
+            self.browser_page.show_state(result)
+            if action == 'browser_enable':
+                self.browser_page.feedback.setText(tr('Connection enabled. Restart Zen if it was open, then finish connecting here.'))
         elif action in ('unlock', 'list_entries', 'delete'):
             self.unlocked = True; self.rows = result; self.clear_details(); self.filter_rows()
             self.message.setText(tr('Your vault is open.'))
@@ -496,18 +536,28 @@ class PasswordsWindow(QMainWindow):
             self.dispatch('check')
         elif action in ('unlock', 'list_entries') and not error and self.unlocked:
             self.dispatch('connections')
+        elif action == 'available' and self.navigation.currentRow() == 5:
+            self.browser_action('refresh')
 
     def update_controls(self):
         self.wallets.setEnabled(not self.busy)
         self.unlock_button.setEnabled(not self.busy and bool(self.wallets.currentText()))
         self.unlock_button.setText(tr('Close view') if self.unlocked else tr('Open vault'))
+        self.unlock_button.setToolTip(tr('Hide your saved entries without locking the vault for other apps.') if self.unlocked
+                                     else tr('Open your saved entries. Enter your vault password only if asked.'))
         self.refresh_button.setEnabled(not self.busy and self.unlocked)
         self.add_button.setEnabled(not self.busy and self.unlocked)
         self.import_button.setEnabled(not self.busy and self.unlocked)
         self.lock_button.setEnabled(self.unlocked)
         self.list.setEnabled(not self.busy)
         self.search.setEnabled(not self.busy); self.navigation.setEnabled(not self.busy)
-        self.state_label.setText(tr('Vault open') if self.unlocked else tr('View locked'))
+        self.state_label.setText(tr('Vault open') if self.unlocked else tr('View closed'))
+        self.apps_unlock.setVisible(not self.unlocked)
+        self.apps_unlock.setEnabled(not self.busy and bool(self.wallets.currentText()))
+        self.browser_page.set_busy(self.busy)
+        self.browser_page.set_pairing(self.unlocked, self.browser_connected)
+        for button in self.details.findChildren(QPushButton, 'emptyUnlock'):
+            button.setEnabled(not self.busy and bool(self.wallets.currentText()))
 
     def open_or_hide(self):
         if self.unlocked:
@@ -551,14 +601,23 @@ class PasswordsWindow(QMainWindow):
         content = QWidget(); content.setObjectName('detailSurface'); box = QVBoxLayout(content)
         box.setContentsMargins(28, 32, 28, 28); box.setSpacing(16)
         box.addStretch()
-        label = QLabel(tr('Your logins, in one place') if self.navigation.currentRow() == 0 else tr('Select an entry'))
+        label = QLabel(tr('Open your vault') if not self.unlocked else tr('No matching logins') if self.search.text().strip() and not self.list.count()
+                       else tr('Your logins, in one place') if self.navigation.currentRow() == 0 else tr('Select an entry'))
         label.setObjectName('entryTitle'); label.setFont(QFont('Inter', 18, QFont.DemiBold)); label.setWordWrap(True); box.addWidget(label)
-        text = ((tr('Zen is connected. Monet asks before saving or updating a website login. Your saved logins will appear here.') if self.browser_connected else tr('Connect Zen to save and autofill your website logins. You can also add an account manually or import an existing export.'))
+        text = (tr('Turn on app login offers in Password settings, or add a login here. Supported apps can ask to save accounts in your encrypted vault.')
                 if self.navigation.currentRow() == 0 else tr('Choose an item from the list to see its details.'))
+        if not self.unlocked:
+            text = tr('Use your vault password if asked. Your saved app and website logins appear here.')
+        elif self.search.text().strip() and not self.list.count():
+            text = tr('Try a different name or clear your search to see all saved entries.')
         hint = QLabel(text); hint.setObjectName('muted'); hint.setWordWrap(True); box.addWidget(hint)
-        if self.navigation.currentRow() == 0 and not self.browser_connected:
-            browser = QPushButton(tr('Connect Zen')); browser.clicked.connect(self.connect_zen)
-            box.addWidget(browser, alignment=Qt.AlignLeft)
+        if not self.unlocked:
+            button = QPushButton(tr('Open vault')); button.setObjectName('emptyUnlock')
+            button.setEnabled(not self.busy and bool(self.wallets.currentText()))
+            button.clicked.connect(self.open_or_hide); box.addWidget(button, alignment=Qt.AlignLeft)
+        elif self.navigation.currentRow() == 0 and not self.search.text().strip():
+            offers = QPushButton(tr('App login settings')); offers.clicked.connect(lambda: self.helper_action('open', 'passwords'))
+            box.addWidget(offers, alignment=Qt.AlignLeft)
         box.addStretch(); self.details.setWidget(content)
 
     def show_entry(self, entry):
@@ -567,10 +626,11 @@ class PasswordsWindow(QMainWindow):
         name = next((row['title'] for row in self.rows if row['folder'] == entry['folder'] and row['key'] == entry['key']), entry['key'])
         title = QLabel(name); title.setTextFormat(Qt.PlainText); title.setWordWrap(True)
         title.setObjectName('entryTitle'); title.setFont(QFont('Inter', 18, QFont.DemiBold)); layout.addWidget(title)
-        folder = QLabel(tr('Saved login') if entry['folder'] == 'Monet Logins' else tr('Managed by the app') if entry.get('internal') else entry['folder']); folder.setObjectName('muted'); folder.setTextFormat(Qt.PlainText); folder.setWordWrap(True); layout.addWidget(folder)
+        folder = QLabel(tr('Saved app login') if entry['folder'] == 'Monet App Logins' else tr('Saved login') if entry['folder'] == 'Monet Logins' else tr('Managed by the app') if entry.get('internal') else entry['folder']); folder.setObjectName('muted'); folder.setTextFormat(Qt.PlainText); folder.setWordWrap(True); layout.addWidget(folder)
         if entry['note']:
             note = QLabel(tr(entry['note'])); note.setWordWrap(True); layout.addWidget(note)
         for key in sorted(entry['fields'], key=lambda k: ({'Username': 0, 'Website': 1, 'Password': 2, 'Notes': 3}.get(k, 4), k)):
+            if key == 'Application ID': continue
             value = entry['fields'][key]
             if not value and key in ('Notes', 'Username', 'Website'): continue
             field = SecretField(key, value, self.clipboard, content)
@@ -653,14 +713,23 @@ class PasswordsWindow(QMainWindow):
             self.dispatch('delete')
 
     def connect_zen(self):
-        # Setup opens only the official signed connector page and registers the native host.
-        program = str(Path(self.helper).with_name('monet-passwords'))
+        self.navigation.setCurrentRow(5)
+
+    def browser_action(self, action):
+        if self.busy: return
+        if action in ('enable', 'refresh'):
+            self.browser_page.feedback.clear()
+            self.dispatch('browser_enable' if action == 'enable' else 'browser_status',
+                          [str(Path(self.helper).with_name('monet-passwords-browser'))])
+            return
+        from browser_setup import browser_command
         try:
-            subprocess.Popen([program, '--connect-zen'], stdin=subprocess.DEVNULL,
+            command = browser_command(self.browser_page.state or {}, action)
+            subprocess.Popen(command, stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            self.pref_message.setText(tr('Finish connecting in Zen. If Zen was already open, restart it to enable the native connection.'))
-        except OSError:
-            self.pref_message.setText(tr('Zen connection setup could not be opened.'))
+            self.browser_page.feedback.setText(tr('Continue in Zen, then come back here.'))
+        except (OSError, ValueError):
+            self.browser_page.feedback.setText(tr('Zen could not be opened. Check that it is installed, then try again.'))
 
     def revoke_browser(self):
         item = self.browser_list.currentItem()
@@ -688,9 +757,11 @@ class PasswordsWindow(QMainWindow):
         elif page == 3:
             self.pages.setCurrentIndex(1)
             if self.unlocked: self.dispatch('connections')
-            else: self.app_message.setText(tr('Open your vault from Saved logins first.'))
-        else:
+            else: self.app_message.setText(tr('Open your vault to manage app access.'))
+        elif page == 4:
             self.pages.setCurrentIndex(2); self.load_policy()
+        else:
+            self.pages.setCurrentIndex(3); self.browser_action('refresh')
 
     def helper_action(self, *args):
         # Only fixed non-secret settings commands cross a process boundary.
@@ -739,11 +810,12 @@ class PasswordsWindow(QMainWindow):
         self.pending_check = False
         self.cancel_import_view()
         if self.editor: self.editor.reject(); self.editor = None
-        self.clear_details(); self.rows = []; self.list.clear(); self.app_list.clear(); self.browser_list.clear()
+        self.rows = []; self.list.clear(); self.app_list.clear(); self.browser_list.clear()
         self.clipboard.clear()
         self.request.emit(self.token, 'forget', [])
-        self.message.setText(tr('Password view locked. Open your vault to continue.'))
+        self.message.setText(tr('View closed. Apps may still use the unlocked vault.'))
         self.update_controls()
+        self.clear_details()
 
     @Slot(str)
     def wallet_closed(self, name):
@@ -781,7 +853,12 @@ class PasswordsWindow(QMainWindow):
                 and self.unlocked and not self.busy and not self.editor and not self.import_dialog):
             # Refresh browser saves when returning to the app, without polling or
             # replacing a form the user is editing.
-            self.dispatch('connections' if self.navigation.currentRow() == 3 else 'list_entries')
+            if self.navigation.currentRow() == 5: self.browser_action('refresh')
+            elif self.navigation.currentRow() != 4:
+                self.dispatch('connections' if self.navigation.currentRow() == 3 else 'list_entries')
+        elif (event.type() == QEvent.WindowActivate and hasattr(self, 'browser_page')
+                and not self.busy and self.navigation.currentRow() == 5):
+            self.browser_action('refresh')
         return super().event(event)
 
     def closeEvent(self, event):
@@ -808,7 +885,7 @@ def main(data, helper):
     app = QApplication(sys.argv[:1]); app.setStyle('Fusion'); app.setApplicationName('monet-passwords')
     app.setApplicationDisplayName(tr('Passwords')); app.setDesktopFileName('monet-passwords')
     app.setOrganizationName('monet')
-    page = 'connections' if '--connections' in sys.argv else 'preferences' if '--preferences' in sys.argv else ''
+    page = 'browser' if '--connect-zen' in sys.argv else 'connections' if '--connections' in sys.argv else 'preferences' if '--preferences' in sys.argv else ''
     name = 'monet-passwords-' + str(os.getuid())
     socket = QLocalSocket(); socket.connectToServer(name)
     if socket.waitForConnected(200):
@@ -818,8 +895,8 @@ def main(data, helper):
     if not server.listen(name): return 1
     window = PasswordsWindow(helper)
     def show_page(page):
-        if page in ('connections', 'preferences'):
-            window.navigation.setCurrentRow(3 if page == 'connections' else 4)
+        if page in ('connections', 'preferences', 'browser'):
+            window.navigation.setCurrentRow({'connections': 3, 'preferences': 4, 'browser': 5}[page])
         window.showNormal(); window.raise_(); window.activateWindow()
     def activate():
         peer = server.nextPendingConnection()
@@ -831,6 +908,6 @@ def main(data, helper):
     server.newConnection.connect(activate)
     if page:
         # Discovery is asynchronous; navigation can still be selected programmatically.
-        window.navigation.setCurrentRow(3 if page == 'connections' else 4)
+        window.navigation.setCurrentRow({'connections': 3, 'preferences': 4, 'browser': 5}[page])
     window.show()
     return app.exec()

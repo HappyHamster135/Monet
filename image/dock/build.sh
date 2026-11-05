@@ -14,7 +14,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwayland-devel \
     plasma-workspace-devel libplasma-devel plasma-activities-devel plasma-activities-stats-devel libksysguard-devel plasma-wayland-protocols-devel \
     kf6-kconfig-devel kf6-kcoreaddons-devel kf6-kservice-devel kf6-kglobalaccel-devel kf6-kitemmodels-devel \
-    kf6-ki18n-devel kf6-kio-devel kf6-knotifications-devel kf6-kwindowsystem-devel \
+    kf6-ki18n-devel kf6-kio-devel kf6-knotifications-devel kf6-kwindowsystem-devel kf6-kxmlgui-devel \
     wayland-devel libxkbcommon-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 
@@ -40,7 +40,7 @@ done
 # Ship the complete corresponding source, licenses and build instructions with
 # the image. The archive contains the patched source plus Monet's build inputs.
 mkdir "$work/monet-build"
-for name in CMakeLists.txt MonetDockMotion.qml patch.py bundle.py build.sh README.md; do
+for name in CMakeLists.txt MonetDockMotion.qml MonetDockHover.qml patch.py bundle.py build.sh README.md; do
     cp "$here/$name" "$work/monet-build/"
 done
 cp "$out/runtime.json" "$work/monet-build/runtime.json"

@@ -62,8 +62,7 @@ jobs:
           IMAGE: ${{ steps.build.outputs.image }}
         run: |
           echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          sudo podman push "$IMAGE:latest"
-          sudo podman push "$IMAGE:$(cat VERSION)"
+          bash tools/push-image.sh "$IMAGE" "$(cat VERSION)"
 
   # The same Monet on Bazzite's AMD and Intel desktop (Mesa, no NVIDIA driver):
   # for Radeon and Intel graphics, and older GeForce cards. Built beside the other.
@@ -89,8 +88,7 @@ jobs:
       - name: Push
         run: |
           echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          sudo podman push "$IMAGE:latest"
-          sudo podman push "$IMAGE:$(cat VERSION)"
+          bash tools/push-image.sh "$IMAGE" "$(cat VERSION)"
 
   iso:
     needs: [image, image-amd]
@@ -122,7 +120,7 @@ jobs:
           IMAGE: ${{ needs.image.outputs.image }}
         run: |
           VERSION=$(cat VERSION)
-          sed "s|@IMAGE@|$IMAGE:latest|" image/monet.ks > monet.ks
+          sed "s|@IMAGE@|$IMAGE:$VERSION|" image/monet.ks > monet.ks
 
           # Monet's look for the installer, loaded automatically from /images/product.img.
           rm -rf product && cp -r image/installer/product product
@@ -223,7 +221,7 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA" \
-            image/setup/build.sh "$VERSION" "$IMAGE:latest" "/work/Monet-$VERSION-Setup.iso"
+            image/setup/build.sh "$VERSION" "$IMAGE:$VERSION" "/work/Monet-$VERSION-Setup.iso"
           sudo chown "$(id -u)" Monet-*-Setup.iso
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

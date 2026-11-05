@@ -222,6 +222,8 @@ Shared.MonetWindow {
         { id: "updates", name: i18n("Updates"), glyph: "M12 4v11M7 10l5 5 5-5M5 20h14",
           words: i18nc("Settings search words, space-separated",
                       "updates update version upgrade new reset restore rollback") },
+        { id: "recovery", name: i18n("Recovery"), swatch: "backups", glyph: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3h3",
+          words: i18nc("Settings search words, space-separated", "recovery undo desktop settings preferences shortcuts update restore repair") },
         { id: "about", name: i18n("About Monet"), glyph: "M12 7.5h.01M12 11v6",
           words: i18nc("Settings search words, space-separated",
                       "about pc computer specs graphics gpu processor cpu memory ram storage disk version report logs problem")
@@ -276,6 +278,77 @@ Shared.MonetWindow {
     property var browserInfo: ({})
     property var storageInfo: ({})
     property bool storageBusy: false
+    property var retained: []
+    property var retainedReview: null
+    property bool retainedBusy: false
+    property bool retainedLoaded: false
+    property string retainedMessage: ""
+    property string retainedArchive: ""
+    property bool retainedConsent: false
+    property var retainedExport: null
+    property var health: ({})
+    property bool healthBusy: false
+    property string healthError: ""
+
+    function recoverStorage(action, item, destination) {
+        if (retainedBusy) return
+        if (action === "delete" && (!retainedConsent || !retainedReview || !item
+                || item.id !== retainedReview.id || item.token !== retainedReview.token)) return
+        retainedBusy = true
+        retainedMessage = action === "export" ? i18n("Saving your files. Keep Settings open until this finishes…") : i18n("Checking the saved installation…")
+        ask("storage-recovery " + action + (item ? " " + item.id + " " + item.token : "")
+            + (destination ? " " + hex(destination) : ""), (out, code) => {
+            sheet.retainedBusy = false
+            const result = sheet.json(out, {ok: false})
+            if (!result.ok || code !== 0) {
+                sheet.retainedReview = null
+                sheet.retainedMessage = result.state === "unsupported" ? i18n("This disk layout does not support unfinished-install recovery.")
+                    : result.state === "busy" ? i18n("Another recovery operation is running. Wait, then try again.")
+                    : result.state === "changed" || result.state === "in-use" ? i18n("The saved installation changed or is in use. Refresh before trying again.")
+                    : i18n("The operation did not finish or permission was cancelled. Refresh to check what remains before trying again.")
+                return
+            }
+            sheet.retainedMessage = ""
+            if (action === "list") {
+                sheet.retained = result.items || []
+                sheet.retainedLoaded = true
+                sheet.retainedReview = null
+                if (result.limited) sheet.retainedMessage = i18n("Showing the first 64 saved installations. Refresh after cleanup to see more.")
+            } else if (action === "review") {
+                sheet.retainedReview = result.item
+                sheet.retainedConsent = false
+            } else if (action === "export") {
+                sheet.retainedArchive = result.path
+                sheet.retainedMessage = i18n("Your files were saved in an archive. Open it and check the files before removing the saved installation.")
+            } else if (action === "delete") {
+                sheet.retained = sheet.retained.filter(entry => entry.id !== item.id)
+                sheet.retainedReview = null
+                sheet.retainedMessage = i18n("Saved installation removed. Freed space may take a moment to appear.")
+                sheet.ask("storage-capacity", data => sheet.storageInfo = sheet.json(data, sheet.storageInfo))
+            }
+        })
+    }
+    FolderDialog {
+        id: recoveryFolder
+        title: i18n("Choose where to save your recovered files")
+        onAccepted: {
+            const url = selectedFolder.toString()
+            if (url.startsWith("file:///")) sheet.recoverStorage("export", sheet.retainedExport, decodeURIComponent(url.slice(7)))
+            sheet.retainedExport = null
+        }
+        onRejected: sheet.retainedExport = null
+    }
+    function checkHealth() {
+        if (healthBusy) return
+        healthBusy = true
+        healthError = ""
+        ask("troubleshooting", (out, code) => {
+            sheet.healthBusy = false
+            const result = sheet.json(out, {ok: false})
+            if (result.ok && code === 0) sheet.health = result
+            else sheet.healthError = i18n("The recovery check could not finish. Try again.")
+        })
+    }
     property string storageProblem: ""
     // Storage → OneDrive (monet-quick onedrive): its state, what's being done, and a sign-in that didn't finish.
     property var oneDrive: ({})
@@ -291,6 +364,20 @@ Shared.MonetWindow {
     property bool backupLoading: false
     // The earlier versions of one file, when Files asked for them.
     property var earlier: ({})
+    property bool earlierBusy: false
+    property string earlierMessage: ""
+    function useEarlier(action, item) {
+        if (earlierBusy) return
+        earlierBusy = true
+        earlierMessage = action === "put-back" ? i18n("Restoring a copy…") : ""
+        ask(action + " " + hex(earlier.file) + " " + hex(item.name), out => {
+            sheet.earlierBusy = false
+            const result = sheet.json(out, {})
+            sheet.earlierMessage = result.ok ? (action === "put-back" ? i18n("The restored copy is beside your file.") : "")
+                : result.state === "changed" ? i18n("The list of earlier versions changed. Open it again and choose a version.")
+                : i18n("The copy could not be restored. Check free space and folder permissions, then try again.")
+        })
+    }
     // Games & Controllers: { controllers, overlay, pair, libraries }.
     property var gameInfo: ({})
     // What's new in this Monet: { version, headline, items: [{ title, text }] }.
@@ -304,6 +391,12 @@ Shared.MonetWindow {
     property var printerInfo: ({})
     // The Monet before the last update: { version, date, pending }, or {}.
     property var previous: ({})
+    property var profileHistory: []
+    property var profileReview: null
+    property bool profileLoading: false
+    property bool profileRestoring: false
+    property string profileState: ""
+    property string profileMessage: ""
     // An update that didn't start here, so Monet went back by itself: { version, to }, or {}.
     property var wentBack: ({})
     // Reset this PC: { pending } once it waits for the next restart.
@@ -611,6 +704,7 @@ Shared.MonetWindow {
         } else if (page === "printers") {
             ask("printers", out => sheet.printerInfo = sheet.json(out, sheet.printerInfo))
         }
+        if (page === "recovery") loadProfileHistory()
         if (page === "updates") {
             loadUpdateHistory()
             ask("previous", out => sheet.previous = sheet.json(out, {}))
@@ -874,6 +968,54 @@ Shared.MonetWindow {
             sheet.loadUpdateHistory()
         })
         checkFirmware()
+    }
+
+    function loadProfileHistory() {
+        if (profileLoading || profileRestoring) return
+        profileLoading = true
+        profileReview = null
+        ask("profile-recovery", (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.profileLoading = false
+            sheet.profileState = code === 0 && result.ok === true && Array.isArray(result.items) ? "ready"
+                : result.state === "busy" ? "busy" : "unavailable"
+            sheet.profileHistory = sheet.profileState === "ready" ? result.items : []
+        })
+    }
+    function profileAreas(item) {
+        const names = {appearance: i18n("Appearance"), windows: i18n("Windows and workspace"),
+            input: i18n("Keyboard and pointer"), lock: i18n("Screen locking"), desktop: i18n("Desktop layout"),
+            shortcuts: i18n("Application shortcuts"), preferences: i18n("Other desktop preferences")}
+        return (item.areas || []).map(area => names[area] || names.preferences).join(" · ")
+    }
+    function profileStatus(item) {
+        return item.status === "rolled-back" ? i18n("Undone")
+            : item.status === "conflicts" ? i18n("Some newer choices were kept")
+            : item.status === "interrupted" ? i18n("Interrupted")
+            : item.status === "failed" ? i18n("Didn't finish") : i18n("Completed")
+    }
+    function reviewProfile(item) {
+        if (profileLoading || profileRestoring || !item || !(item.remaining > 0)) return
+        profileReview = item
+        profileMessage = ""
+    }
+    function undoProfile() {
+        if (profileLoading || profileRestoring || !profileReview) return
+        const item = profileReview
+        profileRestoring = true
+        ask("profile-recovery " + item.id + " " + item.fingerprint, (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.profileRestoring = false
+            sheet.profileReview = null
+            sheet.profileMessage = code === 0 && result.ok === true && result.state === "done"
+                ? i18n("Desktop changes undone. Sign out and back in when you are ready to apply them everywhere.")
+                : code === 0 && result.state === "conflicts"
+                    ? i18n("Newer choices and changes that could not be restored were kept. Review what remains.")
+                : result.state === "busy" ? i18n("Desktop settings are being updated. Wait for that to finish, then refresh.")
+                : result.state === "changed" ? i18n("The saved changes have changed. Refresh and review them again before undoing.")
+                : i18n("Recovery could not finish. Some changes may already have been undone; refresh to check what remains.")
+            sheet.loadProfileHistory()
+        })
     }
 
     function goBack() {
@@ -1586,6 +1728,15 @@ Shared.MonetWindow {
         }
     }
 
+    component MaintenanceText: Text {
+        required property var tone
+        Layout.fillWidth: true
+        wrapMode: Text.Wrap
+        textFormat: Text.PlainText
+        color: tone.ink
+        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+    }
+
     component Card: Rectangle {
         id: card
         property var tone
@@ -2035,6 +2186,7 @@ Shared.MonetWindow {
     component Busy: T.ProgressBar {
         id: meter
         property var tone
+        property bool active: true
         implicitWidth: 200
         implicitHeight: 4
         background: Rectangle {
@@ -2050,7 +2202,7 @@ Shared.MonetWindow {
                 radius: 2
                 color: meter.tone.lily
                 NumberAnimation on x {
-                    running: meter.visible && sheet.pollingActive
+                    running: meter.visible && meter.active
                     loops: Animation.Infinite
                     from: -stroke.width
                     to: meter.width
@@ -2354,6 +2506,7 @@ Shared.MonetWindow {
                             contentY = Math.max(0, Math.min(shown.y - (height - shown.height) / 2, contentHeight - height))
                         }
                     }
+                    onHeightChanged: Qt.callLater(reveal)
 
                     Connections {
                         target: sheet
@@ -2469,6 +2622,7 @@ Shared.MonetWindow {
                             model: sheet.pages
                             Rectangle {
                                 id: navItem
+                                objectName: "settingsPage-" + modelData.id
                                 readonly property bool current: sheet.page === modelData.id
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: visible ? Math.max(38, Kirigami.Theme.defaultFont.pointSize * 4 / 3 + 18) : 0
@@ -2631,6 +2785,7 @@ Shared.MonetWindow {
                         contentY = Math.min(Math.max(0, contentHeight - height), top + item.height - height + 12)
                 }
                 onHeightChanged: Qt.callLater(revealFocus)
+                onContentHeightChanged: Qt.callLater(revealFocus)
                 Connections {
                     target: sheet
                     function onActiveFocusItemChanged() { Qt.callLater(scroller.revealFocus) }
@@ -2655,7 +2810,7 @@ Shared.MonetWindow {
                         light: lightPage, wifi: wifiPage, bluetooth: bluetoothPage, phone: phonePage, display: displayPage,
                         sound: soundPage, datetime: datetimePage, users: usersPage, input: inputPage,
                         power: powerPage, notifications: notificationsPage, accessibility: accessibilityPage, apps: appsPage,
-                        storage: storagePage, backups: backupsPage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
+                        storage: storagePage, backups: backupsPage, recovery: recoveryPage, games: gamesPage, windows: windowsPage, privacy: privacyPage,
                         security: securityPage, passwords: passwordsPage,
                         printers: printersPage, welcome: welcomePage,
                         updates: updatesPage, about: aboutPage
@@ -5313,7 +5468,7 @@ Shared.MonetWindow {
                 // What fills the disk, each in a color of The Hours.
                 readonly property var parts: sheet.storageInfo.measured ? [
                     ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
-                    ["files", i18n("Your files"), "#357F72"], ["system", i18n("Monet"), "#9C7BC0"]
+                    ["files", i18n("Your files"), "#357F72"], ["system", sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("Other or unmeasured") : i18n("Monet"), "#9C7BC0"]
                 ] : [["used", i18n("Used"), "#357F72"]]
                 readonly property real total: sheet.storageInfo.total || 0
                 // Emptying the Trash asks once more.
@@ -5437,6 +5592,7 @@ Shared.MonetWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: sheet.storageProblem || (sheet.storageBusy ? i18n("Measuring folder sizes…")
+                                    : sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("Partial measurement. Some folders could not be measured within this scan. Other or unmeasured space includes them.")
                                     : i18n("Folder sizes are measured only when you ask, to keep disk activity low."))
                                 color: look.dim
                                 font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
@@ -5448,6 +5604,99 @@ Shared.MonetWindow {
                                 text: sheet.storageBusy ? i18n("Measuring…") : i18n("Measure folder sizes")
                                 enabled: !sheet.storageBusy
                                 onClicked: sheet.measureStorage()
+                            }
+                        }
+                    }
+                }
+                Caption { tone: look; text: i18n("Unfinished installations") }
+                Card {
+                    tone: look
+                    ColumnLayout {
+                        Layout.fillWidth: true; Layout.margins: 20; spacing: 12
+                        MaintenanceText { tone: look; text: i18n("Setup keeps an unfinished installation when you retry. Review its files before making room. Your current system and its rollback are protected.") }
+                        Pill {
+                            tone: look; objectName: "scanRetained"
+                            text: sheet.retainedBusy ? i18n("Working…") : i18n("Find saved installations")
+                            enabledPill: !sheet.retainedBusy
+                            onClicked: sheet.recoverStorage("list", null)
+                        }
+                        MaintenanceText { tone: look;
+                            objectName: "retainedStatus"
+                            text: sheet.retainedMessage || (sheet.retainedLoaded && sheet.retained.length === 0 ? i18n("No unfinished installations found.") : i18n("This check requires administrator permission. Nothing is removed automatically."))
+                        }
+                        Pill {
+                            tone: look; visible: sheet.retainedArchive !== ""; text: i18n("Open recovered archive")
+                            onClicked: Qt.openUrlExternally("file://" + encodeURI(sheet.retainedArchive))
+                        }
+                    }
+                }
+                Repeater {
+                    model: sheet.retained
+                    Card {
+                        id: savedInstall
+                        required property var modelData
+                        tone: look
+                        ColumnLayout {
+                            Layout.fillWidth: true; Layout.margins: 20; spacing: 12
+                            MaintenanceText { tone: look; font.bold: true; text: i18n("Saved installation · %1", new Date(savedInstall.modelData.time).toLocaleString(Qt.locale(), Locale.ShortFormat)) }
+                            MaintenanceText { tone: look; text: savedInstall.modelData.id }
+                            Pill {
+                                tone: look; objectName: "reviewRetained-" + savedInstall.modelData.id
+                                text: i18n("Review files and cleanup"); enabledPill: !sheet.retainedBusy
+                                onClicked: sheet.recoverStorage("review", savedInstall.modelData)
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 12
+                                visible: sheet.retainedReview !== null && sheet.retainedReview.id === savedInstall.modelData.id
+                                onVisibleChanged: if (visible) Qt.callLater(() => cancelRetained.forceActiveFocus())
+                                MaintenanceText { tone: look;
+                                    text: sheet.retainedReview && sheet.retainedReview.bytes !== null
+                                        ? i18n("Referenced data: %1. Shared data means the space freed may be smaller.", sheet.bytes(sheet.retainedReview.bytes))
+                                        : i18n("Size is unavailable. No data has been removed.")
+                                }
+                                MaintenanceText { tone: look; text: i18n("Save your account's files as an archive first. Choose another drive if this disk is low on space. Other accounts' files are not exported. Removing this installation permanently removes all accounts' files inside it, including any saved boot files.") }
+                                Pill {
+                                    tone: look; text: i18n("Save my files…"); objectName: "exportRetained"
+                                    enabledPill: !sheet.retainedBusy && sheet.retainedReview !== null && sheet.retainedReview.homes === 1
+                                    onClicked: { sheet.retainedExport = sheet.retainedReview; recoveryFolder.open() }
+                                }
+                                MaintenanceText { tone: look;
+                                    visible: sheet.retainedReview !== null && sheet.retainedReview.homes !== 1
+                                    text: i18n("A unique home folder for this account was not found. Keep this installation if it may contain files you need.")
+                                }
+                                QQC2.CheckBox {
+                                    id: recoveryConsent
+                                    objectName: "consentRetained"; Layout.fillWidth: true
+                                    text: i18n("I have checked and saved everything I need.")
+                                    checked: sheet.retainedConsent; enabled: !sheet.retainedBusy
+                                    onToggled: sheet.retainedConsent = checked
+                                    font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                                    indicator: Rectangle {
+                                        width: 24; height: 24; radius: 6
+                                        x: recoveryConsent.leftPadding; y: (recoveryConsent.height - height) / 2
+                                        color: recoveryConsent.checked ? look.lily : look.wash
+                                        border.color: recoveryConsent.activeFocus ? look.lily : look.dim
+                                        border.width: recoveryConsent.activeFocus ? 2 : 1
+                                        Text {
+                                            anchors.centerIn: parent; text: "✓"; visible: recoveryConsent.checked
+                                            color: look.dark ? "#1C1B19" : "#FFFFFF"; font.pixelSize: 18
+                                        }
+                                    }
+                                    contentItem: Text {
+                                        text: recoveryConsent.text; font: recoveryConsent.font; color: look.ink
+                                        wrapMode: Text.Wrap; leftPadding: recoveryConsent.indicator.width + recoveryConsent.spacing
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                                Flow {
+                                    Layout.fillWidth: true; spacing: 8
+                                    Pill { id: cancelRetained; tone: look; text: i18n("Cancel"); enabledPill: !sheet.retainedBusy; onClicked: sheet.retainedReview = null }
+                                    Pill {
+                                        tone: look; objectName: "deleteRetained"; text: i18n("Permanently remove this installation")
+                                        enabledPill: !sheet.retainedBusy && sheet.retainedConsent
+                                        onClicked: sheet.recoverStorage("delete", sheet.retainedReview)
+                                    }
+                                }
                             }
                         }
                     }
@@ -5628,12 +5877,14 @@ Shared.MonetWindow {
                                 Pill {
                                     tone: look
                                     text: i18n("Show")
-                                    onClicked: sheet.ask("version-open " + index)
+                                    enabledPill: !sheet.earlierBusy
+                                    onClicked: sheet.useEarlier("version-open", modelData)
                                 }
                                 Pill {
                                     tone: look
                                     text: i18n("Put back")
-                                    onClicked: sheet.ask("put-back " + index)
+                                    enabledPill: !sheet.earlierBusy
+                                    onClicked: sheet.useEarlier("put-back", modelData)
                                 }
                             }
                         }
@@ -5643,7 +5894,7 @@ Shared.MonetWindow {
                     horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     visible: (sheet.earlier.file || "") !== "" && backupsColumn.versions.length > 0
-                    text: i18n("Put back keeps both: the earlier version goes beside it, with its time in the name.")
+                    text: sheet.earlierMessage || i18n("Put back keeps both: the earlier version goes beside it, with its time in the name.")
                     color: look.dim
                     font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                     lineHeight: 1.3
@@ -5653,7 +5904,8 @@ Shared.MonetWindow {
                     tone: look
                     visible: (sheet.earlier.file || "") !== ""
                     text: i18n("Done")
-                    onClicked: sheet.ask("versions-done", () => sheet.earlier = {})
+                    enabledPill: !sheet.earlierBusy
+                    onClicked: sheet.ask("versions-done", () => { sheet.earlier = {}; sheet.earlierMessage = "" })
                 }
 
                 Caption {
@@ -5798,9 +6050,57 @@ Shared.MonetWindow {
                 Card {
                     tone: look
                     SettingRow {
+                        objectName: "appLoginOffersRow"
                         tone: look
                         divider: false
-                        title: i18n("Saved desktop passwords")
+                        title: i18n("Save and fill app logins")
+                        detail: i18n("Ask before saving or filling logins in supported apps. Choose an account from Monet’s notification to fill it. Some apps keep their fields private and need you to enter the password once when saving.")
+                        tappable: !sheet.walletBusy && sheet.walletInfo.appOffersAvailable === true
+                        onTapped: sheet.walletAction("app-offers", sheet.walletInfo.appOffers ? "off" : "on")
+                        Switch {
+                            tone: look
+                            active: sheet.walletInfo.appOffers === true
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: sheet.walletInfo.appOffers ? (sheet.walletInfo.appOffersRunning ? i18n("Ready for supported apps") : i18n("App login offers need attention")) : i18n("App login offers are off")
+                        detail: sheet.walletInfo.appOffers && !sheet.walletInfo.appOffersRunning
+                            ? i18n("Turn the switch off and on to try again.")
+                            : i18n("Browser passwords stay in your browser. Apps with custom sign-in screens may need a login added manually in Monet Passwords.")
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: sheet.walletInfo.appOffersIgnored > 0
+                        title: i18n("Skipped apps")
+                        detail: i18n("Allow prompts again for apps where you chose Never for this app.")
+                        Pill {
+                            tone: look
+                            text: i18n("Reset skipped apps")
+                            enabled: !sheet.walletBusy
+                            onClicked: sheet.walletAction("app-offers", "reset")
+                        }
+                    }
+                    SettingRow {
+                        objectName: "appLoginSupportRow"
+                        tone: look
+                        title: i18n("App login support")
+                        detail: i18n("Help sandboxed apps expose their sign-in fields, or restore their earlier support settings. Reopen the app after a change.")
+                        Pill {
+                            objectName: "appLoginSupportButton"
+                            tone: look
+                            text: i18n("Review app support")
+                            enabled: !sheet.walletBusy
+                            onClicked: sheet.walletAction("app-support")
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Saved logins")
                         detail: i18n("Open Monet Passwords to search, show, copy and manage saved logins and app credentials.")
                         Pill {
                             objectName: "walletManageButton"
@@ -5813,7 +6113,7 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         title: i18n("App access and prompts")
-                        detail: i18n("See connected desktop apps and disconnect a current connection. Website autofill is managed in your browser.")
+                        detail: i18n("Review browser pairings and desktop apps that can access your vault. Revoke a browser connection without deleting your logins.")
                         Pill {
                             objectName: "walletAccessButton"
                             tone: look
@@ -5824,8 +6124,20 @@ Shared.MonetWindow {
                     }
                     SettingRow {
                         tone: look
+                        title: i18n("Optional Zen connection")
+                        detail: i18n("Connect Zen to Monet Passwords. Monet asks before saving or updating a login; the connector needs no separate password.")
+                        Pill {
+                            objectName: "walletZenButton"
+                            tone: look
+                            text: i18n("Set up Zen autofill")
+                            enabled: !sheet.walletBusy && sheet.walletInfo.manager === true
+                            onClicked: sheet.walletAction("zen")
+                        }
+                    }
+                    SettingRow {
+                        tone: look
                         title: i18n("Website passwords")
-                        detail: i18n("Browsers can keep website logins separately. Choose which sites to save and fill in your browser's password settings.")
+                        detail: i18n("Passwords previously saved only in your browser remain there. Open the browser’s own list to manage those entries.")
                         Pill {
                             objectName: "walletBrowserButton"
                             tone: look
@@ -7069,6 +7381,156 @@ Shared.MonetWindow {
         }
 
         Component {
+            id: recoveryPage
+            ColumnLayout {
+                spacing: 20
+                PageTitle {
+                    tone: look; entry: sheet.entry("recovery"); art: sheet.art
+                    text: i18n("Recovery")
+                    detail: i18n("Recover your files, return to an earlier system, or undo desktop changes.")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look; divider: false
+                        title: i18n("Files and earlier versions")
+                        detail: i18n("Find a backup or restore an earlier copy of a file.")
+                        Pill { tone: look; text: i18n("Open Backups"); onClicked: sheet.page = "backups" }
+                    }
+                    SettingRow {
+                        tone: look; divider: false
+                        title: i18n("An earlier Monet system")
+                        detail: i18n("Check whether the previous system is available in Updates.")
+                        Pill { tone: look; text: i18n("Open Updates"); onClicked: sheet.page = "updates" }
+                    }
+                }
+                Caption { tone: look; text: i18n("Troubleshooting") }
+                Card {
+                    tone: look
+                    ColumnLayout {
+                        Layout.fillWidth: true; Layout.margins: 20; spacing: 12
+                        MaintenanceText { tone: look; text: i18n("Check disk space, updates, backups and recovery availability. The report contains status facts only, with no account names, personal paths or log contents. Nothing is sent.") }
+                        Pill { tone: look; objectName: "checkRecoveryHealth"; text: sheet.healthBusy ? i18n("Checking…") : i18n("Check now"); enabledPill: !sheet.healthBusy; onClicked: sheet.checkHealth() }
+                        MaintenanceText { tone: look; visible: sheet.healthError !== ""; text: sheet.healthError }
+                        MaintenanceText { tone: look;
+                            visible: sheet.health.ok === true
+                            text: (sheet.health.low ? i18n("Storage is running low. Review Storage before installing updates.") : i18n("There is room on the system disk."))
+                                + "\n" + (sheet.health.rollback === true ? i18n("An earlier system is available in Updates.") : sheet.health.rollback === false ? i18n("No earlier system is available yet.") : i18n("System rollback availability could not be checked."))
+                                + "\n" + (sheet.health.services || []).filter(item => item.state === "failed").map(item => item.area === "updates" ? i18n("An update task failed. Open Updates to review and retry.") : i18n("A backup task failed. Open Backups to review it.")).join("\n")
+                        }
+                        Flow {
+                            Layout.fillWidth: true; spacing: 8
+                            Pill { tone: look; text: i18n("Open Storage"); onClicked: sheet.page = "storage" }
+                            Pill { tone: look; text: i18n("Open Updates"); onClicked: sheet.page = "updates" }
+                            Pill { tone: look; text: i18n("Open Backups"); onClicked: sheet.page = "backups" }
+                        }
+                        QQC2.TextArea {
+                            id: recoveryReport; objectName: "recoveryReport"
+                            Layout.fillWidth: true; visible: sheet.health.ok === true
+                            readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
+                            textFormat: TextEdit.PlainText; text: sheet.health.report || ""
+                            color: look.ink; background: Rectangle { color: look.wash; radius: 12 }
+                            Accessible.name: i18n("Diagnostic report preview")
+                        }
+                        Pill {
+                            tone: look; text: i18n("Copy report"); visible: sheet.health.ok === true
+                            onClicked: { recoveryReport.selectAll(); recoveryReport.copy(); recoveryReport.deselect() }
+                        }
+                    }
+                }
+                Caption { tone: look; text: i18n("Undo desktop changes") }
+                Card {
+                    tone: look
+                    ColumnLayout {
+                        Layout.fillWidth: true; Layout.margins: 20; spacing: 12
+                        Text {
+                            Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.dim
+                            text: i18n("Review changes Monet made to this account's settings and shortcuts. Newer personal choices are protected. This does not restore documents or change the installed system.")
+                        }
+                        Pill {
+                            tone: look; objectName: "refreshProfileHistory"
+                            text: sheet.profileLoading ? i18n("Loading…") : i18n("Refresh")
+                            enabledPill: !sheet.profileLoading && !sheet.profileRestoring
+                            onClicked: sheet.loadProfileHistory()
+                        }
+                        Text {
+                            Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.dim
+                            objectName: "profileHistoryStatus"
+                            text: sheet.profileLoading ? i18n("Loading saved desktop changes…")
+                                : sheet.profileState === "busy" ? i18n("Desktop settings are being updated. Wait for that to finish, then refresh.")
+                                : sheet.profileState !== "ready" ? i18n("Saved desktop changes could not be read. The record has been kept; try refreshing.")
+                                : sheet.profileHistory.length === 0 ? i18n("No saved desktop changes yet.")
+                                : i18n("Recent changes, newest first. Review one before undoing it.")
+                        }
+                        Text {
+                            Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.ink
+                            objectName: "profileRecoveryResult"
+                            visible: text !== ""; text: sheet.profileMessage
+                            Accessible.role: Accessible.StaticText
+                        }
+                    }
+                }
+                Repeater {
+                    model: sheet.profileHistory
+                    Card {
+                        required property var modelData
+                        id: historyCard
+                        tone: look
+                        ColumnLayout {
+                            Layout.fillWidth: true; Layout.margins: 20; spacing: 12
+                            Text {
+                                Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.ink; font.bold: true
+                                text: new Date(historyCard.modelData.time).toLocaleString(Qt.locale(), Locale.ShortFormat)
+                                    + " · " + sheet.profileStatus(historyCard.modelData)
+                            }
+                            Text {
+                                Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.dim
+                                text: sheet.profileAreas(historyCard.modelData)
+                            }
+                            Text {
+                                Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.dim
+                                text: [i18np("%1 setting", "%1 settings", historyCard.modelData.settings),
+                                       i18np("%1 shortcut", "%1 shortcuts", historyCard.modelData.shortcuts),
+                                       i18np("%1 change remaining", "%1 changes remaining", historyCard.modelData.remaining)].join(" · ")
+                            }
+                            Pill {
+                                id: reviewChanges
+                                tone: look; objectName: "reviewProfile-" + historyCard.modelData.id
+                                text: i18n("Review changes")
+                                visible: historyCard.modelData.remaining > 0
+                                enabledPill: !sheet.profileLoading && !sheet.profileRestoring
+                                onClicked: { sheet.reviewProfile(historyCard.modelData); Qt.callLater(() => cancelUndo.forceActiveFocus()) }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 12
+                                visible: sheet.profileReview !== null && sheet.profileReview.id === historyCard.modelData.id
+                                Text {
+                                    Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1); color: look.ink
+                                    text: i18n("Undo this set of desktop changes? Only settings and shortcuts that still match the saved changes will be restored. Your apps stay open. Save your work before signing out later.")
+                                }
+                                Flow {
+                                    Layout.fillWidth: true; spacing: 8
+                                    Pill {
+                                        id: cancelUndo
+                                        tone: look; text: i18n("Cancel"); objectName: "cancelProfileUndo-" + historyCard.modelData.id
+                                        enabledPill: !sheet.profileRestoring
+                                        onClicked: { sheet.profileReview = null; reviewChanges.forceActiveFocus() }
+                                    }
+                                    Pill {
+                                        tone: look; kind: "lily"; objectName: "confirmProfileUndo-" + historyCard.modelData.id
+                                        text: sheet.profileRestoring ? i18n("Undoing…") : i18n("Undo these changes")
+                                        enabledPill: !sheet.profileLoading && !sheet.profileRestoring
+                                        onClicked: sheet.undoProfile()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Component {
             id: updatesPage
             ColumnLayout {
                 spacing: 20
@@ -7114,6 +7576,7 @@ Shared.MonetWindow {
                             // Still working: there's no number to show, so it just moves.
                             Busy {
                                 tone: look
+                                active: sheet.pollingActive
                                 Layout.fillWidth: true
                                 Layout.topMargin: 6
                                 visible: sheet.updateState === "checking" || sheet.updateState === "installing"
@@ -7434,6 +7897,7 @@ Shared.MonetWindow {
                             }
                             Busy {
                                 tone: look
+                                active: sheet.pollingActive
                                 Layout.fillWidth: true
                                 Layout.topMargin: 6
                                 visible: sheet.firmwareState === "installing"

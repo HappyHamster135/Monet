@@ -228,12 +228,12 @@ ApplicationWindow {
                 PillButton {
                     id: next
                     objectName: "nextButton"
-                    text: showingKey ? tr("Continue") : installing ? tr("Restart")
-                        : step === 4 ? (setup.mode === "erase" ? tr("Erase & Install") : tr("Install"))
+                    text: showingKey ? tr("Continue") : installing ? (setup.restarting ? tr("Restarting…") : tr("Restart"))
+                        : step === 4 ? (setup.mode === "erase" ? tr("Erase drive & install") : setup.mode === "resume" ? tr("Resume installation") : tr("Install"))
                         : stepLoader.item && stepLoader.item.busy ? stepLoader.item.busyText : tr("Continue")
                     accent: step === 4 && !installing
                     enabled: showingKey ? !!stepLoader.item && stepLoader.item.ready === true
-                        : installing || (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
+                        : installing ? !setup.restarting : (stepLoader.item && stepLoader.item.ready === true && !stepLoader.item.busy)
                     onClicked: {
                         if (showingKey) { keyKept = true; return }
                         if (installing) { setup.restart(); return }
@@ -430,6 +430,7 @@ ApplicationWindow {
 
             // Continue joins the chosen network first, then moves on.
             function leave() {
+                setup.setOffline(false)
                 if (setup.wired || (chosen === setup.joined && chosen !== ""))
                     return true
                 waiting = true
@@ -448,7 +449,7 @@ ApplicationWindow {
             }
 
             Title { text: setup.wired ? tr("You're online") : tr("Connect to Wi-Fi") }
-            Body { text: tr("Monet downloads itself and Windows while it installs. Windows will use this network too.") }
+            Body { text: tr("Connect to download Monet. To resume a completed download, you can continue offline.") }
             Card {
                 visible: setup.wired
                 height: px(64)
@@ -516,6 +517,12 @@ ApplicationWindow {
                 visible: !setup.wired
                 text: setup.scanning ? tr("Looking…") : tr("Look again")
                 onClicked: setup.scan()
+            }
+            Link {
+                objectName: "resumeOffline"
+                visible: !setup.wired && setup.joined === ""
+                text: tr("Continue offline")
+                onClicked: { setup.setOffline(true); step = 2 }
             }
         }
     }
@@ -708,114 +715,165 @@ ApplicationWindow {
 
     Component {
         id: readyStep
-        Column {
-            spacing: px(22)
-            readonly property bool ready: setup.blocker === ""
+        Flickable {
+            id: drivePage
+            objectName: "driveReview"
+            clip: true
+            contentWidth: width
+            contentHeight: driveChoices.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn; visible: drivePage.contentHeight > drivePage.height }
+            readonly property bool ready: setup.blocker === "" && setup.reviewed
             property bool busy: false
-            readonly property var disk: setup.disks.length ? setup.disks[Math.min(setup.disk, setup.disks.length - 1)] : null
-            Title { text: tr("Ready to install") }
+            readonly property var disk: setup.disk >= 0 && setup.disk < setup.disks.length ? setup.disks[setup.disk] : null
+            Connections {
+                target: win
+                function onActiveFocusItemChanged() {
+                    var item = win.activeFocusItem
+                    var ancestor = item
+                    while (ancestor && ancestor !== driveChoices) ancestor = ancestor.parent
+                    if (!ancestor || !item) return
+                    var y = item.mapToItem(driveChoices, 0, 0).y
+                    if (y < drivePage.contentY) drivePage.contentY = y
+                    else if (y + item.height > drivePage.contentY + drivePage.height)
+                        drivePage.contentY = Math.min(drivePage.contentHeight - drivePage.height, y + item.height - drivePage.height)
+                }
+            }
             Column {
-                width: parent.width
-                spacing: px(8)
-                Option {
+                id: driveChoices
+                width: parent.width - px(12)
+                spacing: px(16)
+                Title { text: tr("Choose where to install") }
+                Field {
+                    label: tr("Installation drive")
+                    Choice {
+                        objectName: "installationDrive"
+                        width: parent.width
+                        model: [tr("Choose a drive…")].concat(setup.disks.map(d => d.label + " · " + d.path + (d.external ? " · " + tr("External") : "")))
+                        currentIndex: setup.disk + 1
+                        Component.onCompleted: forceActiveFocus()
+                        onActivated: (i) => { if (i > 0) setup.setDisk(i - 1) }
+                    }
+                }
+                PillButton {
+                    objectName: "refreshDrives"
+                    text: setup.diskLoading ? tr("Looking for drives…") : tr("Refresh drives")
+                    plain: true
+                    enabled: !setup.diskLoading
+                    onClicked: setup.refreshDisks()
+                }
+                Column {
                     width: parent.width
-                    height: px(78)
-                    picked: setup.mode === "erase"
-                    onClicked: setup.setMode("erase")
-                    Image { source: art + "mark.png"; Layout.preferredWidth: px(36); Layout.preferredHeight: px(36); mipmap: true }
-                    Column {
-                        Layout.fillWidth: true
-                        spacing: px(3)
-                        Text { text: tr("Monet and Windows"); font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
-                        Text {
-                            horizontalAlignment: Text.AlignLeft
-                            width: parent.width
-                            text: tr("Erases this PC. Windows installs itself, only for games.")
-                            wrapMode: Text.WordWrap
-                            font.family: sans; font.pixelSize: px(13); lineHeight: px(18); lineHeightMode: Text.FixedHeight; color: dim
+                    spacing: px(5)
+                    visible: drivePage.disk !== null
+                    Body { text: tr("Currently on this drive"); font.weight: Font.DemiBold }
+                    Repeater {
+                        model: drivePage.disk ? (drivePage.disk.contents || []) : []
+                        Body {
+                            required property var modelData
+                            textFormat: Text.PlainText
+                            text: modelData.path + " · " + modelData.name + " · " + modelData.size
                         }
+                    }
+                    Body {
+                        visible: drivePage.disk !== null && !(drivePage.disk.contents || []).length
+                        text: tr("No partitions are listed on this drive.")
+                    }
+                    Body {
+                        textFormat: Text.PlainText
+                        text: tr("Other drives kept unchanged: %1", setup.disks.filter((d, i) => i !== setup.disk).map(d => d.path + " · " + d.label).join("; "))
+                        visible: setup.disks.length > 1
                     }
                 }
                 Option {
-                    width: parent.width
-                    height: px(78)
+                    objectName: "resumeInstallation"
+                    Accessible.name: tr("Resume interrupted installation")
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.checked: picked
+                    width: parent.width; height: Math.max(px(82), implicitHeight)
+                    visible: drivePage.disk !== null && !!drivePage.disk.resume
+                    enabled: !setup.diskBusy
+                    picked: setup.mode === "resume"
+                    onClicked: setup.setMode("resume")
+                    Column {
+                        Layout.fillWidth: true; spacing: px(3)
+                        Body { text: tr("Resume interrupted installation"); font.weight: Font.DemiBold }
+                        Body { text: tr("Reuse the saved download and rebuild the unfinished system. Its previous files are kept; the drive will not be formatted again.") }
+                    }
+                }
+                Option {
+                    objectName: "keepDrive"
+                    Accessible.name: tr("Keep existing data and add Monet")
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.checked: picked
+                    width: parent.width; height: Math.max(px(82), implicitHeight)
+                    visible: drivePage.disk !== null
+                    enabled: !setup.diskBusy
                     picked: setup.mode === "keep"
                     onClicked: setup.setMode("keep")
-                    Image { source: art + "windows.png"; Layout.preferredWidth: px(36); Layout.preferredHeight: px(36); mipmap: true }
                     Column {
-                        Layout.fillWidth: true
-                        spacing: px(3)
-                        Text { text: tr("Monet next to my Windows"); font.family: sans; font.pixelSize: px(15); font.weight: Font.DemiBold; color: ink }
-                        Text {
-                            horizontalAlignment: Text.AlignLeft
-                            width: parent.width
-                            text: tr("Keeps Windows and your files. Monet makes room for itself.")
-                            wrapMode: Text.WordWrap
-                            font.family: sans; font.pixelSize: px(13); lineHeight: px(18); lineHeightMode: Text.FixedHeight; color: dim
-                        }
+                        Layout.fillWidth: true; spacing: px(3)
+                        Body { text: tr("Keep existing data and add Monet"); font.weight: Font.DemiBold }
+                        Body { text: tr("Use free space on this drive. If needed, check whether Windows can safely shrink.") }
                     }
                 }
-            }
-            Card {
-                height: px(52)
-                visible: setup.disks.length <= 1
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: px(16)
-                    anchors.rightMargin: px(16)
-                    Text { text: tr("Disk"); font.family: sans; font.pixelSize: px(13); color: dim }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        horizontalAlignment: Text.AlignLeft
-                        text: disk ? disk.label : tr("Looking for disks…")
-                        elide: Text.ElideRight
-                        Layout.maximumWidth: px(330)
-                        font.family: sans; font.pixelSize: px(13); font.weight: Font.DemiBold; color: ink
+                Option {
+                    objectName: "eraseDrive"
+                    Accessible.name: tr("Erase this drive and install Monet")
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.checked: picked
+                    width: parent.width; height: Math.max(px(82), implicitHeight)
+                    visible: drivePage.disk !== null
+                    enabled: !setup.diskBusy
+                    picked: setup.mode === "erase"
+                    onClicked: setup.setMode("erase")
+                    Column {
+                        Layout.fillWidth: true; spacing: px(3)
+                        Body { text: tr("Erase this drive and install Monet"); font.weight: Font.DemiBold }
+                        Body { text: tr("Delete every partition and file on the selected drive. Other drives are kept.") }
                     }
                 }
-            }
-            Field {
-                label: tr("Disk")
-                visible: setup.disks.length > 1
-                Choice {
+                Note { text: setup.blocker; warm: true; visible: text !== "" }
+                Note { text: setup.roomNote; visible: setup.blocker === "" && text !== "" }
+                Tick {
                     width: parent.width
-                    model: setup.disks.map(d => d.label)
-                    currentIndex: setup.disk
-                    onActivated: (i) => setup.setDisk(i)
+                    visible: setup.mode === "keep" && drivePage.disk !== null && drivePage.disk.hasWindows && !!drivePage.disk.keep
+                    enabled: !setup.diskBusy
+                    title: tr("Bring my files")
+                    detail: setup.files ? setup.files.text : tr("Copy personal folders from Windows into Monet. The originals stay in Windows.")
+                    checked: setup.bring
+                    onClicked: setup.setBring(!setup.bring)
                 }
-            }
-            Note { text: setup.blocker; warm: true; visible: text !== "" }
-            Note { text: setup.roomNote; visible: setup.blocker === "" && text !== "" }
-            // Windows' files come along, copied into Monet's folders.
-            Tick {
-                width: parent.width
-                visible: setup.blocker === "" && !!setup.files && setup.files.fits
-                title: tr("Bring my files")
-                detail: setup.files ? setup.files.text : ""
-                checked: setup.bring
-                onClicked: setup.setBring(!setup.bring)
-            }
-            // Encrypted, as Windows and Macs are: only on a PC whose security chip unlocks it by itself.
-            Tick {
-                width: parent.width
-                visible: setup.blocker === "" && setup.tpm
-                title: tr("Encrypt this PC")
-                detail: tr("Only this PC can read its disk: taken out, it's locked. Monet unlocks it by itself when it starts.")
-                checked: setup.encrypt
-                onClicked: setup.setEncrypt(!setup.encrypt)
-            }
-            Note {
-                text: setup.files ? setup.files.text : ""
-                visible: setup.blocker === "" && !!setup.files && !setup.files.fits
-            }
-            Repeater {
-                model: setup.blocker === "" ? setup.pcNotes : []
-                Note { required property string modelData; text: modelData }
-            }
-            Note {
-                text: tr("Everything on this disk is erased, Windows and your files too. To keep them, choose Monet next to my Windows.")
-                warm: true
-                visible: setup.blocker === "" && setup.mode === "erase" && disk !== null && disk.hasWindows
+                Tick {
+                    width: parent.width
+                    visible: setup.mode !== "resume" && setup.tpm
+                    title: tr("Encrypt Monet")
+                    detail: tr("Protect Monet's files with disk encryption. Save the recovery key shown when installation finishes.")
+                    checked: setup.encrypt
+                    onClicked: setup.setEncrypt(!setup.encrypt)
+                }
+                Tick {
+                    objectName: "gentleInstallation"
+                    width: parent.width
+                    title: tr("Gentler installation")
+                    detail: tr("Use at most two CPU threads during installation. This may take longer, but leaves more room for the screen and other work.")
+                    checked: setup.gentle
+                    onClicked: setup.setGentle(!setup.gentle)
+                }
+                Note { text: setup.driveSummary; textFormat: Text.PlainText; warm: setup.mode === "erase"; visible: text !== "" }
+                Tick {
+                    objectName: "confirmDrive"
+                    width: parent.width
+                    visible: setup.mode !== "" && setup.blocker === ""
+                    title: tr("I have checked the selected drive and these changes")
+                    detail: drivePage.disk ? drivePage.disk.label + " · " + drivePage.disk.path : ""
+                    checked: setup.reviewed
+                    onClicked: setup.setReviewed(!setup.reviewed)
+                }
+                Repeater {
+                    model: setup.blocker === "" ? setup.pcNotes : []
+                    Note { required property string modelData; text: modelData }
+                }
             }
         }
     }
@@ -830,6 +888,7 @@ ApplicationWindow {
             Ripple { anchors.horizontalCenter: parent.horizontalCenter; visible: !liveDetails.visible }
             Title { text: tr("Installing Monet"); anchors.horizontalCenter: parent.horizontalCenter }
             Bar { width: parent.width; value: setup.progress }
+            Body { text: setup.health; horizontalAlignment: Text.AlignHCenter; visible: text !== "" }
             Text {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
@@ -866,10 +925,9 @@ ApplicationWindow {
             property bool busy: false
             spacing: px(22)
             Title { text: tr("All set"); big: true; topPadding: px(40) }
+            Note { text: setup.restartError; warm: true; visible: text !== "" }
             Body {
-                text: setup.mode === "erase"
-                      ? tr("Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself.")
-                      : tr("Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away.")
+                text: setup.completionText
             }
             // The blue screen at the first start is beside the sheet, in pictures (guide).
         }
@@ -985,6 +1043,7 @@ ApplicationWindow {
     component Note: Rectangle {
         readonly property real u: Window.window ? Window.window.u : 1
         property alias text: noteText.text
+        property alias textFormat: noteText.textFormat
         property bool warm: false
         width: parent ? parent.width : 0
         height: noteText.implicitHeight + Math.round(24 * u)
@@ -1119,6 +1178,7 @@ ApplicationWindow {
         id: option
         readonly property real u: Window.window ? Window.window.u : 1
         property bool picked: false
+        implicitHeight: row.implicitHeight + Math.round(24 * u)
         default property alias content: row.data
         hoverEnabled: true
         background: Rectangle {
@@ -1142,7 +1202,7 @@ ApplicationWindow {
         readonly property real u: Window.window ? Window.window.u : 1
         property string title
         property string detail
-        height: Math.round((detail !== "" ? 68 : 52) * u)
+        height: Math.max(Math.round((detail !== "" ? 68 : 52) * u), tickContent.implicitHeight + Math.round(24 * u))
         hoverEnabled: true
         leftPadding: Math.round(16 * u)
         rightPadding: Math.round(16 * u)
@@ -1157,6 +1217,7 @@ ApplicationWindow {
             Behavior on color { ColorAnimation { duration: 140 } }
         }
         contentItem: RowLayout {
+            id: tickContent
             spacing: Math.round(12 * tick.u)
             Rectangle {
                 Layout.preferredWidth: Math.round(20 * tick.u)
@@ -1165,20 +1226,12 @@ ApplicationWindow {
                 color: tick.checked ? "#357F72" : "transparent"
                 border.width: tick.checked ? 0 : Math.max(1, Math.round(1.5 * tick.u))
                 border.color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.3)
-                Shape {
+                Text {
                     visible: tick.checked
                     anchors.centerIn: parent
-                    width: 24
-                    height: 24
-                    scale: Math.round(12 * tick.u) / 24
-                    ShapePath {
-                        strokeColor: "#FFFFFF"
-                        strokeWidth: 3
-                        fillColor: "transparent"
-                        capStyle: ShapePath.RoundCap
-                        joinStyle: ShapePath.RoundJoin
-                        PathSvg { path: "M 5 12.4 L 9.8 17 L 19 7" }
-                    }
+                    text: "✓"
+                    color: "#FFFFFF"
+                    font.pixelSize: Math.round(14 * tick.u)
                 }
             }
             Column {
@@ -1186,6 +1239,9 @@ ApplicationWindow {
                 spacing: Math.round(2 * tick.u)
                 Text {
                     text: tick.title
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
                     font.family: "Inter"; font.pixelSize: Math.round(14 * tick.u); font.weight: Font.DemiBold; color: "#1B1A19"
                 }
                 Text {
@@ -1193,6 +1249,7 @@ ApplicationWindow {
                     width: parent.width
                     visible: tick.detail !== ""
                     text: tick.detail
+                    textFormat: Text.PlainText
                     wrapMode: Text.WordWrap
                     font.family: "Inter"; font.pixelSize: Math.round(12 * tick.u)
                     lineHeight: Math.round(16 * tick.u); lineHeightMode: Text.FixedHeight
@@ -1308,26 +1365,18 @@ ApplicationWindow {
             horizontalAlignment: Text.AlignLeft
             leftPadding: Math.round(14 * u)
             text: choice.displayText
+            textFormat: Text.PlainText
             font: choice.font
             color: "#1B1A19"
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
-        indicator: Shape {
+        indicator: Text {
             x: choice.width - width - Math.round(16 * u)
             y: (choice.height - height) / 2
-            width: Math.round(10 * u)
-            height: Math.round(6 * u)
-            ShapePath {
-                strokeColor: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.6)
-                strokeWidth: Math.max(1.5, 1.6 * u)
-                fillColor: "transparent"
-                capStyle: ShapePath.RoundCap
-                joinStyle: ShapePath.RoundJoin
-                startX: 0; startY: 0
-                PathLine { x: Math.round(5 * u); y: Math.round(6 * u) }
-                PathLine { x: Math.round(10 * u); y: 0 }
-            }
+            text: "⌄"
+            color: Qt.rgba(27 / 255, 26 / 255, 25 / 255, 0.6)
+            font.pixelSize: Math.round(18 * u)
         }
         delegate: ItemDelegate {
             required property int index
@@ -1341,6 +1390,7 @@ ApplicationWindow {
                 horizontalAlignment: Text.AlignLeft
                 leftPadding: Math.round(8 * u)
                 text: modelData
+                textFormat: Text.PlainText
                 color: "#1B1A19"
                 font: choice.font
                 verticalAlignment: Text.AlignVCenter

@@ -17,6 +17,12 @@ seat=()
 command -v seatd-launch >/dev/null && seat=(seatd-launch --)
 
 while true; do
+    # A killed seatd-launch can leave its socket behind. Never unlink an active
+    # server's socket or an unexpected file while restarting the display.
+    if [ "${#seat[@]}" -gt 0 ] && ! python3 /usr/share/monet-setup/monet_setup/seat.py; then
+        sleep 2
+        continue
+    fi
     read -r layout variant options < /run/monet-setup/keyboard 2>/dev/null || { layout=us; variant=; options=; }
     XKB_DEFAULT_LAYOUT=$layout XKB_DEFAULT_VARIANT=$variant XKB_DEFAULT_OPTIONS=$options "${seat[@]}" cage -s -- /usr/bin/monet-setup
     code=$?

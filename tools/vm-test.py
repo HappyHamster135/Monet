@@ -6,7 +6,7 @@
 QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's third-party CA),
 the ISO attached as a read-only USB disk, a blank 96 GB disk and a wired network. Waits for Monet Setup,
 takes a screenshot of each step, and with --install goes on: types a name and
-password, chooses "Monet and Windows", installs, and restarts from the disk
+password, selects/reviews the disposable drive, installs, and restarts from the disk
 (QEMU would start the stick first). On the firmware's blue screen it first
 chooses Continue boot, as people do by mistake, and watches for the blue
 screen to come back (GRUB's fallback); if it doesn't, it starts the stick,
@@ -398,7 +398,16 @@ def main():
         run.shot("ready")
         if not full:
             return 0
-        vm.click(*NEXT)                                    # Erase & Install
+        # Ready focuses the drive selector. This VM owns one fresh disposable
+        # disk and has no TPM. Exercise the same explicit selection/review as a
+        # person; no installer-only bypass or preselected destructive target.
+        vm.keys('spc', 'home', 'down', 'ret')
+        time.sleep(3)
+        vm.keys('tab', 'tab', 'tab', 'spc')                 # Refresh, Keep, Erase
+        vm.keys('tab', 'tab', 'spc')                        # Gentler, confirm drive
+        time.sleep(1)
+        run.shot('drive-reviewed')
+        vm.click(*NEXT)                                    # Erase drive & install
         # Off the buttons: resting on Restart, the pointer hid it (0.9.1's install was all set
         # at 8 minutes, and the test waited the full hour).
         vm.point(W - u(40), H // 2)

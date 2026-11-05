@@ -11,6 +11,10 @@ for desktop edit mode, dragging, the native hover-effect preference, and the
 system's instant/reduced-animation setting. It uses passive HoverHandler events
 and finite property transitions; there is no polling, idle animation, shader or
 extra process. Icon scale is bounded at 1.28 and lift at nine logical pixels.
+Passive trackers attach to the native tooltip areas, which can consume hover
+events before an ancestor handler sees them. They share the current pointer for
+neighbour motion without blocking native tooltips or controls. Tracking uses the
+untransformed task bounds and follows the native task-reordering transform.
 The native Trash applet uses the same motion on the bottom dock, with its full
 painted icon and a stable click area during dragging and reduced-motion changes.
 
@@ -34,3 +38,9 @@ checks the runtime before adding its private Qt plugin path. A later OS update
 falls back to the stock dock instead of loading an incompatible plugin. The
 preview does not modify `/usr` or desktop applet configuration. Restarting
 plasmashell activates or removes the override without closing application windows.
+
+Regression checks: `tests.test_dock_motion` sends pointer events through real
+Plasma tooltip areas and native click/drag controls in a disposable session.
+`tests/native/dock-hover/` is a small CMake test host for the compiled task and
+Trash plugins. Run that executable only in a disposable home and private D-Bus
+session, with `QT_PLUGIN_PATH` pointing to the tested bundle's plugin tree.

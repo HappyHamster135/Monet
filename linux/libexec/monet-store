@@ -683,26 +683,21 @@ def main():
             self.queue = self.jobs.Queue()
             self.downloads = []
             self.loading = False
-            self.timer = QTimer(self)
-            self.timer.setInterval(750)
-            self.timer.timeout.connect(self.poll)
-            self.timer.start()
-            QTimer.singleShot(0, self.poll)
+            self.observer = self.jobs.watch_queue(self.queue, self)
+            self.observer.changed.connect(self.jobs_changed)
+            self.observer.problem.connect(self.queueProblem.emit)
 
         @Slot()
         def poll(self):
-            try:
-                self.queue.recover()
-                jobs = self.queue.read()
-                if jobs != self.downloads:
-                    before = {j["token"]: j["state"] for j in self.downloads}
-                    self.downloads = jobs
-                    # Refresh installed apps after terminal transitions, not each progress tick.
-                    if any(j["state"] not in self.jobs.ACTIVE and before.get(j["token"]) != j["state"] for j in jobs):
-                        self.installed = installed_apps()
-                    self.jobsChanged.emit(jobs)
-            except OSError:
-                self.queueProblem.emit("storage")
+            self.observer.poll()
+
+        def jobs_changed(self, jobs):
+            before = {j["token"]: j["state"] for j in self.downloads}
+            self.downloads = jobs
+            # Refresh installed apps after terminal transitions, not each progress tick.
+            if any(j["state"] not in self.jobs.ACTIVE and before.get(j["token"]) != j["state"] for j in jobs):
+                self.installed = installed_apps()
+            self.jobsChanged.emit(jobs)
 
         @Slot()
         def reload(self):

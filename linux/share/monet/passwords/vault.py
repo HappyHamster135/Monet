@@ -121,7 +121,7 @@ def decode_stream(raw):
 
 
 def category(folder):
-    if folder == PERSONAL_FOLDER:
+    if folder in (PERSONAL_FOLDER, 'Monet App Logins'):
         return 'Logins'
     if any(word in folder.casefold() for word in ('network', 'wifi', 'wireless', '802-11', 'vpn')):
         return 'Network'
@@ -140,6 +140,8 @@ def internal_entry(folder, key):
 
 
 def entry_title(folder, key):
+    if folder == 'Monet App Logins':
+        return re.sub(r' \[(?:[a-f0-9]{64}:)?[a-f0-9]{64}\]$', '', key)
     if folder.casefold() == 'xdg-desktop-portal' and key == 'app.zen_browser.zen':
         return 'Zen Browser'
     if key.endswith(' Safe Storage'):

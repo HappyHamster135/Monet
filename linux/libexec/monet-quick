@@ -67,7 +67,7 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick backup-open TIME|backup-open-drive  your files as they were then, or the copy on the drive
     monet-quick earlier PATH             (Files' menu) Settings → Backups with that file's earlier versions
     monet-quick versions|versions-done   those versions, as JSON; or done with them
-    monet-quick version-open|put-back N  show version N, or put it back beside the file
+    monet-quick version-open|put-back FILE SNAPSHOT  show or restore the selected version (UTF-8 hex)
     monet-quick game-marks               which games play here and which need Windows (anti-cheat, players' reports), as JSON
     monet-quick library                  every game, Steam's, Heroic's and Lutris' here and Windows', each with where it plays, as JSON
     monet-quick favorite GAME on|off     a game among the favorites in Games, or not
@@ -211,6 +211,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -238,7 +239,7 @@ RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
 FIFO = RUNTIME / "monet-settings"
 PAD = RUNTIME / "monet-pad"
 PAGES = ("light", "wifi", "bluetooth", "phone", "printers", "display", "sound", "datetime", "users", "input", "power", "privacy", "passwords",
-         "security", "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "about")
+         "security", "notifications", "accessibility", "apps", "storage", "backups", "games", "windows", "updates", "recovery", "about")
 
 # Pages of KDE's System Settings that Monet Settings links to.
 KDE_PAGES = {
@@ -1313,21 +1314,38 @@ def native_executable(path):
     return path
 
 
-def native_shortcut(path, name, apps=None):
+def native_arguments(text):
+    """Only explicit launch options, split into argv without shell expansion."""
+    if not isinstance(text, str) or len(text.encode("utf-8")) > 8192 or any(ord(c) < 32 or ord(c) == 127 for c in text):
+        raise ValueError(tr("Use a single line of launch options, up to 8,192 bytes."))
+    try:
+        arguments = shlex.split(text)
+    except ValueError:
+        raise ValueError(tr("Close each quote in the launch options.")) from None
+    if len(arguments) > 64:
+        raise ValueError(tr("Use no more than 64 launch options."))
+    return arguments
+
+
+def native_shortcut(path, name, apps=None, arguments=""):
     """Create one menu entry, without importing downloaded desktop commands or MIME defaults."""
     path = native_executable(path)
     name = name.strip()
     if not name or len(name) > 128 or any(ord(c) < 32 or ord(c) == 127 for c in name):
         raise ValueError(tr("Choose a short application name without line breaks."))
+    argv = native_arguments(arguments)
+    encoded = json.dumps(argv, ensure_ascii=False, separators=(",", ":")) if argv else ""
     apps = apps if apps is not None else DATA_HOME / "applications"
     apps.mkdir(parents=True, exist_ok=True)
     token = str(path).encode("utf-8").hex()
     import hashlib
-    entry = apps / ("monet-local-" + hashlib.sha256(str(path).encode()).hexdigest()[:24] + ".desktop")
+    identity = str(path) + ("\0" + encoded if argv else "")
+    entry = apps / ("monet-local-" + hashlib.sha256(identity.encode()).hexdigest()[:24] + ".desktop")
     icon = native_icon(path, apps.parent, entry.stem)
     # The path is data, not a shell command or a Desktop Entry field code.
+    options = " " + encoded.encode("utf-8").hex() if argv else ""
     text = ("[Desktop Entry]\nType=Application\nName=" + name.replace("\\", "\\\\") + "\n"
-            f'Exec="{LIBEXECDIR}/monet-quick" native-run {token}\n'
+            f'Exec="{LIBEXECDIR}/monet-quick" native-run {token}{options}\n'
             f"Icon={icon}\nTerminal=false\nStartupNotify=false\nCategories=Utility;\nX-Monet=true\n")
     if entry.exists():
         if entry.read_text(encoding="utf-8") != text:
@@ -1397,12 +1415,11 @@ def native_icon(path, data_home, identity):
 def native_shortcut_dialog(path):
     try:
         executable = native_executable(path)
-        name = run("kdialog", "--title", tr("Add to apps"), "--inputbox",
-                   tr("Add this application to the menu. Keep its folder in place.\n\n%1\n\nName:", str(executable)),
-                   executable.stem, timeout=600)
+        name = run(sys.executable, str(Path(__file__).resolve().with_name("monet-files-tools")),
+                   "add", str(executable), timeout=600)
         if name is None:
             return False
-        native_shortcut(executable, name)
+        name = name.strip()
     except (OSError, ValueError) as error:
         run("kdialog", "--title", tr("Add to apps"), "--error", tr(str(error)), timeout=600)
         return False
@@ -1412,10 +1429,19 @@ def native_shortcut_dialog(path):
     return True
 
 
-def native_run(token):
+def native_run(token, options=None):
     try:
         executable = native_executable(unhex(token))
-        subprocess.Popen([str(executable)], cwd=executable.parent, start_new_session=True)
+        argv = []
+        if options is not None:
+            if len(options) > 40000:
+                raise ValueError(tr("Launch options are too long."))
+            argv = json.loads(bytes.fromhex(options).decode("utf-8"))
+            if (not isinstance(argv, list) or len(argv) > 64
+                    or any(not isinstance(arg, str) or any(ord(c) < 32 or ord(c) == 127 for c in arg) for arg in argv)
+                    or sum(len(arg.encode("utf-8")) for arg in argv) > 8192):
+                raise ValueError(tr("Launch options are invalid. Add the application again."))
+        subprocess.Popen([str(executable), *argv], cwd=executable.parent, start_new_session=True)
         return True
     except (OSError, ValueError) as error:
         run("kdialog", "--title", tr("Application couldn't open"), "--error",
@@ -2288,13 +2314,84 @@ def storage_capacity():
 
 
 def storage():
+    """One bounded walk per tree; never repeatedly scan the same home folders."""
     disk = shutil.disk_usage(HOME)
-    games = du(DATA_HOME / "Steam/steamapps", HOME / "Games")
-    trash = du(DATA_HOME / "Trash")
-    parts = storage_parts(disk.total, disk.free, du(HOME), games, du("/var/lib/flatpak"),
-                          du(DATA_HOME / "flatpak", HOME / ".var/app"), trash)
-    downloads = downloads_dir()
-    return dict(parts, total=disk.total, trash=trash, downloads=du(downloads), downloadsPath=str(downloads), measured=True)
+    measured = storage_scan()
+    parts = storage_parts(disk.total, disk.free, measured['home'], measured['games'],
+                          measured['apps'], measured['userApps'], measured['trash'])
+    return dict(parts, total=disk.total, trash=measured['trash'], downloads=measured['downloads'],
+                downloadsPath=str(downloads_dir()), measured=True, limited=measured['limited'],
+                unreadable=measured['unreadable'], visited=measured['visited'])
+
+
+def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')):
+    """One native traversal, bounded time/output, no directory-link traversal.
+
+    GNU du aggregates the needed directory depths without sending every filename
+    to Python. NUL records preserve unusual names. Hard links are counted once;
+    shared Btrfs extents still make these approximate referenced sizes.
+    """
+    home = HOME.absolute()
+    categories = {
+        'games': [DATA_HOME / 'Steam/steamapps', HOME / 'Games'],
+        'userApps': [DATA_HOME / 'flatpak', HOME / '.var/app'],
+        'trash': [DATA_HOME / 'Trash'], 'downloads': [downloads_dir()]}
+    result = dict(home=0, games=0, userApps=0, trash=0, downloads=0, apps=0,
+                  visited=0, limited=False, unreadable=False)
+    if seconds <= 0 or limit <= 0:
+        result['limited'] = True
+        return result
+    depth = 1
+    for paths in categories.values():
+        for path in paths:
+            if path.is_relative_to(home):
+                depth = max(depth, len(path.relative_to(home).parts))
+            else:
+                result['limited'] = True
+    targets = [str(home)] + ([str(system_apps)] if system_apps.exists() else [])
+    command = ['du', '--null', '-x', '-B1', '--max-depth=' + str(min(depth, 16)), '--', *targets]
+    deadline, buffer, received, totals = time.monotonic() + seconds, b'', 0, {}
+    process = None
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        os.set_blocking(process.stdout.fileno(), False)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or result['visited'] >= limit or received >= 2 * 1024 * 1024:
+                result['limited'] = True
+                break
+            if not select.select([process.stdout], [], [], min(remaining, 0.1))[0]:
+                continue
+            chunk = os.read(process.stdout.fileno(), 65536)
+            if not chunk:
+                break
+            received += len(chunk)
+            buffer += chunk
+            while b'\0' in buffer and result['visited'] < limit:
+                record, buffer = buffer.split(b'\0', 1)
+                size, separator, path = record.partition(b'\t')
+                if separator and size.isdigit():
+                    totals[os.fsdecode(path)] = int(size)
+                    result['visited'] += 1
+                else:
+                    result['unreadable'] = True
+        if process.poll() is None and (result['limited'] or time.monotonic() >= deadline):
+            process.kill()
+        code = process.wait(timeout=max(0.1, deadline - time.monotonic()))
+        if code != 0 and not result['limited']:
+            result['unreadable'] = True
+    except (OSError, subprocess.SubprocessError):
+        result['unreadable'] = True
+    finally:
+        if process is not None:
+            if process.poll() is None:
+                process.kill(); process.wait()
+            process.stdout.close()
+    result['home'] = totals.get(str(home), 0)
+    result['apps'] = totals.get(str(system_apps), 0)
+    for key, paths in categories.items():
+        result[key] = sum(totals.get(str(path), 0) for path in set(paths))
+    return result
 
 
 def empty_trash():
@@ -2303,6 +2400,112 @@ def empty_trash():
         if shutil.which(command[0]):
             return run(*command, timeout=600) is not None
     return False
+
+
+def storage_recovery(args):
+    """An explicit administrator request; no root work merely from opening a page."""
+    if not args or args[0] not in ('list', 'review', 'delete', 'export'):
+        return dict(ok=False, state='changed')
+    if (args[0] == 'list' and len(args) != 1) or (args[0] != 'list' and
+            (len(args) not in ((3, 4) if args[0] == 'export' else (3,)) or not re.fullmatch('previous-install-[0-9a-f]{16}', args[1])
+             or not re.fullmatch('[0-9a-f]{64}', args[2]))):
+        return dict(ok=False, state='changed')
+    command = ['pkexec', f'{LIBEXECDIR}/monet-storage-recovery', *args[:3]]
+    archive = None
+    try:
+        if args[0] == 'export':
+            # Named, private, unique output. The root helper only streams bytes;
+            # it cannot write into the user's home with elevated permissions.
+            if len(args) == 4:
+                if not re.fullmatch('(?:[0-9a-f]{2}){1,4096}', args[3]):
+                    raise ValueError('invalid destination')
+                folder = Path(bytes.fromhex(args[3]).decode('utf-8'))
+                if not folder.is_absolute() or not folder.is_dir():
+                    raise ValueError('invalid destination')
+            else:
+                folder = HOME / tr('Recovered installations')
+                folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(prefix=args[1] + '-', suffix='.tar.partial', dir=folder, delete=False) as output:
+                archive = Path(output.name)
+                done = subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL, timeout=960)
+                output.flush()
+                os.fsync(output.fileno())
+            if done.returncode != 0:
+                raise ValueError('export failed')
+            complete = archive.with_suffix('')
+            publish_recovery_archive(archive, complete)
+            return dict(ok=True, state='exported', path=str(complete))
+        done = subprocess.run(command, capture_output=True, text=True, timeout=180)
+        result = json.loads(done.stdout) if len(done.stdout) < 131072 else None
+        if not isinstance(result, dict) or type(result.get('ok')) is not bool:
+            raise ValueError('invalid response')
+        if done.returncode and result['ok']:
+            raise ValueError('false success')
+        return result
+    except (OSError, ValueError, subprocess.SubprocessError):
+        if archive is not None:
+            archive.unlink(missing_ok=True)
+        return dict(ok=False, state='unavailable', items=[])
+
+
+def publish_recovery_archive(source, target):
+    """Atomic no-replace rename also works on FAT/exFAT USB destinations.
+
+    Hard-link publication would reject these common recovery drives. Both paths
+    are in the same chosen directory; only the user's completed temporary file
+    is renamed, and an existing destination is never overwritten.
+    """
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = libc.renameat2
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(source), -100, os.fsencode(target), 1) != 0:
+        raise OSError(ctypes.get_errno(), 'Could not publish recovery archive')
+
+
+def troubleshooting():
+    """Allowlisted facts only. No logs, commands, hostnames, accounts or paths."""
+    disk = storage_capacity()
+    history = update_history()
+    try:
+        status = json.loads(run('bootc', 'status', '--json', timeout=8) or '{}').get('status', {})
+        rollback = bool(status['rollback']) if 'rollback' in status else None
+    except (ValueError, TypeError, AttributeError):
+        rollback = None
+    # bootc status requires root on supported images. rpm-ostree's read-only
+    # service supplies the same deployment list to an ordinary desktop user.
+    if rollback is None:
+        try:
+            deployments = json.loads(run('rpm-ostree', 'status', '--json', timeout=8) or '{}')['deployments']
+            if (isinstance(deployments, list) and deployments
+                    and all(isinstance(d, dict) and isinstance(d.get('booted'), bool)
+                            and isinstance(d.get('staged', False), bool) for d in deployments)
+                    and sum(d['booted'] for d in deployments) == 1):
+                rollback = any(not d['booted'] and not d.get('staged', False) for d in deployments)
+        except (ValueError, TypeError, KeyError):
+            pass
+    services = []
+    for unit, scope, area in (('monet-update.service', [], 'updates'),
+                              ('monet-keep.service', [], 'backups'),
+                              ('monet-backup-now.service', ['--user'], 'backups')):
+        raw = run('systemctl', *scope, 'show', unit,
+                  '--property=LoadState,ActiveState,Result', timeout=5)
+        fields = dict(line.split('=', 1) for line in (raw or '').splitlines() if '=' in line)
+        state = ('unavailable' if fields.get('LoadState') != 'loaded' else
+                 'failed' if fields.get('ActiveState') == 'failed' or fields.get('Result', 'success') != 'success' else
+                 'running' if fields.get('ActiveState') in ('active', 'activating') else 'ready')
+        services.append(dict(id=unit, area=area, state=state))
+    last = history.get('items', [{}])[0].get('result') if history.get('items') else None
+    low = disk['free'] < max(5 * 1024**3, disk['total'] * 0.05)
+    snapshots = len(snapshot_names())
+    report = ['Monet recovery check', f'Free disk space: {disk["free"] // 1024**2} MiB',
+              'Low disk space: ' + ('yes' if low else 'no'),
+              'Rollback available: ' + ('unknown' if rollback is None else 'yes' if rollback else 'no'),
+              f'File snapshots: {snapshots}', 'Latest update: ' + (last or 'unknown')]
+    report.extend(s['id'] + ': ' + s['state'] for s in services)
+    return dict(ok=True, low=low, free=disk['free'], rollback=rollback, snapshots=snapshots,
+                update=last, updateKnown=history.get('ok', False), services=services, report='\n'.join(report))
 
 
 # Lock & Privacy --------------------------------------------------------------
@@ -2361,13 +2564,32 @@ def wallet_status():
         unlocked = None
     session = os.environ.get("XDG_SESSION_ID", "")
     service = run("loginctl", "show-session", session, "-p", "Service", "--value", timeout=3) if session else None
+    try:
+        offers = json.loads(run(f"{LIBEXECDIR}/monet-passwords", "--app-login-status", timeout=5) or "{}")
+    except (ValueError, AttributeError):
+        offers = {}
+    if not isinstance(offers, dict): offers = {}
     return {"enabled": kread("kwalletrc", "Wallet", "Enabled", "true") != "false",
+            "appOffers": offers.get("enabled") is True,
+            "appOffersRunning": offers.get("running") is True,
+            "appOffersAvailable": type(offers.get("enabled")) is bool and offers.get("error") is not True,
+            "appOffersIgnored": offers.get("ignored", 0) if type(offers.get("ignored", 0)) is int else 0,
             "policy": minutes if idle else "session", "idleMinutes": minutes,
             "unlocked": unlocked if isinstance(unlocked, bool) else None,
             "automaticLogin": "autologin" in service if service is not None else None,
             "manager": Path(f"{LIBEXECDIR}/monet-passwords").is_file(),
             "preferences": Path(f"{LIBEXECDIR}/monet-passwords").is_file(),
             "browser": wallet_browser_target() is not None}
+
+
+def wallet_app_offers(value):
+    if value not in ("on", "off", "reset"): return {"ok": False}
+    try:
+        result = json.loads(run(f"{LIBEXECDIR}/monet-passwords", "--app-login-policy", value, timeout=15) or "{}")
+        ok = result.get("ok") is True
+    except (ValueError, AttributeError):
+        ok = False
+    return {"ok": ok, "state": wallet_status()}
 
 
 def wallet_policy(value):
@@ -2409,6 +2631,25 @@ def wallet_access():
     """Open Monet's connected-app view; never read vault contents here."""
     try:
         subprocess.Popen([f"{LIBEXECDIR}/monet-passwords", "--connections"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except OSError:
+        return {"ok": False}
+
+
+def wallet_app_support():
+    try:
+        subprocess.Popen([f"{LIBEXECDIR}/monet-passwords", "--app-support"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except OSError:
+        return {"ok": False}
+
+
+def wallet_zen():
+    """Open guided setup in Monet; never install an extension silently."""
+    try:
+        subprocess.Popen([f"{LIBEXECDIR}/monet-passwords", "--connect-zen"], start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"ok": True}
     except OSError:
@@ -5609,6 +5850,8 @@ def search_catalog():
          N_("backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"), "backups", "document-revert"),
         ("updates", tr("Check for updates"), tr("Updates · New versions and recovery"),
          N_("update; updates; upgrade; new version; system rollback; previous working version"), "updates", "system-software-update"),
+        ("desktop-recovery", tr("Undo desktop changes"), tr("Recovery · Review saved settings and shortcuts"),
+         N_("recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"), "recovery", "document-revert"),
         ("restore-work", tr("Restore work after Windows"), tr("Play on Windows · Reopen apps when you return"),
          N_("restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"), "windows#return", "view-restore"),
         ("default-apps", tr("Choose default apps"), tr("Default Apps · Browser, email and files"),
@@ -6213,12 +6456,39 @@ def versions(path, root=SNAPSHOTS, homes=HOMES):
 def put_back(version, original):
     """A copy of an earlier version beside the file as it is: "letter (2026-10-23 14.00).txt"."""
     source, original = Path(version["path"]), Path(original)
-    target = free_name(original.with_name(f"{original.stem} ({version['name']}){original.suffix}"))
-    if source.is_dir():
-        shutil.copytree(source, target, symlinks=True)
-    else:
-        shutil.copy2(source, target)
-    return target
+    # Copy privately on the destination filesystem. A failed copy must never
+    # look like a restored file, and even a dangling link counts as occupied.
+    with tempfile.TemporaryDirectory(prefix=".monet-restore-", dir=original.parent) as folder:
+        pending = Path(folder) / "copy"
+        if source.is_dir() and not source.is_symlink():
+            shutil.copytree(source, pending, symlinks=True)
+        else:
+            shutil.copy2(source, pending, follow_symlinks=False)
+        for number in range(1000):
+            suffix = f" ({number + 1})" if number else ""
+            target = original.with_name(f"{original.stem} ({version['name']}){suffix}{original.suffix}")
+            try:
+                publish_recovery_archive(pending, target)
+                return target
+            except FileExistsError:
+                continue
+        raise FileExistsError("No unused name for the restored file")
+
+
+def earlier_action(action, file_hex, snapshot_hex):
+    """Use the selected snapshot's identity, never a changing list position."""
+    try:
+        path, name = unhex(file_hex), unhex(snapshot_hex)
+        if path != EARLIER.read_text():
+            return {"ok": False, "state": "changed"}
+        version = next((item for item in versions(path) if item["name"] == name), None)
+        if version is None:
+            return {"ok": False, "state": "changed"}
+        target = version["path"] if action == "version-open" else put_back(version, path)
+    except (OSError, ValueError, shutil.Error):
+        return {"ok": False, "state": "failed"}
+    show_in_files(target)
+    return {"ok": True, "state": "opened" if action == "version-open" else "restored"}
 
 
 def look_back(names, now=None):
@@ -6474,6 +6744,23 @@ def status(scope="all"):
     return result
 
 
+def profile_recovery(args):
+    """Forward only the bounded, redacted profile API; never invoke a shell or root helper."""
+    if args and (len(args) != 2 or not re.fullmatch('[a-f0-9]{32}', args[0])
+                 or not re.fullmatch('[a-f0-9]{64}', args[1])):
+        return {'ok': False, 'state': 'changed', 'items': []}
+    command = ['recover', *args] if args else ['recovery']
+    try:
+        result = subprocess.run([f'{LIBEXECDIR}/monet-profile', *command],
+                                capture_output=True, text=True, timeout=120)
+        data = json.loads(result.stdout) if result.returncode == 0 and len(result.stdout) < 65536 else None
+        if not isinstance(data, dict) or type(data.get('ok')) is not bool:
+            raise ValueError('Invalid profile response')
+        return data
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {'ok': False, 'state': 'unavailable', 'items': []}
+
+
 def main(argv):
     cmd, args = (argv[0] if argv else "status"), argv[1:]
     on = bool(args) and args[0] == "on"
@@ -6622,15 +6909,8 @@ def main(argv):
         emit({"file": path, "name": os.path.basename(path), "versions": versions(path)} if path else {})
     elif cmd == "versions-done":
         EARLIER.unlink(missing_ok=True)
-    elif cmd in ("version-open", "put-back") and args and args[0].isdigit():
-        try:
-            path = EARLIER.read_text()
-        except OSError:
-            path = ""
-        found = versions(path) if path else []
-        if int(args[0]) < len(found):
-            version = found[int(args[0])]
-            show_in_files(version["path"] if cmd == "version-open" else put_back(version, path))
+    elif cmd in ("version-open", "put-back"):
+        emit(earlier_action(cmd, *args) if len(args) == 2 else {"ok": False, "state": "changed"})
     elif cmd == "batteries":
         emit(batteries())
     elif cmd == "battery-care":
@@ -6740,6 +7020,8 @@ def main(argv):
         emit(update_check())
     elif cmd == "update-history":
         emit(update_history())
+    elif cmd == 'profile-recovery':
+        emit(profile_recovery(args))
     elif cmd == "previous":
         try:
             emit(previous_monet(json.loads(run("rpm-ostree", "status", "--json", timeout=30) or "{}")))
@@ -6836,12 +7118,18 @@ def main(argv):
         emit(wallet_status())
     elif cmd == "wallet-policy":
         emit(wallet_policy(args[0]) if len(args) == 1 else {"ok": False})
+    elif cmd == "wallet-app-offers":
+        emit(wallet_app_offers(args[0]) if len(args) == 1 else {"ok": False})
     elif cmd == "wallet-lock":
         emit(wallet_lock())
     elif cmd == "wallet-manage":
         emit(wallet_manage())
     elif cmd == "wallet-access":
         emit(wallet_access())
+    elif cmd == "wallet-app-support":
+        emit(wallet_app_support())
+    elif cmd == "wallet-zen":
+        emit(wallet_zen())
     elif cmd == "wallet-browser":
         emit(wallet_browser())
     elif cmd == "security":
@@ -6907,6 +7195,10 @@ def main(argv):
         emit(storage())
     elif cmd == "storage-capacity":
         emit(storage_capacity())
+    elif cmd == 'storage-recovery':
+        emit(storage_recovery(args))
+    elif cmd == 'troubleshooting':
+        emit(troubleshooting())
     elif cmd == "empty-trash":
         emit({"ok": empty_trash()})
     elif cmd == "defaults":
@@ -7030,8 +7322,8 @@ def main(argv):
         hide_system_root()
     elif cmd == "native-shortcut" and len(args) == 1:
         return 0 if native_shortcut_dialog(args[0]) else 1
-    elif cmd == "native-run" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
-        return 0 if native_run(args[0]) else 1
+    elif cmd == "native-run" and len(args) in (1, 2) and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        return 0 if native_run(*args) else 1
     elif cmd == "windows-files":
         windows_files_note()
     elif cmd == "played":

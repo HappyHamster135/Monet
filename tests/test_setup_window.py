@@ -119,6 +119,113 @@ class SetupWindow(unittest.TestCase):
         self.assertEqual(self.window.property("phase"), "failed")
         self.assertTrue(self.setup._error)
 
+    def test_drive_choice_and_review_are_explicit_and_reset_when_drive_changes(self):
+        original = dict(self.setup._disks[0], contents=[dict(path='/dev/nvme0n1p3', name='Windows', size='999 GB')])
+        other = dict(original, path='/dev/nvme1n1', label='Personal backup · 2 TB', contents=[], hasWindows=False)
+        self.setup._disks = [original, other]
+        self.setup._disk, self.setup._mode, self.setup._reviewed = -1, '', False
+        self.setup.changed.emit(); self.window.setProperty('step', 4); QTest.qWait(500)
+        button = self.window.findChild(QObject, 'nextButton')
+        self.assertFalse(button.property('enabled'))
+        self.setup.setDisk(0); self.setup.setMode('erase'); QTest.qWait(50)
+        self.assertIn('/dev/nvme0n1', self.setup.driveSummary)
+        self.assertIn('other drives', self.setup.driveSummary)
+        self.assertFalse(button.property('enabled'))
+        confirmation = self.window.findChild(QQuickItem, 'confirmDrive')
+        confirmation.forceActiveFocus(); QTest.qWait(30)
+        review = self.window.findChild(QQuickItem, 'driveReview')
+        self.assertGreater(review.property('contentY'), 0)
+        QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(30)
+        self.assertTrue(self.setup.reviewed)
+        self.assertTrue(button.property('enabled'))
+        self.setup.setDisk(1); QTest.qWait(50)
+        self.assertEqual(self.setup.mode, '')
+        self.assertFalse(self.setup.reviewed)
+        self.assertFalse(button.property('enabled'))
+        self.setup.setDisk(-1); self.assertEqual(self.setup.disk, 1)
+        self.setup.setDisk(999); self.assertEqual(self.setup.disk, 1)
+
+    def test_offline_navigation_reaches_review_but_allows_only_resume(self):
+        self.setup._wired, self.setup._joined, self.setup._networks = False, '', []
+        self.setup.wifiChanged.emit(); self.window.setProperty('step', 1); QTest.qWait(100)
+        self.assertFalse(self.window.findChild(QQuickItem, 'nextButton').isEnabled())
+        link = self.window.findChild(QQuickItem, 'resumeOffline')
+        self.assertTrue(link.isVisible())
+        link.forceActiveFocus(); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(50)
+        self.assertEqual(self.window.property('step'), 2)
+        self.assertTrue(self.setup.offline)
+        self.window.setProperty('step', 4); QTest.qWait(50)
+        self.setup.setDisk(0); self.setup.setMode('erase')
+        self.assertIn('internet', self.setup.blocker)
+        self.setup._disks[0]['resume'] = dict(id='synthetic-receipt')
+        self.setup.setMode('resume'); self.setup.setReviewed(True); QTest.qWait(50)
+        self.assertEqual(self.setup.blocker, '')
+        self.assertTrue(self.window.findChild(QQuickItem, 'nextButton').isEnabled())
+        self.setup.setOffline(False)
+        self.assertFalse(self.setup.reviewed)
+
+    def test_complete_event_does_not_enable_restart_before_worker_exit(self):
+        self.start_worker("import time; print('{\"done\": true}', flush=True); time.sleep(0.5)")
+        QTest.qWait(150)
+        self.assertEqual(self.setup.phase, 'install')
+        self.wait_for_worker()
+        self.assertEqual(self.setup.phase, 'done')
+
+    def test_vm_keyboard_path_selects_and_reviews_the_single_disposable_drive(self):
+        self.setup._disk, self.setup._mode, self.setup._reviewed = -1, '', False
+        self.setup._pc['tpm'] = False
+        self.setup.changed.emit(); self.window.setProperty('step', 4); QTest.qWait(500)
+        choice = self.window.findChild(QQuickItem, 'installationDrive')
+        self.assertTrue(choice.hasActiveFocus())
+        for key in (Qt.Key_Space, Qt.Key_Home, Qt.Key_Down, Qt.Key_Return):
+            QTest.keyClick(self.window, key); QTest.qWait(30)
+        self.assertEqual(self.setup.disk, 0)
+        for name in ('refreshDrives', 'keepDrive', 'eraseDrive'):
+            QTest.keyClick(self.window, Qt.Key_Tab)
+            self.assertEqual(self.window.activeFocusItem().objectName(), name)
+        QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(30)
+        self.assertEqual(self.setup.mode, 'erase')
+        for name in ('gentleInstallation', 'confirmDrive'):
+            QTest.keyClick(self.window, Qt.Key_Tab)
+            self.assertEqual(self.window.activeFocusItem().objectName(), name)
+        QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(30)
+        self.assertTrue(self.setup.reviewed)
+        self.assertTrue(self.window.findChild(QQuickItem, 'nextButton').isEnabled())
+
+    def test_noisy_worker_is_bounded_and_keeps_servicing_gui_events(self):
+        from PySide6.QtCore import QTimer
+        import io
+        ticks = []
+        timer = QTimer(); timer.setInterval(1); timer.timeout.connect(lambda: ticks.append(True)); timer.start()
+        try:
+            with mock.patch('sys.stderr', io.StringIO()):
+                self.worker("import json; [print(json.dumps({'log':'output '*300})) for _ in range(1500)]; print('{\"done\": true}')")
+            self.assertEqual(self.setup.phase, 'done')
+            self.assertLessEqual(len(self.setup._log), 200)
+            self.assertTrue(all(len(line) <= 4096 for line in self.setup._log))
+            self.assertGreater(len(ticks), 10)
+        finally:
+            timer.stop()
+
+    def test_restart_request_is_async_and_a_failure_remains_actionable(self):
+        import time
+        self.setup._phase = 'done'; self.setup.progressChanged.emit()
+        def slow_failure(*args, **kwargs):
+            time.sleep(.2)
+            return mock.Mock(returncode=1)
+        with mock.patch.object(app, 'DEMO', False), mock.patch.object(app.subprocess, 'run', side_effect=slow_failure):
+            before = time.monotonic(); self.setup.restart()
+            self.assertLess(time.monotonic() - before, .1)
+            self.assertTrue(self.setup.restarting)
+            QTest.qWait(100)
+            self.assertTrue(self.setup.restarting)
+            for _ in range(100):
+                if not self.setup.restarting: break
+                time.sleep(.005)
+                QTest.qWait(20)
+            self.assertFalse(self.setup.restarting)
+            self.assertIn('try again', self.setup.restartError)
+
     def test_encrypted_completion_keeps_the_recovery_step(self):
         self.worker("print('{\"recovery\": \"synthetic-test-key\"}'); print('{\"done\": true}')")
         self.assertEqual(self.window.property("phase"), "done")
@@ -216,7 +323,7 @@ class SetupWindow(unittest.TestCase):
         self.assertEqual(self.window.property("step"), 4)
         QTest.qWait(500)
         encrypt = next(item for item in self.window.findChildren(QQuickItem)
-                       if item.property("title") == "Encrypt this PC")
+                       if item.property("title") == "Encrypt Monet")
         self.tab_to(encrypt)
         before = self.setup.encrypt
         QTest.keyClick(self.window, Qt.Key_Space)
@@ -224,6 +331,7 @@ class SetupWindow(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertEqual(self.setup.encrypt, before)
         # A keyboard click must never bypass the same disk blocker as a mouse click.
+        self.setup.setReviewed(True)
         self.tab_to(next_button)
         with mock.patch.object(self.setup, "install") as install:
             self.setup._disks = []

@@ -60,7 +60,7 @@ class Service(dbus.service.Object):
         other_collection.PropertiesChanged('org.freedesktop.Secret.Collection', {'Locked': dbus.Boolean(True)}, [])
     @dbus.service.method(api, in_signature='sxs', out_signature='i')
     def open(self, wallet, window, app):
-        assert int(window) == 0 and app in ('Monet Passwords', 'Monet Passwords for Zen')
+        assert int(window) == 0 and app in ('Monet Passwords', 'Monet Passwords for Zen', 'Monet App Logins')
         collection.locked = False
         collection.PropertiesChanged('org.freedesktop.Secret.Collection', {'Locked': dbus.Boolean(False)}, [])
         return self.data.call('open', wallet, window, app)

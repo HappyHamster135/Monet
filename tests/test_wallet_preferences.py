@@ -69,6 +69,14 @@ class WalletPreferences(unittest.TestCase):
             self.assertEqual(launch.call_args.args[0], [f'{self.q.LIBEXECDIR}/monet-passwords', '--connections'])
             run.assert_not_called()
 
+    def test_zen_setup_opens_guided_native_page_without_changing_browser_settings(self):
+        with patch.object(self.q.subprocess, 'Popen') as launch, patch.object(self.q, 'run') as run:
+            self.assertTrue(self.q.wallet_zen()['ok'])
+            self.assertEqual(launch.call_args.args[0], [f'{self.q.LIBEXECDIR}/monet-passwords', '--connect-zen'])
+            run.assert_not_called()
+            launch.side_effect = OSError()
+            self.assertFalse(self.q.wallet_zen()['ok'])
+
     def test_browser_link_uses_only_known_local_application_and_fixed_page(self):
         with tempfile.TemporaryDirectory() as temp:
             folder=Path(temp)

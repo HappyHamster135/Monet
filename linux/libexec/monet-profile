@@ -9,10 +9,12 @@ from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
 import subprocess
+import stat
 import sys
 import tempfile
 import time
@@ -41,21 +43,24 @@ def atomic(path, data, mode=0o600):
 
 
 @contextmanager
-def lock(name="state"):
+def lock(name="state", wait=True):
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     with (STATE / (name + ".lock")).open("a") as stream:
         os.chmod(stream.name, 0o600)
-        fcntl.flock(stream, fcntl.LOCK_EX)
+        fcntl.flock(stream, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
         yield
 
 
 def load():
     try:
-        with (STATE / "state.json").open("rb") as stream: raw = stream.read(LIMIT + 1)
+        fd = os.open(STATE / "state.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            if not stat.S_ISREG(os.fstat(fd).st_mode): raise ValueError('Invalid profile record')
+            raw = stream.read(LIMIT + 1)
     except FileNotFoundError:
         return {"version": 1, "owned": {}, "runs": {}, "applied": [], "blocked": []}
     state = json.loads(raw)
-    if (len(raw) > LIMIT or state.get("version") != 1
+    if (len(raw) > LIMIT or not isinstance(state, dict) or state.get("version") != 1
             or any(not isinstance(state.get(k), dict) for k in ("owned", "runs"))
             or any(not isinstance(state.get(k), list) for k in ("applied", "blocked"))):
         raise ValueError("Unreadable profile record; the original has been kept")
@@ -265,39 +270,112 @@ def run(command):
         return 0 if success else 1
 
 
+def undo_record(state, record):
+    conflicts = []
+    for key, change in reversed(list(record["changes"].items())):
+        if change.get("undone"): continue
+        target = change["target"][1] if change["kind"] == "key" else change["target"]
+        try: safe_path(target)
+        except ValueError:
+            conflicts.append(key); continue
+        if change["kind"] == "key":
+            args = list(change["target"]); args[1] = str(safe_path(args[1]))
+            current = read_key(args)
+            if current != change["after"] and current != change["before"]:
+                conflicts.append(key); continue
+            write_key(args, change["before"])
+            if read_key(args) != change['before']:
+                conflicts.append(key); continue
+        else:
+            path = safe_path(change["target"], DATA)
+            current = base64.b64encode(path.read_bytes()).decode() if path.exists() else None
+            if current != change["after"] and current != change["before"]:
+                conflicts.append(key); continue
+            if change["before"] is None: path.unlink(missing_ok=True)
+            else: atomic(path, base64.b64decode(change["before"]), path.stat().st_mode & 0o777 if path.exists() else 0o644)
+        if change["owner"] is None: state["owned"].pop(key, None)
+        else: state["owned"][key] = change["owner"]
+        change["undone"] = True
+        save(state)
+    record["status"] = "conflicts" if conflicts else "rolled-back"
+    revision = record["revision"]
+    state["applied"] = [r for r in state["applied"] if r != revision]
+    if revision not in state["blocked"]: state["blocked"].append(revision)
+    save(state)
+    return {"restored": not conflicts, "conflicts": conflicts}
+
+
 def rollback(token):
     with lock("run"), lock():
-        state = load(); record = state["runs"][token]; conflicts = []
-        for key, change in reversed(list(record["changes"].items())):
-            if change.get("undone"): continue
-            target = change["target"][1] if change["kind"] == "key" else change["target"]
-            try: safe_path(target)
-            except ValueError:
-                conflicts.append(key); continue
-            if change["kind"] == "key":
-                args = list(change["target"]); args[1] = str(safe_path(args[1]))
-                current = read_key(args)
-                if current != change["after"] and current != change["before"]:
-                    conflicts.append(key); continue
-                write_key(args, change["before"])
-            else:
-                path = safe_path(change["target"], DATA)
-                current = base64.b64encode(path.read_bytes()).decode() if path.exists() else None
-                if current != change["after"] and current != change["before"]:
-                    conflicts.append(key); continue
-                if change["before"] is None: path.unlink(missing_ok=True)
-                else: atomic(path, base64.b64decode(change["before"]), path.stat().st_mode & 0o777 if path.exists() else 0o644)
-            if change["owner"] is None: state["owned"].pop(key, None)
-            else: state["owned"][key] = change["owner"]
-            change["undone"] = True
-            save(state)
-        record["status"] = "conflicts" if conflicts else "rolled-back"
-        revision = record["revision"]
-        state["applied"] = [r for r in state["applied"] if r != revision]
-        if revision not in state["blocked"]: state["blocked"].append(revision)
-        save(state)
-        print(json.dumps({"restored": not conflicts, "conflicts": conflicts}))
-        return 1 if conflicts else 0
+        state = load(); result = undo_record(state, state['runs'][token])
+        print(json.dumps(result))
+        return 0 if result['restored'] else 1
+
+
+def recovery_item(token, record):
+    """A bounded description, never preference values, launcher commands or file contents."""
+    if (not re.fullmatch('[a-f0-9]{32}', token) or not isinstance(record, dict)
+            or record.get('status') not in ('done', 'failed', 'running', 'conflicts', 'rolled-back')
+            or not isinstance(record.get('time'), (int, float)) or not math.isfinite(record['time'])
+            or not 0 < record['time'] < 10**11 or not isinstance(record.get('revision'), str)
+            or not isinstance(record.get('changes'), dict)):
+        raise ValueError('Invalid profile history')
+    settings = shortcuts = remaining = 0
+    areas = set()
+    for change in record['changes'].values():
+        if not isinstance(change, dict) or not all(k in change for k in ('kind', 'target', 'before', 'after', 'owner')):
+            raise ValueError('Invalid profile change')
+        owner = change['owner']
+        if owner is not None and not isinstance(owner, dict):
+            raise ValueError('Invalid profile ownership')
+        if change['kind'] == 'key':
+            args = change['target']
+            if (not isinstance(args, list) or len(args) < 6 or not all(isinstance(a, str) for a in args)
+                    or args[0] != '--file' or args[-2] != '--key' or len(args[2:-2]) % 2
+                    or any(args[i] != '--group' for i in range(2, len(args)-2, 2))):
+                raise ValueError('Invalid preference change')
+            if any(change[k] is not None and not isinstance(change[k], str) for k in ('before', 'after')):
+                raise ValueError('Invalid preference value')
+            settings += 1
+            name = Path(args[1]).name
+            areas.add({'kdeglobals': 'appearance', 'kwinrc': 'windows', 'kcminputrc': 'input',
+                       'kxkbrc': 'input', 'kscreenlockerrc': 'lock',
+                       'plasma-org.kde.plasma.desktop-appletsrc': 'desktop'}.get(name, 'preferences'))
+        elif change['kind'] == 'file' and isinstance(change['target'], str):
+            for k in ('before', 'after'):
+                value = change[k]
+                if value is not None and (not isinstance(value, str) or len(value) > 350000
+                                          or len(base64.b64decode(value, validate=True)) > 256 * 1024):
+                    raise ValueError('Invalid shortcut change')
+            shortcuts += 1; areas.add('shortcuts')
+        else: raise ValueError('Unknown profile change')
+        remaining += not bool(change.get('undone'))
+    fingerprint = hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
+    return dict(id=token, fingerprint=fingerprint, time=int(record['time'] * 1000),
+                status='interrupted' if record['status'] == 'running' else record['status'],
+                settings=settings, shortcuts=shortcuts, remaining=remaining, areas=sorted(areas))
+
+
+def recovery(token=None, expected=None):
+    """Settings' preview/undo API; never wait behind a live migration or change unseen history."""
+    try:
+        with lock('run', wait=False), lock(wait=False):
+            state = load()
+            items = [recovery_item(k, v) for k, v in state['runs'].items()]
+            if token is None:
+                return dict(ok=True, state='ready', items=sorted(items, key=lambda i: i['time'], reverse=True)[:20])
+            selected = next((i for i in items if i['id'] == token), None)
+            if selected is None or selected['fingerprint'] != expected:
+                return dict(ok=False, state='changed')
+            record = state['runs'][token]
+            result = undo_record(state, record)
+            return dict(ok=result['restored'], state='done' if result['restored'] else 'conflicts',
+                        restored=sum(bool(c.get('undone')) for c in record['changes'].values()),
+                        kept=len(result['conflicts']))
+    except BlockingIOError:
+        return dict(ok=False, state='busy', items=[])
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        return dict(ok=False, state='unavailable', items=[])
 
 
 def main(args):
@@ -307,6 +385,8 @@ def main(args):
     elif args[0] == "file": file_update(args[1], args[2], "--alias" in args)
     elif args[0] == "run": return run(args[1:])
     elif args[0] == "rollback": return rollback(args[1])
+    elif args[0] == 'recovery': print(json.dumps(recovery()))
+    elif args[0] == 'recover' and len(args) == 3: print(json.dumps(recovery(args[1], args[2])))
     elif args[0] == "status":
         with lock(): print(json.dumps(load()["runs"]))
     else: raise ValueError("Unknown profile operation")

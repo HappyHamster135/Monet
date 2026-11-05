@@ -17,7 +17,34 @@ ColumnLayout {
     property bool percentage: true
     property bool paused: false
     readonly property bool ready: sensorsModel.ready && sensorIds.length > 0
+    readonly property int sampleCount: readings.samples.length
+    readonly property var firstValues: sampleCount === 1 ? readings.samples[0].values : []
     spacing: 6
+
+    // Start with the readings we have. Keep a bounded, shared timeline so paired
+    // network/disk series never acquire different lengths or invented zeroes.
+    HistoryBuffer { id: readings; objectName: "performanceHistory" }
+    onSensorIdsChanged: readings.clear()
+    onPausedChanged: { if (!paused) readings.clear() }
+    function sample() {
+        if (!ready || paused) return
+        const values = sensorIds.map((_, column) =>
+            sensorsModel.data(sensorsModel.index(0, column), Sensors.SensorDataModel.Value))
+        readings.append(values, Date.now())
+    }
+    Timer {
+        interval: 1000
+        repeat: true
+        running: history.ready && !history.paused
+        triggeredOnStart: true
+        onTriggered: history.sample()
+    }
+    Connections {
+        target: sensorsModel
+        // Metadata can arrive before the first value. Show that first real
+        // reading immediately, then collect at the regular one-second cadence.
+        function onDataChanged() { if (!history.sampleCount) history.sample() }
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -56,12 +83,28 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             direction: Charts.XYChart.ZeroAtEnd
-            lineWidth: 2
-            fillOpacity: 0.08
+            lineWidth: history.sampleCount > 1 ? 2 : 0
+            fillOpacity: history.sampleCount > 1 ? 0.08 : 0
             interpolate: false
-            xRange { from: 0; to: 59; automatic: false }
+            // QuickCharts' upper bound is exclusive. Two readings already fill
+            // the graph; a single reading is shown as a point at "Now".
+            xRange { from: 0; to: Math.max(2, history.sampleCount); automatic: false }
             yRange { from: 0; to: history.percentage ? 100 : 1; automatic: !history.percentage }
             colorSource: Charts.ArraySource { array: history.colors }
+            Repeater {
+                model: history.sampleCount === 1 ? history.sensorIds.length : 0
+                Rectangle {
+                    required property int index
+                    objectName: "firstHistoryPoint" + index
+                    readonly property real value: history.firstValues[index] ?? 0
+                    readonly property real ceiling: history.percentage ? 100
+                        : (Math.max(0, ...history.firstValues) || 1)
+                    width: 6; height: 6; radius: 3
+                    x: plot.width - width / 2
+                    y: plot.height * (1 - Math.min(1, value / ceiling)) - height / 2
+                    color: history.colors[index % history.colors.length]
+                }
+            }
             ChartControls.GridLines {
                 anchors.fill: parent
                 z: -1
@@ -74,7 +117,7 @@ ColumnLayout {
             }
             QQC2.Label {
                 anchors.centerIn: parent
-                visible: !history.ready
+                visible: history.sampleCount === 0
                 text: i18nd("monet", "Waiting for sensor readings…")
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -83,7 +126,12 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: history.percentage ? 46 : 74
-        QQC2.Label { text: i18nd("monet", "60 seconds"); font.pixelSize: 11; color: Kirigami.Theme.disabledTextColor }
+        QQC2.Label {
+            objectName: "historyDuration"
+            text: history.sampleCount > 1 ? i18nd("monet", "%1 s", readings.duration) : ""
+            font.pixelSize: 11
+            color: Kirigami.Theme.disabledTextColor
+        }
         Item { Layout.fillWidth: true }
         QQC2.Label { text: history.paused ? i18nd("monet", "Paused") : i18nd("monet", "Now"); font.pixelSize: 11; color: Kirigami.Theme.disabledTextColor }
     }
@@ -97,19 +145,10 @@ ColumnLayout {
     }
     Instantiator {
         model: history.sensorIds
-        delegate: Charts.HistoryProxySource {
-            id: series
+        delegate: Charts.ArraySource {
             objectName: "historySeries" + index
             required property int index
-            source: Charts.ModelSource { model: sensorsModel; column: index; roleName: "Value" }
-            // DoNotFill leaves uncollected history empty, rather than inventing zeros.
-            fillMode: Charts.HistoryProxySource.DoNotFill
-            maximumHistory: 60
-            interval: history.ready && !history.paused ? 1000 : -1
-            property var restart: Connections {
-                target: history
-                function onPausedChanged() { if (!history.paused) series.clear() }
-            }
+            array: readings.samples.map(row => row.values[index]).reverse()
         }
         onObjectAdded: (index, object) => plot.insertValueSource(index, object)
         onObjectRemoved: (index, object) => plot.removeValueSource(object)

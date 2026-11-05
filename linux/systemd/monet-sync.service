@@ -1,6 +1,7 @@
 [Unit]
 Description=Monet: sync the list of Windows games
-After=local-fs.target
+# ESP readers must wait for bootupd's writable mount during an OS upgrade.
+After=local-fs.target bootloader-update.service
 
 [Service]
 Type=oneshot

@@ -6,11 +6,54 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.5-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.5-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.5-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.5-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.5-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.6-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.6-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.6-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.6-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.6-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+
+### New in 0.9.6: a smoother desktop, clearer recovery
+
+- **Choose the installation drive explicitly.** Setup shows each drive and what
+  will be kept or erased. Interrupted installs can reuse verified downloads,
+  including offline, and preserve the previous attempt's files. A gentler
+  installation option reduces worker CPU load.
+- **Recover files before making room.** Storage reviews unfinished installations,
+  saves your account's files to a chosen drive and requires confirmation before
+  removing a saved installation. The running system and rollback are protected.
+- **Startup apps belong in Task Manager.** Add apps, turn sign-in startup on or
+  off and search the list, with clear feedback and protected desktop components.
+- **Recovery explains the next step.** Check space, updates, backups and rollback
+  availability; preview a private diagnostic report. Review and undo Monet's
+  recorded desktop changes while preserving newer personal choices.
+- **Performance graphs start immediately.** The first reading appears at once;
+  the graph expands with available history up to the latest 60 seconds.
+- **Monet from sign-in onward.** The OS image's native sign-in screen gains the
+  Fraunces clock, glass panel and clearer password controls, with compact and
+  software-rendered layouts and a built-in fallback sign-in page.
+- **Smoother everyday interactions.** More reliable dock hover animation,
+  improved keyboard focus and Mist/Smoke contrast, bounded on-demand storage
+  scans and less work while windows are hidden.
+- **Better English spelling suggestions.** System dictionaries prioritize common
+  contractions and typos, including `im` → `I'm` and `preformace` → `performance`.
+  Apps that manage their own dictionaries keep their own spelling behavior.
+- **Optional app login saving and filling.** Enable it in Password settings to
+  approve saved accounts and choose a login from Monet's native picker. Supported
+  native and sandboxed controls can fill directly. Accessible Electron forms can
+  offer to save; native Electron filling requires support from the app through
+  Monet's new integration. Review app support can enable sign-in field access
+  for a selected sandboxed app and undo the change. Embedded pages keep separate
+  accounts for each app and site.
+- **First boot works without extra downloads when none are needed.** An empty
+  app selection, or apps already included in Monet, finishes offline.
+
+This is a preview release candidate. Local automated and virtual-machine tests
+are recorded in the [testing notes](https://github.com/HappyHamster135/Monet/blob/main/docs/TESTING.md).
+Physical hardware qualification remains pending, including the reported Razer
+hard lock, Secure Boot/TPM, suspend, peripherals and Windows/game round trips.
+These changes do not establish a fix for the laptop's overheating or a measured
+performance advantage over Windows or other Linux distributions. Nothing is
+published by preparing this local candidate.
 
 ### New in 0.9.5: a clearer, lighter desktop
 

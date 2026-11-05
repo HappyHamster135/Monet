@@ -29,6 +29,96 @@ def directory():
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/store"
 
 
+def watch_queue(queue, parent=None):
+    """Observe atomic queue writes; only active work needs a recovery timer.
+
+    Qt stays out of the detached worker and command-line paths. Watch the folder
+    because each durable write replaces downloads.json. If watching/reading fails,
+    retry slowly instead of either spinning or silently losing future changes.
+    """
+    from PySide6.QtCore import QFileSystemWatcher, QObject, QTimer, Signal, Slot
+
+    class QueueWatch(QObject):
+        changed = Signal("QVariant")
+        problem = Signal(str)
+
+        def __init__(self):
+            super().__init__(parent)
+            self.items = []
+            self.failed = False
+            self.identity = None
+            self.watcher = QFileSystemWatcher(self)
+            self.watcher.directoryChanged.connect(self.wake)
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.poll)
+            self.pending = QTimer(self)
+            self.pending.setSingleShot(True)
+            self.pending.setInterval(75)
+            self.pending.timeout.connect(self.poll)
+            self.pending.start(0)
+
+        def identity_now(self):
+            try:
+                info = queue.folder.stat()
+                return info.st_dev, info.st_ino
+            except OSError:
+                return None
+
+        def wake(self, path):
+            # Watching the parent catches a renamed/replaced queue directory.
+            # Other Monet state changes must not cause queue reads.
+            if path == str(queue.folder.parent) and self.identity_now() == self.identity:
+                return
+            # Active transactions already refresh at the worker's progress rate.
+            # Directory events must not double that rate or restart a debounce
+            # indefinitely when several atomic writes arrive together.
+            if self.timer.isActive() and self.timer.interval() == 750:
+                return
+            if not self.pending.isActive():
+                self.pending.start(75)
+
+        @Slot()
+        def poll(self):
+            self.pending.stop()
+            watched = False
+            try:
+                queue.folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+                folder = str(queue.folder)
+                identity = self.identity_now()
+                if identity != self.identity and folder in self.watcher.directories():
+                    self.watcher.removePath(folder)
+                self.identity = identity
+                # Arm before reading so a submission between read and watch
+                # cannot leave an idle observer asleep indefinitely.
+                watched = folder in self.watcher.directories() or self.watcher.addPath(folder)
+                parent_folder = str(queue.folder.parent)
+                parent_watched = parent_folder in self.watcher.directories() or self.watcher.addPath(parent_folder)
+                watched = watched and parent_watched
+                queue.recover()
+                items = queue.read()
+                self.failed = False
+                if items != self.items:
+                    self.items = items
+                    self.changed.emit(items)
+            except OSError:
+                if not self.failed:
+                    self.problem.emit("storage")
+                self.failed = True
+            # Worker death produces no file event: keep recovery checks while
+            # anything is active, including a queued worker that never started.
+            active = any(item["state"] in ACTIVE for item in self.items)
+            interval = 750 if active else 30000 if self.failed or not watched else 0
+            if interval:
+                if self.timer.interval() != interval:
+                    self.timer.setInterval(interval)
+                if not self.timer.isActive():
+                    self.timer.start()
+            else:
+                self.timer.stop()
+
+    return QueueWatch()
+
+
 class Queue:
     def __init__(self, folder=None):
         self.folder = Path(folder) if folder is not None else directory()

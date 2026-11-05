@@ -12,22 +12,30 @@ DONE="$STATE/apps-done"
 EVERYDAY="app.zen_browser.zen org.kde.gwenview org.kde.okular org.kde.haruna org.kde.elisa org.kde.kcalc"
 
 [ -e "$DONE" ] && exit 0
-command -v flatpak >/dev/null || exit 0
 if [ -f "$CHOSEN" ]; then
     wanted="$(cat "$CHOSEN")"
 else
     wanted="$EVERYDAY"
 fi
 
-flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
-
-# One at a time, so one that fails (no connection, no room) doesn't keep the rest out.
-left=()
+# Resolve the choice before contacting Flathub. No apps, or only built-in apps,
+# must finish successfully even when this PC has no internet connection.
+pending=()
 for app in $wanted; do
     [[ "$app" =~ ^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$ ]] || continue
     [ -f "/usr/share/applications/$app.desktop" ] && continue
-    flatpak install --system --noninteractive --or-update -y flathub "$app" || left+=("$app")
+    pending+=("$app")
 done
+
+left=()
+if [ ${#pending[@]} -gt 0 ]; then
+    command -v flatpak >/dev/null || exit 0
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
+    # One failure must not keep the remaining selected apps out.
+    for app in "${pending[@]}"; do
+        flatpak install --system --noninteractive --or-update -y flathub "$app" || left+=("$app")
+    done
+fi
 
 mkdir -p "$STATE"
 if [ ${#left[@]} -eq 0 ]; then

@@ -1,5 +1,415 @@
 # Testing Monet on real hardware
 
+## 0.9.6 release candidate — 4 November 2026
+
+Follow-up: `desktop-followup-final.json` passes **1,326 of 1,342 checks**, with
+16 documented skips and no failed modules; JavaScript and browser-form checks
+also pass. Both RC8 image builds and packaged-source/native-greeter checks pass.
+New recovery coverage includes selected-snapshot identity, collision-safe
+publication, disk-full cleanup, folders/links, UI retry feedback and reversible
+account-preview retirement. An unprivileged laptop probe now correctly detects
+rollback through rpm-ostree's read-only service. RC8 boots in the existing VM
+with Secure Boot/SELinux and preserved work, preferences and Startup state.
+Separate OCI-directory staging/boot/check acceptance validates the local-only
+laptop deployment route. The older counts and image IDs below record RC6.
+
+The current local status and boundaries are in [RELEASE-0.9.6.md](RELEASE-0.9.6.md).
+Evidence is under `target/release096-2026-11-04/`; VERSION and workspace/plugin
+versions are now 0.9.6. Historical runs below retain their original boundaries.
+
+The final required desktop run (`desktop-release-confirmed.json`, runner exit zero)
+discovers 1,332 Python tests across 80 modules: 1,316 pass and 16 documented
+skips, with no failed modules. All JavaScript checks and the signed connector's
+reproduction/form checks pass. Skipped PowerShell syntax and setup behavior
+checks pass separately with the local runtime. Eight notification checks run
+through their passing private-bus parent. The five native update-retry checks
+also pass against the installed VM. The partition-discovery container skip
+remains explicit. Rust's 99 workspace tests and warnings-denied Clippy pass.
+The first run with the new greeter checks omitted the pinned browser XPI
+environment variable; the separate browser check and the corrected full run
+both pass. That invocation error is retained in `desktop-release.log`.
+
+Both complete pinned-base graphics images contain the recovery, Startup,
+diagnostics, performance, spelling and native sign-in changes. The final RC6
+builds both exit zero; their image lint passes 14 checks, skips one inapplicable
+check and emits no warnings. Packaged greeter binaries, runtime RPMs and clean
+source archives match their manifests and this checkout. Earlier RC2 tool
+wrappers returned 143 after writing/tagging their images; those logs remain as
+historical evidence, not the final build result. Authselect factory state
+restores and validates in both graphics variants.
+
+The published 0.9.5 baseline upgrades to the exact final AMD/Intel manifest and
+rolls back with Secure Boot enabled and SELinux enforcing. Documents, an app
+shortcut, a KConfig preference and a disabled Startup entry retain their hashes
+and values. The other qcow2 drive has no modified extents. Installed storage
+recovery exports nested homes and sparse files, rejects stale/mounted deletion,
+preserves the active root and releases its mount.
+
+A real disposable 1 GiB Btrfs filesystem verifies the working-space guard before
+an existing root can move. ENOSPC/EDQUOT tests preserve the download and receipt;
+download-space failures stop without network retry delays. The frozen-source
+Setup ISO passes signed boot-file and optical/USB consistency checks. Its
+encrypted keep-data trial survives a post-download hard reset, verifies the
+retained 6 GB download and finishes with the virtual link down. Finalization
+releases every target/service-namespace mount, closes LUKS and clears the receipt
+and runtime state. First and second encrypted boots pass under Secure Boot and
+SELinux; the software TPM unlocks after removal of the bootstrap key. The
+recovery phrase works, and the retained original partition and second drive
+remain unchanged.
+
+The greeter is rebuilt from the exact installed source RPM, with runtime,
+link-dependency and binary/source checksum guards. Real native previews cover
+compact, wide, software-rendered and 150% Arabic layouts, password rejection
+and retry. A deliberately missing main page proves the original-QML fallback
+can still sign in. The installed VM also exercises PAM rejection/success and
+the native on-screen keyboard. The panel follows its controls when idle.
+
+The fallback ISO passes media/embedded-EFI checks and boots its branded graphical
+installer under Secure Boot. Its local Lorax EFI-image step uses mtools instead
+of unavailable rootless host loop devices; the adapter is retained as evidence.
+The first Setup build was invalidated by editing its shell source while it ran.
+The final build uses an immutable source snapshot and exits zero.
+
+
+## 0.9.6 storage, Startup and troubleshooting — 4 November 2026
+
+Local-only evidence: `target/polish-storage-2026-11-04/`. No host configuration,
+physical disk, commit, push or release was changed. VERSION remains 0.9.5.
+
+- `final-suite.json` / `.log` / `.exit`: **1,320 discovered Python tests across
+  79 modules, 1,304 passed, 16 documented skips**, no failed modules; all 27
+  JavaScript tests and pinned signed-connector reproduction/form tests pass.
+  Test-runner and container exits are both zero.
+- `affected.json`: **459 passed, zero skips/failures**, after the final QML,
+  native scan and chosen-folder export changes. It includes 22 maintenance
+  checks, Settings interactions, native laptop fixtures, style/package checks
+  and polling tests. The final sparse-export change was additionally rerun in
+  `unit-final.json` (22 passes) and the actual VM below.
+- `task-manager-bundle/`: rebuilt/sealed native Plasma 6.8.2 executable, runtime
+  manifest and source archive. `native-task-manager.log` confirms the actual
+  executable loads the new Startup page and invokes the real helper once with
+  no idle polling. `native-task-manager.png` uses Monet's actual KDE/Kvantum
+  colors. Startup interaction tests cover add, toggle, keyboard Enter, search,
+  failed reads and hidden-window idleness in a disposable home.
+- `render.py`, `render.log` and PNGs: native Qt RHI/Mesa via private Xvfb, at
+  100%, 125%, 150% and 200%, alternating Mist and Smoke. Storage review and
+  troubleshooting use synthetic status responses; Startup uses actual isolated
+  desktop entries. QSettings identity warnings belong to the minimal render
+  fixture. Production Settings supplies its application/organization names.
+- `vm-check-final.json`: real Btrfs on an overlay of the prior disposable
+  baseline VM. A selected retained root contains a nested home and another
+  nested Documents subvolume, plus a 100 MiB sparse file. The archive preserves
+  their contents in 40 KiB, does not dereference an outside link, and excludes
+  root-only files. Stale confirmations and a separately mounted retained root
+  are refused (including different Btrfs major:minor numbers). Recursive removal
+  deletes only that selected root; the active root remains. Helper mounts stay
+  private. `vm-user-preserved.json` also verifies the pre-existing user files,
+  saved preference and second-drive sentinel.
+- `vm-usb.json`: an ordinary user publishes the completed archive on a disposable
+  FAT filesystem, where hard links are unsupported; a pre-existing destination
+  remains untouched. The production helper uses an atomic no-replace rename.
+- `storage-benchmark.json`: five warm-cache samples per implementation on the
+  same 8,400-file disposable tree. Median repeated scans: **35.7 ms**; bounded
+  native traversal: **13.6 ms**. The initial Python walk regressed to 90.5 ms and
+  was replaced before completion. This measures only folder accounting, not
+  application launch speed, battery life, installation time or OS competition.
+
+Failures found and fixed: Enter activation in Startup; saved-status text hiding
+empty search feedback; inline QML components reaching outside their scope;
+Smoke text/search contrast; unsafe recursive temporary-directory cleanup after
+an unmount error; FIEMAP sizes reading zero before writeback; FAT-incompatible
+hard-link publication; nested Btrfs folders omitted by tar's filesystem boundary.
+No snapshot quota or estimate is presented as guaranteed reclaimable space.
+
+Boundaries: only Setup's retained roots on the running Monet Btrfs filesystem
+are offered. Export needs a matching owned account home and sufficient space on
+the chosen destination; it does not copy other accounts. An interrupted copy is
+left with `.partial`, never reported as a complete archive. Cleanup is recursive
+and not transactional; an error requires refresh before another review. Startup
+covers XDG desktop-entry autostart, not arbitrary systemd services or script
+folders, and does not measure per-app startup impact. Diagnostics never upload
+anything and distinguish unavailable service/rollback information. Full-image
+integration of these additions, translation review, broader accessibility/app
+polish and all physical hardware qualification remain open.
+
+## Automated test environments
+
+`python3 tools/test.py` runs each Python module in a separate process, with a
+ten-minute per-module deadline and process-group cleanup. On Linux it creates
+a temporary HOME/XDG tree, an offscreen Qt session and a private D-Bus daemon
+without desktop-service activation. The real account's wallet, display, audio
+server and system bus are not used. Phone and Passwords native fixtures are
+enabled when their Qt runtime is available. Individual modules/classes can be
+passed as positional arguments; `--summary PATH` records counts and skip reasons.
+
+The Build workflow's required `desktop` job builds `tests/Containerfile` using
+Fedora 44's matching Qt/PySide/KDE packages, then runs as an ordinary user with
+networking disabled and a read-only checkout. `--require-desktop` checks required
+Python, QML, native plugins and tools before running tests, and fails on
+unexpected skips. It runs the JavaScript submission checks and rebuilds the
+browser form fixture from the exact upstream XPI whose hash the existing
+connector builder verifies. No extension is installed or submitted for signing.
+The rebuilt payload must also match the bundled signed connector and its source
+receipt. Native Ark fixtures extract real ZIP and tar downloads into temporary
+folders, then scan without running the downloaded programs. Failed extraction,
+name collisions and cancellation/process cleanup have separate regression cases.
+
+Reproduce that job locally:
+
+```sh
+podman build -f tests/Containerfile -t localhost/monet-desktop-tests:44 .
+mkdir -p target/desktop-tests
+curl --fail --location --retry 3 \
+  https://addons.mozilla.org/firefox/downloads/file/5078406/keepassxc_browser-1.10.4.1.xpi \
+  -o target/desktop-tests/upstream.xpi
+podman run --rm --init --userns=keep-id --network=none --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -v "$PWD:/src:ro" -v "$PWD/target/desktop-tests:/results" \
+  -e MONET_TEST_BROWSER_UPSTREAM=/results/upstream.xpi \
+  localhost/monet-desktop-tests:44 \
+  python3 tools/test.py --require-desktop --summary /results/summary.json
+```
+
+On an SELinux host, add `--security-opt=label=disable` for these explicitly
+mounted source/results directories. To use the host's installed runtimes,
+put Node on PATH and set `MONET_TEST_BROWSER_UPSTREAM` to the downloaded archive.
+Also provide `MONET_ELECTRON_BINARY` from `tests/install-electron-runtime.py`
+and `MONET_TEST_ELECTRON_DBUS` pointing to `node_modules/dbus-next` installed
+from `linux/share/monet/app-integration/electron/package-lock.json`. The test
+image installs both pinned Electron and these locked dependencies during build.
+`python3 tools/test-browser.py ARCHIVE` independently rebuilds and tests the
+connector's form code without network access.
+
+Native Electron integration tests use the real main process and isolated-world
+DOM filling, with accessibility disabled. The `MONET_FLATPAK_INTEGRATION=1`
+fixtures additionally require an isolated container with nested mount/user
+namespaces, Flatpak and an installed Freedesktop 25.08 runtime. They build and
+install disposable applications in private HOME/XDG directories, never the
+real account's Flatpak installation. The native integration fixture grants only
+`org.monet.PasswordOffers1` access. The separate accessibility fixture exercises
+Monet's actual per-app preference and verifies undo removes the override. Do
+not run these fixtures directly against a real desktop. Local fixture builds
+use Electron's `--no-sandbox` flag inside the test container; the outer Flatpak
+filesystem and D-Bus sandbox remain active. This is not a flag for shipping apps.
+
+Expected skips are limited to the notification checks executed by their passing
+isolated parent, PowerShell checks owned by the Windows job, absent physical
+partitions, restricted nested mount namespaces, the opt-in Flatpak fixtures, and
+the opt-in systemd user-manager fixtures. Read-only boot-mount recovery has a separate required Linux CI step in
+a private mount namespace. The systemd fixtures still need the configured VM or
+an explicitly selected disposable user manager. None of these checks replaces a
+complete OS-image installation, update/rollback, physical hardware or game test.
+
+### 0.9.6 local full-image acceptance — 4 November 2026
+
+Evidence is in `target/image096-2026-11-04/`. These are local, unpublished
+builds from the dirty checkout at `e1fc593`; VERSION remains 0.9.5. Both complete
+AMD/Intel and NVIDIA images build against pinned Fedora 45 Bazzite bases.
+`inputs.json`, the build logs, `source-hashes.json` and the OCI artifact records
+identify the inputs. The NVIDIA image has build coverage only; GPU and physical
+hardware qualification are deferred.
+
+The AMD OCI manifest used for full installs and the published-baseline upgrade is
+`sha256:742af7acf59208dae9174f0454b130193e007ac0124ec0c98ec5b7f05806cda2`.
+The later desktop-fix rebuild is
+`sha256:229923150d4324c89a999289797f4aeb6545a9940e95cfae9152f9ffb04a0888`;
+both AMD/Intel and NVIDIA rebuilds succeeded (`candidate-v3-images.json`).
+Its local image label is `0.9.6-local.20261104`; the CLI and release-notes UI still
+use the unchanged source VERSION. Do not identify these test deployments by
+that displayed version alone. The published 0.9.5 baseline manifest is
+`sha256:d7cbc37010f71b482b1651217d8cec61c0e2ef66178cf6c82887323facd2f73e`;
+the published Setup ISO was checked against its release checksum and asset digest.
+
+The bench uses KVM, private qcow2 disks, Microsoft-trusting OVMF firmware and,
+for the encrypted trial, a software TPM. Each VM has a 96 GiB target and a
+separate 64 GiB drive containing a sentinel. A read-only loopback registry serves
+the local OCI layouts; changing its stable alias makes the real update helper
+discover the candidate. Temporary guest credentials provide the test channel and
+RPC agent. They are not packaged in Monet. No host drives, firmware, desktop
+configuration or TPM were changed.
+
+**Upgrade and rollback pass.** The published installer installed the baseline,
+its virtual MOK was enrolled, and the desktop started with Secure Boot enabled
+and SELinux enforcing. `monet helper update` then staged the candidate; reboot
+verified its exact manifest and Fedora 45 kernel. `monet helper rollback`, followed
+by reboot, restored the published manifest and Fedora 44 kernel. The sequence
+was repeated for the v2 candidate with the EFI ordering fix. Documents, a custom application shortcut
+and a KConfig preference survived both directions. The separate drive's sentinel
+and entire qcow2 file hash stayed unchanged. The final candidate and rollback
+boots report no failed system units. See `baseline/v2-*.json`,
+`baseline/user-data-after-v2*.json` and `baseline/upgrade-rollback-serial.log`.
+
+The initial candidate exposed an EFI mount race: Monet's read-only ESP probes
+could overlap bootupd's writable mount. Both early ESP readers now wait for
+`bootloader-update.service`; the final boot journal verifies that order. The
+initial failed bootloader update succeeded on retry. The later boot had no new
+EFI update to apply, so this proves ordering and a clean boot rather than a second
+bootloader binary transition. Full-image builds also exposed missing KF6
+GlobalAccel/XmlGui dependencies and the obsolete `ostree container commit` step;
+the build declares those dependencies and uses `bootc container lint`. That lint
+passes 11 checks with one skip and three nonfatal warnings for build-time DNF
+runtime/log/state files. The build also reports dracut's missing `/root` source
+diagnostic but exits successfully; image hygiene remains follow-up work. These
+diagnostics are retained in the logs, not counted as clean lint output.
+
+The fresh install trials exposed several mount-lifetime problems. Shared chroot
+`/dev` and `/sys` mounts prevented clean unmounts, so configuration now makes each
+bind mount recursively slave. Bootc also left `/run/bootc/storage` mounted outside
+the target tree: the encrypted install correctly reported a cleanup failure, and
+the unencrypted trial retained that alias despite reaching All set. Bootc now runs
+in a private mount namespace so its auxiliary mounts cannot propagate or outlive
+it. The `.6` rerun still failed to close encryption: six live system services had
+retained copies of the worker's own target/chroot mounts. Releasing those copies
+in the disposable VM immediately allowed `cryptsetup close` to succeed. The
+entire worker now enters its own recursively private mount namespace before
+probing drives or starting threads; inability to isolate stops before drive
+writes. A native target/device-mount test verifies that only the worker sees its
+mounts and live-service namespaces stay unchanged. The `.7` keep-mode full
+installation reached All set with every service mount namespace clean; checking
+just the live session's main mount table is insufficient. The encrypted `.8`
+full retry also passes this check. See `worker-namespace-proof.json` and
+`encrypted/service-mount-root-cause.json`.
+A later retry also exposed stale OSTree boot entries pointing into the preserved
+root. Setup now copies and flushes the former boot files into a `saved-boot-*`
+folder within a retained subvolume before removing those entries and rebuilding.
+It leaves the receipt, bootstrap recovery key and separate EFI partition intact.
+Regressions cover retained symlinks, unchanged unrelated data and a failed backup
+flush leaving the originals available for another retry.
+
+**Keep-data installation passes.** The final `.7` worker preserved the entire
+existing 2 GiB data partition and separate drive by SHA256, removed its receipt
+and runtime state, released all target mounts across every live service namespace,
+and booted the exact candidate manifest with Secure Boot and SELinux enforcing.
+The desktop and Welcome page opened; the existing partition hash still matched
+after login. See `keep-private/clean-finish.json`, `firstboot.json`,
+`kept-partition-{before,after,after-boot}.json` and `desktop-settled.png`.
+The offline encrypted trial preserved its exact checkpoint, bootstrap key and
+retained-root sentinel through the interruption (`encrypted/final-offline-resume.json`).
+
+**Encrypted offline completion passes.** With the network link disconnected,
+`.8` verified the saved OCI blobs, rebuilt the unfinished system without
+formatting, and reached the recovery-key page and All set. All service mount
+namespaces were clean, the LUKS mapping closed normally, and the receipt and
+runtime key were removed. The displayed recovery phrase passed an actual
+`cryptsetup --test-passphrase` check. On first boot the software TPM enrolled,
+the bootstrap key file disappeared, and its original slot was revoked. The
+retained document hash and archived boot entries remained intact; Secure Boot
+and SELinux stayed enabled and system units reported no failures. See
+`encrypted/clean-finish.json`, `recovery-key-test.json`, `all-set.png`,
+`firstboot-seal.json` and `firstboot-status.json`.
+The second boot unlocked automatically using the software TPM with no
+`rd.luks.key` argument or bootstrap file. The recovery phrase still worked when
+external token plugins were disabled and its specific key slot selected; an
+incorrect phrase was rejected. This avoids mistaking a TPM token unlock for a
+successful recovery-phrase test. See `secondboot-tpm.json`,
+`recovery-key-after-tpm.json` and `recovery-key-negative.json`.
+
+Setup's Fedora 45 Plymouth script plugin also crashed without its label plugin.
+The ISO now explicitly includes `plymouth-plugin-label`; both root plugins, the
+initrd label renderer and font links were inspected. The rebuilt `.4` ISO boots
+with Secure Boot enabled, opens Setup, and reports no failed services. Its boot
+evidence is under `splash/`; the installer namespace fix requires the later ISO.
+
+**Required desktop suite passes on the candidate runtime:** 1,288 Python tests
+discovered across 77 modules, 1,272 passed, 16 documented skips, no failed modules;
+27 JavaScript checks and signed-connector reproduction pass. Both runner and
+container exited zero (`desktop-final-suite.json`, `desktop-final-suite.log`,
+`desktop-final-suite.exit`; the earlier `completion-suite.*` also passes).
+The isolated test image adds Node to the candidate solely for the test runner.
+The first Fedora 45 run found Python 3.15's removed `load_module` API in two test
+fixtures and a systemd condition fixture using an inaccessible manager runtime;
+these fixtures were corrected. The focused confirmation passed all 125 checks
+without skips. Later runs under concurrent image/VM load exposed two test-fixture
+races: fixed millisecond sleeps inspected Qt callbacks before completion, and
+two real free-space reads differed while VM disks grew. The tests now wait for
+completion with a bounded deadline and check accounting against a fixed statvfs
+snapshot, respectively; real-filesystem accounting invariants remain covered.
+The final complete run passes. Earlier failing evidence remains in
+`full-suite.*`, `private-suite.*` and `acceptance-suite.*`.
+No extension was installed or submitted for signing.
+
+Restarting Setup also reproduced a black screen: seatd left an abandoned socket
+that prevented the next compositor from starting. Startup now removes only an
+owned Unix socket whose connection is refused and whose inode has not changed;
+it retains active sockets, links and other file types. Real-socket regression
+tests pass. The final `.8` ISO returned to the interactive Hello screen after
+two service restarts, with no seatd socket errors or failed system units. See
+`encrypted/display-restarts.json` and `encrypted/restart-{one,two}.png`.
+
+Installed-desktop acceptance found two additional Plasma 6.8 issues. KWin's
+uncreatable `Window` type shadowed Qt Quick's window, so Monet Snap did not load.
+The overlay now explicitly uses the Qt Quick import. In the running candidate,
+Windows+Z opens the picker and selecting its left half places Settings correctly
+(`keep-private/snap-picker.png`, `snap-left.png`). Plasma's foreground booster
+also started before the display existed and aborted four times during login.
+A drop-in orders it after `plasma-core.target`, matching other graphical helpers.
+A reboot/login with these local guest overrides reports no snap load error,
+an active booster with zero restarts, and no failed system or user units
+(`keep-private/desktop-startup-{before,after}.json`). The rebuilt image was then
+staged through `monet helper update`; all temporary guest overrides were removed
+before reboot. The installed files match the source hashes, Windows+Z and
+half-screen placement work, and the booster has zero restarts. Documents,
+shortcuts, preferences and the other drive's sentinel survive this update.
+See `keep-private/v3-{update,staged,desktop}.json`, `v3-snap-*.png` and
+`user-data-after-v3.json`. Rollback then booted the exact preceding manifest with
+no failed system units and the same documents, shortcuts, preferences and
+other-drive sentinel (`v3-rolled-back.json`, `user-data-after-v3-rollback.json`).
+After shutdown, the separate drive's entire qcow2 hash also matches its value
+before installation (`second-drive-final.json`). This later rebuild changes only
+the snap import and foreground-helper ordering; its fresh-install path was not
+repeated.
+
+A separate 160 GiB disposable VM disk exercises the real NTFS tools with
+synthetic files. `prepare_keep` shrank its 159 GiB NTFS partition to about
+79.5 GiB, retaining its start, type, partition UUID and filesystem UUID. The EFI
+partition's entire SHA256 and both personal-file hashes stayed unchanged; file
+detection and read-only copying into a new destination also passed. See
+`ntfs/shrink-result.json` and `ntfs/import-result.json`. This is filesystem-path
+coverage, not a booted Windows installation or its scheduled chkdsk, BitLocker,
+hibernation, fragmentation and workload matrix.
+
+These results do not qualify physical Razer thermals, NVIDIA graphics, real TPM
+firmware changes, Windows/game trips, or comparative OS performance. They also do
+not cover every possible interruption boundary or a booted Windows shrink.
+
+### Installer drive review and restart recovery
+
+`python3 tools/test.py tests.test_setup tests.test_setup_recovery tests.test_setup_window`
+uses synthetic drive metadata, temporary files and native offscreen Qt. It never
+formats a host drive. Coverage includes explicit drive selection/confirmation,
+live/mounted/mapped drive refusal, changed disk/partition identities, checkpoint
+and bootstrap-key integrity, an interrupted worker followed by lost RAM and an
+offline retry, corrupted/missing OCI blobs, preservation of an unfinished root,
+checked flush failures, noisy worker output and asynchronous restart failure.
+CPU affinity is tested only in a disposable subprocess; sensor reads are fixtures.
+Screens were inspected at 1440×900 and 1024×768. Evidence is under
+`target/setup-drives-2026-11-04/`.
+
+Disk preparation, encryption, mounts, bootc and firmware commands are mocked in
+these regressions. The following acceptance checks remain for a disposable VM
+and, where relevant, physical hardware with a newly built Setup ISO:
+
+- Attach two virtual disks with distinct sentinel files; choose one and confirm
+  that erase/keep and encrypted/unencrypted installs leave the other unchanged.
+- Interrupt after partitioning, mid-download, during bootc unpacking and during
+  final cleanup. Restart the USB and resume the same drive, with networking
+  disabled for a completed download. Verify the key, bootability and cleanup.
+- Repeat a failed late retry with a missing download subvolume, retained personal
+  files and low free space. Recover files from `previous-install-*` explicitly.
+- Verify the Razer after its reported 6.7 GB download transition, with normal and
+  gentler scheduling. Neither pointer nor Ctrl+Alt+F3 responded in the reported
+  failure. Record persistent phase/health samples and kernel evidence; the cause
+  and whether these changes resolve it are still unverified.
+
+The installer uses bootc's documented
+[`--skip-finalize`](https://bootc.dev/bootc/man/bootc-install-to-filesystem.8.html)
+while postprocessing and scratch files still write to the target. After those
+handles close, `bootc install finalize` checks the deployment; targeted flushes
+and checked normal unmounts complete the installation. It does not force a
+full-device discard or freeze a filesystem that still holds active scratch files.
+This ordering needs full boot/install acceptance, not only command fixtures.
+
+
 Phase 0 of the plan: prove the switch works before building more. Fill in the
 tables as you go and commit the results.
 
@@ -217,7 +627,7 @@ checksum stayed unchanged, and the clock-only user overrides were then reapplied
 
 ### Next to Windows, backups and the painting
 
-- [ ] Monet Setup on a PC with a full Windows drive: "Monet next to my Windows" offers to make room (the note says from and to), Bring my files is ticked, and after installing Windows still starts (it checks its drive once)
+- [ ] Monet Setup on a PC with a full Windows drive: choose that drive and "Keep existing data and add Monet"; the note offers to make room (from and to). Select Bring my files explicitly. After installing, Windows still starts (it checks its drive once).
 - [ ] At the first sign-in the files from Windows are in Documents, Pictures and the rest, and a note says so
 - [ ] Settings â†’ Backups: after an hour, "An hour ago" opens your files in Files; right-click a file â†’ Earlier versions â†’ Put back puts a copy beside it
 - [ ] A USB drive picked in Backups gets "Monet Backup/<you>" the next time it's plugged in
@@ -2589,3 +2999,105 @@ GitHub asset digests and sizes match the prepared files. Fresh public downloads
 of the USB maker and manifest also match. The fallback installer SHA-256 is
 `b8560092d55f06b7da6ed4dc30931cc448a23f8b78ae9cd294cd9838a0630553`.
 No 0.9.5 release or physical USB write was made.
+
+
+## Competitive comparison protocol
+
+For the 0.9.6 comparison, begin with Windows, Bazzite and Monet on the same
+hardware; Fedora Kinoite and Ubuntu or Mint provide additional desktop baselines.
+This is a future physical-hardware protocol, not evidence that a comparison has
+already run. Disposable VMs establish functional correctness; do not use their
+FPS, thermal or power behavior as hardware results.
+
+Record exact OS/image versions and digests, kernel/driver/firmware versions,
+application and game builds, CPU/GPU/RAM/storage, display resolution and refresh,
+brightness, scaling, power mode and AC/battery state. Keep the workload, network
+conditions and initial data equivalent. Report default out-of-box behavior
+separately from any normalized configuration; do not silently tune one contender.
+Allow initial updates/indexing to finish and record remaining background work.
+Use fresh disposable test accounts and synthetic data, never the owner's normal
+vault or existing installation disks.
+
+| Question | Measurement and acceptance evidence |
+| --- | --- |
+| Does installation work reliably? | Time download and deployment separately. Test selected-drive preservation by comparing untouched-drive hashes, encrypted/unencrypted install, network interruption, cancellation, restart after download and late failure, verified cache reuse, first boot and recovery. Report failures and retry cost alongside successful duration. |
+| Does the desktop feel responsive? | Cold and warm launch-to-interactive timings for Settings, Files, Store and Passwords; search-to-result and input-to-visible-feedback latency; animation frame-time distribution and stalls. Use explicit start/end events, not a window appearing as proof it is usable. Record idle CPU and system memory accounting separately; do not sum process RSS and call it total memory. |
+| How well do games run? | Fixed game/scene/settings/resolution and documented shader-cache state. Report median FPS and p95/p99 frame time, crashes and unavailable titles. Compare native Windows against Linux/Proton explicitly. Time the complete Monet-to-Windows game trip and return to restored work separately from in-game performance. |
+| What does laptop use cost? | Matched video/web/idle workloads and screen brightness; energy use, battery duration, fan behavior, temperature and throttling. Record sensor availability and ambient conditions. Repeat only after returning to a comparable starting temperature. |
+| Can a normal user finish the task? | Time and errors for connecting Wi-Fi/headphones, installing/removing an app, choosing a drive, restoring a file, undoing desktop changes and returning after a game. Record assistance/terminal use and failure recovery; do not equate fewer clicks alone with better usability. |
+| Can an update be trusted? | Upgrade an actual earlier image, restart, verify saved preferences/files and app availability, roll back and reboot again. Interrupt the update at documented checkpoints on disposable disks. Verify the user-visible result agrees with the installed deployment. |
+
+Predeclare workloads and at least five timed runs per short scenario, alternate
+OS order and report median, spread and all failures. Use repeated full battery
+runs rather than extrapolating one brief power sample. Retain raw samples, scripts
+and image identifiers. Mark unavailable measurements explicitly. Do not award an
+overall numeric score or claim lower temperature, better battery life or faster
+performance until comparable evidence exists.
+
+## Performance startup and spelling suggestions — 4 November 2026
+
+Evidence: `target/typing-performance-2026-11-04/`. The targeted desktop check
+uses `tests.test_laptop_native`, `tests.test_system_info`, `tests.test_spelling`
+and `tests.test_look`: **422 tests passed, zero skips/failures**, with runner and
+container exit codes zero (`regression-confirm.json`/`.log`/`.exit`). The chart
+fixture checks empty/single/short/full history,
+paired-series alignment, real zeroes versus invalid readings, the rolling
+60-second bound, timer jitter/gaps, clock changes, pause/resume and device changes.
+Its additional OpenGL/Mesa render pass uses Xvfb on a private display and D-Bus
+session, without host display or GPU access. It verifies visible first points at
+Now and both short lines spanning the graph. Software-only QML tests cannot
+establish that QuickCharts' custom scene-graph nodes draw correctly.
+
+A separate cold-start run with real ksystemstats and the repository sensor face
+captured a first point and a visible two-sample line within about two seconds,
+plus the subsequent five-sample trace (`graph-*-samples.png`, `preview.log`).
+These are functional startup observations, not comparative OS benchmarks.
+
+Native Hunspell tests use disposable copies of en_US, en_GB, en_CA and en_AU,
+checking first-ranked corrections, capitalization, preservation of valid words,
+unchanged dictionary word lists, repeatable patching and rejection of an invalid
+upstream replacement table. All 72 replacement entries were also checked against
+all four regional dictionaries. The build preserves the British dictionary's
+ISO8859-1 encoding and the other dictionaries' UTF-8 bytes. Fresh desktop test
+images include the four dictionaries and the virtual rendering dependencies.
+
+The local `monet-096-typing-performance` image adds these dictionary/QML changes
+to the previously tested complete AMD candidate. This verifies local packaging;
+it is not a new complete install/upgrade/rollback acceptance run. No live desktop
+files, user spelling preferences, app-managed dictionaries or hardware settings
+were changed. The ChatGPT desktop application's bundled Chromium spelling menu
+remains outside this OS dictionary fix. Translations retain existing entries;
+new untranslated text falls back to English. Nothing was committed or pushed.
+
+## Dock hover reliability — 4 November 2026
+
+Evidence: `target/dock-hover-2026-11-04/`. A cold Qt window with real Plasma
+ToolTipArea children reproduces missed hover events in the previous ancestor
+tracker; plain Item children do not (`probe-plain.log`, `probe-tooltip.log`).
+The final per-task tracker preserves the tooltip area's own `containsMouse`
+state as well as the animation. `tests/fixtures/dock-hover.qml` exercises the
+production tracker and motion components with native ToolTipArea, TapHandler,
+DragHandler and MouseArea input, using real Qt pointer events.
+
+**411 tests pass, zero skips/failures**, across `tests.test_dock_motion`,
+`tests.test_dock_preview` and `tests.test_look` in the required desktop container
+(`regression-final.json`/`.log`/`.exit`; runner and container exit codes zero).
+Coverage includes first entry, rapid traversal, neighbours, exits/re-entry,
+task-to-Trash transitions, left/right clicks, drag recovery, motion preferences,
+hide/show and destroying/recreating the hovered delegate. The existing stale
+runtime fallback remains tested. Python/shell syntax, translations and whitespace
+checks pass.
+
+The patch is idempotent on clean Plasma 6.7.5 and 6.8.2 sources. Both 6.8.2
+plugins were compiled against the matching image runtime and sealed with their
+corresponding source (`bundle/`, `build.log`, `build.exit`). The C++ fixture in
+`tests/native/dock-hover/` embeds the actual rebuilt task and Trash applets in a
+private offscreen window and validates hover, native tooltip delivery, exit and
+edit-mode recovery (`native.log`, `native.exit`). Its baseline applet run also
+passes under that initialization sequence; the cold ToolTipArea fixture supplies
+the failing-before evidence. The offscreen fixture has no window manager, audio
+server or compositor shadows; related service warnings are expected. It does
+not constitute a live Wayland-panel or physical-hardware acceptance run.
+
+No normal desktop panel, installed plugin, user preferences or open applications
+were changed. No commit, push, version bump or release was made.

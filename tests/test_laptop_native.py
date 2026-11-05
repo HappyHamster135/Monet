@@ -3,6 +3,7 @@ import importlib.util
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import tempfile
 import unittest
@@ -24,10 +25,22 @@ class LaptopNative(unittest.TestCase):
                        XDG_CACHE_HOME=str(root / "cache"), XDG_RUNTIME_DIR=str(root / "runtime"),
                        DBUS_SYSTEM_BUS_ADDRESS="unix:path=/nonexistent",
                        QT_QPA_PLATFORM="offscreen", QT_QPA_PLATFORMTHEME="kde", XDG_CURRENT_DESKTOP="KDE")
-            result = subprocess.run(["dbus-run-session", "--", "python3",
-                                     str(ROOT / "tests/fixtures/laptop-native.py"), name],
-                                    env=env, cwd=ROOT, capture_output=True, text=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            # KDE may activate private-bus descendants which inherit stdout.
+            # Wait for the fixture itself, not for every inherited pipe to close.
+            output = root / "fixture.log"
+            with output.open("w") as log:
+                process = subprocess.Popen(["dbus-run-session", "--", "python3",
+                    str(ROOT / "tests/fixtures/laptop-native.py"), name],
+                    env=env, cwd=ROOT, stdout=log, stderr=log, start_new_session=True)
+                try:
+                    code = process.wait(timeout=60)
+                except subprocess.TimeoutExpired:
+                    self.fail("Native fixture timed out: " + output.read_text())
+                finally:
+                    try: os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError: pass
+                    process.wait(timeout=5)
+            self.assertEqual(code, 0, output.read_text())
 
     def test_task_manager_action_loads_and_launches_expected_helper(self):
         self.run_fixture("action")
@@ -40,6 +53,16 @@ class LaptopNative(unittest.TestCase):
 
     def test_performance_navigation_device_selection_and_pause(self):
         self.run_fixture("performance")
+
+    def test_performance_history_draws_early_and_keeps_only_the_last_minute(self):
+        self.run_fixture("performance-history")
+
+    @unittest.skipUnless(shutil.which("Xvfb"), "Xvfb for native chart rendering")
+    def test_performance_history_renders_single_points_and_short_lines(self):
+        self.run_fixture("performance-history-render")
+
+    def test_startup_apps_add_toggle_search_failure_and_hidden_idle(self):
+        self.run_fixture("startup")
 
     def test_system_details_snapshot_refresh_navigation_and_lazy_readers(self):
         self.run_fixture("system")

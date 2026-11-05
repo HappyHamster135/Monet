@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import signal
 import stat
 import subprocess
 import sys
@@ -126,12 +127,213 @@ def scan_apps(folder, max_entries=6000, max_depth=6, seconds=2.0):
     return dict(items=items[:100], limited=limited or len(items) > 100, unreadable=unreadable, visited=seen)
 
 
+def quick_helper():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader("monet_quick", str(Path(__file__).resolve().with_name("monet-quick")))
+    quick = module_from_spec(spec_from_loader(loader.name, loader))
+    loader.exec_module(quick)
+    return quick
+
+
+def archive_destination(path):
+    """Suggest an unused sibling, without creating or replacing anything."""
+    path = Path(path).resolve(strict=True)
+    if not path.is_file():
+        raise ValueError(tr("Choose an archive to extract."))
+    name = path.name
+    for suffix in ('.tar.gz', '.tar.bz2', '.tar.xz', '.tar.zst', '.tar.lz', '.tar.lzma',
+                   '.tgz', '.tbz2', '.txz', '.zip', '.tar', '.7z'):
+        if name.lower().endswith(suffix):
+            name = name[:-len(suffix)]
+            break
+    if not name or name in {'.', '..'}:
+        name = tr("Extracted files")
+    for index in range(1, 1001):
+        candidate = path.parent / (name if index == 1 else f'{name} ({index})')
+        if not candidate.exists() and not candidate.is_symlink():
+            return candidate
+    raise ValueError(tr("Choose another folder for the extracted files."))
+
+
+def make_extract_dialog(path):
+    from PySide6.QtCore import QProcess, Qt
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+                                  QLabel, QLineEdit, QPushButton, QVBoxLayout)
+    source = Path(path).resolve(strict=True)
+    suggested = archive_destination(source)
+    dialog = QDialog(); dialog.setWindowTitle(tr("Extract and find applications"))
+    dialog.setWindowIcon(QIcon.fromTheme("package-x-generic")); dialog.resize(620, 300)
+    dialog.extracted = None
+    layout = QVBoxLayout(dialog); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(12)
+    for text in (tr("Extract into a new folder, then choose which application to add to the menu."), str(source)):
+        label = QLabel(text); label.setTextFormat(Qt.PlainText); label.setWordWrap(True); layout.addWidget(label)
+    form = QFormLayout(); layout.addLayout(form)
+    destination = QLineEdit(str(suggested)); destination.setObjectName("extractDestination")
+    form.addRow(tr("Extract to:"), destination)
+    browse = QPushButton(tr("Choose location…")); layout.addWidget(browse)
+    status = QLabel(); status.setObjectName("extractStatus"); status.setTextFormat(Qt.PlainText)
+    status.setWordWrap(True); layout.addWidget(status)
+    buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
+    extract = buttons.addButton(tr("Extract and find applications"), QDialogButtonBox.AcceptRole)
+    extract.setObjectName("extractApps"); extract.setDefault(True)
+    show = buttons.addButton(tr("Show in Files"), QDialogButtonBox.ActionRole)
+    show.setEnabled(False); show.setObjectName("showExtracted")
+    layout.addWidget(buttons)
+    worker = QProcess(dialog); worker.setObjectName("archiveExtractor")
+    worker.setUnixProcessParameters(QProcess.UnixProcessFlag.CreateNewSession)
+    folder = None
+    cancelled = False
+
+    def choose():
+        parent = QFileDialog.getExistingDirectory(dialog, tr("Choose location…"), str(suggested.parent))
+        if parent:
+            destination.setText(str(Path(parent) / suggested.name))
+    browse.clicked.connect(choose)
+
+    def busy(active):
+        extract.setEnabled(not active); destination.setEnabled(not active); browse.setEnabled(not active)
+
+    def failed():
+        nonlocal folder
+        if cancelled:
+            return
+        busy(False)
+        if folder is not None:
+            try:
+                folder.rmdir()  # Never remove partial output or follow a link.
+                folder = None
+            except OSError:
+                pass
+        show.setEnabled(folder is not None)
+        status.setText(tr("Extraction did not finish. You can inspect any extracted files in Files, or retry in a new folder."))
+
+    def finished(code, state):
+        if cancelled:
+            return
+        if code == 0 and state == QProcess.NormalExit and folder is not None and folder.is_dir():
+            dialog.extracted = folder
+            dialog.accept()
+        else:
+            failed()
+    worker.finished.connect(finished)
+    worker.errorOccurred.connect(lambda error: failed() if error == QProcess.FailedToStart else None)
+    # Archive names/errors can be large; Ark owns the native error/password UI.
+    worker.readyReadStandardOutput.connect(worker.readAllStandardOutput)
+    worker.readyReadStandardError.connect(worker.readAllStandardError)
+
+    def start():
+        nonlocal folder
+        if worker.state() != QProcess.NotRunning:
+            return
+        try:
+            target = Path(destination.text())
+            if not target.is_absolute() or not target.name:
+                raise ValueError(tr("Choose a full path for a new folder."))
+            target = target.parent.resolve(strict=True) / target.name
+            target.mkdir(mode=0o755)  # Atomic reservation: existing folders are never reused.
+        except FileExistsError:
+            status.setText(tr("That folder already exists. Choose a new folder to keep its files unchanged."))
+            return
+        except (OSError, ValueError) as error:
+            status.setText(tr("Couldn't create the extraction folder.") + "\n" + str(error))
+            return
+        folder = target; show.setEnabled(True); busy(True)
+        status.setText(tr("Extracting… You may be asked for an archive password."))
+        worker.setWorkingDirectory(str(target))
+        worker.start("ark", ["--batch", "--destination", str(target), str(source)])
+    buttons.accepted.connect(start)
+    destination.returnPressed.connect(start)
+
+    def reveal():
+        if folder is not None:
+            try:
+                subprocess.Popen(["dolphin", str(folder)], start_new_session=True)
+            except OSError as error:
+                status.setText(tr("Couldn't open Files") + "\n" + str(error))
+    show.clicked.connect(reveal)
+
+    def cancel():
+        nonlocal cancelled
+        cancelled = True
+        if worker.state() != QProcess.NotRunning:
+            pid = worker.processId()
+            if pid:
+                try: os.killpg(pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+            worker.kill()
+            worker.waitForFinished(1000)
+        if folder is not None:
+            try: folder.rmdir()
+            except OSError: pass  # Keep partial files, including after cancellation.
+    dialog.rejected.connect(cancel)
+    buttons.rejected.connect(dialog.reject)
+    return dialog
+
+
+def make_shortcut_dialog(path, name=None, parent=None):
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
+                                  QLabel, QLineEdit, QVBoxLayout, QWidget)
+    quick = quick_helper()
+    path = quick.native_executable(path)
+    dialog = QDialog(parent)
+    dialog.setWindowTitle(tr("Add to apps"))
+    dialog.setWindowIcon(QIcon.fromTheme("application-x-executable"))
+    dialog.resize(540, 240)
+    dialog.saved_name = ""
+    layout = QVBoxLayout(dialog)
+    layout.setContentsMargins(20, 20, 20, 20)
+    layout.setSpacing(12)
+    note = QLabel(tr("Keep the application folder in place.") + "\n\n" + str(path))
+    note.setTextFormat(Qt.PlainText); note.setWordWrap(True)
+    note.setTextInteractionFlags(Qt.TextSelectableByMouse); layout.addWidget(note)
+    form = QFormLayout(); layout.addLayout(form)
+    title = QLineEdit(name or path.stem); title.setObjectName("shortcutName")
+    form.addRow(tr("Name:"), title)
+    advanced = QCheckBox(tr("Launch options")); advanced.setObjectName("launchOptions")
+    layout.addWidget(advanced)
+    options_box = QWidget(); options_layout = QVBoxLayout(options_box)
+    options_layout.setContentsMargins(0, 0, 0, 0)
+    arguments = QLineEdit(); arguments.setObjectName("shortcutArguments")
+    arguments.setAccessibleName(tr("Launch options")); arguments.setMaxLength(8192)
+    options_layout.addWidget(arguments)
+    hint = QLabel(tr('Separate options with spaces. Put quotes around values containing spaces.'))
+    hint.setWordWrap(True); options_layout.addWidget(hint)
+    options_box.hide(); layout.addWidget(options_box)
+    advanced.toggled.connect(options_box.setVisible)
+    error = QLabel(); error.setObjectName("shortcutError"); error.setTextFormat(Qt.PlainText)
+    error.setWordWrap(True); error.hide(); layout.addWidget(error)
+    buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
+    add = buttons.addButton(tr("Add to apps"), QDialogButtonBox.AcceptRole)
+    add.setObjectName("saveShortcut"); add.setDefault(True)
+    buttons.rejected.connect(dialog.reject); layout.addWidget(buttons)
+
+    def save():
+        if dialog.saved_name:
+            return
+        try:
+            quick.native_shortcut(path, title.text(), arguments=arguments.text() if advanced.isChecked() else "")
+        except (OSError, ValueError) as problem:
+            error.setText(str(problem)); error.show()
+            return
+        dialog.saved_name = title.text().strip()
+        dialog.accept()
+    buttons.accepted.connect(save)
+    title.returnPressed.connect(save)
+    arguments.returnPressed.connect(save)
+    title.selectAll(); title.setFocus()
+    return dialog
+
+
 def make_dialog(mode, path):
     # Qt is loaded only for the short-lived window, never by the scan worker.
     from PySide6.QtCore import QProcess, QTimer, Qt
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
-                                  QInputDialog, QLabel, QLineEdit, QMessageBox, QProgressBar,
+                                  QLabel, QLineEdit, QMessageBox, QProgressBar,
                                   QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 
     dialog = QDialog()
@@ -235,16 +437,13 @@ def make_dialog(mode, path):
     def register():
         item = selected()
         if not item or item["kind"] != "native": return
-        name, accepted = QInputDialog.getText(dialog, tr("Add to apps"), tr("Keep the application folder in place.\n\nName:"), text=item["name"])
-        if not accepted: return
         try:
-            from importlib.machinery import SourceFileLoader
-            from importlib.util import module_from_spec, spec_from_loader
-            loader = SourceFileLoader("monet_quick", str(Path(__file__).with_name("monet-quick")))
-            quick = module_from_spec(spec_from_loader(loader.name, loader)); loader.exec_module(quick)
-            quick.native_shortcut(item["path"], name)
+            editor = make_shortcut_dialog(item["path"], item["name"], dialog)
+            accepted = editor.exec() == QDialog.Accepted
+            editor.deleteLater()
+            if not accepted: return
             # KDE's file watcher rebuilds incrementally; do not block the dialog on a full cache rebuild.
-            status.setText(tr("%1 was added to your application menu.", name))
+            status.setText(tr("%1 was added to your application menu.", editor.saved_name))
         except (OSError, ValueError) as error:
             QMessageBox.warning(dialog, tr("Couldn't add application"), str(error))
     add.clicked.connect(register)
@@ -278,7 +477,7 @@ def make_dialog(mode, path):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "--scan", "--space"}:
+    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "add", "extract", "--scan", "--space"}:
         return 2
     mode, path = sys.argv[1:]
     if mode in {"--scan", "--space"}:
@@ -291,6 +490,27 @@ def main():
     from PySide6.QtWidgets import QApplication
     app = QApplication(sys.argv[:1]); app.setApplicationName("monet-files-tools")
     app.setApplicationDisplayName(tr("Files")); app.setDesktopFileName("org.kde.dolphin")
+    if mode == "extract":
+        try:
+            dialog = make_extract_dialog(path)
+        except (OSError, ValueError) as error:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(None, tr("Couldn't extract archive"), str(error))
+            return 1
+        if not dialog.exec():
+            return 1
+        path, mode = dialog.extracted, "apps"
+        dialog.deleteLater()
+    if mode == "add":
+        try:
+            dialog = make_shortcut_dialog(path)
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        if dialog.exec():
+            print(dialog.saved_name)
+            return 0
+        return 1
     dialog = make_dialog(mode, path)
     dialog.exec()
     return 0

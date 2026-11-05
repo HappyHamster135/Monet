@@ -62,10 +62,10 @@ class Disks(unittest.TestCase):
                                                      part("nvme1n1p5", label="MONETSETUP", fstype="vfat")])
         self.assertEqual([d["name"] for d in disks.disks([STICK, again])], ["nvme1n1"])
 
-    def test_usb_disks_only_when_nothing_else(self):
+    def test_external_drives_remain_selectable_but_internal_drives_come_first(self):
         usb = disk("sdb", 500 * GB, tran="usb")
         self.assertEqual([d["name"] for d in disks.disks([STICK, usb])], ["sdb"])
-        self.assertEqual([d["name"] for d in disks.disks([STICK, usb, NVME])], ["nvme0n1"])
+        self.assertEqual([d["name"] for d in disks.disks([STICK, usb, NVME])], ["nvme0n1", "sdb"])
 
     def test_erase_leaves_windows_its_share(self):
         plan = disks.plan_erase(1000 * GB)
@@ -512,7 +512,7 @@ class Encrypting(unittest.TestCase):
         app_code = (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8")
         self.assertIn('"encrypt": self._encrypt and bool(self._pc.get("tpm")),', app_code)
         qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
-        self.assertIn("visible: setup.blocker === \"\" && setup.tpm", qml)
+        self.assertIn('visible: setup.mode !== "resume" && setup.tpm', qml)
         self.assertIn("onClicked: setup.setEncrypt(!setup.encrypt)", qml)
 
     def test_the_disk_is_encrypted_with_a_key_of_its_own(self):
@@ -955,7 +955,7 @@ class TheStick(unittest.TestCase):
         qml = (ROOT / "setup/qml/Main.qml").read_text(encoding="utf-8")
         self.assertIn("onVisibleChanged: if (visible) logView.toEnd()", qml)
         app = (ROOT / "setup/monet_setup/app.py").read_text(encoding="utf-8")
-        self.assertEqual(app.count('print("install: " + '), 2)   # the journal, so a test PC's serial console
+        self.assertIn("print('install: ' + text", app)   # the bounded log also reaches the journal
         test = (ROOT / "tools/vm-test.py").read_text(encoding="utf-8")
         self.assertIn('run.shot("failed-details")', test)
 

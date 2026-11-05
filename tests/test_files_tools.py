@@ -4,6 +4,7 @@ import importlib.util
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -80,12 +81,85 @@ class FilesTools(unittest.TestCase):
         self.assertTrue(self.f.scan_apps(self.root, seconds=0)["limited"])
 
     def test_capacity_uses_available_blocks_and_reports_reserved_space(self):
-        info = os.statvfs(self.root)
-        result = self.f.drive_space(self.root)
-        self.assertEqual(result["total"], info.f_blocks * info.f_frsize)
-        self.assertEqual(result["free"], info.f_bavail * info.f_frsize)
+        # Two live reads race concurrent downloads/builds on the same filesystem.
+        # A fixed snapshot also exercises reserved blocks and differing block sizes.
+        info = SimpleNamespace(f_blocks=1000, f_bfree=300, f_bavail=250,
+                               f_frsize=4096, f_bsize=8192, f_flag=os.ST_RDONLY)
+        with patch.object(self.f.os, 'statvfs', return_value=info) as probe:
+            result = self.f.drive_space(self.root)
+        probe.assert_called_once_with(self.root.resolve())
+        self.assertEqual(result["total"], 4096000)
+        self.assertEqual(result["free"], 1024000)
+        self.assertEqual(result["reserved"], 204800)
+        self.assertTrue(result['readonly'])
         self.assertEqual(result["total"], result["used"] + result["free"] + result["reserved"])
+        actual = self.f.drive_space(self.root)
+        self.assertGreater(actual['total'], 0)
+        self.assertEqual(actual['total'], actual['used'] + actual['free'] + actual['reserved'])
         with self.assertRaises(FileNotFoundError): self.f.drive_space(self.root / "gone")
+
+
+try:
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QLabel, QLineEdit, QPushButton
+    from PySide6.QtTest import QTest
+except ImportError:
+    QApplication = None
+
+
+@unittest.skipUnless(QApplication, "native Qt shortcut dialog")
+class ShortcutDialog(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from tests.test_look import quick_helper
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.program = self.root / "Example"; self.program.write_text("#!/bin/sh\nexit 0\n"); self.program.chmod(0o700)
+        self.tool = files_tools(); self.quick = quick_helper()
+        self.quick.DATA_HOME = self.root / "data"
+        with patch.object(self.tool, "quick_helper", return_value=self.quick):
+            self.dialog = self.tool.make_shortcut_dialog(self.program)
+        self.addCleanup(self.dialog.close)
+        self.dialog.show(); QTest.qWait(20)
+        self.name = self.dialog.findChild(QLineEdit, "shortcutName")
+        self.options = self.dialog.findChild(QLineEdit, "shortcutArguments")
+        self.advanced = self.dialog.findChild(QCheckBox, "launchOptions")
+        self.save = self.dialog.findChild(QPushButton, "saveShortcut")
+
+    def test_cancel_and_invalid_options_do_not_write_then_keyboard_retry_saves(self):
+        self.assertFalse(self.options.isVisible())
+        self.advanced.setChecked(True)
+        self.assertTrue(self.options.isVisible())
+        self.options.setText('"unfinished')
+        self.save.click()
+        self.assertTrue(self.dialog.isVisible())
+        self.assertTrue(self.dialog.findChild(QLabel, "shortcutError").isVisible())
+        self.assertFalse(self.quick.DATA_HOME.exists())
+        self.name.setText("Example profile")
+        self.options.setText('--profile "Personal profile"')
+        self.options.setFocus()
+        with patch.object(self.quick.subprocess, "Popen") as launch:
+            QTest.keyClick(self.options, Qt.Key_Return)
+            launch.assert_not_called()
+        self.assertEqual(self.dialog.result(), QDialog.Accepted)
+        entry, = (self.quick.DATA_HOME / "applications").glob("*.desktop")
+        self.assertIn("Name=Example profile", entry.read_text())
+        self.assertEqual(self.dialog.saved_name, "Example profile")
+
+    def test_hiding_options_excludes_old_text_and_cancel_creates_nothing(self):
+        self.dialog.reject()
+        self.assertFalse(self.quick.DATA_HOME.exists())
+        self.dialog.show()
+        self.advanced.setChecked(True); self.options.setText('"unfinished')
+        self.advanced.setChecked(False); self.save.click()
+        self.assertEqual(self.dialog.result(), QDialog.Accepted)
+        entry, = (self.quick.DATA_HOME / "applications").glob("*.desktop")
+        self.assertEqual(self.quick.desktop_entry(entry.read_text())["Exec"].count("native-run"), 1)
+        self.assertNotIn('unfinished', entry.read_text())
 
 
 if __name__ == "__main__": unittest.main()

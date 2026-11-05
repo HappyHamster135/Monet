@@ -6,6 +6,6 @@
         "Description": "Temperatures, video memory and fan speeds, with unavailable readings clearly marked",
         "Icon": "utilities-system-monitor",
         "License": "GPL-3.0-or-later",
-        "Version": "0.9.5"
+        "Version": "0.9.6"
     }
 }

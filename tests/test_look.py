@@ -889,7 +889,9 @@ class Updates(unittest.TestCase):
         self.assertIn("flatpak install --system --noninteractive --or-update -y flathub", script)
         self.assertIn('touch "$DONE"', script)
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn("monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-store monet-store-jobs; do", install)
+        installed = re.search(r"for tool in ([^;]+); do", install).group(1).split()
+        for helper in ("monet-widgets", "monet-apps", "monet-charge", "monet-paint", "monet-games", "monet-settings", "monet-store", "monet-store-jobs"):
+            self.assertIn(helper, installed)
         self.assertIn("monet-apps", (ROOT / "linux/uninstall.sh").read_text())
         self.assertIn("/var/lib/monet/apps-done", (ROOT / "linux/libexec/monet-session").read_text())
 
@@ -2373,7 +2375,10 @@ class StartAndSignIn(unittest.TestCase):
         containerfile = (ROOT / "image/Containerfile").read_text()
         self.assertIn("plymouth-set-default-theme monet", containerfile)
         self.assertIn("plymouth-plugin-script", containerfile)  # the theme is a script
-        self.assertIn("dracut", containerfile)
+        self.assertIn("bash /tmp/monet-finish-image", containerfile)
+        finish = (ROOT / "image/finish-image.sh").read_text()
+        self.assertIn("dracut --no-hostonly", finish)
+        self.assertIn('--add ostree --add fido2 --add tpm2-tss', finish)
 
     def test_lock_screen_is_monets_and_always_unlocks(self):
         lock = SHARE / "monet/lockscreen"
@@ -3567,7 +3572,7 @@ class Backups(unittest.TestCase):
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
         self.assertIn("backups: backupsPage", settings)
         self.assertIn('sheet.ask("keep " + (on ? "on" : "off")', settings)
-        self.assertIn('onClicked: sheet.ask("put-back " + index)', settings)
+        self.assertIn('onClicked: sheet.useEarlier("put-back", modelData)', settings)
         self.assertTrue((SHARE / "monet/settings/swatch-backups.png").is_file())
         menu = (SHARE / "kio/servicemenus/monet-earlier.desktop").read_text(encoding="utf-8")
         self.assertIn("Exec=@LIBEXECDIR@/monet-quick earlier %f", menu)
@@ -4457,7 +4462,7 @@ class EncryptedDisk(unittest.TestCase):
                      "ConditionPathExists=!/var/lib/monet/firstboot-seal.json", "KeyringMode=shared"):
             self.assertIn(line, again)
         image = (ROOT / "image/Containerfile").read_text()
-        self.assertIn("--add tpm2-tss", image)
+        self.assertIn("--add tpm2-tss", (ROOT / "image/finish-image.sh").read_text())
         self.assertIn(" cryptsetup tpm2-tss", image)
         self.assertIn("\ncryptsetup\n", (ROOT / "image/setup/packages.txt").read_text())
         build = (ROOT / ".github/workflows/build.yml").read_text()
@@ -5453,7 +5458,9 @@ class OneGamesFolderForBoth(unittest.TestCase):
         self.assertEqual(install.count("systemctl enable monet-windows-drive.service monet-windows-files.service"), 2)
         uninstall = (ROOT / "linux/uninstall.sh").read_text()
         self.assertIn("rm -f /etc/systemd/system/monet-windows-drive.service", uninstall)
-        self.assertIn(" monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-store monet-store-jobs; do", uninstall)
+        removed = re.search(r"for tool in ([^;]+); do", uninstall).group(1).split()
+        for helper in ("monet-windows-drive", "monet-paint", "monet-guest", "monet-prepare-windows", "monet-games", "monet-settings", "monet-store", "monet-store-jobs"):
+            self.assertIn(helper, removed)
         self.assertIn("linux/libexec/monet-windows-drive ", (ROOT / ".github/workflows/build.yml").read_text())
         session = (ROOT / "linux/libexec/monet-session").read_text()
         self.assertIn('"$LIBEXECDIR/monet-quick" steam-share >/dev/null 2>&1', session)
@@ -6669,7 +6676,7 @@ class EAGames(unittest.TestCase):
         self.assertIn('["ea", "battlenet", "ubisoft", "epic", "rockstar", "riot"]', launchers)
         self.assertIn('!name.ends_with("service.exe")', launchers)
         installer = (ROOT / "windows/Install-Launcher.ps1").read_text(encoding="utf-8")
-        self.assertIn("ValidateSet('epic', 'ubisoft', 'battlenet', 'ea', 'discord')", installer)
+        self.assertIn("ValidateSet('steam', 'epic', 'ubisoft', 'battlenet', 'ea', 'discord')", installer)
         self.assertIn("Signer = 'O=\"?Electronic Arts'", installer)
         games = GAMES_APP.read_text(encoding="utf-8")
         self.assertIn('root.asking.locate && root.asking.store === "ea"', games)
@@ -7802,7 +7809,9 @@ class OurOwnStore(unittest.TestCase):
         for look_and_feel in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (SHARE / f"plasma/look-and-feel/{look_and_feel}/contents/layouts/org.kde.plasma.desktop-layout.js")
             self.assertIn('"applications:monet-store.desktop",', layout.read_text(encoding="utf-8"))
-        self.assertIn("python3-pyside6 python3-gobject", (ROOT / "image/Containerfile").read_text(encoding="utf-8"))
+        packages = (ROOT / "image/Containerfile").read_text(encoding="utf-8")
+        for package in ("python3-pyside6", "python3-gobject"):
+            self.assertIn(package, packages)
         from unittest import mock
         quick = quick_helper()
         with tempfile_dir() as tmp:

@@ -11,7 +11,7 @@ def replace(path, old, new):
 
 def apply(source):
     applet=source/'applets/taskmanager'
-    replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml')
+    replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml')
     # Standalone build keeps the upstream generated settings in their original folder.
     replace(applet/'CMakeLists.txt','${CMAKE_SOURCE_DIR}/kcms/recentFiles/', '${UPSTREAM_SOURCE}/kcms/recentFiles/')
     replace(applet/'qml/main.qml','    property Task toolTipOpenedByClick', '''    // Passive hover tracking never takes clicks or grabs away from task controls.
@@ -19,27 +19,34 @@ def apply(source):
         && Plasmoid.location === PlasmaCore.Types.BottomEdge
         && Plasmoid.configuration.taskHoverEffect && !Plasmoid.containment.corona.editMode
         && !dragSource && Kirigami.Units.shortDuration > 0
-    readonly property bool monetHoverActive: monetDockHover.hovered
-    readonly property point monetPointer: monetDockHover.point.position
-    HoverHandler {
-        id: monetDockHover
-        enabled: tasks.monetMotionEnabled
-        blocking: false
-    }
+    readonly property QtObject monetHoverState: QtObject { property QtObject current: null }
+    readonly property bool monetHoverActive: monetMotionEnabled && (monetHoverState.current?.hovered ?? false)
+    readonly property point monetPointer: monetHoverState.current?.point.scenePosition ?? Qt.point(0, 0)
 
     property Task toolTipOpenedByClick''')
+    replace(applet/'qml/Task.qml', '    id: task\n', '''    id: task
+
+    MonetDockHover {
+        id: monetTaskHover
+        objectName: "monetTaskHover"
+        coordinator: task.tasksRoot.monetHoverState
+        trackingEnabled: !task.inPopup && task.tasksRoot.monetMotionEnabled && taskList.rows === 1
+    }
+''')
     replace(applet/'qml/Task.qml','        id: iconBox\n', '''        id: iconBox
 
         MonetDockMotion {
             id: monetMotion
+            objectName: "monetDockMotion"
             motionEnabled: !task.inPopup && task.tasksRoot.monetMotionEnabled && taskList.rows === 1
             hovering: task.tasksRoot.monetHoverActive
             duration: Kirigami.Units.shortDuration
             iconHeight: iconBox.height
             distance: {
-                // Read x and width so relayouts also update the mapped center.
+                // Track native relayout transforms as well as the pointer.
                 const layoutX = task.x;
-                const center = task.mapToItem(task.tasksRoot, task.width / 2, task.height / 2);
+                const movingX = translateTransform.x;
+                const center = task.mapToItem(null, task.width / 2, task.height / 2);
                 return (task.tasksRoot.monetPointer.x - center.x) / Math.max(1, task.width);
             }
         }
@@ -50,8 +57,9 @@ def apply(source):
         ]
 ''')
     (applet/'qml/MonetDockMotion.qml').write_bytes(Path(__file__).with_name('MonetDockMotion.qml').read_bytes())
+    (applet/'qml/MonetDockHover.qml').write_bytes(Path(__file__).with_name('MonetDockHover.qml').read_bytes())
     trash = source/'applets/trash'
-    replace(trash/'CMakeLists.txt', '        main.qml', '        main.qml\n        MonetDockMotion.qml')
+    replace(trash/'CMakeLists.txt', '        main.qml', '        main.qml\n        MonetDockMotion.qml\n        MonetDockHover.qml')
     replace(trash/'main.qml', 'import QtQuick\n', 'import QtQuick\nimport QtQuick.Layouts\n')
     replace(trash/'main.qml', '    property bool containsAcceptableDrag: false', '''    readonly property bool monetBottomDock: Plasmoid.location === PlasmaCore.Types.BottomEdge
     readonly property bool monetDockMotionEnabled: monetBottomDock
@@ -62,17 +70,25 @@ def apply(source):
     replace(trash/'main.qml', '        activeFocusOnTab: true', '''        // Use the painted full-size icon on the bottom dock, not a 16px action icon.
         Layout.minimumWidth: root.monetBottomDock ? Kirigami.Units.iconSizes.large : 0
         activeFocusOnTab: true''')
+    replace(trash/'main.qml', '        PlasmaCore.ToolTipArea {\n', '''        PlasmaCore.ToolTipArea {
+            MonetDockHover {
+                id: monetTrashHover
+                objectName: "monetTrashHover"
+                trackingEnabled: root.monetDockMotionEnabled
+            }
+''')
     replace(trash/'main.qml', '        Kirigami.Icon {\n            source: Plasmoid.icon', '''        Kirigami.Icon {
             id: trashIcon
             roundToIconSize: !root.monetBottomDock
             source: root.monetBottomDock ? (root.hasContents ? "user-trash-full" : "user-trash") : Plasmoid.icon
             MonetDockMotion {
                 id: monetMotion
+                objectName: "monetDockMotion"
                 motionEnabled: root.monetDockMotionEnabled
-                hovering: mouseArea.containsMouse
+                hovering: monetTrashHover.hovering
                 duration: Kirigami.Units.shortDuration
                 iconHeight: Math.min(trashIcon.width, trashIcon.height)
-                distance: (mouseArea.mouseX - mouseArea.width / 2) / Math.max(1, mouseArea.width)
+                distance: (monetTrashHover.position.x - mouseArea.width / 2) / Math.max(1, mouseArea.width)
             }
             transform: [
                 Scale { origin.x: trashIcon.width / 2; origin.y: trashIcon.height / 2;
@@ -80,5 +96,6 @@ def apply(source):
                 Translate { y: -monetMotion.lift }
             ]''')
     (trash/'MonetDockMotion.qml').write_bytes(Path(__file__).with_name('MonetDockMotion.qml').read_bytes())
+    (trash/'MonetDockHover.qml').write_bytes(Path(__file__).with_name('MonetDockHover.qml').read_bytes())
 
 if __name__=='__main__':apply(Path(sys.argv[1]))

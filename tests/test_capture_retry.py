@@ -1,12 +1,23 @@
 """Transient native metadata misses must not silently discard a supported window."""
 from importlib.machinery import SourceFileLoader
+from importlib.util import module_from_spec, spec_from_loader
 from pathlib import Path
+import sys
 import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-editor, files, pdf = [SourceFileLoader('retry_'+name, str(ROOT/'linux/libexec'/('monet-'+name+'-session'))).load_module()
-                      for name in ('editor','files','pdf')]
+
+
+def load(name):
+    loader = SourceFileLoader('retry_'+name, str(ROOT/'linux/libexec'/('monet-'+name+'-session')))
+    module = module_from_spec(spec_from_loader(loader.name, loader))
+    sys.modules[loader.name] = module
+    loader.exec_module(module)
+    return module
+
+
+editor, files, pdf = [load(name) for name in ('editor', 'files', 'pdf')]
 
 
 class CaptureRetry(unittest.TestCase):

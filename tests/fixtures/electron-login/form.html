@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Synthetic Electron login</title>
+<form aria-label="Sign in" onsubmit="event.preventDefault(); submitted = true; this.hidden = true">
+<label>Server <input id="server" value="server.example.invalid"></label>
+<label>Email <input id="user" autocomplete="username"></label>
+<label>Password <input id="password" type="password" autocomplete="current-password"></label>
+<button id="submit">Sign in</button></form>
+<script>
+let submitted = false;
+function startFixture() {
+  const p = document.getElementById('password'), u = document.getElementById('user');
+  if (fixtureMode === 'save') u.value = 'fixture@example.invalid';
+  if (fixtureMode === 'readonly') {u.value = 'fixture@example.invalid'; u.readOnly = true;}
+  setTimeout(() => p.focus(), 1200);
+  if (fixtureMode === 'save') {
+    setTimeout(() => {p.value = 'synthetic-fill-only'; p.dispatchEvent(new Event('input', {bubbles:true}));}, 1500);
+    setTimeout(() => document.getElementById('submit').focus(), 2200);
+    setTimeout(() => document.getElementById('submit').click(), 2400);
+  }
+  if (fixtureMode === 'changed-page') setTimeout(() => history.pushState({}, '', '?different-page'), 1450);
+  if (fixtureMode === 'changed-action') setTimeout(() => document.getElementById('submit').textContent = 'Create account', 1450);
+}
+function verifyFixture() {
+  const p = document.getElementById('password'), u = document.getElementById('user');
+  if (fixtureMode === 'save') return submitted;
+  if (fixtureMode === 'unsupported-fill' || fixtureMode.startsWith('changed-')) return !p.value && !submitted;
+  return u.value === 'fixture@example.invalid' && p.value === 'synthetic-fill-only' && !submitted;
+}
+</script></html>

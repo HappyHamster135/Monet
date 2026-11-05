@@ -28,6 +28,12 @@ class NotificationPolicyProcess(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             env = {**os.environ, "MONET_NOTIFICATION_TEST_BUS": "1", "QT_QPA_PLATFORM": "offscreen",
                    "XDG_CONFIG_HOME": temp + "/config", "XDG_DATA_HOME": temp + "/data", "XDG_CACHE_HOME": temp + "/cache"}
+            # Native history resolves desktop-entry hints through KService.
+            # Supply a synthetic app instead of relying on Dolphin being installed.
+            desktop = Path(env["XDG_DATA_HOME"]) / "applications/org.monet.NotificationFixture.desktop"
+            desktop.parent.mkdir(parents=True)
+            desktop.write_text("[Desktop Entry]\nType=Application\nName=Monet policy test\nExec=true\n")
+            subprocess.run(["kbuildsycoca6", "--noincremental"], env=env, capture_output=True, check=True, timeout=30)
             result = subprocess.run(["dbus-run-session", "--", sys.executable, "-m", "unittest",
                                      "tests.test_notification_policy.NativePolicy", "-v"],
                                     env=env, cwd=ROOT, capture_output=True, text=True, timeout=45)
@@ -120,7 +126,7 @@ QtObject {
 
     def notify(self, *, urgency=1, service="", action=False, transient=False, replaces=0):
         actions = ["view", "View"] if action else []
-        hints = {"desktop-entry": GLib.Variant("s", "org.kde.dolphin"), "urgency": GLib.Variant("y", urgency)}
+        hints = {"desktop-entry": GLib.Variant("s", "org.monet.NotificationFixture"), "urgency": GLib.Variant("y", urgency)}
         if service: hints["x-kde-appname"] = GLib.Variant("s", service)
         if transient: hints["transient"] = GLib.Variant("b", True)
         arguments = GLib.Variant("(susssasa{sv}i)", ("Monet policy test", replaces, "dialog-information",
@@ -150,7 +156,7 @@ QtObject {
         return next(row for row in self.rows() if str(row["notificationId"]) == str(ident))
 
     def test_muted_messages_stay_hidden_after_unmuting_but_new_messages_can_popup(self):
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
         ident = self.notify(urgency=2, action=True)
         muted = self.row(ident)
         self.assertTrue(muted["expired"])
@@ -163,7 +169,7 @@ QtObject {
     def test_muting_an_app_hides_existing_popups_without_deleting_them(self):
         ident = self.notify()
         self.assertFalse(self.row(ident)["expired"])
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
         self.pump()
         self.assertTrue(self.row(ident)["expired"])
 
@@ -178,7 +184,7 @@ QtObject {
 
     def test_muting_multiple_active_messages_retains_every_message_and_action(self):
         identifiers = [self.notify(urgency=2, action=True) for _ in range(5)]
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
         self.pump()
         self.assertEqual(len(self.rows()), len(identifiers))
         for ident in identifiers:
@@ -189,7 +195,7 @@ QtObject {
         self.assertTrue(all(self.row(ident)["expired"] for ident in identifiers))
 
     def test_replacing_a_muted_message_updates_history_without_replaying_it(self):
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
         ident = self.notify(urgency=2, action=True)
         self.assertTrue(self.row(ident)["expired"])
         previous_body = self.row(ident)["body"]
@@ -206,14 +212,14 @@ QtObject {
         self.assertIn("view", self.row(ident)["actionNames"])
 
     def test_muted_transient_messages_are_not_added_to_history(self):
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
         ident = self.notify(transient=True)
         self.assertFalse(any(str(row["notificationId"]) == str(ident) for row in self.rows()))
         self.ids.remove(ident)
 
     def test_history_filters_and_clear_history_still_work(self):
-        self.preferences.setProperty("popupBlacklistedApplications", ["org.kde.dolphin"])
-        self.history.setProperty("blacklistedDesktopEntries", ["org.kde.dolphin"])
+        self.preferences.setProperty("popupBlacklistedApplications", ["org.monet.NotificationFixture"])
+        self.history.setProperty("blacklistedDesktopEntries", ["org.monet.NotificationFixture"])
         ident = self.notify()
         self.assertEqual(self.rows(), [])
         self.history.setProperty("blacklistedDesktopEntries", [])

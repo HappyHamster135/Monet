@@ -569,7 +569,7 @@ kw_default dolphinrc General ShowZoomSlider false
 kw_default dolphinrc General AlwaysShowTabBar true
 kw_default dolphinrc General ShowFullPath true
 # KDE adds our page to customized layouts itself; only order an untouched profile.
-kw_default systemmonitorrc General pageOrder monet-applications.page,monet-performance.page,monet-processes.page,monet-system.page,applications.page,processes.page,overview.page,history.page
+kw_default systemmonitorrc General pageOrder monet-applications.page,monet-performance.page,monet-processes.page,monet-startup.page,monet-system.page,applications.page,processes.page,overview.page,history.page
 kw_default systemmonitorrc General startPage monet-applications.page
 kw_default systemmonitorrc General hiddenPages applications.page,processes.page,overview.page,history.page
 # The paired image build fixes Atomic mount lookup. Never enable the full space

@@ -70,7 +70,7 @@ def patch(source):
     function canRemovePage() {
         const controller = app.pageStack.currentItem?.controller;
         return !!controller && controller.writeableState === Page.PageController.Writeable
-            && !["applications.page", "history.page", "overview.page", "processes.page", "monet-system.page", "monet-applications.page", "monet-performance.page", "monet-processes.page"].includes(controller.fileName);
+            && !["applications.page", "history.page", "overview.page", "processes.page", "monet-system.page", "monet-applications.page", "monet-performance.page", "monet-processes.page", "monet-startup.page"].includes(controller.fileName);
     }
     function availablePage(exclude) {
         return Array.from(globalDrawer.actions).find(action => action.visible

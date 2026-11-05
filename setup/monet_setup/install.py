@@ -31,10 +31,11 @@ Progress goes to stdout, one JSON object per line:
               nowhere: {"recovery": "..."} before {"done": true}.
 5. finish     unmount, delete the download, done.
 
-A retry in the same session skips the disk step when it already finished
-(STATE remembers), so a dropped download doesn't cost the downloaded part.
+A receipt on the target's boot filesystem survives restarts. A verified retry
+skips partitioning and reuses the completed download without network access.
 """
 
+import errno
 import glob
 import json
 import os
@@ -47,9 +48,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import threading
+import fcntl
 from pathlib import Path
 
-from . import disks, pc, system, words
+from . import cache, checkpoint, disks, pc, resources, system, words
 from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
@@ -81,6 +84,13 @@ MAPPED = "monet"
 FIRST_KEY = "monet-firstboot.key"
 # Recovery keys in letters that type the same on every keyboard layout, as systemd's.
 MODHEX = "cbdefghijklnrtuv"
+EVENT_LOCK = threading.Lock()
+WORK_TMP = None
+# Room for the unpacked image, boot-file backup and Btrfs metadata. This is a
+# minimum working budget, not a prediction of final usage or guaranteed space.
+# Check after downloading, before moving the old root or its boot files.
+INSTALL_WORKING_BYTES = 20 * 1024**3
+DOWNLOAD_RESERVE_BYTES = 512 * 1024**2
 
 
 class Stop(Exception):
@@ -88,7 +98,8 @@ class Stop(Exception):
 
 
 def emit(**event):
-    print(json.dumps(event), flush=True)
+    with EVENT_LOCK:
+        print(json.dumps(event), flush=True)
 
 
 def log(text):
@@ -107,20 +118,25 @@ def run(*args, check=True, input=None, timeout=1800, quiet=False, live=False):
         log("$ " + " ".join(shlex.quote(str(a)) for a in args))
     try:
         # Background descendants can keep pipes open after the command finishes.
-        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+        with tempfile.TemporaryFile(dir=WORK_TMP) as stdout, tempfile.TemporaryFile(dir=WORK_TMP) as stderr:
             positions, pending = [0, 0], [b"", b""]
 
             def show(final=False):
                 for i, stream in enumerate((stdout, stderr)):
-                    chunk = os.pread(stream.fileno(), os.fstat(stream.fileno()).st_size - positions[i], positions[i])
+                    size = os.fstat(stream.fileno()).st_size
+                    if final and size - positions[i] > 65536:
+                        positions[i] = size - 65536
+                        pending[i] = b''
+                        log('  [earlier command output omitted]')
+                    chunk = os.pread(stream.fileno(), min(65536, size - positions[i]), positions[i])
                     positions[i] += len(chunk)
                     lines = (pending[i] + chunk).replace(b"\r", b"\n").split(b"\n")
-                    pending[i] = lines.pop()
+                    pending[i] = lines.pop()[-4096:]
                     if final:
                         lines.append(pending[i])
                     for line in lines:
                         if line.strip():
-                            log("  " + line.decode("utf-8", "replace"))
+                            log("  " + line[-4096:].decode("utf-8", "replace"))
 
             expired = False
             with subprocess.Popen([str(a) for a in args],
@@ -148,8 +164,10 @@ def run(*args, check=True, input=None, timeout=1800, quiet=False, live=False):
                     done.wait()
                 if live:
                     show(final=True)
-            output = os.pread(stdout.fileno(), os.fstat(stdout.fileno()).st_size, 0).decode("utf-8", "replace")
-            errors = os.pread(stderr.fileno(), os.fstat(stderr.fileno()).st_size, 0).decode("utf-8", "replace")
+            def tail(stream):
+                size = os.fstat(stream.fileno()).st_size
+                return os.pread(stream.fileno(), min(size, 4 * 1024**2), max(0, size - 4 * 1024**2)).decode('utf-8', 'replace')
+            output, errors = tail(stdout), tail(stderr)
     except OSError as e:
         raise Stop(f"{args[0]} isn't available ({e.strerror}).") from None
     out = output + errors
@@ -253,7 +271,12 @@ def filesystem(parts):
 def opened(partition):
     """The encrypted partition, opened with its key."""
     device = f"/dev/mapper/{MAPPED}"
-    if not os.path.exists(device):
+    if os.path.exists(device):
+        status = run('cryptsetup', 'status', MAPPED, quiet=True)
+        backing = re.search(r'^\s*device:\s*(\S+)\s*$', status, re.MULTILINE)
+        if backing is None or os.path.realpath(backing[1]) != os.path.realpath(partition):
+            raise Stop(_('Another encrypted drive is using the installation mapping. Restart Setup before continuing.'))
+    else:
         run("cryptsetup", "open", "--key-file", KEY, partition, MAPPED)
     return device
 
@@ -263,12 +286,10 @@ def encrypt(partition):
     can open it); returns where the btrfs goes."""
     if os.path.ismount(TOP):
         run("umount", "-R", TOP, check=False, quiet=True)
-    run("cryptsetup", "close", MAPPED, check=False, quiet=True)
+    if os.path.exists(f'/dev/mapper/{MAPPED}'):
+        run("cryptsetup", "close", MAPPED, quiet=True)
     KEY.parent.mkdir(parents=True, exist_ok=True)
-    if not KEY.exists():
-        fd = os.open(KEY, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as f:
-            f.write(secrets.token_bytes(64))
+    checkpoint.atomic(KEY, secrets.token_bytes(64))
     run("cryptsetup", "luksFormat", "--type", "luks2", "--batch-mode", "--label", "monet", "--key-file", KEY, partition)
     return opened(partition)
 
@@ -287,6 +308,29 @@ def prepare_disk(plan):
     run("btrfs", "subvolume", "create", DOWNLOAD)
     emit(phase="disk", fraction=1.0)
     return parts
+
+
+def validate_target(plan):
+    """Recheck the selected physical drive before any writes, including retries."""
+    if plan.get('offline') and not plan.get('resume'):
+        raise Stop(_('Connect to the internet to start a new installation, or choose Resume interrupted installation.'))
+    disk = checkpoint.current_disk(plan.get('disk'))
+    if (disk is None or disk not in disks.disks([disk]) or disks.in_use(disk)
+            or not plan.get('identity') or disks.identity(disk) != plan['identity']):
+        raise Stop(_('The selected drive is missing, changed or in use. Go back and choose it again.'))
+    if os.path.ismount(TOP) or os.path.ismount(TARGET) or os.path.exists(f'/dev/mapper/{MAPPED}'):
+        raise Stop(_('An earlier installation still has a drive open. Restart Setup before continuing.'))
+    if not plan.get('resume'):
+        if plan.get('layout') != disks.layout(disk):
+            raise Stop(_('The partitions on this drive changed. Go back and review them again.'))
+        if plan.get('mode') not in ('erase', 'keep'):
+            raise Stop(_('Choose what to keep or erase on the selected drive.'))
+        if plan['mode'] == 'erase' and plan.get('sizes') != disks.plan_erase(int(disk['size'])):
+            raise Stop(_('The installation sizes changed. Go back and review the drive again.'))
+        if plan['mode'] == 'keep':
+            fresh = disks.inspect_keep(dict(path=disk['path'], identity=disks.identity(disk), layout=disks.layout(disk)))
+            if not fresh['keep'] or fresh['keep'] != plan.get('sizes'):
+                raise Stop(fresh['keepWhy'] or _('The available space changed. Go back and review the drive again.'))
 
 
 # -- 2. the download ------------------------------------------------------------
@@ -347,20 +391,50 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
 
 def download(plan, tries=8):
     image = plan["image"]
+    folder = Path(DOWNLOAD)
+    if (folder / cache.MARKER).exists():
+        emit(phase='download', note=_('Checking the saved download…'))
+        if cache.valid(folder, image):
+            emit(phase='download', fraction=1.0, note=_('Using the verified saved download.'))
+            return
+        log('Saved download failed its integrity check')
+        if plan.get('offline'):
+            raise Stop(_('The saved download is incomplete or damaged. Connect to the internet, then resume the installation again.'))
+        # This is only our recorded download subvolume, never a personal folder.
+        # Refuse directory links instead of following them during cleanup.
+        if (folder / 'oci').is_symlink():
+            raise Stop(_('The saved download location changed. Go back and review the drive.'))
+        if (folder / 'oci').exists():
+            shutil.rmtree(folder / 'oci')
+        (folder / cache.MARKER).unlink()
+    if plan.get('offline'):
+        raise Stop(_('The saved download is incomplete or damaged. Connect to the internet, then resume the installation again.'))
     run("nm-online", "-s", "-q", "-t", "60", check=False, timeout=90)
     total = image_size(image)
     log(f"Monet's download: {total / 1e9:.1f} GB" if total else "Monet's download size isn't known")
     start = received()
     for attempt in range(tries):
+        require_space(folder, DOWNLOAD_RESERVE_BYTES)
         if copy_once(image, total, start):
+            cache.complete(folder, image)
             emit(phase="download", fraction=1.0, got=total, total=total)
             return
+        # A full disk is not a dropped connection. Keep the partial download
+        # and explain the actual problem without eight slow network retries.
+        require_space(folder, DOWNLOAD_RESERVE_BYTES)
         emit(phase="download", note="the connection dropped, picking up where it stopped")
         time.sleep(min(10 * (attempt + 1), 60))
     raise Stop(_("The connection dropped and didn't come back. Check the Wi-Fi, then try again."))
 
 
 # -- 3. installing ----------------------------------------------------------------
+
+def require_space(folder, minimum):
+    if shutil.disk_usage(folder).free < minimum:
+        if minimum == INSTALL_WORKING_BYTES:
+            raise Stop(_('Monet needs at least 20 GiB of free working space to finish installing. The saved download and previous installation are kept. Free space on this drive or choose another drive.'))
+        raise Stop(_('The installation drive is running out of space. The partial download is kept. Free space on this drive or choose another drive, then try again.'))
+
 
 def mount_target(parts):
     os.makedirs(TARGET, exist_ok=True)
@@ -371,21 +445,79 @@ def mount_target(parts):
     run("mount", parts["efi"], f"{TARGET}/boot/efi")
 
 
+def preserve_boot(parts, previous=None):
+    """Keep a failed attempt's boot files before building its replacement.
+
+    This is Setup's dedicated boot partition, already checked against its
+    receipt. Stale OSTree entries point into the root we just preserved and
+    would prevent bootc loading the new, empty sysroot. Leave the receipt and
+    the separate EFI partition alone. Flush the backup before removing files
+    so another interruption still leaves a recoverable copy.
+    """
+    with checkpoint.boot_mount(parts['boot'], writable=True) as boot:
+        entries = [entry for entry in boot.iterdir()
+                   if entry.name not in (checkpoint.DIRECTORY, 'efi', 'lost+found')]
+        if not entries:
+            return
+        if previous is None:
+            previous = Path(TOP) / ('previous-install-' + secrets.token_hex(8))
+            run('btrfs', 'subvolume', 'create', previous)
+        backup = previous / ('saved-boot-' + secrets.token_hex(8))
+        backup.mkdir(mode=0o700)
+        for entry in entries:
+            dest = backup / entry.name
+            if entry.is_symlink():
+                dest.symlink_to(os.readlink(entry))
+            elif entry.is_dir():
+                shutil.copytree(entry, dest, symlinks=True)
+            elif entry.is_file():
+                shutil.copy2(entry, dest, follow_symlinks=False)
+            else:
+                raise Stop(f'Cannot preserve the previous boot file: {entry.name}')
+        run('sync', '-f', backup, timeout=180, live=True)
+        for entry in entries:
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+        run('sync', '-f', boot, timeout=180, live=True)
+        log(f'Previous boot files kept at the filesystem top level: {backup.relative_to(TOP)}')
+
+
 def install(plan, parts):
     emit(phase="install", fraction=0.05)
-    # bootc wants an empty root: a try that stopped halfway left things there.
+    require_space(TOP, INSTALL_WORKING_BYTES)
+    # bootc wants an empty root. A previous attempt may already contain copied
+    # personal files or even have booted before Setup's final cleanup. Preserve
+    # it by renaming the subvolume; never delete an unfinished system on retry.
     unmount_target()
     root = Path(f"{TOP}/root")
+    if root.is_symlink():
+        raise Stop(_('The installation workspace changed. Go back and review the drive.'))
+    previous = None
     if root.exists() and any(root.iterdir()):
-        run("btrfs", "subvolume", "delete", root)
+        previous = root.with_name('previous-install-' + secrets.token_hex(8))
+        root.rename(previous)
+        log(f'Previous unfinished system kept at the filesystem top level: {previous.name}')
+    preserve_boot(parts, previous)
     if not root.exists():
         run("btrfs", "subvolume", "create", root)
     mount_target(parts)
+    folder = Path(TARGET) / 'boot' / checkpoint.DIRECTORY
+    if folder.is_dir() and not folder.is_symlink():
+        checkpoint.atomic(folder / 'health.json', json.dumps(dict(resources.sample(), phase='install', elapsed=0)).encode())
     emit(phase="install", fraction=0.15)
-    run("bootc", "install", "to-filesystem",
+    # bootc binds the target's storage at /run/bootc/storage. Keep its auxiliary
+    # mounts in a private namespace so they disappear when bootc exits, including
+    # on failure. Otherwise they outlive our target mounts and keep LUKS busy.
+    run("unshare", "--mount", "--propagation", "private", "bootc", "install", "to-filesystem",
         "--source-imgref", f"oci:{DOWNLOAD}/oci:latest",
         "--target-imgref", plan["image"],
         "--skip-fetch-check",
+        # Account setup still writes to the target. Defer finalization until
+        # those writes and our scratch-file handles are finished. In particular,
+        # bootc must not remount/freeze the filesystem holding its own output.
+        "--skip-finalize",
         "--karg", "rootflags=subvol=root",
         *(arg for karg in QUIET for arg in ("--karg", karg)),
         *(luks_kargs(parts) if parts.get("fs") else []),
@@ -503,6 +635,11 @@ def configure(plan):
             target.mkdir(parents=True, exist_ok=True)
             run("mount", *opts, source, target)
             mounts.append(target)
+            # The live session's /dev and /sys are shared mount trees. Without
+            # isolating their copies, recursive cleanup propagates back to the
+            # live session and fails on its busy /dev/shm and SELinux mounts.
+            # Register the mount first so an isolation failure still cleans up.
+            run("mount", "--make-rslave", target)
         account, name = plan["account"], plan["name"]
         etc = root / "etc"
         run("chroot", root, "useradd", "-m", "-U", "-G", "wheel", "-c", name, account)
@@ -541,7 +678,7 @@ def configure(plan):
                 continue
             for folder in (etc / "NetworkManager/system-connections", var / "lib/monet/wifi"):
                 write(folder / Path(conn).name, data, 0o600)
-        if plan["mode"] == "erase":
+        if plan["mode"] == "erase" and plan['sizes'].get('windows', 0) > 0:
             write(var / "lib/monet/windows-setup", "waiting\n")
         # The apps picked on "Your apps": monet-apps installs them once Monet is
         # online (an empty list is a choice too: none).
@@ -683,18 +820,27 @@ def seal(parts):
 def unmount_target():
     for path in (f"{TARGET}/boot/efi", f"{TARGET}/boot", TARGET):
         if os.path.ismount(path):
-            run("umount", "-R", path, check=False)
+            run("umount", "-R", path, timeout=120, live=True)
 
 
 def finish(parts=None):
     emit(phase="finish", fraction=0.2)
+    run('bootc', 'install', 'finalize', TARGET, timeout=180, live=True)
+    # Flush only the filesystems we installed onto; a global sync may wait on
+    # unrelated drives. Checked, normal unmounts finish journal writes without
+    # freezing a mounted filesystem or forcing a full-device discard here.
+    # Failure to flush/unmount is never reported as success.
+    for path in (f'{TARGET}/boot/efi', f'{TARGET}/boot', TARGET):
+        run('sync', '-f', path, timeout=180, live=True)
     unmount_target()
     run("btrfs", "subvolume", "delete", DOWNLOAD, check=False)
-    run("umount", TOP, check=False)
+    run('sync', '-f', TOP, timeout=180, live=True)
+    run("umount", TOP, timeout=120, live=True)
     if parts and parts.get("fs"):
-        run("cryptsetup", "close", MAPPED, check=False)
+        run("cryptsetup", "close", MAPPED, timeout=120, live=True)
         KEY.unlink(missing_ok=True)
-    run("sync", check=False)
+    if parts:
+        checkpoint.clear(parts)
     emit(phase="finish", fraction=1.0)
 
 
@@ -717,22 +863,80 @@ def remember(plan, parts):
         pass
 
 
+def isolate_mounts():
+    """Keep every target mount out of the live session's service namespaces.
+
+    Isolating bootc alone does not isolate our mounts: systemd services receive
+    shared target/chroot mounts and can retain them after our normal unmounts.
+    Enter this namespace before probing or starting the monitor thread. Failure
+    must stop installation before any disk writes.
+    """
+    os.unshare(os.CLONE_NEWNS)
+    run('mount', '--make-rprivate', '/')
+
+
 def main(path):
+    global WORK_TMP
     plan = json.loads(Path(path).read_text())
     words.use(plan.get("language", ""))
     phase = "disk"
+    parts, completed = None, False
+    stopped = threading.Event()
+    lock = None
+    started = time.monotonic()
+    previous_tmp = os.environ.get('TMPDIR')
+
+    def monitor():
+        while not stopped.wait(5):
+            health = dict(resources.sample(), elapsed=int(time.monotonic() - started), phase=phase)
+            emit(health=health)
+            # Only a small health sample survives a hard reset. No account data,
+            # command output, password or recovery phrase goes into this record.
+            folder = Path(TARGET) / 'boot' / checkpoint.DIRECTORY
+            if os.path.ismount(f'{TARGET}/boot') and folder.is_dir() and not folder.is_symlink():
+                try: checkpoint.atomic(folder / 'health.json', json.dumps(health).encode())
+                except OSError: pass
     try:
-        parts = remembered(plan)
-        if parts and os.path.exists(parts["monet"]):
-            log("using the disk prepared by the last try")
-            if not os.path.ismount(TOP):
-                if parts.get("fs"):
-                    opened(parts["monet"])
-                os.makedirs(TOP, exist_ok=True)
-                run("mount", filesystem(parts), TOP)
+        STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        lock = (STATE.parent / 'install.lock').open('w')
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise Stop(_('Another installation is still running. Wait for it to finish.')) from None
+        isolate_mounts()
+        validate_target(plan)
+        if plan.get('gentle'):
+            count = resources.gentler()
+            log(f'Gentler installation: at most {count} logical CPUs, lower scheduling priority')
+        monitor_thread = threading.Thread(target=monitor, daemon=True)
+        monitor_thread.start()
+        if plan.get('resume'):
+            try:
+                parts, receipt = checkpoint.resume(plan, KEY)
+            except (ValueError, OSError) as error:
+                raise Stop(_('The interrupted installation could not be verified. Refresh the drive list and review it again.')) from error
+            if plan['encrypt']:
+                parts['fs'] = opened(parts['monet'])
+            os.makedirs(TOP, exist_ok=True)
+            run('mount', filesystem(parts), TOP)
+            if Path(DOWNLOAD).is_symlink():
+                raise Stop(_('The installation workspace changed. Go back and review the drive.'))
+            if not Path(DOWNLOAD).exists():
+                # Cleanup may have removed the cache before a failed unmount
+                # or checkpoint cleanup. Recreate only our own subvolume.
+                run('btrfs', 'subvolume', 'create', DOWNLOAD)
+            run('btrfs', 'subvolume', 'show', DOWNLOAD, quiet=True)
+            log('Resuming the verified installation; keeping the downloaded image')
         else:
             parts = prepare_disk(plan)
+            run('udevadm', 'settle', '--timeout=30', quiet=True)
+            receipt = checkpoint.save(plan, parts, KEY)
             remember(plan, parts)
+        emit(resume=receipt['id'])
+        workspace = Path(DOWNLOAD) / 'work'
+        if workspace.is_symlink(): raise Stop(_('The installation workspace changed. Go back and review the drive.'))
+        workspace.mkdir(mode=0o700, exist_ok=True)
+        WORK_TMP = str(workspace)
+        os.environ['TMPDIR'] = WORK_TMP
         phase = "download"
         download(plan)
         phase = "install"
@@ -741,20 +945,49 @@ def main(path):
         configure(plan)
         recovery = seal(parts)
         phase = "finish"
+        stopped.set()
+        monitor_thread.join(timeout=30)
+        if monitor_thread.is_alive():
+            raise Stop(_('The drive is still saving installation status. Wait a moment before trying again.'))
+        WORK_TMP = None
+        if previous_tmp is None: os.environ.pop('TMPDIR', None)
+        else: os.environ['TMPDIR'] = previous_tmp
         finish(parts)
         STATE.unlink(missing_ok=True)
         if recovery:
             # Shown once, on the last page; never in the log.
             emit(recovery=recovery)
+        completed = True
         emit(done=True)
     except Stop as e:
         emit(phase=phase, error=str(e))
+        sys.exit(1)
+    except OSError as e:
+        log(f"{type(e).__name__}: {e}")
+        if e.errno in (errno.ENOSPC, errno.EDQUOT):
+            emit(phase=phase, error=_("The installation drive ran out of space. The saved download and recovery information are kept. Free space on this drive or choose another drive, then try again."))
+        else:
+            emit(phase=phase, error=_("Something unexpected went wrong. The details say what."))
         sys.exit(1)
     except Exception as e:  # noqa: BLE001 - shown to the person, details in the log
         log(f"{type(e).__name__}: {e}")
         emit(phase=phase, error=_("Something unexpected went wrong. The details say what."))
         sys.exit(1)
     finally:
+        stopped.set()
+        WORK_TMP = None
+        if previous_tmp is None: os.environ.pop('TMPDIR', None)
+        else: os.environ['TMPDIR'] = previous_tmp
+        if parts and not completed:
+            # Leave the persistent receipt/download intact, but release mounts
+            # so retry cannot overlap a previous installer or reformat its data.
+            try:
+                unmount_target()
+                if os.path.ismount(TOP): run('umount', TOP, timeout=120, live=True)
+                if parts.get('fs'): run('cryptsetup', 'close', MAPPED, timeout=120, live=True)
+            except Stop as error:
+                log('Cleanup: ' + str(error))
+        if lock is not None: lock.close()
         try:
             Path(path).unlink()
         except OSError:

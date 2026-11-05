@@ -1,17 +1,29 @@
 """Okular patch validation; live tab/window coverage belongs to the native VM fixture."""
 from importlib.machinery import SourceFileLoader
+from importlib.util import module_from_spec, spec_from_loader
 from pathlib import Path
 import copy
 import json
 import os
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch as mock_patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-patch = SourceFileLoader("pdf_patch", str(ROOT / "image/pdf-recovery/patch.py")).load_module()
-pdf = SourceFileLoader("pdf_session", str(ROOT / "linux/libexec/monet-pdf-session")).load_module()
+
+
+def load(name, path):
+    loader = SourceFileLoader(name, str(ROOT/path))
+    module = module_from_spec(spec_from_loader(name, loader))
+    sys.modules[name] = module
+    loader.exec_module(module)
+    return module
+
+
+patch = load("pdf_patch", "image/pdf-recovery/patch.py")
+pdf = load("pdf_session", "linux/libexec/monet-pdf-session")
 
 
 class Metadata(unittest.TestCase):

@@ -246,6 +246,25 @@ if os.environ.get('MONET_PASSWORDS_QT_TESTS') == '1':
             self.assertTrue(self.window.busy)
             self.window.busy = False
 
+        def test_closed_view_offers_unlock_before_connect_and_apps_can_unlock_directly(self):
+            button = self.window.details.findChild(QPushButton, 'emptyUnlock')
+            self.assertTrue(button.isEnabled())
+            self.assertFalse(any('Connect Zen' in b.text() for b in self.window.details.findChildren(QPushButton)))
+            self.window.navigation.setCurrentRow(3)
+            self.assertTrue(self.window.apps_unlock.isVisible())
+            self.window.apps_unlock.click(); self.wait()
+            self.assertTrue(self.window.unlocked)
+            self.assertFalse(self.window.apps_unlock.isVisible())
+            self.assertIn('Fixture App', [self.window.app_list.item(i).text() for i in range(self.window.app_list.count())])
+
+        def test_closed_view_never_claims_browser_is_unpaired(self):
+            self.unlock(); self.window.browser_connected = True
+            self.window.clear_session()
+            self.assertEqual(self.window.state_label.text(), 'View closed')
+            self.assertEqual(self.window.rows, [])
+            self.assertIsNone(self.window.entry)
+            self.assertTrue(self.window.details.findChild(QPushButton, 'emptyUnlock').isEnabled())
+
         def test_unknown_binary_is_explained_and_not_editable(self):
             self.select('Encryption key')
             self.assertEqual(self.window.fields, [])

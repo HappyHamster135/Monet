@@ -106,3 +106,33 @@ The installed Settings preview now shows recent automatic update outcomes withou
 The local preview now pauses all recurring detail reads when minimized, then refreshes on restore. Sound, Phone, the Windows return summary, photo/backup progress, Date & Time and busy animations are covered. Updates also stops polling unused battery state. All 37 focused Settings/return checks and three isolated Phone checks pass. A native Sound comparison dropped from two helpers/215.2 ms child CPU over 6.5 seconds minimized to no helpers/zero child CPU. This is a bounded helper measurement, not a whole-system memory or battery benchmark. See backlog 095-25 for evidence and the reversible installation receipt.
 
 External Wayland minimization is now covered too: native exposure events stop Settings polling even when Qt still reports Windowed. A second native comparison drops four minimized probes/465.9 ms child CPU over 6.5 seconds to none, with immediate refresh after restore. The final local installation and evidence are recorded in backlog 095-25. This adds no polling daemon or window-list model.
+
+
+## 0.9.6 competitive assessment — 4 November 2026
+
+Monet's strongest opportunity is a coherent everyday desktop with a guided trip
+to Windows for games and restoration of work on return. That is a product
+hypothesis supported by the implemented workflows, not a measured advantage over
+another OS. Monet inherits Bazzite/Fedora/KDE technology (`image/Containerfile`);
+its own value must come from integration, defaults and reliable recovery.
+There are no controlled Windows-versus-Monet or distribution-versus-Monet FPS,
+battery, temperature, boot-time or whole-desktop responsiveness results yet.
+Earlier subprocess timing improvements in this document apply only to those
+specific helpers.
+
+| Reference | Documented baseline | What Monet still needs to demonstrate |
+| --- | --- | --- |
+| Windows | Windows has graphical troubleshooting, update removal, reset and recovery-environment routes. [Microsoft recovery guide](https://support.microsoft.com/en-gb/windows/experience/backup-recovery/recovery-options-in-windows). | Clear recovery when the installed desktop cannot start, plus dependable Windows game handoff. Proton supports some anti-cheat configurations but requires publisher cooperation and does not support kernel-space anti-cheat; a Windows route is useful, but is not proof that every title will work. [Valve documentation](https://partner.steamgames.com/doc/steamhardware/proton). |
+| Bazzite | Automatic desktop updates, previous-deployment rollback and a graphical updater/rollback utility already exist. [Bazzite documentation](https://docs.bazzite.gg/Installing_and_Managing_Software/Updates_Rollbacks_and_Rebasing/). | The closest baseline, since Monet uses Bazzite: easier everyday tasks and Windows trips without introducing extra failures or overhead. Atomic updates alone are not a differentiator. |
+| Fedora Kinoite | A KDE Plasma desktop with an atomic system foundation. [Fedora Kinoite](https://fedoraproject.org/atomic-desktops/kinoite/). | Show that Monet's defaults and integrated apps reduce effort while preserving user choices across upgrades. Sharing KDE does not establish identical performance or reliability. |
+| Linux Mint | Its installation guide includes graphical Timeshift setup, a destination drive and scheduled incremental system snapshots. [Mint guide](https://linuxmint-installation-guide.readthedocs.io/en/latest/timeshift.html). | Recovery should be easy to discover and distinguish personal files, desktop preferences and the installed system. The new Settings page covers journaled desktop changes only; it is not equivalent to a full system snapshot. |
+| Ubuntu | Canonical maintains a hardware certification catalogue and compatibility testing programme. [Ubuntu certified hardware](https://ubuntu.com/certified). | A published, reproducible hardware matrix for Monet's exact image: installation, encryption, sleep, graphics, audio, network and peripherals. Inherited drivers do not replace qualification of Monet's integration. |
+
+For 0.9.6, prioritize successful installation and retry, update/rollback,
+recoverable mistakes, consistent keyboard/scaling behavior and truthful error
+messages before adding more applications. The new graphical desktop recovery is
+one completed local implementation step. The Razer hard lock, new full-image VM
+acceptance and physical game handoff remain unverified. Translated strings also
+need human review; catalog inclusion alone is not translation completion.
+See [the current backlog](BACKLOG-0.9.5.md) and the comparison protocol in
+[TESTING.md](TESTING.md#competitive-comparison-protocol).

@@ -40,6 +40,24 @@ class TestSite(BaseHTTPRequestHandler):
         elif self.path == "/multi-password":
             content = '''<h1>Sign in: second step</h1><form method="post" action="/submitted">
 <label>Password <input name="password" type="password" autocomplete="current-password"></label><button>Continue</button></form>'''
+        elif self.path in ("/change-full", "/change-no-user", "/signup-confirm"):
+            username = '<label>Username <input name="username" autocomplete="username"></label>' if self.path != '/change-no-user' else ''
+            current = '<label>Current password <input name="current" type="password" autocomplete="current-password" required></label>' if self.path != '/signup-confirm' else ''
+            content = '''<h1>Update a local test account</h1><form method="post" action="/submitted">''' + username + current + '''
+<label>New password <input name="newpassword" type="password" autocomplete="new-password" required></label>
+<label>Repeat new password <input name="confirmation" type="password" autocomplete="new-password" required></label>
+<button>Save changes</button></form><script>
+const form=document.querySelector('form');
+function validate(){form.confirmation.setCustomValidity(form.newpassword.value===form.confirmation.value?'':'Passwords must match');}
+form.newpassword.addEventListener('input',validate);form.confirmation.addEventListener('input',validate);
+</script>'''
+        elif self.path == "/multi-dynamic":
+            content = '''<h1>Sign in: dynamic first step</h1><form method="post" action="/submitted">
+<label>Username <input name="username" autocomplete="username"></label><button>Next</button></form><script>
+const form=document.querySelector('form');let second=false;
+form.addEventListener('submit',event=>{if(!second){event.preventDefault();second=true;
+form.innerHTML='<label>Password <input name="password" type="password" autocomplete="current-password"></label><button>Continue</button>';}});
+</script>'''
         elif self.path in ("/", "/signup", "/change"):
             title = {"/": "A local sign-in test", "/signup": "Create a test account", "/change": "Change a test password"}[self.path]
             autocomplete = "current-password" if self.path == "/" else "new-password"

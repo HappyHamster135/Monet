@@ -10,10 +10,12 @@ import os
 import sys
 import tempfile
 import threading
+import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 
-from . import disks, network, pc, system, words
+from . import checkpoint, disks, network, pc, system, words
 from .system import account_name
 from .words import N_, _, ntr, tr
 from .qt import (Property, QFontDatabase, QGuiApplication, QLocale, QObject, QProcess, QQmlApplicationEngine, QTime,
@@ -85,8 +87,15 @@ class Setup(QObject):
         self._zone, self._zone_chosen, self._zone_asked = "", False, False
         self._networks, self._wired, self._scanning = [], False, False
         self._joining, self._wifi_error, self._joined = False, "", ""
-        self._disks, self._disk, self._mode = [], 0, "erase"
-        self._bring = True
+        self._offline = False
+        self._disks, self._disk, self._mode = [], -1, ""
+        self._bring = False
+        self._disk_loading, self._disk_busy, self._files_busy = True, False, False
+        self._disk_generation, self._resume_id, self._reviewed = 0, '', False
+        self._gentle, self._health, self._restarting, self._restart_error = False, '', False, ''
+        self._files_lock = threading.Lock()
+        self._reading, self._exit_code = False, None
+        self._read_queued, self._done_received, self._plan_path = False, False, None
         self._encrypt = True                 # on PCs with a TPM 2.0 (the choice shows only there)
         self._recovery = ""                  # the recovery key, once installed: shown once, kept nowhere
         self._untrusted = None               # an installed Monet's key the firmware doesn't trust yet
@@ -134,6 +143,8 @@ class Setup(QObject):
             pass
 
     def _demo(self):
+        self._disk_loading = False
+        self._disk, self._mode = 0, 'erase'
         self._networks = [{"name": "Harbor", "signal": 92, "secure": True, "active": False},
                           {"name": "Giverny 5G", "signal": 74, "secure": True, "active": False},
                           {"name": "Le Havre", "signal": 51, "secure": True, "active": False},
@@ -402,11 +413,60 @@ class Setup(QObject):
 
     # -- disk and mode --
     def _load_disks(self):
-        self._background(disks.offer, self._disks_loaded)
+        self._background(lambda: disks.offer(details=False), self._disks_loaded)
 
     def _disks_loaded(self, found):
         self._disks = found
+        self._disk_loading = False
         self.changed.emit()
+
+    @Property(bool, notify=changed)
+    def diskLoading(self):
+        return self._disk_loading
+
+    @Property(bool, notify=changed)
+    def offline(self):
+        return self._offline
+
+    @Slot(bool)
+    def setOffline(self, value):
+        self._offline = value
+        self._reviewed = False
+        self.changed.emit()
+
+    @Property(bool, notify=changed)
+    def diskBusy(self):
+        return self._disk_busy or self._files_busy
+
+    @Property(bool, notify=changed)
+    def reviewed(self):
+        return self._reviewed
+
+    @Slot(bool)
+    def setReviewed(self, value):
+        self._reviewed = value
+        self.changed.emit()
+
+    @Property(bool, notify=changed)
+    def gentle(self):
+        return self._gentle
+
+    @Slot(bool)
+    def setGentle(self, value):
+        self._gentle = value
+        self.changed.emit()
+
+    @Slot()
+    def refreshDisks(self):
+        if self._proc or self._disk_loading or DEMO:
+            return
+        self._disk_generation += 1
+        self._disk, self._mode, self._resume_id = -1, '', ''
+        self._disks = []
+        self._reviewed, self._disk_busy, self._files_busy = False, False, False
+        self._disk_loading = True
+        self.changed.emit()
+        self._load_disks()
 
     @Property("QVariant", notify=changed)
     def disks(self):
@@ -422,16 +482,84 @@ class Setup(QObject):
 
     @Slot(int)
     def setDisk(self, index):
+        if self._proc or self._disk_loading or index < 0 or index >= len(self._disks):
+            return
         self._disk = index
+        self._disk_generation += 1
+        generation = self._disk_generation
+        self._mode, self._resume_id, self._bring, self._reviewed = '', '', False, False
+        self._files_busy = False
+        self._disk_busy = not DEMO
         self.changed.emit()
+        if DEMO:
+            return
+        chosen = dict(self._chosen())
+        def probe():
+            try:
+                current = checkpoint.current_disk(chosen['path'])
+                if current is None or disks.identity(current) != chosen['identity']:
+                    return None
+                return checkpoint.probe(current)
+            except Exception:
+                return None
+        def done(receipt):
+            if generation != self._disk_generation: return
+            self._chosen()['resume'] = receipt
+            self._disk_busy = False
+            self.changed.emit()
+        self._background(probe, done)
 
     @Slot(str)
     def setMode(self, mode):
+        if self._proc or mode not in ('erase', 'keep', 'resume') or not self._chosen():
+            return
+        if self._disk_busy or mode == 'resume' and not self._chosen().get('resume'):
+            return
         self._mode = mode
+        self._resume_id, self._reviewed, self._bring = '', False, False
         self.changed.emit()
+        if mode == 'keep' and not self._chosen().get('checked', bool(self._chosen().get('keep'))):
+            self._disk_busy = True
+            generation = self._disk_generation
+            chosen = dict(self._chosen())
+            def inspect():
+                try: return disks.inspect_keep(chosen)
+                except Exception:
+                    return dict(keep=None, keepWhy=_('This drive could not be checked. Refresh the drive list and try again.'), checked=True)
+            def done(result):
+                if generation != self._disk_generation: return
+                self._chosen().update(result); self._disk_busy = False
+                self.changed.emit()
+            self._background(inspect, done)
+            self.changed.emit()
 
     def _chosen(self):
-        return self._disks[min(self._disk, len(self._disks) - 1)] if self._disks else {}
+        return self._disks[self._disk] if 0 <= self._disk < len(self._disks) else {}
+
+    @Property(str, notify=changed)
+    def driveSummary(self):
+        chosen = self._chosen()
+        if not chosen: return ''
+        target = chosen['label'] + ' (' + chosen['path'] + ')'
+        if self._mode == 'erase':
+            return tr('Erase everything on %1. All other drives will be kept unchanged.', target)
+        if self._mode == 'keep':
+            return tr('Keep existing partitions on %1 and add Monet in the available space. All other drives will be kept unchanged.', target)
+        if self._mode == 'resume':
+            return tr('Resume the interrupted installation on %1 without formatting it again. All other drives will be kept unchanged.', target)
+        return tr('Selected drive: %1. Choose what to keep or erase below.', target)
+
+    @Property(str, notify=changed)
+    def completionText(self):
+        chosen = self._chosen()
+        receipt = chosen.get('resume') or {}
+        mode = receipt.get('mode') if self._mode == 'resume' else self._mode
+        sizes = receipt.get('sizes') if self._mode == 'resume' else chosen.get(self._mode)
+        if mode == 'erase' and (sizes or {}).get('windows', 0) > 0:
+            return _('Take out the USB stick and restart. After you sign in, Monet gets Windows ready for your games by itself.')
+        if mode == 'keep' and chosen.get('hasWindows'):
+            return _('Take out the USB stick and restart. Your PC starts in Monet, and Windows is one click away.')
+        return _('Take out the USB stick and restart. Your PC starts in Monet.')
 
     @Property(str, notify=changed)
     def roomNote(self):
@@ -459,7 +587,30 @@ class Setup(QObject):
 
     @Slot(bool)
     def setBring(self, on):
+        if self._proc or self._files_busy: return
         self._bring = on
+        if on and self._mode == 'keep' and self._chosen().get('keep') and not self._chosen().get('files') and not DEMO:
+            generation = self._disk_generation
+            expected = dict(self._chosen()); self._files_busy = True
+            def measure():
+                try:
+                    with self._files_lock:
+                        current = checkpoint.current_disk(expected['path'])
+                        if (current is None or disks.identity(current) != expected['identity']
+                                or disks.layout(current) != expected['layout'] or disks.in_use(current)):
+                            return None
+                        found = disks.windows_files(current)
+                        if found:
+                            found['fits'] = found['total'] // disks.MIB <= expected['keep']['monet'] - disks.MONET_OWN_MIB
+                        return found
+                except (OSError, ValueError, KeyError):
+                    return None
+            def done(found):
+                if generation != self._disk_generation: return
+                self._files_busy = False; self._chosen()['files'] = found
+                if not found: self._bring = False
+                self.changed.emit()
+            self._background(measure, done)
         self.changed.emit()
 
     # -- encrypting --
@@ -517,9 +668,21 @@ class Setup(QObject):
         """Why Install can't go ahead on the chosen disk and mode, if it can't."""
         if self._pc_blocker():
             return self._pc_blocker()
+        if getattr(self, '_disk_loading', False):
+            return _('Looking for drives…')
         if not self._disks:
             return _("No disk found to install Monet on.")
-        disk = self._disks[min(self._disk, len(self._disks) - 1)]
+        disk = self._chosen()
+        if not disk:
+            return _('Choose the drive where Monet will be installed.')
+        if disk.get('busy'):
+            return _('This drive is in use. Close its files and unmount it before installing.')
+        if getattr(self, '_disk_busy', False) or getattr(self, '_files_busy', False):
+            return _('Checking the selected drive…')
+        if self._mode not in ('erase', 'keep', 'resume'):
+            return _('Choose what to keep or erase on the selected drive.')
+        if getattr(self, '_offline', False) and self._mode != 'resume':
+            return _('Connect to the internet to start a new installation, or choose Resume interrupted installation.')
         if self._mode == "keep" and not disk["keep"]:
             return disk["keepWhy"]
         if self._mode == "erase" and not disk["erase"]:
@@ -549,14 +712,17 @@ class Setup(QObject):
 
     @Slot()
     def install(self):
-        if self._proc or self.blocker:
+        if self._proc or self.blocker or not self._reviewed or DEMO:
             return
         disk = self._disks[self._disk]
         locale = system.LANGUAGES[self._language][1]
         layout, variant = system.KEYBOARDS[self._keyboard][1:]
         plan = {
             "image": pc.image_for(IMAGE, self._pc), "disk": disk["path"], "mode": self._mode,
-            "sizes": disk[self._mode],
+            "sizes": disk.get(self._mode), 'identity': disk['identity'], 'layout': disk['layout'],
+            'resume': disk['resume']['id'] if self._mode == 'resume' else self._resume_id,
+            'gentle': self._gentle,
+            'offline': self._offline,
             "language": locale, "keyboard": layout, "variant": variant,
             "timezone": self._zone,
             "name": self._name, "account": account_name(self._name), "password": self._password,
@@ -566,31 +732,77 @@ class Setup(QObject):
             "encrypt": self._encrypt and bool(self._pc.get("tpm")),
         }
         fd, path = tempfile.mkstemp(prefix="monet-plan-", suffix=".json", dir="/run")
+        self._plan_path = Path(path)
         with os.fdopen(fd, "w") as f:
             json.dump(plan, f)
         self._phase, self._error, self._log, self._progress = "disk", "", [], 0.0
+        self._exit_code, self._done_received = None, False
         self._status = _(PHASES["disk"][0])
         self.progressChanged.emit()
         self._proc = QProcess(self)
         self._proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self._proc.readyReadStandardOutput.connect(self._read)
         self._proc.finished.connect(self._finished)
+        self._proc.errorOccurred.connect(self._process_error)
         self._proc.setWorkingDirectory(str(HERE))
         self._proc.start(sys.executable, ["-m", "monet_setup.install", path])
 
+    def _process_error(self, error):
+        if error == QProcess.ProcessError.FailedToStart:
+            self._phase, self._error = 'failed', _('The installer could not start. Try again.')
+            self._proc.deleteLater(); self._proc = None
+            if self._plan_path: self._plan_path.unlink(missing_ok=True)
+            self.progressChanged.emit()
+
     def _read(self, final=False):
-        while self._proc and (self._proc.canReadLine() or (final and self._proc.bytesAvailable())):
-            line = bytes(self._proc.readLine()).decode(errors="replace").strip()
-            try:
-                event = json.loads(line)
-            except ValueError:
-                self._log.append(line)
-                print("install: " + line, file=sys.stderr, flush=True)
-                continue
-            self.report(event)
+        self._read_queued = False
+        deadline, count = time.monotonic() + .008, 0
+        self._reading = True
+        try:
+            while self._proc and (self._proc.canReadLine() or ((final or self._exit_code is not None) and self._proc.bytesAvailable())):
+                line = bytes(self._proc.readLine(65537)).decode(errors="replace").strip()
+                try:
+                    event = json.loads(line)
+                    if not isinstance(event, dict): raise ValueError('not an event')
+                except ValueError:
+                    self._append_log(line)
+                else:
+                    self.report(event)
+                count += 1
+                if count >= 64 or time.monotonic() >= deadline: break
+        finally:
+            self._reading = False
+        self.progressChanged.emit()
+        if self._proc and (self._proc.canReadLine() or (self._exit_code is not None and self._proc.bytesAvailable())):
+            if not self._read_queued:
+                self._read_queued = True
+                QTimer.singleShot(0, self._read)
+        elif self._proc and self._exit_code is not None:
+            self._proc.deleteLater(); self._proc = None
+            self._phase = 'done' if self._exit_code == 0 and self._done_received and not self._error else 'failed'
+            if self._phase == 'failed': self._error = self._error or _('The installer stopped unexpectedly.')
+            if self._plan_path: self._plan_path.unlink(missing_ok=True)
+            self.progressChanged.emit()
+
+    def _append_log(self, text):
+        text = str(text)[:4096]
+        self._log = (self._log + [text])[-200:]
+        print('install: ' + text, file=sys.stderr, flush=True)
 
     def report(self, event):
         """One progress event from install.py."""
+        if event.get('resume'):
+            self._resume_id = event['resume']
+        if isinstance(event.get('health'), dict):
+            health = event['health']; status = []
+            if isinstance(health.get('temperature'), (int, float)):
+                status.append(tr('Highest reported temperature: %1 °C', round(health['temperature'])))
+            if isinstance(health.get('available'), (int, float)):
+                status.append(tr('Available memory: %1 GB', f"{health['available'] / 1e9:.1f}"))
+            status.append(tr('Elapsed: %1 min', max(1, int(health.get('elapsed', 0)) // 60)))
+            self._health = ' · '.join(status)
+            if not getattr(self, '_reading', False): self.progressChanged.emit()
+            return
         phase = event.get("phase", self._phase)
         title, start, end = PHASES.get(phase, (phase, self._progress, self._progress))
         if "fraction" in event:
@@ -606,23 +818,32 @@ class Setup(QObject):
             parts.append(event["note"])
         self._status = " · ".join(parts)
         if event.get("log"):
-            self._log.append(event["log"])
+            self._append_log(event['log'])
             # The journal too, where a test PC's serial console shows why an install stopped.
-            print("install: " + event["log"], file=sys.stderr, flush=True)
         if event.get("error"):
             self._error = event["error"]
         if event.get("recovery"):
             self._recovery = event["recovery"]
-        self._phase = "done" if event.get("done") else phase
-        self.progressChanged.emit()
+        if event.get('done'):
+            self._done_received = True
+        self._phase = 'done' if event.get('done') and not getattr(self, '_proc', None) else phase
+        if not getattr(self, '_reading', False): self.progressChanged.emit()
 
     def _finished(self, code, *_status):
+        self._exit_code = code
         self._read(final=True)
-        self._proc = None
-        if code != 0 or self._phase != "done":
-            self._phase = "failed"
-            self._error = self._error or _("The installer stopped unexpectedly.")
-        self.progressChanged.emit()
+
+    @Property(str, notify=progressChanged)
+    def health(self):
+        return self._health
+
+    @Property(bool, notify=progressChanged)
+    def restarting(self):
+        return self._restarting
+
+    @Property(str, notify=progressChanged)
+    def restartError(self):
+        return self._restart_error
 
     @Slot()
     def retry(self):
@@ -630,8 +851,20 @@ class Setup(QObject):
 
     @Slot()
     def restart(self):
-        if not DEMO:
-            os.system("systemctl reboot")
+        if DEMO or self._restarting:
+            return
+        self._restarting, self._restart_error = True, ''
+        self.progressChanged.emit()
+        def reboot():
+            try:
+                return subprocess.run(['systemctl', 'reboot'], capture_output=True, timeout=15).returncode == 0
+            except (OSError, subprocess.TimeoutExpired): return False
+        def done(ok):
+            if not ok:
+                self._restarting = False
+                self._restart_error = _('Restart could not be requested. You can try again; your installation is saved.')
+            self.progressChanged.emit()
+        self._background(reboot, done)
 
     # -- a Monet installed here whose first start's blue screen was skipped --
     def _found_untrusted(self, key):

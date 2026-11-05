@@ -38,6 +38,34 @@ class LocalApps(unittest.TestCase):
             self.q.native_shortcut(self.program, "My app", self.apps)
         self.assertEqual(entry.read_text(), "personal launcher")
 
+    def test_explicit_options_are_literal_and_keep_the_original_launcher(self):
+        original = self.q.native_shortcut(self.program, "My app", self.apps)
+        arguments = '--profile "My profile" "%U" "$(touch NO)" "`echo X`" "$HOME" "" å'
+        entry = self.q.native_shortcut(self.program, "My profile", self.apps, arguments=arguments)
+        self.assertNotEqual(entry, original)
+        self.assertEqual(self.q.native_shortcut(self.program, "My profile", self.apps, arguments=arguments), entry)
+        tokens = self.q.desktop_entry(entry.read_text())["Exec"].split()[-2:]
+        with patch.object(self.q.subprocess, "Popen") as launch:
+            self.assertTrue(self.q.native_run(*tokens))
+        launch.assert_called_once_with([str(self.program), '--profile', 'My profile', '%U',
+                                       '$(touch NO)', '`echo X`', '$HOME', '', 'å'],
+                                      cwd=self.program.parent, start_new_session=True)
+        self.assertTrue(original.is_file())
+        self.assertFalse((self.root / "NO").exists())
+
+    def test_invalid_options_never_create_a_shortcut_or_start_an_app(self):
+        import json
+        for arguments in ('"unclosed', 'bad\noption', 'a\x00b', 'å' * 4097, 'a ' * 65):
+            with self.assertRaises(ValueError):
+                self.q.native_shortcut(self.program, "Invalid", self.apps, arguments=arguments)
+        self.assertFalse(self.apps.exists())
+        bad = [None, {}, [1], ['a\x00b'], ['x'] * 65, ['å' * 4097]]
+        tokens = [json.dumps(value).encode().hex() for value in bad] + ['invalid', 'ff', '00' * 20001]
+        with patch.object(self.q.subprocess, "Popen") as launch, patch.object(self.q, "run"):
+            for token in tokens:
+                self.assertFalse(self.q.native_run(str(self.program).encode().hex(), token))
+            launch.assert_not_called()
+
     def package_icon(self, icon="demo", contents=None):
         program = self.root / "package/usr/bin/demo"
         program.parent.mkdir(parents=True)

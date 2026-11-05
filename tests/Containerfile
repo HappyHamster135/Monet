@@ -1,0 +1,23 @@
+# Fedora supplies mutually compatible Qt/PySide/KDE packages for desktop tests.
+# No host desktop, user data, system bus or block devices are mounted here.
+FROM registry.fedoraproject.org/fedora:44
+RUN dnf -y install python3 python3-pyside6 python3-gobject python3-dbus python3-pynacl \
+    python3-numpy python3-pillow gtk3 gtk4 nodejs nodejs-npm dbus-daemon dbus-tools \
+    plasma-workspace plasma-desktop plasma-systemmonitor plasma-pa \
+    kf6-kirigami kf6-kconfig plasma-integration kvantum \
+    pipewire pipewire-pulseaudio pipewire-utils pulseaudio-utils \
+    util-linux ntfsprogs dosfstools wimlib-utils cryptsetup openssl \
+    diffutils findutils which git ark \
+    hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \
+    xorg-x11-server-Xvfb mesa-dri-drivers libglvnd-glx \
+ && dnf clean all
+COPY tests/install-electron-runtime.py /tmp/install-electron-runtime.py
+RUN python3 /tmp/install-electron-runtime.py /opt/monet-test-electron \
+ && rm /tmp/install-electron-runtime.py
+ENV MONET_ELECTRON_BINARY=/opt/monet-test-electron/electron
+COPY linux/share/monet/app-integration/electron/package*.json /opt/monet-electron-client/
+RUN cd /opt/monet-electron-client && npm ci --ignore-scripts --omit=optional --no-fund --no-audit --cache=/tmp/monet-npm-cache \
+ && rm -rf /tmp/monet-npm-cache
+ENV MONET_TEST_ELECTRON_DBUS=/opt/monet-electron-client/node_modules/dbus-next
+WORKDIR /src
+CMD ["python3", "tools/test.py", "--require-desktop"]

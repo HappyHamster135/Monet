@@ -10,6 +10,38 @@ class MonetSubmissionGate {
         this.now = now;
         this.salt = cryptoProvider.getRandomValues(new Uint8Array(32));
         this.recent = new Map();
+        this.steps = new Map();
+    }
+    flowOrigin(tab, url) {
+        try {
+            if (!Number.isInteger(tab?.id) || tab.id < 0 || typeof url !== 'string' || url.length > 8192) return '';
+            const page = new URL(url), source = new URL(tab.url);
+            if (page.origin !== source.origin || page.username || page.password || source.username || source.password) return '';
+            if (page.protocol !== 'https:' && !(page.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(page.hostname))) return '';
+            return page.origin;
+        } catch (_) { return ''; }
+    }
+    rememberUsername(tab, username, url) {
+        const origin = this.flowOrigin(tab, url);
+        if (!origin || typeof username !== 'string' || !username || username.length > 4096) return false;
+        for (const [id, entry] of this.steps) {
+            if (this.now() - entry.time >= 120000) this.steps.delete(id);
+        }
+        if (this.steps.size >= 128 && !this.steps.has(tab.id)) return false;
+        this.steps.set(tab.id, {origin, username, time: this.now()});
+        return true;
+    }
+    username(tab, url) {
+        const origin = this.flowOrigin(tab, url), step = this.steps.get(tab?.id);
+        if (!origin || !step || step.origin !== origin || this.now() - step.time >= 120000) {
+            this.steps.delete(tab?.id);
+            return '';
+        }
+        return step.username;
+    }
+    clearFlow(tabId) {
+        if (tabId === undefined) this.steps.clear();
+        else this.steps.delete(tabId);
     }
     async submit(tab, args) {
         const [submitted, username, password, url, previous = []] = args;

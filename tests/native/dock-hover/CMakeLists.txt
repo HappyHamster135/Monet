@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.22)
+project(MonetDockHoverTest LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Quick Test)
+find_package(KF6Config REQUIRED)
+find_package(KF6I18n REQUIRED)
+find_package(Plasma REQUIRED)
+find_package(PlasmaQuick REQUIRED)
+add_executable(dock-hover main.cpp)
+target_link_libraries(dock-hover PRIVATE Qt6::Widgets Qt6::Quick Qt6::Test
+    KF6::ConfigCore KF6::I18n Plasma::Plasma Plasma::PlasmaQuick)

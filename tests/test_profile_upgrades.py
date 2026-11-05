@@ -102,6 +102,67 @@ class ProfileUpgrades(unittest.TestCase):
         self.assertEqual(self.read(), "My font"); self.assertEqual(self.read("accent"), "MISSING")
         self.call("run", str(path)); self.assertEqual(self.read("accent"), "MISSING")
 
+    def recovery_fixture(self):
+        path = self.script(f'"{self.helper}" put --file kdeglobals --group General --key upgradeFont PRIVATE-VALUE\n'
+                           f'"{self.helper}" put --file kdeglobals --group General --key accent Green\n')
+        self.call('run', str(path))
+        return json.loads(self.call('recovery').stdout)['items'][0]
+
+    def test_graphical_recovery_is_redacted_and_preserves_newer_choices(self):
+        item = self.recovery_fixture()
+        self.assertEqual(item['settings'], 2); self.assertEqual(item['remaining'], 2)
+        self.assertEqual(item['areas'], ['appearance'])
+        self.assertNotIn('PRIVATE-VALUE', json.dumps(item)); self.assertNotIn(str(self.config), json.dumps(item))
+        self.user('My newer font')
+        result = json.loads(self.call('recover', item['id'], item['fingerprint']).stdout)
+        self.assertEqual(result, dict(ok=False, state='conflicts', restored=1, kept=1))
+        self.assertEqual(self.read(), 'My newer font'); self.assertEqual(self.read('accent'), 'MISSING')
+        fresh = json.loads(self.call('recovery').stdout)['items'][0]
+        self.assertEqual(fresh['remaining'], 1)
+
+    def test_changed_review_and_unknown_record_never_restore(self):
+        item = self.recovery_fixture(); saved = self.record()
+        saved['runs'][item['id']]['status'] = 'failed'
+        (self.state/'monet/profile/state.json').write_text(json.dumps(saved))
+        for token in (item['id'], '0'*32):
+            result = json.loads(self.call('recover', token, item['fingerprint']).stdout)
+            self.assertEqual(result['state'], 'changed')
+        self.assertEqual(self.read(), 'PRIVATE-VALUE')
+
+    def test_live_migration_is_busy_but_abandoned_run_is_recoverable(self):
+        import fcntl
+        item = self.recovery_fixture()
+        with (self.state/'monet/profile/run.lock').open('a') as locked:
+            fcntl.flock(locked, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertEqual(json.loads(self.call('recovery').stdout)['state'], 'busy')
+            self.assertEqual(json.loads(self.call('recover', item['id'], item['fingerprint']).stdout)['state'], 'busy')
+        saved = self.record(); saved['runs'][item['id']]['status'] = 'running'
+        (self.state/'monet/profile/state.json').write_text(json.dumps(saved))
+        fresh = json.loads(self.call('recovery').stdout)['items'][0]
+        self.assertEqual(fresh['status'], 'interrupted')
+        result = json.loads(self.call('recover', fresh['id'], fresh['fingerprint']).stdout)
+        self.assertEqual(result, dict(ok=True, state='done', restored=2, kept=0))
+        self.assertEqual(self.read(), 'MISSING')
+
+    def test_unreadable_or_linked_history_is_not_reported_as_empty(self):
+        self.assertEqual(json.loads(self.call('recovery').stdout), dict(ok=True, state='ready', items=[]))
+        file = self.state/'monet/profile/state.json'
+        for content in ('bad json', '[]', '{"version":99}', '{"version":1,"owned":{},"runs":{"bad":{}},"applied":[],"blocked":[]}'):
+            file.write_text(content)
+            self.assertEqual(json.loads(self.call('recovery').stdout)['state'], 'unavailable')
+            self.assertEqual(file.read_text(), content)
+        other = self.root/'personal'; other.write_text('keep this'); file.unlink(); file.symlink_to(other)
+        self.assertEqual(json.loads(self.call('recovery').stdout)['state'], 'unavailable')
+        self.assertEqual(other.read_text(), 'keep this')
+
+    def test_a_write_reporting_success_without_effect_is_not_marked_undone(self):
+        item = self.recovery_fixture(); tools = self.root/'bin'; tools.mkdir()
+        fake = tools/'kwriteconfig6'; fake.write_text('#!/bin/sh\nexit 0\n'); fake.chmod(0o755)
+        result = json.loads(self.call('recover', item['id'], item['fingerprint'],
+                                     env=dict(self.env, PATH=str(tools)+os.pathsep+self.env['PATH'])).stdout)
+        self.assertEqual(result, dict(ok=False, state='conflicts', restored=0, kept=2))
+        self.assertEqual(self.read(), 'PRIVATE-VALUE')
+
     def test_write_failure_does_not_record_success(self):
         tools = self.root / "bin"; tools.mkdir()
         fail = tools / "kwriteconfig6"; fail.write_text("#!/bin/sh\nexit 1\n"); fail.chmod(0o755)

@@ -306,9 +306,12 @@ class BootMount(unittest.TestCase):
                 receipt.unlink(missing_ok=True)
                 if has_key: key.touch()
                 if has_receipt: receipt.touch()
-                code = subprocess.run(["systemd-analyze", "condition", f"ConditionPathExists=|{key}",
-                                       f"ConditionPathExists=|{receipt}"], capture_output=True, timeout=10).returncode
-                self.assertEqual(code == 0, has_key or has_receipt)
+                # New systemd initializes a manager even for condition evaluation.
+                # Keep its runtime directory private and never use the host manager.
+                result = subprocess.run(["systemd-analyze", "--user", "condition", f"ConditionPathExists=|{key}",
+                                         f"ConditionPathExists=|{receipt}"],
+                                        env=dict(os.environ, XDG_RUNTIME_DIR=tmp), capture_output=True, timeout=10)
+                self.assertEqual(result.returncode == 0, has_key or has_receipt, result.stderr)
 
 
 @unittest.skipUnless(shutil.which("cryptsetup"), "cryptsetup is needed for disposable LUKS2 fixtures")

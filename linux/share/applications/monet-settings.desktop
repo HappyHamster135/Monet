@@ -124,7 +124,7 @@ Keywords[uk]=налаштування;параметри;wifi;вайфай;bluet
 Keywords[vi]=cài đặt;tùy chọn;wifi;bluetooth;màn hình;âm thanh;hình nền;tối;sáng;cập nhật;
 Keywords[zh_CN]=设置;偏好设置;首选项;wifi;无线网络;蓝牙;bluetooth;显示;屏幕;声音;壁纸;深色;浅色;更新;
 Keywords[zh_TW]=設定;偏好設定;wifi;無線網路;bluetooth;藍牙;顯示器;螢幕;聲音;桌布;深色;淺色;更新;settings;
-Actions=light;wifi;bluetooth;phone;printers;display;sound;datetime;users;input;power;privacy;passwords;security;notifications;accessibility;apps;storage;backups;games;windows;updates;about;
+Actions=light;wifi;bluetooth;phone;printers;display;sound;datetime;users;input;power;privacy;passwords;security;notifications;accessibility;apps;storage;backups;games;windows;updates;recovery;about;
 StartupNotify=true
 SingleMainWindow=true
 
@@ -824,6 +824,10 @@ Name[vi]=Cập nhật
 Name[zh_CN]=更新
 Name[zh_TW]=更新
 Exec=@LIBEXECDIR@/monet-settings updates
+
+[Desktop Action recovery]
+Name=Recovery
+Exec=@LIBEXECDIR@/monet-settings recovery
 
 [Desktop Action about]
 Name=About Monet

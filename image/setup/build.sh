@@ -72,8 +72,12 @@ chroot "$ROOT" fc-cache -f >/dev/null
 chroot "$ROOT" plymouth-set-default-theme monet
 KVER=$(ls "$ROOT/lib/modules" | sort -V | tail -1)
 echo "== Starting up: kernel $KVER"
+# There is no syslog socket inside this disposable build chroot. Keep dracut's
+# console diagnostics without trying to send them to the builder's host logger.
+printf 'sysloglvl=0\n' > "$ROOT/etc/dracut.conf.d/99-monet-container-build.conf"
 chroot "$ROOT" dracut --no-hostonly --force --quiet --add "dmsquash-live plymouth" \
     --omit "iscsi nfs nbd fcoe fcoe-uefi multipath" /boot/initramfs-live.img "$KVER"
+rm "$ROOT/etc/dracut.conf.d/99-monet-container-build.conf"
 cp "$ROOT/lib/modules/$KVER/vmlinuz" "$ISO/images/pxeboot/vmlinuz"
 cp "$ROOT/boot/initramfs-live.img" "$ISO/images/pxeboot/initrd.img"
 
@@ -114,7 +118,7 @@ mcopy -i "$W/efiboot.img" "$ISO"/EFI/BOOT/* ::/EFI/BOOT/
 echo "== Squashing"
 rm -rf "$ROOT"/var/cache/dnf/* "$ROOT"/var/log/dnf* "$ROOT"/boot/efi/EFI \
        "$ROOT"/boot/initramfs-* "$ROOT"/boot/vmlinuz-* "$ROOT"/boot/loader "$ROOT"/boot/System.map-*
-mksquashfs "$ROOT" "$ISO/LiveOS/squashfs.img" -comp xz -Xbcj x86 -b 1M -noappend -quiet
+mksquashfs "$ROOT" "$ISO/LiveOS/squashfs.img" -comp xz -Xbcj x86 -b 1M -noappend -quiet -processors "$(nproc)"
 
 echo "== $OUT"
 xorriso -as mkisofs -o "$OUT" -V "$LABEL" -iso-level 3 -joliet -joliet-long -rational-rock \

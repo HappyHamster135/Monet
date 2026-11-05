@@ -1,0 +1,12 @@
+{
+  "version": "0.1.1",
+  "extension_id": "{d6b46926-af45-4fa5-b746-bd36f68af460}",
+  "sha256": "72ffb607b98999e1e0b680ce347425b2d1cd1e4e7d6629c28c4b079a5cd97d47",
+  "signing_record": "https://addons.mozilla.org/en-US/developers/addon/63215ddcb8374935a449/versions/6659730",
+  "upstream_sha256": "ae41157a3f017b0773abba2097d5b0056241631d0a38ad36d68d0b24b1a409c1",
+  "sources": {
+    "build.py": "1c39a85344f218ca9f72857982c11a12d6af5d9a6a1bfc630d5b89eeb171f7f0",
+    "automatic-submit.js": "d7197980aa61a071c4a58c1d27524dc1dccff69ba37148f67f0cebb8e7c74879",
+    "LICENSE.upstream": "589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2"
+  }
+}

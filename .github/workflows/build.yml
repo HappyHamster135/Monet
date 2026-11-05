@@ -26,20 +26,49 @@ jobs:
         run: sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools >/dev/null
       - name: Tests
         run: cargo test --workspace
+      - name: Read-only boot cleanup in a private mount namespace
+        run: sudo unshare --mount --propagation private --fork python3 tests/fixtures/seal-boot-mount.py
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Shell scripts
-        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh tools/build-settings-style.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh tools/push-image.sh tools/build-settings-style.sh image/finish-image.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile linux/libexec/monet-passwords linux/libexec/monet-passwords-browser linux/share/monet/passwords/*.py tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-startup linux/libexec/monet-storage-recovery linux/libexec/monet-files-tools linux/libexec/monet-system-info linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile linux/libexec/monet-passwords linux/libexec/monet-passwords-browser linux/share/monet/passwords/*.py tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl >/dev/null
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl dbus-daemon dbus-bin >/dev/null
           python3 tools/test.py
 
+  desktop:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Native Qt and KDE test runtime
+        run: podman build -f tests/Containerfile -t localhost/monet-desktop-tests:44 .
+      - name: Pinned browser test input (the builder verifies its SHA-256)
+        run: |
+          mkdir -p target/desktop-tests
+          curl --fail --location --retry 3 \
+            https://addons.mozilla.org/firefox/downloads/file/5078406/keepassxc_browser-1.10.4.1.xpi \
+            -o target/desktop-tests/upstream.xpi
+      - name: Required desktop tests (private home, bus and sound server)
+        run: |
+          mkdir -p target/desktop-tests
+          podman run --rm --init --userns=keep-id --network=none --cap-drop=ALL --security-opt=no-new-privileges \
+            -v "$PWD:/src:ro" -v "$PWD/target/desktop-tests:/results" \
+            -e MONET_TEST_BROWSER_UPSTREAM=/results/upstream.xpi \
+            localhost/monet-desktop-tests:44 \
+            python3 tools/test.py --require-desktop --summary /results/summary.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: desktop-test-results
+          path: target/desktop-tests/summary.json
+          if-no-files-found: warn
+
   linux:
-    needs: test
+    needs: [test, desktop]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,7 +102,7 @@ jobs:
           if-no-files-found: error
 
   windows:
-    needs: test
+    needs: [test, desktop]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -121,7 +150,7 @@ jobs:
           fi
 
   os:
-    needs: [test, check]
+    needs: [test, desktop, check]
     if: needs.check.outputs.new == 'true'
     uses: ./.github/workflows/image.yml
     permissions:

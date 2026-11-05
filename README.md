@@ -70,8 +70,12 @@ cargo build --release -p monet-bridge                                # on Window
 ```
 
 Run the Python and Qt checks on Linux with `python3 tools/test.py`, or send them
-to the configured test VM with `python tools/vm.py tests`. Each module has its own
-process so Qt fixtures cannot leave type registrations in another test app.
+to the configured test VM with `python tools/vm.py tests`. The Linux runner creates
+a temporary home and private session bus. Each module has its own process and
+timeout, so Qt fixtures cannot leave type registrations in another test app.
+`--require-desktop` rejects missing desktop dependencies and unexpected skips;
+the required CI desktop job supplies the matching Fedora Qt/KDE runtime and
+the pinned browser test archive. See [test environments](docs/TESTING.md#automated-test-environments).
 
 Linux release packaging also needs CMake, a C++17 compiler and Qt 6 Widgets/Test
 development packages (`qt6-base-dev` on Debian/Ubuntu, `qt6-qtbase-devel` on Fedora).
@@ -81,6 +85,10 @@ run `bash tools/build-settings-style.sh linux/lib/monet/qt` before `linux/instal
 
 Pushing a new version number in `VERSION` builds everything (the apps, the
 Monet OS image, and the installer ISO) and publishes a release.
+Released image version tags stay fixed; scheduled base updates move only
+`latest`. Installers use their versioned images. A locally qualified release
+can instead publish its exact verified artifacts before advancing the default
+branch; its existing version tag prevents an automatic replacement build.
 
 ## Principles
 

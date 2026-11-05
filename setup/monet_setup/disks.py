@@ -15,6 +15,7 @@ with ntfsresize: Windows keeps what it uses and half its free space, at least
 """
 
 import json
+import hashlib
 import os
 import re
 import subprocess
@@ -62,11 +63,41 @@ def flag(value):
 
 def lsblk():
     out = run("lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,RM,RO,TRAN,MODEL,VENDOR,PARTTYPE,FSTYPE,LABEL,"
-              "PARTLABEL,MOUNTPOINTS")
+              "PARTLABEL,MOUNTPOINTS,SERIAL,WWN,MAJ:MIN,LOG-SEC,PARTUUID,UUID,START", timeout=15)
     try:
         return json.loads(out or "{}").get("blockdevices", [])
     except ValueError:
         return []
+
+
+def descendants(device):
+    yield device
+    for child in device.get("children", []):
+        yield from descendants(child)
+
+
+def identity(disk):
+    """Physical identity, kept separate from the layout that installation changes."""
+    return {key: disk.get(key) for key in ('path', 'size', 'serial', 'wwn', 'model', 'maj:min', 'log-sec')}
+
+
+def layout(disk):
+    fields = ('path', 'size', 'start', 'parttype', 'partuuid', 'uuid', 'fstype')
+    parts = [{key: part.get(key) for key in fields} for part in disk.get('children', [])]
+    return hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest()
+
+
+def in_use(disk, allowed=()):
+    if any(child is not disk and child.get('type') not in (None, 'part') for child in descendants(disk)):
+        return True  # An active encrypted/LVM/RAID mapping also owns its backing device.
+    return any(point and not any(point == path or point.startswith(path + '/') for path in allowed)
+               for child in descendants(disk) for point in (child.get('mountpoints') or []))
+
+
+def contents(disk):
+    return [dict(path=p.get('path', ''), name=p.get('label') or p.get('partlabel') or p.get('fstype') or _('Partition'),
+                 size=size_text(int(p.get('size') or 0)), filesystem=p.get('fstype') or '')
+            for p in disk.get('children', [])]
 
 
 def live_media(devices):
@@ -76,10 +107,10 @@ def live_media(devices):
     already has Monet (monet, MONETWIN, MONETSETUP): that disk can be used."""
     found = set()
     for disk in devices:
-        for part in [disk] + disk.get("children", []):
+        for part in descendants(disk):
             points = [p for p in (part.get("mountpoints") or []) if p]
             label = part.get("label") or ""
-            if any(p.startswith("/run/initramfs/live") for p in points) or label.startswith("Monet-") \
+            if any(p == '/' or p.startswith("/run/initramfs/live") for p in points) or label.startswith("Monet-") \
                     or label == "MONETEFI":
                 found.add(disk["name"])
     return found
@@ -99,15 +130,12 @@ def size_text(size):
 
 
 def disks(devices=None):
-    """Disks Monet could go on, biggest first. Never the USB stick it's running
-    from; USB and removable disks only when there's nothing else."""
+    """All possible targets, internal first. The running system is never a target."""
     devices = lsblk() if devices is None else devices
     media = live_media(devices)
     usable = [d for d in devices if d.get("type") == "disk" and d["name"] not in media and not flag(d.get("ro"))
               and not d["name"].startswith(("zram", "loop", "sr", "nbd", "ram")) and int(d.get("size") or 0) > 0]
-    internal = [d for d in usable if not flag(d.get("rm")) and d.get("tran") != "usb"]
-    chosen = internal or usable
-    return sorted(chosen, key=lambda d: -int(d["size"]))
+    return sorted(usable, key=lambda d: (flag(d.get('rm')) or d.get('tran') == 'usb', -int(d['size'])))
 
 
 def windows_mib(size_mib):
@@ -170,7 +198,7 @@ def plan_keep(disk, free_bytes, shrink=None):
     """Monet next to what's there: the free space, or room made by shrinking Windows'
     drive; Windows' EFI partition. shrink(path) says how small the drive can get."""
     if not efi_partition(disk):
-        return None, _("This disk has no EFI partition, so Windows doesn't start from it.")
+        return None, _("This drive has no EFI system partition. Choose another drive, or prepare space with a partitioning tool before installing alongside existing data.")
     monet = free_bytes // MIB - BOOT_MIB - 16
     if monet >= MIN_MONET_MIB:
         return {"boot": BOOT_MIB, "monet": monet}, ""
@@ -181,7 +209,7 @@ def plan_keep(disk, free_bytes, shrink=None):
     if windows is None or shrink is None:
         return None, no_room
     if (windows.get("fstype") or "").lower() == "bitlocker":
-        return None, _("Windows' drive is encrypted with BitLocker, so Monet can't make room on it. Turn BitLocker off in Windows first, or choose Monet and Windows.")  # noqa: E501
+        return None, _("Windows' drive is encrypted with BitLocker, so Monet can't make room on it. Choose another drive to keep it unchanged, or turn BitLocker off in Windows first.")
     smallest, why = shrink(windows["path"])
     if smallest is None:
         return None, why or no_room
@@ -202,7 +230,7 @@ def mount_windows(path):
     try:
         os.makedirs(WINDOWS_MOUNT, exist_ok=True)
         if os.path.ismount(WINDOWS_MOUNT):
-            return True
+            return False  # A previous probe may not have unmounted; never reuse another drive.
         # ntfs-3g reads a drive Windows left asleep too.
         for kind in ("ntfs-3g", "ntfs3"):
             if subprocess.run(["mount", "-t", kind, "-o", "ro", path, WINDOWS_MOUNT],
@@ -280,7 +308,7 @@ def windows_files(disk):
     return found
 
 
-def offer(devices=None, free=None, shrink=None, files=None):
+def offer(devices=None, free=None, shrink=None, files=None, details=True):
     """What the Ready page shows: each disk, whether "next to my Windows" fits on it
     (and why not), and the files Windows has to bring along."""
     free = free or (lambda path: largest_free(path))
@@ -288,14 +316,30 @@ def offer(devices=None, free=None, shrink=None, files=None):
     files = files or windows_files
     out = []
     for disk in disks(devices):
-        start, sectors, sector = free(disk["path"])
-        keep, why = plan_keep(disk, sectors * sector, shrink)
+        keep, why = None, ''
+        if details:
+            start, sectors, sector = free(disk["path"])
+            keep, why = plan_keep(disk, sectors * sector, shrink)
         has_windows = windows_partition(disk) is not None
-        found = files(disk) if has_windows else None
+        found = files(disk) if details and has_windows else None
         # They're copied: room for them, and Monet's own besides.
         if found and keep:
             found["fits"] = found["total"] // MIB <= keep["monet"] - MONET_OWN_MIB
         out.append({"path": disk["path"], "label": describe(disk), "size": int(disk["size"]),
                     "erase": plan_erase(int(disk["size"])), "keep": keep, "keepWhy": why,
-                    "hasWindows": has_windows, "files": found})
+                    "hasWindows": has_windows, "files": found, 'checked': details,
+                    'identity': identity(disk), 'layout': layout(disk), 'contents': contents(disk),
+                    'external': flag(disk.get('rm')) or disk.get('tran') == 'usb',
+                    'busy': in_use(disk)})
     return out
+
+
+def inspect_keep(expected):
+    current = next((d for d in disks() if d['path'] == expected['path']), None)
+    if current is None or identity(current) != expected['identity'] or layout(current) != expected['layout']:
+        return dict(keep=None, keepWhy=_('This drive changed. Refresh the drive list and choose again.'), checked=True)
+    if in_use(current):
+        return dict(keep=None, keepWhy=_('This drive is in use. Close its files and unmount it before installing.'), checked=True)
+    _, sectors, sector = largest_free(current['path'])
+    keep, why = plan_keep(current, sectors * sector, shrink_info)
+    return dict(keep=keep, keepWhy=why, checked=True)

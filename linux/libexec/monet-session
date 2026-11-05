@@ -83,7 +83,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.9.5"
+current="$looks/look-0.9.6"
 # Only new accounts created from the image carry this marker. Never reset an
 # existing account's display scale during an upgrade or a later sign-in.
 if [ -f "$looks/display-defaults-pending" ]; then

@@ -19,6 +19,9 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+# Verify before making any system changes; the browser keeps signature checks on.
+python3 "$SRC/share/monet/passwords/connector.py"
+
 BINDIR="$PREFIX/bin"
 DATADIR="$PREFIX/share"
 LIBEXECDIR="$PREFIX/libexec"
@@ -114,6 +117,9 @@ done
 put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"
 # Settings → Security's fixes: root's part, always after an administrator's password.
 put 755 "$SRC/libexec/monet-secure" "$LIBEXECDIR/monet-secure"
+# Retained installation recovery requires normal administrator authentication.
+put 755 "$SRC/libexec/monet-storage-recovery" "$LIBEXECDIR/monet-storage-recovery"
+put 755 "$SRC/libexec/monet-startup" "$LIBEXECDIR/monet-startup"
 # A guest who leaves nothing behind (Settings → Accounts): root's part, the same.
 put 755 "$SRC/libexec/monet-guest" "$LIBEXECDIR/monet-guest"
 # A guest's things go when they sign out: logind ends what they left running (only theirs),
@@ -170,6 +176,7 @@ put 644 "$SRC/share/kio/servicemenus/monet-earlier.desktop" "$DATADIR/kio/servic
 put 644 "$SRC/share/kio/servicemenus/monet-windows-program.desktop" "$DATADIR/kio/servicemenus/monet-windows-program.desktop"
 put 644 "$SRC/share/kio/servicemenus/monet-local-app.desktop" "$DATADIR/kio/servicemenus/monet-local-app.desktop"
 put 644 "$SRC/share/kio/servicemenus/monet-folder-tools.desktop" "$DATADIR/kio/servicemenus/monet-folder-tools.desktop"
+put 644 "$SRC/share/kio/servicemenus/monet-archive-apps.desktop" "$DATADIR/kio/servicemenus/monet-archive-apps.desktop"
 
 # The look: paintings, the Plasma style and global theme, Monet's widgets,
 # colors, the glass app style, the terminal's colors and the fonts.
@@ -222,6 +229,7 @@ tree "$SRC/share/ksysguard/sensorfaces/org.monet.hardware" "$DATADIR/ksysguard/s
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.totals" "$DATADIR/ksysguard/sensorfaces/org.monet.totals"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.performance" "$DATADIR/ksysguard/sensorfaces/org.monet.performance"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.system" "$DATADIR/ksysguard/sensorfaces/org.monet.system"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.startup" "$DATADIR/ksysguard/sensorfaces/org.monet.startup"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.applications" "$DATADIR/ksysguard/sensorfaces/org.monet.applications"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.processes" "$DATADIR/ksysguard/sensorfaces/org.monet.processes"
 fill "$DATADIR"/ksysguard/sensorfaces/org.monet.*/contents/ui/*.qml
@@ -282,6 +290,9 @@ put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-s
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 put 644 "$SRC/systemd/user/monet-keys.service" "$USERUNITDIR/monet-keys.service"
+put 644 "$SRC/systemd/user/monet-password-offers.service" "$USERUNITDIR/monet-password-offers.service"
+put 644 "$SRC/systemd/user/plasma-foreground-booster.service.d/monet-session.conf" \
+    "$USERUNITDIR/plasma-foreground-booster.service.d/monet-session.conf"
 put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
 put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
 put 644 "$SRC/systemd/user/monet-files-place.path" "$USERUNITDIR/monet-files-place.path"
@@ -362,6 +373,17 @@ tree "$SRC/share/monet/window-buttons" "$DATADIR/monet/window-buttons"
 cp -r "$SRC/share/monet/settings-app" "$DATADIR/monet/settings-app"
 install -d "$DATADIR/monet/passwords"
 install -m 644 "$SRC/share/monet/passwords/"*.py "$DATADIR/monet/passwords/"
+install -m 644 "$SRC/share/monet/passwords/connector.xpi" "$DATADIR/monet/passwords/connector.xpi"
+# App authors can vendor the native Electron client without a browser extension.
+# Dependencies are bundled by the integrating app, not loaded by the OS service.
+tree "$SRC/share/monet/app-integration" "$DATADIR/monet/app-integration"
+# Carry the derivative's preferred source and reproduction instructions in the OS.
+connector_source="$SRC/share/doc/monet/passwords-connector"
+[ -d "$connector_source" ] || connector_source="$SRC/../browser/monet-passwords"
+install -d "$DATADIR/doc/monet/passwords-connector"
+for source in README.md LICENSE.upstream build.py automatic-submit.js release.json; do
+    install -m 644 "$connector_source/$source" "$DATADIR/doc/monet/passwords-connector/"
+done
 # The Store's window (monet-store), and its front page: Monet's picks under strips of The Hours.
 cp -r "$SRC/share/monet/store-app" "$DATADIR/monet/store-app"
 tree "$SRC/share/monet/store" "$DATADIR/monet/store"

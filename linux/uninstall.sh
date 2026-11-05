@@ -87,6 +87,7 @@ rm -f /etc/systemd/system/monet-guest-wipe.service /etc/systemd/logind.conf.d/50
 [ -f /etc/pam.d/su ] && sed -i '/pam_succeed_if\.so user != guest quiet/d' /etc/pam.d/su
 # Windows' Games folder stays on Windows' drive, with its games; Monet stops sharing it.
 rm -f "/etc/systemd/user/app-steam@autostart.service.d/monet-steam-share.conf"
+rm -f /etc/systemd/user/plasma-foreground-booster.service.d/monet-session.conf
 rm -f '/etc/systemd/user/app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf'
 systemctl disable monet-windows-drive.service monet-windows-files.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-windows-files.service \
@@ -95,6 +96,7 @@ systemctl daemon-reload
 
 systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
+    /etc/systemd/user/monet-password-offers.service \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service /etc/systemd/user/monet-keys.service \
     /etc/systemd/user/monet-names.path /etc/systemd/user/monet-names.service \
     /etc/systemd/user/monet-files-place.path /etc/systemd/user/monet-files-place.service \
@@ -134,11 +136,15 @@ done
 rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-folder-tools.desktop" \
+    "$PREFIX/share/kio/servicemenus/monet-archive-apps.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-earlier.desktop" "$PREFIX/share/applications/monet-replay.desktop" \
     "$PREFIX/share/applications/monet-windows-program.desktop" "$PREFIX/share/kio/servicemenus/monet-windows-program.desktop" \
     "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-store.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-performance.page"
+rm -f "$PREFIX/share/plasma-systemmonitor/monet-startup.page"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.startup"
+rm -f "$PREFIX/libexec/monet-startup" "$PREFIX/libexec/monet-storage-recovery"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-applications.page" "$PREFIX/share/plasma-systemmonitor/monet-processes.page"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-system.page"
 rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.system"
@@ -170,6 +176,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/aurorae/themes/MonetMatte" "$PREFIX/share/aurorae/themes/MonetSmokeMatte" \
     "$PREFIX/share/kwin/scripts/monet-snap" "$PREFIX/share/kwin/effects/monet-motion" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
+    "$PREFIX/share/doc/monet/passwords-connector" \
     /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."

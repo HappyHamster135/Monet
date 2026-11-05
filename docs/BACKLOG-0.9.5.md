@@ -1,5 +1,348 @@
 # Monet 0.9.5 laptop backlog
 
+## 0.9.6 release preparation — 4 November 2026
+
+The latest status, acceptance evidence, local laptop deployment and remaining scope are maintained in
+[RELEASE-0.9.6.md](RELEASE-0.9.6.md). VERSION is now 0.9.6 locally. Both complete
+graphics images, both installers and the Linux/Windows/USB packages are built.
+The final desktop suite is green, and the published-baseline upgrade/rollback
+preserves user data, preferences, Startup choices and the second virtual drive.
+The new recovery tools also pass against the installed candidate. Low-space and
+offline encrypted retry checks pass, including TPM/recovery-key boots after
+bootstrap-key removal. Native update retry acceptance is complete. The native
+sign-in screen now follows Monet's styling, including compact/RTL layouts,
+password retry, on-screen keyboard and idle/wake behaviour. The final desktop
+run now passes 1,326 tests with 16 documented skips; separate native/PowerShell
+checks cover the applicable skipped cases. RC8 also fixes atomic file restoration,
+snapshot selection and ordinary-user rollback diagnostics. Recorded previews can
+be retired reversibly before the requested local laptop update. Nothing is
+committed, pushed or published; physical checks remain deferred.
+
+## 0.9.6 polish continuation — 4 November 2026
+
+Current instruction: local source, image builds and isolated container/VM tests.
+Nothing committed, pushed, published or installed into the running desktop.
+Physical hardware checks remain deferred. VERSION was still 0.9.5 during this
+earlier pass; see the release preparation section above for the current state.
+
+**Storage recovery, Startup and troubleshooting: implemented locally.**
+Settings → Storage now finds retained unfinished installations on the running
+Monet disk, reviews their referenced size and exports the matching account's
+files to a chosen folder/drive before explicit permanent removal. A private
+mount namespace, retained-root identity checks, mounted-root protection and
+administrator authentication guard these operations. Nested home subvolumes
+and sparse files are included; incomplete exports keep a `.partial` suffix.
+Other accounts' files are not exported. Removal warns that every account's
+files inside that retained installation will be removed. The active `root`,
+its OS rollback and other drives are outside this operation's scope.
+
+Task Manager has a **Startup** page for adding installed apps and turning
+sign-in apps on/off. It preserves desktop-entry arguments and conditions,
+writes verified user overrides, protects managed desktop components and reports
+stale/failed changes. Search and empty/error states are native Monet controls;
+there is no new daemon or idle polling. Session restoration remains separate.
+Settings → Recovery adds an explicit check of free space, update/background
+jobs, file snapshots and OS rollback availability, with next-action links and
+a copyable, allowlisted report preview containing no logs or personal paths.
+
+Storage's optional breakdown now uses one bounded native directory traversal,
+with an eight-second/output budget and labelled partial results. A same-session
+8,400-file fixture measured median 13.6 ms versus 35.7 ms for the previous
+repeated scans; this is a local microbenchmark, not a whole-OS speed comparison.
+Keyboard activation, stale search feedback, Smoke contrast and narrow layouts
+were fixed during native testing. Mist/Smoke renders were checked from 100% to
+200% scaling. Current free space stays above the retained-installation list.
+
+Validation: the full required desktop suite passed **1,304 Python tests**
+(1,320 discovered, 16 documented skips), all **27 JavaScript checks** and the
+signed browser connector reproduction/form checks. Subsequent affected-area
+coverage passed **459 checks with no skips**, including the three added export
+checks; the final recovery helper also passed its 22-check module and real VM
+checks after the sparse-file change. The rebuilt Plasma 6.8.2 Task Manager
+loads Startup and calls its helper once. Disposable Btrfs VM checks cover
+export, nested homes, sparse files, stale tokens, mounted candidates, recursive
+cleanup and preservation of the active root, existing user files/preferences
+and the second virtual disk. FAT export publication refuses existing files.
+Evidence: `target/polish-storage-2026-11-04/` and TESTING.md. No new full OS image
+or Setup ISO was built for these three additions; no live desktop change or Git
+commit/push occurred. Hardware, broader cross-app polish and language review
+remain release work.
+
+**Performance history and English spelling follow-up:** Performance now shows
+the first reading as a point at Now, draws a line after the next reading and
+expands the time scale with the available history, up to the latest 60 seconds.
+Pausing freezes the trace; resuming or changing devices starts a fresh one.
+Invalid readings do not become zeroes, and delayed timers/clock changes cannot
+leave an unbounded or misleading history. Native rendering is tested with Mesa
+and a private virtual display, in addition to the existing navigation tests.
+
+The image's four English Hunspell variants now prioritize 72 common contractions
+and misspellings, including `im` → `I'm` and `preformace` →
+`performance`. Existing regional words, dictionary encodings and valid words
+such as `ill`, `well` and `its` are preserved. This improves suggestions in apps
+using the system dictionaries; it does not silently replace typed text. The
+owner's ChatGPT desktop app uses Chromium's app-managed spelling menu, which
+this OS dictionary change does **not** update. Better suggestions in that chat,
+context-aware correction and consistent behavior across bundled/sandboxed app
+dictionaries remain open. See TESTING.md for the local validation boundaries.
+
+**Dock hover follow-up:** fixed locally. A cold native ToolTipArea fixture
+reproduces the dock's ancestor hover tracker missing pointer movement entirely.
+Passive trackers now attach directly to each task's native tooltip area and share
+the current pointer for neighbour magnification. Trash uses the same handler.
+Native tooltip delivery, clicks and drag handling remain intact; leaving,
+disable/re-enable, hidden windows and removal of the hovered task recover cleanly.
+There is no new polling or resident helper. All **411 targeted checks pass**;
+both Plasma 6.8.2 native plugins were rebuilt and exercised in a disposable
+applet host. The source patch also applies twice cleanly to Plasma 6.7.5.
+The running desktop was not changed; this remains a local 0.9.6 change.
+
+**096-01 — graphical desktop recovery: implemented locally.** Settings → Recovery
+links to file backups and the existing OS rollback page, and previews recent
+journaled desktop preference/shortcut changes. Explicit review precedes undo;
+keyboard focus starts on Cancel. The unprivileged helper refuses a changed
+preview or a live migration, preserves newer edits, rereads preferences after a
+write, and distinguishes empty, busy, unreadable, partial and completed outcomes.
+It exposes counts and affected areas without preference values, launcher commands
+or personal paths. Undo is journaled per change, does not close apps, and never
+signs out or reboots automatically. It covers Monet's recorded migrations, not
+arbitrary preferences, document recovery or repair of an unbootable system.
+
+Recovery participates in Settings search and desktop actions, uses the existing
+visual components, and adds no polling loop or resident service. Narrow-window
+review exposed focus scrolling before the text had finished reflowing; the
+scroller now follows the final content height too, and the selected sidebar
+page stays visible after resizing. Singular/plural counts are
+correct. The 40 new catalog entries preserve existing translations; untranslated
+additions still fall back to English and need language review.
+
+**Validation:** the required Fedora desktop run passed **1,259 Python tests
+across 77 modules**, with 16 documented skips (1,275 discovered), zero failures,
+and all **27 JavaScript checks** plus signed-connector reproduction passing.
+The final expanded keyboard/reflow check also passed separately. Native Qt
+renders at 1000×780 and 760×520 in Mist and Smoke were inspected; review controls
+remain visible after text reflow. This pass exercises real KConfig commands in
+disposable homes and native QML with a synthetic helper, including newer edits,
+stale previews, active/interrupted migrations, corrupt/symlinked journals and a
+write that reports success without changing the value. Translation freshness,
+Python syntax and whitespace checks pass. Evidence: `target/polish096-2026-11-04/`.
+The first container returned 143 after its successful report. A complete
+confirmation run recorded the test runner exit code and container exit code as
+zero; both full runs report the same counts. No test failure was reproduced.
+Offscreen software rendering still shows sidebar glyphs outside its clipped
+list; render-path isolation remains part of 096-04. A temporary layered-render
+probe stalled and was stopped; it was not applied to production sources.
+No full OS image was built or physical hardware exercised in this pass.
+
+Remaining work, in priority order:
+
+| Item | Next evidence or implementation | Status |
+| --- | --- | --- |
+| 096-02 — install, upgrade and rollback | Both complete images build. Keep-data and offline encrypted recovery installations finish cleanly; software-TPM second boot and recovery-key checks pass. Published-to-candidate and final desktop-rebuild upgrade/rollback preserve data and preferences. Evidence and exact artifact boundaries are in TESTING.md. | Local acceptance matrix passes; broader interruption/low-space and real Windows-shrink cases remain open. Hardware deferred. |
+| 096-03 — recovery from unfinished installs | Guided review, chosen-drive archive recovery and explicit cleanup now pass local native/VM checks. Other disks/unbootable systems and manual per-partition layout control remain separate gaps. | Implemented locally; fresh release-image integration remains. |
+| 096-04 — consistent everyday UI | Finish a keyboard, scaling, Mist/Smoke, error/empty/busy-state and screen-reader pass across core apps, including GTK/Electron/Flatpak boundaries. Review translations of installer/recovery strings. | Plasma snap-window import and foreground-helper startup crashes fixed and verified in the rebuilt image; broad acceptance open. |
+| 096-05 — complete Windows game trip | Supported-game matrix, Windows drivers/Steam readiness, game start, return and work restoration, including cancellation and failed launch. | Software fixtures exist; physical game acceptance deferred. |
+| 096-06 — comparative performance | Same-machine, same-workload timings and frame times, memory accounting, battery/temperature and end-to-end task success. Protocol is in TESTING.md. | No controlled OS comparison measured yet; physical work deferred. |
+| 096-07 — hardware qualification | Diagnose the Razer post-download hard lock; encrypted NVIDIA/TPM/recovery boot, firmware trust, suspend/resume, audio, Bluetooth, network and external displays. | Deferred as requested; release acceptance remains open. |
+
+The [competitive assessment](ASSESSMENT-2026-10-30.md#096-competitive-assessment--4-november-2026)
+compares documented Windows, Bazzite, Fedora Kinoite, Mint and Ubuntu capabilities.
+Monet's integrated workflows are a plausible advantage; stronger reliability,
+compatibility, battery life or gaming performance are not established by the
+current local test count.
+
+The full-image pass fixed installer mount propagation into live services,
+bootc's retained storage mounts, stale boot entries on retry, offline recovery
+navigation, Setup's Plymouth dependency and abandoned display sockets, an EFI
+update/probe race, and Fedora 45 build compatibility. The final required desktop
+suite passes **1,272 Python tests** (1,288 discovered, 16 documented skips) and
+**27 JavaScript checks**, with runner and container exit codes zero. Native
+synthetic NTFS shrink/import also preserves file and EFI hashes. The complete
+record is in [TESTING.md](TESTING.md#096-local-full-image-acceptance--4-november-2026)
+and `target/image096-2026-11-04/`. Three nonfatal image-lint warnings and dracut
+build diagnostics remain image-hygiene follow-up work. These local results do
+not establish a fix for the Razer's physical hard lock or a performance advantage
+over Windows and other Linux distributions.
+
+
+## Installer drive choice and interrupted-install recovery — 4 November 2026
+
+Local source changes only; no commit, push, release, installed-system change or
+physical disk write. The owner reports a Razer hard lock just after the full
+6.7 GB download screen, with neither pointer nor Ctrl+Alt+F3 responding. Restarting
+previously required starting installation again. The exact thermal/kernel/driver
+cause has not been established, and these changes are not hardware acceptance.
+
+- **095-77 — explicit drive review:** show internal and external targets by
+  model, capacity and path, with partition contents and other drives kept.
+  Require a drive, keep/erase choice and final review. Live, mounted, actively
+  mapped, changed or replaced targets are refused before writes. Check free
+  space/NTFS shrink only for the selected keep operation; scan personal files
+  only when copying is requested. Keep mode still needs an EFI partition on the
+  same drive. Manual per-partition layout editing remains open.
+- **095-78 — restart-safe retry:** a bounded, durable boot-partition receipt
+  binds the physical drive and exact filesystem/partition identities. Encrypted
+  targets retain their existing bootstrap key until completion; account and
+  Wi-Fi passwords and recovery phrases are not added to this record. Restarted
+  Setup restores the verified key, skips formatting and verifies every cached
+  OCI blob before offline reuse. Missing/corrupt downloads are fetched again.
+  Unfinished roots are renamed to `previous-install-*`, preserving files at the
+  filesystem top level instead of silently deleting them. Guided recovery and
+  cleanup of these subvolumes were subsequently implemented locally (above);
+  repeated late retries can still consume space until explicitly reviewed.
+- **095-79 — install workload and completion:** optional gentler scheduling
+  limits worker/child CPU use to two logical CPUs; scratch files live on the
+  target and captured output is bounded. Progress retains a small health/phase
+  sample, and Qt consumes output in bounded batches. Bootc finalization is
+  deferred until postprocessing/scratch writes finish, then deployment checks,
+  targeted flushes and normal checked unmounts precede success. No forced
+  full-device discard or filesystem freeze is performed at this stage. Restart
+  requests are asynchronous and failures stay actionable. Small drives and
+  resumed installs receive accurate completion text.
+
+**Validation:** 84 focused installer checks passed without touching real disks.
+Native drive review was inspected at 1440×900 and 1024×768, including keyboard
+navigation. Translation catalogs retain all unchanged translations; 55 added
+messages currently fall back to English where untranslated. The final required
+Fedora desktop run discovered **1,265 Python tests across 77 modules: 1,249 passed,
+16 documented skips, zero failures**. All 27 JavaScript checks and signed-connector
+reproduction passed. Python syntax, translation freshness, actionlint and whitespace
+checks passed. The final scrollbar rendering was inspected afterwards. Evidence:
+`target/setup-drives-2026-11-04/`. The tests mock partitioning/mount/bootc commands;
+they do not establish that the resulting OS boots. A newly built Setup ISO and
+disposable multi-disk encrypted/unencrypted install/restart trials remain needed,
+followed by the deferred Razer and TPM/Secure Boot hardware checks. Existing USB
+sticks are unchanged. No install-time or thermal improvement is claimed as measured.
+
+## Local continuation — 4 November 2026
+
+Current instruction remains local development only: no commit, push, publication,
+OS installation or account-preview installation. Physical hardware checks are
+explicitly deferred. This continuation implements two remaining delivery flows:
+
+- **095-75 — signed connector packaging and updates:** the reviewed 0.1.1 XPI,
+  exact digest and source receipt are included in Linux/OS packaging. Packaging
+  refuses mismatched source/artifacts; the installer validates before system
+  changes. The preferred source, license and reproduction instructions travel
+  with the package. Zen setup offers an explicit update for an older installed
+  connector, with normal browser approval and no automatic downgrade/re-pairing.
+- **095-76 — archive to application:** Files offers **Extract and find
+  applications…** for supported archives. Ark extracts only after confirmation
+  into a newly reserved folder, then Monet opens the existing app finder. Existing
+  folders and links are never reused. Cancellation stops the extractor's process
+  group; partial output remains available. Nothing downloaded is automatically
+  executed or given new execute permission by Monet.
+
+**Verification:** the complete required Fedora desktop suite passes all 76 Python
+modules: **1,227 passed, 16 documented skips, zero failures** (1,243 discovered).
+All **99 Rust tests** and **27 JavaScript checks** pass, including the freshly
+rebuilt connector's comparison with the signed artifact. Clippy with warnings
+denied, workflow lint, translation freshness, whitespace, 197 Python/29 shell
+syntax checks, nine PowerShell parser checks and the separate PowerShell setup
+fixture pass. The skip categories are unchanged from the 3 November run below.
+
+The actual Linux package builds, including its native C++ Settings layout test.
+The packaged `install.sh --image` succeeds inside a disposable, network-disabled
+Fedora container, and the installed connector hash, preferred source/license,
+archive service action, helper paths and native style are verified. This tests
+package assembly/installation, not Bazzite boot, browser approval in a new image,
+upgrade/rollback or hardware. The local package uses the existing debug CLI and
+omits the optional Windows payload; it is a smoke-test package, not a release.
+
+Real ZIP/tar fixtures preserve the archive and execute permissions, and do not
+run the app. Both native dialogs were rendered and inspected in Mist and Smoke.
+Evidence: `target/backlog-local-2026-11-04/summary.json`, `full-suite.log`,
+`package.log`, `package-files.json` and `install-smoke.json`. Test/install containers
+were removed. HEAD stays `e1fc593`, VERSION stays 0.9.5; no commit, push, new signing,
+publication or live desktop installation was performed.
+
+## Local backlog pass — 3 November 2026
+
+Current instruction: keep all work local; do not commit or push. This pass does
+not install a new OS image or publish. Existing uncommitted Passwords and Store changes are retained.
+This pass adds 095-72/73/74: required desktop test coverage, explicit launch
+options for downloaded apps, and the reusable Settings progress-animation fix.
+The new launcher supports separate profile shortcuts, quoted values, literal
+arguments, inline validation and keyboard submission. Existing shortcuts remain
+valid. The native dialog was checked in both Mist and Smoke.
+
+The clean Fedora test environment exposed missing fixture dependencies, tests
+depending on a real installed Dolphin entry, a weather fixture with a 60 ms retry
+deadline, obsolete installer/launcher assertions, and inherited output pipes
+keeping native fixtures alive after their main process exited. These are repaired
+without weakening product assertions. Notification tests now provide their own
+synthetic desktop entry. Passwords UI classes and consent/setup tests are enabled
+automatically instead of being omitted by an unset manual flag.
+
+Local evidence is under `target/backlog-local-2026-11-03/`. The test container is
+a development dependency image, not a rebuilt Monet OS. New source/UI changes
+have not been installed into this account's preview; Git HEAD and VERSION remain
+unchanged. Hosted CI execution is still pending an authorized future push.
+
+**Final local verification, after resuming:** the complete required desktop run
+finished successfully across all 74 Python modules: **1,215 passed, 16 skipped,
+zero failed** (1,231 discovered). The eight notification skips are exercised by
+their passing isolated parent; two PowerShell checks passed separately on Linux
+PowerShell. The remaining omissions are five opt-in systemd user-manager fixtures
+and native discovery of physical partitions, which the container does not expose.
+The native read-only mount and disposable LUKS/GPT/NTFS fixtures passed.
+
+All **99 Rust tests** and **27 JavaScript checks** passed, including 11 checks
+against a freshly rebuilt, hash-verified browser connector. Clippy with warnings
+denied, workflow lint, translation freshness, whitespace checks, syntax checks
+for 192 Python files and 24 shell scripts, and all nine PowerShell parser checks
+passed. The PowerShell setup behavior fixture also passed; this does not establish
+native Windows installation or game behavior.
+
+The complete run used Fedora 44, Plasma 6.8.2 and Qt/PySide 6.11.2, as recorded in
+`target/backlog-local-2026-11-03/resumed/runtime-packages.txt`. Its result is
+`resumed/summary.json`, with the complete output in `resumed/full-suite.log`.
+All 2,046 recorded source files stayed unchanged during the run. The test container
+exited and was removed. Git HEAD remains `e1fc593`, VERSION remains 0.9.5, and no
+commit, push, release, OS-image installation or account-preview installation was
+performed in this pass. The new CI jobs have been tested locally, not on hosted CI.
+
+### What the OS still needs
+
+This section is the historical 0.9.5 assessment. Full-image upgrade/rollback,
+encrypted VM recovery, native retry checks and the current recovery/Startup work
+have since passed; consult [RELEASE-0.9.6.md](RELEASE-0.9.6.md) for the remaining
+qualification and product scope rather than treating completed rows as blockers.
+
+1. **Boot and installation acceptance:** encrypted NVIDIA installation, repeated
+   TPM/recovery boots, legacy bootstrap-key cleanup without a receipt, physical
+   USB/Secure Boot trust and the unresolved Razer installer freeze. The source
+   recovery fixes and disposable-disk tests do not settle these hardware cases.
+2. **A complete Windows gaming setup:** model-aware driver preload, acceptance
+   of the remaining Windows driver repair, physical touchpad/network/graphics
+   checks, Steam sign-in/game launch and a real Windows-only game round trip.
+   FACEIT/Riot/Vanguard installation guidance is still missing. The long Windows
+   shutdown/return delay needs another measurement after hardware/update completion.
+3. **Recovery people can rely on:** install this complete source as an OS image,
+   test upgrade and rollback with real preferences/work preserved, restore actual
+   files from backup and exercise recovery when the desktop cannot start.
+   The five native systemd retry/history scenarios remain VM acceptance work;
+   the desktop container deliberately has no user service manager.
+4. **Hardware and performance coverage:** suspend/resume, battery drain, audible
+   playback/recording, Bluetooth audio/controllers, external displays/docks,
+   hybrid graphics and longer gaming/frame-time/memory measurements. Bluetooth
+   import exists from Windows to Monet; automatic enrollment in the reverse
+   direction is not implemented.
+5. **Broader work restoration:** office documents, additional editors/browsers
+   and browser-profile combinations still need adapters or acceptance. Existing
+   Files/Kate/KWrite/PDF/Zen work is narrower than universal session restoration.
+6. **Desktop polish and accessibility:** keyboard/screen-reader/RTL and large-text
+   acceptance across all custom flows, broader theme consistency, easier Files
+   navigation, package-install workflows and painting app-supplied
+   window icons or existing absolute-path desktop icons.
+7. **Password integration beyond the local preview:** publish and accept the
+   now-packaged signed connector through the OS release, broaden real-site compatibility and
+   obtain an independent security review. Passkeys, TOTP, global auto-type and
+   Windows-side password integration are not implemented by the current host.
+
+The detailed rows below distinguish implementation, account-local previews,
+published releases and hardware acceptance; “implemented” does not mean all four.
+
 The owner authorized pushing and releasing 0.9.5 on 30 October 2026. Candidate `8407f02` is published as the [v0.9.5 preview release](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.5); all ten jobs in its [release workflow](https://github.com/HappyHamster135/Monet/actions/runs/41112429830), including the Setup VM, succeeded. Verified on 3 November: the tag resolves to the exact candidate and all five artifact digests match the published SHA256SUMS. Follow-up commits remain local on `codex/backlog-after-095`. The local-only notes below record earlier development stages; remaining hardware acceptance work stays open and is not implied by publication.
 
 This backlog combines the owner's 30 October 2026 laptop feedback with the [laptop assessment](ASSESSMENT-2026-10-30.md). “Verified” means the stated check passed; it does not imply release acceptance.
@@ -13,7 +356,7 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-03 | Medium | Task Manager on right-click | Implemented locally. Task Manager appears in the desktop wallpaper, Monet menu, clock, Quick Settings and Sound context menus; Ctrl+Shift+Esc remains. Real QML action loaded and dispatched the expected helper in a private session. |
 | 095-04 | Medium | Make Files easier for Windows users | First pass implemented. Tabs stay visible and breadcrumbs show the full path by default. Existing choices survive migration. Native Files preview checked; broader navigation/layout improvements remain open. |
 | 095-05 | Medium | Show real free disk space in Files | Implemented in the native Files patch. Original Dolphin observer reports 0 B for Home/Downloads; patched observer matches statvfs on five laptop paths. Enable the full status bar only after the patched image bundle installs successfully. The upgrade now evolves Monet’s owned compact bar to the full bar while preserving an explicitly hidden bar. Full paired Dolphin/image build still required. |
-| 095-06 | Medium | Make downloaded applications easy to reopen | First pass implemented: “Add to apps…” for a selected Linux executable creates a menu shortcut without running it. Tested with the extracted ChatGPT wrapper and hostile filename fixtures. Keep the downloaded folder in place. Folder-based discovery is now implemented (095-23). Automatic archive extraction/package installation, icons and optional launch arguments remain open. |
+| 095-06 | Medium | Make downloaded applications easy to reopen | “Add to apps…” creates a menu shortcut without running the download. Folder discovery and packaged icons are implemented (095-23/28). Optional explicit launch arguments and separate profile shortcuts are implemented locally (095-73). Guided archive extraction now hands off to the finder (095-76). Keep the downloaded folder in place. Package installation remains open. |
 | 095-07 | Medium | Hide disconnected audio outputs and acknowledge selection | Implemented locally. One metadata snapshot filters the three disconnected HDMI ports while preserving unknown/available ports. Selection waits for backend feedback and reports failure. Laptop probe returns only the speaker; unit cases cover removal, failure, fallback and dummy outputs. Real external-device switching still needs hardware. |
 | 095-08 | Medium | Natural scrolling by default | Implemented in image and account defaults. Real KConfig migration test confirms NaturalScroll=true for defaults while preserving a touchpad explicitly set false. Physical input check after image upgrade remains. |
 | 095-09 | Medium | Mist and Smoke update open windows consistently | Implemented for KDE/Kvantum light transitions. A live Qt window passes Mist → Smoke → Mist → Smoke on the installed KDE runtime. Custom non-Monet styles remain untouched. Broader Qt Quick/GTK/Electron/Flatpak checks and same-mode glass-style changes remain open. |
@@ -23,7 +366,7 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-13 | Low | Make doctor permission warnings accurate | Fixed and verified with a newly built local monet doctor. Unreadable rules now report “could not be checked” rather than claiming a missing rule; a found rule is described as installed without asserting authorization. |
 | 095-14 | Medium | Remove misleading full system disk in Files sidebar | First-login timing fix implemented. A path unit reruns the existing idempotent places helper when KDE creates/changes its bookmark file. Native isolated Files preview hides the red system device. Live transient path-unit test verifies delayed creation and preserves explicit unhiding. |
 | 095-15 | Low | Investigate NVIDIA settings and Bluetooth wizard failures | NVIDIA startup fix applied locally after the candidate: skip the settings loader when the GPU or saved settings file is absent; retain the native loader/errors otherwise. Real queries succeed, the missing-config loader returns 1, and the same loader with an empty test config returns 0. Bluetooth's exit 1 alone is not evidence of failure: KDE's wizard also returns its Accepted result as 1. Actual Bluetooth pairing and NVIDIA GUI acceptance remain open. |
-| 095-16 | Medium | Strengthen automated test coverage | Added audio, downloaded-app, real QML Task Manager and live Kvantum regressions, plus a native Dolphin free-space harness. All run locally. Making required runtimes explicit in CI and adding boot/partition recovery cases remain open. |
+| 095-16 | Medium | Strengthen automated test coverage | Native audio, Files, Task Manager, Kvantum and boot/partition recovery fixtures exist. The local follow-up adds a required Fedora desktop CI job, explicit dependency checks, unexpected-skip failures, isolated Phone/Passwords coverage and reproducible browser form tests (095-72). Hosted execution and full image/hardware acceptance remain open. |
 | 095-17 | Low | Update deprecated APIs and fixture cleanup | Partial follow-up fix: VM screenshot recognition uses Pillow's new pixel API with compatibility for older images; both existing recognition tests pass with deprecations treated as errors. The GLib warning originates in installed PyGObject's own GLib compatibility exports, not a Monet signal-registration call. Dependency and Qt cleanup warnings remain open. |
 | 095-18 | High | Hardware acceptance before release | Open. Encrypted NVIDIA installation, repeated boot/recovery, sleep/resume, sound recording/playback, Bluetooth pairing, external displays, backup restore, Windows game round trip, and Secure Boot trust. |
 | 095-19 | Medium | A useful Task Manager Performance page | Implemented locally. Focused CPU, Memory, Graphics, Network, Storage and Sensors tabs, live history and relevant readings. Includes GPU selection, temperature, VRAM, fan RPM and disk free space. Native page verified against the laptop's sensors, NVIDIA tool and filesystem. See 095-22 for the updated layout. |
@@ -79,6 +422,16 @@ Release preparation on 30 October: VERSION, the Rust workspace/lockfile and desk
 | 095-67 | High | Save and autofill Zen logins without exports | Applied locally. Signed KeePassXC-Browser connects directly to Monet’s encrypted personal logins. Every save/change requires native approval; exact-origin fill, screen/provider locks and browser revocation are enforced. Normal-profile keyboard/save/approval/autofill passed with a temporary account, then the account and test permission were removed. Existing browser-only logins can be saved when used; no silent extraction or CSV requirement. See the current integration notes below. |
 | 095-68 | High | Native save/update approval immediately on Zen login submission | Applied locally with the permanent signed Monet connector 0.1.0. Native save/update approval, declined-update preservation, autofill and normal browser restart verified. Mozilla approved the owner-authorized private unlisted submission. Signing remains enabled. |
 | 095-69 | Medium | Stronger dock hover including Trash | Applied locally. Up to 28% magnification and nine logical pixels of lift, full painted Trash sizing and matching motion. Actual dock hover and Wastebin opening checked; reduced-motion and stale-runtime fallback tests pass. |
+| 095-70 | Medium | Clear password setup and recovery | Applied locally. Zen autofill in Passwords and Settings checks installation metadata, guides missing/disabled connectors, opens an installed connector without reinstalling, and explains one-time pairing and session unlocking. Closed views offer Open vault; Connected apps can unlock directly. Setup opens a separate Zen window so minimized browser windows do not hide the result. |
+| 095-71 | High | Multi-step Zen sign-ins and password changes | Fixes tested locally: 17 live synthetic scenarios, 27 JavaScript checks and 27 Python checks pass. Username continuity, correct-account autofill, current/new/confirmation field roles, invalid/ambiguous submissions and declined changes covered. Applied locally with privately signed connector 0.1.1. Normal Zen reports it active, enabled, signedState 2 and non-temporary; installed archive hash and native-host configuration verified after update acceptance. |
+| 095-72 | High | Make desktop regression coverage required | Implemented in source. Fedora desktop container, native dependency preflight, unexpected-skip rejection, automatic private Phone/Passwords fixtures, process timeouts and structured results. Build/release jobs depend on the desktop job; boot-mount recovery has its own required namespace check. Hosted execution remains pending a future authorized push. |
+| 095-73 | Medium | Launch options for downloaded applications | Implemented locally in the shared native Add to apps dialog. Explicit options support quoted values and separate profile shortcuts, with literal argv execution, bounded input, validation/retry and preservation of old shortcuts. No downloaded desktop commands are imported. Native Files and keyboard checks pass; source only, not installed into the desktop preview. |
+| 095-74 | Medium | Keep Settings progress animations valid when minimized | Fixed locally. Reusable Busy components receive activity explicitly instead of referencing the containing window's ID. Inline-component and native Settings regressions pass. Source only. |
+| 095-75 | High | Ship the signed browser connector and offer updates | Implemented locally. Linux/OS and preview packaging carry the reviewed signed 0.1.1 archive with digest/source checks and reproducible payload comparison. Installer validates before system changes; source/license travel with the package. Setup offers explicit updates only for older recognized versions, retaining normal Zen approval, identity and pairing. Release publication, new-image browser acceptance and future signing remain separate. |
+| 095-76 | Medium | Extract downloads directly into the app finder | Implemented locally. Files archive action uses native Ark in a new folder, followed by bounded application discovery. Literal filenames, existing-folder/link refusal, missing backend, partial failure and process-group cancellation are covered; real ZIP/tar fixtures pass without running downloads. Other archive formats depend on installed Ark plugins. No live desktop installation. |
+| 095-77 | High | Choose and review the installation drive explicitly | Implemented and tested locally. Model/path/capacity, existing partitions, external targets, other drives kept and mandatory confirmation; fresh identity/layout/in-use guards before writes. Selected-drive checks replace startup-wide scans. Manual partition editing and complete multi-disk boot acceptance remain open. |
+| 095-78 | High | Resume installation after a hard reset | Implemented and tested with disposable file/command fixtures. Durable receipt/bootstrap key, exact disk/partition verification, offline verified download reuse and preserved unfinished roots. Missing/corrupt cache and failed cleanup retry are covered. Full encrypted/unencrypted VM boot trials and guided old-root recovery/cleanup remain open. |
+| 095-79 | High | Reduce installer pressure and make completion reliable | Implemented locally: opt-in two-thread worker, target-backed scratch space, bounded output/event processing, health samples, deferred bootc finalization, checked flush/unmount and asynchronous restart. The reported Razer hard lock is not confirmed fixed; rebuilt ISO and hardware acceptance remain open. |
 
 
 
@@ -653,3 +1006,22 @@ The permanent connector has its own identity and received Mozilla’s private un
 
 
 Mozilla’s signed file has SHA-256 `8fcd6250f4e0adc27eb07c7a685889b201cfc7db228e957511596848e8b85882`. All scripts/assets match the tested candidate byte-for-byte; only signing files and manifest whitespace were added (parsed manifests match exactly). Zen reports signedState 2, active, non-temporary after restart. A reversible native-host manifest update allows the new identity: `~/.local/state/monet/password-browser/20261103T160650.800831Z/`. Local signed connector/setup copy receipt: `~/.local/state/monet/desktop-preview/20261103T161314.998104Z/receipt.json`, followed by the final setup forwarding refinement in `20261103T161722.503316Z/receipt.json`. Connect Zen prefers the installed signed local artifact and uses Flatpak’s file-forwarding portal rather than granting filesystem access. The forwarded file was verified readable inside the sandbox. Image-wide shipping and an extension update feed remain future release work; the signed binary is not checked into Git or publicly listed.
+
+## Passwords setup and recovery — 3 November 2026
+
+095-70 adds the guided **Zen autofill** page and a Settings entry point. Installed, disabled, missing and misconfigured states use bounded metadata checks on the existing worker. Opening setup neither reinstalls the connector nor reads browser credentials. A stored browser pairing is described as saved, not proof of a live connection. Closed views offer the vault-opening action, and Connected apps can unlock directly. Empty searches and the distinction between closing a view and locking the vault are clearer. No polling service or extension changes were added.
+
+Verification: **68 password/model/setup/consent/helper tests, two native QML Settings checks and one isolated D-Bus lock integration check passed (71 total)**. Translation freshness, Python syntax and whitespace checks pass. Native laptop testing found that opening a tab could leave Zen minimized; setup now opens a dedicated browser window, verified visible and active through the installed button. The connector reported its existing unlocked connection without re-pairing. Mist fixture and installed Smoke rendering were inspected. Synthetic tests cover missing/disabled/unsigned connectors, corrupt metadata, unexpected profiles, another manager's host ownership, allowed launch targets, missing signed artifacts, direct unlocking and read-only status checks. This pass did not repeat website-specific form compatibility testing; the signed connector and consent/storage protocol are unchanged.
+
+Local receipts: `~/.local/state/monet/desktop-preview/20261103T163739.770973Z/receipt.json` (six files) and `20261103T164332.238001Z/receipt.json` (browser-window fix). Source/install hashes match; the signed connector hash is unchanged. Passwords was refreshed with an open-dialog guard; setup test windows/tabs were closed and the temporary input fixture stopped. No existing login was read or modified. Evidence is under `target/passwords-refinement-2026-11-03/`. Unrelated Store edits remain separate. Nothing pushed, tagged or released; VERSION and Windows CLI routing are unchanged. Image bundling/update delivery and unusual website form compatibility remain open.
+
+
+## Multi-step Zen login and password-change testing — 3 November 2026
+
+095-71 reproduces and fixes missing usernames on two-page saves, wrong-account autofill on the second page, missed current-password fields, and an unload race that dropped password-change approval. Original autocomplete roles are retained despite upstream menus changing their attributes. New/confirmation fields remain untouched by autofill; mismatches and invalid forms do not write. Account selection uses an explicit username, selected account or unique current-password match, with ambiguous changes requiring selection.
+
+The username-step cache is top-level, tab/origin scoped, RAM-only, bounded and expires after two minutes. Locks, native disconnect, tab closure and origin changes discard it. No polling service, persistent username history or new extension permission was added. Native save/update approval and storage encryption are unchanged.
+
+**Validation:** 17 live synthetic scenarios passed in a disposable Zen profile/private vault, plus 27 JavaScript and 27 Python protocol/consent/fixture checks. The repository checker reproduced all 17 results and refuses the desktop vault bus/normal browser profile. Evidence: `target/passwords-flows-2026-11-03/`. Tests used synthetic credentials only; real browser/vault logins were not read or changed. Unusual real websites and successful-authentication detection remain compatibility work.
+
+**Application status:** reproducible unsigned connector 0.1.1 SHA-256 `8eac99c0be1bbdd00b0c9104d96fdef7fb675110295bbe58bc9d20953e686488`. Source/reviewer notes supplied to the previously authorized [private unlisted Mozilla submission](https://addons.mozilla.org/en-US/developers/addon/63215ddcb8374935a449/versions/6659730), with zero validation errors and six inherited warnings. Mozilla approved and signed the update. All scripts/assets and parsed manifest match the tested unsigned build; only signature files and manifest formatting differ. Signed SHA-256: `72ffb607b98999e1e0b680ce347425b2d1cd1e4e7d6629c28c4b079a5cd97d47`. The local setup artifact is updated reversibly with receipt `~/.local/state/monet/desktop-preview/20261103T172312.727346Z/receipt.json`. The owner accepted the normal Zen update prompt. Follow-up metadata checks confirm version 0.1.1 is active, enabled, signedState 2 and non-temporary. The installed archive and local setup artifact both match the verified signed SHA-256; native-host registration/proxy configuration remains valid. Evidence: `target/passwords-flows-2026-11-03/installed-status.json`. No existing credential or pairing key was read during verification. Disposable browser/private bus/server and the fixture host registration were stopped/removed. No signature bypass, normal-profile debugging, GitHub push, tag or OS release. Store changes remain separate.

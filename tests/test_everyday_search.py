@@ -25,7 +25,8 @@ class EverydaySearch(unittest.TestCase):
                               ("Windows files", "storage#shared-files"),
                               ("how can I make bigger text?", "accessibility#size"),
                               ("pair headphones", "bluetooth"), ("Wi-Fi", "wifi"),
-                              ("restore browser tabs", "windows#return")):
+                              ("restore browser tabs", "windows#return"),
+                              ("undo desktop changes", "recovery"), ("restore settings", "recovery")):
             with self.subTest(query=query):
                 self.assertEqual(self.q.everyday_search(query)[0]["target"], target)
 
@@ -442,8 +443,15 @@ Window {
 
     def query(self, text="headphones"):
         self.search.setProperty("text", text); self.search.forceActiveFocus()
-        QTest.qWait(170)
-        return self.root.property("everydaySource")
+        # The debounce runs on the Qt event loop. A fixed wait can expire
+        # before its first frame on a busy image builder, returning an empty
+        # request and discarding the synthetic response as stale.
+        for _ in range(200):
+            source = self.root.property("everydaySource")
+            if source and self.root.property("everydayQuery") == text:
+                return source
+            QTest.qWait(10)
+        self.fail("Search request did not start for " + text)
 
     def test_delayed_suggestions_are_visible_without_moving_keyboard_focus(self):
         for query in ("headphones", "birthday", "headphones"):

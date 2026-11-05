@@ -16,6 +16,11 @@ if [ "$KIND" = linux ] && [ -n "$BRIDGE" ] && { [ -z "$SETUP_CHECK" ] || [ ! -f 
     exit 1
 fi
 
+# Refuse stale source or a missing/altered signed connector before replacing output.
+if [ "$KIND" = linux ]; then
+    python3 "$ROOT/browser/monet-passwords/package.py"
+fi
+
 rm -rf "$OUT"
 mkdir -p "$OUT"
 cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
@@ -23,6 +28,12 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        # Local validation caches are not executable package content.
+        find "$OUT" -type d -name __pycache__ -prune -exec rm -rf {} +
+        mkdir -p "$OUT/share/doc/monet/passwords-connector"
+        for source in README.md LICENSE.upstream build.py automatic-submit.js release.json; do
+            cp "$ROOT/browser/monet-passwords/$source" "$OUT/share/doc/monet/passwords-connector/"
+        done
         bash "$ROOT/tools/build-settings-style.sh" "$OUT/lib/monet/qt"
         # What's new, for Settings → Updates and the note after an update (monet-quick whats-new).
         cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"

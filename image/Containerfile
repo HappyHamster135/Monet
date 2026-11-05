@@ -11,7 +11,7 @@ ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
 
 FROM docker.io/library/rust:1 AS build
 RUN apt-get update \
- && apt-get install -y --no-install-recommends mingw-w64 cmake qt6-base-dev \
+ && apt-get install -y --no-install-recommends mingw-w64 cmake qt6-base-dev python3 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
@@ -95,6 +95,10 @@ FROM runtime AS task-manager
 COPY image/task-manager /src/task-manager
 RUN sh /src/task-manager/build.sh /out
 
+FROM runtime AS login
+COPY image/login /src/login
+RUN sh /src/login/build.sh /out
+
 FROM runtime AS files-recovery
 COPY image/files-recovery /src/files-recovery
 RUN sh /src/files-recovery/build.sh /out
@@ -109,6 +113,12 @@ COPY LICENSE /src/window-identity/LICENSE
 RUN sh /src/window-identity/build.sh /out
 
 FROM runtime
+# Keep common contractions and multi-error typos ahead of unrelated words in
+# native spelling menus. Apps with their own dictionaries remain app-managed.
+RUN dnf5 -y install hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \
+ && dnf5 clean all
+COPY image/spelling /tmp/monet-spelling
+RUN python3 /tmp/monet-spelling/patch.py && rm -rf /tmp/monet-spelling
 # Keep version-only changes out of the native library build caches.
 ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
@@ -118,6 +128,10 @@ RUN python3 /tmp/monet-pdf-recovery/bundle.py install /tmp/monet-pdf-recovery \
 COPY --from=task-manager /out /tmp/monet-task-manager
 RUN python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager \
  && rm -rf /tmp/monet-task-manager
+
+COPY --from=login /out /tmp/monet-login
+RUN python3 /tmp/monet-login/bundle.py install /tmp/monet-login \
+ && rm -rf /tmp/monet-login
 
 COPY --from=files-recovery /out /tmp/monet-files-recovery
 RUN python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
@@ -142,10 +156,10 @@ COPY --from=password /out /tmp/monet/password
 # rebuilt the way Bazzite builds it, with what unlocks an encrypted disk by
 # itself (the TPM's libraries, which systemd-cryptsetup asks for there).
 COPY image/setup/files/usr/share/plymouth/themes/monet /usr/share/plymouth/themes/monet
+COPY image/finish-image.sh /tmp/monet-finish-image
 RUN /tmp/monet/install.sh --image \
  && rm -rf /tmp/monet \
  && plymouth-set-default-theme monet \
- && kernel="$(dnf5 repoquery --installed --queryformat='%{evr}.%{arch}' kernel)" \
- && dracut --no-hostonly --kver "$kernel" --reproducible --zstd --add ostree --add fido2 --add tpm2-tss -f "/usr/lib/modules/$kernel/initramfs.img" \
- && chmod 0600 "/usr/lib/modules/$kernel/initramfs.img" \
- && ostree container commit
+ && bash /tmp/monet-finish-image \
+ && rm /tmp/monet-finish-image \
+ && bootc container lint

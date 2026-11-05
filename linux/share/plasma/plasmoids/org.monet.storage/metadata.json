@@ -12,7 +12,7 @@
         "Id": "org.monet.storage",
         "License": "GPL-3.0-or-later",
         "Name": "Storage",
-        "Version": "0.9.5",
+        "Version": "0.9.6",
         "Website": "https://github.com/HappyHamster135/Monet"
     },
     "X-Plasma-API-Minimum-Version": "6.0"

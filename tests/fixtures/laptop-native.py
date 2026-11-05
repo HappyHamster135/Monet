@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from PySide6.QtCore import QObject, Slot, QUrl, QMetaObject, Qt
+from PySide6.QtCore import QObject, Slot, QUrl, QMetaObject, Qt, QTimer
 from PySide6.QtGui import QPalette, QWindow
 from PySide6.QtQml import QQmlEngine, QQmlComponent
 from PySide6.QtQuick import QQuickItem, QQuickWindow
@@ -318,6 +318,139 @@ def system():
     window.close(); window.deleteLater(); QTest.qWait(30)
 
 
+def performance_history(render=False):
+    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
+    os.environ.pop("QT_QPA_PLATFORMTHEME", None)
+    if render:
+        # QuickCharts' custom scene-graph nodes do not draw in Qt's software
+        # backend. Use real OpenGL with Mesa in an isolated virtual display;
+        # neither the host display nor a GPU device is needed.
+        import select
+        read_fd, write_fd = os.pipe()
+        display = subprocess.Popen(["Xvfb", "-displayfd", str(write_fd), "-screen", "0", "800x600x24",
+                                    "-nolisten", "tcp"], pass_fds=(write_fd,))
+        os.close(write_fd)
+        try:
+            assert select.select([read_fd], [], [], 10)[0], "Virtual display did not start"
+            number = os.read(read_fd, 100).decode().strip()
+            assert number.isdecimal(), number
+        finally:
+            os.close(read_fd)
+        os.environ.update(DISPLAY=":" + number, QT_QPA_PLATFORM="xcb", QT_QUICK_BACKEND="rhi",
+                          QSG_RHI_BACKEND="opengl", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
+        QQuickWindow.setSceneGraphBackend("rhi")
+    class Words(QObject):
+        @Slot(str, str, result=str)
+        @Slot(str, str, "QVariant", result=str)
+        def i18nd(self, domain, text, value=None):
+            return text if value is None else text.replace("%1", str(value))
+    app = QApplication([])
+    engine = QQmlEngine(); words = Words(); engine.rootContext().setContextObject(words)
+    warnings = []
+    engine.warnings.connect(lambda errors: warnings.extend(e.toString() for e in errors
+        if "HistoryChart.qml" in e.toString() or "HistoryBuffer.qml" in e.toString()))
+    folder = ROOT / "linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui"
+    source = CONFIG / "HistoryFixture.qml"
+    source.write_text('''import QtQuick
+import QtQuick.Controls
+import "''' + folder.as_uri() + '''" as Monitor
+ApplicationWindow {
+    width: 640; height: 320; visible: true
+    Monitor.HistoryChart {
+        anchors.fill: parent; anchors.margins: 16
+        sensorIds: ["network/all/download", "network/all/upload"]
+        labels: ["Download", "Upload"]; paused: true
+    }
+}
+''')
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(source)), QQmlComponent.Asynchronous)
+    for _ in range(100):
+        if not component.isLoading(): break
+        QTest.qWait(20)
+    assert component.isReady(), [e.toString() for e in component.errors()]
+    window = component.create()
+    assert window is not None, [e.toString() for e in component.errors()]
+    QTest.qWait(30)
+    chart = window.findChild(QObject, "historyChart")
+    buffer = window.findChild(QObject, "performanceHistory")
+    plot = window.findChild(QObject, "performancePlot")
+    duration = window.findChild(QObject, "historyDuration")
+    append = engine.newQObject(buffer).property("append")
+    def record(values, now):
+        result = append.call([engine.toScriptValue(values), engine.toScriptValue(now)])
+        assert not result.isError(), result.toString()
+        QTest.qWait(2)
+    def samples(): return buffer.property("samples").toVariant()
+    def values(index): return window.findChild(QObject, f"historySeries{index}").property("array")
+    def extent(): return engine.newQObject(plot).property("xRange").property("to").toNumber()
+    def painted_columns(color):
+        from PySide6.QtCore import QPointF
+        QTest.qWait(30)
+        picture = window.grabWindow()
+        assert not picture.isNull()
+        origin = plot.mapToScene(QPointF(0, 0))
+        # Include the half-dot at Now, but exclude the legend above the plot.
+        columns = set()
+        for y in range(int(origin.y()) - 3, int(origin.y() + plot.height()) + 4):
+            for x in range(int(origin.x()) - 3, int(origin.x() + plot.width()) + 4):
+                pixel = picture.pixelColor(x, y)
+                if all(abs(a - b) < 12 for a, b in zip((pixel.red(), pixel.green(), pixel.blue()), color)):
+                    columns.add(x - int(origin.x()))
+        return columns
+
+    assert chart.property("sampleCount") == 0 and duration.property("text") == ""
+    for bad in ([None, 5], ["5", 5], [-1, 5], [float("nan"), 5], [float("inf"), 5], []):
+        record(bad, 0)
+    assert samples() == []
+    record([20, 40], 0)
+    assert chart.property("sampleCount") == 1 and plot.property("lineWidth") == 0
+    assert values(0) == [20] and values(1) == [40]
+    if render:
+        columns = painted_columns((53, 127, 114))
+        assert columns and min(columns) >= plot.width() - 4, columns
+    record([30, 50], 1000)
+    assert chart.property("sampleCount") == 2 and extent() == 2
+    assert plot.property("lineWidth") == 2 and duration.property("text") == "1 s"
+    assert values(0) == [30, 20] and values(1) == [50, 40]
+    if render:
+        for color in ((53, 127, 114), (146, 117, 165)):
+            columns = painted_columns(color)
+            # Antialiasing blends some columns into the background. The trace
+            # must still cover the graph, rather than a sliver at the far right.
+            assert len(columns) > plot.width() * 0.5, (color, len(columns), plot.width())
+            assert min(columns) < plot.width() * 0.05 and max(columns) > plot.width() * 0.95
+    # Equal readings still form a line; legitimate idle readings remain zero.
+    record([30, 50], 1998); record([0, 0], 3000)
+    assert chart.property("sampleCount") == 4 and extent() == 4
+    assert values(0) == [0, 30, 30, 20]
+    record([90, 90], 3100)
+    assert chart.property("sampleCount") == 4
+    for second in range(4, 90): record([second, second + 100], second * 1000)
+    assert chart.property("sampleCount") == 61 and extent() == 61
+    assert buffer.property("duration") == 60 and duration.property("text") == "60 s"
+    assert values(0)[0] == 89 and values(0)[-1] == 29
+    # Delayed timers, clock changes and replacement devices start a fresh trace.
+    record([1, 2], 100000)
+    assert len(samples()) == 1
+    record([2, 3], 999)
+    assert len(samples()) == 1
+    frozen = samples(); QTest.qWait(1100)
+    assert samples() == frozen
+    chart.setProperty("paused", False); QTest.qWait(20)
+    assert len(samples()) <= 1 and samples() != frozen
+    chart.setProperty("paused", True)
+    record([10, 20], 2000)
+    chart.setProperty("sensorIds", engine.toScriptValue(["cpu/all/usage"]))
+    QTest.qWait(20)
+    assert samples() == []
+    record([42], 3000)
+    assert values(0) == [42]
+    assert not warnings, warnings
+    window.close(); window.deleteLater(); QTest.qWait(20)
+    if render:
+        display.terminate(); display.wait(timeout=5)
+
+
 def tables():
     # Compile against the installed KDE table components, not fixture substitutes.
     # A missing schema or import breaks native actions even if totals still draw.
@@ -381,7 +514,7 @@ def files():
     sys.path.insert(0, str(ROOT))
     from tests.test_files_tools import files_tools
     from unittest.mock import patch
-    from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTreeWidget, QInputDialog
+    from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTreeWidget
     app = QApplication([])
     tool = files_tools()
     folder = CONFIG / "Downloads"; folder.mkdir()
@@ -395,7 +528,12 @@ def files():
     assert tree.topLevelItemCount() == 2, dialog.findChild(QLabel, "scanStatus").text()
     add = dialog.findChild(QPushButton, "addApp"); show = dialog.findChild(QPushButton, "showApp")
     assert add.isEnabled()
-    with patch.object(QInputDialog, "getText", return_value=("Example", True)), patch.object(tool.subprocess, "Popen") as launch:
+    create = tool.make_shortcut_dialog
+    def shortcut(*args):
+        editor = create(*args)
+        QTimer.singleShot(0, editor.findChild(QPushButton, "saveShortcut").click)
+        return editor
+    with patch.object(tool, "make_shortcut_dialog", side_effect=shortcut), patch.object(tool.subprocess, "Popen") as launch:
         QTest.mouseClick(add, Qt.LeftButton); QTest.qWait(50)
         launch.assert_not_called()
     entries = list((CONFIG.parent / "data/applications").glob("monet-local-*.desktop"))
@@ -416,4 +554,73 @@ def files():
     space.reject(); QTest.qWait(20)
 
 
-{"theme": theme, "action": action, "hardware": hardware, "performance": performance, "files": files, "system": system, "tables": tables, "activity": activity}[sys.argv[1]]()
+def startup():
+    import json
+    os.environ["QT_QUICK_BACKEND"] = "software"
+    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
+    os.environ.pop("QT_QPA_PLATFORMTHEME", None)
+    os.environ["XDG_CONFIG_DIRS"] = str(CONFIG / "no-system-config")
+    os.environ["XDG_DATA_DIRS"] = str(CONFIG / "no-system-data")
+    os.environ["XDG_CURRENT_DESKTOP"] = "KDE"
+    class Words(QObject):
+        @Slot(str, str, result=str)
+        def i18nd(self, domain, text): return text
+    folder = CONFIG / 'autostart'; folder.mkdir()
+    desktop = '[Desktop Entry]\nType=Application\nName=Example\nExec=/usr/bin/true\n'
+    entry = folder/'example.desktop'; entry.write_text(desktop)
+    apps = Path(os.environ['XDG_DATA_HOME'])/'applications'; apps.mkdir()
+    (apps/'second.desktop').write_text(desktop.replace('Example', 'Second'))
+    app = QApplication([])
+    engine = QQmlEngine(); words = Words(); engine.rootContext().setContextObject(words)
+    source = CONFIG / 'StartupFixture.qml'
+    qml = ROOT / 'linux/share/ksysguard/sensorfaces/org.monet.startup/contents/ui'
+    source.write_text('import QtQuick\nimport QtQuick.Controls\nimport "' + qml.as_uri() + '" as Monitor\n'
+        'ApplicationWindow { width: 660; height: 650; visible: true; Monitor.Startup { anchors.fill: parent; anchors.margins: 20; helper: '
+        + json.dumps(str(ROOT / 'linux/libexec/monet-startup')) + ' } }')
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(source)), QQmlComponent.Asynchronous)
+    for _ in range(100):
+        if not component.isLoading(): break
+        QTest.qWait(20)
+    assert component.isReady(), [e.toString() for e in component.errors()]
+    window = component.create(); assert window is not None
+    def find(name, item=None):
+        item = item or window.contentItem()
+        if item.objectName() == name: return item
+        for child in item.childItems():
+            found = find(name, child)
+            if found: return found
+    view = find('monetStartup')
+    def wait(predicate):
+        for _ in range(200):
+            if predicate(): return
+            QTest.qWait(20)
+        raise AssertionError(view.property('problem'))
+    wait(lambda: view.property('loaded') and not view.property('busy'))
+    assert not view.property('problem'), view.property('problem')
+    toggle = find('startupToggle-0'); assert toggle is not None
+    toggle.forceActiveFocus(); QTest.keyClick(window, Qt.Key_Return)
+    wait(lambda: 'Hidden=true' in entry.read_text() and not view.property('busy'))
+    assert 'next time you sign in' in view.property('message')
+    QMetaObject.invokeMethod(find('startupAdd'), 'clicked')
+    wait(lambda: not view.property('busy'))
+    assert view.property('adding')
+    QMetaObject.invokeMethod(find('startupToggle-0'), 'clicked')
+    wait(lambda: (folder/'second.desktop').exists() and not view.property('busy'))
+    assert not view.property('adding')
+    # Narrow layout, search, failed reader and no polling while hidden.
+    window.setWidth(380); QTest.qWait(80)
+    find('startupSearch').setProperty('text', 'missing'); QTest.qWait(30)
+    assert 'No matching' in find('startupStatus').property('text')
+    find('startupSearch').setProperty('text', '')
+    view.setProperty('helper', '/nonexistent/monet-startup')
+    QMetaObject.invokeMethod(find('startupRefresh'), 'clicked')
+    wait(lambda: not view.property('busy'))
+    assert 'could not be read or saved' in view.property('problem')
+    before = view.property('serial'); window.hide(); QTest.qWait(250)
+    assert view.property('serial') == before
+    window.close(); engine.deleteLater(); QTest.qWait(1)
+
+
+{"startup": startup, "theme": theme, "action": action, "hardware": hardware, "performance": performance,
+ "performance-history-render": lambda: performance_history(render=True),
+ "performance-history": performance_history, "files": files, "system": system, "tables": tables, "activity": activity}[sys.argv[1]]()

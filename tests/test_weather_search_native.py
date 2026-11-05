@@ -78,6 +78,8 @@ class PlaceSearch(unittest.TestCase):
     def test_deadline_reports_timeout_and_can_retry(self):
         self.item.setProperty('timeout', 60); self.call('find', 'Timeout'); self.wait()
         self.assertIn('timed out', self.item.property('problem'))
+        # Keep the deliberately tiny deadline on the timeout case only.
+        self.item.setProperty('timeout', 2000)
         self.call('find', 'Malmö'); self.wait(); self.assertEqual(self.results()[0]['name'], 'Malmö')
 
 

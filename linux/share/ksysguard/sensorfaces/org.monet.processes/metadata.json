@@ -6,6 +6,6 @@
         "Description": "Native task table with suspended updates while minimized",
         "Icon": "utilities-system-monitor",
         "License": "LGPL-2.0-or-later",
-        "Version": "0.9.5"
+        "Version": "0.9.6"
     }
 }

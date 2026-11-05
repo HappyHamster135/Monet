@@ -1,0 +1,224 @@
+#!/usr/bin/python3
+"""On-demand recovery of Setup's retained roots. Run through pkexec.
+
+Only the running Monet filesystem is eligible. A private mount namespace keeps
+its top level out of the desktop. No arbitrary device, path or command arguments
+are accepted. Export runs as the caller and streams an uncompressed tar to stdout;
+the unprivileged caller owns the destination. Cleanup requires a fresh identity
+token and refuses any root used by the running system or another host mount.
+"""
+from contextlib import contextmanager
+import ctypes
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import pwd
+import re
+import stat
+import subprocess
+import sys
+import tempfile
+
+NAME = r'previous-install-[0-9a-f]{16}'
+TOKEN = r'[0-9a-f]{64}'
+
+
+def run(*args, timeout=30):
+    result = subprocess.run([str(a) for a in args], capture_output=True, text=True,
+                            timeout=timeout, env={'PATH': '/usr/sbin:/usr/bin', 'LC_ALL': 'C'})
+    if result.returncode:
+        raise RuntimeError('operation-failed')
+    return result.stdout
+
+
+def unescape(value):
+    return re.sub(r'\\([0-7]{3})', lambda m: chr(int(m[1], 8)), value)
+
+
+def mounted_roots(text, device):
+    # Btrfs assigns different anonymous device numbers to subvolumes. Compare
+    # all Btrfs roots conservatively, not only the booted mount's major:minor.
+    return [unescape(line.split()[3]) for line in text.splitlines()
+            if len(line.split()) >= 6 and (' - btrfs ' in line or line.split()[2] == device)]
+
+
+def filesystem():
+    info = json.loads(run('findmnt', '--json', '--target', '/sysroot',
+                          '--output', 'SOURCE,FSTYPE,FSROOT,MAJ:MIN'))['filesystems'][0]
+    # Setup always installs under the root subvolume. Other layouts are read-only
+    # unsupported states here, never guesses about where it is safe to delete.
+    if info['fstype'] != 'btrfs' or info['fsroot'] != '/root':
+        raise RuntimeError('unsupported')
+    source = info['source'].split('[', 1)[0]
+    if not source.startswith('/dev/') or not stat.S_ISBLK(os.stat(source).st_mode):
+        raise RuntimeError('unsupported')
+    return source, info['maj:min']
+
+
+def safe_path(root, relative):
+    path = root
+    for part in Path(relative).parts:
+        if part in ('..', '/', ''):
+            raise RuntimeError('changed')
+        path /= part
+        if path.is_symlink():
+            raise RuntimeError('changed')
+    return path
+
+
+def identity(top, name, roots):
+    if not re.fullmatch(NAME, name):
+        raise RuntimeError('changed')
+    prefix = '/' + name
+    if any(p == prefix or p.startswith(prefix + '/') for p in roots):
+        raise RuntimeError('in-use')
+    path = safe_path(top, name)
+    st = path.stat()
+    if not stat.S_ISDIR(st.st_mode) or st.st_ino != 256 or st.st_uid != 0:
+        raise RuntimeError('changed')
+    info = run('btrfs', 'subvolume', 'show', path)
+    fields = dict((key.strip(), value.strip()) for line in info.splitlines()
+                  if ':' in line for key, value in [line.split(':', 1)])
+    uuid, ident = fields.get('UUID', ''), fields.get('Subvolume ID', '')
+    if not re.fullmatch('[0-9a-f-]{36}', uuid) or not ident.isdigit() or int(ident) <= 5:
+        raise RuntimeError('changed')
+    token = hashlib.sha256(f'{name}:{uuid}:{ident}:{st.st_ctime_ns}'.encode()).hexdigest()
+    return dict(id=name, token=token, time=int(st.st_mtime * 1000))
+
+
+def homes(top, name, user):
+    root = safe_path(top, name)
+    deploy = safe_path(root, 'ostree/deploy')
+    if not deploy.exists():
+        return []
+    found = []
+    for entry in sorted(deploy.iterdir())[:64]:
+        path = safe_path(root, f'ostree/deploy/{entry.name}/var/home/{user.pw_name}')
+        if path.is_dir() and path.stat().st_uid == user.pw_uid:
+            found.append(path)
+    return found
+
+
+def inspect(top, name, roots, user, measure=False):
+    item = identity(top, name, roots)
+    item['homes'] = len(homes(top, name, user))
+    item['bytes'] = None
+    if measure:
+        try:
+            # Referenced bytes, NOT a promise of freed space: extents may be shared.
+            # st_blocks accounts for delayed allocation too; Btrfs's FIEMAP
+            # report can say zero before writeback. Include nested subvolumes.
+            output = run('du', '-s', '-B1', '--', top / name, timeout=25)
+            row = output.splitlines()[-1].split()
+            if len(row) >= 2 and row[0].isdigit():
+                item['bytes'] = int(row[0])
+        except (RuntimeError, subprocess.TimeoutExpired):
+            pass
+    return item
+
+
+def operate(top, command, args, roots, user):
+    if command == 'list' and not args:
+        items = []
+        for entry in sorted(top.iterdir()):
+            if re.fullmatch(NAME, entry.name):
+                try:
+                    items.append(inspect(top, entry.name, roots, user))
+                except (OSError, RuntimeError):
+                    continue  # Never offer unsafe or mounted candidates for removal.
+                if len(items) >= 64:
+                    return dict(ok=True, items=items, limited=True)
+        return dict(ok=True, items=items, limited=False)
+    if command not in ('review', 'delete', 'export') or len(args) != 2 or not re.fullmatch(TOKEN, args[1]):
+        raise RuntimeError('changed')
+    name, token = args
+    item = inspect(top, name, roots, user, measure=command == 'review')
+    if item['token'] != token:
+        raise RuntimeError('changed')
+    if command == 'review':
+        return dict(ok=True, item=item)
+    if command == 'delete':
+        run('btrfs', 'subvolume', 'delete', '--recursive', '--commit-after', top / name, timeout=120)
+        if (top / name).exists():
+            raise RuntimeError('operation-failed')
+        return dict(ok=True, state='deleted')
+    sources = homes(top, name, user)
+    if len(sources) != 1:
+        raise RuntimeError('no-home')
+    # tar never follows links, never runs scripts, and cannot read anything the
+    # signed-in account cannot. No root-owned output or path in the user's home.
+    # This fresh private mount has no external child mounts. Include nested
+    # Btrfs home subvolumes: --one-file-system would silently omit their files.
+    result = subprocess.run(['/usr/bin/tar', '--create', '--format=pax', '--sparse',
+                             '--file=-', '--directory=' + str(sources[0]), '.'],
+                            user=user.pw_uid, group=user.pw_gid,
+                            extra_groups=os.getgrouplist(user.pw_name, user.pw_gid),
+                            env={'PATH': '/usr/bin', 'LC_ALL': 'C'}, stderr=subprocess.DEVNULL,
+                            timeout=900)
+    if result.returncode:
+        raise RuntimeError('export-failed')
+    return None
+
+
+@contextmanager
+def top_mount(source, writable):
+    # unshare before the first mount; namespace destruction also cleans up after
+    # a killed helper. The host mount table never receives this top-level view.
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.unshare(0x00020000) != 0:
+        raise OSError(ctypes.get_errno(), 'unshare')
+    run('mount', '--make-rprivate', '/')
+    top = Path(tempfile.mkdtemp(prefix='monet-recovery-', dir='/run'))
+    try:
+        top.chmod(0o755)  # export's unprivileged tar must be able to traverse it
+        run('mount', '-t', 'btrfs', '-o', 'subvolid=5,nosuid,nodev,noexec,' + ('rw' if writable else 'ro'), source, top)
+        try:
+            yield top
+        finally:
+            run('umount', top)
+    finally:
+        # Never use recursive temporary-directory cleanup around a mountpoint.
+        # A failed unmount must not turn cleanup into deletion of the filesystem.
+        try:
+            top.rmdir()
+        except OSError:
+            pass
+
+
+def main(args):
+    exporting = bool(args) and args[0] == 'export'
+    try:
+        uid = int(os.environ.get('PKEXEC_UID', '-1'))
+        user = pwd.getpwuid(uid)
+        if os.geteuid() != 0 or uid < 1000 or user.pw_name == 'guest':
+            raise RuntimeError('unavailable')
+        command = args[0] if args else ''
+        if command not in ('list', 'review', 'delete', 'export'):
+            raise RuntimeError('changed')
+        fd = os.open('/run/monet-storage-recovery.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, 'w') as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise RuntimeError('busy') from None
+            source, device = filesystem()
+            # Read host mounts before entering our namespace. Includes booted
+            # and rollback deployments whenever mounted, including bind mounts.
+            roots = mounted_roots(Path('/proc/self/mountinfo').read_text(), device)
+            with top_mount(source, command == 'delete') as top:
+                roots += mounted_roots(Path('/proc/1/mountinfo').read_text(), device)
+                result = operate(top, command, args[1:], roots, user)
+        if result is not None:
+            print(json.dumps(result))
+        return 0
+    except (OSError, ValueError, KeyError, IndexError, RuntimeError, subprocess.SubprocessError) as error:
+        state = str(error) if str(error) in ('unsupported', 'changed', 'in-use', 'busy', 'no-home') else 'unavailable'
+        if not exporting:
+            print(json.dumps(dict(ok=False, state=state, items=[])))
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

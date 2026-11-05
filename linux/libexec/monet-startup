@@ -1,0 +1,193 @@
+#!/usr/bin/python3
+"""Task Manager's on-demand XDG autostart editor. Never launches an application.
+
+User overrides preserve the original desktop entry, including arguments and
+conditions. System files and managed desktop components are never modified.
+Each write is bound to the exact entry displayed, atomically replaced and read
+back. This manages sign-in apps, not services or session restoration.
+"""
+import configparser
+import hashlib
+import json
+import locale
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import sys
+import tempfile
+
+CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
+DATA = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share'))
+CONFIG_DIRS = [Path(p) for p in os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':') if p.startswith('/')]
+DATA_DIRS = [Path(p) for p in os.environ.get('XDG_DATA_DIRS', '/usr/local/share:/usr/share').split(':') if p.startswith('/')]
+
+
+def read(path):
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError('not a regular entry')
+        data = stream.read(65537)
+    if len(data) > 65536:
+        raise ValueError('entry too large')
+    return data
+
+
+def fields(data):
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    parser.optionxform = str
+    parser.read_string(data.decode('utf-8'))
+    return dict(parser['Desktop Entry'])
+
+
+def token(name, data):
+    return hashlib.sha256(name.encode() + b'\0' + data).hexdigest()
+
+
+def entry(name, path):
+    data = read(path)
+    info = fields(data)
+    if info.get('Type') != 'Application' or not info.get('Name') or not (info.get('Exec') or info.get('DBusActivatable') == 'true'):
+        raise ValueError('not an app')
+    lang = (locale.getlocale()[0] or 'en_US').split('.')[0]
+    title = info.get('Name[' + lang + ']', info.get('Name[' + lang.split('_')[0] + ']', info['Name']))
+    managed = (name.startswith(('monet-', 'org.kde.plasmashell', 'plasma-', 'polkit-'))
+               or info.get('X-KDE-autostart-phase', '2') != '2'
+               or info.get('NoDisplay') == 'true')
+    desktop = set(os.environ.get('XDG_CURRENT_DESKTOP', 'KDE').split(':'))
+    allowed = (not info.get('OnlyShowIn') or bool(desktop.intersection(info['OnlyShowIn'].split(';'))))
+    allowed = allowed and not desktop.intersection(info.get('NotShowIn', '').split(';'))
+    available = not info.get('TryExec') or bool(shutil.which(info['TryExec']))
+    return dict(id=name.encode().hex(), name=title[:160], icon=info.get('Icon', 'application-x-executable'),
+                token=token(name, data), enabled=info.get('Hidden') != 'true', managed=managed,
+                available=bool(available and allowed), conditional=bool(info.get('X-KDE-autostart-condition')),
+                personal=path.parent == CONFIG / 'autostart')
+
+
+def sources(available=False):
+    def failed(error):
+        raise error
+    found = {}
+    roots = [DATA, *DATA_DIRS] if available else [CONFIG, *CONFIG_DIRS]
+    for base in roots:
+        folder = base / ('applications' if available else 'autostart')
+        if not folder.is_dir():
+            continue
+        # Desktop IDs flatten subfolders. Directory links are never traversed.
+        count = 0
+        for parent, dirs, files in os.walk(folder, followlinks=False, onerror=failed):
+            dirs.sort()
+            if not available:
+                dirs[:] = []
+            for filename in sorted(files):
+                count += 1
+                if count > 4096:
+                    raise ValueError('too many entries')
+                if not filename.endswith('.desktop'):
+                    continue
+                path = Path(parent) / filename
+                name = str(path.relative_to(folder)).replace('/', '-')
+                found.setdefault(name, path)
+    return found
+
+
+def listing(available=False):
+    current = sources()
+    items, unreadable = [], 0
+    for name, path in (sources(True) if available else current).items():
+        if available and name in current:
+            continue
+        try:
+            item = entry(name, path)
+            if available and (item['managed'] or not item['available'] or not item['enabled']):
+                continue
+            items.append(item)
+        except (OSError, ValueError, KeyError, configparser.Error):
+            unreadable += 1
+    return dict(ok=True, items=sorted(items, key=lambda row: (row['managed'], row['name'].casefold())), unreadable=unreadable)
+
+
+def with_hidden(data, hidden):
+    lines = data.decode('utf-8').splitlines()
+    result, inside, inserted = [], False, False
+    for line in lines:
+        if line.startswith('['):
+            if inside and not inserted:
+                result.append('Hidden=' + str(hidden).lower()); inserted = True
+            inside = line == '[Desktop Entry]'
+        if inside and line.split('=', 1)[0].strip() == 'Hidden':
+            if not inserted:
+                result.append('Hidden=' + str(hidden).lower()); inserted = True
+            continue
+        result.append(line)
+    if inside and not inserted:
+        result.append('Hidden=' + str(hidden).lower())
+    return ('\n'.join(result) + '\n').encode()
+
+
+def change(command, ident, expected, setting='on'):
+    if not re.fullmatch('(?:[0-9a-f]{2}){1,512}', ident) or not re.fullmatch('[0-9a-f]{64}', expected):
+        raise ValueError('changed')
+    name = bytes.fromhex(ident).decode('utf-8')
+    if '/' in name or name in ('.', '..') or not name.endswith('.desktop'):
+        raise ValueError('changed')
+    available = command == 'add'
+    paths = sources(available)
+    if name not in paths or available and name in sources():
+        raise ValueError('changed')
+    path = paths[name]
+    data = read(path)
+    shown = entry(name, path)
+    if token(name, data) != expected or shown['token'] != expected or shown['managed'] or not shown['available']:
+        raise ValueError('changed')
+    updated = with_hidden(data, setting == 'off')
+    folder = CONFIG / 'autostart'
+    folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+    destination = folder / name
+    before = read(destination) if destination.exists() else None
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(prefix='.monet-', dir=folder, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(updated); stream.flush(); os.fsync(stream.fileno())
+        # Detect an app editing its own startup preference during our review.
+        current = sources()
+        if (available and name in current or not available and current.get(name) != path
+                or read(path) != data or (read(destination) if destination.exists() else None) != before):
+            raise ValueError('changed')
+        os.replace(temporary, destination)
+        directory = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+        if read(destination) != updated:
+            raise OSError('write not verified')
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+    return listing()
+
+
+def main(args):
+    try:
+        if not args or args == ['list']:
+            result = listing()
+        elif args == ['available']:
+            result = listing(True)
+        elif len(args) == 4 and args[0] == 'set' and args[3] in ('on', 'off'):
+            result = change(*args)
+        elif len(args) == 3 and args[0] == 'add':
+            result = change(*args)
+        else:
+            raise ValueError('invalid request')
+    except (OSError, ValueError, KeyError, configparser.Error):
+        result = dict(ok=False, state='changed', items=[])
+    print(json.dumps(result))
+    return 0 if result['ok'] else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

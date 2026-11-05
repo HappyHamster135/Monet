@@ -105,6 +105,17 @@ class PasswordsTestSite(unittest.TestCase):
         self.assertIn(b'name="password"', second)
         self.assertNotIn(b'name="username"', second)
 
+    def test_change_fixtures_distinguish_current_new_and_confirmation(self):
+        full = self.request('GET', '/change-full')[2]
+        self.assertIn(b'autocomplete="current-password"', full)
+        self.assertEqual(full.count(b'autocomplete="new-password"'), 2)
+        no_user = self.request('GET', '/change-no-user')[2]
+        self.assertNotIn(b'name="username"', no_user)
+        self.assertIn(b'setCustomValidity', no_user)
+        signup = self.request('GET', '/signup-confirm')[2]
+        self.assertNotIn(b'autocomplete="current-password"', signup)
+        self.assertIn(b"form.innerHTML=", self.request('GET', '/multi-dynamic')[2])
+
 
 if __name__ == "__main__":
     unittest.main()

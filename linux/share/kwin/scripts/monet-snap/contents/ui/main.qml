@@ -16,7 +16,7 @@
  * KWin's own edge tiling and top-edge maximizing are off (monet-look): this does both.
  */
 import QtQuick
-import QtQuick.Window
+import QtQuick.Window as QuickWindow
 import org.kde.kwin
 import org.kde.kirigami as Kirigami
 
@@ -516,7 +516,7 @@ Item {
     }
 
     // The bar and the preview, over the screen being dragged on; nothing here takes the pointer.
-    Window {
+    QuickWindow.Window {
         id: overlay
         readonly property bool dragging: root.dragged !== null && root.moving && root.travelled
         flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus

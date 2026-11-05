@@ -120,6 +120,11 @@ class HardwareSnapshot(unittest.TestCase):
         path.write_text('[Desktop Entry]\nName=My monitor\nExec=plasma-systemmonitor --page-id personal.page\n'
                         'Icon=my-icon\nX-KDE-Wayland-Interfaces=existing_protocol\n'
                         '[Desktop Action test]\nExec=plasma-systemmonitor --page-id processes.page\n')
+        store = preview.DATA / 'applications/monet-store.desktop'
+        store.write_text('[Desktop Entry]\nName=My Store\nIcon=custom-store\nExec=/usr/libexec/monet-store search:paint\n'
+                         '[Desktop Action custom]\nExec=my-command\n')
+        custom = preview.DATA / 'applications/org.kde.discover.desktop'
+        custom.write_text('[Desktop Entry]\nName=My apps\nExec=custom-store-wrapper\n')
         plan = preview.plan()
         contents = plan[path][0].decode()
         self.assertIn('Name=My monitor\n', contents)
@@ -128,6 +133,13 @@ class HardwareSnapshot(unittest.TestCase):
         self.assertRegex(contents, r'Exec=/[^\n]+/plasma-systemmonitor --page-id personal.page\n')
         self.assertIn('[Desktop Action test]\nExec=plasma-systemmonitor --page-id processes.page', contents)
         self.assertIn('Exec=plasma-systemmonitor --page-id personal.page', path.read_text())  # Planning is read-only.
+        self.assertEqual(plan[store][0].decode(), store.read_text().replace('/usr/libexec/monet-store', str(preview.HELPERS / 'monet-store')))
+        self.assertEqual(plan[custom][0], custom.read_bytes())
+        self.assertIn(preview.HELPERS / 'monet-store-jobs', plan)
+        launcher = plan[preview.HELPERS / 'monet-store'][0].decode()
+        self.assertIn('DATADIR = "' + str(preview.PRIVATE) + '"', launcher)
+        self.assertIn('LIBEXECDIR = "' + str(preview.HELPERS) + '"', launcher)
+        self.assertIn(preview.PRIVATE / 'monet/store-app/Store.qml', plan)
         # Every desktop widget must receive the same guard, not only panel apps.
         for widget in (ROOT / 'linux/share/plasma/plasmoids').glob('org.monet.*'):
             ui = preview.DATA / 'plasma/plasmoids' / widget.name / 'contents/ui'

@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.startup",
+        "Name": "Startup",
+        "Description": "Choose the apps that open when you sign in",
+        "Icon": "system-run",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.6"
+    }
+}
