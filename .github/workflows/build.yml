@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: warn
 
   linux:
-    needs: [test, desktop]
+    needs: test
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,7 +102,7 @@ jobs:
           if-no-files-found: error
 
   windows:
-    needs: [test, desktop]
+    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -158,7 +158,7 @@ jobs:
       packages: write
 
   release:
-    needs: [check, linux, windows, os]
+    needs: [test, desktop, check, linux, windows, os]
     if: needs.check.outputs.new == 'true'
     runs-on: ubuntu-24.04
     steps:

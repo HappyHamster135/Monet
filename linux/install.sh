@@ -317,7 +317,7 @@ put 644 "$SRC/systemd/user/monet-replay.service" "$USERUNITDIR/monet-replay.serv
 put 644 "$SRC/systemd/user/app-steam@autostart.service.d/monet-steam-share.conf" \
     "$USERUNITDIR/app-steam@autostart.service.d/monet-steam-share.conf"
 # A fresh account has no NVIDIA settings to restore at login.
-put 644 "$SRC/systemd/user/app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf" \
+put 644 "$SRC/systemd/user/monet-nvidia-settings.conf" \
     "$USERUNITDIR/app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf"
 # Backups: earlier versions every hour (the homes made a subvolume of their own
 # once, before the sign-in screen), and the copy on a drive when it's plugged in.

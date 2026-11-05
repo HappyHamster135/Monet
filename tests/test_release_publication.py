@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 from pathlib import Path
 import subprocess
+import re
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -73,6 +74,21 @@ class QualifiedPublication(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 qualified.publish(record, Path("unused"))
             run.assert_not_called()
+
+
+@unittest.skipIf(os.name == "nt", "Linux systemd installation path")
+class PortableSources(unittest.TestCase):
+    def test_nvidia_dropin_installs_with_systemd_escaping_from_a_portable_source(self):
+        script = (ROOT / "linux/install.sh").read_text()
+        functions = script[script.index("subst() {"):script.index("# Copies a folder")]
+        command = re.search(r'(?m)^put 644 "\$SRC/systemd/user/monet-nvidia-settings.conf" \\\n.*', script).group()
+        with tempfile.TemporaryDirectory() as folder:
+            env = dict(os.environ, SRC=str(ROOT / "linux"), USERUNITDIR=folder,
+                       BINDIR="/usr/bin", DATADIR="/usr/share", LIBEXECDIR="/usr/libexec")
+            subprocess.run(["bash", "-eu", "-c", functions + command], env=env, check=True, timeout=10)
+            path = Path(folder) / r"app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf"
+            self.assertEqual(path.read_bytes(), (ROOT / "linux/systemd/user/monet-nvidia-settings.conf").read_bytes())
+            self.assertEqual(path.stat().st_mode & 0o777, 0o644)
 
 
 if __name__ == "__main__":
