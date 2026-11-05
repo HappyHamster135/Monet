@@ -15,6 +15,8 @@ from tests.test_resume import r, ROOT
 
 class CancelledDeparture(unittest.TestCase):
     def test_symlinked_preview_loads_the_complete_installed_helper_family(self):
+        if importlib.util.find_spec("PySide6") is None:
+            self.skipTest("Qt runtime")
         loader = importlib.machinery.SourceFileLoader("departure_loader", str(ROOT / "linux/libexec/monet-leave"))
         leave = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
         loader.exec_module(leave)

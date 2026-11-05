@@ -1,0 +1,41 @@
+{
+  "version": "0.9.6",
+  "candidate": "RC13",
+  "images": {
+    "amd": {
+      "image": "ghcr.io/happyhamster135/monet-amd:0.9.6",
+      "manifest": "sha256:14cbe2969fe53bc35bb7c87c02cd3bd940723970d659bf0c194810c6e3abe310"
+    },
+    "nvidia": {
+      "image": "ghcr.io/happyhamster135/monet:0.9.6",
+      "manifest": "sha256:40a3714a4f09c4f1f81439b1ae78f5d231b189d6fd4e11229511bee8fb811823"
+    }
+  },
+  "parts": [
+    {
+      "name": "Monet-0.9.6-oci.tar.part-aa",
+      "bytes": 1887436800,
+      "sha256": "ba90b98ce5bee53e7f569a32f8d5bda94930198f37ab68f8f576e253bb1efe1d"
+    },
+    {
+      "name": "Monet-0.9.6-oci.tar.part-ab",
+      "bytes": 1887436800,
+      "sha256": "a3a65a28d5ec1c910a3c001f276320a8d608e34945533b142dffac3367f4ec1b"
+    },
+    {
+      "name": "Monet-0.9.6-oci.tar.part-ac",
+      "bytes": 1887436800,
+      "sha256": "2416c295db91cd2d24e3a7c70b31d5de69a8f607178f2a488864c7ea9637fba7"
+    },
+    {
+      "name": "Monet-0.9.6-oci.tar.part-ad",
+      "bytes": 1887436800,
+      "sha256": "bb5fcf1db6334b6f9ea43399f29c1d851b38a1d5b934d522a60d649bb1c03512"
+    },
+    {
+      "name": "Monet-0.9.6-oci.tar.part-ae",
+      "bytes": 1575413760,
+      "sha256": "df121ebf47c579910a710f402f293e48eba1986c8b2903a29f12220524f60bef"
+    }
+  ]
+}

@@ -3,12 +3,17 @@ import os
 from pathlib import Path
 import unittest
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
-from PySide6.QtCore import QUrl, QPoint, Qt
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlEngine,QQmlComponent
-from PySide6.QtQuick import QQuickWindow
-from PySide6.QtTest import QTest
+try:
+    from PySide6.QtCore import QUrl, QPoint, Qt
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtQml import QQmlEngine,QQmlComponent
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    HAVE_QT = True
+except ImportError:
+    HAVE_QT = False
 
+@unittest.skipUnless(HAVE_QT, "Qt runtime")
 class DockMotion(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -46,6 +51,7 @@ class DockMotion(unittest.TestCase):
             self.assertLessEqual(self.motion.property('iconScale'),1.281)
         self.settle();self.assertAlmostEqual(self.motion.property('amount'),0)
 
+@unittest.skipUnless(HAVE_QT, "Qt runtime")
 class DockPointer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

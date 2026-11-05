@@ -7,8 +7,11 @@ from tests.test_look import quick_helper
 
 class DockBounds(unittest.TestCase):
     def test_center_dock_can_grow_and_shrink_without_reserving_closed_task_slots(self):
-        from PySide6.QtCore import QCoreApplication
-        from PySide6.QtQml import QJSEngine
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError:
+            self.skipTest("Qt runtime")
         app = QCoreApplication.instance() or QCoreApplication([])
         quick = quick_helper()
         with patch.object(quick, 'run', return_value='') as call:

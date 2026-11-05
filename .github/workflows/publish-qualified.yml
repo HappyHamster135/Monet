@@ -1,0 +1,36 @@
+name: Publish qualified images
+
+# The tag is pushed only after the branch checks and local image tests pass.
+# It publishes existing bytes from a draft release; it does not rebuild the OS.
+on:
+  push:
+    tags: ['publish-v*']
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: qualified-image-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify the publication tag
+        run: test "$GITHUB_REF_NAME" = "publish-v$(cat VERSION)"
+      - name: Make room for the verified exports
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo apt-get update -q
+          sudo apt-get install -y -q skopeo
+      - name: Publish exact versioned and rolling manifests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/monet-registry-auth.json
+        run: |
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
+          python3 tools/publish-qualified.py "image/releases/$(cat VERSION).json" "$RUNNER_TEMP/monet-qualified"
