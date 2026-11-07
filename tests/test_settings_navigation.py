@@ -171,6 +171,26 @@ class SettingsNavigation(unittest.TestCase):
             self.assertEqual(self.helper.commands[before:], [["helper", "kde", "bluetooth"]])
             self.assertTrue(more.hasActiveFocus())
 
+    def test_sidebar_hover_clears_as_the_pointer_moves_to_the_next_row(self):
+        wifi = self.item("settingsPage-wifi")
+        bluetooth = self.item("settingsPage-bluetooth")
+        selected = self.item("settingsPage-light")
+
+        def move_to(row):
+            point = row.mapToScene(QPointF(row.width() / 2, row.height() / 2)).toPoint()
+            QTest.mouseMove(self.window, point)
+            self.app.processEvents()
+
+        move_to(wifi)
+        self.wait_for(lambda: wifi.property("color").alphaF() > 0.02)
+        move_to(bluetooth)
+        self.assertEqual(wifi.property("color").alpha(), 0)
+        self.assertGreater(bluetooth.property("color").alpha(), 0)
+        move_to(selected)
+        self.assertEqual(bluetooth.property("color").alpha(), 0)
+        self.assertEqual(selected.property("color").alpha(), 0)
+        self.assertEqual(self.window.property("page"), "light")
+
     def test_custom_choices_accept_both_enter_keys_once(self):
         for name, verb, value, key in (("lightChoice-mist", "light", "mist", Qt.Key_Return),
                                         ("lightChoice-smoke", "light", "smoke", Qt.Key_Enter),

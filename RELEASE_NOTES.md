@@ -95,7 +95,8 @@ testing is still in progress.
 - **More consistent input and layouts.** Keyboard focus, Enter, Escape, touchpad
   scrolling, large text and fractional scaling have been polished across Settings,
   Store, the app menu, extraction and Transfers. Long choice labels wrap instead
-  of running off their card. Desktop-menu defaults are repaired while preserving
+  of running off their card. Settings clears the old sidebar highlight as the
+  pointer moves between rows. Desktop-menu defaults are repaired while preserving
   existing custom bindings.
 
 Measurements and current qualification limits are recorded in the

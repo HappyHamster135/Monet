@@ -2806,8 +2806,8 @@ Shared.MonetWindow {
                                 Layout.topMargin: modelData.gap ? 10 : 0
                                 visible: side.matches(modelData)
                                 radius: 12
+                                // Clear the old hover as soon as the pointer reaches another row.
                                 color: navHover.hovered && !current ? (look.dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.3)) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Math.round(140 * sheet.speed) } }
                                 border.width: activeFocus ? 2 : 0
                                 border.color: look.lily
                                 activeFocusOnTab: true
