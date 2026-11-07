@@ -2466,8 +2466,26 @@ def set_download_path(path):
     if any(char in str(path) for char in '\n\r\0'):
         raise ValueError(tr('Choose a folder without line breaks in its name.'))
     CONFIG.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['xdg-user-dirs-update', '--set', 'DOWNLOAD', str(path)], check=True, timeout=10)
-    # XDG_CONFIG_HOME is inherited by the tool; KDE and portals read this same path.
+    # Older xdg-user-dirs-update leaves literal double quotes unescaped. Write
+    # the standard assignment ourselves, preserving the other XDG directories.
+    config_file = (CONFIG / 'user-dirs.dirs').resolve()
+    relative = path.relative_to(HOME) if path.is_relative_to(HOME) else None
+    escaped = re.sub(r'[\\$`"]', lambda match: '\\' + match[0], str(relative or path))
+    value = '$HOME/' + escaped if relative is not None else escaped
+    assignment = f'XDG_DOWNLOAD_DIR="{value}"'
+    existing = config_file.read_text(encoding='utf-8') if config_file.exists() else ''
+    updated, replacements = re.subn(r'(?m)^[ \t]*XDG_DOWNLOAD_DIR[ \t]*=.*$', lambda _: assignment, existing)
+    if not replacements:
+        updated = existing + ('\n' if existing and not existing.endswith('\n') else '') + assignment + '\n'
+    mode = config_file.stat().st_mode & 0o777 if config_file.exists() else 0o600
+    fd, temporary = tempfile.mkstemp(prefix='.user-dirs-', dir=config_file.parent)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as output:
+            os.fchmod(output.fileno(), mode)
+            output.write(updated)
+        os.replace(temporary, config_file)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
     sync_browser_downloads()
     return path
 

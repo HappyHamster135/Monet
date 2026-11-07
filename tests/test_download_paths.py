@@ -50,9 +50,12 @@ class DownloadPaths(unittest.TestCase):
         target = self.home / 'Work "quoted" $HOME $(touch NO) `echo x` \\ å'; target.mkdir()
         prefs = self.profile / 'user.js'
         prefs.write_text('user_pref("my.preference", true);\nuser_pref("browser.download.dir", "/old");\n')
+        other_folders = '# Local directories\nXDG_DOCUMENTS_DIR="$HOME/My documents"\n'
+        (self.config / 'user-dirs.dirs').write_text(other_folders + 'XDG_DOWNLOAD_DIR="$HOME/Old"\n')
         self.quick.set_download_path(target)
         self.assertEqual(self.quick.downloads_dir(), target)
         self.assertEqual(subprocess.check_output(['xdg-user-dir', 'DOWNLOAD'], text=True).strip(), str(target))
+        self.assertTrue((self.config / 'user-dirs.dirs').read_text().startswith(other_folders))
         self.assertIn('user_pref("my.preference", true);', prefs.read_text())
         line, = [line for line in prefs.read_text().splitlines() if '"browser.download.dir"' in line]
         self.assertEqual(json.loads(line.split(', ', 1)[1].removesuffix(');')), str(target))
@@ -70,7 +73,7 @@ class DownloadPaths(unittest.TestCase):
                 self.quick.set_download_path(invalid)
         self.assertEqual((self.config / 'user-dirs.dirs').read_bytes(), before)
 
-    @unittest.skipUnless(shutil.which('xdg-mime'), 'native MIME defaults')
+    @unittest.skipUnless(shutil.which('xdg-mime') and shutil.which('kwriteconfig6'), 'native KDE MIME defaults')
     def test_archives_use_monet_handler_and_keep_an_explicit_alternative(self):
         apps = self.data / 'applications'; apps.mkdir()
         for name in ('monet-archive.desktop', 'org.kde.ark.desktop', 'personal-archive.desktop'):
