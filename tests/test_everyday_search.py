@@ -1,6 +1,7 @@
 """Everyday phrases, safe navigation, and the actual Settings search controls."""
 import importlib.machinery
 import importlib.util
+import gettext
 import json
 import os
 import re
@@ -30,6 +31,21 @@ class EverydaySearch(unittest.TestCase):
             with self.subTest(query=query):
                 self.assertEqual(self.q.everyday_search(query)[0]["target"], target)
 
+    def test_power_and_download_phrases_navigate_without_changing_preferences(self):
+        with patch.object(self.q, "open_settings") as settings, patch.object(self.q, "kwrite") as write:
+            for query, target in (("stop screen locking", "power#lock"),
+                                  ("screen keeps locking", "power#lock"),
+                                  ("download folder", "storage#downloads"),
+                                  ("where downloads go", "storage#downloads"),
+                                  ("battery limit", "power#battery-limit"),
+                                  ("keep awake", "power#keep-awake"),
+                                  ("keep screen on", "power#keep-awake")):
+                result = self.q.everyday_search(query)[0]
+                self.assertEqual(result["target"], target)
+                self.assertTrue(self.q.open_search_result(result["id"]))
+                self.assertEqual(settings.call_args.args, (target,))
+            write.assert_not_called()
+
     def test_password_queries_open_the_dedicated_page(self):
         for query in ('wallet', 'password', 'passwords', 'password manager', 'autofill'):
             self.assertEqual(self.q.everyday_search(query)[0]['target'], 'monet-passwords.desktop')
@@ -39,6 +55,16 @@ class EverydaySearch(unittest.TestCase):
         with patch.object(self.q, "_", side_effect=lambda s: "gör text större; större text" if s == alias else s):
             for query in ("GÖR TEXT STÖRRE", "gor text storre", "make text bigger"):
                 self.assertEqual(self.q.everyday_search(query)[0]["id"], "text-size")
+
+    def test_shipped_swedish_power_and_download_aliases_use_the_same_routes(self):
+        words = gettext.translation('monet', localedir=str(ROOT / 'linux/share/locale'), languages=['sv'])
+        with patch.object(self.q, '_', words.gettext), patch.object(self.q, 'kwrite') as write:
+            for query, target in (('sluta låsa skärmen', 'power#lock'),
+                                  ('nedladdningsmapp', 'storage#downloads'),
+                                  ('laddningsgräns', 'power#battery-limit'),
+                                  ('håll skärmen på', 'power#keep-awake')):
+                self.assertEqual(self.q.everyday_search(query)[0]['target'], target)
+            write.assert_not_called()
 
     def test_queries_do_not_execute_commands_or_return_unrelated_actions(self):
         with patch.object(self.q.subprocess, "Popen") as popen:
@@ -124,7 +150,7 @@ class EverydaySearch(unittest.TestCase):
 
 
 try:
-    from PySide6.QtCore import QObject, QSettings, QStandardPaths, QTimer, QUrl, Qt, Signal, Slot
+    from PySide6.QtCore import QAbstractListModel, QModelIndex, Property, QObject, QSettings, QStandardPaths, QTimer, QUrl, Qt, Signal, Slot
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow
@@ -347,6 +373,17 @@ class MenuSearchUI(unittest.TestCase):
         source = (directory / "main.qml").read_text()
         imports = source[source.index("import QtQuick"):source.index("PlasmoidItem {")]
         representation = source.split("    fullRepresentation: ", 1)[1].rsplit("\n}", 1)[0]
+        # Keep window/application metadata inert while exercising the real
+        # priority code and source-row activation.
+        representation = re.sub(r'readonly property TaskManager.TasksModel runningTasks: TaskManager.TasksModel \{.*?\n        }', '''readonly property var runningTasks: QtObject {
+            property int count: 3
+            function index(row, column) { return row }
+            function data(row, role) {
+                const titles = ["chatgpt — Files", "chatgpt.x86_64.rpm — Archives", "ChatGPT"]
+                const apps = ["Files", "Archives", "ChatGPT"]
+                return role === Qt.DisplayRole ? titles[row] : apps[row]
+            }
+        }''', representation, flags=re.S)
         functions = "\n".join(re.search(r"    (function " + name + r"\(.*?\n    })", source, re.S).group(1)
                               for name in ("findEveryday", "runEveryday", "launchEveryday"))
         receiver = re.search(r"onNewData: (\(source, data\) => \{.*?\n        })", source, re.S).group(1)
@@ -357,6 +394,7 @@ Window {
     Item {
         id: root; anchors.fill: parent
         property real speed: 0
+        property rect usableScreen: Qt.rect(0, 0, Screen.width, Screen.height)
         property string firstName: "Test"
         property bool expanded: true
         property var everydayResults: []
@@ -366,13 +404,29 @@ Window {
         property string everydayError: ""
         property string openingResult: ""
         property string launched: ""
+        property string requestedMenu: ""
         property var sent: []
+        property var suppliedResults: null
         property var appendResult: function(row) { nativeResults.append(row) }
+        property var updateResult: function(row, key, value) { nativeResults.setProperty(row, key, value) }
         signal everydayReady()
-        function i18n(text) { return text }
-        function i18nc(context, text) { return text }
+        function i18n(text, a, b) {
+            if (typeof fixtureWords === "undefined") return text;
+            if (arguments.length > 2) return fixtureWords.i18n(text, a, b);
+            if (arguments.length > 1) return fixtureWords.i18n(text, a);
+            return fixtureWords.i18n(text);
+        }
+        function i18nc(context, text) { return typeof fixtureWords === "undefined" ? text : fixtureWords.i18nc(context, text) }
+        function i18nd(domain, text, argument) { return text.replace("%1", argument) }
         function launch(model, index) { launched = "native-" + index }
-        function showAppMenu(item, id) {}
+        function isStarting(id) { return false }
+        Item {
+            id: appLauncher
+            visible: false
+            property var states: ({})
+            function canOpenNewWindow(id) { return false }
+        }
+        function showAppMenu(item, id) { requestedMenu = id }
         property var everyApp: empty
         property var recent: empty
         property var apps: QtObject {
@@ -385,13 +439,13 @@ Window {
             property int count: 1
             property bool querying: false
             signal queryFinished()
-            function modelForRow(row) { return nativeResults }
+            function modelForRow(row) { return root.suppliedResults || nativeResults }
         }
         ListModel { id: empty }
         ListModel { id: nativeResults
             objectName: "testNativeResults"
             Component.onCompleted: {
-                for (let i = 0; i < 20; i++) append({display: "Native result " + i, description: "Folder", decoration: "folder", favoriteId: ""})
+                for (let i = 0; i < 20; i++) append({display: "Native result " + i, description: "Folder", decoration: "folder", favoriteId: "", url: "file:///Downloads/native-" + i})
             }
         }
         QtObject { id: user; property string fullName: "Test"; property string loginName: "test"; property string faceIconUrl: "" }
@@ -409,17 +463,22 @@ Window {
     }
 }
 '''.replace("RECEIVER", receiver).replace("FUNCTIONS", functions).replace("REPRESENTATION", representation)
+        if getattr(self, "native_runner", False):
+            qml = re.sub(r'property var finder: QtObject \{.*?\n        }',
+                         'property var finder: Kicker.RunnerModel { mergeResults: true }', qml, count=1, flags=re.S)
         # Give the real representation the same available area as the shell.
         qml = qml.replace("id: page", 'id: page; objectName: "testPage"; anchors.fill: parent')
         qml = qml.replace("id: root;", 'id: root; objectName: "testRoot";')
         qml = qml.replace("id: results", 'id: results; objectName: "testResults"')
         self.engine = QQmlApplicationEngine(); self.errors = []
+        if hasattr(self, "words"): self.engine.rootContext().setContextProperty("fixtureWords", self.words)
         self.engine.warnings.connect(lambda values: self.errors.extend(v.toString() for v in values))
         # loadData holds Python's GIL while the QML loader thread initializes
         # Kirigami on some PySide builds. Loading a saved fixture avoids that.
         self.fixture = tempfile.TemporaryDirectory()
         path = Path(self.fixture.name) / "SearchTest.qml"
-        path.write_text('import "' + directory.as_uri() + '"\n' + qml)
+        path.write_text('import "' + directory.as_uri() + '"\nimport "' +
+                        (ROOT / 'linux/share/monet/widgets').as_uri() + '"\n' + qml)
         self.engine.load(QUrl.fromLocalFile(str(path)))
         self.assertTrue(self.engine.rootObjects(), self.errors)
         self.window = self.engine.rootObjects()[0]; QTest.qWait(100)
@@ -516,9 +575,66 @@ Window {
 
     def add_app(self, name="ChatGPT", ident="applications:chatgpt.desktop"):
         # The folder deliberately ranks ahead of the application in KRunner.
-        row = {"display": name, "description": "Application", "decoration": "system-run", "favoriteId": ident}
+        row = {"display": name, "description": "Application", "decoration": "system-run", "favoriteId": ident, "url": ""}
         self.root.property("appendResult").call([self.engine.toScriptValue(row)])
         QTest.qWait(20)
+
+    def test_cold_application_metadata_promotes_without_a_running_window_change(self):
+        tasks = self.page.property("runningTasks")
+        if hasattr(tasks, "toQObject"): tasks = tasks.toQObject()
+        tasks.setProperty("count", 0)
+        self.query("zen")
+        row = dict(display="Zen Browser", description="Web Browser", decoration="zen", favoriteId="", url="")
+        self.root.property("appendResult").call([self.engine.toScriptValue(row)])
+        QTest.qWait(20)
+        self.root.property("updateResult").call([20,"favoriteId","applications:app.zen_browser.zen.desktop"])
+        QTest.qWait(30)
+        self.assertEqual(self.item("menuApplicationResult-0").property("name"), "Zen Browser")
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-20")
+        self.assertEqual(tasks.property("count"), 0)
+        self.assertFalse(self.errors, self.errors)
+
+    def test_ranking_never_resolves_file_urls_and_handles_metadata_bursts(self):
+        class Metadata(QAbstractListModel):
+            count = Property(int, lambda self: 3, constant=True)
+            url_reads = 0
+            def rowCount(self, parent=QModelIndex()): return 0 if parent.isValid() else 3
+            def roleNames(self):
+                return {0:b'display',1:b'decoration',257:b'description',258:b'favoriteId',259:b'url'}
+            def data(self, index, role=Qt.DisplayRole):
+                if not index.isValid(): return None
+                row=index.row()
+                if role == 259:
+                    self.url_reads += 1
+                    return 'file:///unavailable-drive/ChatGPT.exe'
+                return {0:['chatgpt folder','ChatGPT','ChatGPT.exe'],
+                        1:['folder','chatgpt','application-x-executable'],
+                        257:['Downloads','Application','Downloads'],
+                        258:['','applications:chatgpt.desktop','']}.get(role,['','',''])[row]
+        model=Metadata(self.root)
+        self.root.setProperty('suppliedResults',model)
+        self.query('ch');QTest.qWait(50)
+        self.assertEqual(self.item('menuApplicationResult-0').property('name'),'ChatGPT')
+        self.assertEqual(self.item('menuApplicationResult-1').property('name'),'ChatGPT.exe')
+        self.assertEqual(self.results.property('count'),1)
+        for _ in range(100):model.dataChanged.emit(model.index(0,0),model.index(2,0),[257,258])
+        QTest.qWait(50)
+        self.assertEqual(model.url_reads,0)
+        QTest.keyClick(self.window,Qt.Key_Return)
+        self.assertEqual(self.root.property('launched'),'native-1')
+
+    def test_fast_typing_coalesces_queries_and_enter_uses_the_latest_text(self):
+        queries=[];self.finder.queryChanged.connect(lambda:queries.append(self.finder.property('query')))
+        self.add_app()
+        self.search.forceActiveFocus()
+        for char in 'chatgpt':
+            QTest.keyClick(self.window,Qt.Key(ord(char.upper())));QTest.qWait(15)
+        QTest.keyClick(self.window,Qt.Key_Return)
+        self.assertEqual(self.root.property('launched'),'')
+        QTest.qWait(200)
+        self.assertEqual(queries,['chatgpt'])
+        self.assertEqual(self.root.property('launched'),'native-20')
 
     def test_application_precedes_same_name_folder_and_launches_source_row(self):
         self.query("chatgpt")
@@ -571,3 +687,38 @@ Window {
         self.deliver(source)
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertEqual(self.root.property("launched"), "native-0")
+
+    def test_running_and_portable_apps_precede_packages_and_folder_windows(self):
+        self.query("chatgpt")
+        rows = [
+            dict(display="chatgpt.x86_64.rpm", description="~/Downloads", decoration="package-x-generic", url="file:///Downloads/chatgpt.x86_64.rpm"),
+            dict(display="chatgpt — Files", description="Activate running window on Desktop 1", decoration="folder", url=""),
+            dict(display="chatgpt.x86_64.rpm — Archives", description="Activate running window on Desktop 1", decoration="ark", url=""),
+            dict(display="ChatGPT", description="Activate running window on Desktop 1", decoration="chatgpt", url=""),
+            dict(display="ChatGPT.exe", description="~/Downloads", decoration="application-x-ms-dos-executable", url="file:///Downloads/ChatGPT.exe"),
+            dict(display="ChatGPT.AppImage", description="~/Downloads", decoration="application-x-executable", url="file:///Downloads/ChatGPT.AppImage"),
+            dict(display="ChatGPT.exe.zip", description="~/Downloads", decoration="application-zip", url="file:///Downloads/ChatGPT.exe.zip"),
+        ]
+        for row in rows:
+            self.root.property("appendResult").call([self.engine.toScriptValue(dict(row, favoriteId=""))])
+        QTest.qWait(30)
+        self.assertEqual(self.item("menuApplicationResult-0").property("name"), "ChatGPT")
+        self.assertEqual(self.item("menuApplicationResult-1").property("name"), "ChatGPT.exe")
+        self.assertEqual(self.item("menuApplicationResult-2").property("name"), "ChatGPT.AppImage")
+        self.assertEqual(self.results.property("count"), 24)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-23")
+        self.assertFalse(self.errors, self.errors)
+
+    def test_late_running_application_metadata_updates_priority(self):
+        tasks = self.page.property("runningTasks")
+        if hasattr(tasks, "toQObject"): tasks = tasks.toQObject()
+        tasks.setProperty("count", 0)
+        self.query("chatgpt")
+        row = dict(display="ChatGPT", description="Activate running window on Desktop 1", decoration="chatgpt", favoriteId="", url="")
+        self.root.property("appendResult").call([self.engine.toScriptValue(row)])
+        QTest.qWait(30); self.assertEqual(self.results.property("count"), 21)
+        tasks.setProperty("count", 3)
+        QTest.qWait(30); self.assertEqual(self.results.property("count"), 20)
+        self.assertEqual(self.item("menuApplicationResult-0").property("name"), "ChatGPT")
+        self.assertFalse(self.errors, self.errors)

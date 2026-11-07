@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+"""Connection-owned temporary inhibition, activated on demand by the session bus."""
+from pathlib import Path
+import sys
+folder = Path('@DATADIR@/monet')
+if not folder.is_dir():
+    folder = Path(__file__).resolve().parents[1] / 'share/monet'
+sys.path.insert(0, str(folder))
+from monet_runtime.keep_awake import main
+if __name__ == '__main__':
+    sys.exit(main())

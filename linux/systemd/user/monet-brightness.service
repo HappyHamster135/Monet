@@ -1,0 +1,14 @@
+[Unit]
+Description=Remember Monet screen brightness
+PartOf=graphical-session.target
+After=plasma-powerdevil.service
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-brightness
+Slice=background.slice
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical-session.target

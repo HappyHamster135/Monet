@@ -11,9 +11,12 @@ widgets'), and keeps one window: opening Games again brings that one forward.
 import gettext
 import os
 import sys
+import time
 
-from PySide6.QtCore import QEvent, QObject, Property, QProcess, QRectF, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion, QWindow
+STARTUP_STARTED = time.monotonic()
+
+from PySide6.QtCore import QEvent, QObject, Property, QProcess, QRect, QRectF, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion, QScreen, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket, QNetworkAccessManager, QNetworkDiskCache
 from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
 
@@ -61,6 +64,77 @@ class Words(QObject):
         return fill(WORDS.ngettext(one, many, int(count)), (count, *values))
 
 
+class WindowArea(QObject):
+    """The watched window's own usable screen rectangle, without polling."""
+
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._window = None
+        self._screen = None
+        self._geometry = QRect()
+        self._set_screen(QGuiApplication.primaryScreen())
+
+    @Property(int, notify=changed)
+    def width(self):
+        return self._geometry.width()
+
+    @Property(int, notify=changed)
+    def height(self):
+        return self._geometry.height()
+
+    @Property(QRect, notify=changed)
+    def geometry(self):
+        return QRect(self._geometry)
+
+    @Slot(QWindow)
+    def watch(self, window):
+        if window is not self._window:
+            if self._window is not None:
+                self._window.screenChanged.disconnect(self._set_screen)
+                self._window.destroyed.disconnect(self._window_gone)
+            self._window = window
+            if window is not None:
+                window.screenChanged.connect(self._set_screen)
+                window.destroyed.connect(self._window_gone)
+        self._set_screen(window.screen() if window is not None else None)
+
+    @Slot(QScreen)
+    def _set_screen(self, screen):
+        if screen is not self._screen:
+            if self._screen is not None:
+                self._screen.availableGeometryChanged.disconnect(self._refresh)
+                self._screen.geometryChanged.disconnect(self._refresh)
+                self._screen.destroyed.disconnect(self._screen_gone)
+            self._screen = screen
+            if screen is not None:
+                screen.availableGeometryChanged.connect(self._refresh)
+                screen.geometryChanged.connect(self._refresh)
+                screen.destroyed.connect(self._screen_gone)
+        self._refresh()
+
+    @Slot()
+    def _refresh(self):
+        if self._screen is None:
+            return
+        geometry = self._screen.availableGeometry()
+        # A disconnected output can briefly have no usable size. Keep the last
+        # valid rectangle instead of saving a one-pixel window during reconnect.
+        if geometry.width() > 0 and geometry.height() > 0 and geometry != self._geometry:
+            self._geometry = QRect(geometry)
+            self.changed.emit()
+
+    @Slot()
+    def _screen_gone(self):
+        self._screen = None
+
+    @Slot()
+    def _window_gone(self):
+        self._window = None
+        self._set_screen(None)
+
+
 class WindowActivity(QObject):
     """Native exposure follows external Wayland minimization without polling."""
 
@@ -105,6 +179,39 @@ class WindowActivity(QObject):
         if active != self._active:
             self._active = active
             self.activeChanged.emit()
+
+
+def startup_event(label, phase, started):
+    if os.environ.get("MONET_STARTUP_TIMING") != "1":
+        return
+    import json
+    print("MONET_STARTUP " + json.dumps(dict(app=label, phase=phase,
+          elapsed_ms=round((time.monotonic() - started) * 1000, 3))), file=sys.stderr, flush=True)
+
+
+class StartupTiming(QObject):
+    """Opt-in first-frame measurements; never record arguments or user data."""
+
+    def __init__(self, label, window, started):
+        super().__init__(window)
+        self._label, self._window, self._started = label, window, started
+        if os.environ.get("MONET_STARTUP_TIMING") == "1":
+            self._mark("window-created")
+            window.frameSwapped.connect(self._first_frame)
+
+    def _mark(self, phase):
+        startup_event(self._label, phase, self._started)
+
+    def _first_frame(self):
+        self._window.frameSwapped.disconnect(self._first_frame)
+        self._mark("first-frame")
+
+
+class BootClock(QObject):
+    """Countdowns include explicit suspend and ignore wall-clock changes."""
+    @Slot(result=float)
+    def now(self):
+        return time.clock_gettime(time.CLOCK_BOOTTIME) if hasattr(time, "CLOCK_BOOTTIME") else time.monotonic()
 
 
 class Helper(QObject):
@@ -276,9 +383,11 @@ def main():
     engine.rootContext().setContextProperty("art", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
     engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
     engine.rootContext().setContextProperty("blurBehind", False)
+    startup_event("games", "qml-load-start", STARTUP_STARTED)
     engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/games/Games.qml"))
     if not engine.rootObjects():
         return 1
+    startup = StartupTiming("games", engine.rootObjects()[0], STARTUP_STARTED)
     glaze(engine.rootObjects()[0], engine.rootContext())
     return app.exec()
 

@@ -32,6 +32,7 @@ Item {
     Accessible.onPressAction: framed.chosen()
 
     // The mat and the screenshot in it, lifted a little under the pointer.
+    // Software rendering paints sources directly; shader masks/shadows need RHI.
     Item {
         id: frame
         width: parent.width
@@ -44,9 +45,10 @@ Item {
             anchors.fill: parent
             radius: 12
             color: framed.tone.dark ? "#34322F" : "#FFFFFF"
-            visible: false
+            visible: GraphicsInfo.api === GraphicsInfo.Software
         }
         MultiEffect {
+            visible: GraphicsInfo.api !== GraphicsInfo.Software
             source: mat
             anchors.fill: mat
             shadowEnabled: true
@@ -59,7 +61,8 @@ Item {
         Item {
             anchors.fill: parent
             anchors.margins: 6
-            layer.enabled: true
+            clip: GraphicsInfo.api === GraphicsInfo.Software
+            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: shape
@@ -86,6 +89,7 @@ Item {
             }
             Image {
                 id: shot
+                objectName: "storeFramedShot"
                 anchors.fill: parent
                 source: framed.app.shot || ""
                 fillMode: Image.PreserveAspectCrop
@@ -101,7 +105,7 @@ Item {
             anchors.fill: parent
             anchors.margins: 6
             visible: false
-            layer.enabled: true
+            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
             Rectangle { anchors.fill: parent; radius: 8 }
         }
     }

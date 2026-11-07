@@ -177,7 +177,15 @@ def fallback():
     wait_for(lambda: obj.property('volume') is None, 'failed fallback must discard stale volume')
     failed.unlink(); value.write_text('Volume: 0.52\n')
     wait_for(lambda: obj.property('volume') == 52, 'automatic fallback retry')
-    print(json.dumps({'fallback_refresh_failure_retry': 'passed'}))
+    obj.setProperty('active', False)
+    value.write_text('Volume: 0.29\n'); count = number_calls()
+    for _ in range(5): refresh(obj)
+    QTest.qWait(2400)
+    assert number_calls() == count, 'inactive fallback kept launching commands'
+    assert obj.property('volume') == 52, 'inactive view lost its last reading'
+    obj.setProperty('active', True)
+    wait_for(lambda: obj.property('volume') == 29, 'fresh reading immediately after resume')
+    print(json.dumps({'fallback_refresh_failure_retry': 'passed', 'inactive_reads': 0, 'resume': 'fresh'}))
 
 
 def recovery():

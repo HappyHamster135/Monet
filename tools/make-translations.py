@@ -235,6 +235,9 @@ def gather():
     qml = sorted(set((ROOT / "linux").rglob("*.qml")) | set((ROOT / "image").rglob("*.qml")))
     # The native sidebar patch embeds QML in a fail-closed source transform.
     qml.append(ROOT / "image/task-manager/patch.py")
+    qml.append(ROOT / "image/dock/patch.py")
+    # Native modules use the same i18nd("monet", ...) literal convention.
+    qml.extend(sorted((ROOT / "image/launcher").glob("*.cpp")))
     for p in qml:
         scan(p.read_text(encoding="utf-8"), QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "qml").glob("*.qml")):

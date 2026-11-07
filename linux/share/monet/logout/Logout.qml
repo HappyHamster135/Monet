@@ -1,32 +1,22 @@
-/*
- * Monet's restart and shut-down screen: the desktop softens behind a sheet
- * of glass that asks one question. Asked to restart, shut down or sign out,
- * it counts down with the sun on the answer; asked from Ctrl+Alt+Del or the
- * power button, it offers all of them. Esc or a click outside cancels, and
- * going ahead lets the sun set first.
- *
- * KDE's logout greeter loads it from the global theme (logout/Logout.qml),
- * once per screen, with sdtype, ShutdownType, maysd, canLogout, spdMethods,
- * softwareUpdatePending and the reboot notes as context properties, and
- * listens for the signals below by name. If it can't load, KDE's own shows.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Plasma owns the session, updates and power policy. This page emits its signals.
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Effects
 import QtQuick.Layouts
-import QtQuick.Shapes
-
-import org.kde.coreaddons as KCoreAddons
+import QtQuick.Window
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.private.sessions
 import "timer.js" as AutoTriggerTimer
 
-Item {
+FocusScope {
     id: root
-    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
-    LayoutMirroring.childrenInherit: true
+    objectName: "MonetPowerScreen"
+    focus: true
     width: typeof screenGeometry === "undefined" ? 1440 : screenGeometry.width
     height: typeof screenGeometry === "undefined" ? 900 : screenGeometry.height
+    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.childrenInherit: true
 
     signal logoutRequested()
     signal haltRequested()
@@ -38,553 +28,535 @@ Item {
     signal cancelRequested()
     signal lockScreenRequested()
     signal cancelSoftwareUpdateRequested()
+    signal showApplicationsRequested()
 
-    // Without a GPU there's no blur behind: a heavier wash instead.
     readonly property bool softwareRendering: GraphicsInfo.api === GraphicsInfo.Software
-    readonly property real speed: Kirigami.Units.longDuration / 200
-    // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+    readonly property real speed: Kirigami.Units.longDuration / 200
+    property real fontScale: Math.max(1, Kirigami.Theme.defaultFont.pointSize / 11)
     readonly property color ink: smoke ? "#EFECE6" : "#1C1B19"
     readonly property color dim: smoke ? "#B4AEA5" : "#6B665E"
-    readonly property color glass: smoke ? Qt.rgba(0.141, 0.137, 0.129, 0.78) : Qt.rgba(0.969, 0.961, 0.945, 0.76)
-    readonly property color hairline: smoke ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.09)
-    readonly property color pebble: smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0.11, 0.106, 0.098, 0.06)
-    readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
-    readonly property color sun: "#F2552C"
     readonly property color paper: "#FBF7EE"
-
-    // Asked for one thing (with a countdown), or for a choice.
+    readonly property color panel: smoke ? "#292824" : "#F7F5EF"
+    readonly property color hairline: smoke ? "#49473F" : "#DFDBD1"
+    readonly property color pebble: smoke ? "#33322D" : "#EFEBE2"
+    readonly property color lily: smoke ? "#73C7B3" : "#357F72"
+    readonly property color sun: "#F2552C"
+    readonly property bool compact: height < 640 || width < 520
     readonly property bool choosing: sdtype === ShutdownType.ShutdownTypeDefault
     readonly property bool restarting: sdtype === ShutdownType.ShutdownTypeReboot
     readonly property bool shuttingDown: sdtype === ShutdownType.ShutdownTypeHalt
+    readonly property bool permitted: restarting || shuttingDown ? maysd : canLogout
     property int remaining: 30
-    property bool counting: !choosing
+    property bool counting: !choosing && permitted
     property bool leaving: false
-    readonly property string firstName: (kuser.fullName || kuser.loginName || "").trim().split(" ")[0]
+    property string transitionMessage: ""
+    property var countdownCallback: null
+    property bool offerApplicationReview: false
+    Timer { interval: 4000; running: root.leaving; onTriggered: root.offerApplicationReview = true }
 
-    function go() {
-        if (restarting) {
-            leave(() => softwareUpdatePending ? root.rebootUpdateRequested() : root.rebootRequested())
-        } else if (shuttingDown) {
-            leave(() => softwareUpdatePending ? root.haltUpdateRequested() : root.haltRequested())
-        } else {
-            leave(() => root.logoutRequested())
-        }
+    function stopCounting() { AutoTriggerTimer.cancelAutoTrigger() }
+
+    function showLeaving(message) {
+        leaving = true
+        transitionMessage = message || i18nd("monet", "Signing out…")
+        night.opacity = 1
     }
 
-    // The sun sets, then the PC does what was asked. Sleep doesn't wait.
-    function leave(action) {
-        if (leaving) {
-            return
-        }
+    function leave(action, message) {
+        if (leaving || !AutoTriggerTimer.beginAction(countdownCallback)) return
         leaving = true
-        counting = false
+        transitionMessage = message || (restarting ? i18nd("monet", "Restarting…") : shuttingDown ? i18nd("monet", "Shutting down…") : i18nd("monet", "Signing out…"))
         sunset.action = action
         sunset.start()
     }
 
-    function stopCounting() {
-        AutoTriggerTimer.cancelAutoTrigger()
+    function go() {
+        if (!permitted) return
+        if (restarting) leave(() => softwareUpdatePending ? root.rebootUpdateRequested() : root.rebootRequested())
+        else if (shuttingDown) leave(() => softwareUpdatePending ? root.haltUpdateRequested() : root.haltRequested())
+        else leave(() => root.logoutRequested())
     }
 
-    KCoreAddons.KUser {
-        id: kuser
+    function goWithoutUpdates() {
+        if (!maysd) return
+        leave(() => restarting ? root.rebootRequested() : root.haltRequested())
     }
 
-    // Anyone else signed in could lose what they haven't saved.
+    function reveal(item) {
+        if (!item || !item.visible || !item.enabled) return
+        let ancestor = item
+        while (ancestor && ancestor !== scrollBody) ancestor = ancestor.parent
+        if (!ancestor) return
+        const point = item.mapToItem(scrollBody, 0, 0)
+        const margin = 8
+        let position = scroller.contentY
+        if (point.y < position + margin) position = point.y - margin
+        else if (point.y + item.height > position + scroller.height - margin)
+            position = point.y + item.height - scroller.height + margin
+        scroller.contentY = Math.max(0, Math.min(Math.max(0, scroller.contentHeight - scroller.height), position))
+    }
+
+    function buttons() {
+        return [sleepChoice, hibernateChoice, restartChoice, plainRestartChoice,
+                shutDownChoice, plainShutDownChoice, logoutChoice,
+                goPill, plainGo, cancelChoice].filter(item => item.visible && item.enabled)
+    }
+
+    function handleKey(event, item) {
+        stopCounting()
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (item.enabled) item.clicked()
+            event.accepted = true
+        } else if ([Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down].includes(event.key)) {
+            const order = buttons()
+            if (!order.length) return
+            let step = event.key === Qt.Key_Up || event.key === Qt.Key_Left ? -1 : 1
+            if ((event.key === Qt.Key_Left || event.key === Qt.Key_Right) && root.LayoutMirroring.enabled) step *= -1
+            if (choosing && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) step *= choices.columns
+            const index = Math.max(0, order.indexOf(item))
+            order[(index + step + order.length) % order.length].forceActiveFocus(Qt.TabFocusReason)
+            event.accepted = true
+        } else event.accepted = false
+    }
+
+    Component.onCompleted: {
+        countdownCallback = () => { root.counting = false }
+        AutoTriggerTimer.addCancelAutoTriggerCallback(countdownCallback)
+        Qt.callLater(() => {
+            const preferred = choosing ? shutDownChoice : goPill
+            if (preferred.visible && preferred.enabled) preferred.forceActiveFocus(Qt.TabFocusReason)
+            else cancelChoice.forceActiveFocus(Qt.TabFocusReason)
+        })
+    }
+    Component.onDestruction: AutoTriggerTimer.removeCancelAutoTriggerCallback(countdownCallback)
+
     SessionsModel {
         id: otherSessions
         includeUnusedSessions: false
         includeOwnSession: false
     }
-
     QQC2.Action {
         shortcut: "Escape"
-        onTriggered: root.cancelRequested()
+        onTriggered: if (!root.leaving) { root.stopCounting(); root.cancelRequested() }
     }
-
+    Keys.onPressed: event => { root.stopCounting(); event.accepted = false }
     Timer {
         interval: 1000
         repeat: true
-        running: root.counting
-        onTriggered: {
-            root.remaining -= 1
-            if (root.remaining <= 0) {
-                root.go()
-            }
-        }
-        // A key on any screen stops the countdown on all of them.
-        Component.onCompleted: AutoTriggerTimer.addCancelAutoTriggerCallback(() => { root.counting = false })
+        running: root.counting && !root.leaving
+        onTriggered: if (--root.remaining <= 0) root.go()
     }
 
-    // The desktop, softened and washed in mist or smoke (KWin blurs behind this window).
     Rectangle {
-        id: wash
         anchors.fill: parent
-        readonly property color tone: root.smoke ? "#14131A" : "#F3F1EC"
-        color: Qt.rgba(tone.r, tone.g, tone.b, root.softwareRendering ? 0.82 : (root.smoke ? 0.46 : 0.38))
-        opacity: 0
-        Component.onCompleted: opacity = 1
-        Behavior on opacity { NumberAnimation { duration: Math.round(380 * root.speed) } }
+        color: root.smoke ? "#151511" : "#E9E5DA"
+        opacity: root.softwareRendering ? 0.94 : 0.70
     }
-
     MouseArea {
         anchors.fill: parent
-        onClicked: root.cancelRequested()
+        enabled: !root.leaving
+        onClicked: { root.stopCounting(); root.cancelRequested() }
     }
 
-    Item {
-        // The sheet rises into place.
-        id: rise
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: sheet.width
-        height: sheet.height
-        y: Math.round((parent.height - height) / 2) + Kirigami.Units.gridUnit * 1.5
-        opacity: 0
-        Component.onCompleted: {
-            y = Qt.binding(() => Math.round((parent.height - height) / 2))
-            opacity = 1
+    Rectangle {
+        id: sheet
+        objectName: "powerSheet"
+        readonly property int pad: root.compact ? 22 : 34
+        anchors.centerIn: parent
+        width: Math.max(1, Math.min(680, root.width - (root.width < 480 ? 24 : 64)))
+        height: Math.max(1, Math.min(root.height - 32, scrollBody.implicitHeight + footer.implicitHeight + pad * 2 + 20))
+        radius: 24
+        color: root.panel
+        border.width: 1
+        border.color: root.hairline
+        enabled: !root.leaving
+        layer.enabled: !root.softwareRendering
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: root.smoke ? "#80000000" : "#331C1B19"
+            shadowBlur: 1
+            shadowVerticalOffset: 12
         }
-        Behavior on y { NumberAnimation { duration: Math.round(380 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] } }
-        Behavior on opacity { NumberAnimation { duration: Math.round(380 * root.speed) } }
+        MouseArea { anchors.fill: parent }
 
-        Rectangle {
-            id: sheet
-            readonly property int pad: Kirigami.Units.gridUnit * 2
-            width: Math.min(root.width - Kirigami.Units.gridUnit * 2,
-                            Math.max(Kirigami.Units.gridUnit * 23, content.implicitWidth + pad * 2))
-            height: content.implicitHeight + pad * 2
-            radius: 22
-            color: root.glass
-            border.width: 1
-            border.color: root.hairline
-            layer.enabled: !root.softwareRendering
-            layer.effect: MultiEffect {
-                shadowEnabled: true
-                shadowColor: root.smoke ? "#99000000" : "#661C1B19"
-                shadowBlur: 1
-                shadowVerticalOffset: 10
-            }
-            // The light caught in the sheet's edge, as on Monet's glass: brightest at the top left
-            // and the bottom right.
-            Shape {
-                anchors.fill: parent
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                    readonly property real w: Math.max(sheet.width, 1)
-                    readonly property real h: Math.max(sheet.height, 1)
-                    strokeWidth: -1
-                    fillRule: ShapePath.OddEvenFill
-                    fillGradient: LinearGradient {
-                        x1: 0
-                        y1: 0
-                        x2: 2 * parent.w * parent.h * parent.h / (parent.w * parent.w + parent.h * parent.h)
-                        y2: 2 * parent.w * parent.w * parent.h / (parent.w * parent.w + parent.h * parent.h)
-                        GradientStop { position: 0; color: Qt.rgba(1, 1, 1, root.smoke ? 0.42 : 0.92) }
-                        GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, root.smoke ? 0.07 : 0.24) }
-                        GradientStop { position: 1; color: Qt.rgba(1, 1, 1, root.smoke ? 0.24 : 0.62) }
-                    }
-                    PathRectangle { width: sheet.width; height: sheet.height; radius: sheet.radius }
-                    PathRectangle {
-                        x: 1.25
-                        y: 1.25
-                        width: sheet.width - 2.5
-                        height: sheet.height - 2.5
-                        radius: sheet.radius - 1.25
-                    }
-                }
-            }
-
-            // Clicks on the sheet stay on it.
-            MouseArea {
-                anchors.fill: parent
-            }
-
-            ColumnLayout {
-                id: content
-                anchors.fill: parent
-                anchors.margins: sheet.pad
-                spacing: Kirigami.Units.smallSpacing * 2
-
-                // Your face, or your initial on a dab of lily, as on the lock screen.
-                Item {
-                    id: avatar
-                    visible: root.choosing
-                    Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 76
-                    implicitHeight: 76
-                    readonly property bool hasFace: face.status === Image.Ready && !root.softwareRendering
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: root.paper
-                        opacity: 0.85
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 3
-                        radius: width / 2
-                        visible: !avatar.hasFace
-                        gradient: Gradient {
-                            GradientStop { position: 0; color: "#4DB4A0" }
-                            GradientStop { position: 1; color: "#245A50" }
-                        }
-                        Text {
-                            horizontalAlignment: Text.AlignLeft
-                            anchors.centerIn: parent
-                            anchors.verticalCenterOffset: -2
-                            text: (root.firstName || "M").charAt(0).toUpperCase()
-                            color: root.paper
-                            font.family: "Fraunces 72pt SuperSoft"
-                            font.pixelSize: 34
-                        }
-                    }
-                    Image {
-                        id: face
-                        anchors.fill: parent
-                        anchors.margins: 3
-                        visible: false
-                        asynchronous: true
-                        fillMode: Image.PreserveAspectCrop
-                        sourceSize.width: width * 2
-                        sourceSize.height: height * 2
-                        source: kuser.faceIconUrl
-                    }
-                    Item {
-                        id: faceMask
-                        anchors.fill: face
-                        visible: false
-                        layer.enabled: true
-                        Rectangle { anchors.fill: parent; radius: width / 2 }
-                    }
-                    MultiEffect {
-                        anchors.fill: face
-                        source: face
-                        visible: avatar.hasFace
-                        maskEnabled: true
-                        maskSource: faceMask
-                        maskThresholdMin: 0.5
-                        maskSpreadAtMin: 1
-                    }
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    Layout.topMargin: root.choosing ? Kirigami.Units.smallSpacing : 0
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    color: root.ink
-                    font.family: "Fraunces 72pt SuperSoft"
-                    font.italic: root.choosing
-                    font.pixelSize: root.choosing ? 26 : 30
-                    text: root.choosing ? (root.firstName ? i18ndc("monet", "%1 is a first name", "See you soon, %1.", root.firstName) : i18nd("monet", "See you soon."))
-                        : root.restarting ? i18nd("monet", "Restart now?")
-                        : root.shuttingDown ? i18nd("monet", "Shut down now?")
-                        : i18nd("monet", "Sign out now?")
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    Layout.maximumWidth: Kirigami.Units.gridUnit * 21
-                    Layout.alignment: Qt.AlignHCenter
-                    visible: !root.choosing
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    color: root.dim
-                    font.family: "Inter"
-                    font.pixelSize: 14
-                    lineHeight: 1.15
-                    text: {
-                        const save = i18nd("monet", "Open apps close, so save your work first.")
-                        if (!root.counting) {
-                            return save
-                        }
-                        const left = root.restarting
-                            ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and restarts in 1 second.", "Your PC installs its updates and restarts in %1 seconds.", root.remaining)
-                                                     : i18ndp("monet", "Your PC restarts in 1 second.", "Your PC restarts in %1 seconds.", root.remaining))
-                            : root.shuttingDown
-                            ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and shuts down in 1 second.", "Your PC installs its updates and shuts down in %1 seconds.", root.remaining)
-                                                     : i18ndp("monet", "Your PC shuts down in 1 second.", "Your PC shuts down in %1 seconds.", root.remaining))
-                            : i18ndp("monet", "You'll be signed out in 1 second.", "You'll be signed out in %1 seconds.", root.remaining)
-                        return left + "\n" + save
-                    }
-                }
-
-                // What else happens: someone else signed in, or where the PC restarts to.
-                Repeater {
-                    model: [
-                        otherSessions.count > 0 && (!root.choosing || maysd)
-                            ? i18ndp("monet", "Someone else is signed in too. They lose anything they haven't saved.",
-                                    "%1 other people are signed in too. They lose anything they haven't saved.", otherSessions.count) : "",
-                        rebootToFirmwareSetup && (root.choosing || root.restarting)
-                            ? (isUefi ? i18nd("monet", "When it restarts, the PC opens its setup screen (BIOS).") : i18nd("monet", "When it restarts, the PC opens its firmware settings.")) : "",
-                        rebootToBootLoaderMenu && (root.choosing || root.restarting) ? i18nd("monet", "When it restarts, the PC opens its boot menu.") : "",
-                        rebootToBootLoaderEntry !== "" && (root.choosing || root.restarting)
-                            ? i18ndc("monet", "%1 is what the PC starts next", "When it restarts, the PC starts %1.", rebootToBootLoaderEntry) : ""
-                    ].filter(note => note !== "")
-                    delegate: Text {
-                        required property string modelData
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: Kirigami.Units.gridUnit * 21
-                        Layout.alignment: Qt.AlignHCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        color: root.dim
-                        font.family: "Inter"
-                        font.italic: true
-                        font.pixelSize: 13
-                        text: modelData
-                    }
-                }
-
-                // One question: Cancel, and the sun on the answer.
-                RowLayout {
-                    visible: !root.choosing
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: Kirigami.Units.gridUnit
-                    spacing: Kirigami.Units.smallSpacing * 3
-
-                    Pill {
-                        id: cancelPill
-                        text: i18nd("monet", "Cancel")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.cancelRequested()
-                        Keys.onPressed: root.stopCounting()
-                        KeyNavigation.right: goPill
-                    }
-                    Pill {
-                        id: goPill
-                        focus: !root.choosing
-                        text: root.restarting ? (softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart"))
-                            : root.shuttingDown ? (softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down"))
-                            : i18nd("monet", "Sign out")
-                        ink: root.paper
-                        tint: root.sun
-                        ring: root.ink
-                        speed: root.speed
-                        onClicked: root.go()
-                        Keys.onPressed: event => {
-                            if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter) {
-                                root.stopCounting()
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: sheet.pad
+            spacing: 20
+            QQC2.ScrollView {
+                id: scrollView
+                objectName: "powerScroll"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                contentWidth: availableWidth
+                // Keep the bar out of the cards' hover targets, including
+                // when all content fits and Qt's transient bar is hidden.
+                readonly property bool overflowing: scroller.contentHeight > scroller.height + 1
+                rightPadding: overflowing ? Math.max(12, effectiveScrollBarWidth) + 6 : 0
+                clip: true
+                QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+                QQC2.ScrollBar.vertical.policy: overflowing ? QQC2.ScrollBar.AlwaysOn : QQC2.ScrollBar.AlwaysOff
+                Flickable {
+                    id: scroller
+                    objectName: "powerFlickable"
+                    contentWidth: width
+                    contentHeight: scrollBody.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
+                    flickableDirection: Flickable.VerticalFlick
+                    clip: true
+                    ColumnLayout {
+                        id: scrollBody
+                        width: scroller.width
+                        spacing: root.compact ? 18 : 24
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            Rectangle { implicitWidth: 12; implicitHeight: 12; radius: 6; color: root.sun }
+                            Text {
+                                text: "Monet"
+                                color: root.dim
+                                font.family: "Inter"
+                                font.pixelSize: 13 * root.fontScale
+                                font.weight: Font.Medium
+                                font.letterSpacing: 1.5
+                            }
+                            Item { Layout.fillWidth: true }
+                            PowerMark {
+                                visible: !root.choosing
+                                kind: root.restarting ? "restart" : root.shuttingDown ? "shutdown" : "logout"
+                                ink: root.sun
+                                Layout.preferredWidth: 28
+                                Layout.preferredHeight: 28
                             }
                         }
-                        KeyNavigation.left: cancelPill
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Text {
+                                objectName: "powerHeading"
+                                Layout.fillWidth: true
+                                text: root.choosing ? i18nd("monet", "See you soon.")
+                                    : root.restarting ? i18nd("monet", "Restart now?")
+                                    : root.shuttingDown ? i18nd("monet", "Shut down now?") : i18nd("monet", "Sign out now?")
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                                color: root.ink
+                                font.family: "Fraunces 72pt SuperSoft"
+                                font.pixelSize: (root.compact ? 32 : 42) * root.fontScale
+                                font.weight: Font.Light
+                                font.italic: root.choosing
+                            }
+                            Text {
+                                visible: root.choosing
+                                Layout.fillWidth: true
+                                text: i18nd("monet", "Power & Sleep")
+                                color: root.dim
+                                font.family: "Inter"
+                                font.pixelSize: 14 * root.fontScale
+                            }
+                            Text {
+                                objectName: "powerExplanation"
+                                visible: !root.choosing
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                textFormat: Text.PlainText
+                                color: root.dim
+                                font.family: "Inter"
+                                font.pixelSize: 14 * root.fontScale
+                                lineHeight: 1.3
+                                text: {
+                                    const save = i18nd("monet", "Open apps close, so save your work first.")
+                                    if (!root.counting) return save
+                                    const left = root.restarting
+                                        ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and restarts in 1 second.", "Your PC installs its updates and restarts in %1 seconds.", root.remaining)
+                                                                 : i18ndp("monet", "Your PC restarts in 1 second.", "Your PC restarts in %1 seconds.", root.remaining))
+                                        : root.shuttingDown
+                                        ? (softwareUpdatePending ? i18ndp("monet", "Your PC installs its updates and shuts down in 1 second.", "Your PC installs its updates and shuts down in %1 seconds.", root.remaining)
+                                                                 : i18ndp("monet", "Your PC shuts down in 1 second.", "Your PC shuts down in %1 seconds.", root.remaining))
+                                        : i18ndp("monet", "You'll be signed out in 1 second.", "You'll be signed out in %1 seconds.", root.remaining)
+                                    return left + "\n" + save
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: [
+                                otherSessions.count > 0 && (root.choosing || root.restarting || root.shuttingDown)
+                                    ? i18ndp("monet", "Someone else is signed in too. They lose anything they haven't saved.", "%1 other people are signed in too. They lose anything they haven't saved.", otherSessions.count) : "",
+                                rebootToFirmwareSetup && (root.choosing || root.restarting)
+                                    ? (isUefi ? i18nd("monet", "When it restarts, the PC opens its setup screen (BIOS).") : i18nd("monet", "When it restarts, the PC opens its firmware settings.")) : "",
+                                rebootToBootLoaderMenu && (root.choosing || root.restarting) ? i18nd("monet", "When it restarts, the PC opens its boot menu.") : "",
+                                rebootToBootLoaderEntry !== "" && (root.choosing || root.restarting)
+                                    ? i18ndc("monet", "%1 is what the PC starts next", "When it restarts, the PC starts %1.", rebootToBootLoaderEntry) : ""
+                            ].filter(note => note !== "")
+                            delegate: Text {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                textFormat: Text.PlainText
+                                text: modelData
+                                color: root.dim
+                                font.family: "Inter"
+                                font.pixelSize: 13 * root.fontScale
+                                lineHeight: 1.25
+                            }
+                        }
+
+                        GridLayout {
+                            id: choices
+                            objectName: "powerChoices"
+                            visible: root.choosing
+                            Layout.fillWidth: true
+                            columns: width >= 440 ? 2 : 1
+                            columnSpacing: 12
+                            rowSpacing: 12
+                            PowerCard {
+                                id: sleepChoice
+                                objectName: "sleepChoice"
+                                visible: spdMethods.SuspendState
+                                text: i18nd("monet", "Sleep")
+                                symbol: "sleep"
+                                onClicked: root.suspendRequested(2)
+                            }
+                            PowerCard {
+                                id: hibernateChoice
+                                objectName: "hibernateChoice"
+                                visible: spdMethods.HibernateState
+                                text: i18nd("monet", "Hibernate")
+                                symbol: "hibernate"
+                                onClicked: root.suspendRequested(4)
+                            }
+                            PowerCard {
+                                id: restartChoice
+                                objectName: "restartChoice"
+                                visible: maysd
+                                text: softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart")
+                                symbol: "restart"
+                                onClicked: root.leave(() => softwareUpdatePending ? root.rebootUpdateRequested() : root.rebootRequested(), i18nd("monet", "Restarting…"))
+                            }
+                            PowerCard {
+                                id: plainRestartChoice
+                                objectName: "plainRestartChoice"
+                                visible: maysd && softwareUpdatePending
+                                text: i18nd("monet", "Restart")
+                                symbol: "restart"
+                                onClicked: root.leave(() => root.rebootRequested(), i18nd("monet", "Restarting…"))
+                            }
+                            PowerCard {
+                                id: shutDownChoice
+                                objectName: "shutDownChoice"
+                                visible: maysd
+                                text: softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down")
+                                symbol: "shutdown"
+                                warm: true
+                                onClicked: root.leave(() => softwareUpdatePending ? root.haltUpdateRequested() : root.haltRequested(), i18nd("monet", "Shutting down…"))
+                            }
+                            PowerCard {
+                                id: plainShutDownChoice
+                                objectName: "plainShutDownChoice"
+                                visible: maysd && softwareUpdatePending
+                                text: i18nd("monet", "Shut down")
+                                symbol: "shutdown"
+                                warm: true
+                                onClicked: root.leave(() => root.haltRequested(), i18nd("monet", "Shutting down…"))
+                            }
+                            PowerCard {
+                                id: logoutChoice
+                                objectName: "logoutChoice"
+                                visible: canLogout
+                                text: i18nd("monet", "Sign out")
+                                symbol: "logout"
+                                onClicked: root.leave(() => root.logoutRequested())
+                            }
+                        }
+
+                        ColumnLayout {
+                            visible: !root.choosing
+                            Layout.fillWidth: true
+                            spacing: 10
+                            ActionPill {
+                                id: goPill
+                                objectName: "goPill"
+                                visible: root.permitted
+                                primary: true
+                                text: root.restarting ? (softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart"))
+                                    : root.shuttingDown ? (softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down")) : i18nd("monet", "Sign out")
+                                onClicked: root.go()
+                            }
+                            ActionPill {
+                                id: plainGo
+                                objectName: "plainGo"
+                                visible: maysd && softwareUpdatePending && (root.restarting || root.shuttingDown)
+                                text: root.restarting ? i18nd("monet", "Restart") : i18nd("monet", "Shut down")
+                                onClicked: root.goWithoutUpdates()
+                            }
+                        }
                     }
                 }
-
-                // Or the choices, each with its sign: the moon to sleep, the setting sun to shut down.
-                RowLayout {
-                    id: choices
-                    visible: root.choosing
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: Kirigami.Units.gridUnit
-                    spacing: Kirigami.Units.smallSpacing * 2
-
-                    Choice {
-                        id: sleepChoice
-                        visible: spdMethods.SuspendState
-                        sign: "system-suspend"
-                        text: i18nd("monet", "Sleep")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.suspendRequested(2)
-                    }
-                    Choice {
-                        visible: spdMethods.HibernateState
-                        sign: "system-suspend-hibernate"
-                        text: i18nd("monet", "Hibernate")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.suspendRequested(4)
-                    }
-                    Choice {
-                        visible: maysd
-                        sign: softwareUpdatePending ? "system-reboot-update" : "system-reboot"
-                        text: softwareUpdatePending ? i18nd("monet", "Update and restart") : i18nd("monet", "Restart")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.leave(() => softwareUpdatePending ? root.rebootUpdateRequested() : root.rebootRequested())
-                    }
-                    Choice {
-                        id: shutDownChoice
-                        visible: maysd
-                        focus: root.choosing
-                        sign: softwareUpdatePending ? "system-shutdown-update" : "system-shutdown"
-                        text: softwareUpdatePending ? i18nd("monet", "Update and shut down") : i18nd("monet", "Shut down")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.leave(() => softwareUpdatePending ? root.haltUpdateRequested() : root.haltRequested())
-                    }
-                    Choice {
-                        visible: canLogout
-                        sign: "system-log-out"
-                        text: i18nd("monet", "Sign out")
-                        ink: root.ink
-                        tint: root.pebble
-                        ring: root.lily
-                        speed: root.speed
-                        onClicked: root.leave(() => root.logoutRequested())
-                    }
-                }
-
-                QQC2.AbstractButton {
+            }
+            ColumnLayout {
+                id: footer
+                Layout.fillWidth: true
+                spacing: 16
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.hairline }
+                ActionPill {
                     id: cancelChoice
-                    visible: root.choosing
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: Kirigami.Units.smallSpacing
-                    implicitWidth: cancelLabel.implicitWidth + 28
-                    implicitHeight: 32
+                    objectName: "cancelChoice"
                     text: i18nd("monet", "Cancel")
-                    onClicked: root.cancelRequested()
-                    Accessible.name: text
-                    background: Rectangle {
-                        radius: height / 2
-                        color: cancelChoice.hovered || cancelChoice.visualFocus ? root.pebble : "transparent"
-                        border.width: cancelChoice.visualFocus ? 2 : 0
-                        border.color: root.lily
-                    }
-                    contentItem: Text {
-                        id: cancelLabel
-                        text: cancelChoice.text
-                        color: root.dim
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        font.family: "Inter"
-                        font.pixelSize: 14
-                    }
+                    shortcutHint: "Esc"
+                    onClicked: { root.stopCounting(); root.cancelRequested() }
                 }
             }
         }
     }
 
-    // Arrows move between the choices, as Tab does.
-    Keys.onLeftPressed: event => {
-        const item = Window.activeFocusItem ? Window.activeFocusItem.nextItemInFocusChain(false) : null
-        if (item) {
-            item.forceActiveFocus(Qt.BacktabFocusReason)
-        }
-        root.stopCounting()
-    }
-    Keys.onRightPressed: event => {
-        const item = Window.activeFocusItem ? Window.activeFocusItem.nextItemInFocusChain(true) : null
-        if (item) {
-            item.forceActiveFocus(Qt.TabFocusReason)
-        }
-        root.stopCounting()
-    }
-
-    // The sun sets: the screen fades to night before the PC goes.
     Rectangle {
         id: night
+        objectName: "monetSessionTransition"
         anchors.fill: parent
-        color: "#05070E"
+        color: root.smoke ? "#242321" : "#F3F1EC"
         opacity: 0
         visible: opacity > 0
+        Column {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 48, 540)
+            spacing: 22
+            Image {
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: Qt.resolvedUrl("monet.svg")
+                width: 72; height: 72
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
+            Text {
+                width: parent.width; text: "Monet"
+                horizontalAlignment: Text.AlignHCenter
+                color: root.ink; font.family: "Fraunces 72pt SuperSoft"; font.pixelSize: 44
+            }
+            Text {
+                width: parent.width; text: root.transitionMessage
+                horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
+                color: root.dim; font.family: "Inter"; font.pixelSize: 17
+            }
+            QQC2.BusyIndicator {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 32; height: 32
+                running: root.leaving && root.speed > 0
+                visible: root.speed > 0
+                palette.dark: root.lily
+            }
+            ActionPill {
+                objectName: "showApplications"
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width, 260)
+                visible: root.offerApplicationReview
+                text: i18nd("monet", "Show applications")
+                onClicked: root.showApplicationsRequested()
+            }
+        }
     }
     SequentialAnimation {
         id: sunset
         property var action: null
-        NumberAnimation {
-            target: night
-            property: "opacity"
-            to: 1
-            duration: Math.round(900 * root.speed)
-            easing.type: Easing.Bezier
-            easing.bezierCurve: [0.4, 0, 0.2, 1, 1, 1]
-        }
-        ScriptAction {
-            script: sunset.action()
-        }
+        NumberAnimation { target: night; property: "opacity"; to: 1; duration: Math.round(240 * root.speed); easing.type: Easing.OutCubic }
+        ScriptAction { script: if (sunset.action) sunset.action() }
     }
 
-    // A pill: Cancel on a pebble of glass, or the answer on the sun.
-    component Pill: QQC2.AbstractButton {
-        id: pill
-        property color ink
-        property color tint
-        property color ring
-        property real speed: 1
-        implicitWidth: Math.max(label.implicitWidth + 44, 112)
-        implicitHeight: 42
+    component PowerCard: QQC2.AbstractButton {
+        id: card
+        property string symbol
+        property bool warm: false
+        readonly property color accent: warm ? root.sun : root.lily
+        Layout.fillWidth: true
+        Layout.minimumWidth: 0
+        implicitWidth: 240
+        implicitHeight: Math.max(82, cardLabel.implicitHeight + 30)
+        leftPadding: 16
+        rightPadding: 16
+        topPadding: 15
+        bottomPadding: 15
         activeFocusOnTab: true
+        hoverEnabled: true
         Accessible.name: text
-        Keys.onEnterPressed: clicked()
-        Keys.onReturnPressed: clicked()
-        scale: down ? 0.95 : hovered ? 1.04 : 1
-        Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
+        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => root.reveal(card))
+        Keys.onPressed: event => root.handleKey(event, card)
         background: Rectangle {
-            radius: height / 2
-            color: pill.tint
-            border.width: pill.visualFocus ? 2 : 0
-            border.color: pill.ring
+            radius: 16
+            color: card.down ? Qt.tint(root.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.18))
+                : card.hovered || card.visualFocus ? Qt.tint(root.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, root.smoke ? 0.13 : 0.08)) : root.pebble
+            border.width: card.visualFocus ? 2 : 1
+            border.color: card.visualFocus ? card.accent : card.hovered ? Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.5) : root.hairline
         }
-        contentItem: Text {
-            id: label
-            text: pill.text
-            color: pill.ink
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            font.family: "Inter"
-            font.pixelSize: 15
-            font.weight: Font.DemiBold
-        }
-    }
-
-    // A choice: its sign on a round pebble of glass, its name below.
-    component Choice: QQC2.AbstractButton {
-        id: choice
-        property string sign
-        property color ink
-        property color tint
-        property color ring
-        property real speed: 1
-        implicitWidth: 92
-        implicitHeight: 104
-        activeFocusOnTab: true
-        Accessible.name: text
-        Keys.onEnterPressed: clicked()
-        Keys.onReturnPressed: clicked()
-        background: Item {}
-        contentItem: ColumnLayout {
-            spacing: 8
+        contentItem: RowLayout {
+            spacing: 14
             Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                implicitWidth: 64
-                implicitHeight: 64
-                radius: 32
-                color: choice.hovered || choice.visualFocus ? Qt.rgba(choice.tint.r, choice.tint.g, choice.tint.b, Math.min(1, choice.tint.a * 2.2)) : choice.tint
-                border.width: choice.visualFocus ? 2 : 0
-                border.color: choice.ring
-                scale: choice.down ? 0.93 : choice.hovered ? 1.06 : 1
-                Behavior on scale { NumberAnimation { duration: Math.round(160 * choice.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
-                Kirigami.Icon {
-                    anchors.centerIn: parent
-                    width: 30
-                    height: 30
-                    source: choice.sign
-                    color: choice.ink
-                }
+                implicitWidth: 44
+                implicitHeight: 44
+                radius: 13
+                color: Qt.rgba(card.accent.r, card.accent.g, card.accent.b, root.smoke ? 0.12 : 0.10)
+                PowerMark { anchors.centerIn: parent; width: 26; height: 26; kind: card.symbol; ink: card.accent }
             }
             Text {
+                id: cardLabel
                 Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
+                text: card.text
+                textFormat: Text.PlainText
                 wrapMode: Text.Wrap
-                text: choice.text
-                color: choice.ink
+                color: root.ink
                 font.family: "Inter"
-                font.pixelSize: 13
+                font.pixelSize: 15 * root.fontScale
+                font.weight: Font.Medium
+            }
+            PowerMark {
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                kind: "arrow"
+                ink: card.hovered || card.visualFocus ? card.accent : root.dim
+                rotation: root.LayoutMirroring.enabled ? 180 : 0
+            }
+        }
+    }
+
+    component ActionPill: QQC2.AbstractButton {
+        id: pill
+        property bool primary: false
+        property string shortcutHint: ""
+        Layout.fillWidth: true
+        implicitHeight: Math.max(46, pillLabel.implicitHeight + 24)
+        leftPadding: 18
+        rightPadding: 18
+        activeFocusOnTab: true
+        hoverEnabled: true
+        Accessible.name: text
+        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => root.reveal(pill))
+        Keys.onPressed: event => root.handleKey(event, pill)
+        background: Rectangle {
+            radius: 13
+            color: pill.primary ? root.sun : pill.hovered || pill.down ? root.pebble : "transparent"
+            opacity: pill.down ? 0.85 : 1
+            border.width: pill.visualFocus ? 2 : pill.primary ? 0 : 1
+            border.color: pill.visualFocus ? root.lily : root.hairline
+        }
+        contentItem: RowLayout {
+            Text {
+                id: pillLabel
+                Layout.fillWidth: true
+                text: pill.text
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                horizontalAlignment: pill.shortcutHint ? Text.AlignLeft : Text.AlignHCenter
+                color: pill.primary ? root.paper : root.ink
+                font.family: "Inter"
+                font.pixelSize: 14 * root.fontScale
+                font.weight: Font.Medium
+            }
+            Text {
+                visible: pill.shortcutHint !== ""
+                text: pill.shortcutHint
+                color: root.dim
+                font.family: "Inter"
+                font.pixelSize: 12 * root.fontScale
             }
         }
     }

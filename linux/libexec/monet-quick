@@ -39,6 +39,8 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick batteries                everything with a battery (this laptop, mouse, controllers...), as JSON
     monet-quick battery-care             whether the battery can stop at 80%, and where it stops, as JSON
     monet-quick battery-limit 80|100     stop charging at 80% (battery care), or charge to full
+    monet-quick keep-awake off|30|60|on  pause idle screen/lock/sleep timers temporarily
+    monet-quick keep-awake-status        connection-owned inhibition and remaining seconds
     monet-quick apps-sound               the apps playing sound and each one's volume, as JSON
     monet-quick app-volume ID 0-100
     monet-quick brightness 0-100
@@ -203,6 +205,7 @@ import gettext
 import gzip
 import html
 import json
+import math
 import os
 import re
 import select
@@ -637,6 +640,17 @@ def kread(file, group, key, default=""):
         args += ["--group", name]
     out = run(*args, "--key", key, "--default", default)
     return (out or default).strip()
+
+
+def kread_values(requests):
+    """Bound independent native reads; keep KConfig's defaults and policy handling.
+
+    Only this foreground request owns these workers. No cached preferences or
+    persistent polling: the next request reads the native configuration afresh.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="monet-config") as workers:
+        return list(workers.map(lambda request: kread(*request), requests))
 
 
 def kwrite(file, group, key, value):
@@ -1491,6 +1505,31 @@ def store_entry():
     return next((s for s in stores if any((folder / s).is_file() for folder in app_dirs())), "")
 
 
+def desktop_launch(app_id):
+    """Use Plasma's shared native launcher, or None when it is not installed.
+
+    Once an existing owner has received the request, errors never fall through
+    to a second launcher: a lost reply is not proof that the app did not start.
+    """
+    try:
+        import dbus
+    except ImportError:
+        return None
+    try:
+        bus = dbus.SessionBus()
+        owner = bus.get_name_owner("org.monet.Launcher")
+    except dbus.DBusException:
+        return None # No launch request has been sent, so legacy fallback is safe.
+    try:
+        proxy = bus.get_object(owner, "/Launcher", introspect=False)
+        result = proxy.Open(app_id, False, os.environ.get("XDG_ACTIVATION_TOKEN", ""),
+                            dbus_interface="org.monet.Launcher1", timeout=3)
+        accepted = result.get("accepted") if isinstance(result, dict) else None
+        return isinstance(accepted, (bool, dbus.Boolean)) and bool(accepted)
+    except dbus.DBusException:
+        return False
+
+
 def launch(app_id):
     """Starts an app by its menu entry's file name, the way the menu would."""
     if not re.fullmatch(r"[\w.+-]+\.desktop", app_id):
@@ -1498,6 +1537,9 @@ def launch(app_id):
     path = next((folder / app_id for folder in app_dirs() if (folder / app_id).is_file()), None)
     if path is None:
         return False
+    native = desktop_launch(app_id)
+    if native is not None:
+        return native
     for command in (["kioclient", "exec", str(path)], ["gio", "launch", str(path)], ["gtk-launch", app_id[:-8]]):
         if shutil.which(command[0]):
             subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1814,7 +1856,8 @@ def zen():
                     sheet.write_text(line + "\n" + text, encoding="utf-8")
             prefs = profile / "user.js"
             text = prefs.read_text(encoding="utf-8") if prefs.is_file() else ""
-            write_if_changed(prefs, with_part(text, ZEN_PREFS).encode())
+            text = without_download_preferences(text)
+            write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *download_preferences())).encode())
             bookmarks_for_zen(profile)
         except OSError:
             continue
@@ -1928,6 +1971,68 @@ SLEEP_TIMES = (300, 600, 900, 1800, 3600, 7200, 0)  # on battery from 5 minutes,
 POWER_STATES = {"ac": ("AC", 600, 900), "battery": ("Battery", 300, 600)}  # group, screen off, sleep (KDE's)
 PROFILE_SERVICES = (("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/UPower/PowerProfiles"),
                     ("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"))
+AWAKE_BUS = ("org.monet.KeepAwake", "/org/monet/KeepAwake", "org.monet.KeepAwake")
+
+
+def awake_marker():
+    return Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/" + str(os.getuid()))) / "monet/keep-awake.json"
+
+
+def awake_off(error=""):
+    return dict(active=False, duration=0, end=0, remaining=0, indefinite=False, pending=False, error=error)
+
+
+def awake_reply(data):
+    try:
+        result = json.loads(data[0])
+        state = result.get("state", result)
+        if not isinstance(state.get("active"), bool):
+            raise ValueError("Invalid Keep awake reply")
+        for key in ("remaining", "end"):
+            value = state.get(key)
+            if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                raise ValueError("Invalid Keep awake timing")
+        duration = state.get("duration")
+        if type(duration) is not int or duration < -1 or duration > 86400:
+            raise ValueError("Invalid Keep awake duration")
+        if state.get("indefinite") is not (duration == -1) or not isinstance(state.get("pending"), bool):
+            raise ValueError("Invalid Keep awake state")
+        if state["active"] and (duration == 0 or state["pending"]):
+            raise ValueError("Invalid active inhibition")
+        return result
+    except (ValueError, TypeError, KeyError, IndexError, AttributeError):
+        return dict(ok=False, state=awake_off("unavailable"), error="unavailable")
+
+
+def keep_awake_status():
+    marker = awake_marker()
+    try:
+        saved = json.loads(marker.read_text())
+    except FileNotFoundError:
+        return awake_off()
+    except (OSError, ValueError):
+        return awake_off("unavailable")
+    if not isinstance(saved, dict) or not isinstance(saved.get("owner"), str) or not saved["owner"].startswith(":"):
+        return awake_off("unavailable")
+    owner = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                    "org.freedesktop.DBus", "GetNameOwner", "s", AWAKE_BUS[0])
+    if not owner or owner[0] != saved.get("owner"):
+        return awake_off("interrupted")
+    result = awake_reply(busjson("--user", "call", *AWAKE_BUS, "GetStatus"))
+    return result.get("state", result)
+
+
+def set_keep_awake(mode):
+    durations = {"off": 0, "30": 1800, "60": 3600, "on": -1}
+    if mode not in durations:
+        return dict(ok=False, state=awake_off("request"), error="request")
+    if mode == "off":
+        owner = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                        "org.freedesktop.DBus", "GetNameOwner", "s", AWAKE_BUS[0])
+        if not owner:
+            awake_marker().unlink(missing_ok=True)
+            return dict(ok=True, state=awake_off())
+    return awake_reply(busjson("--user", "--", "call", *AWAKE_BUS, "SetDuration", "i", str(durations[mode])))
 
 
 def virtual_machine():
@@ -1955,23 +2060,36 @@ def power_mode():
 
 def power_state():
     virtual = virtual_machine()
+    requests = []
+    for group, screen_default, sleep_default in POWER_STATES.values():
+        requests.extend([
+            ("powerdevilrc", (group, "Display"), "TurnOffDisplayWhenIdle", "true"),
+            ("powerdevilrc", (group, "Display"), "TurnOffDisplayIdleTimeoutSec", str(screen_default)),
+            ("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendAction", str(NO_ACTION if virtual else SLEEP)),
+            ("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendIdleTimeoutSec", str(sleep_default)),
+        ])
+    requests.extend([
+        ("powerdevilrc", ("AC", "SuspendAndShutdown"), "PowerButtonAction", str(ASK)),
+        ("powerdevilrc", ("AC", "SuspendAndShutdown"), "LidAction", str(NO_ACTION if virtual else SLEEP)),
+        ("kscreenlockerrc", "Daemon", "Timeout", "5"),
+        ("kscreenlockerrc", "Daemon", "Autolock", "true"),
+        ("kscreenlockerrc", "Daemon", "LockOnResume", "true"),
+    ])
+    values = iter(kread_values(requests))
     state = {"hasBattery": has_battery(), "hasLid": has_lid()}
     for name, (group, screen_default, sleep_default) in POWER_STATES.items():
-        screen_on = kread("powerdevilrc", (group, "Display"), "TurnOffDisplayWhenIdle", "true") == "true"
-        screen = kread("powerdevilrc", (group, "Display"), "TurnOffDisplayIdleTimeoutSec", str(screen_default))
-        action = kread("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendAction", str(NO_ACTION if virtual else SLEEP))
-        sleep = kread("powerdevilrc", (group, "SuspendAndShutdown"), "AutoSuspendIdleTimeoutSec", str(sleep_default))
+        screen_on, screen, action, sleep = (next(values) for _ in range(4))
         try:
-            state[name] = {"screen": int(screen) if screen_on else 0, "sleep": int(sleep) if int(action) == SLEEP else 0}
+            state[name] = {"screen": int(screen) if screen_on == "true" else 0, "sleep": int(sleep) if int(action) == SLEEP else 0}
         except ValueError:
             state[name] = {"screen": screen_default, "sleep": sleep_default}
+    button, lid = next(values), next(values)
     try:
-        state["button"] = int(kread("powerdevilrc", ("AC", "SuspendAndShutdown"), "PowerButtonAction", str(ASK)))
-        state["lidAction"] = int(kread("powerdevilrc", ("AC", "SuspendAndShutdown"), "LidAction",
-                                       str(NO_ACTION if virtual else SLEEP)))
+        state["button"], state["lidAction"] = int(button), int(lid)
     except ValueError:
         state["button"], state["lidAction"] = ASK, SLEEP
     state["mode"], state["modes"] = power_mode()
+    state.update(lock_state(tuple(values)))
     return state
 
 
@@ -2298,13 +2416,90 @@ def storage_parts(total, free, home, games, apps, user_apps, trash):
 
 
 def downloads_dir():
-    """The Downloads folder as the account names it (xdg-user-dirs: "Hämtningar" in Swedish), else ~/Downloads."""
+    """The account's download destination, with Desktop as the fallback."""
     try:
-        found = re.search(r'^XDG_DOWNLOAD_DIR="([^"]*)"', (CONFIG / "user-dirs.dirs").read_text(encoding="utf-8"), re.M)
+        path = user_folder(HOME, (CONFIG / 'user-dirs.dirs').read_text(), 'DOWNLOAD')
     except OSError:
-        found = None
-    path = Path(found.group(1).replace("$HOME", str(HOME))) if found else None
-    return path if path and path.is_absolute() and path != HOME else HOME / "Downloads"
+        path = None
+    return path or desktop_dir()
+
+
+def desktop_dir():
+    try:
+        folder = user_folder(HOME, (CONFIG / 'user-dirs.dirs').read_text(), 'DESKTOP')
+    except OSError:
+        folder = None
+    return folder or HOME / 'Desktop'
+
+
+def download_preferences():
+    # folderList=2 uses the literal custom directory, including a localized Desktop.
+    return ('user_pref("browser.download.folderList", 2);',
+            'user_pref("browser.download.useDownloadDir", true);',
+            'user_pref("browser.download.dir", ' + json.dumps(str(downloads_dir())) + ');')
+
+
+def without_download_preferences(text):
+    keys = ('browser.download.folderList', 'browser.download.useDownloadDir', 'browser.download.dir')
+    return ''.join(line for line in text.splitlines(keepends=True)
+                   if not any(re.match(r'\s*user_pref\("' + re.escape(key) + r'"\s*,', line) for key in keys))
+
+
+def sync_browser_downloads():
+    root = zen_root()
+    if not (root / 'profiles.ini').is_file():
+        return
+    for profile in zen_profiles(root):
+        prefs = profile / 'user.js'
+        text = prefs.read_text() if prefs.is_file() else ''
+        # Only download preferences change; keep all other browser settings.
+        text = without_download_preferences(text)
+        write_if_changed(prefs, (text.rstrip('\n') + '\n' + '\n'.join(download_preferences()) + '\n').encode())
+
+
+def set_download_path(path):
+    path = Path(path).resolve(strict=True)
+    if path == HOME.resolve():
+        raise ValueError(tr('Choose a separate folder for downloads.'))
+    if not path.is_dir() or not os.access(path, os.W_OK | os.X_OK):
+        raise ValueError(tr('Choose a writable folder for downloads.'))
+    if any(char in str(path) for char in '\n\r\0'):
+        raise ValueError(tr('Choose a folder without line breaks in its name.'))
+    CONFIG.mkdir(parents=True, exist_ok=True)
+    subprocess.run(['xdg-user-dirs-update', '--set', 'DOWNLOAD', str(path)], check=True, timeout=10)
+    # XDG_CONFIG_HOME is inherited by the tool; KDE and portals read this same path.
+    sync_browser_downloads()
+    return path
+
+
+ARCHIVE_MIMES = ('application/zip', 'application/x-tar', 'application/x-compressed-tar',
+                 'application/x-bzip-compressed-tar', 'application/x-xz-compressed-tar',
+                 'application/x-zstd-compressed-tar', 'application/x-7z-compressed', 'application/vnd.rar',
+                 'application/x-rar', 'application/gzip', 'application/x-bzip2', 'application/x-xz', 'application/zstd', 'application/x-rpm')
+
+
+def files_defaults():
+    receipt = CONFIG / 'monet/files-defaults-v1'
+    if receipt.exists():
+        return
+    subprocess.run(['xdg-user-dirs-update'], check=True, timeout=10)
+    current = downloads_dir()
+    # xdg-user-dirs localizes the default folder. Preserve an already chosen path.
+    localized = gettext.dgettext('xdg-user-dirs', 'Downloads')
+    if current in {HOME / 'Downloads', HOME / localized}:
+        target = desktop_dir()
+        target.mkdir(parents=True, exist_ok=True)
+        set_download_path(target)
+    # Explicit alternatives such as another archive manager remain available.
+    for mime in ARCHIVE_MIMES:
+        previous = run('xdg-mime', 'query', 'default', mime)
+        if not previous or previous.strip() == 'org.kde.ark.desktop':
+            # Avoid older xdg-mime's KDE setter calling unversioned qtpaths,
+            # which is absent on Qt 6. This is the standard preference file.
+            subprocess.run(['kwriteconfig6', '--file', str(CONFIG / 'mimeapps.list'),
+                '--group', 'Default Applications', '--key', mime, 'monet-archive.desktop;'], check=True, timeout=10)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.touch()
 
 
 def storage_capacity():
@@ -2534,16 +2729,26 @@ def fingerprint_state(listed=None):
     return {"enrolled": bool(re.search(r"^\s*-\s*#\d+:", listed, re.M))}
 
 
-def privacy_state():
+def lock_state(values=None):
+    """Screen-lock policy, without probing privacy hardware such as fingerprint readers."""
+    if values is None:
+        values = (kread("kscreenlockerrc", "Daemon", "Timeout", "5"),
+                  kread("kscreenlockerrc", "Daemon", "Autolock", "true"),
+                  kread("kscreenlockerrc", "Daemon", "LockOnResume", "true"))
+    timeout, autolock, resume = values
     try:
-        minutes = int(kread("kscreenlockerrc", "Daemon", "Timeout", "5") or 5)
+        minutes = int(timeout or 5)
     except ValueError:
         minutes = 5
-    return {"lockAfter": minutes if kread("kscreenlockerrc", "Daemon", "Autolock", "true") != "false" else 0,
-            "lockOnResume": kread("kscreenlockerrc", "Daemon", "LockOnResume", "true") != "false",
-            # KDE's 0 remembers everything, 1 only some apps, 2 nothing.
-            "remember": kread("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0") != "2",
-            "fingerprint": fingerprint_state()}
+    return {"lockAfter": minutes if autolock != "false" else 0, "lockOnResume": resume != "false"}
+
+
+def privacy_state():
+    # Retain the lock fields for callers of the existing helper endpoint.
+    return dict(lock_state(),
+                # KDE's 0 remembers everything, 1 only some apps, 2 nothing.
+                remember=kread("kactivitymanagerd-pluginsrc", SCORING, "what-to-remember", "0") != "2",
+                fingerprint=fingerprint_state())
 
 
 def reload_locker():
@@ -5824,6 +6029,14 @@ def open_settings(page):
 def search_catalog():
     N_ = lambda text: text  # Extract aliases now, translate them when matching.
     rows = [
+        ("screen-lock", tr("Screen locking"), tr("Power & Sleep · Automatic screen locking"),
+         N_("stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"), "power#lock", "system-lock-screen"),
+        ("download-folder", tr("Download folder"), tr("Storage · Where downloads are saved"),
+         N_("download folder; downloads folder; download path; download location; where downloads go; save downloads"), "storage#downloads", "folder-download"),
+        ("battery-limit", tr("Battery charge limit"), tr("Power & Sleep · Protect the battery"),
+         N_("battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"), "power#battery-limit", "battery"),
+        ("keep-awake", tr("Keep awake"), tr("Power & Sleep · Temporarily prevent idle sleep and locking"),
+         N_("keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"), "power#keep-awake", "preferences-system-power-management"),
         ("saved-passwords", tr("Passwords"), tr("Saved logins, app access and vault unlocking"),
          N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "monet-passwords.desktop", "wallet-open"),
         ("text-size", tr("Make text and windows bigger"), tr("Accessibility · Size of everything"),
@@ -6299,7 +6512,13 @@ def user_folder(home, dirs_text, key):
     for line in dirs_text.splitlines():
         name, _, value = line.strip().partition("=")
         if name == f"XDG_{key}_DIR":
-            path = Path(value.strip('"').replace("$HOME", str(home)))
+            match = re.fullmatch(r'"((?:\\.|[^"\\])*)"\s*', value)
+            if not match:
+                return None
+            raw = match[1]
+            if raw == '$HOME' or raw.startswith('$HOME/'):
+                raw = str(home) + raw[5:]
+            path = Path(re.sub(r'\\([\\$`"])', r'\1', raw))
             return path if path.is_absolute() and path != home else None
     return None
 
@@ -6702,7 +6921,25 @@ def battery_care(supplies=Path("/sys/class/power_supply")):
     return {"supported": False, "limit": 100}
 
 
-def battery_state(upower):
+def mains_state(supplies=Path("/sys/class/power_supply")):
+    """Actual charger connection, independent of a full or charge-limited battery."""
+    states = []
+    for supply in supplies.iterdir() if supplies.is_dir() else ():
+        try:
+            kind = (supply / "type").read_text().strip()
+            if kind != "Mains" and not kind.startswith("USB"):
+                continue
+            if (supply / "scope").exists() and (supply / "scope").read_text().strip() == "Device":
+                continue
+            online = (supply / "online").read_text().strip()
+            if online in ("0", "1"):
+                states.append(online == "1")
+        except OSError:
+            continue
+    return any(states) if states else None
+
+
+def battery_state(upower, plugged=None):
     """The battery, from UPower's display device (every battery together, as KDE shows it):
     {battery: percent, charging, plugged (charging, full or held at a charge limit), minutes
     (left on battery, or until full)}, or the first battery the kernel lists, or no battery."""
@@ -6711,18 +6948,23 @@ def battery_state(upower):
         state = props.get("State")
         seconds = props.get("TimeToEmpty") if state == UPOWER_DISCHARGING else props.get("TimeToFull") if state == UPOWER_CHARGING else 0
         return {"battery": round(props["Percentage"]), "charging": state == UPOWER_CHARGING,
-                "plugged": state != UPOWER_DISCHARGING, "minutes": round(seconds / 60) if seconds else None}
+                "plugged": plugged if plugged is not None else state != UPOWER_DISCHARGING,
+                "minutes": round(seconds / 60) if seconds else None}
     for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
         try:
             level, text = int((bat / "capacity").read_text()), (bat / "status").read_text().strip()
         except (OSError, ValueError):
             continue
-        return {"battery": level, "charging": text == "Charging", "plugged": text != "Discharging", "minutes": None}
+        return {"battery": level, "charging": text == "Charging",
+                "plugged": plugged if plugged is not None else text != "Discharging", "minutes": None}
     return {"battery": None, "charging": False, "plugged": True, "minutes": None}
 
 
 def status(scope="all"):
     """Quick Settings needs the whole snapshot; Settings only reads its open page."""
+    include_battery = scope != "quick"
+    if scope == "quick":
+        scope = "all"  # Plasma already shares a native UPower snapshot.
     result = {}
     if scope in ("all", "wifi"):
         result.update(wifi=wifi_state(), network=wifi_name())
@@ -6735,10 +6977,10 @@ def status(scope="all"):
         result["keyboard"] = keyboard_light()
     if scope in ("all", "sound"):
         result.update(volume=volume("@DEFAULT_AUDIO_SINK@"), mic=volume("@DEFAULT_AUDIO_SOURCE@"))
-    if scope in ("all", "power", "updates"):
+    if include_battery and scope in ("all", "power", "updates"):
         upower = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/DisplayDevice",
                         "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.UPower.Device")
-        result.update(battery_state(upower[0] if upower else None))
+        result.update(battery_state(upower[0] if upower else None, plugged=mains_state()))
     if scope in ("all", "light"):
         result["light"] = light_state()
     return result
@@ -6973,6 +7215,8 @@ def main(argv):
         sys.exit(0 if paint_run(unhex(args[0])) else 1)
     elif cmd == "paint-state":
         emit(paint_state())
+    elif cmd == "files-defaults":
+        files_defaults()
     elif cmd == "time":
         emit(clock(run("timedatectl", "show") or ""))
     elif cmd == "zones":
@@ -7048,6 +7292,12 @@ def main(argv):
         emit(firmware_update())
     elif cmd == "restart":
         restart()
+    elif cmd == "keep-awake-status":
+        emit(keep_awake_status())
+    elif cmd == "keep-awake" and len(args) == 1:
+        result = set_keep_awake(args[0])
+        emit(result)
+        return 0 if result.get("ok") else 1
     elif cmd == "power":
         emit(power_state())
     elif cmd == "power-time" and len(args) == 3 and args[0] in POWER_STATES and args[1] in ("screen", "sleep") \

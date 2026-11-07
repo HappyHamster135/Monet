@@ -7,11 +7,11 @@
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import "../games"
 
 Flickable {
     id: home
+    objectName: "storeHome"
     MouseScroll { view: home }
     property var tone
     // The Store's window: banner(), choose(), openApp(), working, rowWords.
@@ -27,13 +27,9 @@ Flickable {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    // A wheel's turn glides, as everywhere in Monet's apps.
-    Kirigami.WheelHandler {
-        target: home
-        filterMouseEvents: !("acceptedButtons" in home)
-        keyNavigationEnabled: true
-        verticalStepSize: 96
-    }
+    ScrollInput { id: scrollInput; view: home; onScrollRequested: home.store.cancelFocusReveal(home) }
+    Keys.priority: Keys.AfterItem
+    Keys.onPressed: event => scrollInput.key(event)
 
     function updated(app) {
         return app.released > 0 ? i18n("Updated %1", new Date(app.released * 1000).toLocaleDateString(Qt.locale(), Locale.ShortFormat)) : ""
@@ -49,7 +45,7 @@ Flickable {
         // Today's pick: its screenshot hung on the painting, a placard beside it.
         Item {
             id: hero
-            readonly property var app: home.shown.today
+            readonly property var app: home.shown.today || null
             readonly property bool wide: width > 760
             readonly property bool busy: app !== null && app !== undefined
                 && (app.state === "working" || home.store.working[app.id] !== undefined)
@@ -86,9 +82,10 @@ Flickable {
                     anchors.fill: parent
                     radius: 8
                     color: home.tone.dark ? "#34322F" : "#FFFFFF"
-                    visible: false
+                    visible: GraphicsInfo.api === GraphicsInfo.Software
                 }
                 MultiEffect {
+                    visible: GraphicsInfo.api !== GraphicsInfo.Software
                     source: heroMat
                     anchors.fill: heroMat
                     shadowEnabled: true
@@ -123,6 +120,7 @@ Flickable {
                 visible: false
             }
             MultiEffect {
+                visible: GraphicsInfo.api !== GraphicsInfo.Software
                 source: heroCardShape
                 anchors.fill: heroCardShape
                 shadowEnabled: true
@@ -133,6 +131,7 @@ Flickable {
             }
             Rectangle {
                 id: heroCard
+                objectName: "storeFeaturedCard"
                 anchors.left: parent.left
                 anchors.leftMargin: 32
                 anchors.verticalCenter: parent.verticalCenter
@@ -140,8 +139,16 @@ Flickable {
                 height: heroColumn.implicitHeight + 48
                 radius: 14
                 color: home.tone.paper
-                border.width: 1
-                border.color: home.tone.line
+                border.width: activeFocus ? 2 : 1
+                border.color: activeFocus ? home.tone.lily : home.tone.line
+                activeFocusOnTab: true
+                Keys.onReturnPressed: if (hero.app) home.store.openApp(hero.app.id)
+                Keys.onEnterPressed: if (hero.app) home.store.openApp(hero.app.id)
+                Keys.onSpacePressed: if (hero.app) home.store.openApp(hero.app.id)
+                Accessible.role: Accessible.Button
+                Accessible.name: hero.app ? hero.app.name : ""
+                Accessible.description: hero.app ? hero.app.summary : ""
+                Accessible.onPressAction: if (hero.app) home.store.openApp(hero.app.id)
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -323,6 +330,7 @@ Flickable {
                                 model: home.shown.top
                                 Rectangle {
                                     id: ranked
+                                    objectName: "storeRanked-" + modelData.id
                                     required property var modelData
                                     required property int index
                                     Layout.fillWidth: true
@@ -334,6 +342,7 @@ Flickable {
                                     border.color: home.tone.lily
                                     activeFocusOnTab: true
                                     Keys.onReturnPressed: home.store.choose(modelData, "flathub")
+                                    Keys.onEnterPressed: home.store.choose(modelData, "flathub")
                                     Keys.onSpacePressed: home.store.choose(modelData, "flathub")
                                     Behavior on color { ColorAnimation { duration: Math.round(140 * home.tone.speed) } }
                                     RowLayout {

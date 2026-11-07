@@ -66,6 +66,7 @@ var right = island("right")
 right.addWidget("org.monet.weather")
 right.addWidget("org.monet.quick")
 right.addWidget("org.monet.sound")
+right.addWidget("org.monet.transfers")
 var tray = right.addWidget("org.kde.plasma.systemtray")
 // Everyday controls in view; specialist tools remain in Settings and Configure System Tray.
 // Applied once when adopting Monet's look, never on --keep upgrades.

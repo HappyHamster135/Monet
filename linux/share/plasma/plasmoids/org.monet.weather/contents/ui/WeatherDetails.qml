@@ -8,6 +8,11 @@ import "Forecast.js" as Forecast
 
 FocusScope {
     id: details
+    SessionActivity {
+        id: detailsActivity; viewVisible: details.visible
+        onActiveChanged: if (active) details.clockNow = Date.now()
+    }
+    readonly property bool samplingActive: detailsActivity.active
     required property QtObject store
     required property var describe
     signal closed()
@@ -41,7 +46,7 @@ FocusScope {
             }
         }
     }
-    Timer { interval: 60000; running: details.visible; repeat: true; onTriggered: details.clockNow = Date.now() }
+    Timer { interval: 60000; running: details.visible && detailsActivity.active; repeat: true; onTriggered: details.clockNow = Date.now() }
     function opened() {
         clockNow = Date.now(); selectedDay = ""; firstHour = 0;
         closeButton.forceActiveFocus();

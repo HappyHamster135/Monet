@@ -16,6 +16,8 @@ QtObject {
     property string helper: "@LIBEXECDIR@/monet-weather"
     property var queue: []
     property string inFlight: ""
+    property bool active: true
+    onActiveChanged: if (active) { sendNext(); refresh(); }
     readonly property P5Support.DataSource runner: P5Support.DataSource {
         engine: "executable"
         connectedSources: []
@@ -42,8 +44,12 @@ QtObject {
     }
     function sendNext() {
         if (inFlight || !queue.length) return;
-        inFlight = queue[0];
-        queue = queue.slice(1);
+        // Pending preference writes must still finish if the screen locks.
+        // Reads, legacy seeding and forecast fetches can wait for a visible view.
+        const index = active ? 0 : queue.findIndex(command => command.startsWith(helper + " set "));
+        if (index < 0) return;
+        inFlight = queue[index];
+        queue = queue.filter((command, at) => at !== index);
         runner.connectSource(inFlight);
     }
     function run(args) {
@@ -53,7 +59,11 @@ QtObject {
     }
     function write(patch) { run("set " + hex(JSON.stringify(patch))); }
     function seed(legacy) { run("seed " + hex(JSON.stringify(legacy))); }
-    function refresh() { run("status"); }
+    function refresh(force) {
+        if (!active) return;
+        if (!force && inFlight === helper + " status") return;
+        run("status");
+    }
     function retry() { run("refresh"); }
     readonly property FolderListModel preferences: FolderListModel {
         folder: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet"
@@ -79,7 +89,7 @@ QtObject {
             Component.onCompleted: debounce.restart()
         }
     }
-    readonly property Timer debounce: Timer { interval: 150; onTriggered: store.refresh() }
-    readonly property Timer poll: Timer { interval: 60000; running: true; repeat: true; onTriggered: store.refresh() }
+    readonly property Timer debounce: Timer { interval: 150; onTriggered: store.refresh(true) }
+    readonly property Timer poll: Timer { interval: 60000; running: store.active; repeat: true; onTriggered: store.refresh() }
     Component.onCompleted: refresh()
 }

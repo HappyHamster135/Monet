@@ -11,8 +11,10 @@ import datetime
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share'))
@@ -20,9 +22,11 @@ CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
 STATE = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state'))
 HELPERS = Path.home() / '.local/libexec/monet-desktop-preview'
 PRIVATE = DATA / 'monet-desktop-preview'
+BIN = Path.home() / '.local/bin'
 LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-store', 'monet-store-jobs', 'monet-files-tools', 'monet-system-info', 'monet-weather', 'monet-light', 'monet-daylight'}
 LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
-LOCAL |= {'monet-session', 'monet-passwords', 'monet-passwords-browser'}
+LOCAL |= {'monet-session', 'monet-passwords', 'monet-passwords-browser', 'monet-keep-awake', 'monet-brightness'}
+LOCAL |= {'monet-look', 'monet-fresh', 'monet-region', 'monet-files', 'monet-file-jobs'}
 
 
 def digest(path):
@@ -39,6 +43,11 @@ def render(source, *, private_data=False, local_helpers=False, bindir='/usr/bin'
         for name in LOCAL:
             text = text.replace('{LIBEXECDIR}/' + name, str(HELPERS / name))
             text = text.replace('"$LIBEXECDIR/' + name + '"', '"' + str(HELPERS / name) + '"')
+    preview_files = str(BIN / 'monet-files')
+    text = text.replace('/usr/bin/monet-files', preview_files)
+    text = text.replace('"$BINDIR/monet-files"', '"' + preview_files + '"')
+    if source.name == 'monet-files':
+        text = text.replace('@DATADIR@', str(DATA))
     return (text.replace('@BINDIR@', str(bindir))
             .replace('@DATADIR@', str(PRIVATE) if private_data else '/usr/share')
             .replace('@LIBEXECDIR@', str(HELPERS) if local_helpers else '/usr/libexec')).encode()
@@ -67,7 +76,7 @@ def cli_prefix(requested=None):
     return prefix
 
 
-def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
+def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundles=None):
     import importlib.util
     spec = importlib.util.spec_from_file_location('connector_package', ROOT / 'browser/monet-passwords/package.py')
     connector = importlib.util.module_from_spec(spec); spec.loader.exec_module(connector)
@@ -117,8 +126,40 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
             add(PRIVATE / 'task-manager' / name, (monitor_bundle / name).read_bytes())
     for name in LOCAL:
         add(HELPERS / name, render(ROOT / 'linux/libexec' / name,
-            private_data=name in {'monet-settings', 'monet-games', 'monet-store', 'monet-passwords', 'monet-passwords-browser'},
+            private_data=name in {'monet-settings', 'monet-games', 'monet-store', 'monet-passwords', 'monet-passwords-browser', 'monet-keep-awake', 'monet-brightness'},
             local_helpers=name in {'monet-settings', 'monet-games', 'monet-store', 'monet-light', 'monet-passwords', 'monet-passwords-browser'}), 0o755)
+    for source in (ROOT / 'linux/share/monet/monet_runtime').glob('*.py'):
+        add(PRIVATE / 'monet/monet_runtime' / source.name, source.read_bytes())
+    add(HELPERS / 'monet_region.py', (ROOT / 'setup/monet_setup/region.py').read_bytes())
+    add(BIN / 'monet-files', HELPERS / 'monet-files')
+    for source in (ROOT / 'linux/share/monet/monet_files').glob('*.py'):
+        add(DATA / 'monet/monet_files' / source.name, source.read_bytes())
+    for name in ('stacks.js', 'transfers.js', 'bar-defaults.js'):
+        add(DATA / 'monet' / name, render(ROOT / 'linux/share/monet' / name, local_helpers=True))
+    add(DATA / 'applications/monet-archive.desktop', render(ROOT / 'linux/share/applications/monet-archive.desktop', local_helpers=True))
+    add(CONFIG / 'systemd/user/monet-fresh.service', render(ROOT / 'linux/systemd/user/monet-fresh.service', local_helpers=True))
+    # Layout packages are resolved as a unit. Keep installed logout and other
+    # unrelated files while replacing only Monet's current layout instructions.
+    for name in ('org.monet.desktop', 'org.monet.smoke.desktop'):
+        folder = Path('plasma/look-and-feel') / name
+        installed = DATA / folder if (DATA / folder / 'metadata.json').exists() else Path('/usr/share') / folder
+        for source in installed.rglob('*'):
+            if source.is_file(): add(DATA / folder / source.relative_to(installed), source.read_bytes())
+        layout = Path('contents/layouts/org.kde.plasma.desktop-layout.js')
+        add(DATA / folder / layout, render(ROOT / 'linux/share' / folder / layout, local_helpers=True))
+        for source in (ROOT / 'linux/share/monet/logout').iterdir():
+            if source.is_file(): add(DATA / folder / 'contents/logout' / source.name, source.read_bytes())
+    for source in (ROOT / 'linux/share/locale').glob('*/LC_MESSAGES/monet.mo'):
+        add(DATA / source.relative_to(ROOT / 'linux/share'), source.read_bytes())
+        add(PRIVATE / source.relative_to(ROOT / 'linux/share'), source.read_bytes())
+    add(DATA / 'dbus-1/services/org.monet.KeepAwake.service',
+        render(ROOT / 'linux/share/dbus-1/services/org.monet.KeepAwake.service', local_helpers=True))
+    add(CONFIG / 'systemd/user/monet-keep-awake.service',
+        render(ROOT / 'linux/systemd/user/monet-keep-awake.service', local_helpers=True))
+    add(CONFIG / 'systemd/user/monet-brightness.service',
+        render(ROOT / 'linux/systemd/user/monet-brightness.service', local_helpers=True))
+    add(CONFIG / 'systemd/user/graphical-session.target.wants/monet-brightness.service',
+        CONFIG / 'systemd/user/monet-brightness.service')
     # Preserve the installed launch command and all existing desktop metadata.
     # KWin's supported per-application declaration enables minimized-window
     # notifications; it does not disable compositor permission checks.
@@ -163,6 +204,10 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
         add(PRIVATE / 'monet' / name, Path('/usr/share/monet') / name)
     # Copy the shared frame as well as its callers. Keep the old private games
     # symlink replaceable without ever writing through it into /usr/share.
+    add(DATA / 'monet/widgets/ScrollInput.qml', (ROOT / 'linux/share/monet/widgets/ScrollInput.qml').read_bytes())
+    # QML resolves ../widgets from the private games URL, before following its
+    # symlink into the shared account data directory.
+    add(PRIVATE / 'monet/widgets', DATA / 'monet/widgets')
     for source in (ROOT / 'linux/share/monet/games').rglob('*'):
         if source.is_file():
             add(DATA / 'monet/games' / source.relative_to(ROOT / 'linux/share/monet/games'),
@@ -177,6 +222,8 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
                 if source.suffix in {'.qml', '.js'} else source.read_bytes())
     add(DATA / 'plasma/wallpapers/org.monet.hours/contents/ui/TaskManagerAction.qml',
         render(ROOT / 'linux/share/monet/widgets/TaskManagerAction.qml', local_helpers=True))
+    add(DATA / 'plasma/wallpapers/org.monet.hours/contents/ui/SessionActivity.qml',
+        render(ROOT / 'linux/share/monet/widgets/SessionActivity.qml', local_helpers=True))
     # Shared fixes must reach desktop widgets too: the lowest-ID desktop
     # widget coordinates layout persistence for the whole containment.
     for source_dir in sorted((ROOT / 'linux/share/plasma/plasmoids').glob('org.monet.*')):
@@ -193,8 +240,21 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
     source_shell = DATA / shell if (DATA / shell / 'metadata.json').exists() else Path('/usr/share') / shell
     for source in source_shell.rglob('*'):
         if source.is_file(): add(DATA / shell / source.relative_to(source_shell), source.read_bytes())
+    logout = shell / 'contents/logout'
+    fallback = source_shell / 'contents/logout/KdeLogout.qml'
+    if not fallback.exists(): fallback = source_shell / 'contents/logout/Logout.qml'
+    if fallback.exists():
+        add(DATA / logout / 'KdeLogout.qml', fallback.read_bytes())
+        for source, target in (('ShellLogout.qml', 'Logout.qml'), ('Logout.qml', 'MonetLogout.qml'),
+                               ('PowerMark.qml', 'PowerMark.qml'), ('timer.js', 'timer.js'), ('monet.svg', 'monet.svg')):
+            add(DATA / logout / target, (ROOT / 'linux/share/monet/logout' / source).read_bytes())
     add(DATA / shell / 'contents/explorer/MonetWidgetExplorer.qml',
         (ROOT / 'linux/share/monet/explorer/MonetWidgetExplorer.qml').read_bytes())
+    for name in ('MonetLockScreen.qml', 'LockScreen.qml'):
+        add(DATA / shell / 'contents/lockscreen' / name,
+            (ROOT / 'linux/share/monet/lockscreen' / name).read_bytes())
+    add(DATA / shell / 'contents/lockscreen/ClockFormat.qml',
+        (ROOT / 'linux/share/monet/widgets/ClockFormat.qml').read_bytes())
     for name in ('chatgpt', 'org.inkscape.Inkscape', 'org.keepassxc.KeePassXC'):
         path = Path('icons/Monet/apps/scalable') / (name + '.svg')
         add(DATA / path, (ROOT / 'linux/share' / path).read_bytes())
@@ -212,8 +272,9 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
                 render(source, local_helpers=True) if source.suffix == '.qml' else source.read_bytes())
     for source in (ROOT / 'linux/share/locale').glob('*/LC_MESSAGES/plasma-systemmonitor.mo'):
         add(DATA / source.relative_to(ROOT / 'linux/share'), source.read_bytes())
-    for name in ('monet-folder-tools.desktop', 'monet-local-app.desktop', 'monet-archive-apps.desktop'):
-        add(DATA / 'kio/servicemenus' / name, render(ROOT / 'linux/share/kio/servicemenus' / name, local_helpers=True))
+    for name in ('monet-folder-tools.desktop', 'monet-local-app.desktop', 'monet-archive-apps.desktop', 'monet-archive-open.desktop'):
+        # KIO trusts user-owned service menus only when marked executable.
+        add(DATA / 'kio/servicemenus' / name, render(ROOT / 'linux/share/kio/servicemenus' / name, local_helpers=True), 0o755)
     add(DATA / 'applications/monet-settings.desktop', render(ROOT / 'linux/share/applications/monet-settings.desktop', local_helpers=True))
     add(DATA / 'applications/monet-passwords.desktop', render(ROOT / 'linux/share/applications/monet-passwords.desktop', local_helpers=True))
     # Session restore/return notifications must use the same Settings runtime
@@ -242,6 +303,11 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None):
         add(CONFIG / 'systemd/user' / name, text.encode())
     nvidia = Path(r'app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf')
     add(CONFIG / 'systemd/user' / nvidia, (ROOT / 'linux/systemd/user/monet-nvidia-settings.conf').read_bytes())
+    if native_bundles:
+        spec = importlib.util.spec_from_file_location('desktop_preview_native', ROOT / 'tools/desktop-preview-native.py')
+        native = importlib.util.module_from_spec(spec); spec.loader.exec_module(native)
+        # Validate the complete native set before returning any installation plan.
+        native.extend(SimpleNamespace(ROOT=ROOT, DATA=DATA, CONFIG=CONFIG, HELPERS=HELPERS, PRIVATE=PRIVATE), files, Path(native_bundles))
     return files
 
 
@@ -250,6 +316,9 @@ def restore(receipt):
     for row in reversed(info['files']):
         target = Path(row['path'])
         if digest(target) != row['after']:
+            kept.append(str(target)); continue
+        if (row.get('after_mode') is not None and target.exists() and not target.is_symlink()
+                and stat.S_IMODE(target.stat().st_mode) != row['after_mode']):
             kept.append(str(target)); continue
         if target.exists() or target.is_symlink(): target.unlink()
         if row['before'] is not None:
@@ -262,11 +331,18 @@ def restore(receipt):
 def recorded_previews():
     """Validated receipt history, including already-retired package paths."""
     rows = {}
-    for receipt in sorted((STATE / 'monet/desktop-preview').glob('*/receipt.json')):
+    receipts = [*(STATE / 'monet/desktop-preview').glob('*/receipt.json'),
+                *(STATE / 'monet/local-test-install').glob('*/receipt.json')]
+    for receipt in sorted(receipts, key=lambda path: path.parent.name):
         for row in json.loads(receipt.read_text())['files']:
+            # The first laptop installer separately recorded newly seeded user
+            # preferences. Those are now their choices, not preview payloads to
+            # unwind when the full OS update replaces the account overrides.
+            if receipt.parent.parent.name == 'local-test-install' and row.get('backup', '').startswith('config-'):
+                continue
             target = Path(row['path'])
             # Receipts are account-local data, never authority for arbitrary paths.
-            if not any(target.is_relative_to(root) for root in (DATA, CONFIG, HELPERS, STATE / 'monet/desktop-preview')):
+            if not any(target.is_relative_to(root) for root in (DATA, CONFIG, HELPERS, BIN, STATE / 'monet/desktop-preview')):
                 raise ValueError(f'Preview receipt is outside the managed account paths: {target}')
             rows.setdefault(target, []).append((receipt, row))
     return rows
@@ -278,15 +354,20 @@ def retirement_plan():
     changes, kept = {}, []
     for target, history in rows.items():
         current = value = digest(target)
+        current_mode = value_mode = stat.S_IMODE(target.stat().st_mode) if target.exists() and not target.is_symlink() else None
         source = None
         for receipt, row in reversed(history):
             if value != row['after']:
                 continue
+            if row.get('after_mode') is not None and value_mode != row['after_mode']:
+                # A later permission edit is personal, even with identical bytes.
+                break
             source = receipt.parent / row['backup'] if row['before'] is not None else None
             if source is not None and digest(source) != row['before']:
                 raise ValueError(f'Preview backup is missing or changed: {source}')
             value = row['before']
-        if current == value:
+            value_mode = stat.S_IMODE(source.stat().st_mode) if source is not None and not source.is_symlink() else None
+        if current == value and current_mode == value_mode:
             if current is not None: kept.append(str(target))
         else:
             changes[target] = (current, source)
@@ -296,13 +377,14 @@ def retirement_plan():
 def is_preview_launcher(path):
     return (any(path.is_relative_to(root) for root in
                 (DATA / 'applications', CONFIG / 'autostart', CONFIG / 'systemd/user'))
+            or path.is_relative_to(BIN)
             or path == STATE / 'monet/desktop-preview/cli-prefix')
 
 
 def prune_preview_directories(launchers_only=False):
     # KPackage treats even an empty user package folder as an override. Leaving
     # one behind hides /usr/share's valid shell and can crash Plasma at sign-in.
-    roots = (DATA, CONFIG, HELPERS, STATE / 'monet/desktop-preview')
+    roots = (DATA, CONFIG, HELPERS, BIN, STATE / 'monet/desktop-preview')
     parents = set()
     for target in recorded_previews():
         if launchers_only and not is_preview_launcher(target):
@@ -351,7 +433,9 @@ def retire(apply_changes=False, launchers_only=False):
             if digest(target) != before:
                 kept.append(str(target)); continue
             after = digest(source) if source is not None else None
-            row = dict(path=str(target), before=before, after=after, backup=str(len(info['files'])))
+            row = dict(path=str(target), before=before, after=after, backup=str(len(info['files'])),
+                       before_mode=stat.S_IMODE(target.stat().st_mode) if target.exists() and not target.is_symlink() else None,
+                       after_mode=stat.S_IMODE(source.stat().st_mode) if source is not None and not source.is_symlink() else None)
             if before is not None: shutil.copy2(target, backup / row['backup'], follow_symlinks=False)
             info['files'].append(row)
             receipt.write_text(json.dumps(info, indent=2)); receipt.chmod(0o600)
@@ -366,15 +450,18 @@ def retire(apply_changes=False, launchers_only=False):
 def apply(files):
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     backup = STATE / 'monet/desktop-preview' / stamp
-    backup.mkdir(parents=True); receipt = backup / 'receipt.json'
+    backup.mkdir(parents=True, mode=0o700); receipt = backup / 'receipt.json'
     info = {'source': str(ROOT), 'files': []}
     for target, (data, mode) in files.items():
         after = 'link:' + str(data) if isinstance(data, Path) else hashlib.sha256(data).hexdigest()
         before = digest(target)
-        if before == after: continue
-        row = {'path': str(target), 'before': before, 'after': after, 'backup': str(len(info['files']))}
+        before_mode = stat.S_IMODE(target.stat().st_mode) if target.exists() and not target.is_symlink() else None
+        after_mode = None if isinstance(data, Path) else mode
+        if before == after and (isinstance(data, Path) or before_mode == after_mode): continue
+        row = {'path': str(target), 'before': before, 'after': after, 'backup': str(len(info['files'])),
+               'before_mode': before_mode, 'after_mode': after_mode}
         if before is not None: shutil.copy2(target, backup / row['backup'], follow_symlinks=False)
-        info['files'].append(row); receipt.write_text(json.dumps(info, indent=2))
+        info['files'].append(row); receipt.write_text(json.dumps(info, indent=2)); receipt.chmod(0o600)
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(target.name + '.monet-preview-tmp')
         if temporary.exists() or temporary.is_symlink(): raise FileExistsError(temporary)
@@ -383,6 +470,7 @@ def apply(files):
             temporary.write_bytes(data); temporary.chmod(mode)
         temporary.replace(target)
     receipt.write_text(json.dumps(info, indent=2))
+    receipt.chmod(0o600)
     print(json.dumps({'installed_files': len(info['files']), 'receipt': str(receipt)}, indent=2))
 
 
@@ -396,6 +484,7 @@ if __name__ == '__main__':
     parser.add_argument('--after-version', help='With --retire: defer until this Monet VERSION is running')
     parser.add_argument('--task-manager-bundle', type=Path)
     parser.add_argument('--dock-bundle', type=Path)
+    parser.add_argument('--native-bundles', type=Path, help='Matching activity, launcher, dock, Files and Archives bundles')
     parser.add_argument('--monet-prefix', type=Path, help='Root-owned tested CLI preview; remembered for future previews')
     args = parser.parse_args()
     if args.retire and args.restore: parser.error('--retire cannot be combined with --restore')
@@ -405,5 +494,5 @@ if __name__ == '__main__':
         print(json.dumps({'deferred': True, 'version': args.after_version}))
     elif args.retire: retire(args.apply, args.launchers_only)
     elif args.restore: restore(args.restore)
-    elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle))
-    else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))
+    elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle, args.native_bundles))
+    else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle, args.native_bundles)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))

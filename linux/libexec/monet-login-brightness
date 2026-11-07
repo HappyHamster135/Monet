@@ -1,0 +1,109 @@
+#!/usr/bin/python3
+"""Seed the separate greeter's brightness before its compositor starts.
+
+Run as a boot-time system unit, never from untrusted package/file actions.
+Only a validated numeric brightness and internal-display identity are copied;
+display modes, HDR, scaling and other greeter settings stay independent.
+"""
+import json
+import configparser
+import io
+import math
+import os
+from pathlib import Path
+import pwd
+import tempfile
+
+
+def atomic_text(path, text, uid, gid):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='monet-brightness-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(text)
+        os.chown(temporary, uid, gid)
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def greeter_power(path, uid, gid):
+    policy = configparser.ConfigParser(interpolation=None, strict=False)
+    policy.optionxform = str
+    if path.exists(): policy.read(path)
+    for profile in ('AC','Battery','LowBattery'):
+        for suffix, values in [('Display',dict(UseProfileSpecificDisplayBrightness='false',DimDisplayWhenIdle='false',TurnOffDisplayWhenIdle='false')),
+                               ('SuspendAndShutdown',dict(AutoSuspendAction='0'))]:
+            group = profile+']['+suffix
+            if not policy.has_section(group): policy.add_section(group)
+            for key,value in values.items(): policy.set(group,key,value)
+    stream = io.StringIO(); policy.write(stream,space_around_delimiters=False)
+    if not path.exists() or path.read_text()!=stream.getvalue(): atomic_text(path,stream.getvalue(),uid,gid)
+
+
+def seed(profile, greeter, ratio):
+    if type(ratio) not in (int, float) or not math.isfinite(ratio) or not 0 <= ratio <= 1:
+        return False
+    source = next((row.get('data', []) for row in profile if row.get('name') == 'outputs'), [])
+    internal = [row for row in source if str(row.get('connectorName', '')).startswith(('eDP-', 'LVDS-', 'DSI-'))]
+    if not internal:
+        return False
+    outputs = next((row for row in greeter if row.get('name') == 'outputs'), None)
+    if outputs is None:
+        outputs = dict(name='outputs', data=[]); greeter.append(outputs)
+    changed = False
+    for screen in internal:
+        # Prefer EDID identity: connector numbering can change across boots.
+        match = next((row for row in outputs['data'] if screen.get('edidHash') and row.get('edidHash') == screen['edidHash']), None)
+        if match is None:
+            match = next((row for row in outputs['data'] if row.get('connectorName') == screen.get('connectorName')), None)
+        if match is None:
+            match = {key:screen[key] for key in ('connectorName','edidHash','edidIdentifier','uuid') if key in screen}
+            outputs['data'].append(match)
+        if match.get('brightness') != ratio:
+            match['brightness'] = ratio; changed = True
+    return changed
+
+
+def main():
+    greeter = pwd.getpwnam('plasmalogin')
+    config = Path(greeter.pw_dir)/'.config'
+    if config.is_symlink(): return 1
+    config.mkdir(parents=True,exist_ok=True)
+    os.chown(config,greeter.pw_uid,greeter.pw_gid)
+    greeter_power(config/'powerdevilrc',greeter.pw_uid,greeter.pw_gid)
+    candidates = []
+    for user in pwd.getpwall():
+        if not 1000 <= user.pw_uid < 60000:
+            continue
+        home = Path(user.pw_dir)
+        state = home/'.local/state/monet/brightness.json'
+        profile = home/'.config/kwinoutputconfig.json'
+        try:
+            if state.is_symlink() or profile.is_symlink() or state.stat().st_uid != user.pw_uid or profile.stat().st_uid != user.pw_uid or state.stat().st_size > 4096 or profile.stat().st_size > 1024 * 1024:
+                continue
+            data = json.loads(state.read_text())
+            ratio = data.get('internal')
+            if data.get('version') != 1 or type(ratio) not in (int, float) or not math.isfinite(ratio) or not 0 <= ratio <= 1:
+                continue
+            candidate = json.loads(profile.read_text())
+            if isinstance(candidate, list): candidates.append((state.stat().st_mtime_ns, ratio, candidate))
+        except (OSError, ValueError, AttributeError):
+            continue
+    if not candidates:
+        return 0
+    _, ratio, profile = max(candidates, key=lambda item:item[0])
+    target = Path(greeter.pw_dir)/'.config/kwinoutputconfig.json'
+    try:
+        if target.parent.is_symlink(): return 1
+        saved = json.loads(target.read_text()) if target.exists() else []
+        if not isinstance(saved, list): return 1
+        if seed(profile, saved, ratio): atomic_text(target, json.dumps(saved,indent=2)+'\n', greeter.pw_uid, greeter.pw_gid)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

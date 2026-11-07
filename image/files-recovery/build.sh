@@ -30,11 +30,18 @@ cmake -S "$source" -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_P
     "-DCMAKE_SHARED_LINKER_FLAGS=$linker_flags" "-DCMAKE_EXE_LINKER_FLAGS=$linker_flags" \
     -DBUILD_TESTING=OFF -DBUILD_QCH=OFF
 cmake --build "$work/build" --target dolphin --parallel "$(nproc)"
+cmake -S "$here/tests" -B "$work/experience-test" -DCMAKE_BUILD_TYPE=Release "-DMONET_DOLPHIN_SOURCE=$source"
+cmake --build "$work/experience-test" --parallel 2
+ctest --test-dir "$work/experience-test" --output-on-failure
 install -m 755 "$work/build/bin/dolphin" "$out/dolphin"
 library="$(python3 -c 'import json,sys; from pathlib import Path; print(Path(json.load(open(sys.argv[1]))["targets"][1]["path"]).name)' "$out/runtime.json")"
 install -m 755 "$work/build/bin/$library" "$out/$library"
+# Keep debug information in the retained build tree, outside the shipped pair.
+# Native preview checks should not read tens of MiB of unused DWARF on launch.
+strip --strip-debug "$out/dolphin" "$out/$library"
 mkdir "$work/monet-build"
-for name in build.sh bundle.py patch.py monetfiles.h view-state.cpp window-state.cpp README.md; do cp "$here/$name" "$work/monet-build/"; done
+for name in build.sh bundle.py patch.py thumbnail-jobs.py monetfiles.h view-state.cpp window-state.cpp experience.h experience.cpp README.md; do cp "$here/$name" "$work/monet-build/"; done
+cp -r "$here/tests" "$work/monet-build/tests"
 cp "$out/runtime.json" "$work/monet-build/"
 tar -cJf "$out/source.tar.xz" -C "$work" rpm "$release.src.rpm" monet-build
 cp "$here/bundle.py" "$here/README.md" "$out/"

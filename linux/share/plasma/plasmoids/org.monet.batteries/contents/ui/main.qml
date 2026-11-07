@@ -4,7 +4,7 @@
  * headphones, each a ring of paint round its sign, lily while there's plenty,
  * ochre when it runs low, the sun when it's nearly out, and a dab of the sun
  * beside the number while it charges. From UPower (what KDE reads too), through
- * Monet's helper, every minute.
+ * one shared native snapshot in Plasma, refreshed by UPower events.
  */
 import QtQuick
 import QtQuick.Layouts
@@ -16,17 +16,30 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible; observePower: true }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     // [{ kind, name, level, charging }], this laptop first.
-    property var batteries: []
-    property bool looked: false
+    property var legacyBatteries: []
+    readonly property var batteries: activity.nativeReady ? activity.batteries : legacyBatteries
+    property bool legacyLooked: false
+    readonly property bool looked: activity.nativeReady ? activity.powerReady : legacyLooked
+    readonly property bool unavailable: activity.nativeReady && !activity.powerReady && !activity.powerLoading
+    property bool busy: false
+
+    function refresh() {
+        if (!activity.active || activity.nativeReady || busy) return
+        busy = true
+        runner.connectSource(root.helper + " batteries")
+    }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "preferences-system-power-management"
     preferredRepresentation: fullRepresentation
     toolTipMainText: i18n("Batteries")
-    toolTipSubText: batteries.map(b => root.label(b, 0) + " " + i18nc("a battery's charge, in percent", "%1%", b.level)).join(" · ")
+    toolTipSubText: unavailable ? (batteries.length > 0 ? i18n("Battery information is unavailable. Showing the last reading.")
+        : i18n("Battery information is unavailable."))
+        : batteries.map(b => root.label(b, 0) + " " + i18nc("a battery's charge, in percent", "%1%", b.level)).join(" · ")
 
     P5Support.DataSource {
         id: runner
@@ -34,20 +47,21 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source);
+            root.busy = false;
             try {
-                root.batteries = JSON.parse(data["stdout"]);
+                root.legacyBatteries = JSON.parse(data["stdout"]);
             } catch (e) {
             }
-            root.looked = true;
+            root.legacyLooked = true;
         }
     }
 
     Timer {
         interval: 60 * 1000
-        running: true
+        running: root.visible && activity.active && !activity.nativeReady
         repeat: true
         triggeredOnStart: true
-        onTriggered: runner.connectSource(root.helper + " batteries")
+        onTriggered: root.refresh()
     }
 
     // The device's own name when it has one ("MX Master 3"), else what it is.
@@ -223,10 +237,12 @@ PlasmoidItem {
             Text {
                 anchors.centerIn: parent
                 width: parent.width - 2 * Kirigami.Units.gridUnit
-                visible: root.looked && root.batteries.length === 0
+                visible: root.batteries.length === 0
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                text: i18n("Wireless mice, headphones and controllers show here with their battery.")
+                text: root.unavailable ? i18n("Battery information is unavailable.")
+                    : !root.looked ? i18n("Checking batteries…")
+                    : i18n("Wireless mice, headphones and controllers show here with their battery.")
                 color: card.dim
                 font.family: "Fraunces 72pt SuperSoft"
                 font.italic: true

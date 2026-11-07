@@ -4,6 +4,7 @@ import copy
 import errno
 import hashlib
 import io
+import importlib.util
 import json
 import os
 import socket
@@ -361,6 +362,31 @@ class DownloadCache(unittest.TestCase):
 
 
 class FinishAndResources(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec('PySide6'), 'Qt regional data')
+    def test_city_defaults_are_written_into_the_installed_account(self):
+        from PySide6.QtCore import QLocale, QTime
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'deployment'; var = Path(temp) / 'var'
+            (root / 'usr/share/zoneinfo/Europe').mkdir(parents=True); var.mkdir()
+            (root / 'usr/share/zoneinfo/Europe/Stockholm').write_bytes(b'fixture')
+            plan = dict(account='test', name='Test', password='synthetic', language='en_US.UTF-8',
+                        keyboard='us', variant='', timezone='Europe/Stockholm', mode='keep', apps=[])
+            with patch.object(install, 'deployment', return_value=(root, var)), \
+                 patch.object(install, 'run', return_value='') as commands, patch.object(install, 'log'), \
+                 patch.object(install.glob, 'glob', return_value=[]), redirect_stdout(io.StringIO()):
+                install.configure(plan)
+            config = var / 'home/test/.config'
+            weather = json.loads((config / 'monet/weather.json').read_text())
+            self.assertEqual(weather['place'], 'Stockholm'); self.assertFalse(weather['fahrenheit'])
+            import configparser
+            preferences = configparser.ConfigParser(); preferences.read(config / 'plasma-localerc')
+            formats = preferences['Formats']
+            self.assertEqual(formats['LANG'], 'en_US.UTF-8')
+            self.assertIn('18', QLocale(formats['LC_TIME']).toString(QTime(18, 20), QLocale.ShortFormat))
+            self.assertIn('LC_TIME=' + formats['LC_TIME'], (root / 'etc/locale.conf').read_text())
+            self.assertIn(unittest.mock.call('chroot', root, 'chown', '-R', 'test:test', '/var/home/test/.config'),
+                          commands.call_args_list)
+
     def test_configuration_isolates_live_mounts_before_chroot_and_cleans_up(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)/'deployment'; var = Path(temp)/'var'

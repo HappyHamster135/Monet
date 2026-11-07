@@ -5,6 +5,9 @@
 BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 
+# Repair a removed stacks widget's icon filter after an interrupted session.
+(sleep 5; "$BINDIR/monet-files" stacks-reconcile) >/dev/null 2>&1 &
+
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 # A guest (monet-guest) sees nothing of Windows: no games from it, no notes about it.
 GUEST=""
@@ -83,7 +86,7 @@ fi
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.9.6"
+current="$looks/look-0.9.7"
 # Only new accounts created from the image carry this marker. Never reset an
 # existing account's display scale during an upgrade or a later sign-in.
 if [ -f "$looks/display-defaults-pending" ]; then

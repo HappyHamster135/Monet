@@ -6,25 +6,100 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.6-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.6-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.6-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.6-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.6-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.7-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
+| Monet-0.9.7-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
+| Monet-0.9.7-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
+| Monet-0.9.7-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
+| Monet-0.9.7-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
 
-### USB maker refresh — 5 November 2026
+### New in 0.9.7: quicker everyday use
 
-The one-click USB maker now replaces a previously written installer stick's old
-partitions automatically. It initializes cleared media before writing and waits
-for Windows to release newly mounted volumes, fixing the reported repeat-write
-failures. The installer image normally exposes multiple partitions in Windows.
+Monet 0.9.7 is a prerelease. Physical display, removable-drive and restart
+testing is still in progress.
 
-Twenty native Windows unit tests and two consecutive Kingston DataTraveler
-rewrites passed, with a full byte-for-byte read-back after each write. This
-refresh replaces only `Monet-0.9.6-Make-USB-Stick.exe`; the OS images, ISO files
-and other downloads keep their original bytes. The updated maker's
-[source commit](https://github.com/HappyHamster135/Monet/commit/031fdfd) and
-qualification details are identified in the release verification record.
+- **Your region supplies sensible defaults.** The city chosen in Setup supplies
+  the clock format, Celsius or Fahrenheit and the initial weather location.
+  Existing manual choices stay in place.
+- **Brightness remembers your last level.** The built-in screen restores the
+  chosen slider/key level after sign-in, including when power management starts
+  late. Temporary dimming and HDR's raw backlight level do not replace it.
+  The separate sign-in screen also restores the last internal-screen level and
+  offers brightness keys and a slider.
+- **Leaving keeps a Monet screen.** Restart, shut down and sign out cover
+  closing apps with Monet's progress screen. Native save prompts are revealed
+  when needed, and cancellation returns to the desktop.
+- **Pinning uses clearer names.** App menus say **Pin to Home Bar**, **Unpin
+  from Home Bar** and **Configure Home Bar…**, keeping them distinct from the
+  Task Manager app.
+- **Downloads are easier to find.** Desktop is the default destination. Right-click
+  a folder in Files and choose **Set as download path** to choose another place;
+  existing custom download locations are preserved.
+- **Archives have separate extraction and browsing actions.** Double-click an
+  archive to open its destination-folder extraction box. Choose **Open** from
+  its right-click menu to inspect the contents directly in Archives. The separate
+  **Extract archive…** action also opens the extraction box.
+  RPM packages follow the same prompt without first listing their payload;
+  extracting a package does not install it.
+  Archive menu actions also work correctly in ordinary user accounts, fixing
+  the incorrect authorization error.
+  Large RPM packages open for inspection from their existing file index, avoiding
+  a full payload scan before showing their contents. Extraction remains native.
+  Files follows this handler by default instead of browsing archives as folders.
+  Password prompts remain native, duplicate names
+  offer Keep both, and completion offers **Open folder**. Space previews files;
+  optional Desktop Stacks and Transfers help organize files and follow operations.
+- **Files keeps responding around slow locations.** Navigation and Cancel remain
+  available while drive information and file-operation preparation load in the
+  background. The disk-space label stays readable in the status bar. Background
+  thumbnail work has a loading indicator and Stop/Escape; Refresh resumes it
+  without changing your saved preview choice. Ordinary
+  local-folder opening is comparable in the measured runs.
+  Tab-close icons have a larger square click target while retaining their
+  original appearance and hover/press effects.
+- **Search puts applications first.** Cold results refresh as application
+  metadata arrives, without waiting for an app to be launched. Installed apps, matching running apps and
+  executable file results precede archives, packages and folders. A running
+  file viewer displaying a matching download does not outrank the app itself.
+  Ranking uses result metadata without checking file paths on the desktop UI
+  thread. Short typing pauses combine runner requests and result updates;
+  closing the menu cancels its searches.
+- **Faster repeat Store starts and less hidden widget work.** Store reuses unchanged
+  catalog data after the first load. Widgets pause unnecessary updates while
+  the screen is locked or off, or a popup is closed, then refresh when needed.
+  Hidden city-search and password cursors no longer keep requesting redraws.
+  Wallpaper weather changes settle promptly instead of redrawing for minutes.
+  Measurements cover catalog reuse, foreground responsiveness and VM sessions;
+  laptop power testing remains open.
+- **A clearer clock screen.** Keep the painting and large Monet clock, then use
+  a key or Unlock to open the password form. The layouts fit smaller screens;
+  keyboard focus, typing and Escape work consistently.
+- **Calendar repeat choices stay beside their button.** The picker opens above
+  or below as space allows, with rounded Monet options and keyboard controls.
+- **Settings search reaches the control.** Searches for screen locking, the download
+  folder, a battery limit or Keep awake open and highlight the relevant setting.
+  The four destinations include search phrases and result labels in every
+  supported catalog, with English phrases still available.
+- **Power and sleep are in one place.** Screen-off, sleep and locking controls live
+  in Power & Sleep. Charging information distinguishes a connected charger and a
+  battery paused at its charge limit. Keep awake pauses idle timers for 30 minutes,
+  an hour or the rest of the session, with a countdown and an off switch.
+- **A Monet power page.** Sleep, restart, shut down and sign out use a compact
+  Mist/Smoke panel with consistent drawn icons, readable buttons and a separate
+  Cancel action. Smaller screens, larger text and keyboard navigation fit the
+  layout. The page now loads through Plasma's desktop shell, with the original
+  native page retained as a fallback.
+  Hover feedback uses stable colours and keeps scrollbars clear of the buttons.
+- **Opening an app gives immediate feedback.** Starting indicators, duplicate-launch
+  protection and actionable failures make repeated clicks less confusing while
+  keeping deliberate new-window actions available.
+- **More consistent input and layouts.** Keyboard focus, Enter, Escape, touchpad
+  scrolling, large text and fractional scaling have been polished across Settings,
+  Store, the app menu, extraction and Transfers. Long choice labels wrap instead
+  of running off their card. Desktop-menu defaults are repaired while preserving
+  existing custom bindings.
+
+Measurements and current qualification limits are recorded in the
+[testing notes](https://github.com/HappyHamster135/Monet/blob/main/docs/TESTING.md).
 
 ### New in 0.9.6: a smoother desktop, clearer recovery
 
@@ -68,6 +143,20 @@ hard lock, Secure Boot/TPM, suspend, peripherals and Windows/game round trips.
 These changes do not establish a fix for the laptop's overheating or a measured
 performance advantage over Windows or other Linux distributions. Nothing is
 published by preparing this local candidate.
+
+### USB maker refresh — 5 November 2026
+
+The one-click USB maker now replaces a previously written installer stick's old
+partitions automatically. It initializes cleared media before writing and waits
+for Windows to release newly mounted volumes, fixing the reported repeat-write
+failures. The installer image normally exposes multiple partitions in Windows.
+
+Twenty native Windows unit tests and two consecutive Kingston DataTraveler
+rewrites passed, with a full byte-for-byte read-back after each write. This
+refresh replaces only `Monet-0.9.6-Make-USB-Stick.exe`; the OS images, ISO files
+and other downloads keep their original bytes. The updated maker's
+[source commit](https://github.com/HappyHamster135/Monet/commit/031fdfd) and
+qualification details are identified in the release verification record.
 
 ### New in 0.9.5: a clearer, lighter desktop
 

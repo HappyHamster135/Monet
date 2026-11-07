@@ -11,6 +11,7 @@
  */
 import QtCore
 import QtQuick
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
@@ -19,10 +20,14 @@ import "../games"
 MonetWindow {
     id: root
     title: i18n("Store")
-    width: 1180
-    height: 780
-    minimumWidth: 780
-    minimumHeight: 540
+    readonly property real availableWidth: typeof windowArea !== "undefined" && windowArea.width > 0
+        ? windowArea.width : Math.min(Screen.width, Screen.desktopAvailableWidth)
+    readonly property real availableHeight: typeof windowArea !== "undefined" && windowArea.height > 0
+        ? windowArea.height : Math.min(Screen.height, Screen.desktopAvailableHeight)
+    width: Math.max(1, Math.min(1180, availableWidth - 64))
+    height: Math.max(1, Math.min(780, availableHeight - 96))
+    minimumWidth: Math.max(1, Math.min(780, availableWidth - 32))
+    minimumHeight: Math.max(1, Math.min(540, availableHeight - 48))
     visible: true
     // See-through: WindowGlass is its glass.
     color: "transparent"
@@ -56,10 +61,80 @@ MonetWindow {
     property var windowsApps: []
     // A screenshot shown big.
     property string picture: ""
+    property Item appReturnFocus: null
+    property int navigationRevision: 0
     // What this start was asked for, until the catalog's read.
     property string pending: firstPage
     readonly property string texture: brush
     readonly property real speed: Kirigami.Units.longDuration / 200
+    function fitAvailableScreen() {
+        if (availableWidth <= 0 || availableHeight <= 0
+                || visibility === Window.Maximized || visibility === Window.FullScreen || visibility === Window.Minimized) return
+        width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
+        height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
+    }
+    onAvailableWidthChanged: Qt.callLater(fitAvailableScreen)
+    onAvailableHeightChanged: Qt.callLater(fitAvailableScreen)
+    onVisibleChanged: if (visible) Qt.callLater(fitAvailableScreen)
+    onVisibilityChanged: if (visibility === Window.Windowed) Qt.callLater(fitAvailableScreen)
+
+    property Item pendingFocusReveal: null
+    function scheduleFocusReveal() {
+        pendingFocusReveal = activeFocusItem
+        Qt.callLater(revealFocusedControl)
+    }
+    function cancelFocusReveal(view) {
+        for (let item = pendingFocusReveal; item; item = item.parent) {
+            if (item === view) { pendingFocusReveal = null; return }
+        }
+    }
+    function revealFocusedControl() {
+        const focused = pendingFocusReveal
+        pendingFocusReveal = null
+        // GridView can focus a non-interactive delegate wrapper. Revealing that
+        // wrapper would undo a manual Home/Page scroll to the shelf's header.
+        if (!focused || focused !== activeFocusItem || !focused.visible || !focused.activeFocusOnTab) return
+        for (let view = focused.parent; view; view = view.parent) {
+            if (!("contentY" in view) || !("contentHeight" in view) || !view.contentItem) continue
+            const top = focused.mapToItem(view.contentItem, 0, 0).y
+            const first = view.originY - view.topMargin
+            const last = Math.max(first, view.originY + view.contentHeight - view.height + view.bottomMargin)
+            let position = view.contentY
+            if (top < position + 12) position = top - 12
+            else if (top + focused.height > position + view.height - 12)
+                position = top + focused.height - view.height + 12
+            view.contentY = Math.max(first, Math.min(last, position))
+        }
+    }
+    onActiveFocusItemChanged: scheduleFocusReveal()
+    // Wayland can deliver a configure for the old size after a screen change.
+    onWidthChanged: {
+        if (width > availableWidth - 32 || width < minimumWidth) Qt.callLater(fitAvailableScreen)
+        scheduleFocusReveal()
+    }
+    onHeightChanged: {
+        if (height > availableHeight - 48 || height < minimumHeight) Qt.callLater(fitAvailableScreen)
+        scheduleFocusReveal()
+    }
+    component FocusWatch: QtObject {
+        id: watch
+        required property Flickable view
+        required property var reveal
+        function queue() { if (view.visible) reveal() }
+        readonly property Connections changes: Connections {
+            target: watch.view
+            function onContentHeightChanged() { watch.queue() }
+            function onWidthChanged() { watch.queue() }
+            function onHeightChanged() { watch.queue() }
+            function onVisibleChanged() { watch.queue() }
+        }
+    }
+    FocusWatch { view: home; reveal: root.scheduleFocusReveal }
+    FocusWatch { view: shelfView; reveal: root.scheduleFocusReveal }
+    FocusWatch { view: appPage; reveal: root.scheduleFocusReveal }
+    FocusWatch { view: results; reveal: root.scheduleFocusReveal }
+    FocusWatch { view: downloadsView; reveal: root.scheduleFocusReveal }
+    FocusWatch { view: navList; reveal: root.scheduleFocusReveal }
 
     Settings {
         category: "Store"
@@ -184,18 +259,30 @@ MonetWindow {
         const app = shop.app(id)
         if (!app)
             return
+        navigationRevision++
+        if (pageId === "" && !appReturnFocus) appReturnFocus = activeFocusItem
         pageApp = app
         pageFacts = {}
         pageId = id
         appPage.contentY = 0
         appPage.shown = 0
         shop.learn(id)
-        Qt.callLater(() => appPage.focusFirst())
+        Qt.callLater(() => { if (root.picture === "" && root.pageId === id) appPage.focusFirst() })
     }
     function closePage() {
+        const revision = ++navigationRevision
         pageId = ""
+        Qt.callLater(() => {
+            if (revision !== root.navigationRevision || root.pageId !== "" || !root.visible) return
+            const previous = root.appReturnFocus
+            root.appReturnFocus = null
+            if (previous && previous.visible && previous.enabled) previous.forceActiveFocus(Qt.BacktabFocusReason)
+            else search.forceActiveFocus(Qt.BacktabFocusReason)
+        })
     }
     function chooseSection(which) {
+        navigationRevision++
+        appReturnFocus = null
         pageId = ""
         query = ""
         section = which
@@ -269,6 +356,8 @@ MonetWindow {
         }
     }
     onSectionChanged: {
+        navigationRevision++
+        appReturnFocus = null
         pageId = ""
         query = ""
         kind = ""
@@ -278,11 +367,17 @@ MonetWindow {
     onKindChanged: relist()
     onCheckedOnlyChanged: relist()
     onQueryChanged: {
-        if (query !== "")
+        if (query !== "") {
+            navigationRevision++
+            appReturnFocus = null
             pageId = ""
+        }
         found = loaded && query.trim() !== "" ? shop.find(query) : { apps: [], windows: [], instead: null }
     }
-    Component.onCompleted: if (pending !== "" && !pending.startsWith("appstream") && entries.some(e => e.id === pending)) section = pending
+    Component.onCompleted: {
+        fitAvailableScreen()
+        if (pending !== "" && !pending.startsWith("appstream") && entries.some(e => e.id === pending)) section = pending
+    }
 
     // Colors: Settings' own, mist or smoke as Monet's light chose ---------------
     QtObject {
@@ -304,6 +399,7 @@ MonetWindow {
 
     Shortcut {
         sequences: [StandardKey.Find]
+        enabled: root.picture === ""
         onActivated: search.forceActiveFocus()
     }
 
@@ -372,6 +468,7 @@ MonetWindow {
                         }
                         TextInput {
                             id: search
+                            objectName: "storeSearch"
                             Layout.fillWidth: true
                             color: look.ink
                             font.pixelSize: 14
@@ -405,6 +502,7 @@ MonetWindow {
                 // The sections, then yours; the current one's pebble of glass glides to it.
                 Flickable {
                     id: navList
+                    objectName: "storeNavigation"
                     MouseScroll { view: navList }
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -412,6 +510,9 @@ MonetWindow {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
+                    ScrollInput { id: navInput; view: navList; onScrollRequested: root.cancelFocusReveal(navList) }
+                    Keys.priority: Keys.AfterItem
+                    Keys.onPressed: event => navInput.key(event)
 
                     Rectangle {
                         id: pebble
@@ -440,6 +541,7 @@ MonetWindow {
                             model: root.entries
                             Rectangle {
                                 id: navItem
+                                objectName: "storeSection-" + modelData.id
                                 required property var modelData
                                 required property int index
                                 readonly property bool current: root.section === modelData.id && root.query === ""
@@ -456,6 +558,7 @@ MonetWindow {
                                 activeFocusOnTab: true
                                 Keys.onSpacePressed: root.chooseSection(modelData.id)
                                 Keys.onReturnPressed: root.chooseSection(modelData.id)
+                                Keys.onEnterPressed: root.chooseSection(modelData.id)
 
                                 Text {
                                     horizontalAlignment: Text.AlignLeft
@@ -584,6 +687,7 @@ MonetWindow {
             }
 
             Downloads {
+                id: downloadsView
                 anchors.fill: parent
                 visible: root.section === "downloads" && root.pageId === "" && root.query === ""
                 tone: look
@@ -631,18 +735,16 @@ MonetWindow {
             // What a search found: Windows' answer first, then your Windows' apps, then the Store's.
             Flickable {
                 id: results
+                objectName: "storeResults"
                 MouseScroll { view: results }
                 anchors.fill: parent
                 visible: root.loaded && root.pageId === "" && root.query !== ""
                 contentHeight: resultsColumn.implicitHeight + 40
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                Kirigami.WheelHandler {
-                    target: results
-                    filterMouseEvents: !("acceptedButtons" in results)
-                    keyNavigationEnabled: true
-                    verticalStepSize: 96
-                }
+                ScrollInput { id: resultsInput; view: results; onScrollRequested: root.cancelFocusReveal(results) }
+                Keys.priority: Keys.AfterItem
+                Keys.onPressed: event => resultsInput.key(event)
                 Column {
                     id: resultsColumn
                     x: 32
@@ -699,7 +801,7 @@ MonetWindow {
                                 columns: pageArea.columns
                                 columnSpacing: 12
                                 rowSpacing: 12
-                                visible: root.found.instead && root.found.instead.apps.length > 0
+                                visible: !!root.found.instead && root.found.instead.apps.length > 0
                                 Repeater {
                                     model: root.found.instead ? root.found.instead.apps : []
                                     AppCard {
@@ -793,6 +895,7 @@ MonetWindow {
                     function open(id) { shop.open(id) }
                     function showPicture(url) { root.picture = url }
                     function openApp(id) { root.openApp(id) }
+                    function cancelFocusReveal(view) { root.cancelFocusReveal(view) }
                 }
                 tone: look
                 painting: root.pageId !== "" ? root.banner(root.pageApp.section || "tools") : ""
@@ -808,23 +911,46 @@ MonetWindow {
         }
 
         // A screenshot, big: a click puts it away.
-        Rectangle {
-            anchors.fill: parent
+        QQC2.Popup {
+            id: pictureViewer
+            parent: body
+            x: 0
+            y: 0
+            width: parent.width
+            height: parent.height
+            padding: 0
+            modal: true
+            focus: true
             visible: root.picture !== ""
-            color: Qt.rgba(0, 0, 0, 0.82)
-            Image {
-                anchors.fill: parent
-                anchors.margins: 40
-                source: root.picture
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-                smooth: true
+            closePolicy: QQC2.Popup.CloseOnEscape
+            onOpened: pictureClose.forceActiveFocus(Qt.PopupFocusReason)
+            onAboutToHide: root.picture = ""
+            background: Rectangle { color: Qt.rgba(0, 0, 0, 0.82) }
+            contentItem: Item {
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 40
+                    source: root.picture
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    smooth: true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: pictureViewer.close()
+                }
+                Pill {
+                    id: pictureClose
+                    objectName: "storePictureClose"
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 12
+                    tone: look
+                    kind: "lily"
+                    text: i18n("Close")
+                    onClicked: pictureViewer.close()
+                }
             }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.picture = ""
-            }
-            Keys.onEscapePressed: root.picture = ""
         }
     }
 }

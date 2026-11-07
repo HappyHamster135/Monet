@@ -4,7 +4,7 @@
 QJsonObject DolphinView::monetViewState() const
 {
     const auto folder = monetLocalPath(url());
-    if (folder.isEmpty() || m_loadingState != LoadingState::Completed || rootItem().url() != url()
+    if (folder.isEmpty() || m_loadingState != LoadingState::Completed || !rootItem().url().matches(url(), QUrl::StripTrailingSlash)
         || selectedItemsCount() > 4096 || m_model->expandedDirectories().size() > 256) return {};
     auto paths = [&](const auto &urls, QJsonArray &result) {
         QStringList ordered;

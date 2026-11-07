@@ -20,6 +20,10 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity {
+        id: activity; viewVisible: root.visible
+        onActiveChanged: if (active) root.today = new Date()
+    }
 
     property date today: new Date()
     // The notes panel, beside the card (on a wide card they're always out).
@@ -34,6 +38,7 @@ PlasmoidItem {
     NoteStore {
         id: noteStore
         helper: "@LIBEXECDIR@/monet-quick"
+        active: activity.active
     }
 
     Component.onCompleted: {
@@ -53,7 +58,7 @@ PlasmoidItem {
     Timer {
         // The day turns at midnight; and a look at the notes, for ones written at the clock.
         interval: 60 * 1000
-        running: true
+        running: activity.active
         repeat: true
         onTriggered: {
             const now = new Date();

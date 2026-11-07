@@ -17,6 +17,7 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
 
     readonly property bool inPanel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
         || Plasmoid.formFactor === PlasmaCore.Types.Vertical
@@ -31,6 +32,9 @@ PlasmoidItem {
 
     WeatherStore {
         id: shared
+        active: activity.active || (detailsPopup.visible && desktopDetails.samplingActive)
+            || (root.expanded && root.fullRepresentationItem && root.fullRepresentationItem.details
+                && root.fullRepresentationItem.item && root.fullRepresentationItem.item.samplingActive)
         Component.onCompleted: seed({place: Plasmoid.configuration.place,
             latitude: Plasmoid.configuration.latitude, longitude: Plasmoid.configuration.longitude,
             places: Array.from(Plasmoid.configuration.places || []), fahrenheit: Plasmoid.configuration.fahrenheit})
@@ -485,8 +489,16 @@ PlasmoidItem {
                 onVisibleChanged: {
                     field.text = "";
                     root.found = [];
+                    if (!visible) {
+                        field.focus = false;
+                        typing.stop();
+                        placeSearch.cancel();
+                    }
                     if (visible && root.choosing) {
-                        Qt.callLater(() => field.forceActiveFocus());
+                        Qt.callLater(() => {
+                            if (field.visible && field.enabled && root.choosing)
+                                field.forceActiveFocus();
+                        });
                     }
                 }
 
@@ -529,6 +541,11 @@ PlasmoidItem {
 
                 T.TextField {
                     id: field
+                    objectName: "weatherPlaceSearch"
+                    enabled: visible && activity.active
+                    // Qt keeps a focused hidden input's cursor timer alive.
+                    // A stale city search must not keep repainting the desktop.
+                    cursorVisible: visible && activity.active && activeFocus
                     Layout.fillWidth: true
                     implicitHeight: 32
                     leftPadding: 12
@@ -541,14 +558,19 @@ PlasmoidItem {
                     font.family: "Inter"
                     font.pixelSize: 13
                     Accessible.name: i18n("Find a place for the weather")
-                    onTextChanged: { placeSearch.cancel(); typing.restart() }
+                    onTextChanged: {
+                        placeSearch.cancel();
+                        if (visible && activity.active) typing.restart();
+                        else typing.stop();
+                    }
                     Keys.onReturnPressed: field.takeFirst()
                     Keys.onEnterPressed: field.takeFirst()
                     Keys.onEscapePressed: root.choosing = false
                     Connections {
                         target: field.Window.window
                         function onActiveChanged() {
-                            if (field.Window.window.active && card.asking) field.forceActiveFocus();
+                            if (field.Window.window.active && card.asking && field.visible && field.enabled)
+                                field.forceActiveFocus();
                         }
                     }
 

@@ -20,9 +20,11 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.plasmoid
 import org.kde.plasma.private.kicker as Kicker
 import org.kde.plasma.private.sessions
+import org.kde.taskmanager as TaskManager
 
 PlasmoidItem {
     id: root
+    LaunchController { id: appLauncher }
 
     Plasmoid.icon: "monet"
     Plasmoid.contextualActions: [TaskManagerAction {}]
@@ -32,6 +34,13 @@ PlasmoidItem {
 
     // Animations follow the desktop's speed, and stop when it's set to instant.
     readonly property real speed: Kirigami.Units.longDuration / 200
+    // A panel popup belongs to its own output. Leave room for the dialog frame
+    // and margins, including when an open menu follows a live scale change.
+    readonly property rect usableScreen: {
+        const area = Plasmoid.containment ? Plasmoid.containment.availableScreenRect : null
+        return area && area.width > 0 && area.height > 0
+            ? area : Qt.rect(0, 0, Screen.width, Screen.height)
+    }
     // Every app from A to Z, once KDE's model has read them.
     property var everyApp: null
     readonly property string firstName: (user.fullName || user.loginName || "").trim().split(" ")[0]
@@ -121,6 +130,11 @@ PlasmoidItem {
 
     // Opens an app, file or setting; the menu closes when it did.
     function launch(model, index) {
+        const handled = appLauncher.fromModel(model, index, root)
+        if (handled !== 0) {
+            if (handled === 1) root.expanded = false
+            return
+        }
         if (model && index >= 0 && index < model.count && model.trigger(index, "", null)) {
             root.expanded = false
         }
@@ -128,6 +142,10 @@ PlasmoidItem {
 
     function isPinned(id) {
         return id !== "" && apps.favoritesModel.isFavorite(id)
+    }
+    function isStarting(id) {
+        const key = appLauncher.key(id)
+        return !!(key !== "" && appLauncher.states[key] && appLauncher.states[key].state === "starting")
     }
 
     // Apps can be pinned and unpinned (search results that aren't apps have no id).
@@ -179,6 +197,16 @@ PlasmoidItem {
         placement: PlasmaExtras.Menu.BottomPosedLeftAlignedPopup
 
         PlasmaExtras.MenuItem {
+            text: i18n("New window")
+            icon: "window-new"
+            visible: appLauncher.canOpenNewWindow(appMenu.favoriteId)
+            onClicked: {
+                appLauncher.open(appMenu.favoriteId, root, true)
+                root.expanded = false
+            }
+        }
+
+        PlasmaExtras.MenuItem {
             text: root.isPinned(appMenu.favoriteId) ? i18n("Unpin from Menu") : i18n("Pin to Menu")
             icon: root.isPinned(appMenu.favoriteId) ? "list-remove" : "window-pin"
             onClicked: {
@@ -195,10 +223,14 @@ PlasmoidItem {
         id: page
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 30
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 33
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 24
-        Layout.minimumHeight: Kirigami.Units.gridUnit * 26
+        readonly property real maximumContentWidth: Math.max(1, root.usableScreen.width - Kirigami.Units.largeSpacing * 2)
+        readonly property real maximumContentHeight: Math.max(1, root.usableScreen.height - Kirigami.Units.largeSpacing * 2)
+        Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 30, maximumContentWidth)
+        Layout.preferredHeight: Math.min(Kirigami.Units.gridUnit * 33, maximumContentHeight)
+        Layout.minimumWidth: Math.min(Kirigami.Units.gridUnit * 24, maximumContentWidth)
+        Layout.minimumHeight: Math.min(Kirigami.Units.gridUnit * 26, maximumContentHeight)
+        Layout.maximumWidth: maximumContentWidth
+        Layout.maximumHeight: maximumContentHeight
         collapseMarginsHint: true
         focus: true
 
@@ -211,20 +243,126 @@ PlasmoidItem {
         readonly property var found: root.finder.count > 0 ? root.finder.modelForRow(0) : null
         readonly property Item shownView: searching ? results : everything ? allApps : pinned
         readonly property color ink: Kirigami.Theme.textColor
+        readonly property bool compact: height < Kirigami.Units.gridUnit * 33
+        Timer {
+            id: nativeSearchDelay
+            interval: 90
+            onTriggered: {
+                root.finder.query = search.text.trim()
+                page.refreshApplicationPriority()
+            }
+        }
 
-        // Kicker supplies favoriteId only for installed application matches.
-        // Partition one native query, preserving its relevance order and actions.
+        function fitPopup() {
+            const window = page.Window.window
+            if (!root.expanded || !window) return
+            // A late Wayland configure can restore the previous popup size
+            // after its hints changed. Keep the native frame and a smaller
+            // user-chosen size, and correct only an oversized content area.
+            // Window geometry can update before its anchored content. A
+            // transient negative padding must not shrink it a second time.
+            const limitWidth = maximumContentWidth + Math.max(0, window.width - width)
+            const limitHeight = maximumContentHeight + Math.max(0, window.height - height)
+            if (window.width > limitWidth) window.width = limitWidth
+            if (window.height > limitHeight) window.height = limitHeight
+            window.update()
+        }
+        onMaximumContentWidthChanged: Qt.callLater(fitPopup)
+        onMaximumContentHeightChanged: Qt.callLater(fitPopup)
+        onWidthChanged: Qt.callLater(fitPopup)
+        onHeightChanged: Qt.callLater(fitPopup)
+        Connections {
+            target: page.Window.window
+            function onXChanged() { Qt.callLater(page.fitPopup) }
+            function onYChanged() { Qt.callLater(page.fitPopup) }
+        }
+
+        // A portable/running app may have no desktop entry. Keep it ahead of
+        // matching downloads too, while retaining native actions/source rows.
+        readonly property TaskManager.TasksModel runningTasks: TaskManager.TasksModel {
+            groupMode: TaskManager.TasksModel.GroupDisabled
+        }
+        readonly property string windowActivation: i18nd("kwin", "Activate running window on %1", "\u0001")
+        function runningApplication(label) {
+            const query = search.text.trim().toLocaleLowerCase()
+            if (!query) return false
+            for (let row = 0; row < runningTasks.count; ++row) {
+                const index = runningTasks.index(row, 0)
+                if (String(runningTasks.data(index, Qt.DisplayRole)) !== label) continue
+                for (const role of [TaskManager.AbstractTasksModel.AppName, TaskManager.AbstractTasksModel.AppId]) {
+                    if (String(runningTasks.data(index, role) || "").toLocaleLowerCase().includes(query)) return true
+                }
+            }
+            return false
+        }
+        function applicationResult(row, parent) {
+            if (!found) return false
+            const index = found.index(row, 0, parent)
+            const value = name => {
+                const role = found.KItemModels.KRoleNames.role(name)
+                return role < 0 ? "" : String(found.data(index, role) || "")
+            }
+            if (value("favoriteId") !== "") return true
+            const icon = value("decoration")
+            // Kicker's URL role stats local files and resolves symlinks on the
+            // GUI thread. Ranking must use match metadata, never touch a drive.
+            if (!/^(inode-directory|folder(?:-|$))/.test(icon)
+                    && (/\.(exe|appimage)$/i.test(value("display"))
+                    || icon === "application-x-executable" || icon === "application-x-ms-dos-executable")) return true
+            // Kicker does not expose the runner ID. Recognize KWin's localized
+            // activation subtext, not a translated category or a file's name.
+            const parts = windowActivation.split("\u0001")
+            const detail = value("description")
+            return parts.length === 2 && detail.startsWith(parts[0]) && detail.endsWith(parts[1])
+                && detail.length > parts[0].length + parts[1].length
+                && runningApplication(value("display"))
+        }
         KItemModels.KSortFilterProxyModel {
             id: applicationMatches
             sourceModel: page.found
-            filterRoleName: "favoriteId"
-            filterRegularExpression: /.+/
+            dynamicSortFilter: false
+            filterRowCallback: (row, parent) => page.applicationResult(row, parent)
         }
         KItemModels.KSortFilterProxyModel {
             id: otherMatches
             sourceModel: page.found
-            filterRoleName: "favoriteId"
-            filterRegularExpression: /^$/
+            dynamicSortFilter: false
+            filterRowCallback: (row, parent) => !page.applicationResult(row, parent)
+        }
+        function refreshApplicationPriority() {
+            priorityDelay.restart()
+        }
+        Timer {
+            id: priorityDelay
+            interval: 0
+            onTriggered: {
+                // Never reset proxies inside a source model's update signal.
+                // Coalesce the runner's row/metadata bursts into one pass.
+                applicationMatches.invalidateFilter()
+                otherMatches.invalidateFilter()
+                if (page.launchWhenFound && !root.finder.querying) {
+                    page.launchWhenFound = false
+                    page.launchFirst()
+                }
+            }
+        }
+        // A cold runner publishes rows and their application metadata in
+        // separate updates. Refresh from those changes, independently of any
+        // running-window change or first app launch.
+        Connections {
+            target: page.found
+            ignoreUnknownSignals: true
+            function onDataChanged() { page.refreshApplicationPriority() }
+            function onRowsInserted() { page.refreshApplicationPriority() }
+            function onModelReset() { page.refreshApplicationPriority() }
+            function onLayoutChanged() { page.refreshApplicationPriority() }
+        }
+        Connections {
+            target: page.runningTasks
+            ignoreUnknownSignals: true
+            function onCountChanged() { Qt.callLater(page.refreshApplicationPriority) }
+            function onDataChanged() { Qt.callLater(page.refreshApplicationPriority) }
+            function onModelReset() { Qt.callLater(page.refreshApplicationPriority) }
         }
         function launchMatch(proxy, index) {
             if (!root.finder.querying && index >= 0 && index < proxy.count)
@@ -256,7 +394,7 @@ PlasmoidItem {
             // Kicker retains old rows during a query. Never open a stale match
             // or a folder while the matching application is still arriving.
             if (!searching) return
-            if (root.finder.querying) {
+            if (root.finder.querying || nativeSearchDelay.running || priorityDelay.running) {
                 launchWhenFound = true
             } else if (applicationMatches.count > 0) {
                 launchMatch(applicationMatches, 0)
@@ -282,6 +420,14 @@ PlasmoidItem {
             }
         }
 
+        function appKey(item, event) {
+            if (event.key === Qt.Key_Menu && event.modifiers === Qt.NoModifier
+                    || event.key === Qt.Key_F10 && event.modifiers === Qt.ShiftModifier) {
+                if (item && typeof item.menuRequested === "function") item.menuRequested()
+                event.accepted = true
+            } else typeIntoSearch(event)
+        }
+
         Keys.onEscapePressed: {
             if (searching) {
                 search.text = ""
@@ -297,6 +443,7 @@ PlasmoidItem {
         Component.onCompleted: {
             root.apps.refresh()
             reset()
+            Qt.callLater(fitPopup)
         }
 
         Connections {
@@ -309,9 +456,13 @@ PlasmoidItem {
             }
             function onExpandedChanged() {
                 if (root.expanded) {
+                    Qt.callLater(page.fitPopup)
                     page.reset()
                 } else {
                     page.launchWhenFound = false
+                    nativeSearchDelay.stop()
+                    root.finder.query = ""
+                    root.findEveryday("")
                 }
             }
         }
@@ -319,17 +470,14 @@ PlasmoidItem {
         Connections {
             target: root.finder
             function onQueryFinished() {
-                if (page.launchWhenFound) {
-                    page.launchWhenFound = false
-                    page.launchFirst()
-                }
+                page.refreshApplicationPriority()
             }
         }
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: Kirigami.Units.largeSpacing * 2
-            spacing: Kirigami.Units.largeSpacing * 2
+            anchors.margins: page.compact ? Kirigami.Units.largeSpacing + Kirigami.Units.smallSpacing : Kirigami.Units.largeSpacing * 2
+            spacing: launchFeedback.visible || page.compact ? Kirigami.Units.smallSpacing * 2 : Kirigami.Units.largeSpacing * 2
 
             // The search: a well with a lily ring while you type.
             T.TextField {
@@ -354,7 +502,11 @@ PlasmoidItem {
                     page.launchWhenFound = false
                     page.everydayIndex = 0
                     page.applicationIndex = -1
-                    root.finder.query = text
+                    if (text.trim() === "") {
+                        nativeSearchDelay.stop()
+                        root.finder.query = ""
+                    } else nativeSearchDelay.restart()
+                    page.refreshApplicationPriority()
                     root.findEveryday(text)
                     results.currentIndex = 0
                 }
@@ -408,6 +560,14 @@ PlasmoidItem {
             }
 
             // What the list is: pinned or all apps, and the way to the other.
+            LaunchFeedback {
+                id: launchFeedback
+                Layout.fillWidth: true
+                controller: appLauncher
+                source: root
+                onDismissed: search.forceActiveFocus(Qt.TabFocusReason)
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 visible: !page.searching
@@ -425,6 +585,7 @@ PlasmoidItem {
                 // arrow pointing where it goes ("All apps ›", "‹ Pinned").
                 Rectangle {
                     id: otherList
+                    objectName: "menuOtherList"
                     function go() {
                         page.everything = !page.everything
                         page.shownView.currentIndex = -1
@@ -476,39 +637,47 @@ PlasmoidItem {
 
                 // Pinned apps, then the files you opened last.
                 ColumnLayout {
+                    id: pinnedSection
                     anchors.fill: parent
                     visible: !page.searching && !page.everything
-                    spacing: Kirigami.Units.largeSpacing * 2
+                    spacing: page.compact ? Kirigami.Units.smallSpacing * 2 : Kirigami.Units.largeSpacing * 2
 
                     GridView {
                         id: pinned
+                        objectName: "menuPinned"
+                        readonly property int columns: Math.max(1, Math.min(6, Math.floor(width / 80)))
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.max(1, Math.min(2, Math.ceil(count / 6))) * cellHeight
+                        Layout.minimumHeight: cellHeight
+                        Layout.preferredHeight: Math.max(1, Math.min(2, Math.ceil(count / columns),
+                            Math.floor((pinnedSection.height - recentHeading.implicitHeight - 48 - 2*pinnedSection.spacing) / cellHeight))) * cellHeight
                         clip: true
                         model: root.apps.favoritesModel
-                        cellWidth: Math.floor(width / 6)
+                        cellWidth: Math.floor(width / columns)
                         cellHeight: 96
                         keyNavigationEnabled: true
                         currentIndex: -1
+                        activeFocusOnTab: true
+                        onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
                         boundsBehavior: Flickable.StopAtBounds
+                        ScrollInput { view: pinned }
                         Keys.onReturnPressed: root.launch(model, currentIndex)
                         Keys.onEnterPressed: root.launch(model, currentIndex)
                         Keys.onUpPressed: {
-                            if (currentIndex < 6) {
+                            if (currentIndex < columns) {
                                 search.forceActiveFocus()
                             } else {
                                 moveCurrentIndexUp()
                             }
                         }
                         Keys.onDownPressed: {
-                            if (currentIndex + 6 >= count && recentFiles.count > 0) {
+                            if (currentIndex + columns >= count && recentFiles.count > 0) {
                                 recentFiles.forceActiveFocus()
                                 recentFiles.currentIndex = 0
                             } else {
                                 moveCurrentIndexDown()
                             }
                         }
-                        Keys.onPressed: event => page.typeIntoSearch(event)
+                        Keys.onPressed: event => page.appKey(currentItem, event)
 
                         delegate: AppTile {
                             id: pinnedTile
@@ -518,6 +687,7 @@ PlasmoidItem {
                             height: pinned.cellHeight
                             icon: model.decoration
                             name: model.display
+                            launching: root.isStarting(model.favoriteId || "")
                             current: pinned.activeFocus && pinned.currentIndex === index
                             speed: root.speed
                             onActivated: root.launch(pinned.model, index)
@@ -540,6 +710,7 @@ PlasmoidItem {
                     }
 
                     Text {
+                        id: recentHeading
                         horizontalAlignment: Text.AlignLeft
                         Layout.leftMargin: Kirigami.Units.smallSpacing
                         text: i18n("Recent")
@@ -550,13 +721,18 @@ PlasmoidItem {
 
                     ListView {
                         id: recentFiles
+                        objectName: "menuRecentFiles"
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        Layout.minimumHeight: 48
                         clip: true
                         model: root.recent
                         keyNavigationEnabled: true
                         currentIndex: -1
+                        activeFocusOnTab: true
+                        onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
                         boundsBehavior: Flickable.StopAtBounds
+                        ScrollInput { view: recentFiles }
                         Keys.onReturnPressed: root.launch(model, currentIndex)
                         Keys.onEnterPressed: root.launch(model, currentIndex)
                         Keys.onUpPressed: {
@@ -603,13 +779,17 @@ PlasmoidItem {
 
                 ListView {
                     id: allApps
+                    objectName: "menuAllApps"
                     anchors.fill: parent
                     visible: !page.searching && page.everything
                     clip: true
                     model: root.everyApp
                     keyNavigationEnabled: true
                     currentIndex: -1
+                    activeFocusOnTab: true
+                    onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
                     boundsBehavior: Flickable.StopAtBounds
+                    ScrollInput { view: allApps }
                     section.property: "group"
                     section.delegate: Text {
                         horizontalAlignment: Text.AlignLeft
@@ -634,7 +814,7 @@ PlasmoidItem {
                             decrementCurrentIndex()
                         }
                     }
-                    Keys.onPressed: event => page.typeIntoSearch(event)
+                    Keys.onPressed: event => page.appKey(currentItem, event)
 
                     delegate: AppRow {
                         id: appRow
@@ -643,6 +823,7 @@ PlasmoidItem {
                         width: allApps.width
                         icon: model.decoration
                         name: model.display
+                        launching: root.isStarting(model.favoriteId || "")
                         current: allApps.activeFocus && allApps.currentIndex === index
                         speed: root.speed
                         onActivated: root.launch(allApps.model, index)
@@ -652,6 +833,8 @@ PlasmoidItem {
 
                 ListView {
                     id: results
+                    activeFocusOnTab: true
+                    ScrollInput { view: results }
                     anchors.fill: parent
                     visible: page.searching
                     clip: true
@@ -672,7 +855,7 @@ PlasmoidItem {
                             decrementCurrentIndex()
                         }
                     }
-                    Keys.onPressed: event => page.typeIntoSearch(event)
+                    Keys.onPressed: event => page.appKey(currentItem, event)
 
                     header: Column {
                         width: results.width
@@ -721,6 +904,7 @@ PlasmoidItem {
                                 objectName: "menuApplicationResult-" + index
                                 width: results.width
                                 icon: model.decoration; name: model.display
+                                launching: root.isStarting(model.favoriteId || "")
                                 detail: model.description || i18n("Application")
                                 enabled: !root.finder.querying
                                 current: search.activeFocus ? index === 0 : page.applicationIndex === index
@@ -744,7 +928,7 @@ PlasmoidItem {
                                     else if (root.everydayResults.length > 0) results.headerItem.focusAt(0)
                                     else page.focusOtherResults()
                                 }
-                                Keys.onPressed: event => page.typeIntoSearch(event)
+                                Keys.onPressed: event => page.appKey(applicationRow, event)
                             }
                         }
                         Text {

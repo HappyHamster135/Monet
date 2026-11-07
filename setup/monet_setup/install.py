@@ -52,7 +52,7 @@ import threading
 import fcntl
 from pathlib import Path
 
-from . import cache, checkpoint, disks, pc, resources, system, words
+from . import cache, checkpoint, disks, pc, region, resources, system, words
 from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
@@ -651,7 +651,6 @@ def configure(plan):
             log(f"made {account} ({name}), an administrator without a password")
         emit(phase="configure", fraction=0.4)
 
-        write(etc / "locale.conf", f"LANG={plan['language']}\n")
         write(etc / "vconsole.conf", f"KEYMAP={plan['keyboard']}{'-' + plan['variant'] if plan['variant'] else ''}\n")
         layouts, variants, options = system.xkb(plan["keyboard"], plan["variant"])
         write(etc / "X11/xorg.conf.d/00-keyboard.conf",
@@ -667,6 +666,16 @@ def configure(plan):
         if (root / "usr/share/zoneinfo" / zone).exists():
             (etc / "localtime").unlink(missing_ok=True)
             (etc / "localtime").symlink_to(f"../usr/share/zoneinfo/{zone}")
+        defaults = region.settings(zone, plan['language'])
+        # Language controls words; the selected city controls time and units.
+        write(etc / 'locale.conf', f"LANG={plan['language']}\nLC_TIME={defaults['locale']}\n"
+              f"LC_MEASUREMENT={defaults['locale']}\n")
+        config = var / 'home' / account / '.config'
+        write(config / 'plasma-localerc', f"[Formats]\nLANG={plan['language']}\n"
+              f"LC_TIME={defaults['locale']}\nLC_MEASUREMENT={defaults['locale']}\n", 0o600)
+        region.seed_weather(config, defaults)
+        write(config / 'monet/region-defaults-v1', 'Setup\n', 0o600)
+        run('chroot', root, 'chown', '-R', f'{account}:{account}', f'/var/home/{account}/.config')
         write(etc / "hostname", "monet\n")
         emit(phase="configure", fraction=0.6)
 

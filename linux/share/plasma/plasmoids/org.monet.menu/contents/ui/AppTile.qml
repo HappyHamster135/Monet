@@ -5,6 +5,7 @@
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.components as PC
 
 Item {
     id: tile
@@ -13,12 +14,13 @@ Item {
     property string name
     property bool current: false
     property real speed: 1
+    property bool launching: false
 
     signal activated()
     signal menuRequested()
 
     Accessible.role: Accessible.Button
-    Accessible.name: name
+    Accessible.name: launching ? i18n("Starting %1…", name) : name
     Accessible.onPressAction: activated()
 
     Rectangle {
@@ -37,11 +39,12 @@ Item {
         scale: tap.pressed ? 0.94 : 1
         Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
 
-        Kirigami.Icon {
+        Item {
             Layout.alignment: Qt.AlignHCenter
             implicitWidth: 44
             implicitHeight: 44
-            source: tile.icon
+            Kirigami.Icon { anchors.fill: parent; source: tile.icon; opacity: tile.launching ? 0.4 : 1 }
+            PC.BusyIndicator { anchors.centerIn: parent; width: 28; height: 28; running: tile.launching && tile.visible; visible: tile.launching }
         }
         Text {
             Layout.fillWidth: true

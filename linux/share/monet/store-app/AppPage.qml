@@ -9,11 +9,11 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Templates as T
-import org.kde.kirigami as Kirigami
 import "../games"
 
 Flickable {
     id: page
+    objectName: "storeAppPage"
     MouseScroll { view: page }
     // The Store's window: install, remove, open, openApp, showPicture.
     property var store
@@ -45,12 +45,9 @@ Flickable {
     Keys.onEscapePressed: page.back()
     Keys.onBackPressed: page.back()
 
-    Kirigami.WheelHandler {
-        target: page
-        filterMouseEvents: !("acceptedButtons" in page)
-        keyNavigationEnabled: true
-        verticalStepSize: 96
-    }
+    ScrollInput { id: scrollInput; view: page; onScrollRequested: page.store.cancelFocusReveal(page) }
+    Keys.priority: Keys.AfterItem
+    Keys.onPressed: event => scrollInput.key(event)
 
     // What it can reach, each as words and a mark; "programs" is the one to think twice about.
     readonly property var reachWords: ({
@@ -88,6 +85,7 @@ Flickable {
                 }
             }
             Pill {
+                objectName: "storeBack"
                 anchors.left: parent.left
                 anchors.leftMargin: 24
                 anchors.top: parent.top
@@ -119,9 +117,10 @@ Flickable {
                         anchors.fill: parent
                         radius: 30
                         color: page.tone.paper
-                        visible: false
+                        visible: GraphicsInfo.api === GraphicsInfo.Software
                     }
                     MultiEffect {
+                        visible: GraphicsInfo.api !== GraphicsInfo.Software
                         source: tile
                         anchors.fill: tile
                         shadowEnabled: true
@@ -310,13 +309,27 @@ Flickable {
             x: 32
             width: Math.min(parent.width - 64, 980)
             height: page.shots.length > 0 ? galleryColumn.implicitHeight + 36 : 0
+            objectName: "storeScreenshotGallery"
             visible: page.shots.length > 0
             activeFocusOnTab: true
             Keys.onLeftPressed: page.shown = Math.max(0, page.shown - 1)
             Keys.onRightPressed: page.shown = Math.min(page.shots.length - 1, page.shown + 1)
             Keys.onReturnPressed: page.store.showPicture(page.shots[page.shown].image)
-            Accessible.role: Accessible.Graphic
+            Keys.onEnterPressed: page.store.showPicture(page.shots[page.shown].image)
+            Keys.onSpacePressed: page.store.showPicture(page.shots[page.shown].image)
+            Accessible.role: Accessible.Button
+            Accessible.onPressAction: page.store.showPicture(page.shots[page.shown].image)
             Accessible.name: page.shots.length > 0 ? page.shots[page.shown].caption : ""
+
+            Rectangle {
+                objectName: "storeScreenshotFocus"
+                anchors.fill: parent
+                color: "transparent"
+                radius: 14
+                border.width: 2
+                border.color: page.tone.lily
+                visible: gallery.activeFocus
+            }
 
             Column {
                 id: galleryColumn
@@ -331,9 +344,10 @@ Flickable {
                         anchors.fill: parent
                         radius: 14
                         color: page.tone.dark ? "#34322F" : "#FFFFFF"
-                        visible: false
+                        visible: GraphicsInfo.api === GraphicsInfo.Software
                     }
                     MultiEffect {
+                        visible: GraphicsInfo.api !== GraphicsInfo.Software
                         source: galleryMat
                         anchors.fill: galleryMat
                         shadowEnabled: true

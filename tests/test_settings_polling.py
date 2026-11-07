@@ -35,6 +35,17 @@ class SettingsPolling(unittest.TestCase):
         for field in ("wifi", "network", "bluetooth", "night", "quiet", "volume", "mic", "brightness", "keyboard", "battery", "light"):
             self.assertIn(field, state)
 
+    def test_native_panel_snapshot_does_not_repeat_battery_hardware_reads(self):
+        q = quick_helper()
+        with patch.object(q, 'run', return_value=None), patch.object(q, 'busjson', return_value=None) as bus, \
+                patch.object(q, 'battery_state') as battery, patch.object(q, 'mains_state') as mains:
+            state = q.status('quick')
+        battery.assert_not_called(); mains.assert_not_called()
+        self.assertFalse(any('/org/freedesktop/UPower/devices/DisplayDevice' in call.args for call in bus.call_args_list))
+        for field in ('wifi','network','bluetooth','night','quiet','volume','mic','brightness','keyboard','light'):
+            self.assertIn(field, state)
+        self.assertNotIn('battery', state)
+
     def test_capacity_does_not_walk_home_or_start_disk_usage_commands(self):
         q = quick_helper()
         with patch.object(q, "du") as scan, patch.object(q, "run") as run:

@@ -28,7 +28,8 @@ if [ "$(id -u)" -ne 0 ]; then
         sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
-    systemctl --user disable --now monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user stop monet-keep-awake.service monet-brightness.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
     # Zen back to its own look (monet-quick zen): Monet's folder, its two imports and its part of user.js.
@@ -94,7 +95,7 @@ rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-
     /var/lib/monet/windows-files.json /var/lib/monet/windows-steam-shots.json
 systemctl daemon-reload
 
-systemctl --global disable monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+systemctl --global disable monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
     /etc/systemd/user/monet-password-offers.service \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service /etc/systemd/user/monet-keys.service \
@@ -127,16 +128,19 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs; do
+rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
+for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
 rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
+    "$PREFIX/share/applications/monet-archive.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-folder-tools.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-archive-apps.desktop" \
+    "$PREFIX/share/kio/servicemenus/monet-archive-open.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-earlier.desktop" "$PREFIX/share/applications/monet-replay.desktop" \
     "$PREFIX/share/applications/monet-windows-program.desktop" "$PREFIX/share/kio/servicemenus/monet-windows-program.desktop" \
     "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-store.desktop"
@@ -164,6 +168,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/plasma/plasmoids/org.monet.system" "$PREFIX/share/plasma/plasmoids/org.monet.played" \
     "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" "$PREFIX/share/plasma/plasmoids/org.monet.network" "$PREFIX/share/plasma/plasmoids/org.monet.storage"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
     "$PREFIX/share/plasma/plasmoids/org.monet.sound" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.stacks" "$PREFIX/share/plasma/plasmoids/org.monet.transfers" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
     "$PREFIX/share/plasma/desktoptheme/monet-matte" \
     "$PREFIX/share/plasma/look-and-feel/org.monet.desktop" "$PREFIX/share/plasma/look-and-feel/org.monet.smoke.desktop" \
@@ -180,3 +185,11 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."
+
+# On-demand Keep awake owns native cookies only for its process lifetime.
+rm -f /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service"
+rm -rf "$PREFIX/share/monet/monet_runtime"
+
+# Sign-in brightness belongs to the separate system greeter account.
+systemctl disable monet-login-brightness.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-login-brightness.service /etc/systemd/user/monet-login-power.service /etc/systemd/user/plasma-login-wayland.target.d/monet-brightness.conf

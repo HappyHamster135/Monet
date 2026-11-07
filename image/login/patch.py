@@ -11,6 +11,20 @@ def replace(text, before, after, count=1):
     return text.replace(before, after)
 
 
+def brightness_events(greeter):
+    cpp = greeter / 'greetereventfilter.cpp'
+    text = cpp.read_text()
+    text = replace(text, '#include <QKeyEvent>', '#include <QKeyEvent>\n#include <QQuickView>\n#include <QQuickItem>')
+    text = replace(text, '        if (keyEvent->key() == Qt::Key_Escape) {', '''        auto view = qobject_cast<QQuickView *>(m_window.data());
+        if (view && view->rootObject() && view->rootObject()->metaObject()->indexOfMethod("monetHandleKey(QVariant)") >= 0) {
+            QVariant handled;
+            if (QMetaObject::invokeMethod(view->rootObject(), "monetHandleKey", Q_RETURN_ARG(QVariant, handled),
+                    Q_ARG(QVariant, QVariant::fromValue(int(keyEvent->key())))) && handled.toBool()) return true;
+        }
+        if (keyEvent->key() == Qt::Key_Escape) {''')
+    cpp.write_text(text)
+
+
 def patch(source):
     greeter = Path(source) / 'src/frontend/greeter'
     qml = greeter / 'qml'
@@ -19,6 +33,17 @@ def patch(source):
     # A load error must still leave a way to sign in, with the original components.
     (qml / 'KdeMain.qml').write_text(replace(main, 'Login {', 'KdeLogin {', 2))
     (qml / 'KdeLogin.qml').write_text(login)
+    main = replace(main, '    id: root\n', '''    id: root
+    function monetHandleKey(key) { return monetBrightness.keyPressed(key) }
+    Keys.onPressed: event => monetBrightness.handleKey(event)
+    MonetBrightness {
+        id: monetBrightness
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 20
+        z: 100
+    }
+''')
     main = replace(main, '    readonly property bool softwareRendering:',
                    '    readonly property bool spacious: width >= 1100 && height >= 700\n\n    readonly property bool softwareRendering:')
     main = replace(main, '        BreezeComponents.Clock {', '        MonetClock {')
@@ -80,10 +105,12 @@ def patch(source):
 ''')
     (qml / 'Main.qml').write_text(main)
     (qml / 'Login.qml').write_text(login)
+    brightness_events(greeter)
     shutil.copy2(Path(__file__).with_name('MonetClock.qml'), qml)
+    shutil.copy2(Path(__file__).with_name('MonetBrightness.qml'), qml)
     cmake = greeter / 'CMakeLists.txt'
     cmake.write_text(replace(cmake.read_text(), '    qml/Main.qml\n',
-                            '    qml/Main.qml\n    qml/MonetClock.qml\n    qml/KdeMain.qml\n    qml/KdeLogin.qml\n'))
+                            '    qml/Main.qml\n    qml/MonetClock.qml\n    qml/MonetBrightness.qml\n    qml/KdeMain.qml\n    qml/KdeLogin.qml\n'))
     cpp = greeter / 'main.cpp'
     cpp.write_text(replace(cpp.read_text(), '        window->setSource(QUrl("qrc:/qt/qml/org/kde/plasma/login/Main.qml"));',
                           '''        window->setSource(QUrl("qrc:/qt/qml/org/kde/plasma/login/Main.qml"));

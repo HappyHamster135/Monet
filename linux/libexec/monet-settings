@@ -11,7 +11,10 @@ does the work, as it did when Settings was a sheet of the bar. Monet Games' side
 import importlib.util
 import os
 import sys
+import time
 from importlib.machinery import SourceFileLoader
+
+STARTUP_STARTED = time.monotonic()
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QGuiApplication, QIcon
@@ -45,19 +48,26 @@ def main():
     server.listen(name)
     helper = games.Helper()
     activity = games.WindowActivity()
+    area = games.WindowArea()
+    clock = games.BootClock()
     games.answer(server, helper)
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextObject(words)
     engine.rootContext().setContextProperty("helper", helper)
     engine.rootContext().setContextProperty("windowActivity", activity)
+    engine.rootContext().setContextProperty("windowArea", area)
+    engine.rootContext().setContextProperty("bootClock", clock)
     engine.rootContext().setContextProperty("pictures", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
     engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
     engine.rootContext().setContextProperty("firstPage", page)
     engine.rootContext().setContextProperty("blurBehind", False)
+    games.startup_event("settings", "qml-load-start", STARTUP_STARTED)
     engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/settings-app/MonetSettings.qml"))
     if not engine.rootObjects():
         return 1
+    startup = games.StartupTiming("settings", engine.rootObjects()[0], STARTUP_STARTED)
     activity.watch(engine.rootObjects()[0])
+    area.watch(engine.rootObjects()[0])
     games.glaze(engine.rootObjects()[0], engine.rootContext())
     return app.exec()
 

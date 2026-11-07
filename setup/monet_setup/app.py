@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from . import checkpoint, disks, network, pc, system, words
+from . import checkpoint, disks, network, pc, region, system, words
 from .system import account_name
 from .words import N_, _, ntr, tr
 from .qt import (Property, QFontDatabase, QGuiApplication, QLocale, QObject, QProcess, QQmlApplicationEngine, QTime,
@@ -268,7 +268,8 @@ class Setup(QObject):
             now = datetime.now(ZoneInfo(self._zone))
         except Exception:      # no time zone data here (a demo on another system)
             return ""
-        return QLocale(self.lang.split(".")[0]).toString(QTime(now.hour, now.minute), QLocale.FormatType.ShortFormat)
+        locale = region.settings(self._zone, self.lang)['locale']
+        return QLocale(locale.split(".")[0]).toString(QTime(now.hour, now.minute), QLocale.FormatType.ShortFormat)
 
     def _ask_zone(self):
         """Online for the first time: where the PC is, from the internet, unless a zone was chosen."""

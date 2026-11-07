@@ -20,12 +20,21 @@ PlasmoidItem {
     id: root
     ClockFormat { id: clockFormat }
     PanelFit { helper: root.helper }
+    SessionActivity {
+        id: activity
+        viewVisible: root.visible
+        observePower: root.expanded
+        onActiveChanged: if (active) Qt.callLater(root.refresh)
+        onBatteryStateChanged: if (nativeReady) root.info = root.withPower(root.info)
+    }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property real speed: Kirigami.Units.longDuration / 200
     // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     property var info: ({})
+    property bool statusBusy: false
+    property bool outputsBusy: false
     // Speakers, headphones, a screen: where the sound can play.
     property var outputs: []
     property bool quietBusy: false
@@ -44,12 +53,14 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
-            if (source === root.helper + " status") {
+            if (source === root.helper + " status" || source === root.helper + " status quick") {
+                root.statusBusy = false
                 try {
-                    root.info = JSON.parse(data["stdout"])
+                    root.info = root.withPower(JSON.parse(data["stdout"]))
                 } catch (e) {
                 }
             } else if (source === root.helper + " outputs") {
+                root.outputsBusy = false
                 try {
                     // PipeWire's stand-in on a PC with no speakers isn't a place to play.
                     root.outputs = JSON.parse(data["stdout"]).filter(o => !o.none)
@@ -77,8 +88,24 @@ PlasmoidItem {
     }
 
     function refresh() {
-        runner.connectSource(helper + " status")
-        runner.connectSource(helper + " outputs")
+        if (!activity.active) return
+        if (!statusBusy) {
+            statusBusy = true
+            runner.connectSource(helper + (activity.nativeReady ? " status quick" : " status"))
+        }
+        if (!outputsBusy) {
+            outputsBusy = true
+            runner.connectSource(helper + " outputs")
+        }
+    }
+
+    function withPower(snapshot) {
+        if (!activity.nativeReady) return snapshot
+        const power = activity.batteryState
+        const known = power.available === true
+        return Object.assign({}, snapshot, {battery: known ? power.battery : null,
+            charging: known ? power.charging : null, plugged: known ? power.plugged : null,
+            minutes: known ? power.minutes : null})
     }
 
     function playThrough(output) {
@@ -192,7 +219,7 @@ PlasmoidItem {
     Timer {
         interval: 3000
         repeat: true
-        running: root.expanded
+        running: root.expanded && activity.active
         triggeredOnStart: true
         onTriggered: if (!root.dragging) root.refresh()
     }

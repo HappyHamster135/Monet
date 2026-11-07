@@ -33,7 +33,7 @@ Item {
             fillMode: Image.PreserveAspectFit
             sourceSize.width: 2172
             asynchronous: true
-            layer.enabled: true
+            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: paintingMask
@@ -52,7 +52,7 @@ Item {
         radius: painting.radius
         color: "white"
         visible: false
-        layer.enabled: true
+        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
     }
 
     Rectangle {
@@ -63,6 +63,7 @@ Item {
         visible: false
     }
     MultiEffect {
+        visible: GraphicsInfo.api !== GraphicsInfo.Software
         source: card
         anchors.fill: card
         shadowEnabled: true

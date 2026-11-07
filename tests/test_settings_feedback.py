@@ -1,6 +1,7 @@
 """The appearance repair reports real failures and keeps its result visible."""
 import importlib.machinery
 import importlib.util
+import gettext
 import json
 import os
 from pathlib import Path
@@ -105,10 +106,15 @@ class LookFeedback(unittest.TestCase):
         loader.exec_module(cls.games)
 
     def setUp(self):
+        if os.environ.get('MONET_SETTINGS_TEST_LANGUAGE'):
+            words = gettext.translation('monet', localedir=str(ROOT / 'linux/share/locale'),
+                                        languages=[os.environ['MONET_SETTINGS_TEST_LANGUAGE']])
+            language = patch.object(self.games, 'WORDS', words); language.start(); self.addCleanup(language.stop)
         self.engine = QQmlApplicationEngine(); self.words = self.games.Words(); self.helper = FakeHelper()
         self.activity = self.games.WindowActivity()
+        self.clock = self.games.BootClock()
         context = self.engine.rootContext(); context.setContextObject(self.words)
-        for name, value in {"helper": self.helper, "windowActivity": self.activity, "firstPage": "light", "blurBehind": False,
+        for name, value in {"helper": self.helper, "windowActivity": self.activity, "bootClock": self.clock, "firstPage": "light", "blurBehind": False,
                             "pictures": QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings") + "/").toString(),
                             "brush": QUrl.fromLocalFile(str(ROOT / "linux/share/monet/textures/brush.png")).toString()}.items():
             context.setContextProperty(name, value)
@@ -295,6 +301,158 @@ class LookFeedback(unittest.TestCase):
         state=self.window.property("displaySizes").toVariant()
         self.assertEqual([screen["scale"] for screen in state], [200,125])
 
+    def test_keep_awake_preserves_policy_coalesces_clicks_and_ignores_old_reads(self):
+        self.helper.held_commands |= {'keep-awake-status', 'keep-awake'}
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        old_read = self.helper.pending_commands[-1]
+        for _ in range(2):
+            QMetaObject.invokeMethod(self.window, 'changeKeepAwake', Q_ARG('QVariant', 1800))
+        self.assertEqual(self.helper.commands.count(['helper', 'keep-awake', '30']), 1)
+        pending = self.helper.pending_commands[-1]
+        self.helper.done.emit(old_read, '{"active":false,"duration":0}', 0, '')
+        self.assertTrue(self.window.property('keepAwakeBusy'))
+        state = dict(active=True, duration=1800, end=self.clock.now()+1800, remaining=1800,
+                     indefinite=False, pending=False, error='')
+        self.helper.done.emit(pending, json.dumps(dict(ok=True, state=state)), 0, '')
+        self.wait_for(lambda: not self.window.property('keepAwakeBusy'))
+        self.assertGreater(self.window.property('keepAwakeLeft'), 1790)
+        self.assertEqual(self.item('keepAwakeDuration').property('current'), 1800)
+        self.assertFalse(any(c[1] in ('power-time','lock-after','lock-resume') for c in self.helper.commands))
+
+    def test_keep_awake_backend_recovery_replaces_the_unavailable_message(self):
+        state = dict(active=False, duration=1800, end=self.clock.now()+1800, remaining=1800,
+                     indefinite=False, pending=True, error='backend-unavailable')
+        self.helper.replies['keep-awake'] = json.dumps(dict(ok=False,state=state))
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        QTest.qWait(60)
+        QMetaObject.invokeMethod(self.window, 'changeKeepAwake', Q_ARG('QVariant', 1800))
+        self.wait_for(lambda: 'unavailable' in self.item('search-keep-awake').property('detail'))
+        state.update(active=True,pending=False,error='')
+        self.helper.replies['keep-awake-status'] = json.dumps(state)
+        QMetaObject.invokeMethod(self.window, 'loadKeepAwake')
+        self.wait_for(lambda: 'remaining' in self.item('search-keep-awake').property('detail'))
+        self.assertEqual(self.item('keepAwakeDuration').property('current'),1800)
+
+    def test_keep_awake_countdown_resyncs_and_hidden_views_do_no_reads(self):
+        state = dict(active=True, duration=1800, end=self.clock.now()+65, remaining=65,
+                     indefinite=False, pending=False, error='')
+        self.helper.replies['keep-awake-status'] = json.dumps(state)
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#keep-awake'))
+        self.wait_for(lambda: 'remaining' in self.item('search-keep-awake').property('detail'))
+        before = self.window.property('keepAwakeLeft')
+        self.assertTrue(self.window.property('pollingActive'))
+        # Native timer delivery and ceiling the remaining seconds need not
+        # coincide with one fixed test sleep, especially in the full suite.
+        self.wait_for(lambda: self.window.property('keepAwakeLeft') < before)
+        self.window.setVisibility(QWindow.Minimized); QTest.qWait(40)
+        self.helper.commands.clear()
+        QMetaObject.invokeMethod(self.window, 'loadKeepAwake')
+        self.assertNotIn(['helper','keep-awake-status'], self.helper.commands)
+        self.window.showNormal()
+        self.wait_for(lambda: ['helper','keep-awake-status'] in self.helper.commands)
+
+    def test_keep_awake_keyboard_choices_keep_focus_and_fit_the_window(self):
+        from PySide6.QtCore import QPointF
+        self.window.resize(760, 520)
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#keep-awake'))
+        self.wait_for(lambda: self.window.property('pendingAnchor') == '')
+        segments = self.item('keepAwakeDuration')
+        choices = {}
+        for item in segments.childItems()[0].childItems():
+            value = item.property('modelData')
+            if hasattr(value, 'toVariant'): value = value.toVariant()
+            if isinstance(value, list) and len(value) == 2:
+                choices[value[0]] = item
+        self.assertEqual(set(choices), {0, 1800, 3600, -1})
+        for duration, key, mode in ((1800, Qt.Key_Return, '30'), (3600, Qt.Key_Enter, '60'),
+                                    (-1, Qt.Key_Space, 'on'), (0, Qt.Key_Return, 'off')):
+            state = dict(active=duration != 0, duration=duration, end=self.clock.now()+duration if duration > 0 else 0,
+                         remaining=max(0,duration), indefinite=duration == -1, pending=False, error='')
+            self.helper.replies['keep-awake'] = json.dumps(dict(ok=True, state=state))
+            choice = choices[duration]; choice.forceActiveFocus(Qt.TabFocusReason)
+            QTest.keyClick(self.window, key)
+            self.wait_for(lambda: not self.window.property('keepAwakeBusy'))
+            self.assertEqual(self.helper.commands.count(['helper', 'keep-awake', mode]), 1)
+            self.assertTrue(choice.hasActiveFocus())
+            self.assertEqual(segments.property('current'), duration)
+        left = segments.mapToItem(self.window.contentItem(), QPointF()).x()
+        self.assertGreaterEqual(left, 0)
+        self.assertLessEqual(left + segments.width(), self.window.width())
+        if os.environ.get('MONET_SCALE_CAPTURE'):
+            output = Path(os.environ['MONET_SCALE_CAPTURE']); output.mkdir(parents=True, exist_ok=True)
+            self.assertTrue(self.window.grabWindow().save(str(output / 'keep-awake.png')))
+
+    def test_open_loads_each_page_snapshot_once(self):
+        self.helper.commands.clear()
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        QTest.qWait(80)
+        self.assertEqual(self.helper.commands.count(['helper', 'power']), 1)
+        self.assertEqual(self.helper.commands.count(['helper', 'battery-care']), 1)
+
+    def test_power_and_download_search_targets_are_focused_and_highlighted(self):
+        self.helper.replies['battery-care'] = '{"supported":true,"limit":80}'
+        self.helper.replies['status'] = '{"battery":100,"charging":false,"plugged":true}'
+        self.window.resize(760, 520)
+        if os.environ.get('QT_SCALE_FACTOR'):
+            self.assertAlmostEqual(self.window.devicePixelRatio(), float(os.environ['QT_SCALE_FACTOR']), places=2)
+        for route, target in [('power#lock', 'search-lock'), ('storage#downloads', 'search-downloads'),
+                              ('power#battery-limit', 'search-battery-limit')]:
+            with self.subTest(route=route):
+                QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', route))
+                self.wait_for(lambda: self.window.property('pendingAnchor') == '')
+                item = self.item(target)
+                self.assertTrue(item.property('activeFocus'))
+                self.assertEqual(self.window.property('highlightedItem'), item)
+                self.assertTrue(self.item('searchHighlightOutline').isVisible())
+                scroller = self.item('settingsScroller')
+                from PySide6.QtCore import QPointF
+                top = item.mapToItem(scroller, QPointF()).y()
+                self.assertGreaterEqual(top, -2)
+                self.assertLess(top, scroller.height())
+                if os.environ.get('MONET_SCALE_CAPTURE'):
+                    QTest.qWait(350)
+                    output = Path(os.environ['MONET_SCALE_CAPTURE']); output.mkdir(parents=True, exist_ok=True)
+                    self.assertTrue(self.window.grabWindow().save(str(output / (target + '.png'))))
+        self.assertFalse(any(c[1] in ('lock-after', 'battery-limit') for c in self.helper.commands))
+
+    def test_battery_limit_search_explains_unsupported_hardware(self):
+        self.helper.replies['battery-care'] = '{"supported":false,"limit":100}'
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#battery-limit'))
+        self.wait_for(lambda: self.window.property('pendingAnchor') == '')
+        item = self.item('search-battery-limit')
+        self.wait_for(lambda: 'support' in item.property('detail'))
+        self.assertFalse(item.property('tappable'))
+        self.assertTrue(item.isVisible())
+        self.assertTrue(item.property('activeFocus'))
+
+    def test_battery_limit_search_survives_slow_hardware_reply(self):
+        self.helper.held_commands.add('battery-care')
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#battery-limit'))
+        self.wait_for(lambda: self.window.property('pendingAnchor') == '')
+        item = self.item('search-battery-limit')
+        self.assertIn('Checking', item.property('detail'))
+        QTest.qWait(1200)
+        self.helper.done.emit(self.helper.pending_commands[-1], '{"supported":true,"limit":80}', 0, '')
+        self.wait_for(lambda: item.property('tappable'))
+        self.assertTrue(item.property('activeFocus'))
+        self.assertIn('Stops charging', item.property('detail'))
+        self.assertEqual(self.helper.commands.count(['helper', 'battery-care']), 1)
+
+    def test_battery_description_distinguishes_paused_full_and_unplugged(self):
+        self.helper.replies['battery-care'] = '{"supported":true,"limit":80}'
+        for state, expected in [({'battery':100,'charging':False,'plugged':True}, '80% limit'),
+                                ({'battery':70,'charging':False,'plugged':True}, 'not charging'),
+                                ({'battery':100,'charging':False,'plugged':False}, 'On battery'),
+                                ({'battery':70,'charging':True,'plugged':True}, 'Charging')]:
+            self.helper.replies['status'] = json.dumps(state)
+            QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+            self.wait_for(lambda: expected in self.item('batteryStatusRow').property('detail'))
+        self.helper.replies['battery-care'] = '{"supported":true,"limit":100}'
+        self.helper.replies['status'] = '{"battery":100,"charging":false,"plugged":true}'
+        QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        self.wait_for(lambda: 'fully charged' in self.item('batteryStatusRow').property('detail'))
+
     def item(self, name):
         pending = [self.window.contentItem()]
         while pending:
@@ -361,8 +519,7 @@ class LookFeedback(unittest.TestCase):
         QMetaObject.invokeMethod(self.window, "measureStorage")
         QMetaObject.invokeMethod(self.window, "measureStorage")
         self.assertEqual(self.helper.commands.count(["helper", "storage"]), 1)
-        QTest.qWait(20)
-        self.assertFalse(self.window.property("storageBusy"))
+        self.wait_for(lambda: not self.window.property("storageBusy"))
         self.assertTrue(self.window.property("storageProblem"))  # malformed worker response is retryable
 
     def test_wallet_policy_waits_for_confirmation_and_does_not_poll(self):

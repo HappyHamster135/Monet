@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock, patch
 
@@ -267,6 +268,12 @@ class ReturnUI(unittest.TestCase):
     def press(self, name):
         self.item(name).forceActiveFocus(); QTest.keyClick(self.window, Qt.Key_Return)
 
+    def wait_for(self, condition):
+        deadline = time.monotonic() + 2
+        while not condition() and time.monotonic() < deadline:
+            QTest.qWait(10)
+        self.assertTrue(condition())
+
     def test_repeat_keyboard_actions_are_ignored_while_retry_is_starting_and_running(self):
         self.helper.delay = 100
         self.press("returnRetry-a.desktop"); self.press("returnRetry-a.desktop")
@@ -307,10 +314,15 @@ class ReturnUI(unittest.TestCase):
 
     def test_background_refresh_keeps_keyboard_focus_inside_the_recovery_card(self):
         self.item("returnOpen-a.desktop").forceActiveFocus()
-        QMetaObject.invokeMethod(self.window, "loadReturn"); QTest.qWait(60)
+        self.assertTrue(self.item("returnOpen-a.desktop").hasActiveFocus())
+        QMetaObject.invokeMethod(self.window, "loadReturn")
+        self.wait_for(lambda: not self.window.property("returnLoading")
+                      and self.item("returnOpen-a.desktop").hasActiveFocus())
         self.assertTrue(self.item("returnOpen-a.desktop").hasActiveFocus())
         self.helper.state = dict(self.helper.state, busy=True)
-        QMetaObject.invokeMethod(self.window, "loadReturn"); QTest.qWait(60)
+        QMetaObject.invokeMethod(self.window, "loadReturn")
+        self.wait_for(lambda: not self.window.property("returnLoading")
+                      and self.item("search-return").hasActiveFocus())
         self.assertTrue(self.item("search-return").hasActiveFocus())
 
     def test_controls_fit_a_narrow_window_and_missing_names_are_plain_text(self):

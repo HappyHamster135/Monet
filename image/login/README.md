@@ -2,7 +2,10 @@
 
 The image builds Plasma Login Manager's native greeter from the exact installed
 Fedora source RPM. Monet adds its Fraunces clock, quiet glass panel and rounded
-password controls. Narrow displays keep the compact layout; software rendering
+password controls. A compact Monet brightness control and brightness keys use
+PowerDevil in the separate greeter session. A boot-time helper copies only the
+last internal-screen brightness into that account; modes, HDR and scaling are
+not imported. Narrow displays keep the compact layout; software rendering
 uses opaque glass. There is no extra blur or background polling.
 
 The daemon, PAM, session selection, keyboard/virtual keyboard, screen reader and

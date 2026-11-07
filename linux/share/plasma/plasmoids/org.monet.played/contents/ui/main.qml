@@ -18,12 +18,19 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property string monet: "@BINDIR@/monet"
     // [{ id, name, last (Unix time), art (a URL or ""), play (here) or windows (there) }], newest first.
     property var games: []
     property bool looked: false
+    property bool busy: false
+    function refresh() {
+        if (!activity.active || busy) return;
+        busy = true;
+        runner.connectSource(root.helper + " played");
+    }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "applications-games"
@@ -36,6 +43,7 @@ PlasmoidItem {
         onNewData: (source, data) => {
             disconnectSource(source);
             if (source === root.helper + " played") {
+                root.busy = false;
                 try {
                     root.games = JSON.parse(data["stdout"]);
                 } catch (e) {
@@ -47,10 +55,10 @@ PlasmoidItem {
 
     Timer {
         interval: 60 * 1000
-        running: true
+        running: activity.active
         repeat: true
         triggeredOnStart: true
-        onTriggered: runner.connectSource(root.helper + " played")
+        onTriggered: root.refresh()
     }
 
     // Ids only contain letters, digits, ":", ".", "_" and "-" (monet-quick lists no others).

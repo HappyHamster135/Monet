@@ -1,0 +1,224 @@
+#!/usr/bin/python3
+"""Private, durable extraction jobs. Closing the dialog does not stop work."""
+from contextlib import contextmanager
+import fcntl
+import importlib.machinery
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import re
+import signal
+from shutil import which as shutil_which
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+
+ACTIVE = {'queued', 'running', 'paused', 'cancelling'}
+TOKEN = re.compile('[a-f0-9]{32}\\Z')
+
+
+class Queue:
+    def __init__(self, folder=None):
+        self.folder = Path(folder) if folder else Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local/state') / 'monet/files/transfers'
+
+    @contextmanager
+    def lock(self, token, worker=False, blocking=True):
+        if not TOKEN.fullmatch(token): raise ValueError('Invalid transfer')
+        self.folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (self.folder / (token + ('.worker' if worker else '.lock'))).open('a') as stream:
+            fcntl.flock(stream, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+            yield
+
+    def read(self, token):
+        if not TOKEN.fullmatch(token): raise ValueError('Invalid transfer')
+        with (self.folder / (token + '.json')).open('rb') as stream:
+            raw = stream.read(65537)
+        job = json.loads(raw)
+        if (len(raw) > 65536 or job.get('token') != token or job.get('state') not in ACTIVE | {'done', 'failed', 'cancelled', 'interrupted'}
+                or not all(isinstance(job.get(key), str) and len(job[key]) <= 8192 for key in ('source', 'destination', 'error', 'name'))
+                or job.get('command') not in {'', 'pause', 'resume', 'cancel'}
+                or type(job.get('updated')) not in (int, float) or not math.isfinite(job['updated'])
+                or type(job.get('progress')) not in (int, float) or not -1 <= job['progress'] <= 1
+                or not Path(job['source']).is_absolute() or not Path(job['destination']).is_absolute()):
+            raise ValueError('Invalid transfer record')
+        return job
+
+    def write(self, job):
+        fd, temporary = tempfile.mkstemp(dir=self.folder, prefix='.transfer-')
+        try:
+            with os.fdopen(fd, 'w') as stream:
+                json.dump(job, stream, ensure_ascii=True, allow_nan=False); stream.flush(); os.fsync(stream.fileno())
+            os.replace(temporary, self.folder / (job['token'] + '.json'))
+            directory = os.open(self.folder, os.O_RDONLY | os.O_DIRECTORY)
+            try: os.fsync(directory)
+            finally: os.close(directory)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+
+    def change(self, token, **values):
+        with self.lock(token):
+            job = self.read(token); job.update(values, updated=time.time()); self.write(job)
+            return job
+
+    def submit(self, source, destination, token=None):
+        source = Path(source).resolve(strict=True)
+        if not source.is_file(): raise ValueError('Choose a regular archive.')
+        destination = Path(destination)
+        if not destination.is_absolute() or destination.name in {'', '.', '..'}:
+            raise ValueError('Choose a full path for a new folder.')
+        destination = destination.parent.resolve(strict=True) / destination.name
+        token = uuid.uuid4().hex if token is None else token
+        if not isinstance(token, str) or not TOKEN.fullmatch(token) or token == '0' * 32: raise ValueError('Invalid transfer')
+        with self.lock(token), self.lock('0' * 32):
+            if (self.folder / (token + '.json')).exists(): raise FileExistsError('This transfer already exists.')
+            existing = list(self.folder.glob('*.json'))
+            if len(existing) >= 100:
+                old = [self.read(path.stem) for path in existing]
+                finished = sorted((job for job in old if job['state'] not in ACTIVE), key=lambda job: job['updated'])
+                if not finished: raise ValueError('Too many active transfers. Wait for one to finish.')
+                (self.folder / (finished[0]['token'] + '.json')).unlink()
+            destination.mkdir(mode=0o755)
+            info = destination.stat(); original = source.stat()
+            job = dict(token=token, kind='extract', name=source.name, source=str(source), destination=str(destination),
+                sourceIdentity=[original.st_dev, original.st_ino, original.st_size, original.st_mtime_ns],
+                destinationIdentity=[info.st_dev, info.st_ino], state='queued', command='', progress=-1,
+                updated=time.time(), error='')
+            try: self.write(job)
+            except OSError:
+                destination.rmdir(); raise
+        return job
+
+    def launch(self, token):
+        self.read(token)
+        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), 'dispatch', token], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def dispatch(self, token):
+        # A separate process owns Ark. Never tie its lifetime to a dialog/window.
+        if shutil_which('systemd-run'):
+            try:
+                result = subprocess.run(['systemd-run', '--user', '--quiet', '--collect', '--unit=monet-extraction-' + token,
+                    '--property=TimeoutStopSec=5', '--setenv=XDG_STATE_HOME=' + str(self.folder.parents[2]),
+                    sys.executable, str(Path(__file__).resolve()), 'run', token], capture_output=True, timeout=3)
+                if result.returncode == 0: return
+            except (OSError, subprocess.TimeoutExpired): pass
+        # Also works in a desktop without a user service manager, and private tests.
+        self.run(token)
+
+    def control(self, token, action):
+        job = self.read(token)
+        if action == 'retry':
+            if job['state'] in ACTIVE or job['state'] == 'done': raise ValueError('This transfer cannot be retried.')
+            parent = Path(job['destination']).parent; name = Path(job['destination']).name
+            for number in range(2, 1002):
+                try:
+                    retry = self.submit(job['source'], parent / f'{name} ({number})')
+                    self.launch(retry['token']); return retry
+                except FileExistsError: continue
+            raise ValueError('Choose another extraction location.')
+        if action not in {'cancel', 'pause', 'resume'} or job['state'] not in ACTIVE:
+            raise ValueError('This transfer is no longer active.')
+        return self.change(token, command=action)
+
+    def status(self):
+        jobs = []
+        self.folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+        for path in sorted(self.folder.glob('*.json'))[:100]:
+            try:
+                job = self.read(path.stem)
+                if job['state'] in ACTIVE and time.time() - job['updated'] > 10:
+                    try:
+                        with self.lock(job['token'], worker=True, blocking=False):
+                            job = self.change(job['token'], state='interrupted', error='Extraction was interrupted. Retry keeps any partial files.')
+                    except BlockingIOError: pass
+                jobs.append(dict(job, destinationUrl=Path(job['destination']).as_uri()))
+            except (ValueError, OSError): continue
+        return sorted(jobs, key=lambda job: job['updated'], reverse=True)
+
+    def run(self, token, reveal=True):
+        try:
+            with self.lock(token, worker=True, blocking=False):
+                job = self.read(token)
+                if job['state'] != 'queued': return
+                source = Path(job['source']); destination = Path(job['destination'])
+                child = None; paused = False
+                try:
+                    original = source.stat(); info = destination.lstat()
+                    if ([original.st_dev, original.st_ino, original.st_size, original.st_mtime_ns] != job['sourceIdentity']
+                            or not stat.S_ISDIR(info.st_mode) or [info.st_dev, info.st_ino] != job['destinationIdentity']):
+                        raise ValueError('The archive or destination changed. Choose it again in Files.')
+                    if job['command'] == 'cancel':
+                        self.change(token, state='cancelled'); return
+                    self.change(token, state='running')
+                    child = subprocess.Popen(['ark', '--batch', '--destination', str(destination), str(source)],
+                        cwd=destination, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    cancelled = False
+                    while child.poll() is None:
+                        command = self.read(token)['command']
+                        if command == 'cancel':
+                            os.killpg(child.pid, signal.SIGKILL); child.wait(); cancelled = True; break
+                        if command == 'pause' and not paused:
+                            os.killpg(child.pid, signal.SIGSTOP); paused = True
+                            self.change(token, state='paused', command='')
+                        if command == 'resume' and paused:
+                            os.killpg(child.pid, signal.SIGCONT); paused = False
+                            self.change(token, state='running', command='')
+                        time.sleep(0.1)
+                    if cancelled or child.returncode == 130:
+                        self.change(token, state='cancelled', command='')
+                    elif child.returncode == 0:
+                        # A drive can disappear or the path can be replaced while
+                        # Ark is running. Its exit status alone cannot establish
+                        # that the advertised destination still holds the output.
+                        result = destination.lstat()
+                        if (not stat.S_ISDIR(result.st_mode)
+                                or [result.st_dev, result.st_ino] != job['destinationIdentity']):
+                            raise ValueError('The extraction folder changed or its drive disconnected. Partial files were kept. Reconnect the drive and retry in a new folder.')
+                        self.change(token, state='done', progress=1, command='')
+                        if reveal:
+                            try: subprocess.Popen(['dolphin', str(destination)], start_new_session=True)
+                            except OSError: pass
+                    else:
+                        self.change(token, state='failed', command='', error='Extraction did not finish. Partial files were kept; retry uses a new folder.')
+                except (OSError, ValueError) as error:
+                    if child is not None and child.poll() is None:
+                        os.killpg(child.pid, signal.SIGKILL); child.wait()
+                    self.change(token, state='failed', error=str(error))
+        except BlockingIOError:
+            return
+
+
+def store_module():
+    loader = importlib.machinery.SourceFileLoader('monet_store_jobs', str(Path(__file__).with_name('monet-store-jobs')))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader)); loader.exec_module(module)
+    return module
+
+
+def main(args):
+    queue = Queue()
+    if len(args) == 2 and args[0] == 'run': queue.run(args[1]); return 0
+    if len(args) == 2 and args[0] == 'dispatch': queue.dispatch(args[1]); return 0
+    if not args or args == ['status']:
+        store = store_module().Queue(); store.recover()
+        print(json.dumps({'files': queue.status(), 'store': store.read()}, ensure_ascii=True)); return 0
+    if len(args) == 3 and args[0] in {'cancel', 'pause', 'resume', 'retry'} and args[1] == 'files':
+        queue.control(args[2], args[0]); return 0
+    if len(args) == 3 and args[1] == 'store' and args[0] in {'cancel', 'retry'}:
+        store = store_module().Queue()
+        job = next(job for job in store.read() if job['token'] == args[2])
+        changed = store.change(job['id'], args[0])
+        if changed and args[0] == 'retry':
+            store_module().start_worker(Path(__file__).with_name('monet-store'))
+        return 0
+    return 2
+
+
+if __name__ == '__main__':
+    try: sys.exit(main(sys.argv[1:]))
+    except (OSError, ValueError, StopIteration) as error:
+        print(str(error), file=sys.stderr); sys.exit(1)

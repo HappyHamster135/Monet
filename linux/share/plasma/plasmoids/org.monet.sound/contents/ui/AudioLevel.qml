@@ -6,6 +6,7 @@ import org.kde.plasma.plasma5support as P5Support
 Item {
     id: level
     visible: false
+    property bool active: true
     property url nativeSource: "NativeAudioStatus.qml"
     property string fallbackCommand: "wpctl get-volume @DEFAULT_AUDIO_SINK@"
     property var volume: null
@@ -17,6 +18,7 @@ Item {
     property int serial: 0
 
     function refresh() {
+        if (!active) return;
         if (nativeReady) {
             volume = native.item.volume;
             muted = native.item.muted;
@@ -28,6 +30,7 @@ Item {
         }
     }
     onNativeReadyChanged: refresh()
+    onActiveChanged: if (active) refresh()
     Loader { id: native; source: level.nativeSource }
     Connections {
         target: native.item
@@ -52,7 +55,7 @@ Item {
     Timer {
         interval: 2000
         repeat: true
-        running: !level.nativeReady
+        running: level.active && !level.nativeReady
         triggeredOnStart: true
         onTriggered: level.refresh()
     }

@@ -4,12 +4,14 @@ import gettext
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import signal
 import stat
 import subprocess
 import sys
 import time
+import uuid
 
 DATADIR = "@DATADIR@"
 WORDS = gettext.translation("monet", localedir=f"{DATADIR}/locale", fallback=True)
@@ -136,122 +138,373 @@ def quick_helper():
     return quick
 
 
-def archive_destination(path):
-    """Suggest an unused sibling, without creating or replacing anything."""
-    path = Path(path).resolve(strict=True)
-    if not path.is_file():
-        raise ValueError(tr("Choose an archive to extract."))
-    name = path.name
+def archive_name(path):
+    """A suggested name without touching the archive's filesystem."""
+    name = Path(path).name
     for suffix in ('.tar.gz', '.tar.bz2', '.tar.xz', '.tar.zst', '.tar.lz', '.tar.lzma',
-                   '.tgz', '.tbz2', '.txz', '.zip', '.tar', '.7z'):
+                   '.rpm', '.tgz', '.tbz2', '.txz', '.zip', '.tar', '.7z', '.rar', '.gz', '.bz2', '.xz', '.zst'):
         if name.lower().endswith(suffix):
             name = name[:-len(suffix)]
             break
     if not name or name in {'.', '..'}:
         name = tr("Extracted files")
+    return name
+
+
+def archive_destination(path, parent=None):
+    """Suggest an unused folder, without creating or replacing anything."""
+    path = Path(path).resolve(strict=True)
+    if not path.is_file():
+        raise ValueError(tr("Choose an archive to extract."))
+    name = archive_name(path)
     for index in range(1, 1001):
-        candidate = path.parent / (name if index == 1 else f'{name} ({index})')
+        candidate = Path(parent or path.parent) / (name if index == 1 else f'{name} ({index})')
         if not candidate.exists() and not candidate.is_symlink():
             return candidate
     raise ValueError(tr("Choose another folder for the extracted files."))
 
 
-def make_extract_dialog(path):
-    from PySide6.QtCore import QProcess, Qt
+def file_jobs_module():
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    loader = SourceFileLoader('monet_file_jobs', str(Path(__file__).resolve().with_name('monet-file-jobs')))
+    module = module_from_spec(spec_from_loader(loader.name, loader)); loader.exec_module(module)
+    return module
+
+
+def extraction_task(request, emit):
+    """Run filesystem preparation/extraction only in the disposable worker.
+
+    Standard output is a bounded JSON-lines protocol. Ark keeps its own native
+    password/error dialogs; its output cannot be mistaken for protocol messages.
+    The GUI can stop this process group even during a slow filesystem lookup.
+    """
+    if (not isinstance(request, dict) or request.get('action') not in {'info', 'extract'}
+            or not isinstance(request.get('source'), str) or len(request['source']) > 8192
+            or not Path(request['source']).is_absolute()):
+        raise ValueError(tr("Choose an archive to extract."))
+    source = Path(request['source']).resolve(strict=True)
+    if not source.is_file():
+        raise ValueError(tr("Choose an archive to extract."))
+    if request['action'] == 'info':
+        parent = source.parent if request.get('findApps') else quick_helper().desktop_dir()
+        if not request.get('findApps'): parent.mkdir(parents=True, exist_ok=True)
+        emit(dict(state='info', source=str(source), destination=str(archive_destination(source, parent))))
+        return
+    raw = request.get('destination')
+    if not isinstance(raw, str) or not 1 <= len(raw) <= 8192 or not Path(raw).is_absolute():
+        raise ValueError(tr("Choose a full path for a new folder."))
+    target = Path(raw)
+    if request.get('dropped'):
+        if not target.is_dir(): raise ValueError(tr("Drop a destination folder, not a file."))
+        target = archive_destination(source, target)
+    if target.name in {'', '.', '..'}:
+        raise ValueError(tr("Choose a full path for a new folder."))
+    target = target.parent.resolve(strict=True) / target.name
+    if request.get('background'):
+        queue = file_jobs_module().Queue()
+        job = queue.submit(source, target, token=request.get('token'))
+        emit(dict(state='prepared', destination=job['destination'], identity=job['destinationIdentity']))
+        try: queue.launch(job['token'])
+        except OSError:
+            queue.change(job['token'], state='failed', error=tr("Extraction could not start. Retry uses a new folder."))
+            raise
+        emit(dict(state='queued', destination=job['destination'], identity=job['destinationIdentity']))
+        return
+    target.mkdir(mode=0o755)  # Atomic reservation; never reuse an existing folder.
+    info = target.lstat()
+    if not stat.S_ISDIR(info.st_mode):
+        raise ValueError(tr("The extraction folder changed or its drive disconnected. Choose a new folder and retry."))
+    identity = (info.st_dev, info.st_ino)
+    def same_folder():
+        try:
+            current = target.lstat()
+            return stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) == identity
+        except OSError: return False
+    emit(dict(state='prepared', destination=str(target), identity=identity))
+    try:
+        # Inherit the worker's private process group so cancellation also stops
+        # extractor descendants. Durable queue jobs deliberately detach instead.
+        result = subprocess.run(['ark', '--batch', '--destination', str(target), str(source)], cwd=target,
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if result.returncode == 0:
+            if not same_folder():
+                raise ValueError(tr("The extraction folder changed or its drive disconnected. Choose a new folder and retry."))
+            emit(dict(state='done', destination=str(target), identity=identity))
+            return
+        error = (tr("Extraction cancelled. Partial files were kept; retry in a new folder.") if result.returncode == 130 else
+                 tr("Extraction did not finish. You can inspect any extracted files in Files, or retry in a new folder."))
+    except OSError as problem:
+        error = tr("Extraction did not finish. You can inspect any extracted files in Files, or retry in a new folder.") + '\n' + str(problem)
+    available = same_folder()
+    if available:
+        try: target.rmdir(); available = False  # Removes only an empty, unchanged reservation.
+        except OSError: pass
+    emit(dict(state='failed', error=error, destination=str(target) if available else '', identity=identity))
+
+
+def cancel_extraction_submission(token):
+    """Called after the submitting process exits, never on the GUI thread."""
+    if not re.fullmatch(r'[a-f0-9]{32}', token): raise ValueError('Invalid transfer')
+    queue = file_jobs_module().Queue()
+    try:
+        with queue.lock(token, worker=True, blocking=False):
+            job = queue.read(token)
+            if job['state'] == 'queued':
+                queue.change(token, state='cancelled', command='')
+                return
+    except BlockingIOError: pass
+    except FileNotFoundError: return  # Cancelled before the submission committed.
+    try: queue.control(token, 'cancel')
+    except (FileNotFoundError, ValueError): pass
+
+
+def make_extract_dialog(path, find_apps=True, background=False):
+    from PySide6.QtCore import QEvent, QProcess, QTimer, Qt
     from PySide6.QtGui import QIcon
-    from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-                                  QLabel, QLineEdit, QPushButton, QVBoxLayout)
-    source = Path(path).resolve(strict=True)
-    suggested = archive_destination(source)
-    dialog = QDialog(); dialog.setWindowTitle(tr("Extract and find applications"))
-    dialog.setWindowIcon(QIcon.fromTheme("package-x-generic")); dialog.resize(620, 300)
+    from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+                                  QFrame, QLabel, QLayout, QLineEdit, QProgressBar, QPushButton,
+                                  QScrollArea, QStyle, QVBoxLayout, QWidget)
+    # No source/destination stat, resolve, mkdir or cleanup runs in this process.
+    source = Path(os.path.abspath(os.fspath(path)))
+    helper = os.path.abspath(__file__)
+    class ExtractDialog(QDialog):
+        def __init__(self):
+            super().__init__()
+            self.buttons = None
+            self.details = None
+            self.drop = None
+            self.observed_screen = None
+            self.fit_timer = QTimer(self); self.fit_timer.setSingleShot(True)
+            self.fit_timer.timeout.connect(self.fit_screen)
+            self.focus_timer = QTimer(self); self.focus_timer.setSingleShot(True)
+            self.focus_timer.timeout.connect(self.reveal_focus)
+            QApplication.instance().focusChanged.connect(self.queue_reveal)
+
+        def queue_reveal(self, *args):
+            self.focus_timer.start(0)
+
+        def reveal_focus(self):
+            focus = QApplication.focusWidget()
+            if self.isVisible() and self.details is not None and focus is not None and self.details.isAncestorOf(focus):
+                self.details.ensureWidgetVisible(focus)
+
+        def watch_screen(self, screen):
+            if self.observed_screen is not None:
+                try: self.observed_screen.availableGeometryChanged.disconnect(self.queue_fit)
+                except (RuntimeError, TypeError): pass
+            self.observed_screen = screen
+            if screen is not None: screen.availableGeometryChanged.connect(self.queue_fit)
+            self.queue_fit()
+
+        def queue_fit(self, *args):
+            self.fit_timer.start(0)
+
+        def fit_screen(self):
+            if self.buttons is None or self.isMinimized() or self.isMaximized() or self.isFullScreen(): return
+            area = self.screen().availableGeometry()
+            if area.isEmpty(): return
+            width = max(1, area.width() - 32); height = max(1, area.height() - 48)
+            if self.drop is not None: self.drop.setMinimumHeight(64 if min(self.height(), height) < 400 else 100)
+            # Preserve full native button captions. A narrow dialog uses a
+            # vertical button box; only the details above it scroll.
+            spacing = max(12, self.style().pixelMetric(QStyle.PM_LayoutHorizontalSpacing))
+            buttons = self.buttons.buttons()
+            row_width = sum(button.sizeHint().width() for button in buttons) + spacing * (len(buttons) + 1)
+            self.buttons.setOrientation(Qt.Vertical if row_width > min(self.width(), width) - 40 else Qt.Horizontal)
+            self.setMaximumSize(width, height)
+            self.resize(min(self.width(), width), min(self.height(), height))
+
+        def changeEvent(self, event):
+            super().changeEvent(event)
+            if hasattr(self, 'fit_timer') and event.type() in (QEvent.FontChange, QEvent.StyleChange):
+                self.queue_fit()
+
+        def showEvent(self, event):
+            if self.observed_screen is None:
+                self.windowHandle().screenChanged.connect(self.watch_screen)
+                self.watch_screen(self.screen())
+            self.fit_screen()
+            super().showEvent(event)
+
+        def resizeEvent(self, event):
+            super().resizeEvent(event)
+            self.queue_fit()
+
+    dialog = ExtractDialog(); dialog.setWindowTitle(tr("Extract and find applications") if find_apps else tr("Extract archive"))
+    dialog.setWindowIcon(QIcon.fromTheme("package-x-generic")); dialog.resize(620, 400)
     dialog.extracted = None
-    layout = QVBoxLayout(dialog); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(12)
-    for text in (tr("Extract into a new folder, then choose which application to add to the menu."), str(source)):
+    outer = QVBoxLayout(dialog); outer.setContentsMargins(20, 20, 20, 20); outer.setSpacing(12)
+    outer.setSizeConstraint(QLayout.SetNoConstraint)
+    class DetailsArea(QScrollArea):
+        def wheelEvent(self, event):
+            # Native Widgets handles detents; keep precise touchpad pixels too.
+            # A manual scroll cancels a queued focus reveal.
+            dialog.focus_timer.stop()
+            pixels = event.pixelDelta()
+            if not pixels.isNull():
+                bar = self.verticalScrollBar() if pixels.y() else self.horizontalScrollBar()
+                bar.setValue(bar.value() - (pixels.y() if pixels.y() else pixels.x()))
+                event.accept()
+            elif event.angleDelta().isNull() and event.phase() != Qt.NoScrollPhase:
+                event.accept()
+            else: super().wheelEvent(event)
+
+    scroll = DetailsArea(); dialog.details = scroll
+    scroll.setObjectName('extractDetails'); scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.NoFrame); outer.addWidget(scroll, 1)
+    body = QWidget(); scroll.setWidget(body)
+    layout = QVBoxLayout(body); layout.setContentsMargins(0, 0, 0, 0); layout.setSpacing(12)
+    for text in ((tr("Extract into a new folder, then choose which application to add to the menu.") if find_apps
+                  else tr("Choose where to put the extracted files. A new folder keeps them together.")), str(source)):
         label = QLabel(text); label.setTextFormat(Qt.PlainText); label.setWordWrap(True); layout.addWidget(label)
+
+    class FolderDrop(QFrame):
+        def folder(self, event):
+            urls = event.mimeData().urls()
+            if len(urls) == 1 and urls[0].isLocalFile():
+                return urls[0].toLocalFile()
+            return None
+
+        def dragEnterEvent(self, event):
+            # Directory validation happens in the worker after a drop. A local
+            # URL alone cannot tell us its type without touching a slow mount.
+            if worker.state() == QProcess.NotRunning and self.folder(event) is not None:
+                event.acceptProposedAction()
+
+        def dropEvent(self, event):
+            folder = self.folder(event)
+            if worker.state() == QProcess.NotRunning and folder is not None:
+                event.acceptProposedAction()
+                start(folder)
+
+    drop = FolderDrop(); drop.setObjectName('extractDropTarget'); drop.setAcceptDrops(True)
+    drop.setFrameShape(QFrame.StyledPanel); drop.setMinimumHeight(100)
+    drop_layout = QVBoxLayout(drop)
+    hint = QLabel(tr('Drop a destination folder here to extract'))
+    hint.setAlignment(Qt.AlignCenter); hint.setWordWrap(True); drop_layout.addWidget(hint)
+    drop.setAccessibleName(hint.text()); outer.insertWidget(0, drop); dialog.drop = drop
     form = QFormLayout(); layout.addLayout(form)
-    destination = QLineEdit(str(suggested)); destination.setObjectName("extractDestination")
+    destination = QLineEdit(); destination.setObjectName("extractDestination")
     form.addRow(tr("Extract to:"), destination)
     browse = QPushButton(tr("Choose location…")); layout.addWidget(browse)
+    progress = QProgressBar(); progress.setObjectName('extractPreparationProgress'); progress.setRange(0, 0)
+    progress.setAccessibleName(tr("Preparing extraction")); layout.addWidget(progress)
     status = QLabel(); status.setObjectName("extractStatus"); status.setTextFormat(Qt.PlainText)
     status.setWordWrap(True); layout.addWidget(status)
     buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
-    extract = buttons.addButton(tr("Extract and find applications"), QDialogButtonBox.AcceptRole)
+    extract = buttons.addButton(tr("Extract and find applications") if find_apps else tr("Extract"), QDialogButtonBox.AcceptRole)
     extract.setObjectName("extractApps"); extract.setDefault(True)
-    show = buttons.addButton(tr("Show in Files"), QDialogButtonBox.ActionRole)
+    show = buttons.addButton(tr("Open folder"), QDialogButtonBox.ActionRole)
     show.setEnabled(False); show.setObjectName("showExtracted")
-    layout.addWidget(buttons)
+    outer.addWidget(buttons); dialog.buttons = buttons
     worker = QProcess(dialog); worker.setObjectName("archiveExtractor")
     worker.setUnixProcessParameters(QProcess.UnixProcessFlag.CreateNewSession)
     folder = None
     cancelled = False
-
-    def choose():
-        parent = QFileDialog.getExistingDirectory(dialog, tr("Choose location…"), str(suggested.parent))
-        if parent:
-            destination.setText(str(Path(parent) / suggested.name))
-    browse.clicked.connect(choose)
+    cleanup_started = False
+    submission = ''
+    submission_environment = None
+    response = None
+    pending = bytearray()
 
     def busy(active):
         extract.setEnabled(not active); destination.setEnabled(not active); browse.setEnabled(not active)
+        drop.setEnabled(not active); progress.setVisible(active)
+        if not active: extract.setDefault(True)
 
-    def failed():
-        nonlocal folder
-        if cancelled:
-            return
-        busy(False)
-        if folder is not None:
+    def choose():
+        parent = QFileDialog.getExistingDirectory(dialog, tr("Choose location…"), str(Path(destination.text()).parent))
+        if parent:
+            destination.setText(str(Path(parent) / archive_name(source)))
+    browse.clicked.connect(choose)
+
+    def read():
+        nonlocal pending, response, folder
+        pending.extend(bytes(worker.readAllStandardOutput()))
+        if len(pending) > 65536:
+            response = dict(state='failed', error=tr("Extraction did not finish. Try again."))
+            worker.kill(); return
+        while b'\n' in pending:
+            line, _, rest = pending.partition(b'\n'); pending = bytearray(rest)
             try:
-                folder.rmdir()  # Never remove partial output or follow a link.
-                folder = None
-            except OSError:
-                pass
-        show.setEnabled(folder is not None)
-        status.setText(tr("Extraction did not finish. You can inspect any extracted files in Files, or retry in a new folder."))
-
-    def finished(code, state):
-        if cancelled:
-            return
-        if code == 0 and state == QProcess.NormalExit and folder is not None and folder.is_dir():
-            dialog.extracted = folder
-            dialog.accept()
-        else:
-            failed()
-    worker.finished.connect(finished)
-    worker.errorOccurred.connect(lambda error: failed() if error == QProcess.FailedToStart else None)
-    # Archive names/errors can be large; Ark owns the native error/password UI.
-    worker.readyReadStandardOutput.connect(worker.readAllStandardOutput)
+                value = json.loads(line)
+                if not isinstance(value, dict) or value.get('state') not in {'info','prepared','queued','done','failed'}:
+                    raise ValueError('Invalid extraction response')
+                target = value.get('destination', '')
+                if not isinstance(target, str) or len(target) > 8192 or target and not Path(target).is_absolute():
+                    raise ValueError('Invalid extraction destination')
+            except (ValueError, UnicodeError):
+                response = dict(state='failed', error=tr("Extraction did not finish. Try again.")); worker.kill(); return
+            if value['state'] == 'prepared':
+                folder = Path(target); destination.setText(target); show.setEnabled(True)
+                status.setText(tr("Starting extraction…") if background else tr("Extracting… You may be asked for an archive password."))
+            else: response = value
+    worker.readyReadStandardOutput.connect(read)
     worker.readyReadStandardError.connect(worker.readAllStandardError)
 
-    def start():
-        nonlocal folder
-        if worker.state() != QProcess.NotRunning:
-            return
+    def cancel_submission():
+        nonlocal cleanup_started
+        if not submission or cleanup_started: return
+        cleanup_started = True
+        # The submitting child has exited before this cancellation helper runs.
+        # A late committed job cannot escape cancellation or be created afterward.
         try:
-            target = Path(destination.text())
-            if not target.is_absolute() or not target.name:
-                raise ValueError(tr("Choose a full path for a new folder."))
-            target = target.parent.resolve(strict=True) / target.name
-            target.mkdir(mode=0o755)  # Atomic reservation: existing folders are never reused.
-        except FileExistsError:
-            status.setText(tr("That folder already exists. Choose a new folder to keep its files unchanged."))
-            return
-        except (OSError, ValueError) as error:
-            status.setText(tr("Couldn't create the extraction folder.") + "\n" + str(error))
-            return
-        folder = target; show.setEnabled(True); busy(True)
-        status.setText(tr("Extracting… You may be asked for an archive password."))
-        worker.setWorkingDirectory(str(target))
-        worker.start("ark", ["--batch", "--destination", str(target), str(source)])
-    buttons.accepted.connect(start)
-    destination.returnPressed.connect(start)
+            subprocess.Popen([sys.executable, helper, '--extract-cancel', submission], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             env=submission_environment)
+        except OSError: pass
+
+    def finished(code, state):
+        nonlocal folder
+        read()
+        if cancelled:
+            cancel_submission(); return
+        busy(False)
+        value = response or {}
+        if code != 0 or state != QProcess.NormalExit:
+            value = dict(state='failed', error=tr("Extraction did not finish. Try again."))
+        if value.get('state') == 'info':
+            destination.setText(value['destination']); status.clear()
+        elif value.get('state') in {'done','queued'}:
+            dialog.extracted = Path(value['destination']); dialog.accept()
+        else:
+            folder = Path(value['destination']) if value.get('destination') else None
+            show.setEnabled(folder is not None)
+            status.setText(value.get('error') or tr("Extraction did not finish. Try again."))
+    worker.finished.connect(finished)
+    def failed_to_start(error):
+        if error != QProcess.FailedToStart: return
+        if cancelled: cancel_submission(); return
+        busy(False)
+        status.setText(tr("Extraction did not finish. Try again.") + '\n' + worker.errorString())
+    worker.errorOccurred.connect(failed_to_start)
+
+    def run(request):
+        nonlocal response, pending
+        response = None; pending = bytearray(); show.setEnabled(False); busy(True)
+        payload = json.dumps(request, ensure_ascii=True).encode().hex()
+        worker.start(sys.executable, [helper, '--extract-worker', payload])
+
+    def start(dropped=None):
+        nonlocal submission, submission_environment, cleanup_started, folder
+        if worker.state() != QProcess.NotRunning or cancelled: return
+        folder = None
+        submission = uuid.uuid4().hex if background else ''
+        submission_environment = dict(os.environ); cleanup_started = False
+        request = dict(action='extract', source=str(source), destination=dropped or destination.text(),
+                       dropped=bool(dropped), background=background, token=submission)
+        status.setText(tr("Preparing extraction… You can cancel while the folder is checked."))
+        run(request)
+    buttons.accepted.connect(lambda: start())
+    # QDialog's default Extract button handles Return/Enter. Starting directly
+    # from returnPressed too disables that button before the same key reaches
+    # QDialog, which can then activate Cancel instead.
 
     def reveal():
         if folder is not None:
-            try:
-                subprocess.Popen(["dolphin", str(folder)], start_new_session=True)
-            except OSError as error:
-                status.setText(tr("Couldn't open Files") + "\n" + str(error))
+            try: subprocess.Popen(["dolphin", str(folder)], start_new_session=True)
+            except OSError as error: status.setText(tr("Couldn't open Files") + "\n" + str(error))
     show.clicked.connect(reveal)
 
     def cancel():
@@ -263,12 +516,13 @@ def make_extract_dialog(path):
                 try: os.killpg(pid, signal.SIGKILL)
                 except ProcessLookupError: pass
             worker.kill()
-            worker.waitForFinished(1000)
-        if folder is not None:
-            try: folder.rmdir()
-            except OSError: pass  # Keep partial files, including after cancellation.
+        else: cancel_submission()
+        # No waiting, stat or rmdir here: even cancellation stays responsive if
+        # the destination has stopped answering. Existing/partial files stay.
     dialog.rejected.connect(cancel)
     buttons.rejected.connect(dialog.reject)
+    status.setText(tr("Checking archive…"))
+    run(dict(action='info', source=str(source), findApps=find_apps))
     return dialog
 
 
@@ -477,7 +731,43 @@ def make_dialog(mode, path):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "add", "extract", "--scan", "--space"}:
+    if len(sys.argv) == 3 and sys.argv[1] == '--open-folder':
+        # Compatibility path for generic Linux installs without the native
+        # module. Inspect local paths in this child, never in the Plasma GUI.
+        from urllib.parse import urlsplit, unquote_to_bytes
+        try:
+            if len(sys.argv[2]) > 131072: raise ValueError(tr("This transfer has no folder to open."))
+            request = json.loads(bytes.fromhex(sys.argv[2])); url = request.get('url')
+            if not isinstance(url, str) or len(url) > 32768 or '\x00' in url: raise ValueError(tr("This transfer has no folder to open."))
+            parts = urlsplit(url)
+            if parts.scheme not in {'file','sftp','smb','ftp','ftps','fish','nfs','mtp','afc','webdav','webdavs','desktop','remote','network'}:
+                raise ValueError(tr("This transfer has no folder to open."))
+            directory = bool(request.get('directory'))
+            if parts.scheme == 'file' and parts.netloc in {'','localhost'}:
+                path = Path(os.fsdecode(unquote_to_bytes(parts.path)))
+                if not path.is_absolute(): raise ValueError(tr("This transfer has no folder to open."))
+                info = path.stat()
+                if directory and not stat.S_ISDIR(info.st_mode):
+                    raise ValueError(tr("This destination is no longer a folder. Choose it again in Files."))
+                directory = stat.S_ISDIR(info.st_mode)
+            subprocess.Popen(['dolphin', *([] if directory else ['--select']), url], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(json.dumps(dict(ok=True))); return 0
+        except (OSError, ValueError, AttributeError) as error:
+            print(json.dumps(dict(ok=False, error=str(error)))); return 1
+    if len(sys.argv) == 3 and sys.argv[1] == '--extract-cancel':
+        cancel_extraction_submission(sys.argv[2]); return 0
+    if len(sys.argv) == 3 and sys.argv[1] == '--extract-worker':
+        def emit(value): print(json.dumps(value, ensure_ascii=True), flush=True)
+        try:
+            if len(sys.argv[2]) > 131072: raise ValueError('Invalid extraction request')
+            extraction_task(json.loads(bytes.fromhex(sys.argv[2])), emit)
+        except FileExistsError:
+            emit(dict(state='failed', error=tr("That folder already exists. Choose a new folder to keep its files unchanged.")))
+        except (OSError, ValueError, RuntimeError) as error:
+            emit(dict(state='failed', error=str(error)[:8192]))
+        return 0
+    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "add", "extract", "unpack", "downloads", "--scan", "--space"}:
         return 2
     mode, path = sys.argv[1:]
     if mode in {"--scan", "--space"}:
@@ -490,15 +780,32 @@ def main():
     from PySide6.QtWidgets import QApplication
     app = QApplication(sys.argv[:1]); app.setApplicationName("monet-files-tools")
     app.setApplicationDisplayName(tr("Files")); app.setDesktopFileName("org.kde.dolphin")
-    if mode == "extract":
+    if mode == 'downloads':
+        from PySide6.QtWidgets import QMessageBox
         try:
-            dialog = make_extract_dialog(path)
+            target = quick_helper().set_download_path(path)
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            QMessageBox.warning(None, tr("Couldn't change download path"), str(error))
+            return 1
+        QMessageBox.information(None, tr('Download path changed'),
+            tr('New downloads will be saved to %1. Restart Browser to use the new location there.', target))
+        return 0
+    if mode in {"extract", "unpack"}:
+        try:
+            dialog = make_extract_dialog(path, find_apps=mode == 'extract', background=mode == 'unpack')
         except (OSError, ValueError) as error:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(None, tr("Couldn't extract archive"), str(error))
             return 1
         if not dialog.exec():
             return 1
+        if mode == 'unpack':
+            try:
+                subprocess.Popen(['@BINDIR@/monet-files', 'transfers'], start_new_session=True)
+            except OSError:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.information(None, tr('Extraction started'), tr('Files opens the result when extraction finishes.'))
+            return 0
         path, mode = dialog.extracted, "apps"
         dialog.deleteLater()
     if mode == "add":

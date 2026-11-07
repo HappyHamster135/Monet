@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import "../games"
 
 Flickable {
     id: view
+    objectName: "storeDownloads"
     MouseScroll { view: view }
     property var tone
     property var store
@@ -35,7 +35,9 @@ Flickable {
     contentHeight: content.implicitHeight + 64
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-    Kirigami.WheelHandler { target: view; keyNavigationEnabled: true }
+    ScrollInput { id: scrollInput; view: view; onScrollRequested: view.store.cancelFocusReveal(view) }
+    Keys.priority: Keys.AfterItem
+    Keys.onPressed: event => scrollInput.key(event)
     ColumnLayout {
         id: content
         x: 32

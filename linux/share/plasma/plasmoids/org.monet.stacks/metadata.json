@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.monet.stacks",
+        "Name": "Desktop stacks",
+        "Description": "Group desktop files by type or date without moving them",
+        "Icon": "view-group",
+        "Category": "File System",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.6",
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ]
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

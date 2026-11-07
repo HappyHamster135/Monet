@@ -3,6 +3,7 @@
  * paper. `plain` for one standing alone (a kind of app), with how many there are (`count`).
  */
 import QtQuick
+import QtQuick.Layouts
 
 Rectangle {
     id: pebble
@@ -13,8 +14,10 @@ Rectangle {
     property int count: -1
     signal clicked()
 
-    width: row.implicitWidth + 24
-    height: plain ? 32 : 30
+    implicitWidth: row.implicitWidth + 24
+    implicitHeight: Math.max(plain ? 32 : 30, row.implicitHeight + 12)
+    width: Math.min(implicitWidth, parent.width)
+    height: implicitHeight
     radius: height / 2
     color: chosen ? (tone.dark ? Qt.rgba(1, 1, 1, 0.16) : "#FFFFFF")
         : mouse.containsMouse ? tone.press : plain ? tone.wash2 : "transparent"
@@ -22,17 +25,20 @@ Rectangle {
     border.color: activeFocus ? tone.lily : tone.line
     activeFocusOnTab: true
     Keys.onReturnPressed: pebble.clicked()
+    Keys.onEnterPressed: pebble.clicked()
     Keys.onSpacePressed: pebble.clicked()
     Behavior on color { ColorAnimation { duration: Math.round(140 * pebble.tone.speed) } }
 
-    Row {
+    RowLayout {
         id: row
         anchors.centerIn: parent
+        width: parent.width - 24
         spacing: 6
         Text {
             id: label
             horizontalAlignment: Text.AlignLeft
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
             color: pebble.tone.ink
             opacity: pebble.chosen ? 1 : 0.75
             font.pixelSize: 13
@@ -40,7 +46,7 @@ Rectangle {
         }
         Text {
             horizontalAlignment: Text.AlignLeft
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
             visible: pebble.count >= 0
             text: pebble.count.toLocaleString(Qt.locale(), "f", 0)
             color: pebble.tone.dim

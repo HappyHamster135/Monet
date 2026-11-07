@@ -17,6 +17,14 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
     ClockFormat { id: clockFormat }
+    SessionActivity {
+        id: activity; viewVisible: root.visible
+        onActiveChanged: if (active) Qt.callLater(root.syncClock)
+    }
+    function syncClock() {
+        now = new Date();
+        minuteTick.interval = (60 - now.getSeconds()) * 1000;
+    }
 
     property date now: new Date()
     // The notes beside the month, out or away (it stays as it was left).
@@ -36,12 +44,14 @@ PlasmoidItem {
     NoteStore {
         id: noteStore
         helper: "@LIBEXECDIR@/monet-quick"
+        active: activity.active && root.expanded
     }
 
     Timer {
+        id: minuteTick
         // On the minute, so the time turns when the clock on the wall does.
         interval: (60 - new Date().getSeconds()) * 1000
-        running: true
+        running: activity.active
         repeat: true
         onTriggered: {
             root.now = new Date();

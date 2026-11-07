@@ -1,15 +1,16 @@
 # Fedora supplies mutually compatible Qt/PySide/KDE packages for desktop tests.
 # No host desktop, user data, system bus or block devices are mounted here.
-FROM registry.fedoraproject.org/fedora:44
+ARG FEDORA_RELEASE=45
+FROM registry.fedoraproject.org/fedora:${FEDORA_RELEASE} AS desktop-runtime
 RUN dnf -y install python3 python3-pyside6 python3-gobject python3-dbus python3-pynacl \
     python3-numpy python3-pillow gtk3 gtk4 nodejs nodejs-npm dbus-daemon dbus-tools \
     plasma-workspace plasma-desktop plasma-systemmonitor plasma-pa \
-    kf6-kirigami kf6-kconfig plasma-integration kvantum \
+    kf6-kirigami kf6-kconfig plasma-integration kvantum rsms-inter-fonts \
     pipewire pipewire-pulseaudio pipewire-utils pulseaudio-utils \
-    util-linux ntfsprogs dosfstools wimlib-utils cryptsetup openssl \
-    diffutils findutils which git ark \
+    util-linux procps-ng ntfsprogs dosfstools wimlib-utils cryptsetup openssl \
+    diffutils findutils which git dolphin baloo-widgets ark 7zip \
     hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \
-    xorg-x11-server-Xvfb mesa-dri-drivers libglvnd-glx \
+    xorg-x11-server-Xvfb mesa-dri-drivers libglvnd-glx libXtst fontconfig \
  && dnf clean all
 COPY tests/install-electron-runtime.py /tmp/install-electron-runtime.py
 RUN python3 /tmp/install-electron-runtime.py /opt/monet-test-electron \
@@ -18,6 +19,56 @@ ENV MONET_ELECTRON_BINARY=/opt/monet-test-electron/electron
 COPY linux/share/monet/app-integration/electron/package*.json /opt/monet-electron-client/
 RUN cd /opt/monet-electron-client && npm ci --ignore-scripts --omit=optional --no-fund --no-audit --cache=/tmp/monet-npm-cache \
  && rm -rf /tmp/monet-npm-cache
+RUN dnf -y install xdotool && dnf clean all
 ENV MONET_TEST_ELECTRON_DBUS=/opt/monet-electron-client/node_modules/dbus-next
+# Only the disposable container opts in to deliberately filling its tmpfs.
+ENV MONET_TEST_ARCHIVE_TMPFS=/dev/shm
 WORKDIR /src
+
+FROM desktop-runtime AS archive-recovery
+COPY image/archive-recovery /src/archive-recovery
+RUN sh /src/archive-recovery/build.sh /out
+
+FROM desktop-runtime AS activity
+COPY image/activity /src/activity
+COPY LICENSE /src/activity/LICENSE
+RUN MONET_ACTIVITY_TESTING=1 sh /src/activity/build.sh /out
+
+FROM desktop-runtime AS launcher
+COPY image/launcher /src/launcher
+COPY LICENSE /src/launcher/LICENSE
+RUN MONET_LAUNCHER_TESTING=1 sh /src/launcher/build.sh /out
+
+FROM desktop-runtime AS dock
+COPY image/dock /src/dock
+COPY tests/native/dock-launch /src/dock-launch
+RUN sh /src/dock/build.sh /out \
+ && cmake -S /src/dock-launch -B /tmp/dock-launch -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build /tmp/dock-launch --parallel 2 \
+ && mkdir /out/tests \
+ && cp /tmp/dock-launch/dock-launch /out/tests/
+
+FROM desktop-runtime
+RUN dnf -y install binutils && dnf clean all
+COPY --from=archive-recovery /out /tmp/monet-archive-recovery
+RUN python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery \
+ && rm -rf /tmp/monet-archive-recovery
+COPY --from=activity /out /tmp/monet-activity
+RUN python3 /tmp/monet-activity/bundle.py install /tmp/monet-activity \
+ && mkdir -p /opt/monet-test-activity \
+ && cp /tmp/monet-activity/tests/* /opt/monet-test-activity/ \
+ && rm -rf /tmp/monet-activity
+ENV MONET_ACTIVITY_FIXTURE=/opt/monet-test-activity/activity-test
+COPY --from=launcher /out /tmp/monet-launcher
+RUN python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher \
+ && mkdir -p /opt/monet-test-launcher \
+ && cp /tmp/monet-launcher/tests/* /opt/monet-test-launcher/ \
+ && rm -rf /tmp/monet-launcher
+ENV MONET_LAUNCHER_FIXTURE=/opt/monet-test-launcher/launcher-test
+COPY --from=dock /out /tmp/monet-dock
+RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
+ && mkdir -p /opt/monet-test-dock \
+ && cp /tmp/monet-dock/tests/dock-launch /opt/monet-test-dock/ \
+ && rm -rf /tmp/monet-dock
+ENV MONET_DOCK_LAUNCH_FIXTURE=/opt/monet-test-dock/dock-launch
 CMD ["python3", "tools/test.py", "--require-desktop"]

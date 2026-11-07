@@ -12,12 +12,39 @@ sys.path.insert(0, str(ROOT / 'linux/share/monet/passwords'))
 role, toolkit, mode = sys.argv[1:4]
 USERNAME, PASSWORD, SERVER = 'fixture@example.invalid', 'synthetic-fill-only', 'server.example.invalid'
 
+
+def drive_changed_form(once, change, verify, expire):
+    """Change a real form only after the observer has captured its original target."""
+    reader = int(os.environ['MONET_NATIVE_CHANGE_READ'])
+    writer = int(os.environ['MONET_NATIVE_CHANGE_WRITE'])
+    os.set_blocking(reader, False)
+
+    def poll():
+        try:
+            command = os.read(reader, 1)
+        except BlockingIOError:
+            command = b''
+        if command == b'M':
+            change()
+            os.write(writer, b'A')
+        elif command == b'V':
+            verify()
+            return
+        else:
+            assert not command, command
+        once(10, poll)
+
+    once(10, poll)
+    once(8000, expire)
+
+
 if role == 'observe':
     import gi
     gi.require_version('Atspi', '2.0')
     from gi.repository import Atspi, GLib
     from app_detector import Detector
     seen, offered = [], []
+    controls = None
     filling = mode != 'save'
     def offer(identity, values):
         if toolkit == 'flatpak': assert identity.scope == 'flatpak:org.monet.AutofillFixture'
@@ -28,10 +55,20 @@ if role == 'observe':
         if toolkit == 'flatpak': assert target.identity.scope == 'flatpak:org.monet.AutofillFixture'
         seen.append('pending')
         def choose():
+            if controls:
+                try:
+                    answer = os.read(controls[1], 1)
+                except BlockingIOError:
+                    return True
+                assert answer == b'A', answer
             result = target.apply(dict(username=USERNAME, password=PASSWORD, service=SERVER))
             seen[-1] = result
+            if controls:
+                os.write(controls[0], b'V')
             return False
-        GLib.timeout_add(450, choose)
+        if controls:
+            os.write(controls[0], b'M')
+        GLib.timeout_add(20 if controls else 450, choose)
     detector = Detector(Atspi, GLib, offer, lambda _: True, suggest=suggest if filling else None)
     detector.start()
     fixture = None
@@ -41,7 +78,18 @@ if role == 'observe':
         binary=os.environ['MONET_SANDBOX_WIDGET_BINARY']
         fixture,command=sandbox.command(binary,[mode],(Path(binary).parent,))
     else: command=[sys.executable, __file__, 'form', toolkit, mode]
-    form = subprocess.Popen(command)
+    env = dict(os.environ)
+    inherited = ()
+    if toolkit != 'flatpak' and mode in ('changed-server', 'changed-action'):
+        command_read, command_write = os.pipe()
+        answer_read, answer_write = os.pipe()
+        os.set_blocking(answer_read, False)
+        controls = command_write, answer_read
+        env.update(MONET_NATIVE_CHANGE_READ=str(command_read), MONET_NATIVE_CHANGE_WRITE=str(answer_write))
+        inherited = command_read, answer_write
+    form = subprocess.Popen(command, env=env, pass_fds=inherited)
+    for descriptor in inherited:
+        os.close(descriptor)
     def finished():
         if form.poll() is not None:
             Atspi.event_quit(); return False
@@ -51,10 +99,12 @@ if role == 'observe':
     Atspi.event_main(); detector.clear()
     if form.poll() is None: form.kill()
     code=form.wait()
+    for descriptor in controls or ():
+        os.close(descriptor)
     if fixture: fixture.cleanup()
     assert code == 0, 'Native control values did not match the chosen account'
     if filling:
-        assert seen == [mode not in ('changed-server', 'changed-action')], 'Wrong native fill result'
+        assert seen == [mode not in ('changed-server', 'changed-action')], f'Wrong native fill result: {seen!r}'
         assert not offered, 'Autofill must not re-offer the same login for saving'
     else: assert offered == [True], 'Native form was not detected'
     print('PASS: ' + toolkit + ' ' + mode)
@@ -80,8 +130,6 @@ elif toolkit == 'qt':
             user.hide(); server.hide(); password.show(); button.setText('Sign in'); password.setFocus()
         QTimer.singleShot(600, user.setFocus); QTimer.singleShot(1000, second_page)
     else: QTimer.singleShot(1000, password.setFocus)
-    if mode == 'changed-action': QTimer.singleShot(1200, lambda: button.setText('Create account'))
-    if mode == 'changed-server': QTimer.singleShot(1200, lambda: server.setText('changed.example.invalid'))
     if mode == 'save':
         QTimer.singleShot(1200, lambda: password.setText(PASSWORD))
         QTimer.singleShot(1700, button.setFocus); QTimer.singleShot(1900, button.click)
@@ -89,7 +137,12 @@ elif toolkit == 'qt':
         good = (user.text() == USERNAME and password.text() == PASSWORD and not submitted) if mode not in ('save', 'changed-server', 'changed-action') else (
             not password.text() and not submitted if mode in ('changed-server', 'changed-action') else submitted == [True])
         app.exit(0 if good else 1)
-    QTimer.singleShot(2800, verify)
+    if mode in ('changed-server', 'changed-action'):
+        change = (lambda: button.setText('Create account')) if mode == 'changed-action' else (
+            lambda: server.setText('changed.example.invalid'))
+        drive_changed_form(QTimer.singleShot, change, verify, lambda: app.exit(1))
+    else:
+        QTimer.singleShot(2800, verify)
     sys.exit(app.exec())
 else:
     import gi
@@ -125,8 +178,6 @@ else:
     def once(ms, callback):
         GLib.timeout_add(ms, lambda: (callback(), False)[1])
     once(1000, password.grab_focus)
-    if mode == 'changed-action': once(1200, lambda: button.set_label('Create account'))
-    if mode == 'changed-server': once(1200, lambda: server.set_text('changed.example.invalid'))
     if mode == 'save':
         once(1200, lambda: password.set_text(PASSWORD)); once(1700, button.grab_focus)
         once(1900, lambda: button.emit('clicked'))
@@ -135,6 +186,12 @@ else:
         outcome[0] = (user.get_text() == USERNAME and password.get_text() == PASSWORD and not submitted) if mode not in ('save', 'changed-server', 'changed-action') else (
             not password.get_text() and not submitted if mode in ('changed-server', 'changed-action') else submitted == [True])
         loop.quit()
-    once(2800, verify); loop.run()
+    if mode in ('changed-server', 'changed-action'):
+        change = (lambda: button.set_label('Create account')) if mode == 'changed-action' else (
+            lambda: server.set_text('changed.example.invalid'))
+        drive_changed_form(once, change, verify, loop.quit)
+    else:
+        once(2800, verify)
+    loop.run()
     window.destroy()
     sys.exit(0 if outcome[0] else 1)

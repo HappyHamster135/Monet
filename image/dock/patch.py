@@ -9,12 +9,31 @@ def replace(path, old, new):
     if text.count(old)!=1:raise ValueError(f'Unsupported task applet source: {path.name}')
     path.write_text(text.replace(old,new))
 
+def prepend(path, anchor, addition):
+    # Later insertions may separate this text from its anchor. Match the
+    # insertion itself so reapplying the patch cannot duplicate properties.
+    if addition in path.read_text(): return
+    replace(path, anchor, addition + anchor)
+
 def apply(source):
     applet=source/'applets/taskmanager'
+    # Plasma's internal task-manager model is the Home Bar in Monet. Keep the
+    # actual System Monitor/Task Manager app distinct in user-facing menus.
+    context = applet/'qml/ContextMenu.qml'
+    old = 'i18nc("action:inmenu", "&Pin to Task Manager")'
+    new = 'i18nd("monet", "Pin to Home Bar")'
+    text = context.read_text()
+    if new not in text:
+        if text.count(old) != 2: raise ValueError('Unsupported dock pin actions')
+        context.write_text(text.replace(old, new))
+    replace(context, 'i18nc("action:inmenu", "Unpin from Task Manager")',
+            'i18nd("monet", "Unpin from Home Bar")')
+    replace(context, 'text: configureAction ? configureAction.text : ""',
+            'text: configureAction ? i18nd("monet", "Configure Home Bar…") : ""')
     replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml')
     # Standalone build keeps the upstream generated settings in their original folder.
     replace(applet/'CMakeLists.txt','${CMAKE_SOURCE_DIR}/kcms/recentFiles/', '${UPSTREAM_SOURCE}/kcms/recentFiles/')
-    replace(applet/'qml/main.qml','    property Task toolTipOpenedByClick', '''    // Passive hover tracking never takes clicks or grabs away from task controls.
+    prepend(applet/'qml/main.qml','    property Task toolTipOpenedByClick', '''    // Passive hover tracking never takes clicks or grabs away from task controls.
     readonly property bool monetMotionEnabled: iconsOnly && !vertical
         && Plasmoid.location === PlasmaCore.Types.BottomEdge
         && Plasmoid.configuration.taskHoverEffect && !Plasmoid.containment.corona.editMode
@@ -23,7 +42,33 @@ def apply(source):
     readonly property bool monetHoverActive: monetMotionEnabled && (monetHoverState.current?.hovered ?? false)
     readonly property point monetPointer: monetHoverState.current?.point.scenePosition ?? Qt.point(0, 0)
 
-    property Task toolTipOpenedByClick''')
+''')
+    prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    // One native launch coordinator is shared with Monet's menu. Older generic
+    // installs retain Plasma's normal launch path when the module is absent.
+    readonly property QtObject monetLauncher: QtObject {
+        id: monetLaunchBridge
+        property var client: null
+        readonly property var states: client ? client.states : ({})
+        function openForLauncher(url, source, newWindow) {
+            const id = client ? client.key(String(url)) : "";
+            if (!id) return false;
+            client.open(id, source, !!newWindow);
+            return true;
+        }
+        Component.onCompleted: {
+            try { client = Qt.createQmlObject('import org.monet.launcher 1.0; Launcher {}', monetLaunchBridge, "MonetDockLauncher"); }
+            catch (error) { client = null; }
+        }
+    }
+
+''')
+    replace(applet/'qml/code/TaskTools.js',
+        'function activateTask(index, model, modifiers, task, plasmoid, tasks, windowViewAvailable) {',
+        '''function activateTask(index, model, modifiers, task, plasmoid, tasks, windowViewAvailable) {
+    if (tasks.monetLauncher && (model.IsLauncher || model.IsStartup || (modifiers & Qt.ShiftModifier))
+            && tasks.monetLauncher.openForLauncher(model.LauncherUrlWithoutIcon, task, !!(modifiers & Qt.ShiftModifier))) {
+        return;
+    }''')
     replace(applet/'qml/Task.qml', '    id: task\n', '''    id: task
 
     MonetDockHover {
@@ -33,6 +78,26 @@ def apply(source):
         trackingEnabled: !task.inPopup && task.tasksRoot.monetMotionEnabled && taskList.rows === 1
     }
 ''')
+    replace(applet/'qml/Task.qml', '    readonly property int pid: model.AppPid', '''    readonly property bool monetOpening: {
+        const bridge = task.tasksRoot.monetLauncher;
+        const id = bridge.client ? bridge.client.key(String(model.LauncherUrlWithoutIcon)) : "";
+        return !!(id && bridge.states[id] && bridge.states[id].state === "starting");
+    }
+    readonly property int pid: model.AppPid''')
+    replace(applet/'qml/Task.qml', 'active: task.model.IsStartup', 'active: task.model.IsStartup || task.monetOpening')
+    replace(applet/'qml/Task.qml', '    Accessible.description: {', '''    Accessible.description: {
+        if (task.monetOpening) return i18nd("monet", "Starting %1…", model.display);''')
+    replace(applet/'qml/Task.qml', '                    tasksModel.requestNewInstance(modelIndex());',
+        '''                    if (!task.tasksRoot.monetLauncher.openForLauncher(model.LauncherUrlWithoutIcon, task, true)) {
+                        tasksModel.requestNewInstance(modelIndex());
+                    }''')
+    replace(applet/'qml/ContextMenu.qml', '        onClicked: tasksModel.requestNewInstance(menu.modelIndex)',
+        '''        onClicked: {
+            const task = menu.visualParent;
+            if (!task || !task.tasksRoot.monetLauncher.openForLauncher(menu.get(TaskManager.AbstractTasksModel.LauncherUrlWithoutIcon), task, true)) {
+                tasksModel.requestNewInstance(menu.modelIndex);
+            }
+        }''')
     replace(applet/'qml/Task.qml','        id: iconBox\n', '''        id: iconBox
 
         MonetDockMotion {

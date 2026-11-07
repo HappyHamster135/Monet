@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.monet.transfers",
+        "Name": "Transfers",
+        "Description": "Copies, downloads and extractions in one place",
+        "Icon": "folder-download",
+        "Category": "File System",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.6",
+        "Authors": [
+            {
+                "Name": "Monet"
+            }
+        ]
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

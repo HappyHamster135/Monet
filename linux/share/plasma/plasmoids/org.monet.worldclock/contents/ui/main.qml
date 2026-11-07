@@ -17,6 +17,7 @@ import org.kde.plasma.private.digitalclock
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
     ClockFormat { id: clockFormat }
 
     readonly property var zones: Array.from(Plasmoid.configuration.zones || [])
@@ -26,8 +27,14 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     // This PC's own time, to say how far each town is from it.
-    Clock {
-        id: here
+    QtObject { id: here; property date dateTime: new Date() }
+    Loader {
+        visible: false
+        active: activity.active
+        sourceComponent: Clock {
+            onTimeChanged: here.dateTime = dateTime
+            Component.onCompleted: here.dateTime = dateTime
+        }
     }
 
     // Days apart, as the calendar counts them: -1, 0 or 1.
@@ -136,9 +143,15 @@ PlasmoidItem {
                         Layout.fillHeight: true
                         spacing: Kirigami.Units.gridUnit * 0.7
 
-                        Clock {
-                            id: clock
-                            timeZone: town.modelData
+                        QtObject { id: clock; property date dateTime: new Date() }
+                        Loader {
+                            visible: false
+                            active: activity.active
+                            sourceComponent: Clock {
+                                timeZone: town.modelData
+                                onTimeChanged: clock.dateTime = dateTime
+                                Component.onCompleted: clock.dateTime = dateTime
+                            }
                         }
 
                         Face {

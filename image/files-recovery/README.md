@@ -1,9 +1,44 @@
 # Native Files recovery metadata
 
-The same paired build fixes local free-space lookup on Atomic systems: the
-status bar shares observers using `QStorageInfo`'s actual mount root. Solid's
-storage-device lookup can associate `/var/home` with the read-only overlay and
-report 0 B free. Remote locations retain Dolphin's existing KIO handling.
+The paired build also supplies Monet's everyday Files actions: Space previews
+the selected/current local item, without taking spaces away from inline rename;
+Tools offers Quick preview and Transfers. The preview launches through KIO so
+Wayland activation is preserved. A process-level filter adds **Keep both** to
+KIO's existing conflict dialog, retaining its previews, sizes, dates and native
+unused-name/copy checks. Resume-only dialogs remain unchanged.
+
+The roles updater limits speculative work to two pages before/after the view
+and yields at a 32 ms budget. Visible items keep their existing priority. This
+reduces background thumbnail/metadata work and long event-loop stalls without
+turning off normal previews or changing saved view state.
+
+Native thumbnail jobs share the existing delayed loading indicator and Stop
+control. Stop or Escape pauses new preview work for that listing, retains
+completed thumbnails and leaves the saved preview setting unchanged. Refresh,
+navigation or an explicit preview toggle resumes work. The action follows the
+active tab; cancelling only previews does not mark its completed listing as
+cancelled. State uses QObject properties without adding class data members,
+and the original exported no-argument cancellation helper remains available.
+
+In a disposable matching build/test runtime, verify the pair with
+`python3 image/files-recovery/bundle.py verify OUTPUT/runtime.json`, then run
+`python3 tests/fixtures/files-thumbnail-native.py OUTPUT ARTIFACTS` from Monet's
+repository. The fixture supplies its own home, cache, bus, Xvfb display and 2,000
+synthetic photo paths. It verifies real native previews, responsiveness,
+Stop/Escape, refresh, tab state, saved preview choice and graceful teardown.
+Set `QT_SCALE_FACTOR=1.25`, `1.5` or `2` for the fractional-scale checks.
+
+`tests/` builds native Qt/KIO checks for Keep both and Space-versus-text-input.
+The image build runs these after compiling Dolphin. The package preserves
+these test sources along with the experience adapter in its source archive.
+
+Free-space lookup never discovers a filesystem root on the GUI thread. Exact
+URLs share observers; native KIO workers resolve local and remote filesystem
+capacity asynchronously. This also avoids Solid associating `/var/home` with
+the read-only Atomic overlay. Different folders on one filesystem may use
+separate jobs, bounded by active/recent views; this avoids synchronous mount
+queries while navigating sleeping or disconnected drives. Old job results and
+queued notifications from the previously selected location are discarded.
 
 The image's Dolphin exposes a read-only `monetFilesState` method on its existing
 `org.kde.dolphin.MainWindow` interface. It captures local folders, active tab/split side,
@@ -13,6 +48,7 @@ and custom tab labels. It does not read file contents or enumerate all directory
 through the existing Wayland surface identity plugin. The helper discovers surviving
 D-Bus objects when the first window has closed. Missing/ambiguous identity refuses the
 multiwindow capture; the ordinary single-window path does not require the plugin.
+Loaded local URLs may differ by a trailing slash; they still identify the same directory.
 Loading, remote, ambiguous and oversized states are refused. The existing private native
 session remains the restoration path; normal Dolphin session files are untouched.
 

@@ -1,0 +1,13 @@
+#!/usr/bin/python3
+"""On-demand previews, desktop stacks and the shared transfer panel."""
+import sys
+from pathlib import Path
+
+folder = Path('@DATADIR@/monet')
+if not folder.is_dir():
+    folder = Path(__file__).resolve().parents[1] / 'share/monet'
+sys.path.insert(0, str(folder))
+from monet_files import main
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

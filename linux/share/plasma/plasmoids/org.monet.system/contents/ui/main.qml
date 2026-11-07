@@ -16,6 +16,7 @@ import org.kde.ksysguard.sensors as Sensors
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
 
     // Degrees the way this PC's region counts them.
     readonly property bool fahrenheit: Qt.locale().measurementSystem === Locale.ImperialUSSystem
@@ -37,20 +38,22 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     component Reading: Sensors.Sensor {
+        required property bool sampling
+        enabled: sampling
         updateRateLimit: 1500
     }
 
-    Reading { id: cpu; sensorId: "cpu/all/usage" }
-    Reading { id: cpuHeat; sensorId: "cpu/all/maximumTemperature" }
-    Reading { id: memory; sensorId: "memory/physical/usedPercent" }
-    Reading { id: memoryUsed; sensorId: "memory/physical/used" }
-    Reading { id: download; sensorId: "network/all/download" }
-    Reading { id: upload; sensorId: "network/all/upload" }
+    Reading { sampling: root.visible && activity.active; id: cpu; sensorId: "cpu/all/usage" }
+    Reading { sampling: root.visible && activity.active; id: cpuHeat; sensorId: "cpu/all/maximumTemperature" }
+    Reading { sampling: root.visible && activity.active; id: memory; sensorId: "memory/physical/usedPercent" }
+    Reading { sampling: root.visible && activity.active; id: memoryUsed; sensorId: "memory/physical/used" }
+    Reading { sampling: root.visible && activity.active; id: download; sensorId: "network/all/download" }
+    Reading { sampling: root.visible && activity.active; id: upload; sensorId: "network/all/upload" }
     // Each graphics chip: the busier one is the one a game runs on (a laptop has two).
-    Reading { id: gpu0; sensorId: "gpu/gpu0/usage" }
-    Reading { id: gpu1; sensorId: "gpu/gpu1/usage" }
-    Reading { id: gpuHeat0; sensorId: "gpu/gpu0/temperature" }
-    Reading { id: gpuHeat1; sensorId: "gpu/gpu1/temperature" }
+    Reading { sampling: root.visible && activity.active; id: gpu0; sensorId: "gpu/gpu0/usage" }
+    Reading { sampling: root.visible && activity.active; id: gpu1; sensorId: "gpu/gpu1/usage" }
+    Reading { sampling: root.visible && activity.active; id: gpuHeat0; sensorId: "gpu/gpu0/temperature" }
+    Reading { sampling: root.visible && activity.active; id: gpuHeat1; sensorId: "gpu/gpu1/temperature" }
     readonly property bool second: ready(gpu1) && (!ready(gpu0) || gpu1.value > gpu0.value)
     readonly property var gpu: second ? gpu1 : gpu0
     readonly property var gpuHeat: second ? gpuHeat1 : gpuHeat0

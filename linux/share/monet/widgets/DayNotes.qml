@@ -11,6 +11,8 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Templates as T
+import QtQuick.Window
+import org.kde.kirigami as Kirigami
 
 ColumnLayout {
     id: page
@@ -268,17 +270,178 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        QQC2.ComboBox {
+        T.AbstractButton {
             id: repeatChoice
             objectName: "noteRepeat"
             Layout.fillWidth: true
+            implicitHeight: Math.max(42, repeatLabel.implicitHeight + 20)
+            leftPadding: mirrored ? 42 : 16
+            rightPadding: mirrored ? 16 : 42
+            hoverEnabled: true
+            activeFocusOnTab: true
+            readonly property color fill: "#357F72"
             readonly property var intervals: ["none", "yearly", "monthly", "weekly", "daily"]
-            model: [i18n("Doesn't repeat"), i18n("Every year"), i18n("Every month"), i18n("Every week"), i18n("Every day")]
-            currentIndex: Math.max(0, intervals.indexOf(page.recurrence))
+            readonly property var model: [i18n("Doesn't repeat"), i18n("Every year"), i18n("Every month"), i18n("Every week"), i18n("Every day")]
+            readonly property int currentIndex: Math.max(0, intervals.indexOf(page.recurrence))
+            readonly property string displayText: model[currentIndex]
+            property int highlightedIndex: currentIndex
+            signal activated(int index)
             Accessible.name: i18n("Repeat note")
-            onActivated: {
+            Accessible.role: Accessible.ComboBox
+            Accessible.description: displayText
+            function choose(index) {
+                if (index < 0 || index >= model.length) return
+                activated(index)
+                popup.close()
+            }
+            function togglePicker() {
+                if (popup.visible) popup.close()
+                else { highlightedIndex = currentIndex; popup.open() }
+            }
+            function key(event) {
+                let index = popup.visible ? highlightedIndex : currentIndex
+                if (event.key === Qt.Key_Down) index = Math.min(model.length - 1, index + 1)
+                else if (event.key === Qt.Key_Up) index = Math.max(0, index - 1)
+                else if (event.key === Qt.Key_Home) index = 0
+                else if (event.key === Qt.Key_End) index = model.length - 1
+                else if ([Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)) {
+                    if (popup.visible) choose(highlightedIndex)
+                    else togglePicker()
+                    event.accepted = true; return
+                } else { event.accepted = false; return }
+                if (popup.visible) {
+                    highlightedIndex = index
+                    repeatOptions.positionViewAtIndex(index, ListView.Contain)
+                } else choose(index)
+                event.accepted = true
+            }
+            onClicked: togglePicker()
+            Keys.onPressed: event => key(event)
+            contentItem: Text {
+                id: repeatLabel
+                text: repeatChoice.displayText
+                color: "#FBF7EE"
+                font.family: "Inter"
+                font.pixelSize: Math.max(13, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3))
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: repeatChoice.mirrored ? Text.AlignRight : Text.AlignLeft
+                elide: Text.ElideRight
+            }
+            background: Rectangle {
+                radius: 12
+                color: repeatChoice.down ? "#2C6D62" : repeatChoice.fill
+                border.width: repeatChoice.visualFocus ? 2 : 0
+                border.color: "#9FD3C4"
+            }
+            indicator: Item {
+                x: repeatChoice.mirrored ? 16 : repeatChoice.width - width - 16
+                y: (repeatChoice.height - height) / 2
+                width: 12; height: 8
+                rotation: repeatChoice.popup.visible ? 180 : 0
+                Behavior on rotation { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                Rectangle { x: 1; y: 3; width: 7; height: 1.5; radius: 0.75; rotation: 40; color: "#FBF7EE" }
+                Rectangle { x: 6; y: 3; width: 7; height: 1.5; radius: 0.75; rotation: -40; color: "#FBF7EE" }
+            }
+            property Component optionDelegate: T.ItemDelegate {
+                id: option
+                required property int index
+                required property var modelData
+                objectName: "noteRepeatOption-" + index
+                width: ListView.view ? ListView.view.width : repeatChoice.width - 12
+                implicitHeight: Math.max(40, optionText.implicitHeight + 18)
+                leftPadding: repeatChoice.mirrored ? 36 : 14; rightPadding: repeatChoice.mirrored ? 14 : 36
+                text: modelData
+                hoverEnabled: true
+                highlighted: repeatChoice.highlightedIndex === index
+                onHoveredChanged: if (hovered) repeatChoice.highlightedIndex = index
+                onClicked: repeatChoice.choose(index)
+                Accessible.name: text
+                contentItem: Text {
+                    id: optionText
+                    text: option.text
+                    color: "#FBF7EE"
+                    font: repeatLabel.font
+                    wrapMode: Text.Wrap
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: repeatChoice.mirrored ? Text.AlignRight : Text.AlignLeft
+                }
+                background: Rectangle {
+                    radius: 10
+                    color: option.down ? "#2C6D62" : repeatChoice.fill
+                    opacity: option.highlighted || option.hovered || option.index === repeatChoice.currentIndex ? 1 : 0.82
+                    border.width: option.highlighted || option.index === repeatChoice.currentIndex ? 2 : 0
+                    border.color: "#9FD3C4"
+                    Text {
+                        anchors.right: parent.right; anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: option.index === repeatChoice.currentIndex
+                        text: "✓"; color: "#FBF7EE"; font.pixelSize: 14
+                    }
+                }
+            }
+            readonly property QQC2.Popup popup: QQC2.Popup {
+                id: repeatPopup
+                objectName: "noteRepeatPopup"
+                // Plasma's Dialog can offset its Controls overlay. Position
+                // directly in that overlay, measuring room in the real window.
+                popupType: QQC2.Popup.Item
+                focus: true
+                onOpened: repeatOptions.forceActiveFocus(Qt.PopupFocusReason)
+                readonly property Item overlayItem: repeatChoice.QQC2.Overlay.overlay
+                parent: overlayItem || repeatChoice
+                readonly property Item windowContent: repeatChoice.Window.window ? repeatChoice.Window.window.contentItem : null
+                readonly property point anchorPoint: {
+                    // mapToItem alone does not track layout changes. Observe
+                    // the ancestor geometry so resizing/reopening stays anchored.
+                    for (let item = repeatChoice; item && item !== windowContent; item = item.parent) {
+                        const geometry = [item.x, item.y, item.width, item.height, item.scale, item.rotation]
+                    }
+                    return windowContent ? repeatChoice.mapToItem(windowContent, 0, 0) : Qt.point(0, 0)
+                }
+                readonly property real anchorY: anchorPoint.y
+                readonly property point overlayAnchor: {
+                    const anchor = anchorPoint
+                    if (!overlayItem) return Qt.point(0, 0)
+                    const geometry = [overlayItem.x, overlayItem.y, overlayItem.width, overlayItem.height]
+                    return repeatChoice.mapToItem(overlayItem, 0, 0)
+                }
+                readonly property real above: Math.max(1, anchorY - 8)
+                readonly property real below: windowContent ? Math.max(1, windowContent.height - anchorY - repeatChoice.height - 8) : 1
+                readonly property real desiredHeight: repeatOptions.contentHeight + topPadding + bottomPadding
+                readonly property bool opensDown: below >= desiredHeight || below >= above
+                x: overlayAnchor.x
+                y: overlayAnchor.y + (opensDown ? repeatChoice.height + 6 : -height - 6)
+                width: repeatChoice.width
+                height: Math.min(desiredHeight, opensDown ? below : above)
+                padding: 6
+                // The overlay origin can be outside the window; our bounds
+                // above already constrain the visible menu to the window.
+                margins: -1
+                closePolicy: QQC2.Popup.CloseOnEscape | QQC2.Popup.CloseOnPressOutside
+                background: Rectangle {
+                    radius: 15
+                    color: page.ink.hslLightness > 0.5 ? "#292824" : "#F7F5EF"
+                    border.width: 1; border.color: page.lily
+                }
+                contentItem: ListView {
+                    id: repeatOptions
+                    objectName: "noteRepeatOptions"
+                    clip: true
+                    LayoutMirroring.enabled: repeatChoice.mirrored
+                    LayoutMirroring.childrenInherit: true
+                    spacing: 4
+                    model: repeatPopup.visible ? repeatChoice.model : null
+                    delegate: repeatChoice.optionDelegate
+                    currentIndex: repeatChoice.highlightedIndex
+                    focus: true
+                    Keys.onPressed: event => repeatChoice.key(event)
+                    boundsBehavior: Flickable.StopAtBounds
+                    QQC2.ScrollIndicator.vertical: QQC2.ScrollIndicator {}
+                }
+            }
+            onActivated: index => {
                 page.keepNow();
-                page.recurrence = intervals[currentIndex];
+                page.recurrence = intervals[index];
                 if (note.text.trim()) page.store.write(note.written,note.text,page.recurrence);
             }
         }

@@ -568,6 +568,15 @@ kw_default dolphinrc PlacesPanel IconSize 22
 kw_default dolphinrc General ShowZoomSlider false
 kw_default dolphinrc General AlwaysShowTabBar true
 kw_default dolphinrc General ShowFullPath true
+# Folder sizes remain available on demand in Properties. Reuse Files for
+# externally opened locations and leave slow remote previews on demand.
+kw_default dolphinrc ContentDisplay DirectorySizeMode None
+kw_default dolphinrc General OpenExternallyCalledFolderInNewTab true
+kw_default dolphinrc General ShowToolTips false
+# Archive activation follows the MIME handler (Monet's extraction box).
+# Contents inspection remains an explicit right-click Open action.
+kw_default dolphinrc General BrowseThroughArchives false
+kw_default kiorc PreviewSettings MaximumRemoteSize 0
 # KDE adds our page to customized layouts itself; only order an untouched profile.
 kw_default systemmonitorrc General pageOrder monet-applications.page,monet-performance.page,monet-processes.page,monet-startup.page,monet-system.page,applications.page,processes.page,overview.page,history.page
 kw_default systemmonitorrc General startPage monet-applications.page

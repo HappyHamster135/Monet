@@ -10,6 +10,7 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible; onActiveChanged: if (active) Qt.callLater(root.refresh) }
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "drive-harddisk"
     preferredRepresentation: fullRepresentation
@@ -27,7 +28,7 @@ PlasmoidItem {
         while (value >= 1024 && unit < units.length - 1) { value /= 1024; ++unit; }
         return Number(value).toLocaleString(Qt.locale(), 'f', unit < 2 ? 0 : 1) + " " + units[unit];
     }
-    function refresh() { if (!busy) { busy = true; reader.connectSource(command + " # space-refresh-" + (++requestSerial)); } }
+    function refresh() { if (activity.active && !busy) { busy = true; reader.connectSource(command + " # space-refresh-" + (++requestSerial)); } }
     P5Support.DataSource {
         id: reader
         engine: "executable"
@@ -42,7 +43,7 @@ PlasmoidItem {
             } catch (error) { root.failed = true; }
         }
     }
-    Timer { interval: 60000; running: root.visible; repeat: true; onTriggered: root.refresh() }
+    Timer { interval: 60000; running: root.visible && activity.active; repeat: true; onTriggered: root.refresh() }
     Component.onCompleted: refresh()
     fullRepresentation: Glass {
         id: card

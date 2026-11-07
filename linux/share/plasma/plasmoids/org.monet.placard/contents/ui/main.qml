@@ -11,6 +11,14 @@ import org.kde.coreaddons as KCoreAddons
 
 PlasmoidItem {
     id: root
+    SessionActivity {
+        id: activity; viewVisible: root.visible
+        onActiveChanged: if (active) Qt.callLater(root.syncClock)
+    }
+    function syncClock() {
+        now = new Date()
+        minuteTick.interval = (60 - now.getSeconds()) * 1000 + 50
+    }
     ClockFormat { id: clockFormat }
     LayoutGuard {}
 
@@ -49,9 +57,10 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     Timer {
+        id: minuteTick
         // Tick on the minute.
         interval: (60 - root.now.getSeconds()) * 1000 + 50
-        running: true
+        running: activity.active
         repeat: true
         onTriggered: {
             root.now = new Date()

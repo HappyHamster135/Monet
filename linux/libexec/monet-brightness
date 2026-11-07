@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+"""Remember the built-in screen's chosen brightness across sign-ins."""
+from pathlib import Path
+import sys
+folder = Path('@DATADIR@/monet')
+if not folder.is_dir():
+    folder = Path(__file__).resolve().parents[1] / 'share/monet'
+sys.path.insert(0, str(folder))
+from monet_runtime.brightness import main
+if __name__ == '__main__':
+    sys.exit(main())

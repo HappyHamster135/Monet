@@ -86,7 +86,7 @@ try:
     from PySide6.QtCore import QObject,QUrl,QMetaObject,Qt
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QJSEngine,QQmlApplicationEngine
-    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtQuick import QQuickWindow,QQuickItem
     from PySide6.QtTest import QTest
     QT=True
 except ImportError: QT=False
@@ -225,6 +225,61 @@ Window { width:700; height:450; visible:true
             self.assertFalse(errors,'\n'.join(errors))
             window.close(); engine.deleteLater(); QTest.qWait(1)
 
+    def test_repeat_picker_stays_next_to_its_button_and_saves_one_choice(self):
+        engine=QQmlApplicationEngine();words=helper('monet-games').Words();engine.rootContext().setContextObject(words)
+        errors=[];engine.warnings.connect(lambda values:errors.extend(v.toString() for v in values))
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'repeat.qml'
+            path.write_text('''import QtQuick
+import "'''+QUrl.fromLocalFile(str(WIDGETS)).toString()+'''"
+Window { width:440; height:700; visible:true; color:"#292824"; property int closedNotes:0
+ QtObject { id:data; property var notes:({}); property string problem:""; property var saved:[]
+ function noteFor(day){return "Birthday"} function repeatFor(day){return "none"}
+ function after(day,count){return []} function write(day,text,repeat){saved=saved.concat([repeat])} function retry(){} }
+ DayNotes { objectName:"editor"; x:20; y:20; width:400; height:330; store:data;
+ day:new Date(2026,10,7); today:day; ink:"#EFECE6"; dim:"#B4AEA5"; lily:"#4DB4A0";
+ onClosed:closedNotes++ }
+ property var saved:data.saved
+}''')
+            engine.load(QUrl.fromLocalFile(str(path)));self.assertTrue(engine.rootObjects(),errors)
+            window=engine.rootObjects()[0];QTest.qWait(80)
+            button=window.findChild(QQuickItem,'noteRepeat');popup=window.findChild(QObject,'noteRepeatPopup')
+            self.assertIsNotNone(button);self.assertIsNotNone(popup)
+            def choice(index):
+                stack=[popup.property('contentItem')]
+                while stack:
+                    item=stack.pop()
+                    if item.objectName()=='noteRepeatOption-'+str(index):return item
+                    stack.extend(item.childItems())
+            for height,down in [(700,True),(390,False)]:
+                window.resize(440,height);QTest.qWait(40)
+                QMetaObject.invokeMethod(popup,'open');QTest.qWait(50)
+                self.assertTrue(popup.property('visible'));self.assertEqual(popup.property('opensDown'),down, {name:popup.property(name) for name in ['anchorY','above','below','desiredHeight','height']})
+                content=popup.property('contentItem');origin=content.mapToItem(window.contentItem(),0,0)
+                anchor=button.mapToItem(window.contentItem(),0,0)
+                left=origin.x()-popup.property('leftPadding');top=origin.y()-popup.property('topPadding')
+                self.assertAlmostEqual(left,anchor.x(),delta=1)
+                if down:self.assertAlmostEqual(top,anchor.y()+button.height()+6,delta=1)
+                else:self.assertAlmostEqual(top+popup.property('height'),anchor.y()-6,delta=1)
+                self.assertGreaterEqual(top,0);self.assertLessEqual(top+popup.property('height'),window.height())
+                option=choice(0);self.assertIsNotNone(option,errors)
+                self.assertEqual(option.property('background').property('radius'),10)
+                self.assertEqual(option.property('background').property('color'),button.property('fill'))
+                if os.environ.get('MONET_CALENDAR_CAPTURE'):
+                    QTest.qWait(180)
+                    capture=Path(os.environ['MONET_CALENDAR_CAPTURE']);capture.mkdir(parents=True,exist_ok=True)
+                    self.assertTrue(window.grabWindow().save(str(capture/('repeat-down.png' if down else 'repeat-up.png'))))
+                QTest.keyClick(content.window(),Qt.Key_Escape);QTest.qWait(20)
+                self.assertFalse(popup.property('visible'));self.assertEqual(window.property('closedNotes'),0)
+            QMetaObject.invokeMethod(popup,'open');QTest.qWait(40)
+            option=choice(3);self.assertIsNotNone(option,errors)
+            target=option.window();position=option.mapToItem(target.contentItem(),option.width()/2,option.height()/2)
+            QTest.mouseClick(target,Qt.LeftButton,Qt.NoModifier,position.toPoint());QTest.qWait(40)
+            self.assertFalse(popup.property('visible'))
+            self.assertEqual(window.findChild(QObject,'editor').property('recurrence'),'weekly')
+            self.assertEqual(window.property('saved').toVariant(),['weekly'])
+            self.assertFalse(errors,'\n'.join(errors));window.close();engine.deleteLater();QTest.qWait(1)
+
     def test_glass_flags_follow_same_count_renames_and_disable(self):
         errors=[]
         with tempfile.TemporaryDirectory() as tmp:
@@ -271,6 +326,7 @@ Window { width:700; height:450; visible:true
             path.write_text('''import QtQuick
 import QtQuick.Window
 Window { id:root; width:320; height:200; visible:true
+ QtObject { id:activity; property bool active:true }
  property string folder:Qt.resolvedUrl(".").toString()
  property var hours:[{name:"night"},{name:"dawn"},{name:"day"},{name:"dusk"}]
  property int fromLight:0; property int toLight:1; property real blend:0
@@ -495,6 +551,18 @@ Window { id:host; width:960; height:540; visible:true; property bool notesOpen:f
             for _ in range(2):
                 window.setProperty('notesOpen',True); QMetaObject.invokeMethod(popup,'write'); QTest.qWait(30)
                 self.assertTrue(popup.property('visible'))
+                repeat=popup.findChild(QQuickItem,'noteRepeat');menu=popup.findChild(QObject,'noteRepeatPopup')
+                QMetaObject.invokeMethod(menu,'open');QTest.qWait(40)
+                notesWindow=repeat.window();content=menu.property('contentItem')
+                point=content.mapToItem(notesWindow.contentItem(),0,0)
+                anchorPoint=repeat.mapToItem(notesWindow.contentItem(),0,0)
+                top=point.y()-menu.property('topPadding')
+                if menu.property('opensDown'):
+                    self.assertAlmostEqual(top,anchorPoint.y()+repeat.height()+6,delta=1)
+                else:self.assertAlmostEqual(top+menu.property('height'),anchorPoint.y()-6,delta=1)
+                self.assertGreaterEqual(top,0);self.assertLessEqual(top+menu.property('height'),notesWindow.height())
+                QTest.keyClick(content.window(),Qt.Key_Escape);QTest.qWait(20)
+                self.assertFalse(menu.property('visible'));self.assertTrue(window.property('notesOpen'))
                 QMetaObject.invokeMethod(popup,'finish'); QTest.qWait(30)
                 self.assertFalse(window.property('notesOpen')); self.assertFalse(popup.property('visible'))
             window.setProperty('notesOpen',True); QMetaObject.invokeMethod(popup,'write'); QTest.qWait(30)

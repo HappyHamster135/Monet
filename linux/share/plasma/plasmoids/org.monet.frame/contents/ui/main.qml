@@ -14,6 +14,7 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
     LayoutGuard {}
 
     readonly property string painting: "file://@DATADIR@/wallpapers/Monet/contents/hours/dusk.jpg"
@@ -49,7 +50,7 @@ PlasmoidItem {
     Timer {
         id: changer
         interval: 10 * 60 * 1000
-        running: true
+        running: activity.active
         repeat: true
         onTriggered: root.nextPicture()
     }
@@ -106,8 +107,12 @@ PlasmoidItem {
                     Connections {
                         target: root
                         function onCurrentChanged() {
-                            hang.hangUp(root.current);
+                            if (activity.active) hang.hangUp(root.current);
                         }
+                    }
+                    Connections {
+                        target: activity
+                        function onActiveChanged() { if (activity.active) hang.hangUp(root.current); }
                     }
 
                     Image {

@@ -282,7 +282,7 @@ class ProfileUpgrades(unittest.TestCase):
         config = {
             "kdeglobals": "[General]\nfont=My Font,13\nColorScheme=MyColors\nAccentColor=1,2,3\n[KDE]\nLookAndFeelPackage=org.example.desktop\nwidgetStyle=Fusion\nAnimationDurationFactor=0\n[Icons]\nTheme=MyIcons\n",
             "kcminputrc": "[Mouse]\ncursorTheme=MyCursor\n[Libinput][123][456][My Touchpad]\nNaturalScroll=false\n",
-            "dolphinrc": "[General]\nAlwaysShowTabBar=false\nShowFullPath=false\nShowStatusBar=Disabled\n",
+            "dolphinrc": "[General]\nAlwaysShowTabBar=false\nShowFullPath=false\nShowStatusBar=Disabled\nBrowseThroughArchives=true\n",
             "systemmonitorrc": "[General]\npageOrder=processes.page,custom.page,overview.page\nstartPage=custom.page\nhiddenPages=history.page\n",
             "kwinrc": "[org.kde.kdecoration2]\nlibrary=org.example.decoration\ntheme=MyFrame\nButtonsOnLeft=\nButtonsOnRight=AX\n",
             "kglobalshortcutsrc": "[kwin]\nOverview=Ctrl+Alt+O,Meta+W,Toggle Overview\nGrid View=none,Meta+G,Toggle Grid View\n",
@@ -320,6 +320,7 @@ class ProfileUpgrades(unittest.TestCase):
         self.call("put", "--file", "dolphinrc", "--group", "General", "--key", "ShowStatusBar", "Small")
         subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
         self.assertIn("ShowStatusBar=FullWidth", (self.config / "dolphinrc").read_text())
+        self.assertIn("BrowseThroughArchives=false", (self.config / "dolphinrc").read_text())
 
     def test_before_desktop_job_keeps_menu_and_tray_choices_without_old_stamps(self):
         rc = self.config / "plasma-org.kde.plasma.desktop-appletsrc"
@@ -331,11 +332,22 @@ class ProfileUpgrades(unittest.TestCase):
         path = self.root / "monet-fresh"
         path.write_text((ROOT / "linux/libexec/monet-fresh").read_text().replace("@LIBEXECDIR@", str(self.root)))
         path.chmod(0o755)
+        # Other first-login jobs have their own native tests.
+        for helper in ('monet-region', 'monet-quick'):
+            (self.root / helper).write_text('#!/bin/sh\nexit 0\n')
+            (self.root / helper).chmod(0o755)
         env = dict(self.env, XDG_CACHE_HOME=str(self.root / "cache"))
         for _ in range(2):
             subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=30)
         for line in expected.splitlines():
             if "=" in line: self.assertIn(line + "\n", rc.read_text())
+        # Old receipts must not prevent repairing a missing binding. A menu-only
+        # subgroup makes Plasma skip its shell defaults, for desktop and widgets.
+        rc.write_text('[ActionPlugins][0][RightButton;NoModifier]\nadd widgets=true\n')
+        subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=30)
+        binding = subprocess.check_output(['kreadconfig6', '--file', str(rc), '--group', 'ActionPlugins',
+            '--group', '0', '--key', 'RightButton;NoModifier'], env=env, text=True).strip()
+        self.assertEqual(binding, 'org.kde.contextmenu')
 
     def test_desktop_menu_defaults_exist_before_first_login_and_account_choices_win(self):
         system = self.root / "system-defaults"
@@ -349,3 +361,38 @@ class ProfileUpgrades(unittest.TestCase):
             self.assertEqual(subprocess.check_output([*args, key], env=env, text=True).strip(), expected)
         (self.config / name).write_text("[ActionPlugins][0][RightButton;NoModifier]\nconfigure=true\n")
         self.assertEqual(subprocess.check_output([*args, "configure"], env=env, text=True).strip(), "true")
+
+    def test_before_desktop_skips_completed_defaults_and_retries_only_missing_receipts(self):
+        path = self.root/'monet-fresh'
+        path.write_text((ROOT/'linux/libexec/monet-fresh').read_text()
+            .replace('@LIBEXECDIR@', str(self.root)).replace('@BINDIR@', str(self.root)))
+        path.chmod(0o755)
+        flags = self.config/'monet'; flags.mkdir()
+        for name in ('menu-add-widgets', 'menu-monet', 'tray-brightness-6'): (flags/name).touch()
+        rc = self.config/'plasma-org.kde.plasma.desktop-appletsrc'
+        rc.write_text('[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n')
+        (self.root/'monet').write_text('#!/bin/sh\necho test-version\n')
+        (self.root/'monet').chmod(0o755)
+        log = self.root/'calls'
+        for helper, receipt in (('monet-region', 'region-defaults-v1'), ('monet-quick', 'files-defaults-v1')):
+            script = self.root/helper
+            script.write_text('#!/usr/bin/python3\nfrom pathlib import Path\nimport sys\n'
+                + f'root=Path({str(self.root)!r})\n'
+                + f'with (root/"calls").open("a") as out: out.write({helper!r}+"\\n")\n'
+                + f'if (root/{("fail-"+helper)!r}).exists(): sys.exit(1)\n'
+                + f'Path({str(flags/receipt)!r}).touch()\n')
+            script.chmod(0o755)
+        env = dict(self.env, XDG_CACHE_HOME=str(self.root/'cache'))
+        def fresh(ok=True):
+            result = subprocess.run([str(path)], env=env, text=True, capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 0 if ok else 1, result.stderr)
+        fresh(); fresh()
+        self.assertEqual(log.read_text().splitlines(), ['monet-region', 'monet-quick'])
+        (flags/'region-defaults-v1').unlink(); failure = self.root/'fail-monet-region'; failure.touch()
+        fresh(ok=False)
+        self.assertFalse((flags/'region-defaults-v1').exists())
+        failure.unlink(); fresh()
+        self.assertEqual(log.read_text().splitlines()[-2:], ['monet-region', 'monet-region'])
+        (flags/'files-defaults-v1').unlink(); fresh()
+        self.assertEqual(log.read_text().splitlines()[-1], 'monet-quick')
+        self.assertEqual(rc.read_text(), '[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n')

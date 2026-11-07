@@ -6,11 +6,11 @@
  */
 import QtQuick
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import "../games"
 
 GridView {
     id: shelf
+    objectName: "storeShelf"
     MouseScroll { view: shelf }
     property var tone
     // The Store's window: banner(), choose(), kindWords, order, kind, checkedOnly.
@@ -32,11 +32,11 @@ GridView {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    Kirigami.WheelHandler {
-        target: shelf
-        filterMouseEvents: !("acceptedButtons" in shelf)
-        keyNavigationEnabled: true
-        verticalStepSize: 96
+    ScrollInput { id: scrollInput; view: shelf; onScrollRequested: shelf.store.cancelFocusReveal(shelf) }
+    // GridView owns arrow-key item navigation. Page/Home/End include its header.
+    Keys.onPressed: event => {
+        if ([Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown].includes(event.key)) scrollInput.key(event)
+        else event.accepted = false
     }
 
     function updated(app) {
@@ -48,6 +48,7 @@ GridView {
         spacing: 20
         Item { width: 1; height: 8 }
         Strip {
+            objectName: "storeShelfBanner"
             width: parent.width
             tone: shelf.tone
             picture: shelf.visible ? shelf.store.banner(shelf.section) : ""
@@ -61,22 +62,31 @@ GridView {
             visible: shelf.sortable
             spacing: 10
             Rectangle {
-                implicitWidth: orderRow.implicitWidth + 6
-                implicitHeight: 36
-                width: implicitWidth
-                height: implicitHeight
+                readonly property real naturalWidth: {
+                    let total = 6
+                    for (let i = 0; i < orderChoices.count; ++i) {
+                        const choice = orderChoices.itemAt(i)
+                        if (choice) total += choice.implicitWidth + (i > 0 ? orderRow.spacing : 0)
+                    }
+                    return total
+                }
+                width: Math.min(naturalWidth, parent.width)
+                height: orderRow.implicitHeight + 6
                 radius: 18
                 color: shelf.tone.wash2
                 Accessible.role: Accessible.Grouping
                 Accessible.name: i18n("Sort by")
-                Row {
+                Flow {
                     id: orderRow
-                    anchors.centerIn: parent
+                    x: 3; y: 3
+                    width: parent.width - 6
                     spacing: 2
                     Repeater {
+                        id: orderChoices
                         model: [["popular", i18n("Popular")], ["updated", i18n("Recently updated")], ["name", i18n("Name")]]
                         Pebble {
                             required property var modelData
+                            objectName: "storeOrder-" + modelData[0]
                             tone: shelf.tone
                             text: modelData[1]
                             chosen: shelf.store.order === modelData[0]
@@ -86,6 +96,7 @@ GridView {
                 }
             }
             Rectangle {
+                objectName: "storeCheckedFilter"
                 implicitWidth: checkedRow.implicitWidth + 28
                 implicitHeight: 36
                 width: implicitWidth
@@ -97,6 +108,7 @@ GridView {
                 border.color: shelf.tone.lily
                 activeFocusOnTab: true
                 Keys.onReturnPressed: shelf.store.checkedOnly = !shelf.store.checkedOnly
+                Keys.onEnterPressed: shelf.store.checkedOnly = !shelf.store.checkedOnly
                 Keys.onSpacePressed: shelf.store.checkedOnly = !shelf.store.checkedOnly
                 Behavior on color { ColorAnimation { duration: Math.round(140 * shelf.tone.speed) } }
                 Row {
@@ -164,20 +176,21 @@ GridView {
         GridLayout {
             width: parent.width
             visible: shelf.podium
-            columns: 3
+            columns: Math.max(1, Math.min(3, Math.floor((width + columnSpacing) / (240 + columnSpacing))))
             columnSpacing: 26
             Repeater {
                 model: shelf.podium ? shelf.apps.slice(0, 3) : []
                 Framed {
                     required property var modelData
                     required property int index
+                    objectName: "storePodium-" + modelData.id
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
                     Layout.alignment: Qt.AlignTop
                     tone: shelf.tone
                     app: modelData
                     rank: index + 1
-                    painting: shelf.store.banner(shelf.section)
+                    painting: shelf.visible ? shelf.store.banner(shelf.section) : ""
                     onChosen: shelf.store.choose(modelData, "flathub")
                 }
             }
@@ -185,11 +198,16 @@ GridView {
         Item { width: 1; height: 2 }
     }
 
-    delegate: Item {
+    delegate: FocusScope {
+        id: shelfEntry
         required property var modelData
+        required property int index
         width: shelf.cellWidth
         height: shelf.cellHeight
         AppCard {
+            objectName: "storeShelfCard-" + shelfEntry.modelData.id
+            focus: true
+            onActiveFocusChanged: if (activeFocus) shelf.currentIndex = shelfEntry.index
             anchors.fill: parent
             anchors.rightMargin: 12
             anchors.bottomMargin: 12

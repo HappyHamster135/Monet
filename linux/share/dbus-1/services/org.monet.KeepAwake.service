@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.monet.KeepAwake
+Exec=@LIBEXECDIR@/monet-keep-awake
+SystemdService=monet-keep-awake.service

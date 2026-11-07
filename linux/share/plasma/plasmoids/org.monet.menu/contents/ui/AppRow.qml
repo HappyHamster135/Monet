@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.components as PC
 
 Item {
     id: row
@@ -15,6 +16,7 @@ Item {
     property string detail
     property bool current: false
     property real speed: 1
+    property bool launching: false
 
     signal activated()
     signal menuRequested()
@@ -23,7 +25,7 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: name
-    Accessible.description: detail
+    Accessible.description: launching ? i18n("Starting…") : detail
     Accessible.onPressAction: activated()
 
     Rectangle {
@@ -42,10 +44,11 @@ Item {
         anchors.rightMargin: 10
         spacing: 12
 
-        Kirigami.Icon {
+        Item {
             implicitWidth: 28
             implicitHeight: 28
-            source: row.icon
+            Kirigami.Icon { anchors.fill: parent; source: row.icon; opacity: row.launching ? 0.4 : 1 }
+            PC.BusyIndicator { anchors.centerIn: parent; width: 22; height: 22; running: row.launching && row.visible; visible: row.launching }
         }
         ColumnLayout {
             Layout.fillWidth: true
@@ -63,8 +66,8 @@ Item {
             Text {
                 horizontalAlignment: Text.AlignLeft
                 Layout.fillWidth: true
-                visible: row.detail !== ""
-                text: row.detail
+                visible: row.launching || row.detail !== ""
+                text: row.launching ? i18n("Starting…") : row.detail
                 color: Kirigami.Theme.textColor
                 opacity: 0.6
                 elide: Text.ElideRight

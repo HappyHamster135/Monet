@@ -12,12 +12,39 @@ import org.kde.plasma.plasmoid
 
 WallpaperItem {
     id: root
+    SessionActivity {
+        id: activity; viewVisible: root.visible
+        onActiveChanged: Qt.callLater(root.syncActivity)
+    }
+    function syncActivity() {
+        if (activity.active) {
+            update(); sky(); animateVeil();
+        } else {
+            fade.stop(); veilMotion.stop();
+            skyGeneration++;
+            if (skyRequest) skyRequest.abort();
+            skyRequest = null;
+        }
+    }
+    // The lock screen also uses this painting: give a new view its static first
+    // image, then leave background transitions/network work paused while locked.
+    Component.onCompleted: update(true)
 
     // The desktop's right-click menu: Windows' two ways to the settings, as Monet Settings' own
     // pages. KDE's Desktop and Wallpaper and Display Configuration are out of it (monet-fresh):
     // they opened KDE's dialogs. A wallpaper's entries are the only ones Plasma's menu takes in.
     contextualActions: [
         TaskManagerAction {},
+        PlasmaCore.Action {
+            text: i18n("Toggle desktop stacks")
+            icon.name: "view-group"
+            onTriggered: root.fileTools("stacks-toggle")
+        },
+        PlasmaCore.Action {
+            text: i18n("Transfers")
+            icon.name: "folder-download"
+            onTriggered: root.fileTools("transfers")
+        },
         PlasmaCore.Action {
             text: i18n("Display settings")
             icon.name: "preferences-desktop-display"
@@ -29,6 +56,12 @@ WallpaperItem {
             onTriggered: root.settings("light")
         }
     ]
+    function fileTools(action) {
+        const runner = Qt.createQmlObject('import org.kde.plasma.plasma5support as P5Support\n'
+            + 'P5Support.DataSource { engine: "executable" }', root, "fileTools")
+        runner.newData.connect(source => { runner.disconnectSource(source); runner.destroy(); })
+        runner.connectSource("@BINDIR@/monet-files " + action)
+    }
     // Monet Settings at a page (monet-quick rings Quick Settings' doorbell). The runner only once
     // asked for: the lock screen shows this painting too, and needn't have it.
     function settings(page) {
@@ -117,7 +150,8 @@ WallpaperItem {
     readonly property var session: /^(\d+),(\d+)$/.exec(root.configuration.Focus || "")
     property bool focusing: false
 
-    function update() {
+    function update(force) {
+        if (!force && !activity.active) return;
         focusing = session !== null && Date.now() / 1000 < +session[2]
         const pinned = hours.findIndex(h => h.name === fixed)
         if (pinned >= 0 && !focusing) {
@@ -224,7 +258,7 @@ WallpaperItem {
     function loaded(image) {
         if (image === above && image.status !== Image.Loading) {
             arriving = false
-            if (image.status === Image.Ready)
+            if (image.status === Image.Ready && activity.active)
                 fade.restart()
         }
     }
@@ -262,27 +296,46 @@ WallpaperItem {
     // Each minute; every few seconds while a focus session runs a day through.
     Timer {
         interval: root.focusing ? 4000 : 60 * 1000
-        running: true
+        running: activity.active
         repeat: true
         triggeredOnStart: true
         onTriggered: root.update()
     }
     onSessionChanged: update()
 
-    // The weather there: rain, fog and snow lay a veil of mist over the painting,
-    // drifting in and out over a few minutes, darker in the dusk and night lights.
+    // Rain, fog and snow soften the painting, darker in dusk and night lights.
+    // Settle with the other wallpaper transitions: a minutes-long opacity
+    // animation keeps the entire desktop rendering after every sign-in.
     property bool dark: false
     property real veil: 0
+    property real paintedVeil: 0
+    property var skyRequest: null
+    property int skyGeneration: 0
     property bool snowy: false
+    onVeilChanged: if (activity.active) animateVeil()
+    function animateVeil() {
+        if (!activity.active || Math.abs(paintedVeil - veil) < 0.0001) { veilMotion.stop(); return; }
+        veilMotion.to = veil; veilMotion.restart();
+    }
+    NumberAnimation {
+        id: veilMotion; target: root; property: "paintedVeil"
+        duration: 1500; easing.type: Easing.InOutSine
+    }
     function sky() {
+        if (!activity.active) return;
+        const generation = ++skyGeneration;
+        if (skyRequest) skyRequest.abort();
+        skyRequest = null;
         if (root.configuration.Weather === false || !place) {
             veil = 0
             return
         }
         const request = new XMLHttpRequest()
+        skyRequest = request;
         request.onreadystatechange = () => {
-            if (request.readyState !== XMLHttpRequest.DONE || request.status !== 200)
-                return
+            if (request.readyState !== XMLHttpRequest.DONE || generation !== root.skyGeneration) return;
+            root.skyRequest = null;
+            if (request.status !== 200 || !activity.active) return;
             try {
                 const code = JSON.parse(request.responseText).current.weather_code
                 snowy = (code >= 71 && code <= 77) || code === 85 || code === 86
@@ -305,14 +358,13 @@ WallpaperItem {
         anchors.fill: parent
         z: 2
         color: root.dark ? (root.snowy ? "#4A5260" : "#2E3642") : (root.snowy ? "#EEF1F3" : "#D3DADF")
-        opacity: root.veil
-        Behavior on opacity { NumberAnimation { duration: 180000; easing.type: Easing.InOutSine } }
+        opacity: root.paintedVeil
         Behavior on color { ColorAnimation { duration: 1500 } }
     }
 
     Timer {
         interval: 30 * 60 * 1000
-        running: true
+        running: activity.active
         repeat: true
         triggeredOnStart: true
         onTriggered: root.sky()

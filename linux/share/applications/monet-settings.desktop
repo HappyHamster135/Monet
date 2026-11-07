@@ -492,36 +492,7 @@ Name[zh_TW]=電源與睡眠
 Exec=@LIBEXECDIR@/monet-settings power
 
 [Desktop Action privacy]
-Name=Lock & Privacy
-Name[ar]=القفل & الخصوصية
-Name[cs]=Zamykání & soukromí
-Name[da]=Lås & privatliv
-Name[de]=Sperre & Datenschutz
-Name[el]=Κλείδωμα & απόρρητο
-Name[es]=Bloqueo & privacidad
-Name[fi]=Lukitus & tietosuoja
-Name[fr]=Verrouillage & vie privée
-Name[he]=נעילה & פרטיות
-Name[hi]=लॉक & निजता
-Name[hu]=Zárolás & adatvédelem
-Name[id]=Kunci & privasi
-Name[it]=Blocco e privacy
-Name[ja]=ロック & プライバシー
-Name[ko]=잠금 & 개인 정보
-Name[nb]=Lås & personvern
-Name[nl]=Vergrendeling & privacy
-Name[pl]=Blokada i prywatność
-Name[pt]=Bloqueio & privacidade
-Name[pt_BR]=Bloqueio & privacidade
-Name[ro]=Blocare & confidențialitate
-Name[ru]=Блокировка & приватность
-Name[sv]=Lås & integritet
-Name[th]=การล็อก & ความเป็นส่วนตัว
-Name[tr]=Kilit & gizlilik
-Name[uk]=Блокування & приватність
-Name[vi]=Khóa & quyền riêng tư
-Name[zh_CN]=锁屏 & 隐私
-Name[zh_TW]=鎖定與隱私
+Name=Privacy
 Exec=@LIBEXECDIR@/monet-settings privacy
 
 [Desktop Action passwords]

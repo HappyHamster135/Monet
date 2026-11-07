@@ -28,6 +28,7 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        cp "$ROOT/setup/monet_setup/region.py" "$OUT/libexec/monet_region.py"
         # Local validation caches are not executable package content.
         find "$OUT" -type d -name __pycache__ -prune -exec rm -rf {} +
         mkdir -p "$OUT/share/doc/monet/passwords-connector"

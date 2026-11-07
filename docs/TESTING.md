@@ -1,5 +1,123 @@
 # Testing Monet on real hardware
 
+## Local 0.9.7 second batch — 5 November 2026
+
+The backlog remains the release checklist. These are source/build changes; the
+existing account preview has not been refreshed. No production OS image, commit,
+push or version number changed.
+
+The Fedora 45 desktop test container now builds and installs the guarded native
+Archives executable, retaining its matching distribution libraries/plugins. Its
+build exits zero. Native tests reproduce the old false Completed result after an
+actual ENOSPC error, then pass with the batch exit-status fix. Encrypted ZIP,
+header-encrypted 7z, wrong passwords, native password cancellation and retry in
+a new folder also pass. The full-disk fixture fills only the container's private
+tmpfs; it must not run against a normal user filesystem.
+
+The full run discovers 1,485 Python checks with 19 declared skips. It initially
+finds one fixed-delay countdown-test failure. The test now waits for bounded,
+observable progress; the complete affected 30-test module reruns successfully.
+Combined coverage is **1,466 passed / 19 skipped**, with JavaScript and all 11
+browser-form checks passing in the full run. The original result and corrected
+module are retained separately; `desktop-consolidated.json` records how they
+combine. The final frozen release candidate still needs a fresh whole-suite run.
+Eight notification cases among the skips execute through their private-bus parent;
+the remaining skips require Flatpak integration, PowerShell, real partition
+discovery or the VM's transient user-service fixture. None are newly hidden skips.
+
+Keep awake has seven backend/client tests and native Settings coverage for
+duration replacement, countdown, cancellation, backend loss/recovery, crashes,
+coalesced requests and pausing reads while minimized. Return, keypad Enter and
+Space exercise the real Settings controls. Three additional native renders pass
+in Swedish at 125%, 150% and 200%; captures verify the physical pixel sizes,
+control bounds and focus. This is a focused Settings check, with the broader
+app/keyboard/touchpad audit still open.
+
+A separate 12-second laptop probe confirms real PowerDevil activation,
+ScreenSaver request acceptance, automatic expiry and release. Hashes of saved
+power/lock preferences stay unchanged. The first immediate-activation assertion
+was premature: PowerDevil deliberately delays enforcement, observed here at
+about 4.8 seconds. This probe does not qualify lid/suspend, AC transitions or
+manual policy overrides.
+
+The complete paired Files executable/library builds successfully from frozen
+inputs. Both native Qt/KIO test executables pass, including an effective blocking
+filesystem shim and obsolete/queued-result rejection. Two actual Dolphin/Xvfb
+scenarios navigate away from a delayed loopback WebDAV folder, exercise native
+Stop, load the local folder and refuse late replies. All sampled read-only UI
+RPC replies remain below one millisecond in these runs; this is controlled
+responsiveness evidence, not a general folder-opening speed claim. Real sleeping
+USB/network devices and thumbnail stress remain release checks.
+
+Evidence is under `target/097-goal/`: the full and corrected test reports, native
+build logs/bundles, source snapshots/hashes, WebDAV results, Swedish captures and
+the laptop inhibition probe. Catalogs are regenerated and placeholder validation
+passes; Swedish power/search text is added. Wider translation review remains open.
+
+## Local 0.9.7 first batch — 5 November 2026
+
+Scope and remaining acceptance work are in [the 0.9.7 backlog](BACKLOG-0.9.7.md).
+These changes are source-only; the existing reversible laptop test installation
+still contains the preceding batch. No OS image, commit, push or release changed.
+
+The affected suite reports 505 tests: 501 pass and four skip because a JavaScript
+runtime and Xvfb are unavailable. The additional native startup-process test
+passes, taking the distinct total to 502 passed / four skipped. Store's affected
+48-test follow-up also passes (three of the same runtime skips). Six separate
+native checks pass at 125%, 150% and 200%. Captures cover the new search targets;
+this is not a complete keyboard, accessibility or hardware scaling qualification.
+
+Coverage includes coalesced Settings loads, navigation without preference writes,
+focus/highlights, unavailable or delayed charge-limit support, charger connection
+independent of battery charging state, charging explanations and the actual Store
+first-frame/catalog-start order. The initial duplicate-query regression failed
+with two requests before the source fix and passes with one afterward.
+
+`tools/bench-desktop.py` stages the native launchers in temporary directories and
+isolates profiles, D-Bus and local-server sockets. It changes no installed app or
+real desktop profile. Startup events are opt-in (`MONET_STARTUP_TIMING=1`) and
+record phase/timing only, without arguments or helper output. Examples:
+
+```sh
+python3 tools/bench-desktop.py --samples 5 --collect-host --output /tmp/monet-startup-clean.json
+python3 tools/bench-desktop.py --samples 5 --reuse-cache --verify-store-start --output /tmp/monet-startup-reused.json
+python3 tools/test.py tests.test_startup_timing
+```
+
+Five clean-profile software-rendered Store samples changed from a 468.5 ms
+median observed first frame to 260.1 ms after deferring the catalog worker until
+the window has painted. Native Qt queues the timer to the GUI thread and a guard
+allows one catalog start. Five real process traces verify frame-before-worker
+ordering; the automated test also launches fresh Settings and Store windows.
+Initial data readiness, Files UI timing, physical startup, battery drain and
+complete-image acceptance remain separate work. Raw timing/test reports,
+captures and source hashes are under `target/polish097-2026-11-05/`.
+
+## Local Files quality-of-life checks — 5 November 2026
+
+`tests.test_files_qol` uses disposable files, a private session bus and native
+offscreen Plasma hosts. It covers read-only text/image/PDF/Word/archive previews,
+bounded archive listings, virtual grouping without moving files, restoration of
+desktop filters, and detached extraction with pause/resume/cancel/retry and
+interruption detection. ZIP extraction also runs against the real Ark backend.
+The transfer widget receives a real JobViewServer request and renders its native
+progress beside Store/extraction fixture records. Both widgets are rendered in
+Monet's light and dark palettes; gallery images come from those native captures.
+
+Run the focused checks with:
+
+```sh
+python3 tools/test.py tests.test_files_qol tests.test_archive_apps tests.test_files_session tests.test_files_bundle tests.test_profile_upgrades tests.test_look
+```
+
+`image/files-recovery/tests` compiles Qt/KIO tests for Keep both and Space without
+interfering with inline text input. The image's native build runs these checks.
+The complete patched Dolphin 26.08.2 target was also compiled in a disposable
+Fedora 45 container. These checks do not install anything into the running OS.
+Release still requires the image's matching source-RPM/runtime guards and normal
+installed-desktop and hardware verification. No folder-opening speed multiplier
+is claimed: the change reduces speculative work and the main-thread work budget.
+
 ## 0.9.6 release candidate — 4 November 2026
 
 Follow-up: `desktop-followup-final.json` passes **1,326 of 1,342 checks**, with
@@ -3122,3 +3240,2678 @@ not constitute a live Wayland-panel or physical-hardware acceptance run.
 
 No normal desktop panel, installed plugin, user preferences or open applications
 were changed. No commit, push, version bump or release was made.
+
+## 0.9.7 shared activity and widget sampling — 5 November 2026
+
+Evidence: `target/097-goal/`. The in-process `org.monet.activity` QML extension
+shares native locker, per-output DPMS, suspend and UPower observations across
+QML engines in a Plasma process. It has no periodic hardware timer, per-widget
+daemon or disk-state IPC. Missing readings preserve the last complete battery
+list with separate availability. Owner/revision checks reject obsolete replies.
+Initial lock discovery finishes before nonessential reads start; an unavailable
+locker falls back after a bounded async query rather than freezing the view.
+
+Native private-bus/Wayland tests pass in release and AddressSanitizer/
+UndefinedBehaviorSanitizer builds (`activity-native-tests-v2.log`,
+`activity-asan-v2.log`). They cover independent outputs, lock races, opening a
+view while already locked, missing/replaced lockers, suspend/resume, shared power
+queries, no-subscriber pauses, invalid data, UPower replacement, removed outputs
+and compositor reconnection. Leak detection is disabled for the sanitizer run;
+this is memory/undefined-behavior checking, not a Qt leak audit.
+
+The test image installs the same guarded module as the OS recipe and adds only
+its private test fixture executable. Runtime RPM identities, library hashes,
+dynamic dependencies, relocations, RPATH and bundle hashes are checked before
+installation. The corresponding source and GPL license ship in
+`/usr/share/doc/monet-activity/`. The OS stage excludes the fixture executable.
+The source archive uses an explicit input list, excluding local build/cache files.
+
+Build with the socket-watch permission required by the nested Wayland fixture:
+
+```sh
+podman build --security-opt label=disable -f tests/Containerfile \
+  -t localhost/monet-desktop-tests:097-activity .
+```
+
+The default container labeling denied inotify access to its disposable Wayland
+socket and failed reconnect coverage; running that fixture with labeling disabled
+passes. No host display socket, system bus or hardware is mounted into the tests.
+
+`activity-final.json` records **69 passing checks, zero skips/failures**, including
+15 actual Plasma widgets, native sensor enable flags, closed Quick/Clock/Transfers
+popups, fresh battery data after resuming, preserved inactive note/weather writes,
+audio, clock format and existing accessibility/layout checks. The wallpaper
+scene test supplies a window and containment configuration around the full source
+and uses a loopback weather server. It checks a static locked first painting,
+aborted in-flight requests, deferred painting changes and stopped animations on
+lock, DPMS and window hide. This is not a running Plasma containment test.
+Native rendering exposed and fixed Sound's request initialization ordering and a
+Weather binding that referred outside its component scope.
+
+After the last battery tooltip/catalog changes,
+`activity-regression-final.json` records **437 passing checks, zero skips/failures**
+across `test_look`, `test_words`, `test_profile_upgrades`, `test_audio_native` and
+the Batteries render test. The audio fallback check now also verifies no commands
+while inactive and an immediate fresh reading on resume. These targeted runs
+overlap; they are not a new complete desktop/image validation. Catalog generation,
+placeholder checks, Python/shell syntax and whitespace checks pass. Swedish adds
+the battery availability/checking messages; wider translation review remains.
+
+The idle comparison can be repeated inside that test image:
+
+```sh
+python3 tools/bench-widget-idle.py --samples 3 --seconds 6 \
+  --output /results/activity-idle.json
+```
+
+It alternates the actual baseline Git revision and worktree source in disposable
+homes/buses, with the real three-second Quick Settings interval and controlled
+helper responses. Baseline is `9f6ace83b4ec26336b1f65addb94c3d09c4db582`.
+In all three samples, visible views perform four status/output helper reads per
+six seconds; locked/display-off baseline views continue four reads, while the
+candidate performs zero. Median process voluntary context switches are 19→4
+while locked and 14→0 while display-off. CPU totals of 0–10 ms are too close to
+the accounting resolution to establish a CPU improvement. Context switches are
+not hardware wakeup counts, and synthetic helper replies do not measure actual
+hardware-query cost, whole-desktop activity or battery life. Raw samples are in
+`activity-idle.json`/`.log`.
+
+No installed laptop files or saved policy were changed by this batch. A read-only
+compatibility check rejects the test-image module for the current laptop's older
+libcurl package (`8.21.0-8.fc45`, versus `8.21.0-9.fc45` in the test image).
+The guard was preserved; the module was not loaded into the live desktop. A
+matching build, real Wayland lock/display transitions, physical power testing,
+full images, upgrade/rollback and final complete test run remain release gates.
+
+## 0.9.7 native application launch feedback — 5 November 2026
+
+The menu, compiled dock and Monet helper use `org.monet.launcher` to share pending
+native launch jobs. The coordinator survives recreated views/QML engines; it is
+an in-process object, not a separate daemon. It accepts indexed desktop-entry
+IDs, keeps file/URL/desktop-action handling native, and preserves menu/task-manager
+activity-history reporting. A successful KIO process spawn is kept distinct from
+a mapped window. Missing programs fail with a retryable message; wrapper exits
+and confirmation deadlines report uncertainty without permitting accidental
+repeat launches. Dismiss hides the message without discarding its pending guard.
+
+Evidence is under `target/097-goal/`. The earlier `launch-native-reviewed.log`
+records a compile error from the notification action shadowing the Retry method.
+It is corrected. `launch-native-reviewed-v3.log` and `launch-asan-reviewed.log`
+pass in release and AddressSanitizer/UndefinedBehaviorSanitizer builds. The native
+executable reports 18 QtTest cases, including setup/cleanup. Coverage includes
+real KIO processes, missing executables, explicit new-window Retry, existing or
+late/unmapped windows, a model reset, concurrent apps, native startup suppression,
+shared QML-engine state, D-Bus/helper calls, early exit, dismissal and the actual
+30-second confirmation deadline. A private bus without service-activation
+directories avoids starting unrelated activity daemons during this fixture.
+Leak detection is disabled; these are not Qt leak measurements.
+
+The test image builds and guards both the native launcher and the modified dock:
+
+```sh
+podman build --security-opt label=disable -f tests/Containerfile \
+  -t localhost/monet-desktop-tests:097-launcher .
+podman run --rm --security-opt label=disable --network none \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  -e MONET_LAUNCHER_CAPTURE=/results/launch-ui-with-dock \
+  localhost/monet-desktop-tests:097-launcher \
+  python3 tools/test.py --require-desktop \
+    --summary /results/launch-regression-with-dock.json \
+    tests.test_app_launch tests.test_launcher_bundle tests.test_everyday_search \
+    tests.test_look tests.test_dock_motion tests.test_words
+```
+
+The compiled dock fixture clicks actual native task delegates, checking Starting,
+eight repeated clicks producing one process, two apps concurrently, missing-program
+feedback, and Shift/middle-click new-window actions. It verifies the private
+fixture app IDs before sending input. Its settings go in the applet's General
+group; writing the root group would silently test the default app list instead.
+The menu fixture uses real Kicker models and native launch jobs; it exercises both
+the notification Retry action and the actual menu button's clicked signal. It
+also checks that a Monet helper request joins the same pending job. The latter
+menu Retry check is a signal invocation, not a physical-pointer/keyboard test.
+Saved menu captures were inspected for error text, pending rows and footer
+clipping. Wider keyboard, translation and fractional-scaling checks remain.
+
+The final candidate image is
+`f90d5db5339df2ed2122ee91ecab7fb28ecbd2b98a87db6293459f6d129e7b47`.
+`launch-regression-with-dock.json` records 459 passing Python checks, zero skips
+and zero failed modules. The native executable's cases are inside one wrapper
+check; they are not added again to that total. This targeted regression run is
+not the final complete desktop suite.
+Its native runtime/bundle metadata are retained in `launch-final-runtime.json`.
+The launcher module SHA-256 is
+`d8cd6f7885867f69bd06526588dd463f0e4b049f8cbc430d9ebfd10eb07e76ce`.
+Runtime and private task-model package/library identities, bundle hashes,
+relocations, dependencies, QML metadata and RPATH are checked before installation.
+Notification configuration is also hash checked; account-specific notification
+preferences are preserved. Corresponding source/license archives are installed.
+
+A separate test uses a real private KWin compositor and the laptop's Intel render
+node inside the disposable container. It has no host display/socket, session bus,
+user configuration or KMS card, and cannot control the physical panels:
+
+```sh
+podman run --rm --userns=keep-id --user 1000:1000 \
+  --device /dev/dri/renderD128 --security-opt label=disable --network none \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-launcher \
+  python3 tests/fixtures/launch-wayland.py /results/launch-wayland-with-dock
+```
+
+`launch-wayland-with-dock/result.json` passes nine explicit checks: a working
+renderer, native task discovery, immediate pending state, repeated-click
+suppression, concurrent apps, mapped-window confirmation, restoring/activating a
+minimized app, deliberate second windows and distinct forwarded native Wayland
+activation tokens. `support.txt` confirms KWin 6.8.2, active OpenGL ES compositing
+and Intel Iris Xe/Mesa rendering. The headless probes without a render node had
+exposed windows but no working renderer and were not accepted as window-system
+proof. These checks do not qualify the laptop's normal Plasma session, NVIDIA,
+physical monitor reconnection or suspend/resume.
+
+This batch remains local source/build work. No live laptop module or desktop
+configuration was replaced. A matching laptop installation, remaining file/UI
+work, final full-suite/image builds, profile upgrade/rollback and physical release
+checks remain open. VERSION is still 0.9.6; no Git commit or push was made.
+
+## 0.9.7 cancellable archive preparation — 5 November 2026
+
+`monet-files-tools` now uses a separate process for initial archive metadata,
+unused-folder suggestions, dropped-folder validation, directory reservation,
+foreground Ark execution and durable queue submission. The GUI starts its loading
+state without resolving/statting the source or destination. Cancellation signals
+its private process group without waiting on the GUI thread or synchronously
+checking/removing an unavailable folder. Partial output is kept; an interrupted
+reservation can remain as an empty folder. Empty, unchanged failed-start
+reservations are still removed by the worker.
+
+Background submission uses an ID allocated before work starts. If Cancel arrives
+after the queue record is committed but before acknowledgement, the submitter is
+stopped first and its exact record is cancelled afterward. A late writer cannot
+start an orphaned extraction. A reused ID and the queue's reserved global-lock ID
+are rejected. A successfully accepted job stays detached from the dialog.
+
+The destination field relies on the native dialog's default Extract button for
+Return and keypad Enter. Connecting returnPressed as a second start handler could
+disable Extract before that key reached QDialog and activate Cancel instead. The
+real key-event test reproduced that race and now verifies one extraction per key.
+Escape continues to cancel during initial metadata and queue preparation.
+
+Run the affected checks in the existing matching native test image:
+
+```sh
+podman run --rm --security-opt label=disable --network none \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  -e MONET_ARCHIVE_CAPTURE=/results/archive-async-ui-v2 \
+  localhost/monet-desktop-tests:097-launcher \
+  python3 tools/test.py --require-desktop \
+    --summary /results/archive-async-final-v2.json \
+    tests.test_archive_apps tests.test_files_qol tests.test_files_tools \
+    tests.test_archive_failures tests.test_download_paths tests.test_archive_bundle \
+    tests.test_words
+```
+
+The image is `f90d5db5339df2ed2122ee91ecab7fb28ecbd2b98a87db6293459f6d129e7b47`;
+the changed Python source is mounted read-only. Native Ark is the guarded matching
+build from the earlier batch. `archive-async-final-v2.json` records **59 passing
+checks, zero skips/failures**. This is a focused run, not a complete desktop or OS
+image acceptance result.
+
+The source-lookup fixture deliberately blocks a worker's os.stat for twenty
+seconds. It verifies a different worker PID, six GUI timer ticks while blocked,
+no corresponding Python archive stat in the GUI, and Escape returning in less
+than 250 ms. The second fixture pauses after queue reservation and before launch;
+Escape cancels that committed record without starting Ark. These are controlled
+worker delays, not real device latency measurements. Earlier attempts patched
+Path.stat, which this Python's is_file bypasses; the final fixture patches os.stat
+and proves its delay was reached before making assertions. Captures/observations
+are in `archive-async-ui-v2/` and were inspected for readable loading state and
+available cancellation.
+
+The same run drives Ark's actual header-encrypted 7z password and Escape dialogs
+through the new foreground worker on a private X server. It also retains the
+queue tests for encrypted ZIP/7z, wrong passwords, cancellation and actual ENOSPC
+on the container's private small tmpfs. Literal paths, execute permissions,
+existing/broken-link destinations, partial output, replaced/disappearing folders,
+missing Ark, descendant cancellation and background lifetime checks pass. The
+Transfers/Stacks render checks use their existing controlled job fixtures; they
+do not yet prove the pending native copy/download completion-action work.
+
+Catalogs were regenerated, including Swedish preparation/error/loading words.
+The newest helper changes have not been installed in the laptop account preview.
+Physical removable-drive behavior, completion actions, broader scaling/focus
+checks, matching laptop installation and the final full-suite/image/upgrade/
+rollback release checks remain. No Git commit, push or version bump was made.
+
+## 0.9.7 transfer completion actions — 5 November 2026
+
+Monet's Transfers view now uses the guarded native `FolderOpener` alongside its
+existing launch module. Each explicit action asynchronously checks the real
+KIO destination type. Directories use the default directory handler; files use
+OpenFileManagerWindowJob to open their parent and select them. The action never
+opens downloaded content. It has immediate busy feedback, cancellation, a
+30-second deadline, failure text and dismissal. Revision checks protect against
+obsolete replies, a removed view and a timeout racing an immediate retry.
+No periodic or initial destination metadata probe is added. Older generic Linux
+installs retain an external file-manager compatibility path; that fallback's
+local checks run in a child process, not in the widget's GUI thread.
+
+The shared component is installed with the widget's other common QML. The native
+bundle now also fingerprints KIOCore explicitly, checks all dependency/package/
+file identities and ships the corresponding folder-action sources. Normal OS
+builds exclude its native fixture executables.
+
+`target/097-goal/folder-native-final.log` records the native check before the text
+formatter addition. `folder-asan-text.log` verifies the final folder-action fixture
+with AddressSanitizer/UndefinedBehaviorSanitizer: **14 QtTest cases, including
+setup/cleanup, pass**. Leak detection is disabled. Cases cover literal filenames,
+HTML-to-plain descriptions, file-manager selection instead of executing desktop
+files, direct directory opening, a directory replaced by a file, unavailable
+paths and retry, nonfilesystem URI rejection, cancelled/late WebDAV replies,
+responsive WebDAV directories, deadlines, view destruction and immediate retry
+from a changed handler. Both native fixture executables also pass during the
+final test-image build (`folder-image-build-text.log`).
+
+The final matching test image is
+`0fc562e25deaa7757bdb3b8fb2db36dc4ddf4816a0fb5e8d77dfcb5080d068e2`,
+tagged `localhost/monet-desktop-tests:097-folders`. Changed scripts/QML are mounted
+read-only for the workflow checks:
+
+```sh
+podman run --rm --security-opt label=disable --network none \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  -e MONET_TRANSFER_CAPTURE=/results/transfers-completion-verified \
+  localhost/monet-desktop-tests:097-folders \
+  python3 tools/test.py --require-desktop \
+    --summary /results/folder-final-checks.json \
+    tests.test_transfer_folders tests.test_files_qol.NativeWidgets \
+    tests.test_widget_activity.WidgetActivity.test_transfers tests.test_words
+```
+
+That run passes **14 Python checks, zero skips/failures**. The earlier broad
+`folder-regression-final.json` run passes 510 checks, before the last display and
+watcher fixes. The final focused run covers those changed paths; these overlapping
+runs must not be summed or presented as a fresh final whole-suite run.
+
+The rendered workflow uses actual KIO CopyJob and FileCopyJob operations, a
+loopback HTTP download and the standard KUiServerV2JobTracker. It enables native
+immediate progress reporting to make fast fixture operations observable. Its
+registered test application stays alive until the test finishes; otherwise Qt's
+job quit-lock could exit the windowless driver before the asynchronous JobView
+request/termination was processed. The test image has no Dolphin desktop entry,
+so the driver uses its own registered identity instead of impersonating Dolphin.
+A real Ark queue extracts a ZIP. A supplementary controlled native Ark job view
+checks duplicate suppression when the same destination has display-form versus
+fully encoded spaces, # and Swedish characters. It is not a second extraction.
+
+The panel closes/reopens before invoking its actual buttons' clicked signals.
+Native file-manager API/default directory-handler fixtures record the resulting
+URLs. The download is a real desktop file with an execution marker; it is selected
+in its parent and the marker is never created. Copy and extraction directories
+open directly. The destination is then moved aside, its actual queue record
+changes, and the open panel observes that update without a manual refresh. It
+shows/dismisses the unavailable-folder error while extracted files remain intact.
+These button checks invoke signals rather than physical pointer/keyboard input.
+
+Visual inspection found raw `<a href>` descriptions before conversion to plain
+text. The final completed, scrolled and error captures in
+`transfers-completion-verified/` are readable and show the appropriate actions.
+Long failure details are limited visually while retaining their accessible text.
+The workflow also reproduced an incorrect watcher path: StateLocation appends
+plasmawindowed/plasmashell, whereas the queues use XDG_STATE_HOME/monet. The view
+now uses GenericStateLocation, starts watching after initial queue-directory
+creation and refreshes an already-open panel on a new open request.
+
+The real Wayland check uses the same isolated render-node procedure documented
+above, with image tag `097-folders` and output directory
+`/results/folder-wayland-text-final`. All 11 explicit checks pass. In addition to
+the app launch checks, the source window is activated, FolderOpener opens the
+correct directory in a controlled default directory handler, and that handler's
+real Wayland window becomes active. Its distinct native activation token and
+literal directory argument are recorded. This is a controlled handler, not a
+Dolphin window/content audit; it also does not qualify the laptop's normal Plasma
+session, physical outputs, NVIDIA, hotplug or suspend/resume.
+
+Swedish folder messages/catalogs, syntax and whitespace checks pass. Source and
+bundle metadata are retained with the results. No live laptop plugin, policy or
+account preview was replaced, and no Git commit, push or version bump was made.
+The remaining physical disconnect, wider keyboard/touchpad/scaling, matching
+laptop installation, full image/suite and upgrade/rollback release checks remain.
+
+## 0.9.7 Settings keyboard, scrolling and clipping — 5 November 2026
+
+The actual Settings window now exposes More settings to Tab/Shift+Tab with a
+visible outline. Return and keypad Enter work on its page tabs, tappable rows,
+action pills and appearance/power choices. Disabled pills no longer take Tab
+focus. Search destinations which group controls hand their next Tab to the
+first visible, enabled control. The existing return-summary-specific handoff was
+removed after a regression check showed that both handlers could run for one key.
+
+The two scroll panels use a Qt WheelHandler for wheel detents and high-resolution
+touchpad pixels. It consumes the gesture's zero-delta boundaries as well as its
+updates, retaining the final position. Page keys and modified wheel page steps
+remain available; child editors/controls get their own keys first. Actual pointer
+tests also verify background window-drag requests and ordinary control clicks.
+There are no added polling timers or input-helper processes.
+
+Software-rendered Shape marks which were entirely outside the sidebar could
+paint above its clipped viewport. Software-only visibility checks suppress those
+marks. GPU rendering keeps its original path and does not subscribe to the
+software scroll-position bindings. Qt's software renderer's handling of an empty
+clip region is visible in its [corresponding source](https://raw.githubusercontent.com/qt/qtdeclarative/6.11/src/quickshapes/qquickshapesoftwarerenderer.cpp).
+The checks use each mark's own bounds, including its centered position; using
+only its row's bounds had still allowed a mark over the footer. The pixel test
+now checks both edges and sweeps a row's worth of scroll positions.
+The controlled negative case removes only those visibility bindings: the same
+pixel test then detects 599 stray white pixels above the list at 200%. Its report
+has one expected assertion failure and no runtime errors. Removing the two native
+scroll handlers separately reproduces ignored touchpad pixels, also as one
+expected assertion failure. These negative sources/results are retained under
+`target/097-goal/navigation-clipping-negative-final/`, `navigation-input-negative/`,
+`navigation-no-culling.qml` and `navigation-no-native-scroll.qml`.
+
+The local image `localhost/monet-desktop-tests:097-navigation` is
+`b0544fdba844467e9e00e0351e895b8f2211df8d2e43385ed75404c5b2a297d7`.
+It extends the previously guarded `097-folders` test image with Inter
+(`rsms-inter-fonts`); the font is also added to tests/Containerfile. The fixture
+registers the repository's Fraunces fonts before creating the QML engine, requires
+both font families and requires the Swedish catalog for Swedish runs. Each case
+uses a private 1920×1080 Xvfb display, account, session bus and new Qt process.
+No host display, physical input devices, system bus or account files are used.
+
+Reproduce the matrix from the repository root:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/settings-navigation.py /results/navigation-footer-matrix
+```
+
+The six combinations are 125%, 150%, 200%, each with normal 10-point English
+and larger 14-point Swedish text. Each executes the same ten behavioral checks,
+including real Qt key events, pointer input, wheel events and a touchpad device's
+pixel gesture. `navigation-footer-matrix/result.json` records results and the
+screenshots under each combination show focus, clipping and the scrolled page.
+The matching reduced-motion run is:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/settings-navigation.py /results/navigation-footer-reduced \
+    --scales 1.5 --fonts 10 --reduced-motion
+```
+
+Reduced motion uses the native org.kde.desktop style/platform plugin and a private
+kdeglobals with AnimationDurationFactor=0. The test verifies that the actual
+Units duration has fallen to its native minimum (observed 1 ms), rather than
+assuming the Basic style reads KDE preferences. This also executes all ten checks.
+
+`navigation-footer-regression.json` covers Settings feedback/polling/search,
+accessibility, display controls, window frame input, appearance helpers,
+return-summary actions, notification controls and catalogs. This is an affected
+regression run, not a complete desktop/image suite. Current source hashes, reports
+and boundaries are collected in `navigation-validation.json`.
+
+The current matrix passes all 60 executions, the native reduced-motion run
+passes its ten executions, and the fresh affected regression run passes 556
+checks with no skips or failed modules. The ten matrix checks repeat across
+different environments; these figures are not a count of unique tests or a
+claim that the complete release suite has passed.
+
+The captures were inspected with the actual fonts. At this checkpoint some narrow
+appearance-card captions still elided; the following batch addresses those labels
+and several Store paths. Software X11 input-event evidence does not qualify physical touchpad
+gestures, Wayland/graphics hardware, monitor reconnects or the laptop's normal
+session. These additions remain source-only, with no new laptop installation,
+Git commit, push or version bump.
+
+## 0.9.7 readable choices and Store keyboard paths — 5 November 2026
+
+Settings' appearance, wallpaper and power cards now wrap complete captions and
+choose their column count from available width and the reading font. Three
+columns remain available at the normal size; larger text can reflow to two or one.
+The photo placeholder reserves enough preview space for its text. New checks
+inspect each visible label for truncation and containment, check card overlap,
+resize 760→900→760 logical pixels, and verify that resizing retains focus without
+sending a preference change. Existing power-choice focus was confirmed through
+its reply and a refresh; its model was left intact.
+
+`choice-baseline/` reproduces the original truncated Swedish Follow the hours
+caption. `choice-matrix/result.json` now passes 78 executions: thirteen cases at
+each of 125%, 150%, 200%, with normal English and larger Swedish text.
+`choice-reduced/result.json` passes the same thirteen cases in the native KDE
+reduced-motion profile. The images in both folders were rendered using Inter and
+Monet's Fraunces fonts; the enlarged card/placeholder captures were inspected.
+Use the preceding scale fixture commands with output `/results/choice-matrix`
+and `/results/choice-reduced` to reproduce these runs.
+
+Store now accepts keypad Enter on its sections, sort/filter controls, ranked and
+featured apps and screenshot gallery. The gallery has a visible focus outline.
+Its screenshot viewer is a native modal Qt popup with an explicit Close button:
+Tab/Shift+Tab stay in the viewer, Find cannot move focus behind it, Escape closes
+only the image and native focus returns to the gallery. Opening a featured app's
+details by keyboard does not begin installation.
+
+Back returns to the original app card, or Search if that item was removed. A
+navigation revision prevents a queued restoration from overriding a new section.
+Focused items are revealed after visible layouts/content sizes change, using
+signals rather than polling. The test at 150% found that restoring focus before
+the hidden Home view finished layout could leave the card below the viewport;
+the visible-content observers cover that transition. An absent featured app is
+normalized to null before its bindings run. Hidden shelf frames also avoid
+requesting an invalid Home banner.
+
+Store's eight cases use its actual QML, controlled catalog data, a local generated
+test image and a helper which only records calls. They verify no unexpected
+install/open/remove action from image-viewer keys. The existing private display
+fixture can run them with:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/settings-navigation.py /results/store-keyboard-final \
+    --module tests.test_store_navigation
+```
+
+`store-keyboard-final/result.json` passes 48 executions across the six scale/font/
+language combinations. `store-keyboard-reduced-final/result.json` passes eight
+more using `--scales 1.5 --fonts 10 --reduced-motion`. Gallery/viewer and restored
+window captures were inspected. `store-back-negative/` removes the Back restoration
+while retaining the other Store changes: the original-card and removed-card
+fallback cases fail their intended focus assertions, with no runtime errors.
+
+The fresh affected run `choice-store-current-regression.json` passes 588 checks
+without skips/failures, including Store queue/observer/entry-point and real startup
+ordering checks alongside the previous Settings/window suites. Catalog generation,
+syntax and whitespace checks pass. Current source hashes and reports are in
+`choice-store-validation.json`. Repeated scale executions are not unique tests;
+none of these scoped runs replaces the final whole desktop/image suite.
+
+The size fixture restores a 3000×2000 Store window and checks it against its
+single screen. Multiple-output sizing remains open: Qt's
+[desktopAvailableWidth/Height implementation](https://raw.githubusercontent.com/qt/qtdeclarative/6.11/src/quick/items/qquickscreen.cpp)
+uses the virtual desktop's available size. Store must use its own screen's
+available geometry before that behavior can be qualified across outputs. Physical
+monitor changes, native Wayland/graphics, touchpads, the remaining app audit,
+matching laptop installation and release acceptance remain pending. All work
+stays local, source-only, uncommitted and unpushed; VERSION remains 0.9.6.
+
+## 0.9.7 follow-up: per-output window bounds (6 November 2026)
+
+This supersedes the multiple-output sizing gap in the preceding pass. Settings
+and Store use `WindowArea` from `monet-games`, exposed by their Python entry
+points. It follows the watched QWindow's own QScreen and `availableGeometry`,
+including work-area changes, with Qt signals rather than polling. It keeps the
+last usable rectangle during an invalid/disconnected-screen transition. Tests
+check negative screen origins, work-area changes, duplicate notifications,
+rewatching, unrelated observers, and window/screen/receiver destruction.
+
+Both QML windows fit restored dimensions and their minimum sizes to that output.
+A late configure for an old size is corrected on the subsequent size-change
+event. A normal smaller width is retained when moving back, within the new
+screen's minimum width. The correction does not change maximized/fullscreen
+state or recreate the app's page/control objects.
+
+Actual two-screen Qt plumbing, using a private 1920×1080 plus 1280×720 X server:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/settings-navigation.py /results/window-area-x11-verified \
+    --module tests.native_window_area --two-screens --fonts 10
+```
+
+`window-area-x11-verified/result.json` passes six executions: both apps at 125%,
+150% and 200%. These cover saved 3000×2000 sizes, real QWindow screen switches,
+late oversized resizes, keeping a chosen width, restore, and maximized/fullscreen
+guards. Each app has a separate small-screen capture. Separate X screens do not
+model an extended desktop's compositor moves; those are checked with KWin below.
+
+The private native Wayland check exposes only the Intel render node to KWin:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 --device /dev/dri/renderD128 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/window-area-wayland.py /results/window-area-wayland-verified
+```
+
+The fixture starts its own bus, account and KWin, with two virtual outputs. No
+host display, session bus, user data or physical display-control device is
+exposed. It uses logical 1536×864 at 125% and 960×540 at 200%, with the combined
+desktop wider than either output, then changes one output to 175%. Native KWin
+scripting moves the windows; the actual TaskManager model supplies compositor
+state and frame geometry. Checks wait for that geometry to agree with the client
+size and stay inside its own output. Minimized state is checked in the compositor,
+since Qt's visibility flag alone does not prove native Wayland minimization.
+
+The successful `window-area-wayland-final/` run covers nine fitted checkpoints
+for each app, plus minimized-state preservation, maximized/fullscreen moves,
+page/control identity and working Intel OpenGL compositing. The subsequent
+`window-area-wayland-verified/` run records the current fixture sources. Qt clients
+use their software renderer; this is not qualification of their GPU rendering.
+The `support.txt`, `doctor.log`, JSON records and app captures are retained.
+
+The controlled negative run `window-area-wayland-negative-current/` substitutes only
+`Settings-no-late-fit.qml`, removing the two size-change corrections. It fails the
+small-output check: the window and compositor retain height 520
+where the available height is 540 and the intended 48-pixel allowance requires
+492. The main run passes without test-side manual fitting. The earlier diagnostic
+`window-area-wayland-v8/` also records that explicitly invoking the fit corrected
+that old size. Neither negative substitutes a different native controller.
+
+Fresh real-font single-screen checks pass 78 Settings and 48 Store executions
+across the six scale/font/language combinations in `window-area-settings-current/`
+and `window-area-store-final/`. The separate native reduced-motion runs pass 13
+Settings and eight Store cases in `window-area-settings-reduced/` and
+`window-area-store-reduced/`. These are repeated executions, not unique tests.
+Current source hashes and all reports are recorded in `window-area-validation.json`.
+
+The affected regression run `window-area-regression.json` covers 623 cases. All
+modules except Look passed; its one failure required the obsolete virtual-desktop
+minimum-width source expression. That literal assertion was retired in favor of
+the native behavior tests above. `window-area-final-checks.json` reruns all 402
+Look checks and the five WindowArea checks, passing 407 without skips/errors.
+These runs overlap and do not constitute the final full desktop/image suite.
+Catalog generation/checking, Python parsing and whitespace checks also pass.
+
+Physical monitor reconnects, other graphics hardware, physical touchpads,
+menu/extraction/Transfers and Store scrolling/narrow-content layout, matching laptop installation and
+final full-suite/image/profile upgrade and rollback gates remain open. These
+changes have not refreshed the laptop account preview. Work remains local and
+uncommitted; VERSION remains 0.9.6.
+
+## 0.9.7 Store scrolling, narrow layouts and shared glyph clipping (6 November 2026)
+
+Store's five content views and sidebar now share Settings' `ScrollInput.qml`.
+Native fixtures send actual Qt wheel and touchpad pixel events, including gesture
+begin/update/end, reverse movement and end-of-content bounds. They check panel
+isolation, modified-wheel viewport steps, Home/Page/End, mouse background-drag
+requests and ordinary card clicks. A GridView's page keys include its header;
+arrows retain native item selection. Focus scopes pass Enter to the selected card,
+Tab focus updates the selection, and Back restores that card in view. Manual
+scroll requests cancel that panel's pending focus reveal, while later real focus
+and layout changes retain automatic reveal.
+
+The shelf podium uses one to three columns with usable labels. Sort controls
+wrap inside their group, and captions grow to fit. The resize case uses the
+smaller of two actual X screens, so the 200% run includes a 608-pixel-wide window.
+It checks labels, sort-control bounds, object/focus preservation and absence of
+the offscreen checkmark over the title. Navigation never installs/opens an app
+outside the controlled Shop recording fixture. A normal search without a
+compatibility suggestion also has no missing-value Boolean warning.
+
+Final native input/layout matrix:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-navigation \
+  python3 tests/fixtures/settings-navigation.py /results/store-shared-input-final \
+    --module tests.test_store_scrolling --two-screens
+```
+
+`store-shared-input-final/result.json` passes 48 executions of eight cases at
+125%, 150% and 200%, with English/10pt and Swedish/14pt app-default font settings.
+`store-shared-reduced/result.json` passes eight more at 150% in the native KDE
+reduced-motion style. Current Settings checks pass 78 executions of 13 cases in
+`store-shared-settings-final/`, plus 13 in `store-shared-settings-reduced/`.
+Store's existing eight navigation/image-viewer checks pass 48 executions in
+`store-shared-navigation-final/`, plus eight in
+`store-shared-navigation-reduced/`. Those use the same scale driver, with
+`--module tests.test_store_navigation` or its default Settings module.
+
+The scale audit found white and colored paths painted outside their viewport by
+Qt's software Shape renderer. `games/Glyph.qml` now checks ancestor clips before
+painting its Shape in that renderer, preserving the Item's layout slot. Geometry
+reads make native coordinate mappings react to position, size, scale, rotation
+and transform-origin changes. A separate actual Qt window checks colored pixels
+through those changes and nested clip intersections. The normal GPU branch does
+not perform the software clip walk. Settings uses the same glyph component; its
+older per-sidebar guards and duplicated glyph definition are removed.
+
+Three controlled substitutions verify the failure detectors using the current
+fixture, each mounted over one source file in a disposable container:
+
+- `store-shared-glyph-negative-final/` substitutes `Glyph-no-clip.qml`. It
+  reproduces 827 white pixels above the sidebar, 368 colored title pixels at a
+  608-pixel window width, and colored pixels escaping the separate nested-clip
+  fixture. The main runs pass these assertions with the correction. An earlier
+  opacity-only probe did not catch the title mark; the final checks use actual
+  pixels and explicitly hide the Shape for the offscreen-filter comparison.
+- `store-focus-negative-final/` substitutes `Shelf-no-focus-proxy.qml`, retaining
+  the other changes. Arrow selection followed by Enter fails to open the selected
+  controlled app. The current focus scope passes Enter and Back restoration.
+- `store-cancel-negative-final/` substitutes `Store-no-scroll-cancel-final.qml`.
+  Home is undone by a delayed reveal of the selected card; the current input
+  signal cancels that pending reveal. Native arrow navigation remains enabled.
+
+`store-shared-regression.json` passes 631 affected Python checks with no skipped
+or failed modules. The existing native Wayland geometry fixture also passes all
+18 fitted checkpoints and its window-state/scale/output tests with the final
+sources in `store-shared-wayland/`. It uses software Qt clients and an actual
+Intel OpenGL KWin compositor on virtual outputs, not physical monitor hotplug.
+The existing commands in the preceding section apply, using that output path.
+
+Source hashes, current reports and artifact hashes are in
+`target/097-goal/store-scroll-validation.json`. The read-only account install plan
+includes the new shared files; it has not been applied. The installed receipt
+still points to `20261105T140838.565736Z`. Catalog generation/checks, Python
+syntax and whitespace checks pass. These overlapping scoped suites do not replace
+the final full desktop/image suite.
+
+The inspected software Store capture still shows blank framed artwork; that
+fallback needs investigation before qualifying artwork rendering. Physical
+touchpads, normal GPU client rendering, other graphics hardware, the remaining
+menu/extraction/Transfers audit, matching laptop installation and final release
+acceptance remain open. All changes stay local and uncommitted; VERSION is 0.9.6.
+
+## 0.9.7 Store artwork on software and OpenGL renderers (6 November 2026)
+
+This closes the blank-artwork gap observed in the preceding Store pass. Qt's
+[software adaptation does not render ShaderEffect](https://doc.qt.io/qt-6/qtquick-visualcanvas-adaptations-software.html).
+The Store's masked image layers therefore left screenshots, fallback paintings
+and section banners blank. Software rendering now paints those sources directly
+with rectangular clipping and visible paper mats. Unavailable shader shadows are
+hidden in that renderer. GPU rendering keeps its existing rounded masks/shadows.
+The software fallback intentionally does not require rounded shader masks.
+
+`tests/test_store_artwork.py` renders the actual Store QML with distinct controlled
+PNG colors. It checks screenshot pixels, painting and icon pixels when no shot
+exists, return to those fallbacks after an image-load error, and the section
+banner. The only accepted image warning names that deliberately missing file;
+other QML warnings still fail the case. Tests record no external app actions.
+The smaller actual X screen is selected before resizing, including a 608-pixel
+window at 200%. Captures of software and OpenGL output were inspected.
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/settings-navigation.py /results/store-artwork-verified \
+    --module tests.test_store_artwork --two-screens
+```
+
+`store-artwork-verified/result.json` passes 24 executions: four cases at 125%,
+150% and 200%, with English/10pt and Swedish/14pt app-default fonts.
+`store-artwork-reduced/result.json` passes four more with
+`--scales 1.5 --fonts 10 --reduced-motion`. The controlled negative
+`store-artwork-negative-final/` restores only the always-enabled mask layers in
+Framed/Strip, keeping the other fixes. All four image assertions fail, with no
+runtime errors/skips. Its source overrides are retained beside the reports.
+
+The new private Wayland renderer fixture verifies the active client API rather
+than assuming the requested backend was selected:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 --device /dev/dri/renderD128 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/wayland-render.py /results/store-artwork-gpu-threaded-final \
+    --renderer opengl
+```
+
+The four pixel cases also pass in `store-artwork-gpu-basic-final/` using
+`--render-loop basic`, and `store-artwork-raster-final/` using
+`--renderer software`. Both OpenGL loops are tested; the software client is
+tested separately. All use a private 1920×1080 virtual output at native 150%
+scale with an actual OpenGL KWin compositor. No host display, session bus,
+physical display-control device or user account is exposed.
+
+Per-case renderer JSON verifies the actual OpenGL/Software API. The basic-loop
+GPU run additionally queries QRhi driver data after an actual frame, identifying
+Intel Iris Xe (RPL-P), Mesa 26.2.6. OpenGL reports UnknownDevice and zero numeric
+IDs, so the recorded device name supplies that identification. The threaded run
+checks its active API and rendered pixels separately. Driver collection is
+restricted to the explicit basic loop: a Python callback on the threaded render
+loop can block on the GIL during GUI/render synchronization. This diagnostic
+restriction does not change the application's normal threaded GPU path.
+
+The updated test image `localhost/monet-desktop-tests:097-artwork` is
+`d260bd281639ff82390e09d1a06d0648f8c00b5ae6c11eb97d1caf95dc0d1f63`.
+Its incremental build adds only procps-ng 4.0.6-2.fc45 to the previous navigation
+image, asserting that no existing RPM changed. Both repository image definitions
+now explicitly install that dependency, and `tools/test-runtime.py` requires
+`pgrep`. The missing helper seen in the earlier regression log is no longer
+silently omitted from required desktop checks. Native bundle dependencies remain
+unchanged.
+
+The final affected regression run, including `--require-desktop`, passes 635
+checks with no skipped or failed modules in `store-artwork-current-regression.json`.
+`store-artwork-input/result.json`
+retains 48 passing scroll/layout/clipping executions after images are visible.
+Current source hashes and reports are in `store-artwork-validation.json`.
+These scoped checks do not replace full-image or physical-device qualification.
+The remaining menu/extraction/Transfers audit, matching laptop installation and
+release gates remain open. No account preview refresh, commit, push or VERSION
+change was made.
+
+## 0.9.7 focused menu input and short-window checks (6 November 2026)
+
+`tests/test_menu_navigation.py` loads the actual menu full representation and
+delegates, with inert external models/helpers. It covers Tab reaching pinned,
+recent and all-app views with a current selection; arrow handoff and both Enter
+keys; Escape through search/All apps/close; Menu and Shift+F10 on an app; wheel
+and precise touchpad events in all four lists; and usable section bounds at
+short window heights. Compact layouts adapt pinned columns/rows and retain a
+usable recent-files region. These tests exercise representation geometry, not
+the outer Plasma popup's size limits; that qualification remains open.
+
+The common ScrollInput now lives in `linux/share/monet/widgets/ScrollInput.qml`.
+The games-directory component forwards to it so Settings/Store keep their
+existing import. The full installer and reversible account installer include
+the canonical file, while applets receive their self-contained common copy.
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/settings-navigation.py /results/menu-navigation-matrix \
+    --module tests.test_menu_navigation
+```
+
+`menu-navigation-matrix/result.json` passes all 36 executions: six cases at
+125%, 150% and 200%, using English/10pt and Swedish-catalog/14pt contexts with
+English fallback for untranslated labels. `menu-navigation-reduced/result.json`
+passes six more with `--scales 1.5 --fonts 10 --reduced-motion`, using native KDE
+style. The original `menu-navigation-baseline/` recorded seven failing assertions
+across six cases without runtime errors, including skipped Tab targets, absent
+keyboard context-menu requests, ignored pixel gestures and a zero-height recent
+view. Current short-window captures were retained and inspected.
+
+A separate real Plasma/Kicker fixture still verifies pending launch feedback,
+duplicate prevention, concurrent apps and both retry paths. The affected launch,
+search and profile migration run passes 60 Python checks with no skips or failed
+modules in `menu-packaging-checks.json`. The native launch binary also passes its
+18 QtTest cases. Settings/Store input and appearance regressions pass 431 checks
+without skips or failed modules in `menu-shared-input-regression.json`.
+
+All reports, source hashes and capture hashes are recorded in
+`target/097-goal/menu-navigation-validation.json`, using the same artwork test
+image as the preceding section. Changed Python sources parse, installer shell
+syntax and whitespace checks pass. The read-only account preview plan contains
+723 files; it was not applied, and the installed receipt remains
+`20261105T140838.565736Z`. Outer popup geometry, extraction/Transfers input,
+physical devices, matching laptop installation and final release acceptance
+remain open. Everything stays local and uncommitted; VERSION remains 0.9.6.
+
+## 0.9.7 actual Plasma menu popup bounds (6 November 2026)
+
+This closes the outer-popup gap from the preceding focused menu checks. A real
+Plasma panel in a private KWin session reproduced a 604-pixel popup in a
+494-pixel usable area after changing to native 200% scale. Qt requested y=-72;
+the compositor placed it at y=0, still overflowing the usable area. Merely
+constraining the representation inside an ordinary test window did not exercise
+this path.
+
+Menu size hints now use the panel's own containment's
+[available screen rectangle](https://api.kde.org/qml-org-kde-plasma-plasmoid-containment.html#availableScreenRect-attached-prop),
+with room for the native frame. Queued geometry-change handlers also correct
+late oversized Wayland configures. Native padding and a smaller current size
+are preserved. There is no polling or replacement popup implementation.
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 --device /dev/dri/renderD128 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/menu-popup-wayland.py /results/menu-popup-fourth
+```
+
+`menu-popup-fourth/result.json` passes 12 checkpoints, with separate private
+sessions for native 10pt and 14pt fonts. Each session covers 125%, 150%, 200%,
+moving the panel to another output at 200%, a live 175% change there, and moving
+the panel to the top edge. Two actual QScreens have separate KWin virtual
+outputs; the usable rectangle is relative to the containment's own output,
+including its panel reservation. The fixture compares native compositor frame
+geometry with that usable rectangle and checks Search, the view switch, Pinned
+and Recent bounds inside the representation. It does not infer successful
+placement merely from Qt's requested window position.
+
+The fixture starts its own activity manager and Plasma shell. Each owned child
+has a separate process group and is stopped on completion/failure. KWin logging
+is explicitly sent to the capture file so its frame observations are available;
+KScreen's output list is sorted by virtual output name rather than assumed to
+match the panel's screen index. Only the Intel render node is exposed: the
+compositor uses OpenGL, while Plasma's client rendering is software. No host
+display, session bus, account or physical output-control device is exposed.
+
+`Menu-without-popup-correction.qml` disables only `fitPopup`, keeping the bounded
+hints and all other fixes. Running the same fixture with `--fonts 10 --source`
+that file passes the first two scale checkpoints, then fails the actual frame
+bounds at 200%. The extracted failure context and raw log are retained in
+`menu-popup-negative/`. This proves that size hints alone do not resolve the
+tested late-configure case.
+
+The current representation matrix passes 36 executions in
+`menu-popup-input/result.json`, plus six with native reduced motion in
+`menu-popup-reduced/result.json`. The affected regression run passes 445 Python
+checks without skips or failed modules in `menu-popup-regression.json` (menu,
+search, native launch/dock and appearance). These overlapping scoped runs are
+not a final complete suite. Source/report/artifact hashes are recorded in
+`target/097-goal/menu-popup-validation.json`.
+
+Python syntax and whitespace checks pass. The account preview is unchanged;
+matching laptop installation, extraction/Transfers input/layout, physical
+devices and final release acceptance remain open. No commit, push or version
+bump was made.
+
+## 0.9.7 extraction and Transfers input/layout (6 November 2026)
+
+The archive preparation dialog previously enforced a 417-pixel height on the
+tested 640×360 logical screen. It now follows its current screen's usable size,
+keeps the folder drop target and native action buttons outside the scrolling
+details, and stacks button captions when they do not fit horizontally. Tab focus
+reveals the destination/chooser inside the details; native mouse steps and
+precise touchpad pixels both scroll. Escape, worker cancellation, native password
+dialogs and background queue submission retain their operation coverage.
+
+Transfers uses a native Flickable/scrollbar with the same precise input component
+as Settings, Store and menu. Both Enter keys activate a focused template button;
+auto-repeat cannot repeat a transfer action. Titles, states, messages and action
+groups adapt to narrow layouts. Loading/error messages and the explanatory note
+are part of the scrollable content, leaving usable room for jobs at large text.
+Error dismissal and cancellation have keyboard focus; errors remain plain text.
+
+Local rows have stable job keys. Progress updates and reordering preserve the
+actual control QObject and its focus, while completion selects that job's Open
+folder action. Focus reveal also follows ancestor layout changes after rows
+move. Manual Home and tested wheel input cancel automatic following; later
+progress updates cannot undo those choices. Full-view indeterminate animation
+is disabled when closed/inactive. These state checks do not measure whole-OS
+CPU or battery savings.
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/settings-navigation.py /results/transfers-navigation-verified \
+    --module tests.test_transfers_navigation --two-screens
+```
+
+Use `tests.test_extraction_navigation` and output `extraction-navigation-current`
+for the Widgets pass. The fixture registers the packaged reading/heading fonts
+and starts new processes for each scale/font/catalog combination. The second
+actual X screen is 1280×720 pixels; at 200% this supplies the 640×360 logical
+screen. Reports list both screen sizes and distinguish Widgets raster rendering
+from Qt Quick software rendering. Captures and geometry/control JSON were
+retained and inspected. English fallback remains for untranslated messages.
+
+| Report under target/097-goal | Passing checks | Scope |
+| --- | ---: | --- |
+| extraction-navigation-current/result.json | 18 | Three cases × 125%, 150%, 200% × English/10pt and Swedish-catalog/14pt |
+| extraction-navigation-native-current/result.json | 3 | Native KDE style with reduced motion at 150% |
+| extraction-wayland/result.json | 3 | Actual Widgets interaction on private Wayland at native 200% |
+| transfers-navigation-verified/result.json | 60 | Ten cases across the same six scale/font combinations |
+| transfers-navigation-native-verified/result.json | 10 | Native KDE style with reduced motion at 150% |
+| transfers-popup-verified/result.json | 12 | Actual Plasma popup with completed real Ark jobs |
+| transfers-menu-popup-current/result.json | 12 | Menu regression with current geometry handling |
+| extraction-transfers-current-regression.json | 513 | Affected GUI, archive, file-operation, widget, appearance and catalog suites; no skips/failed modules |
+
+The native-style test selects public template controls in QML before returning
+them to Python. Recursively wrapping KDE's private style items exposed a PySide
+binding assertion; keeping those private items in QML avoids that test-harness
+failure. Required control/label counts prevent an empty selector from passing.
+This changes test introspection, not the application's native style.
+
+The popup fixture now also supports Transfers:
+
+```sh
+podman run --rm --network none --security-opt label=disable \
+  --userns=keep-id --user 1000:1000 --device /dev/dri/renderD128 \
+  -v "$PWD:/src:ro" -v "$PWD/target/097-goal:/results:rw" \
+  localhost/monet-desktop-tests:097-artwork \
+  python3 tests/fixtures/menu-popup-wayland.py /results/transfers-popup-verified \
+    --widget transfers
+```
+
+Its private account completes three actual small ZIP extractions with the queue
+and native Ark, verifies the output, and waits for those jobs to appear in the
+real Plasma widget. Both 10pt/14pt sessions cover 125%, 150%, 200%, another
+mixed-scale output, a live 175% change and a top-edge panel. Compositor frame
+bounds, viewport and Refresh are checked against the output's panel-free area.
+The fixture waits for actual placement with a bounded deadline; it does not use
+Qt's requested position as proof of compositor placement. Only the Intel render
+node is exposed; these are software clients on an OpenGL KWin compositor with
+virtual outputs, without host display/bus/account access.
+
+Two geometry details were exposed. Window geometry can update before anchored
+content, so negative temporary frame padding must not shrink an already smaller
+window again. Static popups can also retain their old compositor position until
+a frame commits. Menu/Transfers now request that frame on geometry/position
+events. The controlled current-source `Transfers-without-position-frame.qml`
+disables only that request. It passes the first checkpoint, then leaves KWin's
+frame at y=269 while Qt requests y=125 after scaling to 150%; the frame still
+overflows after a five-second wait. Raw logs and extracted failure context are
+in `transfers-position-negative/`.
+
+The affected operation suites include real KIO copy/download tracking, native
+Ark, completed rows after closing/reopening Transfers, literal folder arguments,
+downloaded desktop files never being executed, native descriptions without HTML
+markup, and a missing destination with dismissible error and retained files.
+These scoped tests do not replace the final complete suite/image run.
+
+Current source/report/capture hashes are in
+`target/097-goal/extraction-transfers-validation.json`. Catalog generation/check,
+changed Python syntax and whitespace checks pass. The read-only account preview
+plan contains 723 files and has not been applied. The installed receipt remains
+`20261105T140838.565736Z`; VERSION remains 0.9.6. Matching laptop installation,
+physical input/displays/drives, measured readiness/idle activity and final image,
+upgrade/rollback and release acceptance remain open. No commit or push was made.
+
+## 0.9.7 batch 15 — matching account preview (6 November 2026)
+
+Scope: a reversible account installation on the laptop's current Monet 0.9.6
+runtime. This is not a new booted OS image, physical power/input qualification,
+or a sign-in/app-readiness performance result. All work remains uncommitted.
+
+### Matching native builds
+
+`target/097-goal/laptop-build-inputs` captures the current five native source
+directories and the host runtime manifests. The SDK initially differed only in
+libcurl revision 9 versus the laptop's revision 8. The libcurl RPM's extracted
+library SHA-256, `ecf513b17b10f1d619eca804d4c7b93b139ca56e4cafaed64356fda1736e142e`,
+matches the laptop's library. Only disposable containers were changed. Version
+locks retain the matching SDK packages during dependency installation. The
+existing Monet Files/dock binaries are copied into the SDK as its captured
+baseline, rather than relaxing the bundle's original-file checks. Every final
+bundle verifies against the actual host's packages and original-file hashes.
+
+Activity and launcher native CTest suites pass; Files' experience/loading CTest
+suites pass. Build logs are `laptop-activity-build.log`,
+`laptop-launcher-build.log`, `laptop-dock-build-v2.log`,
+`laptop-files-build.log` and `laptop-archives-build.log` under
+`target/097-goal`. The first dock dependency command rejected an excluded
+explicit curl argument; replacing that exclusion with a version lock allowed
+the matching build. The failed command is retained in `laptop-dock-build.log`.
+
+Files and Archives packaging now strips debug sections from shipped binaries.
+The original unstripped binaries stay in the local build trees. The candidate
+was repackaged with the same operation, updated corresponding build instructions,
+unchanged compared `.text` dumps, and the normal runtime/ABI/seal checks.
+`laptop-native-package-validation.json` records the byte sizes: the Files pair
+shrinks from 87,053,432 to 4,430,104 bytes; Ark from 4,981,816 to 286,688 bytes.
+The current matching bundles are in `target/097-goal/laptop-native`.
+
+### Installer, guards and native operation checks
+
+`tools/install-desktop-preview.py --native-bundles DIR` validates all five
+components before returning a plan. The directory contains `activity`,
+`launcher`, `dock`, `files`, and `archives`. Apply uses the existing backup/
+receipt mechanism; source archives remain beside the account-native binaries.
+Each QML module has its own import root. A process rechecks immutable runtime
+identities and the payloads it can load. Files/Ark validate their own binaries on
+launch. Stale inherited preview QML/plugin/library paths are removed before
+fallback; custom external paths remain. No sampling daemon was added.
+
+Run the end-to-end account fixture in a matching, isolated desktop container:
+
+```sh
+podman exec --workdir /src/monet monet097-laptop-build python3 \
+  tests/fixtures/native-preview-install.py /output/laptop-native \
+  /output/laptop-account-final-package.json \
+  tests.test_native_preview,tests.test_archive_apps,tests.test_archive_failures,tests.test_app_launch,tests.test_transfer_folders
+```
+
+The fixture creates a disposable account and bus, applies the complete plan,
+checks actual mapped account QML modules and the executed Files/Ark binaries,
+runs the requested operation suites through the installed wrappers, then undoes
+the installation while preserving a later personal edit. The final package run
+passes 40 checks without skips. Before the packaging/guard optimization, the
+wider affected run passes 123 checks without skips. Reports are
+`laptop-account-final-package.json`, `laptop-account-final-package-regression.json`,
+`laptop-account-qualified.json`, and `laptop-account-qualified-regression.json`.
+The focused installer/retirement/bundle unit run passes 43 checks in
+`laptop-installer-unit-final.log`.
+
+Real delayed-WebDAV Files navigation and cancellation pass with the matching
+pair. Reports/captures are in `laptop-files-navigation-v2`,
+`laptop-files-cancel`, and, after debug stripping, `laptop-files-final-navigation`.
+The first GUI attempt failed because the disposable desktop image lacked the
+Files/Baloo runtime, not because the app reached a loading state. Its log is
+retained in `laptop-files-navigation`. The test Containerfile/runtime checker
+now require Files and the relevant native dependencies/tools.
+
+Two wider runs exposed a genuine completion-fixture isolation defect: the fake
+file manager silently queued behind a real Files process left on the suite bus.
+`laptop-transfer-owner-audit-transfers/filemanager.log` records expected owner
+`:1.13` versus actual `:1.2`; only directory actions reached the stub. The fixture
+now creates a private bus, uses `do_not_queue`, and waits for confirmed endpoint
+ownership/readiness. The corrected wider and final-package runs verify all three
+actions and preserve logs/captures, including `filemanager.log` and
+`actions.jsonl`. This fixes the fixture; it is not evidence of a product folder-
+opening regression. Earlier failing reports are retained for comparison.
+
+### Laptop installation and bounded performance result
+
+The reviewed plan contained 852 payloads and 264 changes. They were installed
+with receipt `~/.local/state/monet/desktop-preview/20261106T030609.054604Z/receipt.json`.
+The final packaging/guard optimization changed nine files, with receipt
+`~/.local/state/monet/desktop-preview/20261106T031345.000395Z/receipt.json`.
+`laptop-installed.json` records the final application and its preceding receipt.
+All payload hashes and five native component guards pass. Neither application
+changed any of the twelve checked power, lock, region, download, Files, weather
+or panel preference files. The installer does not rerun profile defaults.
+
+Plasma was refreshed with no active local transfers or native job views. PID
+424063 maps the account activity/launcher/dock modules; details are in
+`laptop-activation.json`. The activation journal is retained in
+`laptop-plasma-activation.log`: no Monet QML loading/type errors were observed;
+upstream KDE `leftInset` warnings and an unresolved ChatGPT Unity launcher entry
+remain visible. Already-open Files, Settings and Store windows retain their
+loaded code until reopened.
+
+Seven warm-cache samples on this laptop measure the initial all-component
+preview guard at a 76.29 ms median. Avoiding unrelated executable checks gives
+an installed app-module guard median of 1.393 ms and desktop-module guard median
+of 3.758 ms. The command still validates every module it can load; binary
+launches retain their separate guards. These timings exclude Python/process
+startup, painting, loaded data and whole-OS effects. Raw samples are in
+`laptop-native-guard-timing.json` and `laptop-installed-guard-timing.json`.
+
+To undo this update, close Files/Settings/Store, restore the two receipts in
+reverse order, reload the user manager/cache and refresh Plasma:
+
+```sh
+python3 tools/install-desktop-preview.py --restore "$HOME/.local/state/monet/desktop-preview/20261106T031345.000395Z/receipt.json"
+python3 tools/install-desktop-preview.py --restore "$HOME/.local/state/monet/desktop-preview/20261106T030609.054604Z/receipt.json"
+systemctl --user daemon-reload
+kbuildsycoca6 --noincremental
+systemctl --user restart plasma-plasmashell.service
+```
+
+Later personal edits are preserved. Read-only retirement planning also verifies
+the combined current and first-preview receipt history, preserving preferences
+seeded by the first preview. The final source/report/artifact hashes are in
+`target/097-goal/laptop-preview-validation.json`. Whole-image upgrade/rollback,
+real app readiness/idle measurements, hardware/drives/input and final release
+preparation remain open; VERSION is still 0.9.6.
+
+
+## 0.9.7 batch 16 — app data frames and Store cache (6 November 2026)
+
+Scope: actual source/installed app measurements on this laptop with isolated
+profiles, buses and virtual displays, plus a reversible account update. Neither
+these results nor systemd target timings establish physical screen readiness,
+whole-OS speed, cold OS-cache performance or battery-life gains.
+
+### Methods and current reports
+
+`tools/bench-app-readiness.py` compares a pinned Git revision against staged
+worktree or already-installed helpers. A common probe records the first submitted
+frame, settlement of initial Settings helper replies/Store models, and a following
+frame. It does not wait for remote artwork. Sources/probe are captured by hash;
+the probe is frozen per run, and concurrent worktree changes are flagged. Per-run
+profiles and optional shared per-variant app caches are temporary. OS page caches
+are not flushed. Cached system catalog/Flatpak listings are read; metadata refresh
+and optional Python HTTP requests are suppressed. Native mode uses private KWin
+OpenGL and native KDE controls, with an absolute socket path for isolated clients.
+Ready-frame captures are taken only after timing, with an explicit completion
+handshake so the client cannot be killed before saving them.
+
+```sh
+python3 tools/bench-app-readiness.py --samples 5 --reuse-cache --wayland --capture \
+  --candidate-helpers "$HOME/.local/libexec/monet-desktop-preview" \
+  --output target/097-goal/readiness-installed-fixed.json
+python3 tools/bench-app-readiness.py --apps store --samples 5 --wayland \
+  --candidate-helpers "$HOME/.local/libexec/monet-desktop-preview" \
+  --output target/097-goal/readiness-installed-empty-cache.json
+python3 tools/bench-files-opening.py --samples 5 --entries 1000 --reuse-cache \
+  --native-pair "$HOME/.local/share/monet-desktop-preview/native/dolphin" \
+  --output target/097-goal/files-opening-measured
+```
+
+The baseline revision is `9f6ace83b4ec26336b1f65addb94c3d09c4db582`. Runs alternate
+variant order. Native app reports retain KWin support/logs and first ready-frame
+images. Files opens a disposable 1,000-file local directory on private 1280×900
+outputs, verifies the native bundle before the direct-native comparison, and
+records compositor-observed mapping and `monetFilesState` listing completion.
+KWin does not expose `readyForPainting` to this script, so the report retains null
+and claims mapped windows, not first scanout/finished thumbnail rendering. Wall/
+monotonic-clock agreement is checked. The first Files observer attempt missed logs;
+adding script logging and waiting for its ready marker fixed the measurement,
+not the product. Its incomplete baseline is retained in `files-opening-initial`.
+
+Five-run medians from the current installed/native reports:
+
+| Session/metric | Baseline | Installed candidate |
+| --- | ---: | ---: |
+| Settings first submitted frame, shared-cache run | 387.951 ms | 391.815 ms |
+| Settings initial-data frame, shared-cache run | 531.686 ms | 549.166 ms |
+| Store first submitted frame, shared-cache run | 459.804 ms | 356.853 ms |
+| Store initial-data frame, shared-cache run | 1,335.230 ms | 473.652 ms |
+| Store process peak RSS at data frame, shared-cache run | 562.66 MiB | 280.03 MiB |
+| Store first submitted frame, fresh app cache per sample | 489.167 ms | 413.852 ms |
+| Store initial-data frame, fresh app cache per sample | 1,380.813 ms | 1,479.558 ms |
+| Files mapped window and completed listing | 295.930 ms | 326.521 ms (account wrapper) |
+
+The directly launched verified native Files pair measures 301.505 ms for the last
+metric, with listing completion at 209.507 ms versus the baseline's 218.251 ms.
+These small-directory timings do not demonstrate a convincing native opening
+speedup; the wrapper adds overhead. Existing delayed-drive navigation/cancellation
+reports establish responsiveness separately. Settings is slightly slower in these
+measurements and remains performance work. The Store gain applies to valid cached
+metadata; first uncached contents arrive later while the window appears earlier.
+No result here proves faster sign-in or longer battery life. Shared-cache runs
+include their first cache-building sample; detailed raw samples and ranges remain
+in the reports. These are not controlled cold OS-cache experiments.
+
+`startup-host-observation.json` records the current boot's systemd output: firmware
+16.351 s, loader 8.733 s, kernel 1.790 s, initrd 9.546 s and userspace 30.834 s
+(total 67.257 s). The user workspace target reaches 5.875 s, with kded/PowerDevil
+on its displayed chain. Service durations overlap, some services have restarted,
+and the target is not a desktop-usability timestamp. No durations are summed as
+saved time, and no before/after sign-in claim is made.
+
+### Parsed metadata cache and correctness
+
+`cached_catalog` keys its record by catalog identity (resolved source, device,
+inode, size, mtime, ctime), parser schema, languages and the current blocklist.
+Each locale/source gets one replaceable cache file rather than accumulating a
+new file for every catalog update. Reads are bounded to 32 MiB, require regular
+files and never block on a FIFO. Malformed/stale caches reparse. Explicit Refresh
+bypasses the cache. Source identity is checked again before accepting/saving a
+record. Atomic replacement uses a private temporary file, and write errors leave
+apps available and existing cache data intact. Only parsed app metadata is cached;
+installed state/transaction permissions remain fresh.
+
+Serialization runs on the already-existing worker, after its loaded signal has
+reached the UI and a subsequent real frame. The frame connection exists only
+while work waits, with a bounded wait for hidden/closing windows. The production
+entry point invokes the native update slot through QMetaObject, so a generic
+QWindow Python wrapper does not require extra QtQuick bindings. A deliberately
+500 ms delayed save verifies frame-before-write ordering, including the raw
+production helper without the measurement probe.
+
+`catalog-real-data-equality.json` validates the actual 51,246,398-byte catalog:
+3,323 app records after 17 blocked IDs, in the current English language order,
+compare exactly across uncached, newly saved and cache-hit reads. The hit is run
+with the XML parser disabled, proving reuse. The cache is 7,110,793 bytes. Metadata
+and source digests are retained; no raw personal app inventory is logged.
+
+The affected backend/startup/Store navigation, artwork, scrolling, queue and
+observer run passes 73 checks without skips in `catalog-final-regression.json`.
+The account fixture passes 29 focused checks in `catalog-preview-verified.json`,
+and the expanded fixture passes 10 native-preview checks while starting the
+actual installed Settings, Store and Games in `catalog-preview-all-apps.json`.
+The final fixture also removes only the shared-import link, confirms that the
+actual Settings entry point fails at that import, restores the link and completes
+23 focused checks plus safe undo in `catalog-preview-final.json`. The broader
+installer/preview unit selection passes 28 checks in
+`catalog-preview-installer-tests.log`.
+Reports/logs are under `target/097-goal`.
+
+### Installed-app packaging repair and undo
+
+The first installed-app benchmark failed at QML loading: private games' relative
+`../widgets` import had no sibling directory, although the shared file existed
+in account data. Earlier installation checks loaded native modules and executables
+but missed these app entry points. `tools/install-desktop-preview.py` now plans a
+private shared-widget directory link. The account fixture launches actual helpers
+and waits for their first frame before accepting installation. The repaired
+installed benchmark completes all samples and captures. The broken
+`readiness-installed-native.json` report is retained as a failing baseline, not a
+performance result. An earlier capture attempt also revealed a probe-only QWindow
+wrapper without grabWindow; importing the public QtQuick wrapper and using a
+capture-completion handshake fixes that harness issue. Neither issue is hidden
+by accepting missing samples.
+
+The Store helper update has receipt
+`~/.local/state/monet/desktop-preview/20261106T041641.205546Z/receipt.json`; the
+shared-import repair has receipt
+`~/.local/state/monet/desktop-preview/20261106T042237.416837Z/receipt.json`.
+`catalog-installed.json` and `catalog-import-installed.json` retain each
+application. Both verify unchanged checked preferences and all five native
+guards; all 853 current planned payloads match. Plasma remains PID 424063; app
+windows must be reopened to load their new code. Reverting just the Store helper
+uses its receipt and keeps the import repair. For a full preview rollback, restore
+these and the two batch-15 receipts in reverse chronological order, then reload
+the user manager/cache and refresh Plasma. Current local testing/undo instructions
+list the exact commands.
+
+Current-source/report/artifact hashes are recorded in
+`target/097-goal/readiness-cache-validation.json`. Full-image upgrade/rollback,
+physical tests, sign-in/Settings/idle improvements and final release preparation
+remain open. A physical menu/screen-behavior question is pending; no result is
+assumed. No commit, push, OS image change or version bump was made.
+
+## 0.9.7 batch 17: foreground power reads and repeat sign-in preparation
+
+The input to this batch is frozen in `target/097-goal/power-startup-before/`,
+with source digests in `sources.json`. The implementation changes only
+`monet-quick` and `monet-fresh`. Power & Sleep still uses native `kreadconfig6`
+for inherited defaults, nested groups and immutable policy; thirteen independent
+reads run with at most four request-owned workers. Results retain request order.
+The workers are joined before returning. There is no persistent pool or settings
+cache, and ordinary standalone lock/privacy reads keep their behavior.
+
+At sign-in, existing region/download receipts now avoid launching two helpers
+which would immediately return. Their versioned receipt paths are unchanged.
+Removing a receipt retries its helper; a failure propagates and does not suppress
+the next retry. Desktop-menu repair is outside these checks and still runs.
+
+### Measurements and limits
+
+`target/097-goal/measure-power-startup.py` retains the measurement procedure.
+It stages the current Linux sources twice, replaces the four baseline helper
+sources from the frozen input, and uses identical UI, native runtime, private
+profiles/buses and alternating variant order. Its staging directory is retained
+and the script refuses to overwrite an earlier run. Source digests and raw
+samples are in `power-settings-measured.json`; the worktree did not change during
+the measurements. The primary run predates the CPU-intensive image build.
+
+Seven samples per variant, with medians below:
+
+| Measurement | Frozen input | Candidate |
+| --- | ---: | ---: |
+| Power helper elapsed | 180.034 ms | 145.411 ms |
+| Power helper plus child CPU | 179.733 ms | 193.892 ms |
+| Completed-setup sign-in helper elapsed | 211.276 ms | 81.863 ms |
+| Completed-setup sign-in helper plus child CPU | 209.853 ms | 81.210 ms |
+| Settings first frame | 391.535 ms | 388.281 ms |
+| Settings initial Power & Sleep data frame | 563.173 ms | 509.712 ms |
+
+The power helper trades roughly 14 ms of CPU for about 35 ms less waiting in
+this run. This is a foreground responsiveness change, not evidence of lower idle
+CPU or longer battery life. The sign-in helper does less work once setup is
+complete; its timing is not whole-session sign-in or boot time. The native GUI
+comparison uses a private Intel KWin/OpenGL virtual output and per-variant app
+caches shared after the first sample; OS page caches/background work are not
+controlled. Actual GUI captures are `power-settings-before.png` and
+`power-settings-candidate.png`; compositor support/logs are retained. These
+data-frame checks exclude full animation settlement and physical presentation.
+
+The preliminary 15-sample helper-only run is retained as
+`power-parallel-pilot.json`; its CPU and timings are separate from the primary
+seven-sample comparison. No preferences change in either primary helper run.
+
+### Regression and installation
+
+```sh
+python3 tools/test.py tests.test_power_reads tests.test_profile_upgrades \
+  tests.test_settings_polling tests.test_power_connection tests.test_keep_awake \
+  --summary target/097-goal/power-startup-regression.json
+python3 tools/test.py tests.test_look tests.test_more_settings \
+  tests.test_settings_feedback tests.test_settings_navigation \
+  tests.test_regional_defaults tests.test_download_paths tests.test_startup_timing \
+  --summary target/097-goal/power-startup-ui-regression.json
+podman exec --workdir /src/monet monet097-laptop-build python3 \
+  tests/fixtures/native-preview-install.py /output/laptop-native \
+  /output/power-startup-preview.json \
+  tests.test_native_preview,tests.test_power_reads,tests.test_settings_polling,tests.test_power_connection
+```
+
+The first two reports pass 42 and 457 checks, without skips or failed modules.
+The third runs in the matching disposable native-preview container: 21 checks
+pass, actual Settings/Store/Games entry points paint, paired Files/Ark executables
+load, removing only the shared import link reproduces the expected failure, and
+undo restores unchanged payloads while preserving a later personal edit.
+
+Native policy tests cover a locked inherited group overruling an account value,
+an inherited timeout, disabled policies, malformed values and an edit observed
+by the next request. Bounded delayed reads retain result order. The sign-in
+fixture verifies completed receipt skips, missing receipts, failure propagation,
+successful retry and unchanged explicit empty/custom desktop bindings.
+
+`apply-power-startup-preview.py` applies the verified current plan to the account.
+`power-startup-installed.json` records two changed files, all 853 payloads
+matching, five valid native components and zero changes in twelve checked
+preference files. Its receipt is
+`~/.local/state/monet/desktop-preview/20261106T045226.375844Z/receipt.json`.
+`power-laptop-readonly.json` verifies identical actual-account native power
+results from the preceding helper and the newly installed one; it does not
+exercise sleep or change policy. Reopen Settings to load the new helper.
+Testing/undo instructions list this receipt first for a full preview rollback.
+
+Current source/report/artifact digests are recorded in
+`target/097-goal/power-startup-validation.json`. A fresh release desktop test
+image is building with `podman build --security-opt label=disable -f
+tests/Containerfile -t localhost/monet-desktop-tests:097-release-candidate .`;
+its current log is `release-test-image-build-v2.log`. The first attempt omitted
+the SELinux option documented in batch 3; its private-socket inotify denial
+failed compositor-reconnect coverage. That failing log is retained as
+`release-test-image-build.log`. No test assertion or native monitor code was
+changed to accept it. A running build is not a completed release test.
+Full-image customized-profile upgrade/rollback, physical power/drive/input
+qualification, complete sign-in/idle comparisons, language review and final
+release preparation remain open. VERSION is 0.9.6; no commit or push was made.
+
+## 0.9.7 batch 18: full desktop/Rust run and OS integration preparation
+
+The fresh desktop runtime is image
+`794f6ebf86dc451b64da383cb8b2b484a9d5a8a9c1c634b8d8a2088ff0a3d1c7`.
+`release-test-image-build-v2.log` records its successful build, including the
+native activity and launcher CTest stages. The first build's private-socket
+SELinux denial remains in its separate log; the successful build uses the
+already-documented `--security-opt label=disable` container option and keeps all
+native assertions.
+
+The complete run uses that immutable image, a read-only repository mount,
+private homes/buses, no network, dropped capabilities and the pinned local
+browser input. Its actual command, start/end times and exit code are in
+`target/097-goal/release-candidate-run.json`; the summary/log are
+`release-candidate-full-suite.json` and `release-candidate-full-suite.log`.
+`release-candidate-inputs.json` records 2,252 input digests. They match before and
+after the entire run, which exits zero.
+
+| Check | Result |
+| --- | --- |
+| Python modules | All 115 discovered modules ran; none have zero checks |
+| Python tests | 1,595 passed; 19 declared skips; no failures/errors |
+| JavaScript | All selected Node tests pass |
+| Browser form behavior | Eleven checks pass |
+| Rust Linux workspace | 99 tests pass |
+| Clippy | Workspace, all targets, warnings denied; passes |
+| Source syntax | 27 shell and 107 Python files pass |
+
+Every skipped Python case matches `tools/test.py`'s explicit environment policy:
+three opt-in Flatpak cases, eight notification cases run by their private-bus
+parent fixture, five opt-in native user-manager retry cases, two PowerShell
+cases and one physical partition-discovery case. The strict desktop run does
+not accept unexpected skips. These are declared limits, not device/Windows
+qualification. The final summary lists every case and reason.
+
+Rust runs in the full image's completed builder stage `1f46cc4fdc86`, whose
+2,252 copied source inputs compare exactly with the tested snapshot before the
+checks. It installs the CI storage test tools only inside its disposable
+container, then runs:
+
+```sh
+cargo test --locked --workspace
+cargo clippy --locked --workspace --all-targets -- -D warnings
+```
+
+`release-rust-suite-v2.log` retains results; the container exits zero. The first
+attempt's login shell reset Cargo's image-provided PATH; it stops at command
+lookup and is retained in `release-rust-suite.log`. A fail-fast non-login shell
+fixes the harness. No Rust source was changed. `release-source-syntax.json`
+lists the syntax-checked inputs. Completed evidence/digests are consolidated in
+`release-desktop-validation.json`. This backlog/testing update follows the run;
+only these two progress documents differ from that recorded input snapshot.
+
+### Full-image and virtual-machine work in progress
+
+`full-image-build-run.json` records the local integration build, with its
+complete command in `full-image-build.log`. The Mesa base is pinned to
+`ghcr.io/ublue-os/bazzite@sha256:3c67436e214fe34be11565cd3f0065789b1f107984ab247ca6cea4bcd2c94597`.
+`full-image-inputs.json` matches the tested snapshot. This integration build
+retains VERSION 0.9.6 and uses only a local tag; it is not a published 0.9.7
+release. No successful OS-image lint, boot or upgrade is claimed yet.
+
+The rootless VM toolbox contains QEMU/KVM and firmware, with only the task's
+directory and `/dev/kvm` forwarded. No laptop block device or home/profile is
+forwarded. `vm/cloud-input.json` records Fedora Cloud 45's official image URL,
+size and verified SHA-256
+`50bdc5e70f6a24f540932d15411c1c6ae9fcfa40fb990d876d83c5cc823b2ad0`.
+The installer boots from an overlay, with task-only SSH credentials and UEFI
+variables. The read-only inventory confirms the SecureBoot variable is enabled.
+The installer initially lacked the split `virtio-vga` module; it uses the
+supported standard VGA device. The separate toolbox for the Monet desktop adds
+the distribution's explicit virtio-vga package. Failed launch logs are retained;
+the stale QMP socket was moved only after its owner had exited and connection
+was refused. No live VM was restarted because an observation timed out.
+
+The guest command in `vm/install-baseline.py` checks its fixture hostname and
+QEMU identity, all three disk serials, the blank target's 128 GiB size and lack
+of mounts/partitions before running bootc against `/dev/vdb`. That device is
+`vm/monet-system.qcow2`, created for this task; a separate virtual disk supports
+a later unchanged-drive check. The published baseline reference is pinned to
+`ghcr.io/happyhamster135/monet-amd@sha256:14cbe2969fe53bc35bb7c87c02cd3bd940723970d659bf0c194810c6e3abe310`.
+`vm-baseline-install.log` records installation progress. A running bootc process
+and a growing target repository are not completed installation or upgrade proof.
+
+Full-image/customized-profile upgrade and rollback, complete sign-in/idle
+comparisons, physical hardware/drives/input, language review and final release
+preparation remain open. Nothing was committed, pushed or installed over the
+laptop's OS image.
+
+## 0.9.7 batch 19: localized search, Settings choices and candidate preparation
+
+`tests/test_search_localization.py` exercises the actual compiled catalogs. Four
+independent native queries per language must select the exact lock, download,
+battery-limit and Keep-awake control, with translated labels/descriptions;
+English queries retain all four destinations. Navigation never calls the setting
+writer. The controlled pre-translation run fails in 28 language subtests; Swedish
+already works. `search-translation-edits.json` records the 336 filled entries in
+28 catalogs and preserved existing translations. Generator/catalog checks pass.
+The focused backend run (`search-localization-regression.json`) passes 38 tests.
+These changes complete these search destinations, not translation of every
+new help paragraph or a native-speaker review of every language.
+
+The Settings navigation fixture now accepts a locale and applies its actual
+QLocale/layout direction, restoring defaults afterward. Native Arabic at 150%
+and 200%, 14-point text, exposes a clipped timer choice: 467.031 logical pixels
+of choices in 406 available pixels. `search-ar-focus-negative/` retains the
+failing screenshots and assertions. Segments now measure the largest label
+weight, cap their width to the containing card and use Flow with wrapping
+labels. Captions remain centered; focus/Return/Enter assertions are unchanged.
+
+Final current-QML results are `search-localized-settings-v5.json` and its four
+per-language reports: 104 checks, no skips/errors/failures, German/Arabic/
+Japanese/Thai, 150%/200%, 14-point text. `search-segments-final-matrix/result.json`
+passes 78 checks without skips for English/Swedish at 125%/150%/200%, including
+large text, reduced motion, exact-control focus and scrolling. These are real
+Qt/KDE controls on private Xvfb/software rendering; they do not establish physical
+touchpad or monitor behavior. The broader 93-check affected run also passes,
+but precedes the final caption-centering adjustment; the final matrices include it.
+
+`apply-search-layout-preview.py` applies the already-verified account plan.
+`search-layout-installed.json` records 57 changed payloads, all 853 planned
+payloads matching, five valid native components and zero changes in twelve
+checked preferences. Receipt:
+`~/.local/state/monet/desktop-preview/20261106T061830.398101Z/receipt.json`.
+Undo instructions list it before earlier receipts. No Plasma restart or OS image
+replacement was needed; reopen Settings for the new QML/catalogs.
+
+VERSION, Cargo workspace/lock package versions and the current release-note
+excerpt now identify an unpublished 0.9.7 candidate. The batch-18 complete suite
+was for the preceding 0.9.6 snapshot, so final-source verification remains open.
+The earlier full Mesa integration image built successfully (14 bootc checks
+passed, one skipped), ID
+`797c77556db0495b4a00929476b957af046ce522adfaab356555a37a671842db`.
+It predates this batch and keeps version 0.9.6. Its complete build command/log
+and input digests remain in `full-image-build-run.json`, `full-image-build.log`
+and `full-image-inputs.json`; none are relabeled as final-candidate evidence.
+
+`vm-baseline-install.log` exits zero; `vm/baseline-install-proof.json` records
+the actual installed deployment and byte-for-byte unchanged other virtual drive.
+Task-only SSH configuration is labeled against the target SELinux policy, without
+disabling enforcement. Only the virtual OVMF variables receive a MOK request;
+the known public enrollment password matches Setup. The first request harness
+incorrectly relied on mokutil's exit status despite its 'not enrolled' output;
+that harness is corrected to inspect the result and require pending enrollment.
+The virtual enrollment/boot is still incomplete; no upgrade/rollback pass is
+claimed. The laptop firmware, block devices and profile are never forwarded.
+
+All changes remain local with no Git commit or push. Physical power/menu/input/
+drive qualification, complete sign-in/idle comparisons, final source/image
+verification and customized-profile upgrade/rollback remain release gates.
+
+## 0.9.7 batch 20: candidate build failures, fixture ordering and VM baseline
+
+`candidate097-source-inputs.json` freezes 2,253 inputs for the first local 0.9.7
+candidate. Its Mesa build succeeds, but its complete desktop run finds the
+sign-in look stamp still at 0.9.6. The stamp now matches VERSION, while the
+content-based profile receipt still controls whether a migration runs. The
+second snapshot is `candidate097-v2-source-inputs.json`; its successful Mesa
+image is `3662a41330a4bd6df32173c789f4271a3c66119450e3501f4064ce8bd1cd03f8`.
+Both build logs record 14 bootc checks passed and one skipped. These images
+predate the later ICU runtime correction and are not the final accepted build.
+
+The first complete desktop report has one version-stamp failure. The second
+report (`candidate097-v2-desktop.json`) runs 1,616 checks with 19 declared skips
+and failures in four modules: app detector, native archive failures, return UI
+and Settings feedback. Complete logs are retained separately from the original
+wrapper output. Both wrappers returned 143 while their containers remained
+alive; the same actual containers were observed through terminal state and
+their logs recovered with Podman. Neither worker was restarted on that signal.
+The run metadata records this observation and unchanged inputs.
+
+The form fixture used independent 1,000/1,200/1,450 ms timers across two
+processes. `diag-app-detector-slow.json` reproduces the false failure with a
+controlled delayed observer: native fields remain empty, but no original target
+was ever captured (`seen=[]`). A private inherited-pipe handshake now captures
+the original target before requesting the real Qt/GTK mutation, acknowledges
+that mutation, then applies/rejects and verifies the native fields. The same
+delayed-observer control passes (`diag-app-detector-fixed-slow.json`). Existing
+fill, save, read-only, server/action changes and two-page cases still run.
+
+Native archive discovery now tolerates an old X11 window ID only if a fresh
+visible-window query proves that it vanished. Errors for a still-visible window
+remain failures, as do nonterminal workers, incorrect queue states and native
+password/full-disk assertions. Settings storage and recovery focus assertions
+wait for their asynchronous completion within two seconds, preserving their
+original conditions. The first Return-UI harness used a QTest convenience API
+not exposed by this PySide binding; its error is retained. The explicit native
+event-loop wait passes all 22 Return checks. Together with the other unchanged
+modules in `release-fixture-fixes.json`, all 64 affected checks pass without
+skips; this does not replace the final complete-suite run.
+
+`candidate097-rust-v2.log` records 99 Rust workspace tests and all-target Clippy
+with warnings denied, using final-version builder stage `576a021080ce`. All
+2,253 recorded source inputs matched that builder before testing. Subsequent
+changes are outside Rust/Cargo inputs. The first disposable-container attempt
+dropped capabilities needed by apt; a separate quoting error stopped a driver
+before its container ran. Neither is counted as passing validation.
+
+`candidate097-nvidia-base.json` pins the NVIDIA base to
+`ghcr.io/ublue-os/bazzite-nvidia-open@sha256:9c3c4df94a7731238021549ed3fc951c3ae5e1fee37667d16754f37ae0f73134`.
+Its first build fails at the PDF bundle guard because installing development
+headers upgrades ICU 78.3-8 to 78.3-9 after capture. `image/Containerfile` now
+updates shipped ICU along with util-linux/Brotli before native build stages.
+All strict native guards remain unchanged. Both corrected variants require
+new successful builds; the failed attempt is `candidate097-nvidia.log`.
+
+### Actual customized-profile VM baseline
+
+`vm/baseline-boot-proof-final.json` proves the published 0.9.6 digest is booted,
+Secure Boot is enabled, Universal Blue's key is already enrolled, SELinux is
+Enforcing and no system units are failed. This mokutil returns one for an
+already-enrolled key; the probe checks the explicit result rather than treating
+the exit code alone as enrollment state. Screens retain actual MOK confirmation
+and normal graphical sign-in/desktop, including `vm/baseline-desktop.png`.
+
+The first hardware setup creates deployment serial 1 and reboots. Initial
+offline SSH firewall/network changes accidentally targeted serial 0; the
+read-only inspection (`vm-baseline-inspection.log`) identifies the active boot
+symlink. `vm-prepare-active.log` records the corrected fixture on serial 1.
+Its static slirp connection and SSH port are private VM provisioning only; no
+product /usr files or laptop firewall/firmware/devices were changed. The one-shot
+network diagnostic is disabled after access is verified.
+
+A synthetic ordinary account, `monettest`, signs in through the actual login
+manager and reaches Plasma. Its first panel is moved to the top at height 52
+using Plasma's native scripting API. The fixture sets a custom Files shortcut,
+explicit US time/measurement formats despite Stockholm's system time zone,
+Gothenburg weather with manually selected Fahrenheit, Documents/Incoming as
+download destination, enabled/disabled startup entries and disabled Steam
+autostart. It includes a Unicode-named document and a desktop symlink. No actual
+laptop user profile is copied into the VM.
+
+`vm/profile-before.json` records the post-sign-out file hashes, modes/ownership,
+symlink, semantic preferences, panel groups and booted image.
+`vm/baseline-customized-snapshot.json` records a clean-shutdown disk/OVMF
+checkpoint and the unchanged sentinel-drive digest. This is the precondition
+for upgrade/rollback, not a passing upgrade result. An exported earlier Mesa
+candidate is retained with its own hash in `vm/image-share/candidate.json`; it
+predates the ICU fix and must not silently stand in for the corrected image.
+
+Final full-source/native/image verification, actual customized-profile upgrade/
+rollback, complete sign-in/idle comparisons and physical power/menu/drives/input
+remain required. All work stays local, uncommitted and unpushed.
+
+## 0.9.7 batch 21: complete frozen candidate run and corrected VM layout
+
+`candidate097-v3-source-inputs.json` records 2,253 unchanged inputs for both
+image builds and the full desktop run. Both builds finish successfully:
+
+| Variant | Immutable local image ID |
+| --- | --- |
+| Mesa | `52d96c33312d9461b862158bb8f88b68ad709c3690c7e13128cee5c02d96cb05` |
+| NVIDIA | `613bd192628c6cc0803707da60221ba6e087af9067a287173cf5dd1d1fccefe9` |
+
+The run metadata/logs are `candidate097-v3-{mesa,nvidia}-run.json` and matching
+logs. Each records 14 bootc lint checks passed and one skipped; all native
+package/binary/ABI installation guards pass, including the ICU-corrected PDF
+build. `candidate097-v3-image-cli.json` starts the real binary from each immutable
+image and verifies version 0.9.7. These are build/runtime-command checks, not
+complete OS boot/upgrade or graphics-device qualification.
+
+`candidate097-v3-desktop-run.json` and its summary/log record the completed
+strict desktop run: all 116 discovered modules ran nonzero checks, 1,597 Python
+tests pass, 19 declared cases skip, and none fail/error. The skip names/reasons
+match batch 18 exactly. Selected Node checks and eleven browser-form checks pass.
+The complete run exits zero and all recorded inputs match before/after. The
+46 Rust/Cargo inputs are unchanged from the 99-test/warnings-denied Clippy run.
+Completed evidence and artifact digests are consolidated in
+`candidate097-v3-validation.json`. Later progress-document edits are recorded
+separately; they do not alter product or test sources.
+
+The private exports are `vm/image-share/monet-097-{mesa,nvidia}-v3.oci.tar` with
+metadata in `mesa-v3.json` and `nvidia-v3.json`. The exporter verifies image
+version/config identity, reads the actual OCI manifest descriptor and hashes
+the complete archive before its final rename. These artifacts remain local.
+The guest staging driver verifies size, full hash, manifest, config digest,
+architecture and version before any bootc switch. Its private server exposes
+only image-share on container loopback; task SSH keys are outside that folder.
+
+`final-candidate-preview-installed.json` records one changed sign-in helper,
+all 853 payloads matching, five valid native components and no differences in
+twelve preference files. Receipt:
+`~/.local/state/monet/desktop-preview/20261106T075025.246764Z/receipt.json`.
+The testing/undo guide lists it before older receipts. The laptop OS remains
+0.9.6. `laptop-current-power-readonly.json` records unchanged configuration hashes
+and actual native power data: AC screen/sleep and automatic locking disabled,
+lock on resume enabled. Intel/NVIDIA PCI identities are recorded for later
+physical checks; no sleep, lock, firmware or graphics setting is changed.
+
+### Discarded VM layout and corrected baseline
+
+The initial test disk used bootc to-disk's root-bound boot directory. Its generated
+boot.mount binds /sysroot/boot, while GPT auto discovery creates boot.automount
+for the same path with a two-minute idle timeout. The resulting stop of
+monet-boot-arm during a long import times out; shutdown then reports an invalid
+/boot remount and the staged NVIDIA baseline does not become booted. Diagnostics
+are `vm-boot-generated-units.log`, `vm-boot-mount-diagnostic.log` and
+`vm-nvidia-trial-diagnostic.log`. The initial image staging result is not an
+accepted upgrade result, and its failed health check is retained. No product
+service was weakened to accommodate that fixture.
+
+`install-canonical-baseline.py` creates only the new serial-verified virtual
+/dev/vdd, with Setup's separate 1 GiB EFI / 2 GiB ext4 boot / Btrfs root-subvolume
+layout, and installs the same pinned published 0.9.6 image to-filesystem. The
+image installation succeeds; configuration resumes without repartitioning.
+The chroot needs proc/sys/dev mounts and target account-file labels before PAM
+can open the new password files. Bulk relabeling from the cloud guest encounters
+contexts its loaded policy does not support; copied account/vendor labels are
+therefore retained, and only fixture-created configuration/account paths receive
+their target labels. SELinux is never disabled. Original failed harness logs
+and the successful `vm-canonical-baseline-finish-v5.log` are retained.
+
+The captured account is mirrored with attributes/xattrs, removing newly seeded
+skeleton defaults absent from the original profile. Source filesystem mounts
+use read-only `rescue=nologreplay`, as documented in the
+[Btrfs mount options](https://btrfs.readthedocs.io/en/latest/ch-mount-options.html).
+No filesystem repair/log-clearing command is used.
+
+`vm/canonical-baseline-profile-check.json` passes the original document/link/
+permission/ownership, region, weather, download, startup, shortcut and panel
+configuration checks. Secure Boot and SELinux remain enabled and no system units
+are failed. `vm/canonical-boot-mount-proof.json` proves ext4 /boot, no conflicting
+automount and an active shutdown-trial service after ordinary idle time.
+`vm/canonical-baseline-snapshot.json` records its clean-shutdown disk/OVMF
+checkpoint and unchanged sentinel drive. A separate NVIDIA copy avoids sharing
+writable OS/sentinel disks between running VMs. These are baseline preconditions;
+actual 0.9.7 upgrade/rollback and native application/profile checks remain open.
+
+Full sign-in/idle comparisons and physical power/menu/drive/monitor/input checks
+also remain open. No commit, push, publication or laptop OS replacement was made.
+
+## 0.9.7 batch 22: installed-image upgrade/rollback and native app smoke
+
+Both canonical-layout VMs boot the exact v3 local OCI manifest recorded in
+batch 21. Each signs into its actual Plasma desktop, preserves the customized
+profile through clean sign-out, queues rollback, boots the pinned published
+0.9.6 image and signs in again. `vm/canonical-{mesa,nvidia}-stable-` reports
+cover upgrade desktop and rollback prelogin/desktop checks; corresponding
+`upgrade-durable.json` and `rollback-durable.json` reports verify saved state
+after sign-out. Files, links, permissions, ownership, startup choices, manual
+region/weather/units, download path and shortcut checks pass. Plasma's live
+panels retain IDs 5/8/12, top/bottom/bottom positions and heights 52/60/60.
+Secure Boot and enforcing SELinux remain enabled throughout.
+
+The first GUI comparisons retain two fixture diagnostics. KGlobalAccel moves
+the hand-written Files shortcut into `[services][org.kde.dolphin.desktop]` and
+normalizes its key representation. The collector reads either native storage
+form and compares QKeySequence values; actual Meta+Ctrl+F opens Files. A missing
+preferred browser is pruned by the 0.9.6 desktop as well as the candidate,
+because this isolated fixture lacks the browser Flatpak. Stable baseline
+captures are made after 0.9.6 GUI sign-in/sign-out; the original proof and
+negative reports remain. Subsequent round trips keep every comparison enabled.
+
+The NVIDIA virtual machine has no NVIDIA PCI device. Published 0.9.6 and the
+candidate both fail `nvidia-cdi-refresh.path` and `nvidia-cdi-refresh.service`
+after NVIDIA-SMI reports no driver/device. Baseline/candidate diagnostics are
+`canonical-nvidia-no-gpu-{baseline,candidate}.json`. The final verifier checks
+the fixture lacks an NVIDIA device and allows only those two recorded baseline
+failures, rejecting additional failed units. An early probe before CDI finished
+starting found no failed units; its strict equality mismatch is retained.
+Mesa has no failed system units. This qualifies profile/image behavior with a
+virtual GPU; actual NVIDIA driver/device acceptance remains required.
+
+Actual installed Settings, Store and Games reach their first frames on both
+variants. Settings opens `power#lock`, scrolls to the lock timer and highlights
+it (`candidate-settings.png`). Initial journal collection used the caller's
+user filter and missed the app's records; corrected collection explicitly
+selects UID 1000 and its user unit. These smoke observations check packaging
+and rendering, without claiming comparable startup-speed measurements or
+fully loaded Store contents.
+
+Both native archive dialogs offer the drop destination and default to Desktop.
+Enter starts extraction through installed Ark. The actual Desktop/sample file
+contents and ownership match, and each durable queue record is `done`.
+`mesa-native-transfers-complete.png` shows Completed and Open folder;
+`mesa-native-open-folder.png` shows Files at Desktop/sample with hello.txt.
+The file is still present after each rollback. The initial nested fixture
+string did not parse; its replacement is parsed before submission. An early
+smoke metadata field guessed the source directory; final assertions use the
+actual Desktop destination shown in the dialog.
+
+The extraction smoke adds Transfers widget 34 to panel 12 through the normal
+product flow. This intentional UI action changes AppletOrder. The fixture
+checks it was absent from the saved profile, removes precisely that widget
+through Plasma, and verifies the original panel configuration before clean
+sign-out/rollback. The diagnostic comparison with the smoke widget still
+present is retained; no panel comparison is relaxed.
+
+`mesa-native-open-folder.png` also exposes clipped disk-space text in Files.
+`mesa-096-files-layout.png` reproduces it on published 0.9.6. Read-only font,
+output and Files configuration is saved in `canonical-files-layout-context.json`.
+The cause/fix is still open under 097-08; theme settings have not been changed.
+
+Only ignored VM harness files and these progress documents changed. The 2,253
+frozen inputs still match except the two recorded progress documents. Full
+sign-in/idle comparisons, Files label investigation and physical power/menu/
+drives/monitor/input checks remain. All work stays local and uncommitted.
+
+The final consolidated proof is `vm/candidate097-v3-image-roundtrips.json`.
+Both VMs shut down cleanly with exit zero; both unrelated sentinel drives retain
+their original byte-for-byte digest. No build/import job remains running.
+
+## 0.9.7 batch 23: Files disk-space button height
+
+The native probe in `files-statusbar-probe/` uses actual KCapacityBar and
+QToolButton components. With the original child-widget height, Kvantum's default
+vertical layout margins are 9+9 pixels, leaving a 12-pixel button in a 30-pixel
+row. The probe reproduces clipped text at 10/12/16-point fonts. Removing only
+the vertical margins gives the button the available row height and fixes the
+rendered text. The initial probe used a top-level stop button and inherited its
+480-pixel default height; the corrected probe uses the actual child-widget
+relationship. Its original diagnostics remain separate.
+
+`image/files-recovery/patch.py` applies the change to the distribution's actual
+StatusBarSpaceInfo layout. No theme setting or frame dimension changes.
+`laptop-files-label-build.log` records the guarded native build and both existing
+experience/loading test executables passing. `files-label-native-negative/`
+captures the original paired Files binary; `files-label-native-positive/` and
+`files-label-matrix/` capture the rebuilt pair in private Xvfb sessions with the
+repository's six Kvantum themes. The ten native runs cover 125%, 150% and 200%,
+12-point text and 16-point text at 200%. Every controlled delayed-drive navigation
+and stale-reply check passes; the maximum observed metadata RPC is below 1.3 ms.
+The compact contact sheet shows the actual status bars. Vertical text is readable;
+very narrow large-font windows retain native horizontal elision.
+
+`files-label-preview-installed.json` records five changed payloads, all 853
+planned payloads matching, five valid native components and no differences in
+twelve checked preference files. Receipt:
+`~/.local/state/monet/desktop-preview/20261106T094123.350047Z/receipt.json`.
+The testing/undo guide places it before earlier receipts. No running Files
+window is closed; its next process loads the new pair.
+
+An attempted private VM preview refuses the laptop-specific pair because its
+expected base-binary hash differs (`vm/label-preview-guard.log`). The mismatched
+pair is not run or installed; the original guard remains intact. Updated full
+images must build their own matching pair and qualify the actual VM rendering.
+The earlier v3 builds/tests/round trips retain their original source identities.
+
+The source patch changes the final inputs. Rebuild both images and verify the
+new frozen sources; full sign-in/idle comparisons and physical acceptance remain
+open. Everything remains local, uncommitted and unpushed.
+
+## 0.9.7 batch 24: v4 qualification and whole-session observations
+
+All evidence in this section is under `target/097-goal/` unless prefixed `vm/`.
+`candidate097-v4-source-inputs.json` freezes 2,253 inputs. Both image builds
+finish with exit zero and unchanged inputs; `candidate097-v4-validation.json`
+records their identities, the native Files binary/source correspondence and
+the matching OCI exports. Both archives were independently rehashed. The Mesa
+export wrapper returned 143 after its complete archive/result were written;
+the completed artifact, OCI manifest and image identity pass verification. No
+duplicate export is submitted.
+
+The full serial run (`candidate097-v4-serial-desktop-run.json`) passes 116
+modules, 1,597 checks and 19 declared skips, plus the selected Node checks and
+11 browser-form checks. The original concurrent run retains failures in three
+modules involving Xvfb/Electron startup and a bounded UI-refresh wait. An isolated
+recheck passes 35 tests with one declared skip. A separate Xvfb-reset hypothesis
+does not reproduce the problem. No fixture or assertion is weakened, and the
+same frozen inputs pass the serial full run. The 46 current Cargo/Rust inputs
+still match the previous 99 tests and warnings-denied Clippy pass.
+
+Both actual v4 installed images pass profile comparisons before sign-in, in
+the desktop and after clean sign-out, followed by the same three checks after
+rollback to their pinned 0.9.6 images. Files opened by the saved custom shortcut
+shows readable space text in `vm/mesa-v4-files-label.png` and
+`vm/nvidia-v4-files-label.png`. The earlier extracted Desktop file remains
+accessible after both rollbacks. Secure Boot and SELinux stay enabled. NVIDIA
+uses a virtual GPU and retains only its two recorded baseline no-device CDI
+exceptions. This does not qualify physical NVIDIA graphics. Both VMs shut down
+cleanly; unrelated sentinel drives are checked separately in the round-trip
+report. No laptop OS image or user preferences are replaced.
+
+`vm/session-startup-probe.py` arms an unprivileged observer before credentials
+are entered. A persistent KWin script records desktop/panel mapping and geometry;
+the endpoint requires the full-size fixture surfaces to settle for 500 ms and
+the Plasma scripting API to return the saved panel layout. Its elapsed time is
+measured from the user-manager start, excluding password entry. Initial window
+lists must be empty and wall/monotonic clock drift must stay below 20 ms. The
+observer removes its private KWin script after each sample. Early dry runs and
+the two attempts that refused an already-signed-out fixture remain separate.
+The ignored logout helper now accepts that state only after verifying both the
+user manager is inactive and no UID-1000 processes remain. Timing criteria and
+product code are unchanged.
+
+All three formal startup samples per phase are retained:
+
+| Phase | Settled/responsive seconds | Median seconds |
+| --- | --- | --- |
+| Original 0.9.6 | 3.646, 3.596, 5.169 | 3.646 |
+| v4 candidate | 6.298, 5.510, 5.340 | 5.510 |
+| 0.9.6 after rollback | 6.403, 5.143, 5.178 | 5.178 |
+
+No startup gain is established. The return baseline is also slower than the
+original, so the full initial gap cannot be assigned to candidate code. These
+are repeated sign-ins with existing page/app caches in the same 4-vCPU/8-GiB
+virtual-GPU fixture. Separate boots, unfrozen external weather and scheduling
+variation limit the comparison. Remote widget contents and input readiness are
+not inferred from mapped surfaces.
+
+`vm/session-idle-probe.py` measures the entire fixture-user cgroup, including
+short-lived children, over three 30-second samples per visible/locked phase.
+It checks the actual ScreenSaver state at both ends, includes normal periodic
+helper bursts and reports virtual CPU steal. Original baseline pooled CPU is
+0.887% visible / 0.855% locked; candidate is 10.403% / 10.293%, expressed as a
+percentage of one virtual core. A separate 30-second visible sample after
+rollback is 0.857%. Most extra candidate CPU is in Plasma and KWin. These results
+require investigation. They do not establish lower background activity, hardware
+wakeups or battery-life savings. The candidate's initial samples may overlap
+deferred sign-in work; journals and process details remain available. The
+upstream KWin packages differ (6.8.2-2 versus 6.8.2-3), so the comparison also
+does not isolate Monet changes from its image base.
+
+`vm/session-benchmark-comparison.json` retains the distributions and limits;
+raw startup/idle samples, screenshots and runtime journals are alongside it.
+The startup and CPU concerns remain open under 097-01/097-02. No product source
+is changed in response to an unisolated measurement.
+
+`laptop-acceptance-user-report.json` records the user's confirmation that
+Desktop/widget right-click menus and AC stay-awake with screen, lock and sleep
+timers Never work. Sleep/wake, lid, drive disconnect, monitor/input and physical
+graphics acceptance remain separate. Their question about locking versus sleep
+does not request removing a control; the existing UI is retained. Only these
+two progress documents change after the v4 frozen checks. No commit, push,
+publication or laptop OS replacement is made.
+
+
+## 0.9.7 batch 25: cursor-driven redraws and native clock screen
+
+Evidence remains under `target/097-goal/`. The v4 source/build/round-trip reports
+retain their identities; the changes in this section require a new snapshot.
+
+`vm/candidate-desktop-cpu-profile.json` locates most extra CPU in llvmpipe and
+Qt's scenegraph. Replacing Hours temporarily with the static Image wallpaper
+barely changes the cost (`vm/isolate-wallpaper-cpu.log`). Native animation and
+object-tree snapshots find no continuous QML animation. A breakpoint on
+QQuickWindow::maybeUpdate identifies QQuickTextInput::timerEvent as its caller.
+The safe entry-address trace in `vm/candidate-cursor-address.json` maps the timer
+owner to Weather's city field: invisible, enabled, actively focused and cursor
+visible. The earlier attempted diagnostic call at a method breakpoint lost the
+original Plasma process; its recovered session is diagnostic work, not product
+stability evidence. That failed probe and the original logs are retained.
+
+Weather now disables a hidden/inactive field, releases its focus, stops pending
+search work and checks visibility again before deferred focus. The regression
+in `tests/fixtures/widget-activity.py` opens and focuses city search, then closes
+it. `weather-cursor-negative-source.json` verifies the negative source against
+the v4 digest, adding only an objectName locator. The native negative fails on
+all three retained properties (enabled/focused/cursor); the fixed source passes
+(`weather-cursor-regression.json`). No assertion is relaxed.
+
+Actual v4 lock logs also show VirtualKeyboardLoader is not a type, which sends
+Monet's page to the retained Plasma fallback. The current KWinVirtualKeyboard
+API fixes loading. The clock retains Fraunces, adapts to narrow screens and adds
+an explicit Unlock action. Focus belongs to the cover while idle and the form
+while visible. Deferred focus waits for the form to appear; hidden inputs never
+receive it. Pointer entry does not dismiss the form. A first keyboard smoke
+exposed missing cover focus after disabling the hidden input; native input tests
+now cover this transition. Earlier manual interaction gaps exceeded the ten-second
+form timeout; bounded controllers replace those attempts, with their negatives
+kept. The consent button receives focus for the no-password UI state.
+
+`tests/fixtures/lockscreen-native.py` launches the distribution's actual
+kscreenlocker_greet in testing mode on its own Xvfb display and private session
+bus, with no host display or system services. It uses the repository's fonts.
+XTest sends Enter, moves into the password field, types one character and sends
+Escape. Geometry, input delivery, cover restoration and absent hidden cursors are
+asserted at 1280x800, 960x540 and 480x800 logical dimensions. A seventh case checks
+the no-password consent UI; this is a UI-state check, not a passwordless PAM
+backend result. `lockscreen-consent.json` passes. Early fixture attempts lacked
+Qt's stderr logging and native activation settlement; those original reports
+remain. The final checks use QT_FORCE_STDERR_LOGGING and actual input events,
+rather than setting prompt visibility as proof of keyboard operation. Runtime
+preflight and container dependencies explicitly cover the greeter, XTest,
+fontconfig and the keyboard module.
+
+`vm/lockscreen-consent-final-unlocked.json` verifies that the exact current page
+accepts the fixture password through the actual locker and GetActive becomes
+false. The native backend, its authentication checks and both fallback layers
+are retained. `clock-weather-preview-installed.json` and
+`clock-consent-preview-installed.json` record two then one changed payloads.
+Receipts end in 20261106T121511.287239Z and 20261106T123052.119950Z. All 853 planned
+payloads match, all five native guards pass and twelve checked preferences are
+unchanged. The account testing/undo guide lists newest receipts first. No live
+laptop session is restarted.
+
+The repeated observations in `vm/idle-candidate-final-cursors/result.json` include
+three 30-second visible and three locked samples, with normal helper bursts
+retained. Pooled user-slice CPU is 1.3751% visible / 0.6045% locked of one virtual
+core, versus original candidate 10.4026% / 10.2925%. Original baseline is
+0.8868% / 0.8552%. The low and burst samples are all retained. An intermediate
+clock page left password focus behind its idle cover; that separate greeter
+cost is recorded before the cursor fix. The repeat measurements use private
+QML overrides on the v4 image, not a rebuilt final image, and do not establish
+battery-life, hardware-wakeup or universal speed gains. Corrected-source startup
+samples still vary; no general startup improvement is claimed.
+
+The user's follow-up records sleep/wake, lid and touchpad as working; external
+monitor testing is untried. Drive and GPU qualification remain separate. Remove
+the task's two QML-package overrides and restore its original fixture panel file
+before final-image checks, so local files cannot mask an image defect. Final
+builds/full-suite and installed-image verification remain open. Everything stays
+local, uncommitted and unpushed.
+
+### 0.9.7 final-image clock checks and bounded weather transition (batch 26)
+
+The frozen v5 manifest contains 2,255 inputs. Both image builds finish unchanged;
+`candidate097-v5-installed-source-proof.json` checks the installed clock/Weather
+sources, native Files pair and label source, and the 46 unchanged Rust/Cargo
+inputs. The serial desktop run passes 117 modules, 1,598 checks and the same 19
+declared skips as v4, plus Node and 11 browser forms. Both actual images pass
+native password unlocking and the preserved-profile prelogin/desktop/sign-out
+checks without account QML overrides. See `vm/mesa-v5-image-ui.json`,
+`vm/nvidia-v5-image-ui.json` and the matching native-unlock reports.
+
+Three serial sign-ins in `vm/signin-v5-final-serial/result.json` measure
+5,595.030 / 5,585.677 / 5,269.833 ms to settled, responsive saved panels. The
+parallel qualification sign-ins are separate and excluded from this series.
+No general startup improvement is established. All earlier samples remain.
+
+The visible intervals in `vm/idle-v5-final-image/result.json` expose a separate
+weather-wallpaper cost: approximately 311% of one virtual core during its
+three-minute opacity animation. This run retains three visible and two locked
+intervals; the wrapper ended with status 143 before the last locked observation
+returned. The cause of that wrapper interruption is not established; it is not a
+complete six-interval pass. The two completed locked observations are below 1%.
+`vm/isolate-v5-wallpaper-cpu.log` measures 12-second intervals at 311.126% with
+The Hours, 0.294% with a static wallpaper and 300.043% after restoring The Hours.
+
+The weather veil now settles in 1.5 seconds. The native wallpaper fixture waits
+for the real fog transition to finish and checks its final opacity, then changes
+the controlled weather and verifies that display-off/window hiding still pause
+work. `wallpaper-settle-negative-source.json` proves the negative control is the
+exact v5 source; its test fails at the settling deadline with no QML warnings.
+`wallpaper-settle-positive.json` passes the same test with the fixed source.
+`vm/idle-wallpaper-settle-probe.json` observes 262.085 ms of whole-user CPU over
+30 seconds (0.874% of one core) after a sign-in with only this wallpaper override.
+That targeted observation is separate from final-image performance evidence.
+`vm/wallpaper-settle-probe-retired.json` confirms removal of all task QML package
+overrides and restoration of the original fixture Plasma configuration.
+
+The laptop receipt 20261106T132004.687755Z installs one changed payload, verifies
+all 853 payloads and five native guards, and preserves twelve checked preference
+files. The next sign-in loads the wallpaper change; no live session is restarted.
+The final images/full suite must now use the v6 snapshot. Physical monitor,
+drive and graphics acceptance remain open; all work is local and unpublished.
+
+### 0.9.7 final v6 verification (batch 27)
+
+`candidate097-v6-source-inputs.json` freezes 2,255 inputs with manifest SHA-256
+`533688bb77fdabc750d7d172301a27228404573073acb8146182ce2da99f8388`.
+Both builds finish with unchanged inputs. The serial complete run passes 117
+modules: 1,598 passed checks and the same 19 declared skips as v5, plus Node and
+11 browser forms. Image exports were still finishing shortly after suite start;
+the overlap is recorded, all modules passed and no assertions were changed.
+The 46 Cargo/Rust inputs still match the 99-test and Clippy pass. The installed
+source proof now includes the weather wallpaper, all three clock files, Weather
+and the native Files pair with its matching corrected source archive.
+
+Both VMs independently verify the full archive hash/size and OCI index/config
+before staging. They boot the exact v6 digests, pass prelogin/graphical/post-sign-
+out profile checks, accept the fixture password through the native locker, and
+roll back to the pinned 0.9.6 image. Rollback profile checks and the extracted
+file pass before/after sign-in and sign-out. Actual installed QML hashes match
+the images; all three task account overrides are absent. Secure Boot/SELinux
+remain enabled. NVIDIA permits only the recorded baseline no-device CDI unit
+exceptions and makes no physical NVIDIA claim. Both VMs power off cleanly;
+unrelated sentinel disk SHA-256 remains
+`3b107e52f63fab104395d42dbb0d08b9ef9cb3f10b1e32fe083674dba258e7f8`.
+See `vm/candidate097-v6-image-roundtrips.json` for all report hashes.
+
+The final sign-in and idle series run after builds/tests and the other VM stop,
+without account QML overrides. Startup samples are 5,077.066 / 5,710.279 /
+5,633.558 ms to settled, responsive panels; no general gain is established.
+Idle uses one bounded invocation per 30-second interval, avoiding a single
+long-lived wrapper. All six finish on the same candidate boot, with lock state
+checked at both ends. Visible CPU is 279.909 / 95.671 / 5,056.968 ms; locked CPU
+is 345.111 / 96.186 / 343.279 ms. Pooled percentages of one virtual core are
+6.0362% visible / 0.8718% locked. The high visible interval is mostly Plasma and
+KWin and is retained. Interval accounting alone cannot attribute that cost to
+a particular transition or show its subinterval timing. The first two visible
+intervals are low; the series does not show the prior sustained weather fade.
+The controlled native old/fixed test separately establishes prompt settling.
+`vm/session-benchmark-v6-comparison.json` retains baseline, v4, private override,
+the incomplete five-interval v5 run and the complete v6 run with source hashes.
+Live weather, caches, scheduling and short samples limit comparisons; no
+uniform CPU, whole-OS, hardware wakeup or battery-life gain is claimed.
+
+All 2,255 frozen inputs still match after the final image tests. Subsequent edits
+only update this testing record and the backlog; their post-run digests are
+recorded separately. The latest laptop preview is unchanged, with receipt
+20261106T132004.687755Z, 853 verified payloads, five valid native guards and twelve
+checked preferences preserved. Both VMs are stopped on the published baseline.
+Physical external-monitor, drive and graphics qualification remains separate.
+Nothing is committed, pushed, published or rebased on the laptop.
+
+### 0.9.7 thumbnail loading/cancellation audit (batch 28, in progress)
+
+`files-thumbnail-v6-pair-proof.json` records the pair extracted directly from the
+actual v6 image and checked against its installed runtime manifest. An older
+bundle failed the byte-for-byte identity check and was not used as final-image
+evidence. In `files-thumbnail-v6-rerun/result.json`, 2,000 distinct JPEG paths
+share four 4,800×3,200 image payloads through hardlinks. Native thumbnail cache
+URI metadata is checked; entries grow 5→84 while sixty state queries stay below
+2.049 ms. Native navigation away takes 131.110 ms including typing. Returning to
+the original tab preserves selection/scroll, and stale work does not replace
+the local view. This tests native decoding/list pressure with warm shared file
+data, not physical disk throughput. The first screenshot helper aborted because
+its QGui application lacked the private display environment; the corrected
+helper runs in a child with that environment. The failed run remains recorded.
+
+The same evidence shows Stop disabled while previews are generated after folder
+listing completes. `tests/fixtures/files-thumbnail-native.py` requires that
+control, then exercises Stop, Escape, refresh, tab switching, preference and
+selection preservation, and graceful process exit. It fails on the exact v6
+pair at the missing-control assertion (`files-thumbnail-v6-negative.log`).
+
+The native fix is under verification. Its first build compiled, but the bundle
+compatibility check rejected removal of an existing private exported symbol.
+That rejection is retained; the check is not weakened. The current helper keeps
+the original no-argument symbol and an additional overload, and stores new
+transient state in QObject properties to preserve class memory layouts. No
+matching laptop installation or final-image claim is made for this new code yet.
+
+The revised prototype seals successfully with the original exported symbol
+retained, and no class data members added. The generic v6 test image refuses its
+different laptop-runtime package set; the actual behavior checks run inside the
+matching SDK with a private home/cache/bus/Xvfb. The native case passes at 100%,
+125%, 150% and 200%. It verifies Stop through the existing action, Escape through
+native keyboard input, paused cache growth after scrolling, resumed previews on
+Refresh, retained completed cache entries and saved preview preference, correct
+active-tab Stop state, preserved original tab selection/scroll, stale-reply
+rejection and clean native process exit. Visual captures show Loading and Stop.
+All four report hashes are in `files-thumbnail-native-matrix.json`; maximum RPC
+latency is 4.560 ms. The earlier guard failures and harness failure are retained.
+
+Receipt 20261106T144417.965361Z installs five changed account payloads, verifies
+all 853 planned payloads/five native guards and preserves twelve checked
+preference files. The next Files process loads the new pair; existing windows
+are not terminated. The testing/undo guide is updated. Final images/full suite
+must now use a new v7 frozen source snapshot; this native prototype does not
+stand in for that qualification.
+
+The final fixture uses 401 files in the original tab, selects the last item and
+requires nonzero scroll before creating the photo tab. It also verifies the
+current item and selection after Refresh. All four scale cases pass in
+`files-thumbnail-native-strong-matrix.json`. The initial exact-state assertion
+at 200% fails because the scroll maximum settles from 19,686 to 19,680, and the
+offset follows it; current/selected paths, folder, label and splitter size stay
+identical. `files-thumbnail-native-state200-diagnostic/` retains those values.
+The final check follows the existing recovery contract: preserve the stored
+offset, clamped only to the current valid range, and still require a nonzero
+offset. It does not drop selection/current/expanded/folder/tab-size checks.
+No product-code change was required for that viewport adjustment. The tested
+native helper and installed preview are unchanged; new image qualification
+must use the final fixture/source hashes.
+
+### 0.9.7 final v7 image qualification (batch 29)
+
+`candidate097-v7-source-inputs.json` freezes 2,257 inputs (manifest SHA-256
+`3792acc34d2316cc813409ee6cb9c1a6e95c6b5922a8c14689662d270345bb42`). Both
+pinned-base image builds finish successfully, including two native CTest checks
+and complete native package/ABI seals. Installed sources match the five checked
+clock/Weather/wallpaper QML files and the native Files payloads. The source
+archive contains the exact final `thumbnail-jobs.py` helper. All 46 Cargo/Rust
+inputs still match the earlier 99-test and warnings-denied Clippy pass.
+
+`files-thumbnail-v7-production-matrix.json` records the final fixture against
+the pairs extracted directly from the actual Mesa and NVIDIA images, each at
+100% and 200%. All four cases pass Stop and native Escape, resumed previews on
+Refresh, retained preview preference/cache, active-tab Stop state, original-tab
+selection and nonzero scroll, current/selection after Refresh, stale-result
+navigation and clean native process exit. Maximum state-query latency is
+4.603 ms. The matching laptop-runtime prototype also passes 125% and 150%;
+these are software-rendered synthetic shared-image workloads, not physical
+drive or GPU throughput measurements.
+
+After both exports and production native cases finish, the complete desktop
+suite runs serially with no build/export/VM overlap. It passes 117 modules:
+1,598 checks passed and the same 19 declared skips, plus Node and 11 browser-form
+checks. Run state is terminal exit 0 with no changed inputs. The skip set matches
+v5 exactly. `candidate097-v7-validation.json` links the build, source, suite,
+native regression and account-preview proofs.
+
+`candidate097-v7-exports-verified.json` records exporter checksums, OCI/config
+consistency and independent full archive verification in each guest before a
+successful guarded bootc staging unit. Both actual images boot 0.9.7 and pass
+the customized-profile check before sign-in, on the graphical desktop and after
+sign-out. Native password unlocking succeeds with the shipped Monet clock.
+There are no shell, Weather or wallpaper account overrides, and all five QML
+hashes match the image/source proof. Both installed native Files pairs and
+their embedded source helper also match the production proofs.
+
+Both fixtures then roll back to their pinned 0.9.6 images and pass the same
+three profile phases. The earlier extracted file retains its content and owner;
+files, startup entries, panels, shortcuts, regional/manual Weather choices,
+downloads and power preferences persist. Secure Boot and SELinux remain enabled.
+The NVIDIA fixture uses a virtual GPU and only its recorded baseline no-device
+CDI exceptions. The SSH disconnect during NVIDIA rollback reboot and both
+poweroffs is expected; actual version/profile checks and stopped exit-0 container
+states independently verify the outcomes. Neither unrelated virtual sentinel
+disk changes. `vm/candidate097-v7-image-roundtrips.json` links all twelve profile
+checks, native authentication, installed UI and sentinel evidence.
+
+Concurrent sign-ins in this batch test functionality; they are not formal
+performance samples. The common desktop QML remains unchanged from the measured
+v6 image, whose complete sample set and limitations remain in
+`vm/session-benchmark-v6-comparison.json`. No general startup, uniform CPU or
+battery-life gain is claimed from this Files-only change.
+
+All 2,257 frozen inputs still match after both roundtrips; the pre-documentation
+attestation records that fact and the unchanged Git HEAD. Only this testing
+record and the backlog are updated afterward, with post-run hashes recorded
+separately. Latest preview receipt 20261106T144417.965361Z remains installed:
+853 payloads, five native guards and twelve checked preferences verified at
+installation. Files uses the new native pair after its existing windows close;
+the clock loads on the next lock, desktop QML on the next sign-in. No live
+laptop session is terminated. Both VMs are cleanly stopped on 0.9.6.
+Physical monitor, drive and graphics acceptance remains open. Nothing is
+committed, pushed, published or rebased on the laptop.
+
+### 0.9.7 physical NVIDIA client rendering (batch 30)
+
+`candidate097-v7-physical-renderer-check.json` records eight additional passing
+Store pixel checks at 150% on the laptop. In the basic Qt loop, QRhi identifies
+the physical NVIDIA RTX A500 and all four cases reject a software device. The
+same four screenshot/fallback/banner assertions pass in the normal threaded
+OpenGL loop with the same exclusive NVIDIA client vendor environment. The
+private KWin compositor independently reports Intel Mesa OpenGL and a virtual
+output. Separate temporary HOME/XDG directories, private D-Bus and a private
+Wayland socket keep the active laptop session and output configuration intact.
+
+The initial `store-artwork-v7-nvidia-hardware` attempt applies NVIDIA variables
+to the Intel compositor as well and fails its active-compositing guard before
+the app tests. The retained `render-v7-nvidia-client.py` adapter applies those
+variables only in the isolated client process, leaving fixture and test
+assertions unchanged. Passing runs are in
+`store-artwork-v7-nvidia-client-hardware/` and
+`store-artwork-v7-nvidia-threaded-hardware/`. Report and adapter hashes are
+retained; current product/test sources still match the final v7 snapshot.
+
+Read-only inventory shows only the built-in display connected and no removable
+drive attached. The user's external-monitor response, “Cannot test yet”, is
+recorded in `laptop-acceptance-user-report.json`; it is not a passing result.
+These client-renderer checks do not qualify physical outputs, hotplug, suspend,
+long-running stability, native-image hardware boot or battery behavior. Those
+physical acceptance limits remain open. No active laptop session is restarted,
+and nothing is committed, pushed or published.
+
+### 0.9.7 archive inspection correction (batch 31)
+
+The default managed archive desktop entry previously started `unpack`, which
+opens extraction preparation rather than a contents browser. It now executes
+native Ark directly. `monet-archive-open.desktop` adds top-level Open and
+Extract archive… actions; only the latter starts the destination-folder UI.
+Both the image/add-on installer and account-preview plan carry this service,
+and the native preview rewrites the browsing command to its guarded Ark wrapper.
+The handler ID is unchanged, so no MIME preference rewrite is needed.
+
+Build `tests/native/archive-open` with CMake in the matching native SDK, then run
+`tests/fixtures/archive-open-native.py MENU_FIXTURE ARK_BINARY OUTPUT` there.
+The fixture uses private HOME/XDG, D-Bus, accessibility and Xvfb. Real KDE
+KFileItemActions constructs the menu, verifies both top-level actions and runs
+either the preferred MIME application or the actual Open service action.
+AT-SPI observes a known file in the native archive table; a window title alone
+is not accepted as contents readiness. Both 8-entry and 12,000-entry ZIPs include
+literal Unicode, `%U` and shell-metacharacter filenames. The fixture verifies
+unchanged archive bytes, no extracted files and native browser exit 0.
+
+`archive-open-native-v4/result.json` records all four passing cases. Contents
+readiness is 206.5 / 208.9 ms for the small ZIP and 1,356.2 / 1,528.1 ms for the
+large ZIP. These are synthetic warm local ZIPs in the matching SDK with software
+X11 rendering, not a before/after claim for the user's file. Initial harness
+attempts incorrectly required KIO's completed launcher to stay alive, then
+misclassified an unreaped native child as running. They remain in the earlier
+`archive-open-native*` folders. The final fixture adopts KIO's forked browser as
+a child and verifies/reaps its actual exit status; menu/content/no-extraction
+assertions remain intact.
+
+`archive-open-affected-tests.json` has 32 passes, zero skips/failures across
+archive preparation, password/cancellation behavior, extraction navigation,
+download/MIME defaults and preview compatibility/restoration. The desktop
+application validates and install/uninstall shell syntax passes. KDE's Type=Service
+extension is checked through native KIO rather than the application-only desktop
+entry validator.
+
+Receipt 20261106T162311.847163Z installs only the two archive desktop entries,
+verifies both and all five existing native guards, leaves twelve checked
+preference files unchanged and refreshes application/menu caches. The ZIP
+default remains `monet-archive.desktop`, now the contents browser. Other preview
+payloads and live windows remain untouched; the local undo guide records this
+receipt first. The full v7 image qualification predates these metadata changes
+and is not claimed as final-image qualification for this correction.
+
+### 0.9.7 preserve double-click extraction (batch 32)
+
+The user clarifies that double-click should retain its previous extraction box;
+only right-click Open was requested as a contents browser. Batch 31's default
+browsing behavior is superseded. The application desktop entry is restored to
+its prior `monet-files-tools unpack` command, without browser startup metadata.
+The Open service action stays on the direct guarded Ark route.
+
+`tests/fixtures/archive-open-native.py` now asserts both behaviors independently:
+default dispatch must expose the extraction drop target and literal source path,
+without a contents table; right-click Open must expose a known archive member.
+Both cases keep archive bytes intact and create no extracted files. Explicit
+Escape cancellation of extraction is expected to exit 1, while the native browser
+quits with exit 0. The native launcher/menu implementation is unchanged.
+
+`archive-default-extract-native-v2/result.json` has four passing cases. The
+8/12,000-entry extraction boxes are ready in 176/202 ms; corresponding contents
+browsers are ready in 193/1,342 ms. These remain private SDK/X11/software-rendered,
+synthetic warm-local measurements. The first updated harness attempt correctly
+observes the drop target but fails its overly exact window-caption match because
+Qt adds “— Files”; it is retained in `archive-default-extract-native/`. The final
+fixture accepts that caption suffix while retaining the actual drop-target,
+source-path, route, archive-integrity, no-extraction and exit-status assertions.
+
+Fourteen preference/preview checks pass without skips in
+`archive-default-extract-checks.json`; desktop application validation also passes.
+Receipt 20261106T163255.663760Z changes one installed application entry, preserving
+the browsing service bytes and six checked preferences. The default MIME handler
+ID stays unchanged. Caches and the undo guide are updated without closing any
+active laptop windows. Earlier batch 31 reports describe its superseded default;
+they are not evidence for current double-click behavior. Nothing is committed or
+pushed.
+
+### 0.9.7 power-page design and shell wiring (batch 33)
+
+The [upstream greeter loader](https://raw.githubusercontent.com/KDE/plasma-workspace/master/logout-greeter/main.cpp)
+uses a Plasma/Shell package; the native test below verifies this on the installed
+6.8.2 runtime. The existing Monet page was copied only to global-theme logout folders,
+so the screenshot shows the stock shell controls and theme icons. The installer
+now preserves the shell's native page as `KdeLogout.qml`, installs Monet's page
+as `MonetLogout.qml` and puts a signal-forwarding loader at `Logout.qml`. The
+account-preview plan mirrors this wiring and retains the complete shell package.
+Both older global-theme entry points still receive the complete Monet page.
+
+`tests/test_power_screen.py` renders the new page with isolated context values
+and captures its signals without a session/power backend. Thirteen cases cover
+Mist/Smoke, portrait/short layouts, wrapped large German text, RTL, permission
+visibility, native action/update routing, duplicate activation, countdowns,
+Tab/arrows, Space, both Enter keys, Escape, outside-click cancellation, shared
+countdown cancellation and cross-screen action ownership/removal.
+The content scrolls to focused controls while Cancel remains visible. All thirteen
+pass at 100%, 125%, 150% and 200%, with no skips or QML warnings. Captures retain
+the native pixel sizes. Eleven affected preview/packaging checks also pass.
+`power-screen-two-screen-negative.json` retains the failing pre-guard probe:
+two page instances could emit different actions during the exit fade. The shared
+claim fixes that race, and removing its owner releases it for the other page.
+The final warning condition also follows native semantics: other-session work
+warnings are not shown for sign-out.
+
+The private KWin/OpenGL renderer fixture runs at native 150% scaling. Its basic
+loop renders all four layout variants and identifies the NVIDIA RTX A500 through
+QRhi, rejecting CPU renderers. The threaded OpenGL loop passes all thirteen cases
+with the same exclusive NVIDIA client environment and a private Intel compositor.
+No callback reads QRhi from Python on the threaded loop. Reports are in
+`power-screen-gpu-basic-final/` and `power-screen-gpu-threaded-final/`; software captures and
+scaling reports are under `power-screen-*`. These client-renderer observations
+do not qualify physical display connections, suspend or general GPU stability.
+
+`tests/fixtures/power-greeter-native.py` materializes the actual account-preview
+shell plan in a private home and runs the real `ksmserver-logout-greeter --windowed`
+on Xvfb. It uses a private session bus and a disconnected system bus: the CLI
+flag itself is not treated as a power-action sandbox. The positive case observes
+`MonetPowerScreen` with fallback disabled. The negative case intentionally corrupts
+the Monet component and observes the preserved native fallback. Both save native
+screenshots, accept only Escape, emit no power actions and exit 0. The preserved
+native source SHA-256 is
+`3f9d6449c070a2dd29db40288255bac78951124f40fac2da71aa8f3956a79110`, matching
+the copy installed on the laptop. Results are in
+`power-greeter-native-positive-verified/result.json` and
+`power-greeter-native-fallback-final/result.json`.
+
+The initial thirteen-file installation and six-file shared-action follow-up
+remain in the receipt history. Latest receipt 20261106T174648.821127Z updates
+the three copies of the page. These changes stay within the two legacy
+global-theme logout folders and the desktop-shell logout folder. Sixteen
+selected payloads and all five existing native guards verify. Fourteen checked
+preferences, including theme, panels, power, locking, MIME handlers and downloads,
+stay unchanged. Existing windows/session are not closed; the next prompt loads
+the new page. The receipt and undo instructions precede the archive correction
+in the local guide. No restart, shutdown, suspend or sign-out is performed on
+the laptop. Full image qualification predates these source changes; no new
+full-image or physical acceptance claim is made, and nothing is committed or
+pushed.
+
+### 0.9.7 hover and Files archive activation correction (batch 34)
+
+The mouse probe found six hover misses at the right edges of restart/sign-out
+cards: a transient ScrollView bar intercepted the pointer even with equal
+content and viewport height. The page disables that bar when content fits and
+reserves space when it is needed. Explicit hover and immediate opaque tinted
+fills also remove colour-animation churn. The same 105-position probe then has
+zero misses. The added real-mouse regression covers icon, text, arrow and card
+edges in wide, portrait and short scrolling layouts. Fourteen power cases pass
+at 100%/150%, two targeted cases at 200%, and the hover case on the private
+150% threaded OpenGL client path. No power backend is attached.
+
+`tests/fixtures/files-archive-native.py` now drives actual paired Dolphin GUI
+double-click and Enter activation on disposable ZIPs with 8/12,000 entries.
+Both show the extraction drop target (518/378 ms in this warm local run), cancel,
+leave archive bytes unchanged and create no extracted files. The earlier KIO
+fixture used runPreferredApplications; its default mode now uses OpenUrlJob,
+as Dolphin's single-file activation does. Its four native cases pass, including
+right-click Open inspecting both archives without extraction. These tests use
+private homes, Xvfb and buses; no host window input or files are used.
+
+The default-only look migration explicitly sets BrowseThroughArchives=false;
+its real migration test retains an existing true preference and supplies false
+when absent. Eleven migration/preview checks pass. The requested laptop preview
+sets this preference to false, refreshes launch caches, and installs the hover
+changes with receipt 20261106T183554.489130Z. Five files change; seven selected
+payloads and all five native guards verify. Other checked preferences, the
+extraction desktop entry and the separate Open service stay unchanged. Existing
+Files may retain old launch data, so close and reopen that app once; reopening
+the power prompt loads its correction. A laptop restart is not needed.
+
+Reports are `target/097-goal/power-hover-{controls,scale150,scale200,defaults-packaging}.json`,
+`power-hover-gpu/result.json`, `files-archive-activation-v3/result.json`,
+`archive-real-single-activation-final/result.json` and
+`hover-archive-preview-installed.json`. Full-image/physical qualification has not
+been repeated for this correction. Everything remains local and uncommitted.
+
+### 0.9.7 tab-close target, app priority and RPM activation (batch 35)
+
+The Files event filter expands input around the existing native CloseButton to
+max(32, icon size + 16) logical pixels, clipped to its tab. It forwards native
+enter/hover/press/release events; the style, painted geometry and close signal
+remain unchanged. Native tests verify padded clicks, press/drag-away cancellation,
+ordinary tab selection, reordering and RTL. Both added cases pass under
+MonetDark/Kvantum at 100%, 150% and 200%. The initial scaled test had an offscreen
+target beyond its virtual screen; bounding its window to the available area
+corrected the fixture. CTest's experience and loading suites pass. The rebuilt
+guarded Dolphin executable uses the byte-identical prior private library and
+retains updated corresponding source; private preview install/load/undo passes.
+
+Kicker supplies favoriteId for installed apps but not arbitrary running apps.
+The menu now also promotes executable file URLs and KWin activation rows whose
+task AppName/AppId matches the query. A file viewer's matching document title is
+insufficient. Task metadata changes reapply filtering. Ten search UI cases and
+six navigation cases pass; the final search source also passes after excluding
+folders named like executables. A read-only real Wayland/Kicker query observes
+ChatGPT as the first application, with its RPM and running Archives window left
+among other results. No search result is activated by this observation.
+
+The third screenshot shows chatgpt.x86_64.rpm (621,826,837 bytes), which was still
+associated with Archives. The archive desktop entry, service menu, image defaults
+and first-login MIME list now include application/x-rpm. Its suggested destination
+also removes .rpm. Native Files double-click/Enter tests with the rebuilt pair
+show extraction prompts for 8/12,000-entry ZIPs and this actual large RPM in
+519/384/487 ms, cancel them, and retain source hashes without extraction. These
+are private warm-local observations, not general cold-start/slow-drive timings.
+Right-click Open retains native contents inspection. Four MIME/directory tests
+pass. The broader affected run has 55 checks with one native encrypted-extractor
+skip; that check passes separately in the SDK with the matching patched Ark.
+Using the stock SDK Ark reproduces its already-known false success on password
+cancellation; no new source workaround is introduced for that superseded runtime.
+
+Receipt 20261106T201754.718157Z installs ten changed files and verifies thirteen
+selected payloads/five native guards. Only application/x-rpm in mimeapps.list
+changes among the checked preference files. The running desktop shell was
+refreshed successfully, preserving the current Files and ChatGPT processes.
+Reopen Files once to load its new executable. The account guide records this
+receipt and undo order. No laptop restart, RPM installation, commit or push is
+performed. Evidence is under target/097-goal in tab-search-archive-preview-installed.json,
+tab-target-native-style-final.log, search-app-priority-installed-source.json,
+search-app-priority-controls-final.json, search-live-priority.json,
+archive-zip-rpm-activation-final/result.json, archive-rpm-defaults-final.json,
+tab-target-native-encrypted-final.json and tab-target-preview-private.json.
+
+### 0.9.7 archive authorization and repeat-picker positioning (batch 36)
+
+The laptop's native KDesktopFile query authorizes the default extraction app
+but rejects the 0644 user-owned service menu. KDE's
+[service-file authorization](https://raw.githubusercontent.com/KDE/kconfig/master/src/core/kdesktopfile.cpp)
+accepts root-owned files or executable files outside the application directories.
+The account preview and Linux installer now install Monet's own service menus
+at 0755. A new normal-user SDK account (UID 1000) runs the native fixtures:
+four default/Open KIO cases and two actual Dolphin double-click/Enter cases pass,
+with archive hashes retained and no extraction. The earlier root fixtures could
+not detect this because root ownership satisfies the same authorization check.
+The read-only laptop query in archive-authorization-before.json has
+menu_authorized=false; archive-authorization-after.json has true. The global
+launch permission and preferred extraction app remain authorized throughout.
+
+The preview installer previously skipped identical bytes even when modes were
+wrong. It now records before/after modes and installs permission-only changes.
+Restore/retirement retain later permission edits. Two added tests cover mode-only
+installation/undo and protection of personal chmod changes; legacy receipts
+remain supported. No archive file permissions or global policy are changed.
+
+The repeat picker is drawn from template controls and a standalone item popup.
+It measures real window space and maps the anchor into the Controls overlay.
+Tests reproduce Plasma Dialog's overlay at a negative half-window offset;
+using window coordinates or a ComboBox popup's automatic flipping detached the
+menu. The final picker accounts for that offset and controls its own placement.
+It opens adjacent above/below, preserves native note recurrence persistence,
+and uses rounded green rows matching the button. Pointer selection saves one
+choice; Escape closes only the picker. Keyboard recurrence, reopening/resizing,
+and the separate real NotesPopup window are covered. Three focused cases pass
+at 100%, 150% and 200%; the separate notes-window case also passes at 150% on a
+private KWin Wayland output. Software captures are in calendar-repeat-layout/.
+
+archive-trust-calendar-final-checks.json records 34 passing installer/desktop/
+notes checks without skips. Native normal-user results are in
+archive-authorization-nonroot/ and files-archive-authorization-nonroot/;
+calendar-repeat-scale150.json, calendar-repeat-scale200.json and
+calendar-repeat-wayland/result.json retain scaled/native placement checks.
+Receipt 20261106T205033.991070Z records 24 changes: four mode-only service menus
+and twenty shared DayNotes copies. Selected bytes and modes/five native guards
+verify, with fifteen checked preference/notes files unchanged. The desktop is
+refreshed to load QML; no laptop restart, commit, push or full-image qualification
+is performed. The local guide includes mode-aware undo instructions.
+
+### Local correction batch 37: brightness memory and Home Bar names
+
+`tests.test_brightness_memory` checks atomic private state, malformed/invalid
+values, range changes and ignoring restore/profile events. Its native fixture
+uses an isolated session bus, disconnected system bus and disposable HOME/XDG
+paths. A fake PowerDevil arrives after the real helper, exposes an external
+screen before the internal panel, emits key/slider events, then restarts with a
+new internal display number. The helper restores 27%, saves 43%, restores it in
+a new session and after renumbering, and saves the final 61% slider value.
+External brightness is never overwritten. Sixteen focused checks, including
+native-preview reversibility and dock fallback, pass with zero skips.
+
+The native dock was rebuilt against the laptop's Plasma 6.8.2 runtime with the
+same guarded bundle approach. Its actual QMenu shows Unpin from Home Bar and
+Configure Home Bar, with keyboard mnemonics normalized in the assertion. The
+same fixture retains pointer launch, immediate starting feedback, duplicate
+suppression, concurrent launches, failure handling, Shift and middle-click
+checks. Both pin actions and unpin keep their native implementations. All
+catalogs pass `tools/make-translations.py --check`; Swedish wording is included.
+
+Receipt `20261106T210319.762180Z` changes ten local preview files and verifies
+twelve planned payloads/all five native guards. Fourteen preference files,
+including power policy, output configuration and dock launchers, stay unchanged.
+The new brightness unit is enabled, active and passes systemd verification.
+Its initial state is 20%, matching the laptop's current logical value; the HDR
+kernel backlight reading of 100% is intentionally not used. The desktop is
+refreshed without closing apps. This is source/account-preview validation,
+not a reboot, firmware/login-screen or physical-monitor qualification.
+
+For the remaining laptop check, choose a recognizable level (for example 35%),
+restart when convenient, then check the level after signing in. Repeat once
+using the brightness keys. The firmware/startup logo is outside the signed-in
+session's brightness control. No settings or hardware renderer are changed to
+work around that distinction.
+
+Undo this batch using the exact receipt and the instructions in
+`~/.local/state/monet/local-test-build/TESTING-AND-UNDO.txt`: stop
+`monet-brightness.service`, restore the receipt, reload the user manager, and
+refresh plasmashell. The saved level is ordinary user state and can be kept for
+future reinstalls. No archive files, commits, pushes or OS images are involved.
+
+
+### Local correction batch 38: RPM header contents listing
+
+The actual reported ChatGPT RPM is copied with reflink support into ignored
+fixture storage; GUI/native probes only read that copy. The original download
+matches its SHA-256 before and after installation. Native original/candidate
+plugins list 4,185 members with identical paths, sizes, permissions, link
+metadata and file types. Raw sequential listing takes 14,820 ms versus 67 ms
+using the existing RPM header. Owner/group names are available from the header
+rather than the cpio stream's numeric IDs.
+
+`tests/fixtures/rpm-open-native.py` creates private HOME/XDG/session/accessibility
+buses and Xvfb with a disconnected system bus. Readiness requires both top-level
+rows and an enabled Extract action, rather than the first painted window. Actual
+Archives takes 17,906 ms before and 219 ms after. A separate UID 1000 test installs
+the exact preview planner's Ark payload, wrapper and guard into a temporary
+account and opens the same package in 272 ms. The final packaged binary/plugin
+match the installed native dependency sets and have no build RPATH. These are
+warm-file X11 measurements, not cold-drive/network or physical Wayland latency
+qualification. No input package is extracted in the GUI measurements.
+
+`tests/native/rpm-list` loads actual plugins, including for selected extraction.
+`tests/fixtures/rpm-list-native.py` builds but never installs a small disposable
+RPM containing directories, hard links, a symlink, a ghost and a filename with
+quotes, Unicode and shell syntax. Paths match the original plugin; only the
+selected special-name file is extracted. The fixture reproduces ArchiveModel's
+normal removal of the cpio ./ prefix at the extraction boundary. ZIP fallback,
+invalid-header errors and worker-thread interruption also pass. No scriptlets
+run. The helper uses a single argument-vector RPM query, not a shell. Output,
+entry count and time are bounded, and incomplete queries fall back without
+publishing partial header entries. Actual decompression remains native when
+extracting or previewing a member.
+
+Twenty-two focused bundle/preview/password checks pass with zero skips.
+Schema 2 rejects missing/tampered plugins and query runtimes, retains schema 1
+compatibility, and scopes private plugins to a guarded Ark launch. Source RPM,
+prepared source, helper header and build inputs ship with the local bundle.
+
+Receipt 20261106T212007.948436Z installs 7 changed files; all eight planned
+payloads and five native guards verify. Fifteen checked preference/state files
+(including brightness memory) and the original RPM stay unchanged. Reopen
+Archives to load it; neither the desktop nor laptop is restarted. Undo with
+Archives closed using the exact receipt in
+`~/.local/state/monet/local-test-build/TESTING-AND-UNDO.txt`. No commit, push,
+publication or new full-image qualification is performed.
+
+
+### Local correction batch 39: session and sign-in continuity
+
+The native logout executable is rebuilt from the exact Fedora Plasma Workspace
+6.8.2 source RPM and installed only through a reversible account preview and
+runtime guard. The full image has the corresponding build stage. Authentication,
+updates and session policy remain KDE's. Only the accepted Monet page is retained;
+a stock/fallback theme keeps its original close behavior. The surface moves
+behind applications and releases keyboard input, so the native session's save
+prompts stay usable. A shutdown-service disconnect removes it on cancellation;
+failed requests do not leave an orphaned backdrop.
+
+`session-backdrop-native-complete/result.json` exercises the actual rebuilt
+executable in GUI_TEST mode on private X11/profile/buses with a disconnected
+system bus. It retains the Monet transition, allows an independent unsaved-work
+prompt to focus, and exits when a fake shutdown connection closes. The final
+render includes bundled branding and private installed fonts and was inspected.
+There are no laptop power/session calls or GPU/physical restart claims.
+
+`login-brightness-native-final/result.json` runs the real rebuilt greeter with
+its mock authentication backend, private X server and fake brightness service.
+Brightness keys decrease/increase the level and the real slider changes it.
+Special-key handling goes through the native window event filter, so password
+field focus does not swallow brightness keys. Ordinary password/authentication
+handling stays native. This does not test a physical laptop login or hardware
+brightness controller. The runtime has matching package identities/linked ABI;
+the laptop's earlier Monet-patched base greeter is pinned independently from the
+SDK's stock binary for safe local fallback.
+
+The boot-time system helper copies only the numeric internal-panel brightness
+and stable output identity into the separate plasmalogin account. It retains
+that account's modes, scaling, HDR, other outputs and unrelated configuration.
+Unit tests cover identity matching, new greeter state, invalid values and the
+absence of new greeter idle/suspend/profile-brightness defaults. Normal desktop
+brightness memory stamps the most recently used account even if its level did
+not change. The root-owned preview requires administrator authentication and
+never restarts display-manager, changes PAM, or signs out the current desktop.
+`tools/install-login-preview.py` defaults to a read-only plan and records a
+root-owned undo receipt for any applied files and seeded greeter configuration.
+The administrator-approved system installation completed under receipt
+`/var/lib/monet/login-preview/20261106T225609.063998Z/receipt.json`.
+Root verification checks all fifteen receipt entries, root-owned payloads,
+the native runtime guard and the plasmalogin-owned internal brightness of 0.2.
+Systemd verification caught the initial preview's duplicate power-service bus
+owner. The corrected target wants the existing `plasma-powerdevil.service`;
+the duplicate unit is removed and the original undo receipt is retained.
+System and user unit validation now pass. The existing desktop power service
+was not restarted; the desktop shell was refreshed to load the menu fixes.
+
+Cold search metadata tests hold the running-window count at zero, publish app
+metadata after a folder result, and verify application-first keyboard launch.
+The native isolated runner reads the current app catalog without any running
+windows and finds Zen and the newly registered portable ChatGPT launcher.
+`cold-all-apps-after.json` also records both in the actual freshly constructed
+Kicker All apps model, using the account's catalog without launching either.
+The latter points to the already extracted executable; no archive is extracted
+or package installed. Keep that portable app's folder in place.
+
+Account receipts from 20261106T221057.706016Z through the newest batch receipt
+contain the desktop changes and branding refinements. Fourteen checked user
+preferences remain unchanged; all six native guards and 76 selected payloads
+verify. Undo those receipts newest-first using
+`~/.local/state/monet/local-test-build/TESTING-AND-UNDO.txt`. The separate system
+receipt needs administrator access to undo. No commit, push,
+publication or new full-image qualification is performed.
+
+Restart when convenient to test the installed system login preview. Check the
+sign-in brightness with both the slider and brightness keys, then search Zen
+and ChatGPT before opening either. Check restart/shutdown continuity with saved
+work, and separately cancel an application's unsaved-work prompt to verify the
+backdrop disappears and the desktop remains usable.
+
+### Local correction batch 40: search responsiveness and a covering power screen
+
+Kicker's URL role performs synchronous QFileInfo existence/symlink checks.
+Ranking now uses application IDs, match icons/names and native window metadata
+without reading that role. Both filter proxies use deferred, coalesced refreshes
+outside source-model update signals. The native query has a 90 ms typing delay;
+Enter waits for the current query, and closing the menu cancels searches.
+The metadata regression uses a real QAbstractListModel, records zero URL reads
+and processes 100 metadata updates. The rapid-typing regression verifies one
+runner request for ChatGPT and correct deferred Enter activation.
+
+`tests/fixtures/menu-search-native.py` loads the actual menu representation with
+the real Kicker runner, reads the account's app catalog on a private bus/cache,
+and disables every launch hook. Before correction, its second-character samples
+include roughly 0.5 seconds for `ch` and 1.1 seconds for `se` (including the
+intentional 180 ms observation interval); it did not reproduce a permanent
+hang. Corrected repeated ChatGPT, Zen and Settings queries complete with an
+event-loop heartbeat. These local samples are not a general latency guarantee.
+
+The native logout greeter now retains an overlay above ordinary apps, releases
+its exclusive keyboard grab, and lowers the cover when the unfiltered native
+window model reports new windows or attention. This includes windows omitted
+from the Home Bar. Closing those windows restores the cover. A delayed Show
+applications button handles prompts embedded inside an existing window without
+forcing apps to close or changing native shutdown/update authorization.
+The build intentionally adds only libtaskmanager.so.6 to the original direct
+dependencies; package capture includes that library's complete linked runtime,
+and normal ABI, source and account runtime guards remain required.
+
+`tests/fixtures/session-cover-wayland.py` uses a private KWin Wayland compositor,
+GUI_TEST backend and disconnected system bus. Full-compositor screenshots prove
+the solid magenta fullscreen test app is hidden by Monet (#f3f1ec), visible while
+a new native save prompt exists (#d700a0), and hidden after that prompt closes.
+Separate restart and shutdown runs pass, and fake shutdown cancellation exits
+the greeter. The X11 native handoff/cancellation case passes too. The rendered
+Monet restart page was visually inspected. No test restarts the laptop.
+
+For laptop testing, use the Windows key and type ChatGPT or Zen, including quick
+typing and repeated erase/retype. Search should accept the whole word and keep
+apps first. Then save your work and test Restart or Shut Down: the Monet screen
+should cover apps while they close. A real save prompt should remain accessible;
+Show applications is also available if an app needs attention. The account
+preview's installed receipt and TESTING-AND-UNDO.txt record reversible changes.
+No system-login reinstall is required for this batch. Nothing is committed or
+pushed; physical restart/shutdown continuity still needs the user's check.
+
+Account receipt 20261106T232552.998480Z installs this batch. Ten files changed;
+all 69 selected payloads and six native guards verify. Fourteen checked account
+preferences are unchanged, and the desktop shell was refreshed successfully.
+`session-cover-final-checks.json` records 41 checks, zero skips and no failures.
+`search-cover-preview-installed.json` and `search-cover-local-validation.json`
+record installation and native/private-session evidence. Undo this receipt
+before older account receipts using TESTING-AND-UNDO.txt.

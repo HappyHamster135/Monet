@@ -14,20 +14,37 @@ import QtQuick.Controls as QQC2
 import QtQuick.Dialogs
 import QtQuick.Effects
 import QtQuick.Layouts
-import QtQuick.Shapes
 import QtQuick.Templates as T
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
 import "../games" as Shared
+import "FocusNavigation.js" as FocusNavigation
 
 Shared.MonetWindow {
     id: sheet
 
     readonly property real speed: Kirigami.Units.longDuration / 200
-    width: Math.min(1000, Screen.desktopAvailableWidth - 64)
-    height: Math.min(780, Screen.desktopAvailableHeight - 96)
-    minimumWidth: Math.min(760, Screen.desktopAvailableWidth - 32)
-    minimumHeight: Math.min(520, Screen.desktopAvailableHeight - 48)
+    readonly property real availableWidth: typeof windowArea !== "undefined" && windowArea.width > 0
+        ? windowArea.width : Math.min(Screen.width, Screen.desktopAvailableWidth)
+    readonly property real availableHeight: typeof windowArea !== "undefined" && windowArea.height > 0
+        ? windowArea.height : Math.min(Screen.height, Screen.desktopAvailableHeight)
+    width: Math.max(1, Math.min(1000, availableWidth - 64))
+    height: Math.max(1, Math.min(780, availableHeight - 96))
+    minimumWidth: Math.max(1, Math.min(760, availableWidth - 32))
+    minimumHeight: Math.max(1, Math.min(520, availableHeight - 48))
+    function fitAvailableScreen() {
+        if (availableWidth <= 0 || availableHeight <= 0
+                || visibility === Window.Maximized || visibility === Window.FullScreen || visibility === Window.Minimized) return
+        width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
+        height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
+    }
+    onAvailableWidthChanged: Qt.callLater(fitAvailableScreen)
+    onAvailableHeightChanged: Qt.callLater(fitAvailableScreen)
+    // Wayland can deliver a configure for the old size after a screen change.
+    onWidthChanged: if (width > availableWidth - 32 || width < minimumWidth) Qt.callLater(fitAvailableScreen)
+    onHeightChanged: if (height > availableHeight - 48 || height < minimumHeight) Qt.callLater(fitAvailableScreen)
+    onVisibleChanged: if (visible) Qt.callLater(fitAvailableScreen)
+    onVisibilityChanged: if (visibility === Window.Windowed) Qt.callLater(fitAvailableScreen)
     // See-through: the glass column's glass is WindowGlass (Games' and the Store's too).
     color: "transparent"
     // The size people gave it, kept for next time (~/.config/monet/settings.conf).
@@ -43,7 +60,11 @@ Shared.MonetWindow {
     property string searchReady: ""
     property string searchProblem: ""
     property string pendingAnchor: ""
+    property string currentAnchor: ""
     property int anchorAttempts: 0
+    property Item highlightedItem: null
+    property rect highlightedRect: Qt.rect(0, 0, 0, 0)
+    property bool loadScheduled: false
     property var windowsFiles: ({})
     property bool outputBusy: false
     property string outputProblem: ""
@@ -52,7 +73,7 @@ Shared.MonetWindow {
         && (typeof windowActivity === "undefined" || windowActivity.active)
     readonly property var statusPages: ["light", "wifi", "bluetooth", "display", "sound", "power"]
     readonly property bool statusPage: statusPages.includes(page)
-    onPollingActiveChanged: { if (pollingActive) refresh() }
+    onPollingActiveChanged: { if (pollingActive) { refresh(); if (page === "power") loadKeepAwake() } }
     // Also acknowledge changes made in another display settings window.
     Screen.onDevicePixelRatioChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
     // Wayland's screen DPR is rounded to an integer; fractional changes also
@@ -134,9 +155,43 @@ Shared.MonetWindow {
         const target = findSearchTarget(pageLoader.item, pendingAnchor)
         if (!target || !target.visible || target.height <= 0) return
         const top = target.mapToItem(scroller.contentItem, 0, 0).y
-        scroller.contentY = Math.max(0, Math.min(top - 20, scroller.contentHeight - scroller.height))
+        const margin = Math.min(40, Math.max(0, (scroller.height - target.height) / 2))
+        scroller.contentY = Math.max(0, Math.min(top - margin, scroller.contentHeight - scroller.height))
         target.forceActiveFocus(Qt.ShortcutFocusReason)
+        highlightedItem = target
+        updateSearchHighlight()
+        searchHighlight.restart()
         pendingAnchor = ""
+    }
+
+    Timer {
+        id: searchHighlight
+        interval: 1800
+        onTriggered: sheet.highlightedItem = null
+    }
+    function updateSearchHighlight() {
+        if (!highlightedItem) return
+        const point = highlightedItem.mapToItem(scroller.contentItem, 0, 0)
+        highlightedRect = Qt.rect(point.x - 2, point.y - 2, highlightedItem.width + 4, highlightedItem.height + 4)
+    }
+    Connections {
+        target: sheet.highlightedItem
+        function onXChanged() { sheet.updateSearchHighlight() }
+        function onYChanged() { sheet.updateSearchHighlight() }
+        function onWidthChanged() { sheet.updateSearchHighlight() }
+        function onHeightChanged() { sheet.updateSearchHighlight() }
+    }
+    Rectangle {
+        objectName: "searchHighlightOutline"
+        parent: scroller.contentItem
+        x: sheet.highlightedRect.x
+        y: sheet.highlightedRect.y
+        width: sheet.highlightedRect.width
+        height: sheet.highlightedRect.height
+        z: 1000
+        visible: sheet.highlightedItem !== null
+        color: Qt.rgba(look.lily.r, look.lily.g, look.lily.b, 0.09)
+        radius: 14
     }
 
     readonly property string art: pictures
@@ -181,10 +236,10 @@ Shared.MonetWindow {
         { id: "power", name: i18n("Power & Sleep"),
           glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
           words: i18nc("Settings search words, space-separated",
-                      "power sleep suspend screen off energy battery lid button shutdown performance saver mode") },
-        { id: "privacy", name: i18n("Lock & Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
+                      "power sleep suspend screen off energy battery lid button shutdown performance saver mode lock locker wake away password") },
+        { id: "privacy", name: i18n("Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
           words: i18nc("Settings search words, space-separated",
-                      "lock screen locker wake sleep privacy recent files history forget remember away fingerprint finger") },
+                      "privacy recent files history forget remember fingerprint finger") },
         { id: "passwords", name: i18n("Passwords"), swatch: "privacy", glyph: "M8 14a5 5 0 1 1 4-8M12 10l9 9M17 15l3-3",
           words: i18nc("Settings search words, space-separated", "password passwords wallet vault autofill saved logins app access unlock password manager") },
         { id: "security", name: i18n("Security"), glyph: "M12 3l7.5 3v5.5c0 4.6-3.1 8.4-7.5 9.5-4.4-1.1-7.5-4.9-7.5-9.5V6zM9 12l2.2 2.2L15.5 10",
@@ -245,7 +300,32 @@ Shared.MonetWindow {
     property var appsSound: []
     property bool appsSoundLoading: false
     // Battery care: whether the battery can stop at 80%, and where it stops.
-    property var batteryCare: ({ supported: false, limit: 100 })
+    property var batteryCare: ({})
+    property var keepAwakeInfo: ({ active: false, duration: 0, end: 0, remaining: 0, error: "" })
+    property bool keepAwakeBusy: false
+    property bool keepAwakeReading: false
+    property int keepAwakeRevision: 0
+    property int keepAwakeTick: 0
+    property string keepAwakeProblem: ""
+    readonly property int keepAwakeLeft: {
+        const tick = keepAwakeTick
+        if (!keepAwakeInfo.active || keepAwakeInfo.indefinite) return 0
+        const now = typeof bootClock !== "undefined" ? bootClock.now() : Date.now() / 1000
+        return Math.max(0, Math.ceil((keepAwakeInfo.end || 0) - now))
+    }
+    Timer {
+        interval: 1000
+        repeat: true
+        running: sheet.pollingActive && sheet.page === "power" && sheet.keepAwakeInfo.active === true
+            && sheet.keepAwakeInfo.indefinite !== true
+        onTriggered: sheet.keepAwakeTick++
+    }
+    Timer {
+        interval: 10000
+        repeat: true
+        running: sheet.pollingActive && sheet.page === "power"
+        onTriggered: sheet.loadKeepAwake()
+    }
     // This PC's own Wi-Fi network for phones and tablets.
     property var hotspot: ({ on: false, possible: false })
     // Ready when you come back: after Windows, the desktop starts behind the lock screen.
@@ -382,7 +462,7 @@ Shared.MonetWindow {
     property var gameInfo: ({})
     // What's new in this Monet: { version, headline, items: [{ title, text }] }.
     property var whatsNew: ({})
-    // Lock & Privacy: { lockAfter, lockOnResume, remember }; Printers: { printers, cups }.
+    // Privacy: { remember, fingerprint }; Printers: { printers, cups }.
     property var privacyInfo: ({})
     property var walletInfo: ({})
     property bool walletBusy: false
@@ -537,11 +617,13 @@ Shared.MonetWindow {
     Component.onCompleted: open(firstPage)
 
     function open(which) {
+        fitAvailableScreen()
         const destination = (which === "privacy#passwords" ? "passwords" : (which || "")).split("#")
         if (destination[0] && (destination[0] === "welcome" || pages.some(p => p.id === destination[0]))) {
             pendingAnchor = /^[a-z-]+$/.test(destination[1] || "") ? destination[1] : ""
             anchorAttempts = 0
             page = destination[0]
+            currentAnchor = pendingAnchor
         }
         if (visibility === Window.Minimized) {
             showNormal()
@@ -550,10 +632,21 @@ Shared.MonetWindow {
         }
         raise()
         requestActivate()
-        load()
+        scheduleLoad()
+    }
+
+    function scheduleLoad() {
+        if (loadScheduled) return
+        loadScheduled = true
+        Qt.callLater(() => {
+            sheet.loadScheduled = false
+            if (sheet.visible) sheet.load()
+        })
     }
 
     onPageChanged: {
+        highlightedItem = null
+        currentAnchor = ""
         joining = ""
         asking = null
         renaming = false
@@ -561,7 +654,7 @@ Shared.MonetWindow {
             passwordState = ""
         }
         if (visible) {
-            load()
+            scheduleLoad()
         }
     }
 
@@ -652,6 +745,7 @@ Shared.MonetWindow {
             ask("accounts", out => sheet.people = sheet.json(out, sheet.people))
             ask("guest", out => sheet.guestInfo = sheet.json(out, sheet.guestInfo))
         } else if (page === "power") {
+            loadKeepAwake()
             ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
             ask("battery-care", out => sheet.batteryCare = sheet.json(out, sheet.batteryCare))
         } else if (page === "input") {
@@ -1320,6 +1414,60 @@ Shared.MonetWindow {
         return next
     }
 
+    function loadKeepAwake() {
+        if (keepAwakeBusy || keepAwakeReading || page !== "power" || !pollingActive) return
+        keepAwakeReading = true
+        const revision = keepAwakeRevision
+        ask("keep-awake-status", (out, code) => {
+            sheet.keepAwakeReading = false
+            if (revision !== sheet.keepAwakeRevision) return
+            const state = sheet.json(out, {})
+            if (code === 0 && typeof state.active === "boolean") {
+                sheet.keepAwakeInfo = state
+                sheet.keepAwakeTick++
+            }
+        })
+    }
+    function changeKeepAwake(seconds) {
+        if (keepAwakeBusy || ![-1, 0, 1800, 3600].includes(seconds)) return
+        keepAwakeBusy = true
+        keepAwakeProblem = ""
+        keepAwakeRevision++
+        const mode = seconds === -1 ? "on" : seconds === 0 ? "off" : seconds === 1800 ? "30" : "60"
+        ask("keep-awake " + mode, (out, code) => {
+            sheet.keepAwakeBusy = false
+            const result = sheet.json(out, {})
+            if (result.state && typeof result.state.active === "boolean") sheet.keepAwakeInfo = result.state
+            sheet.keepAwakeTick++
+            sheet.keepAwakeProblem = (code === 0 && result.ok === true)
+                || (result.state && typeof result.state.active === "boolean" && result.state.error) ? ""
+                : i18n("Keep awake couldn't be changed. Try again.")
+        })
+    }
+    function keepAwakeDescription() {
+        if (keepAwakeBusy) return i18n("Changing…")
+        if (keepAwakeProblem) return keepAwakeProblem
+        if (keepAwakeInfo.error === "interrupted") return i18n("Keep awake stopped unexpectedly. Choose a duration to start it again.")
+        if (keepAwakeInfo.error) return i18n("Keep awake is unavailable. Choose a duration to try again.")
+        if (!keepAwakeInfo.active) return i18n("Uses your screen, lock and sleep settings")
+        if (keepAwakeInfo.indefinite) return i18n("Until turned off or you sign out")
+        if (keepAwakeLeft === 0) return i18n("Finishing…")
+        const minutes = Math.floor(keepAwakeLeft / 60)
+        const seconds = String(keepAwakeLeft % 60).padStart(2, "0")
+        return i18nc("%1 is a countdown such as 29:59", "%1 remaining", minutes + ":" + seconds)
+    }
+
+    function batteryDescription() {
+        if (info.charging) return info.minutes
+            ? i18nc("%1 is a time like 1:20", "Charging, full in %1", hm(info.minutes)) : i18n("Charging")
+        if (!info.plugged) return info.minutes
+            ? i18nc("%1 is a time like 2:15", "About %1 left", hm(info.minutes)) : i18n("On battery")
+        if (batteryCare.supported === true && batteryCare.limit < 100 && info.battery >= batteryCare.limit)
+            return i18n("Plugged in · charging paused · %1% limit", batteryCare.limit)
+        if (info.battery >= 100) return i18n("Plugged in · fully charged")
+        return i18n("Plugged in · not charging")
+    }
+
     function powerTime(state, what, seconds) {
         powerInfo = changed(powerInfo, [state, what], seconds)
         ask("power-time " + state + " " + what + " " + seconds, () => sheet.reloadPower())
@@ -1327,6 +1475,11 @@ Shared.MonetWindow {
     function powerAction(key, action) {
         powerInfo = changed(powerInfo, [key === "button" ? "button" : "lidAction"], action)
         ask((key === "button" ? "power-button " : "power-lid ") + action, () => sheet.reloadPower())
+    }
+    function powerLock(what, value) {
+        powerInfo = changed(powerInfo, [what], value)
+        ask(what === "lockAfter" ? "lock-after " + value
+            : "lock-resume " + (value ? "on" : "off"), () => sheet.reloadPower())
     }
     function powerMode(mode) {
         powerInfo = changed(powerInfo, ["mode"], mode)
@@ -1418,10 +1571,9 @@ Shared.MonetWindow {
             else sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
         })
     }
-    function privacy(what, value) {
-        privacyInfo = changed(privacyInfo, [what], value)
-        ask(what === "lockAfter" ? "lock-after " + value
-            : (what === "lockOnResume" ? "lock-resume " : "remember ") + (value ? "on" : "off"))
+    function rememberFiles(value) {
+        privacyInfo = changed(privacyInfo, ["remember"], value)
+        ask("remember " + (value ? "on" : "off"))
     }
 
     function walletAction(action, value) {
@@ -1548,27 +1700,15 @@ Shared.MonetWindow {
     // Inline components can't see this file's ids, so everything they need
     // comes in through properties.
 
-    component Glyph: Item {
-        id: glyph
-        property string path
-        property bool filled
-        property color color: "#FFFFFF"
-        implicitWidth: 16
-        implicitHeight: 16
-        Shape {
-            anchors.fill: parent
-            // Smooth edges without a multisampled layer for every glyph.
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                scale: Qt.size(glyph.width / 24, glyph.height / 24)
-                strokeColor: glyph.color
-                strokeWidth: 2.4
-                fillColor: glyph.filled ? glyph.color : "transparent"
-                capStyle: ShapePath.RoundCap
-                joinStyle: ShapePath.RoundJoin
-                PathSvg { path: glyph.path }
-            }
-        }
+    component Glyph: Shared.Glyph {}
+
+    component ChoiceGrid: GridLayout {
+        property int optionCount: 3
+        readonly property real minimumCardWidth: Math.max(132, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) * 8.5)
+        Layout.fillWidth: true
+        columns: Math.max(1, Math.min(3, optionCount, Math.floor((width + columnSpacing) / (minimumCardWidth + columnSpacing))))
+        columnSpacing: 12
+        rowSpacing: 12
     }
 
     component Rounded: Item {
@@ -1747,6 +1887,9 @@ Shared.MonetWindow {
         color: tone.wash
         border.width: activeFocus ? 2 : 1
         border.color: activeFocus ? tone.lily : tone.line
+        Keys.onTabPressed: event => {
+            event.accepted = card.activeFocus && FocusNavigation.enter(card)
+        }
         ColumnLayout {
             id: list
             anchors.left: parent.left
@@ -1777,6 +1920,10 @@ Shared.MonetWindow {
         activeFocusOnTab: tappable
         Keys.onSpacePressed: if (tappable) row.tapped()
         Keys.onReturnPressed: if (tappable) row.tapped()
+        Keys.onEnterPressed: if (tappable) row.tapped()
+        Keys.onTabPressed: event => {
+            event.accepted = row.activeFocus && FocusNavigation.enter(row)
+        }
 
         Rectangle {
             anchors.fill: parent
@@ -1847,6 +1994,7 @@ Shared.MonetWindow {
         Item {
             id: slot
             objectName: "settingRowControls"
+            readonly property real controlsAvailableWidth: Math.max(1, row.width - 36)
             anchors.right: parent.right
             anchors.rightMargin: 18
             y: row.stacked ? Math.max(texts.y + texts.height, leadSlot.y + leadSlot.height) + 12
@@ -1962,15 +2110,17 @@ Shared.MonetWindow {
         implicitHeight: Math.max(kind === "sun" ? 44 : 40, label.implicitHeight + 18)
         radius: kind === "sun" ? 20 : 12
         opacity: enabledPill ? 1 : 0.5
+        enabled: enabledPill
         color: kind === "sun" ? (hover.hovered ? "#FF6A42" : "#F2552C")
             : kind === "lily" ? (hover.hovered ? "#3F9483" : "#357F72")
             : (hover.hovered ? tone.press : tone.wash2)
         scale: tap.pressed ? 0.96 : hover.hovered && kind === "sun" ? 1.04 : 1
         border.width: activeFocus ? 2 : 0
         border.color: kind === "plain" ? tone.lily : "#FFFFFF"
-        activeFocusOnTab: true
+        activeFocusOnTab: enabledPill
         Keys.onSpacePressed: if (enabledPill) pill.clicked()
         Keys.onReturnPressed: if (enabledPill) pill.clicked()
+        Keys.onEnterPressed: if (enabledPill) pill.clicked()
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
@@ -2037,14 +2187,29 @@ Shared.MonetWindow {
         property var tone
         property var options: []
         property var current
+        property real maximumWidth: parent && typeof parent.controlsAvailableWidth === "number"
+            ? parent.controlsAvailableWidth : naturalWidth
+        readonly property real naturalWidth: {
+            // Metric calls depend on the font as well as the option text.
+            const measuredFont = segmentMetrics.font
+            return options.reduce((width, option) => width
+                + Math.ceil(segmentMetrics.advanceWidth(String(option[1]))) + 22, 6 + Math.max(0, options.length - 1) * 2)
+        }
         signal picked(var value)
-        implicitWidth: segmentRow.implicitWidth + 6
+        implicitWidth: Math.min(naturalWidth, maximumWidth)
         implicitHeight: segmentRow.implicitHeight + 6
         radius: 11
         color: tone.wash2
-        Row {
+        FontMetrics {
+            id: segmentMetrics
+            font.family: Kirigami.Theme.defaultFont.family
+            font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+            font.weight: Font.DemiBold
+        }
+        Flow {
             id: segmentRow
             anchors.centerIn: parent
+            width: Math.max(1, segments.width - 6)
             spacing: 2
             Repeater {
                 model: segments.options
@@ -2052,7 +2217,8 @@ Shared.MonetWindow {
                     id: segment
                     required property var modelData
                     readonly property bool chosen: segments.current === modelData[0]
-                    width: segmentLabel.implicitWidth + 22
+                    implicitWidth: Math.ceil(segmentMetrics.advanceWidth(String(modelData[1]))) + 22
+                    width: Math.min(implicitWidth, segmentRow.width)
                     height: Math.max(34, segmentLabel.implicitHeight + 14)
                     radius: 9
                     color: chosen ? (segments.tone.dark ? Qt.rgba(1, 1, 1, 0.17) : "#FFFFFF")
@@ -2061,13 +2227,19 @@ Shared.MonetWindow {
                     border.color: segments.tone.lily
                     activeFocusOnTab: true
                     Keys.onSpacePressed: segments.picked(modelData[0])
+                    Keys.onReturnPressed: segments.picked(modelData[0])
+                    Keys.onEnterPressed: segments.picked(modelData[0])
                     Behavior on color { ColorAnimation { duration: Math.round(140 * segments.tone.speed) } }
                     Text {
-                        horizontalAlignment: Text.AlignLeft
                         id: segmentLabel
+                        horizontalAlignment: Text.AlignHCenter
                         anchors.centerIn: parent
+                        width: Math.max(0, segment.width - 22)
                         text: segment.modelData[1]
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
                         color: segments.tone.ink
+                        font.family: segmentMetrics.font.family
                         font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         font.weight: segment.chosen ? Font.DemiBold : Font.Medium
                     }
@@ -2489,6 +2661,7 @@ Shared.MonetWindow {
                 // page's pebble of glass glides from one to the next.
                 Flickable {
                     id: navList
+                    objectName: "settingsNavigation"
                     Shared.MouseScroll { view: navList }
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -2496,6 +2669,9 @@ Shared.MonetWindow {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
+                    Shared.ScrollInput { id: navInput; view: navList }
+                    Keys.priority: Keys.AfterItem
+                    Keys.onPressed: event => navInput.key(event)
                     // On a laptop's screen not every page fits: a scrollbar says there are more,
                     // and the page that opens (from a notification, say) is scrolled into view.
                     T.ScrollBar.vertical: Rail { id: navScroll; tone: look }
@@ -2637,6 +2813,7 @@ Shared.MonetWindow {
                                 activeFocusOnTab: true
                                 Keys.onSpacePressed: sheet.go(modelData)
                                 Keys.onReturnPressed: sheet.go(modelData)
+                                Keys.onEnterPressed: sheet.go(modelData)
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -2716,20 +2893,31 @@ Shared.MonetWindow {
                 }
 
                 Rectangle {
+                    id: moreSettings
+                    objectName: "settingsMore"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: Math.max(34, Kirigami.Theme.defaultFont.pointSize * 4 / 3 + 16)
                     radius: 10
                     color: kdeHover.hovered ? (look.dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.3)) : "transparent"
+                    border.width: activeFocus ? 2 : 0
+                    border.color: look.lily
+                    activeFocusOnTab: true
+                    Keys.onSpacePressed: sheet.ask("kde " + sheet.kdePage())
+                    Keys.onReturnPressed: sheet.ask("kde " + sheet.kdePage())
+                    Keys.onEnterPressed: sheet.ask("kde " + sheet.kdePage())
                     Text {
                         horizontalAlignment: Text.AlignLeft
                         anchors.left: parent.left
+                        anchors.right: parent.right
                         anchors.leftMargin: 10
+                        anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         text: i18n("More settings ›")
                         color: look.ink
                         opacity: 0.78
                         font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                         font.weight: Font.Medium
+                        elide: Text.ElideRight
                     }
                     HoverHandler { id: kdeHover }
                     TapHandler { onTapped: sheet.ask("kde " + sheet.kdePage()) }
@@ -2767,6 +2955,9 @@ Shared.MonetWindow {
                 id: scroller
                 objectName: "settingsScroller"
                 Shared.MouseScroll { view: scroller }
+                Shared.ScrollInput { id: pageInput; view: scroller }
+                Keys.priority: Keys.AfterItem
+                Keys.onPressed: event => pageInput.key(event)
                 anchors.fill: parent
                 anchors.topMargin: 2
                 anchors.bottomMargin: sheet.page === "notifications" ? notificationFeedback.height + 12 : 2
@@ -2785,17 +2976,10 @@ Shared.MonetWindow {
                         contentY = Math.min(Math.max(0, contentHeight - height), top + item.height - height + 12)
                 }
                 onHeightChanged: Qt.callLater(revealFocus)
-                onContentHeightChanged: Qt.callLater(revealFocus)
+                onContentHeightChanged: { Qt.callLater(revealFocus); Qt.callLater(sheet.updateSearchHighlight) }
                 Connections {
                     target: sheet
                     function onActiveFocusItemChanged() { Qt.callLater(scroller.revealFocus) }
-                }
-                // A wheel's turn glides, as in the Store and Games.
-                Kirigami.WheelHandler {
-                    target: scroller
-                    filterMouseEvents: !("acceptedButtons" in scroller)
-                    keyNavigationEnabled: true
-                    verticalStepSize: 96
                 }
                 T.ScrollBar.vertical: Rail { tone: look }
 
@@ -3023,9 +3207,7 @@ Shared.MonetWindow {
                     text: i18n("Light & Wallpaper")
                     detail: i18n("How Monet looks, and when it changes.")
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
+                ChoiceGrid {
                     Repeater {
                         model: [
                             ["hours", i18n("Follow the hours"), i18n("Mist by day, smoke after dark")],
@@ -3035,8 +3217,10 @@ Shared.MonetWindow {
                         ]
                         Rectangle {
                             id: choice
+                            objectName: "lightChoice-" + modelData[0]
                             readonly property bool picked: (sheet.info.light || "hours") === modelData[0]
                             Layout.fillWidth: true
+                            Layout.fillHeight: true
                             Layout.preferredWidth: 1
                             implicitHeight: choiceColumn.implicitHeight + 20
                             radius: 18
@@ -3046,6 +3230,8 @@ Shared.MonetWindow {
                             scale: choiceTap.pressed ? 0.98 : 1
                             activeFocusOnTab: true
                             Keys.onSpacePressed: sheet.chooseLight(modelData[0])
+                            Keys.onReturnPressed: sheet.chooseLight(modelData[0])
+                            Keys.onEnterPressed: sheet.chooseLight(modelData[0])
                             Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
                             Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
                             ColumnLayout {
@@ -3071,7 +3257,7 @@ Shared.MonetWindow {
                                     color: look.ink
                                     font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
-                                    elide: Text.ElideRight
+                                    wrapMode: Text.Wrap
                                 }
                                 Text {
                                     horizontalAlignment: Text.AlignLeft
@@ -3080,7 +3266,7 @@ Shared.MonetWindow {
                                     text: modelData[2]
                                     color: look.dim
                                     font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
-                                    elide: Text.ElideRight
+                                    wrapMode: Text.Wrap
                                 }
                             }
                             HoverHandler { id: choiceHover }
@@ -3090,6 +3276,7 @@ Shared.MonetWindow {
                             }
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData[1]
+                            Accessible.description: modelData[2]
                             Accessible.checked: picked
                             Accessible.onPressAction: sheet.chooseLight(modelData[0])
                         }
@@ -3100,12 +3287,9 @@ Shared.MonetWindow {
                     tone: look
                     text: i18n("Painting")
                 }
-                // Three to a row, like paintings on a gallery wall.
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 3
-                    columnSpacing: 12
-                    rowSpacing: 12
+                // Keep room for the painting and its full caption at larger text sizes.
+                ChoiceGrid {
+                    optionCount: 6
                     Repeater {
                         model: [
                             ["hours", i18n("The Hours"), i18n("The harbor at Le Havre")],
@@ -3117,6 +3301,7 @@ Shared.MonetWindow {
                         ]
                         Rectangle {
                             id: seriesChoice
+                            objectName: "seriesChoice-" + modelData[0]
                             readonly property bool picked: (sheet.prefs.series || "hours") === modelData[0]
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -3129,6 +3314,8 @@ Shared.MonetWindow {
                             scale: seriesTap.pressed ? 0.98 : 1
                             activeFocusOnTab: true
                             Keys.onSpacePressed: sheet.chooseSeries(modelData[0])
+                            Keys.onReturnPressed: sheet.chooseSeries(modelData[0])
+                            Keys.onEnterPressed: sheet.chooseSeries(modelData[0])
                             Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
                             Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
                             ColumnLayout {
@@ -3141,7 +3328,8 @@ Shared.MonetWindow {
                                 Image {
                                     id: seriesArt
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: Math.round(width * 236 / 480)
+                                    Layout.preferredHeight: Math.max(Math.round(width * 236 / 480),
+                                        modelData[0] === "photo" ? photoPlaceholder.implicitHeight + 16 : 0)
                                     Layout.bottomMargin: 7
                                     source: modelData[0] !== "photo" ? sheet.art + "series-" + modelData[0] + ".png"
                                         : sheet.photoInfo.preview || ""
@@ -3156,7 +3344,9 @@ Shared.MonetWindow {
                                         border.width: 1
                                         border.color: look.line
                                         Column {
+                                            id: photoPlaceholder
                                             anchors.centerIn: parent
+                                            width: Math.max(0, parent.width - 12)
                                             spacing: 6
                                             Kirigami.Icon {
                                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -3167,6 +3357,9 @@ Shared.MonetWindow {
                                             }
                                             Text {
                                                 anchors.horizontalCenter: parent.horizontalCenter
+                                                width: parent.width
+                                                horizontalAlignment: Text.AlignHCenter
+                                                wrapMode: Text.Wrap
                                                 text: sheet.photoInfo.state === "painting"
                                                     ? i18n("Painting… %1%", sheet.photoInfo.percent || 0) : i18n("Choose a photo…")
                                                 color: look.dim
@@ -3183,7 +3376,7 @@ Shared.MonetWindow {
                                     color: look.ink
                                     font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
-                                    elide: Text.ElideRight
+                                    wrapMode: Text.Wrap
                                 }
                                 Text {
                                     horizontalAlignment: Text.AlignLeft
@@ -3192,10 +3385,7 @@ Shared.MonetWindow {
                                     text: modelData[2]
                                     color: look.dim
                                     font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
-                                    // Four side by side: room for two lines rather than cutting the words off.
-                                    wrapMode: Text.WordWrap
-                                    maximumLineCount: 2
-                                    elide: Text.ElideRight
+                                    wrapMode: Text.Wrap
                                 }
                             }
                             HoverHandler { id: seriesHover }
@@ -3205,6 +3395,7 @@ Shared.MonetWindow {
                             }
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData[1]
+                            Accessible.description: modelData[2]
                             Accessible.checked: picked
                             Accessible.onPressAction: sheet.chooseSeries(modelData[0])
                         }
@@ -4721,28 +4912,31 @@ Shared.MonetWindow {
                     entry: sheet.entry("power")
                     art: sheet.art
                     text: i18n("Power & Sleep")
-                    detail: i18n("When the screen rests, when the PC sleeps, and how hard it works.")
+                    detail: i18n("When the screen rests or locks, when the PC sleeps, and how hard it works.")
                 }
                 // The battery, on a laptop: how full, and charging or how long it lasts.
                 Card {
                     tone: look
-                    visible: typeof sheet.info.battery === "number"
+                    visible: typeof sheet.info.battery === "number" || sheet.currentAnchor === "battery-limit"
                     SettingRow {
                         tone: look
                         divider: false
+                        visible: typeof sheet.info.battery === "number"
                         title: i18n("Battery %1%", sheet.info.battery)
-                        detail: sheet.info.charging
-                            ? (sheet.info.minutes ? i18nc("%1 is a time like 1:20", "Charging, full in %1", sheet.hm(sheet.info.minutes)) : i18n("Charging"))
-                            : sheet.info.plugged ? i18n("Plugged in")
-                            : sheet.info.minutes ? i18nc("%1 is a time like 2:15", "About %1 left", sheet.hm(sheet.info.minutes)) : i18n("On battery")
+                        objectName: "batteryStatusRow"
+                        detail: sheet.batteryDescription()
                     }
                     // Battery care, where the battery can do it (ThinkPads and many others): it stops at 80%.
                     SettingRow {
                         tone: look
-                        visible: sheet.batteryCare.supported === true
-                        tappable: true
+                        visible: sheet.batteryCare.supported === true || sheet.currentAnchor === "battery-limit"
+                        tappable: sheet.batteryCare.supported === true
+                        objectName: "search-battery-limit"
                         title: i18n("Protect the battery")
-                        detail: i18n("Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in.")
+                        detail: sheet.batteryCare.supported === true
+                            ? i18n("Stops charging at 80%, so the battery lasts more years. Best for a laptop that's mostly plugged in.")
+                            : sheet.batteryCare.supported === false ? i18n("This PC doesn't report support for a charging limit.")
+                            : i18n("Checking charging-limit support…")
                         onTapped: {
                             const limit = sheet.batteryCare.limit <= 80 ? 100 : 80
                             sheet.batteryCare = { supported: true, limit: limit }
@@ -4750,16 +4944,17 @@ Shared.MonetWindow {
                         }
                         Switch {
                             tone: look
+                            visible: sheet.batteryCare.supported === true
                             active: sheet.batteryCare.limit <= 80
                         }
                     }
                 }
                 // How hard it works: three choices, like Light's.
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
+                ChoiceGrid {
+                    optionCount: powerModeOptions.count
                     visible: (sheet.powerInfo.modes || []).length > 0
                     Repeater {
+                        id: powerModeOptions
                         model: [
                             ["power-saver", i18n("Power saver"), i18n("Cooler and quieter, longer on battery"),
                              "M5 19c0-9 5-14 14-14c0 9-5 14-14 14zM5 19l7-7"],
@@ -4770,9 +4965,11 @@ Shared.MonetWindow {
                         ].filter(m => (sheet.powerInfo.modes || []).indexOf(m[0]) !== -1)
                         Rectangle {
                             id: modeChoice
+                            objectName: "powerMode-" + modelData[0]
                             required property var modelData
                             readonly property bool picked: sheet.powerInfo.mode === modelData[0]
                             Layout.fillWidth: true
+                            Layout.fillHeight: true
                             Layout.preferredWidth: 1
                             implicitHeight: modeColumn.implicitHeight + 28
                             radius: 18
@@ -4782,6 +4979,8 @@ Shared.MonetWindow {
                             scale: modeTap.pressed ? 0.98 : 1
                             activeFocusOnTab: true
                             Keys.onSpacePressed: sheet.powerMode(modelData[0])
+                            Keys.onReturnPressed: sheet.powerMode(modelData[0])
+                            Keys.onEnterPressed: sheet.powerMode(modelData[0])
                             Behavior on scale { NumberAnimation { duration: Math.round(160 * sheet.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
                             Behavior on color { ColorAnimation { duration: Math.round(160 * sheet.speed) } }
                             ColumnLayout {
@@ -4805,7 +5004,7 @@ Shared.MonetWindow {
                                     color: look.ink
                                     font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                                     font.weight: Font.DemiBold
-                                    elide: Text.ElideRight
+                                    wrapMode: Text.Wrap
                                 }
                                 Text {
                                     horizontalAlignment: Text.AlignLeft
@@ -4868,6 +5067,78 @@ Shared.MonetWindow {
                                     onPicked: value => sheet.powerTime(powerState.modelData[0], "sleep", value)
                                 }
                             }
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        objectName: "search-keep-awake"
+                        title: i18n("Keep awake")
+                        detail: sheet.keepAwakeDescription()
+                        Segments {
+                            objectName: "keepAwakeDuration"
+                            tone: look
+                            enabled: !sheet.keepAwakeBusy
+                            options: [[0, i18n("Off")], [1800, i18n("30 min")], [3600, i18n("1 hour")], [-1, i18n("Until off")]]
+                            current: sheet.keepAwakeInfo.active === true ? sheet.keepAwakeInfo.duration : 0
+                            onPicked: value => sheet.changeKeepAwake(value)
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.margins: 18
+                        text: i18n("Temporarily pauses automatic screen-off, locking and sleep. Your saved settings stay the same.")
+                        color: look.dim
+                        font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
+                        wrapMode: Text.Wrap
+                    }
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Locking")
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Lock the screen")
+                        objectName: "search-lock"
+                        detail: i18n("Locks after this long untouched, even when sleep is off")
+                        Segments {
+                            tone: look
+                            objectName: "autoLockTime"
+                            options: [[1, i18n("1 min")], [5, i18n("5 min")], [15, i18n("15 min")], [30, i18n("30 min")],
+                                      [0, i18n("Never")]]
+                            current: typeof sheet.powerInfo.lockAfter === "number" ? sheet.powerInfo.lockAfter : 5
+                            onPicked: value => sheet.powerLock("lockAfter", value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Ask for the password after sleep")
+                        objectName: "lockOnResumeRow"
+                        checkable: true
+                        checked: sheet.powerInfo.lockOnResume !== false
+                        detail: i18n("Waking the PC shows the lock screen")
+                        onTapped: sheet.powerLock("lockOnResume", sheet.powerInfo.lockOnResume === false)
+                        Switch {
+                            tone: look
+                            active: sheet.powerInfo.lockOnResume !== false
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Lock now")
+                        detail: i18n("Or press the Windows key and L")
+                        Pill {
+                            tone: look
+                            text: i18n("Lock")
+                            onClicked: sheet.ask("lock-now")
                         }
                     }
                 }
@@ -5739,9 +6010,9 @@ Shared.MonetWindow {
                     }
                     SettingRow {
                         tone: look
+                        objectName: "search-downloads"
                         title: i18n("Downloads")
-                        detail: !sheet.storageInfo.measured ? i18n("Open Downloads to review your files") : (sheet.storageInfo.downloads || 0) > 0
-                            ? i18n("%1 · look through them in Files", sheet.bytes(sheet.storageInfo.downloads)) : i18n("Empty")
+                        detail: sheet.storageInfo.downloadsPath || i18n("Desktop")
                         Pill {
                             tone: look
                             visible: (sheet.storageInfo.downloadsPath || "") !== ""
@@ -6239,53 +6510,18 @@ Shared.MonetWindow {
                     tone: look
                     entry: sheet.entry("privacy")
                     art: sheet.art
-                    text: i18n("Lock & Privacy")
-                    detail: sheet.privacyInfo.lockAfter === 0 ? i18n("The screen doesn't lock by itself.")
-                        : sheet.privacyInfo.lockAfter > 0 ? i18np("The screen locks after %1 minute away.",
-                                                                  "The screen locks after %1 minutes away.", sheet.privacyInfo.lockAfter)
-                        : i18n("Who can get in, and what Monet remembers.")
+                    text: i18n("Privacy")
+                    detail: i18n("Who can get in, and what Monet remembers.")
                 }
                 Card {
                     tone: look
-                    SettingRow {
-                        tone: look
-                        divider: false
-                        title: i18n("Lock the screen")
-                        detail: i18n("When you've been away this long")
-                        Segments {
-                            tone: look
-                            options: [[1, i18n("1 min")], [5, i18n("5 min")], [15, i18n("15 min")], [30, i18n("30 min")],
-                                      [0, i18n("Never")]]
-                            current: typeof sheet.privacyInfo.lockAfter === "number" ? sheet.privacyInfo.lockAfter : 5
-                            onPicked: value => sheet.privacy("lockAfter", value)
-                        }
-                    }
-                    SettingRow {
-                        tone: look
-                        tappable: true
-                        title: i18n("Ask for the password after sleep")
-                        detail: i18n("Waking the PC shows the lock screen")
-                        onTapped: sheet.privacy("lockOnResume", sheet.privacyInfo.lockOnResume === false)
-                        Switch {
-                            tone: look
-                            active: sheet.privacyInfo.lockOnResume !== false
-                        }
-                    }
-                    SettingRow {
-                        tone: look
-                        title: i18n("Lock now")
-                        detail: i18n("Or press the Windows key and L")
-                        Pill {
-                            tone: look
-                            text: i18n("Lock")
-                            onClicked: sheet.ask("lock-now")
-                        }
-                    }
+                    visible: !!sheet.privacyInfo.fingerprint
                     // With a fingerprint reader: a finger unlocks and says yes to administrator
                     // questions. KDE's Accounts page sets one up (Configure Fingerprint).
                     SettingRow {
                         tone: look
                         visible: !!sheet.privacyInfo.fingerprint
+                        divider: false
                         title: i18n("Fingerprint")
                         detail: sheet.privacyInfo.fingerprint && sheet.privacyInfo.fingerprint.enrolled
                             ? i18n("Your finger unlocks the screen and says yes when Monet asks for your password")
@@ -6324,7 +6560,7 @@ Shared.MonetWindow {
                         tappable: true
                         title: i18n("Remember recent files")
                         detail: i18n("Files and the menu show what you opened lately")
-                        onTapped: sheet.privacy("remember", sheet.privacyInfo.remember === false)
+                        onTapped: sheet.rememberFiles(sheet.privacyInfo.remember === false)
                         Switch {
                             tone: look
                             active: sheet.privacyInfo.remember !== false
@@ -7215,17 +7451,6 @@ Shared.MonetWindow {
                     tone: look
                     Accessible.role: Accessible.Grouping
                     Accessible.name: i18n("After your last return")
-                    Keys.onTabPressed: event => {
-                        if (sheet.activeFocusItem !== returnCard) { event.accepted = false; return }
-                        for (const name of ["returnRetryAll", "returnDismiss", "returnRefresh"]) {
-                            const next = sheet.returnFocusTarget(returnCard, name)
-                            if (next && next.visible && next.enabledPill) {
-                                next.forceActiveFocus(Qt.TabFocusReason)
-                                return
-                            }
-                        }
-                        event.accepted = false
-                    }
                     SettingRow {
                         tone: look
                         divider: false
@@ -8090,6 +8315,7 @@ Shared.MonetWindow {
 
     // A page of Monet's own, or one KDE's settings show (then this stays put).
     function go(entry) {
+        currentAnchor = ""
         pendingAnchor = ""
         if (entry.kde)
             ask("kde " + entry.kde)

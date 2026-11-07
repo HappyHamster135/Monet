@@ -19,6 +19,13 @@ import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+    SessionActivity {
+        id: activity; viewVisible: root.visible
+        onActiveChanged: if (active) Qt.callLater(() => {
+            root.refresh();
+            if (root.expanded || !audioLevel.nativeReady) root.look();
+        })
+    }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property real speed: Kirigami.Units.longDuration / 200
@@ -43,6 +50,7 @@ PlasmoidItem {
 
     AudioLevel {
         id: audioLevel
+        active: activity.active
         onVolumeChanged: if (!root.dragging) root.volume = volume
         onMutedChanged: if (!root.dragging) root.muted = muted
     }
@@ -120,7 +128,11 @@ PlasmoidItem {
         if (!dragging) { volume = audioLevel.volume; muted = audioLevel.muted; }
     }
     function look() {
-        if (!soundRequest) soundRequest = request(helper + " sound")
+        if (!activity.active || soundRequest) return
+        // Keep the identity before connecting: a cached source may reply during
+        // connectSource, and activity can change while the widget is created.
+        soundRequest = helper + " sound # monet-sound-" + (++requestSerial)
+        runner.connectSource(soundRequest)
     }
     // Arguments are fixed words or numbers, never anyone's text.
     function run(args) {
@@ -182,11 +194,11 @@ PlasmoidItem {
     Timer {
         interval: root.expanded ? 3000 : 60000
         repeat: true
-        running: root.expanded || !audioLevel.nativeReady
+        running: activity.active && (root.expanded || !audioLevel.nativeReady)
         triggeredOnStart: true
         onTriggered: if (!root.dragging) root.look()
     }
-    onExpandedChanged: if (root.expanded) look()
+    onExpandedChanged: if (root.expanded) Qt.callLater(look)
     // Nothing to set up: no KDE settings window from its menu.
     Component.onCompleted: {
         try {

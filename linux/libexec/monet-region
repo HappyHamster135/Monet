@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+"""Seed region preferences before Plasma starts; keep later manual choices."""
+import configparser
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+# In a source checkout the shared installer module has not been packaged yet.
+if not Path(__file__).with_name('monet_region.py').exists():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'setup'))
+    from monet_setup import region
+else:
+    import monet_region as region
+
+
+def main():
+    config = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
+    preferences = config / 'plasma-localerc'
+    saved = configparser.ConfigParser(interpolation=None, strict=False)
+    saved.read(preferences)
+    language = saved.get('Formats', 'LANG', fallback=os.environ.get('LANG', 'en_US.UTF-8'))
+    # Use a receipt so choosing "follow region" later (deleting LC_TIME) persists.
+    receipt = config / 'monet/region-defaults-v1'
+    if receipt.exists():
+        return
+    defaults = region.settings(region.current_zone(), language)
+    for key in ('LC_TIME', 'LC_MEASUREMENT'):
+        if not saved.has_option('Formats', key):
+            subprocess.run(['kwriteconfig6', '--file', str(preferences), '--group', 'Formats',
+                            '--key', key, defaults['locale']], check=True, timeout=10)
+    region.seed_weather(config, defaults)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.touch()
+
+
+if __name__ == '__main__':
+    main()

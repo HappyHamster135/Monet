@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.22)
+project(MonetFilesExperienceTests LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_AUTOMOC ON)
+find_package(ECM REQUIRED NO_MODULE)
+list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
+find_package(KF6KIO REQUIRED)
+find_package(KF6I18n REQUIRED)
+add_executable(files-experience-test experience-test.cpp)
+target_link_libraries(files-experience-test PRIVATE Qt6::Widgets Qt6::Test KF6::KIOWidgets KF6::I18n)
+enable_testing()
+add_test(NAME files-experience COMMAND files-experience-test)
+set_tests_properties(files-experience PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=generic;DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent")
+
+if(MONET_DOLPHIN_SOURCE)
+    enable_language(C)
+    find_package(KF6Solid REQUIRED)
+    add_library(slow-space SHARED slow-space.c)
+    target_link_libraries(slow-space PRIVATE ${CMAKE_DL_LIBS})
+    add_executable(files-loading-test loading-test.cpp
+        ${MONET_DOLPHIN_SOURCE}/src/statusbar/mountpointobserver.cpp
+        ${MONET_DOLPHIN_SOURCE}/src/statusbar/mountpointobservercache.cpp
+        ${MONET_DOLPHIN_SOURCE}/src/statusbar/spaceinfoobserver.cpp)
+    target_include_directories(files-loading-test PRIVATE ${MONET_DOLPHIN_SOURCE}/src/statusbar)
+    target_link_libraries(files-loading-test PRIVATE Qt6::Widgets Qt6::Test KF6::KIOCore KF6::Solid ${CMAKE_DL_LIBS})
+    add_test(NAME files-loading COMMAND files-loading-test)
+    set_tests_properties(files-loading PROPERTIES ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=generic;DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent;LD_PRELOAD=$<TARGET_FILE:slow-space>")
+endif()

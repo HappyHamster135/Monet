@@ -1,0 +1,11 @@
+[Unit]
+Description=Monet temporary Keep awake
+PartOf=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=dbus
+BusName=org.monet.KeepAwake
+ExecStart=@LIBEXECDIR@/monet-keep-awake
+Slice=background.slice
+TimeoutStopSec=5

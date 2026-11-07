@@ -489,11 +489,14 @@ is tried again at the next sign-in.
   off, paper.
 - **Weather**: the temperature in Fraunces, the sky painted beside it (the
   sun and its reflection for a clear day, a crescent at night, clouds, rain,
-  snow, fog, a storm) and the next four days. From Open-Meteo once a place is
-  chosen: no account, only the place is sent. The place is chosen right on
+  snow, fog, a storm) and the next four days. Setup's city supplies the first
+  place and its country's Celsius or Fahrenheit convention, independently of
+  the interface language. Its coordinates come from tzdata, so an offline
+  install can prepare Weather too. Forecasts come from Open-Meteo: no account,
+  only the place is sent. Another place is chosen right on
   the card ("Where are you?", a town, then one of three matches), never in
-  KDE's settings window; click the place's name for another. The first
-  place sets the degrees the way the PC's region counts them. Every place
+  KDE's settings window; click the place's name for another. Saved places
+  and unit choices survive later sign-ins and upgrades. Every place
   chosen is kept (`places`, in order): ‹ › beside the name go through them,
   each keeps its last forecast so going back is instant, and the widget's
   right-click menu adds one or forgets the one shown.
@@ -562,7 +565,9 @@ is tried again at the next sign-in.
 - **The gallery** (`linux/share/monet/explorer`), after the way a Mac edits
   its widgets: from the desktop's right-click menu (Add or Manage Widgets,
   which KDE leaves out of it and `monet-fresh` puts back before Plasma
-  starts) or Settings → Light & Wallpaper → Edit widgets. Glass down half the
+  starts) or Settings → Light & Wallpaper → Edit widgets. Missing right-click
+  bindings are repaired even when an older menu migration already ran; an
+  explicit disabled or alternative mouse action stays. Glass down half the
   screen with "Widgets" in Fraunces and Done; down its left a search well and
   Monet's widgets for where you're adding one (the desktop's or the bar's),
   each with its painted icon, then More widgets; beside them big cards, two
@@ -628,6 +633,56 @@ sidebar; the files on paper; folders big enough to see their paintings
 (80 px, previews on); a soft Lily wash for the selection instead of a solid
 block.
 
+Downloads start on the account's Desktop (including its localized name).
+An existing custom download folder stays. A folder's right-click menu has
+**Set as download path**, which updates XDG user directories and Browser's
+download preferences; Browser takes the new directory after restarting.
+Old downloads remain where they were. Settings → Storage shows the active path.
+
+Double-clicking an archive opens **Extract archive**, initially targeting a
+new folder on the Desktop. Drop a destination folder on its box to extract
+there, or use Choose location and Extract. Ark handles formats and passwords;
+Files opens the result. Existing folders are never overwritten, and partial
+output stays available after failure or cancellation. **Extract and find
+applications** remains a separate right-click action.
+
+**Quick preview** opens with Space while a local item is focused in Files.
+Space or Escape closes it; inline renaming still accepts spaces. Images,
+the first PDF page, text, Word/OpenDocument text and archive listings are read
+in a disposable worker with a timeout and bounded output. Preview never
+extracts an archive or runs its contents. Open in application uses the usual
+file association. The image's native Files build adds Preview and Transfers
+to its Tools menu and carries Wayland activation to the preview window.
+
+**Desktop stacks** are optional, from the desktop's right-click menu or the
+widget gallery. Type and Date group the real Desktop's files without moving
+them. Groups expand to file actions and previews. The widget temporarily
+hides ordinary desktop icons using Folder View's filter and saves its previous
+values. Turning stacks off or removing the widget restores those values;
+later custom filters win. Sign-in repairs a stale filter after an interrupted
+removal. Each screen/activity keeps its own saved filter.
+
+**Transfers**, in the bar and Files' Tools menu, combines Plasma's native KIO
+jobs with Store downloads and Monet's extraction queue. Native copies keep
+their existing undo history. Pause/resume/cancel are offered where the job
+supports them; failed, cancelled and interrupted extractions and Store jobs
+can be retried. Extraction runs independently of its dialog, reveals the
+finished folder, and keeps partial output on failure. Retrying reserves a
+different folder. Native Ark progress for an already represented extraction
+is hidden to avoid duplicate rows. Browser downloads appear here when the
+browser exposes native Plasma jobs; this does not change browser extensions.
+
+Files' new defaults skip background directory-size counting and remote
+thumbnails, preserve explicit settings, and reuse an existing Files window for
+external locations. The native roles updater yields after a 32 ms work budget
+instead of 200 ms and prefetches two pages each way instead of five. Visible
+items keep priority and normal image previews remain enabled. These are work
+budgets, not a measured claim about overall folder-opening speed.
+
+Setup's continent and city also choose the clock format and measurement locale,
+without changing the chosen interface language. The same regional module seeds
+older accounts before Plasma starts, once, preserving explicit saved choices.
+
 **Monet Settings** (`monet-settings`, its window `share/monet/settings-app/MonetSettings.qml`):
 one window, about 1000 × 780. What other systems have, Monet's way: Sound
 lists the apps playing and gives each its own volume (`wpctl` streams, as
@@ -665,7 +720,7 @@ each cut to its useful end. Headings in English, for whoever it's sent to; it
 stays on the PC until it's sent, and a notification shows it in Files. On the glass: the name in Fraunces, search,
 and the pages, each marked by a swatch cut from the paintings with a white
 glyph, in three groups: the light, the network, printers, the screen, sound,
-the clock and you; the pointer, power, the lock and privacy, notifications,
+the clock and you; the pointer, power and locking, privacy, notifications,
 accessibility, default apps and storage; and games and controllers, Windows,
 Updates and About. Every page is Monet's own, each with a "More…" button at
 its foot for KDE's page of the rarer settings. A pebble of glass glides to the page
@@ -697,8 +752,12 @@ which KWin watches), searched by name, the first one first. Power & Sleep
 offers the power mode as three choices (power-profiles-daemon, at once) and,
 plugged in and on battery, when the screen turns off and when the PC
 sleeps, then what the power button and the lid do: PowerDevil's own
-settings in `powerdevilrc`, reread as they change. Choices of a few are
-Segments: the chosen one on a pebble. Notifications has Do Not Disturb, the
+settings in `powerdevilrc`, reread as they change. The same page owns the
+automatic screen-lock timer and password-after-sleep choice (KDE's screen
+locker, `kscreenlockerrc`), shared by both power profiles. Locking is separate
+from screen-off and sleep; turning either off does not turn locking off.
+Choices of a few are Segments: the chosen one on a pebble. Notifications has
+Do Not Disturb, the
 sounds, when it goes quiet by itself (fullscreen, sharing the screen, urgent
 ones let through), where popups go and how long they stay, and each app that
 has notified, to let it pop up or not (`plasmanotifyrc`, watched by
@@ -723,7 +782,7 @@ leads to KDE Connect's download page, for Android and iPhone alike. The page
 looks again every four seconds while it's open, as phones join the Wi-Fi and
 pairings are answered on the phone.
 
-**Fingerprint** (Lock & Privacy) shows with a reader (`fprintd-list`, read in
+**Fingerprint** (Privacy) shows with a reader (`fprintd-list`, read in
 English): set up, a finger unlocks the screen and answers administrator
 questions (polkit, `sudo`). Bazzite has fprintd but leaves authselect's
 fingerprint step off; the image turns it on (`authselect enable-feature
@@ -756,9 +815,8 @@ one reports), pairs a new one (KDE's Bluetooth wizard) and tests its buttons
 (KDE's page), switches the performance overlay (MangoHud, from the next
 sign-in, in Monet's colors unless you've made your own) and shows where games
 are kept (Steam's libraries, and ~/Games for Heroic and Lutris), each opened
-in Files. Lock & Privacy sets when the screen locks and whether waking asks
-for the password (KDE's screen locker), and whether Files and the menu
-remember what you opened, with forgetting it (asked once more). Printers
+in Files. Privacy sets whether Files and the menu remember what you opened,
+with forgetting it (asked once more). Printers
 shows each printer (the ones on the network turn up by themselves), its
 state and what's waiting, and makes one your default (yours alone, no
 password); adding one is KDE's page. Mouse & Keyboard ends with the keys to

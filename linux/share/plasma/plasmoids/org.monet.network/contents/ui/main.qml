@@ -9,15 +9,16 @@ import org.kde.ksysguard.sensors as Sensors
 
 PlasmoidItem {
     id: root
+    SessionActivity { id: activity; viewVisible: root.visible }
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "preferences-system-network"
     Plasmoid.contextualActions: [TaskManagerAction { id: taskManager }]
     preferredRepresentation: fullRepresentation
     toolTipMainText: i18nd("monet", "Network")
-    Sensors.Sensor { enabled: root.visible; updateRateLimit: 2000; id: download; sensorId: "network/all/download" }
-    Sensors.Sensor { enabled: root.visible; updateRateLimit: 2000; id: upload; sensorId: "network/all/upload" }
-    Sensors.Sensor { enabled: root.visible; updateRateLimit: 2000; id: downloaded; sensorId: "network/all/totalDownload" }
-    Sensors.Sensor { enabled: root.visible; updateRateLimit: 2000; id: uploaded; sensorId: "network/all/totalUpload" }
+    Sensors.Sensor { enabled: root.visible && activity.active; updateRateLimit: 2000; id: download; sensorId: "network/all/download" }
+    Sensors.Sensor { enabled: root.visible && activity.active; updateRateLimit: 2000; id: upload; sensorId: "network/all/upload" }
+    Sensors.Sensor { enabled: root.visible && activity.active; updateRateLimit: 2000; id: downloaded; sensorId: "network/all/totalDownload" }
+    Sensors.Sensor { enabled: root.visible && activity.active; updateRateLimit: 2000; id: uploaded; sensorId: "network/all/totalUpload" }
     function value(sensor) { return sensor.status === Sensors.Sensor.Ready && Number.isFinite(sensor.value) && sensor.value >= 0 ? sensor.formattedValue : "—"; }
     fullRepresentation: Glass {
         id: card

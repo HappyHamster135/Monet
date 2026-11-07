@@ -11,6 +11,7 @@
  */
 import QtCore
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC2
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -20,6 +21,7 @@ import Qt.labs.folderlistmodel
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.workspace.components as PW
+import org.kde.plasma.workspace.keyboardlayout as Keyboards
 import org.kde.plasma.private.keyboardindicator as KeyboardIndicator
 import org.kde.plasma.private.sessions
 import org.kde.kirigami as Kirigami
@@ -73,6 +75,14 @@ Item {
     readonly property string userImage: String(typeof kscreenlocker_userImage === "undefined" ? "" : kscreenlocker_userImage)
     readonly property string firstName: userName.trim().split(" ")[0]
     readonly property string timeText: clockFormat.time(now)
+    readonly property real edge: Math.max(24, Math.min(72, Math.min(width, height) * 0.07))
+
+    function focusPassword() {
+        if (!lockScreenRoot.uiVisible || !mainStack.visible) return;
+        if (block.open) openButton.forceActiveFocus();
+        else if (passwordBox.visible && passwordBox.enabled)
+            passwordBox.forceActiveFocus();
+    }
 
     function handleMessage(msg) {
         if (!msg) {
@@ -100,12 +110,13 @@ Item {
         }
 
         function onSucceeded() {
+            authenticator.stopAuthenticating();
             if (authenticator.hadPrompt) {
                 Qt.quit();
             } else {
                 // Nothing to type (no password on this account): one button to go back in.
                 block.open = true;
-                openButton.forceActiveFocus();
+                Qt.callLater(monetLock.focusPassword);
             }
         }
 
@@ -123,7 +134,7 @@ Item {
 
         function onPromptForSecretChanged(msg) {
             passwordBox.showPassword = false;
-            passwordBox.forceActiveFocus();
+            monetLock.focusPassword();
         }
     }
 
@@ -164,7 +175,8 @@ Item {
 
         property bool uiVisible: false
         property bool seenPositionChange: false
-        property bool blockUI: containsMouse && (passwordBox.text.length > 0 || inputPanel.keyboardActive)
+        property bool blockUI: containsMouse && (passwordBox.text.length > 0 || Keyboards.KWinVirtualKeyboard.visible)
+        focus: !uiVisible
 
         anchors.fill: parent
         hoverEnabled: true
@@ -172,12 +184,13 @@ Item {
         drag.filterChildren: true
         onPressed: uiVisible = true;
         onPositionChanged: {
-            uiVisible = seenPositionChange;
+            if (seenPositionChange) uiVisible = true;
             seenPositionChange = true;
         }
         onUiVisibleChanged: {
             if (uiVisible) {
                 Window.window.requestActivate();
+                Qt.callLater(monetLock.focusPassword);
             }
 
             if (blockUI) {
@@ -195,22 +208,31 @@ Item {
                 fadeoutTimer.restart();
             }
         }
-        onExited: {
-            uiVisible = false;
+        // Keep the native authenticator available while its prompt is visible.
+        Timer {
+            interval: 1000
+            running: lockScreenRoot.uiVisible && !authenticator.unlocked
+            repeat: true
+            onTriggered: authenticator.startAuthenticating()
+        }
+        ScreenLocker.ActiveScreenMonitor {
+            lockscreenState: ScreenLocker.LockscreenState
+            window: lockScreenRoot.Window.window
+            onActiveChanged: if (!active) lockScreenRoot.uiVisible = false
         }
         Keys.onEscapePressed: {
             // If the escape key is pressed, kscreenlocker will turn off the screen.
             // We do not want to show the password prompt in this case.
             if (uiVisible) {
                 uiVisible = false;
-                if (inputPanel.keyboardActive) {
-                    inputPanel.showHide();
-                }
+                if (Keyboards.KWinVirtualKeyboard.visible)
+                    Keyboards.KWinVirtualKeyboard.active = false;
                 root.clearPassword();
             }
         }
         Keys.onPressed: event => {
             uiVisible = true;
+            if (!blockUI) fadeoutTimer.restart();
             event.accepted = false;
         }
 
@@ -278,9 +300,11 @@ Item {
             readonly property bool ink: monetLock.light === "midday"  // the midday sky is bright
             readonly property color textColor: ink ? "#13202E" : "#FFFFFF"
             anchors.left: parent.left
+            anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.leftMargin: Kirigami.Units.gridUnit * 4
-            anchors.bottomMargin: Kirigami.Units.gridUnit * 4
+            anchors.leftMargin: monetLock.edge
+            anchors.rightMargin: monetLock.edge
+            anchors.bottomMargin: monetLock.edge
             spacing: 0
             visible: monetLock.settings.alwaysShowClock && !monetLock.settings.hideClockWhenIdle && opacity > 0
             opacity: lockScreenRoot.uiVisible ? 0 : 1
@@ -294,8 +318,10 @@ Item {
             }
 
             Text {
+                Layout.fillWidth: true
                 horizontalAlignment: Text.AlignLeft
                 text: Qt.formatDate(monetLock.now, "dddd, d MMMM")
+                wrapMode: Text.WordWrap
                 color: placard.textColor
                 opacity: 0.88
                 font.family: "Inter"
@@ -305,13 +331,17 @@ Item {
             }
 
             Text {
+                Layout.fillWidth: true
                 horizontalAlignment: Text.AlignLeft
+                id: timeReadout
                 text: monetLock.timeText
                 color: placard.textColor
                 font.family: "Fraunces 72pt SuperSoft"
                 font.weight: Font.Light
-                font.pixelSize: 148
-                font.letterSpacing: -5
+                font.pixelSize: Math.min(148, monetLock.height * 0.22)
+                minimumPixelSize: 36
+                fontSizeMode: Text.HorizontalFit
+                font.letterSpacing: -2
                 Layout.leftMargin: -6
                 Layout.topMargin: -6
                 Layout.bottomMargin: -8
@@ -329,6 +359,7 @@ Item {
                 }
 
                 Text {
+                    Layout.fillWidth: true
                     horizontalAlignment: Text.AlignLeft
                     text: monetLock.series === "lilies"
                         ? i18ndc("monet", "the wallpaper's name, after Monet's Water Lilies; %1 is the light", "Water Lilies, %1", monetLock.lightName)
@@ -341,6 +372,17 @@ Item {
                     font.family: "Fraunces 72pt SuperSoft"
                     font.italic: true
                     font.pixelSize: 22
+                    wrapMode: Text.WordWrap
+                }
+            }
+            PlasmaComponents3.Button {
+                Layout.topMargin: Kirigami.Units.gridUnit
+                text: i18ndc("plasma_shell_org.kde.plasma.desktop", "@action:button accessible only", "Unlock")
+                icon.name: "system-lock-screen"
+                enabled: !lockScreenRoot.uiVisible
+                onClicked: {
+                    lockScreenRoot.uiVisible = true;
+                    Qt.callLater(monetLock.focusPassword);
                 }
             }
         }
@@ -352,7 +394,8 @@ Item {
                 right: parent.right
             }
             height: lockScreenRoot.height
-            focus: true // StackView is an implicit focus scope, so we need to give this focus so the item inside will have it
+            focus: lockScreenRoot.uiVisible
+            onVisibleChanged: if (visible) Qt.callLater(monetLock.focusPassword)
 
             // this isn't implicit, otherwise items still get processed for the scenegraph
             visible: opacity > 0
@@ -366,8 +409,6 @@ Item {
 
                 // No password on this account: unlocked already, one button to go in.
                 property bool open: false
-                // Where the on-screen keyboard must not cover (VirtualKeyboardLoader).
-                readonly property real visibleBoundary: rise.y + rise.height
 
                 function startLogin() {
                     const password = passwordBox.text
@@ -540,14 +581,14 @@ Item {
                                     font.pointSize: Kirigami.Theme.defaultFont.pointSize + 1
                                     text: PasswordSync.password
                                     placeholderText: i18ndc("plasma_shell_org.kde.plasma.desktop", "@info:placeholder in text field", "Password")
-                                    focus: true
-                                    enabled: !authenticator.graceLocked
+                                    focus: lockScreenRoot.uiVisible && visible
+                                    enabled: lockScreenRoot.uiVisible && visible && !authenticator.graceLocked
 
                                     // In Qt this is implicitly active based on focus rather than visibility
                                     // in any other application having a focussed invisible object would be weird
                                     // but here we are using to wake out of screensaver mode
                                     // We need to explicitly disable cursor flashing to avoid unnecessary renders
-                                    cursorVisible: visible
+                                    cursorVisible: lockScreenRoot.uiVisible && visible && activeFocus
 
                                     onAccepted: {
                                         if (lockScreenRoot.uiVisible) {
@@ -558,7 +599,7 @@ Item {
                                     Connections {
                                         target: root
                                         function onClearPassword() {
-                                            passwordBox.forceActiveFocus()
+                                            monetLock.focusPassword()
                                             passwordBox.text = "";
                                             passwordBox.text = Qt.binding(() => PasswordSync.password);
                                         }
@@ -601,7 +642,7 @@ Item {
                                             capStyle: ShapePath.RoundCap
                                             joinStyle: ShapePath.RoundJoin
                                             PathPolyline {
-                                                path: LayoutMirroring.enabled
+                                                path: sunButton.LayoutMirroring.enabled
                                                     ? [Qt.point(26, 20), Qt.point(14, 20), Qt.point(19.5, 14.5), Qt.point(14, 20), Qt.point(19.5, 25.5)]
                                                     : [Qt.point(14, 20), Qt.point(26, 20), Qt.point(20.5, 14.5), Qt.point(26, 20), Qt.point(20.5, 25.5)]
                                             }
@@ -731,19 +772,8 @@ Item {
                     }
                 }
 
-                Component.onCompleted: passwordBox.forceActiveFocus()
+                Component.onCompleted: monetLock.focusPassword()
             }
-        }
-
-        VirtualKeyboardLoader {
-            id: inputPanel
-
-            z: 1
-
-            screenRoot: lockScreenRoot
-            mainStack: mainStack
-            mainBlock: block
-            passwordField: passwordBox
         }
 
         Loader {
@@ -776,15 +806,18 @@ Item {
 
                 focusPolicy: Qt.TabFocus
                 text: i18ndc("plasma_shell_org.kde.plasma.desktop", "Button to show/hide virtual keyboard", "Virtual Keyboard")
-                icon.name: inputPanel.keyboardActive ? "input-keyboard-virtual-on" : "input-keyboard-virtual-off"
+                icon.name: Keyboards.KWinVirtualKeyboard.visible ? "input-keyboard-virtual-on" : "input-keyboard-virtual-off"
                 onClicked: {
                     // Otherwise the password field loses focus and virtual keyboard
                     // keystrokes get eaten
-                    passwordBox.forceActiveFocus();
-                    inputPanel.showHide()
+                    if (Keyboards.KWinVirtualKeyboard.visible) {
+                        Keyboards.KWinVirtualKeyboard.active = false;
+                    } else {
+                        passwordBox.forceActiveFocus();
+                        Keyboards.KWinVirtualKeyboard.forceActivate();
+                    }
                 }
 
-                visible: inputPanel.status === Loader.Ready
                 Layout.fillHeight: true
             }
 

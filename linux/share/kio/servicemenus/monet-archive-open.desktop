@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/zip;application/x-tar;application/x-compressed-tar;application/x-bzip-compressed-tar;application/x-xz-compressed-tar;application/x-zstd-compressed-tar;application/x-7z-compressed;application/vnd.rar;application/x-rar;application/gzip;application/x-bzip2;application/x-xz;application/zstd;application/x-rpm;
+Actions=open;unpack;
+X-KDE-Priority=TopLevel
+X-KDE-Protocols=file
+X-KDE-RequiredNumberOfUrls=1
+X-Monet=true
+
+[Desktop Action open]
+Name=Open
+Icon=document-open
+Exec=ark -- %f
+
+[Desktop Action unpack]
+Name=Extract archive…
+Icon=archive-extract
+Exec=@LIBEXECDIR@/monet-files-tools unpack %f

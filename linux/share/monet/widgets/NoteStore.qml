@@ -21,6 +21,10 @@ QtObject {
     // {"2026-10-23": "…"}
     property var notes: ({})
     property bool loaded: false
+    property bool active: true
+    property bool reading: false
+    property bool readPending: false
+    onActiveChanged: if (active) Qt.callLater(refresh)
     // Writes the helper hasn't kept yet: a look meanwhile could bring back an older note.
     property var queue: []
     property string inFlight: ""
@@ -33,6 +37,7 @@ QtObject {
         onNewData: (source, data) => {
             disconnectSource(source);
             if (source === store.helper + " notes") {
+                store.reading = false;
                 if (store.writing === 0) {
                     try {
                         store.notes = JSON.parse(data["stdout"]) || {};
@@ -40,6 +45,7 @@ QtObject {
                     }
                 }
                 store.loaded = true;
+                if (store.readPending && store.active && store.writing === 0) Qt.callLater(store.refresh);
             } else if (source.startsWith(store.helper + " note ")) {
                 store.inFlight = "";
                 if (data["exit code"] !== 0) {
@@ -91,6 +97,9 @@ QtObject {
     }
 
     function refresh() {
+        if (!active || reading || writing > 0) { readPending = true; return; }
+        readPending = false;
+        reading = true;
         runner.connectSource(helper + " notes");
     }
 

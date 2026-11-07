@@ -1,0 +1,8 @@
+[Global]
+Name=Monet
+IconName=monet
+
+[Event/launch-failed]
+Name=Application could not open
+Comment=An application needs attention before opening
+Action=Popup

@@ -44,7 +44,7 @@ Item {
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
     // Adding to a panel: the bar's widgets; to the desktop: the desktop's.
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
-    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|storage|system|timer|weather|worldclock"
+    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound|transfers" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|stacks|storage|system|timer|weather|worldclock"
 
     signal closed()
 
@@ -61,6 +61,12 @@ Item {
 
     function remove(pluginName) {
         if (explorer && pluginName) {
+            if (pluginName === "org.monet.stacks" && containment) {
+                const runner = Qt.createQmlObject('import org.kde.plasma.plasma5support as P5Support\n'
+                    + 'P5Support.DataSource { engine: "executable" }', gallery, "restoreIcons")
+                runner.newData.connect(source => { runner.disconnectSource(source); runner.destroy(); })
+                runner.connectSource("@BINDIR@/monet-files stacks-disable " + containment.id)
+            }
             explorer.removeAllInstances(pluginName)
         }
     }
