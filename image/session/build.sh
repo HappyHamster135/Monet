@@ -7,7 +7,10 @@ mkdir -p "$out"
 python3 "$here/bundle.py" capture "$out/runtime.json"
 release="$(rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}' plasma-workspace)"
 version="$(rpm -q --qf '%{VERSION}' plasma-workspace)"
-dnf5 -y install --setopt=install_weak_deps=False cmake gcc-c++ make tar xz python3 rpm-build dnf5-plugins extra-cmake-modules qt6-qtbase-devel qt6-qtdeclarative-devel plasma-workspace-devel libplasma-devel layer-shell-qt-devel kf6-ki18n-devel kf6-kpackage-devel kf6-kwindowsystem-devel kf6-kconfig-devel kf6-kdbusaddons-devel libX11-devel PackageKit-Qt6-devel
+dnf5 -y install --setopt=install_weak_deps=False cmake gcc-c++ make tar xz python3 rpm-build dnf5-plugins \
+    extra-cmake-modules qt6-qtbase-devel qt6-qtdeclarative-devel plasma-workspace-devel libplasma-devel \
+    layer-shell-qt-devel kf6-ki18n-devel kf6-kpackage-devel kf6-kwindowsystem-devel kf6-kconfig-devel \
+    kf6-kcoreaddons-devel kf6-kitemmodels-devel kf6-kdbusaddons-devel libX11-devel PackageKit-Qt6-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-session.XXXXXX")"
 dnf5 download --srpm --destdir="$work" "$release"
