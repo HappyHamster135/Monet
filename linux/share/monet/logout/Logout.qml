@@ -312,6 +312,7 @@ FocusScope {
                             columnSpacing: 12
                             rowSpacing: 12
                             PowerCard {
+                                powerPage: root
                                 id: sleepChoice
                                 objectName: "sleepChoice"
                                 visible: spdMethods.SuspendState
@@ -320,6 +321,7 @@ FocusScope {
                                 onClicked: root.suspendRequested(2)
                             }
                             PowerCard {
+                                powerPage: root
                                 id: hibernateChoice
                                 objectName: "hibernateChoice"
                                 visible: spdMethods.HibernateState
@@ -328,6 +330,7 @@ FocusScope {
                                 onClicked: root.suspendRequested(4)
                             }
                             PowerCard {
+                                powerPage: root
                                 id: restartChoice
                                 objectName: "restartChoice"
                                 visible: maysd
@@ -336,6 +339,7 @@ FocusScope {
                                 onClicked: root.leave(() => softwareUpdatePending ? root.rebootUpdateRequested() : root.rebootRequested(), i18nd("monet", "Restarting…"))
                             }
                             PowerCard {
+                                powerPage: root
                                 id: plainRestartChoice
                                 objectName: "plainRestartChoice"
                                 visible: maysd && softwareUpdatePending
@@ -344,6 +348,7 @@ FocusScope {
                                 onClicked: root.leave(() => root.rebootRequested(), i18nd("monet", "Restarting…"))
                             }
                             PowerCard {
+                                powerPage: root
                                 id: shutDownChoice
                                 objectName: "shutDownChoice"
                                 visible: maysd
@@ -353,6 +358,7 @@ FocusScope {
                                 onClicked: root.leave(() => softwareUpdatePending ? root.haltUpdateRequested() : root.haltRequested(), i18nd("monet", "Shutting down…"))
                             }
                             PowerCard {
+                                powerPage: root
                                 id: plainShutDownChoice
                                 objectName: "plainShutDownChoice"
                                 visible: maysd && softwareUpdatePending
@@ -362,6 +368,7 @@ FocusScope {
                                 onClicked: root.leave(() => root.haltRequested(), i18nd("monet", "Shutting down…"))
                             }
                             PowerCard {
+                                powerPage: root
                                 id: logoutChoice
                                 objectName: "logoutChoice"
                                 visible: canLogout
@@ -376,6 +383,7 @@ FocusScope {
                             Layout.fillWidth: true
                             spacing: 10
                             ActionPill {
+                                powerPage: root
                                 id: goPill
                                 objectName: "goPill"
                                 visible: root.permitted
@@ -385,6 +393,7 @@ FocusScope {
                                 onClicked: root.go()
                             }
                             ActionPill {
+                                powerPage: root
                                 id: plainGo
                                 objectName: "plainGo"
                                 visible: maysd && softwareUpdatePending && (root.restarting || root.shuttingDown)
@@ -401,6 +410,7 @@ FocusScope {
                 spacing: 16
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.hairline }
                 ActionPill {
+                    powerPage: root
                     id: cancelChoice
                     objectName: "cancelChoice"
                     text: i18nd("monet", "Cancel")
@@ -447,6 +457,7 @@ FocusScope {
                 palette.dark: root.lily
             }
             ActionPill {
+                powerPage: root
                 objectName: "showApplications"
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: Math.min(parent.width, 260)
@@ -465,9 +476,10 @@ FocusScope {
 
     component PowerCard: QQC2.AbstractButton {
         id: card
+        required property var powerPage
         property string symbol
         property bool warm: false
-        readonly property color accent: warm ? root.sun : root.lily
+        readonly property color accent: warm ? powerPage.sun : powerPage.lily
         Layout.fillWidth: true
         Layout.minimumWidth: 0
         implicitWidth: 240
@@ -479,14 +491,14 @@ FocusScope {
         activeFocusOnTab: true
         hoverEnabled: true
         Accessible.name: text
-        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => root.reveal(card))
-        Keys.onPressed: event => root.handleKey(event, card)
+        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => powerPage.reveal(card))
+        Keys.onPressed: event => powerPage.handleKey(event, card)
         background: Rectangle {
             radius: 16
-            color: card.down ? Qt.tint(root.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.18))
-                : card.hovered || card.visualFocus ? Qt.tint(root.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, root.smoke ? 0.13 : 0.08)) : root.pebble
+            color: card.down ? Qt.tint(powerPage.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.18))
+                : card.hovered || card.visualFocus ? Qt.tint(powerPage.pebble, Qt.rgba(card.accent.r, card.accent.g, card.accent.b, powerPage.smoke ? 0.13 : 0.08)) : powerPage.pebble
             border.width: card.visualFocus ? 2 : 1
-            border.color: card.visualFocus ? card.accent : card.hovered ? Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.5) : root.hairline
+            border.color: card.visualFocus ? card.accent : card.hovered ? Qt.rgba(card.accent.r, card.accent.g, card.accent.b, 0.5) : powerPage.hairline
         }
         contentItem: RowLayout {
             spacing: 14
@@ -494,7 +506,7 @@ FocusScope {
                 implicitWidth: 44
                 implicitHeight: 44
                 radius: 13
-                color: Qt.rgba(card.accent.r, card.accent.g, card.accent.b, root.smoke ? 0.12 : 0.10)
+                color: Qt.rgba(card.accent.r, card.accent.g, card.accent.b, powerPage.smoke ? 0.12 : 0.10)
                 PowerMark { anchors.centerIn: parent; width: 26; height: 26; kind: card.symbol; ink: card.accent }
             }
             Text {
@@ -503,23 +515,24 @@ FocusScope {
                 text: card.text
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
-                color: root.ink
+                color: powerPage.ink
                 font.family: "Inter"
-                font.pixelSize: 15 * root.fontScale
+                font.pixelSize: 15 * powerPage.fontScale
                 font.weight: Font.Medium
             }
             PowerMark {
                 Layout.preferredWidth: 16
                 Layout.preferredHeight: 16
                 kind: "arrow"
-                ink: card.hovered || card.visualFocus ? card.accent : root.dim
-                rotation: root.LayoutMirroring.enabled ? 180 : 0
+                ink: card.hovered || card.visualFocus ? card.accent : powerPage.dim
+                rotation: powerPage.LayoutMirroring.enabled ? 180 : 0
             }
         }
     }
 
     component ActionPill: QQC2.AbstractButton {
         id: pill
+        required property var powerPage
         property bool primary: false
         property string shortcutHint: ""
         Layout.fillWidth: true
@@ -529,14 +542,14 @@ FocusScope {
         activeFocusOnTab: true
         hoverEnabled: true
         Accessible.name: text
-        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => root.reveal(pill))
-        Keys.onPressed: event => root.handleKey(event, pill)
+        onActiveFocusChanged: if (activeFocus) Qt.callLater(() => powerPage.reveal(pill))
+        Keys.onPressed: event => powerPage.handleKey(event, pill)
         background: Rectangle {
             radius: 13
-            color: pill.primary ? root.sun : pill.hovered || pill.down ? root.pebble : "transparent"
+            color: pill.primary ? powerPage.sun : pill.hovered || pill.down ? powerPage.pebble : "transparent"
             opacity: pill.down ? 0.85 : 1
             border.width: pill.visualFocus ? 2 : pill.primary ? 0 : 1
-            border.color: pill.visualFocus ? root.lily : root.hairline
+            border.color: pill.visualFocus ? powerPage.lily : powerPage.hairline
         }
         contentItem: RowLayout {
             Text {
@@ -546,17 +559,17 @@ FocusScope {
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 horizontalAlignment: pill.shortcutHint ? Text.AlignLeft : Text.AlignHCenter
-                color: pill.primary ? root.paper : root.ink
+                color: pill.primary ? powerPage.paper : powerPage.ink
                 font.family: "Inter"
-                font.pixelSize: 14 * root.fontScale
+                font.pixelSize: 14 * powerPage.fontScale
                 font.weight: Font.Medium
             }
             Text {
                 visible: pill.shortcutHint !== ""
                 text: pill.shortcutHint
-                color: root.dim
+                color: powerPage.dim
                 font.family: "Inter"
-                font.pixelSize: 12 * root.fontScale
+                font.pixelSize: 12 * powerPage.fontScale
             }
         }
     }
