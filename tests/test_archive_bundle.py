@@ -68,7 +68,7 @@ class ArchiveBundle(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b'original')
             self.assertEqual(sorted(p.name for p in Path(temp).iterdir()), ['source', 'target'])
 
-    def test_rpm_plugin_and_query_runtime_are_required_in_new_bundles(self):
+    def test_rpm_plugin_and_query_runtime_are_required_in_schema_two(self):
         originals = dict(self.originals, **{'/usr/bin/rpm': 'd'*64,
             '/usr/lib64/qt6/plugins/kerfuffle/'+b.RPM_PLUGIN: 'e'*64})
         manifest = dict(self.manifest, schema=2, originals=originals)
@@ -84,3 +84,26 @@ class ArchiveBundle(unittest.TestCase):
             with patch.object(b, 'verify'), patch.object(b, 'atomic_copy') as copy:
                 with self.assertRaisesRegex(ValueError, 'Damaged'): b.install(folder)
                 copy.assert_not_called()
+
+    def test_zip_plugin_is_checked_and_installed_in_schema_three(self):
+        plugins = {name: '/usr/lib64/qt6/plugins/kerfuffle/' + name for name in (b.RPM_PLUGIN, b.ZIP_PLUGIN)}
+        originals = dict(self.originals, **{'/usr/bin/rpm': 'd'*64, plugins[b.RPM_PLUGIN]: 'e'*64})
+        manifest = dict(self.manifest, schema=3, originals=originals)
+        with patch.object(b, 'packages', return_value=manifest['packages']), patch.object(b, 'digest', side_effect=originals.get):
+            b.verify(manifest)
+            self.assertEqual(b.plugin_paths(manifest), plugins)
+            incomplete = dict(originals)
+            incomplete.pop(plugins[b.ZIP_PLUGIN])
+            with self.assertRaisesRegex(ValueError, 'libzip'):
+                b.verify(dict(manifest, originals=incomplete))
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            for name in (*b.payload_names(manifest), 'README.md'):
+                (folder/name).write_bytes(name.encode())
+            manifest['files'] = {name: b.digest(folder/name) for name in b.payload_names(manifest)}
+            (folder/'runtime.json').write_text(json.dumps(manifest))
+            with patch.object(b, 'verify'), patch.object(b, 'compatible') as compatible, \
+                    patch.object(b.Path, 'mkdir'), patch.object(b, 'atomic_copy') as copy:
+                b.install(folder)
+                compatible.assert_any_call(folder/b.ZIP_PLUGIN, plugins[b.ZIP_PLUGIN])
+                copy.assert_any_call(folder/b.ZIP_PLUGIN, Path(plugins[b.ZIP_PLUGIN]), 0o755)

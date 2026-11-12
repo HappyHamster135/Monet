@@ -322,6 +322,42 @@ class ProfileUpgrades(unittest.TestCase):
         self.assertIn("ShowStatusBar=FullWidth", (self.config / "dolphinrc").read_text())
         self.assertIn("BrowseThroughArchives=false", (self.config / "dolphinrc").read_text())
 
+    def test_screenshot_keys_migrate_the_defaults_and_keep_custom_bindings(self):
+        apps = self.data / "applications"; apps.mkdir()
+        (apps / "org.kde.spectacle.desktop").write_text(
+            "[Desktop Entry]\nX-KDE-Shortcuts=Print,Meta+Shift+S\n"
+            "[Desktop Action FullScreenScreenShot]\nX-KDE-Shortcuts=Shift+Print\n"
+            "[Desktop Action RectangularRegionScreenShot]\nX-KDE-Shortcuts=Meta+Shift+Print\n")
+        look = self.root / "monet-look"
+        look.write_text((ROOT / "linux/libexec/monet-look").read_text().replace("@LIBEXECDIR@", str(self.root)))
+        look.chmod(0o755)
+        (self.config / "monet").mkdir()
+        for stamp in ("keys-094", "keys-windows"):
+            (self.config / "monet" / stamp).touch()
+        rc = self.config / "kglobalshortcutsrc"
+        group = "[services][org.kde.spectacle.desktop]\n"
+        rc.write_text(group + "_launch=Ctrl+Alt+S\n")
+        subprocess.run([str(look), "--keys"], env=self.env, check=True)
+        self.assertEqual(rc.read_text(), group + "_launch=Ctrl+Alt+S\n")
+        rc.write_text(group)
+        subprocess.run([str(look), "--keys"], env=self.env, check=True)
+        self.assertIn("_launch=none\n", rc.read_text())
+        self.assertNotIn("FullScreenScreenShot=", rc.read_text())
+        region_keys = "RectangularRegionScreenShot=Print\\tMeta+Shift+S\\tMeta+Shift+Print\n"
+        self.assertIn(region_keys, rc.read_text())
+        for full in ("Print\\tShift+Print", "Shift+Print\\tPrint"):
+            old = group + f"_launch=none\nFullScreenScreenShot={full}\n"
+            rc.write_text(old + "RectangularRegionScreenShot=Ctrl+Alt+S\n")
+            subprocess.run([str(look), "--keys"], env=self.env, check=True)
+            self.assertEqual(rc.read_text(), old + "RectangularRegionScreenShot=Ctrl+Alt+S\n")
+            rc.write_text(old + "RectangularRegionScreenShot=Meta+Shift+S\\tMeta+Shift+Print\n")
+            subprocess.run([str(look), "--keys"], env=self.env, check=True)
+            self.assertIn("FullScreenScreenShot=Shift+Print\n", rc.read_text())
+            self.assertIn(region_keys, rc.read_text())
+        updated = rc.read_text()
+        subprocess.run([str(look), "--keys"], env=self.env, check=True)
+        self.assertEqual(rc.read_text(), updated)
+
     def test_before_desktop_job_keeps_menu_and_tray_choices_without_old_stamps(self):
         rc = self.config / "plasma-org.kde.plasma.desktop-appletsrc"
         rc.write_text('[ActionPlugins][0]\nRightButton;NoModifier=\n'

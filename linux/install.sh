@@ -100,6 +100,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
+put 755 "$SRC/libexec/monet-switch" "$LIBEXECDIR/monet-switch"
 regional="$SRC/libexec/monet_region.py"
 [ -f "$regional" ] || regional="$SRC/../setup/monet_setup/region.py"
 install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
@@ -142,6 +143,7 @@ put 755 "$SRC/libexec/monet-windows-drive" "$LIBEXECDIR/monet-windows-drive"
 # added to an existing system it's only there for that switch, and nothing changes.
 if [ "$IMAGE" = 1 ]; then
     install -D -m 644 "$SRC/firewalld/monet.xml" /usr/lib/firewalld/zones/monet.xml
+    install -D -m 644 "$SRC/firewalld/monet.xml" /usr/lib/firewalld/zones/monet-shared.xml
     if command -v firewall-offline-cmd >/dev/null; then
         before="$(firewall-offline-cmd --get-default-zone 2>/dev/null || :)"
         if [ -n "$before" ] && [ "$before" != monet ]; then
@@ -153,6 +155,7 @@ if [ "$IMAGE" = 1 ]; then
     fi
 else
     install -D -m 644 "$SRC/firewalld/monet.xml" /etc/firewalld/zones/monet.xml
+    install -D -m 644 "$SRC/firewalld/monet.xml" /etc/firewalld/zones/monet-shared.xml
 fi
 
 install -D -m 644 "$SRC/icons/monet.svg" "$DATADIR/icons/hicolor/scalable/apps/monet.svg"
@@ -429,14 +432,33 @@ fi
 chmod -R u=rwX,go=rX "$DATADIR/monet"
 put 644 "$SRC/autostart/monet-session.desktop" /etc/xdg/autostart/monet-session.desktop
 
-# Allow one-click switching without a password. /usr/local is a link to
-# /var/usrlocal on Fedora Atomic, so allow both spellings of the path.
-# Battery care's helper too: it only writes the battery's charge limit.
-real_bin="$(readlink -f "$BINDIR/monet")"
-programs="[\"$BINDIR/monet\", \"$real_bin\", \"$LIBEXECDIR/monet-charge\", \"$(readlink -f "$LIBEXECDIR/monet-charge")\", \"$LIBEXECDIR/monet-ready\", \"$(readlink -f "$LIBEXECDIR/monet-ready")\", \"$LIBEXECDIR/monet-keep\", \"$(readlink -f "$LIBEXECDIR/monet-keep")\", \"$LIBEXECDIR/monet-windows-drive\", \"$(readlink -f "$LIBEXECDIR/monet-windows-drive")\"]"
+# Allow both spellings on Fedora Atomic, where /usr/local is a symlink.
+real_switch="$(readlink -f "$LIBEXECDIR/monet-switch")"
+# A custom prefix can be writable by a desktop user. Never grant it a
+# passwordless rule, even if the installed files themselves are root-owned.
+trusted_path() {
+    local path="$1" mode
+    [[ "$path" = /* ]] || return 1
+    while [ "$path" != / ]; do
+        [ "$(stat -c %u -- "$path")" = 0 ] || return 1
+        if [ ! -L "$path" ]; then
+            mode="$(stat -c %a -- "$path")"
+            (( (8#$mode & 022) == 0 )) || return 1
+        fi
+        path="$(dirname -- "$path")"
+    done
+}
 install -d -m 755 /etc/polkit-1/rules.d
-sed -e "s|@PROGRAMS@|$programs|" "$SRC/polkit/49-monet.rules" > /etc/polkit-1/rules.d/49-monet.rules
-chmod 644 /etc/polkit-1/rules.d/49-monet.rules
+switch="$LIBEXECDIR/monet-switch"
+if ! trusted_path "$switch" || ! trusted_path "$real_switch" ||
+   ! trusted_path "$BINDIR/monet" || ! trusted_path "$(readlink -f "$BINDIR/monet")"; then
+    switch=
+    real_switch=
+fi
+sed -e "s|@SWITCH@|$switch|g" -e "s|@REAL_SWITCH@|$real_switch|g" "$SRC/polkit/49-monet.rules" \
+    > /etc/polkit-1/rules.d/49-monet.rules.tmp
+chmod 644 /etc/polkit-1/rules.d/49-monet.rules.tmp
+mv -f /etc/polkit-1/rules.d/49-monet.rules{.tmp,}
 
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service

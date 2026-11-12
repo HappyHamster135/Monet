@@ -12,10 +12,11 @@ import re
 import signal
 import sys
 import tempfile
+import threading
 import types
 import unittest
 from unittest import mock
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -73,7 +74,8 @@ class Disks(unittest.TestCase):
         free = size_mib - plan["efi"] - plan["boot"] - plan["monet"]
         # What monet-prepare-windows needs: 64 GiB for Windows and 8 for setup.
         self.assertGreaterEqual(free, plan["windows"] + disks.WINDOWS_SETUP_MIB)
-        self.assertGreaterEqual(plan["windows"], 100 * 1024)
+        self.assertEqual(plan["windows"], 128 * 1024)
+        self.assertEqual(disks.plan_erase(256 * GB)["windows"], 100 * 1024)
         self.assertGreaterEqual(plan["monet"], disks.MIN_MONET_MIB)
 
     def test_small_disk_is_all_monet_and_tiny_disk_is_refused(self):
@@ -844,11 +846,15 @@ class TheBlueScreenSkipped(unittest.TestCase):
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(module.subprocess, "run"), \
                 mock.patch.object(module.subprocess, "Popen") as start, mock.patch.object(module.shutil, "copy"):
-            (Path(tmp) / "qmp.sock").touch()
-            machine = module.VM("installer.iso", tmp)
+            work, runtime = Path(tmp) / "evidence", Path(tmp) / "runtime"
+            runtime.mkdir()
+            (runtime / "qmp.sock").touch()
+            machine = module.VM("installer.iso", work, runtime=runtime)
             command = start.call_args.args[0]
             self.assertIn("file=installer.iso,format=raw,readonly=on,if=none,id=usb", command)
             self.assertIn("usb-storage,drive=usb,removable=on,bootindex=1,id=stick", command)
+            self.assertIn(f"unix:{runtime / 'qmp.sock'},server,nowait", command)
+            self.assertEqual(machine.disk, runtime / "disk.qcow2")
             self.assertIn("q35,smm=on", command)
             self.assertTrue(any("OVMF_CODE_4M.ms.fd" in arg for arg in command))
             self.assertFalse(any("ide-cd" in arg for arg in command))
@@ -856,7 +862,66 @@ class TheBlueScreenSkipped(unittest.TestCase):
             with mock.patch.object(machine, "qmp") as qmp:
                 machine.start_first("disk")
                 self.assertEqual(qmp.call_args.args[0]["arguments"]["value"], 3)
-            start.call_args.kwargs["stdout"].close()
+            with self.assertRaises(FileExistsError):
+                module.VM("installer.iso", work, runtime=runtime)
+            start.assert_called_once()
+            start.return_value.poll.return_value = None
+            machine.stop()
+            start.return_value.terminate.assert_called_once()
+            start.return_value.wait.assert_called_once_with(timeout=10)
+            self.assertFalse(machine.disk.exists())
+            self.assertTrue((work / "qemu.log").is_file())
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "requires Pillow in the VM test environment")
+    def test_setup_vm_checks_host_capacity_before_starting(self):
+        spec = importlib.util.spec_from_file_location("vm_capacity_test", ROOT / "tools/vm-test.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(module, "VM") as vm:
+            out = Path(tmp) / "result" / "screens"
+            for free, available, reserve, detail in ((3, 16, 8, "GiB free"), (16, 4, 8, "available memory"),
+                                                      (63, 16, 64, "keeps 64 GiB free")):
+                with self.subTest(free=free, available=available), \
+                        mock.patch.object(module.shutil, "disk_usage", return_value=types.SimpleNamespace(free=free * module.GIB)), \
+                        mock.patch.object(Path, "open", mock.mock_open(read_data=f"MemAvailable: {available * 1024 ** 2} kB\n")), \
+                        redirect_stderr(io.StringIO()) as error, self.assertRaises(SystemExit) as failure:
+                    module.main(["installer.iso", str(out), "--install", "--disk-reserve-gib", str(reserve)])
+                self.assertEqual(failure.exception.code, 9)
+                self.assertIn(detail, error.getvalue())
+            vm.assert_not_called()
+            self.assertFalse(out.parent.exists())
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "requires Pillow in the VM test environment")
+    def test_setup_vm_stops_if_host_capacity_falls_during_installation(self):
+        spec = importlib.util.spec_from_file_location("vm_capacity_test", ROOT / "tools/vm-test.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        stopped = threading.Event()
+
+        def guest_install(full):
+            self.assertTrue(full)
+            self.assertTrue(stopped.wait(5))
+            raise ConnectionRefusedError("QEMU has stopped")
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(module, "VM") as vm, \
+                mock.patch.object(module, "Run") as run, \
+                mock.patch.object(module, "host_capacity", side_effect=[None, "Host disk headroom reached."]) as capacity, \
+                redirect_stderr(io.StringIO()) as error:
+            scratch = Path(tmp) / "scratch"
+            scratch.mkdir()
+            screens = Path(tmp) / "output" / "screens"
+            vm.return_value.stop.side_effect = stopped.set
+            run.return_value.exercise.side_effect = guest_install
+            with mock.patch.object(module, "DISK_SCRATCH", scratch):
+                self.assertEqual(module.main(["installer.iso", str(screens), "--install", "--disk-reserve-gib", "64"]), 9)
+            runtime = vm.call_args.kwargs["runtime"]
+            self.assertEqual(runtime.parent, scratch)
+            self.assertFalse(runtime.exists())
+            self.assertEqual(capacity.call_args_list, [
+                mock.call((screens.parent / "vm-work", screens, scratch), disk_reserve=64 * module.GIB, starting=True),
+                mock.call((screens.parent / "vm-work", screens, scratch), disk_reserve=64 * module.GIB),
+            ])
+        self.assertIn("Stopping the Setup VM.", error.getvalue())
 
     def test_the_vm_test_knows_monet_from_the_stick(self):
         # Up to 0.9.3 the VM started the stick again after the blue screen, and the "tour" was Setup's Hello.

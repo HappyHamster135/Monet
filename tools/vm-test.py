@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Boots Monet Setup's USB stick in a virtual machine and walks through it.
 
-    python3 tools/vm-test.py Monet-X-Setup.iso SCREENS/ [--install]
+    python3 tools/vm-test.py Monet-X-Setup.iso SCREENS/ [--install] [--keep-disk] [--disk-reserve-gib N]
 
 QEMU with KVM and UEFI firmware with Secure Boot on (Microsoft's third-party CA),
 the ISO attached as a read-only USB disk, a blank 96 GB disk and a wired network. Waits for Monet Setup,
@@ -21,17 +21,25 @@ Screenshots go to SCREENS/ (NN-name.png); the exit code says how far the
 install got: 0 Monet started; 4 the install didn't finish; 5 no blue screen;
 6 neither the fallback nor the stick brought the blue screen back (Monet was
 installed; Setup still ships); 8 Monet didn't start after the blue screen.
-The look around never changes it: it prints what it saw.
+Exit 9 means the host did not have enough disk or memory headroom. The runner
+keeps the disposable disk in /var/tmp and removes it when QEMU stops. With
+--keep-disk it leaves the disk alongside the VM logs for inspection.
+Screenshots and logs stay. The look around prints what it saw.
 """
 
+import argparse
 import base64
+import fcntl
 import json
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -40,22 +48,58 @@ from PIL import Image, ImageChops, ImageStat
 W, H = 1920, 1080
 U = min(W / 1440, H / 900)          # Monet Setup's scale on this screen
 OVMF = Path("/usr/share/OVMF")
+GIB = 1024 ** 3
+VM_MEMORY_MIB = 8192
+DISK_RESERVE = 8 * GIB
+MEMORY_RESERVE = 4 * GIB
+DISK_SCRATCH = Path("/var/tmp")
+
+
+def host_capacity(paths, *, disk_reserve=DISK_RESERVE, starting=False):
+    """Explain why the host cannot start or keep running the VM, if any."""
+    for path in paths:
+        folder = path.resolve()
+        while not folder.exists():
+            folder = folder.parent
+        free = shutil.disk_usage(folder).free
+        if free < disk_reserve:
+            return f"{folder} has {free / GIB:.1f} GiB free. This test keeps {disk_reserve // GIB} GiB free on the host."
+    with Path("/proc/meminfo").open() as memory:
+        available = next((int(line.split()[1]) * 1024 for line in memory if line.startswith("MemAvailable:")), None)
+    if available is None:
+        return "Couldn't check available host memory."
+    needed = MEMORY_RESERVE + (VM_MEMORY_MIB * 1024 ** 2 if starting else 0)
+    if available < needed:
+        return f"The host has {available / GIB:.1f} GiB of available memory. This step needs {needed / GIB:.0f} GiB."
+    return None
 
 
 class VM:
-    def __init__(self, iso, work):
+    def __init__(self, iso, work, *, runtime=None, keep_disk=False):
         self.work = Path(work)
         self.work.mkdir(parents=True, exist_ok=True)
-        self.sock = self.work / "qmp.sock"
-        disk = self.work / "disk.qcow2"
-        subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", str(disk), "96G"], check=True)
+        runtime = self.work if runtime is None else Path(runtime)
+        self.sock = runtime / "qmp.sock"
+        self.disk = (self.work if keep_disk else runtime) / "disk.qcow2"
+        self.keep_disk = keep_disk
+        self.proc = None
+        # Reserve this filename without overwriting an earlier test's disk.
+        self.disk.touch(mode=0o600, exist_ok=False)
+        try:
+            self.start(iso)
+        except BaseException:
+            self.stop()
+            raise
+
+    def start(self, iso):
+        subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", str(self.disk), "96G"], check=True)
         code, vars_ = OVMF / "OVMF_CODE_4M.ms.fd", self.work / "vars.fd"
         shutil.copy(OVMF / "OVMF_VARS_4M.ms.fd", vars_)
         cmd = ["qemu-system-x86_64", "-machine", "q35,smm=on", "-accel", "kvm", "-cpu", "host", "-smp", "4",
-               "-m", "8192", "-global", "driver=cfi.pflash01,property=secure,value=on",
+               "-m", str(VM_MEMORY_MIB), "-global", "driver=cfi.pflash01,property=secure,value=on",
                "-drive", f"if=pflash,format=raw,unit=0,readonly=on,file={code}",
                "-drive", f"if=pflash,format=raw,unit=1,file={vars_}",
-               "-drive", f"file={disk},if=none,id=hd,format=qcow2", "-device", "virtio-blk-pci,drive=hd,bootindex=2,id=disk",
+               "-drive", f"file={self.disk},if=none,id=hd,format=qcow2", "-device", "virtio-blk-pci,drive=hd,bootindex=2,id=disk",
                "-device", f"VGA,edid=on,xres={W},yres={H},vgamem_mb=64",
                "-device", "qemu-xhci",
                "-drive", f"file={iso},format=raw,readonly=on,if=none,id=usb",
@@ -71,7 +115,8 @@ class VM:
             ("systemd.unit-dropin.sysinit.target", "[Unit]\nWants=monet-vm-journal.service\n"),
         ]:
             cmd += ["-smbios", f"type=11,value=io.systemd.credential.binary:{name}={base64.b64encode(text.encode()).decode()}"]
-        self.proc = subprocess.Popen(cmd, stdout=open(self.work / "qemu.log", "w"), stderr=subprocess.STDOUT)
+        with (self.work / "qemu.log").open("w") as log:
+            self.proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
         for _ in range(100):
             if self.sock.exists():
                 break
@@ -144,7 +189,15 @@ class VM:
             time.sleep(0.08)
 
     def stop(self):
-        self.proc.terminate()
+        if self.proc is not None and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+        if not self.keep_disk:
+            self.disk.unlink(missing_ok=True)
 
 
 def u(n):
@@ -359,14 +412,8 @@ class Run:
         return None
 
 
-def main():
-    if len(sys.argv) < 3:
-        sys.exit(__doc__)
-    iso, out = sys.argv[1], sys.argv[2]
-    full = "--install" in sys.argv
-    vm = VM(iso, Path(out).parent / "vm-work")
-    run = Run(vm, out)
-    try:
+    def exercise(self, full):
+        vm, run = self.vm, self
         time.sleep(8)
         run.shot("firmware")
         time.sleep(12)
@@ -486,9 +533,80 @@ def main():
             print(f"tour: stopped ({e})", flush=True)
             run.shot("tour-stopped")
         return 0
+
+
+def exercise(args, work, paths, runtime):
+    finished = threading.Event()
+    capacity_failure = threading.Event()
+    vm = None
+
+    def watch_host():
+        while not finished.wait(1):
+            try:
+                problem = host_capacity(paths, disk_reserve=args.disk_reserve_gib * GIB)
+            except OSError as error:
+                problem = f"Couldn't check host capacity ({error})."
+            if problem:
+                capacity_failure.set()
+                print(f"Stopping the Setup VM. {problem}", file=sys.stderr, flush=True)
+                vm.stop()
+                return
+
+    watcher = threading.Thread(target=watch_host)
+    try:
+        vm = VM(args.iso, work, runtime=runtime, keep_disk=args.keep_disk)
+        watcher.start()
+        result = Run(vm, args.screens).exercise(args.install)
+    except (OSError, ValueError):
+        # The QMP connection can disappear when the capacity check stops QEMU.
+        if not capacity_failure.is_set():
+            raise
+        result = 9
     finally:
-        vm.stop()
+        finished.set()
+        if watcher.ident is not None:
+            watcher.join()
+        if vm is not None:
+            vm.stop()
+    return 9 if capacity_failure.is_set() else result
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Exercise Monet Setup in a disposable VM.")
+    parser.add_argument("iso")
+    parser.add_argument("screens", type=Path)
+    parser.add_argument("--install", action="store_true", help="complete installation and boot the guest")
+    parser.add_argument("--keep-disk", action="store_true", help="retain the disposable guest disk alongside the VM logs")
+    parser.add_argument("--disk-reserve-gib", type=int, default=DISK_RESERVE // GIB,
+                        help="keep at least this many GiB free on the output and VM disk filesystems")
+    args = parser.parse_args(argv)
+    if args.disk_reserve_gib < 1:
+        parser.error("--disk-reserve-gib must be positive")
+
+    work = args.screens.parent / "vm-work"
+    paths = (work, args.screens) if args.keep_disk else (work, args.screens, DISK_SCRATCH)
+    problem = host_capacity(paths, disk_reserve=args.disk_reserve_gib * GIB, starting=True)
+    if problem:
+        parser.exit(9, f"Setup VM did not start. {problem}\n")
+
+    work.mkdir(parents=True, exist_ok=True)
+    # The logs and retained disk in this directory belong to one run at a time.
+    with (work / "run.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            parser.exit(1, f"A Setup VM is already using {work}.\n")
+        # A short path also keeps the QMP socket usable in deeply nested workspaces.
+        with tempfile.TemporaryDirectory(prefix="monet-setup-vm-", dir=DISK_SCRATCH) as scratch:
+            return exercise(args, work, paths, Path(scratch))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    def interrupted(signum, _frame):
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, interrupted)
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

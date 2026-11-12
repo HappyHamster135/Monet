@@ -101,8 +101,11 @@ with tempfile.TemporaryDirectory(prefix='monet-activity-wallpaper-') as temporar
             assert not root.property('fading') and not root.property('fetching')
             assert Weather.requests == 0
             assert root.property('paintedSource').endswith('/day.jpg')
+            generation = root.property('skyGeneration')
             control.SetLocked(False)
             until(lambda: Weather.arrived.is_set() and root.property('fetching'))
+            QTest.qWait(100)
+            assert root.property('skyGeneration') == generation + 1, 'Unlock must start one weather request'
             # Abort an in-flight response at lock; releasing it cannot animate or repaint.
             control.SetLocked(True); until(lambda: not root.property('sampling') and not root.property('fetching'))
             Weather.release.set(); QTest.qWait(150)

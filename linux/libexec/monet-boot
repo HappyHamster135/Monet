@@ -19,6 +19,7 @@ Runs as root, from systemd:
 """
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -27,6 +28,7 @@ from pathlib import Path
 STATE = Path("/var/lib/monet")
 TRIAL = STATE / "trial.json"          # the Monet on trial, and the one before it
 WENT_BACK = STATE / "went-back.json"  # an update that didn't start here (Settings reads it)
+BOOT = Path("/boot")
 GRUB_CONFIGS = (Path("/boot/grub2/grub.cfg"), Path("/boot/efi/EFI/fedora/grub.cfg"))
 TRIES = 3     # starts GRUB gives a new Monet before it starts the one before
 WAIT = 300    # seconds a new Monet has to bring up the sign-in screen
@@ -68,9 +70,9 @@ def deployment(status, which):
     return found.get("imageDigest"), found.get("version") or ""
 
 
-def grub_counts(configs=GRUB_CONFIGS):
+def grub_counts(configs=None):
     """Whether the PC's GRUB counts a new Monet's tries."""
-    for config in configs:
+    for config in GRUB_CONFIGS if configs is None else configs:
         try:
             if "boot_counter" in config.read_text(errors="replace"):
                 return True
@@ -84,9 +86,28 @@ def grub_env():
     return dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
 
 
+def edit_grub(*args):
+    command = ("grub2-editenv", "-", *args)
+    if os.statvfs(BOOT).f_flag & os.ST_RDONLY:
+        if not BOOT.is_mount():
+            raise OSError("Could not update the GRUB environment on a read-only boot directory")
+        # bootc can leave /boot read-only at the mount level. Only this command
+        # needs a writable view of the mount.
+        command = ("unshare", "--mount", "--propagation", "private", "/bin/sh", "-ec",
+                   'mount -o remount,bind,rw "$1"; shift; exec grub2-editenv - "$@"',
+                   "monet-boot", BOOT, *args)
+    if run(*command, timeout=15) is None:
+        raise OSError("Could not update the GRUB environment")
+
+
 def arm(status=None, counts=None):
     """At shutdown: the Monet staged for this restart goes on trial."""
     status = bootc_status() if status is None else status
+    if status.get("rollbackQueued") is True:
+        # GRUB's old trial counter could select the wrong entry after bootc
+        # rearranges them for a rollback.
+        done()
+        return
     digest, version = deployment(status, "staged")
     before, before_version = deployment(status, "booted")
     # Nothing staged, or the same Monet with other settings (its kernel arguments): no trial.
@@ -94,7 +115,7 @@ def arm(status=None, counts=None):
         return
     write(TRIAL, {"digest": digest, "version": version, "before": before, "beforeVersion": before_version})
     if grub_counts() if counts is None else counts:
-        run("grub2-editenv", "-", "set", f"boot_counter={TRIES}", "boot_success=0")
+        edit_grub("set", f"boot_counter={TRIES}", "boot_success=0")
 
 
 def manager():
@@ -146,11 +167,40 @@ def went_back(trial, now=time.time):
                       "to": trial.get("beforeVersion", ""), "when": int(now())})
 
 
-def done(trial=None):
+def done():
     """The trial is over: GRUB stops counting, and the next start is an ordinary one."""
+    if grub_counts():
+        edit_grub("set", "boot_success=1")
+        edit_grub("unset", "boot_counter")
     TRIAL.unlink(missing_ok=True)
-    run("grub2-editenv", "-", "unset", "boot_counter")
-    run("grub2-editenv", "-", "set", "boot_success=1")
+
+
+def keep_booted():
+    """Make the deployment GRUB started the default, under OSTree's deployment lock."""
+    try:
+        import gi
+        gi.require_version("OSTree", "1.0")
+        from gi.repository import GLib, OSTree
+    except (ImportError, ValueError) as error:
+        raise OSError("OSTree's boot entry interface is unavailable") from error
+
+    sysroot = OSTree.Sysroot.new_default()
+    try:
+        if not sysroot.initialize_with_mount_namespace() or sysroot.try_lock() != (True, True):
+            raise OSError("Could not lock OSTree's boot entries")
+        try:
+            if not sysroot.load() or sysroot.get_staged_deployment():
+                raise OSError("Could not update OSTree's boot entries while an update is pending")
+            booted = sysroot.require_booted_deployment()
+            deployments = sysroot.get_deployments()
+            if not booted.equal(deployments[0]):
+                ordered = [booted, *(deployment for deployment in deployments if not booted.equal(deployment))]
+                if not sysroot.write_deployments(ordered):
+                    raise OSError("Could not keep the booted deployment")
+        finally:
+            sysroot.unlock()
+    except GLib.Error as error:
+        raise OSError(f"Could not keep the booted deployment: {error.message}") from error
 
 
 def check(status=None, up=None, env=None):
@@ -161,6 +211,8 @@ def check(status=None, up=None, env=None):
     status = bootc_status() if status is None else status
     env = grub_env() if env is None else env
     booted, _ = deployment(status, "booted")
+    if not booted:
+        raise OSError("Could not identify the booted deployment; keeping the boot trial")
     if booted == trial.get("digest"):
         if (up or desktop_up)():
             done()
@@ -176,10 +228,9 @@ def check(status=None, up=None, env=None):
         done()
         run("systemctl", "reboot")
         return "went back"
-    if env.get("boot_counter") == "-1":
-        # GRUB gave up on it and started the one before: that one stays the one that starts.
-        if run("bootc", "rollback") is None:
-            raise OSError("Could not keep the rollback deployment; keeping the boot trial")
+    if env.get("boot_counter") == "-1" and booted == trial.get("before"):
+        # The failed deployment is now the one bootc calls rollback.
+        keep_booted()
         went_back(trial)
         done()
         return "went back"
@@ -205,11 +256,9 @@ def may_update(status=None, refresh=True):
 
 def main(args):
     cmd = args[0] if args else ""
-    if cmd == "arm":
-        arm()
-    elif cmd == "check":
+    if cmd in ("arm", "check"):
         try:
-            check()
+            (arm if cmd == "arm" else check)()
         except OSError as error:
             print(str(error), file=sys.stderr)
             return 1

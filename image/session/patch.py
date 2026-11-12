@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-"""Retain Monet's native logout surface as the session closes; no power override."""
+"""Keep the logout cover and defer firmware restart until Plasma has closed apps."""
 from pathlib import Path
 import sys
-root=Path(sys.argv[1])/'logout-greeter'
+source=Path(sys.argv[1])
+root=source/'logout-greeter'
 def replace(name,old,new):
  p=root/name;s=p.read_text()
  if new in s:return
@@ -70,3 +71,117 @@ replace('greeter.cpp', 'void Greeter::quit()\n{', '''void Greeter::updateMonetCo
 
 void Greeter::quit()
 {''')
+
+root=source/'startkde/plasma-shutdown'
+replace('org.kde.Shutdown.xml', '    <method name="logoutAndReboot"/>', '''    <method name="logoutAndReboot"/>
+    <method name="logoutAndRebootToFirmware">
+      <arg name="started" type="b" direction="out"/>
+    </method>''')
+replace('shutdown.h', '    void logoutAndReboot();', '''    void logoutAndReboot();
+    bool logoutAndRebootToFirmware();''')
+replace('shutdown.h', '    void startLogout(KWorkSpace::ShutdownType shutdownType);', '''    bool startLogout(KWorkSpace::ShutdownType shutdownType, bool rebootToFirmware = false);
+    bool requestFirmwareReboot();
+    bool m_rebootToFirmware = false;''')
+replace('shutdown.cpp', '#include <QDBusConnection>', '''#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusReply>
+#include <QDBusVariant>''')
+replace('shutdown.cpp', 'void Shutdown::startLogout(KWorkSpace::ShutdownType shutdownType)', '''static QDBusMessage login1Call(const QString &method, const QVariantList &arguments = {},
+                               const QString &interface = QStringLiteral("org.freedesktop.login1.Manager"))
+{
+    auto call = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.login1"),
+                                               QStringLiteral("/org/freedesktop/login1"), interface, method);
+    call.setArguments(arguments);
+    call.setInteractiveAuthorizationAllowed(true);
+    return QDBusConnection::systemBus().call(call, QDBus::Block, INT32_MAX);
+}
+
+bool Shutdown::logoutAndRebootToFirmware()
+{
+    const QDBusReply<QString> allowed = login1Call(QStringLiteral("CanRebootToFirmwareSetup"));
+    if (!allowed.isValid() || (allowed.value() != QStringLiteral("yes") && allowed.value() != QStringLiteral("challenge"))) {
+        return false;
+    }
+    return startLogout(KWorkSpace::ShutdownTypeReboot, true);
+}
+
+bool Shutdown::startLogout(KWorkSpace::ShutdownType shutdownType, bool rebootToFirmware)''')
+replace('shutdown.cpp', '''        qCWarning(PLASMA_SESSION) << "Logout already in progress, ignoring duplicate request";
+        return;
+    }
+
+    m_shutdownType = shutdownType;''', '''        qCWarning(PLASMA_SESSION) << "Logout already in progress, ignoring duplicate request";
+        return false;
+    }
+
+    m_shutdownType = shutdownType;
+    m_rebootToFirmware = rebootToFirmware;''')
+replace('shutdown.cpp', '''        if (closeSessionReply.isError()) {
+            qCInfo(PLASMA_SESSION)''', '''        if (closeSessionReply.isError()) {
+            if (m_rebootToFirmware) {
+                logoutCancelled();
+                return;
+            }
+            qCInfo(PLASMA_SESSION)''')
+replace('shutdown.cpp', '''    });
+}
+
+void Shutdown::saveSession()''', '''    });
+    return true;
+}
+
+void Shutdown::saveSession()''')
+replace('shutdown.cpp', '''void Shutdown::logoutComplete()
+{
+    runShutdownScripts();
+''', '''bool Shutdown::requestFirmwareReboot()
+{
+    const auto manager = QStringLiteral("org.freedesktop.login1.Manager");
+    const auto property = QStringLiteral("RebootToFirmwareSetup");
+    const auto setFirmware = QStringLiteral("SetRebootToFirmwareSetup");
+    const QDBusReply<QDBusVariant> previous = login1Call(QStringLiteral("Get"), {manager, property},
+                                                       QStringLiteral("org.freedesktop.DBus.Properties"));
+    if (!previous.isValid()) {
+        qCWarning(PLASMA_SESSION) << "Could not read the firmware boot target" << previous.error().message();
+        return false;
+    }
+    const bool arm = !previous.value().variant().toBool();
+    if (arm) {
+        const QDBusReply<void> prepared = login1Call(setFirmware, {true});
+        if (!prepared.isValid()) {
+            qCWarning(PLASMA_SESSION) << "Could not set the firmware boot target" << prepared.error().message();
+            return false;
+        }
+    }
+
+    const QDBusReply<void> reboot = login1Call(QStringLiteral("Reboot"), {true});
+    if (reboot.isValid()) {
+        return true;
+    }
+    if (arm) {
+        const QDBusReply<void> cleared = login1Call(setFirmware, {false});
+        if (!cleared.isValid()) {
+            qCWarning(PLASMA_SESSION) << "Could not clear the firmware boot target" << cleared.error().message();
+        }
+    }
+    qCWarning(PLASMA_SESSION) << "Could not restart into firmware" << reboot.error().message();
+    return false;
+}
+
+void Shutdown::logoutComplete()
+{
+    runShutdownScripts();
+
+    if (m_rebootToFirmware) {
+        // Both application close requests have succeeded. Keep the active session
+        // available to logind for authorization until it accepts the reboot.
+        if (requestFirmwareReboot()) {
+            qApp->quit();
+        } else {
+            OrgKdeKSMServerInterfaceInterface ksmserverIface(QStringLiteral("org.kde.ksmserver"), QStringLiteral("/KSMServer"), QDBusConnection::sessionBus());
+            ksmserverIface.resetLogout();
+            logoutCancelled();
+        }
+        return;
+    }
+''')

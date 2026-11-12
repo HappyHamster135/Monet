@@ -244,7 +244,7 @@ Shared.MonetWindow {
           words: i18nc("Settings search words, space-separated", "password passwords wallet vault autofill saved logins app access unlock password manager") },
         { id: "security", name: i18n("Security"), glyph: "M12 3l7.5 3v5.5c0 4.6-3.1 8.4-7.5 9.5-4.4-1.1-7.5-4.9-7.5-9.5V6zM9 12l2.2 2.2L15.5 10",
           words: i18nc("Settings search words, space-separated",
-                      "security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups virus antivirus malware") },
+                      "security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups selinux") },
         { id: "notifications", name: i18n("Notifications"),
           glyph: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
           words: i18nc("Settings search words, space-separated",
@@ -594,7 +594,11 @@ Shared.MonetWindow {
     // before the restart into the firmware settings, and Monet's key asked for.
     property var safety: ({})
     property string securityFixing: ""
-    property bool askingFirmwareSetup: false
+    property bool securityChecking: false
+    property bool securityChecked: false
+    property int securityCheckId: 0
+    property string securityProblem: ""
+    property string securityConfirmation: ""
     property bool keyAsked: false
     property string firmwareState: ""
     property var firmware: []
@@ -723,7 +727,7 @@ Shared.MonetWindow {
         } else if (page === "about") {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
         } else if (page === "security") {
-            askingFirmwareSetup = false
+            securityConfirmation = ""
             loadSecurity()
             if (firmwareState !== "installing" && firmwareState !== "done") {
                 checkFirmware()
@@ -1127,39 +1131,89 @@ Shared.MonetWindow {
     }
 
     function checkFirmware() {
+        if (firmwareState === "installing" || (firmwareState === "done" && firmwareRestart)) return
         firmwareState = "checking"
         ask("firmware-check", out => {
             const found = sheet.json(out, { ok: false })
             sheet.firmware = found.updates || []
             sheet.firmwareMessage = found.message || ""
-            sheet.firmwareState = !found.ok ? "failed" : sheet.firmware.length > 0 ? "available" : "none"
+            sheet.firmwareState = found.unavailable === true ? "unavailable"
+                : !found.ok ? "failed" : sheet.firmware.length > 0 ? "available" : "none"
         })
     }
 
-    function loadSecurity() {
-        ask("security", out => sheet.safety = sheet.json(out, sheet.safety))
+    function loadSecurity(afterChange) {
+        if (securityChecking && afterChange !== true) return
+        const checkId = ++securityCheckId
+        securityChecking = true
+        ask("security", (out, code) => {
+            if (checkId !== sheet.securityCheckId) return
+            const found = code === 0 ? sheet.json(out, null) : null
+            sheet.safety = found && typeof found.secureBoot === "string" ? found : ({})
+            if (sheet.securityConfirmation === "firmware" && sheet.safety.firmwareRestartAvailable !== true)
+                sheet.securityConfirmation = ""
+            sheet.securityChecked = true
+            sheet.securityChecking = false
+            if (afterChange === true) sheet.securityFixing = ""
+        })
     }
 
-    // A fix from the Security page; the ones that need an administrator ask for the password.
     function fixSecurity(command) {
+        if (securityFixing !== "") return
         securityFixing = command
-        ask(command, out => {
-            const result = sheet.json(out, { ok: true })
-            sheet.securityFixing = ""
-            if (command === "trust-key" && result.ok) {
+        securityProblem = ""
+        ask(command, (out, code) => {
+            const result = sheet.json(out, { ok: false })
+            if (code !== 0 || !result || result.ok !== true) {
+                sheet.securityProblem = command === "restart" ? i18n("Couldn’t open the restart confirmation. Try again.")
+                    : i18n("The change didn’t go through. Check the setting below and try again.")
+            } else if (command === "trust-key") {
                 sheet.keyAsked = true
             }
-            sheet.loadSecurity()
+            if (command === "restart") sheet.securityFixing = ""
+            else sheet.loadSecurity(true)
         })
     }
 
-    // How many things on the Security page want a look.
-    function securityProblems() {
+    function securityOverview() {
         const s = safety
-        return [s.secureBoot === "off", s.encrypted === false, s.firewall === "off",
-                s.autoUpdates === false || s.updateWaiting === true,
-                firmwareState === "available" || (firmwareState === "done" && firmwareRestart),
-                s.versions === false].filter(x => x).length
+        if (securityChecking || !securityChecked)
+            return { title: i18n("Checking this PC…") }
+        if (s.firewall === "off")
+            return { title: i18n("The firewall is off."), detail: i18n("Turn it on to limit connections from other devices."), action: i18n("Turn on"), command: "firewall-on" }
+        if (s.encryptionSetup === "pending")
+            return { title: i18n("Finishing disk encryption."), detail: i18n("Keep your recovery key somewhere safe. Check again after restarting."), anchor: "security-device" }
+        if (s.secureBoot === "off" || s.encrypted === false || ["permissive", "disabled"].includes(s.selinux))
+            return { title: i18n("Device security needs a look."), detail: i18n("Check how this PC starts and protects its files."), anchor: "security-device" }
+        if (s.network && s.network.sharingAsDefault)
+            return { title: i18n("The sharing zone is the default."), detail: i18n("Shared ports may be open on other connections."), anchor: "security-network" }
+        if (s.network && s.network.legacy)
+            return { title: i18n("Review older firewall rules."), detail: i18n("Some ports are open across firewall zones."), anchor: "security-network" }
+        if (s.updateWaiting === true)
+            return { title: i18n("An update is ready."), detail: i18n("Restart to finish installing it."), action: i18n("Restart"), command: "restart" }
+        if (s.autoUpdates === "off" || s.lastUpdateFailed === true || firmwareState === "available" || (firmwareState === "done" && firmwareRestart))
+            return { title: i18n("Updates need a look."), anchor: "security-updates" }
+        if (s.secureBoot !== "on" || s.encrypted !== true || s.encryptionSetup !== "complete"
+                || s.firewall !== "on" || !s.network || s.network.complete !== true
+                || s.selinux !== "enforcing" || s.autoUpdates !== "on" || s.updateWaiting !== false
+                || ["failed", "unavailable"].includes(firmwareState))
+            return { title: i18n("Some checks couldn’t be completed."), detail: i18n("See the details below for what Monet could verify."), action: i18n("Check again"), command: "check" }
+        if (firmwareState === "" || firmwareState === "checking") return { title: i18n("Checking for firmware updates…") }
+        if (firmwareState === "installing") return { title: firmwareTitle(), detail: firmwareDetail() }
+        return { title: i18n("The main checks look good."), detail: i18n("See what Monet checked below.") }
+    }
+
+    function securityEvent(event) {
+        switch (event) {
+        case "firewall-on": return i18n("Firewall turned on")
+        case "firewall-strict": return i18n("Default firewall rules changed")
+        case "firewall-network": return i18n("Network sharing changed")
+        case "firewall-sharing":
+        case "firewall-sharing-port": return i18n("Shared ports changed")
+        case "firewall-clear-legacy": return i18n("Older firewall rules removed")
+        case "update-failed": return i18n("Automatic update failed")
+        default: return ""
+        }
     }
 
     function installFirmware() {
@@ -1918,9 +1972,9 @@ Shared.MonetWindow {
         implicitHeight: stacked ? Math.max(texts.implicitHeight, leadSlot.childrenRect.height) + slot.childrenRect.height + 40
             : Math.max(texts.implicitHeight, slot.childrenRect.height, leadSlot.childrenRect.height) + 28
         activeFocusOnTab: tappable
-        Keys.onSpacePressed: if (tappable) row.tapped()
-        Keys.onReturnPressed: if (tappable) row.tapped()
-        Keys.onEnterPressed: if (tappable) row.tapped()
+        Keys.onSpacePressed: event => { if (tappable && !event.isAutoRepeat) row.tapped() }
+        Keys.onReturnPressed: event => { if (tappable && !event.isAutoRepeat) row.tapped() }
+        Keys.onEnterPressed: event => { if (tappable && !event.isAutoRepeat) row.tapped() }
         Keys.onTabPressed: event => {
             event.accepted = row.activeFocus && FocusNavigation.enter(row)
         }
@@ -2118,9 +2172,9 @@ Shared.MonetWindow {
         border.width: activeFocus ? 2 : 0
         border.color: kind === "plain" ? tone.lily : "#FFFFFF"
         activeFocusOnTab: enabledPill
-        Keys.onSpacePressed: if (enabledPill) pill.clicked()
-        Keys.onReturnPressed: if (enabledPill) pill.clicked()
-        Keys.onEnterPressed: if (enabledPill) pill.clicked()
+        Keys.onSpacePressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
+        Keys.onReturnPressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
+        Keys.onEnterPressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
@@ -2193,7 +2247,7 @@ Shared.MonetWindow {
             // Metric calls depend on the font as well as the option text.
             const measuredFont = segmentMetrics.font
             return options.reduce((width, option) => width
-                + Math.ceil(segmentMetrics.advanceWidth(String(option[1]))) + 22, 6 + Math.max(0, options.length - 1) * 2)
+                + Math.ceil(segmentMetrics.advanceWidth(String(option[1]))) + 24, 6 + Math.max(0, options.length - 1) * 2)
         }
         signal picked(var value)
         implicitWidth: Math.min(naturalWidth, maximumWidth)
@@ -2217,7 +2271,7 @@ Shared.MonetWindow {
                     id: segment
                     required property var modelData
                     readonly property bool chosen: segments.current === modelData[0]
-                    implicitWidth: Math.ceil(segmentMetrics.advanceWidth(String(modelData[1]))) + 22
+                    implicitWidth: Math.ceil(segmentMetrics.advanceWidth(String(modelData[1]))) + 24
                     width: Math.min(implicitWidth, segmentRow.width)
                     height: Math.max(34, segmentLabel.implicitHeight + 14)
                     radius: 9
@@ -2234,10 +2288,11 @@ Shared.MonetWindow {
                         id: segmentLabel
                         horizontalAlignment: Text.AlignHCenter
                         anchors.centerIn: parent
-                        width: Math.max(0, segment.width - 22)
+                        width: Math.max(0, segment.width - 16)
                         text: segment.modelData[1]
                         textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideRight
                         color: segments.tone.ink
                         font.family: segmentMetrics.font.family
                         font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
@@ -2560,7 +2615,7 @@ Shared.MonetWindow {
             sequences: ["Escape"]
             onActivated: {
                 if (search.text !== "") { search.text = ""; search.forceActiveFocus() }
-                else sheet.close()
+                else if (sheet.page !== "security" || !pageLoader.item?.cancelConfirmation()) sheet.close()
             }
         }
         Shortcut {
@@ -2965,21 +3020,33 @@ Shared.MonetWindow {
                 contentWidth: width
                 contentHeight: pageLoader.height + 60
                 boundsBehavior: Flickable.StopAtBounds
+                property bool followFocus: true
+                function resumeFocusTracking() { followFocus = sheet.active }
                 function revealFocus() {
                     const item = sheet.activeFocusItem
                     let ancestor = item
                     while (ancestor && ancestor !== scroller.contentItem) ancestor = ancestor.parent
-                    if (!item || !ancestor) return
+                    if (!followFocus || !sheet.active || !item || !ancestor) return
                     const top = item.mapToItem(scroller.contentItem, 0, 0).y
                     if (top < contentY + 12) contentY = Math.max(0, top - 12)
                     else if (top + item.height > contentY + height - 12)
                         contentY = Math.min(Math.max(0, contentHeight - height), top + item.height - height + 12)
                 }
                 onHeightChanged: Qt.callLater(revealFocus)
-                onContentHeightChanged: { Qt.callLater(revealFocus); Qt.callLater(sheet.updateSearchHighlight) }
+                onContentHeightChanged: {
+                    if (followFocus && sheet.active) Qt.callLater(revealFocus)
+                    Qt.callLater(sheet.updateSearchHighlight)
+                }
                 Connections {
                     target: sheet
-                    function onActiveFocusItemChanged() { Qt.callLater(scroller.revealFocus) }
+                    function onActiveChanged() {
+                        // The window restores focus during activation. Reveal only later moves.
+                        scroller.followFocus = false
+                        if (sheet.active) Qt.callLater(scroller.resumeFocusTracking)
+                    }
+                    function onActiveFocusItemChanged() {
+                        if (sheet.active && scroller.followFocus) Qt.callLater(scroller.revealFocus)
+                    }
                 }
                 T.ScrollBar.vertical: Rail { tone: look }
 
@@ -3000,6 +3067,7 @@ Shared.MonetWindow {
                         updates: updatesPage, about: aboutPage
                     })[sheet.page]
                     onLoaded: {
+                        pageInput.stopWheelAnimation()
                         scroller.contentY = 0
                         enter.restart()
                     }
@@ -5166,6 +5234,7 @@ Shared.MonetWindow {
                         title: i18n("Closing the lid")
                         Segments {
                             tone: look
+                            objectName: "lidActionChoices"
                             options: [[1, i18n("Sleep")], [32, i18n("Lock")], [64, i18n("Screen off")], [0, i18n("Nothing")]]
                             current: sheet.powerInfo.lidAction
                             onPicked: value => sheet.powerAction("lid", value)
@@ -5739,7 +5808,7 @@ Shared.MonetWindow {
                 // What fills the disk, each in a color of The Hours.
                 readonly property var parts: sheet.storageInfo.measured ? [
                     ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
-                    ["files", i18n("Your files"), "#357F72"], ["system", sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("Other or unmeasured") : i18n("Monet"), "#9C7BC0"]
+                    ["files", i18n("Your files"), "#357F72"], ["system", i18n("Other or unmeasured"), "#9C7BC0"]
                 ] : [["used", i18n("Used"), "#357F72"]]
                 readonly property real total: sheet.storageInfo.total || 0
                 // Emptying the Trash asks once more.
@@ -7002,40 +7071,98 @@ Shared.MonetWindow {
             }
         }
 
-        // Security: one look at what keeps this PC safe, each with what would fix it. Monet only
-        // looks here (monet-quick security); a fix that needs an administrator asks for the password.
         Component {
             id: securityPage
             ColumnLayout {
+                id: safetyCard
                 spacing: 20
                 readonly property var s: sheet.safety
-                readonly property int problems: sheet.securityProblems()
+                readonly property var network: s.network || ({})
+                readonly property var rules: network.sharing || ({ apps: [], ports: [] })
+                readonly property bool canChangeNetwork: s.networkActions === true
+                readonly property bool confirmingFirmware: sheet.securityConfirmation === "firmware"
+                readonly property bool confirmingLegacy: sheet.securityConfirmation === "legacy"
+                readonly property var overview: sheet.securityOverview()
+                readonly property var apps: [
+                    ["games", i18n("Games you host")],
+                    ["localsend", "LocalSend"],
+                    ["syncthing", "Syncthing"],
+                    ["sunshine", i18n("Streaming this PC")],
+                    ["deskflow", "Deskflow"]
+                ]
+
+                function cancelConfirmation() {
+                    if (!sheet.securityConfirmation) return false
+                    const review = confirmingFirmware ? firmwareReview : legacyReview
+                    sheet.securityConfirmation = ""
+                    if (review.visible && review.enabled) review.forceActiveFocus(Qt.OtherFocusReason)
+                    return true
+                }
+
                 PageTitle {
                     tone: look
                     entry: sheet.entry("security")
                     art: sheet.art
                     text: i18n("Security")
-                    detail: parent.s.secureBoot === undefined ? i18n("Looking…")
-                        : parent.problems === 0 ? i18n("Your PC is protected.")
-                        : i18np("One thing to look at.", "%1 things to look at.", parent.problems)
                 }
                 Card {
-                    id: safetyCard
                     tone: look
-                    readonly property var s: sheet.safety
+                    SettingRow {
+                        objectName: "security-overview"
+                        tone: look
+                        divider: false
+                        title: safetyCard.overview.title
+                        detail: safetyCard.overview.detail || ""
+                        Pill {
+                            objectName: "security-overview-action"
+                            tone: look
+                            kind: ["restart", "firewall-on"].includes(safetyCard.overview.command) ? "sun" : "plain"
+                            visible: !!(safetyCard.overview.action || safetyCard.overview.anchor)
+                            enabledPill: sheet.securityFixing === "" && !sheet.securityChecking
+                            text: safetyCard.overview.action || i18n("Review")
+                            onClicked: {
+                                const next = safetyCard.overview
+                                if (next.anchor) {
+                                    sheet.pendingAnchor = next.anchor
+                                    sheet.revealSearchTarget()
+                                } else if (next.command === "check") {
+                                    sheet.loadSecurity()
+                                    sheet.checkFirmware()
+                                } else {
+                                    sheet.fixSecurity(next.command)
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        visible: sheet.securityProblem !== "" || sheet.securityFixing !== ""
+                        tone: look
+                        title: sheet.securityProblem || i18n("Waiting for the change…")
+                    }
+                }
+
+                Caption { tone: look; text: i18n("Device security") }
+                Card {
+                    tone: look
                     // Secure Boot: only signed software starts. Before it goes on, the firmware has
                     // to trust Monet's key (its blue screen), or Monet wouldn't start.
                     SettingRow {
                         id: bootRow
+                        objectName: "search-security-device"
                         tone: look
+                        divider: false
                         title: i18n("Secure Boot")
                         readonly property bool needsKey: safetyCard.s.secureBoot === "off" && safetyCard.s.keyTrusted !== true
-                        detail: safetyCard.s.secureBoot === "on" ? i18n("On: only software signed by its makers starts with the PC.")
-                            : safetyCard.s.secureBoot === "" ? i18n("This PC didn't start in UEFI mode, so Secure Boot can't be on.")
-                            : safetyCard.s.secureBoot === undefined ? ""
+                        readonly property bool canRestartToFirmware: safetyCard.s.firmwareRestartAvailable === true
+                        detail: !sheet.securityChecked ? ""
+                            : safetyCard.s.secureBoot === "on" ? i18n("On. The PC checks the boot software against keys it trusts.")
+                            : safetyCard.s.secureBoot === "unavailable" ? i18n("This PC didn't start in UEFI mode, so Secure Boot can't be on.")
+                            : safetyCard.s.secureBoot !== "off" ? i18n("Couldn’t check Secure Boot.")
                             : sheet.keyAsked ? i18n("At the next restart a blue screen asks to trust Monet: choose Enroll MOK, Continue and Yes, type monetsetup and choose Reboot. Then turn Secure Boot on in the firmware settings.")
                             : bootRow.needsKey ? i18n("Off. Before it goes on, the PC has to trust Monet, or Monet won't start: a blue screen asks once, at the next restart.")
-                            : sheet.askingFirmwareSetup ? i18n("Your PC restarts into its firmware settings. Find Secure Boot (often under Boot or Security), turn it on, then save and exit.")
+                            : !bootRow.canRestartToFirmware ? i18n("Off. Open the PC’s firmware settings at startup to turn it on.")
+                            : safetyCard.confirmingFirmware ? i18n("Your PC restarts into its firmware settings. Find Secure Boot (often under Boot or Security), turn it on, then save and exit.")
+                                + "\n" + i18n("Open apps close, so save your work first.")
                             : i18n("Off. Games with anti-cheat in Windows need it too. It's turned on in the PC's firmware settings.")
                         lead: Mark {
                             tone: look
@@ -7045,30 +7172,47 @@ Shared.MonetWindow {
                         Row {
                             spacing: 8
                             visible: safetyCard.s.secureBoot === "off"
+                                     && (sheet.keyAsked || bootRow.needsKey || bootRow.canRestartToFirmware)
                             Pill {
+                                id: firmwareCancel
+                                objectName: "security-firmware-cancel"
                                 tone: look
-                                visible: sheet.askingFirmwareSetup && !sheet.keyAsked && !bootRow.needsKey
+                                visible: safetyCard.confirmingFirmware && !sheet.keyAsked && !bootRow.needsKey
                                 text: i18n("Cancel")
-                                onClicked: sheet.askingFirmwareSetup = false
+                                onClicked: safetyCard.cancelConfirmation()
                             }
                             Pill {
+                                id: firmwareReview
+                                objectName: "security-firmware-review"
                                 tone: look
-                                kind: sheet.askingFirmwareSetup || sheet.keyAsked ? "sun" : "plain"
+                                visible: !firmwareCancel.visible
+                                kind: sheet.keyAsked ? "sun" : "plain"
                                 enabledPill: sheet.securityFixing === ""
                                 text: sheet.securityFixing === "trust-key" ? i18n("Asking…")
-                                    : sheet.keyAsked || sheet.askingFirmwareSetup ? i18n("Restart")
+                                    : sheet.keyAsked ? i18n("Restart")
                                     : bootRow.needsKey ? i18n("Trust Monet…")
                                     : i18n("Firmware settings…")
                                 onClicked: {
                                     if (sheet.keyAsked) {
-                                        sheet.ask("restart")
+                                        sheet.fixSecurity("restart")
                                     } else if (bootRow.needsKey) {
                                         sheet.fixSecurity("trust-key")
-                                    } else if (sheet.askingFirmwareSetup) {
-                                        sheet.ask("firmware-setup")
                                     } else {
-                                        sheet.askingFirmwareSetup = true
+                                        sheet.securityConfirmation = "firmware"
+                                        firmwareCancel.forceActiveFocus(Qt.OtherFocusReason)
                                     }
+                                }
+                            }
+                            Pill {
+                                objectName: "security-firmware-confirm"
+                                tone: look
+                                kind: "sun"
+                                visible: firmwareCancel.visible
+                                enabledPill: sheet.securityFixing === ""
+                                text: i18n("Restart")
+                                onClicked: {
+                                    safetyCard.cancelConfirmation()
+                                    sheet.fixSecurity("firmware-setup")
                                 }
                             }
                         }
@@ -7076,74 +7220,263 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         title: i18n("Encryption")
-                        detail: safetyCard.s.encrypted === true ? i18n("On: only this PC can read Monet's disk.")
+                        detail: !sheet.securityChecked ? ""
+                            : safetyCard.s.encryptionSetup === "pending" ? i18n("Setup is still using a temporary key. Keep your recovery key safe.")
+                            : safetyCard.s.encrypted === true && safetyCard.s.encryptionSetup === "complete" ? i18n("Monet’s system disk is encrypted.")
+                            : safetyCard.s.encrypted === true ? i18n("The system disk is encrypted. Monet couldn’t verify that setup finished.")
                             : safetyCard.s.encrypted === false ? i18n("Off: someone who takes the disk out can read your files. Monet Setup encrypts the disk when it installs Monet.")
-                            : safetyCard.s.secureBoot === undefined ? "" : i18n("Monet couldn't tell.")
+                            : i18n("Couldn’t check disk encryption.")
                         lead: Mark {
                             tone: look
                             known: typeof safetyCard.s.encrypted === "boolean"
-                            good: safetyCard.s.encrypted === true
+                            good: safetyCard.s.encrypted === true && safetyCard.s.encryptionSetup === "complete"
                         }
                     }
                     SettingRow {
                         tone: look
-                        title: i18n("Firewall")
-                        detail: safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === true
-                                ? i18n("On: only what Monet uses comes in from the network.")
-                            : safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === false
-                                ? i18n("On, with the system's usual openings for the network.")
-                            : safetyCard.s.firewall === "on" ? i18n("On: connections from the network go through it first.")
-                            : safetyCard.s.firewall === "off" ? i18n("Off: anything on the network can try to reach this PC.")
-                            : safetyCard.s.firewall === "" ? i18n("This Monet has no firewall.") : ""
+                        title: i18n("App isolation")
+                        detail: !sheet.securityChecked ? ""
+                            : safetyCard.s.selinux === "enforcing" ? i18n("SELinux limits what system services and apps can access.")
+                            : safetyCard.s.selinux === "permissive" ? i18n("SELinux records violations but doesn’t block them.")
+                            : safetyCard.s.selinux === "disabled" ? i18n("SELinux is off.")
+                            : safetyCard.s.selinux === "unavailable" ? i18n("SELinux is unavailable on this installation.")
+                            : i18n("Couldn’t check SELinux.")
                         lead: Mark {
                             tone: look
-                            known: safetyCard.s.firewall === "on" || safetyCard.s.firewall === "off"
+                            known: ["enforcing", "permissive", "disabled"].includes(safetyCard.s.selinux)
+                            good: safetyCard.s.selinux === "enforcing"
+                        }
+                    }
+                }
+
+                Caption { tone: look; text: i18n("Firewall & networks") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        objectName: "search-security-network"
+                        tone: look
+                        divider: false
+                        title: i18n("Firewall")
+                        detail: !sheet.securityChecked ? ""
+                            : safetyCard.s.firewall === "on" ? (safetyCard.network.complete === true
+                                ? i18n("On. See the active connections below.") : i18n("On. Monet couldn’t check all firewall rules."))
+                            : safetyCard.s.firewall === "off" ? i18n("Off. Other devices can try to connect to this PC.")
+                            : safetyCard.s.firewall === "unavailable" ? i18n("Firewalld is unavailable on this installation.")
+                            : i18n("Couldn’t check the firewall.")
+                        lead: Mark {
+                            tone: look
+                            known: ["on", "off"].includes(safetyCard.s.firewall)
                             good: safetyCard.s.firewall === "on"
                         }
                         Pill {
                             tone: look
-                            visible: safetyCard.s.firewall === "off"
-                            enabledPill: sheet.securityFixing === ""
-                            text: sheet.securityFixing === "firewall-on" ? i18n("Turning on…") : i18n("Turn on")
-                            onClicked: sheet.fixSecurity("firewall-on")
+                            visible: safetyCard.s.firewall === "on"
+                            enabledPill: !sheet.securityChecking && sheet.securityFixing === ""
+                            text: i18n("Check again")
+                            onClicked: sheet.loadSecurity()
                         }
                     }
-                    // Monet's zone (linux/firewalld/monet.xml) or the system's own; asks for the password.
                     SettingRow {
+                        id: defaultFirewallRow
+                        objectName: "security-default-firewall"
                         tone: look
-                        strong: false
-                        tappable: sheet.securityFixing === ""
+                        title: i18n("Use Monet’s default rules")
+                        detail: i18n("These rules cover nearby printers, your phone, and Steam on your local network.")
                         visible: safetyCard.s.firewall === "on" && typeof safetyCard.s.firewallStrict === "boolean"
-                        title: i18n("Only what Monet uses comes in")
-                        detail: i18n("The phone, Steam's Remote Play and game transfers on this network, and finding printers. Games you host and other apps can be let in below.")
-                        onTapped: sheet.fixSecurity("firewall-strict " + (safetyCard.s.firewallStrict ? "off" : "on"))
-                        Switch {
-                            tone: look
-                            active: safetyCard.s.firewallStrict === true
-                        }
+                        tappable: safetyCard.canChangeNetwork && sheet.securityFixing === ""
+                        checkable: true
+                        checked: safetyCard.s.firewallStrict === true
+                        onTapped: sheet.fixSecurity("firewall-strict " + (checked ? "off" : "on"))
+                        Switch { tone: look; active: defaultFirewallRow.checked }
                     }
                     SettingRow {
                         tone: look
-                        title: i18n("Updates")
-                        detail: safetyCard.s.autoUpdates === false ? i18n("Only when you ask, so fixes for security holes wait until then.")
-                            : safetyCard.s.updateWaiting === true ? i18n("An update is ready. It's used from the next restart.")
-                            : safetyCard.s.autoUpdates === true ? i18n("Monet and your apps update by themselves, with every fix for security holes.") : ""
-                        lead: Mark {
+                        visible: safetyCard.s.firewall === "on" && !safetyCard.canChangeNetwork
+                        title: i18n("Network changes need the updated system helper.")
+                        detail: i18n("You can still see the active connections and rules here.")
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: safetyCard.network.sharingAsDefault === true
+                        title: i18n("Shared ports may be open on other connections.")
+                        detail: i18n("Choose Monet’s default rules to keep sharing on selected profiles.")
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: safetyCard.s.firewall === "on" && (safetyCard.network.devices || []).length === 0
+                        title: safetyCard.network.known ? i18n("No active firewall zones found.") : i18n("Couldn’t read the active firewall zones.")
+                    }
+                    Repeater {
+                        model: safetyCard.network.devices || []
+                        SettingRow {
+                            required property var modelData
                             tone: look
-                            known: typeof safetyCard.s.autoUpdates === "boolean"
-                            good: safetyCard.s.autoUpdates === true && safetyCard.s.updateWaiting !== true
+                            title: modelData.name || modelData.interface || i18n("Source addresses")
+                            detail: (modelData.zone ? i18n("Zone: %1", modelData.zone) : i18n("Couldn’t check this connection’s zone."))
+                                + (modelData.sources ? " · " + modelData.sources.join(", ") : "")
+                                + (modelData.ports ? "\n" + i18n("Zone ports: %1", modelData.ports) : "")
+                                + (modelData.services ? "\n" + i18n("Zone services: %1", modelData.services) : "")
+                            Pill {
+                                tone: look
+                                objectName: modelData.interface ? "security-sharing-profile-" + modelData.interface : ""
+                                visible: modelData.changeable === true
+                                enabledPill: safetyCard.canChangeNetwork && sheet.securityFixing === ""
+                                    && (modelData.zone === "monet-shared" || safetyCard.network.sharingAsDefault === false)
+                                text: modelData.zone === "monet-shared" ? i18n("Stop sharing") : i18n("Share on this profile")
+                                onClicked: sheet.fixSecurity("firewall-network " + modelData.uuid
+                                                              + (modelData.zone === "monet-shared" ? " off" : " on"))
+                            }
+                        }
+                    }
+                    SettingRow {
+                        visible: safetyCard.network.legacy === true
+                        tone: look
+                        title: i18n("Older firewall rules")
+                        detail: i18n("These rules open ports across firewall zones.")
+                            + ((safetyCard.network.legacyApps || []).length ? "\n" + safetyCard.network.legacyApps.join(", ") : "")
+                            + ((safetyCard.network.legacyPorts || []).length ? "\n" + safetyCard.network.legacyPorts.map(rule => rule.port).join(", ") : "")
+                            + (safetyCard.confirmingLegacy ? "\n" + i18n("Remove all of these rules? You can add the ports you still use under Shared ports.") : "")
+                        Row {
+                            spacing: 8
+                            visible: safetyCard.canChangeNetwork
+                            Pill {
+                                id: legacyReview
+                                objectName: "security-legacy-review"
+                                tone: look
+                                visible: !safetyCard.confirmingLegacy
+                                enabledPill: sheet.securityFixing === "" && safetyCard.s.firewall === "on"
+                                text: i18n("Review")
+                                onClicked: {
+                                    sheet.securityConfirmation = "legacy"
+                                    legacyCancel.forceActiveFocus(Qt.OtherFocusReason)
+                                }
+                            }
+                            Pill {
+                                id: legacyCancel
+                                objectName: "security-legacy-cancel"
+                                tone: look
+                                visible: safetyCard.confirmingLegacy
+                                text: i18n("Cancel")
+                                onClicked: safetyCard.cancelConfirmation()
+                            }
+                            Pill {
+                                objectName: "security-legacy-confirm"
+                                tone: look
+                                visible: safetyCard.confirmingLegacy
+                                enabledPill: sheet.securityFixing === "" && safetyCard.s.firewall === "on"
+                                text: i18n("Remove all")
+                                onClicked: {
+                                    safetyCard.cancelConfirmation()
+                                    sheet.fixSecurity("firewall-clear-legacy")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Caption { tone: look; text: i18n("Shared ports") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Ports for nearby devices")
+                        detail: !sheet.securityChecked ? ""
+                            : !safetyCard.network.sharing ? i18n("Couldn’t read Monet’s sharing rules.")
+                            : i18n("These ports open on connection profiles you choose to share with. Any app listening on one of them can receive connections. A wired profile may be used on more than one network.")
+                    }
+                    Repeater {
+                        model: safetyCard.network.appPorts ? safetyCard.apps : []
+                        SettingRow {
+                            id: shareRow
+                            required property var modelData
+                            objectName: "security-sharing-app-" + modelData[0]
+                            tone: look
+                            title: modelData[1]
+                            detail: safetyCard.network.appPorts[modelData[0]].join(", ")
+                            checkable: true
+                            checked: safetyCard.rules.apps.includes(modelData[0])
+                            tappable: safetyCard.canChangeNetwork && safetyCard.s.firewall === "on"
+                                      && (checked || safetyCard.network.sharingAsDefault === false)
+                                      && !!safetyCard.network.sharing && sheet.securityFixing === ""
+                            onTapped: sheet.fixSecurity("firewall-sharing " + modelData[0] + (checked ? " off" : " on"))
+                            Switch { tone: look; active: shareRow.checked }
+                        }
+                    }
+                    Repeater {
+                        model: safetyCard.rules.ports
+                        SettingRow {
+                            required property var modelData
+                            tone: look
+                            title: modelData.name
+                            detail: modelData.port
+                            Pill {
+                                objectName: "security-sharing-port-" + modelData.port
+                                tone: look
+                                enabledPill: safetyCard.canChangeNetwork && safetyCard.s.firewall === "on" && sheet.securityFixing === ""
+                                text: i18n("Remove")
+                                onClicked: sheet.fixSecurity("firewall-remove-port " + modelData.port)
+                            }
+                        }
+                    }
+                }
+
+                Caption { tone: look; text: i18n("Sign-in") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Sign-in and screen lock")
+                        detail: i18n("Manage your account or choose when Monet asks you to unlock the screen.")
+                        Pill { tone: look; text: i18n("Accounts"); onClicked: sheet.open("users") }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Lock when you step away")
+                        Pill { tone: look; text: i18n("Screen lock"); onClicked: sheet.open("power#lock") }
+                    }
+                }
+
+                Caption { tone: look; text: i18n("Updates & recovery") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        id: updateRow
+                        tone: look
+                        objectName: "search-security-updates"
+                        divider: false
+                        readonly property string automatic: safetyCard.s.autoUpdates || "unknown"
+                        readonly property bool ready: safetyCard.s.updateWaiting === true
+                        readonly property bool failed: safetyCard.s.lastUpdateFailed === true
+                        readonly property bool nothingStaged: safetyCard.s.updateWaiting === false
+                        title: i18n("Automatic updates")
+                        detail: !sheet.securityChecked ? ""
+                            : ready ? i18n("An update is ready. It's used from the next restart.")
+                            : failed ? i18n("The last automatic update failed.")
+                            : automatic === "off" ? i18n("Only when you ask, so fixes for security holes wait until then.")
+                            : automatic === "on" && nothingStaged ? i18n("Monet checks for updates in the background.")
+                            : automatic === "unavailable" ? i18n("Automatic updates are unavailable on this installation.")
+                            : i18n("Couldn’t check automatic updates.")
+                        lead: Mark {
+                            objectName: "security-update-mark"
+                            tone: look
+                            known: updateRow.ready || updateRow.failed || updateRow.automatic === "off" || good
+                            good: updateRow.automatic === "on" && updateRow.nothingStaged && !updateRow.failed
                         }
                         Pill {
+                            objectName: "security-update-action"
                             tone: look
-                            visible: safetyCard.s.autoUpdates === false || safetyCard.s.updateWaiting === true
+                            visible: updateRow.ready || updateRow.failed || updateRow.automatic === "off"
                             enabledPill: sheet.securityFixing === ""
-                            text: safetyCard.s.autoUpdates === false ? i18n("Turn on") : i18n("Restart")
+                            text: updateRow.ready ? i18n("Restart") : updateRow.failed ? i18n("Open Updates") : i18n("Turn on")
                             onClicked: {
-                                if (safetyCard.s.autoUpdates === false) {
-                                    sheet.securityFixing = "updates"
-                                    sheet.ask("auto-updates on", () => { sheet.securityFixing = ""; sheet.loadSecurity() })
+                                if (updateRow.ready) {
+                                    sheet.fixSecurity("restart")
+                                } else if (updateRow.failed) {
+                                    sheet.open("updates#update-history")
                                 } else {
-                                    sheet.ask("restart")
+                                    sheet.fixSecurity("auto-updates on")
                                 }
                             }
                         }
@@ -7151,34 +7484,35 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         title: i18n("Firmware")
-                        detail: sheet.firmwareState === "none" ? i18n("Up to date: this PC's own parts have no updates from their makers.")
+                        detail: sheet.firmwareState === "unavailable" ? i18n("Firmware updates are unavailable on this installation.")
+                            : sheet.firmwareState === "none" ? i18n("No firmware updates were offered for this PC.")
                             : sheet.firmwareState === "available" ? sheet.firmwareTitle() + ". " + sheet.firmwareDetail()
                             : sheet.firmwareState === "checking" || sheet.firmwareState === "" ? i18n("Looking for updates for this PC's own parts…")
                             : sheet.firmwareDetail()
                         lead: Mark {
                             tone: look
-                            known: sheet.firmwareState !== "checking" && sheet.firmwareState !== "" && sheet.firmwareState !== "failed"
+                            known: sheet.firmwareState !== "checking" && sheet.firmwareState !== "" && sheet.firmwareState !== "failed" && sheet.firmwareState !== "unavailable"
                             good: sheet.firmwareState === "none" || (sheet.firmwareState === "done" && !sheet.firmwareRestart)
                         }
                         Pill {
                             tone: look
                             visible: sheet.firmwareState === "available" || sheet.firmwareState === "installing"
                                 || sheet.firmwareState === "failed" || (sheet.firmwareState === "done" && sheet.firmwareRestart)
-                            enabledPill: sheet.firmwareState !== "installing" && (sheet.firmwareState !== "available" || sheet.firmware.some(f => !f.blocked))
+                            enabledPill: sheet.firmwareState !== "installing" && (sheet.firmwareState !== "done" || sheet.securityFixing === "")
+                                && (sheet.firmwareState !== "available" || sheet.firmware.some(f => !f.blocked))
                             text: sheet.firmwareState === "installing" ? i18n("Installing…")
                                 : sheet.firmwareState === "done" ? i18n("Restart now")
                                 : sheet.firmwareState === "failed" ? i18n("Try again")
                                 : i18n("Install")
-                            onClicked: sheet.firmwareState === "done" ? sheet.ask("restart")
+                            onClicked: sheet.firmwareState === "done" ? sheet.fixSecurity("restart")
                                 : sheet.firmwareState === "failed" ? sheet.checkFirmware()
                                 : sheet.installFirmware()
                         }
                     }
                     SettingRow {
                         tone: look
-                        divider: false
                         title: i18n("Backups")
-                        detail: safetyCard.s.versions === false ? i18n("Off: a file deleted or changed by mistake can't be brought back.")
+                        detail: safetyCard.s.versions === false ? i18n("Earlier versions of files are turned off.")
                             : safetyCard.s.versions === true && safetyCard.s.drive ? i18n("Earlier versions of your files every hour, and copies on %1.", safetyCard.s.drive)
                             : safetyCard.s.versions === true ? i18n("Earlier versions of your files every hour. Copies on a USB drive keep them safe from a broken disk too.")
                             : ""
@@ -7191,12 +7525,11 @@ Shared.MonetWindow {
                             tone: look
                             visible: safetyCard.s.versions === false || (safetyCard.s.versions === true && !safetyCard.s.drive)
                             enabledPill: sheet.securityFixing === ""
-                            text: safetyCard.s.versions === false ? (sheet.securityFixing === "keep" ? i18n("Turning on…") : i18n("Turn on"))
+                            text: safetyCard.s.versions === false ? (sheet.securityFixing === "keep on" ? i18n("Turning on…") : i18n("Turn on"))
                                 : i18n("Add a drive…")
                             onClicked: {
                                 if (safetyCard.s.versions === false) {
-                                    sheet.securityFixing = "keep"
-                                    sheet.ask("keep on", () => { sheet.securityFixing = ""; sheet.loadSecurity() })
+                                    sheet.fixSecurity("keep on")
                                 } else {
                                     sheet.page = "backups"
                                 }
@@ -7204,64 +7537,33 @@ Shared.MonetWindow {
                         }
                     }
                 }
-                // What Monet's zone keeps out by default, let in one app at a time (monet-secure
-                // firewall-allow: a fixed set of ports each, after an administrator's yes).
-                Caption {
-                    tone: look
-                    visible: allowedCard.visible
-                    text: i18n("Apps that can accept connections")
-                }
+
+                Caption { tone: look; text: i18n("Protection history") }
                 Card {
-                    id: allowedCard
                     tone: look
-                    visible: safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === true
-                    Repeater {
-                        model: [
-                            ["games", i18n("Games you host"), i18n("Minecraft, Terraria, Valheim, Factorio and Stardew Valley worlds that others on this network join")],
-                            ["localsend", "LocalSend", i18n("Files from phones and computers nearby")],
-                            ["syncthing", "Syncthing", i18n("Folders kept in step with your other devices")],
-                            ["sunshine", i18n("Streaming this PC"), i18n("Sunshine, for playing this PC's games on a TV or another device with Moonlight")],
-                            ["deskflow", "Deskflow", i18n("One mouse and keyboard for two computers")]
-                        ]
-                        SettingRow {
-                            id: allowRow
-                            required property var modelData
-                            required property int index
-                            tone: look
-                            divider: index > 0
-                            tappable: sheet.securityFixing === ""
-                            title: modelData[1]
-                            detail: modelData[2]
-                            readonly property bool open: (safetyCard.s.allowed || []).indexOf(modelData[0]) !== -1
-                            onTapped: sheet.fixSecurity("firewall-allow " + modelData[0] + (open ? " off" : " on"))
-                            Switch {
-                                tone: look
-                                active: allowRow.open
-                            }
-                        }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Recent activity")
+                        detail: !sheet.securityChecked ? ""
+                            : safetyCard.s.historyAvailable !== true ? i18n("Monet couldn’t read all of the local security log.")
+                            : (safetyCard.s.history || []).length ? i18n("Changes recorded on this PC.")
+                            : i18n("No recent security activity was found in the local log.")
                     }
-                    // Programs asked about when they started accepting connections (monet-quick listening).
                     Repeater {
-                        model: safetyCard.s.listening || []
+                        model: safetyCard.s.history || []
                         SettingRow {
-                            id: askedRow
                             required property var modelData
                             tone: look
-                            tappable: sheet.securityFixing === ""
-                            title: modelData.name
-                            detail: i18n("Asked when it started accepting connections, on port %1", modelData.port)
-                            onTapped: sheet.fixSecurity("listening-allow " + modelData.key + (modelData.allowed ? " off" : " on"))
-                            Switch {
-                                tone: look
-                                active: askedRow.modelData.allowed === true
-                            }
+                            visible: title !== ""
+                            title: sheet.securityEvent(modelData.event)
+                            detail: new Date(modelData.time).toLocaleString(Qt.locale(), Locale.ShortFormat)
                         }
                     }
                 }
                 Text {
-                    horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    text: i18n("In Windows, Windows Security keeps watch: Monet never turns it off.")
+                    text: i18n("For Windows protections, open Windows Security in Windows.")
                     color: look.dim
                     font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                     wrapMode: Text.Wrap
@@ -7856,6 +8158,7 @@ Shared.MonetWindow {
                         Layout.margins: 20
                         spacing: 12
                         RowLayout {
+                            objectName: "search-update-history"
                             Layout.fillWidth: true
                             Text {
                                 Layout.fillWidth: true

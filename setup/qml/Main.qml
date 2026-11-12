@@ -543,7 +543,7 @@ ApplicationWindow {
                 return problem === ""
             }
             Title { text: tr("Who's using this PC?") }
-            Body { text: tr("This is your account in Monet and in Windows.") }
+            Body { text: tr("This password is for your Monet account.") }
             Field {
                 label: tr("Your name")
                 Entry { id: name; objectName: "nameEntry"; width: parent.width; placeholder: tr("Name"); focus: true; text: setup.personName; onAccepted: pass.forceActiveFocus() }

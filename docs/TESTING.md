@@ -1,5 +1,598 @@
 # Testing Monet on real hardware
 
+## Monet 0.9.8 release verification
+
+The AMD/Intel and NVIDIA images built from Bazzite's stable images and passed
+bootc's image checks. Monet Setup and the Fedora fallback carry the exact
+manifest digests listed in `image/releases/0.9.8.json`. The fallback's media
+checksum passed, and its embedded EFI menu includes the Monet entries.
+
+The desktop run covered 1,707 checks with 19 documented skips and no
+failures. All 104 Rust workspace tests passed. The Windows-target run under Wine passed 63 tests,
+and all nine PowerShell scripts passed their syntax check. Linux and
+Windows-target Clippy passed with warnings treated as errors.
+
+A Secure Boot VM installed the published 0.9.7 release and used the documented
+signing-key setup. It refused the unsigned 0.9.8 AMD/Intel image and the same
+image signed by a different key without staging either. It then booted the
+exact image signed by the Monet release key with SELinux enforcing. Rollback
+returned to the original 0.9.7 digest and preserved a saved file. The exact
+NVIDIA image signature also verified against the release key in the local
+registry.
+
+The exact Monet Setup ISO installed the pinned AMD/Intel image in a
+disposable VM. Choosing Continue boot on the first Secure Boot enrollment
+screen brought the prompt back. After enrollment, the installed system booted.
+
+The Fedora fallback installed the pinned AMD/Intel image from a local
+registry in a disposable VM. The installed system booted with Secure Boot
+and SELinux enforcing. Its booted digest matched the release record and
+its update source tracked the rolling channel.
+
+The Windows-target USB writer's shared write and read-back code copied both
+release ISOs to disposable 4 GiB disk images under Wine. Independent read-back
+matched the installer payloads. The written images reached the Monet Setup
+boot screen and the Fedora fallback menu with Secure Boot enabled in QEMU.
+Physical USB writes and GPU testing remain open.
+
+## Local 0.9.7 release checks — 11–12 November 2026
+
+The full desktop run used the frozen source of the previous local release images.
+It passed 1,670 Python checks across 120 modules with 19 declared skips.
+The JavaScript test and all 11 browser form checks passed. The two PowerShell
+checks skipped in the container passed with the retained local runtime.
+All 99 Rust tests, Linux and Windows-target Clippy, and the translation
+catalog check passed.
+
+The Linux bundle's Monet and Setup-check binaries match those in both images.
+The Bridge binary matches in both packages and both images. The USB maker was
+cross-built for 64-bit Windows. All three assets passed their checksum and
+package checks. The exact writer refused a file without an ISO header, then wrote and
+verified the exact Setup ISO twice on a virtual USB stick. The rewritten stick
+booted Setup with Secure Boot enabled. Physical USB writing with this build
+remains open. The release reports and assets are in
+`target/097-clean-release/final-checks/`.
+
+The laptop's account preview still had the older widget glass, which
+looked for the Monet wallpaper once at startup. An OpenGL fixture reproduced
+the paper fallback when the wallpaper loaded late. The packaged 0.9.7 widget
+glass picked up both the late load and a replacement. The account preview
+was refreshed and the painting was visible through the widgets on the
+running desktop. Evidence is in `target/widget-glass-local.dpaSEZ/`.
+
+A later check used the account preview's Haystacks wallpaper in a private
+Plasma session. Calendar, Weather, System and Now Playing sampled the painting
+in Clear. Calendar also followed all four Glass levels, used paper with KDE's
+image wallpaper, and returned to Clear when The Hours was restored. The 24
+focused checks passed. The reported live symptom remains unverified. Captures
+are in `target/widget-glass.Z7GOLP/` and `target/widget-glass.cQlMeA/`.
+
+The refreshed account Security preview reads the live firewalld rules
+without elevation. It shows the status of the active connections on an
+older system helper and keeps editing unavailable. The firmware restart
+button now requires the matching method on the running Plasma session.
+The read-only probe recognized the method on a private test bus. The
+installed preview hid the button on a session that lacked it and
+completed two real status checks. All 57 focused Security and Settings
+tests passed. Evidence is in `target/097-security-local.NZJVUq/`.
+
+The refreshed AMD/Intel and NVIDIA images include this Security page and
+the widget glass fix. On both images the installed helper recognized the
+firmware method on a fresh session bus, where Plasma started the shutdown
+service on demand. The Linux bundle's Monet and Setup-check binaries and
+the Windows Bridge binary match those shipped in both images. All 100
+Rust tests, Linux and Windows-target Clippy, and the three asset checksum
+checks passed. The local assets retain the previously qualified USB maker.
+Its rebuild differed only in the PE timestamp and checksum.
+
+Both refreshed images passed the local signed-update and rollback test.
+Each VM rejected unsigned and wrong-key offers before booting the signed
+0.9.7 digest with Secure Boot and SELinux active. The installed Security
+and glass files matched the image. Firmware status recovered after the
+test restored the firmware service. Each VM rolled back to its original
+0.9.6 digest, retained its test file and cleared the stale boot counter.
+The refreshed source manifest, image digests, package checks and VM logs
+are in `target/097-security-release.0tb6wB/`.
+
+The local Setup and Fedora fallback ISOs both record the refreshed AMD/Intel
+and NVIDIA digests. Both ISO checksums passed, and the digest maps extracted
+from the media matched the exported image manifests. Setup also passed the
+signed boot-file checks. Media and reports are in
+`target/097-security-release.0tb6wB/media/`.
+
+The Fedora fallback VM installed and booted the pinned AMD/Intel digest
+after the test registry moved the 0.9.7 tag. Secure Boot and SELinux were
+active. The installed Security and widget files matched the image, and
+the update check used the rolling reference. The first install stopped
+at the 64 GiB SSD reserve. The retry completed with a 56 GiB reserve.
+Both disposable disks were removed and both runs' logs were kept.
+
+The rebuilt Setup ISO booted with Secure Boot and a virtual TPM. It saved
+the pinned NVIDIA download after the registry tag moved, refused a
+substitute cache offline, and completed an encrypted install from the
+original cache. The recovery key unlocked LUKS2. The SSD guard interrupted
+the installed VM during the first restart. LUKS had a TPM slot and the
+temporary key was gone, while the published boot entry still referenced it.
+Removing that argument in the disposable guest let it boot the pinned
+image through the TPM with Secure Boot and SELinux active. The journal
+records OSTree starting deployment finalization before the interruption.
+
+The source helper now keeps the temporary key until both the running kernel
+and its published deployment have boot arguments without it. All 22 seal
+tests passed, including simulated loss of staged arguments and real LUKS
+slot retirement. The source helper also identified the running entry in
+the recovered VM while a different entry was staged. Logs are in
+`target/097-security-release.0tb6wB/media/native/evidence/`.
+
+Both images were rebuilt with the seal change and matched the frozen helper.
+The rebuilt Setup ISO pinned both new digests. It refused a substitute cache
+and completed an encrypted NVIDIA install offline from the verified cache.
+The test confirmed that the booted entry still referenced a usable temporary
+key while the staged entry omitted it. It stopped the VM before OSTree
+published the staged entry. The next boot used the original entry without
+asking for recovery. After an orderly restart, Monet retired the temporary
+key and a further boot unlocked through the TPM. Secure Boot and SELinux
+were active, and Settings reported encryption complete. The harness held the
+first hardware restart and read the checks from the guest serial console.
+All 115 focused Setup, recovery and seal tests passed on the frozen source.
+
+The Linux and Windows packages match the rebuilt image binaries, and the
+Linux package carries the corrected seal helper. The previously verified USB
+maker is byte-for-byte unchanged. The Setup and fallback ISO checksums and
+the installer, image and package evidence are in
+`target/097-seal-release.Iw2cUZ/`.
+
+Both images containing the seal fix also rejected unsigned and wrong-key
+updates in the local VMs. The trusted update booted the expected 0.9.7
+digest on each variant. Both then rolled back to their original 0.9.6
+digests, kept the test file and cleared the stale boot counter.
+
+The rebuilt Fedora fallback ISO installed and booted the pinned AMD/Intel
+digest after the registry changed its version tag. The installed system
+matched the rebuilt image's file checksums, kept Secure Boot and SELinux
+active, and checked the rolling update reference. The test disks were
+removed from their dedicated Btrfs subvolume.
+
+The full desktop run on the same frozen source had 1,674 Python passes across
+120 modules and 19 declared skips. All 16 JavaScript submission checks and
+11 browser password-form checks passed. The two PowerShell checks skipped
+in the desktop container passed with the retained local PowerShell runtime.
+The translation catalog check passed. Reports are in
+`target/097-seal-release.Iw2cUZ/desktop-qualification/`.
+
+The AMD/Intel and NVIDIA customized-profile VMs each signed in on the original
+0.9.6 image, on the signed 0.9.7 export with the seal fix, and after rollback.
+Both kept file contents and metadata, the enabled and disabled startup choices,
+the custom Files shortcut, region and weather settings, the download destination,
+and the recorded power and lock preferences. Plasma reported the original
+panel positions and sizes in all six desktop sessions. Each rollback booted
+the original digest with Secure Boot and SELinux active. Evidence is in
+`target/097-seal-release.Iw2cUZ/profiles/`.
+
+A separate encrypted NVIDIA install on that image exposed a retained rollback
+entry that still referenced the retired key. Monet queued that deployment, and
+the VM reached a LUKS recovery prompt. After the test updated the retained
+entry in place, the same rollback booted through the TPM with Secure Boot and
+SELinux active. The deployment serial and image digest confirmed the rollback.
+Evidence is in `target/097-seal-release.Iw2cUZ/media/rb/evidence/`.
+
+The updated helper now verifies the retained entries on disk and flushes the
+boot partition before retiring the temporary slot. The focused Setup, LUKS and
+widget run passed 122 tests. The earlier widget glass still timed out when
+switching back to Monet's wallpaper after six seconds. The updated widget
+passed that switch and rendered all four Glass levels on a private OpenGL
+Plasma session. Captures and checks are in `target/widget-glass-local.dpaSEZ/`.
+
+The next AMD/Intel and NVIDIA images contain both fixes. The local Setup and
+Fedora fallback ISOs pin their exact digests and passed checksum verification.
+A fresh encrypted NVIDIA install from the rebuilt Setup ISO verified the
+recovery key. On the installed system, the temporary file, LUKS slot and
+published boot arguments were gone. Monet's rollback command switched from
+deployment serial 2 to 0 on the same pinned image. That boot unlocked through
+the TPM with Secure Boot and SELinux active. `/boot` and `/sysroot` stayed
+read-only. The stopped test disk was removed. The image manifests and VM logs
+are in `target/097-rollback-release.RyYpUm/`.
+
+On the rebuilt images, both local update VMs rejected unsigned and wrong-key
+updates, booted the trusted 0.9.7 digest, then rolled back to their original
+0.9.6 digests. The Fedora fallback installed the pinned AMD/Intel digest after
+the version tag moved, booted with Secure Boot and SELinux active, and checked
+the rolling update reference. Installed file checksums matched the image.
+The Linux and Windows bundles match the image binaries, and all three package
+checksums passed. The USB maker is byte-for-byte identical to the earlier test.
+
+The full desktop suite reran with the wallpaper assertion updated for Plasma's
+binding. It passed 1,676 Python tests with 19 declared skips across 120 modules.
+All 16 JavaScript submission checks, 11 browser form checks and two separate
+PowerShell checks passed. The translation catalog check passed.
+
+The Windows USB maker initially accepted the first 64 KiB of the rebuilt
+Setup ISO because the ISO and boot signatures were intact. The VM recorded
+five writes and the maker reported Ready. The updated preflight checks the
+declared ISO volume size and the location of the backup GPT before opening
+the target for writing. Both complete installer ISOs pass. The rebuilt
+writer refused the same truncated file with zero writes or discards.
+
+The rebuilt Windows executable wrote and read back the exact Setup ISO twice
+on the same virtual stick. Independent read-back matched the ISO payload
+and verified the relocated GPT and both partition tables. The rewritten
+stick booted to Monet Setup with Secure Boot enabled. All 102 Rust workspace
+tests, 23 native Windows USB tests, and Linux and Windows-target Clippy checks
+passed. Evidence is in `target/097-rollback-release.RyYpUm/usb-qualification/`.
+
+Both rebuilt images also passed the customized-profile test. Each VM signed
+in on 0.9.6, on the exact signed 0.9.7 image and after rollback. All six
+sessions kept the recorded files and metadata, startup choices, Files
+shortcut, download folder, region, weather, power and lock settings.
+Plasma reported the same panel positions and sizes. The distinct boot IDs,
+image digests and profile checks are in `target/097-rollback-release.RyYpUm/profiles/`.
+
+The same Setup ISO resumed an encrypted NVIDIA installation with the network
+adapter removed. Setup rejected a substitute cache with internally matching
+metadata and installed from the original cache for the pinned digest. The
+recovery key unlocked the disk. An abrupt VM stop before the staged boot entry
+was published left the original entry and temporary key usable on the next
+boot. An orderly restart published the new entry and retired the temporary
+file, slot and boot arguments. Rollback from deployment serial 3 to 0 unlocked
+through the TPM with Secure Boot, SELinux and the firewall active. The installed
+guest allowed the guarded desktop switch from the active session and required
+administrator authentication for firewall edits, Windows preparation, direct
+CLI access and a switch from a detached process. Evidence is in
+`target/097-rollback-release.RyYpUm/media/offline-cut/evidence/`.
+
+During that run, the Security page displayed check failures before its first
+status reply. The page now leaves those row details blank while checking and
+shows failures after the helper reports them. All 76 focused Settings and
+Security tests passed, including a held first reply. The reversible account
+preview contains the change.
+
+Plasma was still running the earlier widget code after the corrected QML had
+been installed in the account. Reloading the desktop shell loaded the wallpaper
+binding for all four active cards and preserved the widget layout. A fresh
+private Plasma run with the installed QML distinguished all four Glass levels
+and verified Clear after two wallpaper replacements. Evidence is in
+`target/widget-glass-live.tn1FJ2/`.
+
+The next AMD/Intel and NVIDIA images contain the Security loading fix. Both
+packaged copies match the frozen Settings source. The checked protection
+helpers, boot helpers, policy and widget files match the previous candidate.
+The Linux and Windows bundles match the binaries from both new images. The
+Windows USB maker is byte-for-byte identical to the one already qualified.
+
+The rebuilt Setup and Fedora fallback ISOs pin both new exported digests.
+Checksums passed for both archives and both ISOs. Setup's signed boot files
+passed the optical and USB packaging checks. The USB maker's preflight
+accepted both new ISOs and rejected the first 64 KiB of the Setup ISO.
+Reports and media are in `target/097-security-loading.jaiOtn/`.
+
+Both new images rejected unsigned and wrong-key update offers in the VMs.
+Each VM booted its trusted 0.9.7 digest and rolled back to its original 0.9.6
+digest. All six sessions preserved the customized profile. Both upgraded
+guests reported Secure Boot, SELinux enforcement and the firewall active.
+The rendered Security page in the AMD/Intel VM showed those live results and
+correctly marked its unencrypted test disk. Boot IDs, checks and the capture
+are in `target/097-security-loading.jaiOtn/profiles/`.
+
+The frozen source passed 1,677 Python tests with 19 declared skips across
+120 modules. The JavaScript submission and 11 browser form checks passed.
+Both PowerShell checks passed with the retained local runtime. The translation
+catalog check passed. The Rust and Windows source trees match the snapshot
+used for the USB maker qualification above. The desktop test reports are in
+`target/097-security-loading.jaiOtn/desktop-qualification/`.
+
+The rebuilt Fedora fallback installed and booted the exact pinned AMD/Intel
+digest after the test registry moved its version tag. Secure Boot and SELinux
+were active. The installed file checksums matched the rebuilt image, and the
+next update check used the rolling reference. The VM disk was removed after
+shutdown. Evidence is in `target/097-security-loading.jaiOtn/media/fallback/`.
+
+The rebuilt Setup ISO installed the pinned NVIDIA digest on an encrypted
+virtual disk and verified the recovery key. The installed system retired the
+temporary key and removed its references from every retained boot entry.
+Monet's rollback command booted the retained deployment at the same digest
+through the TPM. Secure Boot and SELinux were active, and `/boot` and
+`/sysroot` were read-only. Both install VMs shut down and their disposable
+disks were removed. The laptop had 99 GiB free after the run. Evidence is in
+`target/097-security-loading.jaiOtn/media/native/evidence/`.
+
+The Windows USB maker also wrote and verified the newest Setup ISO twice on a
+disposable 4 GiB virtual USB stick. It refused a truncated copy with zero
+writes or discards. An independent read-back matched every ISO byte outside
+the relocated primary GPT fields and verified both GPT headers and tables.
+The written stick booted Setup with Secure Boot enabled, and the running
+installer's digest map matched the one extracted from the ISO. The Windows
+overlay, seed ISO and virtual stick were removed after shutdown. Evidence is
+in `target/097-security-loading.jaiOtn/usb-qualification/evidence/fixed/`.
+
+Twelve Security checks passed at 150% and 200% on the laptop's Intel Iris Xe
+and NVIDIA RTX A500 client renderers. They covered a delayed first reply,
+firewall keyboard controls and a failed firewall change. The RTX A500 also
+rendered all four widget Glass levels and picked up the Monet wallpaper again
+after it was replaced. These checks used private KWin virtual outputs. Evidence
+is in `target/097-security-loading.jaiOtn/physical-security/` and
+`target/097-security-loading.jaiOtn/physical-glass/`. Physical display hotplug
+and removable-drive checks remain open.
+
+The newest Setup ISO also resumed the encrypted NVIDIA install with the
+virtual network adapter removed. It rejected a substitute cache with valid
+internal metadata, completed from the cache for the pinned digest, and proved
+the recovery key could unlock the disk. Before the new boot entry was
+published, the test stopped the VM without a guest shutdown. The original
+entry and temporary key were still usable on the next boot. An orderly restart
+retired the temporary key. Rollback from deployment serial 3 to 0 booted through
+the TPM at the same pinned digest. Secure Boot, SELinux and the firewall were
+active after rollback.
+
+An ordinary account could read the running firewall and could not add a port
+without elevation. The administrator helper added a test rule, which survived
+a firewalld reload, and removed it. The journal recorded the two successful
+changes. The active local account could use the guarded desktop switch. A
+detached process and the active Guest session required administrator approval
+for that switch. Guest also needed approval for the CLI, firewall helper and
+Windows preparation, and could not keep its session running after sign-out.
+Security showed the live device and firewall results on the encrypted guest.
+The final guest shut down cleanly and its test disk was removed. Evidence is
+in `target/097-security-loading.jaiOtn/media/offline-cut/evidence/`.
+
+The exact signed AMD/Intel candidate also passed a restart into virtual UEFI
+from Settings → Security. Canceling the Settings confirmation left the boot
+unchanged. Cancel Logout during KWrite's unsaved-document prompt left the
+draft open and the firmware boot target unset. Plasma displayed its standard
+two-minute logout countdown while the document was open. On the next attempt,
+saving from that prompt let Plasma set the firmware target and request the
+restart, in that order. The VM entered OVMF. After Secure Boot was restored
+there, the same signed image booted, the saved draft matched its original
+text, and Security showed Secure Boot on. Evidence and screenshots are in
+`target/097-security-loading.jaiOtn/firmware-boot/`.
+
+On the exact NVIDIA candidate, the automatic updater rejected an unsigned
+offer and Security recorded the failure. The same image staged once the
+fixture registry served its trusted signature. It reused the candidate's
+layers and changed one image label. Turning automatic updates off skipped
+the next run and left the staged deployment ready.
+
+Opening Security exposed a Plasma conflict. The firmware availability probe
+started `org.kde.Shutdown`, and Plasma's ordinary restart dialog exited
+because it found that service already running. The corrected probe checks
+the installed shutdown bundle while the service is inactive and reads the
+method directly from its existing owner when active. In the VM, opening
+Security reported firmware restart available and left the service inactive.
+The account preview also passed the passive check against its older Plasma
+runtime and left the firmware action unavailable there.
+
+With the corrected helper mounted read-only in the guest, Cancel in Mist
+left the boot ID and staged deployment unchanged. Approving Restart in Smoke
+booted the signed fixture digest with Secure Boot and SELinux active. In
+Updates, canceling the administrator prompt left the boot order unchanged.
+Authorizing the next request and choosing Restart now returned to the original
+NVIDIA digest with the test file preserved. The VM shut down cleanly and its
+4.1 GiB disposable disk was removed. The laptop had 94 GiB free afterward.
+Screenshots, package identities and boot checks are in
+`target/097-security-loading.jaiOtn/security-restart-qualification.TvhdVX/`.
+
+The next AMD/Intel and NVIDIA images include the corrected helper. Each
+packaged helper recognized the firmware method with the D-Bus service both
+inactive and running. The inactive probe left the service inactive. Each
+signed VM rejected unsigned and wrong-key offers, booted the trusted 0.9.7
+digest and rolled back to the original 0.9.6 digest. Both runs preserved the
+custom profile, kept Secure Boot and SELinux active, and cleared the stale
+boot counter. The installed Security page left the shutdown service inactive
+and the native Restart dialog appeared. Canceling preserved the boot ID.
+
+The Linux bundle contains the corrected helper. Its Monet and Setup-check
+binaries and the Windows Bridge match the binaries in both images. The USB
+maker matches the previously tested executable. Both VM installer ISOs passed
+checksum verification. Their extracted digest maps match the exported images.
+Setup's shim, GRUB, MokManager and kernel passed the signed boot-file checks.
+Setup booted to its welcome screen with Secure Boot enabled in a VM with
+no network adapter. The running installer reported both new digest pins.
+The full desktop run passed 1,679 Python checks with 19 declared skips across
+120 modules. The JavaScript test, all 11 browser form checks, both PowerShell
+checks and the translation catalog check passed. The first desktop run's
+archive fixture refused an oversized test tmpfs. The successful run used its
+64 MiB scratch volume.
+
+The Fedora fallback installed and booted the exact AMD/Intel digest after the
+test registry moved the version tag. Secure Boot and SELinux were active, the
+installed file checksums matched the image, and the next update check requested
+the rolling reference. The first attempt stopped at the 72 GiB reserve. The
+retry completed with a 64 GiB reserve. Both disposable disks were removed and
+both sets of logs were retained. The laptop reported 73 GiB free after cleanup.
+
+For the rebuilt Setup ISO, the Windows USB maker refused a truncated copy
+with zero writes or discards. It wrote and verified the full ISO twice on
+the same 4 GiB virtual USB stick. Independent read-back matched the payload
+outside the relocated primary GPT fields and verified both headers and
+partition-table CRCs. The rewritten stick booted Setup with Secure Boot
+enabled and the same digest map as the ISO. The Windows overlay, seed ISO,
+read-back file and virtual stick were removed after shutdown. Evidence is in
+`target/097-passive-restart.uuUCs3/usb-qualification/evidence/fixed/`.
+
+The exact rebuilt AMD/Intel image passed the firmware restart from Security.
+Secure Boot was turned off in the disposable VM to exercise the action.
+The packaged status check showed the action and left Plasma's shutdown service
+inactive. Canceling in Settings kept the boot unchanged. Cancel Logout during
+KWrite's save prompt kept the draft open and the firmware target unset.
+On the next attempt, saving let Plasma set the firmware target and request the
+restart in that order. The VM reached OVMF. After Secure Boot was restored,
+the same signed image booted, the saved document matched every expected byte,
+and Security showed Secure Boot on. The firmware VM shut down cleanly and its
+3.2 GiB disk was removed. Evidence is in
+`target/097-passive-restart.uuUCs3/firmware-qualification.lfsB4y/`.
+
+The automatic updater staged the rebuilt signed NVIDIA image from the earlier
+signed 0.9.7 image on a private registry. With the trial running, the test
+stopped the VM's display manager. After five minutes the installed boot check
+restarted into the previous signed digest. The user's fixture file matched its
+original checksum. Secure Boot and SELinux stayed active, `/boot` was read-only,
+and the boot counter was cleared. The ordinary user could read the rollback
+notice. The next automatic update check saw the failed digest and skipped it
+without staging another deployment. Evidence is in
+`target/097-passive-restart.uuUCs3/boot-recovery.iGBetY/`.
+
+The early boot test interrupted three starts at kernel entry. On the fourth
+start GRUB selected the previous signed NVIDIA deployment. The packaged
+helper ran `bootc rollback` from that deployment, which queued the failed
+image again. A normal restart reproduced the wrong boot order. With the
+corrected helper in the VM, the same three interruptions promoted the
+booted deployment through OSTree. Another normal restart kept it as the
+default. The updater skipped the failed digest and the user's fixture file
+matched its checksum. Secure Boot and SELinux stayed active. Evidence is in
+`target/097-passive-restart.uuUCs3/grub-qualification.lDXQhc/` and
+`target/097-passive-restart.uuUCs3/grub-fixed.c6Vg0X/`.
+
+Both local OCI exports contain the corrected helper and release notes. Each
+retained 293 inherited compressed layers and added only those two files.
+The Linux bundle matches both images. Its other payloads, the Windows bundle
+and the USB maker were verified against the previous artifacts. Both local VM
+installer ISOs were rebuilt with the new digests and passed checksum
+verification. The Setup ISO passed the signed optical and USB boot-file
+checks. It reached Hello with Secure Boot enabled and the network adapter
+removed, and its running installer reported both expected digest pins.
+Artifacts and checksums are in `target/097-grub-recovery.iWK6Ba/`.
+
+The Windows USB maker refused a truncated copy of this Setup ISO with zero
+writes or discards. The full ISO was written and read back twice on the
+same 4 GiB virtual stick. Windows briefly showed Not Responding on the
+first completion dialog. The dialog dismissed on a second click, and the
+same maker instance completed the rewrite. Independent read-back verified
+the payload and both GPT checksums. The rewritten stick booted to Hello
+with Secure Boot enabled and the ISO's digest map. The Windows overlay,
+seed ISO, read-back image and virtual stick were removed after shutdown.
+Evidence is in `target/097-grub-recovery.iWK6Ba/usb-qualification/evidence/fixed/`.
+
+The full desktop suite on the frozen source passed 1,681 Python checks
+across 120 modules, with 19 declared skips. The JavaScript check and all
+11 browser form checks passed. The two PowerShell checks passed separately
+with the retained local runtime, and the translation catalog check passed.
+Reports are in `target/097-grub-recovery.iWK6Ba/desktop-qualification/`.
+
+The Windows USB maker now scans for disks off the window thread and
+combines pending refresh and progress notifications. In a native Windows
+VM, an eight-second discovery delay blocked the old window's 600 ms
+probe. The fixed window answered immediately and kept Make USB stick
+disabled until it had a fresh list. Five extra device notifications
+produced one follow-up scan. Unplugging the selected virtual disk cleared
+the selection while the other disk remained available.
+
+The rebuilt release executable dismissed the completion dialog on one
+click and wrote the same Setup ISO twice. Cancel and a truncated ISO
+produced zero writes or discards. Independent read-back verified the
+payload and both GPT headers. The rewritten stick reached Setup with
+Secure Boot and the expected pins. All 21 Linux and 23 native Windows
+USB-maker tests passed, as did Windows-target Clippy. The VM disks and
+build scratch space were removed. The replacement executable, checksum
+and reports are in `target/097-usb-responsive.c5hbXd/`.
+
+The local candidate manifest joins the rebuilt USB maker to the checked
+Linux and Windows packages, both OCI exports and both VM installer ISOs.
+All seven SHA-256 checks passed. The Linux and Windows packages contain
+the same Bridge executable, and both installer pin maps match the OCI
+manifests. The media use the disposable VM registry. The manifest and
+relative links are in `target/097-local-candidate.nFd1GK/`.
+
+The local candidate also passed a Windows round trip after a signed
+AMD/Intel upgrade from 0.9.6. Windows installed Bridge from the candidate
+ZIP, and its executable matched the package hash. Both setup auto-logon
+values were zero on the existing Windows evaluation guest. The active
+Monet desktop could invoke the dedicated switch without authentication.
+PolicyKit required authentication for the general command and for the
+dedicated switch from an inactive session.
+
+Bridge launched the fixture game without Windows administrator privileges
+and returned to the same signed Monet digest after the game closed. The
+VM kept Monet first in the firmware order, cleared the one-time boot and
+game request, and retained the test file. An older Windows fixture stalled
+during boot. The retry reused the signed Monet deployment with the Windows
+fixture already exercised by the USB maker tests. Both disposable disks
+were removed. Evidence is in
+`target/097-local-candidate.nFd1GK/windows-roundtrip/`.
+
+The same signed AMD/Intel image passed a separate first-sign-in check with
+a Windows evaluation disk saved before its first boot. The disposable overlay
+used the current rendered answer file and exact Bridge package. Windows signed
+in automatically, ran Bridge setup and the cached Steam bootstrap, removed
+the temporary setup volume and files, grew the Windows partition and
+restarted into the same signed Monet deployment. The fixture file survived.
+The offline registry and the next Windows sign-in both reported
+`AutoAdminLogon=0` and `AutoLogonCount=0`. The installed Bridge hash matched
+the package and Secure Boot was enabled in both systems. The VM had no
+internet access, so Steam could not fetch its client update. Evidence is in
+`target/097-local-candidate.nFd1GK/windows-first-logon/`.
+
+The NVIDIA VM rejected unsigned and wrong-key offers before booting the
+trusted export with Secure Boot and SELinux enabled. After three resets at
+kernel entry, GRUB selected the previous signed deployment. The packaged
+helper cleared the trial and boot counter, and later normal boots kept
+that deployment as the default. The ordinary user could read the rollback
+notice, and the customized profile matched its original values. The next
+automatic update check fetched the rolling reference and skipped the failed
+digest without staging it. Evidence is in
+`target/097-grub-recovery.iWK6Ba/profiles/nvidia/`.
+
+The AMD/Intel VM rejected the same two invalid offers and booted the
+trusted digest. A manual rollback restored the original 0.9.6 digest,
+cleared a stale boot counter and kept the customized profile intact.
+Secure Boot and enforcing SELinux stayed active. Both image variants
+passed the packaged Security and firmware checks. The 164 focused source
+checks for Security, recovery, Setup and release packaging passed.
+Reports are in `target/097-grub-recovery.iWK6Ba/profiles/mesa/` and
+`target/097-grub-recovery.iWK6Ba/evidence/focused-security-and-install.log`.
+
+The rebuilt Fedora fallback ISO installed the pinned AMD/Intel digest on
+a blank VM disk after the local registry moved the version tag. The
+installed image booted with Secure Boot and enforcing SELinux, and its
+files matched the export. The update check requested the rolling reference
+and found the same digest. The signed-update VMs used a disposable
+container signature policy. The fallback install verified the media's
+digest pin and kept the existing rolling update origin.
+The temporary disk peaked at 15.84 GiB and was removed after shutdown.
+The lowest recorded SSD and host memory reserves were 69.08 GiB and
+33.39 GiB. Evidence is in `target/097-grub-recovery.iWK6Ba/media/fallback/`.
+
+The rebuilt Setup ISO installed the pinned NVIDIA digest to a blank LUKS2
+disk after the registry moved the version tag. The recovery key unlocked
+the disk. After firmware key enrollment, the VM booted with Secure Boot
+and enforcing SELinux. Setup's temporary key and its boot entry references
+were removed. Rollback booted the retained deployment of the same digest
+using the TPM, with `/boot` and `/sysroot` still read-only. The installed
+boot, sealing and Security helpers and Calendar glass matched the export.
+The temporary disk peaked at 23.76 GiB and was removed after shutdown.
+The lowest recorded SSD and host memory reserves were 68.91 GiB and
+25.69 GiB. Evidence is in `target/097-grub-recovery.iWK6Ba/media/native/evidence/`.
+
+For the preceding pair of images, the rebuilt Setup ISO installed the
+pinned NVIDIA image to a blank encrypted VM disk after the test registry
+moved the version tag. The recovery key unlocked LUKS2. After firmware
+key enrollment, the VM booted with Secure Boot and enforcing SELinux.
+Monet retired the temporary key and removed its
+references from the retained boot entries. The rollback command switched from
+deployment serial 2 to 0 at the same image digest and unlocked through the TPM.
+`/boot` and `/sysroot` stayed read-only. The installed Security helper, sealing
+helper and Calendar glass matched the image.
+
+Removing old Monet test artifacts reduced RAM-backed `/tmp` from 24 GiB to
+270 MiB. The encrypted test used a separate temporary disk with a 25 GiB cap
+and monitored SSD and memory reserves. It peaked at 23.31 GiB with at least
+71.92 GiB free on the SSD and 25.86 GiB of host memory available. The first
+attempt verified the install and recovery key, then hit a QMP socket path
+limit in the test harness. The corrected run passed the boot and rollback
+checks. SSH disconnected during the final power-off after the checks passed.
+Both disposable disks were removed. The laptop reported 72 GiB free afterward.
+Evidence is in `target/097-passive-restart.uuUCs3/media/native-capped.vq8UBA/evidence/`.
+
+The frozen sources, images, bundles, media and VM reports are in
+`target/097-passive-restart.uuUCs3/`.
+
+## Local 0.9.7 source verification — 8 November 2026
+
+The current source snapshot passed the required desktop run. Across 120 Python
+modules, 1,647 checks passed and 17 declared skips covered Flatpak integration,
+the private notification bus, transient user services and native disk discovery.
+The JavaScript test and all 11 browser form checks passed. All 99 Rust tests,
+Clippy with warnings denied, and the translation catalog check also passed.
+The source manifest and run logs are in `target/097-final-verification/`.
+
 ## Local 0.9.7 second batch — 5 November 2026
 
 The backlog remains the release checklist. These are source/build changes; the
@@ -701,8 +1294,63 @@ Test machines:
 
 ### Making the USB stick
 
+- 2026-11-11 Windows 11 VM. The exact 0.9.7 maker listed the 4 GiB virtual
+  USB stick with 512-byte sectors and excluded the Windows system disk. An
+  incomplete local ISO was refused with zero device writes. The exact local
+  Setup ISO produced Ready after a first write and a rewrite, with a full
+  device read-back each time.
+- The stopped guest's USB image matched the ISO outside the primary GPT
+  header. Its valid backup header was relocated to the end of the larger
+  device, and both partition tables matched the ISO. A separate VM booted
+  that read-only USB image to the Setup welcome screen with Secure Boot
+  enabled. Evidence is in `target/097-clean-release/usb-vm/evidence/`.
+- A Windows 11 follow-up held a file open on an NTFS stick. The writer
+  refused the volume lock and the file's SHA-256 and volume label stayed
+  intact. Replacing the selected stick while the confirmation was open
+  reused the same Windows disk number and capacity. The writer rejected the
+  new identity with zero writes or discards to the replacement.
+- The refreshed maker displays the partial-write warning only after it
+  attempts to change the disk layout. In the VM, the busy-stick refusal
+  showed only the reason and the file kept its SHA-256. Unplugging the
+  virtual stick during the actual transfer still showed the partial-write
+  warning. A retry with a blank virtual stick completed a full write and
+  read-back. A separate VM booted the result to Setup with Secure Boot
+  enabled. All 18 USB maker tests on Linux and Windows-target Clippy passed.
+  Evidence and the rebuilt Windows executable are in
+  `target/097-clean-release/usb-safety.xmzz8t/`. These runs used a local ISO
+  and 512-byte logical sectors.
+- The earlier maker reported Ready on a native 4 KiB virtual USB after
+  writing and verifying the ISO. UEFI found no bootable option on the
+  written stick. The image's GPT header is at byte 512, and UEFI looks at
+  byte 4096 on that drive. The refreshed maker refused the same drive
+  before the erase prompt, with zero device writes or discards.
+- Windows reported 512-byte logical and 4 KiB physical sectors on a
+  separate 512e virtual stick. The refreshed maker wrote and verified
+  the local Setup ISO on it. A separate VM booted the written stick to
+  Setup with Secure Boot enabled and confirmed both sector sizes.
+  All 19 USB maker tests on Linux and Windows-target Clippy passed.
+  The executable, checksum and VM evidence are in
+  `target/097-clean-release/usb-sector.MvjFp0/`.
+- The built-in downloader used a fixture URL in an isolated Windows 11
+  VM. It resumed a broken transfer at byte 16777216 and rejected a
+  full-length corrupt ISO without writing to USB. The earlier build
+  reused that bad cache on retry. The refreshed maker removed it after
+  verification failed, then fetched a fresh Setup ISO on retry and
+  verified the written stick.
+- When Setup was unavailable, the maker downloaded the Fedora fallback.
+  Windows reused Disk 1 for a replacement virtual stick inserted during
+  the download. The maker refused the changed identity with zero writes
+  or discards. A new confirmation wrote and verified the cached fallback
+  without a second download. The written stick started Anaconda with
+  Secure Boot enabled. Both ISO cache files were absent after the
+  successful writes. All 21 native Windows tests, 19 Linux USB maker
+  tests and Windows-target Clippy passed. The rebuilt release executable
+  retained its official HTTPS URL. Evidence, checksums and the executable
+  are in `target/097-clean-release/usb-download.Vxr97y/`.
+
 - [ ] The new safety-preview writer lists a plugged-in USB stick, writes and verifies it,
-      and the PC boots its installer. Check ordinary 512-byte and supported 4 KiB sectors.
+      and the PC boots its installer. Check 512-byte logical sectors, including 512e,
+      and verify that native 4 KiB logical sectors are refused before writing.
 - [ ] Unplug/replace the selected stick while downloading: the replacement receives no writes.
 - [ ] Keep a file open on the target: an unsuccessful volume lock stops before any dismount/write.
 - [ ] An oversized/corrupt image and a failed device flush never produce a Ready message.
@@ -815,21 +1463,765 @@ checksum stayed unchanged, and the clock-only user overrides were then reapplied
 - [ ] With no internet in Windows, quitting a game still restarts into Monet (at most about 20 seconds later)
 - [ ] `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Monet\Update-Monet.ps1" -CheckOnly` says whether a newer Bridge is out, and changes nothing
 
-### Security at a glance (after 0.9.3)
+### Security at a glance
 
-- [ ] Settings â†’ Security on a PC with Secure Boot on, an encrypted disk, the firewall on and updates by themselves: every row has a lily tick, and the title says Your PC is protected
-- [ ] Secure Boot off (turned off in the firmware, Monet's key trusted): Firmware settingsâ€¦ explains, Restart asks KDE's restart question, and the PC opens its firmware settings
-- [ ] Secure Boot off on a PC where Monet's key isn't trusted (`sudo mokutil --delete` it first, in a VM): the row says so and offers Trust Monetâ€¦, which asks for the password; the next restart shows the blue screen; after Enroll MOK the row offers Firmware settingsâ€¦
-- [ ] `sudo systemctl disable --now firewalld`: the Firewall row says Off; Turn on asks for the password, and the row says On afterwards
-- [ ] Updates â†’ auto updates off: the Updates row says so; Turn on brings the tick back. With an update downloaded, the row says it's ready and Restart restarts
-- [ ] Firmware: the row looks for updates as the page opens; with one available, Install installs it (fwupd asks for the password)
-- [ ] Backups â†’ earlier versions off: Turn on brings them back; without a backup drive the row offers Add a driveâ€¦, which opens Backups
-- [ ] An unencrypted Monet (Fedora's installer): the Encryption row says Off, with no button
-- [ ] `firewall-cmd --get-default-zone` says `monet`; the Firewall row says only what Monet uses comes in, and the switch under it is on
-- [ ] With the switch on: the phone pairs and rings (Settings â†’ Phone), Steam on another PC on the network finds this one for Remote Play and a local game transfer, a network printer shows up; from another PC, `nc -zv <this PC> 22` (or any other port) is refused
-- [ ] The switch off asks for the password; `firewall-cmd --get-default-zone` is Bazzite's zone again (`cat /usr/share/monet/firewall-zone-before`), and on turns Monet's back on
-- [ ] With Monet's zone on, `python3 -m http.server 8765` in Konsole: within seconds a notification asks "python3 wants to accept connections" and stays; Allow asks for the password, then another device on the network opens http://this-pc:8765, and Security â†’ Apps that can accept connections lists python3 with its switch on. Off again: the other device can't. Run it again after Keep blocked: no question
-- [ ] Apps that can accept connections â†’ Games you host (the password once): a Minecraft LAN world on this PC shows up for a friend on the same Wi-Fi; `firewall-cmd --list-all-policies` shows monet-allowed with 25565; off again, the policy is gone. LocalSend on with the app open: a phone nearby finds this PC
+- [x] Open Settings → Security with a healthy system, then test absent and
+  unreadable Secure Boot, disk, firewall and firmware status separately. An
+  unavailable check gets an explanation and cannot produce the all-clear.
+- [x] Test encrypted Setup before and after the temporary boot key is retired.
+  Recheck after a restart. Secure Boot key enrollment and firmware restart still
+  ask before leaving Monet.
+- [x] Stop firewalld inside a test system. Turn it on from Security. Cancel the
+  administrator prompt once and verify the page still reports that it is off.
+- [x] On two different test networks, share one profile and allow a TCP port.
+  Confirm it is reachable only from the sharing zone, including after a restart
+  and reconnect. Stop sharing and confirm the port is blocked again. Check
+  printer discovery, KDE Connect and a hosted game.
+- [ ] Connect a Steam Remote Play client and stream a game on the local network.
+- [x] Upgrade with an existing global exception. It appears as an older rule
+  until an administrator removes it. Test refusal, successful removal and a
+  failed firewall reload. Check that Protection history lists confirmed changes.
+- [x] In an active local session, Play on Windows still reaches the guarded
+  departure. Direct rollback and Windows preparation require administrator
+  approval. Check an ordinary account, Guest and an inactive or remote session.
+- [x] With an update staged, Security offers Restart. A failed automatic update
+  links to Updates and is recorded in Protection history. Open and cancel the
+  restart with the keyboard in Mist and Smoke.
+- [x] Check the remaining Security actions with the keyboard in Mist and Smoke.
+
+Local 0.9.7 firewall results, 8 November 2026. In a Monet VM with two isolated
+networks, a TCP exception reached only the shared NetworkManager profile. The
+same profile kept access after reconnect and reboot. Moving sharing moved the
+access, and removing the port closed it on both networks. A rule written by the
+previous helper appeared as an older exception. An unprivileged removal was
+refused, and an injected reload failure restored the rule without recording a
+successful change. Administrator removal closed the port on both networks and
+was recorded in Protection history. Settings reported that the firewall stayed
+off after canceling the administrator prompt. Approving the same action started
+and enabled firewalld. The listener notification appeared for the test server,
+and choosing Keep blocked left the port closed on both networks.
+
+The packaged-image check found that an ordinary account could not read the
+private firewalld policy directory. Settings now reads the loaded rules through
+firewalld's read-only D-Bus interface. An ordinary account verified the sharing
+rules and the older global rule, detected a port added outside Monet, and saw
+unknown status while firewalld was stopped. The check did not start firewalld or
+change the policy directory permissions. Logs and screenshots are in
+`target/097-firewall-qualification/`.
+
+A source-level regression covered incomplete firewall reads. Security reports an
+incomplete check if the default zone, active profiles, loaded sharing policy,
+or an active zone’s ports or services cannot be read. Adding sharing requires
+a readable default outside the sharing zone. All 22 focused helper and offscreen
+Settings checks passed. The updated helper and page still need a rebuilt VM check.
+
+Offscreen Settings checks then exercised a firewall change while an older status
+request was pending. The page waited for the post-change result, and a late reply
+could no longer undo the displayed change. A helper test also verified that a
+failed request to Plasma never calls a direct reboot. The Security page reports
+the failure and keeps Restart available. The Security helper and full Settings
+feedback suites passed all 57 checks. The real restart dialog and firewall
+changes still need a check with these files packaged.
+
+Ten Security checks passed in each of Mist and Smoke at 125% in offscreen
+Settings with the KDE Qt theme plugin. Tab brought the default firewall rules,
+profile sharing, app preset and port removal controls into view. Space and both
+Enter keys dispatched the expected helper requests. Holding an activation key
+after the status refreshed could undo a sharing change. Setting rows now ignore
+key repeat, and the regression checks all three activation keys. These tests use
+helper replies without making changes to the host firewall.
+
+The current Settings file matched both 0.9.7 images. Twenty additional
+keyboard checks passed in Mist and Smoke at 150% and 200% on private KWin
+outputs. Tab and Shift+Tab brought the focused controls into view. The
+checks opened Accounts, the exact Screen lock control and Backups, retried
+status and firmware reads, and checked the automatic-update, backup and
+firmware actions. Blocked firmware could not be selected. The tests used
+fixture replies for system changes. Captures and results are in
+`target/097-security-keyboard.c9PNX8/`.
+
+The current signed AMD/Intel candidate also booted over a 0.9.6 installation
+whose packaged firewall helper had opened a global TCP exception. The
+rule files were preserved byte for byte, the port stayed reachable, and an
+ordinary account saw the older rule in the Security status. Direct and
+detached PolicyKit removal attempts were refused. After an injected
+reload failure, the helper restored the rule and recorded no success.
+Administrator removal closed the port while the listener kept running,
+and the ordinary account's Protection history reported one removal.
+The upgrade and firewall logs are in
+`target/097-security-keyboard.c9PNX8/legacy-upgrade/`.
+
+The exact Setup VM ISO installed the pinned NVIDIA image on a blank encrypted
+disk. The recovery key unlocked LUKS2. An ordinary account's Security read
+reported encryption setup pending while the temporary key still unlocked the
+disk. After an orderly restart the key, its slot, the cleanup receipt and its
+boot arguments were gone. Security reported setup complete on that boot and
+again after a further TPM-backed restart. Secure Boot, SELinux and firewalld
+stayed active. A test-only boot hold delayed SSH until its timeout, so the
+qualification issued the orderly restart after taking the pending reading.
+
+The encrypted guest exposed a second issue. Its OSTree repository and
+deployment directories are private, so the ordinary account could not run
+`rpm-ostree status --json`. Security now falls back to the service's read-only
+D-Bus deployment property. The corrected helper reported clear, staged and
+clear again after removal of the test deployment, with directory permissions
+still at 0700. A private Settings run displayed the VM's healthy status and
+each of eight isolated failures for Secure Boot, disk encryption, firewalld
+and firmware. It gave the all-clear only on the healthy input. All 12
+rendered checks passed, including the three encryption readings.
+
+The corrected helper is installed in the reversible account preview. The
+first VM run completed Setup but applied its fresh-start memory threshold
+at the installed guest's restart. The corrected guard let the retry proceed
+while keeping the SSD above 64 GiB free. Both disposable disks were removed.
+Evidence is in `target/097-encryption-status.hqHQLM/`.
+
+The rebuilt AMD/Intel and NVIDIA images contain that exact helper. Each export
+reuses 295 unchanged layers. Both VMs rejected unsigned and wrong-key offers
+and booted the exact signed 0.9.7 digest. With the command-line deployment
+reader made unavailable to the ordinary account, the packaged helper
+reported clear, staged and clear again. Both VMs rolled back to their
+original 0.9.6 digests with their saved file intact.
+
+The Setup and Fedora fallback ISOs pin both rebuilt images. The Setup live
+filesystem comparison covered 40,122 entries and preserved file contents,
+permissions, ownership, hard links and SELinux labels apart from the
+intended digest-map update. The Setup ISO booted with Secure Boot, a
+virtual TPM and no network adapter, and read both pins. Fedora fallback
+installed the pinned AMD/Intel digest after the test registry moved its
+version tag, then booted it with Secure Boot and enforcing SELinux. Its
+installed files matched the export and its update check requested the
+rolling reference.
+
+The final desktop run covered 1,701 Python checks in 120 modules with 19
+documented skips and zero failures. The JavaScript check, all 11 browser
+password-form checks, both separate PowerShell checks and the translation
+catalog check passed. The test container needed its accessibility bus set
+to dbus-daemon. An earlier run reported a ZIP extraction as complete even
+though a wrong password produced corrupt output. The random fixture passed
+on rerun.
+
+The seven rebuilt or retained artifacts passed their SHA-256 checks.
+The Linux bundle contains the corrected helper, and the Windows Bridge
+and USB writer are byte-for-byte identical to the previously qualified
+executables.
+
+The exact Windows USB writer wrote and verified the rebuilt Setup ISO on a
+disposable 4 GiB virtual USB stick. Independent read-back matched the source
+ISO byte for byte outside the relocated primary GPT fields. Both GPT
+headers and partition tables verified. The source ISO has 340 KiB of zero
+padding after its backup GPT. The writer placed the stick's backup GPT at
+the final sector and preserved the protective MBR, whose size field still
+produces an `fdisk` warning. The written stick reached Setup's Hello page
+with Secure Boot enabled and both expected image pins. The VMs had no network
+adapter and the test kept at least 64 GiB free on the SSD. The USB evidence is
+in `target/097-private-update-status.GRmyV6/usb-qualification/evidence/`.
+Physical USB boot, monitor and GPU checks, and Steam Remote Play remain open.
+Reports are in `target/097-private-update-status.GRmyV6/`. The local
+candidate manifest is in `target/097-local-candidate.gou008er/`.
+
+The ZIP follow-up reproduced the failure using a fixed encrypted entry and a
+wrong password that passed its initial check. The old Ark plugin stopped
+reading at the declared size and missed the checksum error. The corrected
+plugin reads through the end of the entry. The same native test now records
+a failed transfer. All 55 archive, bundle, preview and Files checks passed,
+including correct passwords, cancellation and recovery from a full test
+filesystem. The laptop's guarded account launcher loaded the new plugin and
+extracted a deflated file and an empty file.
+
+Both refreshed 0.9.7 exports reuse 296 inherited layers and contain the six
+verified Ark payload files. Each VM rejected unsigned and wrong-key offers,
+booted its exact signed digest with Secure Boot and SELinux enforcing, and
+matched the installed Ark binary and ZIP plugin hashes. The packaged Security
+page's status reader reported clear, staged and clear again for an ordinary
+account. Rollback returned each VM to its original 0.9.6 digest and preserved
+its saved file. The first AMD/Intel attempt hit the 4 GiB scratch-file cap
+after boot. The rerun used an 8 GiB RAM-backed cap and passed.
+
+Both ISOs have the new digest pins. Setup's decoded filesystem comparison
+covered 40,122 entries, including file contents and SELinux labels. The
+Setup ISO ends at its backup GPT and its ISO volume boundary. The exact ISO
+showed Hello with Secure Boot, a virtual TPM, no network adapter, and the
+expected pins. The Windows USB maker wrote and verified it on a virtual stick.
+Independent read-back matched the payload outside the relocated GPT fields,
+and the stick booted with Secure Boot and both pins.
+
+Fedora fallback installed the pinned AMD/Intel digest after the test registry
+moved the version tag. It booted with Secure Boot and SELinux enforcing.
+Installed file hashes matched the export, and its update check requested
+`:latest`. The 137 installer and release checks had one documented PowerShell
+skip and zero failures. The prior separate PowerShell checks cover the retained
+Windows scripts. All seven artifact hashes in
+`target/097-local-candidate.cxv0dsrg/manifest.json` passed. SSD space stayed
+above 64 GiB and the VM scratch disks were removed. Evidence is in
+`target/097-zip-integrity.p6Z5gV/`.
+
+The Windows maker now sets the size of a pure protective MBR from the
+validated USB capacity. All 104 Rust workspace checks and 25 native Windows
+checks passed. The exact executable rejected a truncated ISO with zero
+writes. It wrote and verified the exact Setup and Fedora fallback ISOs from
+the ZIP candidate. Both virtual sticks passed independent payload read-back,
+both GPT CRCs, and `fdisk` with the protective MBR covering the disk. Setup
+reached Hello with Secure Boot and the expected pins. The Fedora stick
+reached Anaconda with Secure Boot. Fedora's optional embedded ISO checksum
+passed on the source image and failed on the written stick. Restoring only
+the original protective MBR still failed, which reproduces the checksum
+failure after the prior writer's GPT relocation. Restoring both original
+headers passed. Evidence is in `target/097-usb-protective.iSncWj/`.
+
+The full desktop recheck of the ZIP candidate found one wallpaper failure.
+The activity handler and weather timer both started a request on unlock.
+The updated fixture reproduced the duplicate while the test server held its
+response. The corrected wallpaper uses the timer for that refresh. It
+passed 40 focused checks, including the existing lock, display and animation
+checks. The account preview contains the correction, and both new exports
+reuse 297 inherited layers with one changed wallpaper file. The full rerun
+covered 1,702 Python checks in 120 modules, with 19 documented skips and
+zero failures. JavaScript and all 11 browser form checks passed.
+Setup and Fedora fallback now pin both new exports. The rebuilt Setup ISO
+reached Hello with Secure Boot, a virtual TPM and no network adapter.
+Both exact images rejected unsigned and wrong-key offers, booted the signed
+0.9.7 deployment and rolled back to 0.9.6 with saved data intact. Installed
+wallpaper and Ark hashes matched their exports.
+
+The Windows maker wrote both repinned ISOs and their independent read-backs
+verified the payload, protective MBR size and GPT tables. The Setup stick
+reached Hello with Secure Boot and read both pins. The first full fallback
+test stopped at a fixture guard that expected optical media. The revised
+guard allows the read-only USB while still requiring the one disposable
+destination. On rerun, Fedora installed the pinned AMD/Intel image from the
+Windows-written stick after the test registry moved the tag. The installed
+guest booted with the stick detached, Secure Boot enabled and SELinux
+enforcing. It matched the expected file hashes and checked `:latest`.
+All seven artifact checksums passed for
+`target/097-local-candidate.e4u63ij7/manifest.json`. The SSD stayed above
+64 GiB free, and the temporary VM disks were removed. Evidence is in
+`target/097-wallpaper-resume.s95TyM/`.
+
+The 0.9.7 direct Ethernet Setup kit at `target/097-direct-setup.XA1DtT/`
+serves the same pinned AMD/Intel and NVIDIA images from their existing
+archives. Its Setup ISO adds the registry CA through Fedora's live updates
+directory. All seven original ISO files and the embedded EFI boot images
+match byte for byte. The ISO's GPT
+and SHA-256 checks pass. The laptop shares the unchanged image extents with
+the VM ISO, keeping at least 64 GiB free on the SSD.
+
+The exact test ISO booted from a read-only virtual USB with Secure Boot
+enabled and a virtual TPM. Setup received a DHCP address from an isolated
+Ethernet bridge with no default route. A system-wide TLS request rejected
+the test CA. Skopeo accepted the registry-scoped CA and read both pinned
+manifests. Both image signatures also verified against the candidate key.
+The Setup worker then downloaded and verified the AMD/Intel image, finished
+an encrypted installation, and verified that its recovery key unlocked the
+target. A change to the running test harness interrupted its shutdown step
+after the worker completed. The harness stopped the VM and removed the RAM
+disk.
+
+The follow-up in `target/097-direct-setup.XA1DtT/boot-check/` repeated the
+installation and shut down Setup normally. The installed VM booted with its
+system disk and firmware only. After MOK enrollment it reached the Monet
+desktop with Secure Boot enabled and SELinux enforcing. A normal restart
+reached the desktop again. A temporary serial diagnostic boot argument let
+the harness read the exact pinned AMD/Intel digest and the `:latest` update
+origin. The system used the encrypted disk, had a TPM 2.0 token bound to
+PCR 7, and retired the temporary key and its boot argument. Both installed
+boots reached the desktop without entering the recovery key. The VM shut
+down normally and the RAM disk was removed. The offline text console
+printed a missing Homebrew script and a separate permission warning.
+
+The system shell profiles are identical in both candidate exports. Using
+those profiles, a partial Homebrew prefix and a private OSTree directory
+reproduced both console messages. The image build now waits for the
+Homebrew executable and its main script before running shell setup. The
+login warning reads the booted image through rpm-ostree's read-only D-Bus
+property. A test with a signed booted image and an unverified staged image
+stayed quiet. Booting the unverified official image still produced the
+warning. A complete Homebrew installation still loads its environment and
+completions. The source fix is pending a new image build.
+
+The kit's README gives the physical test procedure for a dedicated Ethernet
+adapter and a spare installation drive. Physical USB, GPU and display checks
+remain open.
+
+On 11 November, the rebuilt AMD/Intel 0.9.7 image used Monet's default zone
+on two isolated links. An ordinary account saw a shared CUPS queue marked
+Ready in Settings → Printers. Avahi resolved it over IPv4 and IPv6 on both
+links, and direct IPP requests returned the expected attributes. KDE Connect
+paired on the first link and reconnected on the second with the same device ID.
+The Phones helper reported the peer as paired and nearby. Each guest sent a
+test file on the second link, and the receiving guest verified the bytes. The
+printer remained discoverable on both links with only one profile shared.
+
+The Games preset let a Cuberite Minecraft server reply on TCP 25565 and a
+test listener reply on UDP 2456. Both were reachable over IPv4 and IPv6 only
+from the shared profile. Moving sharing moved access to the other link. The
+rules survived a firewalld reload and a full guest reboot. After reboot, a
+fixture player joined the Cuberite world with authentication disabled inside
+the isolated test network. Stopping sharing blocked both listeners on both
+links. The Security helper reported the active profile zones and Games setting
+throughout. Logs are in `target/097-current-images-v5/nearby-devices/`.
+
+On 11 November, an ordinary desktop account saw a failed automatic update
+in Protection history after the VM's local registry was stopped. In Smoke,
+Tab and Enter on Open Updates went directly to the recent automatic attempts.
+A signed manual update was then staged with automatic updates off. The
+packaged page showed Turn on where Restart was needed. With the corrected
+Settings file mounted in the test guest, Tab and Enter opened the restart
+confirmation in Mist and Smoke. Escape canceled it and left the deployment
+staged. Desktop fixtures also checked a healthy overview and separate missing
+or unreadable Secure Boot, disk, firewall, firmware, and update status.
+The full desktop run recorded 1,667 Python checks with 17 documented skips,
+no failed modules, and 11 passing browser password form checks.
+Evidence is in `target/097-current-images-v3/security-vm/`.
+
+In the same VM, PolicyKit allowed the Windows switch for the ordinary account
+in its active local Plasma session. The general Monet command and Windows
+preparation required administrator authentication. The switch also required
+administrator authentication for a process started over SSH and for a Guest
+account signed in at the active local desktop. These checks queried the real
+policy without dispatching any of the actions.
+
+The AMD/Intel and NVIDIA images were rebuilt with the corrected Settings
+file and updated release notes. Both images rejected unsigned and wrong-key
+updates, booted the trusted 0.9.7 deployment, and rolled back to their original
+0.9.6 digest. The VM checks verified the installed Settings file against the
+build. The installer pins for this pair are in
+`target/097-current-images-v4/installer/`.
+
+In the next rebuilt AMD/Intel guest, Monet's automatic update service rejected
+an unsigned image with the disposable signing policy. Booted, staged and
+rollback deployments stayed the same. The packaged Security page recorded the
+failure, and Tab and Enter on Open Updates went to the failed attempt. After
+the registry offered the trusted signature for the same digest, the automatic
+service staged it. With automatic updates turned off, the packaged Restart
+button opened the confirmation in Mist and Smoke. Escape kept the boot ID and
+all deployments unchanged in both themes. Approving it in Smoke booted the
+signed digest and kept the earlier digest available for rollback. Secure Boot
+and SELinux enforcement remained active. Running `monet rollback` from the
+active desktop opened the real administrator prompt. Cancel left the deployed
+systems unchanged. Approval queued the previous digest, and a separate
+restart booted it with the test file intact.
+
+The same guest reproduced a firmware status error. With fwupd stopped and
+masked, its JSON error was shown as a successful check with no updates. The
+corrected helper distinguishes successful device lists, fwupd's no-action
+exit code and failed checks. The corrected Settings overview keeps firmware
+installation and its pending restart visible. With the two files bind-mounted
+in the guest, Settings showed the daemon error with Try again. After the
+daemon was unmasked, Tab and Enter retried successfully. The 40 focused checks
+passed. The desktop suite recorded 1,672 Python checks with 19 documented
+skips and no failed modules, plus 16 browser submission checks and 11 password
+form checks. The two skipped PowerShell checks passed separately with the local
+runtime. Evidence is in `target/097-current-images-v5/security-status/`.
+
+The local AMD/Intel and NVIDIA images were rebuilt with both corrected files.
+The build verified their installed bytes. In each container, the packaged
+helper reported failure from an ordinary account when fwupd's daemon was
+unreachable. Both exact exported images then passed a signed update from
+0.9.6 and rollback to their respective original digests. Each VM rejected
+unsigned and wrong-key updates without staging a deployment. With Secure Boot
+and SELinux still active, the packaged helper reported the real error while
+fwupd was masked, then completed the check after the service was restored.
+Build and update evidence is in `target/097-current-images-v6/`.
+
+The firmware and older-rule reviews now open with keyboard focus on Cancel.
+Escape dismisses either review and returns focus to its button. The Settings
+regressions cover Tab to the separate confirmation button, a held Enter key,
+failed helper calls, and a separate Restart after key enrollment is requested.
+The updated Settings file was bind-mounted in the rebuilt AMD/Intel guest.
+It ran in Mist and Smoke against an older TCP exception written by the
+previous helper. Canceling the review or the real administrator prompt
+preserved the loaded rule. Approving removal cleared it and produced one
+entry in Protection history.
+The desktop run recorded 1,669 Python checks with 17 documented skips,
+16 browser submission checks and 11 password form checks. The only failure
+was an assertion for the old Escape handler's exact source text. After
+updating it, all 405 checks in that module passed on rerun.
+
+The same guest reproduced a firmware restart issue in the earlier image.
+The helper set logind's next-boot firmware flag before opening Plasma's
+restart prompt. Escape closed the prompt and the flag stayed set.
+
+The Settings confirmation now queues the firmware request with Plasma's
+shutdown service. It sets the firmware target after both application close
+checks finish. The native test runs the built service on private buses and
+covers unavailable firmware, canceled or failed close requests, duplicate
+requests, an approved restart, and a refused reboot with and without a
+pre-existing firmware target.
+
+The shutdown service and Settings changes were bind-mounted in the AMD/Intel
+VM. The Settings fixture reported Secure Boot as off to expose the firmware
+action, with the VM's actual Secure Boot left on. Escape in Settings and
+Cancel Logout while KWrite had an unsaved file both left the boot ID and
+firmware flag alone. On retry, the flag stayed clear until Save. OVMF opened
+its boot menu and offered EFI Firmware Setup. Monet booted again with the
+file saved, Secure Boot enabled, SELinux enforcing and the firmware flag
+clear. A subsequent ordinary Plasma restart went straight back into Monet.
+The native bundle passed installation and binary checks in the matching
+Fedora build container. The desktop suite recorded 1,670 Python checks
+with 17 documented skips and no failed modules. All 16 browser submission
+checks and 11 password form checks passed. Logs and screenshots are in
+`target/097-current-images-v4/security-actions/`.
+
+The next AMD/Intel and NVIDIA images include the updated shutdown service,
+Settings page and helper. Both built binaries matched the one used in the
+firmware restart VM. The private-bus checks also passed as the ordinary user
+inside both booted images. Each VM rejected an unsigned image and a wrong-key
+signature without staging a deployment, booted the trusted 0.9.7 digest and
+rolled back to its original 0.9.6 digest. Secure Boot, SELinux enforcement and
+the saved test file survived. Evidence is in `target/097-current-images-v5/`.
+
+### Installer image trust
+
+- [x] Build a local Setup ISO from the qualified AMD/Intel and NVIDIA manifests.
+  Verify the two versioned references and digests in `IMAGE_DIGESTS.json`.
+  Move a test registry tag after building the ISO. A fresh download must
+  use the original digest. An offline resume must accept the original cache
+  and reject a replacement cache even when its receipt and blobs agree.
+- [x] Qualify signed updates separately in a disposable VM. Test valid,
+  wrong-key and unsigned updates and confirm that rejected images leave the
+  deployed and staged systems alone. Boot the signed update and roll back
+  with the disposable signing policy. Check the Fedora fallback installer
+  separately from Monet Setup using the same image digests.
+- [x] On fresh Windows test media, check that the first automatic sign-in
+  still runs Bridge setup, clears `AutoLogonCount` and disables setup's
+  `AutoAdminLogon`. Check the next sign-in and a Play on Windows round trip.
+
+The rebuilt 0.9.7 AMD/Intel and NVIDIA images each passed a signed update
+from 0.9.6 and a rollback to the original digest. Each guest rejected the
+unsigned candidate without staging a deployment, then booted the exact
+candidate after a signature from the disposable VM test key was available.
+Secure Boot, SELinux enforcement and the saved test file survived both boots.
+The corrected images were pinned in the local Setup ISO. The live ISO booted
+with Secure Boot enabled and loaded both matching pins. With networking
+disabled, Setup accepted the downloaded AMD/Intel cache and rejected a
+replacement with a matching receipt and valid blobs but a different digest.
+The desktop suite ran 1,665 Python checks with 17 skips and no failed modules.
+All 11 browser password form checks passed. Evidence is in
+`target/097-current-images-v2/`.
+
+The same Setup ISO installed the pinned AMD/Intel image on a blank virtual
+disk. The recovery key unlocked LUKS2. After signing key enrollment, the
+guest booted with Secure Boot enabled and SELinux enforcing, and Settings
+reported disk encryption complete from the ordinary desktop session. A
+firmware restart booted the same digest using the virtual TPM, with no
+temporary key, cleanup receipt or temporary-key kernel argument.
+
+The Fedora fallback ISO used both digests from the same build. The loopback
+registry served the NVIDIA manifest at the AMD/Intel tag, and the fallback
+guest still installed and booted the AMD/Intel digest specified by the ISO.
+The installed guest reported Monet 0.9.7, Secure Boot enabled and SELinux
+enforcing. Evidence is in `target/097-current-images-v2/fallback/`.
+
+On the first boot, Bazzite's hardware setup was already changing kernel
+arguments when Monet attempted to remove the temporary key argument.
+Monet kept its cleanup receipt and completed the operation after Bazzite's
+automatic restart. The seal service now runs before Bazzite's hardware setup.
+The revised unit passed systemd verification and all 24 focused checks. A
+second fresh encrypted installation used the revised unit as an override in
+the test guest. It retired the temporary key on the first boot, then Bazzite
+changed the kernel arguments and restarted. The guest started using the TPM,
+with no temporary key or kernel argument. Both rebuilt images contain the
+verified unit. Evidence is in `target/097-current-images-v2/fresh/`,
+`target/097-current-images-v2/seal-order-vm/` and `target/097-current-images-v3/`.
+
+Both rebuilt images passed another update and rollback round trip. The
+disposable signing policy rejected an unsigned image and a signature checked
+against the wrong key without changing the booted image or staging a deployment.
+Each guest then booted the trusted 0.9.7 digest with the packaged seal unit and
+rolled back to its original 0.9.6 digest. Secure Boot, SELinux enforcement and
+the saved test file survived. The new Setup digest list and fallback Kickstart
+are in `target/097-current-images-v3/installer/`. The installer VM results above
+used the previous pair of image digests.
+
+Both installer ISOs were then rebuilt using the new digests. The embedded
+Setup manifest and the Fedora Kickstart matched both qualified images. The
+rebuilt Fedora fallback installed and booted the AMD/Intel image with Secure
+Boot enabled and SELinux enforcing after the registry tag was moved. Its
+registry log records the pinned manifest requests. The full desktop suite ran
+1,665 Python checks with 19 documented skips and no failed modules, and all
+11 browser password form checks passed. Both PowerShell checks skipped by the
+desktop container passed separately with the local PowerShell runtime.
+Evidence is in `target/097-current-images-v3/`.
+
+Native Setup used the pinned NVIDIA digest after both registry tags moved.
+The test interrupted installation after the verified download and restarted
+the same ISO with the network adapter removed. Setup rediscovered the saved
+checkpoint, refused a substitute cache with a valid receipt and matching blobs,
+and finished the encrypted installation after the original cache was restored.
+The recovery key unlocked LUKS2. The packaged seal service retired the
+temporary key before Bazzite changed its kernel arguments. The automatic
+restart and a separate firmware restart booted the pinned image through the
+virtual TPM. Secure Boot and SELinux remained active, and the ordinary desktop
+session reported encryption complete. An earlier run hit the host RAM-disk
+quota. The clean run passed after the ISO files were moved to a separate
+filesystem. The native VM used virtual graphics and a local registry.
+Evidence is in `target/097-current-images-v3/native/`.
+
+The next Setup and Fedora fallback ISOs were rebuilt from the images with
+the corrected Security page. Both ISO checksums passed. Setup's embedded
+digest list and the fallback's extracted Kickstart match both images from
+the signed-update run. Setup also passed the signed EFI and kernel checks
+and the optical/USB boot file comparison. These ISOs use the VM's isolated
+registry. Checksums and the extracted files are in
+`target/097-current-images-v4/installer/` and
+`target/097-current-images-v4/fallback/`.
+
+The rebuilt fallback installed on a blank virtual disk after both registry
+tags were moved. The registry log shows the installer requesting the AMD/Intel
+digest embedded in the Kickstart. The installed guest booted that digest and
+reported Monet 0.9.7, Secure Boot enabled and SELinux enforcing.
+
+Native Setup downloaded the pinned NVIDIA image after both tags were moved.
+The VM shut down after the verified download and restarted the same ISO
+without a network adapter. Setup refused the substitute cache, then finished
+installing from the restored checkpoint. The recovery key passed the LUKS2
+check. The packaged seal service retired the temporary key before Bazzite's
+automatic restart. That restart and a separate firmware restart booted the
+pinned image through the virtual TPM, with Secure Boot and SELinux active.
+The installed Settings file matched the build, and the ordinary account's
+security check reported encryption complete. The Security page screenshot
+shows Secure Boot, encryption, app isolation and firewall status. The fixture
+disables the automatic update timer. Evidence is in
+`target/097-current-images-v4/native/`.
+
+Setup and Fedora fallback were rebuilt again for the images with the
+firmware restart fix. Both checksums passed. The extracted Setup digest
+list and Fedora Kickstart match the images booted in the latest signed
+update tests. Setup also passed the signed boot component checks and the
+optical/USB boot file comparison. The builds use the local VM registry.
+Checksums and extracted files are in `target/097-current-images-v5/installer/`
+and `target/097-current-images-v5/fallback/`.
+
+The rebuilt fallback installed on a blank virtual disk after both registry
+tags moved. The installed guest booted the AMD/Intel digest from the ISO
+with Secure Boot enabled and SELinux enforcing. Its shutdown binary and
+Settings helper matched the built image.
+
+Native Setup downloaded the pinned NVIDIA image after both tags moved. The
+VM restarted the same ISO without a network adapter. Setup refused the
+replacement cache, resumed the verified checkpoint and accepted the LUKS2
+recovery key. The temporary key was retired before Bazzite's automatic
+restart. Both that restart and a separate firmware restart unlocked through
+the virtual TPM and booted the pinned image with Secure Boot and SELinux
+active. The installed shutdown binary, Settings helper and QML matched the
+build. The Security page screenshot shows the settled status from the ordinary
+account. The fixture disables the automatic update timer. Evidence is in
+`target/097-current-images-v5/native/`.
+
+Setup and Fedora fallback were rebuilt using the images with the firmware
+status fix. Both ISO checksums passed. The digest list extracted from Setup
+and the Kickstart extracted from the fallback ISO match the exact AMD/Intel
+and NVIDIA digests from the signed update and rollback tests. Setup also
+passed the signed boot component checks and the optical/USB boot file
+comparison. Evidence is in `target/097-current-images-v6/installer/` and
+`target/097-current-images-v6/fallback/`.
+
+The rebuilt Fedora fallback installed the pinned AMD/Intel digest on a blank
+virtual disk after both registry tags moved. The guest booted with Secure Boot
+enabled and SELinux enforcing. Its firmware helper, Settings page and shutdown
+binary matched the build.
+
+The matching Setup ISO saved the pinned NVIDIA download and refused a
+substitute cache while offline. The first run hit the host's RAM-disk quota
+while writing the virtual disk. The retry stopped before completion and the
+installed boot and virtual TPM checks are still open for this image pair.
+The interrupted guest disk was removed during storage cleanup. The logs and
+screenshots are in `target/097-current-images-v6/native/`.
+
+The saved bootc reports exposed an update-channel gap. Native Setup recorded
+the versioned image as its future update source, and the Fedora fallback
+recorded the digest itself. The native Setup worker now installs the verified
+OCI cache and configures the same graphics variant's `:latest` tag for later
+updates. Its offline resume still skips the update-source fetch check. The
+Setup and recovery suites passed all 93 checks, including the source and target
+references for both variants.
+
+The rebuilt native Setup ISO passed its checksum, the signed boot-file
+checks and the optical/USB comparison. The extracted worker and digest list
+matched the build inputs. In the VM, Setup downloaded the pinned NVIDIA
+image after both version tags moved. With the network adapter removed, it
+refused a substitute cache with a matching receipt, resumed from the restored
+cache and verified the recovery key against the LUKS2 volume. The test images
+reused the retained 0.9.7 layers and packaged the updated boot helper.
+
+After enrolling the driver key in the VM firmware, the system booted the
+pinned digest. The packaged seal service retired the temporary key before
+Bazzite restarted, and a separate firmware restart unlocked through the
+virtual TPM. Setup left the NVIDIA `:latest` channel configured to use the
+container signature policy. With the disposable policy installed in the
+guest, an ordinary `bootc upgrade` rejected unsigned and wrong-key offers
+without staging either one. It then staged and booted the trusted digest.
+Monet's rollback returned to the pinned digest. The fixture set a stale
+GRUB counter before each restart and Monet cleared it. The encrypted disk,
+Secure Boot, SELinux and the test file survived both transitions. Evidence
+is in `target/097-native-channel-vm/evidence/`.
+
+The Fedora fallback now sets the matching `:latest` reference in an Anaconda
+post-install step. It associates the installed OSTree commit with that reference
+and preserves the deployment's signature policy. The 28 installer, graphics and
+download checks passed. A disposable OSTree sysroot pulled a small pinned OCI
+image from a loopback registry after `:latest` moved, rewrote the origin without
+network access, and imported the newer image from `:latest` while keeping the
+original deployments.
+
+A rebuilt fallback ISO passed its checksum and installed the pinned AMD/Intel
+v6 image after the registry's version tag moved. Anaconda set the update origin.
+The test fixture's CA copy failed because the live environment lacked
+`install`. The fixture was finished in the guest before reboot. Secure Boot
+and SELinux remained active, and `bootc upgrade --check` requested `:latest`.
+With the disposable signing policy, the guest rejected unsigned and wrong-key
+images and staged the trusted digest.
+
+A stale GRUB counter kept booting the running deployment after both the signed
+update and Monet's queued rollback. Clearing it in the guest let the trusted
+deployment boot and let rollback return to the original pinned digest. The
+test file, Secure Boot and SELinux survived both transitions. In the guest,
+`/boot` was mounted read-only. The source helper now uses a private writable
+mount to update GRUB and preserves the trial receipt if the edit fails. All 13
+focused boot-helper checks passed. Logs are in
+`target/097-installer-channel-vm/fallback/`.
+
+The shutdown helper now clears the counter when bootc has queued a rollback.
+A fresh Fedora fallback VM installed the pinned AMD/Intel image after both
+version tags moved. The test images reused the retained 0.9.7 layers and
+packaged the new helper. The guest used the disposable signing policy to
+reject unsigned and wrong-key offers and boot the trusted digest from
+`:latest`. The text-mode test install defaulted to multi-user mode, so the
+graphical target was enabled in the guest for the sign-in health check.
+
+The fixture set the stale GRUB counter before each restart. The packaged
+helper booted the signed update and later returned to the original digest
+through Monet's rollback command. Both transitions left `/boot` read-only
+from the guest's main mount namespace, and Secure Boot, SELinux and the test
+file survived. All 151 installer, Setup, publication and boot-helper checks
+passed, including the PowerShell parse check with the retained local runtime.
+Evidence is in `target/097-boot-trial-vm/evidence/`.
+
+The AMD/Intel and NVIDIA 0.9.7 images were built through the full Containerfile
+from the same source snapshot, using the cached Bazzite bases and unchanged
+build stages. The packaged Security page, firewall rules, PolicyKit policy,
+boot helper and widget glass matched the snapshot. Both images passed the
+packaged shutdown fixture, including canceling a firmware restart.
+
+Separate VMs running 0.9.6 rejected unsigned and wrong-key offers from the
+local registry without staging a deployment. Each guest booted its exact
+0.9.7 export under the disposable signing policy. The packaged firmware check
+reported the unavailable daemon and recovered after it was unmasked. Both
+rollbacks cleared an injected stale GRUB counter and restored the original
+digest. Secure Boot, SELinux enforcement and the test file survived.
+
+Monet Setup and Fedora fallback were rebuilt with both exported digests.
+Both ISO checksums passed, and their extracted pins matched the manifests
+tested in the VMs. Setup also passed the signed boot-file and optical/USB
+checks. The source manifest, build logs and VM evidence are in
+`target/097-clean-release/`.
+
+Both exact ISOs then installed on blank virtual disks after both versioned
+registry tags moved. Fedora fallback booted the pinned AMD/Intel export and
+its update check used the matching `:latest` channel. The ordinary account
+reported Secure Boot, enforcing SELinux and Monet's firewall rules active.
+The installed Security page, policy and helpers matched the signed-update VM.
+
+Native Setup downloaded the pinned NVIDIA export. With no network adapter it
+refused a replacement cache, resumed from the verified cache and checked the
+recovery key against the LUKS2 volume. After VM firmware key enrollment, Monet
+retired the temporary key before Bazzite restarted. A separate firmware
+restart unlocked through the virtual TPM and booted the same digest. The
+installed update check used the NVIDIA `:latest` channel with container
+signature policy selected. The installed files matched the signed-update VM.
+
+The installed Security page showed the active protections in the ordinary
+Wayland session. PolicyKit required administrator authentication for the
+general command, Windows preparation and firewall helper. The local session
+could use the narrow Windows switch helper, while a process outside the
+local session needed administrator authentication. A firewall change from
+the desktop launcher authenticated the passwordless test administrator
+through PAM. After setting a password in the guest, the same control opened
+Monet's administrator prompt. Cancel left the firewall rules and Protection
+history unchanged. The fixture disables automatic updates, which explains
+the update notice in the screenshots. Logs and screenshots are in
+`target/097-clean-release/media/fallback/` and
+`target/097-clean-release/media/native/evidence/`.
+
+For new releases, both media jobs now take the AMD/Intel and NVIDIA digests
+reported by the versioned OCI image jobs. An existing release tag continues
+through the rolling-image build without generating new installer media. Local
+test doubles checked the digest output and failure paths. Both workflow build
+steps then produced matching pins with tag resolution disabled in the fixture.
+All 24 focused publication, Setup and recovery checks passed.
+
+`tools/vm-test.py` checks the output and VM disk filesystems before starting
+QEMU. The disk reserve defaults to 8 GiB. Use `--disk-reserve-gib 64` for the
+laptop's release tests. QEMU starts with at least 12 GiB of host memory
+available. The runner stops the guest if the disk reserve or 4 GiB of
+available host memory runs low. Disposable disks live in `/var/tmp`, outside
+Monet's home snapshots, and are removed when QEMU stops. The QMP socket uses
+the same short runtime path even with deeply nested output folders. Screenshots
+and logs stay in the output folder. With `--keep-disk`, the disk stays beside
+the logs in `vm-work` for inspection.
+
+The runner refused an unavailable reserve before launching QEMU. With the
+64 GiB reserve it booted the exact Setup ISO from USB and reached the drive
+picker using a nested report directory. A second invocation was refused while
+the first held the report directory. The short QMP socket and temporary disk
+were removed at exit, and the screenshots stayed. All 127 focused Setup,
+recovery, publication and sealing checks passed. Logs are in
+`target/097-passive-restart.uuUCs3/runner-storage.msNFV6/`.
+
+Local 0.9.7 Windows results, 8 November 2026. The installer and recovery suite
+passed all 124 checks, including PowerShell parsing and HTTP retry tests for
+changed downloads, invalid ranges and interrupted transfers. A Linux guest rejected
+malformed and linked ISOs, then verified both images in a valid x64 fixture
+while the ISO was mounted read-only. In a separate guest, WinPE deployed
+Microsoft's checksum-verified Windows 11 Enterprise evaluation image once.
+Repeating deployment preserved the original EFI fallback and the test file.
+A copy of the deployed guest ran the updated answer file at first sign-in and
+recorded `AutoLogonCount` and `AutoAdminLogon` as zero. Both stayed zero after
+the next boot, which still opened the desktop for the passwordless account.
+The VM had no network and used a recording script in place of Bridge setup.
+Local evidence is in `target/097-windows-qualification/`.
+
+A separate two-disk VM booted Monet 0.9.7 and the evaluation copy of Windows
+under the same Secure Boot firmware. Windows installed the released Bridge
+and Game Profile from local media. Monet imported Bridge's game catalog from
+the Windows EFI partition. From an active Monet desktop, `monet play` used
+the current switch helper to restart without an administrator prompt. Bridge
+started the offline test game as the signed-in user without elevation, showed
+the return countdown when it closed, and restarted into Monet. Monet stayed
+first in the boot order and cleared the pending trip record. The firmware's
+one-time boot target and launch request were both cleared. PolicyKit required
+administrator authentication for both the switch helper and the general Monet
+binary when checked against an inactive process. The run used a test game,
+with network launchers and physical PCs outside its scope. The boot logs and
+cover captures are in `target/097-windows-qualification/trip/`.
+
+A fresh copy of the deployed Windows evaluation guest ran the same answer file
+with a recording wrapper around the released Bridge installer and Valve's signed
+Steam bootstrapper. Secure Boot was on. The first sign-in installed Bridge, the
+Game Profile and the Steam bootstrapper, then removed the temporary setup volume,
+expanded C: and restarted into Monet. The existing Windows test file survived.
+The guest was offline. Steam's client update and sign-in remain separate checks,
+and Microsoft blocked the automatic consumer ISO download in this environment.
+Local evidence is in `target/097-windows-qualification/first-run/`.
+
+Local 0.9.8 VM results, 7 November 2026. The AMD/Intel and NVIDIA tests
+started from separate 0.9.6 snapshots and used existing 0.9.7 OCI exports
+with disposable signatures served by a read-only loopback registry. On
+both variants, bootc rejected unsigned and wrong-key images during the
+initial switch and again during an ordinary upgrade. No rejection staged
+a deployment. Both trusted images booted, and Monet's rollback restored
+the previous digest. Secure Boot, SELinux enforcement and the saved test
+file survived each reboot.
+
+Two fresh Anaconda installs used verified Fedora 45 netinstall media
+and blank virtual disks. The original Kickstart followed a moved tag.
+The patched Kickstart downloaded and booted the image pinned at build
+time. Both guests started with Secure Boot enabled and SELinux enforcing.
+A separate guest OSTree pull rejected a server that supplied different
+manifest bytes for the pinned digest. The fallback's guarantee comes
+from the digest on the installer media. Production signature policy is
+still a release step. Local evidence is in `target/098-security-vm/`.
 
 ### A smoother trip to Windows (0.9.3)
 

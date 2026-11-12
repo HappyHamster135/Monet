@@ -18,7 +18,8 @@ WallpaperItem {
     }
     function syncActivity() {
         if (activity.active) {
-            update(); sky(); animateVeil();
+            // The weather timer refreshes as it starts.
+            update(); animateVeil();
         } else {
             fade.stop(); veilMotion.stop();
             skyGeneration++;

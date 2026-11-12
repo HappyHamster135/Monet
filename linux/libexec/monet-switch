@@ -1,0 +1,4 @@
+#!/bin/sh
+# The only command the desktop may run through pkexec without a password.
+[ "$#" -eq 3 ] || exit 2
+exec @BINDIR@/monet helper switch-desktop "$1" "$2" "$3"

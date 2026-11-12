@@ -44,13 +44,16 @@ def remote_digest(image):
     return "sha256:" + hashlib.sha256(result.stdout).hexdigest()
 
 
-def publish(record, layout):
+def publish(record, layout, signer=None):
     for variant, info in record["images"].items():
         image, digest = info["image"], info["manifest"]
         current = remote_digest(image)
         if current is not None and current != digest:
             raise RuntimeError(f"Refusing to replace an existing version: {image}")
-        if current is None:
+        if signer:
+            # An interrupted publish may have left a manifest without its signature.
+            subprocess.run([sys.executable, str(signer), f"oci:{layout}:{variant}", image], check=True)
+        elif current is None:
             subprocess.run(["skopeo", "copy", "--preserve-digests",
                             f"oci:{layout}:{variant}", "docker://" + image], check=True)
         if remote_digest(image) != digest:
@@ -93,7 +96,8 @@ def main():
         raw = checked(["skopeo", "inspect", "--raw", f"oci:{layout}:{variant}"])
         if "sha256:" + hashlib.sha256(raw).hexdigest() != info["manifest"]:
             raise ValueError(f"Unexpected archived manifest: {variant}")
-    publish(record, layout)
+    signer = Path(__file__).with_name("sign-release-image.py") if Path("image/monet-update.pub").is_file() else None
+    publish(record, layout, signer)
 
 
 if __name__ == "__main__":

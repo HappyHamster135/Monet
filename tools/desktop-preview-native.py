@@ -107,22 +107,28 @@ def extend(p, files, bundles):
     folder = bundles / 'session'
     if folder.exists():
         module = load(p.ROOT / 'image/session/bundle.py', 'preview_session')
-        binary = module.verified_binary(folder)
-        destination = native / 'logout'
-        target = destination / binary.name
-        add(target, binary.read_bytes(), 0o755)
-        manifest = json.loads((folder / 'runtime.json').read_text())
+        binaries = module.verified_binaries(folder)
         for filename in ('runtime.json', 'source.tar.xz', 'README.md'):
-            add(destination / filename, (folder / filename).read_bytes())
-        record('logout', [(binary, target)], ['/usr/libexec/ksmserver-logout-greeter'], executable=str(target))
-        wrapper = ('#!/usr/bin/python3\nimport sys\nsys.path.insert(0, ' + repr(str(p.HELPERS)) + ')\n'
-                   'from monet_native_preview import launch\nlaunch("logout", "/usr/libexec/ksmserver-logout-greeter", sys.argv[1:])\n')
-        add(bindir / 'monet-logout', wrapper.encode(), 0o755)
-        service = Path('dbus-1/services/org.kde.LogoutPrompt.service')
-        source = p.DATA / service if (p.DATA / service).exists() else Path('/usr/share') / service
-        text = source.read_text()
-        text = re.sub(r'^Exec=.*$', 'Exec=' + str(bindir / 'monet-logout'), text, flags=re.M)
-        add(p.DATA / service, text.encode())
+            add(native / 'logout' / filename, (folder / filename).read_bytes())
+        for name, original, service_name in (
+            ('logout', module.GREETER, 'org.kde.LogoutPrompt'),
+            ('shutdown', module.SHUTDOWN, 'org.kde.Shutdown'),
+        ):
+            binary = binaries.get(original)
+            if binary is None:
+                continue
+            target = native / name / binary.name
+            add(target, binary.read_bytes(), 0o755)
+            record(name, [(binary, target)], [original], executable=str(target))
+            launcher = bindir / f'monet-{name}'
+            wrapper = ('#!/usr/bin/python3\nimport sys\nsys.path.insert(0, ' + repr(str(p.HELPERS)) + ')\n'
+                       'from monet_native_preview import launch\n'
+                       f'launch({name!r}, {str(original)!r}, sys.argv[1:])\n')
+            add(launcher, wrapper.encode(), 0o755)
+            service = Path(f'dbus-1/services/{service_name}.service')
+            source = p.DATA / service if (p.DATA / service).exists() else Path('/usr/share') / service
+            text = re.sub(r'^Exec=.*$', 'Exec=' + str(launcher), source.read_text(), flags=re.M)
+            add(p.DATA / service, text.encode())
 
     for name, folder_name, image_name in (('dolphin', 'files', 'files-recovery'), ('ark', 'archives', 'archive-recovery')):
         folder = bundles / folder_name
@@ -135,10 +141,10 @@ def extend(p, files, bundles):
         originals = manifest['originals'] if name == 'ark' else {r['path']: r['original_sha256'] for r in manifest['targets']}
         if name == 'ark':
             module.compatible(folder / name)
-            replacements = [name]
-            if manifest['schema'] == 2:
-                module.compatible(folder / module.RPM_PLUGIN, module.plugin_path(manifest))
-                replacements.append(module.RPM_PLUGIN)
+            plugins = module.plugin_paths(manifest)
+            for filename, original in plugins.items():
+                module.compatible(folder / filename, original)
+            replacements = [name, *plugins]
         else:
             replacements = [Path(r['path']).name for r in manifest['targets']]
             for original in manifest['targets']:
@@ -157,7 +163,7 @@ def extend(p, files, bundles):
             add(destination / filename, (folder / filename).read_bytes())
         options = {'executable': str(destination / name)}
         if name == 'dolphin': options['libraries'] = str(destination)
-        if name == 'ark' and manifest['schema'] == 2:
+        if name == 'ark' and plugins:
             options.update(plugins=str(destination / 'plugins'), extra_binaries=[Path('/usr/bin/rpm')])
         record(name, loaded, originals, **options)
         wrapper = ('#!/usr/bin/python3\nimport sys\nsys.path.insert(0, ' + repr(str(p.HELPERS)) + ')\n'

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build only the native logout greeter from this image's distribution source.
+# Build the native logout greeter and shutdown service from this image's distribution source.
 set -eu
 out="$1"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -18,9 +18,12 @@ rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/plasma-workspace.spec"
 source="$work/rpm/BUILD/plasma-workspace-$version-build/plasma-workspace-$version"
 python3 "$here/patch.py" "$source"
-cmake -S "$here" -B "$work/build" -DUPSTREAM_SOURCE="$source" -DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,--as-needed -DBUILD_TESTING=OFF
-cmake --build "$work/build" --target ksmserver-logout-greeter --parallel 4
+cmake -S "$here" -B "$work/build" -DUPSTREAM_SOURCE="$source" -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr -DKDE_INSTALL_LIBEXECDIR=libexec -DCMAKE_SKIP_RPATH=ON \
+    -DCMAKE_EXE_LINKER_FLAGS=-Wl,--as-needed -DBUILD_TESTING=OFF
+cmake --build "$work/build" --target ksmserver-logout-greeter plasma-shutdown --parallel 4
 install -m 755 "$work/build/logout-greeter/ksmserver-logout-greeter" "$out/ksmserver-logout-greeter"
+install -m 755 "$work/build/plasma-shutdown/plasma-shutdown" "$out/plasma-shutdown"
 mkdir "$work/monet-session"
 cp "$here/CMakeLists.txt" "$here/README.md" "$here/build.sh" "$here/bundle.py" "$here/patch.py" "$work/monet-session/"
 tar -cJf "$out/source.tar.xz" -C "$work" "$release.src.rpm" rpm monet-session

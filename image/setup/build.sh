@@ -3,11 +3,13 @@
 # Monet Setup, with Fedora's signed shim, GRUB and kernel, so it starts with
 # Secure Boot on. UEFI only (every PC that runs Windows 11 has it).
 #
-#   image/setup/build.sh VERSION IMAGE OUT.iso [BOOTC-SETTINGS.tar]
+#   image/setup/build.sh VERSION IMAGE OUT.iso [BOOTC-SETTINGS.tar] [IMAGE-DIGESTS.json]
 #
 # BOOTC-SETTINGS.tar (bootc-settings.tar in the repository by default) holds the
 # image's own install settings for bootc, which reads them from the system it runs
 # on: .github/workflows/image.yml takes them out of the image it built.
+# A local qualification can supply the exact digests from its image exports.
+# Otherwise the build records the versioned manifests from the release registry.
 #
 # Runs as root in a Fedora container (.github/workflows/image.yml) with
 # --privileged, for the chroot that makes the initramfs.
@@ -17,9 +19,13 @@ VERSION=$1
 IMAGE=$2
 OUT=$3
 SETTINGS=${4:-}
+DIGESTS=${5:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 SETTINGS=${SETTINGS:-$REPO/bootc-settings.tar}
+if [ -n "$DIGESTS" ]; then
+    DIGESTS=$(realpath "$DIGESTS")
+fi
 FEDORA=$(rpm -E %fedora)
 LABEL="Monet-$VERSION"
 W=/var/tmp/monet-live
@@ -29,7 +35,7 @@ ISO=$W/iso
 rm -rf "$W"
 mkdir -p "$ROOT" "$ISO/LiveOS" "$ISO/images/pxeboot" "$ISO/EFI/BOOT"
 
-dnf -y -q install dracut squashfs-tools xorriso mtools dosfstools python3 sbsigntools diffutils >/dev/null
+dnf -y -q install dracut squashfs-tools xorriso mtools dosfstools python3 sbsigntools diffutils skopeo >/dev/null
 
 echo "== The live system (Fedora $FEDORA)"
 dnf -y -q --installroot="$ROOT" --releasever="$FEDORA" --use-host-config \
@@ -52,6 +58,7 @@ cp -a "$REPO/setup/monet-setup" "$REPO/setup/monet_setup" "$REPO/setup/qml" "$RE
 find "$APP" -name __pycache__ -prune -exec rm -rf {} +
 echo "$VERSION" > "$APP/VERSION"
 echo "$IMAGE" > "$APP/IMAGE"
+(cd "$REPO/setup" && python3 -m monet_setup.trust "$IMAGE" "$APP/IMAGE_DIGESTS.json" ${DIGESTS:+"$DIGESTS"})
 ln -sf /usr/share/monet-setup/monet-setup "$ROOT/usr/bin/monet-setup"
 cp "$REPO"/linux/share/fonts/monet/*.ttf "$REPO"/image/installer/product/usr/share/fonts/monet/Inter-*.otf \
    "$ROOT/usr/share/fonts/monet/"

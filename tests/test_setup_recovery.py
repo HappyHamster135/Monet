@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import patch
 
 from tests.test_setup import disk, part, GB, STICK
-from monet_setup import cache, checkpoint, disks, install, resources, seat
+from monet_setup import cache, checkpoint, disks, install, resources, seat, trust
 
 
 def prepared(encrypted=True):
@@ -29,14 +29,14 @@ def prepared(encrypted=True):
     return result
 
 
-def make_cache(folder, image='example.invalid/monet:fixture'):
+def make_cache(folder, image='example.invalid/monet:fixture', payload=b'SYNTHETIC LAYER'):
     root = folder / 'oci'; (root / 'blobs/sha256').mkdir(parents=True)
     def blob(data, kind):
         encoded = json.dumps(data).encode() if isinstance(data, dict) else data
         digest = hashlib.sha256(encoded).hexdigest()
         (root / 'blobs/sha256' / digest).write_bytes(encoded)
         return dict(digest='sha256:'+digest, size=len(encoded), mediaType='application/vnd.oci.image.'+kind)
-    layer = blob(b'SYNTHETIC LAYER', 'layer.v1.tar')
+    layer = blob(payload, 'layer.v1.tar')
     config = blob(dict(architecture='amd64', os='linux'), 'config.v1+json')
     manifest = blob(dict(schemaVersion=2, config=config, layers=[layer]), 'manifest.v1+json')
     manifest['annotations'] = {'org.opencontainers.image.ref.name': 'latest'}
@@ -152,7 +152,7 @@ class Checkpoints(unittest.TestCase):
     def test_worker_isolation_failure_stops_before_drive_probes_or_writes(self):
         for step in ('namespace', 'propagation'):
             with self.subTest(step=step):
-                plan = self.root/'isolation-plan.json'; plan.write_text('{}')
+                plan = self.root/'isolation-plan.json'; plan.write_text(json.dumps(self.plan))
                 events = []
                 with patch.object(install, 'STATE', self.root/'runtime/install.json'), \
                      patch.object(install.os, 'unshare', side_effect=PermissionError('denied') if step == 'namespace' else None), \
@@ -167,6 +167,19 @@ class Checkpoints(unittest.TestCase):
                 if step == 'namespace': run.assert_not_called()
                 self.assertEqual(events[-1]['phase'], 'disk')
                 self.assertIn('error', events[-1])
+
+    def test_missing_media_digest_stops_before_drive_probes_or_writes(self):
+        plan = self.root / 'missing-digest-plan.json'
+        plan.write_text(json.dumps(dict(self.plan, imageDigest='sha256:' + 'a' * 64)))
+        with patch.object(trust, 'expected', side_effect=FileNotFoundError), \
+             patch.object(install, 'isolate_mounts') as isolate, \
+             patch.object(install, 'prepare_disk') as prepare, \
+             patch.object(install, 'emit') as emit, self.assertRaises(SystemExit) as failed:
+            install.main(plan)
+        self.assertEqual(failed.exception.code, 1)
+        isolate.assert_not_called()
+        prepare.assert_not_called()
+        self.assertIn('verify its image information', emit.call_args.kwargs['error'])
 
     def test_reboot_recovers_only_the_bootstrap_key_and_same_partitions(self):
         receipt = self.save(); self.key.unlink()
@@ -337,6 +350,83 @@ class DownloadCache(unittest.TestCase):
             layer.write_bytes(b'CORRUPTED LAYER!')
             self.assertFalse(cache.valid(folder, 'example.invalid/monet:fixture'))
 
+    def test_offline_resume_refuses_a_substitute_with_its_own_valid_receipt(self):
+        image = 'example.invalid/monet:fixture'
+        with tempfile.TemporaryDirectory() as temp:
+            original, substitute = Path(temp) / 'original', Path(temp) / 'substitute'
+            make_cache(original, image)
+            make_cache(substitute, image, payload=b'REPLACEMENT LAYER')
+            expected = json.loads((original / 'oci/index.json').read_text())['manifests'][0]['digest']
+            self.assertTrue(cache.valid(original, image, expected))
+            self.assertTrue(cache.valid(substitute, image))
+            self.assertFalse(cache.valid(substitute, image, expected))
+            with patch.object(install, 'DOWNLOAD', str(substitute)), patch.object(install, 'run') as run, \
+                 patch.object(install, 'copy_once') as fetch, redirect_stdout(io.StringIO()):
+                with self.assertRaises(install.Stop):
+                    install.download(dict(image=image, imageDigest=expected, offline=True))
+                run.assert_not_called()
+                fetch.assert_not_called()
+            self.assertTrue((substitute / cache.MARKER).exists())
+
+    def test_fresh_install_downloads_the_digest_from_its_media(self):
+        image = 'example.invalid/monet:fixture'
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            make_cache(folder, image)
+            expected = json.loads((folder / 'oci/index.json').read_text())['manifests'][0]['digest']
+            (folder / cache.MARKER).unlink()
+            with patch.object(install, 'DOWNLOAD', str(folder)), patch.object(install, 'run'), \
+                 patch.object(install, 'image_size', return_value=0), patch.object(install, 'log'), \
+                 patch.object(install, 'copy_once', return_value=True) as fetch, redirect_stdout(io.StringIO()):
+                install.download(dict(image=image, imageDigest=expected))
+            self.assertEqual(fetch.call_args.args[0], 'example.invalid/monet@' + expected)
+
+    def test_built_media_keeps_the_verified_source_and_tracks_the_update_channel(self):
+        for repository, digest, channel, signed in (
+            ('ghcr.io/happyhamster135/monet', 'sha256:' + 'a' * 64, 'latest', True),
+            ('ghcr.io/happyhamster135/monet-amd', 'sha256:' + 'b' * 64, 'latest', True),
+            ('example.invalid:8443/monet', 'sha256:' + 'c' * 64, 'latest', False),
+            ('example.invalid:8443/monet-dev', None, '0.9.7', False),
+        ):
+            plan = dict(image=f'{repository}:0.9.7', imageDigest=digest, offline=True)
+            with self.subTest(image=plan['image']), tempfile.TemporaryDirectory() as temp:
+                download = str(Path(temp) / 'download')
+                with patch.object(install, 'TOP', temp), patch.object(install, 'DOWNLOAD', download), \
+                     patch.object(install, 'TARGET', str(Path(temp) / 'target')), \
+                     patch.object(install, 'require_space'), patch.object(install, 'unmount_target'), \
+                     patch.object(install, 'preserve_boot'), patch.object(install, 'mount_target'), \
+                     patch.object(install, 'boot_entry'), patch.object(install, 'run') as run, redirect_stdout(io.StringIO()):
+                    install.install(plan, {})
+                command = next(call.args for call in run.call_args_list if 'bootc' in call.args)
+                self.assertEqual(command[command.index('--source-imgref') + 1], f'oci:{download}/oci:latest')
+                self.assertEqual(command[command.index('--target-imgref') + 1], f'{repository}:{channel}')
+                self.assertEqual('--enforce-container-sigpolicy' in command, signed)
+                self.assertIn('--skip-fetch-check', command)
+
+    def test_built_media_requires_a_valid_digest_for_the_selected_variant(self):
+        image = 'example.invalid/monet:fixture'
+        amd = 'example.invalid/monet-amd:fixture'
+        pins = {image: 'sha256:' + 'a' * 64, amd: 'sha256:' + 'b' * 64}
+        with tempfile.TemporaryDirectory() as temp:
+            media = Path(temp)
+            self.assertIsNone(trust.expected(image, media))
+            (media / 'IMAGE').write_text(image)
+            with self.assertRaises(FileNotFoundError):
+                trust.expected(image, media)
+            source = media / 'verified-images.json'
+            source.write_text(json.dumps(pins))
+            trust.write_pins(image, media / trust.PINS, source)
+            self.assertEqual(trust.expected(image, media), pins[image])
+            self.assertEqual(trust.expected(amd, media), pins[amd])
+            rendered = trust.render_kickstart('nvidia=@IMAGE@\namd=@AMD_IMAGE@', image, pins)
+            self.assertEqual(rendered, f'nvidia=example.invalid/monet@{pins[image]}\n'
+                                       f'amd=example.invalid/monet-amd@{pins[amd]}')
+            with self.assertRaises(ValueError):
+                trust.expected('example.invalid/monet:other', media)
+            source.write_text(json.dumps({image: pins[image]}))
+            with self.assertRaises(ValueError):
+                trust.write_pins(image, media / trust.PINS, source)
+
     def test_offline_missing_or_corrupt_download_fails_without_network_or_deletion(self):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
@@ -359,6 +449,13 @@ class DownloadCache(unittest.TestCase):
             other = folder / 'personal'; other.write_bytes(data); layer.symlink_to(other)
             self.assertFalse(cache.valid(folder, 'example.invalid/monet:fixture'))
             self.assertEqual(other.read_bytes(), data)
+            (folder / cache.MARKER).unlink()
+            with patch.object(install, 'DOWNLOAD', str(folder)), patch.object(install, 'run'), \
+                 patch.object(install, 'image_size', return_value=0), patch.object(install, 'log'), \
+                 patch.object(install, 'copy_once') as fetch, redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(install.Stop, 'location changed'):
+                    install.download({'image': 'example.invalid/monet:fixture'})
+                fetch.assert_not_called()
 
 
 class FinishAndResources(unittest.TestCase):

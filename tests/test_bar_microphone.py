@@ -55,6 +55,20 @@ Settings
             self.assertFalse(self.quick.microphone_action("input", "52")["ok"])
             change.assert_not_called()
 
+    def test_disconnected_port_is_not_listed_or_selectable(self):
+        nodes = [{"id": 64, "name": "Stereo Microphone", "default": False},
+                 {"id": 65, "name": "Digital Microphone", "default": True},
+                 {"id": 67, "name": "Virtual Microphone", "default": False}]
+        ports = {64: {"active_port": "Mic2", "ports": [{"name": "Mic2", "availability": "not available"}]},
+                 65: {"active_port": "Mic1", "ports": [{"name": "Mic1", "availability": "availability unknown"}]}}
+        with patch.object(self.quick, "microphones", return_value=nodes), \
+             patch.object(self.quick, "pulse_nodes", return_value=ports), \
+             patch.object(self.quick, "bar_sound", return_value={}), patch.object(self.quick, "run", return_value=""), \
+             patch.object(self.quick, "ok") as change:
+            self.assertEqual(self.quick.available_microphones(), nodes[1:])
+            self.assertFalse(self.quick.microphone_action("input", "64")["ok"])
+            change.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

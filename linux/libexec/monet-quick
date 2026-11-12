@@ -172,7 +172,7 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick firewall-on|trust-key    turn the firewall on; trust Monet's key at the next restart (both
                                          ask for an administrator's password: monet-secure)
     monet-quick firewall-strict on|off   only what Monet uses comes in, or the system's own zone (the same)
-    monet-quick firewall-allow APP on|off  games, localsend, syncthing, sunshine or deskflow can accept connections (the same)
+    monet-quick firewall-sharing APP on|off  allow an app’s ports on profiles that opt into sharing
     monet-quick firmware-setup           restart into the PC's firmware settings
     monet-quick restart                  ask to restart, the way the app menu does
     monet-quick widgets                  open the widget gallery, as the desktop's Add Widgets does
@@ -203,6 +203,7 @@ import datetime
 import getpass
 import gettext
 import gzip
+import hashlib
 import html
 import json
 import math
@@ -432,16 +433,10 @@ def sinks(status):
     return found
 
 
-def outputs():
-    """Playable outputs, excluding ports explicitly reported as disconnected.
-
-    Pulse indexes are object serials, not wpctl IDs. Match object.id instead.
-    Unknown availability is normal for built-in speakers and virtual outputs.
-    One JSON snapshot replaces a separate inspect process for every output.
-    """
-    found = sinks(run("wpctl", "status") or "")
+def pulse_nodes(kind):
+    """Match Pulse devices to wpctl by object.id. Pulse indexes are serials."""
     try:
-        raw = json.loads(run("pactl", "--format=json", "list", "sinks") or "null")
+        raw = json.loads(run("pactl", "--format=json", "list", kind) or "null")
     except (ValueError, TypeError):
         raw = None
     metadata = {}
@@ -452,14 +447,27 @@ def outputs():
             ident = str(item["properties"].get("object.id", ""))
             if ident.isdigit():
                 metadata[int(ident)] = item
+    return metadata
+
+
+def disconnected_port(item):
+    """Unknown availability is normal for built-in and virtual devices."""
+    ports = item.get("ports")
+    if not isinstance(ports, list):
+        return False
+    return any(isinstance(port, dict) and port.get("name") == item.get("active_port")
+               and port.get("availability") in ("not available", "no") for port in ports)
+
+
+def outputs():
+    """Playable outputs, excluding ports explicitly reported as disconnected."""
+    found = sinks(run("wpctl", "status") or "")
+    metadata = pulse_nodes("sinks")
     playable = []
     for sink in found:
         item = metadata.get(sink["id"])
         if item is not None:
-            ports = item.get("ports", [])
-            port = next((p for p in ports if isinstance(p, dict) and p.get("name") == item.get("active_port")), {}) \
-                if isinstance(ports, list) else {}
-            if port.get("availability") in ("not available", "no"):
+            if disconnected_port(item):
                 continue
             sink["none"] = item["properties"].get("node.name") == "auto_null"
         else:
@@ -515,7 +523,7 @@ def apps_sound():
 def bar_sound():
     """The bar's Sound (org.monet.sound): where the sound can play, PipeWire's stand-in left
     out, and the apps playing. How loud it reads from wpctl itself, often."""
-    inputs = microphones(run("wpctl", "status") or "")
+    inputs = available_microphones()
     microphone = next((source for source in inputs if source["default"]), None)
     if microphone:
         level = run("wpctl", "get-volume", str(microphone["id"])) or ""
@@ -544,6 +552,12 @@ def microphones(status):
     return found
 
 
+def available_microphones():
+    found = microphones(run("wpctl", "status") or "")
+    metadata = pulse_nodes("sources") if found else {}
+    return [source for source in found if not disconnected_port(metadata.get(source["id"], {}))]
+
+
 def microphone_action(action, value, source_id=None):
     """Acknowledge capture changes only after WirePlumber reports the actual result."""
     if action == "mute" and value in ("on", "off"):
@@ -559,7 +573,7 @@ def microphone_action(action, value, source_id=None):
         return {"ok": bool(changed and mic and mic["id"] == ident and mic["muted"] == (value == "on")), "sound": state}
     if action == "input" and value.isdigit():
         ident = int(value)
-        if not any(source["id"] == ident for source in microphones(run("wpctl", "status") or "")):
+        if not any(source["id"] == ident for source in available_microphones()):
             return {"ok": False, "sound": bar_sound()}
         changed = ok("wpctl", "set-default", str(ident))
         state = bar_sound()
@@ -969,22 +983,30 @@ def last_line(text):
 
 def firmware_check():
     if not shutil.which("fwupdmgr"):
-        return {"ok": True, "updates": []}
+        return {"ok": True, "updates": [], "unavailable": True}
     try:
         result = subprocess.run(["fwupdmgr", "get-updates", "--json", *FWUPD_QUIET],
                                 capture_output=True, text=True, timeout=120)
     except (OSError, subprocess.TimeoutExpired):
         return {"ok": False, "message": "Monet couldn't ask about firmware updates."}
+    # fwupd reserves 2 for a completed check with nothing to do.
+    if result.returncode == 2:
+        return {"ok": True, "updates": []}
     try:
         report = json.loads(result.stdout)
     except ValueError:
-        report = None
-    if isinstance(report, dict):
-        return {"ok": True, "updates": firmware_updates(report)}
-    # 2 is fwupd's "nothing to do": no updates, or no part it can update.
-    if result.returncode == 2:
-        return {"ok": True, "updates": []}
-    return {"ok": False, "message": last_line(result.stderr or result.stdout)}
+        return {"ok": False, "message": last_line(result.stderr or result.stdout)}
+    if not isinstance(report, dict):
+        report = {}
+    if result.returncode == 0 and isinstance(report.get("Devices"), list) and "Error" not in report:
+        try:
+            return {"ok": True, "updates": firmware_updates(report)}
+        except (AttributeError, KeyError, TypeError):
+            pass  # An invalid device or release record leaves the check incomplete.
+    error = report.get("Error")
+    message = error.get("Message") if isinstance(error, dict) else None
+    detail = last_line(message) if isinstance(message, str) else ""
+    return {"ok": False, "message": detail or last_line(result.stderr)}
 
 
 def firmware_update():
@@ -999,8 +1021,8 @@ def firmware_update():
 
 def restart():
     """KDE's own restart question, so open apps can save first."""
-    if busctl("call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptReboot") is None:
-        run("systemctl", "reboot")
+    reply = busctl("call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptReboot")
+    return {"ok": reply is not None}
 
 
 # Security: what keeps this PC safe, at a glance (Settings → Security). It only looks, here and
@@ -1015,15 +1037,20 @@ MONET_KEY = Path("/etc/pki/akmods/certs/akmods-ublue.der")
 
 
 def secure_boot(efivars=EFIVARS):
-    """"on" or "off", or "" when the PC didn't start in UEFI mode (then it can't be on)."""
-    if not efivars.is_dir():
-        return ""
+    """Separate legacy boot, disabled Secure Boot and an unreadable variable."""
+    try:
+        efivars.parent.stat()
+    except FileNotFoundError:
+        return "unavailable"
+    except OSError:
+        return "unknown"
     try:
         data = (efivars / SECURE_BOOT_VAR).read_bytes()
     except OSError:
-        return "off"
-    # Four bytes of attributes, then the value.
-    return "on" if len(data) > 4 and data[4] == 1 else "off"
+        return "unknown"
+    if len(data) != 5 or data[4] not in (0, 1):
+        return "unknown"
+    return "on" if data[4] else "off"
 
 
 def key_trusted(key=MONET_KEY):
@@ -1043,31 +1070,46 @@ def encrypted():
     if not device.startswith("/dev/"):
         return None
     chain = run("lsblk", "-s", "-n", "-o", "TYPE", device)
-    return None if chain is None else "crypt" in chain.split()
+    return "crypt" in chain.split() if chain and chain.strip() else None
+
+
+def encryption_setup(boot=Path("/boot"), receipt=Path("/var/lib/monet/firstboot-seal.json")):
+    # Only inspect the existence of the temporary keys, never read their contents.
+    for path in (boot / "monet-firstboot.key", boot / "monet-setup-pending/bootstrap.key", receipt):
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return "unknown"
+        return "pending"
+    return "complete"
+
+
+def service_state(unit):
+    out = run("systemctl", "show", "-p", "LoadState", "-p", "ActiveState", unit)
+    return dict(line.split("=", 1) for line in (out or "").splitlines() if "=" in line)
 
 
 def firewall():
-    """"on" or "off", or "" when this Monet has no firewall. Asked of systemd, which never needs a
-    password (firewall-cmd --state may: outside the desktop's own session it said no)."""
-    if not shutil.which("firewall-cmd"):
-        return ""
-    return "on" if (run("systemctl", "is-active", "firewalld") or "").strip() == "active" else "off"
+    state = service_state("firewalld.service")
+    if state.get("LoadState") == "not-found":
+        return "unavailable"
+    active = state.get("ActiveState")
+    if active in ("inactive", "failed"):
+        return "off"
+    return "on" if active == "active" else "unknown"
+
+
+def selinux_state():
+    if not shutil.which("getenforce"):
+        return "unavailable"
+    state = (run("getenforce") or "").strip().lower()
+    return state if state in ("enforcing", "permissive", "disabled") else "unknown"
 
 
 # Settings → Security → Apps that can accept connections (monet-secure's APPS, ports and all).
 FIREWALL_APPS = ("games", "localsend", "syncthing", "sunshine", "deskflow")
-FIREWALL_ALLOWED = Path("/var/lib/monet/firewall-allowed.json")
-
-
-def firewall_allowed(path=FIREWALL_ALLOWED):
-    """The apps let in from the network (monet-secure firewall-allow keeps the list)."""
-    try:
-        names = json.loads(path.read_text())
-    except (OSError, ValueError):
-        return []
-    return [name for name in FIREWALL_APPS if isinstance(names, list) and name in names]
-
-
 def firewall_strict():
     """Whether only what Monet uses comes in: the firewall's default zone is Monet's
     (linux/firewalld/monet.xml). None when the firewall can't say."""
@@ -1093,7 +1135,8 @@ def secure_helper():
     """monet-secure as a module: what Settings → Security lets in, as it keeps it."""
     import importlib.util
     from importlib.machinery import SourceFileLoader
-    loader = SourceFileLoader("monet_secure", f"{LIBEXECDIR}/monet-secure")
+    source = Path(__file__).with_name("monet-secure")
+    loader = SourceFileLoader("monet_secure", str(source if source.is_file() else Path(LIBEXECDIR) / "monet-secure"))
     module = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_secure", loader))
     try:
         loader.exec_module(module)
@@ -1125,6 +1168,11 @@ def let_in(zone_files=ZONE_FILES, secure=None):
         for name in secure.allowed():
             ports |= set().union(*(port_range(s[4:]) for s in secure.APPS[name] if s.startswith("tcp/")))
         ports |= {int(p["port"][4:]) for p in secure.allowed_ports()}
+        scoped = secure.sharing_rules() if hasattr(secure, "sharing_rules") else None
+        if scoped:
+            for name in scoped["apps"]:
+                ports |= set().union(*(port_range(s[4:]) for s in secure.APPS[name] if s.startswith("tcp/")))
+            ports |= {int(p["port"][4:]) for p in scoped["ports"]}
     return ports
 
 
@@ -1196,7 +1244,7 @@ def remember_listening(key, name, port, allowed, path=None):
 
 def listening_allow(name, port, on):
     """The port in or out again (monet-secure, which asks for an administrator)."""
-    return ok("pkexec", f"{LIBEXECDIR}/monet-secure", "firewall-allow-port", " ".join(name.split())[:60] or "?",
+    return ok("pkexec", f"{LIBEXECDIR}/monet-secure", "firewall-sharing-port", " ".join(name.split())[:60] or "?",
               f"tcp/{port}", "on" if on else "off", timeout=300)
 
 
@@ -1206,25 +1254,33 @@ def ask_listening(key, name, port, lock=None):
     # Critical, so it stays until it's answered, as Windows' question does.
     answer = (run("notify-send", "--app-name=Monet", "--icon=security-high", "--urgency=critical", f"--action=allow={tr('Allow')}",
                   f"--action=block={tr('Keep blocked')}", "--wait", tr("%1 wants to accept connections", name),
-                  tr("From other devices on this network, on port %1. Monet's firewall keeps them out until you allow it.",
+                  tr("Allow TCP port %1 on networks you share with? Other apps can also use this port.",
                      str(port)), timeout=24 * 3600) or "").strip()
     if answer not in ("allow", "block"):
         return None
-    allowed = answer == "allow" and listening_allow(name, port, True)
+    allowed = answer == "allow"
+    if allowed and not listening_allow(name, port, True):
+        return None
     with lock or contextlib.nullcontext():
         remember_listening(key, name, port, allowed)
     return allowed
 
 
+def sharing_active():
+    secure = secure_helper()
+    zones = secure.active_zones() if secure else None
+    return bool(zones and zones.get(secure.SHARED, {}).get("interfaces"))
+
+
 def listening_watch(every=LISTEN_EVERY, rounds=None):
-    """monet-listening.service: each program and port asked about once, while Monet's zone is on."""
+    """Ask about new listeners while a connection opted into sharing is active."""
     if getpass.getuser() == "guest":
         return 0
     import threading
     lock, asked, checked, strict, open_ports = threading.Lock(), set(), -1e9, False, set()
     while rounds is None or rounds > 0:
         if time.monotonic() - checked > 60:
-            checked, strict = time.monotonic(), firewall_strict() is True
+            checked, strict = time.monotonic(), sharing_active()
             open_ports = let_in() if strict else set()
         if strict:
             with lock:
@@ -1243,51 +1299,162 @@ def listening_watch(every=LISTEN_EVERY, rounds=None):
     return 0
 
 
-def listening_list(path=None, secure=None):
-    """Settings' rows: each program asked about, whether its port is let in now, by name."""
-    known = read_json(path or LISTENING)
-    secure = secure or secure_helper()
-    ports = {p["port"] for p in secure.allowed_ports()} if secure else set()
-    rows = [{"key": key.encode().hex(), "name": str(v.get("name") or ""), "port": v.get("port"),
-             "allowed": f"tcp/{v.get('port')}" in ports}
-            for key, v in (known.items() if isinstance(known, dict) else []) if isinstance(v, dict)]
-    return sorted(rows, key=lambda r: (r["name"].lower(), r["port"] or 0))
+def staged_deployment(deployments):
+    if not isinstance(deployments, list) or not deployments:
+        return None
+    if not all(isinstance(entry, dict) and isinstance(entry.get("booted", False), bool)
+               and isinstance(entry.get("staged", False), bool) for entry in deployments):
+        return None
+    if sum(entry.get("booted", False) for entry in deployments) != 1:
+        return None
+    return any(entry.get("staged", False) for entry in deployments)
 
 
 def update_waiting():
     """Whether an update is downloaded and used from the next restart."""
     try:
-        status = json.loads(run("rpm-ostree", "status", "--json", timeout=30) or "{}")
+        status = json.loads(run("rpm-ostree", "status", "--json", timeout=15) or "{}")
+    except ValueError:
+        status = None
+    waiting = staged_deployment(status.get("deployments")) if isinstance(status, dict) else None
+    if waiting is not None:
+        return waiting
+
+    # A fresh encrypted install keeps the OSTree repository private. The
+    # system service can report the deployments without opening those files.
+    service = "org.projectatomic.rpmostree1"
+    deployments = busjson("--system", "--allow-interactive-authorization=no", "get-property",
+                          service, "/org/projectatomic/rpmostree1/Sysroot",
+                          service + ".Sysroot", "Deployments")
+    if not isinstance(deployments, list):
+        return None
+    try:
+        flags = [{name: entry[name]["data"] if entry[name]["type"] == "b" else None
+                  for name in ("booted", "staged")} for entry in deployments]
+    except (KeyError, TypeError):
+        return None
+    return staged_deployment(flags)
+
+
+def automatic_updates():
+    try:
+        Path("/var/lib/monet/auto-updates-off").stat()
+    except FileNotFoundError:
+        state = service_state("monet-update.timer")
+        if state.get("LoadState") == "not-found":
+            return "unavailable"
+        return {"active": "on", "inactive": "off", "failed": "off"}.get(state.get("ActiveState"), "unknown")
+    except OSError:
+        return "unknown"
+    return "off"
+
+
+SHUTDOWN_SERVICE = "org.kde.Shutdown"
+SHUTDOWN_BINARY = Path("/usr/bin/plasma-shutdown")
+DBUS_DAEMON = ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus")
+
+
+def installed_firmware_restart():
+    """Check the native bundle selected by session-bus activation."""
+    roots = data_dirs()
+    if runtime := os.environ.get("XDG_RUNTIME_DIR"):
+        roots.insert(0, Path(runtime))
+    service = Path("dbus-1/services") / (SHUTDOWN_SERVICE + ".service")
+    definition = next((root / service for root in roots if (root / service).is_file()), None)
+    if definition is None:
+        return False
+    try:
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read_string(definition.read_text())
+        entry = parser["D-BUS Service"]
+        if entry.get("Name") != SHUTDOWN_SERVICE or entry.get("SystemdService"):
+            return False
+        binary = SHUTDOWN_BINARY
+        manifest = Path(DATADIR) / "monet/session/runtime.json"
+        command = shlex.split(entry.get("Exec", ""))
+        if command != [str(binary)]:
+            # The account preview's launcher can fall back to the system binary
+            # after a runtime update. Use the same guard the launcher checks.
+            import monet_native_preview as preview
+            native = preview.read()
+            if command != [str(Path(native["bin"]) / "monet-shutdown")]:
+                return False
+            component = native["components"].get("shutdown", {})
+            if preview.valid(component):
+                binary = Path(component["executable"])
+                manifest = binary.parent.parent / "logout/runtime.json"
+        checksum = json.loads(manifest.read_text()).get("shutdown_binary")
+        return isinstance(checksum, str) and hashlib.sha256(binary.read_bytes()).hexdigest() == checksum
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, ImportError, configparser.Error):
+        return False
+
+
+def firmware_restart_available():
+    # Introspection of the well-known name can start plasma-shutdown. The logout
+    # greeter treats that daemon's presence as a shutdown already in progress.
+    owner = busctl("call", *DBUS_DAEMON, "GetNameOwner", "s", SHUTDOWN_SERVICE)
+    if owner is None:
+        reply = busctl("--json=short", "call", *DBUS_DAEMON, "ListActivatableNames")
+        try:
+            listing = json.loads(reply or "{}")
+            names, = listing["data"]
+            return (listing["type"] == "as" and isinstance(names, list) and SHUTDOWN_SERVICE in names
+                    and installed_firmware_restart())
+        except (ValueError, TypeError, KeyError):
+            return False
+    match = re.fullmatch(r's "(:[0-9]+\.[0-9]+)"', owner.strip())
+    if not match:
+        return False
+    reply = busctl("--json=short", "--timeout=3s", "introspect", match[1], "/Shutdown", SHUTDOWN_SERVICE)
+    try:
+        methods = json.loads(reply or "[]")
     except ValueError:
         return False
-    return any(d.get("staged") for d in status.get("deployments", []))
+    return isinstance(methods, list) and any(
+        isinstance(method, dict)
+        and method.get("name") in (".logoutAndRebootToFirmware", "logoutAndRebootToFirmware")
+        and method.get("type") == "method"
+        and method.get("signature") in (None, "")
+        and method.get("result_value") == "b"
+        for method in methods
+    )
 
 
 def security():
     backups = backup_state()
+    disk = encrypted()
+    secure = secure_helper()
+    firewall_state = firewall()
+    history = secure.security_history() if secure and hasattr(secure, "security_history") else None
+    updates = update_history()
+    recent = (history or []) + [{"time": event["time"], "event": "update-failed"}
+                                for event in updates["items"] if event["result"] == "failed"]
+    latest_update = next((event["result"] for event in updates["items"] if event["result"] != "skipped"), None)
     return {
         "secureBoot": secure_boot(),
         "keyTrusted": key_trusted(),
-        "encrypted": encrypted(),
-        "firewall": firewall(),
+        "firmwareRestartAvailable": firmware_restart_available(),
+        "encrypted": disk,
+        "encryptionSetup": encryption_setup() if disk is True else "unknown",
+        "selinux": selinux_state(),
+        "firewall": firewall_state,
         "firewallStrict": firewall_strict(),
-        "allowed": firewall_allowed(),
-        "listening": listening_list(),
-        "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
+        "network": secure.network_status() if secure and hasattr(secure, "network_status") else {},
+        "networkActions": run(f"{LIBEXECDIR}/monet-secure", "capabilities", timeout=3) == "network-sharing\n",
+        "autoUpdates": automatic_updates(),
         "updateWaiting": update_waiting(),
+        "lastUpdateFailed": latest_update == "failed",
+        "history": sorted(recent, key=lambda entry: entry["time"], reverse=True)[:12],
+        "historyAvailable": history is not None and updates["ok"],
         "versions": backups["versions"],
         "drive": backups["label"] if backups["drive"] else "",
     }
 
 
 def firmware_setup():
-    """Restarts into the PC's firmware settings (where Secure Boot is turned on), through
-    KDE's restart question so open apps can save first."""
-    if run("busctl", "--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
-           "org.freedesktop.login1.Manager", "SetRebootToFirmwareSetup", "b", "true", timeout=10) is None:
-        return {"ok": False}
-    restart()
-    return {"ok": True}
+    """Ask Plasma to restart into firmware after its application close checks."""
+    reply = busctl("call", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logoutAndRebootToFirmware")
+    return {"ok": (reply or "").strip() == "b true"}
 
 
 # Music ---------------------------------------------------------------------
@@ -7124,10 +7291,10 @@ def main(argv):
         emit(screen_features())
     elif cmd == "backup":
         emit(backup_state())
-    # Root keeps or deletes the snapshots; Monet's polkit rule lets this one program run without a password.
+    # Root keeps or deletes the snapshots after administrator approval.
     elif cmd == "keep" and args and args[0] in ("on", "off"):
-        run("pkexec", f"{LIBEXECDIR}/monet-keep", args[0], timeout=900)
-        emit(backup_state())
+        done = ok("pkexec", f"{LIBEXECDIR}/monet-keep", args[0], timeout=900)
+        emit(dict(backup_state(), ok=done))
     elif cmd == "backup-drive" and args and (args[0] == "none" or re.fullmatch(r"[0-9A-Fa-f-]{4,40}", args[0])):
         drive = next((d for d in backup_drives() if d["uuid"] == args[0]), None)
         save_backup(drive=drive and drive["uuid"], label=drive["label"] if drive else "", last=None, error="")
@@ -7302,14 +7469,15 @@ def main(argv):
         run("pkexec", f"{LIBEXECDIR}/monet-reset", "arm" if args[0] == "on" else "cancel", timeout=600)
         emit({"pending": RESET_PENDING.exists()})
     elif cmd == "auto-updates" and args and args[0] in ("on", "off"):
-        # Monet's helper keeps it, as root (without a password, as for switching to Windows).
-        run(f"{BINDIR}/monet", "auto-updates", args[0], timeout=30)
+        emit({"ok": ok(f"{BINDIR}/monet", "auto-updates", args[0], timeout=120)})
     elif cmd == "firmware-check":
         emit(firmware_check())
     elif cmd == "firmware-update":
         emit(firmware_update())
     elif cmd == "restart":
-        restart()
+        result = restart()
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "keep-awake-status":
         emit(keep_awake_status())
     elif cmd == "keep-awake" and len(args) == 1:
@@ -7405,20 +7573,16 @@ def main(argv):
     # Fixes that ask for an administrator's password (monet-secure, through pkexec).
     elif cmd in ("firewall-on", "trust-key"):
         emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, timeout=300)})
-    elif cmd == "firewall-allow" and len(args) == 2 and args[0] in FIREWALL_APPS and args[1] in ("on", "off"):
+    elif cmd == "firewall-sharing" and len(args) == 2 and args[0] in FIREWALL_APPS and args[1] in ("on", "off"):
         emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, *args, timeout=120)})
+    elif cmd == "firewall-network" and len(args) == 2 and args[1] in ("on", "off"):
+        emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, *args, timeout=120)})
+    elif cmd == "firewall-remove-port" and len(args) == 1:
+        emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", "firewall-sharing-port", "TCP", args[0], "off", timeout=120)})
+    elif cmd == "firewall-clear-legacy" and not args:
+        emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, timeout=120)})
     elif cmd == "listening":
         return listening_watch()
-    elif cmd == "listening-allow" and len(args) == 2 and args[1] in ("on", "off"):
-        # Settings' switch for a program that was asked about: its port in or out again.
-        known = read_json(LISTENING)
-        key = unhex(args[0]) if re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]) else ""
-        found = known.get(key) if isinstance(known, dict) else None
-        on = args[1] == "on"
-        done = isinstance(found, dict) and isinstance(found.get("port"), int) and listening_allow(found["name"], found["port"], on)
-        if done:
-            remember_listening(key, found["name"], found["port"], on)
-        emit({"ok": bool(done)})
     elif cmd == "firewall-strict" and args and args[0] in ("on", "off"):
         emit({"ok": ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, args[0], timeout=120)})
     elif cmd == "firmware-setup":

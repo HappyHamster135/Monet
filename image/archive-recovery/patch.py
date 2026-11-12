@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Make native Ark batch extraction return its actual KJob outcome."""
+"""Preserve native Ark extraction results and speed up RPM browsing."""
 from pathlib import Path
 import sys
 
@@ -28,6 +28,42 @@ patch('app/main.cpp',
 patch('app/batchextract.cpp',
       '        m_failedFiles.append(url.fileName());',
       '        m_failedFiles.append(url.fileName());\n        setError(KJob::UserDefinedError);')
+
+patch('plugins/libzipplugin/libzipplugin.cpp',
+      '''        while (sum != statBuffer.size) {
+            const auto readBytes = zip_fread(zipFile.get(), buf, 1000);
+            if (readBytes < 0) {
+                qCCritical(ARK_LOG) << "Failed to read data";
+                Q_EMIT error(xi18n("Failed to read data for entry: %1", entry));
+                return false;
+            }
+            if (out.writeRawData(buf, readBytes) != readBytes) {
+                qCCritical(ARK_LOG) << "Failed to write data";
+                Q_EMIT error(xi18n("Failed to write data for entry: %1", entry));
+                return false;
+            }
+
+            sum += readBytes;
+        }''',
+      '''        // libzip can report a checksum failure on the read after the last bytes.
+        zip_int64_t readBytes;
+        while ((readBytes = zip_fread(zipFile.get(), buf, sizeof(buf))) > 0) {
+            if (static_cast<zip_uint64_t>(readBytes) > statBuffer.size - sum) {
+                break;
+            }
+            if (out.writeRawData(buf, readBytes) != readBytes) {
+                qCCritical(ARK_LOG) << "Failed to write data";
+                Q_EMIT error(xi18n("Failed to write data for entry: %1", entry));
+                return false;
+            }
+
+            sum += readBytes;
+        }
+        if (readBytes != 0 || sum != statBuffer.size) {
+            qCCritical(ARK_LOG) << "Failed to read data";
+            Q_EMIT error(xi18n("Failed to read data for entry: %1", entry));
+            return false;
+        }''')
 
 patch('plugins/libarchive/libarchiveplugin.cpp', '#include "libarchiveplugin.h"',
       '#include "libarchiveplugin.h"\n#include "rpmheader.h"')

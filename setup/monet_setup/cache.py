@@ -1,8 +1,4 @@
-"""Verify a completed OCI download before reusing it without network access.
-
-Descriptors follow the OCI image-layout and descriptor specifications. This
-checks transfer integrity, not publisher authenticity; bootc keeps its policy.
-"""
+"""Verify the saved OCI download against the manifest on the installer media."""
 import hashlib
 import json
 import os
@@ -14,8 +10,8 @@ from .checkpoint import atomic, read_file
 
 MARKER = 'download-complete.json'
 JSON_LIMIT = 2 * 1024 * 1024
-MANIFESTS = {'application/vnd.oci.image.manifest.v1+json',
-             'application/vnd.docker.distribution.manifest.v2+json'}
+OCI_MANIFEST = 'application/vnd.oci.image.manifest.v1+json'
+MANIFESTS = {OCI_MANIFEST, 'application/vnd.docker.distribution.manifest.v2+json'}
 INDEXES = {'application/vnd.oci.image.index.v1+json',
            'application/vnd.docker.distribution.manifest.list.v2+json'}
 
@@ -25,7 +21,21 @@ def complete(folder, image):
     atomic(folder / MARKER, json.dumps(dict(image=image, index=hashlib.sha256(index).hexdigest())).encode())
 
 
-def valid(folder, image):
+def writable_layout_is_safe(folder):
+    root = folder / 'oci'
+    digests = root / 'blobs/sha256'
+    if any(path.is_symlink() for path in (root, root / 'blobs', digests, root / 'index.json', root / 'oci-layout')):
+        return False
+    try:
+        with os.scandir(digests) as entries:
+            return all(entry.is_file(follow_symlinks=False) for entry in entries)
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+
+
+def valid(folder, image, expected=None):
     try:
         receipt = json.loads(read_file(folder / MARKER, 4096))
         root = folder / 'oci'
@@ -39,6 +49,8 @@ def valid(folder, image):
             return False
         roots = [d for d in index['manifests'] if d.get('annotations', {}).get('org.opencontainers.image.ref.name') == 'latest']
         if len(roots) != 1: return False
+        if expected is not None and (roots[0].get('digest') != expected or roots[0].get('mediaType') != OCI_MANIFEST):
+            return False
         pending, checked, total = [(roots[0], 0)], set(), 0
         while pending:
             descriptor, depth = pending.pop()

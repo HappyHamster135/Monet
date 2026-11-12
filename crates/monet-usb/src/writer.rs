@@ -27,11 +27,37 @@ impl DerefMut for Buffer {
 }
 
 pub trait Destination: Read + Write + Seek {
-    /// Validate identity/capacity and obtain every volume lock before writing anything.
-    fn prepare(&mut self, total: u64) -> io::Result<()>;
+    /// Validate the device and lock its volumes, then return its capacity in bytes.
+    fn prepare(&mut self, total: u64) -> io::Result<u64>;
     /// Clear the old partition layout only after preparation succeeds and validate the reopened device.
     fn reset_layout(&mut self, total: u64) -> io::Result<()>;
     fn sync_media(&mut self) -> io::Result<()>;
+}
+
+fn fit_protective_mbr(head: &mut [u8], total: u64, capacity: u64) {
+    let Some(prefix) = head.get_mut(..552) else { return };
+    let (mbr, gpt) = prefix.split_at_mut(512);
+    if mbr[510..] != *b"\x55\xaa" || gpt[..8] != *b"EFI PART" || gpt[24..32] != 1u64.to_le_bytes() {
+        return;
+    }
+    let backup = u64::from_le_bytes(gpt[32..40].try_into().unwrap());
+    let sectors = capacity / 512;
+    if !(2..total / 512).contains(&backup) || sectors <= backup + 1 {
+        return;
+    }
+    let mut entries = mbr[446..510].chunks_exact_mut(16)
+        .filter(|entry| entry.iter().any(|&byte| byte != 0));
+    let Some(entry) = entries.next() else { return };
+    // Only a pure protective MBR gets a disk-sized entry. A hybrid MBR can
+    // describe real partitions, and its layout must be kept as supplied.
+    if entries.next().is_some() || entry[0] != 0 || entry[4] != 0xee
+        || entry[8..12] != 1u32.to_le_bytes()
+        || entry[12..16] != u32::try_from(backup).unwrap_or(u32::MAX).to_le_bytes()
+    {
+        return;
+    }
+    let last_lba = u32::try_from(sectors - 1).unwrap_or(u32::MAX);
+    entry[12..16].copy_from_slice(&last_lba.to_le_bytes());
 }
 
 pub fn write(
@@ -49,7 +75,8 @@ pub fn write(
     let first = total.min(CHUNK as u64) as usize;
     let mut head = Buffer::new(first);
     image.read_exact(&mut head[..first])?;
-    disk.prepare(total)?;
+    let capacity = disk.prepare(total)?;
+    fit_protective_mbr(&mut head[..first], total, capacity);
     disk.reset_layout(total)?;
     let mut buf = Buffer::new(CHUNK);
     let mut back = Buffer::new(CHUNK);
@@ -79,6 +106,9 @@ pub fn write(
         let padded = crate::plan::padded(n);
         image.read_exact(&mut buf[..n])?;
         buf[n..padded].fill(0);
+        if done == 0 {
+            fit_protective_mbr(&mut buf[..n], total, capacity);
+        }
         disk.read_exact(&mut back[..padded])?;
         if back[..padded] != buf[..padded] {
             return Err(io::Error::other(t!(
@@ -119,12 +149,13 @@ mod tests {
         }
     }
     impl Destination for FakeDisk {
-        fn prepare(&mut self, total: u64) -> io::Result<()> {
-            if self.fault == "lock" || total > self.bytes.get_ref().len() as u64 {
+        fn prepare(&mut self, total: u64) -> io::Result<u64> {
+            let capacity = self.bytes.get_ref().len() as u64;
+            if self.fault == "lock" || total > capacity {
                 return Err(io::Error::other("preflight veto"));
             }
             self.prepared = true;
-            Ok(())
+            Ok(capacity)
         }
         fn reset_layout(&mut self, _total: u64) -> io::Result<()> {
             assert!(self.prepared, "all locks and validation must precede clearing the layout");
@@ -195,6 +226,45 @@ mod tests {
         assert_eq!(disk.bytes.get_ref()[crate::plan::padded(bytes.len())], 0xa5);
         assert_eq!(disk.reads, 3);
         assert!(disk.layout_reset);
+    }
+
+    fn protective_iso() -> Vec<u8> {
+        let mut iso = crate::plan::test_iso(32);
+        let backup = iso.len() as u64 / 512 - 1;
+        iso[450] = 0xee;
+        iso[454..458].copy_from_slice(&1u32.to_le_bytes());
+        iso[458..462].copy_from_slice(&(backup as u32).to_le_bytes());
+        iso[512..520].copy_from_slice(b"EFI PART");
+        iso[536..544].copy_from_slice(&1u64.to_le_bytes());
+        iso[544..552].copy_from_slice(&backup.to_le_bytes());
+        iso
+    }
+
+    #[test]
+    fn pure_protective_entry_uses_the_validated_disk_size_and_passes_readback() {
+        let iso = protective_iso();
+        let mut disk = FakeDisk::new("");
+        let last_lba = (disk.bytes.get_ref().len() / 512 - 1) as u32;
+        write(&mut Cursor::new(&iso), &mut disk, iso.len() as u64, |_, _, _| {}).unwrap();
+        let mut expected = iso;
+        expected[458..462].copy_from_slice(&last_lba.to_le_bytes());
+        assert_eq!(&disk.bytes.get_ref()[..expected.len()], expected);
+        assert_eq!(disk.reads, 1);
+    }
+
+    #[test]
+    fn hybrid_entries_are_kept_and_large_disk_size_is_saturated() {
+        let iso = protective_iso();
+        let mut hybrid = iso.clone();
+        hybrid[466] = 0x17;
+        let original = hybrid.clone();
+        let total = hybrid.len() as u64;
+        fit_protective_mbr(&mut hybrid, total, 2 * total);
+        assert_eq!(hybrid, original);
+
+        let mut large = iso;
+        fit_protective_mbr(&mut large, total, (u64::from(u32::MAX) + 2) * 512);
+        assert_eq!(large[458..462], u32::MAX.to_le_bytes());
     }
 
     #[test]

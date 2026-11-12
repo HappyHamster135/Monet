@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rebuild just Ark's executable against the exact installed distribution source.
+# Rebuild Ark and its patched plugins from the installed distribution source.
 set -eu
 out="$1"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -28,11 +28,13 @@ cmake -S "$source" -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_P
     "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" -DCMAKE_C_FLAGS_RELEASE=-DNDEBUG -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
     "-DCMAKE_SHARED_LINKER_FLAGS=$linker_flags" "-DCMAKE_EXE_LINKER_FLAGS=$linker_flags" "-DCMAKE_MODULE_LINKER_FLAGS=$linker_flags" \
     -DBUILD_TESTING=OFF -DBUILD_DOC=OFF
-cmake --build "$work/build" --target ark kerfuffle_libarchive_readonly --parallel "$(nproc)"
+cmake --build "$work/build" --target ark kerfuffle_libarchive_readonly kerfuffle_libzip --parallel "$(nproc)"
 install -m 755 "$work/build/bin/ark" "$out/ark"
 strip --strip-debug "$out/ark"
-install -m 755 "$work/build/bin/kerfuffle/kerfuffle_libarchive_readonly.so" "$out/kerfuffle_libarchive_readonly.so"
-strip --strip-debug "$out/kerfuffle_libarchive_readonly.so"
+for plugin in kerfuffle_libarchive_readonly.so kerfuffle_libzip.so; do
+    install -m 755 "$work/build/bin/kerfuffle/$plugin" "$out/$plugin"
+    strip --strip-debug "$out/$plugin"
+done
 mkdir "$work/monet-build"
 cp "$here/build.sh" "$here/patch.py" "$here/bundle.py" "$here/README.md" "$here/rpmheader.h" "$work/monet-build/"
 cp "$out/runtime.json" "$work/monet-build/"

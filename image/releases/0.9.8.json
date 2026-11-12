@@ -1,0 +1,40 @@
+{
+  "version": "0.9.8",
+  "images": {
+    "amd": {
+      "image": "ghcr.io/happyhamster135/monet-amd:0.9.8",
+      "manifest": "sha256:879a18de5e5749c923c485b011ccce168416285d2b7b77e0333d2176a31250bc"
+    },
+    "nvidia": {
+      "image": "ghcr.io/happyhamster135/monet:0.9.8",
+      "manifest": "sha256:3580354a9acc97e3e28263b5da4320f1d143368c50916db1d3e8c28e52b6d79e"
+    }
+  },
+  "parts": [
+    {
+      "name": "Monet-0.9.8-oci.tar.part-aa",
+      "bytes": 1887436800,
+      "sha256": "3564fe208a5036c4f3671d5dbd6d8f924af2b12ba57aab3d8796e227cb14c4fe"
+    },
+    {
+      "name": "Monet-0.9.8-oci.tar.part-ab",
+      "bytes": 1887436800,
+      "sha256": "42d4d3e8a21224f173dd3dc53cbba8c5cd899c7f34ca05cc84a757f453a724e8"
+    },
+    {
+      "name": "Monet-0.9.8-oci.tar.part-ac",
+      "bytes": 1887436800,
+      "sha256": "7b76864b44cc8cf8e9a6374b39aa12bc0d9ab663d999e0878c37e5d2e6020cf2"
+    },
+    {
+      "name": "Monet-0.9.8-oci.tar.part-ad",
+      "bytes": 1887436800,
+      "sha256": "22923dcc26b49af7a65ead108af1e468d30001c20ef012e316f062fbc066efc4"
+    },
+    {
+      "name": "Monet-0.9.8-oci.tar.part-ae",
+      "bytes": 1250560000,
+      "sha256": "5d5e7eac2bf43b4b1a3080a4f48d34c4a8c1b128658612154f2ae0eb7b22597f"
+    }
+  ]
+}

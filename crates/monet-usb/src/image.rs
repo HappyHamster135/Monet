@@ -68,24 +68,35 @@ fn sha256(file: &mut File) -> Result<String, String> {
     Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
 }
 
-pub fn open(path: &str, expected: Option<&str>) -> Result<File, String> {
+#[derive(Debug)]
+pub enum OpenError {
+    Read(String),
+    Invalid(&'static str),
+}
+
+impl From<std::io::Error> for OpenError {
+    fn from(error: std::io::Error) -> Self {
+        Self::Read(error.to_string())
+    }
+}
+
+pub fn open(path: &str, expected: Option<&str>) -> Result<File, OpenError> {
     // Deny writes/deletion so validation and writing cannot see different source contents.
     let mut file = OpenOptions::new()
         .read(true)
         .share_mode(FILE_SHARE_READ)
-        .open(path)
-        .map_err(|e| e.to_string())?;
-    let info = file.metadata().map_err(|e| e.to_string())?;
-    let mut header = vec![0; 32774];
-    if !info.is_file() || file.read_exact(&mut header).is_err() || !crate::plan::bootable_iso(&header, info.len()) {
-        return Err(t!("This is not a complete bootable ISO image. Nothing was written.").into());
+        .open(path)?;
+    let info = file.metadata()?;
+    let invalid_iso = OpenError::Invalid(t!("This is not a complete bootable ISO image. Nothing was written."));
+    if !info.is_file() || !crate::plan::bootable_iso(&mut file, info.len())? {
+        return Err(invalid_iso);
     }
     if let Some(expected) = expected {
-        if sha256(&mut file)? != expected {
-            return Err(t!("The installer checksum does not match. Delete the cached ISO from your temporary folder and download it again. Nothing was written.").into());
+        if sha256(&mut file).map_err(OpenError::Read)? != expected {
+            return Err(OpenError::Invalid(t!("The installer checksum does not match. Nothing was written.")));
         }
     }
-    file.rewind().map_err(|e| e.to_string())?;
+    file.rewind()?;
     Ok(file)
 }
 
@@ -117,12 +128,11 @@ mod tests {
             );
         }
         let name = path.to_str().unwrap();
-        assert!(open(name, None).is_err());
-        let mut iso = vec![0; 65536];
-        iso[510..512].copy_from_slice(b"\x55\xaa");
-        iso[32769..32774].copy_from_slice(b"CD001");
-        std::fs::write(&path, iso).unwrap();
-        assert!(open(name, Some(&"0".repeat(64))).is_err());
+        assert!(matches!(open(name, None), Err(OpenError::Invalid(_))));
+        std::fs::write(&path, crate::plan::test_iso(512)).unwrap();
+        assert!(matches!(open(name, None), Err(OpenError::Invalid(_))));
+        std::fs::write(&path, crate::plan::test_iso(32)).unwrap();
+        assert!(matches!(open(name, Some(&"0".repeat(64))), Err(OpenError::Invalid(_))));
         let file = open(name, None).unwrap();
         assert!(OpenOptions::new().write(true).open(&path).is_err());
         assert!(std::fs::remove_file(&path).is_err());

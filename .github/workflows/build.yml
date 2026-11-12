@@ -153,6 +153,7 @@ jobs:
     needs: [test, desktop, check]
     if: needs.check.outputs.new == 'true'
     uses: ./.github/workflows/image.yml
+    secrets: inherit
     permissions:
       contents: read
       packages: write

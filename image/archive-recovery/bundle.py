@@ -11,16 +11,21 @@ import sys
 import tempfile
 
 RPM_PLUGIN = 'kerfuffle_libarchive_readonly.so'
+ZIP_PLUGIN = 'kerfuffle_libzip.so'
+PLUGINS = {1: (), 2: (RPM_PLUGIN,), 3: (RPM_PLUGIN, ZIP_PLUGIN)}
 
 
 def payload_names(manifest):
-    return ('ark', RPM_PLUGIN, 'source.tar.xz') if manifest['schema'] == 2 else ('ark', 'source.tar.xz')
+    return ('ark', *PLUGINS[manifest['schema']], 'source.tar.xz')
 
 
-def plugin_path(manifest):
-    paths = [p for p in manifest['originals'] if p.endswith('/kerfuffle/' + RPM_PLUGIN)]
-    if len(paths) != 1: raise ValueError('Missing native RPM plugin')
-    return paths[0]
+def plugin_paths(manifest):
+    paths = {}
+    for name in PLUGINS[manifest['schema']]:
+        matches = [path for path in manifest['originals'] if path.endswith('/kerfuffle/' + name)]
+        if len(matches) != 1: raise ValueError('Missing native Archives plugin: ' + name)
+        paths[name] = matches[0]
+    return paths
 
 
 def run(*args):
@@ -48,21 +53,22 @@ def capture():
         if 'not found' in linked: raise ValueError('Incomplete Archives runtime')
         for dependency in {path, *re.findall(r'(?:=>\s+|^\s*)(/\S+)', linked, re.M)}:
             names.update(run('rpm', '-qf', '--qf', '%{NAME}.%{ARCH}\n', str(Path(dependency).resolve())).splitlines())
-    return dict(schema=2, originals={p: digest(p) for p in sorted(paths)},
+    return dict(schema=3, originals={p: digest(p) for p in sorted(paths)},
                 package_names=sorted(names), packages=packages(sorted(names)))
 
 
 def verify(manifest):
     originals = manifest.get('originals')
     names = manifest.get('package_names')
-    if (manifest.get('schema') not in (1, 2) or not isinstance(originals, dict) or not 3 <= len(originals) <= 100
+    schema = manifest.get('schema')
+    if (type(schema) is not int or schema not in PLUGINS or not isinstance(originals, dict) or not 3 <= len(originals) <= 100
             or '/usr/bin/ark' not in originals
             or any(not isinstance(p, str) or not re.fullmatch(r'/usr/bin/ark|/usr/lib(?:64)?/(?:libkerfuffle\.so\.\d+(?:\.\d+)*|qt6/plugins/kerfuffle/kerfuffle_[a-z0-9_]+\.so)', p)
-                   and not (manifest.get('schema') == 2 and p == '/usr/bin/rpm') for p in originals)
+                   and not (schema >= 2 and p == '/usr/bin/rpm') for p in originals)
             or any(not isinstance(value, str) or not re.fullmatch('[a-f0-9]{64}', value) for value in originals.values())):
         raise ValueError('Invalid Archives runtime manifest')
-    if manifest['schema'] == 2:
-        plugin_path(manifest)
+    if schema >= 2:
+        plugin_paths(manifest)
         if '/usr/bin/rpm' not in originals: raise ValueError('Missing RPM query runtime')
     if (not isinstance(names, list) or not 1 <= len(names) <= 512
             or any(not isinstance(n, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9+_.-]*', n) for n in names)
@@ -97,7 +103,8 @@ def atomic_copy(source, target, mode):
 def seal(folder):
     manifest = json.loads((folder / 'runtime.json').read_text())
     verify(manifest); compatible(folder / 'ark')
-    if manifest['schema'] == 2: compatible(folder / RPM_PLUGIN, plugin_path(manifest))
+    for name, path in plugin_paths(manifest).items():
+        compatible(folder / name, path)
     manifest['files'] = {name: digest(folder / name) for name in payload_names(manifest)}
     (folder / 'runtime.json').write_text(json.dumps(manifest, indent=2) + '\n')
 
@@ -109,12 +116,15 @@ def install(folder):
             or any(digest(folder / name) != expected for name, expected in manifest['files'].items())):
         raise ValueError('Damaged Archives bundle')
     compatible(folder / 'ark')
-    if manifest['schema'] == 2: compatible(folder / RPM_PLUGIN, plugin_path(manifest))
+    plugins = plugin_paths(manifest)
+    for name, path in plugins.items():
+        compatible(folder / name, path)
     docs = Path('/usr/share/doc/monet-archive-recovery'); docs.mkdir(parents=True, exist_ok=True)
     for name in ('runtime.json', 'source.tar.xz', 'README.md'):
         atomic_copy(folder / name, docs / name, 0o644)
     atomic_copy(folder / 'ark', Path('/usr/bin/ark'), 0o755)
-    if manifest['schema'] == 2: atomic_copy(folder / RPM_PLUGIN, Path(plugin_path(manifest)), 0o755)
+    for name, path in plugins.items():
+        atomic_copy(folder / name, Path(path), 0o755)
 
 
 if __name__ == '__main__':

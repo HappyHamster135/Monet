@@ -3,6 +3,26 @@
 set -euo pipefail
 IMAGE=${1:?image name required}
 VERSION=${2:?version required}
+DIGEST_OUTPUT=${3:-}
+digest=
+
+push() {
+    local tag=$1
+    shift
+    case "$IMAGE" in
+        ghcr.io/happyhamster135/monet|ghcr.io/happyhamster135/monet-amd)
+            if [ -f image/monet-update.pub ]; then
+                python3 tools/sign-release-image.py "containers-storage:$IMAGE:$tag" "$IMAGE:$tag" "$@"
+                return
+            fi
+            ;;
+    esac
+    if [ "$#" -gt 0 ]; then
+        sudo podman push --format oci --digestfile="$1" "$IMAGE:$tag"
+    else
+        sudo podman push "$IMAGE:$tag"
+    fi
+}
 
 if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
     echo "v$VERSION is released; keeping its qualified image."
@@ -14,6 +34,20 @@ else
         echo "Could not determine whether v$VERSION is released." >&2
         exit "$status"
     fi
-    sudo podman push "$IMAGE:$VERSION"
+    if [ -n "$DIGEST_OUTPUT" ]; then
+        digestfile=$(mktemp)
+        trap 'rm -f -- "$digestfile"' EXIT
+        push "$VERSION" "$digestfile"
+        digest=$(<"$digestfile")
+        if ! [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Could not record the published OCI digest for $IMAGE:$VERSION." >&2
+            exit 1
+        fi
+    else
+        push "$VERSION"
+    fi
 fi
-sudo podman push "$IMAGE:latest"
+push latest
+if [ -n "$digest" ]; then
+    printf 'digest=%s\n' "$digest" >> "$DIGEST_OUTPUT"
+fi

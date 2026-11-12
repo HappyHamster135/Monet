@@ -4,7 +4,7 @@
  * soft shadow under it.
  *
  * Widgets on the desktop share its surface with the wallpaper, so KWin can't
- * blur behind them. The glass finds The Hours in the scene instead and
+ * blur behind them. The glass takes The Hours from the desktop's containment and
  * frosts the part of it the widget covers, so it follows the light as it
  * drifts, a painting that's kept, and the widget as it's moved. Without The
  * Hours (another wallpaper, a panel), or with glass switched off (Settings →
@@ -14,10 +14,13 @@
  * install.sh copies this file into each of Monet's widgets.
  */
 import QtCore
+import QtQml.Models
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
+import QtQuick.Window
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.plasmoid
 
 Item {
     id: glass
@@ -36,7 +39,11 @@ Item {
     property real wash: 0.16
     default property alias content: inside.data
 
-    property Item painting: null
+    // Plasma publishes the wallpaper when it is ready and whenever it is replaced.
+    property Item wallpaper: Plasmoid?.containment?.wallpaperGraphicsObject ?? null
+    readonly property Item painting: wallpaper?.hours !== undefined && wallpaper.below !== undefined
+                                      && wallpaper.above !== undefined && wallpaper.Window.window === glass.Window.window
+                                      ? wallpaper : null
     property rect patch: Qt.rect(0, 0, 1, 1)
     // The painting frosted behind it, unless glass is off (monet-light leaves glass-off).
     readonly property bool frosted: drawBackground && painting !== null && !appearance.off
@@ -51,23 +58,27 @@ Item {
 
     GlassSettings { id: appearance; enabled: glass.drawBackground }
 
-    // The Hours: the item with its two lights, wherever the scene keeps it.
-    function findPainting() {
-        let top = glass;
-        while (top.parent) {
-            top = top.parent;
+    // Plasma can reparent a widget after creating it. Follow its current ancestors.
+    readonly property var ancestors: {
+        const chain = [];
+        if (painting) {
+            for (let item = glass.parent; item; item = item.parent) chain.push(item);
         }
-        const queue = [top];
-        while (queue.length > 0) {
-            const item = queue.shift();
-            if (item !== glass && item.hours !== undefined && item.below !== undefined && item.above !== undefined) {
-                return item;
-            }
-            for (let i = 0; i < item.children.length; i++) {
-                queue.push(item.children[i]);
-            }
+        return chain;
+    }
+    Instantiator {
+        model: glass.ancestors
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onXChanged() { glass.place(); }
+            function onYChanged() { glass.place(); }
         }
-        return null;
+    }
+    Connections {
+        target: glass.painting
+        function onXChanged() { glass.place(); }
+        function onYChanged() { glass.place(); }
     }
 
     function place() {
@@ -77,21 +88,12 @@ Item {
         }
     }
 
-    function follow() {
-        // Moving the widget moves one of its ancestors: follow them all.
-        for (let item = glass.parent; item; item = item.parent) {
-            item.xChanged.connect(place);
-            item.yChanged.connect(place);
-        }
-    }
-
+    onXChanged: place()
+    onYChanged: place()
     onWidthChanged: place()
     onHeightChanged: place()
-    Component.onCompleted: Qt.callLater(() => {
-        painting = findPainting();
-        follow();
-        place();
-    })
+    onPaintingChanged: place()
+    onAncestorsChanged: place()
 
     // Its shadow, softer than a window's.
     Rectangle {

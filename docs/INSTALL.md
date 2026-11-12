@@ -3,9 +3,9 @@
 One USB stick installs everything: Monet, and Windows for the games that need
 it. Some PCs need a firmware setting enabled to trust Linux boot media; see below.
 
-This checkout documents the local **0.9.6 release candidate**. Its downloads have
-not been published yet; see [release readiness](RELEASE-0.9.6.md) for validation
-and the remaining hardware checks.
+These instructions are for the **0.9.7 preview**. The release page has the USB
+maker, Monet Setup, and the Fedora fallback installer.
+[Monet 0.9.7 downloads](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.7)
 
 You need:
 
@@ -17,7 +17,7 @@ You need:
   about 2012 can't run Monet. Every PC that runs Windows 11 has it.
 - 4 GB of memory at least, 8 GB to run many apps at once
 - A disk of 70 GB or more
-- A USB stick of 2 GB or more (it will be erased)
+- A USB stick of 2 GB or more with 512-byte logical sectors (it will be erased)
 - Internet (Wi-Fi is fine)
 
 Setup installs onto the drive you select. **Erasing that drive deletes all of
@@ -34,11 +34,12 @@ for Windows, which downloads after you sign in to Monet.
 The same USB maker and stick support Intel, AMD and NVIDIA PCs. Graphics are
 detected on the PC you boot from the stick; the PC making it does not choose them.
 ARM PCs, Apple Silicon Macs and BIOS-only machines are not supported.
+512e drives meet the sector requirement. They report 512-byte logical sectors
+and use 4 KiB physical sectors.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.6-Make-USB-Stick.exe** from the
-   [Monet release](https://github.com/HappyHamster135/Monet/releases) and
+1. Download **Monet-0.9.7-Make-USB-Stick.exe** from the release page and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
 
@@ -49,14 +50,12 @@ On a Windows PC (this one, or any other):
 3. It downloads Monet, writes the stick and checks it (about 10-20 minutes),
    then says it's ready.
 
-The stick gets **Monet Setup**, Monet's own installer, when the release has
-it (**Monet-0.9.6-Setup.iso**), and otherwise Fedora's installer dressed as
-Monet (**Monet-0.9.6-Installer.iso**). Monet Setup is in a release only once
-it has installed Monet in a test PC.
+The USB maker prefers **Monet-0.9.7-Setup.iso**. It checks the downloaded
+installer against the release checksum before writing the stick. If Monet
+Setup is unavailable, it uses **Monet-0.9.7-Installer.iso**, the Fedora fallback.
 
-On Linux or a Mac, download **Monet-0.9.6-Setup.iso** (or, if the release
-doesn't have it, **Monet-0.9.6-Installer.iso**) and write it with your disk
-tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
+On Linux or a Mac, download **Monet-0.9.7-Setup.iso** and write it with your
+disk tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
 
@@ -77,15 +76,16 @@ before changing firmware security settings.
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.6**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.7**).
 2. Monet Setup opens over the harbor at dawn. Choose your language,
    keyboard and time zone (a region, then a city: Setup guesses it, and once
    online, finds where the PC is), and click **Continue**.
 3. Connect to Wi-Fi (with a cable, this step is skipped).
-4. Enter your name and a password, twice: your account in Monet, and in
-   Windows. Any password will do. Or leave both empty: then Monet signs you
-   in by itself and the screen doesn't lock, but anyone who uses the PC can
-   open your account. Settings → Accounts gives it a password later.
+4. Enter your name and type your Monet password twice. Leave both password
+   fields empty and Monet signs you in by itself. Anyone who uses the PC
+   can then open your account. On a passwordless administrator account,
+   firewall changes can go through without a password dialog.
+   Settings → Accounts gives the account a password later.
 5. Choose your apps, then choose an **Installation drive** by its model,
    capacity and device path. Review its existing partitions and the list of
    other drives that will be kept. No drive is selected automatically.
@@ -98,11 +98,9 @@ before changing firmware security settings.
    On a PC with TPM 2.0, **Encrypt Monet** is selected by default. Keep the
    recovery key shown at completion; it also unlocks the disk if the TPM cannot.
 
-The drive review and restart recovery described here are included in the local
-**0.9.6 candidate**. They require its Setup ISO; an existing USB stick does
-not acquire them automatically. Older Setup releases use the earlier choice names.
-Installations started with an older USB have no durable recovery receipt and
-cannot be adopted automatically by the new resume path.
+Use the 0.9.7 Setup stick for the drive review and installation recovery
+described here. Resume needs the recovery information saved by the Setup stick
+that started the installation.
 
 Setup downloads the system, then unpacks and writes it. A finished download is
 not a finished installation: leave the PC and USB connected until **All set**.
@@ -114,31 +112,30 @@ take longer and is not a fix for a thermal, kernel, firmware or graphics fault.
 If installation is interrupted after disk preparation, boot the updated USB
 again. If the download completed and no network is available, choose **Continue
 offline** on the connection page. Enter your account choices, select the same drive and choose **Resume
-interrupted installation**. Setup verifies the drive and partition identities,
-does not format again, and checks every blob before reusing a completed download
-without fetching it again. Account and Wi-Fi passwords are not saved in the
-recovery record. Offline mode permits only resuming an existing installation;
-a corrupted or missing download keeps its files and asks you to reconnect.
-A drive
-whose identity, device numbering or partition layout changed is refused.
+interrupted installation**. Setup verifies the drive, partition identities and
+saved download before reusing them. It keeps the existing partitions. The local
+installer update also checks the downloaded image against the exact digest
+recorded for that graphics variant on the Setup stick. Account and Wi-Fi
+passwords are not saved in the recovery record. Offline mode only resumes an
+existing installation. A corrupted or missing download asks you to reconnect.
+Setup refuses to resume if the drive identity, device numbering or layout changed.
 
 An unfinished system is retained as a `previous-install-*` subvolume at the
 Monet filesystem's top level when rebuilding it. Those files are not automatically
 merged into the new account. Repeated late retries can consume space; inspect
 and recover anything needed before removing old subvolumes. Cleanup is never
-automatic; the local 0.9.6 recovery controls are described below. When retrying
-a late failure, Setup also preserves the former boot files in a `saved-boot-*`
+automatic. When retrying a late failure, Setup also preserves the former boot
+files in a `saved-boot-*`
 folder inside a retained subvolume before rebuilding the boot entries. The
 installation receipt and other systems' EFI files stay in place.
 
-Local 0.9.6 work adds Settings → Storage → Unfinished installations. After
+Open Settings → Storage → Unfinished installations to review saved systems. After
 successfully booting Monet, use Find saved installations, then Review files and
 cleanup. Save your files to an archive on a folder/drive you choose and check it
 before confirming permanent removal. Only the matching account's home is
 exported; removal also removes other accounts' files in that retained system.
-The running OS and its rollback are protected. This is not repair from an
-unbootable system or recovery from another disk, and these desktop additions
-have not yet been included in a newly built release ISO.
+The running OS and its rollback are protected. This tool needs a working Monet
+desktop and works on retained installations on the current disk.
 
 For an encrypted installation, a temporary bootstrap key is retained on the
 unencrypted boot partition until Setup finishes, alongside the existing first-boot
@@ -154,7 +151,11 @@ disk encryption does not protect against someone with physical access to this ke
 7. When it says it's all set, click **Restart** and take out the USB stick.
 
 <details>
-<summary>With Fedora's installer (Monet-0.9.4-Installer.iso)</summary>
+<summary>With Fedora's fallback installer</summary>
+
+The 0.9.8 fallback offers erase only when it can identify the boot media and
+one eligible internal drive. If either check fails, use Monet Setup to choose
+the drive. The older 0.9.7 fallback preselects the largest eligible drive.
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -163,9 +164,10 @@ disk encryption does not protect against someone with physical access to this ke
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
 5. Click **User Creation** and enter your name and a password.
-6. Click **Begin Installation**. The disk is already set up for you: about
-   two thirds for Monet, one third for Windows. Monet downloads itself while
-   it installs; a Monet page shows how far it is.
+6. Open **Installation Destination** and check the selected drive and partition
+   changes before clicking **Begin Installation**. If the summary says
+   **Kickstart insufficient**, select only the drive you intend to use and
+   confirm its layout there. Monet shows download progress while it installs.
 7. Click **Reboot** and take out the USB stick.
 
 </details>
@@ -199,19 +201,26 @@ Sign in to Monet. It greets you by name.
 
 ## 4. Windows gets ready (about 30 minutes, in the background)
 
-Right after you sign in, Monet starts downloading Windows 11 from Microsoft
-and shows its progress. Keep using your PC. When it's ready, Monet asks to
-restart: Windows then installs itself (about 10 minutes, a few restarts, no
-questions), sets up Monet Bridge and the Game Profile, and comes back to
-Monet. Done.
+If Setup reserved space for a new Windows install, Monet starts downloading
+Windows 11 from Microsoft after you sign in and shows its progress. Keep using
+your PC. When it's ready, Monet asks to restart. Windows installs itself, sets
+up Monet Bridge and the Game Profile, then comes back to Monet.
+
+On a new dual-boot install, Setup leaves room for a Windows partition of
+100 to 128 GiB plus 8 GiB for setup files. This includes room for Windows
+updates. Check the sizes of any games you plan to install on that partition.
 
 ---
 
 ## Good to know
 
-- **Windows** has an account with your name and no password, so it starts
-  straight into your games. If the PC came with Windows, Windows activates by
-  itself. If not, it runs unactivated, with a small watermark.
+- **A new games-only Windows** has a separate local administrator account
+  with your name and no password. Its first automatic sign-in finishes setup,
+  then setup clears its sign-in settings. Windows can still open the desktop
+  automatically when the account has no password. Automatic device encryption
+  is turned off during installation. Windows Security and Windows Update can be
+  managed in Windows. If the PC came with Windows, Windows activates by itself.
+  Otherwise it runs unactivated, with a small watermark.
 - **Play a game:** click **Games** in the panel (the sun as a play button).
   Every game is there, Steam's, Heroic's and Lutris' in Monet and the ones in
   Windows, each saying where it plays. **Play** on a Windows game restarts in
@@ -263,8 +272,9 @@ Monet. Make the package public (GitHub → your profile → **Packages** →
 **monet** → **Package settings** → **Change visibility** → **Public**), then
 start the installer again.
 
-**"Test this media" fails.** Use the first menu entry instead; the test is
-optional.
+**"Test this media" fails.** Windows can move GPT metadata after writing the
+stick, which can cause Fedora's embedded ISO checksum to fail. Verify the
+downloaded ISO against `SHA256SUMS`. If it matches, use the first menu entry.
 
 **The start asks for a passphrase.** Monet's disk is encrypted, and this time
 the PC's security chip couldn't vouch for the start: after a firmware update,
@@ -285,7 +295,8 @@ offers to try again.
 
 **Microsoft blocked the download.** Choosing **Windows** opens Microsoft's
 download page. Download **Windows 11 Disk Image (ISO)** into **Downloads**,
-then choose **Windows** again. Monet installs it from there.
+then choose **Windows** again. Monet opens the ISO read-only and checks the
+setup and install images before creating or formatting Windows partitions.
 
 **A Linux game runs slowly on a laptop.** It may be using the built-in
 graphics. In Steam: right-click the game → **Properties** → **Launch Options**:
@@ -324,6 +335,33 @@ monet update              # install, then restart
 monet auto-updates off    # only when you ask (on turns it back)
 ```
 
+### First signed update from 0.9.7
+
+Monet 0.9.8 Setup and the Fedora fallback configure signature verification for
+Monet's update repositories. On an existing 0.9.7 installation, add Monet's
+release key before the first update if you want that download verified too.
+
+Download the 0.9.8 source archive from the Monet GitHub release and extract it.
+From its top-level directory, run these commands:
+
+```sh
+sudo python3 image/install-update-trust.py image/monet-update.pub
+sudo bootc status
+```
+
+Use the same repository shown in the current image. For an image named
+`ghcr.io/happyhamster135/monet`, run:
+
+```sh
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/happyhamster135/monet:latest
+```
+
+If your current image uses `ghcr.io/happyhamster135/monet-amd`, use
+`ghcr.io/happyhamster135/monet-amd:latest` instead. Restart after the switch
+succeeds. The previous deployment remains available in the boot menu.
+
+### Going back after an update
+
 A new Monet that doesn't start properly goes back by itself: if it hasn't
 brought up the sign-in screen within five minutes, the PC restarts into the
 Monet from before, and Settings → Updates says so. The daily update then
@@ -336,7 +374,7 @@ The first time you start a version with a new look, Monet freshens your
 desktop (the painting, the colors, the glass) and keeps your panels. Your
 files and apps aren't touched.
 
-The local 0.9.6 candidate adds **Settings → Recovery**. It links to Backups
+**Settings → Recovery** links to Backups
 and Updates and lists recent changes Monet recorded to this account's desktop
 settings and application shortcuts. Choose **Review changes**, then **Undo these
 changes** to restore matching entries. Later personal edits are kept; failures
@@ -344,8 +382,7 @@ and unreadable history remain visible. Save your work and sign out when ready
 if restored settings have not appeared in running apps. Recovery never signs
 you out automatically. This does not restore documents, reinstall Monet or undo
 arbitrary unrecorded changes. A recent journal must exist, and this page requires
-a working desktop. The published installer and your running system are unchanged
-until a build containing these local changes is installed.
+a working desktop.
 
 Monet Bridge, Monet's part in Windows, updates itself on the way back to
 Monet, at most once a day: when a newer Monet is out, it installs that
@@ -378,16 +415,16 @@ on the stick's start menu, then **Free up space** to shrink Windows, or use
 free space you made in Windows' **Disk Management**. It doesn't bring your
 files: open them from Windows' drive in Files.
 
-Either way Windows needs to be fully shut down: hold **Shift** while you
-choose **Shut down** in Windows (that skips Fast Startup). Windows can't be
-shrunk if it's encrypted with BitLocker; turn BitLocker off in Windows
-first, or use **Install Monet and Windows** instead. Windows checks its
-drive once the next time it starts.
+Either way, fully shut down Windows. Hold **Shift** while choosing **Shut down**
+to skip Fast Startup. If BitLocker is on, use existing unallocated space or a
+separate drive to keep the encrypted partition intact. To let Setup shrink it,
+first turn BitLocker off from Windows. **Install Monet and Windows** erases the
+target drive. Windows checks its drive the next time it starts after a shrink.
 
 The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.6-Linux.tar.gz** and run `./monet-0.9.6-linux/install.sh`,
+Download **Monet-0.9.7-Linux.tar.gz** and run `./monet-0.9.7-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).

@@ -5,9 +5,11 @@ Monet Setup encrypts the disk (LUKS2) with a key that's there only for the first
 start: a file on the boot partition, which the kernel's command line points to
 (rd.luks.key). The TPM can't learn the PC during Setup: Monet's kernel is signed
 with Universal Blue's key, so the PC measures its own start differently from the
-USB stick's. So Monet's first start does it: the TPM learns the disk's key, sealed
-to Secure Boot's state (PCR 7); the start-up key is wiped from the disk and the boot
-partition, and the command line forgets it. From then on Monet starts by itself.
+USB stick's. On Monet's first start, the TPM learns the disk's key, sealed to
+Secure Boot's state (PCR 7), and Monet stages the kernel arguments without
+the start-up key. Once Monet boots with those arguments, it retires the
+start-up key from LUKS and wipes the file on the boot partition. The retained
+rollback entries also need to use the TPM before the temporary key is retired.
 
 When the PC's start changes in a way the TPM can't vouch for (a firmware update that
 changes Secure Boot's keys, the TPM cleared), the start asks for the recovery key.
@@ -141,6 +143,59 @@ def tpm_unlocks(device, data):
     return False
 
 
+def kernel_arguments(options):
+    # Keep quoted values together, including spaces and additional '=' characters.
+    if not options or not options.strip() or options.count('"') % 2:
+        raise ValueError("Could not read the deployment's kernel arguments")
+    return re.findall(r'(?:[^\s"]+|"[^"]*")+', options)
+
+
+@contextmanager
+def locked_sysroot():
+    try:
+        import gi
+        gi.require_version("OSTree", "1.0")
+        from gi.repository import GLib, OSTree
+    except (ImportError, ValueError) as error:
+        raise RuntimeError("OSTree's boot entry interface is unavailable") from error
+
+    sysroot = OSTree.Sysroot.new_default()
+    try:
+        if not sysroot.initialize_with_mount_namespace() or sysroot.try_lock() != (True, True):
+            raise RuntimeError("OSTree's boot entries are busy; cleanup remains pending")
+        try:
+            if not sysroot.load():
+                raise RuntimeError("Could not load OSTree's boot entries")
+            yield sysroot
+        finally:
+            sysroot.unlock()
+    except GLib.Error as error:
+        raise RuntimeError(f"Could not finish updating OSTree's boot entries: {error.message}") from error
+
+
+def clear_firstboot_argument(sysroot, key):
+    def arguments(deployment):
+        return kernel_arguments(deployment.get_bootconfig().get("options"))
+
+    # Wait for a staged deployment to publish before editing the bootloader entries.
+    if sysroot.get_staged_deployment() or key in arguments(sysroot.require_booted_deployment()):
+        return False
+    expected = []
+    for deployment in sysroot.get_deployments():
+        original = arguments(deployment)
+        updated = [option for option in original if option != key]
+        if updated != original and not sysroot.deployment_set_kargs_in_place(deployment, " ".join(updated)):
+            raise RuntimeError("Could not update a retained boot entry")
+        expected.append(updated)
+
+    # Reopen the entries from disk. The setter also updates its in-memory copy.
+    published = sysroot.new_default()
+    if not expected or not published.load() or [arguments(d) for d in published.get_deployments()] != expected:
+        raise RuntimeError("Could not verify the updated boot entries on disk")
+    required("sync", "-f", FIRST_KEY.parent)
+    return True
+
+
 def boot_read_only():
     data = json.loads(required("findmnt", "--json", "--mountpoint", FIRST_KEY.parent,
                                "--output", "TARGET,VFS-OPTIONS"))
@@ -240,9 +295,20 @@ def finish_first_start():
             data = metadata(device)
             if not tpm_unlocks(device, data):
                 raise RuntimeError("The TPM enrollment could not unlock the disk; keeping the start-up key")
-        required("rpm-ostree", "kargs", f"--delete-if-present={state['karg']}", timeout=900)
-        if state["karg"] in required("rpm-ostree", "kargs").split():
-            raise RuntimeError("The start-up key is still in the next boot's arguments")
+        if state["karg"] in kernel_arguments(required("rpm-ostree", "kargs")):
+            required("rpm-ostree", "kargs", f"--delete-if-present={state['karg']}", timeout=900)
+            if state["karg"] in kernel_arguments(required("rpm-ostree", "kargs")):
+                raise RuntimeError("The start-up key is still in the next boot's arguments")
+        # The original entry must still boot if shutdown loses the staged arguments.
+        if karg:
+            print("The start-up key will be retired after Monet boots without it.")
+            return
+    # OSTree makes its mounts writable in this process's namespace. Keep the
+    # deployment lock until the key slot and file have been retired.
+    with locked_sysroot() as sysroot:
+        if not clear_firstboot_argument(sysroot, state["karg"]):
+            print("The start-up key will be retired after Monet boots without it.")
+            return
         data = metadata(device)
         check_slots(data, state)
         if state["slot"] in data["keyslots"]:

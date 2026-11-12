@@ -13,8 +13,8 @@ from tests.test_look import quick_helper
 
 ROOT = Path(__file__).resolve().parents[1]
 try:
-    from PySide6.QtCore import QObject, QMetaObject, QTimer, QUrl, Signal, Slot, Q_ARG, Qt
-    from PySide6.QtGui import QGuiApplication, QWindow
+    from PySide6.QtCore import QEvent, QObject, QMetaObject, QPointF, QTimer, QUrl, Signal, Slot, Q_ARG, Qt
+    from PySide6.QtGui import QGuiApplication, QKeyEvent, QWindow
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow
     from PySide6.QtTest import QTest
@@ -132,6 +132,326 @@ class LookFeedback(unittest.TestCase):
         while not condition() and time.monotonic() < deadline:
             QTest.qWait(10)
         self.assertTrue(condition(), 'The asynchronous reply did not arrive')
+
+    def test_security_shows_unknown_and_pending_checks_in_the_overview(self):
+        state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete",
+                     firewall="unavailable", selinux="enforcing", autoUpdates="on",
+                     updateWaiting=False, network={"known": True, "devices": []})
+        self.helper.replies["security"] = json.dumps(state)
+        self.helper.replies["firmware-check"] = '{"ok":true,"updates":[]}'
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        overview = self.window.findChild(QObject, "security-overview")
+        self.assertIn("couldn’t be completed", overview.property("title"))
+
+        self.helper.replies["security"] = json.dumps(dict(state, firewall="on", encryptionSetup="pending"))
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        self.wait_for(lambda: overview.property("title") == "Finishing disk encryption.")
+        action = self.window.findChild(QObject, "security-overview-action")
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.findChild(QObject, "search-security-device").hasActiveFocus())
+
+    def test_security_waits_for_the_first_result_before_showing_errors(self):
+        self.helper.held_commands.add("security")
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        self.assertFalse(self.window.property("securityChecked"))
+        self.assertEqual(self.item("security-overview").property("title"), "Checking this PC…")
+        titles = {"Secure Boot", "Encryption", "App isolation", "Firewall",
+                  "Ports for nearby devices", "Automatic updates", "Recent activity"}
+        rows = {row.property("title"): row for row in self.window.findChildren(QObject)
+                if row.metaObject().indexOfProperty("detail") >= 0 and row.property("title") in titles}
+        self.assertEqual(rows.keys(), titles)
+        for row in rows.values():
+            self.assertEqual(row.property("detail"), "")
+
+        self.helper.done.emit(self.helper.pending_commands.pop(), "{}", 1, "")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        for row in rows.values():
+            self.assertIn("couldn’t", row.property("detail").lower())
+
+    def test_security_does_not_turn_a_failed_firewall_action_into_success(self):
+        self.helper.replies["security"] = '{"secureBoot":"on","firewall":"off"}'
+        self.helper.held_commands.add("firewall-on")
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        action = self.window.findChild(QObject, "security-overview-action")
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("securityFixing") == "firewall-on")
+        self.helper.done.emit(self.helper.pending_commands.pop(), "{}", 1, "")
+        self.wait_for(lambda: bool(self.window.property("securityProblem"))
+                      and not self.window.property("securityChecking"))
+        self.assertEqual(self.window.findChild(QObject, "security-overview").property("title"), "The firewall is off.")
+
+    def test_security_ignores_a_firewall_snapshot_started_before_a_change(self):
+        network = dict(known=True, complete=True, sharingAsDefault=False, devices=[],
+                       sharing={"apps": [], "ports": []},
+                       appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
+        state = dict(secureBoot="on", firewall="on", networkActions=True, network=network)
+        self.helper.replies.update(security=json.dumps(state), **{"firewall-sharing": '{"ok":true}'})
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        games = self.item("security-sharing-app-games")
+        self.assertFalse(games.property("checked"))
+
+        self.helper.held_commands.add("security")
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        old = self.helper.pending_commands.pop()
+        games.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Space)
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        new = self.helper.pending_commands.pop()
+        self.assertIn(["helper", "firewall-sharing", "games", "on"], self.helper.commands)
+        self.assertFalse(games.property("tappable"))
+
+        updated = dict(state, network=dict(network, sharing={"apps": ["games"], "ports": []}))
+        self.helper.done.emit(new, json.dumps(updated), 0, "")
+        self.wait_for(lambda: games.property("checked") and games.property("tappable"))
+        self.helper.done.emit(old, json.dumps(state), 0, "")
+        self.assertTrue(games.property("checked"))
+        self.assertFalse(self.window.property("securityChecking"))
+        self.assertTrue(games.hasActiveFocus())
+        for key, text in ((Qt.Key_Space, " "), (Qt.Key_Return, "\r"), (Qt.Key_Enter, "\r")):
+            with self.subTest(repeated_key=key):
+                repeat = QKeyEvent(QEvent.KeyPress, key, Qt.NoModifier, text, True)
+                self.app.sendEvent(self.window, repeat)
+                self.assertNotIn(["helper", "firewall-sharing", "games", "off"], self.helper.commands)
+
+    def test_security_network_controls_can_be_tabbed_and_activated(self):
+        profile = dict(interface="eth0", uuid="6ac182e3-476f-4074-9600-c591f288c71c", name="Wired",
+                       zone="monet", changeable=True)
+        network = dict(known=True, complete=True, sharingAsDefault=False, devices=[profile],
+                       sharing={"apps": [], "ports": [{"name": "Test", "port": "tcp/8765"}]},
+                       appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
+        state = dict(secureBoot="on", firewall="on", firewallStrict=True, networkActions=True, network=network)
+        self.helper.replies["security"] = json.dumps(state)
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        self.item("search-security-network").forceActiveFocus(Qt.TabFocusReason)
+        view = self.item("settingsScroller")
+        actions = (
+            ("security-default-firewall", Qt.Key_Return, ["firewall-strict", "off"]),
+            ("security-sharing-profile-eth0", Qt.Key_Enter, ["firewall-network", profile["uuid"], "on"]),
+            ("security-sharing-app-games", Qt.Key_Space, ["firewall-sharing", "games", "on"]),
+            ("security-sharing-port-tcp/8765", Qt.Key_Return, ["firewall-remove-port", "tcp/8765"]),
+        )
+        for name, _, _ in actions:
+            control = self.item(name)
+            for _ in range(8):
+                QTest.keyClick(self.window, Qt.Key_Tab)
+                if control.hasActiveFocus():
+                    break
+            self.assertTrue(control.hasActiveFocus(), name)
+            self.wait_for(lambda: 0 <= control.mapToItem(view, QPointF()).y() <= view.height() - control.height())
+
+        for name, key, command in actions:
+            with self.subTest(control=name):
+                self.helper.replies[command[0]] = '{"ok":true}'
+                self.item(name).forceActiveFocus(Qt.TabFocusReason)
+                QTest.keyClick(self.window, key)
+                self.wait_for(lambda: not self.window.property("securityFixing"))
+                self.assertEqual(self.helper.commands.count(["helper", *command]), 1)
+
+    def test_security_firmware_and_legacy_rules_review_focuses_cancel(self):
+        self.helper.replies["security"] = json.dumps(dict(
+            secureBoot="off", keyTrusted=True, firmwareRestartAvailable=True, firewall="on", networkActions=True,
+            network=dict(known=True, devices=[], legacy=True, legacyPorts=[{"port": "7777"}]),
+        ))
+        self.helper.replies["firewall-clear-legacy"] = '{"ok":false}'
+        self.helper.replies["firmware-setup"] = '{"ok":false}'
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+
+        for name, command in (("firmware", "firmware-setup"), ("legacy", "firewall-clear-legacy")):
+            with self.subTest(action=name):
+                review = self.item(f"security-{name}-review")
+                review.forceActiveFocus(Qt.TabFocusReason)
+                QTest.keyClick(self.window, Qt.Key_Return)
+                cancel = self.item(f"security-{name}-cancel")
+                self.assertTrue(cancel.hasActiveFocus())
+                repeat = QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier, "\r", True)
+                self.app.sendEvent(self.window, repeat)
+                self.assertTrue(cancel.hasActiveFocus())
+                self.assertNotIn(["helper", command], self.helper.commands)
+                QTest.keyClick(self.window, Qt.Key_Escape)
+                self.assertTrue(self.window.isVisible())
+                self.assertTrue(review.hasActiveFocus())
+                confirm = self.item(f"security-{name}-confirm")
+                self.assertFalse(confirm.isVisible())
+
+                QTest.keyClick(self.window, Qt.Key_Space)
+                self.assertTrue(cancel.hasActiveFocus())
+                QTest.keyClick(self.window, Qt.Key_Enter)
+                self.assertTrue(review.hasActiveFocus())
+                self.assertNotIn(["helper", command], self.helper.commands)
+
+                QTest.keyClick(self.window, Qt.Key_Enter)
+                QTest.keyClick(self.window, Qt.Key_Tab)
+                self.assertTrue(confirm.hasActiveFocus())
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.wait_for(lambda: bool(self.window.property("securityProblem")))
+                self.assertEqual(self.helper.commands.count(["helper", command]), 1)
+                self.assertFalse(confirm.isVisible())
+                self.wait_for(lambda: not self.window.property("securityChecking"))
+
+    def test_security_hides_firmware_restart_without_the_session_method(self):
+        state = dict(secureBoot="off", keyTrusted=True, firmwareRestartAvailable=False)
+        self.helper.replies["security"] = json.dumps(state)
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        review = self.item("security-firmware-review")
+        self.assertFalse(review.isVisible())
+        self.assertIn("at startup", self.item("search-security-device").property("detail"))
+
+        self.helper.replies["security"] = json.dumps(dict(state, firmwareRestartAvailable=True))
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        self.wait_for(review.isVisible)
+        review.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertTrue(self.item("security-firmware-confirm").isVisible())
+
+        self.helper.replies["security"] = json.dumps(state)
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        self.wait_for(lambda: self.window.property("securityConfirmation") == "")
+        self.assertFalse(review.isVisible())
+        self.assertNotIn(["helper", "firmware-setup"], self.helper.commands)
+
+    def test_security_key_enrollment_waits_for_a_separate_restart(self):
+        self.helper.replies["security"] = '{"secureBoot":"off","keyTrusted":false}'
+        self.helper.replies["trust-key"] = '{"ok":true}'
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        action = self.item("security-firmware-review")
+        self.assertEqual(action.property("text"), "Trust Monet…")
+        action.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Enter)
+        self.wait_for(lambda: action.property("text") == "Restart")
+        self.assertEqual(self.helper.commands.count(["helper", "trust-key"]), 1)
+        self.assertNotIn(["helper", "restart"], self.helper.commands)
+        action.forceActiveFocus(Qt.TabFocusReason)
+        repeat = QKeyEvent(QEvent.KeyPress, Qt.Key_Enter, Qt.NoModifier, "\r", True)
+        self.app.sendEvent(self.window, repeat)
+        self.assertNotIn(["helper", "restart"], self.helper.commands)
+        QTest.keyClick(self.window, Qt.Key_Enter)
+        self.assertEqual(self.helper.commands.count(["helper", "restart"]), 1)
+
+    def test_security_keeps_restart_available_with_automatic_updates_off(self):
+        state = dict(secureBoot="on", encrypted=False, firewall="on", autoUpdates="off", updateWaiting=True)
+        self.helper.replies["security"] = json.dumps(state)
+        self.helper.replies["restart"] = '{"ok":false}'
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+        self.assertEqual(self.item("security-overview").property("title"), "Device security needs a look.")
+        self.assertIn("An update is ready", self.item("search-security-updates").property("detail"))
+        action = self.item("security-update-action")
+        self.assertEqual(action.property("text"), "Restart")
+        action.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertIn(["helper", "restart"], self.helper.commands)
+        self.assertNotIn(["helper", "auto-updates", "on"], self.helper.commands)
+        self.wait_for(lambda: "restart confirmation" in self.window.property("securityProblem"))
+        self.assertEqual(action.property("text"), "Restart")
+        self.helper.replies["restart"] = '{"ok":true}'
+        action.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: not self.window.property("securityFixing"))
+        self.assertEqual(self.window.property("securityProblem"), "")
+
+        self.helper.replies["security"] = json.dumps(dict(state, updateWaiting=False, lastUpdateFailed=True))
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        self.wait_for(lambda: action.property("text") == "Open Updates")
+        self.assertEqual(self.item("search-security-updates").property("detail"), "The last automatic update failed.")
+        action.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.window.property("page"), "updates")
+        self.wait_for(lambda: self.item("search-update-history").hasActiveFocus())
+
+    def test_security_does_not_mark_an_unknown_check_as_healthy(self):
+        network = {"known": True, "complete": True, "devices": [], "sharingAsDefault": False,
+                   "sharing": {"apps": [], "ports": []}}
+        state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete", firewall="on",
+                     selinux="enforcing", autoUpdates="on", updateWaiting=False,
+                     network=network)
+        available = '{"ok":true,"updates":[]}'
+        self.helper.replies.update(security=json.dumps(state), **{"firmware-check": available})
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked") and self.window.property("firmwareState") == "none")
+        overview = self.item("security-overview")
+        self.assertEqual(overview.property("title"), "The main checks look good.")
+        for changes, firmware, firmware_state in (
+            ({"secureBoot": "unavailable"}, available, "none"),
+            ({"secureBoot": "unknown"}, available, "none"),
+            ({"encrypted": None}, available, "none"),
+            ({"firewall": "unavailable"}, available, "none"),
+            ({"firewall": "unknown"}, available, "none"),
+            ({"network": dict(network, complete=False, sharingAsDefault=None)}, available, "none"),
+            ({"updateWaiting": None}, available, "none"),
+            ({}, '{"ok":false,"unavailable":true}', "unavailable"),
+            ({}, '{"ok":false}', "failed"),
+        ):
+            with self.subTest(changes=changes, firmware=firmware_state):
+                self.helper.replies.update(security=json.dumps(dict(state, **changes)), **{"firmware-check": firmware})
+                QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+                QMetaObject.invokeMethod(self.window, "checkFirmware")
+                self.wait_for(lambda: not self.window.property("securityChecking")
+                              and self.window.property("firmwareState") == firmware_state)
+                self.assertIn("couldn’t be completed", overview.property("title"))
+                if "network" in changes:
+                    self.assertIn("couldn’t check all firewall rules",
+                                  self.item("search-security-network").property("detail"))
+                if "updateWaiting" in changes:
+                    mark = self.item("security-update-mark")
+                    self.assertFalse(mark.property("known"))
+                    self.assertFalse(mark.property("good"))
+
+    def test_security_keeps_removal_controls_available_when_the_default_zone_is_unknown(self):
+        network = dict(known=True, complete=False, sharingAsDefault=None,
+                       devices=[dict(interface="eth0", zone="monet", changeable=True),
+                                dict(interface="eth1", zone="monet-shared", changeable=True)],
+                       sharing={"apps": ["localsend"], "ports": []},
+                       appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
+        state = dict(secureBoot="on", firewall="on", networkActions=True, network=network)
+        self.helper.replies["security"] = json.dumps(state)
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked"))
+
+        self.assertFalse(self.item("security-sharing-profile-eth0").property("enabledPill"))
+        self.assertTrue(self.item("security-sharing-profile-eth1").property("enabledPill"))
+        self.assertFalse(self.item("security-sharing-app-games").property("tappable"))
+        self.assertTrue(self.item("security-sharing-app-localsend").property("tappable"))
+
+        self.helper.replies["security"] = json.dumps(dict(state, network=dict(network, complete=True, sharingAsDefault=False)))
+        QMetaObject.invokeMethod(self.window, "loadSecurity", Q_ARG("QVariant", False))
+        self.wait_for(lambda: not self.window.property("securityChecking"))
+        self.assertTrue(self.item("security-sharing-profile-eth0").property("enabledPill"))
+        self.assertTrue(self.item("security-sharing-app-games").property("tappable"))
+
+    def test_security_keeps_an_in_progress_firmware_update_visible(self):
+        state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete", firewall="on",
+                     selinux="enforcing", autoUpdates="on", updateWaiting=False,
+                     network={"known": True, "complete": True, "devices": [], "sharing": {"apps": [], "ports": []}})
+        self.helper.replies.update(security=json.dumps(state), **{
+            "firmware-check": '{"ok":true,"updates":[{"device":"Dock","version":"2","restart":true}]}'
+        })
+        self.helper.held_commands.add("firmware-update")
+        self.window.setProperty("page", "security")
+        self.wait_for(lambda: self.window.property("securityChecked")
+                      and self.window.property("firmwareState") == "available")
+        overview = self.item("security-overview")
+        QMetaObject.invokeMethod(self.window, "installFirmware")
+        self.assertEqual(overview.property("title"), "Updating firmware…")
+        checks = self.helper.commands.count(["helper", "firmware-check"])
+        QMetaObject.invokeMethod(self.window, "checkFirmware")
+        self.assertEqual(self.helper.commands.count(["helper", "firmware-check"]), checks)
+        self.helper.done.emit(self.helper.pending_commands.pop(), '{"ok":true}', 0, "")
+        self.wait_for(lambda: self.window.property("firmwareState") == "done")
+        self.assertTrue(self.window.property("firmwareRestart"))
+        self.assertEqual(overview.property("title"), "Updates need a look.")
+        QMetaObject.invokeMethod(self.window, "checkFirmware")
+        self.assertEqual(self.helper.commands.count(["helper", "firmware-check"]), checks)
+        self.assertEqual(self.window.property("firmwareState"), "done")
 
     def test_retained_install_review_consent_busy_and_failed_cleanup(self):
         item = dict(id='previous-install-'+'a'*16, token='b'*64, time=1793782800000, homes=1, bytes=None)

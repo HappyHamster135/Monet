@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 if QT:
     from PySide6.QtCore import QPoint, QPointF, QLocale, QMetaObject, QUrl, Qt, Q_ARG
-    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QInputDevice, QPointingDevice, QWheelEvent
+    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QInputDevice, QPointingDevice, QWheelEvent, QWindow
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtTest import QSignalSpy, QTest
     from tests.test_settings_feedback import FakeHelper
@@ -251,6 +251,40 @@ class SettingsNavigation(unittest.TestCase):
         self.assertGreater(len(focused_names), 8, (focused_names, departed))
         self.capture("power-tab")
 
+    def test_returning_to_settings_preserves_the_scroll_position(self):
+        self.open("power")
+        view = self.item("settingsScroller")
+        choice = self.item("powerMode-power-saver")
+        choice.forceActiveFocus(Qt.TabFocusReason)
+        self.wait_for(choice.hasActiveFocus)
+        QTest.qWait(40)  # Let the keyboard focus reveal finish before scrolling away.
+        bottom = view.property("contentHeight") - view.height()
+        self.assertGreater(bottom, 50)
+        view.setProperty("contentY", bottom)
+        QTest.qWait(40)
+        other = QWindow()
+        self.addCleanup(other.close)
+        other.show()
+        other.requestActivate()
+        self.wait_for(other.isActive)
+        self.window.requestActivate()
+        self.wait_for(choice.hasActiveFocus)
+        QTest.qWait(100)
+        self.assertAlmostEqual(view.property("contentY"), bottom, delta=1)
+
+    def test_lid_lock_label_stays_on_one_line(self):
+        self.helper.replies["power"] = json.dumps({"hasLid": True, "lidAction": 1})
+        self.open("power")
+        group = self.item("lidActionChoices")
+        self.assertTrue(group.isVisible())
+        choices = [item for row in group.childItems() for item in row.childItems()
+                   if item.property("modelData") is not None]
+        self.assertEqual(len(choices), 4)
+        for choice in choices:
+            label = next(child for child in choice.childItems() if child.inherits("QQuickText"))
+            self.assertEqual(label.property("lineCount"), 1, label.property("text"))
+            self.assertLessEqual(label.implicitWidth(), label.width() + 1)
+
     def test_wheel_and_touchpad_pixel_deltas_scroll_only_the_panel_under_the_pointer(self):
         nav = self.item("settingsNavigation"); page = self.item("settingsScroller")
 
@@ -284,6 +318,48 @@ class SettingsNavigation(unittest.TestCase):
                 samples = send(target, pixel)
                 self.assertGreater(target.property("contentY"), 0, (target.objectName(), pixel, samples))
                 self.assertEqual(other.property("contentY"), 0, (other.objectName(), pixel))
+
+    def test_mouse_wheel_combines_notches_and_yields_to_touchpad_input(self):
+        nav = self.item("settingsNavigation")
+        nav.setProperty("contentY", 0)
+        point = nav.mapToScene(QPointF(nav.width() - 24, nav.height() / 2))
+        screen = QPointF(self.window.mapToGlobal(point.toPoint()))
+        touchpad = QPointingDevice("Settings fixture touchpad", 44, QInputDevice.TouchPad,
+                                  QPointingDevice.Finger, QInputDevice.Position | QInputDevice.PixelScroll
+                                  | QInputDevice.Scroll, 2, 0)
+        QTest.mouseMove(self.window, point.toPoint())
+        QTest.qWait(20)
+
+        def send(amount, precise=False):
+            event = QWheelEvent(point, screen, QPoint(0, amount) if precise else QPoint(),
+                                QPoint() if precise else QPoint(0, amount), Qt.NoButton, Qt.NoModifier,
+                                Qt.ScrollUpdate if precise else Qt.NoScrollPhase, False,
+                                Qt.MouseEventSynthesizedBySystem if precise else Qt.MouseEventNotSynthesized,
+                                touchpad if precise else QPointingDevice.primaryPointingDevice())
+            event.setTimestamp(int(time.monotonic() * 1000))
+            QGuiApplication.sendEvent(self.window, event)
+
+        send(-120)
+        animated = self.window.property("speed") > 1 / 200
+        if animated:
+            self.assertAlmostEqual(nav.property("contentY"), 0, delta=1)
+        else:
+            self.assertAlmostEqual(nav.property("contentY"), 96, delta=1)
+        send(-120)
+        self.wait_for(lambda: abs(nav.property("contentY") - 192) < 1)
+        QTest.qWait(170)
+
+        if animated:
+            send(-120)
+            send(120)
+            self.wait_for(lambda: abs(nav.property("contentY") - 96) < 1)
+            QTest.qWait(170)
+        send(-120)
+        position = nav.property("contentY")
+        send(-30, precise=True)
+        self.assertAlmostEqual(nav.property("contentY"), position + 30, delta=1)
+        QTest.qWait(200)
+        self.assertAlmostEqual(nav.property("contentY"), position + 30, delta=1)
 
     def test_scrolled_glyphs_do_not_paint_over_the_sidebar_title_or_search(self):
         nav = self.item("settingsNavigation")

@@ -230,6 +230,7 @@ struct Disk {
     file: Option<File>,
     selected: plan::Target,
     volumes: Vec<Handle>,
+    layout_change_started: bool,
 }
 impl Read for Disk {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
@@ -289,16 +290,18 @@ impl Disk {
     }
 }
 impl writer::Destination for Disk {
-    fn prepare(&mut self, total: u64) -> io::Result<()> {
+    fn prepare(&mut self, total: u64) -> io::Result<u64> {
         validate(self.file.as_ref().unwrap(), self.selected, total)?;
         self.volumes = lock_volumes(self.selected.number)?;
-        validate(self.file.as_ref().unwrap(), self.selected, total)
+        validate(self.file.as_ref().unwrap(), self.selected, total)?;
+        Ok(self.selected.bytes)
     }
     fn reset_layout(&mut self, total: u64) -> io::Result<()> {
         validate(self.file.as_ref().unwrap(), self.selected, total)?;
         let handle = self.file.as_ref().unwrap().as_raw_handle() as HANDLE;
         // Locked volumes already permit raw writes; ISO/Linux partitions need not support dismount.
         // Windows clears both GPT headers too, so an old backup table cannot revive stale partitions.
+        self.layout_change_started = true;
         control(handle, IOCTL_DISK_DELETE_DRIVE_LAYOUT).map_err(|e| {
             io::Error::other(format!("Clearing Disk {}'s old partition layout: {e}", self.selected.number))
         })?;
@@ -328,21 +331,29 @@ impl writer::Destination for Disk {
     }
 }
 
-pub fn write(stick: &Stick, image: &mut File, progress: impl FnMut(u32, u64, u64)) -> Result<(), String> {
+pub struct WriteError {
+    pub message: String,
+    pub layout_change_started: bool,
+}
+
+pub fn write(stick: &Stick, image: &mut File, progress: impl FnMut(u32, u64, u64)) -> Result<(), WriteError> {
+    let mut disk = Disk {
+        file: None,
+        selected: stick.target,
+        volumes: Vec::new(),
+        layout_change_started: false,
+    };
     let result = (|| -> io::Result<()> {
         let total = image.metadata()?.len();
-        let file = open_disk(stick.target, total)?;
-        let mut disk = Disk {
-            file: Some(file),
-            selected: stick.target,
-            volumes: Vec::new(),
-        };
+        disk.file = Some(open_disk(stick.target, total)?);
         writer::write(image, &mut disk, total, progress)?;
         disk.reopen(total)?;
         control(disk.file.as_ref().unwrap().as_raw_handle() as HANDLE, IOCTL_DISK_UPDATE_PROPERTIES)
             .map_err(|e| io::Error::other(format!("Refreshing Disk {} after verification: {e}", stick.target.number)))?;
         Ok(())
     })();
+    let layout_change_started = disk.layout_change_started;
+    drop(disk);
     if let Err(error) = &result {
         if let Ok(mut log) = OpenOptions::new()
             .create(true)
@@ -352,7 +363,10 @@ pub fn write(stick: &Stick, image: &mut File, progress: impl FnMut(u32, u64, u64
             let _ = writeln!(log, "Disk {}: {error}", stick.target.number);
         }
     }
-    result.map_err(|e| e.to_string())
+    result.map_err(|error| WriteError {
+        message: error.to_string(),
+        layout_change_started,
+    })
 }
 
 #[cfg(test)]

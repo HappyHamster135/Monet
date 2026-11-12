@@ -52,7 +52,7 @@ import threading
 import fcntl
 from pathlib import Path
 
-from . import cache, checkpoint, disks, pc, region, resources, system, words
+from . import cache, checkpoint, disks, pc, region, resources, system, trust, words
 from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
@@ -367,7 +367,9 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
     moving for STALL seconds (then it's stopped, to be started again)."""
     log(f"$ skopeo copy docker://{image} oci:{DOWNLOAD}/oci:latest")
     with open(LOG, "a") if LOG.parent.exists() else open(os.devnull, "w") as out:
-        proc = popen(["skopeo", "copy", "--retry-times", "3", f"docker://{image}", f"oci:{DOWNLOAD}/oci:latest"],
+        flags = ["--preserve-digests", "--remove-signatures"] if "@" in image else []
+        proc = popen(["skopeo", "copy", "--retry-times", "3", *flags,
+                      f"docker://{image}", f"oci:{DOWNLOAD}/oci:latest"],
                      stdout=out, stderr=subprocess.STDOUT)
         seen, moved, rates = received(), clock.time(), []
         while proc.poll() is None:
@@ -391,10 +393,12 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
 
 def download(plan, tries=8):
     image = plan["image"]
+    expected = plan.get("imageDigest")
+    source = trust.pinned_reference(image, expected) if expected else image
     folder = Path(DOWNLOAD)
     if (folder / cache.MARKER).exists():
         emit(phase='download', note=_('Checking the saved download…'))
-        if cache.valid(folder, image):
+        if cache.valid(folder, image, expected):
             emit(phase='download', fraction=1.0, note=_('Using the verified saved download.'))
             return
         log('Saved download failed its integrity check')
@@ -410,13 +414,20 @@ def download(plan, tries=8):
     if plan.get('offline'):
         raise Stop(_('The saved download is incomplete or damaged. Connect to the internet, then resume the installation again.'))
     run("nm-online", "-s", "-q", "-t", "60", check=False, timeout=90)
-    total = image_size(image)
+    total = image_size(source)
     log(f"Monet's download: {total / 1e9:.1f} GB" if total else "Monet's download size isn't known")
     start = received()
     for attempt in range(tries):
         require_space(folder, DOWNLOAD_RESERVE_BYTES)
-        if copy_once(image, total, start):
+        if not cache.writable_layout_is_safe(folder):
+            raise Stop(_('The saved download location changed. Go back and review the drive.'))
+        if copy_once(source, total, start):
             cache.complete(folder, image)
+            # An interrupted copy can reuse blobs already on this drive.
+            if expected:
+                emit(phase="download", note=_("Checking the downloaded image…"))
+                if not cache.valid(folder, image, expected):
+                    raise Stop(_("Setup couldn’t verify the downloaded copy of Monet. Try downloading it again."))
             emit(phase="download", fraction=1.0, got=total, total=total)
             return
         # A full disk is not a dropped connection. Keep the partial download
@@ -487,6 +498,8 @@ def preserve_boot(parts, previous=None):
 def install(plan, parts):
     emit(phase="install", fraction=0.05)
     require_space(TOP, INSTALL_WORKING_BYTES)
+    image = plan["image"]
+    update_image = trust.update_reference(image) if plan.get("imageDigest") else image
     # bootc wants an empty root. A previous attempt may already contain copied
     # personal files or even have booted before Setup's final cleanup. Preserve
     # it by renaming the subvolume; never delete an unfinished system on retry.
@@ -510,9 +523,13 @@ def install(plan, parts):
     # bootc binds the target's storage at /run/bootc/storage. Keep its auxiliary
     # mounts in a private namespace so they disappear when bootc exits, including
     # on failure. Otherwise they outlive our target mounts and keep LUKS busy.
+    # The source archive is pinned by the media. Only later registry pulls
+    # use the signature policy in the installed system.
+    official = update_image.rsplit(":", 1)[0] in trust.RELEASE_REPOSITORIES
     run("unshare", "--mount", "--propagation", "private", "bootc", "install", "to-filesystem",
         "--source-imgref", f"oci:{DOWNLOAD}/oci:latest",
-        "--target-imgref", plan["image"],
+        "--target-imgref", update_image,
+        *(("--enforce-container-sigpolicy",) if official else ()),
         "--skip-fetch-check",
         # Account setup still writes to the target. Defer finalization until
         # those writes and our scratch-file handles are finished. In particular,
@@ -906,6 +923,10 @@ def main(path):
                 try: checkpoint.atomic(folder / 'health.json', json.dumps(health).encode())
                 except OSError: pass
     try:
+        try:
+            plan["imageDigest"] = trust.expected(plan["image"])
+        except (OSError, ValueError) as error:
+            raise Stop(_("Setup couldn’t verify its image information. Make a new installer and try again.")) from error
         STATE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         lock = (STATE.parent / 'install.lock').open('w')
         try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

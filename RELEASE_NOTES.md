@@ -6,11 +6,60 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.7-Make-USB-Stick.exe** | **Start here** (on Windows): makes the Monet USB stick for you.                                                                                        |
-| Monet-0.9.7-Setup.iso              | Monet Setup, Monet's own installer: the USB stick's image, for writing it yourself (on Linux or a Mac). Here once it has installed Monet in a test PC. |
-| Monet-0.9.7-Installer.iso          | Fedora's installer dressed as Monet: the stick's image when there's no Setup.iso.                                                                      |
-| Monet-0.9.7-Windows.zip            | Monet Bridge for Windows: to update a Windows set up before 0.9.2, or for "next to my Windows" when Windows is encrypted                               |
-| Monet-0.9.7-Linux.tar.gz           | Only for adding Monet to an existing Bazzite install                                                                                                   |
+| **Monet-0.9.8-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8: Security at a glance
+
+Monet 0.9.8 is a prerelease. Check the release verification record for the
+install, update and hardware combinations tested with this build.
+
+- **See what needs attention in Settings → Security.** Check Secure Boot, disk
+  encryption, app isolation, the firewall, and updates in one place. Monet
+  explains unavailable checks. Protection history shows confirmed firewall
+  changes and failed automatic updates. A downloaded update still offers
+  Restart when automatic updates are off. Restarting into firmware waits
+  for apps to finish closing before changing the next boot.
+- **Boot recovery keeps the working deployment.** If three interrupted starts
+  send GRUB back to the previous deployment, it stays the default for later
+  restarts and the automatic updater skips the failed image.
+- **Choose where to share ports.** Pick a connection profile for shared apps
+  and ports. Settings lists older firewall exceptions for review. Removing
+  them requires administrator approval.
+- **Administrator prompts follow the action.** Preparing Windows and rolling
+  back Monet require administrator approval. Play on Windows still works
+  directly from the active desktop session.
+- **Installer downloads are pinned to a specific image.** Monet Setup and the
+  Fedora fallback record the expected image when their media is built. Setup
+  verifies the saved download before using it offline. On encrypted installs,
+  Monet enrolls the TPM on the first boot and keeps the temporary key through
+  an interrupted restart. Before retiring the key, Monet updates the retained
+  boot entries so rollback can unlock through the TPM too.
+- **Monet's update repositories use signed images.** New installations trust
+  the Monet release key. If you're updating from 0.9.7, the install guide has
+  the steps to verify your first download with that key.
+- **Terminals start cleanly on a fresh install.** Homebrew shell setup waits
+  until its files are ready. The terminal's image warning checks the system
+  that actually booted.
+- **Clear widget glass follows The Hours.** Widgets pick up Monet's painting
+  when it loads or changes, including after sign-in. Other wallpaper plugins
+  use the widgets' paper background.
+- **The USB maker checks the stick before erasing it.** It refuses drives
+  with unsupported logical sectors and warns about a partial write if it
+  has already attempted to change the disk layout. If a download fails
+  verification, the maker removes it so the next attempt can fetch a fresh copy.
+- **Print Screen saves the area you select.** Drag over the part you want and
+  press Enter. The picture goes straight to Pictures → Screenshots. Win+Shift+S
+  does the same.
+- **Settings stays where you left it.** Switching back keeps your scroll position.
+  Power & Sleep labels fit at larger scales, and the sound panel hides inputs
+  that the audio system reports as disconnected.
+- **More room for Monet on new dual-boot installs.** Setup allows 100 to 128 GiB
+  for Windows, with another 8 GiB for its setup files. Existing partitions
+  keep their sizes during an update.
 
 ### New in 0.9.7: quicker everyday use
 

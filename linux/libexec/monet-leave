@@ -115,10 +115,15 @@ class Departure(QDialog):
                 if self.cancelled:
                     return
                 self.message.setText(tr("Checking Windows before closing your apps…"))
-                args = [self.monet, "helper", "switch", "--guarded"]
-                for flag, value in (("--checkpoint", self.ident), ("--game", self.game), ("--task", self.task)):
-                    if value:
-                        args.extend([flag, value])
+                switch = Path(__file__).with_name("monet-switch")
+                if switch.is_file():
+                    args = [str(switch), self.game or "", self.task or "", self.ident]
+                else:
+                    # A standalone CLI preview can still have the older helper layout.
+                    args = [self.monet, "helper", "switch", "--guarded"]
+                    for flag, value in (("--checkpoint", self.ident), ("--game", self.game), ("--task", self.task)):
+                        if value:
+                            args.extend([flag, value])
                 self.process.start("pkexec", args)
             return
         if self.phase == "restart" and not code and status == QProcess.NormalExit:

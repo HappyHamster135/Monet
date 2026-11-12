@@ -87,7 +87,7 @@ class EverydaySearch(unittest.TestCase):
             execute.assert_called_once_with("timedatectl", "set-ntp", "true", timeout=120)
             for action, args, timeout in (("firewall-on", [], 300), ("trust-key", [], 300),
                                           ("firewall-strict", ["on"], 120),
-                                          ("firewall-allow", ["localsend", "on"], 120)):
+                                          ("firewall-sharing", ["localsend", "on"], 120)):
                 execute.reset_mock()
                 self.q.main([action, *args])
                 execute.assert_called_once_with("pkexec", f"{self.q.LIBEXECDIR}/monet-secure", action, *args, timeout=timeout)

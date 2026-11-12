@@ -5,9 +5,9 @@ Runs once at the end of the Monet installer, inside the new system. If it
 can't finish (no internet, Microsoft blocks the download), Monet still
 works, and choosing Windows in the app menu runs it again.
 
-1. Splits the free space the installer left at the end of the disk into a
-   Windows partition and a small setup partition.
-2. Downloads Windows 11 from Microsoft, in the same language as Monet.
+1. Gets Windows 11 from Microsoft or opens the provided ISO, then checks
+   the setup and install images.
+2. Uses the space the installer reserved for Windows and its setup files.
 3. Copies Windows Setup to the setup partition, with Monet's own install
    script in place of the Setup wizard and an answer file that skips all of
    Windows' first-start questions and installs Monet Bridge.
@@ -25,6 +25,7 @@ import os
 import re
 import resource
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -32,6 +33,9 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import xml.etree.ElementTree as ET
+from contextlib import contextmanager
+from http.client import HTTPException
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -638,36 +642,91 @@ def windows_download_link(ms_lang):
     return uri, pick.get("Language", "English")
 
 
+def discard_download(target):
+    target.unlink(missing_ok=True)
+    target.with_suffix(".etag").unlink(missing_ok=True)
+
+
+def check_work_dir():
+    WORK.mkdir(mode=0o700, parents=True, exist_ok=True)
+    info = WORK.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o022:
+        raise Stop("failed", "the Windows download directory is not protected")
+
+
 def download(url, target):
     """Downloads with progress, resuming after dropped connections."""
-    target.parent.mkdir(parents=True, exist_ok=True)
+    receipt = target.with_suffix(".etag")
+    source = hashlib.sha256(url.encode()).hexdigest()
+    strong_tag = re.compile(r'"[\x21\x23-\x7e\x80-\xff]*"')
+    tag = ""
+    try:
+        saved_source, _, saved_tag = receipt.read_text().partition("\n")
+        if saved_source == source and strong_tag.fullmatch(saved_tag):
+            tag = saved_tag
+    except (OSError, UnicodeError):
+        pass
     for attempt in range(8):
-        have = target.stat().st_size if target.exists() else 0
+        have = target.stat().st_size if tag and target.exists() else 0
         headers = {"User-Agent": USER_AGENT}
         if have:
             headers["Range"] = f"bytes={have}-"
+            headers["If-Range"] = tag
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as r:
-                total = have + int(r.headers.get("Content-Length", 0))
-                if have and r.status != 206:
-                    have, total = 0, int(r.headers.get("Content-Length", 0))
+                raw_length = r.headers.get("Content-Length")
+                length = int(raw_length) if raw_length is not None else None
+                response_tag = r.headers.get("ETag", "")
+                if r.status == 206:
+                    content_range = r.headers.get("Content-Range", "")
+                    match = re.fullmatch(r"bytes ([0-9]+)-([0-9]+)/([0-9]+)", content_range, re.I)
+                    start, end, total = map(int, match.groups()) if match else (-1, -1, -1)
+                    if (not have or response_tag != tag or not 0 <= start == have <= end < total
+                            or (length is not None and length != end - start + 1)):
+                        tag = ""
+                        log("Windows download returned an unexpected range; starting again")
+                        continue
+                    limit = end + 1
+                elif r.status == 200:
+                    have, total, limit = 0, length, length
+                else:
+                    raise ValueError(f"unexpected HTTP response {r.status}")
                 with target.open("ab" if have else "wb") as f:
+                    if not have:
+                        # Truncate before replacing the receipt, so an interrupted restart
+                        # cannot associate bytes from the previous download with a new tag.
+                        os.fsync(f.fileno())
+                        tag = response_tag if strong_tag.fullmatch(response_tag) else ""
+                        with receipt.open("w") as record:
+                            if tag:
+                                record.write(f"{source}\n{tag}")
+                            record.flush()
+                            os.fsync(record.fileno())
                     done, last = have, 0
-                    while chunk := r.read(4 * 1024 * 1024):
+                    while chunk := r.read1(4 * 1024 * 1024):
+                        if limit is not None and done + len(chunk) > limit:
+                            tag = ""
+                            receipt.unlink(missing_ok=True)
+                            raise ValueError("the response exceeded its declared length")
                         f.write(chunk)
                         done += len(chunk)
                         if total and time.time() - last > 5:
                             last = time.time()
                             progress(5 + 60 * done / total, "Downloading Windows (%1 of %2 GB)", done >> 30, total >> 30)
-            if not total or done >= total:
+            if done and (total is None or done == total):
                 return
-            log("download ended early, resuming")
+            log("Windows download is incomplete, resuming")
         except urllib.error.HTTPError as e:
-            if e.code == 416:  # already complete
-                return
+            e.close()
+            if e.code == 416 and have:
+                if e.headers.get("Content-Range", "").lower() == f"bytes */{have}" and e.headers.get("ETag") == tag:
+                    return
+                tag = ""
+                log("Windows download couldn't resume; starting again")
+                continue
             log(f"download interrupted: {e}")
             time.sleep(5 * (attempt + 1))
-        except (urllib.error.URLError, OSError, TimeoutError) as e:
+        except (OSError, HTTPException, ValueError) as e:
             log(f"download interrupted: {e}")
             time.sleep(5 * (attempt + 1))
     raise Stop("download-failed", "the Windows download kept failing")
@@ -676,14 +735,15 @@ def download(url, target):
 # ------------------------------------------------------- staging Windows Setup
 
 def wim_images(path):
-    """[(index, name)] of the editions in a WIM/ESD file."""
-    images, index = [], None
-    for line in run("wimlib-imagex", "info", path, capture=True).splitlines():
-        if line.startswith("Index:"):
-            index = int(line.split(":", 1)[1])
-        elif line.startswith("Name:") and index is not None:
-            images.append((index, line.split(":", 1)[1].strip()))
-    return images
+    """[(index, name)] of the x64 editions in a WIM/ESD file."""
+    try:
+        info = subprocess.run(["wimlib-imagex", "info", str(path), "--xml"],
+                              check=True, capture_output=True, timeout=30)
+        return [(int(image.attrib["INDEX"]), image.findtext("NAME") or "Windows")
+                for image in ET.fromstring(info.stdout).findall("IMAGE")
+                if image.findtext("WINDOWS/ARCH") == "9"]
+    except (OSError, subprocess.SubprocessError, ET.ParseError, KeyError, ValueError) as error:
+        raise Stop("download-failed", "the Windows ISO contains an unreadable image") from error
 
 
 def pick_edition(images):
@@ -861,61 +921,99 @@ def resume_staged_setup(disk):
     return setup["partn"], phase
 
 
-def stage(iso, setup_dev, ui_lang, locale, keyboard, timezone, identities):
-    require_setup_payload()
+@contextmanager
+def windows_media(iso):
+    """Prepare the source before any Windows partition is created or formatted."""
+    if not iso.is_file() or iso.stat().st_size == 0:
+        raise Stop("download-failed", "the Windows ISO file is missing or empty")
     WORK.mkdir(parents=True, exist_ok=True)
-    iso_dir, setup_dir = MOUNT / "iso", MOUNT / "setup"
-    for d in (iso_dir, setup_dir):
-        d.mkdir(parents=True, exist_ok=True)
-        run("umount", d, check=False, capture=True)
-    run("mount", "-o", "loop,ro", iso, iso_dir)
+    iso_dir = MOUNT / "iso"
+    iso_dir.mkdir(parents=True, exist_ok=True)
+    if iso_dir.is_mount():
+        run("umount", iso_dir, capture=True)
     try:
-        # "quiet": FAT has no permissions; don't fail when copying them.
-        run("mount", "-o", "quiet", setup_dev, setup_dir)
+        run("mount", "-t", "udf,iso9660", "-o", "loop,ro,nodev,nosuid,noexec", iso.resolve(), iso_dir)
+    except Stop as error:
+        raise Stop("download-failed", "the Windows ISO could not be opened") from error
+    try:
+        files = set()
+        for path in iso_dir.rglob("*"):
+            info = path.lstat()
+            if stat.S_ISREG(info.st_mode):
+                if info.st_size:
+                    files.add(path.relative_to(iso_dir).as_posix().casefold())
+            elif not stat.S_ISDIR(info.st_mode):
+                raise Stop("download-failed", "the Windows ISO contains links or special files")
+        boot = iso_dir / "sources/boot.wim"
+        required = {"sources/boot.wim", "efi/boot/bootx64.efi", "efi/microsoft/boot/bcd", "boot/boot.sdi"}
+        if not required <= files or not boot.is_file():
+            raise Stop("download-failed", "the Windows ISO is missing its UEFI setup files")
+        source = next((path for path in (iso_dir / "sources/install.wim", iso_dir / "sources/install.esd")
+                       if path.is_file()), None)
+        if not source:
+            raise Stop("download-failed", "the Windows ISO has no install image")
         try:
-            progress(68, "Copying Windows Setup")
-            for item in setup_dir.iterdir():
-                shutil.rmtree(item) if item.is_dir() else item.unlink()
-            skip = {"install.wim", "install.esd", "install.swm"}
-            shutil.copytree(iso_dir, setup_dir, dirs_exist_ok=True, copy_function=shutil.copyfile,
-                            ignore=lambda d, names: [n for n in names if n.lower() in skip])
-
-            source = next((iso_dir / "sources" / n for n in ("install.wim", "install.esd")
-                           if (iso_dir / "sources" / n).exists()), None)
-            if not source:
-                raise Stop("failed", "the Windows download has no install image")
-            index, name = pick_edition(wim_images(source))
-            progress(72, "Preparing %1", name)
-            single = WORK / "windows.wim"
-            single.unlink(missing_ok=True)
+            boot_info = run("wimlib-imagex", "info", boot, capture=True, timeout=30)
+        except Stop as error:
+            raise Stop("download-failed", "the Windows ISO contains an unreadable setup image") from error
+        if not re.search(r"^Boot Index:\s+2\s*$", boot_info, re.M) or 2 not in dict(wim_images(boot)):
+            raise Stop("download-failed", "the Windows ISO has no bootable x64 setup image")
+        images = wim_images(source)
+        if not images:
+            raise Stop("download-failed", "the Windows ISO has no x64 Windows edition")
+        index, name = pick_edition(images)
+        progress(68, "Preparing %1", name)
+        with tempfile.TemporaryDirectory(prefix="media-", dir=WORK) as folder:
+            single = Path(folder) / "windows.wim"
             run("wimlib-imagex", "export", source, index, single, "--compress=LZX", capture=True)
-            progress(85, "Preparing Windows Setup")
-            run("wimlib-imagex", "split", single, setup_dir / "sources" / "install.swm", "3800", capture=True)
-            single.unlink(missing_ok=True)
-
-            winpe = SHARE / "winpe"
-            monet = setup_dir / "monet"
-            monet.mkdir(exist_ok=True)
-            user, full = first_user()
-            values = {
-                "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": windows_computer_name(user),
-                "TIMEZONE": timezone, "UILANG": ui_lang, "LOCALE": locale, "INPUT": keyboard,
-            }
-            (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))
-            shutil.copytree(SHARE / "windows", monet / "bridge", dirs_exist_ok=True, copy_function=shutil.copyfile)
-            profiles = wifi_profiles()
-            if profiles:
-                (monet / "bridge" / "wifi").mkdir(exist_ok=True)
-                for i, xml in enumerate(profiles):
-                    (monet / "bridge" / "wifi" / f"wifi{i}.xml").write_text(xml)
-                log(f"carried {len(profiles)} Wi-Fi network(s) over to Windows")
-            write_setup_handoff(setup_dir, identities)
-            log(f"staged {name} for {values['USER']} ({ui_lang}, {keyboard}, {timezone})")
-        finally:
-            run("sync", check=False)
-            run("umount", setup_dir, check=False)
+            for image in (boot, single):
+                try:
+                    run("wimlib-imagex", "verify", image, capture=True)
+                except Stop as error:
+                    raise Stop("download-failed", "the Windows ISO contains damaged installation files") from error
+            yield iso_dir, single, name
     finally:
         run("umount", iso_dir, check=False)
+
+
+def stage(media, setup_dev, ui_lang, locale, keyboard, timezone, identities):
+    iso_dir, single, name = media
+    setup_dir = MOUNT / "setup"
+    setup_dir.mkdir(parents=True, exist_ok=True)
+    run("umount", setup_dir, check=False, capture=True)
+    # FAT has no file permissions to copy.
+    run("mount", "-o", "quiet", setup_dev, setup_dir)
+    try:
+        progress(76, "Copying Windows Setup")
+        for item in setup_dir.iterdir():
+            shutil.rmtree(item) if item.is_dir() else item.unlink()
+        skip = {"install.wim", "install.esd", "install.swm"}
+        shutil.copytree(iso_dir, setup_dir, dirs_exist_ok=True, symlinks=True, copy_function=shutil.copyfile,
+                        ignore=lambda d, names: [n for n in names if n.lower() in skip])
+        progress(85, "Preparing Windows Setup")
+        run("wimlib-imagex", "split", single, setup_dir / "sources" / "install.swm", "3800", capture=True)
+
+        winpe = SHARE / "winpe"
+        monet = setup_dir / "monet"
+        monet.mkdir(exist_ok=True)
+        user, full = first_user()
+        values = {
+            "USER": windows_name(user), "FULLNAME": full[:64], "COMPUTER": windows_computer_name(user),
+            "TIMEZONE": timezone, "UILANG": ui_lang, "LOCALE": locale, "INPUT": keyboard,
+        }
+        (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))
+        shutil.copytree(SHARE / "windows", monet / "bridge", dirs_exist_ok=True, copy_function=shutil.copyfile)
+        profiles = wifi_profiles()
+        if profiles:
+            (monet / "bridge" / "wifi").mkdir(exist_ok=True)
+            for i, xml in enumerate(profiles):
+                (monet / "bridge" / "wifi" / f"wifi{i}.xml").write_text(xml)
+            log(f"carried {len(profiles)} Wi-Fi network(s) over to Windows")
+        write_setup_handoff(setup_dir, identities)
+        log(f"staged {name} for {values['USER']} ({ui_lang}, {keyboard}, {timezone})")
+    finally:
+        run("sync", check=False)
+        run("umount", setup_dir, check=False)
 
 
 def boot_setup_once(disk, partn):
@@ -975,6 +1073,7 @@ def prepare_main():
     set_status("preparing")
     progress(0, "Getting Windows ready")
     downloaded = False
+    media_checked = False
     try:
         disk = root_disk()
         require_setup_payload()
@@ -992,29 +1091,28 @@ def prepare_main():
             set_status("pending")
             progress(100, "Windows setup continues at the next restart")
             return 0
+        check_work_dir()
         ms_lang, ui, locale, keyboard, timezone = region()
 
         if iso is None:
-            if shutil.disk_usage("/var/tmp").free < 16 * 1024**3:
+            if shutil.disk_usage(WORK).free < 16 * 1024**3:
                 raise Stop("no-space", "there isn't enough free space to download Windows")
             progress(4, "Asking Microsoft for Windows 11")
             url, got = windows_download_link(ms_lang)
             if got.lower() != ms_lang.lower():
                 ui = "en-US"
             iso = WORK / "windows.iso"
-            downloaded = True
             download(url, iso)
-        # Obtain the media before creating or formatting anything. Microsoft can
-        # reject automatic downloads; that failure must leave storage untouched.
-        if not iso.is_file() or iso.stat().st_size == 0:
-            raise Stop("download-failed", "the Windows ISO file is missing or empty")
-        if recovery_plan is not None:
-            log(recover_partition_plan(disk, recovery_plan, adopt=True))
-        win_dev, setup_dev, partn = make_partitions(disk)
-        identities = deployment_manifest(disk)
-        stage(iso, setup_dev, ui, locale, keyboard, timezone, identities)
-        if deployment_manifest(disk) != identities:
-            raise Stop("failed", "the prepared Windows disk changed while copying setup")
+            downloaded = True
+        with windows_media(iso) as media:
+            media_checked = True
+            if recovery_plan is not None:
+                log(recover_partition_plan(disk, recovery_plan, adopt=True))
+            _, setup_dev, partn = make_partitions(disk)
+            identities = deployment_manifest(disk)
+            stage(media, setup_dev, ui, locale, keyboard, timezone, identities)
+            if deployment_manifest(disk) != identities:
+                raise Stop("failed", "the prepared Windows disk changed while copying setup")
         progress(97, "Getting ready to restart")
         boot_setup_once(disk, partn)
         set_status("pending")
@@ -1030,8 +1128,10 @@ def prepare_main():
         set_status("failed")
         return 3
     finally:
-        if downloaded and iso and iso.exists() and STATUS.read_text() == "pending":
-            iso.unlink(missing_ok=True)
+        if downloaded:
+            status = STATUS.read_text()
+            if status == "pending" or (not media_checked and status == "download-failed"):
+                discard_download(iso)
         shutil.rmtree(STATE / "wifi", ignore_errors=True)
 
 

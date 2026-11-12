@@ -1,5 +1,5 @@
 //! The window: Monet's paper, a title, the sticks, a progress bar, two buttons.
-//! The work happens on another thread, which posts WM_APP when there's news.
+//! Disk discovery and writing run off the window thread.
 
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -29,6 +29,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ID_STICKS: usize = 10;
 const ID_MAKE: usize = 11;
 const ID_CLOSE: usize = 12;
+const WM_STICKS_READY: u32 = WM_APP + 1;
 const PAPER: u32 = 0x00F7FAFB; // #FBFAF7 (COLORREF is 0x00BBGGRR)
 const INK: u32 = 0x00191B1C;
 const DIM: u32 = 0x00626B6B;
@@ -37,14 +38,26 @@ static MAIN: AtomicIsize = AtomicIsize::new(0);
 // One paper brush for the window and its labels (a new one per repaint leaked).
 static PAPER_BRUSH: AtomicIsize = AtomicIsize::new(0);
 static CONTROLS: Mutex<Vec<isize>> = Mutex::new(Vec::new()); // title, text, sticks, bar, status, make, close
-static NEWS: Mutex<News> = Mutex::new(News { text: String::new(), fraction: 0.0, finished: None, busy: false });
-static STICKS: Mutex<Vec<disk::Stick>> = Mutex::new(Vec::new());
+static NEWS: Mutex<News> = Mutex::new(News {
+    text: String::new(), fraction: 0.0, finished: None, busy: false, posted: false,
+});
+static STICKS: Mutex<Sticks> = Mutex::new(Sticks {
+    listed: Vec::new(), scanning: false, changed: false, result: None,
+});
 
 struct News {
     text: String,
     fraction: f64,
     finished: Option<Result<(), String>>,
     busy: bool,
+    posted: bool,
+}
+
+struct Sticks {
+    listed: Vec<disk::Stick>,
+    scanning: bool,
+    changed: bool,
+    result: Option<Vec<disk::Stick>>,
 }
 
 fn wide(s: &str) -> Vec<u16> {
@@ -58,22 +71,23 @@ fn control(i: usize) -> HWND {
     CONTROLS.lock().unwrap().get(i).copied().unwrap_or(0) as HWND
 }
 
-fn tell(text: String, fraction: f64) {
-    {
-        let mut news = NEWS.lock().unwrap();
-        news.text = text;
-        news.fraction = fraction;
+fn post_news(news: &mut News) {
+    if !news.posted {
+        news.posted = unsafe { PostMessageW(MAIN.load(Ordering::SeqCst) as HWND, WM_APP, 0, 0) } != 0;
     }
-    unsafe { PostMessageW(MAIN.load(Ordering::SeqCst) as HWND, WM_APP, 0, 0) };
+}
+
+fn tell(text: String, fraction: f64) {
+    let mut news = NEWS.lock().unwrap();
+    news.text = text;
+    news.fraction = fraction;
+    post_news(&mut news);
 }
 
 fn finish(result: Result<(), String>) {
-    {
-        let mut news = NEWS.lock().unwrap();
-        news.finished = Some(result);
-        news.busy = false;
-    }
-    unsafe { PostMessageW(MAIN.load(Ordering::SeqCst) as HWND, WM_APP, 0, 0) };
+    let mut news = NEWS.lock().unwrap();
+    news.finished = Some(result);
+    post_news(&mut news);
 }
 
 pub fn run() {
@@ -158,39 +172,104 @@ pub fn run() {
 }
 
 fn refresh_sticks() {
-    if NEWS.lock().unwrap().busy {
+    if control(2).is_null() || NEWS.lock().unwrap().busy {
         return;
     }
-    let found = disk::sticks();
+    {
+        let mut sticks = STICKS.lock().unwrap();
+        if sticks.scanning {
+            sticks.changed = true;
+            return;
+        }
+        sticks.scanning = true;
+    }
+    unsafe {
+        EnableWindow(control(2), 0);
+        EnableWindow(control(5), 0);
+    }
+    std::thread::spawn(|| {
+        let found = disk::sticks();
+        STICKS.lock().unwrap().result = Some(found);
+        unsafe { PostMessageW(MAIN.load(Ordering::SeqCst) as HWND, WM_STICKS_READY, 0, 0) };
+    });
+}
+
+fn stick_index() -> Option<usize> {
+    usize::try_from(unsafe { SendMessageW(control(2), CB_GETCURSEL, 0, 0) }).ok()
+}
+
+fn show_sticks() {
     let combo = control(2);
+    let index = stick_index();
+    let (labels, selection) = {
+        let mut sticks = STICKS.lock().unwrap();
+        let Some(found) = sticks.result.take() else { return };
+        sticks.scanning = false;
+        if std::mem::take(&mut sticks.changed) {
+            drop(sticks);
+            refresh_sticks();
+            return;
+        }
+        // Keep the chosen device through hotplug. If it disappeared, let the
+        // user choose again before offering to erase another device.
+        let selection = if sticks.listed.is_empty() {
+            (!found.is_empty()).then_some(0)
+        } else {
+            index.and_then(|i| sticks.listed.get(i))
+                .and_then(|old| found.iter().position(|new| new.target == old.target))
+        };
+        let labels = found.iter().map(|stick| wide(&stick.label)).collect::<Vec<_>>();
+        sticks.listed = found;
+        (labels, selection)
+    };
     unsafe {
         SendMessageW(combo, CB_RESETCONTENT, 0, 0);
-        for stick in &found {
-            let label = wide(&stick.label);
+        for label in &labels {
             SendMessageW(combo, CB_ADDSTRING, 0, label.as_ptr() as isize);
         }
-        if !found.is_empty() {
-            SendMessageW(combo, CB_SETCURSEL, 0, 0);
+        if let Some(i) = selection {
+            SendMessageW(combo, CB_SETCURSEL, i, 0);
         }
-        EnableWindow(control(5), (!found.is_empty()) as i32);
-        let text = if found.is_empty() { tr("Plug in a USB stick (2 GB or more).") } else { String::new() };
+        EnableWindow(combo, 1);
+        EnableWindow(control(5), selection.is_some() as i32);
+        let text = if labels.is_empty() {
+            tr("Plug in a USB stick (2 GB or more).")
+        } else {
+            NEWS.lock().unwrap().text.clone()
+        };
         let text = wide(&text);
         SetWindowTextW(control(4), text.as_ptr());
     }
-    *STICKS.lock().unwrap() = found;
 }
 
 fn start(hwnd: HWND) {
-    let choice = unsafe { SendMessageW(control(2), CB_GETCURSEL, 0, 0) };
-    let Some(stick) = STICKS.lock().unwrap().get(choice.max(0) as usize).cloned() else { return };
-    let question = wide(&trf("Everything on %1 will be erased.\n\nMake it a Monet USB stick?", &[stick.label.as_str()]));
+    if NEWS.lock().unwrap().busy {
+        return;
+    }
+    let Some(choice) = stick_index() else { return };
+    let stick = {
+        let sticks = STICKS.lock().unwrap();
+        if sticks.scanning {
+            return;
+        }
+        let Some(stick) = sticks.listed.get(choice).cloned() else { return };
+        stick
+    };
     let title = wide(&tr("Make a Monet USB stick"));
+    if let Err(error) = plan::check_sector_size(stick.target.sector) {
+        let text = wide(&tr(error));
+        unsafe { MessageBoxW(hwnd, text.as_ptr(), title.as_ptr(), MB_OK | MB_ICONERROR) };
+        return;
+    }
+    let question = wide(&trf("Everything on %1 will be erased.\n\nMake it a Monet USB stick?", &[stick.label.as_str()]));
+    NEWS.lock().unwrap().busy = true;
     let answer =
         unsafe { MessageBoxW(hwnd, question.as_ptr(), title.as_ptr(), MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2) };
     if answer != IDOK {
+        NEWS.lock().unwrap().busy = false;
+        refresh_sticks();
         return;
     }
-    NEWS.lock().unwrap().busy = true;
     unsafe {
         EnableWindow(control(2), 0);
         EnableWindow(control(5), 0);
@@ -216,8 +295,19 @@ fn start(hwnd: HWND) {
         };
         let result = result.and_then(|()| {
             tell(tr("Checking the installer before writing…"), 0.0);
-            let mut source = image::open(&iso, expected.as_deref())?;
-            tell(tr("Writing to the USB stick…"), 0.0);
+            let mut source = image::open(&iso, expected.as_deref()).map_err(|error| match error {
+                image::OpenError::Read(message) => message,
+                image::OpenError::Invalid(message) if expected.is_some() => {
+                    let next = if std::fs::remove_file(&iso).is_ok() {
+                        tr("The failed download was removed. Try again for a fresh copy.")
+                    } else {
+                        tr("Delete the cached ISO from your temporary folder and try again.")
+                    };
+                    format!("{}\n\n{next}", tr(message))
+                }
+                image::OpenError::Invalid(message) => tr(message),
+            })?;
+            tell(tr("Checking the USB stick before writing…"), 0.0);
             disk::write(&stick, &mut source, |phase, done, total| {
                 let f = done as f64 / total.max(1) as f64;
                 let gb = |b: u64| b as f64 / 1e9;
@@ -229,7 +319,14 @@ fn start(hwnd: HWND) {
                 };
                 tell(line, f);
             })
-            .map_err(|e| format!("{}\n\n{}", tr(&e), tr("The USB device is not ready to use. A partial write may require reformatting. This error does not establish whether the hardware is damaged. See Monet-USB-Stick.log in your temporary folder.")))
+            .map_err(|error| {
+                let message = tr(&error.message);
+                if error.layout_change_started {
+                    format!("{message}\n\n{}", tr("The USB device is not ready to use. A partial write may require reformatting. This error does not establish whether the hardware is damaged. See Monet-USB-Stick.log in your temporary folder."))
+                } else {
+                    message
+                }
+            })
         });
         if result.is_ok() && given.is_none() {
             let _ = std::fs::remove_file(&iso);
@@ -314,6 +411,12 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
         WM_COMMAND => {
             match wparam & 0xFFFF {
                 ID_MAKE => start(hwnd),
+                ID_STICKS if wparam >> 16 == CBN_SELCHANGE as usize => {
+                    let busy = NEWS.lock().unwrap().busy;
+                    let scanning = STICKS.lock().unwrap().scanning;
+                    let available = !busy && !scanning && stick_index().is_some();
+                    EnableWindow(control(5), available as i32);
+                }
                 ID_CLOSE => {
                     PostMessageW(hwnd, WM_CLOSE, 0, 0);
                 }
@@ -325,9 +428,14 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
             refresh_sticks();
             1
         }
+        WM_STICKS_READY => {
+            show_sticks();
+            0
+        }
         WM_APP => {
             let (text, fraction, finished) = {
                 let mut news = NEWS.lock().unwrap();
+                news.posted = false;
                 (news.text.clone(), news.fraction, news.finished.take())
             };
             let t = wide(&text);
@@ -343,9 +451,14 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
                 let t = wide(&text);
                 let title = wide(&tr("Make a Monet USB stick"));
                 MessageBoxW(hwnd, t.as_ptr(), title.as_ptr(), MB_OK | icon);
-                let done = wide(&if result.is_ok() { tr("Done.") } else { String::new() });
+                let done = if result.is_ok() { tr("Done.") } else { String::new() };
+                {
+                    let mut news = NEWS.lock().unwrap();
+                    news.busy = false;
+                    news.text.clone_from(&done);
+                }
+                let done = wide(&done);
                 SetWindowTextW(control(4), done.as_ptr());
-                EnableWindow(control(2), 1);
                 refresh_sticks();
             }
             0
@@ -368,6 +481,7 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
             0
         }
         WM_DESTROY => {
+            MAIN.store(0, Ordering::SeqCst);
             PostQuitMessage(0);
             0
         }

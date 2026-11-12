@@ -140,56 +140,55 @@ RUN python3 /tmp/monet-spelling/patch.py && rm -rf /tmp/monet-spelling
 # Keep version-only changes out of the native library build caches.
 ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}" org.opencontainers.image.title="Monet"
-COPY --from=pdf-recovery /out /tmp/monet-pdf-recovery
-RUN python3 /tmp/monet-pdf-recovery/bundle.py install /tmp/monet-pdf-recovery \
- && rm -rf /tmp/monet-pdf-recovery
-COPY --from=task-manager /out /tmp/monet-task-manager
-RUN python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager \
- && rm -rf /tmp/monet-task-manager
+RUN --mount=type=bind,from=pdf-recovery,source=/out,target=/tmp/monet-pdf-recovery,ro \
+    python3 /tmp/monet-pdf-recovery/bundle.py install /tmp/monet-pdf-recovery
+RUN --mount=type=bind,from=task-manager,source=/out,target=/tmp/monet-task-manager,ro \
+    python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager
 
-COPY --from=login /out /tmp/monet-login
-RUN python3 /tmp/monet-login/bundle.py install /tmp/monet-login \
- && rm -rf /tmp/monet-login
-COPY --from=session /out /tmp/monet-session
-RUN python3 /tmp/monet-session/bundle.py install /tmp/monet-session \
- && rm -rf /tmp/monet-session
+RUN --mount=type=bind,from=login,source=/out,target=/tmp/monet-login,ro \
+    python3 /tmp/monet-login/bundle.py install /tmp/monet-login
+RUN --mount=type=bind,from=session,source=/out,target=/tmp/monet-session,ro \
+    python3 /tmp/monet-session/bundle.py install /tmp/monet-session
 
-COPY --from=files-recovery /out /tmp/monet-files-recovery
-RUN python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
- && mkdir -p /usr/share/monet && touch /usr/share/monet/files-free-space-v1 \
- && rm -rf /tmp/monet-files-recovery
-COPY --from=archive-recovery /out /tmp/monet-archive-recovery
-RUN python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery \
- && rm -rf /tmp/monet-archive-recovery
-COPY --from=activity /out /tmp/monet-activity
-RUN python3 /tmp/monet-activity/bundle.py install /tmp/monet-activity \
- && rm -rf /tmp/monet-activity
-COPY --from=launcher /out /tmp/monet-launcher
-RUN python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher \
- && rm -rf /tmp/monet-launcher
-COPY --from=window-identity /out /tmp/monet-window-identity
-RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \
- && rm -rf /tmp/monet-window-identity
-COPY --from=editor-recovery /out /tmp/monet-editor-recovery
-RUN python3 /tmp/monet-editor-recovery/bundle.py install /tmp/monet-editor-recovery \
- && rm -rf /tmp/monet-editor-recovery
-COPY --from=notifications /out /tmp/monet-notifications
-RUN python3 /tmp/monet-notifications/bundle.py install /tmp/monet-notifications \
- && rm -rf /tmp/monet-notifications
-COPY --from=dock /out /tmp/monet-dock
-RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
- && rm -rf /tmp/monet-dock
-COPY --from=build /out /tmp/monet
-COPY --from=password /out /tmp/monet/password
+RUN --mount=type=bind,from=files-recovery,source=/out,target=/tmp/monet-files-recovery,ro \
+    python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
+ && mkdir -p /usr/share/monet && touch /usr/share/monet/files-free-space-v1
+RUN --mount=type=bind,from=archive-recovery,source=/out,target=/tmp/monet-archive-recovery,ro \
+    python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery
+RUN --mount=type=bind,from=activity,source=/out,target=/tmp/monet-activity,ro \
+    python3 /tmp/monet-activity/bundle.py install /tmp/monet-activity
+RUN --mount=type=bind,from=launcher,source=/out,target=/tmp/monet-launcher,ro \
+    python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher
+RUN --mount=type=bind,from=window-identity,source=/out,target=/tmp/monet-window-identity,ro \
+    python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity
+RUN --mount=type=bind,from=editor-recovery,source=/out,target=/tmp/monet-editor-recovery,ro \
+    python3 /tmp/monet-editor-recovery/bundle.py install /tmp/monet-editor-recovery
+RUN --mount=type=bind,from=notifications,source=/out,target=/tmp/monet-notifications,ro \
+    python3 /tmp/monet-notifications/bundle.py install /tmp/monet-notifications
+RUN --mount=type=bind,from=dock,source=/out,target=/tmp/monet-dock,ro \
+    python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock
 # Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the
 # sun breathing, instead of Bazzite's. It lives in the initramfs, so that's
 # rebuilt the way Bazzite builds it, with what unlocks an encrypted disk by
 # itself (the TPM's libraries, which systemd-cryptsetup asks for there).
 COPY image/setup/files/usr/share/plymouth/themes/monet /usr/share/plymouth/themes/monet
 COPY image/finish-image.sh /tmp/monet-finish-image
-RUN /tmp/monet/install.sh --image \
+COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
+# Stage outputs are temporary inputs. Copying them in their own layers would
+# ship those copies alongside the installed files even after deleting them.
+RUN --mount=type=bind,from=build,source=/out,target=/mnt/monet-package,ro \
+    --mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro \
+    --mount=type=bind,source=image/install-update-trust.py,target=/mnt/install-update-trust.py,ro \
+    --mount=type=bind,source=image/monet-update.pub,target=/mnt/monet-update.pub,ro \
+    install -d /tmp/monet/password \
+ && cp -a /mnt/monet-package/. /tmp/monet/ \
+ && cp -a /mnt/monet-password/. /tmp/monet/password/ \
+ && /tmp/monet/install.sh --image \
  && rm -rf /tmp/monet \
+ && python3 /tmp/monet-shell-profiles.py /etc/profile.d \
+ && rm /tmp/monet-shell-profiles.py \
  && plymouth-set-default-theme monet \
  && bash /tmp/monet-finish-image \
  && rm /tmp/monet-finish-image \
+ && python3 /mnt/install-update-trust.py /mnt/monet-update.pub \
  && bootc container lint

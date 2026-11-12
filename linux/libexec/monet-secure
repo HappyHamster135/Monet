@@ -1,40 +1,50 @@
 #!/usr/bin/env python3
-"""Settings → Security's fixes that need an administrator. Runs as root through pkexec, which
-asks for the password: unlike monet-keep, Monet's polkit rule doesn't let this one through
-without it.
+"""Read firewall state and apply Settings → Security fixes through pkexec.
 
     monet-secure firewall-on   the firewall on, now and at every start
     monet-secure firewall-strict on|off
                                only what Monet uses comes in from the network (the firewall's
                                Monet zone, linux/firewalld/monet.xml), or the system's own zone
-    monet-secure firewall-allow games|localsend|syncthing|sunshine|deskflow on|off
-                               that app can accept connections from the network (its ports)
-    monet-secure firewall-allow-port NAME tcp/PORT on|off
-                               a program that asked can accept connections on that port (the
-                               question when it started listening, or its switch in Settings)
+    monet-secure firewall-network UUID on|off
+    monet-secure firewall-sharing APP on|off
+    monet-secure firewall-sharing-port NAME tcp/PORT on|off
+    monet-secure firewall-clear-legacy
     monet-secure trust-key     the firmware asked to trust Monet's key at the next restart (its
                                blue screen, with the password monetsetup), so Secure Boot can
                                be turned on without stopping Monet
 """
 
 import json
+import fcntl
+import os
 import re
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 # Monet's kernel and NVIDIA's driver are signed with Universal Blue's key.
 KEY = Path("/etc/pki/akmods/certs/akmods-ublue.der")
 MOK_PASSWORD = "monetsetup"   # the blue screen's, as Monet Setup and its first start use
 STRICT = "monet"
+SHARED = "monet-shared"
 # The system's own zone to go back to: remembered when the switch went on, or the one the
 # Monet image started from (install.sh).
 BEFORE = Path("/var/lib/monet/firewall-zone-before")
 IMAGE_BEFORE = Path("/usr/share/monet/firewall-zone-before")
 
 
+def command(*args):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 def said(*args):
-    return subprocess.run(args, capture_output=True, text=True).stdout.strip()
+    result = command(*args)
+    return result.stdout.strip() if result and result.returncode == 0 else None
 
 
 def zone_before(places=(BEFORE, IMAGE_BEFORE)):
@@ -43,7 +53,7 @@ def zone_before(places=(BEFORE, IMAGE_BEFORE)):
             zone = place.read_text().strip()
         except OSError:
             continue
-        if zone and zone != STRICT:
+        if zone and zone not in (STRICT, SHARED):
             return zone
     return "public"
 
@@ -52,20 +62,18 @@ def firewall_strict(on):
     subprocess.run(["systemctl", "enable", "--now", "firewalld"])
     if on:
         now = said("firewall-cmd", "--get-default-zone")
-        if now and now != STRICT:
+        if now and now not in (STRICT, SHARED):
             BEFORE.parent.mkdir(parents=True, exist_ok=True)
             BEFORE.write_text(now + "\n")
         # Added to a running firewall (a Monet installed on an existing system): read it first.
-        if STRICT not in said("firewall-cmd", "--get-zones").split():
+        if STRICT not in (said("firewall-cmd", "--get-zones") or "").split():
             subprocess.run(["firewall-cmd", "--reload"])
     zone = STRICT if on else zone_before()
     return subprocess.run(["firewall-cmd", f"--set-default-zone={zone}"]).returncode
 
 
-# Settings → Security → Apps that can accept connections: each a fixed set of ports (never
-# anything typed), let in through a firewalld policy of its own, so Monet's zone file stays as
-# the image has it and an update can still change it. The names chosen are in ALLOWED_STATE,
-# which Settings reads.
+# Older versions opened these ports across zones. Keep the old rules visible
+# until an administrator removes them. New rules use the sharing zone.
 ALLOWED_POLICY = Path("/etc/firewalld/policies/monet-allowed.xml")
 ALLOWED_STATE = Path("/var/lib/monet/firewall-allowed.json")
 APPS = {
@@ -82,8 +90,11 @@ APPS = {
 # A program's own port, let in when it asked (monet-quick's question when it starts accepting
 # connections): [{"name": what Settings calls it, "port": "tcp/8000"}], readable by everyone.
 PORTS_STATE = Path("/var/lib/monet/firewall-allowed-ports.json")
+SHARING_POLICY = Path("/etc/firewalld/policies/monet-sharing.xml")
+SHARING_STATE = Path("/var/lib/monet/firewall-sharing.json")
 PORT = re.compile(r"tcp/(\d{4,5})")
 NAME = re.compile(r"[^\x00-\x1f\x7f]{1,60}")
+UUID = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", re.I)
 
 
 def allowed_ports(state=PORTS_STATE):
@@ -110,63 +121,308 @@ def allowed(state=ALLOWED_STATE):
     return [name for name in APPS if isinstance(names, list) and name in names]
 
 
+def policy_ports(names, ports):
+    allowed = []
+    for name in names:
+        for rule in APPS[name]:
+            protocol, port = rule.split("/")
+            allowed.append((port, protocol))
+    for rule in sorted({entry["port"] for entry in ports}):
+        allowed.append((rule.removeprefix("tcp/"), "tcp"))
+    return allowed
+
+
 def policy_xml(names, ports=()):
     lines = ['<?xml version="1.0" encoding="utf-8"?>',
-             "<!-- Written by Monet (monet-secure firewall-allow): what Settings → Security lets in. -->",
+             "<!-- Written by Monet Security. -->",
              '<policy target="CONTINUE" priority="-10">',
              "  <short>Monet: apps that can accept connections</short>",
-             '  <ingress-zone name="ANY"/>',
+             f'  <ingress-zone name="{SHARED}"/>',
              '  <egress-zone name="HOST"/>']
-    for name in names:
-        lines += [f'  <port protocol="{port.split("/")[0]}" port="{port.split("/")[1]}"/>' for port in APPS[name]]
-    for port in sorted({p["port"] for p in ports}):
-        lines.append(f'  <port protocol="tcp" port="{port.split("/")[1]}"/>')
+    for port, protocol in policy_ports(names, ports):
+        lines.append(f'  <port protocol="{protocol}" port="{port}"/>')
     return "\n".join(lines + ["</policy>"]) + "\n"
 
 
-def firewall_allow(name, on, state=ALLOWED_STATE, policy=ALLOWED_POLICY, ports_state=PORTS_STATE):
-    chosen = set(allowed(state))
-    chosen = chosen | {name} if on else chosen - {name}
-    names = [n for n in APPS if n in chosen]
-    state.parent.mkdir(parents=True, exist_ok=True)
-    state.write_text(json.dumps(names) + "\n")
-    state.chmod(0o644)
-    return write_policy(names, allowed_ports(ports_state), policy)
+def sharing_rules(path=SHARING_STATE):
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {"apps": [], "ports": []}
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("apps"), list) or not isinstance(data.get("ports"), list):
+        return None
+    if not all(isinstance(app, str) and app in APPS for app in data["apps"]):
+        return None
+    if not all(isinstance(row, dict) and isinstance(row.get("name"), str) and NAME.fullmatch(row["name"])
+               and isinstance(row.get("port"), str) and port_ok(row["port"]) for row in data["ports"]):
+        return None
+    return data
 
 
-def firewall_allow_port(name, port, on, state=ALLOWED_STATE, policy=ALLOWED_POLICY, ports_state=PORTS_STATE):
-    """A program's port in (on) or out again: kept with what Settings calls it."""
-    ports = [p for p in allowed_ports(ports_state) if p["port"] != port]
-    if on:
-        ports.append({"name": name, "port": port})
-    ports_state.parent.mkdir(parents=True, exist_ok=True)
-    ports_state.write_text(json.dumps(ports, ensure_ascii=False) + "\n")
-    ports_state.chmod(0o644)
-    return write_policy(allowed(state), ports, policy)
+def atomic_write(path, data):
+    if data is None:
+        path.unlink(missing_ok=True)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(data)
+            stream.flush()
+            os.fchmod(stream.fileno(), 0o644)
+            os.fsync(stream.fileno())
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
-def write_policy(names, ports, policy=ALLOWED_POLICY):
-    if names or ports:
-        policy.parent.mkdir(parents=True, exist_ok=True)
-        policy.write_text(policy_xml(names, ports))
-        policy.chmod(0o644)
+def apply_rules(changes):
+    """Keep persisted rules and the running firewall together when reload fails."""
+    before = {path: path.read_bytes() if path.exists() else None for path in changes}
+    try:
+        for path, data in changes.items():
+            atomic_write(path, data)
+        if said("firewall-cmd", "--reload") is not None:
+            return 0
+    except OSError:
+        pass
+    for path, data in before.items():
+        atomic_write(path, data)
+    said("firewall-cmd", "--reload")
+    return 1
+
+
+def save_sharing(rules, policy=SHARING_POLICY, state=SHARING_STATE):
+    apps, ports = rules["apps"], rules["ports"]
+    xml = policy_xml(apps, ports).encode() if apps or ports else None
+    return apply_rules({state: (json.dumps(rules) + "\n").encode(), policy: xml})
+
+
+def runtime_policy(method, *args):
+    bus = "org.fedoraproject.FirewallD1"
+    out = said("busctl", "--system", "--json=short", "--timeout=3s", "--auto-start=no",
+               "--allow-interactive-authorization=no", "call", bus, "/org/fedoraproject/FirewallD1",
+               bus + ".policy", method, *args)
+    try:
+        data, = json.loads(out)["data"]
+    except (KeyError, TypeError, ValueError):
+        return None
+    return data
+
+
+def verified_sharing(policies):
+    # The daemon's policy directory is private. Settings can read the rules
+    # actually loaded in firewalld without asking for administrator access.
+    rules = sharing_rules()
+    if rules is None or policies is None:
+        return None
+    expected_ports = set(policy_ports(rules["apps"], rules["ports"]))
+    if SHARING_POLICY.stem not in policies:
+        return rules if not expected_ports else None
+    if not expected_ports:
+        return None
+    try:
+        response = runtime_policy("getPolicySettings", "s", SHARING_POLICY.stem)
+        settings = {name: value["data"] for name, value in response.items()}
+        ports = set(map(tuple, settings.pop("ports")))
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
+    for name in ("short", "version", "description"):
+        settings.pop(name, None)
+    scope = {"target": "CONTINUE", "priority": -10, "ingress_zones": [SHARED], "egress_zones": ["HOST"]}
+    scope_matches = all(settings.pop(name, None) == value for name, value in scope.items())
+    if ports == expected_ports and scope_matches and not any(settings.values()):
+        return rules
+    return None
+
+
+def split_nm(line):
+    return [re.sub(r"\\(.)", r"\1", part) for part in re.findall(r"((?:\\.|[^:\\])*):", line + ":")]
+
+
+def active_connections():
+    out = said("nmcli", "-t", "-f", "UUID,TYPE,DEVICE,NAME", "connection", "show", "--active")
+    if out is None:
+        return None
+    connections = {}
+    for line in out.splitlines():
+        fields = split_nm(line)
+        if len(fields) == 4 and UUID.fullmatch(fields[0]) and fields[2] and fields[1] != "loopback":
+            uuid, kind, device, name = fields
+            connections[device] = {"uuid": uuid, "kind": kind, "name": name}
+    return connections
+
+
+def configured_zone(uuid):
+    return said("nmcli", "-g", "connection.zone", "connection", "show", "uuid", uuid)
+
+
+def active_zones():
+    out = said("firewall-cmd", "--get-active-zones")
+    if out is None:
+        return None
+    zones = {}
+    for line in out.splitlines():
+        if line and not line[0].isspace():
+            zone = line.split()[0]
+            zones[zone] = {"interfaces": [], "sources": []}
+        elif zones:
+            kind, _, values = line.strip().partition(":")
+            if kind in ("interfaces", "sources"):
+                zones[zone][kind] = values.split()
+    return zones
+
+
+def network_status():
+    zones, connections = active_zones(), active_connections()
+    default_zone = said("firewall-cmd", "--get-default-zone")
+    policies = runtime_policy("getPolicies")
+    if not isinstance(policies, list) or not all(isinstance(name, str) for name in policies):
+        policies = None
+    devices = []
+    details_known = True
+    if zones is not None:
+        for zone, info in zones.items():
+            ports = said("firewall-cmd", "--zone=" + zone, "--list-ports")
+            services = said("firewall-cmd", "--zone=" + zone, "--list-services")
+            if ports is None or services is None:
+                details_known = False
+            for interface in info["interfaces"]:
+                connection = (connections or {}).get(interface, {})
+                uuid = connection.get("uuid")
+                configured = configured_zone(uuid) if uuid and zone in (STRICT, SHARED) else None
+                devices.append(dict(connection, interface=interface, zone=zone,
+                                    ports=ports, services=services,
+                                    changeable=connection.get("kind") in ("802-11-wireless", "802-3-ethernet")
+                                    and (zone, configured) in ((STRICT, ""), (SHARED, SHARED))))
+            if info["sources"]:
+                devices.append({"zone": zone, "sources": info["sources"], "ports": ports, "services": services})
+    seen = {row.get("interface") for row in devices}
+    for interface, connection in (connections or {}).items():
+        if interface not in seen:
+            devices.append(dict(connection, interface=interface))
+    sharing = verified_sharing(policies)
+    legacy = ALLOWED_POLICY.stem in policies if policies is not None else None
+    complete = (zones is not None and connections is not None and bool(default_zone)
+                and sharing is not None and details_known and all("zone" in row for row in devices))
+    return {"known": zones is not None, "complete": complete, "devices": devices,
+            "sharingAsDefault": default_zone == SHARED if default_zone else None,
+            "sharing": sharing, "legacy": legacy,
+            "legacyApps": allowed(), "legacyPorts": allowed_ports(),
+            "appPorts": APPS}
+
+
+def change_network(uuid, on):
+    connections = active_connections() or {}
+    device = next((device for device, row in connections.items()
+                   if row["uuid"] == uuid and row["kind"] in ("802-11-wireless", "802-3-ethernet")), None)
+    zone = said("firewall-cmd", "--get-zone-of-interface", device) if device else None
+    expected, wanted = (STRICT, SHARED) if on else (SHARED, "")
+    if zone != expected or configured_zone(uuid) != ("" if on else SHARED):
+        return 1
+    if on and SHARED not in (said("firewall-cmd", "--get-zones") or "").split():
+        return 1
+    edit = ("nmcli", "connection", "modify", "uuid", uuid, "connection.zone")
+    if said(*edit, wanted) is None:
+        return 1
+    # NetworkManager rebinds an active interface when its profile's zone changes.
+    active = SHARED if on else said("firewall-cmd", "--get-default-zone")
+    for _ in range(5):
+        if active and said("firewall-cmd", "--get-zone-of-interface", device) == active:
+            return 0
+        time.sleep(0.15)
+    said(*edit, "" if on else SHARED)
+    return 1
+
+
+def change_sharing(argv):
+    if argv == ["firewall-clear-legacy"]:
+        return apply_rules(dict.fromkeys((ALLOWED_POLICY, ALLOWED_STATE, PORTS_STATE)))
+    # The sharing zone must never be the fallback for unrelated interfaces.
+    if argv[-1] == "on":
+        default_zone = said("firewall-cmd", "--get-default-zone")
+        if not default_zone or default_zone == SHARED:
+            return 1
+    if len(argv) == 3 and argv[0] == "firewall-network" and UUID.fullmatch(argv[1]) and argv[2] in ("on", "off"):
+        return change_network(argv[1], argv[2] == "on")
+    rules = sharing_rules()
+    if rules is None:
+        return 1
+    if len(argv) == 3 and argv[0] == "firewall-sharing" and argv[1] in APPS and argv[2] in ("on", "off"):
+        apps = set(rules["apps"])
+        (apps.add if argv[2] == "on" else apps.discard)(argv[1])
+        rules["apps"] = sorted(apps)
+    elif (len(argv) == 4 and argv[0] == "firewall-sharing-port"
+          and NAME.fullmatch(argv[1]) and port_ok(argv[2]) and argv[3] in ("on", "off")):
+        rules["ports"] = [row for row in rules["ports"] if row["port"] != argv[2]]
+        if argv[3] == "on":
+            rules["ports"].append({"name": argv[1], "port": argv[2]})
     else:
-        policy.unlink(missing_ok=True)
-    if said("systemctl", "is-active", "firewalld") == "active":
-        return subprocess.run(["firewall-cmd", "--reload"]).returncode
+        return 2
+    return save_sharing(rules)
+
+
+def remove_sharing():
+    profiles = said("nmcli", "-g", "UUID", "connection", "show")
+    if profiles is None:
+        return 1
+    for uuid in profiles.splitlines():
+        zone = configured_zone(uuid)
+        if zone is None or (zone == SHARED and
+                said("nmcli", "connection", "modify", "uuid", uuid, "connection.zone", "") is None):
+            return 1
+    for path in (SHARING_POLICY, SHARING_STATE):
+        path.unlink(missing_ok=True)
     return 0
 
 
-def main(argv):
-    if len(argv) == 3 and argv[0] == "firewall-allow" and argv[1] in APPS and argv[2] in ("on", "off"):
-        return firewall_allow(argv[1], argv[2] == "on")
-    if (len(argv) == 4 and argv[0] == "firewall-allow-port" and NAME.fullmatch(argv[1]) and port_ok(argv[2])
-            and argv[3] in ("on", "off")):
-        return firewall_allow_port(argv[1], argv[2], argv[3] == "on")
+def security_history():
+    out = said("journalctl", "--quiet", "--no-pager", "-n", "12", "-o", "json",
+               "--output-fields=MESSAGE,__REALTIME_TIMESTAMP", "_UID=0", "SYSLOG_IDENTIFIER=monet-security")
+    if out is None:
+        return None
+    entries = []
+    for line in out.splitlines():
+        try:
+            data = json.loads(line)
+            event = data["MESSAGE"]
+            stamp = int(data["__REALTIME_TIMESTAMP"]) // 1000
+        except (KeyError, TypeError, ValueError):
+            continue
+        if event in ("firewall-on", "firewall-strict", "firewall-network", "firewall-sharing",
+                     "firewall-sharing-port", "firewall-clear-legacy") and 0 < stamp <= 8640000000000000:
+            entries.append({"time": stamp, "event": event})
+    return entries[::-1]
+
+
+def firewall_action(argv):
+    if argv == ["firewall-remove-sharing"]:
+        return remove_sharing()
     if argv == ["firewall-on"]:
-        return subprocess.run(["systemctl", "enable", "--now", "firewalld"]).returncode
-    if len(argv) == 2 and argv[0] == "firewall-strict" and argv[1] in ("on", "off"):
-        return firewall_strict(argv[1] == "on")
+        result = subprocess.run(["systemctl", "enable", "--now", "firewalld"]).returncode
+    elif len(argv) == 2 and argv[0] == "firewall-strict" and argv[1] in ("on", "off"):
+        result = firewall_strict(argv[1] == "on")
+    elif argv[0] in ("firewall-sharing", "firewall-sharing-port", "firewall-network", "firewall-clear-legacy"):
+        result = change_sharing(argv)
+    else:
+        return 2
+    if result == 0:
+        said("logger", "-t", "monet-security", argv[0])
+    return result
+
+
+def main(argv):
+    if argv == ["capabilities"]:
+        print("network-sharing")
+        return 0
+    if os.geteuid() != 0:
+        return 1
+    if argv and argv[0].startswith("firewall-"):
+        with open("/run/monet-firewall.lock", "a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            return firewall_action(argv)
     if argv == ["trust-key"] and KEY.exists():
         # The blue screen waits for an answer instead of starting Monet after ten seconds.
         subprocess.run(["mokutil", "--timeout", "-1"])

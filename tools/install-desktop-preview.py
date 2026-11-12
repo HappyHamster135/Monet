@@ -128,6 +128,8 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
         add(HELPERS / name, render(ROOT / 'linux/libexec' / name,
             private_data=name in {'monet-settings', 'monet-games', 'monet-store', 'monet-passwords', 'monet-passwords-browser', 'monet-keep-awake', 'monet-brightness'},
             local_helpers=name in {'monet-settings', 'monet-games', 'monet-store', 'monet-light', 'monet-passwords', 'monet-passwords-browser'}), 0o755)
+    # Status probes use the new reader. Privileged actions still use the system helper.
+    add(HELPERS / 'monet-secure', (ROOT / 'linux/libexec/monet-secure').read_bytes())
     for source in (ROOT / 'linux/share/monet/monet_runtime').glob('*.py'):
         add(PRIVATE / 'monet/monet_runtime' / source.name, source.read_bytes())
     add(HELPERS / 'monet_region.py', (ROOT / 'setup/monet_setup/region.py').read_bytes())

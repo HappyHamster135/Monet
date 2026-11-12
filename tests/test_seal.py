@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import uuid
 
 from tests.test_look import libexec_helper
@@ -37,10 +37,48 @@ class Cleanup(unittest.TestCase):
         self.fail = None
         self.lie = None
         self.ro = True
-        self.args = self.karg
+        self.clean_args = "root=UUID=1 rw ostree=/ostree/boot.1/default/tree/0"
+        self.original_args = f"{self.clean_args} {self.karg}"
+        self.args = self.original_args
+        self.published_args = self.original_args
+        self.clean_rollback_args = ('root=UUID=1 rw ostree=/ostree/boot.1/default/older/0 '
+                                    'rd.luks.key=cafe=/other.key:UUID=beef '
+                                    f'note="keep {self.karg} untouched"')
+        self.rollback_args = f"{self.clean_rollback_args} {self.karg}"
+        self.staged = False
         self.key_matches = True
         self.tpm_works = True
         self.seal.run = self.command
+        self.seal.locked_sysroot = self.locked_sysroot
+        self.sysroot = Mock()
+        self.booted, self.rollback = Mock(), Mock()
+        self.booted.get_bootconfig().get.side_effect = lambda name: self.published_args
+        self.rollback.get_bootconfig().get.side_effect = lambda name: self.rollback_args
+        self.sysroot.require_booted_deployment.return_value = self.booted
+        self.sysroot.get_staged_deployment.side_effect = lambda: self.staged
+        self.sysroot.get_deployments.return_value = [self.booted, self.rollback]
+        self.sysroot.deployment_set_kargs_in_place.side_effect = self.write_entry
+        self.sysroot.new_default().get_deployments.return_value = [self.booted, self.rollback]
+        self.sysroot.new_default().load.side_effect = lambda: self.fail != "entry-readback"
+
+    @contextlib.contextmanager
+    def locked_sysroot(self):
+        if self.fail == "sysroot-lock":
+            raise RuntimeError("fixture: OSTree is busy")
+        self.calls.append(("ostree", "lock"))
+        try:
+            yield self.sysroot
+        finally:
+            self.calls.append(("ostree", "unlock"))
+
+    def write_entry(self, deployment, args):
+        self.assertIs(deployment, self.rollback)
+        self.calls.append(("ostree", "entry-write", args))
+        if self.fail == "entry-write":
+            return False
+        if self.lie != "entry-write":
+            self.rollback_args = args
+        return True
 
     def command(self, *args, timeout=300):
         args = tuple(map(str, args))
@@ -52,7 +90,9 @@ class Cleanup(unittest.TestCase):
         if args[0] == "mount":
             operation = args[2]
         if args[:2] == ("rpm-ostree", "kargs"):
-            operation = "kargs-delete" if len(args) > 2 else "kargs-read"
+            operation = "kargs-read" if len(args) == 2 else "kargs-delete"
+        if args[0] == "sync":
+            operation = "boot-sync"
         if operation == self.fail:
             return None
         if args[0] == "findmnt":
@@ -77,10 +117,13 @@ class Cleanup(unittest.TestCase):
             return "" if self.tpm_works else None
         if operation == "kargs-delete":
             if self.lie != operation:
-                self.args = ""
+                self.args = self.clean_args
             return ""
         if operation == "kargs-read":
             return self.args
+        if operation == "boot-sync":
+            self.assertEqual(args[2], str(self.seal.FIRST_KEY.parent))
+            return ""
         if command == "luksKillSlot":
             if self.lie != command:
                 self.data["keyslots"].pop(args[-1], None)
@@ -89,12 +132,21 @@ class Cleanup(unittest.TestCase):
         raise AssertionError(f"Unmocked command: {args}")
 
     def start(self, expected):
-        with contextlib.redirect_stderr(io.StringIO()) as output:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as output:
             result = self.seal.first_start()
         self.assertEqual(result, expected, output.getvalue())
         return output.getvalue()
 
+    def reboot(self):
+        self.published_args = self.args
+        self.seal.CMDLINE.write_text("rd.luks.uuid=luks-ab12 " + self.published_args)
+
     def test_success_verifies_tpm_and_arguments_before_retiring_only_bootstrap(self):
+        self.start(0)
+        self.assertEqual(set(self.data["keyslots"]), {"0", "1", "2"})
+        self.assertTrue(self.seal.FIRST_KEY.exists())
+        self.assertTrue(self.seal.STATE.exists())
+        self.reboot()
         self.start(0)
         self.assertEqual(set(self.data["keyslots"]), {"1", "2"})
         self.assertFalse(self.seal.FIRST_KEY.exists())
@@ -105,19 +157,74 @@ class Cleanup(unittest.TestCase):
         kill = next(i for i, c in enumerate(self.calls) if c[1] == "luksKillSlot")
         self.assertTrue(any("--token-only" in c for c in self.calls[:kill]))
         self.assertIn(("rpm-ostree", "kargs"), self.calls[:kill])
+        written = self.calls.index(("ostree", "entry-write", self.clean_rollback_args))
+        synced = self.calls.index(("sync", "-f", str(self.seal.FIRST_KEY.parent)))
+        self.assertLess(self.calls.index(("ostree", "lock")), written)
+        self.assertLess(written, synced)
+        self.assertLess(synced, kill)
+        self.assertLess(kill, self.calls.index(("ostree", "unlock")))
+        self.assertEqual(self.rollback_args, self.clean_rollback_args)
+        self.assertEqual(self.published_args, self.clean_args)
         self.assertIn(("mount", "-o", "remount,ro", str(self.seal.FIRST_KEY.parent)), self.calls)
         self.calls.clear()
         self.start(0)
         self.assertEqual(self.calls, [])
 
+    def test_power_loss_before_staged_arguments_are_published_keeps_boot_key(self):
+        self.start(0)
+        self.assertEqual(self.args, self.clean_args)
+        self.assertEqual(self.published_args, self.original_args)
+        # An interrupted shutdown lost the staged arguments and the old entry boots again.
+        self.args = self.published_args
+        self.start(0)
+        self.assertIn("0", self.data["keyslots"])
+        self.assertEqual(self.seal.FIRST_KEY.read_bytes(), b"k" * 64)
+        self.assertTrue(self.seal.STATE.exists())
+        self.assertTrue(self.ro)
+
+    def test_manual_boot_without_argument_keeps_key_for_published_entry(self):
+        self.start(0)
+        self.seal.CMDLINE.write_text("rd.luks.uuid=luks-ab12")
+        self.start(0)
+        self.assertIn("0", self.data["keyslots"])
+        self.assertTrue(self.seal.FIRST_KEY.exists())
+        self.reboot()
+        self.start(0)
+        self.assertFalse(self.seal.FIRST_KEY.exists())
+
+    def test_waits_for_a_staged_deployment_before_editing_published_entries(self):
+        self.start(0)
+        self.reboot()
+        self.staged = True
+        self.start(0)
+        self.assertIn("0", self.data["keyslots"])
+        self.assertTrue(self.seal.FIRST_KEY.exists())
+        self.sysroot.deployment_set_kargs_in_place.assert_not_called()
+        self.staged = False
+        self.start(0)
+        self.assertFalse(self.seal.FIRST_KEY.exists())
+
+    def test_malformed_retained_arguments_keep_the_boot_key(self):
+        self.start(0)
+        self.reboot()
+        self.rollback_args += ' note="unclosed'
+        self.start(1)
+        self.assertIn("0", self.data["keyslots"])
+        self.assertTrue(self.seal.FIRST_KEY.exists())
+        self.assertTrue(self.seal.STATE.exists())
+
     def test_failure_and_retry_of_each_external_step(self):
         for operation in ("luksUUID", "luksDump", "key-test", "--json", "remount,rw",
-                          "enroll", "kargs-delete", "kargs-read", "luksKillSlot"):
+                          "enroll", "kargs-delete", "kargs-read", "sysroot-lock", "entry-write",
+                          "entry-readback", "boot-sync", "luksKillSlot"):
             with self.subTest(operation=operation):
                 # Each failure starts from a fresh fixture, including its receipt.
                 case = Cleanup()
                 case.setUp()
                 try:
+                    if operation in ("sysroot-lock", "entry-write", "entry-readback", "boot-sync", "luksKillSlot"):
+                        case.start(0)
+                        case.reboot()
                     case.fail = operation
                     case.start(1)
                     self.assertEqual(case.seal.FIRST_KEY.read_bytes(), b"k" * 64)
@@ -125,6 +232,8 @@ class Cleanup(unittest.TestCase):
                     self.assertTrue(case.ro)
                     case.fail = None
                     case.start(0)
+                    if operation in ("sysroot-lock", "entry-write", "entry-readback", "boot-sync", "luksKillSlot"):
+                        self.assertFalse(case.seal.FIRST_KEY.exists())
                 finally:
                     case.doCleanups()
 
@@ -133,7 +242,7 @@ class Cleanup(unittest.TestCase):
         self.start(1)
         self.assertIn("0", self.data["keyslots"])
         self.assertEqual(self.seal.FIRST_KEY.read_bytes(), b"k" * 64)
-        self.assertEqual(self.args, self.karg)
+        self.assertEqual(self.args, self.original_args)
         self.assertTrue(self.ro)
         self.tpm_works = True
         self.calls.clear()
@@ -141,8 +250,12 @@ class Cleanup(unittest.TestCase):
         self.assertFalse(any(c[0] == "systemd-cryptenroll" for c in self.calls))
 
     def test_a_success_exit_code_is_not_enough(self):
-        for operation in ("remount,rw", "kargs-delete", "luksKillSlot"):
+        for operation in ("remount,rw", "kargs-delete", "entry-write", "luksKillSlot"):
             with self.subTest(operation=operation):
+                if operation == "entry-write":
+                    self.lie = None
+                    self.start(0)
+                    self.reboot()
                 self.lie = operation
                 self.start(1)
                 self.assertIn("0", self.data["keyslots"])
@@ -152,6 +265,8 @@ class Cleanup(unittest.TestCase):
         self.start(0)
 
     def test_unlink_failure_resumes_after_slot_is_gone(self):
+        self.start(0)
+        self.reboot()
         original = Path.unlink
         def deny_key(path, *args, **kwargs):
             if path == self.seal.FIRST_KEY:
@@ -168,10 +283,13 @@ class Cleanup(unittest.TestCase):
         self.start(0)
         self.assertFalse(any(c[1] == "luksKillSlot" or c[0] == "systemd-cryptenroll" for c in self.calls))
 
-    def test_power_loss_after_key_removal_keeps_receipt_and_restores_mount_on_retry(self):
+    def test_mount_restore_failure_keeps_key_and_restores_mount_on_retry(self):
+        self.start(0)
+        self.reboot()
         self.fail = "remount,ro"
         self.start(1)
-        self.assertFalse(self.seal.FIRST_KEY.exists())
+        self.assertTrue(self.seal.FIRST_KEY.exists())
+        self.assertIn("0", self.data["keyslots"])
         self.assertTrue(self.seal.STATE.exists())
         self.assertFalse(self.ro)
         self.seal.CMDLINE.write_text("rd.luks.uuid=luks-ab12")
@@ -246,6 +364,7 @@ class Cleanup(unittest.TestCase):
         self.seal.CMDLINE.write_text("rd.luks.uuid=luks-cafe " + self.seal.CMDLINE.read_text())
         self.fail = "remount,ro"
         self.start(1)
+        self.reboot()
         self.seal.CMDLINE.write_text("rd.luks.uuid=luks-cafe rd.luks.uuid=luks-ab12")
         self.fail = None
         self.start(0)
@@ -262,6 +381,8 @@ class Cleanup(unittest.TestCase):
         self.assertEqual(ran.call_args.kwargs["env"]["LC_ALL"], "C")
 
     def test_tpm_lost_while_kernel_arguments_change_does_not_retire_slot(self):
+        self.start(0)
+        self.reboot()
         original = self.command
         def stop_tpm(*args, **kwargs):
             out = original(*args, **kwargs)
@@ -341,24 +462,31 @@ class RealLuks(unittest.TestCase):
                 crypt("luksAddKey", "--batch-mode", *fast, "--key-file", first, disk, new)
             karg = f"rd.luks.key={ident}=/monet-firstboot.key:UUID=abcd"
             seal.FIRST_KEY, seal.STATE, seal.RUNDIR = first, root / "state/receipt.json", root
-            seal.disk = lambda **kwargs: (disk, karg)
-            kernel_args = [karg]
+            booted_arg = karg
+            seal.disk = lambda **kwargs: (disk, booted_arg)
+            kernel_args = ["root=UUID=1", karg]
             commands = []
             def run(*args, timeout=300):
                 commands.append(tuple(map(str, args)))
                 if args[0] == "rpm-ostree":
                     if len(args) > 2:
-                        kernel_args.clear()
+                        kernel_args.remove(karg)
                     return " ".join(kernel_args)
                 self.assertEqual(args[0], "cryptsetup")
                 self.assertIn(str(disk), list(map(str, args)))
                 return original_run(*args, timeout=30)
             seal.run = run
             seal.boot_read_only = lambda: False
+            seal.locked_sysroot = contextlib.nullcontext
+            seal.clear_firstboot_argument = lambda sysroot, key: True
             # Substitute only the hardware TPM proof with a separate real key slot.
             # No host TPM, mount, keyring or kernel-argument command is executed.
             seal.tpm_unlocks = lambda device, data: original_run(
                 "cryptsetup", "open", "--test-passphrase", "--key-slot", "2", "--key-file", surrogate, device) is not None
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(seal.first_start(), 0)
+            crypt("open", "--test-passphrase", "--key-file", first, disk)
+            booted_arg = ""
             with patch.object(seal, "wipe", side_effect=OSError("simulated power loss after slot retirement")), \
                     contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(seal.first_start(), 1)

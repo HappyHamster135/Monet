@@ -806,7 +806,7 @@ class Updates(unittest.TestCase):
         self.assertIn('["auto-updates", which @ ("on" | "off")] => elevate(&["helper", "auto-updates", *which])', rust)
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('"autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists()', quick)
-        self.assertIn('run(f"{BINDIR}/monet", "auto-updates", args[0], timeout=30)', quick)
+        self.assertIn('ok(f"{BINDIR}/monet", "auto-updates", args[0], timeout=120)', quick)
         qml = (SETTINGS_QML).read_text(encoding="utf-8")
         self.assertIn('title: i18n("Update automatically")', qml)
         self.assertIn('ask("auto-updates " + (on ? "on" : "off")', qml)
@@ -1507,12 +1507,12 @@ class DesktopWidgets(unittest.TestCase):
             uses = any("Glass {" in f.read_text() for f in (PLASMA / "plasmoids" / widget / "contents/ui").glob("*.qml"))
             self.assertEqual(uses, widget in glassed.group(1).split(), widget)
 
-    def test_glass_frosts_the_hours_it_finds(self):
+    def test_glass_frosts_the_hours_from_plasma(self):
         glass = (SHARE / "monet/widgets/Glass.qml").read_text()
         hours = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
-        # What the glass looks for is what The Hours has.
+        self.assertIn("Plasmoid?.containment?.wallpaperGraphicsObject", glass)
         for name in ("hours", "below", "above"):
-            self.assertIn(f"item.{name} !== undefined", glass)
+            self.assertRegex(glass, rf"\bwallpaper\??\.{name} !== undefined")
             self.assertRegex(hours, rf"property [\w ]+\b{name}:")
 
     def test_glass_off_reaches_the_widgets_and_the_lock_screen(self):
@@ -1964,7 +1964,7 @@ class SnapLikeWindows(unittest.TestCase):
         # do not require the old combined-desktop sizing expression here.
         for piece in ("property alias windowWidth: sheet.width", 'category: "Window"',
                       'if (search.text !== "") { search.text = ""; search.forceActiveFocus() }',
-                      "else sheet.close()", "Component.onCompleted: open(firstPage)",
+                      "sheet.close()", "Component.onCompleted: open(firstPage)",
                       "function onWanted(which) {\n            sheet.open(which)"):
             self.assertIn(piece, settings)
         self.assertNotIn("translation.x", settings)
@@ -2493,7 +2493,8 @@ class EverydayScreens(unittest.TestCase):
         self.assertIn("ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable", containerfile)
         self.assertIn("FROM ${BASE} AS password", containerfile)
         self.assertIn("sh /src/password/build.sh /out || rm -rf /out/*", containerfile)
-        self.assertIn("COPY --from=password /out /tmp/monet/password", containerfile)
+        self.assertIn("--mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro", containerfile)
+        self.assertIn("cp -a /mnt/monet-password/. /tmp/monet/password/", containerfile)
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('if [ -x "$SRC/password/monet-password" ]; then', install)
         self.assertIn('"$USERUNITDIR/plasma-polkit-agent.service.d/monet.conf"', install)
@@ -3028,7 +3029,26 @@ class Scripts(unittest.TestCase):
             self.assertEqual([f["version"] for f in quick.firmware_check()["updates"]], ["2"])
         # No fwupd at all: nothing to show, not an error.
         with mock.patch.object(quick.shutil, "which", lambda name: None):
-            self.assertEqual(quick.firmware_check(), {"ok": True, "updates": []})
+            self.assertEqual(quick.firmware_check(), {"ok": True, "updates": [], "unavailable": True})
+
+    def test_quick_firmware_distinguishes_json_errors_from_empty_results(self):
+        from unittest import mock
+        quick = quick_helper()
+        cases = (
+            (0, {"Devices": []}, {"ok": True, "updates": []}),
+            (2, {"Error": {"Message": "No updatable devices"}}, {"ok": True, "updates": []}),
+            (1, {"Error": {"Message": "Failed to connect to the firmware daemon"}},
+             {"ok": False, "message": "Failed to connect to the firmware daemon"}),
+            (1, {"Devices": []}, {"ok": False, "message": ""}),
+            (0, {}, {"ok": False, "message": ""}),
+            (0, {"Devices": [None]}, {"ok": False, "message": ""}),
+        )
+        with mock.patch.object(quick.shutil, "which", return_value="/usr/bin/fwupdmgr"):
+            for code, report, expected in cases:
+                with self.subTest(code=code, report=report), mock.patch.object(
+                    quick.subprocess, "run", return_value=subprocess.CompletedProcess([], code, json.dumps(report), "")
+                ):
+                    self.assertEqual(quick.firmware_check(), expected)
 
     def test_quick_finds_the_apps_that_play_music(self):
         # Now Playing's "Play something with": players for music, the PC's default first, the nearest
@@ -3295,7 +3315,6 @@ class WhatOtherSystemsHave(unittest.TestCase):
         unit = (ROOT / "linux/systemd/monet-charge.service").read_text()
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-charge apply", unit)
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn('\\"$LIBEXECDIR/monet-charge\\"', install)
         self.assertIn("monet-charge.service", install)
         self.assertIn('run("pkexec", f"{LIBEXECDIR}/monet-charge", args[0], timeout=60)',
                       (ROOT / "linux/libexec/monet-quick").read_text())
@@ -3374,7 +3393,6 @@ class WhatOtherSystemsHave(unittest.TestCase):
         self.assertIn("Before=display-manager.service", (ROOT / "linux/systemd/monet-ready-boot.service").read_text())
         self.assertIn("ExecStop=@LIBEXECDIR@/monet-ready arm", (ROOT / "linux/systemd/monet-ready-leave.service").read_text())
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn('\\"$LIBEXECDIR/monet-ready\\"', install)
         self.assertIn("systemctl --global enable monet-ready-lock.service", install)
         settings = self.SETTINGS.read_text(encoding="utf-8")
         self.assertIn('sheet.ask(on ? "ready-on" : "ready-off"', settings)
@@ -3516,7 +3534,6 @@ class Backups(unittest.TestCase):
         self.assertIn("OnCalendar=hourly", (ROOT / "linux/systemd/monet-keep.timer").read_text())
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('put 755 "$SRC/libexec/monet-keep" "$LIBEXECDIR/monet-keep"', install)
-        self.assertIn('\\"$LIBEXECDIR/monet-keep\\"', install)
         self.assertIn("systemctl enable monet-keep-prepare.service monet-keep.timer", install)
         self.assertIn("systemctl --global enable monet-backup.timer", install)
         uninstall = (ROOT / "linux/uninstall.sh").read_text()
@@ -4131,6 +4148,10 @@ class GoingBackByItself(unittest.TestCase):
         import tempfile
         self.tmp = tempfile.TemporaryDirectory()
         self.boot = libexec_helper("monet-boot")
+        self.boot.BOOT = Path(self.tmp.name)
+        grub = self.boot.BOOT / "grub.cfg"
+        grub.write_text("boot_counter\n")
+        self.boot.GRUB_CONFIGS = (grub,)
         self.boot.TRIAL = Path(self.tmp.name) / "trial.json"
         self.boot.WENT_BACK = Path(self.tmp.name) / "went-back.json"
         self.ran = []
@@ -4175,6 +4196,38 @@ class GoingBackByItself(unittest.TestCase):
         self.assertIn(["grub2-editenv", "-", "unset", "boot_counter"], self.ran)
         self.assertNotIn(["bootc", "rollback"], self.ran)
 
+    def test_queued_rollback_clears_the_trial_before_reboot(self):
+        self.on_trial()
+        self.ran.clear()
+        self.boot.arm(dict(bootc(NEW, rollback=OLD), rollbackQueued=True))
+        self.assertFalse(self.boot.TRIAL.exists())
+        self.assertEqual(self.ran, [
+            ["grub2-editenv", "-", "set", "boot_success=1"],
+            ["grub2-editenv", "-", "unset", "boot_counter"],
+        ])
+
+    def test_grub_counters_can_be_written_with_a_read_only_boot_mount(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        with patch.object(os, "statvfs", return_value=SimpleNamespace(f_flag=os.ST_RDONLY)), \
+                patch.object(Path, "is_mount", return_value=True):
+            self.on_trial()
+            self.assertTrue(self.boot.TRIAL.exists())
+            self.assertEqual(self.ran[0][:5], ["unshare", "--mount", "--propagation", "private", "/bin/sh"])
+            self.assertEqual(self.ran[0][-3:], ["set", "boot_counter=3", "boot_success=0"])
+            self.assertEqual(self.boot.check(bootc(NEW, rollback=OLD), up=lambda: True, env={}), "passed")
+        self.assertFalse(self.boot.TRIAL.exists())
+        self.assertEqual(self.ran[-1][-2:], ["unset", "boot_counter"])
+
+    def test_failed_counter_cleanup_keeps_the_trial_for_retry(self):
+        self.on_trial()
+        before = self.boot.TRIAL.read_bytes()
+        self.boot.run = lambda *args, timeout=120: None
+        with self.assertRaisesRegex(OSError, "GRUB"):
+            self.boot.check(bootc(NEW, rollback=OLD), up=lambda: True, env={})
+        self.assertEqual(self.boot.TRIAL.read_bytes(), before)
+
     def test_one_that_doesnt_goes_back_and_restarts(self):
         self.on_trial()
         self.ran.clear()
@@ -4190,14 +4243,54 @@ class GoingBackByItself(unittest.TestCase):
         self.assertNotIn(["bootc", "rollback"], self.ran)
 
     def test_grub_giving_up_keeps_the_one_before(self):
+        from unittest.mock import patch
+
         self.on_trial()
         self.ran.clear()
-        self.assertEqual(self.boot.check(bootc(OLD, rollback=NEW), env={"boot_counter": "-1"}), "went back")
-        self.assertIn(["bootc", "rollback"], self.ran)
+        with patch.object(self.boot, "keep_booted") as keep:
+            self.assertEqual(self.boot.check(bootc(OLD, rollback=NEW), env={"boot_counter": "-1"}), "went back")
+        keep.assert_called_once_with()
+        self.assertNotIn(["bootc", "rollback"], self.ran)
         self.assertNotIn(["systemctl", "reboot"], self.ran)
         self.assertTrue(self.boot.WENT_BACK.exists())
 
+    def test_keep_booted_changes_ostree_order_under_the_deployment_lock(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        sysroot = Mock()
+        failed, booted, other = Mock(), Mock(), Mock()
+        booted.equal.side_effect = lambda deployment: deployment is booted
+        sysroot.try_lock.return_value = (True, True)
+        sysroot.get_staged_deployment.return_value = None
+        sysroot.require_booted_deployment.return_value = booted
+        sysroot.get_deployments.return_value = [failed, booted, other]
+        repository = SimpleNamespace(OSTree=SimpleNamespace(Sysroot=SimpleNamespace(new_default=lambda: sysroot)),
+                                     GLib=SimpleNamespace(Error=RuntimeError))
+        with patch.dict("sys.modules", {"gi": SimpleNamespace(require_version=Mock()), "gi.repository": repository}):
+            self.boot.keep_booted()
+            sysroot.write_deployments.assert_called_once_with([booted, failed, other])
+            calls = [call[0] for call in sysroot.method_calls]
+            self.assertLess(calls.index("try_lock"), calls.index("load"))
+            self.assertLess(calls.index("write_deployments"), calls.index("unlock"))
+            sysroot.write_deployments.reset_mock()
+            sysroot.get_staged_deployment.return_value = Mock()
+            with self.assertRaisesRegex(OSError, "pending"):
+                self.boot.keep_booted()
+            sysroot.write_deployments.assert_not_called()
+
+    def test_unavailable_boot_status_keeps_the_trial(self):
+        self.on_trial()
+        self.ran.clear()
+        with self.assertRaisesRegex(OSError, "identify the booted deployment"):
+            self.boot.check({}, env={"boot_counter": "-1"})
+        self.assertTrue(self.boot.TRIAL.exists())
+        self.assertFalse(self.boot.WENT_BACK.exists())
+        self.assertEqual(self.ran, [])
+
     def test_failed_rollback_keeps_trial_without_reboot_or_success_record(self):
+        from unittest.mock import patch
+
         for status, env in ((bootc(NEW, rollback=OLD), {}),
                             (bootc(OLD, rollback=NEW), {"boot_counter": "-1"})):
             with self.subTest(booted=status["booted"]):
@@ -4210,11 +4303,13 @@ class GoingBackByItself(unittest.TestCase):
                     self.ran.append(list(args))
                     return None if args == ("bootc", "rollback") else ""
                 self.boot.run = fail_rollback
-                with self.assertRaisesRegex(OSError, "rollback"):
-                    self.boot.check(status, up=lambda: False, env=env)
+                with patch.object(self.boot, "keep_booted", side_effect=OSError("Could not keep the booted deployment")) as keep:
+                    with self.assertRaises(OSError):
+                        self.boot.check(status, up=lambda: False, env=env)
+                self.assertEqual(keep.call_count, int(bool(env)))
                 self.assertEqual(self.boot.TRIAL.read_bytes(), before)
                 self.assertEqual(self.boot.WENT_BACK.read_text(), previous)
-                self.assertEqual(self.ran, [["bootc", "rollback"]])
+                self.assertEqual(self.ran, [] if env else [["bootc", "rollback"]])
 
     def test_failed_rollback_is_reported_to_systemd(self):
         import contextlib
@@ -4397,8 +4492,7 @@ class ResetThisPC(unittest.TestCase):
         self.assertIn('run("pkexec", f"{LIBEXECDIR}/monet-reset", "arm" if args[0] == "on" else "cancel", timeout=600)',
                       quick)
         # Not among the helpers Monet's polkit rule lets run without a password.
-        programs = next(line for line in (ROOT / "linux/install.sh").read_text().splitlines() if line.startswith("programs="))
-        self.assertNotIn("monet-reset", programs)
+        self.assertNotIn("monet-reset", (ROOT / "linux/polkit/49-monet.rules").read_text())
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
         self.assertIn('sheet.ask("reset on", out => sheet.resetState = sheet.json(out, sheet.resetState))', settings)
         self.assertIn('"updates update version upgrade new reset restore rollback"', settings)
@@ -4459,6 +4553,7 @@ class EncryptedDisk(unittest.TestCase):
         first = (ROOT / "linux/systemd/monet-seal.service").read_text()
         self.assertIn("ConditionPathExists=|/boot/monet-firstboot.key", first)
         self.assertIn("ConditionPathExists=|/var/lib/monet/firstboot-seal.json", first)
+        self.assertIn("Before=bazzite-hardware-setup.service", first)
         again = (ROOT / "linux/systemd/monet-seal-relearn.service").read_text()
         for line in ("ConditionKernelCommandLine=rd.luks.uuid", "ConditionPathExists=!/boot/monet-firstboot.key",
                      "ConditionPathExists=!/var/lib/monet/firstboot-seal.json", "KeyringMode=shared"):
@@ -4735,13 +4830,89 @@ class SecurityAtAGlance(unittest.TestCase):
     """Settings → Security: Secure Boot, encryption, the firewall, updates, firmware and backups,
     each with a fix; the ones that need an administrator ask for the password."""
 
+    def test_restart_requires_the_plasma_confirmation(self):
+        from unittest import mock
+        quick = quick_helper()
+        for reply, accepted in (("", True), (None, False)):
+            with self.subTest(accepted=accepted), mock.patch.object(quick, "busctl", return_value=reply) as bus, \
+                    mock.patch.object(quick, "run") as run, mock.patch.object(quick, "emit") as emit:
+                self.assertEqual(quick.main(["restart"]), 0 if accepted else 1)
+                bus.assert_called_once_with("call", "org.kde.LogoutPrompt", "/LogoutPrompt",
+                                            "org.kde.LogoutPrompt", "promptReboot")
+                run.assert_not_called()
+                emit.assert_called_once_with({"ok": accepted})
+
+    def test_firmware_restart_is_queued_by_plasma(self):
+        from unittest import mock
+        quick = quick_helper()
+        for reply, started in (("b true\n", True), ("b false\n", False), (None, False)):
+            with self.subTest(reply=reply), mock.patch.object(quick, "busctl", return_value=reply) as bus, \
+                    mock.patch.object(quick, "run") as run:
+                self.assertEqual(quick.firmware_setup(), {"ok": started})
+                bus.assert_called_once_with("call", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown",
+                                            "logoutAndRebootToFirmware")
+                run.assert_not_called()
+
+    def test_firmware_restart_requires_the_session_method(self):
+        from unittest import mock
+        quick = quick_helper()
+        method = {"name": ".logoutAndRebootToFirmware", "type": "method",
+                  "signature": None, "result_value": "b"}
+        for reply, available in ((None, False), ("[]", False), ("broken", False),
+                                 (json.dumps([dict(method, result_value=None)]), False),
+                                 (json.dumps([method]), True)):
+            with self.subTest(reply=reply), mock.patch.object(quick, "busctl", side_effect=['s ":1.7"\n', reply]) as bus:
+                self.assertEqual(quick.firmware_restart_available(), available)
+                self.assertEqual(bus.call_args_list, [
+                    mock.call("call", *quick.DBUS_DAEMON, "GetNameOwner", "s", quick.SHUTDOWN_SERVICE),
+                    mock.call("--json=short", "--timeout=3s", "introspect", ":1.7", "/Shutdown", quick.SHUTDOWN_SERVICE),
+                ])
+
+    def test_firmware_restart_checks_the_activatable_bundle_without_starting_it(self):
+        from unittest import mock
+        quick = quick_helper()
+        for names, installed, expected in (([], True, False), ([quick.SHUTDOWN_SERVICE], False, False),
+                                           ([quick.SHUTDOWN_SERVICE], True, True)):
+            listing = json.dumps({"type": "as", "data": [names]})
+            with self.subTest(names=names, installed=installed), \
+                    mock.patch.object(quick, "busctl", side_effect=[None, listing]) as bus, \
+                    mock.patch.object(quick, "installed_firmware_restart", return_value=installed) as bundle:
+                self.assertEqual(quick.firmware_restart_available(), expected)
+                self.assertEqual(bus.call_args_list, [
+                    mock.call("call", *quick.DBUS_DAEMON, "GetNameOwner", "s", quick.SHUTDOWN_SERVICE),
+                    mock.call("--json=short", "call", *quick.DBUS_DAEMON, "ListActivatableNames"),
+                ])
+                self.assertEqual(bundle.call_count, bool(names))
+
+    def test_installed_firmware_capability_requires_the_selected_binary(self):
+        from unittest import mock
+        quick = quick_helper()
+        with tempfile_dir() as tmp, mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": tmp}):
+            root = Path(tmp)
+            binary = root / "plasma-shutdown"
+            binary.write_bytes(b"matching native binary")
+            manifest = root / "monet/session/runtime.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(json.dumps({"shutdown_binary": quick.hashlib.sha256(binary.read_bytes()).hexdigest()}))
+            service = root / "dbus-1/services/org.kde.Shutdown.service"
+            service.parent.mkdir(parents=True)
+            definition = f"[D-BUS Service]\nName=org.kde.Shutdown\nExec={binary}\n"
+            service.write_text(definition)
+            with mock.patch.object(quick, "DATADIR", tmp), mock.patch.object(quick, "SHUTDOWN_BINARY", binary):
+                self.assertTrue(quick.installed_firmware_restart())
+                service.write_text(definition + "SystemdService=another.service\n")
+                self.assertFalse(quick.installed_firmware_restart())
+                service.write_text(definition)
+                binary.write_bytes(b"replaced binary")
+                self.assertFalse(quick.installed_firmware_restart())
+
     def test_secure_boot_from_the_firmware(self):
         quick = quick_helper()
         with tempfile_dir() as tmp:
-            efivars = Path(tmp) / "efivars"
-            self.assertEqual(quick.secure_boot(efivars), "")            # not started in UEFI mode
-            efivars.mkdir()
-            self.assertEqual(quick.secure_boot(efivars), "off")         # no SecureBoot variable
+            efivars = Path(tmp) / "efi/efivars"
+            self.assertEqual(quick.secure_boot(efivars), "unavailable")            # not started in UEFI mode
+            efivars.mkdir(parents=True)
+            self.assertEqual(quick.secure_boot(efivars), "unknown")         # no SecureBoot variable
             (efivars / quick.SECURE_BOOT_VAR).write_bytes(b"\x06\x00\x00\x00\x01")
             self.assertEqual(quick.secure_boot(efivars), "on")
             (efivars / quick.SECURE_BOOT_VAR).write_bytes(b"\x06\x00\x00\x00\x00")
@@ -4773,18 +4944,42 @@ class SecurityAtAGlance(unittest.TestCase):
                                         (None, None, None)):
             with mock.patch.object(quick, "run", disks(source, chain)):
                 self.assertEqual(quick.encrypted(), expected)
-        with mock.patch.object(quick.shutil, "which", return_value=None):
-            self.assertEqual(quick.firewall(), "")
-        with mock.patch.object(quick.shutil, "which", return_value="/usr/bin/firewall-cmd"):
-            with mock.patch.object(quick, "run", return_value="active\n"):
-                self.assertEqual(quick.firewall(), "on")
-            with mock.patch.object(quick, "run", return_value=None):           # "inactive" exits 3
-                self.assertEqual(quick.firewall(), "off")
+        for reply, state in ((None, "unknown"), ("LoadState=not-found\n", "unavailable"),
+                             ("LoadState=loaded\nActiveState=active\n", "on"),
+                             ("LoadState=loaded\nActiveState=inactive\n", "off")):
+            with mock.patch.object(quick, "run", return_value=reply):
+                self.assertEqual(quick.firewall(), state)
         staged = json.dumps({"deployments": [{"staged": True}, {"booted": True}]})
         with mock.patch.object(quick, "run", return_value=staged):
             self.assertTrue(quick.update_waiting())
         with mock.patch.object(quick, "run", return_value=json.dumps({"deployments": [{"booted": True}]})):
             self.assertFalse(quick.update_waiting())
+
+    def test_update_status_falls_back_to_read_only_deployments(self):
+        from unittest import mock
+        quick = quick_helper()
+
+        def deployment(booted, staged):
+            return {"booted": {"type": "b", "data": booted}, "staged": {"type": "b", "data": staged}}
+
+        for cli, deployments, expected in (
+            (None, [deployment(True, False), deployment(False, False)], False),
+            (None, [deployment(False, True), deployment(True, False)], True),
+            ('{"deployments":[{}]}', [deployment(True, False)], False),
+            (None, [deployment(True, "false")], None),
+            (None, [deployment(False, False)], None),
+            (None, [{}], None),
+            (None, None, None),
+        ):
+            reply = json.dumps({"type": "aa{sv}", "data": deployments})
+            with self.subTest(deployments=deployments), mock.patch.object(quick, "run", side_effect=[cli, reply]) as run:
+                self.assertIs(quick.update_waiting(), expected)
+                self.assertEqual(run.call_args_list, [
+                    mock.call("rpm-ostree", "status", "--json", timeout=15),
+                    mock.call("busctl", "--json=short", "--system", "--allow-interactive-authorization=no",
+                              "get-property", "org.projectatomic.rpmostree1", "/org/projectatomic/rpmostree1/Sysroot",
+                              "org.projectatomic.rpmostree1.Sysroot", "Deployments", timeout=5),
+                ])
 
     def test_fixes_that_need_an_administrator(self):
         secure = (ROOT / "linux/libexec/monet-secure").read_text(encoding="utf-8")
@@ -4796,51 +4991,152 @@ class SecurityAtAGlance(unittest.TestCase):
         self.assertIn('ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, timeout=300)', quick)
         install = (ROOT / "linux/install.sh").read_text(encoding="utf-8")
         self.assertIn('put 755 "$SRC/libexec/monet-secure" "$LIBEXECDIR/monet-secure"', install)
-        # Never on the list Monet's polkit rule lets through without a password.
-        programs = next(line for line in install.splitlines() if line.startswith("programs="))
-        self.assertNotIn("monet-secure", programs)
+        rule = (ROOT / "linux/polkit/49-monet.rules").read_text()
+        self.assertIn('["@SWITCH@", "@REAL_SWITCH@"]', rule)
+        for program in ("monet-secure", "monet-ready", "monet-keep", "monet-windows-drive"):
+            self.assertNotIn(program, rule)
         self.assertIn("monet-secure", (ROOT / "linux/uninstall.sh").read_text(encoding="utf-8"))
 
-    def test_apps_can_be_let_in_one_at_a_time(self):
-        # Hosting a Minecraft world, LocalSend, Syncthing... were turned away without a word:
-        # Security lets each in by name (a fixed set of ports), in a policy of its own beside
-        # Monet's zone, which stays as the image has it.
+    def test_shared_ports_only_apply_to_the_sharing_zone(self):
         from unittest import mock
         secure = libexec_helper("monet-secure")
         with tempfile_dir() as tmp:
-            state, policy = Path(tmp) / "allowed.json", Path(tmp) / "policies/monet-allowed.xml"
-            ran = []
-            with mock.patch.object(secure, "said", return_value="active"), \
-                    mock.patch.object(secure.subprocess, "run", lambda args, **kw: ran.append(args) or mock.Mock(returncode=0)):
-                secure.firewall_allow("syncthing", True, state, policy)
-                secure.firewall_allow("games", True, state, policy)
-                self.assertEqual(secure.allowed(state), ["games", "syncthing"])
-                root = ET.parse(policy).getroot()
-                self.assertEqual((root.tag, root.get("target"), root.get("priority")), ("policy", "CONTINUE", "-10"))
-                self.assertEqual([z.get("name") for z in root.findall("ingress-zone") + root.findall("egress-zone")], ["ANY", "HOST"])
-                ports = {(p.get("protocol"), p.get("port")) for p in root.findall("port")}
-                self.assertIn(("tcp", "25565"), ports)
-                self.assertIn(("udp", "21027"), ports)
-                self.assertNotIn(("tcp", "53317"), ports)                   # LocalSend wasn't let in
-                secure.firewall_allow("games", False, state, policy)
-                secure.firewall_allow("syncthing", False, state, policy)
-                self.assertFalse(policy.exists())                           # nothing let in: no policy at all
-                self.assertEqual(secure.allowed(state), [])
-            self.assertEqual(ran, [["firewall-cmd", "--reload"]] * 4)
-        with mock.patch.object(secure, "firewall_allow") as allow, mock.patch("sys.stderr"):
-            self.assertEqual(secure.main(["firewall-allow", "22/tcp", "on"]), 2)  # only names it knows
-            allow.assert_not_called()
-        quick = quick_helper()
-        self.assertEqual(quick.FIREWALL_APPS, tuple(secure.APPS))
+            state, policy = Path(tmp) / "sharing.json", Path(tmp) / "monet-sharing.xml"
+            rules = {"apps": ["games", "syncthing"], "ports": [{"name": "Test", "port": "tcp/8765"}]}
+            with mock.patch.object(secure, "said", return_value="success"):
+                self.assertEqual(secure.save_sharing(rules, policy, state), 0)
+            self.assertEqual(secure.sharing_rules(state), rules)
+            root = ET.parse(policy).getroot()
+            self.assertEqual(root.find("ingress-zone").get("name"), "monet-shared")
+            self.assertEqual(root.find("egress-zone").get("name"), "HOST")
+            ports = {(p.get("protocol"), p.get("port")) for p in root.findall("port")}
+            self.assertIn(("tcp", "25565"), ports)
+            self.assertIn(("udp", "21027"), ports)
+            self.assertIn(("tcp", "8765"), ports)
+            self.assertNotIn(("tcp", "53317"), ports)
+
+            original = policy.read_bytes()
+            empty = {"apps": [], "ports": []}
+            with mock.patch.object(secure, "said", side_effect=[None, "success"]):
+                self.assertEqual(secure.save_sharing(empty, policy, state), 1)
+            self.assertEqual(policy.read_bytes(), original)
+            self.assertEqual(secure.sharing_rules(state), rules)
+
+            with mock.patch.object(secure, "said", return_value="success"):
+                self.assertEqual(secure.save_sharing(empty, policy, state), 0)
+            self.assertFalse(policy.exists())
+            self.assertEqual(secure.sharing_rules(state), empty)
+        self.assertEqual(quick_helper().FIREWALL_APPS, tuple(secure.APPS))
+
+    def test_unprivileged_sharing_status_checks_the_loaded_policy(self):
+        from unittest import mock
+        secure = libexec_helper("monet-secure")
+        empty = {"apps": [], "ports": []}
+        rules = {"apps": [], "ports": [{"name": "Test", "port": "tcp/8765"}]}
+        settings = {"target": "CONTINUE", "priority": -10, "ingress_zones": ["monet-shared"],
+                    "egress_zones": ["HOST"], "ports": [["8765", "tcp"]], "disable": False}
+        for names, local, changes, sharing, legacy in (
+            ([], empty, {}, empty, False),
+            ([], rules, {}, None, False),
+            (["monet-sharing", "monet-allowed"], rules, {}, rules, True),
+            (["monet-sharing"], rules, {"ingress_zones": ["ANY"]}, None, False),
+            (["monet-sharing"], rules, {"rich_rules": ["rule accept"]}, None, False),
+            (None, empty, {}, None, None),
+        ):
+            def said(*args):
+                if args[0] != "busctl":
+                    return "monet"
+                if args[-1] == "getPolicies":
+                    return json.dumps({"data": [names]}) if names is not None else None
+                if args[-3:] == ("getPolicySettings", "s", "monet-sharing"):
+                    return json.dumps({"data": [{key: {"data": value}
+                                                 for key, value in (settings | changes).items()}]})
+                self.fail(f"Unexpected firewall query: {args}")
+
+            with self.subTest(names=names, local=local, changes=changes), \
+                    mock.patch.object(secure, "said", side_effect=said), \
+                    mock.patch.object(secure, "active_zones", return_value={}), \
+                    mock.patch.object(secure, "active_connections", return_value={}), \
+                    mock.patch.object(secure, "sharing_rules", return_value=local), \
+                    mock.patch.object(secure, "allowed", return_value=[]), \
+                    mock.patch.object(secure, "allowed_ports", return_value=[]):
+                status = secure.network_status()
+                self.assertEqual(status["sharing"], sharing)
+                self.assertEqual(status["legacy"], legacy)
+                self.assertEqual(status["complete"], sharing is not None)
+
+    def test_firewall_status_requires_complete_reads_for_the_all_clear(self):
+        from unittest import mock
+        secure = libexec_helper("monet-secure")
+        zones = {"monet": {"interfaces": ["eth0"], "sources": []}}
+        complete = {"--get-default-zone": "monet", "--list-ports": "", "--list-services": ""}
+        for zone_status, connections, overrides, expected in (
+            (zones, {}, {}, True),
+            ({}, {}, {}, True),
+            (None, {}, {}, False),
+            (zones, None, {}, False),
+            (zones, {}, {"--get-default-zone": None}, False),
+            (zones, {}, {"--get-default-zone": ""}, False),
+            (zones, {}, {"--list-ports": None}, False),
+            (zones, {}, {"--list-services": None}, False),
+            ({}, {"eth0": {"uuid": "fixture", "name": "Wired"}}, {}, False),
+        ):
+            replies = complete | overrides
+            with self.subTest(zones=zone_status, connections=connections, overrides=overrides), \
+                    mock.patch.object(secure, "active_zones", return_value=zone_status), \
+                    mock.patch.object(secure, "active_connections", return_value=connections), \
+                    mock.patch.object(secure, "runtime_policy", return_value=[]), \
+                    mock.patch.object(secure, "sharing_rules", return_value={"apps": [], "ports": []}), \
+                    mock.patch.object(secure, "allowed", return_value=[]), \
+                    mock.patch.object(secure, "allowed_ports", return_value=[]), \
+                    mock.patch.object(secure, "said", side_effect=lambda *args: replies[args[-1]]):
+                status = secure.network_status()
+                self.assertIs(status["known"], zone_status is not None)
+                self.assertIs(status["complete"], expected)
+                self.assertIs(status["sharingAsDefault"], False if replies["--get-default-zone"] else None)
+
+    def test_sharing_wont_enable_without_a_known_safe_default_zone(self):
+        from unittest import mock
+        secure = libexec_helper("monet-secure")
+        for default in (None, "", "monet-shared"):
+            with self.subTest(default=default), mock.patch.object(secure, "said", return_value=default), \
+                    mock.patch.object(secure, "sharing_rules", return_value={"apps": [], "ports": []}), \
+                    mock.patch.object(secure, "save_sharing", return_value=0) as save:
+                self.assertEqual(secure.change_sharing(["firewall-sharing", "games", "on"]), 1)
+                save.assert_not_called()
+
+    def test_a_network_must_be_active_and_use_monets_default_zone(self):
+        from unittest import mock
+        secure = libexec_helper("monet-secure")
+        wifi = "4984c1b0-bb0a-41a1-b1b1-236947dcdadb"
+        ethernet = "4984c1b0-bb0a-41a1-b1b1-236947dcdadc"
+        out = f"{wifi}:802-11-wireless:wlan0:Home\\: upstairs\n{ethernet}:802-3-ethernet:eth0:Wired\n"
+        with mock.patch.object(secure, "said", return_value=out):
+            self.assertEqual(secure.active_connections()["wlan0"]["name"], "Home: upstairs")
+        with mock.patch.object(secure, "active_connections", return_value={"wlan0": {"uuid": wifi, "kind": "802-11-wireless"}}), \
+                mock.patch.object(secure, "configured_zone", return_value=""), \
+                mock.patch.object(secure, "said", side_effect=["monet", "monet monet-shared public", "", "monet-shared"]) as call:
+            self.assertEqual(secure.change_network(wifi, True), 0)
+            call.assert_any_call("nmcli", "connection", "modify", "uuid", wifi, "connection.zone", "monet-shared")
+        with mock.patch.object(secure, "active_connections", return_value={}), \
+                mock.patch.object(secure, "said") as call:
+            self.assertEqual(secure.change_network(wifi, True), 1)
+            call.assert_not_called()
+
+    def test_encryption_setup_reports_a_bootstrap_key_without_reading_it(self):
+        q = quick_helper()
         with tempfile_dir() as tmp:
-            (Path(tmp) / "a.json").write_text('["deskflow", "nonsense", "games"]')
-            self.assertEqual(quick.firewall_allowed(Path(tmp) / "a.json"), ["games", "deskflow"])
-        source = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
-        self.assertIn('args[0] in FIREWALL_APPS and args[1] in ("on", "off")', source)
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
-        self.assertIn('onTapped: sheet.fixSecurity("firewall-allow " + modelData[0] + (open ? " off" : " on"))', settings)
-        self.assertIn('visible: safetyCard.s.firewall === "on" && safetyCard.s.firewallStrict === true', settings)
-        self.assertIn("rm -f /etc/firewalld/policies/monet-allowed.xml", (ROOT / "linux/uninstall.sh").read_text(encoding="utf-8"))
+            boot = Path(tmp)
+            receipt = boot / "receipt.json"
+            self.assertEqual(q.encryption_setup(boot, receipt), "complete")
+            key = boot / "monet-firstboot.key"
+            key.touch(mode=0)
+            self.assertEqual(q.encryption_setup(boot, receipt), "pending")
+            key.unlink()
+            pending = boot / "monet-setup-pending"
+            pending.mkdir()
+            (pending / "bootstrap.key").touch(mode=0)
+            self.assertEqual(q.encryption_setup(boot, receipt), "pending")
 
     def test_allowed_or_local_listeners_do_not_trigger_process_scans(self):
         from unittest import mock
@@ -4875,30 +5171,6 @@ class SecurityAtAGlance(unittest.TestCase):
     def test_a_program_that_starts_accepting_connections_is_asked_about(self):
         # As Windows asks: the program's own port let in when the person allows it, by name.
         from unittest import mock
-        secure = libexec_helper("monet-secure")
-        with tempfile_dir() as tmp:
-            state, ports, policy = Path(tmp) / "allowed.json", Path(tmp) / "ports.json", Path(tmp) / "monet-allowed.xml"
-            with mock.patch.object(secure, "said", return_value="inactive"):
-                secure.firewall_allow_port("python3", "tcp/8765", True, state, policy, ports)
-                secure.firewall_allow("games", True, state, policy, ports)
-                found = {(p.get("protocol"), p.get("port")) for p in ET.parse(policy).getroot().findall("port")}
-                self.assertIn(("tcp", "8765"), found)
-                self.assertIn(("tcp", "25565"), found)                       # the games' too, both kept
-                self.assertEqual(secure.allowed_ports(ports), [{"name": "python3", "port": "tcp/8765"}])
-                secure.firewall_allow("games", False, state, policy, ports)
-                self.assertIn('port="8765"', policy.read_text())             # the program's stays
-                secure.firewall_allow_port("python3", "tcp/8765", False, state, policy, ports)
-                self.assertFalse(policy.exists())
-            ports.write_text('[{"name": "x", "port": "tcp/22"}, {"name": "a\\nb", "port": "tcp/9000"}, "junk"]')
-            self.assertEqual(secure.allowed_ports(ports), [])                # never one it couldn't have asked for
-        with mock.patch.object(secure, "firewall_allow_port") as allow, mock.patch("sys.stderr"):
-            for args in (["python3", "tcp/80", "on"], ["python3", "udp/8765", "on"], ["a\nb", "tcp/8765", "on"],
-                         ["python3", "tcp/8765", "maybe"], ["", "tcp/8765", "on"]):
-                self.assertEqual(secure.main(["firewall-allow-port", *args]), 2, args)
-            allow.assert_not_called()
-            secure.main(["firewall-allow-port", "Minecraft server", "tcp/25570", "on"])
-            allow.assert_called_once_with("Minecraft server", "tcp/25570", True)
-
         quick = quick_helper()
         ss = ("LISTEN 0 5 0.0.0.0:8765 0.0.0.0:* users:((\"python3\",pid=41,fd=3))\n"
               "LISTEN 0 50 *:1716 *:* users:((\"kdeconnectd\",pid=42,fd=17))\n"
@@ -4925,7 +5197,7 @@ class SecurityAtAGlance(unittest.TestCase):
             asked = []
             quick.LISTENING = Path(tmp) / "listening.json"
             quick.LISTENING.write_text('{"/usr/bin/node 3000": {"name": "node", "port": 3000, "allowed": false}}')
-            with mock.patch.object(quick, "firewall_strict", return_value=True), \
+            with mock.patch.object(quick, "sharing_active", return_value=True), \
                     mock.patch.object(quick, "let_in", return_value=open_ports), \
                     mock.patch.object(quick, "listening_now", return_value=[(8765, 41, "python3"), (1716, 42, "kdeconnectd"),
                                                                              (3000, 46, "node"), (80, 47, "x")]), \
@@ -4951,11 +5223,11 @@ class SecurityAtAGlance(unittest.TestCase):
                 self.assertEqual(allow.called, said == "allow\n")
                 known = json.loads(quick.LISTENING.read_text())
                 self.assertEqual(known.get("/usr/bin/python3 8765", {}).get("allowed"), kept)
-            quick.LISTENING.write_text(json.dumps({"/usr/bin/python3 8765": {"name": "python3", "port": 8765, "allowed": True},
-                                                   "/usr/bin/java 25570": {"name": "java", "port": 25570, "allowed": True}}))
-            rows = quick.listening_list(secure=Secure)
-            self.assertEqual([(r["name"], r["port"], r["allowed"]) for r in rows], [("java", 25570, False), ("python3", 8765, False)])
-            self.assertEqual(bytes.fromhex(rows[1]["key"]).decode(), "/usr/bin/python3 8765")
+            quick.LISTENING.write_text("{}")
+            with mock.patch.object(quick, "run", return_value="allow"), \
+                    mock.patch.object(quick, "listening_allow", return_value=False):
+                self.assertIsNone(quick.ask_listening("/usr/bin/python3 8765", "python3", 8765))
+            self.assertEqual(json.loads(quick.LISTENING.read_text()), {})
         self.assertEqual(quick.program_of(999999999, "python3"), ("python3", "python3"))   # gone: by its name
 
         unit = (ROOT / "linux/systemd/user/monet-listening.service").read_text(encoding="utf-8")
@@ -4970,8 +5242,8 @@ class SecurityAtAGlance(unittest.TestCase):
         source = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
         self.assertIn('"--urgency=critical"', source)
         settings = SETTINGS_QML.read_text(encoding="utf-8")
-        self.assertIn('onTapped: sheet.fixSecurity("listening-allow " + modelData.key + (modelData.allowed ? " off" : " on"))',
-                      settings)
+        self.assertIn('sheet.fixSecurity("firewall-remove-port " + modelData.port)', settings)
+
 
     def test_only_what_monet_uses_comes_in(self):
         zone = ET.parse(SHARE.parent / "firewalld/monet.xml").getroot()
@@ -5009,7 +5281,7 @@ class SecurityAtAGlance(unittest.TestCase):
             with mock.patch.object(quick, "run", return_value=said):
                 self.assertEqual(quick.firewall_strict(), strict)
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
-        self.assertIn('sheet.fixSecurity("firewall-strict " + (safetyCard.s.firewallStrict ? "off" : "on"))', settings)
+        self.assertIn('sheet.fixSecurity("firewall-strict " + (checked ? "off" : "on"))', settings)
         self.assertIn('ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, args[0], timeout=120)',
                       (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8"))
 
@@ -5017,9 +5289,9 @@ class SecurityAtAGlance(unittest.TestCase):
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
         self.assertIn('{ id: "security", name: i18n("Security")', settings)
         self.assertIn("security: securityPage,", settings)
-        self.assertIn('ask("security", out => sheet.safety = sheet.json(out, sheet.safety))', settings)
-        for fix in ('sheet.fixSecurity("trust-key")', 'sheet.ask("firmware-setup")', 'sheet.fixSecurity("firewall-on")',
-                    'sheet.ask("auto-updates on"', "sheet.installFirmware()", 'sheet.ask("keep on"'):
+        self.assertIn('ask("security", (out, code) =>', settings)
+        for fix in ('sheet.fixSecurity("trust-key")', 'sheet.fixSecurity("firmware-setup")', 'command: "firewall-on"',
+                    'sheet.fixSecurity("auto-updates on")', "sheet.installFirmware()", 'sheet.fixSecurity("keep on")'):
             self.assertIn(fix, settings)
         # Secure Boot goes on only once Monet's key is trusted, or Monet wouldn't start.
         self.assertIn('safetyCard.s.secureBoot === "off" && safetyCard.s.keyTrusted !== true', settings)
@@ -6150,7 +6422,6 @@ class BitLockerWindows(unittest.TestCase):
         setup = (ROOT / "linux/systemd/monet-windows-setup.service").read_text(encoding="utf-8")
         self.assertIn("ExecStartPre=-@LIBEXECDIR@/monet-windows-drive unlock-saved\nExecStart=@BINDIR@/monet helper stage-windows", setup)
         install = (ROOT / "linux/install.sh").read_text(encoding="utf-8")
-        self.assertIn('\\"$LIBEXECDIR/monet-windows-drive\\"', install)  # pkexec without a password, as Settings' other helpers
 
     def test_settings_asks_for_the_key_and_sends_it_sealed(self):
         from unittest import mock
@@ -6833,7 +7104,7 @@ class FirmwareIds(unittest.TestCase):
         q = quick_helper()
         with tempfile_dir() as tmp:
             efivars = Path(tmp)
-            self.assertEqual(q.secure_boot(efivars), "off")
+            self.assertEqual(q.secure_boot(efivars), "unknown")
             (efivars / "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c").write_bytes(bytes([7, 0, 0, 0, 1]))
             self.assertEqual(q.secure_boot(efivars), "on")
 
@@ -6850,7 +7121,7 @@ class FirmwareIds(unittest.TestCase):
 
     def test_the_firewall_is_asked_of_systemd(self):
         quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
-        self.assertIn('run("systemctl", "is-active", "firewalld")', quick)
+        self.assertIn('service_state("firewalld.service")', quick)
         self.assertNotIn('"firewall-cmd", "--state"', quick)
 
 
@@ -6901,12 +7172,13 @@ class WindowsKeys(unittest.TestCase):
         for line in ('add_launch org.kde.plasma-systemmonitor.desktop _launch "Ctrl+Shift+Esc"',
                      'add_launch monet-settings.desktop _launch "Meta+I"',
                      'add_launch org.kde.krunner.desktop _launch "Meta+R"',
-                     'add_launch org.kde.spectacle.desktop RectangularRegionScreenShot "Meta+Shift+S"',
                      'kwin_keys "Window Quick Tile Top" "none"', 'kwin_keys "Window Quick Tile Bottom" "none"',
                      'touch "$CONFIG/monet/keys-windows"'):
             self.assertIn(line, keys)
         # Once per account: a key someone changes later stays theirs.
         self.assertLess(keys.index('[ -e "$CONFIG/monet/keys-windows" ] && exit "$failed"'), keys.index("add_launch"))
+        self.assertIn('region_keys="Print${tab}Meta+Shift+S${tab}Meta+Shift+Print"', look)
+        self.assertLess(keys.index('screenshot_keys'), keys.index('[ -e "$CONFIG/monet/keys-windows" ]'))
         # Windows+Space for the next keyboard layout, beside KDE's own key, for accounts that had
         # Windows' keys already too (its own once).
         self.assertIn('add_keys "KDE Keyboard Layout Switcher" "Switch to Next Keyboard Layout" "Meta+Space"', keys)
@@ -7201,8 +7473,7 @@ class AGuest(unittest.TestCase):
         self.assertIn('put 755 "$SRC/libexec/monet-guest" "$LIBEXECDIR/monet-guest"', install)
         self.assertEqual(install.count("systemctl enable monet-guest-wipe.service"), 2)
         # Monet's polkit list never has it: turning it on asks for an administrator's password.
-        programs = install[install.index('programs="['):install.index('install -d -m 755 /etc/polkit-1/rules.d')]
-        self.assertNotIn("monet-guest", programs)
+        self.assertNotIn("monet-guest", rule)
         quick = quick_helper()
         from unittest import mock
         with mock.patch.object(quick, "run", lambda *a, **k: '{"on": true}'):

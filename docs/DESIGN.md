@@ -1209,10 +1209,14 @@ Monet Setup's **Encrypt this PC** is ticked: Monet's btrfs goes inside
 LUKS2. The TPM can't learn the PC under Setup (Monet's kernel is signed with
 Universal Blue's key, so Secure Boot's measurement differs from the stick's),
 so the disk's key waits on the boot partition (`rd.luks.key`) for Monet's
-first start, when `monet-seal` enrolls the TPM (`systemd-cryptenroll`, PCR 7:
-Secure Boot's state, steady through kernel updates and trips to Windows),
-wipes the key's slot and the file, and takes `rd.luks.key` off the command
-line (`rpm-ostree kargs`). The recovery key (64 letters that type the same
+first start, when `monet-seal` enrolls the TPM using `systemd-cryptenroll`
+with PCR 7. It stages boot arguments without `rd.luks.key` using
+`rpm-ostree kargs`. If power is lost before OSTree publishes those arguments,
+the old boot entry can still use the temporary key. After a boot with the
+updated arguments, Monet updates any retained boot entries that reference
+the temporary key. It holds the OSTree deployment lock, reads the entries
+back and syncs the boot partition before retiring the slot and file. The TPM
+must still unlock the disk. The recovery key (64 letters that type the same
 on every keyboard layout) is shown once on Setup's last page and kept
 nowhere. A start the TPM can't vouch for asks for it; that start
 `monet-seal relearn` reads the key typed from root's kernel keyring
@@ -1222,76 +1226,41 @@ Fedora's installer doesn't encrypt.
 
 ## Security at a glance
 
-Settings → Security shows what keeps the PC safe, one row each, with a lily
-tick when it's as it should be, an amber "!" when it wants a look, and what
-would fix it; the title says "Your PC is protected" or how many things want a
-look. `monet-quick security` only looks, here and now: Secure Boot from the
-firmware's `SecureBoot` variable (none at all: not started in UEFI mode),
-whether the firmware trusts Monet's key (`mokutil --test-key`), encryption
-(the disk Monet runs from inside a `crypt` device, `lsblk -s`), the firewall
-(`firewall-cmd --state`), automatic updates and a staged update, and earlier
-versions of files (`monet-keep`) with the drive copies go to. Firmware updates
-are the Updates page's own question (`firmware-check`), asked as the page
-opens.
+Settings → Security puts one next step above Device security, Firewall &
+networks, Sign-in, Updates & recovery and Protection history. It uses the
+same dusk shield and glass as the rest of Settings. A lily mark confirms a
+check, amber calls for a look, and an empty ring means Monet could not check
+or the feature is unavailable. Opening the page does not change the system.
 
-The fixes: Secure Boot off and Monet's key not trusted yet → **Trust Monet…**
-(`monet-secure trust-key`: the import with the blue screen's `monetsetup`,
-waiting for an answer), then the blue screen at the next restart; trusted →
-**Firmware settings…**, which says what to do there and restarts into them
-(logind's `SetRebootToFirmwareSetup`, then KDE's restart question). Secure
-Boot is never sent on before Monet's key is trusted, or Monet wouldn't start.
-Firewall off → **Turn on** (`monet-secure firewall-on`). Updates only when
-asked → **Turn on**; an update waiting → **Restart**. Firmware → **Install**
-(fwupd asks for the password itself). Earlier versions off → **Turn on**; no
-drive → **Add a drive…** (Backups). Encryption has no fix: only Monet Setup
-encrypts, as it installs.
+`monet-quick security` reads the firmware's Secure Boot variable and checks
+whether Monet's boot key is enrolled. It traces the mounted system disk to
+its encryption layer and checks for Setup's temporary boot keys or a pending
+cleanup receipt. It also reads the SELinux mode, firewalld's status, the
+automatic update timer and staged deployment, and the user's backup choices.
+Firmware checks reuse the Updates page's fwupd integration. Sign-in links
+to Accounts and the screen lock control. Protection history reads confirmed
+firewall changes and automatic update failures from the local journal.
 
-The firewall's default zone is Monet's own (`linux/firewalld/monet.xml`,
-`target="default"`): from the network only what Monet uses comes in, as ports
-rather than firewalld's service names (a missing service would stop the zone):
-DHCPv6 (UDP 546), finding printers and devices (mDNS, UDP 5353), the phone
-(KDE Connect, TCP and UDP 1714-1764), and Steam on this network as Steam's help
-lists it: finding other PCs and Remote Play (UDP 27031-27036, TCP 27036-27037)
-and Local Network Game Transfers (TCP 27040). What the PC asks for itself gets
-its answers as always. The image installs it in `/usr/lib/firewalld/zones`,
-remembers Bazzite's default (`/usr/share/monet/firewall-zone-before`) and sets
-Monet's (`firewall-offline-cmd`, only warning if it can't); an existing system
-gets the zone in `/etc/firewalld/zones` and nothing changes. Settings →
-Security's switch, "Only what Monet uses comes in", sets it or goes back
-(`monet-secure firewall-strict on|off`, remembering the zone it leaves in
-`/var/lib/monet/firewall-zone-before`). Under it, while Monet's zone is on,
-**Apps that can accept connections** lets in one at a time: games you host
-(Minecraft, Terraria, Valheim, Factorio, Stardew Valley), LocalSend, Syncthing,
-streaming this PC with Sunshine, and Deskflow. Each is a fixed set of ports in
-`monet-secure` (`firewall-allow NAME on|off`: names only, never typed ports),
-written as a firewalld policy of its own (`/etc/firewalld/policies/monet-allowed.xml`,
-ANY → HOST, CONTINUE, priority -10, the shape of firewalld's own allow-host-ipv6),
-so Monet's zone stays as the image has it and an update can still change it. The
-names chosen are in `/var/lib/monet/firewall-allowed.json` for Settings to read.
+The network section shows active interfaces, their firewalld zones and the
+ports and services listed for each zone. Monet's default zone still covers
+KDE Connect, local discovery and Steam. Choose a connection profile using
+Monet's default zone to share the ports listed under Shared ports. This sets
+that NetworkManager profile to `monet-shared`. Turning sharing off restores
+the default-zone setting for that profile. The app presets and listener
+requests open ports to the host only from the sharing zone. An opening
+applies to the port and can be used by any process that listens there. A
+wired profile can be used on more than one network.
 
-**Windows' question** comes from `monet-listening.service`, a user unit running
-`monet-quick listening`.
-- **What it watches:** every 5 seconds it reads `ss -Hltnp`. That lists TCP ports
-  waiting for others; for anyone but root, only the person's own processes have
-  names. It ignores this PC's own addresses, ports below 1024, and ports the
-  network reaches already (Monet's zone, the apps above, ports allowed before).
-- **When:** only while Monet's zone is the default, checked each minute.
-- **What it asks:** once per program and port, it posts a critical notification,
-  so it stays until answered: "%1 wants to accept connections", with Allow and
-  Keep blocked. The program is named by its app menu entry (from its systemd
-  unit, Flatpaks too), otherwise by its process.
-- **Allow:** runs `monet-secure firewall-allow-port NAME tcp/PORT on`, which asks
-  for an administrator as Windows' shield does. It checks the name and the port
-  (TCP, 1024 and up). The port joins the same policy, and the list in
-  `/var/lib/monet/firewall-allowed-ports.json`.
-- **Afterwards:** the answer, either one, is kept in
-  `~/.config/monet/listening.json`. Security lists each program asked about,
-  with a switch to let it in or out again.
+Rules from earlier releases applied across zones. The page lists them for
+review and can remove them as a group after administrator approval. New
+rules use the sharing zone. The listener service only asks while a sharing
+connection is active and remembers an answer only after it succeeds.
 
-UDP isn't watched: a UDP socket doesn't say whether it waits for others.
-Uninstalling goes back to that zone before removing Monet's. `monet-secure` runs through pkexec and always asks
-for an administrator's password: it's not on the list Monet's polkit rule
-lets through.
+Firewall changes and boot key enrollment use `monet-secure` through Polkit.
+Play on Windows has a separate entry point for the active local session.
+It accepts only the game, task and return checkpoint. Windows preparation,
+rollback and the other system helpers use normal administrator approval.
+The session still waits for apps to close before setting the next boot.
 
 ## Bluetooth in both
 

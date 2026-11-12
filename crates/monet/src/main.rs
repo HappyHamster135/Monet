@@ -60,6 +60,22 @@ type Res<T> = Result<T, String>;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(args.as_slice(), [helper, command, ..] if helper == "helper" && command == "switch-desktop") {
+        let result = match args.as_slice() {
+            [_, _, game, task, checkpoint] => {
+                let optional = |value: &String| (!value.is_empty()).then(|| value.clone());
+                helper_switch(optional(game), optional(task), optional(checkpoint), true)
+            }
+            _ => Err("Invalid Windows switch request.".into()),
+        };
+        return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => {
+                eprintln!("{message}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let confirm = args.iter().any(|a| a == "--confirm");
     let json = args.iter().any(|a| a == "--json");
     let mut words = Vec::new();
@@ -518,8 +534,7 @@ fn is_root() -> bool {
     unsafe { libc::geteuid() == 0 }
 }
 
-/// Runs a helper command as root. pkexec asks for nothing when the Monet
-/// polkit rule is installed.
+/// Runs an administrative command through the system's authentication agent.
 fn elevate(args: &[&str]) -> Res<()> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     if is_root() {
@@ -546,6 +561,10 @@ fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<
     if checkpoint.as_deref().is_some_and(|id| !trip::valid_checkpoint(id)) {
         return Err("Invalid return checkpoint.".into());
     }
+    // Reject invalid data before touching Windows files or firmware entries.
+    LaunchRequest::new(game.clone(), 0, 0)
+        .and_then(|request| request.with_task(task.clone()))
+        .map_err(|error| error.to_string())?;
     // Boot variables need root, but reboot checks must run as the desktop user.
     // Otherwise systemctl mistakes that user's own session for another user.
     let mut restart = desktop_restart_command()?;
@@ -1034,6 +1053,10 @@ fn helper_auto_updates(on: bool) -> Res<()> {
     require_root()?;
     let path = state_dir().join(AUTO_UPDATES_OFF);
     if on {
+        if !Command::new("systemctl").args(["enable", "--now", "monet-update.timer"])
+            .status().is_ok_and(|status| status.success()) {
+            return Err("Monet couldn't start automatic updates.".into());
+        }
         if let Err(e) = fs::remove_file(&path) {
             if e.kind() != std::io::ErrorKind::NotFound {
                 return Err(e.to_string());

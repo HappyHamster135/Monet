@@ -345,6 +345,32 @@ add_keys() { # add_keys <component> <action> <key> <its default and name, if KDE
     case "$tab$keys$tab" in *"$tab$3$tab"*) return ;; esac
     kw --file "$SHORTCUTS" --group "$1" --key "$2" "${keys:+$keys$tab}$3,$rest"
 }
+screenshot_keys() {
+    local app=org.kde.spectacle.desktop launch full region tab region_keys
+    local -a config=(--file "$SHORTCUTS" --group services --group "$app")
+    [ -n "$(desktop_keys "$app" RectangularRegionScreenShot)" ] || return 0
+    launch="$(kreadconfig6 "${config[@]}" --key _launch --default unset)"
+    full="$(kreadconfig6 "${config[@]}" --key FullScreenScreenShot --default unset)"
+    region="$(kreadconfig6 "${config[@]}" --key RectangularRegionScreenShot --default unset)"
+    tab=$'\t'
+    region_keys="Print${tab}Meta+Shift+S${tab}Meta+Shift+Print"
+    # Match KDE's defaults or Monet's earlier mapping, including the order KDE
+    # writes on sign-out. A custom binding on any of these actions is kept.
+    case "$launch:$full" in
+        unset:unset|unset:Shift+Print|none:"Print${tab}Shift+Print"|none:"Shift+Print${tab}Print") ;;
+        *) return 0 ;;
+    esac
+    case "$region" in
+        unset|Meta+Shift+Print|"Meta+Shift+S${tab}Meta+Shift+Print"|"Meta+Shift+Print${tab}Meta+Shift+S"|"$region_keys") ;;
+        *) return 0 ;;
+    esac
+    MONET_PROFILE_FORCE=1 look "${config[@]}" --key RectangularRegionScreenShot "$region_keys" || return 1
+    if [ "$launch" = none ]; then
+        MONET_PROFILE_FORCE=1 look "${config[@]}" --key FullScreenScreenShot Shift+Print
+    else
+        kw "${config[@]}" --key _launch none
+    fi
+}
 if [ "${1:-}" = --keys ]; then
     # 0.9.4, once for every account (those that had Windows' keys already too): Windows+Space for
     # the next keyboard layout beside KDE's own key, and Windows+Tab for the overview of the
@@ -359,12 +385,12 @@ if [ "${1:-}" = --keys ]; then
         kwin_keys "Grid View" "none" "Meta+G,Toggle Grid View"
         [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/keys-094"
     fi
+    screenshot_keys
     [ -e "$CONFIG/monet/keys-windows" ] && exit "$failed"
     add_launch org.kde.plasma-systemmonitor.desktop _launch "Ctrl+Shift+Esc"
     add_launch monet-settings.desktop _launch "Meta+I"
     add_launch org.kde.krunner.desktop _launch "Meta+R"
     add_launch org.kde.dolphin.desktop _launch "Meta+E"
-    add_launch org.kde.spectacle.desktop RectangularRegionScreenShot "Meta+Shift+S"
     kwin_keys "Window Maximize" "Meta+Up$(printf '\t')Meta+PgUp" "Meta+PgUp,Maximize Window"
     kwin_keys "Window Quick Tile Top" "none" "Meta+Up,Quick Tile Window to the Top"
     kwin_keys "Window Minimize" "Meta+Down$(printf '\t')Meta+PgDown" "Meta+PgDown,Minimize Window"
@@ -597,6 +623,7 @@ fi
 ocr="$(ocr_language "${LANGUAGE:-${LANG:-en}}")"
 # Keep screenshots immediately pasteable, while retaining a chosen clipboard policy.
 kw_default spectaclerc General clipboardGroup PostScreenshotCopyImage
+kw_default spectaclerc General autoSaveImage true
 kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"
 
 # Settings and Store in kept panels open Monet's own apps too.

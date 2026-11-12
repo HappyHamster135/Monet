@@ -176,7 +176,8 @@ private Q_SLOTS:
         QCOMPARE(directoryCalls().first(), QStringList{server.url().toString()}); QVERIFY(!opened.first().at(1).toBool());
     }
     void anUnavailableNetworkFolderTimesOutWithoutOpeningAnything() {
-        SlowDav server; FolderOpener opener(nullptr, 200); QSignalSpy opened(&opener, &FolderOpener::opened);
+        // The private KIO worker must start before we observe the stalled request.
+        SlowDav server; FolderOpener opener(nullptr, 2000); QSignalSpy opened(&opener, &FolderOpener::opened);
         QVERIFY(opener.open(server.url())); QTRY_VERIFY(server.stats > 0); QTRY_VERIFY(!opener.busy());
         QVERIFY(opener.error().contains(QStringLiteral("taking too long"))); server.release(); QTest::qWait(100);
         QCOMPARE(opened.count(), 0); QCOMPARE(manager.items.size(), 0); QCOMPARE(directoryCalls().size(), 0);
@@ -187,7 +188,7 @@ private Q_SLOTS:
         server.release(); QTest::qWait(150); QCOMPARE(manager.items.size(), 0); QCOMPARE(directoryCalls().size(), 0);
     }
     void aTimeoutCannotOverwriteAnImmediateRetry() {
-        SlowDav server; FolderOpener opener(nullptr, 150); QSignalSpy opened(&opener, &FolderOpener::opened);
+        SlowDav server; FolderOpener opener(nullptr, 2000); QSignalSpy opened(&opener, &FolderOpener::opened);
         touch(QStringLiteral("timeout-retry.txt")); bool retried = false, stale = false;
         connect(&opener, &FolderOpener::changed, this, [&] {
             if (retried && opener.busy() && !opener.error().isEmpty()) stale = true;

@@ -1,15 +1,95 @@
 """Partition retries use saved identities; all storage is fake or disposable files."""
 import copy
 import fcntl
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from threading import Thread
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from tests.test_installer import load
+
+
+class DownloadRecovery(unittest.TestCase):
+    def test_http_resume_checks_representation_and_range(self):
+        prepare = load("linux/libexec/monet-prepare-windows", "windows_download_fixture")
+        prepare.log = prepare.progress = lambda *args: None
+        full = b"0123456789"
+        tag, changed = '"original"', '"changed"'
+        complete = (200, full, {"ETag": tag, "Content-Length": "10"})
+        partial = (200, full[:5], {"ETag": tag, "Content-Length": "10"})
+        resumed = (206, full[5:], {"ETag": tag, "Content-Range": "bytes 5-9/10", "Content-Length": "5"})
+        stale = (416, b"", {"ETag": tag, "Content-Range": "bytes */4"})
+        unvalidated = (200, full[:5], {"Content-Length": "10"})
+        replaced = (200, full, {"ETag": changed, "Content-Length": "10"})
+        finished = (416, b"", {"ETag": tag, "Content-Range": "bytes */10"})
+        fresh, offset = (None, None), ("bytes=5-", tag)
+        for scenario, responses, expected in (
+            ("resume", [partial, resumed], [fresh, offset]),
+            ("changed", [partial, replaced], [fresh, offset]),
+            ("no strong tag", [unvalidated, complete], [fresh, fresh]),
+            ("stale 416", [partial, stale, complete], [fresh, offset, fresh]),
+            ("bad 206 offset", [partial, (206, full[4:], {"ETag": tag, "Content-Range": "bytes 4-9/10"}),
+                                complete], [fresh, offset, fresh]),
+            ("bad 206 tag", [partial, (206, full[5:], {"ETag": changed, "Content-Range": "bytes 5-9/10"}),
+                             complete], [fresh, offset, fresh]),
+            ("validated 416", [complete, finished], [fresh, ("bytes=10-", tag)]),
+            ("different link", [complete, replaced], [fresh, fresh]),
+        ):
+            requests = []
+
+            class Handler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    requests.append((self.headers.get("Range"), self.headers.get("If-Range")))
+                    status, body, headers = responses.pop(0) if responses else (500, b"", {})
+                    self.send_response(status)
+                    for name, value in headers.items():
+                        self.send_header(name, value)
+                    self.end_headers()
+                    self.wfile.write(body)
+
+                def log_message(self, *args):
+                    pass
+
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as work, \
+                    HTTPServer(("127.0.0.1", 0), Handler) as server, patch.object(prepare.time, "sleep"):
+                thread = Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01})
+                thread.start()
+                try:
+                    target = Path(work) / "windows.iso"
+                    target.write_bytes(b"old download with no identity")
+                    url = f"http://127.0.0.1:{server.server_port}/windows.iso"
+                    prepare.download(url, target)
+                    if scenario == "validated 416":
+                        prepare.download(url, target)
+                    if scenario == "different link":
+                        prepare.download(url + "?new=1", target)
+                    self.assertEqual(target.read_bytes(), full)
+                    self.assertEqual(requests, expected)
+                    self.assertFalse(responses)
+                finally:
+                    server.shutdown()
+                    thread.join()
+
+    def test_work_dir_rejects_links_and_unprotected_directories(self):
+        prepare = load("linux/libexec/monet-prepare-windows", "windows_download_directory_fixture")
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            prepare.WORK = root / "download"
+            prepare.check_work_dir()
+            self.assertEqual(prepare.WORK.stat().st_mode & 0o777, 0o700)
+            prepare.WORK.chmod(0o777)
+            with self.assertRaisesRegex(prepare.Stop, "not protected"):
+                prepare.check_work_dir()
+            prepare.WORK.rmdir()
+            prepare.WORK.symlink_to(root, target_is_directory=True)
+            with self.assertRaisesRegex(prepare.Stop, "not protected"):
+                prepare.check_work_dir()
 
 
 class PartitionDiscovery(unittest.TestCase):
@@ -304,6 +384,8 @@ class Recovery(unittest.TestCase):
                         patch.object(self.p, "root_disk", return_value=self.disk), \
                         patch.object(self.p, "require_setup_payload"), \
                         patch.object(self.p, "resume_staged_setup", return_value=None), \
+                        patch.object(self.p, "check_work_dir"), \
+                        patch.object(self.p.shutil, "disk_usage", return_value=SimpleNamespace(free=32 << 30)), \
                         patch.object(self.p, "windows_download_link", side_effect=self.p.Stop("download-failed", "blocked") if kind == "blocked" else None,
                                      return_value=("https://example.invalid/windows.iso", "English")), \
                         patch.object(self.p, "download", side_effect=self.p.Stop("download-failed", "interrupted")):
@@ -311,6 +393,90 @@ class Recovery(unittest.TestCase):
                 self.assertFalse(self.receipt.exists())
                 self.assertFalse(self.formats())
                 self.assertFalse(self.appends())
+
+    def test_invalid_iso_stops_before_partitioning_or_staging(self):
+        self.p.STATUS = self.p.STATE / "windows-setup"
+        self.p.WORK = self.root / "downloads"
+        iso = self.root / "input.iso"
+        iso.write_bytes(b"not an empty ISO")
+        iso_dir = self.p.MOUNT / "iso"
+        for name in ("sources/boot.wim", "sources/install.wim", "efi/boot/bootx64.efi",
+                     "efi/microsoft/boot/bcd", "boot/boot.sdi"):
+            path = iso_dir / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"fixture")
+
+        for failure in ("mount", "verify", "link"):
+            calls = []
+            if failure == "link":
+                (iso_dir / "linked-file").symlink_to(iso)
+
+            def command(*args, **kwargs):
+                calls.append(args)
+                if args[0] == "mount":
+                    if failure == "mount":
+                        raise self.p.Stop("failed", "fixture ISO could not be mounted")
+                elif args[:2] == ("wimlib-imagex", "info"):
+                    return "Boot Index: 2\n"
+                elif args[:2] == ("wimlib-imagex", "export"):
+                    args[4].write_bytes(b"exported edition")
+                elif args[:2] == ("wimlib-imagex", "verify") and args[2].name == "windows.wim":
+                    raise self.p.Stop("failed", "fixture checksum mismatch")
+
+            with self.subTest(failure=failure), \
+                    patch.object(self.p.sys, "argv", ["monet-prepare-windows", "--iso", str(iso)]), \
+                    patch.object(self.p.os, "geteuid", return_value=0), \
+                    patch.object(self.p.Path, "is_dir", return_value=True), \
+                    patch.object(self.p, "root_disk", return_value=self.disk), \
+                    patch.object(self.p, "require_setup_payload"), \
+                    patch.object(self.p, "resume_staged_setup", return_value=None), \
+                    patch.object(self.p, "check_work_dir"), \
+                    patch.object(self.p, "wim_images", return_value=[(2, "Windows Setup")]), \
+                    patch.object(self.p, "run", side_effect=command), \
+                    patch.object(self.p, "make_partitions") as partitions, \
+                    patch.object(self.p, "stage") as stage:
+                self.assertEqual(self.p.prepare_main(), 2)
+                partitions.assert_not_called()
+                stage.assert_not_called()
+            self.assertEqual(self.p.STATUS.read_text(), "download-failed")
+            self.assertTrue(iso.exists())
+            self.assertEqual(list(self.p.WORK.iterdir()), [])
+            if failure != "mount":
+                self.assertIn(("umount", iso_dir), calls)
+            if failure == "link":
+                self.assertEqual([call[0] for call in calls], ["mount", "umount"])
+
+    def test_corrupt_cached_download_is_cleared_but_interrupted_download_is_kept(self):
+        self.p.STATUS = self.p.STATE / "windows-setup"
+        self.p.WORK = self.root / "downloads"
+        self.p.WORK.mkdir()
+        iso = self.p.WORK / "windows.iso"
+        receipt = iso.with_suffix(".etag")
+        for interrupted in (True, False):
+            def download(url, target):
+                target.write_bytes(b"fixture")
+                receipt.write_text("download identity")
+                if interrupted:
+                    raise self.p.Stop("download-failed", "connection interrupted")
+
+            with self.subTest(interrupted=interrupted), \
+                    patch.object(self.p.sys, "argv", ["monet-prepare-windows"]), \
+                    patch.object(self.p.os, "geteuid", return_value=0), \
+                    patch.object(self.p.Path, "is_dir", return_value=True), \
+                    patch.object(self.p, "root_disk", return_value=self.disk), \
+                    patch.object(self.p, "require_setup_payload"), \
+                    patch.object(self.p, "resume_staged_setup", return_value=None), \
+                    patch.object(self.p, "check_work_dir"), \
+                    patch.object(self.p.shutil, "disk_usage", return_value=SimpleNamespace(free=32 << 30)), \
+                    patch.object(self.p, "windows_download_link", return_value=("https://example.invalid/iso", "English")), \
+                    patch.object(self.p, "download", side_effect=download), \
+                    patch.object(self.p, "windows_media", side_effect=self.p.Stop("download-failed", "corrupt ISO")), \
+                    patch.object(self.p, "make_partitions") as partitions:
+                self.assertEqual(self.p.prepare_main(), 2)
+                partitions.assert_not_called()
+            self.assertEqual(self.p.STATUS.read_text(), "download-failed")
+            self.assertEqual(iso.exists(), interrupted)
+            self.assertEqual(receipt.exists(), interrupted)
 
     def test_legacy_recovery_refuses_preformatted_input_and_existing_record_changes(self):
         plan = self.legacy_plan()

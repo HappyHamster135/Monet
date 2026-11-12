@@ -1,6 +1,8 @@
 //! The parts of making a USB stick that don't touch Windows: what to download,
 //! how to name a stick, how to cut the image into writes.
 
+use std::io::{self, Read, Seek, SeekFrom};
+
 /// Where one of this version's files is: the release this program came with.
 pub fn release_url(version: &str, name: &str) -> String {
     format!("https://github.com/HappyHamster135/Monet/releases/download/v{version}/{name}")
@@ -64,6 +66,14 @@ pub struct Target {
     pub usb: bool,
 }
 
+pub fn check_sector_size(logical: u32) -> Result<(), &'static str> {
+    // The hybrid ISO's partition table addresses 512-byte logical sectors.
+    if logical != 512 {
+        return Err(t!("Monet needs a USB stick with 512-byte logical sectors. Nothing was written."));
+    }
+    Ok(())
+}
+
 /// Recheck the opened device, never trust a disk number saved before downloading.
 pub fn check_target(selected: Target, current: Target, system: Option<u32>, image: u64) -> Result<(), &'static str> {
     if system.is_none() || system == Some(current.number) {
@@ -74,9 +84,7 @@ pub fn check_target(selected: Target, current: Target, system: Option<u32>, imag
             "The selected USB device changed. Select it again. Nothing was written."
         ));
     }
-    if !matches!(current.sector, 512 | 4096) {
-        return Err(t!("This device's sector size is not supported. Nothing was written."));
-    }
+    check_sector_size(current.sector)?;
     let padded = image.checked_add(4095).map(|n| n / 4096 * 4096);
     if image == 0 || padded.is_none_or(|n| n > current.bytes) {
         return Err(t!(
@@ -103,16 +111,65 @@ pub fn checksum(manifest: &str, name: &str) -> Option<String> {
     found
 }
 
-pub fn bootable_iso(header: &[u8], total: u64) -> bool {
-    header.len() >= 32774
-        && total >= header.len() as u64
-        && total.is_multiple_of(2048)
-        && &header[510..512] == b"\x55\xaa"
-        && &header[32769..32774] == b"CD001"
+const ISO_SECTOR: usize = 2048;
+const FIRST_DESCRIPTOR: u64 = 16;
+
+pub fn bootable_iso(image: &mut (impl Read + Seek), total: u64) -> io::Result<bool> {
+    let sectors = total / ISO_SECTOR as u64;
+    if sectors <= FIRST_DESCRIPTOR || !total.is_multiple_of(ISO_SECTOR as u64) {
+        return Ok(false);
+    }
+    image.rewind()?;
+    let mut sector = [0; ISO_SECTOR];
+    image.read_exact(&mut sector)?;
+    if sector[510..512] != *b"\x55\xaa" {
+        return Ok(false);
+    }
+    if sector[512..520] == *b"EFI PART" {
+        // A hybrid image can describe disk data beyond its ISO filesystem.
+        let backup_lba = u64::from_le_bytes(sector[544..552].try_into().unwrap());
+        if !(2..total / 512).contains(&backup_lba) {
+            return Ok(false);
+        }
+    } else if sector[450..512].iter().step_by(16).any(|&kind| kind == 0xee) {
+        return Ok(false);
+    }
+    image.seek(SeekFrom::Start(FIRST_DESCRIPTOR * ISO_SECTOR as u64))?;
+    for descriptor in FIRST_DESCRIPTOR..sectors {
+        image.read_exact(&mut sector)?;
+        if sector[1..6] != *b"CD001" || sector[0] == 255 {
+            return Ok(false);
+        }
+        if sector[0] == 1 {
+            // ISO 9660 records both byte orders in its primary volume descriptor.
+            let blocks = u32::from_le_bytes(sector[80..84].try_into().unwrap());
+            let block_size = u16::from_le_bytes(sector[128..130].try_into().unwrap());
+            let volume = u64::from(blocks) * u64::from(block_size);
+            return Ok(sector[6] == 1
+                && sector[84..88] == blocks.to_be_bytes()
+                && sector[130..132] == block_size.to_be_bytes()
+                && matches!(block_size, 512 | 1024 | 2048)
+                && ((descriptor + 1) * ISO_SECTOR as u64..=total).contains(&volume));
+        }
+    }
+    Ok(false)
 }
 
-/// A write's length rounded up to whole 4 KiB sectors (the stick only takes
-/// whole sectors; the ISO is 2 KiB-aligned, so at most 2 KiB of zeros).
+#[cfg(test)]
+pub(crate) fn test_iso(blocks: u32) -> Vec<u8> {
+    let mut iso = vec![0; 32 * ISO_SECTOR];
+    iso[510..512].copy_from_slice(b"\x55\xaa");
+    let descriptor = &mut iso[FIRST_DESCRIPTOR as usize * ISO_SECTOR..];
+    descriptor[..7].copy_from_slice(b"\x01CD001\x01");
+    descriptor[80..84].copy_from_slice(&blocks.to_le_bytes());
+    descriptor[84..88].copy_from_slice(&blocks.to_be_bytes());
+    descriptor[128..130].copy_from_slice(&(ISO_SECTOR as u16).to_le_bytes());
+    descriptor[130..132].copy_from_slice(&(ISO_SECTOR as u16).to_be_bytes());
+    iso
+}
+
+/// Round the transfer up to match the 4 KiB-aligned I/O buffer.
+/// The ISO is 2 KiB-aligned, so the padding is at most 2 KiB.
 pub fn padded(len: usize) -> usize {
     len.div_ceil(4096) * 4096
 }
@@ -184,10 +241,16 @@ mod tests {
     }
 
     #[test]
+    fn native_4k_target_is_rejected_before_the_write() {
+        let native_4k = Target { sector: 4096, ..target() };
+        let message = check_sector_size(4096).unwrap_err();
+        assert_eq!(check_target(native_4k, native_4k, Some(0), 2048), Err(message));
+    }
+
+    #[test]
     fn image_must_fit_including_sector_padding() {
         let selected = Target {
-            bytes: 8192,
-            sector: 4096,
+            bytes: 8704,
             ..target()
         };
         for size in [0, 8193, u64::MAX] {
@@ -226,14 +289,37 @@ mod tests {
 
     #[test]
     fn reject_empty_truncated_or_non_bootable_images() {
-        let mut header = vec![0; 32774];
-        assert!(!bootable_iso(&header, 65536));
-        header[510..512].copy_from_slice(b"\x55\xaa");
-        header[32769..32774].copy_from_slice(b"CD001");
-        assert!(bootable_iso(&header, 65536));
-        assert!(!bootable_iso(&header, 0));
-        assert!(!bootable_iso(&header, 65535));
-        assert!(!bootable_iso(&header[..512], 65536));
+        let valid = |data: &[u8]| bootable_iso(&mut io::Cursor::new(data), data.len() as u64).unwrap();
+        assert!(!valid(&[]));
+        assert!(!valid(&[0; 65536]));
+        assert!(!valid(&test_iso(512))); // Real ISO header with its payload missing.
+        let mut iso = test_iso(32);
+        assert!(valid(&iso));
+        assert!(!valid(&iso[..65535]));
+        assert!(!valid(&iso[..512]));
+        iso[16 * ISO_SECTOR + 87] ^= 1;
+        assert!(!valid(&iso));
+    }
+
+    #[test]
+    fn hybrid_backup_gpt_must_fit_even_when_the_iso_volume_fits() {
+        let mut iso = test_iso(24);
+        iso[450] = 0xee;
+        let fits = |data: &[u8]| bootable_iso(&mut io::Cursor::new(data), data.len() as u64).unwrap();
+        assert!(!fits(&iso));
+        iso[512..520].copy_from_slice(b"EFI PART");
+        iso[544..552].copy_from_slice(&127u64.to_le_bytes());
+        assert!(fits(&iso));
+        assert!(!fits(&iso[..31 * ISO_SECTOR]));
+    }
+
+    #[test]
+    fn the_boot_record_may_precede_the_primary_volume_descriptor() {
+        let mut iso = test_iso(32);
+        let first = 16 * ISO_SECTOR;
+        iso.copy_within(first..first + ISO_SECTOR, first + ISO_SECTOR);
+        iso[first] = 0;
+        assert!(bootable_iso(&mut io::Cursor::new(&iso), iso.len() as u64).unwrap());
     }
 
     #[test]

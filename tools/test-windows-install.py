@@ -87,7 +87,17 @@ try {
     $checkpoint = Get-Content -Raw 'C:\.monet-setup.json' | ConvertFrom-Json
     $os = Get-CimInstance Win32_OperatingSystem
     $principal = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
+    # FirstLogonCommands may run concurrently. Wait for the setup sign-in cleanup.
+    $winlogon = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $count = Get-ItemPropertyValue -Path $winlogon -Name AutoLogonCount -ErrorAction SilentlyContinue
+        $autoAdminLogon = Get-ItemPropertyValue -Path $winlogon -Name AutoAdminLogon -ErrorAction SilentlyContinue
+        if ($null -ne $count -and $count -eq 0 -and $autoAdminLogon -eq '0') { break }
+        Start-Sleep -Milliseconds 250
+    }
     $result = [ordered]@{version=1;username=$env:USERNAME;computer=$env:COMPUTERNAME;build=$os.BuildNumber;caption=$os.Caption;job=$checkpoint.job_id;phase=$checkpoint.phase;isAdministrator=$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator);fromMonet=[bool]$FromMonet;gameProfile=[bool]$GameProfile;removeApps=[bool]$RemoveApps;installSteam=[bool]$InstallSteam}
+    $result.setupAutoLogonCount = $count
+    $result.setupAutoAdminLogon = $autoAdminLogon
     $result | ConvertTo-Json | Set-Content -Encoding UTF8 'C:\monet-vm-first-logon.json'
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 'C:\monet-vm-first-logon-error.txt'
@@ -257,7 +267,8 @@ def verify_first_logon(work, manifest, job):
                               capture_output=True).stdout.decode("utf-8-sig"))
     expected = {"version": 1, "username": TEST_USER, "computer": TEST_COMPUTER, "job": job["id"],
                 "phase": "complete", "isAdministrator": True, "fromMonet": True, "gameProfile": True,
-                "removeApps": True, "installSteam": True}
+                "removeApps": True, "installSteam": True, "setupAutoLogonCount": 0,
+                "setupAutoAdminLogon": "0"}
     if any(result.get(key) != value for key, value in expected.items()):
         raise RuntimeError(f"Incorrect first-logon handoff: {result}")
     (work / "first-logon.json").write_text(json.dumps(result, indent=2) + "\n")

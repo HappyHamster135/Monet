@@ -1,9 +1,9 @@
 // Monet: switching to Windows is one click, like restarting.
-// Allows the signed-in user to run Monet's helper as root without a password; not a guest
-// (monet-guest), for whom an administrator says yes.
+// The switch entry point only accepts a game, task and return checkpoint.
 polkit.addRule(function(action, subject) {
-    if (action.id == "org.freedesktop.policykit.exec" &&
-        @PROGRAMS@.indexOf(action.lookup("program")) >= 0 &&
+    var program = action.lookup("program");
+    if (action.id == "org.freedesktop.policykit.exec" && program &&
+        ["@SWITCH@", "@REAL_SWITCH@"].indexOf(program) >= 0 &&
         subject.local && subject.active && subject.user != "guest") {
         return polkit.Result.YES;
     }

@@ -1,8 +1,9 @@
 # Monet 0.9.7 — speed, everyday use and small fixes
 
 Approved scope: eight improvements, requested on 5 November 2026. Work stays
-local and uncommitted. VERSION and workspace packages now identify an unpublished
-0.9.7 candidate; the laptop OS remains 0.9.6 with a reversible account preview.
+local and uncommitted. VERSION and workspace packages identify the 0.9.7
+candidate. The laptop runs an earlier 0.9.7 image with a reversible account
+preview.
 Status below distinguishes implementation from installation and release testing.
 
 The current foundation includes regional clock/weather defaults, Desktop as the
@@ -13,10 +14,110 @@ have a reversible account installation for laptop testing. Both candidate image
 variants pass customized-profile upgrade/rollback in isolated virtual machines;
 physical release acceptance remains open.
 
-Current remaining work: physical drive, external-monitor and graphics acceptance.
-The subsequent archive actions and power-page restyle are installed in the
-account preview and pass their affected/native checks. The frozen v7 OS images
-predate these corrections; the next final image qualification must include them.
+Physical drive, external-monitor and graphics acceptance remains open. The
+candidate before the restart fix included the Security page loading fix from
+the account preview. It passed the full desktop suite, encrypted offline Setup
+and TPM rollback after an interrupted boot, the Fedora fallback, and signed
+update and rollback on both image variants with customized profiles. The
+firewall changes and authorization checks for ordinary and Guest sessions also
+passed.
+The Windows USB maker refused a truncated Setup ISO
+before writing, then wrote and verified the complete ISO twice. The written
+virtual stick booted Setup with Secure Boot and the expected digest map.
+Security and widget Glass also passed additional client rendering checks on
+the laptop's GPUs through virtual outputs. A restart from Security reached
+virtual UEFI after a document was saved. Canceling kept the draft open.
+The NVIDIA VM then exposed a restart dialog failure after Security's firmware
+check started Plasma's shutdown service. The passive probe is in the account
+preview. With the fix in the VM, canceling Restart kept the signed update
+staged, confirming Restart booted it, and an administrator-approved rollback
+returned to the original image. Both rebuilt images include the fix. Their
+packaged Restart dialog, signed upgrade and profile-preserving rollback passed.
+The rebuilt VM installer media pin the exact new image digests. Setup booted
+with Secure Boot, and the Fedora fallback installed the pinned AMD/Intel image
+after the test registry moved the version tag. The Windows USB maker wrote and
+verified the rebuilt Setup ISO twice. The rewritten stick passed independent
+read-back and a Secure Boot start in a VM. The exact rebuilt AMD/Intel image
+also passed the firmware restart from Security with an unsaved document. The
+rebuilt NVIDIA image automatically rolled back when the VM's sign-in screen
+failed, and the updater skipped the failed digest on the next check. A fresh
+encrypted Setup install of the exact NVIDIA image verified the recovery key,
+Secure Boot and TPM unlock after rollback to the retained deployment.
+The early boot test exposed a separate GRUB recovery bug. The corrected
+helper is in both local image exports and the Linux bundle. The rebuilt
+NVIDIA image passed recovery after three interrupted starts. Another
+restart kept the recovered signed deployment and the updater skipped the
+failed digest. The rebuilt AMD/Intel image passed signature checks and a
+manual rollback to the original 0.9.6 deployment. Both VMs preserved the
+customized profile. Both VM ISOs were rebuilt with the new pins. Setup
+reached Hello with Secure Boot and its network adapter removed. A fresh
+Fedora fallback install booted the pinned AMD/Intel digest after the
+registry moved the version tag. Its update check used the rolling channel.
+The rebuilt Setup ISO installed the pinned NVIDIA digest to a new encrypted
+disk. The recovery key and TPM unlock after rollback both passed.
+The Windows USB maker refused a truncated copy of the rebuilt Setup ISO,
+wrote and verified the full ISO twice, and the rewritten stick reached
+Setup with Secure Boot enabled in a VM.
+The complete desktop suite passed on the frozen source of this build.
+The Windows USB maker follow-up moved disk scans off the window thread.
+The rebuilt executable passed slow-discovery, unplug, repeat-write and
+Secure Boot checks with the same Setup ISO in a VM.
+The local candidate manifest verifies all seven package, image and VM
+media files. Its signed AMD/Intel image and packaged Windows Bridge passed
+an active-desktop game round trip. The general command and an inactive
+switch still required authentication. A pre-first-boot Windows fixture ran
+the exact Bridge package at its first automatic sign-in, returned to the
+signed Monet image and kept both setup auto-logon values at zero on the next
+Windows sign-in.
+The current Security page passed its remaining keyboard checks in Mist and
+Smoke at 150% and 200%. A signed upgrade from 0.9.6 kept an existing global
+firewall rule, restored it after a failed reload and recorded its eventual
+administrator removal in Protection history.
+The pinned encrypted Setup VM showed Security's pending key state and
+confirmed completion across two restarts. That test found an update-status
+read blocked by private OSTree directories. The read-only D-Bus fallback
+passed on the guest and is in the account preview and both rebuilt images.
+The exact signed update and rollback checks passed on both images. Setup
+booted with both new pins, and Fedora fallback installed the pinned
+AMD/Intel image after the test registry moved its version tag. The final
+desktop suite and all seven local artifact checks passed. The Windows USB
+maker wrote the rebuilt Setup ISO and verified it in a VM. Independent
+read-back matched the ISO payload, and the written stick reached Setup with
+Secure Boot and both expected pins. Physical USB, display and GPU checks,
+and Steam Remote Play remain open.
+The encrypted ZIP failure now has a reproducible fixture. Ark verifies the
+read through the end of each ZIP entry and reports the checksum failure.
+The rebuilt plugin passed native tests, loaded in the laptop's account
+preview, and is in both refreshed local image exports. Both rejected
+unsigned and wrong-key offers, booted the locally signed 0.9.7 update, and
+rolled back to 0.9.6 with the saved file intact. Setup read both refreshed
+pins under Secure Boot. The Windows maker wrote the exact Setup ISO, and
+the resulting virtual stick passed read-back and Secure Boot. Fedora
+fallback installed the pinned AMD/Intel image after the test tag moved.
+The rebuilt Windows writer now sets the protective MBR size from the
+validated USB capacity. Setup and Fedora fallback both passed native Windows
+write, independent GPT read-back and Secure Boot checks. The full desktop
+recheck found a duplicate wallpaper weather request on unlock. A single
+refresh now runs through the weather timer. The fix passed 40 focused checks,
+is installed in the account preview, and is in both new image exports.
+The full desktop rerun passed. The refreshed Setup ISO booted with Secure
+Boot and a virtual TPM and read both new pins.
+Both refreshed images passed signed upgrade and rollback. The rebuilt Windows
+maker wrote both repinned ISOs and passed independent read-back. Fedora
+fallback installed the pinned AMD/Intel image from that virtual stick, then
+booted with the stick removed.
+The current digests and reports
+are in [Testing](TESTING.md).
+The direct Ethernet Setup kit serves both pinned images from the laptop's
+existing archives. The test stick booted with Secure Boot and reached the
+isolated registry with a certificate scoped to that registry. The VM finished
+an encrypted AMD/Intel install and verified its recovery key. The installed
+VM reached the desktop with the stick detached. A second boot used the TPM
+and retired Setup's temporary disk key. The physical test still needs a
+spare USB stick, a dedicated Ethernet link and a spare installation drive.
+The archive actions and power-page restyle are installed in the
+account preview and are packaged in both rebuilt images. The frozen v7 OS images
+predate these corrections.
 Double-click keeps the extraction box; right-click Open is the separate contents
 browser. The temporary default-browsing change in batch 31 is reverted in batch 32.
 The final v7 images include the native thumbnail loading/Stop control as well as

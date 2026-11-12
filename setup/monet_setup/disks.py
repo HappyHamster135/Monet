@@ -139,8 +139,8 @@ def disks(devices=None):
 
 
 def windows_mib(size_mib):
-    """Windows' share of an erased disk: about a third, 100-500 GiB."""
-    return min(max(size_mib * 35 // 100, 100 * 1024), 500 * 1024)
+    """Room for a fresh Windows install and its updates, capped at 128 GiB."""
+    return min(max(size_mib * 35 // 100, 100 * 1024), 128 * 1024)
 
 
 def plan_erase(size):

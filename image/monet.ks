@@ -3,8 +3,9 @@
 # Two choices on the USB stick's start menu:
 #
 #   Install Monet and Windows (erases this PC)   <- default
-#       Monet picks the PC's main disk and splits it between Monet and
-#       Windows. After the first sign-in, Monet downloads Windows 11 from
+#       Monet can split a single internal disk between Monet and Windows.
+#       Use Monet Setup to select a drive on PCs with multiple internal disks.
+#       After the first sign-in, Monet downloads Windows 11 from
 #       Microsoft (showing its progress) and, when you say so, restarts to
 #       install it by itself: no BitLocker, no Fast Startup, no questions,
 #       Monet Bridge already in place.
@@ -14,9 +15,9 @@
 #
 # The installer still asks for Wi-Fi, your name and password. Nothing on the
 # disk changes until you click Begin Installation.
-# @IMAGE@ is filled in when the installer is built.
+# Both image references are pinned to the manifests recorded when the ISO is built.
 
-%pre --interpreter=/usr/bin/python3 --log=/tmp/monet-pre.log
+%pre --interpreter=/usr/bin/python3 --erroronfail --log=/tmp/monet-pre.log
 # Plans the disk for "Install Monet and Windows". Only writes a plan;
 # nothing is changed on any disk here.
 import json, subprocess
@@ -25,12 +26,12 @@ cmdline = open("/proc/cmdline").read().split()
 plan = ""
 
 def run(cmd, timeout=60):
-    """What a tool printed; nothing if it failed or hung."""
+    """What a tool printed, or None if it failed or hung."""
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
-    except Exception as e:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=True).stdout
+    except (OSError, subprocess.SubprocessError) as e:
         print(f"Monet: {cmd[0]} didn't answer ({e})")
-        return ""
+        return None
 
 def lsblk():
     # -l: one flat list with the partitions too, so the USB stick's
@@ -44,16 +45,24 @@ def lsblk():
 def flag(value):
     return value in (True, 1, "1", "true")
 
+def stop_erase(reason):
+    message = "Monet installation stopped.\n\n" + reason + "\n\nRestart with Monet Setup to choose a drive."
+    # Anaconda's graphical interface has not started yet. Keep the message
+    # visible on its console, and record it even when there is no console.
+    run(["tmux", "new-window", "-n", "Monet Setup", "sh", "-c",
+         'printf "\\n%s\\n" "$1"; exec sleep infinity', "monet", message], timeout=5)
+    raise SystemExit(message)
+
 if "monet.keep" not in cmdline:
-    # Let every disk finish showing up before choosing one.
-    run(["udevadm", "settle", "--timeout=30"], timeout=40)
+    if run(["udevadm", "settle", "--timeout=30"], timeout=40) is None:
+        stop_erase("Monet could not finish checking the drives.")
     devices = lsblk()
     # Never touch the USB stick Monet is running from.
     media = set()
     for arg in cmdline:
         if arg.startswith(("inst.stage2=hd:LABEL=", "inst.ks=hd:LABEL=")):
             label = arg.split("LABEL=", 1)[1].split(":")[0].replace("\\x20", " ")
-            dev = run(["blkid", "-L", label], timeout=20).strip()
+            dev = (run(["blkid", "-L", label], timeout=20) or "").strip()
             if dev:
                 media.add(dev)
     media_disks = {d.get("pkname") or d["name"] for d in devices if d["path"] in media}
@@ -63,16 +72,19 @@ if "monet.keep" not in cmdline:
         and d.get("tran") != "usb" and d["name"] not in media_disks
         and not d["name"].startswith(("zram", "loop", "sr", "nbd"))
     ]
-    if disks:
-        disk = max(disks, key=lambda d: int(d["size"]))
-        size_mib = int(disk["size"]) // (1024 * 1024)
-        windows_mib = min(max(size_mib * 35 // 100, 100 * 1024), 500 * 1024)
-        monet_mib = size_mib - windows_mib - 8 * 1024 - 4 * 1024
-        if monet_mib < 64 * 1024:
-            # Too small to share: Monet takes the whole disk.
-            monet_mib = size_mib - 4 * 1024
-        name = disk["name"]
-        plan = f"""
+    # Anaconda can preselect every disk when it receives an empty plan.
+    if len(disks) != 1 or not media_disks:
+        stop_erase("The erase option needs one eligible internal drive and recognized installation media.")
+    disk = disks[0]
+    size_mib = int(disk["size"]) // (1024 * 1024)
+    # Match the fresh-install Windows allowance in monet_setup/disks.py.
+    windows_mib = min(max(size_mib * 35 // 100, 100 * 1024), 128 * 1024)
+    monet_mib = size_mib - windows_mib - 8 * 1024 - 4 * 1024
+    if monet_mib < 64 * 1024:
+        # Too small to share: Monet takes the whole disk.
+        monet_mib = size_mib - 4 * 1024
+    name = disk["name"]
+    plan = f"""
 zerombr
 ignoredisk --only-use={name}
 clearpart --all --initlabel --disklabel=gpt --drives={name}
@@ -81,7 +93,7 @@ part btrfs.monet --size={monet_mib} --ondisk={name}
 btrfs none --label=monet btrfs.monet
 btrfs / --subvol --name=root LABEL=monet
 """
-        print(f"Monet: {name}, {size_mib} MiB: Monet {monet_mib} MiB, the rest for Windows")
+    print(f"Monet: {name}, {size_mib} MiB: Monet {monet_mib} MiB, the rest for Windows")
     print(f"Monet: the USB stick is {sorted(media_disks) or 'not found'}")
 
 open("/tmp/monet-storage.ks", "w").write(plan)
@@ -104,9 +116,9 @@ network --hostname=monet
 import json, os, subprocess, sys, time, urllib.error, urllib.request
 
 # Which Monet the %pre below chose for this PC's graphics.
-image = open("/tmp/monet-image").read().strip() if os.path.exists("/tmp/monet-image") else "@IMAGE@"
+image = open("/tmp/monet-image").read().strip()
 registry, rest = image.split("/", 1)
-repo, tag = rest.rsplit(":", 1)
+repo, reference = rest.rsplit("@", 1)
 accept = ", ".join([
     "application/vnd.oci.image.index.v1+json",
     "application/vnd.oci.image.manifest.v1+json",
@@ -124,7 +136,7 @@ def check():
         if e.code in (401, 403):
             raise PermissionError("access denied") from None
         raise
-    request = urllib.request.Request(f"https://{registry}/v2/{repo}/manifests/{tag}", method="HEAD",
+    request = urllib.request.Request(f"https://{registry}/v2/{repo}/manifests/{reference}", method="HEAD",
                                      headers={"Authorization": f"Bearer {token}", "Accept": accept})
     urllib.request.urlopen(request, timeout=30).close()
 
@@ -145,7 +157,10 @@ for attempt in range(6):
         say("The Monet package on GitHub isn't public. Make it public in its Package settings, then try again.")
         sys.exit(1)
     except urllib.error.HTTPError as e:
-        if e.code in (401, 403, 404):
+        if e.code == 404:
+            say("The exact Monet image for this installer could not be found. Try again later or use a newer installer.")
+            sys.exit(1)
+        if e.code in (401, 403):
             say(f"{image} can't be downloaded ({e}).")
             say("The Monet package on GitHub isn't public. Make it public in its Package settings, then try again.")
             sys.exit(1)
@@ -176,7 +191,7 @@ def image_size():
                                              headers={"Authorization": f"Bearer {token}", "Accept": accept})
             with urllib.request.urlopen(request, timeout=30) as r:
                 return json.load(r)
-        m = manifest(tag)
+        m = manifest(reference)
         if "manifests" in m:
             m = manifest(next(x["digest"] for x in m["manifests"]
                               if x.get("platform", {}).get("architecture") == "amd64"))
@@ -286,10 +301,11 @@ if root:
                 window.kill()
 %end
 
-%pre --interpreter=/usr/bin/python3 --log=/tmp/monet-image.log
+%pre --interpreter=/usr/bin/python3 --erroronfail --log=/tmp/monet-image.log
 # Which Monet: NVIDIA's open driver with a GTX 16 / RTX 20 or newer (PCI ids
 # from 1e00), otherwise AMD's and Intel's, whose open drivers also draw with
 # older NVIDIA cards. Monet Setup chooses the same way (setup/monet_setup/pc.py).
+import re
 from pathlib import Path
 
 def newer_nvidia(devices=Path("/sys/bus/pci/devices")):
@@ -304,14 +320,88 @@ def newer_nvidia(devices=Path("/sys/bus/pci/devices")):
 
 image = "@IMAGE@"
 if not newer_nvidia():
-    name, tag = image.rsplit(":", 1)
-    image = f"{name}-amd:{tag}"
+    image = "@AMD_IMAGE@"
+if not re.fullmatch(r"[^\s@]+@sha256:[0-9a-f]{64}", image):
+    raise SystemExit("Monet: the installer has no verified image digest. Make a new installer.")
 print(f"Monet: {image}")
+# The prefetch and Anaconda use the same digest from the installer media.
 open("/tmp/monet-image", "w").write(image)
 open("/tmp/monet-image.ks", "w").write(f"ostreecontainer --url={image} --transport=registry --no-signature-verification\n")
 %end
 
 %include /tmp/monet-image.ks
+
+%post --nochroot --interpreter=/usr/bin/python3 --erroronfail --log=/tmp/monet-update-origin.log
+# Anaconda's ostreecontainer command records its source as the update origin.
+# Keep the imported image and point subsequent updates at its rolling tag.
+from pathlib import Path
+import re
+
+def container_ref(image):
+    # The registry transport is stored as docker://, escaped by ostree-ext.
+    def escape(match):
+        char = match[0]
+        return "__" if char == "_" else f"_{ord(char):02X}_"
+    return "ostree/container/image/" + re.sub(r"(?<![A-Za-z0-9])/|[^A-Za-z0-9/-]", escape, f"docker://{image}")
+
+def set_update_origin(sysroot, pinned):
+    if not re.fullmatch(r"[^\s@]+@sha256:[0-9a-f]{64}", pinned):
+        raise ValueError("Monet: the installer has no verified image digest.")
+    repository = pinned.split("@", 1)[0]
+    channel = repository + ":latest"
+    prefixes = ("ostree-unverified-registry:", "ostree-unverified-image:docker://",
+                "ostree-unverified-image:registry:", "ostree-image-signed:docker://",
+                "ostree-image-signed:registry:")
+    official = repository in ("ghcr.io/happyhamster135/monet", "ghcr.io/happyhamster135/monet-amd")
+    # The install is pinned by the trusted media. Future official updates
+    # use the signature policy shipped in the installed image.
+    origins = {prefix + ref: ("ostree-image-signed:docker://" if official else prefix) + channel
+               for prefix in prefixes for ref in (pinned, channel)}
+    key = "container-image-reference"
+    sysroot.lock()
+    try:
+        sysroot.load()
+        _, repo = sysroot.get_repo()
+        _, commit = repo.resolve_rev(container_ref(pinned), True)
+        deployments = sysroot.get_deployments()
+        if not commit or not deployments:
+            raise RuntimeError("Monet: the pinned image was not deployed.")
+        changes = []
+        for index, deployment in enumerate(deployments):
+            origin = deployment.get_origin()
+            ref = None
+            if origin and origin.has_group("origin") and key in origin.get_keys("origin")[0]:
+                ref = origin.get_string("origin", key)
+            if index == 0 or ref in origins:
+                if ref not in origins or deployment.get_csum() != commit:
+                    raise RuntimeError("Monet: the installed deployment does not match the pinned image.")
+                if ref != origins[ref]:
+                    changes.append((deployment, origin, origins[ref]))
+
+        update_ref = container_ref(channel)
+        _, existing = repo.resolve_rev(update_ref, True)
+        if existing and existing != commit:
+            raise RuntimeError("Monet: the update channel already refers to a different local image.")
+        if not existing:
+            repo.set_ref_immediate(None, update_ref, commit)
+        for deployment, origin, ref in changes:
+            origin.set_string("origin", key, ref)
+            sysroot.write_origin_file(deployment, origin)
+    finally:
+        sysroot.unlock()
+    return channel
+
+if __name__ == "__main__":
+    import gi
+    gi.require_version("OSTree", "1.0")
+    from gi.repository import Gio, OSTree
+
+    root = Path("/mnt/sysimage")
+    if not root.is_mount():
+        raise SystemExit("Monet: the installed system is not mounted.")
+    sysroot = OSTree.Sysroot.new(Gio.File.new_for_path(str(root)))
+    print("Monet updates:", set_update_origin(sysroot, Path("/tmp/monet-image").read_text().strip()))
+%end
 
 %post --erroronfail --log=/var/log/monet-mok.log
 # Monet's kernel and the NVIDIA driver are signed with Universal Blue's key.

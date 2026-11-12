@@ -724,11 +724,12 @@ msgid_plural "%1 on your desktop"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:652
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:652 linux/share/monet/settings-app/MonetSettings.qml:7287
 msgid "Remove all"
 msgstr ""
 
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:652 linux/share/monet/settings-app/MonetSettings.qml:4768 linux/share/monet/store-app/AppPage.qml:215
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:652 linux/share/monet/settings-app/MonetSettings.qml:4817 linux/share/monet/settings-app/MonetSettings.qml:7333
+#: linux/share/monet/store-app/AppPage.qml:215
 msgid "Remove"
 msgstr ""
 
@@ -1072,10 +1073,10 @@ msgstr ""
 msgid "Restart & Play"
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1424 linux/share/monet/logout/Logout.qml:334 linux/share/monet/logout/Logout.qml:342
-#: linux/share/monet/logout/Logout.qml:383 linux/share/monet/logout/Logout.qml:391 linux/share/monet/settings-app/MonetSettings.qml:7059
-#: linux/share/monet/settings-app/MonetSettings.qml:7140 linux/share/monet/settings-app/MonetSettings.qml:7363 setup/qml/Main.qml:231
-#: crates/monet/src/main.rs:348 crates/monet/src/main.rs:845
+#: linux/share/monet/games/Games.qml:1424 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
+#: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1187
+#: linux/share/monet/settings-app/MonetSettings.qml:7154 linux/share/monet/settings-app/MonetSettings.qml:7383 linux/share/monet/settings-app/MonetSettings.qml:7574
+#: setup/qml/Main.qml:231 crates/monet/src/main.rs:364 crates/monet/src/main.rs:864
 msgid "Restart"
 msgstr ""
 
@@ -1375,8 +1376,8 @@ msgctxt "Settings search words, space-separated"
 msgid "date time clock time zone 24-hour format automatic"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:228 linux/share/monet/settings-app/MonetSettings.qml:4444 linux/share/monet/settings-app/MonetSettings.qml:6492
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1028
+#: linux/share/monet/settings-app/MonetSettings.qml:228 linux/share/monet/settings-app/MonetSettings.qml:4493 linux/share/monet/settings-app/MonetSettings.qml:6541
+#: linux/share/monet/settings-app/MonetSettings.qml:7348 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1042
 msgid "Accounts"
 msgstr ""
 
@@ -1434,7 +1435,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:246
 msgctxt "Settings search words, space-separated"
 msgid ""
-"security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups virus antivirus malware"
+"security safe safety protection protected secure boot encryption encrypted firewall updates firmware backups selinux"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:248 linux/share/monet/settings-app/MonetSettings.qml:5191
@@ -1513,7 +1514,7 @@ msgctxt "Settings search words, space-separated"
 msgid "apps reopen again session"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:277 linux/share/monet/settings-app/MonetSettings.qml:7127 linux/share/monet/settings-app/MonetSettings.qml:7766
+#: linux/share/monet/settings-app/MonetSettings.qml:277 linux/share/monet/settings-app/MonetSettings.qml:7977
 msgid "Updates"
 msgstr ""
 
@@ -1743,6 +1744,118 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1120
 msgid "the Monet from before"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1166
+msgid "Couldn’t open the restart confirmation. Try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1167
+msgid "The change didn’t go through. Check the setting below and try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1175
+msgid "Checking this PC…"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1177
+msgid "The firewall is off."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1177
+msgid "Turn it on to limit connections from other devices."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1179
+msgid "Finishing disk encryption."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1179
+msgid "Keep your recovery key somewhere safe. Check again after restarting."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1181
+msgid "Device security needs a look."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1181
+msgid "Check how this PC starts and protects its files."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1183
+msgid "The sharing zone is the default."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1183 linux/share/monet/settings-app/MonetSettings.qml:7247
+msgid "Shared ports may be open on other connections."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1185
+msgid "Review older firewall rules."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1185
+msgid "Some ports are open across firewall zones."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1187
+msgid "An update is ready."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1187
+msgid "Restart to finish installing it."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1189
+msgid "Updates need a look."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1195
+msgid "Some checks couldn’t be completed."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1195
+msgid "See the details below for what Monet could verify."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1195 linux/share/monet/settings-app/MonetSettings.qml:7222 linux/share/monet/passwords/browser_ui.py:27
+msgid "Check again"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1196
+msgid "Checking for firmware updates…"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1197
+msgid "The main checks look good."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1197
+msgid "See what Monet checked below."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1202
+msgid "Firewall turned on"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1203
+msgid "Default firewall rules changed"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1204
+msgid "Network sharing changed"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1206
+msgid "Shared ports changed"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1207
+msgid "Older firewall rules removed"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1208
+msgid "Automatic update failed"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1176
@@ -3493,7 +3606,7 @@ msgid ""
 "Review the file before creating an import. No browser data is changed by this step."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5580
+#: linux/share/monet/settings-app/MonetSettings.qml:5629 linux/share/monet/settings-app/MonetSettings.qml:7092 linux/share/monet/settings-app/MonetSettings.qml:7287
 msgid "Review"
 msgstr ""
 
@@ -4523,30 +4636,36 @@ msgstr ""
 msgid "More controller settings…"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7018 setup/qml/Main.qml:518
-msgid "Looking…"
+#: linux/share/monet/settings-app/MonetSettings.qml:7220
+msgid "Games you host"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7019
-msgid "Your PC is protected."
+#: linux/share/monet/settings-app/MonetSettings.qml:7223
+msgid "Streaming this PC"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7020
-msgid "One thing to look at."
-msgid_plural "%1 things to look at."
-msgstr[0] ""
-msgstr[1] ""
+#: linux/share/monet/settings-app/MonetSettings.qml:7112
+msgid "Waiting for the change…"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7116
+msgid "Device security"
+msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7031
 msgid "Secure Boot"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7033
-msgid "On: only software signed by its makers starts with the PC."
+#: linux/share/monet/settings-app/MonetSettings.qml:7128
+msgid "On. The PC checks the boot software against keys it trusts."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7034
 msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7130
+msgid "Couldn’t check Secure Boot."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7036
@@ -4562,6 +4681,10 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:7038
 msgid ""
 "Your PC restarts into its firmware settings. Find Secure Boot (often under Boot or Security), turn it on, then save and exit."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7148
+msgid "Off. Open the PC’s firmware settings at startup to turn it on."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7039
@@ -4585,8 +4708,17 @@ msgstr ""
 msgid "Encryption"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7079
-msgid "On: only this PC can read Monet's disk."
+#: linux/share/monet/settings-app/MonetSettings.qml:7174
+msgid "Setup is still using a temporary key. Keep your recovery key safe."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7175
+msgid "Monet’s system disk is encrypted."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7176
+msgid ""
+"The system disk is encrypted. Monet couldn’t verify that setup finished."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7080
@@ -4594,45 +4726,176 @@ msgid ""
 "Off: someone who takes the disk out can read your files. Monet Setup encrypts the disk when it installs Monet."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7081
-msgid "Monet couldn't tell."
+#: linux/share/monet/settings-app/MonetSettings.qml:7178
+msgid "Couldn’t check disk encryption."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7187
+msgid "App isolation"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7188
+msgid "SELinux limits what system services and apps can access."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7189
+msgid "SELinux records violations but doesn’t block them."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7190
+msgid "SELinux is off."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7191
+msgid "SELinux is unavailable on this installation."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7192
+msgid "Couldn’t check SELinux."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7201
+msgid "Firewall & networks"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7090
 msgid "Firewall"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7092
-msgid "On: only what Monet uses comes in from the network."
+#: linux/share/monet/settings-app/MonetSettings.qml:7209
+msgid "On. See the active connections below."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7094
-msgid "On, with the system's usual openings for the network."
+#: linux/share/monet/settings-app/MonetSettings.qml:7236
+msgid "On. Monet couldn’t check all firewall rules."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7095
-msgid "On: connections from the network go through it first."
+#: linux/share/monet/settings-app/MonetSettings.qml:7210
+msgid "Off. Other devices can try to connect to this PC."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7096
-msgid "Off: anything on the network can try to reach this PC."
+#: linux/share/monet/settings-app/MonetSettings.qml:7211
+msgid "Firewalld is unavailable on this installation."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7097
-msgid "This Monet has no firewall."
+#: linux/share/monet/settings-app/MonetSettings.qml:7212
+msgid "Couldn’t check the firewall."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7107 linux/share/monet/settings-app/MonetSettings.qml:7194
-msgid "Turning on…"
+#: linux/share/monet/settings-app/MonetSettings.qml:7229
+msgid "Use Monet’s default rules"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7117
-msgid "Only what Monet uses comes in"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7118
+#: linux/share/monet/settings-app/MonetSettings.qml:7230
 msgid ""
-"The phone, Steam's Remote Play and game transfers on this network, and finding printers. Games you host and other apps can be let in below."
+"These rules cover nearby printers, your phone, and Steam on your local network."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7241
+msgid "Network changes need the updated system helper."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7242
+msgid "You can still see the active connections and rules here."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7248
+msgid "Choose Monet’s default rules to keep sharing on selected profiles."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7253
+msgid "No active firewall zones found."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7253
+msgid "Couldn’t read the active firewall zones."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7260
+msgid "Source addresses"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7261
+msgid "Zone: %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7261
+msgid "Couldn’t check this connection’s zone."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7263
+msgid "Zone ports: %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7264
+msgid "Zone services: %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7269
+msgid "Stop sharing"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7269
+msgid "Share on this profile"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7278
+msgid "Older firewall rules"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7279
+msgid "These rules open ports across firewall zones."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7282
+msgid ""
+"Remove all of these rules? You can add the ports you still use under Shared ports."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7296
+msgid "Shared ports"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7302
+msgid "Ports for nearby devices"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7303
+msgid "Couldn’t read Monet’s sharing rules."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7304
+msgid ""
+"These ports open on connection profiles you choose to share with. Any app listening on one of them can receive connections. A wired profile may be used on more than one network."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7340
+msgid "Sign-in"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7346
+msgid "Sign-in and screen lock"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7347
+msgid ""
+"Manage your account or choose when Monet asks you to unlock the screen."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7352
+msgid "Lock when you step away"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7353
+msgid "Screen lock"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7357
+msgid "Updates & recovery"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7364
+msgid "Automatic updates"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7128
@@ -4643,13 +4906,32 @@ msgstr ""
 msgid "An update is ready. It's used from the next restart."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7130
-msgid ""
-"Monet and your apps update by themselves, with every fix for security holes."
+#: linux/share/monet/settings-app/MonetSettings.qml:7367
+msgid "The last automatic update failed."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7154
-msgid "Up to date: this PC's own parts have no updates from their makers."
+#: linux/share/monet/settings-app/MonetSettings.qml:7368
+msgid "Monet checks for updates in the background."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7369
+msgid "Automatic updates are unavailable on this installation."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7370
+msgid "Couldn’t check automatic updates."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7383 linux/share/monet/settings-app/MonetSettings.qml:7840 linux/share/monet/settings-app/MonetSettings.qml:7860
+msgid "Open Updates"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7398
+msgid "Firmware updates are unavailable on this installation."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:7399
+msgid "No firmware updates were offered for this PC."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7156
@@ -4670,8 +4952,8 @@ msgstr ""
 msgid "Install"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7181
-msgid "Off: a file deleted or changed by mistake can't be brought back."
+#: linux/share/monet/settings-app/MonetSettings.qml:7425
+msgid "Earlier versions of files are turned off."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7182
@@ -4683,50 +4965,36 @@ msgid ""
 "Earlier versions of your files every hour. Copies on a USB drive keep them safe from a broken disk too."
 msgstr ""
 
+#: linux/share/monet/settings-app/MonetSettings.qml:7438
+msgid "Turning on…"
+msgstr ""
+
 #: linux/share/monet/settings-app/MonetSettings.qml:7195
 msgid "Add a drive…"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7212
-msgid "Apps that can accept connections"
+#: linux/share/monet/settings-app/MonetSettings.qml:7451
+msgid "Protection history"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7220
-msgid "Games you host"
+#: linux/share/monet/settings-app/MonetSettings.qml:7457
+msgid "Recent activity"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7220
-msgid ""
-"Minecraft, Terraria, Valheim, Factorio and Stardew Valley worlds that others on this network join"
+#: linux/share/monet/settings-app/MonetSettings.qml:7458
+msgid "Monet couldn’t read all of the local security log."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7221
-msgid "Files from phones and computers nearby"
+#: linux/share/monet/settings-app/MonetSettings.qml:7459
+msgid "Changes recorded on this PC."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7222
-msgid "Folders kept in step with your other devices"
+#: linux/share/monet/settings-app/MonetSettings.qml:7460
+msgid "No recent security activity was found in the local log."
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7223
-msgid "Streaming this PC"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7223
-msgid ""
-"Sunshine, for playing this PC's games on a TV or another device with Moonlight"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7224
-msgid "One mouse and keyboard for two computers"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7252
-msgid "Asked when it started accepting connections, on port %1"
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7264
-msgid "In Windows, Windows Security keeps watch: Monet never turns it off."
+#: linux/share/monet/settings-app/MonetSettings.qml:7475
+msgid "For Windows protections, open Windows Security in Windows."
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7285
@@ -4955,10 +5223,6 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7628
 msgid "Check whether the previous system is available in Updates."
-msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7629 linux/share/monet/settings-app/MonetSettings.qml:7649
-msgid "Open Updates"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7632
@@ -7243,6 +7507,10 @@ msgid "No networks found"
 msgstr ""
 
 #: setup/qml/Main.qml:518
+msgid "Looking…"
+msgstr ""
+
+#: setup/qml/Main.qml:518
 msgid "Look again"
 msgstr ""
 
@@ -7255,7 +7523,7 @@ msgid "Who's using this PC?"
 msgstr ""
 
 #: setup/qml/Main.qml:546
-msgid "This is your account in Monet and in Windows."
+msgid "This password is for your Monet account."
 msgstr ""
 
 #: setup/qml/Main.qml:553
@@ -7733,8 +8001,17 @@ msgid ""
 "The saved download is incomplete or damaged. Connect to the internet, then resume the installation again."
 msgstr ""
 
-#: setup/monet_setup/install.py:406
+#: setup/monet_setup/install.py:410 setup/monet_setup/install.py:423
 msgid "The saved download location changed. Go back and review the drive."
+msgstr ""
+
+#: setup/monet_setup/install.py:428
+msgid "Checking the downloaded image…"
+msgstr ""
+
+#: setup/monet_setup/install.py:430
+msgid ""
+"Setup couldn’t verify the downloaded copy of Monet. Try downloading it again."
 msgstr ""
 
 #: setup/monet_setup/install.py:427
@@ -7762,6 +8039,11 @@ msgstr ""
 
 #: setup/monet_setup/install.py:569
 msgid "Monet's system wasn't found after installing."
+msgstr ""
+
+#: setup/monet_setup/install.py:923
+msgid ""
+"Setup couldn’t verify its image information. Make a new installer and try again."
 msgstr ""
 
 #: setup/monet_setup/install.py:913
@@ -7959,9 +8241,9 @@ msgstr ""
 msgid "%1 wants to accept connections"
 msgstr ""
 
-#: linux/libexec/monet-quick:1209
+#: linux/libexec/monet-quick:1235
 msgid ""
-"From other devices on this network, on port %1. Monet's firewall keeps them out until you allow it."
+"Allow TCP port %1 on networks you share with? Other apps can also use this port."
 msgstr ""
 
 #: linux/libexec/monet-quick:1323
@@ -9864,10 +10146,6 @@ msgstr ""
 msgid "Checking Zen…"
 msgstr ""
 
-#: linux/share/monet/passwords/browser_ui.py:27
-msgid "Check again"
-msgstr ""
-
 #: linux/share/monet/passwords/browser_ui.py:31
 msgid "How it works"
 msgstr ""
@@ -11228,7 +11506,7 @@ msgid ""
 "The USB device is in use or protected. Close its files and try again. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/disk.rs:325
+#: crates/monet-usb/src/disk.rs:327
 msgid ""
 "Windows could not finish writing the USB device. It is not ready to use."
 msgstr ""
@@ -11238,7 +11516,7 @@ msgid "Make a Monet USB stick stopped unexpectedly."
 msgstr ""
 
 #: crates/monet-usb/src/gui.rs:83 crates/monet-usb/src/gui.rs:114 crates/monet-usb/src/gui.rs:134
-#: crates/monet-usb/src/gui.rs:187 crates/monet-usb/src/gui.rs:344 crates/monet-usb/src/gui.rs:361
+#: crates/monet-usb/src/gui.rs:186 crates/monet-usb/src/gui.rs:367 crates/monet-usb/src/gui.rs:384
 msgid "Make a Monet USB stick"
 msgstr ""
 
@@ -11255,84 +11533,92 @@ msgstr ""
 msgid "Plug in a USB stick (2 GB or more)."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:186
+#: crates/monet-usb/src/gui.rs:192
 msgid ""
 "Everything on %1 will be erased.\n"
 "\n"
 "Make it a Monet USB stick?"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:209
+#: crates/monet-usb/src/gui.rs:214
 msgid "The release checksum could not be downloaded. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:211
+#: crates/monet-usb/src/gui.rs:216
 msgid "This release has no valid installer checksum. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:218
+#: crates/monet-usb/src/gui.rs:223
 msgid "Checking the installer before writing…"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:220
-msgid "Writing to the USB stick…"
+#: crates/monet-usb/src/gui.rs:228
+msgid "The failed download was removed. Try again for a fresh copy."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:226
+#: crates/monet-usb/src/gui.rs:230
+msgid "Delete the cached ISO from your temporary folder and try again."
+msgstr ""
+
+#: crates/monet-usb/src/gui.rs:236
+msgid "Checking the USB stick before writing…"
+msgstr ""
+
+#: crates/monet-usb/src/gui.rs:242
 msgid "Writing the USB stick · %1 of %2 GB"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:228
+#: crates/monet-usb/src/gui.rs:244
 msgid "Checking the USB stick · %1 of %2 GB"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:232
+#: crates/monet-usb/src/gui.rs:251
 msgid ""
 "The USB device is not ready to use. A partial write may require reformatting. This error does not establish whether the hardware is damaged. See Monet-USB-Stick.log in your temporary folder."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:248
+#: crates/monet-usb/src/gui.rs:271
 msgid ""
 "This Windows can't download Monet by itself: it needs Windows 10 (2018) or newer."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:257
+#: crates/monet-usb/src/gui.rs:280
 msgid "Getting ready to download Monet…"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:266 crates/monet-usb/src/gui.rs:309
+#: crates/monet-usb/src/gui.rs:289 crates/monet-usb/src/gui.rs:332
 msgid ""
 "Monet couldn't be downloaded. Check the internet connection, then try again: it picks up where it stopped."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:292
+#: crates/monet-usb/src/gui.rs:315
 msgid "Downloading Monet · %1 of %2 GB"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:294
+#: crates/monet-usb/src/gui.rs:317
 msgid "Downloading Monet · %1 GB"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:299
+#: crates/monet-usb/src/gui.rs:322
 msgid "about %1 min left"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:306
+#: crates/monet-usb/src/gui.rs:329
 msgid "The connection dropped. Picking up where it stopped…"
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:338
+#: crates/monet-usb/src/gui.rs:361
 msgid ""
 "Your Monet USB stick is ready.\n"
 "\n"
 "Restart this PC with it plugged in, and choose the USB stick in the PC's boot menu."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:346
+#: crates/monet-usb/src/gui.rs:369
 msgid "Done."
 msgstr ""
 
-#: crates/monet-usb/src/gui.rs:361
+#: crates/monet-usb/src/gui.rs:384
 msgid "The USB stick isn't finished. Stop anyway?"
 msgstr ""
 
@@ -11340,28 +11626,28 @@ msgstr ""
 msgid "Windows could not check the installer checksum. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/image.rs:81
+#: crates/monet-usb/src/image.rs:90
 msgid "This is not a complete bootable ISO image. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/image.rs:85
-msgid ""
-"The installer checksum does not match. Delete the cached ISO from your temporary folder and download it again. Nothing was written."
+#: crates/monet-usb/src/image.rs:101
+msgid "The installer checksum does not match. Nothing was written."
 msgstr ""
 
 #: crates/monet-usb/src/plan.rs:70
-msgid "Windows' system disk could not be excluded. Nothing was written."
-msgstr ""
-
-#: crates/monet-usb/src/plan.rs:73
-msgid "The selected USB device changed. Select it again. Nothing was written."
+msgid ""
+"Monet needs a USB stick with 512-byte logical sectors. Nothing was written."
 msgstr ""
 
 #: crates/monet-usb/src/plan.rs:78
-msgid "This device's sector size is not supported. Nothing was written."
+msgid "Windows' system disk could not be excluded. Nothing was written."
 msgstr ""
 
-#: crates/monet-usb/src/plan.rs:82
+#: crates/monet-usb/src/plan.rs:81
+msgid "The selected USB device changed. Select it again. Nothing was written."
+msgstr ""
+
+#: crates/monet-usb/src/plan.rs:88
 msgid "The installer does not fit on this USB device. Nothing was written."
 msgstr ""
 

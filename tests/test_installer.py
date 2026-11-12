@@ -16,6 +16,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import Mock
 import xml.dom.minidom
 from pathlib import Path
 
@@ -57,13 +58,18 @@ submenu 'Troubleshooting -->' {
 def pre_install():
     """The kickstart's %pre-install functions and settings, without running it."""
     import ast
+    import io
     ks = (ROOT / "image/monet.ks").read_text()
     code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1).replace("@IMAGE@", "ghcr.io/x/monet:latest")
     tree = ast.parse(code)
     keep = [n for n in tree.body if isinstance(n, (ast.Import, ast.FunctionDef))
             or (isinstance(n, ast.Assign) and all(isinstance(t, (ast.Name, ast.Tuple)) for t in n.targets))]
-    ns = {"print": lambda *a, **k: None}
+    def saved_image(path):
+        assert path == "/tmp/monet-image"
+        return io.StringIO("ghcr.io/x/monet@sha256:" + "a" * 64)
+    ns = {"print": lambda *a, **k: None, "open": saved_image}
     exec(compile(ast.Module(body=keep, type_ignores=[]), "pre-install", "exec"), ns)
+    del ns["open"]
     return ns
 
 
@@ -143,7 +149,7 @@ class DiskPlan(unittest.TestCase):
         {"name": "zram0", "path": "/dev/zram0", "size": 8 * 10**9, "type": "disk", "rm": False, "ro": False},
     ]
 
-    def plan(self, cmdline, devices=None, media="/dev/sda1"):
+    def plan(self, cmdline, devices=None, media="/dev/sda1", settled=True):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
         written = {}
@@ -157,8 +163,16 @@ class DiskPlan(unittest.TestCase):
                 written[self.path] = text
 
         fake = types.ModuleType("subprocess")
-        fake.run = lambda cmd, **kw: types.SimpleNamespace(
-            stdout=json.dumps({"blockdevices": devices}) if cmd[0] == "lsblk" else media + "\n")
+        fake.SubprocessError = subprocess.SubprocessError
+        output = {"lsblk": json.dumps({"blockdevices": devices}), "blkid": media, "udevadm": "", "tmux": ""}
+
+        def run(cmd, **kwargs):
+            if cmd[0] == "udevadm" and not settled:
+                self.assertTrue(kwargs["check"])
+                raise subprocess.CalledProcessError(1, cmd)
+            return types.SimpleNamespace(stdout=output[cmd[0]])
+
+        fake.run = run
 
         def fake_open(path, mode="r", *a, **k):
             return io.StringIO(cmdline) if path == "/proc/cmdline" else Sink(path)
@@ -170,14 +184,32 @@ class DiskPlan(unittest.TestCase):
         exec(code, env)
         return written["/tmp/monet-storage.ks"]
 
-    def test_erase_picks_internal_disk(self):
+    def test_erase_picks_the_only_internal_disk(self):
         plan = self.plan("inst.stage2=hd:LABEL=Fedora-E-dvd-x86_64-44 quiet")
         self.assertIn("ignoredisk --only-use=nvme0n1", plan)
         self.assertIn("clearpart --all --initlabel --disklabel=gpt --drives=nvme0n1", plan)
         size = int(re.search(r"--size=(\d+)", plan).group(1))
         total = 1_000_204_886_016 // 2**20
-        self.assertGreater(total - size, 100 * 1024, "room left for Windows")
+        self.assertEqual(total - size, (128 + 8 + 4) * 1024)
         self.assertGreater(size, 64 * 1024)
+
+    def test_erase_stops_with_two_internal_disks(self):
+        other = {"name": "nvme1n1", "path": "/dev/nvme1n1", "size": 2 * 10**12,
+                 "type": "disk", "rm": False, "ro": False, "tran": "nvme"}
+        devices = [*self.DEVICES, other]
+        boot = "inst.stage2=hd:LABEL=Monet-0.9.7"
+        with self.assertRaisesRegex(SystemExit, "Restart with Monet Setup"):
+            self.plan(boot, devices=devices)
+        pre = (ROOT / "image/monet.ks").read_text().split("%pre ", 1)[1].splitlines()[0]
+        self.assertIn("--erroronfail", pre)
+        self.assertEqual(self.plan(boot + " monet.keep", devices=devices), "")
+
+    def test_erase_needs_a_known_boot_disk_and_a_settled_scan(self):
+        boot = "inst.stage2=hd:LABEL=Monet-0.9.7"
+        with self.assertRaisesRegex(SystemExit, "recognized installation media"):
+            self.plan(boot, media="")
+        with self.assertRaisesRegex(SystemExit, "could not finish checking the drives"):
+            self.plan(boot, settled=False)
 
     def test_never_the_stick_even_when_it_looks_internal(self):
         # A USB-to-SATA drive or card reader may not say "usb"; the stick is
@@ -208,7 +240,8 @@ class DiskPlan(unittest.TestCase):
                     for name, value in (("class", cls), ("vendor", vendor), ("device", device)):
                         (dev / name).write_text(value + "\n")
                 self.assertEqual(ns["newer_nvidia"](Path(tmp)), newer, cards)
-        self.assertIn('image = f"{name}-amd:{tag}"', code)
+        self.assertIn('image = "@AMD_IMAGE@"', code)
+        self.assertIn('sha256:[0-9a-f]{64}', code)
         self.assertIn("%include /tmp/monet-image.ks", ks)
         self.assertNotIn("ostreecontainer --url=@IMAGE@", ks)
         self.assertIn('open("/tmp/monet-image")', re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1))
@@ -217,6 +250,67 @@ class DiskPlan(unittest.TestCase):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)
         compile(code.replace("@IMAGE@", "ghcr.io/example/monet:latest"), "pre-install", "exec")
+
+    def test_fallback_records_the_update_channel_for_the_pinned_deployments(self):
+        ks = (ROOT / "image/monet.ks").read_text()
+        code = re.search(r"%post[^\n]*monet-update-origin\.log\n(.*?)\n%end", ks, re.S).group(1)
+        ns = {"__name__": "fixture"}
+        exec(compile(code, "post-install", "exec"), ns)
+
+        image = "registry.invalid:8443/project_name/monet-amd"
+        digest = "a" * 64
+        pinned, channel = f"{image}@sha256:{digest}", f"{image}:latest"
+        ref_prefix = "ostree/container/image/docker_3A__2F__2F_registry_2E_invalid_3A_8443/project__name/monet-amd"
+        pinned_ref = ref_prefix + "_40_sha256_3A_" + digest
+        channel_ref = ref_prefix + "_3A_latest"
+        origin_key = "container-image-reference"
+        commit = "b" * 64
+
+        def deployment(reference, checksum=commit):
+            result = Mock()
+            result.get_csum.return_value = checksum
+            origin = result.get_origin.return_value
+            origin.has_group.return_value = True
+            origin.get_keys.return_value = ([origin_key], 1)
+            origin.get_string.return_value = reference
+            return result
+
+        for outcome in ("success", "official", "unrelated default", "wrong commit", "conflicting cache"):
+            with self.subTest(outcome=outcome):
+                signed = "ostree-image-signed:docker://"
+                unsigned = "ostree-unverified-registry:"
+                test_pinned, test_channel = pinned, channel
+                test_pinned_ref, test_channel_ref = pinned_ref, channel_ref
+                if outcome == "official":
+                    test_pinned = f"ghcr.io/happyhamster135/monet-amd@sha256:{digest}"
+                    test_channel = "ghcr.io/happyhamster135/monet-amd:latest"
+                    test_pinned_ref = ns["container_ref"](test_pinned)
+                    test_channel_ref = ns["container_ref"](test_channel)
+                other = deployment(unsigned + "registry.invalid/another:latest")
+                current = deployment(signed + test_pinned, "c" * 64 if outcome == "wrong commit" else commit)
+                rollback = deployment(unsigned + test_pinned)
+                sysroot = Mock()
+                sysroot.get_deployments.return_value = [other, current, rollback] if outcome == "unrelated default" \
+                    else [current, rollback, other]
+                repo = Mock()
+                sysroot.get_repo.return_value = (True, repo)
+                refs = {test_pinned_ref: commit, test_channel_ref: "c" * 64 if outcome == "conflicting cache" else None}
+                repo.resolve_rev.side_effect = lambda ref, allow_noent: (True, refs[ref])
+
+                if outcome in ("success", "official"):
+                    self.assertEqual(ns["set_update_origin"](sysroot, test_pinned), test_channel)
+                    repo.set_ref_immediate.assert_called_once_with(None, test_channel_ref, commit)
+                    for item, prefix in ((current, signed), (rollback, signed if outcome == "official" else unsigned)):
+                        origin = item.get_origin.return_value
+                        origin.set_string.assert_called_once_with("origin", origin_key, prefix + test_channel)
+                    self.assertEqual(sysroot.write_origin_file.call_count, 2)
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "does not match|different local image"):
+                        ns["set_update_origin"](sysroot, test_pinned)
+                    repo.set_ref_immediate.assert_not_called()
+                    sysroot.write_origin_file.assert_not_called()
+                other.get_origin.return_value.set_string.assert_not_called()
+                sysroot.unlock.assert_called_once_with()
 
     def test_monet_is_downloaded_with_retries(self):
         ks = (ROOT / "image/monet.ks").read_text()
@@ -320,8 +414,9 @@ class DiskPlan(unittest.TestCase):
     def test_keep_asks(self):
         self.assertEqual(self.plan("inst.stage2=hd:LABEL=X monet.keep"), "")
 
-    def test_no_internal_disk_asks(self):
-        self.assertEqual(self.plan("quiet", devices=self.DEVICES[:3]), "")
+    def test_erase_stops_without_an_internal_disk(self):
+        with self.assertRaisesRegex(SystemExit, "one eligible internal drive"):
+            self.plan("inst.stage2=hd:LABEL=Monet-0.9.7", devices=self.DEVICES[:3])
 
 
 class PrepareWindows(unittest.TestCase):
@@ -351,6 +446,9 @@ class PrepareWindows(unittest.TestCase):
         xml.dom.minidom.parseString(out.encode())
         self.assertNotRegex(out.split("-->", 1)[1], r"@[A-Z]+@")
         self.assertIn("PreventDeviceEncryption", out)
+        self.assertIn('<LogonCount>1</LogonCount>', out)
+        self.assertIn('/v AutoLogonCount /t REG_DWORD /d 0 /f', out)
+        self.assertIn('/v AutoAdminLogon /t REG_SZ /d 0 /f', out)
 
     def test_wifi_profiles_for_windows(self):
         with tempfile.TemporaryDirectory() as d:
