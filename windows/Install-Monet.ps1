@@ -6,8 +6,8 @@
     - Copies monet-bridge.exe to C:\Program Files\Monet
     - Turns off Fast Startup, so Windows always shuts down fully and Monet
       can safely read its drive, and reads the PC's clock as UTC, as Monet does
-    - Creates four scheduled tasks under \Monet\ (agent, launcher, back, and
-      update: on the way back to Monet, Bridge brings itself up to date)
+    - Creates scheduled tasks under \Monet\ for the agent, game launch,
+      return to Monet, and staging and applying Bridge updates
     - Adds "Back to Monet" to the Start menu and the desktop
 
     Nothing is removed from Windows. For the optional performance settings,
@@ -156,10 +156,17 @@ Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'Back' `
 if (-not $Quiet -or -not (Get-ScheduledTask -TaskPath '\Monet\' -TaskName 'Update' -ErrorAction SilentlyContinue)) {
     $updater = Join-Path $installDir 'Update-Monet.ps1'
     Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'Update' `
-        -Description 'On the way back to Monet: brings Monet Bridge up to date (once a day at most), then restarts in Monet.' `
+        -Description 'Installs a staged Monet Bridge update before restarting into Monet.' `
         -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$updater`"") `
         -Principal $admin -Settings $settings | Out-Null
 }
+$updater = Join-Path $installDir 'Update-Monet.ps1'
+$stageTrigger = New-ScheduledTaskTrigger -AtLogOn -User $user
+$stageTrigger.Delay = 'PT2M'
+Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'StageUpdate' `
+    -Description 'Checks for and downloads Monet Bridge updates after sign-in.' `
+    -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$updater`" -Stage") `
+    -Trigger $stageTrigger -Principal $admin -Settings $settings | Out-Null
 
 # 5. "Back to Monet" shortcuts
 Say '  Adding "Back to Monet" to Start and the desktop'

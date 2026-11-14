@@ -211,6 +211,7 @@ for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard o
 done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
+put 644 "$SRC/share/monet/bar-layout.js" "$DATADIR/monet/bar-layout.js"
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
     org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.stacks; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
@@ -639,8 +640,13 @@ TMP
     views=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/views
     if [ -f "$views/DesktopEditMode.qml" ] && [ -f "$views/Desktop.qml" ]; then
         [ -f "$views/KdeDesktopEditMode.qml" ] || mv "$views/DesktopEditMode.qml" "$views/KdeDesktopEditMode.qml"
-        install -m 644 "$SRC/share/monet/editmode/MonetDesktopEditMode.qml" "$views/MonetDesktopEditMode.qml"
+        put 644 "$SRC/share/monet/editmode/MonetDesktopEditMode.qml" "$views/MonetDesktopEditMode.qml"
         install -m 644 "$SRC/share/monet/editmode/DesktopEditMode.qml" "$views/DesktopEditMode.qml"
+    fi
+    panel_config=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/configuration
+    if [ -f "$panel_config/PanelConfiguration.qml" ]; then
+        [ -f "$panel_config/KdePanelConfiguration.qml" ] || mv "$panel_config/PanelConfiguration.qml" "$panel_config/KdePanelConfiguration.qml"
+        install -m 644 "$SRC/share/monet/editmode/PanelConfiguration.qml" "$panel_config/PanelConfiguration.qml"
     fi
     # The password prompt: KDE's agent built with Monet's page (image/password),
     # started instead of KDE's build. Without it, KDE's prompt stays.

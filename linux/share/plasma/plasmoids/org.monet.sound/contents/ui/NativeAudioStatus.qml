@@ -3,12 +3,40 @@
 import QtQuick
 import org.kde.plasma.private.volume 0.1 as Audio
 
-QtObject {
+Item {
+    id: audioStatus
+    visible: false
+    property bool observeDevices: false
+    signal devicesChanged()
     readonly property bool ready: Audio.Context.state === Audio.Context.Ready
     readonly property var sink: Audio.PreferredDevice.sink
+    readonly property var source: Audio.PreferredDevice.source
     readonly property bool hasOutput: ready && !!sink && sink.name !== "auto_null"
     readonly property var volume: hasOutput && Number.isFinite(sink.volume)
         ? Math.round(sink.volume / Audio.PulseAudio.NormalVolume * 100) : null
     readonly property bool muted: hasOutput && sink.muted
     readonly property string description: hasOutput ? (sink.description || sink.name) : ""
+
+    onReadyChanged: devicesChanged()
+    onSinkChanged: devicesChanged()
+    onSourceChanged: devicesChanged()
+
+    Loader {
+        active: audioStatus.observeDevices
+        sourceComponent: Item {
+            Audio.SinkModel {
+                onRowsInserted: audioStatus.devicesChanged()
+                onRowsRemoved: audioStatus.devicesChanged()
+                onModelReset: audioStatus.devicesChanged()
+            }
+            Audio.SourceModel {
+                onRowsInserted: audioStatus.devicesChanged()
+                onRowsRemoved: audioStatus.devicesChanged()
+                onModelReset: audioStatus.devicesChanged()
+            }
+            Audio.CardModel {
+                onDataChanged: audioStatus.devicesChanged()
+            }
+        }
+    }
 }

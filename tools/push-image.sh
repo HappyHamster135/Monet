@@ -34,6 +34,10 @@ else
         echo "Could not determine whether v$VERSION is released." >&2
         exit "$status"
     fi
+    if [ -f "image/releases/$VERSION.json" ]; then
+        echo "v$VERSION has qualified images. Publish those through the qualified workflow." >&2
+        exit 1
+    fi
     if [ -n "$DIGEST_OUTPUT" ]; then
         digestfile=$(mktemp)
         trap 'rm -f -- "$digestfile"' EXIT

@@ -1,5 +1,503 @@
 # Testing Monet on real hardware
 
+## 0.9.8-5 reinstall handoff
+
+The [release checklist](../PLAN.md#098-5-release-checklist) records completed
+tests and the remaining hardware checks. The [change list](../RELEASE_NOTES.md#new-in-098-5-everyday-reliability)
+describes what to try. The [release manifest](../image/releases/0.9.8-5.json)
+pins the two signed images, both ISOs, the Windows USB Maker and Bridge, the
+Linux package, and all five OCI archive parts. Keep those exact files together
+for testing or publication. Use the `v0.9.8-5` draft under the repository's
+GitHub Releases to retrieve them after a reset.
+
+The final Setup ISO was written to the Kingston DataTraveler and read back in
+full. All 1,317,404,672 bytes matched the SHA-256 in the manifest. On the
+ThinkPad, restart, press **F12** at the Lenovo logo, choose the Kingston,
+and check whether Setup reaches **Hello**. Check keyboard and touchpad access
+and record the Secure Boot setting and any firmware message. This smoke test
+ends before selecting a drive. The ThinkPad last had Secure Boot disabled
+and lacked the third-party UEFI CA used by the installer shim. Secure Boot
+passed in the installer VMs.
+
+The candidate ISOs pin exact image digests. To continue to a full reinstall
+before the version is published, the installer must reach a test mirror
+serving those signed digests. The USB contains the installer environment.
+The signed images are in the OCI parts in the GitHub draft. For an upgrade
+test, stage the signed NVIDIA image, reboot, and check the deployed digest
+with `bootc status`, the update policy with `sudo bootc upgrade --check`
+against the same mirror, and the GPU with `nvidia-smi` and
+`systemctl status nvidia-cdi-refresh.service`. Leave at least 64 GiB free.
+The VM rehearsal verified the update and rollback, while its virtual GPU
+could not exercise the NVIDIA driver.
+
+On the installed candidate, try **Settings → Light & Wallpaper → Taskbar
+layout**. A fresh profile starts with **One bar**. Choose **Three bars**,
+remove the middle panel, then select **Three bars** again. At larger display
+scales, move a widget, select **Done**, and change the scale back and forth
+to check that the saved positions return. After waking the laptop, check
+whether Quick Settings and Sound reflect Ethernet and USB audio disconnected
+during sleep. Repeat the Files and Store interruption checks with spare media.
+
+### Same-hardware measurements
+
+Record three cold boots per OS on the same laptop. Keep track of OS and app
+versions, brightness, resolution, power profile, peripherals and network.
+Use the same app and local workload, for example Firefox and a saved page.
+Record power-on to sign-in, login submission to a usable desktop, app launch
+to the first interactive view, and Shut Down confirmation to the power light
+turning off. Keep firmware time separate where the OS reports it. Take the
+median of comparable runs and record update restart separately. Turn off
+Windows Fast Startup for the full-shutdown comparison.
+
+For idle battery draw, compare 30 minutes with the display on, AC disconnected,
+and both systems idle after startup. Use the same brightness, power profile,
+network and peripherals. Record starting and ending energy in Wh where
+available and divide the difference by runtime in hours for average draw in W.
+Retain the OS timings alongside stopwatch or video measurements. The ThinkPad
+has a Monet 0.9.8 baseline and needs a Windows install for this comparison.
+Confirm the disk layout again after reinstalling before allocating space.
+
+## Local Monet 0.9.8-5 checks
+
+The installed 0.9.8 laptop took 52.7 s through systemd startup, including
+23.1 s in firmware and the boot loader. Plasma reached its workspace target
+4.6 s after the sign-in session opened. One previous update restart took
+11.6 s from logind's restart request to systemd's shutdown handoff. The
+NVIDIA Flatpak runtime sync took 6.9 s on the installed image's boot
+critical path after the network-online wait. The candidate moves that sync
+behind a timer. The hardware timing needs repeating with the rebuilt image.
+
+Five alternating launches per build used the same laptop and a private KWin
+Wayland session. Median time to the initial data-ready frame was 473 ms on
+0.9.8 and 519 ms on the candidate for Settings, and 486 ms and 491 ms for
+Store. Earlier runs had smaller differences or the opposite order. Files
+mapped its window and finished listing a 1,000-file folder in a median
+314 ms with the system launcher and 303 ms with the account preview.
+These samples don't establish a repeatable speed gain.
+
+Seven later launches per build on the ThinkPad gave data-ready medians of
+653 ms on 0.9.8 and 664 ms on the candidate for Settings, and 548 ms and
+576 ms for Store. Files mapped and finished listing at 417 ms with the
+system launcher and 440 ms with the account preview. These runs used private
+Wayland sessions, a local workload and the Intel GPU. They establish a local
+Monet baseline for the comparison with Windows.
+
+Bridge checks and downloads after Windows sign-in. Back to Monet uses the
+staged package without contacting GitHub. The Windows target compiles and the
+PowerShell fixtures covered success, interrupted downloads, damaged staged
+packages, and restart handoff. The remaining performance runs are repeated
+cold boots, sign-in, ordinary shutdown, and unplugged idle battery drain on
+matching hardware for both systems.
+
+The local performance worksheet includes matching stopwatch milestones, boot
+and shutdown log commands, and 30-minute battery recorders. On the ThinkPad,
+the Monet recorder read 47.5 Wh on AC, excluded the wireless mouse battery,
+and refused to record an idle discharge until external power was removed.
+PowerShell parsing and fixture tests passed for the Windows recorder. Its
+battery API still needs checking on physical Windows hardware. The worksheet
+and recorders are under `target/098-5-local/desktop/followup/try/hardware/`.
+
+Keyboard and layout checks covered Settings, Store, Files and Transfers.
+The large-text and right-to-left checks exposed clipped Settings controls
+and an off-screen ranked Store card. Settings, Store, Transfers and the
+Files extraction dialog passed with 16-point text, 150% scale and Arabic
+translations. The fixes are in the account preview.
+Orca spoke labels and control roles in Settings, Store, and Files in an
+isolated Plasma session. The first pass found that Tab skipped both search
+fields. After the fix, Orca spoke “Search settings” and “Find an app” when
+Tab reached them. It also spoke Pause, Cancel, Open folder, Resume, and
+Retry in the Transfers panel with test jobs. Speech Dispatcher generated
+audio in the private session. The full manual walkthrough remains open.
+All 60 focused checks passed. The 36 Settings, Store, and Transfers
+navigation checks also passed at 16-point text, 150% scale, and Arabic
+right-to-left layout.
+
+Files' main window was tested separately in the signed AMD/Intel VM at
+16-point text and 150% app scale with Arabic and the Monet Solid theme.
+Keyboard shortcuts reached the address field, tabs, split view, details
+view, and search. The file list and search read right to left, and the
+Places panel retained Dolphin's left dock position. A keyboard copy into
+an Arabic-named folder matched the source SHA-256. The temporary profile
+and sample files were removed from the VM.
+
+A disposable filesystem reached ENOSPC. Files reported zero free space,
+and Store kept its queue and could save it again after space was freed.
+Ark showed a disk-full error. After dismissal, Transfers recorded failure
+and extraction succeeded on a larger filesystem. A queued Files extraction
+rejected a detached mount without writing to the underlying directory.
+In private network namespaces, Files' KIO backend returned an error when
+a WebDAV share disappeared and copied again once it came back. Store
+retained its catalog cache while disconnected and refreshed after
+reconnect. A local Flatpak repository reproduced the install stall by
+withholding an object response. Store now supervises the download process
+and asks Flatpak to deploy from local objects once the download finishes.
+A stalled download cancelled in 0.2 s without installing the app. A server
+error and a silent connection both produced the offline result, and each
+case installed successfully after retry. Tests covered a disposable user
+installation and a system installation with Flatpak's helper on a private
+session bus. Both rebuilt images passed the cancellation and server-error
+tests using their installed Store helpers. The kernel disconnected the
+physical Kingston USB during a Files copy from its read-only installer
+volume. KIO reported a read error and removed the partial destination.
+The next copy matched SHA-256 after reconnecting the device.
+
+The shipped Store worker also ran real Flatpak transactions on a capped
+96 MiB filesystem inside the signed AMD/Intel VM. The test filled it to
+ENOSPC, then left 6 MiB for queue receipts before starting the install.
+Both a user installation and a dedicated system installation kept the job
+with a no-space error and no app deployed. Removing the filler let the
+same job retry and install the app. The system test used an isolated
+installation run as root.
+
+In another signed AMD/Intel VM, the Store worker was downloading a Flatpak
+when the VM process was killed. After reboot, Downloads kept the request,
+marked it Interrupted and offered Retry. Flatpak showed no app deployed
+before Retry. Retrying from Downloads finished both a user install and a
+system-wide install through Flatpak's system helper. The installed file
+matched the source checksum in both cases. The first system test lost the
+test remote's trust key on reboot. Importing and flushing that key before
+repeating the full test kept the fixture valid across the restart.
+Screenshots, queue records and helper logs are in
+`try/hardware/store-interruption/`.
+
+The AMD/Intel and NVIDIA images were rebuilt locally against the same pinned
+Bazzite bases. Each passed 13 bootc lint checks with one skip and a warning
+about build mount paths under `/var`. The installed Store, Settings and
+Quick Settings files match the build inputs.
+
+Both OCI manifests were signed with the Monet release key and verified
+through a loopback registry. The same policy rejected an unsigned offer
+and a signature checked against a different key. Cosign also submitted the
+signature records to its public transparency log. The image data and release
+files stayed local.
+
+Monet Setup and Fedora fallback were refreshed with both exact digests.
+Their packaged pins, signed boot files, and media checks passed. The shared
+USB writer copied both ISOs onto disposable disk files. An independent
+read-back passed, and both disk files booted in Secure Boot VMs. The Linux
+and Windows packages were refreshed from the image build, and Bridge is
+byte-identical in both packages and both images. All five assets passed
+their checksums. The 104 Rust tests, Windows-target compilation, and
+PowerShell syntax and behavior tests passed.
+
+The exact Bridge package installed on Windows 11 Enterprise Evaluation in a
+two-disk Secure Boot VM. Its first restart returned to the exact AMD/Intel
+Monet image with SELinux enforcing. A separate run set the installed version
+record to 0.9.8 to exercise the update comparison without replacing the
+candidate Bridge binary. Windows Task Scheduler downloaded and verified the
+exact 0.9.8-5 ZIP from a local HTTPS mirror. With the Windows network link
+disconnected, the desktop's Back to Monet shortcut started the Update task.
+It installed the staged package and restarted into Monet. The mirror received
+no additional requests during the restart. Windows reported 0.9.8-5 on its
+next boot, and the installed Bridge and updater hashes matched the package.
+
+A separate two-disk Secure Boot VM installed the exact published Windows
+Bridge 0.9.8 package. Its update check skipped `v0.9.8-5` when the local
+mirror listed both releases. Back to Monet queried the mirror again before
+restarting. Installing the 0.9.8-5 ZIP over 0.9.8 added the background update
+task, and the updated Bridge recognized its version. With no package staged,
+its next Back to Monet run made no mirror requests. Both returns booted the
+signed AMD/Intel image with SELinux enforcing. Evidence is in
+`try/hardware/bridge-migration/`.
+
+A Windows 11 Enterprise Evaluation 26H2 VM (build 26300.9457) also ran
+Back to Monet while StageUpdate was downloading the exact Bridge ZIP.
+The local HTTPS mirror sent 64 KiB and then paused for 160 seconds.
+Windows reported the task running and no verified package ready. Bridge
+requested the restart within one second of opening the desktop shortcut.
+The signed AMD/Intel image was reachable over SSH 38 seconds after the
+mirror sent the first chunk, with Secure Boot and SELinux enforcing. The
+mirror did not finish sending the ZIP or receive a checksum request, and
+the Windows disk had no update or restart receipt after the return.
+
+Both release ISOs were written to a physical 64 GB Kingston DataTraveler
+from Monet and read back in full. Each read-back matched the SHA-256 in
+the release checksums. The packaged Windows USB Maker then wrote and
+verified Monet Setup on the same stick through a Windows VM's virtual USB
+controller. An independent read-back found 16 bytes changed in the
+protective MBR and primary GPT to fit the stick. The GPT checksum was valid
+and the rest of the ISO matched. The stick booted to Monet Setup's Hello
+screen in a Secure Boot VM. The host recognized the 0.9.8-5 volume and the
+stick was left unmounted. Booting from the laptop's firmware remains open.
+
+The ThinkPad P16s Gen 2 test laptop currently reports Secure Boot disabled.
+Its firmware trust database includes Microsoft's Windows boot certificates.
+It has neither third-party UEFI CA that signed the installer shim. Both final
+ISOs carry the same shim in their filesystem and embedded EFI boot image.
+The shim has signatures from Microsoft's 2011 and 2023 third-party UEFI CAs.
+The certificate check was read-only. The first physical USB test can record
+whether Setup reaches Hello with the current firmware settings. Secure Boot
+qualification also requires the firmware's third-party UEFI CA trust option.
+See [Microsoft's certificate guide](https://support.microsoft.com/en-us/servicing/os/secure-boot/2025/06/windows-secure-boot-certificate-expiration-and-ca-updates).
+
+The packaged USB Maker also tested the final Monet Setup and Fedora fallback
+ISOs on Windows 11 Enterprise Evaluation build 26300.9457. With Setup
+available, the Maker fetched its release checksum, downloaded the ISO, and
+wrote and verified a disposable 4 GiB USB disk. An independent read-back
+compared all 1,317,404,672 bytes. Windows adjusted 13 bytes of disk-sizing
+metadata, and both GPT headers and their partition entries passed CRC checks.
+The written USB booted to Setup's Hello screen in a Secure Boot VM.
+
+The same Maker tested the final Fedora fallback on Windows 11
+Enterprise Evaluation build 26300.9457. The private mirror returned 404
+for Setup. The Maker selected the fallback, fetched its release checksum,
+downloaded it, and wrote and verified a disposable 4 GiB USB disk. The
+independent read-back compared all 1,264,386,048 bytes. Windows adjusted
+13 bytes of disk-sizing metadata, and both GPT headers and their partition
+entries passed CRC checks. The resulting USB reached the fallback's
+graphical summary with Secure Boot enabled and zero writes to the test
+installation disk. The Windows and USB test disks were removed.
+
+Monet Setup resumed the pinned NVIDIA installation from its local cache
+with the VM's network adapter disconnected. The recovery key unlocked the
+encrypted disk. After Secure Boot enrollment, Monet rebooted through the
+TPM, retired the temporary startup key, and checked the signed rolling
+channel. Rollback booted the earlier deployment of the same image digest,
+kept Secure Boot and SELinux enabled, and preserved a saved file.
+
+The Fedora fallback installed the pinned AMD/Intel image and booted it with
+Secure Boot and SELinux enforcing. Its first VM run stopped in an added test
+script. The corrected run completed the installer, enrolled the Secure Boot
+key, and checked the signed rolling channel through the local registry.
+
+The local release archive contains both exact OCI exports, split into five
+checksummed parts. The publication validator now accepts the numbered
+suffix in `0.9.8-5` and verified all five parts. The archive contents
+matched the local exports on read-back.
+`image/releases/0.9.8-5.json` records both signed image digests, the five
+archive parts and all five public downloads with their checksum list. The
+qualified workflow checks the draft's public files against this record before
+publishing images. The default build and direct image push both leave a new
+qualified version to that workflow. A local rehearsal used the same checks
+to verify the public files, unpack the OCI archive and match both manifests.
+Both final ISOs carry those digests. The release files and archive are local.
+
+A loopback OCI registry rehearsal copied both exact images to their versioned
+and rolling tags. After loading the existing Monet signature attachments,
+pulls of all four references passed the release-key policy. No signing key
+was used for the rehearsal. The Linux package and both installed images also
+matched the 11 changed desktop files, with normal install path substitutions.
+The two Windows installer and updater scripts matched their source after the
+version substitution. The registry and pull working copies were removed. An
+hourly home snapshot taken during the rehearsal retained about 16.4 GiB of
+their data, and the filesystem still had 114 GiB free.
+Evidence is in `target/098-5-local/desktop/followup/publication-rehearsal/`.
+
+The keyboard follow-up adds the Settings and Store fixes to both local
+images and the Linux package. Both new images passed bootc lint, and the
+archive read-back verified 385 OCI blobs across five parts. Monet Setup
+and Fedora fallback were refreshed with the new digests. Their signed
+boot files matched the earlier media. The fallback media check passed.
+Both updated manifests were signed offline with the Monet release key.
+
+The refreshed Monet Setup ISO completed an encrypted NVIDIA install in a
+Secure Boot VM. The recovery key unlocked the test disk and a later boot
+through the TPM retired the temporary startup key. The Fedora fallback
+used the refreshed kickstart with a local mirror and unattended VM
+settings. It completed an AMD/Intel install. Both installed guests booted
+the expected manifest with Secure Boot and SELinux enforcing, and the
+installed Settings and Store files matched the keyboard fix.
+
+After an additional reboot, both guests rejected their rolling image when
+the local registry withheld its signature. Restoring the release signature
+let both checks succeed. Each rolling tag already pointed to the installed
+digest, so both checks reported no changes.
+
+A separate AMD/Intel VM booted the earlier 0.9.8-5 digest and then received
+the keyboard follow-up through the signed rolling channel. The guest
+rejected the new digest without its signature. With the signature restored,
+bootc fetched the two changed layers, staged the image, and rebooted into
+the new digest. The earlier digest remained available for rollback and a
+saved file survived. The signed update check then reported no changes.
+Secure Boot and SELinux stayed enabled. This guest also reached the full
+Plasma desktop for local testing. The refreshed Setup ISO was written to
+the physical Kingston and verified against its full SHA-256 checksum.
+Booting the stick on the laptop's firmware remains open.
+
+An isolated AMD/Intel VM also booted the exact published 0.9.8 image after
+verifying its signature with the Monet release key. It rejected the final
+0.9.8-5 digest with its signature withheld, then accepted and booted it
+after the local registry restored the signature. The next signed-channel
+check reported no changes. `monet rollback` returned to the published
+0.9.8 digest. Secure Boot, SELinux enforcement and the checksum of a file
+saved on 0.9.8 survived the upgrade and rollback. Evidence is in
+`try/hardware/previous-release-upgrade/`.
+
+The encrypted NVIDIA VM also installed the earlier 0.9.8-5 digest from
+Monet Setup. It rejected the current digest while its release signature
+was withheld. Restoring the signature let bootc stage the two changed
+layers (97.1 kB) and reboot into the current digest. Monet's rollback
+command then rebooted into the earlier digest and restored the current
+digest on a second pass. Secure Boot, SELinux enforcement, TPM unlock,
+and a saved file survived the full cycle. The signed update check passed
+again on the restored build.
+The NVIDIA runtime timer was enabled and the sync service was absent
+from the graphical boot critical chain. This VM had no physical NVIDIA
+device attached.
+
+A separate encrypted VM installed the exact published 0.9.8 NVIDIA image
+from the published Monet Setup ISO. The image's original signature passed
+the Monet release-key policy. Setup's recovery key unlocked the disk, and
+later boots unlocked through the emulated TPM after the temporary startup
+key was retired. The guest rejected the unsigned 0.9.8-5 offer, staged and
+booted the signed offer, then verified the signed channel again. Rollback
+returned to the published 0.9.8 digest. Secure Boot, SELinux enforcement,
+TPM unlock and the saved file's checksum survived the cycle. The VM used
+virtual graphics. Evidence is in `try/hardware/nvidia-migration/`.
+
+The ThinkPad has an Intel Iris Xe and an NVIDIA RTX A500. Its installed
+0.9.8 deployment tracks `monet:latest` with an unverified origin. The local
+staging launcher requests signature enforcement explicitly and uses a
+temporary mount namespace for the registry configuration. The ThinkPad
+served the exact NVIDIA manifest and signature attachment on loopback.
+A Secure Boot VM rehearsed the signed switch, reboot, post-reboot check
+and rollback. Its container configuration checksums matched before and
+after. Staging on the ThinkPad requires administrator authentication, and
+its physical boot remains open. Evidence is in `try/hardware/physical-stage/`.
+
+The ThinkPad's preflight now verifies the NVIDIA image signature against
+the installed release key and hashes its config and 282 layers. A disposable
+registry rejected a modified signature and a blob with one changed byte.
+The Windows 11 Enterprise Evaluation ISO used in the Bridge tests was
+recovered from a local snapshot by reflink. Its full SHA-256 and installer
+boot files matched the retained test media. The ISO is available locally
+for physical testing. The SSD still has about 343 GiB unallocated and the
+Kingston still contains Monet Setup. See `try/hardware/windows-media/`.
+
+The exact refreshed Monet Setup ISO also completed a graphical install
+with the local signed-image mirror. The walkthrough used Setup's account,
+drive selection, erase review, encryption and recovery-key screens. The
+Restart button led to Secure Boot enrollment and then to the installed
+AMD/Intel sign-in screen. A guest-only serial report confirmed the pinned
+digest, Secure Boot and SELinux enforcement. The `try/` folder includes a
+launcher for repeating this walkthrough on a disposable virtual disk.
+
+A graphical Fedora fallback test with a complete Kickstart exposed a
+premature start. QEMU recorded 7.38 GB of writes to the disposable disk
+before anyone pressed Begin Installation. The rebuilt fallback waits at
+Anaconda's summary. Both its firmware boot menus and the embedded EFI
+menu carry that setting, and the rebuilt media checksum passed.
+With a complete graphical test Kickstart, QEMU recorded zero bytes
+written during each 60-second hold, including after the disk review.
+The install started after Begin Installation, created the chosen wheel
+account, and booted the pinned AMD/Intel image with Secure Boot and SELinux
+enforcing. A signed rolling-channel check passed after a second reboot.
+The exact rebuilt fallback ISO also waited with zero disk writes before
+confirmation when booted from a read-only virtual USB drive. It completed
+the graphical install and booted the pinned image with the selected admin
+account, Secure Boot and SELinux enforcing. The first restart used the VM
+reset after the installer returned to its console when the virtual media
+was removed. After a normal second reboot, bootc fetched the release
+signature and accepted the rolling channel. The tests used a local
+mirror for the unpublished image.
+
+Repeating the restart with the virtual USB still attached produced a
+guest-initiated reset from Anaconda's Reboot System button. Secure Boot
+enrollment appeared, and the installed system accepted the signed update
+channel after enrollment. Removing the USB once the firmware had started
+let the installed system boot without a VM reset.
+
+The fallback account check now requires an unlocked administrator with
+a password. Anaconda had counted the explicitly locked root account as
+sufficient. In the graphical installer, QEMU recorded zero disk writes
+after attempts to start with no account, a passwordless administrator, and
+a password-protected standard account. The text installer also rejected
+starting with no account. Both interfaces accepted a password-protected
+administrator and waited for explicit confirmation. The ISO with this
+change completed the graphical install and restarted from Anaconda with
+the USB still attached. The selected administrator signed in, and the
+root password remained locked. After another normal reboot, bootc fetched
+the local release signature and accepted the signed channel. The updated
+ISO and four other release assets passed their SHA-256 checks.
+
+The local Fedora fallback launcher also installed the exact ISO from a
+read-only virtual USB using the private registry. The guest restarted from
+Anaconda with the USB attached and enrolled the Secure Boot key. Reopening
+the installed virtual disk without the USB reached Monet's sign-in screen
+and the Plasma desktop.
+The guest reported the pinned AMD/Intel digest, Secure Boot enabled and
+SELinux enforcing. Its isolated network cannot fetch optional Flathub apps.
+
+In the installed Plasma session, Orca announced the Settings search field,
+the Store search field and Downloads tab, and the selected sample file in
+Files. A real background extraction appeared as completed in Transfers.
+Orca announced its Open folder button, which opened the extracted folder
+when activated with Enter. The laptop's physical audio output still needs
+checking. Its Windows firmware entry points to a partition absent from the
+connected disks, so the same-hardware Windows measurements remain open.
+With the VM's Ethernet link disabled, Settings reported Cable unplugged
+and Quick Settings hid the LAN tile. Restoring the link brought the tile
+and the wired addresses back.
+In a separate Secure Boot VM on the signed AMD/Intel image, the open
+Quick Settings panel switched live between four states. It showed LAN
+and Connected with Ethernet alone or alongside Wi-Fi, Wi-Fi and the
+active connection name with Wi-Fi alone, and Wi-Fi and Not connected
+with neither connection. NetworkManager associated a simulated Wi-Fi
+client with a local access point. QEMU changed the Ethernet link, and a
+separate unmanaged adapter carried the test connection. The LAN tile
+opened Settings at the Internet page's Ethernet section. With Settings
+still open, removing the link showed Cable unplugged and restoring it
+brought back the addresses, gateway and DNS.
+Two suspend diagnostic cycles on the signed AMD/Intel VM froze the session
+and produced logind's PrepareForSleep signals before and after the freeze.
+Quick Settings removed LAN after the cable was disconnected. Sound switched
+from the detached virtual USB speaker to built-in audio. Both devices
+reappeared when reconnected, and the boot ID and Plasma process stayed the
+same. The full deep and suspend-to-idle attempts in that VM required a
+reset. The diagnostic verifies the desktop refresh; physical wake still
+needs a hardware run.
+Print Screen opened the region selector in the installed desktop. After
+selecting an area and pressing Enter, Spectacle saved a 343 × 197 PNG in
+Pictures → Screenshots and returned to the desktop with a saved notification.
+
+On the laptop, PipeWire enumerated an unavailable stereo microphone port
+and the built-in digital microphone. The candidate Sound helper omitted
+the unavailable port and kept the digital microphone selected when it
+received a stale request for the disconnected input. This used the laptop's
+real audio devices and left the default source in place.
+Speech Dispatcher also sent a short test phrase to the physical speaker
+sink while ALSA reported playback running. A later check ran Orca with
+the candidate Settings and Store in a private desktop session on the
+laptop. Orca logged “Search settings” and “Find an app” on keyboard focus.
+The speaker monitor detected the speech signal and ALSA reported the
+laptop's playback device running. The check retained no audio. Human
+listening and intelligibility remain open.
+The same physical output check captured Orca's location control in the
+host's Files and Open folder in the candidate Transfers panel. ALSA
+reported active speaker playback for each announcement. The Transfers
+panel used disposable jobs, and the signed VM separately covered a real
+background extraction and opening its destination.
+
+Across the full desktop run and the widget rerun, 1,697 Python checks passed
+with 19 documented skips. The JavaScript test and 11 browser form checks
+passed. The older test container lacked the current Archives ZIP plugin and
+Plasma networking module. The reruns used the binaries from the rebuilt
+AMD/Intel image, and the desktop test container now includes Plasma's
+networking package.
+
+Reports are under `target/098-5-local/performance/` and
+`target/098-5-local/desktop/`. Image rebuild and Flatpak transaction logs
+are under `target/098-5-local/rebuild/`. The Windows restart and physical
+USB evidence is under `target/098-5-local/rebuild/bridge-vm/`.
+The keyboard follow-up artifacts and reports are under
+`target/098-5-local/desktop/followup/`. Its `signed-vm/` directory holds
+the release signatures and post-reboot installer evidence. Its `try/`
+directory holds the local desktop launcher, signed upgrade evidence and
+the complete 0.9.8-5 change list. The Store disk exhaustion results and
+physical Orca playback evidence are under `try/store-disk-full/` and
+`try/hardware/orca-playback/`. The NVIDIA upgrade and rollback evidence
+is in `nvidia-upgrade/`. The fallback installer results are under
+`try/fallback/`, `try/fallback-exact/`, `try/fallback-restart/`,
+`try/fallback-admin/`, `try/fallback-text/`, and `try/fallback-vm/`. The stalled
+Bridge download and restart evidence is in `bridge-slow/dual/`.
+Files' Arabic large-text walkthrough is under `try/files-rtl/`. Physical
+speaker routing for Files and Transfers is in `try/hardware/orca-files-transfers/`.
+The Windows USB Maker runs are in `try/windows-final-setup-usb/` and
+`try/windows-final-usb/`. The ThinkPad firmware certificate check is in
+`try/hardware/uefi-trust/`. The live Quick Settings and Internet page
+checks are in `try/hardware/network-transitions/`. The sleep diagnostic
+and full suspend attempt logs are in `try/hardware/resume/`.
+
 ## Monet 0.9.8 release verification
 
 The AMD/Intel and NVIDIA images built from Bazzite's stable images and passed
@@ -2923,6 +3421,475 @@ geometry records then match the saved baseline exactly. The settings file contai
 both arrangements. All local widget copies use the updated guard, and the desktop
 was left at 100%. Wallpapers were not edited. Mixed monitors, hotplug and a complete
 sign-out/reboot remain hardware/release checks.
+
+### Fresh desktop and panel editing (0.9.8-5)
+
+An isolated Plasma session with clean settings opened with one full-width bar.
+The default placard, Weather and Calendar stayed within the desktop without
+overlap at 100%, 125%, 150%, 175% and 200% on a virtual 1920×1080 display.
+Returning to 100% restored the starting positions. The layout tests also
+cover 1366×768, portrait and 4K screens.
+
+Switching from one bar to three and back kept the existing task manager,
+including its pins, and retained the Quick Settings shortcut. After removing
+the middle bar, choosing Three bars restored the task manager, separator and
+Trash. At 960×540 the panel editor scrolled to its footer, Done saved a dragged
+card, and removing desktop Weather from the gallery left the bar's Weather in
+place.
+
+Both updated 0.9.8-5 images were signed with Monet's release key and checked in
+isolated Secure Boot VMs. The Fedora fallback ISO completed a graphical
+AMD/Intel install. The Monet Setup ISO booted to Hello and its installer worker
+completed an encrypted NVIDIA install. The worker verified the recovery key,
+and the installed VM rebooted using the TPM after retiring the temporary key.
+On both installed systems, `bootc upgrade --check` rejected the image when its
+signature was withheld and accepted it when the signature was restored. Both
+VMs reported SELinux enforcing and booted the exact pinned digests. The first
+NVIDIA attempt reached the disk-space guard and was restarted after removing
+its test disk. The lowest observed free space was 72.3 GiB. No images or media
+were published.
+
+An AMD/Intel VM copied from the previous local 0.9.8-5 build also rejected the
+unsigned upgrade. It staged the signed image, rebooted into the new digest,
+retained the old deployment for rollback, and preserved a test file in `/var`.
+
+The preinstalled desktop test VM then took the same signed upgrade and
+reopened its Wayland session. Both installer launchers use the refreshed
+ISOs and local mirror. The release bundle was checked with
+`tools/publish-qualified.py --verify-local`. Its five downloads, checksum
+list and five OCI parts matched the release record. The archive read-back
+checked 388 OCI objects. The Windows USB Maker and Bridge executables match
+the versions used in the earlier Windows VM tests.
+
+A full graphical run of the refreshed Monet Setup ISO also installed the
+AMD/Intel image with encryption on. Setup waited for drive confirmation,
+displayed the recovery-key acknowledgment and restarted from All set.
+The VM enrolled the Secure Boot key and booted the exact signed digest.
+An isolated test service verified the signed channel after another reboot,
+when the TPM unlocked the disk and Monet retired its temporary key. The
+test disk was removed. The install's lowest observed free space was
+70.88 GiB. Evidence is under
+`target/098-5-local/desktop/followup/desktop-refresh/native-gui/`.
+
+The packaged Windows USB Maker independently downloaded and wrote each
+refreshed ISO to a separate disposable 4 GiB USB disk in an isolated Windows
+11 VM. The mirror returned 404 for Setup to exercise the fallback download.
+The Maker reported success in both runs. Full read-back found 13 changed
+bytes on each disk, all within GPT and protective MBR fields that adapt the
+ISO to the USB disk's size. Both GPT headers and partition tables passed
+their CRC checks. Under Secure Boot, the written Setup media reached Hello
+and the fallback reached its installation summary with zero writes to the
+installation target. The temporary disks were removed. The lowest host
+free space was 73.0 GiB. Evidence is under
+`target/098-5-local/desktop/followup/desktop-refresh/windows-usb/`.
+
+The physical ThinkPad verified the refreshed NVIDIA manifest, its release
+signature and all 285 referenced blobs against the local mirror. The Kingston
+write attempt timed out while waiting for system authorization, leaving the
+earlier Setup ISO on the stick. The ThinkPad still boots Monet 0.9.8, runs on
+AC and has no Windows partition. Its F12 boot check and the side-by-side
+Windows performance measurements remain open.
+
+The Windows evaluation media was rebuilt from the checksum-verified ISO
+for the physical performance comparison. WinPE listed both disks but did
+not mount the evaluation USB when its FAT32 partition was marked as an EFI
+system partition. Using the GPT Microsoft basic-data type exposed the
+split Windows image to Setup. The USB then booted with Secure Boot enabled
+and reached the disk picker. QEMU recorded zero writes to its disposable
+96 GiB internal disk. The Kingston writer's GPT and FAT32 read-back passed
+on a file with the exact Kingston geometry. The preparation command uses
+temporary memory, retaining the original ISO and test logs on the SSD.
+The physical USB write and Windows installation remain open. The ThinkPad
+reports 342.85 GiB of unallocated SSD space outside the Monet partition.
+Evidence is under `target/098-5-local/desktop/followup/try/hardware/windows-media/`.
+
+A disposable copy of the refreshed AMD/Intel desktop VM ran Monet's
+rollback command and booted the previous signed deployment. The same
+command returned it to the refreshed image. The test recorded three
+distinct boot IDs and verified the SHA-256 of a saved file after each
+restart. Secure Boot and SELinux enforcement stayed enabled, and the
+signed update check passed after returning to the refreshed image.
+The copied test disk was removed. Evidence is under
+`target/098-5-local/desktop/followup/desktop-refresh/rollback-qa/`.
+
+A separate disposable VM switched from the refreshed AMD/Intel deployment to
+the exact signed NVIDIA deployment through the local registry. After reboot,
+the VM reported the expected digest, passed the signed update check and showed
+the NVIDIA Flatpak verification timer scheduled 30 seconds after boot. Monet's
+rollback command then returned it to the AMD/Intel deployment. The check
+recorded three distinct boot IDs and the same saved file checksum, Secure Boot
+state and SELinux enforcement after each restart. This VM used generic graphics
+and an unencrypted disk. The temporary disk was removed and host free space
+stayed above 75.82 GiB. Evidence is under
+`target/098-5-local/desktop/followup/desktop-refresh/exact-nvidia-stage-qa/`.
+
+An encrypted VM using the NVIDIA image and an emulated TPM upgraded from an
+earlier signed 0.9.8-5 build to the refreshed digest. Withholding the refreshed
+image's signature left the staged deployment empty. Restoring the signature
+let the update stage and boot. The signed channel check passed after reboot
+and again after rollback, which kept the refreshed deployment as the alternate.
+Secure Boot, enforcing SELinux, automatic TPM unlock and the checksum of a
+saved file survived the cycle. The VM used virtual graphics. Its memory-backed
+test disk was removed, and the SSD kept at least 82.97 GiB free. Evidence is
+under `target/098-5-local/desktop/followup/desktop-refresh/encrypted-nvidia-upgrade/`.
+
+All five OCI transfer part checksums were also reproduced by streaming the
+retained image layout through the archive writer. The stream matched the
+release record without allocating another copy of the archive.
+
+The focused release rerun covered 603 desktop, installer, maintenance and
+publication checks with zero failures. One PowerShell parser check was skipped
+on Linux, where PowerShell is unavailable. The Windows VM runs above cover
+execution of the packaged installer and updater scripts. The desktop rerun
+updated an older test to check the Quick Settings and Sound widgets on the
+new default taskbar.
+
+The rebuilt images with the compact placard fix ran clean Plasma sessions at
+1280×720 with 150% scaling, 1366×768 with 125%, 1080×1920 with 150%, and
+3840×2160 with 200%. The three default widgets fit without overlap. Every
+session opened with one taskbar, switched to three, restored a deleted middle
+panel, and returned to one. The focused rerun passed all 445 checks.
+Both exact images also ran a two-output Plasma session at 125% and 200%.
+Changing the primary output to 150%, disabling the secondary, and restoring
+the original output configuration kept the stock cards within each screen.
+After the layout settled, both screens restored the original widget geometry
+and the single taskbar remained on the primary screen. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/mixed-outputs/`.
+
+The AMD/Intel test VM rejected the unsigned compact update and booted the
+signed digest. The subsequent signed update check passed, and the saved file
+and installed placard matched their expected checksums. Both rebuilt ISOs
+carry the new image pins and the same signed boot files as the preceding ISOs.
+Monet Setup reached Hello under Secure Boot. The Fedora fallback reached
+language selection with no writes to the disposable 96 GiB target. The five
+downloads and archive checksums were verified against the rebuilt release
+record. Evidence is under `target/098-5-local/desktop/followup/compact-refresh/`.
+All five transfer parts were then written to a memory-backed directory and
+checked by `tools/publish-qualified.py --verify-local`. The verifier read all
+six release files and the five parts, extracted the OCI layout and checked
+both manifest digests. The transfer and extraction copies were removed
+afterward. SSD free space was 76.83 GiB after this verification. The record
+is `target/098-5-local/desktop/followup/compact-refresh/archive-verification.json`.
+
+The compact NVIDIA build also completed a full Setup installation from the
+updated ISO using the installer worker. The recovery key unlocked the test
+disk, and the VM later rebooted with the emulated TPM after retiring the
+temporary key. Secure Boot and SELinux enforcement remained enabled.
+The installed placard matched the rebuilt package, a withheld signature was
+rejected, and the signed update check passed when the signature was restored.
+The temporary disk was removed. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/setup-full/`.
+
+An encrypted NVIDIA VM also upgraded from the earlier signed build to the
+exact compact release digest. The unsigned offer left no deployment staged.
+The signed offer staged and booted, then Monet rolled back to the earlier
+image. TPM unlock, Secure Boot, SELinux enforcement, and the saved file's
+checksum survived both restarts. Signed channel checks passed after each
+restart. The disposable disk was removed. The lowest SSD free space was
+76.77 GiB. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/encrypted-nvidia-upgrade/`.
+
+The same Setup ISO also completed the graphical wizard on AMD/Intel with
+encryption enabled. QEMU recorded zero writes to the installation target
+before drive confirmation. The wizard displayed the recovery-key page and
+restarted into Secure Boot enrollment. The installed image rebooted with TPM
+unlock and SELinux enforcing. Its signed update check passed and the clock
+placard matched the package checksum. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/setup-graphical/`.
+
+The updated Fedora fallback also completed a graphical AMD/Intel install.
+The disposable disk received zero writes before confirmation. Anaconda
+created the named administrator, left the root password locked, and restarted
+from Reboot System into Secure Boot enrollment. It booted the rebuilt image
+and, after a second boot, rejected an unsigned offer and passed the signed
+update check. The disposable disk was removed. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/fallback-full/`.
+
+Windows USB Maker also wrote both updated ISOs in an isolated Windows 11 VM
+using the exact executable in the local bundle. When the mirror returned
+404 for Setup, the Maker selected the Fedora fallback and fetched its release
+checksum. Full read-back on both disposable 4 GiB USB disks found 13 changed
+bytes per disk. All were disk-size adjustments in the GPT and protective MBR.
+Both partition tables and their backup headers passed CRC checks. Under
+Secure Boot, the Setup USB reached Hello and the fallback USB reached its
+installation summary without writing to the target disk. The temporary
+Windows and USB disks were removed. The lowest SSD free space in the two
+write tests was 74.58 GiB. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/windows-usb/`.
+
+The ThinkPad's installer launchers opened both current ISOs with roughly
+77 GiB free on the SSD. Each used a memory-backed guest disk, reached its
+installer and connected to its isolated registry. Disk and firmware state
+survived stopping the guest. Reset removed both, and the launchers refused
+to allocate a second memory-backed installer disk while the first existed.
+Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/launcher-qa/`.
+
+Seven app launch samples per variant ran on the ThinkPad with private Wayland
+outputs. Median Settings ready-frame time was 647 ms at the pinned source
+revision and 656 ms in the candidate preview. Store was 547 ms and 558 ms.
+Files took 369 ms on the installed baseline and 385 ms in the candidate
+account preview to map a window and list 1,000 local entries. The installed
+Monet 0.9.8 system's recorded startup was 52.731 s, including firmware and
+loader. The laptop was on AC. A candidate boot, repeated cold boots and
+shutdowns, physical sign-in readiness, and the matching Windows and idle
+battery measurements remain open. Evidence is under
+`target/098-5-local/desktop/followup/compact-refresh/physical-bench/`.
+
+The ThinkPad also ran eight Store rendering checks at 150% with the final
+NVIDIA image's QML. All ten Store QML file checksums matched the image. The
+checks covered screenshots, fallback pictures and icons, and section banners
+in Qt's basic and threaded OpenGL loops. QRhi identified the physical RTX
+A500 and the installed 620.70.06 driver. The laptop ran Monet 0.9.8 with a
+private KWin virtual output. Evidence is in
+`target/098-5-local/desktop/followup/compact-refresh/physical-bench/nvidia-store/`.
+
+KWin's reported panel frames exposed an overlap at 1280×720 with 150%
+scaling in the first compact build. On Wayland, Plasma's center anchor
+ignores offsets. Monet now positions the middle panel from the left edge,
+limits it to the gap between the side panels, and reapplies the limits when
+the display scale changes. The Settings helper and the panel resize watcher
+use the same layout code. The disposable desktop VM switched layouts,
+restored the middle panel, and rescaled to 125% with all three frames on the
+same edge and no overlap. The image builds and frame tests are under
+`target/098-5-local/desktop/followup/panel-fit-refresh/`.
+Both builds passed the frame test with animations disabled in an isolated
+session. One direct NVIDIA run on a private virtual output retained its old
+middle panel frame after the requested resize. A separate VM upgraded to the
+exact signed NVIDIA image and verified its signed channel after reboot. In
+the full Plasma session with normal animations, the panels stayed on one
+edge with no overlap after restoring the middle panel, moving from 150% to
+125% and back, and returning to one bar. The VM used Virtio graphics and its
+disposable disk was removed. On the ThinkPad, a private Plasma session
+also used the exact NVIDIA panel files and normal animations at 1280×720.
+NVIDIA's process monitor confirmed that the RTX A500 rendered the
+plasmashell client. Intel drove the virtual KWin output. All seven panel
+states passed, including restoring the middle panel, changing between
+125% and 150%, and returning to one full-width taskbar. The ThinkPad is
+still running 0.9.8 and a complete candidate boot remains open. VM and
+ThinkPad evidence is under
+`target/098-5-local/desktop/followup/panel-fit-refresh/panel-frames/exact-nvidia-vm/`
+and `target/098-5-local/desktop/followup/panel-fit-refresh/nvidia-panel-render/`.
+
+The new images passed bootc lint and signature verification. The new Setup
+and Fedora fallback ISOs pin those images. The local publication verifier
+read the five rebuilt archive parts and checked both manifest digests. The
+preinstalled AMD/Intel VM rejected the unsigned offer, applied the signed
+image and passed the signed update check after reboot. The new Fedora ISO
+completed a graphical install with zero writes before confirmation. The new
+Setup ISO completed an encrypted AMD/Intel install through the graphical
+wizard and an encrypted NVIDIA install through its worker. The graphical
+wizard also recorded zero writes before drive confirmation. The encrypted
+guests unlocked through the virtual TPM after reboot. All three boots ran
+with Secure Boot and SELinux enforcing and passed the signed channel check.
+Fedora fallback and the NVIDIA Setup guest rejected offers with the
+signature withheld. All three disposable disks were removed. The laptop
+verified the NVIDIA signature and its 288 image blobs.
+Its physical staging launcher requires 74 GiB free and authentication and
+stops the stage below 72 GiB. A read-only check counted 264 of the 287
+candidate layers already in the ThinkPad's OSTree repository. The other
+23 layers total 0.54 GiB compressed and 0.63 GiB uncompressed.
+
+Windows USB Maker then wrote both final ISO hashes in an isolated Windows 11
+VM. When the local mirror returned 404 for Setup, the Maker retrieved the
+Fedora fallback and its checksum. Each stick matched the final ISO on full
+read-back with 13 expected adjustments in the protective MBR and primary
+GPT. The primary and backup headers and partition arrays passed their CRC
+checks. With Secure Boot on, the Setup stick reached Hello and the Fedora
+stick reached Installation Summary with zero writes to its separate target.
+The Windows and USB test disks were removed. The SSD stayed above 74 GiB
+free. Evidence is in
+`target/098-5-local/desktop/followup/panel-fit-refresh/windows-usb/`.
+
+The final NVIDIA digest also passed an update and rollback from an earlier
+signed image on an encrypted VM. Withholding the signature rejected the
+update before staging. The signed image booted with the virtual TPM and
+passed the signed channel check. Rollback rebooted into the earlier image
+and verified the signed channel again. Secure Boot, SELinux enforcement,
+automatic TPM unlock and the saved file checksum survived both reboots.
+The test disk was removed. The SSD stayed above 74 GiB free.
+The final source also passed 608 regression checks with no skips, including
+desktop layout, native audio, Settings, Store, release tooling, installers
+and the Windows setup scripts. Evidence is under
+`target/098-5-local/desktop/followup/panel-fit-refresh/encrypted-update-rollback/`
+and `target/098-5-local/desktop/followup/panel-fit-refresh/release-full-module-sweep.json`.
+
+### Widget gallery follow-up
+
+At 1280×800 the status label pushed Calendar's Add button outside its card.
+The status now wraps above the actions, and the actions wrap as space allows.
+Remove all takes a snapshot of the matching widgets before removing them
+because each removal changes Plasma's live list. In the installed AMD/Intel
+test desktop, Add created a second Calendar and Remove all cleared both.
+Selecting Three bars in Light & Wallpaper also restored a deleted middle
+bar with its task manager and Trash.
+
+The gallery fix was rebuilt into both signed images and the Linux package.
+Both ISOs pin the refreshed image digests. The local release verifier read
+all five transfer parts, checked both manifests, and matched the download
+checksums. The AMD/Intel test VM rejected an unsigned offer, installed the
+signed image, and passed a signed update check after reboot. The saved test
+file and previous deployment were still present. The refreshed source passed
+608 regression checks. The refreshed Setup ISO completed an encrypted NVIDIA
+installation through its worker. The recovery key unlocked the fresh disk,
+and the virtual TPM unlocked it automatically on reboot. The installed guest
+rejected the unsigned offer and verified the signed channel under Secure Boot
+and SELinux enforcement. The refreshed Fedora fallback ISO also completed a
+graphical AMD/Intel install with zero writes before confirmation. After two
+installed boots, the administrator account was in wheel, root remained locked,
+and the guest rejected the unsigned offer before verifying the signed channel.
+The graphical Setup wizard also completed an encrypted AMD/Intel install
+with zero target writes before confirmation. The VM needed a retry at the
+Secure Boot enrollment menu. After enrollment, the virtual TPM unlocked the
+disk on reboot and the installed guest verified the signed channel. The
+three disposable installer disks were removed. Evidence is under
+`target/098-5-local/desktop/followup/gallery-refresh/`.
+
+Windows USB Maker downloaded both refreshed ISOs in an isolated Windows 11
+VM. A simulated 404 for Setup selected Fedora fallback. Full read-back found
+13 expected GPT and MBR changes on each test stick. Both GPT headers and their
+partition arrays passed CRC checks. Under Secure Boot, Setup reached Hello and
+Fedora fallback reached Installation Summary without writing to its target.
+The disposable Windows and USB disks were removed. Windows evidence is under
+`target/098-5-local/desktop/followup/gallery-refresh/windows-usb/`.
+
+The gallery build's exact NVIDIA digest also passed a signed upgrade and a
+rollback on an encrypted guest. Each boot passed the signed channel check.
+The guest rejected the unsigned offer before staging, kept the same test file,
+and unlocked through the virtual TPM after the update and rollback.
+
+### Files network interruption follow-up
+
+The KIO HTTP worker returned success after an HTTP 200 response ended early,
+leaving an incomplete file under the final filename. The local test advertised
+12 MiB and closed the connection after sending 2 MiB. The patched worker
+reported the connection failure and retained the transfer under its partial
+filename. A new copy after reconnection matched the source SHA-256. The
+patched worker also passed the test from both rebuilt image filesystems.
+A separate 16 MiB test filesystem returned an out-of-space error, and
+the copy succeeded after freeing space.
+
+Both images were rebuilt and signed, and both installer ISOs pin the new
+digests. The archive verifier checked both manifests and all five transfer
+parts. A fresh graphical Fedora fallback install and an encrypted NVIDIA
+Setup worker install both rejected unsigned offers and passed signed update
+checks after reboot. Both installed guests repeated the Files network and
+full-destination tests successfully. The NVIDIA guest also verified the
+recovery key and automatic TPM unlock. The VM disks were removed. Installer
+evidence is under `target/098-5-local/desktop/followup/files-http-refresh/`.
+
+The graphical Monet Setup wizard completed an encrypted AMD/Intel install
+from the refreshed Setup ISO. The VM recorded zero writes before drive
+confirmation. It completed Secure Boot enrollment, restarted with TPM
+unlock, and verified both the shipped HTTP worker and the signed update
+channel. The installer disk ran in RAM, was removed afterward, and the SSD
+had at least 65.68 GiB free during the run.
+
+Windows USB Maker wrote both refreshed release ISOs from an isolated
+Windows 11 VM. A 404 for Setup triggered the Fedora fallback. Both
+sticks passed full read-back and primary and backup GPT checks. Setup
+reached Hello under Secure Boot. Fedora fallback reached Installation
+Summary under Secure Boot with zero writes to its target. The test disks
+were removed, and the Windows runs recorded at least 65.87 GiB free.
+See `target/098-5-local/desktop/followup/files-http-refresh/windows-usb/results.json`.
+
+An encrypted NVIDIA VM first rejected the refreshed image with its signature
+withheld, then installed it and verified the signed channel after reboot.
+The installed gallery, panel files and HTTP worker matched the candidate.
+Rollback rebooted into the previous image and passed the signed channel check
+again. Both deployments unlocked with the virtual TPM and retained the saved
+file checksum. The disposable disk was removed. The SSD had at least 65.59
+GiB free throughout the run. Evidence is in
+`target/098-5-local/desktop/followup/files-http-refresh/encrypted-update-rollback/results.json`.
+
+The desktop test launcher opened the retained AMD/Intel VM at about
+65.5 GiB free, reached Plasma with the exact signed release image and
+verified the update channel again. Its loopback VNC URL completed the
+RFB handshake. A shutdown requested immediately after launch completed
+once the guest was ready. The lowest observed free space was 65.45 GiB.
+See `target/098-5-local/desktop/followup/files-http-refresh/viewer-launcher/results.json`.
+
+The final AMD/Intel and NVIDIA image filesystems each ran four clean Plasma
+sessions using simulated displays at 1280×720/150%, 1366×768/125%,
+1080×1920/150%, and 3840×2160/200%. The three default widgets fit without
+overlap. Each session started with one bar, switched to three, restored
+the middle bar with its task manager and Trash, and returned to one bar.
+The tested filesystems' OCI layer chains matched the release manifests.
+See `target/098-5-local/desktop/followup/files-http-refresh/layout-final/results.json`.
+
+The archive verifier regenerated the five OCI transfer parts in RAM and
+checked their hashes, both extracted manifests and the release downloads.
+It removed its temporary files and recorded at least 65.44 GiB free on the
+SSD. The local bundle's ARCHIVE-REPACK.md includes this path.
+
+The Windows ZIP, Linux package and both final image filesystems contain
+the same Bridge executable, installer and updater. The hashes match the
+Windows VM evidence for no staged update, a stalled download and a verified
+package installed with no additional mirror requests. The stalled-download
+run requested a Windows restart about 0.2 seconds after opening Back to
+Monet. The staged update run reached the installed Monet guest within a
+45-second observation window. These are VM timings. See
+`target/098-5-local/desktop/followup/files-http-refresh/bridge-payload/results.json`.
+
+The final Setup and fallback ISOs both contain the same signed EFI shim
+in the ISO boot directory and the USB EFI partition. The ThinkPad currently
+has Secure Boot disabled and its firmware database lacks both of the shim's
+Microsoft third-party CA issuers. The firmware boot test is still pending.
+See `target/098-5-local/desktop/followup/files-http-refresh/efi-final/results.json`.
+
+The retained desktop VM booted the exact final AMD/Intel manifest and
+repeated the Store disk-full checks on a 96 MiB guest tmpfs. User and system
+Flatpak installs each kept the failed job with a no-space error and left
+the app absent. After freeing space, retry installed the app in both
+scopes. The test left at least 65.40 GiB free on the SSD. See
+`target/098-5-local/desktop/followup/files-http-refresh/store-destination/results.json`.
+
+In the exact signed AMD/Intel guest, a Flatpak install used a repository on
+a removable QEMU USB mass-storage device. QMP removed the device with an
+object download in progress. The guest kernel recorded the disconnect and
+write errors, and Store retained the failed job. After reattaching and
+remounting the disk, Flatpak confirmed that the app was still absent.
+Store's retry installed it and the payload checksum matched. The guest
+disk overlay and USB test disk were removed. See
+`target/098-5-local/desktop/followup/files-http-refresh/store-drive-disconnect/results.json`.
+
+The ThinkPad staging script ran in a disposable VM with the final NVIDIA
+image. It staged the signed image, checked its signed channel after reboot,
+and rolled back to the prior AMD/Intel image. The /etc/containers file
+hashes matched before staging, after staging, after the signed check and
+after rollback. The NVIDIA guest reached graphical.target with Secure Boot
+and SELinux enforcement. A follow-up boot of the same signed image identified
+the failed units as nvidia-cdi-refresh.service and nvidia-cdi-refresh.path.
+The guest had only a Virtio GPU. The CDI service logged that nvidia-smi
+could not reach a driver and hit its restart limit. Both unit files matched
+the installed ThinkPad files, where CDI succeeded on 0.9.8 with its RTX
+A500. The new NVIDIA Flatpak timer was active in the guest. Its sync service
+was absent from the graphical boot critical chain. The full candidate
+still needs a physical boot. See
+`target/098-5-local/desktop/followup/files-http-refresh/nvidia-boot-diagnosis/results.json`.
+The SSD retained at least 65.24 GiB free and the RAM disk overlay was removed.
+A read-only check on the ThinkPad found OSTree references for 264 of 289
+layers. The missing layers total 0.54 GiB compressed and 0.63 GiB expanded.
+See `target/098-5-local/desktop/followup/files-http-refresh/stage-launcher/`.
+
+When the SSD dropped below 65.25 GiB free, the desktop test launcher
+booted the retained signed AMD/Intel VM using a RAM disk overlay and a
+RAM copy of its firmware. The persistent disk and firmware were mounted
+read-only. Plasma and the signed check passed. The launcher shut down
+the guest, removed the temporary files, and recorded 64.92 GiB minimum
+free space. See
+`target/098-5-local/desktop/followup/files-http-refresh/desktop-ram/results.json`.
+
+Both installer launchers started at about 64.8 GiB free with their guest disks
+in RAM. Both reached their local image registry, and neither wrote to its
+installation target. Reset removed both temporary disks. This verifies the
+lower-footprint launcher path. The full installs are recorded above. See
+`target/098-5-local/desktop/followup/files-http-refresh/installer-low-space/results.json`.
+
+The local probe, results and build rehearsal are under
+`target/098-5-local/desktop/followup/gallery-refresh/files-recovery/`. The
+ThinkPad's 0.9.8 boot and sign-in baseline is under
+`target/098-5-local/desktop/followup/gallery-refresh/physical-baseline/`.
 
 ### Notification controls and focus-timer preferences (2026-10-27–28)
 

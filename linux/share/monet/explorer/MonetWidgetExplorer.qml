@@ -49,7 +49,7 @@ Item {
     signal closed()
 
     // Wide enough for the list and two big cards; the desktop shrinks beside it.
-    width: Math.round(Math.min(Kirigami.Units.gridUnit * 46, Math.max(Kirigami.Units.gridUnit * 32, Screen.width * 0.55)))
+    width: Math.round(Math.min(Kirigami.Units.gridUnit * 46, Screen.width * 0.56))
     height: 800
     opacity: draggingWidget ? 0.3 : 1
 
@@ -67,7 +67,12 @@ Item {
                 runner.newData.connect(source => { runner.disconnectSource(source); runner.destroy(); })
                 runner.connectSource("@BINDIR@/monet-files stacks-disable " + containment.id)
             }
-            explorer.removeAllInstances(pluginName)
+            // The model counts instances across the session, including other screens and bars.
+            // Apply Remove only to the containment the gallery was opened for.
+            const matching = Array.from(containment?.applets || []).filter(applet => applet.pluginName === pluginName)
+            for (const applet of matching) {
+                applet.internalAction("remove")?.trigger()
+            }
         }
     }
 
@@ -85,17 +90,18 @@ Item {
 
     // Done: the gallery closes and the desktop comes back to full size.
     function done() {
-        if (containment && containment.corona) {
-            containment.corona.editMode = false
-        }
         gallery.closed()
     }
 
     onClosed: {
-        // Opened from a panel: back to the panel's settings, as KDE's gallery does.
-        if (explorer && explorer.containment && explorer.containment.containmentType == 1
-                && !explorer.containment.userConfiguring) {
-            explorer.containment.internalAction("configure").trigger()
+        // Keep the panel editor open when returning from its widget gallery.
+        if (forBar) {
+            if (containment && !containment.userConfiguring)
+                containment.internalAction("configure")?.trigger()
+            return
+        }
+        if (containment && containment.corona) {
+            containment.corona.editMode = false
         }
     }
 
@@ -199,117 +205,122 @@ Item {
             spacing: Kirigami.Units.gridUnit
 
             // Search, then the widgets one by one, then everyone else's.
-            ColumnLayout {
-                Layout.preferredWidth: Kirigami.Units.gridUnit * 12
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 12
+            Flickable {
+                Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 12, gallery.width * 0.36)
+                Layout.maximumWidth: Layout.preferredWidth
                 Layout.fillHeight: true
-                spacing: Kirigami.Units.smallSpacing
+                clip: true
+                contentWidth: width
+                contentHeight: categories.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
 
-                T.TextField {
-                    id: search
-                    Layout.fillWidth: true
-                    Layout.bottomMargin: Kirigami.Units.largeSpacing
-                    implicitHeight: 38
-                    leftPadding: 38
-                    rightPadding: 12
-                    verticalAlignment: TextInput.AlignVCenter
-                    color: gallery.ink
-                    placeholderText: i18nd("monet", "Search")
-                    placeholderTextColor: Qt.rgba(gallery.ink.r, gallery.ink.g, gallery.ink.b, 0.5)
-                    selectionColor: Kirigami.Theme.highlightColor
-                    selectedTextColor: Kirigami.Theme.highlightedTextColor
-                    font.family: "Inter"
-                    font.pixelSize: 14
-                    Accessible.name: i18nd("monet", "Search widgets")
-                    onTextChanged: {
-                        if (gallery.explorer) {
-                            gallery.explorer.widgetsModel.searchTerm = text
-                        }
-                        if (text !== "" && gallery.shown !== "more") {
-                            gallery.shown = "all"
-                        }
-                    }
-                    Keys.onReturnPressed: gallery.addFirst()
-                    Keys.onEnterPressed: gallery.addFirst()
-                    background: Rectangle {
-                        radius: height / 2
-                        color: gallery.pebble
-                        border.width: search.activeFocus ? 2 : 1
-                        border.color: search.activeFocus ? gallery.lily : gallery.rim
-                        Kirigami.Icon {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 17
-                            height: 17
-                            source: "edit-find"
-                            opacity: 0.7
-                        }
-                    }
-                    Text {
-                        horizontalAlignment: Text.AlignLeft
-                        anchors.fill: parent
-                        leftPadding: search.leftPadding
-                        rightPadding: search.rightPadding
-                        verticalAlignment: Text.AlignVCenter
-                        visible: search.length === 0 && search.preeditText === ""
-                        text: search.placeholderText
-                        color: search.placeholderTextColor
-                        elide: Text.ElideRight
-                        font: search.font
-                    }
-                }
+                ColumnLayout {
+                    id: categories
+                    width: parent.width
+                    spacing: Kirigami.Units.smallSpacing
 
-                Kind {
-                    title: i18nd("monet", "All widgets")
-                    sign: gallery.forBar ? "monet" : "preferences-desktop-wallpaper"
-                    chosen: gallery.shown === "all"
-                    ink: gallery.ink
-                    wash: gallery.pebble
-                    ring: gallery.lily
-                    speed: gallery.speed
-                    onClicked: gallery.shown = "all"
-                }
-
-                Repeater {
-                    model: mine
-                    delegate: Kind {
-                        required property var model
+                    T.TextField {
+                        id: search
                         Layout.fillWidth: true
-                        title: model.name
-                        sign: model.decoration
-                        chosen: gallery.shown === model.pluginName
+                        Layout.bottomMargin: Kirigami.Units.largeSpacing
+                        implicitHeight: 38
+                        leftPadding: 38
+                        rightPadding: 12
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: gallery.ink
+                        placeholderText: i18nd("monet", "Search")
+                        placeholderTextColor: Qt.rgba(gallery.ink.r, gallery.ink.g, gallery.ink.b, 0.5)
+                        selectionColor: Kirigami.Theme.highlightColor
+                        selectedTextColor: Kirigami.Theme.highlightedTextColor
+                        font.family: "Inter"
+                        font.pixelSize: 14
+                        Accessible.name: i18nd("monet", "Search widgets")
+                        onTextChanged: {
+                            if (gallery.explorer) {
+                                gallery.explorer.widgetsModel.searchTerm = text
+                            }
+                            if (text !== "" && gallery.shown !== "more") {
+                                gallery.shown = "all"
+                            }
+                        }
+                        Keys.onReturnPressed: gallery.addFirst()
+                        Keys.onEnterPressed: gallery.addFirst()
+                        background: Rectangle {
+                            radius: height / 2
+                            color: gallery.pebble
+                            border.width: search.activeFocus ? 2 : 1
+                            border.color: search.activeFocus ? gallery.lily : gallery.rim
+                            Kirigami.Icon {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 17
+                                height: 17
+                                source: "edit-find"
+                                opacity: 0.7
+                            }
+                        }
+                        Text {
+                            horizontalAlignment: Text.AlignLeft
+                            anchors.fill: parent
+                            leftPadding: search.leftPadding
+                            rightPadding: search.rightPadding
+                            verticalAlignment: Text.AlignVCenter
+                            visible: search.length === 0 && search.preeditText === ""
+                            text: search.placeholderText
+                            color: search.placeholderTextColor
+                            elide: Text.ElideRight
+                            font: search.font
+                        }
+                    }
+
+                    Kind {
+                        title: i18nd("monet", "All widgets")
+                        sign: gallery.forBar ? "monet" : "preferences-desktop-wallpaper"
+                        chosen: gallery.shown === "all"
                         ink: gallery.ink
                         wash: gallery.pebble
                         ring: gallery.lily
                         speed: gallery.speed
-                        onClicked: gallery.shown = model.pluginName
+                        onClicked: gallery.shown = "all"
                     }
-                }
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.topMargin: Kirigami.Units.smallSpacing
-                    Layout.bottomMargin: Kirigami.Units.smallSpacing
-                    implicitHeight: 1
-                    color: gallery.hairline
-                    visible: others.count > 0
-                }
+                    Repeater {
+                        model: mine
+                        delegate: Kind {
+                            required property var model
+                            Layout.fillWidth: true
+                            title: model.name
+                            sign: model.decoration
+                            chosen: gallery.shown === model.pluginName
+                            ink: gallery.ink
+                            wash: gallery.pebble
+                            ring: gallery.lily
+                            speed: gallery.speed
+                            onClicked: gallery.shown = model.pluginName
+                        }
+                    }
 
-                Kind {
-                    visible: others.count > 0
-                    title: i18nd("monet", "More widgets")
-                    sign: "list-add"
-                    chosen: gallery.shown === "more"
-                    ink: gallery.ink
-                    wash: gallery.pebble
-                    ring: gallery.lily
-                    speed: gallery.speed
-                    onClicked: gallery.shown = "more"
-                }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+                        Layout.bottomMargin: Kirigami.Units.smallSpacing
+                        implicitHeight: 1
+                        color: gallery.hairline
+                        visible: others.count > 0
+                    }
 
-                Item {
-                    Layout.fillHeight: true
+                    Kind {
+                        visible: others.count > 0
+                        title: i18nd("monet", "More widgets")
+                        sign: "list-add"
+                        chosen: gallery.shown === "more"
+                        ink: gallery.ink
+                        wash: gallery.pebble
+                        ring: gallery.lily
+                        speed: gallery.speed
+                        onClicked: gallery.shown = "more"
+                    }
                 }
             }
 
@@ -331,7 +342,7 @@ Item {
                     GridLayout {
                         Layout.fillWidth: true
                         visible: gallery.shown !== "more"
-                        columns: gallery.shown === "all" ? 2 : 1
+                        columns: gallery.shown === "all" && scroller.width >= Kirigami.Units.gridUnit * 24 ? 2 : 1
                         columnSpacing: Kirigami.Units.largeSpacing
                         rowSpacing: Kirigami.Units.largeSpacing
 
@@ -342,6 +353,7 @@ Item {
                                 required property var model
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 1
+                                Layout.alignment: Qt.AlignTop
                                 visible: gallery.shown === "all" || gallery.shown === model.pluginName
                                 big: gallery.shown !== "all"
                                 pluginName: model.pluginName
@@ -349,7 +361,7 @@ Item {
                                 description: model.description
                                 sign: model.decoration
                                 screenshot: model.screenshot || ""
-                                running: model.running || 0
+                                running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
                                 supported: model.isSupported !== false
                                 smoke: gallery.smoke
                                 forBar: gallery.forBar
@@ -376,7 +388,7 @@ Item {
                             name: model.name
                             description: model.description
                             sign: model.decoration
-                            running: model.running || 0
+                            running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
                             supported: model.isSupported !== false
                             ink: gallery.ink
                             dim: gallery.dim
@@ -627,53 +639,33 @@ Item {
                 }
             }
 
-            RowLayout {
+            Text {
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 12
+                horizontalAlignment: Text.AlignLeft
+                visible: card.running > 0
+                text: card.forBar ? i18nd("monet", "In your bar") : i18ndp("monet", "On your desktop", "%1 on your desktop", card.running)
+                wrapMode: Text.Wrap
+                color: card.ring
+                font.family: "Inter"
+                font.pixelSize: 12
+            }
+
+            Flow {
                 Layout.fillWidth: true
                 Layout.leftMargin: 16
                 Layout.rightMargin: 12
                 Layout.bottomMargin: 2
+                Layout.preferredHeight: childrenRect.height
+                layoutDirection: Qt.RightToLeft
                 spacing: Kirigami.Units.smallSpacing
 
-                Text {
-                    horizontalAlignment: Text.AlignLeft
-                    visible: card.running > 0
-                    text: card.forBar ? i18nd("monet", "In your bar") : i18ndp("monet", "On your desktop", "%1 on your desktop", card.running)
-                    color: card.ring
-                    font.family: "Inter"
-                    font.pixelSize: 12
-                }
-                Item {
-                    Layout.fillWidth: true
-                }
-                T.AbstractButton {
-                    id: takeAwayButton
-                    visible: card.running > 0
-                    // Every copy goes: say so when there's more than one.
-                    text: card.running > 1 ? i18nd("monet", "Remove all") : i18nd("monet", "Remove")
-                    implicitWidth: takeAwayLabel.implicitWidth + 24
-                    implicitHeight: 30
-                    Accessible.name: i18ndc("monet", "%1 is a widget's name", "Remove %1", card.name)
-                    onClicked: card.takeAway()
-                    background: Rectangle {
-                        radius: height / 2
-                        color: card.ink
-                        opacity: takeAwayButton.hovered ? 0.08 : 0
-                    }
-                    contentItem: Text {
-                        id: takeAwayLabel
-                        text: takeAwayButton.text
-                        color: card.dim
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        font.family: "Inter"
-                        font.pixelSize: 13
-                    }
-                }
                 T.AbstractButton {
                     id: addButton
                     text: i18nd("monet", "Add")
-                    implicitWidth: addLabel.implicitWidth + 30
-                    implicitHeight: 30
+                    width: Math.min(parent.width, addLabel.implicitWidth + 30)
+                    height: 30
                     Accessible.name: i18ndc("monet", "%1 is a widget's name", "Add %1", card.name)
                     onClicked: card.add()
                     background: Rectangle {
@@ -687,9 +679,35 @@ Item {
                         color: "#FBF7EE"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
                         font.family: "Inter"
                         font.pixelSize: 13
                         font.weight: Font.DemiBold
+                    }
+                }
+                T.AbstractButton {
+                    id: takeAwayButton
+                    visible: card.running > 0
+                    // Every copy goes: say so when there's more than one.
+                    text: card.running > 1 ? i18nd("monet", "Remove all") : i18nd("monet", "Remove")
+                    width: Math.min(parent.width, takeAwayLabel.implicitWidth + 24)
+                    height: 30
+                    Accessible.name: i18ndc("monet", "%1 is a widget's name", "Remove %1", card.name)
+                    onClicked: card.takeAway()
+                    background: Rectangle {
+                        radius: height / 2
+                        color: card.ink
+                        opacity: takeAwayButton.hovered ? 0.08 : 0
+                    }
+                    contentItem: Text {
+                        id: takeAwayLabel
+                        text: takeAwayButton.text
+                        color: card.dim
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                        font.family: "Inter"
+                        font.pixelSize: 13
                     }
                 }
             }

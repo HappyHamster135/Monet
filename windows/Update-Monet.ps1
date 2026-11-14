@@ -1,22 +1,22 @@
 <#
 .SYNOPSIS
-    Keeps Monet Bridge up to date, on the way back to Monet.
+    Stages Monet Bridge updates after Windows sign-in and installs them on return.
 
 .DESCRIPTION
-    Monet Bridge runs this (the \Monet\Update task) when you go back to Monet,
-    after the game has closed. At most once a day it asks GitHub for Monet's
-    newest release; when that's newer than this Bridge, it downloads the
-    release's Monet-X-Windows.zip, checks it against the release's
-    SHA256SUMS.txt, and installs it (Install-Monet.ps1 -Quiet). Then it
-    restarts into Monet, whatever happened: an update never keeps the PC in
-    Windows. Bridge hands the restart over by leaving update-then-restart in
-    C:\ProgramData\Monet, which this renames to update-claimed as it starts.
+    The StageUpdate task checks for releases and downloads a verified package
+    while Windows is running. Back to Monet only starts the Update task when
+    that package is ready. Update claims the restart, installs the local package,
+    then restarts Windows even if installation failed.
 
 .PARAMETER CheckOnly
-    Only say whether a newer Monet Bridge is out; change nothing.
+    Report whether a newer Monet Bridge is available.
+
+.PARAMETER Stage
+    Download and verify an available update while Windows is running.
 #>
 param(
-    [switch]$CheckOnly
+    [switch]$CheckOnly,
+    [switch]$Stage
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,6 +29,8 @@ $marker = Join-Path $dataDir 'update-then-restart'
 $claimed = Join-Path $dataDir 'update-claimed'
 $checked = Join-Path $dataDir 'update-checked'
 $work = Join-Path $dataDir 'Update'
+$ready = Join-Path $dataDir 'update-ready'
+$applying = Join-Path $dataDir 'update-applying'
 
 function Log($text) {
     if (-not $CheckOnly) {
@@ -36,11 +38,22 @@ function Log($text) {
     }
 }
 
+function ReleaseVersion([string]$name) {
+    # Monet uses a numeric suffix for a revision of an already published build.
+    if ($name -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(?:-([1-9][0-9]*))?$') { return }
+    $revision = if ($Matches[2]) { $Matches[2] } else { '0' }
+    $number = $null
+    if ([version]::TryParse("$($Matches[1]).$revision", [ref]$number)) { return $number }
+}
+
 # This Bridge's version, as its installer left it in Settings > Apps (monet-bridge.exe is a
 # windowed program, whose printing a script can't always catch).
 function Installed {
     $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Monet'
-    return [version](Get-ItemProperty -Path $key -Name DisplayVersion).DisplayVersion
+    $label = (Get-ItemProperty -Path $key -Name DisplayVersion).DisplayVersion
+    $number = ReleaseVersion $label
+    if (-not $number) { throw "Unrecognized installed Monet Bridge version: $label" }
+    return [pscustomobject]@{ Version = $number; Label = $label }
 }
 
 # Monet's newest release on GitHub: its version, and its Windows package and checksums.
@@ -48,64 +61,90 @@ function Installed {
 function Newest {
     $releases = Invoke-RestMethod -UseBasicParsing -TimeoutSec 15 `
         -Uri "https://api.github.com/repos/$Repository/releases?per_page=10" -Headers @{ 'User-Agent' = 'Monet-Bridge' }
-    $release = $releases | Where-Object { -not $_.draft -and $_.tag_name -match '^v\d+\.\d+\.\d+$' } |
-        Sort-Object { [version]($_.tag_name -replace '^v', '') } -Descending | Select-Object -First 1
-    $version = $release.tag_name -replace '^v', ''
-    return [pscustomobject]@{
-        Version = [version]$version
-        Package = $release.assets | Where-Object { $_.name -eq "Monet-$version-Windows.zip" } | Select-Object -First 1
-        Sums    = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
+    $available = foreach ($release in $releases) {
+        if ($release.draft -or $release.tag_name -cnotmatch '^v(.+)$') { continue }
+        $label = $Matches[1]
+        $number = ReleaseVersion $label
+        if (-not $number) { continue }
+        $package = $release.assets | Where-Object { $_.name -ceq "Monet-$label-Windows.zip" } | Select-Object -First 1
+        $sums = $release.assets | Where-Object { $_.name -ceq 'SHA256SUMS.txt' } | Select-Object -First 1
+        if ($package -and $sums) {
+            [pscustomobject]@{ Version = $number; Label = $label; Package = $package; Sums = $sums }
+        }
     }
+    return $available | Sort-Object Version -Descending | Select-Object -First 1
+}
+
+function VerifyPackage($zip, $sums) {
+    $name = Split-Path -Leaf $zip
+    $expected = Get-Content -LiteralPath $sums | Where-Object {
+        $_ -match ('^[a-f0-9]{64}\s+\*?' + [regex]::Escape($name) + '$')
+    } | ForEach-Object { ($_ -split '\s+')[0] }
+    return @($expected).Count -eq 1 -and $expected -eq (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash
 }
 
 $restart = $false
-if (-not $CheckOnly -and (Test-Path $marker)) {
-    Move-Item -Force $marker $claimed
-    $restart = $true
-}
-# Started too late, after Bridge restarted by itself: Windows is going down, so not now.
-if (-not $CheckOnly -and -not $restart) { return }
-# The PC is on its way back to Monet: an update that takes longer waits for another day.
-$deadline = (Get-Date).AddSeconds(75)
 try {
-    # Once a day is enough; the rest of the time this only restarts.
-    $last = if (Test-Path $checked) { (Get-Item $checked).LastWriteTime } else { [datetime]::MinValue }
-    if ($CheckOnly -or (Get-Date) - $last -gt [timespan]::FromHours(20)) {
+    if ($CheckOnly -or $Stage) {
+        if ($Stage -and -not $CheckOnly) {
+            if (Test-Path $ready) { return }
+            $last = if (Test-Path $checked) { (Get-Item $checked).LastWriteTime } else { [datetime]::MinValue }
+            $age = (Get-Date) - $last
+            if ($age -ge [timespan]::Zero -and $age -lt [timespan]::FromHours(20)) { return }
+        }
         $have = Installed
         $newest = Newest
-        if (-not $CheckOnly) { Set-Content -Path $checked -Value (Get-Date -Format o) }
+        $updateAvailable = $newest -and $newest.Version -gt $have.Version
         if ($CheckOnly) {
-            if ($newest.Version -gt $have) { "Monet Bridge $($newest.Version) is out (this is $have)." }
-            else { "Monet Bridge $have is the newest." }
-        } elseif ($newest.Version -gt $have -and $newest.Package -and $newest.Sums) {
+            if ($updateAvailable) { "Monet Bridge $($newest.Label) is out (this is $($have.Label))." }
+            elseif ($newest) { "Monet Bridge $($have.Label) is up to date." }
+            else { "No downloadable Monet Bridge releases were found." }
+        } elseif ($updateAvailable) {
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
             New-Item -ItemType Directory -Force -Path $work | Out-Null
             $zip = Join-Path $work $newest.Package.name
             $sums = Join-Path $work 'SHA256SUMS.txt'
             Invoke-WebRequest -UseBasicParsing -TimeoutSec 120 -Uri $newest.Package.browser_download_url -OutFile $zip
             Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Uri $newest.Sums.browser_download_url -OutFile $sums
-            $want = Get-Content $sums | Where-Object { $_ -match ('\s\*?' + [regex]::Escape($newest.Package.name) + '$') } |
-                ForEach-Object { ($_ -split '\s+')[0] } | Select-Object -First 1
-            if (-not $want -or $want -ne (Get-FileHash -Algorithm SHA256 $zip).Hash) {
-                Log "$($newest.Package.name) didn't match its checksum; not installed"
-            } elseif ((Get-Date) -gt $deadline) {
-                Log "the download took too long; the update waits for the next trip"
-                Remove-Item -Force -ErrorAction SilentlyContinue $checked
-            } else {
-                Expand-Archive -Force -Path $zip -DestinationPath $work
-                $installer = Get-ChildItem -Path $work -Recurse -Filter 'Install-Monet.ps1' | Select-Object -First 1
-                Log "updating Monet Bridge $have to $($newest.Version)"
-                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer.FullName -Quiet
-                Log "Install-Monet.ps1 finished ($LASTEXITCODE)"
-            }
+            if (-not (VerifyPackage $zip $sums)) { throw "$($newest.Package.name) didn't match its checksum" }
+            [IO.Directory]::Move($work, $ready)
+            Log "staged Monet Bridge $($newest.Label)"
         }
+        if (-not $CheckOnly) { Set-Content -Path $checked -Value (Get-Date -Format o) }
+        return
     }
+
+    if (-not (Test-Path $marker)) { return }
+    # Claim the restart before touching the staged download. A late task cannot
+    # claim a marker Bridge has already removed.
+    Move-Item -Force $marker $claimed
+    $restart = $true
+    if (-not (Test-Path $ready -PathType Container)) { return }
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $applying
+    [IO.Directory]::Move($ready, $applying)
+    $zip = @(Get-ChildItem -LiteralPath $applying -File -Filter 'Monet-*-Windows.zip')
+    if ($zip.Count -ne 1 -or $zip[0].Name -cnotmatch '^Monet-(.+)-Windows\.zip$') { throw 'Invalid staged package' }
+    $label = $Matches[1]
+    $version = ReleaseVersion $label
+    $have = Installed
+    if (-not $version -or $version -le $have.Version) { return }
+    if (-not (VerifyPackage $zip[0].FullName (Join-Path $applying 'SHA256SUMS.txt'))) { throw 'Invalid staged checksum' }
+    Expand-Archive -LiteralPath $zip[0].FullName -DestinationPath $applying
+    $installer = Join-Path (Join-Path $applying 'Monet for Windows') 'Install-Monet.ps1'
+    if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) { throw 'Staged installer missing' }
+    Log "updating Monet Bridge $($have.Label) to $label"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -Quiet
+    if ($LASTEXITCODE -ne 0) { throw "Install-Monet.ps1 finished ($LASTEXITCODE)" }
 } catch {
     Log "couldn't update: $_"
     if ($CheckOnly) { "Couldn't check: $_" }
+    elseif ($Stage) { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work }
+    elseif ($restart) { Remove-Item -Force -ErrorAction SilentlyContinue $checked }
 } finally {
     if ($restart) {
-        Remove-Item -Force -ErrorAction SilentlyContinue $claimed
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $applying
+        # Bridge clears the receipt before its next request. Keep it visible
+        # even when rejecting a package takes less than one polling interval.
         & shutdown.exe /r /t 0
     }
 }

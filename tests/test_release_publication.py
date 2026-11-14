@@ -2,9 +2,11 @@
 import os
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import re
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,7 +18,8 @@ SPEC.loader.exec_module(qualified)
 
 
 class ImagePublication(unittest.TestCase):
-    def publish(self, git_status, push_status=0, *, record_digest=False, digest="sha256:" + "a" * 64, rolling_status=0):
+    def publish(self, git_status, push_status=0, *, record_digest=False, digest="sha256:" + "a" * 64,
+                rolling_status=0, qualified_record=False):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for name, script in {
@@ -35,12 +38,16 @@ exit "$PUSH_STATUS"
                 path.chmod(0o700)
             calls = root / "calls"
             output = root / "output"
+            if qualified_record:
+                record = root / "image/releases/0.9.6.json"
+                record.parent.mkdir(parents=True)
+                record.write_text("{}")
             env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
                        GIT_STATUS=str(git_status), PUSH_STATUS=str(push_status), CALLS=str(calls),
                        PUSH_DIGEST=digest, ROLLING_STATUS=str(rolling_status), TMPDIR=folder)
             result = subprocess.run(["bash", str(ROOT / "tools/push-image.sh"),
                                      "ghcr.io/example/monet", "0.9.6", *([str(output)] if record_digest else [])],
-                                    env=env, capture_output=True, text=True, timeout=10)
+                                    cwd=root, env=env, capture_output=True, text=True, timeout=10)
             commands = calls.read_text().splitlines() if calls.exists() else []
             return result.returncode, commands, output.read_text() if output.exists() else ""
 
@@ -50,6 +57,10 @@ exit "$PUSH_STATUS"
     def test_new_version_precedes_rolling_update(self):
         self.assertEqual(self.publish(2), (0, ["podman push ghcr.io/example/monet:0.9.6",
                                               "podman push ghcr.io/example/monet:latest"], ""))
+
+    def test_only_qualified_workflow_can_publish_a_new_qualified_version(self):
+        self.assertEqual(self.publish(2, qualified_record=True), (1, [], ""))
+        self.assertEqual(self.publish(0, qualified_record=True), (0, ["podman push ghcr.io/example/monet:latest"], ""))
 
     def test_remote_failure_publishes_nothing(self):
         self.assertEqual(self.publish(128), (128, [], ""))
@@ -81,6 +92,43 @@ exit "$PUSH_STATUS"
 
 
 class QualifiedPublication(unittest.TestCase):
+    def test_bad_download_stops_before_image_publication(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            version = (ROOT / "VERSION").read_text().strip()
+            assets = {}
+            for kind in ("Setup.iso", "Installer.iso", "Linux.tar.gz", "Windows.zip", "Make-USB-Stick.exe"):
+                path = folder / f"Monet-{version}-{kind}"
+                contents = kind.encode()
+                path.write_bytes(contents)
+                assets[path.name] = {"bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
+            checksums = folder / "SHA256SUMS.txt"
+            contents = "".join(f"{entry['sha256']}  {name}\n" for name, entry in assets.items()).encode()
+            checksums.write_bytes(contents)
+            assets[checksums.name] = {"bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
+            record = {"version": version, "assets": assets}
+            names = qualified.release_files(record)
+            qualified.verify_release_files(record, folder, names)
+
+            stale = folder / f"Monet-{version}-Setup.iso"
+            stale.write_bytes(b"x" * assets[stale.name]["bytes"])
+            record_path = folder / "record.json"
+            record_path.write_text(json.dumps(record))
+            with patch.object(sys, "argv", ["publish-qualified.py", str(record_path), str(folder)]), \
+                    patch.object(qualified.subprocess, "run") as run, \
+                    patch.object(qualified, "publish") as publish:
+                with self.assertRaisesRegex(ValueError, "Release file failed verification"):
+                    qualified.main()
+                run.assert_called_once()
+                self.assertIn(stale.name, run.call_args.args[0])
+                publish.assert_not_called()
+
+            checksums.write_bytes(contents + contents.splitlines(keepends=True)[0])
+            duplicate = checksums.read_bytes()
+            assets[checksums.name] = {"bytes": len(duplicate), "sha256": hashlib.sha256(duplicate).hexdigest()}
+            with self.assertRaisesRegex(ValueError, "Invalid release checksum list"):
+                qualified.verify_release_files(record, folder, names)
+
     def test_corrupt_missing_and_duplicate_parts_are_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)
@@ -106,6 +154,16 @@ class QualifiedPublication(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 qualified.publish(record, Path("unused"))
             run.assert_not_called()
+
+    def test_numbered_release_suffix_in_archive_names(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            path = folder / "Monet-0.9.8-5-oci.tar.part-aa"
+            contents = b"verified export"
+            path.write_bytes(contents)
+            part = {"name": path.name, "bytes": len(contents),
+                    "sha256": hashlib.sha256(contents).hexdigest()}
+            self.assertEqual(qualified.verify_parts({"parts": [part]}, folder), [path])
 
     def test_signing_failure_stops_rolling_promotion(self):
         record = {"images": {

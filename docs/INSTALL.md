@@ -3,9 +3,8 @@
 One USB stick installs everything: Monet, and Windows for the games that need
 it. Some PCs need a firmware setting enabled to trust Linux boot media; see below.
 
-These instructions are for the **0.9.7 preview**. The release page has the USB
-maker, Monet Setup, and the Fedora fallback installer.
-[Monet 0.9.7 downloads](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.7)
+These instructions are for the **0.9.8-5 preview**. Use the USB maker or an
+installer ISO from the same release. [Monet downloads](https://github.com/HappyHamster135/Monet/releases)
 
 You need:
 
@@ -39,7 +38,7 @@ and use 4 KiB physical sectors.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.7-Make-USB-Stick.exe** from the release page and
+1. Download **Monet-0.9.8-5-Make-USB-Stick.exe** from the release page and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
 
@@ -50,11 +49,11 @@ On a Windows PC (this one, or any other):
 3. It downloads Monet, writes the stick and checks it (about 10-20 minutes),
    then says it's ready.
 
-The USB maker prefers **Monet-0.9.7-Setup.iso**. It checks the downloaded
+The USB maker prefers **Monet-0.9.8-5-Setup.iso**. It checks the downloaded
 installer against the release checksum before writing the stick. If Monet
-Setup is unavailable, it uses **Monet-0.9.7-Installer.iso**, the Fedora fallback.
+Setup is unavailable, it uses **Monet-0.9.8-5-Installer.iso**, the Fedora fallback.
 
-On Linux or a Mac, download **Monet-0.9.7-Setup.iso** and write it with your
+On Linux or a Mac, download **Monet-0.9.8-5-Setup.iso** and write it with your
 disk tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
@@ -76,7 +75,7 @@ before changing firmware security settings.
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.7**).
+   **F11** (MSI). Choose the USB stick. Its volume label is **Monet-0.9.8-5**.
 2. Monet Setup opens over the harbor at dawn. Choose your language,
    keyboard and time zone (a region, then a city: Setup guesses it, and once
    online, finds where the PC is), and click **Continue**.
@@ -98,9 +97,8 @@ before changing firmware security settings.
    On a PC with TPM 2.0, **Encrypt Monet** is selected by default. Keep the
    recovery key shown at completion; it also unlocks the disk if the TPM cannot.
 
-Use the 0.9.7 Setup stick for the drive review and installation recovery
-described here. Resume needs the recovery information saved by the Setup stick
-that started the installation.
+Resume needs the recovery information saved by the Setup stick that started
+the installation.
 
 Setup downloads the system, then unpacks and writes it. A finished download is
 not a finished installation: leave the PC and USB connected until **All set**.
@@ -153,9 +151,9 @@ disk encryption does not protect against someone with physical access to this ke
 <details>
 <summary>With Fedora's fallback installer</summary>
 
-The 0.9.8 fallback offers erase only when it can identify the boot media and
-one eligible internal drive. If either check fails, use Monet Setup to choose
-the drive. The older 0.9.7 fallback preselects the largest eligible drive.
+The fallback offers erase only when it can identify the boot media and one
+eligible internal drive. If either check fails, use Monet Setup to choose
+the drive. The fallback waits at its summary before writing to the drive.
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -163,39 +161,32 @@ the drive. The older 0.9.7 fallback preselects the largest eligible drive.
    selected. Press **Enter** (or wait ten seconds).
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
-5. Click **User Creation** and enter your name and a password.
+5. Click **User Creation**, enter your name and a password, and leave
+   **Add administrative privileges to this user account** selected.
 6. Open **Installation Destination** and check the selected drive and partition
    changes before clicking **Begin Installation**. If the summary says
    **Kickstart insufficient**, select only the drive you intend to use and
    confirm its layout there. Monet shows download progress while it installs.
-7. Click **Reboot** and take out the USB stick.
+7. Click **Reboot System**. Remove the USB stick once the PC starts restarting.
 
 </details>
 
 ## 3. First start
 
-**Once**, a blue screen asks to trust Monet (its kernel and the NVIDIA
-driver are signed with Universal Blue's key, which Secure Boot doesn't know
-yet). With the arrow keys and Enter:
+When Secure Boot is on, a blue screen asks once to trust Monet. Its kernel
+and NVIDIA driver are signed with Universal Blue's key. Use the arrow keys
+and Enter:
 
 **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**
 
-Monet Setup's last page shows these steps in pictures: take a photo of them.
+Monet Setup's last page shows these steps in pictures. The Fedora fallback
+shows the same instructions before **Reboot System**.
 
 It opens on **Continue boot**: don't choose that. It skips this, and then
 Secure Boot won't let Monet start. If it happens anyway, the PC says
 "bad shim signature" for ten seconds, then Monet asks the firmware again,
 says so, and restarts: the blue screen is back. (Starting from the USB stick
 works too: Monet Setup notices and offers **Ask again and restart**.)
-
-With Fedora's installer instead:
-
-1. Turn Secure Boot off in the PC's firmware settings, and start Monet.
-2. In Terminal, run `sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der`
-   and type `monetsetup` twice. Then run `sudo mokutil --timeout -1`, so
-   the blue screen waits for you.
-3. Restart, turn Secure Boot back on, and this time choose **Enroll MOK** on
-   the blue screen.
 
 Sign in to Monet. It greets you by name.
 
@@ -335,13 +326,13 @@ monet update              # install, then restart
 monet auto-updates off    # only when you ask (on turns it back)
 ```
 
-### First signed update from 0.9.7
+### Set up signed system updates
 
-Monet 0.9.8 Setup and the Fedora fallback configure signature verification for
-Monet's update repositories. On an existing 0.9.7 installation, add Monet's
-release key before the first update if you want that download verified too.
+Monet 0.9.8 and later configure signature verification when installed from
+Monet Setup or the Fedora fallback. Add the release key before switching
+from Monet 0.9.7 or Bazzite.
 
-Download the 0.9.8 source archive from the Monet GitHub release and extract it.
+Download the 0.9.8-5 source archive from the Monet GitHub release and extract it.
 From its top-level directory, run these commands:
 
 ```sh
@@ -349,16 +340,17 @@ sudo python3 image/install-update-trust.py image/monet-update.pub
 sudo bootc status
 ```
 
-Use the same repository shown in the current image. For an image named
-`ghcr.io/happyhamster135/monet`, run:
+On Monet 0.9.7, use the same repository shown in the current image. On
+Bazzite, use `monet` for an NVIDIA RTX 20-series or later card or a GTX 16-series
+card, and `monet-amd` for AMD, Intel or older NVIDIA graphics. For `monet`, run:
 
 ```sh
 sudo bootc switch --enforce-container-sigpolicy ghcr.io/happyhamster135/monet:latest
 ```
 
-If your current image uses `ghcr.io/happyhamster135/monet-amd`, use
-`ghcr.io/happyhamster135/monet-amd:latest` instead. Restart after the switch
-succeeds. The previous deployment remains available in the boot menu.
+For `monet-amd`, substitute `ghcr.io/happyhamster135/monet-amd:latest`.
+Restart after the switch succeeds. The previous deployment remains available
+in the boot menu.
 
 ### Going back after an update
 
@@ -384,11 +376,15 @@ you out automatically. This does not restore documents, reinstall Monet or undo
 arbitrary unrecorded changes. A recent journal must exist, and this page requires
 a working desktop.
 
-Monet Bridge, Monet's part in Windows, updates itself on the way back to
-Monet, at most once a day: when a newer Monet is out, it installs that
-Monet's Bridge, then restarts into Monet as usual. A Bridge from before 0.9.2
-needs it once by hand: in Windows, open the release's
-**Monet-X-Windows.zip** and double-click **Install Monet**.
+To update an existing Windows Bridge to 0.9.8-5, extract
+**Monet-0.9.8-5-Windows.zip** in Windows and double-click **Install Monet**.
+Approve the administrator prompt. Older Bridge versions skip release numbers
+with a suffix like `0.9.8-5`, so they need this one-time install.
+
+Starting with 0.9.8-5, Bridge checks for updates after you sign in to Windows.
+**Back to Monet** applies an update that has already downloaded and passed
+its checksum check. If no verified package is ready, it requests the restart
+without waiting for a download.
 
 ### If Play goes back to Monet
 
@@ -425,6 +421,7 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.7-Linux.tar.gz** and run `./monet-0.9.7-linux/install.sh`,
-or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
-(`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).
+Extract **Monet-0.9.8-5-Linux.tar.gz** to a folder and run `./install.sh` from
+that folder. To switch the whole system to the Monet image, use the
+[signed update steps](#set-up-signed-system-updates) to install the trust key
+and choose the channel for your graphics hardware.

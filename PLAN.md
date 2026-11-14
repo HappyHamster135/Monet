@@ -1,5 +1,52 @@
 # Monet: Project Plan
 
+## 0.9.8-5 release checklist
+
+- [x] Build and sign both AMD/Intel and NVIDIA images. Verify both installer
+  ISOs, the Windows USB Maker and Bridge packages, and the transfer archive
+  against the [release manifest](image/releases/0.9.8-5.json).
+- [x] Complete Monet Setup and Fedora fallback installs in VMs. Check the
+  signed update channel after reboot. On an encrypted NVIDIA guest, verify
+  that an unsigned update is rejected and the signed upgrade and rollback
+  keep the saved file and TPM unlock.
+- [x] Test fresh widget placement and taskbar alignment at four display modes
+  on both images. Verify the one-bar default, optional three-bar layout and
+  restoration of a removed middle panel. Check panel and widget editor
+  scrolling, editing and removal.
+- [x] Test Windows Bridge with no staged update, a stalled download and a
+  verified offline package. Restart proceeds with no staged package, and
+  applies a verified package locally when one is ready.
+- [x] Check desktop keyboard navigation, Orca, large text and right-to-left
+  layout. Exercise Files and Store interruption recovery with isolated network
+  loss, a full filesystem and removable test storage.
+- [x] Write the final Setup ISO to the Kingston USB and verify its complete
+  SHA-256 read-back against the release manifest.
+- [ ] Boot the Kingston from the ThinkPad's F12 menu. Check the Hello page,
+  keyboard and touchpad. Record the firmware result and Secure Boot setting.
+  Test with the third-party UEFI CA trusted before claiming Secure Boot
+  coverage on this laptop.
+- [ ] Boot the exact signed NVIDIA candidate on the ThinkPad. After reboot,
+  confirm the digest, signed update channel, RTX A500 driver and CDI service.
+  If testing an upgrade from the installed 0.9.8, leave at least 64 GiB free
+  throughout staging. The existing staging launcher starts at 69 GiB free.
+- [ ] Repeat desktop fit, accessibility and resume checks on the installed
+  candidate. Change display resolution and scaling, remove and restore the
+  middle bar, and verify wired network and audio refresh after unplugging and
+  reconnecting devices across sleep. Try real drive removal with spare media
+  while confirming Files and Store recover after reconnecting.
+- [ ] Compare boot, sign-in, app launch, shutdown and idle battery drain on the
+  same physical PC running Monet and Windows. Record firmware, sign-in and
+  usable desktop separately. Repeat three runs per OS, time an update reboot
+  separately and compare 30-minute unplugged idle runs at matching brightness,
+  power profile, display, network and peripheral settings. The ThinkPad has an
+  installed Monet 0.9.8 baseline. A Windows installation still needs to be
+  prepared on the same test hardware.
+- [ ] Review the physical results and branch checks. When ready to release,
+  use the qualified publication workflow with the checksum-verified assets.
+
+[Changes in 0.9.8-5](RELEASE_NOTES.md#new-in-098-5-everyday-reliability) ·
+[Test evidence and reinstall handoff](docs/TESTING.md#098-5-reinstall-handoff)
+
 ## 0.9.4 replacement build — published — 2026-10-30
 
 At the user's request, the existing [0.9.4 release](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.4)
@@ -304,7 +351,7 @@ authorized in order; a VM check does not replace real-hardware release validatio
 |---|---|---|---|
 | 1 | Restore work after a Windows trip: documents, browser tabs and window positions | Editor, Files and Zen slices implemented and VM-tested: saved Kate/KWrite documents, Files tabs/splits, geometry and Zen's native normal session in its original profile. Zen's startup preference is preserved; private windows stay closed. | Reopen real saved documents/tabs, restore multiple windows on their available screens, avoid duplicates, respect the off switch and handle an interrupted restore. State limits for unsaved/private work explicitly; test a real Windows round trip before release. |
 | 2 | Reliable upgrades that preserve shortcuts and preferences | Profile migration implemented and VM-tested: ownership records, field-by-field launcher updates, failure retry and conflict-safe undo. Two live migration runs preserve existing choices and pins. Full image upgrade/reboot/rollback remains a release check. | Upgrade an existing profile with old pins and custom preferences; restart and sign in twice; preserve unrelated choices and verify rollback. |
-| 3 | Store downloads with cancel, retry and recovery | Implemented and VM-tested: saved queue, independent workers, cooperative cancel, retry, interrupted-job recovery, network/space errors and catalog retry. Release checks remain for power loss and actual disk exhaustion. | Persistent queue; cancel/retry; recovery after network loss, app close or reboot; useful errors for unavailable catalogs and full disks. |
+| 3 | Store downloads with cancel, retry and recovery | Implemented. User and system-wide installs recovered from a forced VM reboot during download and from disk exhaustion on a capped filesystem. Network loss, cancellation and catalog retry also passed. | Persistent queue; cancel/retry; recovery after network loss, app close or reboot; useful errors for unavailable catalogs and full disks. |
 | 4 | Sleep/wake, display scaling and hardware support | Desktop scaling slice implemented and VM-tested at 100/125/150/175/200%; hardware validation remains | Keep widgets on screen and separate the bottom bars; return to the previous arrangement when scaling back. Record results for hybrid graphics, multiple monitors, docks, Bluetooth, controllers, battery drain and Secure Boot. |
 | 5 | Clear recovery tools and complete keyboard/accessibility support | Calendar keyboard slice implemented; wider audit and recovery UI remain | Calendar day selection, note editing, repeat choice and close work by keyboard with visible focus. Recover from a failed boot/update and restore real files; finish screen-reader, large-text, reduced-motion and right-to-left flows across everyday apps. |
 

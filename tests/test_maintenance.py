@@ -255,6 +255,43 @@ class Diagnostics(unittest.TestCase):
 
 
 class StorageScan(unittest.TestCase):
+    def test_drive_layout_keeps_windows_and_unallocated_space_separate(self):
+        q = quick_helper()
+        gb = 10**9
+        parts = [
+            dict(type='part', kname='sda1', size=gb, parttype='c12a7328-f81f-11d2-ba4b-00a0c93ec93b'),
+            dict(type='part', kname='sda2', size=653*gb,
+                 children=[dict(type='crypt', kname='dm-0', path='/dev/mapper/monet')]),
+            dict(type='part', kname='sda3', size=100*gb, label='Windows'),
+            dict(type='part', kname='sda4', size=gb, parttype='de94bba4-06d1-4d40-a16a-bfd50179d6ac'),
+            dict(type='part', kname='sda5', size=20*gb, fstype='ntfs'),
+        ]
+        devices = [
+            dict(type='disk', kname='zram0', size=16*gb),
+            dict(type='disk', kname='sda', size=1000*gb, pttype='gpt', children=parts),
+        ]
+        mounts = [dict(target='/', source='composefs'), dict(target='/sysroot', source='/dev/mapper/monet')]
+        with patch.object(q, 'run', side_effect=[json.dumps(dict(blockdevices=devices)),
+                                                json.dumps(dict(filesystems=mounts))]):
+            drive, = q.storage_drives()
+        self.assertTrue(drive['monet'])
+        self.assertEqual(drive['size'], 1000*gb)
+        self.assertEqual(drive['unallocated'], 225*gb)
+        self.assertEqual([part['kind'] for part in drive['partitions']],
+                         ['efi', 'monet', 'windows', 'windowsRecovery', 'windowsData'])
+
+    def test_shared_extents_cannot_overfill_the_capacity_chart(self):
+        q = quick_helper()
+        with patch.object(q, 'storage_capacity', return_value=dict(total=100, free=50, occupied=50)), \
+                patch.object(q, 'storage_drives', return_value=[]), \
+                patch.object(q, 'storage_scan', return_value=dict(home=70, games=40, apps=20, userApps=0, trash=None,
+                    downloads=0, limited=True, unreadable=False, visited=2, scopes=[dict(state='measured')])):
+            result = q.storage()
+        self.assertFalse(result['breakdown'])
+        self.assertTrue(result['overcounted'])
+        self.assertEqual(result['occupied'], 50)
+        self.assertIsNone(result['trash'])
+
     def test_single_walk_counts_categories_and_hardlinks_without_following_links(self):
         q = quick_helper()
         with tempfile.TemporaryDirectory() as folder:

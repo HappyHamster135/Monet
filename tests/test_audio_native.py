@@ -60,6 +60,10 @@ class NativeAudio(unittest.TestCase):
     def test_disconnect_reconnect_and_late_fallback_do_not_corrupt_the_display(self):
         self.fixture('recovery')
 
+    @unittest.skipUnless(shutil.which('wireplumber') and shutil.which('wpctl'), 'private WirePlumber policy')
+    def test_selected_playback_and_capture_devices_return_after_reconnection(self):
+        self.fixture('selection')
+
     @unittest.skipUnless(shutil.which('plasmawindowed'), 'native Plasma widget host')
     def test_full_sound_widget_tracks_native_level_and_renders(self):
         self.fixture('widget')

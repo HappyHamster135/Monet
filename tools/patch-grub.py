@@ -10,6 +10,7 @@
 - Ten seconds before it starts by itself, instead of a minute.
 - Monet's entries leave NVIDIA's open-source driver off (`nouveau.modeset=0`):
   on RTX cards it can stop the installer; the screen still works without it.
+- Installation entries wait for confirmation at Anaconda's summary screen.
 """
 
 import re
@@ -42,6 +43,15 @@ fi
 """
 
 
+def require_confirmation(text):
+    # A complete kickstart can otherwise start writing the planned partitions
+    # as soon as the summary opens. Leave the recovery shell alone.
+    return re.sub(
+        r"^([ \t]*linux(?:efi)?[ \t]+(?=[^\n]*\binst\.stage2=)(?![^\n]*\binst\.(?:rescue|pauseatsummary)\b)[^\n]+)$",
+        r"\1 inst.pauseatsummary", text, flags=re.M,
+    )
+
+
 def patch(text):
     entry = re.search(r"menuentry '([^']*)'[^\n]*\{.*?\n\}", text, re.S)
     if not entry:
@@ -67,7 +77,7 @@ def patch(text):
         text = text[:search.end()] + "\n" + THEME + text[search.end():]
     else:
         text = text + "\n" + THEME
-    return text
+    return require_confirmation(text)
 
 
 if __name__ == "__main__":

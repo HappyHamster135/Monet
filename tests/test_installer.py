@@ -16,7 +16,7 @@ import sys
 import tempfile
 import types
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import xml.dom.minidom
 from pathlib import Path
 
@@ -48,8 +48,11 @@ menuentry 'Test this media & install Fedora 44' --class fedora --class os {
 \tinitrd /images/pxeboot/initrd.img
 }
 submenu 'Troubleshooting -->' {
+\tmenuentry 'Install Fedora 44 in basic graphics mode' --class fedora --class os {
+\t\tlinuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=Fedora-E-dvd-x86_64-44 nomodeset quiet
+\t}
 \tmenuentry 'Rescue a Fedora Linux system' --class fedora --class os {
-\t\tlinux /images/pxeboot/vmlinuz inst.rescue quiet
+\t\tlinux /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=Fedora-E-dvd-x86_64-44 inst.rescue quiet
 \t}
 }
 """
@@ -92,6 +95,16 @@ class StartMenu(unittest.TestCase):
         # The theme is loaded after the search line that sets $root.
         self.assertLess(out.index("search --no-floppy"), out.index("set theme="))
         self.assertLess(out.index("set theme="), out.index("menuentry"))
+
+    def test_each_install_option_requires_confirmation(self):
+        out = patch_grub.patch(GRUB)
+        self.assertEqual(patch_grub.require_confirmation(out), out)
+        kernel_lines = [line.split() for line in out.splitlines()
+                        if line.lstrip().startswith(("linux ", "linuxefi "))]
+        self.assertEqual(len(kernel_lines), 5)
+        for args in kernel_lines:
+            with self.subTest(args=args):
+                self.assertEqual(args.count("inst.pauseatsummary"), int("inst.rescue" not in args))
 
 
 class BootMenu(unittest.TestCase):
@@ -499,7 +512,36 @@ class InstallerLook(unittest.TestCase):
         conf.read(self.PRODUCT / "etc/anaconda/conf.d/90-monet.conf")
         stylesheet = conf["User Interface"]["custom_stylesheet"]
         self.assertTrue((self.PRODUCT / stylesheet.lstrip("/")).is_file())
-        self.assertIn("PasswordSpoke", conf["User Interface"]["hidden_spokes"].split())
+        self.assertEqual(conf["User Interface"]["hidden_spokes"].split(), ["PasswordSpoke", "UserSpoke"])
+
+    def test_installation_requires_a_usable_admin_in_both_interfaces(self):
+        class UserSpoke:
+            status = "Administrator will be created"
+
+        def account(name="monet", locked=False, password="hash", admin=True):
+            return types.SimpleNamespace(name=name, lock=locked, password=password,
+                                         has_admin_priviledges=lambda: admin)
+
+        addons = self.PRODUCT / "usr/share/anaconda/addons/monet_accounts"
+        for interface, path in (("gui", "monet_admin"), ("tui", "monet_admin_text")):
+            with self.subTest(interface=interface):
+                modules = {
+                    "pyanaconda.core.i18n": types.SimpleNamespace(_=lambda text: text),
+                    "pyanaconda.ui.lib.users": types.SimpleNamespace(get_user_list=lambda users: users),
+                    f"pyanaconda.ui.{interface}.spokes.user": types.SimpleNamespace(UserSpoke=UserSpoke),
+                }
+                with patch.dict(sys.modules, modules):
+                    addon = load((addons / interface / "spokes" / f"{path}.py").relative_to(ROOT), path)
+                spoke = getattr(addon, addon.__all__[0])()
+                self.assertTrue(spoke.mandatory)
+                for accounts in ([], [account(name="")], [account(locked=True)],
+                                 [account(password="")], [account(admin=False)]):
+                    spoke._users_module = accounts
+                    self.assertFalse(spoke.completed)
+                    self.assertEqual(spoke.status, "Create an administrator with a password")
+                spoke._users_module = [account(admin=False), account()]
+                self.assertTrue(spoke.completed)
+                self.assertEqual(spoke.status, "Administrator will be created")
 
     def test_stylesheet_parses_in_gtk3(self):
         # Anaconda loads it with an error check: one bad line and none of it

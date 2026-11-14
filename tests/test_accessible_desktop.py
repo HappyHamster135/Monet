@@ -121,6 +121,28 @@ class DesktopUI(unittest.TestCase):
                     self.assertTrue(r['x']>=other['x']+other['width'] or other['x']>=r['x']+r['width']
                                     or r['y']>=other['y']+other['height'] or other['y']>=r['y']+r['height'],(scale,r,other))
 
+    def test_default_cards_align_and_fit_landscape_and_portrait_screens(self):
+        cards = [dict(id=i, type=kind, minWidth=w, minHeight=h, preferredWidth=pw, preferredHeight=ph)
+                 for i, (kind, w, h, pw, ph) in enumerate([
+                     ('placard',288,235,400,235), ('weather',252,180,342,180), ('calendar',234,252,234,252)])]
+        for resolution, scale in [((1280,720),1.5), ((1366,768),1), ((1920,1080),1.25), ((1920,1080),1.75),
+                                  ((1920,1080),2), ((1080,1920),1.5), ((3840,2160),1.5)]:
+            with self.subTest(resolution=resolution, scale=scale):
+                area = dict(width=int(resolution[0]/scale), height=int(resolution[1]/scale)-80)
+                rects = self.js('LayoutMath.js', f'desktopDefaults({json.dumps(cards)},{json.dumps(area)},16)')
+                self.assertEqual({rect['id'] for rect in rects}, {0,1,2})
+                for i, rect in enumerate(rects):
+                    self.assertGreaterEqual(min(rect['x'],rect['y']),16)
+                    self.assertLessEqual(rect['x']+rect['width'],area['width'])
+                    self.assertLessEqual(rect['y']+rect['height'],area['height'])
+                    for other in rects[:i]:
+                        self.assertTrue(rect['x']>=other['x']+other['width'] or other['x']>=rect['x']+rect['width']
+                                        or rect['y']>=other['y']+other['height'] or other['y']>=rect['y']+rect['height'])
+                if area['width']>=1200 and area['height']>=600:
+                    placard, weather, calendar = rects
+                    self.assertEqual(placard['y'],weather['y'])
+                    self.assertEqual(weather['x']+weather['width'],calendar['x']+calendar['width'])
+
     def test_notes_open_inward_with_negative_monitor_origins(self):
         for origin in (-960,0,1920):
             screen=dict(x=origin,y=0,width=960,height=540)

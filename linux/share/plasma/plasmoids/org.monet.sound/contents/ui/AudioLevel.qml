@@ -7,6 +7,8 @@ Item {
     id: level
     visible: false
     property bool active: true
+    property bool observeDevices: false
+    signal devicesChanged()
     property url nativeSource: "NativeAudioStatus.qml"
     property string fallbackCommand: "wpctl get-volume @DEFAULT_AUDIO_SINK@"
     property var volume: null
@@ -30,12 +32,22 @@ Item {
         }
     }
     onNativeReadyChanged: refresh()
-    onActiveChanged: if (active) refresh()
+    onActiveChanged: {
+        if (active) refresh();
+        else pending = "";
+    }
     Loader { id: native; source: level.nativeSource }
+    Binding {
+        target: native.item
+        property: "observeDevices"
+        value: level.active && level.observeDevices
+        when: !!native.item
+    }
     Connections {
         target: native.item
         function onVolumeChanged() { level.refresh(); }
         function onMutedChanged() { level.refresh(); }
+        function onDevicesChanged() { level.devicesChanged(); }
     }
     P5Support.DataSource {
         id: runner

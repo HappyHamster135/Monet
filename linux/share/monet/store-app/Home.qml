@@ -311,7 +311,10 @@ Flickable {
                         width: parent.width - 56
                         spacing: 14
                         Text {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             horizontalAlignment: Text.AlignLeft
+                            wrapMode: Text.Wrap
                             text: i18n("Most installed this month")
                             color: home.tone.ink
                             font.family: "Fraunces 72pt SuperSoft"
@@ -321,6 +324,7 @@ Flickable {
                         GridLayout {
                             id: ranks
                             Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             columns: width > 640 ? 2 : 1
                             rows: Math.ceil(home.shown.top.length / columns)
                             flow: GridLayout.TopToBottom
@@ -334,6 +338,7 @@ Flickable {
                                     required property var modelData
                                     required property int index
                                     Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
                                     Layout.preferredWidth: 1
                                     Layout.preferredHeight: 62
                                     radius: 12
@@ -361,6 +366,7 @@ Flickable {
                                             font.features: ({ "tnum": 1 })
                                         }
                                         Image {
+                                            visible: ranked.width >= 190
                                             Layout.preferredWidth: 42
                                             Layout.preferredHeight: 42
                                             source: ranked.modelData.icon || ""
@@ -370,6 +376,7 @@ Flickable {
                                         }
                                         ColumnLayout {
                                             Layout.fillWidth: true
+                                            Layout.minimumWidth: 0
                                             spacing: 1
                                             Text {
                                                 horizontalAlignment: Text.AlignLeft

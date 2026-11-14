@@ -55,6 +55,12 @@ Settings
             self.assertFalse(self.quick.microphone_action("input", "52")["ok"])
             change.assert_not_called()
 
+    def test_reused_pipewire_id_does_not_unmute_a_different_source(self):
+        current = {"microphone": {"id": 57, "key": "626f6f6d", "serial": 301, "muted": True}}
+        with patch.object(self.quick, "bar_sound", return_value=current), patch.object(self.quick, "ok") as change:
+            self.assertFalse(self.quick.microphone_action("mute", "off", 57, "757362", 202)["ok"])
+            change.assert_not_called()
+
     def test_disconnected_port_is_not_listed_or_selectable(self):
         nodes = [{"id": 64, "name": "Stereo Microphone", "default": False},
                  {"id": 65, "name": "Digital Microphone", "default": True},

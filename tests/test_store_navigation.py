@@ -146,6 +146,14 @@ class StoreNavigation(unittest.TestCase):
         self.assertTrue(self.window.property("checkedOnly"))
         self.assertTrue(checked.hasActiveFocus())
 
+    def test_search_is_in_the_sidebar_tab_order(self):
+        first_section = self.item("storeSection-home")
+        first_section.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Backtab)
+        self.assertTrue(self.item("storeSearch").hasActiveFocus())
+        QTest.keyClick(self.window, Qt.Key_Tab)
+        self.assertTrue(first_section.hasActiveFocus())
+
     def test_image_escape_closes_only_the_image_and_restores_gallery_focus(self):
         ident = self.open_app(); gallery = self.item("storeScreenshotGallery")
         QTest.keyClick(self.window, Qt.Key_Tab); QTest.qWait(30)

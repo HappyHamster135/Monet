@@ -67,6 +67,8 @@ Shared.MonetWindow {
     property bool loadScheduled: false
     property var windowsFiles: ({})
     property bool outputBusy: false
+    property bool outputsLoading: false
+    property int outputsRevision: 0
     property string outputProblem: ""
     property bool statusBusy: false
     readonly property bool pollingActive: visible && visibility !== Window.Minimized
@@ -200,11 +202,11 @@ Shared.MonetWindow {
     readonly property var pages: [
         { id: "light", name: i18n("Light & Wallpaper"), glyph: "M5 15a7 7 0 0 1 14 0M3 19h18",
           words: i18nc("Settings search words, space-separated",
-                      "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors")
+                      "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors taskbar panel bar islands")
               + " " + i18nc("Settings search words, space-separated", "photo picture own painted")
               + " " + i18nc("Settings search words, space-separated", "transparent transparency see-through frosted matte solid blur")
               + " " + i18nc("Settings search words, space-separated", "snap layouts assist windows side by side halves tiling") },
-        { id: "wifi", name: i18n("Wi-Fi"), glyph: "M4 10a12 12 0 0 1 16 0M7 13.5a7.5 7.5 0 0 1 10 0M10 17a3 3 0 0 1 4 0",
+        { id: "wifi", name: i18n("Internet"), glyph: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20M2 12h20M12 2c-5 5-5 15 0 20M12 2c5 5 5 15 0 20",
           words: i18nc("Settings search words, space-separated",
                       "wifi wi-fi wireless network internet password") },
         { id: "bluetooth", name: i18n("Bluetooth"), glyph: "M7 7l10 10-5 5V2l5 5L7 17",
@@ -288,10 +290,15 @@ Shared.MonetWindow {
     // What the helper reported.
     property var info: ({})
     property var prefs: ({ hours: true, placard: true, glass: "clear", weather: true, dodge: true })
+    property string taskbarMode: ""
+    property bool taskbarBusy: false
+    property bool taskbarFailed: false
     // Your photo, painted (monet-paint): {state: "" | "painting" | "ready", percent, preview, failed}.
     property var photoInfo: ({ state: "" })
     property bool photoLoading: false
     property var nets: []
+    property var wiredNetwork: null
+    property bool wiredNetworkLoading: false
     // Whether a look for networks has come back yet (until then: looking).
     property bool netsLoaded: false
     property var devices: []
@@ -357,6 +364,8 @@ Shared.MonetWindow {
     // Default Apps' From Windows: the bookmarks kept from Windows' browsers (monet-quick windows-browsers).
     property var browserInfo: ({})
     property var storageInfo: ({})
+    property int storageRequest: 0
+    property bool storageLoaded: false
     property bool storageBusy: false
     property var retained: []
     property var retainedReview: null
@@ -404,7 +413,7 @@ Shared.MonetWindow {
                 sheet.retained = sheet.retained.filter(entry => entry.id !== item.id)
                 sheet.retainedReview = null
                 sheet.retainedMessage = i18n("Saved installation removed. Freed space may take a moment to appear.")
-                sheet.ask("storage-capacity", data => sheet.storageInfo = sheet.json(data, sheet.storageInfo))
+                sheet.loadStorage()
             }
         })
     }
@@ -715,14 +724,16 @@ Shared.MonetWindow {
         refresh()
         if (page === "light") {
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))
+            if (!taskbarBusy) ask("taskbar", out => sheet.taskbarMode = sheet.json(out, {}).mode || "")
             loadPhotoState()
         } else if (page === "wifi") {
+            loadWiredNetwork()
             ask("wifi-list", out => { sheet.nets = sheet.json(out, []); sheet.netsLoaded = true })
             ask("hotspot", out => sheet.hotspot = sheet.json(out, sheet.hotspot))
         } else if (page === "bluetooth") {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
-            ask("outputs", out => sheet.outputs = sheet.json(out, []))
+            loadOutputs()
             loadAppsSound()
         } else if (page === "about") {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
@@ -777,7 +788,7 @@ Shared.MonetWindow {
                 sheet.displaySizes = Array.isArray(sizes) ? sizes : []
             })
         } else if (page === "storage") {
-            if (!storageBusy) ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
+            if (!storageBusy) loadStorage()
             ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))
             ask("shared-files", out => sheet.windowsFiles = sheet.json(out, {}))
         } else if (page === "backups") {
@@ -821,6 +832,28 @@ Shared.MonetWindow {
         ask("apps-sound", out => {
             sheet.appsSoundLoading = false
             if (!sheet.dragging) sheet.appsSound = sheet.json(out, sheet.appsSound)
+        })
+    }
+
+    function loadWiredNetwork() {
+        if (wiredNetworkLoading) return
+        wiredNetworkLoading = true
+        ask("lan", (out, code) => {
+            sheet.wiredNetworkLoading = false
+            const next = sheet.json(out, {})
+            sheet.wiredNetwork = code === 0 && Array.isArray(next.devices) ? next : { available: false, devices: [] }
+        })
+    }
+
+    function loadOutputs() {
+        if (outputsLoading || outputBusy || dragging) return
+        const revision = outputsRevision
+        outputsLoading = true
+        ask("outputs", (out, code) => {
+            sheet.outputsLoading = false
+            if (code !== 0 || revision !== sheet.outputsRevision) return
+            const result = sheet.json(out, null)
+            if (Array.isArray(result)) sheet.outputs = result
         })
     }
 
@@ -904,6 +937,18 @@ Shared.MonetWindow {
         tell("pref " + key + (on ? " on" : " off"))
     }
 
+    function chooseTaskbar(mode) {
+        if (taskbarBusy) return
+        taskbarBusy = true
+        taskbarFailed = false
+        ask("taskbar " + mode, out => {
+            const state = sheet.json(out, {})
+            sheet.taskbarMode = state.mode || sheet.taskbarMode
+            sheet.taskbarFailed = state.ok !== true
+            sheet.taskbarBusy = false
+        })
+    }
+
     // Settings' Glass slider: monet-light dresses the desktop in it, once the slider is let go.
     function chooseGlass(level) {
         if (prefs.glass === level) {
@@ -984,9 +1029,11 @@ Shared.MonetWindow {
         if (!Number.isInteger(output.id) || outputBusy) {
             return
         }
+        ++outputsRevision
         outputBusy = true
         outputProblem = ""
-        ask("output " + output.id, (out, code) => {
+        const key = /^(?:[0-9a-f]{2})+$/.test(output.key || "") ? " " + output.key : ""
+        ask("output " + output.id + key, (out, code) => {
             const result = sheet.json(out, {})
             if (Array.isArray(result.outputs)) sheet.outputs = result.outputs
             sheet.outputBusy = false
@@ -1612,17 +1659,32 @@ Shared.MonetWindow {
 
     function emptyTrash() {
         storageInfo = changed(storageInfo, ["trash"], 0)
-        ask("empty-trash", () => ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
+        ask("empty-trash", () => loadStorage())
+    }
+    function loadStorage() {
+        const request = ++storageRequest
+        ask("storage-capacity", (out, code) => {
+            if (request !== storageRequest) return
+            sheet.storageLoaded = true
+            if (code === 0) sheet.storageInfo = sheet.json(out, sheet.storageInfo)
+        })
     }
     function measureStorage() {
         if (storageBusy) return
+        const request = ++storageRequest
         storageBusy = true
         storageProblem = ""
         ask("storage", (out, code) => {
             sheet.storageBusy = false
+            if (request !== storageRequest) return
             const result = sheet.json(out, {})
-            if (code === 0 && result.measured === true) sheet.storageInfo = result
-            else sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+            if (code === 0 && result.measured === true) {
+                sheet.storageInfo = result
+                sheet.storageLoaded = true
+            } else {
+                sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+                if (!sheet.storageLoaded) sheet.loadStorage()
+            }
         })
     }
     function rememberFiles(value) {
@@ -1936,6 +1998,8 @@ Shared.MonetWindow {
         property var tone
         default property alias rows: list.data
         Layout.fillWidth: true
+        Layout.minimumWidth: 0
+        Layout.maximumWidth: parent && parent.width > 0 ? parent.width : Infinity
         implicitHeight: list.implicitHeight
         radius: 16
         color: tone.wash
@@ -2160,6 +2224,8 @@ Shared.MonetWindow {
         property string kind: "plain"
         property bool enabledPill: true
         signal clicked()
+        Layout.minimumWidth: 0
+        Layout.maximumWidth: parent && parent.width > 0 ? parent.width : Infinity
         implicitWidth: label.implicitWidth + (kind === "sun" ? 40 : 32)
         implicitHeight: Math.max(kind === "sun" ? 44 : 40, label.implicitHeight + 18)
         radius: kind === "sun" ? 20 : 12
@@ -2178,9 +2244,11 @@ Shared.MonetWindow {
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
-            horizontalAlignment: Text.AlignLeft
+            horizontalAlignment: Text.AlignHCenter
             id: label
             anchors.centerIn: parent
+            width: Math.min(implicitWidth, Math.max(1, pill.width - 24))
+            wrapMode: Text.Wrap
             text: pill.text
             color: pill.kind === "plain" ? pill.tone.ink : "#FFFFFF"
             font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3))
@@ -2674,6 +2742,7 @@ Shared.MonetWindow {
                             id: search
                             objectName: "settingsSearch"
                             Layout.fillWidth: true
+                            activeFocusOnTab: true
                             maximumLength: 256
                             color: look.ink
                             font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
@@ -3145,8 +3214,10 @@ Shared.MonetWindow {
                 if (sheet.page === "notifications") sheet.loadNotifications()
                 // Networks come and go (and are slow to show after waking): look again, but never
                 // while a password is being typed, which a new list would wipe.
-                if (sheet.page === "wifi" && sheet.joining === "") {
-                    sheet.ask("wifi-list", out => { sheet.nets = sheet.json(out, sheet.nets); sheet.netsLoaded = true })
+                if (sheet.page === "wifi") {
+                    sheet.loadWiredNetwork()
+                    if (sheet.joining === "" && sheet.info.wifi === true)
+                        sheet.ask("wifi-list", out => { sheet.nets = sheet.json(out, sheet.nets); sheet.netsLoaded = true })
                 }
             }
         }
@@ -3600,6 +3671,22 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         divider: false
+                        title: i18n("Taskbar layout")
+                        detail: sheet.taskbarBusy ? i18n("Changing the taskbar…")
+                            : sheet.taskbarFailed ? i18n("The taskbar couldn't be changed. Try again.")
+                            : sheet.taskbarMode === "incomplete" ? i18n("Choose Three bars to restore a missing bar.")
+                            : i18n("Use one full-width bar or three separate Monet bars.")
+                        Segments {
+                            objectName: "taskbarLayout"
+                            tone: look
+                            enabled: !sheet.taskbarBusy
+                            options: [["single", i18n("One bar")], ["islands", i18n("Three bars")]]
+                            current: sheet.taskbarMode
+                            onPicked: mode => sheet.chooseTaskbar(mode)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
                         tappable: true
                         title: i18n("Widgets")
                         detail: i18n("Add, move or take away the cards on your desktop")
@@ -3643,15 +3730,77 @@ Shared.MonetWindow {
         Component {
             id: wifiPage
             ColumnLayout {
+                id: internetPage
+                readonly property var wiredDevices: sheet.wiredNetwork ? sheet.wiredNetwork.devices : []
+                readonly property bool lanConnected: sheet.wiredNetwork && sheet.wiredNetwork.available
+                    ? wiredDevices.some(device => device.state === "connected") : sheet.info.lanConnected === true
+                readonly property var wiredStates: ({
+                    connected: i18n("Connected"),
+                    connecting: i18n("Connecting…"),
+                    unmanaged: i18n("Unmanaged"),
+                    unplugged: i18n("Cable unplugged"),
+                    disconnected: i18n("Not connected")
+                })
                 spacing: 20
                 PageTitle {
                     tone: look
                     entry: sheet.entry("wifi")
                     art: sheet.art
-                    text: i18n("Wi-Fi")
-                    detail: sheet.info.wifi === true
-                        ? ((sheet.info.network || "") !== "" ? i18n("Connected to %1", sheet.info.network) : i18n("Not connected"))
-                        : sheet.info.wifi === false ? i18n("Off") : ""
+                    text: i18n("Internet")
+                    detail: internetPage.lanConnected
+                        ? i18n("Connected to LAN")
+                        : sheet.info.wifi === true && sheet.info.network ? i18n("Connected to %1", sheet.info.network)
+                        : sheet.wiredNetwork && sheet.wiredNetwork.available ? i18n("Not connected") : ""
+                }
+                Caption { objectName: "search-lan"; tone: look; text: i18n("LAN (Ethernet)") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: internetPage.wiredDevices.length === 0
+                        title: !sheet.wiredNetwork ? i18n("Checking wired connections…")
+                            : sheet.wiredNetwork.available ? i18n("No Ethernet adapter detected")
+                            : i18n("Wired connection details unavailable")
+                    }
+                    Repeater {
+                        model: internetPage.wiredDevices
+                        ColumnLayout {
+                            id: wiredDevice
+                            required property var modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: 0
+                            SettingRow {
+                                tone: look
+                                divider: wiredDevice.index > 0
+                                title: wiredDevice.modelData.profile || wiredDevice.modelData.device
+                                detail: internetPage.wiredStates[wiredDevice.modelData.state] || i18n("Unavailable")
+                            }
+                            Repeater {
+                                model: wiredDevice.modelData.state === "connected" ? [
+                                    [i18n("Network adapter"), [wiredDevice.modelData.device]],
+                                    [i18n("IPv4 address"), wiredDevice.modelData.ipv4],
+                                    [i18n("IPv6 address"), wiredDevice.modelData.ipv6],
+                                    [i18n("Default gateway"), wiredDevice.modelData.gateways],
+                                    [i18n("DNS servers"), wiredDevice.modelData.dns]
+                                ].filter(row => row[1] && row[1].length) : []
+                                SettingRow {
+                                    required property var modelData
+                                    tone: look
+                                    title: modelData[0]
+                                    detail: modelData[1].join("\n")
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Manage wired connections…")
+                        detail: i18n("Edit Ethernet profiles, IP addresses and DNS in system network settings.")
+                        onTapped: sheet.ask("kde wifi")
+                    }
                 }
                 Card {
                     tone: look
@@ -4332,7 +4481,10 @@ Shared.MonetWindow {
                     repeat: true
                     triggeredOnStart: true
                     running: sheet.page === "sound" && sheet.pollingActive
-                    onTriggered: sheet.loadAppsSound()
+                    onTriggered: {
+                        sheet.loadOutputs()
+                        sheet.loadAppsSound()
+                    }
                 }
                 Card {
                     tone: look
@@ -5805,12 +5957,23 @@ Shared.MonetWindow {
             id: storagePage
             ColumnLayout {
                 id: storageColumn
-                // What fills the disk, each in a color of The Hours.
-                readonly property var parts: sheet.storageInfo.measured ? [
+                readonly property var parts: sheet.storageInfo.breakdown ? [
                     ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
-                    ["files", i18n("Your files"), "#357F72"], ["system", i18n("Other or unmeasured"), "#9C7BC0"]
-                ] : [["used", i18n("Used"), "#357F72"]]
+                    ["files", i18n("Your files"), "#357F72"], ["system", i18n("Unclassified usage"), "#9C7BC0"]
+                ] : [["occupied", i18n("Used or reserved"), "#357F72"]]
                 readonly property real total: sheet.storageInfo.total || 0
+                readonly property var drives: sheet.storageInfo.drives || []
+                readonly property var partitionNames: ({
+                    monet: i18n("Monet partition"),
+                    boot: i18n("Monet boot"),
+                    efi: i18n("EFI system"),
+                    windows: i18n("Windows partition"),
+                    windowsRecovery: i18n("Windows recovery"),
+                    windowsReserved: i18n("Windows reserved"),
+                    windowsSetup: i18n("Windows setup"),
+                    windowsData: i18n("Windows-compatible data"),
+                    other: i18n("Other partition")
+                })
                 // Emptying the Trash asks once more.
                 property bool askingTrash: false
                 spacing: 20
@@ -5821,37 +5984,7 @@ Shared.MonetWindow {
                     text: i18n("Storage")
                     detail: i18n("What fills this PC, and room to make.")
                 }
-                Card {
-                    tone: look
-                    SettingRow {
-                        objectName: "search-shared-files"
-                        tone: look
-                        divider: false
-                        title: i18n("Windows files")
-                        detail: sheet.windowsFiles.available
-                            ? i18n("The shared folder opens in Files. In Windows, it is called Shared with Monet.")
-                            : sheet.windowsFiles.state === "asleep"
-                                ? i18n("Shut down Windows completely, then return to Monet to use the shared folder.")
-                            : sheet.windowsFiles.state === "bitlocker"
-                                ? i18n("Windows' drive is locked. Open its access settings to unlock it.")
-                            : sheet.windowsFiles.state === "unclean"
-                                ? i18n("Windows' drive needs checking. Start Windows and shut it down fully before trying again.")
-                            : sheet.windowsFiles.state === "open"
-                                ? i18n("The shared folder isn't available to this account.")
-                            : sheet.windowsFiles.state === "no-bridge"
-                                ? i18n("Start Windows once to finish setting up the shared folder.")
-                            : i18n("Shared files become available after Windows is set up on this PC.")
-                        Pill {
-                            tone: look
-                            text: sheet.windowsFiles.available ? i18n("Open folder") : i18n("Windows settings")
-                            onClicked: {
-                                if (sheet.windowsFiles.available)
-                                    Qt.openUrlExternally("file://" + encodeURI(sheet.windowsFiles.path))
-                                else sheet.open(sheet.windowsFiles.state === "bitlocker" ? "games#shared" : "windows")
-                            }
-                        }
-                    }
-                }
+                Caption { tone: look; text: i18n("Monet storage") }
                 Card {
                     tone: look
                     ColumnLayout {
@@ -5863,7 +5996,8 @@ Shared.MonetWindow {
                             spacing: 10
                             Text {
                                 horizontalAlignment: Text.AlignLeft
-                                text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free)) : i18n("Measuring…")
+                                text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free))
+                                    : sheet.storageLoaded ? i18n("Capacity unavailable") : i18n("Measuring…")
                                 color: look.ink
                                 font.family: "Fraunces 72pt SuperSoft"
                                 font.weight: Font.Light
@@ -5881,6 +6015,7 @@ Shared.MonetWindow {
                         }
                         // The disk as one bar: each part its share, free space left plain.
                         Rounded {
+                            visible: storageColumn.total > 0
                             Layout.fillWidth: true
                             Layout.preferredHeight: 14
                             radius: 7
@@ -5927,13 +6062,30 @@ Shared.MonetWindow {
                                 }
                             }
                         }
+                        MaintenanceText {
+                            tone: look
+                            visible: sheet.storageInfo.breakdown === true || sheet.storageInfo.overcounted === true
+                            text: sheet.storageInfo.breakdown
+                                ? i18n("Folder sizes are estimates. Unclassified usage includes system files, snapshots, reserved space, and folders outside this scan.")
+                                : i18n("The folder estimates add up to more than the space in use. Shared files and snapshots can occupy the same space.")
+                        }
+                        Repeater {
+                            model: sheet.storageInfo.scopes || []
+                            MaintenanceText {
+                                required property var modelData
+                                tone: look
+                                text: modelData.state === "outside" ? i18n("Outside this scan · %1", modelData.path)
+                                    : modelData.state === "partial" ? i18n("Partially measured · %1", modelData.path)
+                                    : i18n("Measured · %1", modelData.path)
+                            }
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text {
                                 Layout.fillWidth: true
                                 text: sheet.storageProblem || (sheet.storageBusy ? i18n("Measuring folder sizes…")
-                                    : sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("Partial measurement. Some folders could not be measured within this scan. Other or unmeasured space includes them.")
-                                    : i18n("Folder sizes are measured only when you ask, to keep disk activity low."))
+                                    : sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("The scan reached its limit or could not read some folders.")
+                                    : sheet.storageInfo.measured ? "" : i18n("Measure folder sizes to see what is using this space."))
                                 color: look.dim
                                 font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
                                 wrapMode: Text.Wrap
@@ -5944,6 +6096,90 @@ Shared.MonetWindow {
                                 text: sheet.storageBusy ? i18n("Measuring…") : i18n("Measure folder sizes")
                                 enabled: !sheet.storageBusy
                                 onClicked: sheet.measureStorage()
+                            }
+                        }
+                    }
+                }
+                Caption { tone: look; text: i18n("Physical drives") }
+                MaintenanceText {
+                    tone: look
+                    visible: sheet.storageLoaded && storageColumn.drives.length === 0
+                    text: i18n("The physical drive layout is unavailable.")
+                }
+                Repeater {
+                    model: storageColumn.drives
+                    Card {
+                        id: driveCard
+                        required property var modelData
+                        tone: look
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.margins: 20
+                            spacing: 8
+                            MaintenanceText {
+                                tone: look
+                                font.bold: true
+                                text: driveCard.modelData.monet
+                                    ? i18n("Monet’s drive · %1", sheet.bytes(driveCard.modelData.size))
+                                    : i18n("Drive · %1", sheet.bytes(driveCard.modelData.size))
+                            }
+                            MaintenanceText {
+                                tone: look
+                                visible: text !== ""
+                                text: driveCard.modelData.model || ""
+                            }
+                            Repeater {
+                                model: driveCard.modelData.partitions
+                                RowLayout {
+                                    id: partitionRow
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    MaintenanceText {
+                                        tone: look
+                                        text: storageColumn.partitionNames[partitionRow.modelData.kind] || storageColumn.partitionNames.other
+                                    }
+                                    Text {
+                                        color: look.dim
+                                        font: Kirigami.Theme.defaultFont
+                                        text: partitionRow.modelData.size > 0 ? sheet.bytes(partitionRow.modelData.size) : i18n("Size unavailable")
+                                    }
+                                }
+                            }
+                            MaintenanceText {
+                                tone: look
+                                visible: driveCard.modelData.unallocated >= 1e7
+                                text: i18n("About %1 unallocated. This space is outside all partitions.", sheet.bytes(driveCard.modelData.unallocated))
+                            }
+                        }
+                    }
+                }
+                Card {
+                    tone: look
+                    SettingRow {
+                        objectName: "search-shared-files"
+                        tone: look
+                        divider: false
+                        title: i18n("Windows files")
+                        detail: sheet.windowsFiles.available
+                            ? i18n("The shared folder opens in Files. In Windows, it is called Shared with Monet.")
+                            : sheet.windowsFiles.state === "asleep"
+                                ? i18n("Shut down Windows completely, then return to Monet to use the shared folder.")
+                            : sheet.windowsFiles.state === "bitlocker"
+                                ? i18n("Windows' drive is locked. Open its access settings to unlock it.")
+                            : sheet.windowsFiles.state === "unclean"
+                                ? i18n("Windows' drive needs checking. Start Windows and shut it down fully before trying again.")
+                            : sheet.windowsFiles.state === "open"
+                                ? i18n("The shared folder isn't available to this account.")
+                            : sheet.windowsFiles.state === "no-bridge"
+                                ? i18n("Start Windows once to finish setting up the shared folder.")
+                            : i18n("Shared files become available after Windows is set up on this PC.")
+                        Pill {
+                            tone: look
+                            text: sheet.windowsFiles.available ? i18n("Open folder") : i18n("Windows settings")
+                            onClicked: {
+                                if (sheet.windowsFiles.available)
+                                    Qt.openUrlExternally("file://" + encodeURI(sheet.windowsFiles.path))
+                                else sheet.open(sheet.windowsFiles.state === "bitlocker" ? "games#shared" : "windows")
                             }
                         }
                     }
@@ -6052,7 +6288,7 @@ Shared.MonetWindow {
                         divider: false
                         title: i18n("Trash")
                         detail: storageColumn.askingTrash ? i18n("Everything in it is gone for good. Sure?")
-                            : !sheet.storageInfo.measured ? i18n("Not measured")
+                            : !sheet.storageInfo.measured || sheet.storageInfo.trash === null ? i18n("Not measured")
                             : (sheet.storageInfo.trash || 0) > 0 ? sheet.bytes(sheet.storageInfo.trash) : i18n("Empty")
                         Row {
                             spacing: 8

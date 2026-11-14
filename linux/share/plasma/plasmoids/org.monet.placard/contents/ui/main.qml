@@ -71,7 +71,7 @@ PlasmoidItem {
     fullRepresentation: Item {
         // The decorative clock fits its card; a wider time or a twelve-hour
         // locale must not force neighbouring widgets off a scaled desktop.
-        Layout.minimumWidth: 320
+        Layout.minimumWidth: 288
         Layout.minimumHeight: card.implicitHeight
         Layout.preferredWidth: 400
         Layout.preferredHeight: card.implicitHeight

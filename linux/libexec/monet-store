@@ -21,8 +21,10 @@ import json
 import hashlib
 import math
 import os
+import queue
 import re
 import stat
+import subprocess
 import sys
 import threading
 import tempfile
@@ -52,6 +54,7 @@ POPULAR_PAGES = 4
 LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 REF = re.compile(r"app/[\w.-]+/[\w]+/[\w.-]+")
 APP_ID = re.compile(r"[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+){2,}")
+DOWNLOAD_IDLE_SECONDS = 45
 # Bump when parser/localization/icon semantics or the cached app shape change.
 CATALOG_CACHE_SCHEMA = 1
 CATALOG_CACHE_LIMIT = 32 * 1024 * 1024
@@ -654,9 +657,73 @@ def reach(metadata):
 # ---------------------------------------------------------------- one app in or out
 
 def transact(action, ref, progress=lambda value: None, cancelled=lambda: False, scope="system"):
-    """Cooperative cancellation through Gio; Flatpak owns partial downloads/deployments."""
-    if action not in ("install", "remove") or not REF.fullmatch(ref):
+    """Keep stalled network pulls out of the process that owns the download queue."""
+    if action not in ("install", "remove") or scope not in ("system", "user") or not REF.fullmatch(ref):
         return {"error": "failed"}
+    if action == "remove":
+        return flatpak_transaction(action, ref, scope, progress, cancelled)
+    return install_app(ref, scope, progress, cancelled)
+
+
+def install_app(ref, scope, progress, cancelled):
+    if cancelled():
+        return {"cancelled": True}
+    messages = queue.Queue()
+    command = [sys.executable, str(Path(__file__).resolve()), "--install-worker", ref, scope]
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as child:
+        def read_messages():
+            try:
+                for line in child.stdout:
+                    messages.put(json.loads(line))
+            except (OSError, ValueError):
+                pass
+            finally:
+                messages.put(None)
+
+        reader = threading.Thread(target=read_messages, daemon=True)
+        reader.start()
+        last_activity = time.monotonic()
+        deploying = False
+        try:
+            while True:
+                if not deploying and cancelled():
+                    return {"cancelled": True}
+                if not deploying and time.monotonic() - last_activity >= DOWNLOAD_IDLE_SECONDS:
+                    return {"error": "offline"}
+                try:
+                    message = messages.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+                if message is None:
+                    return {"error": "failed"}
+                if message.get("fetched"):
+                    if cancelled():
+                        return {"cancelled": True}
+                    # After this point Flatpak only uses local objects. Keep
+                    # its atomic deployment running even if Cancel is pressed.
+                    child.stdin.write("deploy\n")
+                    child.stdin.flush()
+                    deploying = True
+                elif "done" in message:
+                    last_activity = time.monotonic()
+                    progress(message["done"])
+                else:
+                    child.wait(timeout=1)
+                    return {"ok": True} if message.get("installed") else message
+        finally:
+            # Some libostree versions leave a stalled curl request blocked even
+            # after cancellation. Only the download-only process can be stopped.
+            if not deploying and child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
+            reader.join()
+
+
+def flatpak_transaction(action, ref, scope, progress, cancelled, phase=""):
     import gi
     gi.require_version("Flatpak", "1.0")
     from gi.repository import Flatpak, GLib, Gio
@@ -679,7 +746,7 @@ def transact(action, ref, progress=lambda value: None, cancelled=lambda: False, 
                 return False
             raise
 
-    state = {"ops": 1, "done": 0, "error": ""}
+    state = {"ops": 1, "started": 0}
 
     def ready(t):
         state["ops"] = max(1, len(t.get_operations()))
@@ -687,15 +754,19 @@ def transact(action, ref, progress=lambda value: None, cancelled=lambda: False, 
 
     def new_operation(t, operation, meter):
         meter.set_update_frequency(250)
-        meter.connect("changed", lambda p: progress(round((state["done"] + p.get_progress() / 100) / state["ops"], 3)))
+        index = state["started"]
+        state["started"] += 1
+        transferred = 0
+        fraction = -1
 
-    def operation_done(t, operation, commit, result):
-        state["done"] += 1
-        progress(round(state["done"] / state["ops"], 3))
+        def changed(p):
+            nonlocal transferred, fraction
+            count, percent = p.get_bytes_transferred(), p.get_progress()
+            if count > transferred or percent > fraction:
+                transferred, fraction = count, percent
+                progress(round((index + fraction / 100) / state["ops"], 3))
 
-    def operation_error(t, operation, error, details):
-        state["error"] = trouble(error.message)
-        return False
+        meter.connect("changed", changed)
 
     watcher = threading.Thread(target=watch, daemon=True)
     watcher.start()
@@ -704,26 +775,31 @@ def transact(action, ref, progress=lambda value: None, cancelled=lambda: False, 
             return {"cancelled": True}
         installation = Flatpak.Installation.new_user(cancel) if scope == "user" else Flatpak.Installation.new_system(cancel)
         if present(installation) == (action == "install"):
+            if phase == "fetch":
+                return {"ok": True, "installed": True}
             return {"ok": True}  # Idempotent retry after a commit whose receipt was lost.
         transaction = Flatpak.Transaction.new_for_installation(installation, cancel)
         transaction.set_no_interaction(True)
+        if phase == "fetch":
+            transaction.set_no_deploy(True)
+        if phase == "deploy":
+            transaction.set_no_pull(True)
         transaction.connect("ready", ready)
-        transaction.connect("new-operation", new_operation)
-        transaction.connect("operation-done", operation_done)
-        transaction.connect("operation-error", operation_error)
+        if phase != "deploy":
+            transaction.connect("new-operation", new_operation)
         if action == "install":
             transaction.add_install("flathub", ref, None)
         else:
             transaction.add_uninstall(ref)
         if not transaction.run(cancel):
-            return {"cancelled": True} if cancelled() else {"error": state["error"] or "failed"}
-        if present(installation) != (action == "install"):
+            return {"cancelled": True} if cancelled() else {"error": "failed"}
+        if phase != "fetch" and present(installation) != (action == "install"):
             return {"error": "failed"}
         return {"ok": True}
     except GLib.Error as e:
         if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED) or cancel.is_cancelled() or cancelled():
             return {"cancelled": True}
-        return {"error": state["error"] or trouble(e.message)}
+        return {"error": trouble(e.message)}
     finally:
         stopped.set()
         watcher.join(timeout=1)
@@ -1071,6 +1147,21 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--install-worker"] and len(sys.argv) == 4:
+        ref, scope = sys.argv[2:]
+        if not REF.fullmatch(ref) or scope not in ("system", "user"):
+            sys.exit(2)
+        result = flatpak_transaction("install", ref, scope,
+                                     lambda value: print(json.dumps({"done": value}), flush=True),
+                                     lambda: False, phase="fetch")
+        if result.get("ok") and not result.get("installed"):
+            print(json.dumps({"fetched": True}), flush=True)
+            if sys.stdin.readline() != "deploy\n":
+                sys.exit(0)
+            print(json.dumps({"done": 1}), flush=True)
+            result = flatpak_transaction("install", ref, scope, lambda value: None, lambda: False, phase="deploy")
+        print(json.dumps(result), flush=True)
+        sys.exit(0)
     if sys.argv[1:] == ["--worker"]:
         jobs_module().Queue().run(lambda job, progress, cancelled:
                                 transact(job["action"], job["ref"], progress, cancelled, job["installation"]))

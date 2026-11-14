@@ -24,7 +24,18 @@ PlasmoidItem {
         id: activity
         viewVisible: root.visible
         observePower: root.expanded
-        onActiveChanged: if (active) Qt.callLater(root.refresh)
+        onActiveChanged: {
+            if (active) {
+                Qt.callLater(root.refresh)
+                if (root.expanded) root.networkChanged()
+            } else {
+                root.statusRequest = ""
+                root.networkRequest = ""
+                root.outputsRequest = ""
+                root.outputChangeRequest = ""
+                networkRefresh.stop()
+            }
+        }
         onBatteryStateChanged: if (nativeReady) root.info = root.withPower(root.info)
     }
 
@@ -33,8 +44,14 @@ PlasmoidItem {
     // Mist or smoke, the way monet-light set the colors.
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     property var info: ({})
-    property bool statusBusy: false
-    property bool outputsBusy: false
+    property int requestSerial: 0
+    property int networkRevision: 0
+    property int statusRevision: 0
+    property int requestedNetworkRevision: 0
+    property string statusRequest: ""
+    property string networkRequest: ""
+    property string outputsRequest: ""
+    property string outputChangeRequest: ""
     // Speakers, headphones, a screen: where the sound can play.
     property var outputs: []
     property bool quietBusy: false
@@ -53,19 +70,47 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
-            if (source === root.helper + " status" || source === root.helper + " status quick") {
-                root.statusBusy = false
+            const command = source.replace(/ # monet-quick-\d+$/, "")
+            if (command === root.helper + " status wifi") {
+                if (source !== root.networkRequest) return
+                root.networkRequest = ""
+                if (root.requestedNetworkRevision === root.networkRevision) {
+                    try {
+                        root.info = Object.assign({}, root.info, JSON.parse(data.stdout))
+                        ++root.networkRevision
+                    } catch (e) {
+                    }
+                } else {
+                    networkRefresh.start()
+                }
+            } else if (command === root.helper + " status" || command === root.helper + " status quick") {
+                if (source !== root.statusRequest) return
+                root.statusRequest = ""
                 try {
-                    root.info = root.withPower(JSON.parse(data["stdout"]))
+                    const next = JSON.parse(data.stdout)
+                    if (root.statusRevision !== root.networkRevision) {
+                        next.wifi = root.info.wifi
+                        next.network = root.info.network
+                        next.lanConnected = root.info.lanConnected
+                    }
+                    root.info = root.withPower(next)
                 } catch (e) {
                 }
-            } else if (source === root.helper + " outputs") {
-                root.outputsBusy = false
+            } else if (command === root.helper + " outputs") {
+                if (source !== root.outputsRequest) return
+                root.outputsRequest = ""
                 try {
                     // PipeWire's stand-in on a PC with no speakers isn't a place to play.
-                    root.outputs = JSON.parse(data["stdout"]).filter(o => !o.none)
+                    root.outputs = JSON.parse(data.stdout).filter(o => !o.none)
                 } catch (e) {
                 }
+            } else if (source === root.outputChangeRequest) {
+                root.outputChangeRequest = ""
+                try {
+                    root.outputs = JSON.parse(data.stdout).outputs.filter(o => !o.none)
+                } catch (e) {
+                }
+                root.refresh()
             } else if (source.startsWith(root.helper + " quiet ")) {
                 root.quietBusy = false
                 try {
@@ -89,13 +134,44 @@ PlasmoidItem {
 
     function refresh() {
         if (!activity.active) return
-        if (!statusBusy) {
-            statusBusy = true
-            runner.connectSource(helper + (activity.nativeReady ? " status quick" : " status"))
+        if (!statusRequest) {
+            statusRevision = networkRevision
+            statusRequest = requestSource(activity.nativeReady ? "status quick" : "status")
+            runner.connectSource(statusRequest)
         }
-        if (!outputsBusy) {
-            outputsBusy = true
-            runner.connectSource(helper + " outputs")
+        if (!outputsRequest && !outputChangeRequest) {
+            outputsRequest = requestSource("outputs")
+            runner.connectSource(outputsRequest)
+        }
+    }
+
+    function requestSource(command) {
+        return helper + " " + command + " # monet-quick-" + (++requestSerial)
+    }
+
+    function networkChanged() {
+        if (!activity.active || !expanded) return
+        ++networkRevision
+        networkRefresh.start()
+    }
+    Loader {
+        id: networkEvents
+        active: root.expanded && activity.active
+        source: "NetworkEvents.qml"
+        onLoaded: root.networkChanged()
+    }
+    Connections {
+        target: networkEvents.item
+        function onChanged() { root.networkChanged() }
+    }
+    Timer {
+        id: networkRefresh
+        interval: 100
+        onTriggered: {
+            if (!activity.active || !root.expanded || root.networkRequest) return
+            root.requestedNetworkRevision = root.networkRevision
+            root.networkRequest = root.requestSource("status wifi")
+            runner.connectSource(root.networkRequest)
         }
     }
 
@@ -109,11 +185,13 @@ PlasmoidItem {
     }
 
     function playThrough(output) {
-        if (!Number.isInteger(output.id)) {
+        if (!Number.isInteger(output.id) || outputChangeRequest) {
             return
         }
-        outputs = outputs.map(o => Object.assign({}, o, { default: o.id === output.id }))
-        run("output " + output.id)
+        outputsRequest = ""
+        const key = /^(?:[0-9a-f]{2})+$/.test(output.key || "") ? " " + output.key : ""
+        outputChangeRequest = requestSource("output " + output.id + key)
+        runner.connectSource(outputChangeRequest)
     }
 
     // Arguments are fixed words or numbers, never user text.
@@ -242,6 +320,7 @@ PlasmoidItem {
         property string icon
         property bool active
         property bool available: true
+        property bool checkable: true
         property real speed: 1
         // The page in Settings with more (networks to join, devices to pair): its chevron opens it.
         property string page
@@ -257,7 +336,7 @@ PlasmoidItem {
         scale: tap.pressed ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * tile.speed) } }
-        // From the keyboard too: Tab to it, Space or Enter to switch it.
+        // From the keyboard too: Tab to it, then Space or Enter.
         activeFocusOnTab: true
         Keys.onSpacePressed: if (available) toggled()
         Keys.onReturnPressed: if (available) toggled()
@@ -357,11 +436,12 @@ PlasmoidItem {
             enabled: tile.available
             onTapped: tile.toggled()
         }
-        Accessible.role: Accessible.CheckBox
+        Accessible.role: tile.checkable ? Accessible.CheckBox : Accessible.Button
         Accessible.name: tile.title
         Accessible.description: tile.description
-        Accessible.checked: tile.active
-        Accessible.onToggleAction: if (available) tile.toggled()
+        Accessible.checked: tile.checkable && tile.active
+        Accessible.onToggleAction: if (tile.checkable && tile.available) tile.toggled()
+        Accessible.onPressAction: if (!tile.checkable && tile.available) tile.toggled()
     }
 
     fullRepresentation: PlasmaExtras.Representation {
@@ -384,17 +464,28 @@ PlasmoidItem {
                 rowSpacing: 8
 
                 Tile {
+                    id: networkTile
+                    readonly property bool wired: root.info.lanConnected === true
                     Layout.fillWidth: true
                     speed: root.speed
-                    // Not there at all on a PC without Wi-Fi (the helper says null), as in Windows.
-                    visible: root.info.wifi !== null
-                    title: i18n("Wi-Fi")
-                    icon: "network-wireless"
-                    active: root.info.wifi === true
-                    available: root.info.wifi !== null && root.info.wifi !== undefined
-                    detail: !available ? i18n("Unavailable") : !active ? i18n("Off") : (root.info.network || i18n("Not connected"))
-                    page: "wifi"
-                    onToggled: root.flip("wifi", "wifi")
+                    visible: root.info.wifi !== null || wired
+                    title: wired ? i18n("LAN") : i18n("Wi-Fi")
+                    icon: wired ? "network-wired" : "network-wireless"
+                    active: wired || root.info.wifi === true
+                    available: wired || typeof root.info.wifi === "boolean"
+                    checkable: !wired
+                    description: wired ? i18n("Connected to LAN") : detail
+                    detail: {
+                        if (wired) return i18n("Connected")
+                        if (root.info.wifi === true && root.info.network) return root.info.network
+                        if (!available) return i18n("Unavailable")
+                        return active ? i18n("Not connected") : i18n("Off")
+                    }
+                    page: wired ? "wifi#lan" : "wifi"
+                    onToggled: {
+                        if (wired) networkTile.opened()
+                        else root.flip("wifi", "wifi")
+                    }
                     onOpened: root.openSettings(page)
                 }
                 Tile {

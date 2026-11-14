@@ -842,6 +842,53 @@ class LookFeedback(unittest.TestCase):
         self.wait_for(lambda: not self.window.property("storageBusy"))
         self.assertTrue(self.window.property("storageProblem"))  # malformed worker response is retryable
 
+    def test_storage_shows_physical_layout_and_partial_scan_separately(self):
+        gb = 10**9
+        capacity = dict(total=653*gb, free=68*gb, occupied=585*gb, measured=False, drives=[
+            dict(size=1024*gb, monet=True, model="Test drive", unallocated=368*gb,
+                 partitions=[dict(kind="monet", size=653*gb), dict(kind="windowsRecovery", size=gb)])])
+        self.helper.replies['storage-capacity'] = json.dumps(capacity)
+        self.helper.replies['storage'] = json.dumps(dict(capacity, measured=True, breakdown=True,
+            system=328*gb, limited=True, scopes=[dict(path="/var/home/test", state="partial")]))
+        self.window.setProperty("page", "storage")
+
+        def texts(item):
+            return [item.property("text")] + [text for child in item.childItems() for text in texts(child)]
+
+        content = self.window.contentItem()
+        self.wait_for(lambda: "Windows recovery" in texts(content))
+        for label in ("68 GB free", "of 653 GB", "About 368 GB unallocated. This space is outside all partitions."):
+            self.assertIn(label, texts(content))
+        QMetaObject.invokeMethod(self.window, "measureStorage")
+        self.wait_for(lambda: "Partially measured · /var/home/test" in texts(content))
+        self.assertIn("Unclassified usage  328 GB", texts(content))
+
+    def test_internet_shows_wired_details_and_keeps_wifi_controls(self):
+        self.helper.replies["status"] = json.dumps(dict(wifi=True, network="Office Wi-Fi", lanConnected=True))
+        self.helper.replies["lan"] = json.dumps(dict(available=True, devices=[
+            dict(device="enp1s0", profile="Office Ethernet", state="connected", ipv4=["192.0.2.2/24"],
+                 ipv6=["2001:db8::2/64"], gateways=["192.0.2.1"], dns=["192.0.2.53"]),
+            dict(device="enp2s0", profile="", state="unplugged")]))
+        self.helper.replies["wifi-list"] = "[]"
+        QMetaObject.invokeMethod(self.window, "open", Q_ARG("QVariant", "wifi#lan"))
+
+        def texts(item):
+            return [item.property("text")] + [text for child in item.childItems() for text in texts(child)]
+
+        content = self.window.contentItem()
+        self.wait_for(lambda: "2001:db8::2/64" in texts(content))
+        labels = texts(content)
+        for label in ("Internet", "LAN (Ethernet)", "Connected to LAN", "Office Ethernet", "Cable unplugged",
+                      "192.0.2.53", "Manage wired connections…", "Wi-Fi", "Office Wi-Fi"):
+            self.assertIn(label, labels)
+        self.assertEqual(self.window.property("page"), "wifi")
+        self.wait_for(lambda: self.window.property("pendingAnchor") == "")
+        self.helper.replies["lan"] = json.dumps(dict(available=True, devices=[
+            dict(device="enp1s0", profile="", state="unplugged")]))
+        QMetaObject.invokeMethod(self.window, "loadWiredNetwork")
+        self.wait_for(lambda: "Connected to Office Wi-Fi" in texts(content))
+        self.assertNotIn("192.0.2.53", texts(content))
+
     def test_wallet_policy_waits_for_confirmation_and_does_not_poll(self):
         state = dict(enabled=True, policy="session", unlocked=True, manager=True, automaticLogin=True)
         self.helper.replies['wallet-status'] = json.dumps(state)

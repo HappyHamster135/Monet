@@ -11,6 +11,7 @@
     monet-quick return-dismiss TOKEN     forget this return's recovery list, never its files
     monet-quick wifi on|off
     monet-quick wifi-list                networks nearby, as JSON
+    monet-quick lan                      Ethernet adapters and their current settings, as JSON
     monet-quick wifi-join NAME [KEY]     NAME and KEY as hex of their UTF-8 (they come from people)
     monet-quick bluetooth on|off
     monet-quick bt-list                  paired devices, as JSON
@@ -20,10 +21,10 @@
                                         Do not disturb indefinitely, for a duration, or until 08:00 tomorrow
     monet-quick volume 0-100
     monet-quick mic 0-100
-monet-quick mic-mute ID on|off        mute/unmute the displayed microphone, with verified feedback
-monet-quick input ID                 select an available microphone, with verified feedback
+    monet-quick mic-mute ID on|off       mute/unmute the displayed microphone, with verified feedback
+    monet-quick input ID [NODE]          select an available microphone, with verified feedback
     monet-quick outputs                  speakers and headphones, as JSON
-    monet-quick output ID
+    monet-quick output ID [NODE]
     monet-quick hotspot                  this PC's own Wi-Fi network for phones: on, its name and password, as JSON
     monet-quick hotspot-on|hotspot-off
     monet-quick ready                    whether Ready when you come back is on for you, as JSON
@@ -48,6 +49,7 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
     monet-quick pref hours|placard|glass|weather|dodge|snap on|off
+    monet-quick taskbar [single|islands]   read or change the bottom bar layout
     monet-quick glass solid|matte|frosted|clear  how see-through panels, windows and widgets are
     monet-quick sound                    where the sound can play and the apps playing, as JSON
     monet-quick mute on|off              the speakers or headphones playing
@@ -320,17 +322,49 @@ def wifi_state():
     devices = run("nmcli", "-t", "-f", "TYPE", "device") or ""
     if "wifi" not in devices.split():
         return None
-    out = run("nmcli", "radio", "wifi")
+    out = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "radio", "wifi")
     return {"enabled": True, "disabled": False}.get((out or "").strip())
 
 
-def wifi_name():
-    out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active") or ""
-    for line in out.splitlines():
-        fields = nmcli_fields(line)
-        if len(fields) >= 2 and fields[1] == "802-11-wireless":
-            return fields[0]
-    return ""
+def active_networks():
+    """The connected Wi-Fi profile and whether an Ethernet profile is up."""
+    out = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "-t", "-f", "NAME,TYPE,STATE",
+              "connection", "show", "--active") or ""
+    connected = [fields for fields in map(nmcli_fields, out.splitlines())
+                 if len(fields) == 3 and fields[2] == "activated"]
+    return {
+        "network": next((name for name, kind, _ in connected if kind == "802-11-wireless"), ""),
+        "lanConnected": any(kind == "802-3-ethernet" for _, kind, _ in connected),
+    }
+
+
+def wired_networks():
+    """Read wired links and addresses without changing or scanning the network."""
+    output = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "--terse", "--escape", "no",
+                 "--fields", "GENERAL.DEVICE,GENERAL.TYPE,GENERAL.STATE,GENERAL.CONNECTION,"
+                 "WIRED-PROPERTIES.CARRIER,IP4.ADDRESS,IP6.ADDRESS,IP4.GATEWAY,IP6.GATEWAY,IP4.DNS,IP6.DNS",
+                 "device", "show", timeout=3)
+    if output is None:
+        return {"available": False, "devices": []}
+    devices = []
+    for block in output.strip().split("\n\n"):
+        pairs = [line.split(":", 1) for line in block.splitlines() if ":" in line]
+        fields = dict(pairs)
+        if fields.get("GENERAL.TYPE") != "ethernet" or not fields.get("GENERAL.DEVICE"):
+            continue
+        state = fields.get("GENERAL.STATE", "").split(" ", 1)[0]
+        devices.append({
+            "device": fields["GENERAL.DEVICE"],
+            "profile": fields.get("GENERAL.CONNECTION", "") if state == "100" else "",
+            "state": ("connected" if state == "100" else "connecting" if state in {"40", "50", "60", "70", "80", "90"}
+                      else "unmanaged" if state == "10" else "unplugged" if fields.get("WIRED-PROPERTIES.CARRIER") == "off"
+                      else "disconnected"),
+            "ipv4": [value for key, value in pairs if key.startswith("IP4.ADDRESS[") and value],
+            "ipv6": [value for key, value in pairs if key.startswith("IP6.ADDRESS[") and value],
+            "gateways": [value for key, value in pairs if key in {"IP4.GATEWAY", "IP6.GATEWAY"} and value not in {"", "--"}],
+            "dns": [value for key, value in pairs if key.startswith(("IP4.DNS[", "IP6.DNS[")) and value],
+        })
+    return {"available": True, "devices": devices}
 
 
 def hotspot():
@@ -459,6 +493,14 @@ def disconnected_port(item):
                and port.get("availability") in ("not available", "no") for port in ports)
 
 
+def audio_identity(item):
+    """The stable WirePlumber node name and the current Pulse device index."""
+    name = item.get('name') or item.get('properties', {}).get('node.name')
+    if not isinstance(name, str) or not name or '\0' in name:
+        return {}
+    return {'key': name.encode('utf-8').hex(), 'serial': item.get('index')}
+
+
 def outputs():
     """Playable outputs, excluding ports explicitly reported as disconnected."""
     found = sinks(run("wpctl", "status") or "")
@@ -470,20 +512,51 @@ def outputs():
             if disconnected_port(item):
                 continue
             sink["none"] = item["properties"].get("node.name") == "auto_null"
+            sink.update(audio_identity(item))
         else:
             sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
         playable.append(sink)
     return playable
 
 
-def output_action(ident):
+def audio_selection(devices, ident, key):
+    if key:
+        return next((device for device in devices if device.get('key') == key), None)
+    return next((device for device in devices if device.get('id') == ident), None)
+
+
+def set_audio_default(kind, device, key):
+    # Pulse accepts a node name, so a newly reused PipeWire id cannot redirect
+    # a click. Its default change is saved by WirePlumber's routing policy.
+    if key:
+        return ok('pactl', 'set-default-' + kind, unhex(device['key']), timeout=2)
+    return ok('wpctl', 'set-default', str(device['id']))
+
+
+def observe_audio(read, confirmed, retry):
+    state = read()
+    if retry:
+        for delay in (0.05, 0.1, 0.2):
+            if confirmed(state):
+                break
+            time.sleep(delay)
+            state = read()
+    return state
+
+
+def output_action(ident, key=None):
     """Only select a current playback device, and acknowledge the observed default."""
     before = outputs()
-    if not any(o["id"] == ident and not o["none"] for o in before):
+    selected = audio_selection([o for o in before if not o["none"]], ident, key)
+    if not selected:
         return {"ok": False, "outputs": before}
-    changed = ok("wpctl", "set-default", str(ident))
-    after = outputs()
-    return {"ok": bool(changed and any(o["id"] == ident and o["default"] for o in after)), "outputs": after}
+    changed = set_audio_default('sink', selected, key)
+
+    def confirmed(state):
+        return audio_selection([o for o in state if o["default"] and not o["none"]], ident, key) is not None
+
+    after = observe_audio(outputs, confirmed, changed and key)
+    return {"ok": changed and confirmed(after), "outputs": after}
 
 
 def app_streams(status):
@@ -555,29 +628,47 @@ def microphones(status):
 def available_microphones():
     found = microphones(run("wpctl", "status") or "")
     metadata = pulse_nodes("sources") if found else {}
-    return [source for source in found if not disconnected_port(metadata.get(source["id"], {}))]
+    available = []
+    for source in found:
+        item = metadata.get(source["id"], {})
+        if not disconnected_port(item):
+            available.append(dict(source, **audio_identity(item)))
+    return available
 
 
-def microphone_action(action, value, source_id=None):
+def microphone_action(action, value, source_id=None, key=None, serial=None):
     """Acknowledge capture changes only after WirePlumber reports the actual result."""
     if action == "mute" and value in ("on", "off"):
         # Use the selected source's id, so an unplug/default change cannot unmute
         # a different microphone between displaying the control and verification.
         current = bar_sound().get("microphone")
-        if not current or current["id"] != source_id:
+        if (not current or current["id"] != source_id
+                or key and (current.get('key') != key or current.get('serial') != serial)):
             return {"ok": False, "sound": bar_sound()}
         ident = current["id"]
-        changed = ok("wpctl", "set-mute", str(ident), "1" if value == "on" else "0")
-        state = bar_sound()
-        mic = state.get("microphone")
-        return {"ok": bool(changed and mic and mic["id"] == ident and mic["muted"] == (value == "on")), "sound": state}
+        switch = "1" if value == "on" else "0"
+        changed = (ok("pactl", "set-source-mute", str(serial), switch, timeout=2) if key
+                   else ok("wpctl", "set-mute", str(ident), switch))
+
+        def confirmed(state):
+            mic = state.get("microphone") or {}
+            return (mic.get('id') == ident and mic['muted'] == (value == "on")
+                    and (not key or (mic.get('key') == key and mic.get('serial') == serial)))
+
+        state = observe_audio(bar_sound, confirmed, changed and key)
+        return {"ok": changed and confirmed(state), "sound": state}
     if action == "input" and value.isdigit():
         ident = int(value)
-        if not any(source["id"] == ident for source in available_microphones()):
+        selected = audio_selection(available_microphones(), ident, key)
+        if not selected:
             return {"ok": False, "sound": bar_sound()}
-        changed = ok("wpctl", "set-default", str(ident))
-        state = bar_sound()
-        return {"ok": bool(changed and state.get("microphone") and state["microphone"]["id"] == ident), "sound": state}
+        changed = set_audio_default('source', selected, key)
+
+        def confirmed(state):
+            return audio_selection([state.get("microphone") or {}], ident, key) is not None
+
+        state = observe_audio(bar_sound, confirmed, changed and key)
+        return {"ok": changed and confirmed(state), "sound": state}
     return {"ok": False}
 
 
@@ -2690,18 +2781,100 @@ def files_defaults():
 def storage_capacity():
     """Show free space immediately; folder breakdowns are a separate explicit scan."""
     disk = shutil.disk_usage(HOME)
-    return dict(total=disk.total, free=disk.free, used=disk.used, measured=False, downloadsPath=str(downloads_dir()))
+    return dict(total=disk.total, free=disk.free, used=disk.used, occupied=disk.total - disk.free,
+                measured=False, downloadsPath=str(downloads_dir()))
+
+
+def storage_drives():
+    """Read the partition layout without mounting or scanning any filesystem."""
+    layout = run('lsblk', '--json', '--bytes', '--tree', '--output',
+                 'KNAME,PATH,TYPE,SIZE,FSTYPE,PARTTYPE,PARTLABEL,LABEL,MODEL,PTTYPE,RM', timeout=2)
+    mounts = run('findmnt', '--json', '--list', '--nofsroot', '--output', 'TARGET,SOURCE,FSTYPE,UUID', timeout=2)
+    try:
+        devices = json.loads(layout or '{}').get('blockdevices', [])
+        filesystems = json.loads(mounts or '{}').get('filesystems', [])
+    except (ValueError, AttributeError):
+        return []
+
+    def backing(mount):
+        source = mount.get('source') or ''
+        names = {source, os.path.realpath(source)} if source.startswith('/dev/') else set()
+        uuid = mount.get('uuid') or ''
+        if mount.get('fstype') == 'btrfs' and re.fullmatch(r'[a-fA-F0-9-]{36}', uuid):
+            try:
+                names.update('/dev/' + device.name for device in (Path('/sys/fs/btrfs') / uuid / 'devices').iterdir())
+            except OSError:
+                pass
+        return names
+
+    home = str(HOME.resolve())
+    home_mount = max((m for m in filesystems if home == m['target']
+                      or home.startswith(m['target'].rstrip('/') + '/')),
+                     key=lambda m: len(m['target']), default={})
+    by_target = {m['target']: m for m in filesystems}
+    monet = backing(home_mount) | backing(by_target.get('/', {})) | backing(by_target.get('/sysroot', {}))
+    boot = backing(by_target.get('/boot', {}))
+    efi = backing(by_target.get('/boot/efi', {}))
+
+    def contains(device, sources):
+        return (device.get('path') in sources or '/dev/' + device['kname'] in sources
+                or any(contains(child, sources) for child in device.get('children', [])))
+
+    def part_kind(part):
+        labels = {(part.get(key) or '').strip().lower() for key in ('label', 'partlabel')}
+        guid = (part.get('parttype') or '').lower()
+        if contains(part, monet):
+            return 'monet'
+        if guid == 'c12a7328-f81f-11d2-ba4b-00a0c93ec93b' or contains(part, efi):
+            return 'efi'
+        if contains(part, boot):
+            return 'boot'
+        if guid in {'de94bba4-06d1-4d40-a16a-bfd50179d6ac', '0x27'}:
+            return 'windowsRecovery'
+        if guid == 'e3c9e316-0b5c-4db8-817d-f92df00215ae':
+            return 'windowsReserved'
+        if labels & {'monet setup', 'monetsetup'}:
+            return 'windowsSetup'
+        if labels & {'monet windows', 'monetwin', 'windows', 'windows os'}:
+            return 'windows'
+        if guid == 'ebd0a0a2-b9e5-4433-87c0-68b6b72699c7' or part.get('fstype') in {'ntfs', 'BitLocker'}:
+            return 'windowsData'
+        return 'other'
+
+    drives = []
+    for device in devices:
+        size = device.get('size') or 0
+        if device['type'] != 'disk' or size <= 0 or device['kname'].startswith(('zram', 'ram')):
+            continue
+        has_monet = contains(device, monet)
+        if device.get('rm') and not has_monet:
+            continue
+        partitions = [dict(kind=part_kind(part), size=part.get('size') or 0)
+                      for part in device.get('children', []) if part['type'] == 'part']
+        allocated = sum(part['size'] for part in partitions)
+        # GPT has no enclosing extended partitions. This includes alignment gaps
+        # and the small amount of space taken by the partition table itself.
+        unallocated = (size - allocated if device.get('pttype') == 'gpt' and partitions
+                       and all(part['size'] > 0 for part in partitions) and allocated <= size else None)
+        drives.append(dict(size=size, model=(device.get('model') or '').strip(), monet=has_monet,
+                           partitions=partitions, unallocated=unallocated))
+    return sorted(drives, key=lambda drive: not drive['monet'])
 
 
 def storage():
     """One bounded walk per tree; never repeatedly scan the same home folders."""
-    disk = shutil.disk_usage(HOME)
     measured = storage_scan()
-    parts = storage_parts(disk.total, disk.free, measured['home'], measured['games'],
-                          measured['apps'], measured['userApps'], measured['trash'])
-    return dict(parts, total=disk.total, trash=measured['trash'], downloads=measured['downloads'],
-                downloadsPath=str(downloads_dir()), measured=True, limited=measured['limited'],
-                unreadable=measured['unreadable'], visited=measured['visited'])
+    capacity = storage_capacity()
+    parts = storage_parts(capacity['total'], capacity['free'], measured['home'], measured['games'],
+                          measured['apps'], measured['userApps'], measured['trash'] or 0)
+    used = capacity['total'] - capacity['free']
+    classified = parts['games'] + parts['apps'] + parts['files']
+    overcounted = classified > used
+    return dict(capacity, **{key: parts[key] for key in ('games', 'apps', 'files', 'system')},
+                drives=storage_drives(), breakdown=not overcounted and measured['scopes'][0]['state'] == 'measured',
+                overcounted=overcounted, trash=measured['trash'],
+                downloads=measured['downloads'], measured=True, limited=measured['limited'],
+                unreadable=measured['unreadable'], visited=measured['visited'], scopes=measured['scopes'])
 
 
 def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')):
@@ -2711,24 +2884,43 @@ def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')
     to Python. NUL records preserve unusual names. Hard links are counted once;
     shared Btrfs extents still make these approximate referenced sizes.
     """
-    home = HOME.absolute()
+    home = HOME.resolve()
     categories = {
         'games': [DATA_HOME / 'Steam/steamapps', HOME / 'Games'],
         'userApps': [DATA_HOME / 'flatpak', HOME / '.var/app'],
         'trash': [DATA_HOME / 'Trash'], 'downloads': [downloads_dir()]}
-    result = dict(home=0, games=0, userApps=0, trash=0, downloads=0, apps=0,
-                  visited=0, limited=False, unreadable=False)
+    categories = {key: [home / path.relative_to(HOME) if path.is_relative_to(HOME) else path
+                        for path in paths] for key, paths in categories.items()}
+    scopes = [dict(path=str(home), state='partial')]
+    result = dict(home=0, games=0, userApps=0, trash=None, downloads=0, apps=0,
+                  visited=0, limited=False, unreadable=False, scopes=scopes)
     if seconds <= 0 or limit <= 0:
         result['limited'] = True
         return result
     depth = 1
+    outside = set()
     for paths in categories.values():
         for path in paths:
             if path.is_relative_to(home):
                 depth = max(depth, len(path.relative_to(home).parts))
-            else:
-                result['limited'] = True
-    targets = [str(home)] + ([str(system_apps)] if system_apps.exists() else [])
+            elif path.exists():
+                outside.add(str(path))
+    targets = [str(home)]
+    if system_apps.exists():
+        same_fs = home.stat().st_dev == system_apps.stat().st_dev
+        if not same_fs:
+            # Btrfs subvolumes can have different device numbers but share space.
+            def btrfs_uuid(path):
+                return (run('findmnt', '--noheadings', '--raw', '--types', 'btrfs',
+                            '--output', 'UUID', '--target', str(path), timeout=2) or '').strip()
+            uuid = btrfs_uuid(home)
+            same_fs = bool(uuid and uuid == btrfs_uuid(system_apps))
+        if same_fs and not system_apps.is_relative_to(home):
+            targets.append(str(system_apps))
+            scopes.append(dict(path=str(system_apps), state='partial'))
+        elif not same_fs:
+            outside.add(str(system_apps))
+    scopes.extend(dict(path=path, state='outside') for path in sorted(outside))
     command = ['du', '--null', '-x', '-B1', '--max-depth=' + str(min(depth, 16)), '--', *targets]
     deadline, buffer, received, totals = time.monotonic() + seconds, b'', 0, {}
     process = None
@@ -2768,9 +2960,21 @@ def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')
                 process.kill(); process.wait()
             process.stdout.close()
     result['home'] = totals.get(str(home), 0)
-    result['apps'] = totals.get(str(system_apps), 0)
-    for key, paths in categories.items():
-        result[key] = sum(totals.get(str(path), 0) for path in set(paths))
+    result['apps'] = totals.get(str(system_apps), 0) if str(system_apps) in targets else 0
+    for scope in scopes:
+        if scope['path'] in totals and not result['unreadable']:
+            scope['state'] = 'measured'
+    assigned = set()
+    for path, key in sorted(((path, key) for key in ('games', 'userApps') for path in categories[key]),
+                            key=lambda entry: len(entry[0].parts)):
+        if str(path) in totals and not any(path.is_relative_to(ancestor) for ancestor in assigned):
+            result[key] += totals[str(path)]
+            assigned.add(path)
+    result['downloads'] = totals.get(str(categories['downloads'][0]), 0)
+    trash = categories['trash'][0]
+    result['trash'] = totals.get(str(trash))
+    if result['trash'] is None and not trash.exists() and scopes[0]['state'] == 'measured':
+        result['trash'] = 0
     return result
 
 
@@ -3206,7 +3410,7 @@ def printers():
 def whats_new(text):
     """The newest "### New in X: headline" section: its version, headline, and each
     highlight's bold title with its first sentence."""
-    found = re.search(r"(?m)^### New in ([\w.]+)(?::\s*(.+))?$", text)
+    found = re.search(r"(?m)^### New in ([\w.-]+)(?::\s*(.+))?$", text)
     if not found:
         return {}
     body = text[found.end():]
@@ -5635,32 +5839,11 @@ def set_screen_feature(name, what, on):
 
 
 def fit_bars():
-    # Only Monet's three bottom islands on the same screen are coordinated.
-    # A range lets Plasma resize with its live contents. Fixing both limits to
-    # a snapshot left an empty task-sized hole whenever an app closed.
-    select = """
-var groups={};
-panels().forEach(function(p){
- if(p.location!=="bottom") return;
- var types=p.widgets().map(function(w){return w.type});
- var role=types.indexOf("org.monet.menu")>=0 ? "left" :
-          types.indexOf("org.monet.quick")>=0 ? "right" :
-          types.indexOf("org.kde.plasma.icontasks")>=0 ? "middle" : "";
- if(role) { if(!groups[p.screen]) groups[p.screen]={}; groups[p.screen][role]=p; }
-});
-"""
-    def script(body):
-        return run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell",
-                   "org.kde.PlasmaShell", "evaluateScript", "s", select + body, timeout=5)
-    script("""Object.keys(groups).forEach(function(id){
- var g=groups[id]; if(!g.left || !g.middle || !g.right) return;
- var width=screenGeometry(Number(id)).width, gap=16;
- var available=Math.max(80,width-2*Math.max(g.left.length,g.right.length)-4*gap);
- g.left.offset=gap; g.right.offset=gap;
- g.middle.alignment="center"; g.middle.offset=0;
- g.middle.minimumLength=80; g.middle.maximumLength=Math.floor(available);
- g.middle.lengthMode="custom";
-});""")
+    try:
+        script = (Path(DATADIR) / "monet/bar-layout.js").read_text()
+    except OSError:
+        return
+    plasma_script('const requestedMode = "fit";\n' + script)
 
 
 def set_scale(percent, name=None):
@@ -5786,6 +5969,34 @@ def set_default(kind, app_id):
 
 def plasma_script(script):
     return busctl("call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
+
+
+def taskbar_layout(mode=""):
+    try:
+        script = (Path(DATADIR) / "monet/bar-layout.js").read_text()
+    except OSError:
+        return {"ok": False, "mode": ""}
+    dodge = json.dumps(bool(prefs()["dodge"]))
+
+    def apply(request):
+        source = f"const requestedMode = {json.dumps(request)}; const dodge = {dodge};\n" + script
+        result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                         "org.kde.PlasmaShell", "evaluateScript", "s", source)
+        return result[0].strip() if isinstance(result, list) and len(result) == 1 and isinstance(result[0], str) else ""
+
+    if mode:
+        if apply(mode) == mode:
+            # Plasma removes widgets and creates the new panel views on its event loop.
+            for _ in range(6):
+                time.sleep(.2)
+                actual = apply("")
+                if actual == mode:
+                    if mode == "islands":
+                        fit_bars()
+                    return {"ok": True, "mode": actual}
+        return {"ok": False, "mode": apply("")}
+    actual = apply("")
+    return {"ok": actual in ("single", "islands", "incomplete"), "mode": actual}
 
 
 
@@ -6204,7 +6415,7 @@ def open_settings(page):
         subprocess.Popen(command, start_new_session=True, stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
-    page = KDE_PAGES.get(page, KDE_PAGES["all"])
+    page = KDE_PAGES.get(page.partition("#")[0], KDE_PAGES["all"])
     command, env = kde_settings_command(page)
     os.execvpe(command[0], command, env)
 
@@ -6236,8 +6447,10 @@ def search_catalog():
          N_("microphone; mic; people cannot hear me; input volume; recording sound"), "sound#microphone", "audio-input-microphone"),
         ("bluetooth", tr("Connect a Bluetooth device"), tr("Bluetooth · Pair headphones, a mouse or a controller"),
          N_("bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"), "bluetooth", "preferences-system-bluetooth"),
-        ("wifi", tr("Connect to Wi-Fi"), tr("Wi-Fi · Networks and internet access"),
+        ("wifi", tr("Connect to Wi-Fi"), tr("Internet · Wireless networks"),
          N_("wifi; wi-fi; wireless internet; connect internet; no internet; network connection"), "wifi", "network-wireless"),
+        ("lan", tr("LAN settings"), tr("Internet · Ethernet and IP settings"),
+         N_("lan; ethernet; wired network; network cable; ip address; gateway; dns"), "wifi#lan", "network-wired"),
         ("calendar", tr("Birthdays and repeating notes"), tr("Calendar · Notes that repeat every year, month, week or day"),
          N_("birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"), "calendar", "x-office-calendar"),
         ("windows-files", tr("Windows files"), tr("Storage · Your shared folder and access to Windows files"),
@@ -7152,7 +7365,7 @@ def status(scope="all"):
         scope = "all"  # Plasma already shares a native UPower snapshot.
     result = {}
     if scope in ("all", "wifi"):
-        result.update(wifi=wifi_state(), network=wifi_name())
+        result.update(wifi=wifi_state(), **active_networks())
     if scope in ("all", "bluetooth"):
         result["bluetooth"] = bluetooth_state()
     if scope in ("all", "display"):
@@ -7197,6 +7410,8 @@ def main(argv):
         run("nmcli", "radio", "wifi", "on" if on else "off")
     elif cmd == "wifi-list":
         emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or "", saved_wifi()))
+    elif cmd == "lan":
+        emit(wired_networks())
     elif cmd == "wifi-join" and args:
         command = ["nmcli", "device", "wifi", "connect", unhex(args[0])]
         if len(args) > 1 and args[1]:
@@ -7351,16 +7566,19 @@ def main(argv):
         emit(apps_sound())
     elif cmd == "sound":
         emit(bar_sound())
-    elif cmd == "mic-mute" and len(args) == 2 and args[0].isdigit() and args[1] in ("on", "off"):
-        emit(microphone_action("mute", args[1], int(args[0])))
+    elif cmd == "mic-mute" and len(args) in (2, 4) and args[0].isdigit() and args[1] in ("on", "off"):
+        if len(args) == 2:
+            emit(microphone_action("mute", args[1], int(args[0])))
+        elif args[3].isdigit():
+            emit(microphone_action("mute", args[1], int(args[0]), args[2], int(args[3])))
     elif cmd == "input" and args and args[0].isdigit():
-        emit(microphone_action("input", args[0]))
+        emit(microphone_action("input", args[0], key=args[1] if len(args) > 1 else None))
     elif cmd == "mute" and args and args[0] in ("on", "off"):
         run("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if args[0] == "on" else "0")
     elif cmd == "app-volume" and len(args) == 2 and args[0].isdigit() and args[1].isdigit():
         run("wpctl", "set-volume", args[0], f"{min(int(args[1]), 100)}%")
     elif cmd == "output" and args and args[0].isdigit():
-        emit(output_action(int(args[0])))
+        emit(output_action(int(args[0]), args[1] if len(args) > 1 else None))
     elif cmd == "brightness" and args and args[0].isdigit():
         set_brightness(max(1, min(int(args[0]), 100)))
     elif cmd == "keyboard" and args and args[0].isdigit():
@@ -7369,6 +7587,8 @@ def main(argv):
         set_light(args[0])
     elif cmd == "prefs":
         emit(prefs())
+    elif cmd == "taskbar" and (not args or (len(args) == 1 and args[0] in ("single", "islands"))):
+        emit(taskbar_layout(*args))
     elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass", "weather", "dodge", "snap"):
         save_pref(args[0], args[1] == "on")
         values = prefs()
@@ -7626,7 +7846,7 @@ def main(argv):
     elif cmd == "storage":
         emit(storage())
     elif cmd == "storage-capacity":
-        emit(storage_capacity())
+        emit(dict(storage_capacity(), drives=storage_drives()))
     elif cmd == 'storage-recovery':
         emit(storage_recovery(args))
     elif cmd == 'troubleshooting':
@@ -7815,7 +8035,7 @@ def main(argv):
         subprocess.Popen(command, env=env, start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # And the welcome, which isn't in the list of pages (monet-session opens it for a new account).
-    elif cmd == "open" and (not args or args[0] in PAGES or args[0] == "welcome"):
+    elif cmd == "open" and (not args or args[0] in PAGES or args[0] in ("welcome", "wifi#lan")):
         open_settings(args[0] if args else "")
     elif cmd == "say" and args:
         print(tr(*args))

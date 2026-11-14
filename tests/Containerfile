@@ -4,7 +4,7 @@ ARG FEDORA_RELEASE=45
 FROM registry.fedoraproject.org/fedora:${FEDORA_RELEASE} AS desktop-runtime
 RUN dnf -y install python3 python3-pyside6 python3-gobject python3-dbus python3-pynacl \
     python3-numpy python3-pillow gtk3 gtk4 nodejs nodejs-npm dbus-daemon dbus-tools \
-    plasma-workspace plasma-desktop plasma-systemmonitor plasma-pa \
+    plasma-workspace plasma-desktop plasma-systemmonitor plasma-pa plasma-nm \
     kf6-kirigami kf6-kconfig plasma-integration kvantum rsms-inter-fonts \
     pipewire pipewire-pulseaudio pipewire-utils pulseaudio-utils \
     util-linux procps-ng ntfsprogs dosfstools wimlib-utils cryptsetup openssl \

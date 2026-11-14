@@ -30,6 +30,83 @@ Assert (-not (Test-MonetMissingDriver $update @($update.DriverHardwareID))) 'Int
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('monet-setup-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp | Out-Null
 try {
+    $bridgeUpdate = Join-Path $root 'windows/Update-Monet.ps1'
+    $programFiles, $programData = $env:ProgramFiles, $env:ProgramData
+    $env:ProgramFiles = $env:ProgramData = $temp
+    $baseInstalled = '0.9.8'
+    function Get-ItemProperty { [pscustomobject]@{ DisplayVersion = $baseInstalled } }
+    function Invoke-RestMethod { $releases }
+    function BridgeRelease([string]$label, [bool]$draft = $false, [bool]$withSums = $true) {
+        $assets = @([pscustomobject]@{ name = "Monet-$label-Windows.zip" })
+        if ($withSums) { $assets += [pscustomobject]@{ name = 'SHA256SUMS.txt' } }
+        [pscustomobject]@{ tag_name = "v$label"; draft = $draft; assets = $assets }
+    }
+    $releases = @(
+        (BridgeRelease '0.9.8'), (BridgeRelease '0.9.8-5'),
+        (BridgeRelease '0.9.9' $true), (BridgeRelease '1.0.0' $false $false),
+        (BridgeRelease '2.0.0-rc.1'), (BridgeRelease '2147483648.0.0')
+    )
+    Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.8-5 is out (this is 0.9.8).') 'Revision must be newer than the base release'
+    $baseInstalled = '0.9.8-5'
+    Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.8-5 is up to date.') 'Same revision must not be reinstalled'
+    $releases += (BridgeRelease '0.9.8-10')
+    Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.8-10 is out (this is 0.9.8-5).') 'Revisions sort numerically'
+    $releases += (BridgeRelease '0.9.9')
+    Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.9 is out (this is 0.9.8-5).') 'Next base release outranks the prior revision'
+    $releases = @()
+    Assert ((& $bridgeUpdate -CheckOnly) -eq 'No downloadable Monet Bridge releases were found.') 'Empty release list needs clear feedback'
+    $baseInstalled = '0.9.8'
+    $releases = @(BridgeRelease '0.9.8-5')
+    $fixturePackage = Join-Path $temp 'fixture-package'
+    $fixtureFiles = Join-Path $fixturePackage 'Monet for Windows'
+    New-Item -ItemType Directory -Path $fixtureFiles -Force | Out-Null
+    Set-Content (Join-Path $fixtureFiles 'Install-Monet.ps1') '# Synthetic installer'
+    $fixtureZip = Join-Path $temp 'fixture.zip'
+    Compress-Archive -Path $fixtureFiles -DestinationPath $fixtureZip
+    $bridgeData = Join-Path $temp 'Monet'
+    New-Item -ItemType Directory -Path $bridgeData | Out-Null
+    $calls = @{ Requests = 0; Installs = 0; Restarts = 0; InterruptDownload = $false }
+    function Invoke-WebRequest {
+        param([switch]$UseBasicParsing, $TimeoutSec, $Uri, $OutFile)
+        $calls.Requests++
+        if ($OutFile -like '*.zip') { Copy-Item $fixtureZip $OutFile }
+        elseif ($calls.InterruptDownload) { throw 'Connection lost before the checksums arrived' }
+        else { Set-Content $OutFile "$( (Get-FileHash $fixtureZip).Hash )  Monet-0.9.8-5-Windows.zip" }
+    }
+    function powershell.exe { $calls.Installs++; $global:LASTEXITCODE = 0 }
+    function shutdown.exe { $calls.Restarts++ }
+    & $bridgeUpdate -Stage
+    $stageLog = Get-Content (Join-Path $bridgeData 'update.log') -ErrorAction SilentlyContinue
+    Assert ((Test-Path (Join-Path $bridgeData 'update-ready')) -and $calls.Requests -eq 2) "Stage must publish a complete verified package. $stageLog"
+    Assert ($calls.Installs -eq 0 -and $calls.Restarts -eq 0) 'Stage must leave the active Windows session running'
+    & $bridgeUpdate
+    Assert ($calls.Installs -eq 0 -and $calls.Restarts -eq 0) 'An updater without a restart request must leave Windows running'
+    Set-Content (Join-Path $bridgeData 'update-then-restart') 'fixture'
+    & $bridgeUpdate
+    Assert ($calls.Requests -eq 2 -and $calls.Installs -eq 1 -and $calls.Restarts -eq 1) 'Return must install from disk and restart without network traffic'
+    Assert (-not (Test-Path (Join-Path $bridgeData 'update-ready'))) 'A consumed package must not be applied again'
+
+    Remove-Item (Join-Path $bridgeData 'update-checked')
+    $calls.InterruptDownload = $true
+    & $bridgeUpdate -Stage
+    Assert (-not (Test-Path (Join-Path $bridgeData 'update-ready'))) 'An interrupted download must never publish a ready package'
+    Assert (-not (Test-Path (Join-Path $bridgeData 'Update'))) 'An interrupted download must discard the partial package'
+    Assert (-not (Test-Path (Join-Path $bridgeData 'update-checked'))) 'An interrupted download must remain eligible for retry'
+    Assert ($calls.Installs -eq 1 -and $calls.Restarts -eq 1) 'An interrupted background download must leave Windows running'
+    $calls.InterruptDownload = $false
+    & $bridgeUpdate -Stage
+    Set-Content (Join-Path $bridgeData 'update-ready/Monet-0.9.8-5-Windows.zip') 'damaged after staging'
+    Set-Content (Join-Path $bridgeData 'update-then-restart') 'fixture'
+    & $bridgeUpdate
+    Assert ($calls.Requests -eq 6 -and $calls.Installs -eq 1 -and $calls.Restarts -eq 2) 'Corrupted updates must be discarded and restart must still proceed offline'
+    Assert (-not (Test-Path (Join-Path $bridgeData 'update-checked'))) 'A discarded update must be eligible for a fresh download'
+    Assert ((Test-Path (Join-Path $bridgeData 'update-claimed'))) 'A fast failure must leave the restart receipt visible to Bridge'
+    & $bridgeUpdate
+    Assert ($calls.Restarts -eq 2) 'A restart receipt must not trigger another reboot'
+    Remove-Item Function:Invoke-WebRequest, Function:powershell.exe, Function:shutdown.exe
+    Remove-Item Function:Get-ItemProperty, Function:Invoke-RestMethod
+    $env:ProgramFiles, $env:ProgramData = $programFiles, $programData
+
     function icacls.exe { $global:LASTEXITCODE = $script:aclExit }
     function netsh.exe { $global:LASTEXITCODE = $script:networkExit; $script:imports++ }
     $script:aclExit = 0; $script:networkExit = 1; $script:imports = 0

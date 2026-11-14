@@ -188,6 +188,7 @@ jobs:
               -extract /EFI/BOOT/grub.cfg check.cfg -extract /EFI/BOOT/monet/theme.txt check-theme.txt \
               -extract /images/pxeboot/initrd.img check-initrd.img -extract_boot_images bootimgs/
             grep -q 'Install Monet and Windows' check.cfg
+            grep -q 'inst.pauseatsummary' check.cfg
             grep -q \"search .*'\$NEW'\" check.cfg
             grep -q 'monet/theme.txt' check.cfg
             grep -q 'boot_menu' check-theme.txt
@@ -197,6 +198,10 @@ jobs:
               if mtype -i \"\$img\" ::/EFI/BOOT/grub.cfg > efiboot.cfg 2>/dev/null; then
                 if grep -q menuentry efiboot.cfg && ! grep -q 'Install Monet and Windows' efiboot.cfg; then
                   echo 'The EFI boot image still has the old menu' >&2
+                  exit 1
+                fi
+                if grep -q menuentry efiboot.cfg && ! grep -q 'inst.pauseatsummary' efiboot.cfg; then
+                  echo 'The EFI boot image does not pause for install confirmation' >&2
                   exit 1
                 fi
                 echo \"EFI boot image menu: \$(grep -c menuentry efiboot.cfg) entries, Monet's menu\"

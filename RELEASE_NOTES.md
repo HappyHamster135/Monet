@@ -6,11 +6,50 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.8-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
-| Monet-0.9.8-Setup.iso              | Monet Setup for writing the USB stick yourself. |
-| Monet-0.9.8-Installer.iso          | The Fedora-based fallback installer. |
-| Monet-0.9.8-Windows.zip            | Monet Bridge for an existing Windows installation. |
-| Monet-0.9.8-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+| **Monet-0.9.8-5-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-5-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-5-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-5-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-5-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8-5: Everyday reliability
+
+- **Storage shows where the space went.** See the whole drive, Monet's filesystem,
+  other partitions, and unallocated space. Folder scans show which locations
+  could only be partially measured.
+- **Quick Settings shows LAN when Ethernet is connected.** Network status
+  refreshes as connections change and after wake. Settings → Internet shows
+  wired connection details and keeps Wi-Fi controls on the same page.
+- **Sound follows your devices as they reconnect.** The panel refreshes the
+  speaker and microphone choices after wake and as devices appear or disappear.
+  WirePlumber remembers your selected devices.
+- **The desktop cards fit your screen.** The clock, weather and calendar line up
+  on a fresh install and adjust when you change the display scale.
+- **One taskbar on new installs.** Choose One bar or Three bars under Settings →
+  Light & Wallpaper → Taskbar layout. Choose Three bars again to restore a missing
+  middle bar. The middle bar fits between the side bars as display scaling
+  changes. Panel settings and the widget gallery scroll on smaller screens.
+- **NVIDIA runtime sync runs in the background.** If Flatpak needs new NVIDIA
+  runtimes, Monet starts that work after boot without holding the graphical
+  target open.
+- **Back to Monet skips update downloads.** Bridge checks for updates after
+  signing in to Windows. Back to Monet applies a package only when it has
+  already downloaded and verified it. If you already have
+  an earlier Bridge, install this Windows package once to get support for
+  release numbers like 0.9.8-5.
+- **Settings and Store are easier to use with the keyboard.** Tab and Shift+Tab
+  reach both search fields, and Orca announces them. Settings keeps buttons
+  within the page at larger text sizes, and Store keeps ranked apps in view
+  in narrow, right-to-left layouts.
+- **Files reports interrupted web copies.** If the connection drops during an
+  HTTP or HTTPS copy, the OS image reports the failure and keeps any retained
+  bytes in a partial file.
+- **Store downloads recover from a lost connection.** Cancel stops a stalled
+  download, and a failed download can be retried after reconnecting.
+- **Fedora fallback waits for your confirmation.** Review the target drive,
+  create an administrator account with a password, and select Begin
+  Installation. The installer shows the Secure Boot enrollment steps before
+  you restart.
 
 ### New in 0.9.8: Security at a glance
 

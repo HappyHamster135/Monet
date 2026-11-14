@@ -80,8 +80,9 @@ class PlasmaPackages(unittest.TestCase):
         for widget in re.findall(r'"(org\.monet\.[a-z]+)"', layout):
             kind = "wallpapers" if widget == "org.monet.hours" else "plasmoids"
             self.assertTrue((PLASMA / kind / widget).is_dir(), widget)
-        # Three islands along the bottom.
-        self.assertEqual(layout.count('island("'), 3)
+        self.assertEqual(layout.count("new Panel"), 1)
+        self.assertIn('bar.lengthMode = "fill"', layout)
+        self.assertIn('bar.floating = false', layout)
 
     def test_theme_defaults_point_at_monet(self):
         defaults = (PLASMA / "look-and-feel/org.monet.desktop/contents/defaults").read_text()
@@ -1301,8 +1302,13 @@ class MonetsOwn(unittest.TestCase):
         hidden = (SHARE / "monet/hidden-settings-pages").read_text()
         for page in quick.KDE_PAGES.values():
             self.assertNotIn(f"\n{page}\n", hidden, page)
-        source = (ROOT / "linux/libexec/monet-quick").read_text()
-        self.assertIn('page = KDE_PAGES.get(page, KDE_PAGES["all"])', source)
+        from unittest.mock import patch
+        for route, target in (("wifi#lan", quick.KDE_PAGES["wifi"]), ("", quick.KDE_PAGES["all"])):
+            with self.subTest(route=route), patch.object(quick.os, "access", return_value=False), \
+                    patch.object(quick, "kde_settings_command", return_value=(["systemsettings"], {})) as kde, \
+                    patch.object(quick.os, "execvpe"):
+                quick.open_settings(route)
+                kde.assert_called_once_with(target)
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
         body = re.search(r"function kdePage\(\) \{\n(.*?)\n    \}\n", settings, re.S).group(1)
         pages = re.findall(r'(\w+): "(\w+)"', body)
@@ -1327,7 +1333,7 @@ class MonetsOwn(unittest.TestCase):
             self.assertNotIn("SystrayContainmentId", layout)
             for piece in ('tray.currentConfigGroup = ["General"]', 'tray.writeConfig("knownItems", union(',
                           '"org.kde.plasma.brightness"', '"org.kde.plasma.volume"',
-                          'right.addWidget("org.monet.quick")\nright.addWidget("org.monet.sound")', "tray.reloadConfig()"):
+                          'bar.addWidget("org.monet.quick")\nbar.addWidget("org.monet.sound")', "tray.reloadConfig()"):
                 self.assertIn(piece, layout)
         fresh = (ROOT / "linux/libexec/monet-fresh").read_text()
         self.assertIn(r"/^plugin=org\.kde\.plasma\.systemtray$/", fresh)
@@ -1536,7 +1542,7 @@ class DesktopWidgets(unittest.TestCase):
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
             for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
-                self.assertIn(f'd.addWidget("{widget}"', layout)
+                self.assertIn(f'addDesktopCard(d, "{widget}")', layout)
         # Any desktop without them gets them once: also one laid out before Monet had widgets, or where
         # Plasma's first layout found no desktop. Every desktop, whatever its activity, and done only once
         # Plasma had one: until then, again at every sign-in, after the look.
@@ -1544,7 +1550,7 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn("desktops().forEach(", placing)
         self.assertNotIn("desktopsForActivity", placing)
         for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
-            self.assertIn(f'd.addWidget("{widget}"', placing)
+            self.assertIn(f'"{widget}"', placing)
         self.assertIn('d.widgets("org.monet.weather").length > 0', placing)
         self.assertIn('*"desktops "[1-9]*) mkdir -p "$CONFIG/monet" && touch "$placed"', placing)
         self.assertIn("busctl --user status org.kde.plasmashell", placing)
@@ -1564,7 +1570,7 @@ class DesktopWidgets(unittest.TestCase):
     def test_the_panel_clock_is_monets(self):
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
-            self.assertIn('right.addWidget("org.monet.clock")', layout)
+            self.assertIn('bar.addWidget("org.monet.clock")', layout)
             self.assertNotIn("digitalclock", layout)
         look = (ROOT / "linux/libexec/monet-look").read_text()
         self.assertIn('panel.widgets("org.kde.plasma.digitalclock")', look)
@@ -2442,7 +2448,7 @@ class EverydayScreens(unittest.TestCase):
         self.assertIn('"users": "kcm_users"', (ROOT / "linux/libexec/monet-quick").read_text())
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
-            self.assertIn('left.addWidget("org.monet.menu")', layout)
+            self.assertIn('bar.addWidget("org.monet.menu")', layout)
             self.assertNotIn("kickoff", layout)
         # Kept panels get it too, once, where KDE's menu was and with its shortcut.
         look = (ROOT / "linux/libexec/monet-look").read_text()
@@ -2509,7 +2515,7 @@ class EverydayScreens(unittest.TestCase):
             self.assertIn(part, entry)
         gallery = (explorer / "MonetWidgetExplorer.qml").read_text(encoding="utf-8")
         for part in ("root.widgetExplorer", "pendingUninstallTimer.running", "explorer.addApplet(pluginName)",
-                     "explorer.removeAllInstances(pluginName)", '"text/x-plasmoidservicename"', "widgetsModel.searchTerm",
+                     'applet.internalAction("remove")', '"text/x-plasmoidservicename"', "widgetsModel.searchTerm",
                      "KItemModels.KSortFilterProxyModel",
                      # Done ends the editing: the desktop comes back to full size.
                      "containment.corona.editMode = false"):
@@ -2839,7 +2845,8 @@ class MonetSettings(unittest.TestCase):
         self.assertFalse((self.QUICK / "MonetSettings.qml").exists())
         self.assertIn('onTapped: root.openSettings("")', main)  # All Settings, a pebble of glass
         # Every tile's chevron opens its page (Night Light's is Display), apart from the switch.
-        for page in ("wifi", "bluetooth", "display", "notifications"):
+        self.assertIn('page: wired ? "wifi#lan" : "wifi"', main)
+        for page in ("bluetooth", "display", "notifications"):
             self.assertIn(f'page: "{page}"', main)
         self.assertEqual(main.count("onOpened: root.openSettings(page)"), 4)
         self.assertIn('" listen")', main)
@@ -3125,9 +3132,68 @@ Audio
         from unittest import mock
         quick = quick_helper()
         for devices, expected in (("ethernet\nloopback\n", None), ("wifi\nethernet\n", True)):
-            answers = {("nmcli", "-t", "-f", "TYPE", "device"): devices, ("nmcli", "radio", "wifi"): "enabled\n"}
+            answers = {("nmcli", "-t", "-f", "TYPE", "device"): devices,
+                       ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "radio", "wifi"): "enabled\n"}
             with mock.patch.object(quick, "run", lambda *args, **kw: answers.get(args)):
                 self.assertIs(quick.wifi_state(), expected)
+
+    def test_quick_reports_wired_and_wireless_connections_separately(self):
+        from unittest import mock
+        quick = quick_helper()
+        wired = "Wired:802-3-ethernet:activated\n"
+        wireless = "Café\\: upstairs:802-11-wireless:activated\n"
+        command = ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "-t", "-f", "NAME,TYPE,STATE",
+                   "connection", "show", "--active")
+        for listing, wifi, network, lan in (
+            (wired, True, "", True),
+            (wired, False, "", True),
+            (wired, None, "", True),
+            (wired + wireless, True, "Café: upstairs", True),
+            (wireless, True, "Café: upstairs", False),
+            ("Wired:802-3-ethernet:activating\nTunnel:vpn:activated\n", True, "", False),
+            (None, None, "", False),
+        ):
+            with self.subTest(listing=listing, wifi=wifi), mock.patch.object(quick, "run", return_value=listing) as run, \
+                    mock.patch.object(quick, "wifi_state", return_value=wifi):
+                self.assertEqual(quick.status("wifi"), {"wifi": wifi, "network": network, "lanConnected": lan})
+                run.assert_called_once_with(*command)
+
+    def test_wired_settings_show_each_adapter_and_preserve_ipv6_addresses(self):
+        from unittest import mock
+        quick = quick_helper()
+        listing = """GENERAL.DEVICE:enp1s0
+GENERAL.TYPE:ethernet
+GENERAL.STATE:100 (connected)
+GENERAL.CONNECTION:Office: desk
+WIRED-PROPERTIES.CARRIER:on
+IP4.ADDRESS[1]:192.0.2.2/24
+IP6.ADDRESS[1]:2001:db8::2/64
+IP6.GATEWAY:2001:db8::1
+IP4.GATEWAY:
+IP4.DNS[1]:192.0.2.53
+
+GENERAL.DEVICE:enp2s0
+GENERAL.TYPE:ethernet
+GENERAL.STATE:20 (unavailable)
+WIRED-PROPERTIES.CARRIER:off
+
+GENERAL.DEVICE:wlan0
+GENERAL.TYPE:wifi
+GENERAL.STATE:100 (connected)
+"""
+        with mock.patch.object(quick, "run", side_effect=[listing, None]):
+            state = quick.wired_networks()
+            self.assertTrue(state["available"])
+            first, second = state["devices"]
+            self.assertEqual(first, dict(device="enp1s0", profile="Office: desk", state="connected",
+                                        ipv4=["192.0.2.2/24"], ipv6=["2001:db8::2/64"],
+                                        gateways=["2001:db8::1"], dns=["192.0.2.53"]))
+            self.assertEqual(second["state"], "unplugged")
+            self.assertEqual(quick.wired_networks(), {"available": False, "devices": []})
+        self.assertEqual(quick.everyday_search("ethernet")[0]["target"], "wifi#lan")
+        with mock.patch.object(quick, "open_settings") as open_settings:
+            self.assertEqual(quick.main(["open", "wifi#lan"]), 0)
+            open_settings.assert_called_once_with("wifi#lan")
 
     def test_no_bluetooth_isnt_waited_for(self):
         # bluetoothctl waits forever for an adapter that isn't there: Quick Settings took 3 s a refresh.
@@ -3143,8 +3209,9 @@ Audio
             self.assertTrue(quick.bluetooth_here(Path(tmp)))
         main = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn('visible: typeof root.info.volume === "number" || typeof root.info.brightness === "number"', main)
-        # And no Wi-Fi or Bluetooth tile on a PC without them, as in Windows (not "Unavailable").
-        self.assertIn("visible: root.info.wifi !== null", main)
+        # Hide the tile on PCs without Wi-Fi unless Ethernet has connected.
+        self.assertIn("visible: root.info.wifi !== null || wired", main)
+        self.assertIn('title: wired ? i18n("LAN") : i18n("Wi-Fi")', main)
         self.assertIn("visible: root.info.bluetooth !== null", main)
 
     def test_play_on_windows_without_windows(self):
@@ -3409,7 +3476,11 @@ class WhatOtherSystemsHave(unittest.TestCase):
         session = (ROOT / "linux/libexec/monet-session").read_text()
         self.assertIn('touch "$looks/welcomed"', session)
         self.assertIn('"$LIBEXECDIR/monet-quick" open welcome', session)
-        self.assertIn('args[0] in PAGES or args[0] == "welcome"', (ROOT / "linux/libexec/monet-quick").read_text())
+        from unittest.mock import patch
+        quick = quick_helper()
+        with patch.object(quick, "open_settings") as opened:
+            self.assertEqual(quick.main(["open", "welcome"]), 0)
+            opened.assert_called_once_with("welcome")
         settings = self.SETTINGS.read_text(encoding="utf-8")
         self.assertIn("welcome: welcomePage", settings)
         self.assertIn('destination[0] === "welcome" || pages.some(p => p.id === destination[0])', settings)
@@ -3907,9 +3978,11 @@ class SmallFixesFor090(unittest.TestCase):
         self.assertIn('"widgets/background": dict(radius=20, margin=10, blur=14, drop=8, strength=0.34, glass=0.24)', style)
         menu = (PLASMA / "plasmoids/org.monet.menu/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("color: dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)", menu)
-        # Stamp the current release after its content-based migration succeeds.
-        version = (ROOT / "VERSION").read_text().strip()
-        self.assertIn(f'current="$looks/look-{version}"', (ROOT / "linux/libexec/monet-session").read_text())
+        # A successful content-based migration leaves a look stamp for welcome detection.
+        session = (ROOT / "linux/libexec/monet-session").read_text()
+        self.assertRegex(session, r'(?m)^current="\$looks/look-\d+\.\d+(?:\.\d+)?(?:-\d+)?"$')
+        self.assertIn('if "$LIBEXECDIR/monet-profile" run "$LIBEXECDIR/monet-look" --keep; then\n'
+                      '    mkdir -p "$looks" && touch "$current"\nfi', session)
 
     def test_the_clocks_page_and_highlight(self):
         clock = (PLASMA / "plasmoids/org.monet.clock/contents/ui/main.qml").read_text(encoding="utf-8")
@@ -3994,7 +4067,7 @@ class TheBarStepsAside(unittest.TestCase):
         # 0.9.4: stepping aside by default again, now that pointing at the edge brings them back.
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
-            self.assertIn('set(p, "hiding", "dodgewindows")', layout)
+            self.assertIn('bar.hiding = "dodgewindows"', layout)
             self.assertNotIn('"hiding", "none"', layout)
         look = (ROOT / "linux/libexec/monet-look").read_text()
         # Once for accounts 0.9.1 kept them in view for, unless someone chose that.
@@ -5547,7 +5620,7 @@ class TextFromAPicture(unittest.TestCase):
 
 
 class BridgeKeepsItselfUpToDate(unittest.TestCase):
-    """On the way back to Monet, Monet Bridge updates itself from the newest release, then restarts."""
+    """Bridge stages updates after sign-in and applies them when returning to Monet."""
 
     def test_the_way_out_hands_the_restart_to_the_update(self):
         bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
@@ -5555,7 +5628,8 @@ class BridgeKeepsItselfUpToDate(unittest.TestCase):
         # The update first; the restart of its own only when the task didn't take over.
         self.assertLess(go_back.index("if update_then_restart() {"), go_back.index('run_hidden("shutdown", &["/r", "/t", "0"])'))
         self.assertIn('win::run_hidden("schtasks", &["/run", "/tn", "\\\\Monet\\\\Update"])', bridge)
-        self.assertIn("while started.elapsed() < Duration::from_secs(30)", bridge)
+        self.assertIn("while started.elapsed() < Duration::from_secs(5)", bridge)
+        self.assertLess(go_back.index('data.join("update-ready").is_dir()'), go_back.index('win::run_hidden("schtasks"'))
         self.assertIn("fs::remove_file(&marker).is_err() && claimed.exists()", bridge)
 
     def test_the_update_always_restarts_and_checks_what_it_installs(self):
@@ -5563,14 +5637,15 @@ class BridgeKeepsItselfUpToDate(unittest.TestCase):
         self.assertIn("Move-Item -Force $marker $claimed", update)
         finally_block = update[update.index("} finally {"):]
         self.assertIn("& shutdown.exe /r /t 0", finally_block)
-        self.assertIn("(Get-FileHash -Algorithm SHA256 $zip).Hash", update)
+        self.assertIn("(Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash", update)
         self.assertIn("releases?per_page=10", update)     # every Monet is a pre-release for now
         self.assertIn("[timespan]::FromHours(20)", update)
-        self.assertIn("if (-not $CheckOnly -and -not $restart) { return }", update)   # too late: not while Windows goes down
+        self.assertIn("if (-not (Test-Path $marker)) { return }", update)
         self.assertIn("$ProgressPreference = 'SilentlyContinue'", update)
-        self.assertIn("elseif ((Get-Date) -gt $deadline)", update)
+        self.assertLess(update.index("Invoke-WebRequest"), update.index("Move-Item -Force $marker $claimed"))
         install = (ROOT / "windows/Install-Monet.ps1").read_text(encoding="utf-8")
         self.assertIn("Where-Object { $_.TaskName -ne 'Update' }", install)   # never stops what's running it
+        self.assertIn("$stageTrigger.Delay = 'PT2M'", install)
         self.assertIn("'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1'", install)
         self.assertIn("if ($Quiet) { return }", install)
         self.assertIn('Move-Item -Force "$exe.new" $exe', install)

@@ -21,10 +21,18 @@ PlasmoidItem {
     id: root
     SessionActivity {
         id: activity; viewVisible: root.visible
-        onActiveChanged: if (active) Qt.callLater(() => {
-            root.refresh();
-            if (root.expanded || !audioLevel.nativeReady) root.look();
-        })
+        onActiveChanged: {
+            if (active) Qt.callLater(() => {
+                root.refresh()
+                if (root.expanded || !audioLevel.nativeReady) root.look()
+            })
+            else {
+                root.soundRequest = ""
+                root.microphoneRequest = ""
+                root.outputRequest = ""
+                soundRefresh.stop()
+            }
+        }
     }
 
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
@@ -37,9 +45,9 @@ PlasmoidItem {
     // Where it can play and the apps playing (monet-quick sound): while open, and now and then.
     property var sound: ({ outputs: [], apps: [], inputs: [], microphone: null })
     readonly property var microphone: sound.microphone || null
-    property bool microphoneBusy: false
+    readonly property bool microphoneBusy: microphoneRequest !== ""
     property string microphoneMessage: ""
-    property bool outputBusy: false
+    readonly property bool outputBusy: outputRequest !== ""
     property string outputMessage: ""
     property bool soundKnown: false
     // While a slider is held, don't let a refresh move it.
@@ -51,15 +59,28 @@ PlasmoidItem {
     AudioLevel {
         id: audioLevel
         active: activity.active
+        observeDevices: root.expanded
+        onDevicesChanged: if (root.expanded && activity.active) root.scheduleSoundRefresh()
         onVolumeChanged: if (!root.dragging) root.volume = volume
         onMutedChanged: if (!root.dragging) root.muted = muted
     }
     property int requestSerial: 0
+    property int soundRevision: 0
+    property int requestedSoundRevision: 0
     property string soundRequest: ""
-    function request(command) {
-        const source = command + " # monet-sound-" + (++requestSerial);
-        runner.connectSource(source);
-        return source;
+    property string microphoneRequest: ""
+    property string outputRequest: ""
+    function requestSource(command) {
+        return helper + " " + command + " # monet-sound-" + (++requestSerial)
+    }
+    function scheduleSoundRefresh() {
+        ++soundRevision
+        soundRefresh.start()
+    }
+    Timer {
+        id: soundRefresh
+        interval: 120
+        onTriggered: if (root.expanded) root.look()
     }
 
     Plasmoid.icon: silent || muted || !volume ? "audio-volume-muted"
@@ -81,6 +102,10 @@ PlasmoidItem {
             if (command === root.helper + " sound") {
                 if (source !== root.soundRequest) return
                 root.soundRequest = ""
+                if (root.requestedSoundRevision !== root.soundRevision) {
+                    soundRefresh.start()
+                    return
+                }
                 try {
                     const next = JSON.parse(out)
                     if (!root.dragging) {
@@ -94,18 +119,22 @@ PlasmoidItem {
                 } catch (e) {
                 }
             } else if (command.startsWith(root.helper + " output ")) {
-                root.outputBusy = false
+                if (source !== root.outputRequest) return
+                root.outputRequest = ""
                 try {
                     const result = JSON.parse(out)
-                    if (Array.isArray(result.outputs)) root.sound = Object.assign({}, root.sound, { outputs: result.outputs })
+                    if (Array.isArray(result.outputs))
+                        root.sound = Object.assign({}, root.sound, { outputs: result.outputs.filter(o => !o.none) })
                     root.outputMessage = result.ok === true && data["exit code"] === 0 ? ""
                         : i18n("The sound output could not be changed. Check its connection and try again.")
                 } catch (e) {
                     root.outputMessage = i18n("The sound output could not be changed. Try again.")
                 }
                 root.refresh()
+                root.scheduleSoundRefresh()
             } else if (command.startsWith(root.helper + " mic-mute ") || command.startsWith(root.helper + " input ")) {
-                root.microphoneBusy = false
+                if (source !== root.microphoneRequest) return
+                root.microphoneRequest = ""
                 try {
                     const result = JSON.parse(out)
                     if (result.sound) root.sound = result.sound
@@ -115,7 +144,7 @@ PlasmoidItem {
                 } catch (e) {
                     root.microphoneMessage = i18n("The microphone could not be changed. Try again.")
                 }
-                root.look()
+                root.scheduleSoundRefresh()
             } else {
                 root.refresh()
                 if (root.expanded) root.look()
@@ -128,15 +157,19 @@ PlasmoidItem {
         if (!dragging) { volume = audioLevel.volume; muted = audioLevel.muted; }
     }
     function look() {
-        if (!activity.active || soundRequest) return
+        if (!activity.active || soundRequest || outputBusy || microphoneBusy) return
         // Keep the identity before connecting: a cached source may reply during
         // connectSource, and activity can change while the widget is created.
-        soundRequest = helper + " sound # monet-sound-" + (++requestSerial)
+        requestedSoundRevision = soundRevision
+        soundRequest = requestSource("sound")
         runner.connectSource(soundRequest)
     }
-    // Arguments are fixed words or numbers, never anyone's text.
+    // Arguments are fixed words, numbers, or a hex-encoded device key.
     function run(args) {
-        request(helper + " " + args)
+        runner.connectSource(requestSource(args))
+    }
+    function deviceKey(device) {
+        return /^(?:[0-9a-f]{2})+$/.test(device.key || "") ? " " + device.key : ""
     }
 
     // Sliders send their latest value at most every 120 ms, not every step.
@@ -169,24 +202,29 @@ PlasmoidItem {
         run("mute " + (muted ? "on" : "off"))
     }
     function playThrough(output) {
-        if (!Number.isInteger(output.id) || outputBusy) {
+        if (!Number.isInteger(output.id) || outputBusy || microphoneBusy) {
             return
         }
-        outputBusy = true
         outputMessage = ""
-        run("output " + output.id)
+        ++soundRevision
+        outputRequest = requestSource("output " + output.id + deviceKey(output))
+        runner.connectSource(outputRequest)
     }
     function muteMicrophone() {
-        if (!microphone || microphoneBusy) return
-        microphoneBusy = true
+        if (!microphone || microphoneBusy || outputBusy) return
         microphoneMessage = ""
-        run("mic-mute " + microphone.id + " " + (microphone.muted ? "off" : "on"))
+        ++soundRevision
+        const key = Number.isInteger(microphone.serial) ? deviceKey(microphone) : ""
+        const target = key ? key + " " + microphone.serial : ""
+        microphoneRequest = requestSource("mic-mute " + microphone.id + " " + (microphone.muted ? "off" : "on") + target)
+        runner.connectSource(microphoneRequest)
     }
     function useMicrophone(input) {
-        if (!Number.isInteger(input.id) || microphoneBusy) return
-        microphoneBusy = true
+        if (!Number.isInteger(input.id) || microphoneBusy || outputBusy) return
         microphoneMessage = ""
-        run("input " + input.id)
+        ++soundRevision
+        microphoneRequest = requestSource("input " + input.id + deviceKey(input))
+        runner.connectSource(microphoneRequest)
     }
 
     // The native reader keeps the closed icon current. Probe the app/output list

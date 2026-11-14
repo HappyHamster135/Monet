@@ -12,6 +12,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Templates as T
+import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.extras as PlasmaExtras
 
@@ -40,6 +41,13 @@ Item {
         open = Qt.binding(() => containment.plasmoid.corona.editMode)
     }
 
+    P5Support.DataSource {
+        id: editorCommands
+        engine: "executable"
+        connectedSources: []
+        onNewData: (source, data) => disconnectSource(source)
+    }
+
     // A wash of mist or smoke over everything.
     Rectangle {
         anchors.fill: parent
@@ -50,7 +58,7 @@ Item {
 
     Item {
         id: editModeUi
-        visible: editModeItem.open || xAnim.running
+        visible: editModeItem.open
         x: Math.round(editModeItem.open ? editModeRect.x + editModeRect.width / 2 - zoomedWidth / 2 : 0)
         y: Math.round(editModeItem.open ? editModeRect.y + editModeRect.height / 2 - zoomedHeight / 2 + toolBar.height / 2 : 0)
         width: editModeItem.open ? zoomedWidth : editModeItem.roundedRootWidth
@@ -92,6 +100,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
 
                 Text {
+                    visible: toolBar.width >= 440
                     horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: i18nd("monet", "Drag a widget to move it. Point at one to resize or remove it.")
@@ -145,40 +154,26 @@ Item {
             PlasmaExtras.MenuItem {
                 text: i18nd("monet", "Add a bar…")
                 icon: "list-add"
-                onClicked: containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
+                onClicked: Qt.callLater(() => {
+                    if (editModeItem.open)
+                        containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
+                })
+            }
+            PlasmaExtras.MenuItem {
+                text: i18nd("monet", "Taskbar layout")
+                icon: "preferences-desktop-plasma"
+                onClicked: {
+                    editorCommands.connectSource("@LIBEXECDIR@/monet-quick open light")
+                    containment.plasmoid.corona.editMode = false
+                }
             }
             PlasmaExtras.MenuItem {
                 readonly property QtObject manage: containment ? containment.plasmoid.corona.action("manage-containments") : null
                 text: i18nd("monet", "Manage desktops and bars")
                 icon: "configure"
                 visible: manage ? manage.visible : false
-                onClicked: manage.trigger()
-            }
-        }
-
-        Behavior on x {
-            NumberAnimation {
-                id: xAnim
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on y {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on width {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on height {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
+                enabled: manage?.enabled ?? false
+                onClicked: manage?.trigger()
             }
         }
 

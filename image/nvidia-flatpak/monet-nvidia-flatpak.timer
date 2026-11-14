@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync Flatpak NVIDIA runtimes after startup
+ConditionPathExists=/run/ostree-booted
+
+[Timer]
+OnBootSec=30s
+AccuracySec=1s
+Unit=ublue-nvidia-flatpak-runtime-verify.service
+
+[Install]
+WantedBy=timers.target

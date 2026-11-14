@@ -107,6 +107,10 @@ FROM runtime AS files-recovery
 COPY image/files-recovery /src/files-recovery
 RUN sh /src/files-recovery/build.sh /out
 
+FROM runtime AS files-http
+COPY image/files-http /src/files-http
+RUN sh /src/files-http/build.sh /out
+
 FROM runtime AS archive-recovery
 COPY image/archive-recovery /src/archive-recovery
 RUN sh /src/archive-recovery/build.sh /out
@@ -153,6 +157,8 @@ RUN --mount=type=bind,from=session,source=/out,target=/tmp/monet-session,ro \
 RUN --mount=type=bind,from=files-recovery,source=/out,target=/tmp/monet-files-recovery,ro \
     python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \
  && mkdir -p /usr/share/monet && touch /usr/share/monet/files-free-space-v1
+RUN --mount=type=bind,from=files-http,source=/out,target=/tmp/monet-files-http,ro \
+    sh /tmp/monet-files-http/install.sh /tmp/monet-files-http
 RUN --mount=type=bind,from=archive-recovery,source=/out,target=/tmp/monet-archive-recovery,ro \
     python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery
 RUN --mount=type=bind,from=activity,source=/out,target=/tmp/monet-activity,ro \
@@ -178,6 +184,7 @@ COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
 # ship those copies alongside the installed files even after deleting them.
 RUN --mount=type=bind,from=build,source=/out,target=/mnt/monet-package,ro \
     --mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro \
+    --mount=type=bind,source=image/nvidia-flatpak,target=/mnt/monet-nvidia-flatpak,ro \
     --mount=type=bind,source=image/install-update-trust.py,target=/mnt/install-update-trust.py,ro \
     --mount=type=bind,source=image/monet-update.pub,target=/mnt/monet-update.pub,ro \
     install -d /tmp/monet/password \
@@ -188,6 +195,7 @@ RUN --mount=type=bind,from=build,source=/out,target=/mnt/monet-package,ro \
  && python3 /tmp/monet-shell-profiles.py /etc/profile.d \
  && rm /tmp/monet-shell-profiles.py \
  && plymouth-set-default-theme monet \
+ && bash /mnt/monet-nvidia-flatpak/install.sh \
  && bash /tmp/monet-finish-image \
  && rm /tmp/monet-finish-image \
  && python3 /mnt/install-update-trust.py /mnt/monet-update.pub \

@@ -470,6 +470,7 @@ MonetWindow {
                             id: search
                             objectName: "storeSearch"
                             Layout.fillWidth: true
+                            activeFocusOnTab: true
                             color: look.ink
                             font.pixelSize: 14
                             clip: true

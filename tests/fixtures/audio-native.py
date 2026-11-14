@@ -22,6 +22,7 @@ engine = QQmlEngine()
 objects = []
 server = None
 core = None
+policy = None
 module_ids = {}
 log = (TEMP / 'server.log').open('w')
 config = TEMP / 'core.conf'
@@ -94,11 +95,18 @@ def choose_sink(name):
                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=5)
 
 
-def start_server():
-    global server, core
+def start_server(with_policy=False):
+    global server, core, policy
     if core is None:
+        if with_policy:
+            config.write_text(config.read_text().split('context.objects =', 1)[0])
         core = subprocess.Popen(['pipewire', '-c', str(config)], stdout=subprocess.DEVNULL, stderr=log)
         wait_for(lambda: (TEMP / 'runtime/pipewire-0').exists(), 'private PipeWire core')
+    if with_policy:
+        policy = subprocess.Popen(['wireplumber', '--profile', 'policy'], stdout=subprocess.DEVNULL, stderr=log)
+        wait_for(lambda: 'Found' in subprocess.run(
+            ['pw-metadata', '-n', 'default'], capture_output=True, text=True, timeout=2).stdout,
+            'private WirePlumber default metadata')
     server = subprocess.Popen(['pipewire-pulse', '-c', str(pulse_config)], stdout=subprocess.DEVNULL, stderr=log)
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
@@ -108,7 +116,8 @@ def start_server():
             pactl('info')
             module_ids['one'] = pactl('load-module', 'module-null-sink', 'sink_name=monet_one', 'sink_properties=device.description=First')
             module_ids['two'] = pactl('load-module', 'module-null-sink', 'sink_name=monet_two', 'sink_properties=device.description=Second')
-            choose_sink('monet_one')
+            if not with_policy:
+                choose_sink('monet_one')
             return
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             QTest.qWait(50)
@@ -122,6 +131,38 @@ def stop_server():
         try: server.wait(timeout=5)
         except subprocess.TimeoutExpired: server.kill(); server.wait(timeout=5)
         server = None
+
+
+def device_selection():
+    start_server(with_policy=True)
+    helper_command = [sys.executable, str(ROOT / 'linux/libexec/monet-quick')]
+
+    def query(*args):
+        return json.loads(subprocess.check_output(helper_command + list(args), timeout=6, text=True))
+
+    usb = next(item for item in query('outputs') if item['name'] == 'Second')
+    result = query('output', str(usb['id']), usb['key'])
+    assert result['ok'], result
+    pactl('unload-module', module_ids['two'])
+    wait_for(lambda: pactl('get-default-sink') == 'monet_one', 'fallback after playback device removal')
+    pactl('load-module', 'module-null-sink', 'sink_name=monet_two', 'sink_properties=device.description=Second')
+    wait_for(lambda: pactl('get-default-sink') == 'monet_two', 'WirePlumber restored selected playback device')
+
+    def add_mic(name):
+        return pactl('load-module', 'module-null-sink', 'sink_name=' + name,
+                     'sink_properties=media.class=Audio/Source/Virtual')
+
+    add_mic('monet_mic_one')
+    mic_module = add_mic('monet_mic_two')
+    key = 'monet_mic_two'.encode().hex()
+    wait_for(lambda: any(item.get('key') == key for item in query('sound')['inputs']), 'two capture devices')
+    mic = next(item for item in query('sound')['inputs'] if item.get('key') == key)
+    result = query('input', str(mic['id']), key)
+    assert result['ok'], result
+    pactl('unload-module', mic_module)
+    wait_for(lambda: pactl('get-default-source') == 'monet_mic_one', 'fallback after microphone removal')
+    add_mic('monet_mic_two')
+    wait_for(lambda: pactl('get-default-source') == 'monet_mic_two', 'WirePlumber restored selected microphone')
 
 
 def create(native=True):
@@ -265,11 +306,14 @@ def widget():
 
 
 try:
-    {'native': native_updates, 'fallback': fallback, 'recovery': recovery, 'widget': widget}[sys.argv[1]]()
+    {'native': native_updates, 'fallback': fallback, 'recovery': recovery, 'widget': widget,
+     'selection': device_selection}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()
     QTest.qWait(50)
     stop_server()
+    if policy:
+        policy.terminate(); policy.wait(timeout=5)
     if core:
         core.terminate(); core.wait(timeout=5)
     log.close()

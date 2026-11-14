@@ -1829,8 +1829,7 @@ fn go_back(efi: &mut FirmwareVars, state: &State, found: &[WinGame]) -> Res<()> 
     boot::set_boot_next(efi, target).map_err(|e| format!("couldn't set Monet to start next: {e}"))?;
     log(&format!("returning to Monet (Boot{target:04X})"));
 
-    // On the way out, Bridge brings itself up to date (once a day at most) and the update
-    // task restarts the PC; a Bridge without that task restarts straight away.
+    // Only a verified package staged in Windows needs the update task.
     if update_then_restart() {
         return Ok(());
     }
@@ -1842,19 +1841,22 @@ fn go_back(efi: &mut FirmwareVars, state: &State, found: &[WinGame]) -> Res<()> 
     Ok(())
 }
 
-/// Hands the restart to `\Monet\Update` (Update-Monet.ps1), which updates Bridge when a
-/// newer Monet is out and then restarts whatever happened. True once it has taken over
-/// (renamed the marker); false when it didn't start in time, and the caller restarts.
+/// Hands the restart to `\Monet\Update` (Update-Monet.ps1) to install a staged package.
+/// Returns true once the task claims the restart by renaming the marker.
 fn update_then_restart() -> bool {
-    let marker = data_dir().join("update-then-restart");
-    let claimed = data_dir().join("update-claimed");
+    let data = data_dir();
+    if !data.join("update-ready").is_dir() {
+        return false;
+    }
+    let marker = data.join("update-then-restart");
+    let claimed = data.join("update-claimed");
     let _ = fs::remove_file(&claimed);
     if fs::write(&marker, now().to_string()).is_err() {
         return false;
     }
     if win::run_hidden("schtasks", &["/run", "/tn", "\\Monet\\Update"]) {
         let started = Instant::now();
-        while started.elapsed() < Duration::from_secs(30) {
+        while started.elapsed() < Duration::from_secs(5) {
             if claimed.exists() {
                 return true;
             }

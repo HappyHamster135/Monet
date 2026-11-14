@@ -1,0 +1,66 @@
+{
+  "version": "0.9.8-5",
+  "images": {
+    "mesa": {
+      "image": "ghcr.io/happyhamster135/monet-amd:0.9.8-5",
+      "manifest": "sha256:894bdbe5c0c985d30c40d35e595909326c4fe06846188db7bf7373dad5a7d403"
+    },
+    "nvidia": {
+      "image": "ghcr.io/happyhamster135/monet:0.9.8-5",
+      "manifest": "sha256:ba73a00d69e90d40d6a00c586f4390d852122e23c629566afcc865a746f0925a"
+    }
+  },
+  "parts": [
+    {
+      "name": "Monet-0.9.8-5-oci.tar.part-aa",
+      "bytes": 1992294400,
+      "sha256": "d94a5276b3306e5a3c64ecc84b5483910b828fad04c0e10de3515758b2af8991"
+    },
+    {
+      "name": "Monet-0.9.8-5-oci.tar.part-ab",
+      "bytes": 1992294400,
+      "sha256": "5f3197c69f8ee7b33a68a9ff656a4313e19fae8da420541666a033c5c0217fa6"
+    },
+    {
+      "name": "Monet-0.9.8-5-oci.tar.part-ac",
+      "bytes": 1992294400,
+      "sha256": "34a1f63d07e54d9e81751ab62380954bec16e2c77a3943ddba307ad6d2832700"
+    },
+    {
+      "name": "Monet-0.9.8-5-oci.tar.part-ad",
+      "bytes": 1992294400,
+      "sha256": "f23b1d83daa0927fe52b31c78379d406b6aec9947eca0e9d007c6ff00012ee5c"
+    },
+    {
+      "name": "Monet-0.9.8-5-oci.tar.part-ae",
+      "bytes": 839331840,
+      "sha256": "fbd2856e78304d0e39d5459d17be8b99841a738cd228f85d8615c74d2d2d41e6"
+    }
+  ],
+  "assets": {
+    "Monet-0.9.8-5-Installer.iso": {
+      "bytes": 1264386048,
+      "sha256": "5465e866c955f8332ab5c7033d8b9a897a7b0652b50c074079d52e4a7eaa0129"
+    },
+    "Monet-0.9.8-5-Linux.tar.gz": {
+      "bytes": 70696941,
+      "sha256": "8cd10efe9226487ca335b3dfa78d39aa634a55a277e3a98a8529578e9786b562"
+    },
+    "Monet-0.9.8-5-Make-USB-Stick.exe": {
+      "bytes": 537088,
+      "sha256": "7d241b2439b8a29106a96dd0696ddae2de06442f81c4fce092713cd4d7e2a07a"
+    },
+    "Monet-0.9.8-5-Setup.iso": {
+      "bytes": 1317404672,
+      "sha256": "2699ffa9049d1fde0a4b40828e1cf36932e66c8fccbab1f624e395de2381b275"
+    },
+    "Monet-0.9.8-5-Windows.zip": {
+      "bytes": 3379937,
+      "sha256": "ec3fac278c5e2bc691ef0ceaa501f3f2b9fde5bd086daa36023a867d7225c1d6"
+    },
+    "SHA256SUMS.txt": {
+      "bytes": 468,
+      "sha256": "cce436d351cfc45fb1fa1545b3fd27029883c853b64276ebb371ec87f913fb5b"
+    }
+  }
+}
