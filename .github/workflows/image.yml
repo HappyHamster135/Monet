@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   image:
+    if: github.ref_name != 'codex/monet-0.9.8-5-vm-test'
     runs-on: ubuntu-24.04
     outputs:
       image: ${{ steps.build.outputs.image }}
@@ -81,6 +82,7 @@ jobs:
   # The same Monet on Bazzite's AMD and Intel desktop (Mesa, no NVIDIA driver):
   # for Radeon and Intel graphics, and older GeForce cards. Built beside the other.
   image-amd:
+    if: github.ref_name != 'codex/monet-0.9.8-5-vm-test'
     runs-on: ubuntu-24.04
     outputs:
       digest: ${{ steps.push.outputs.digest }}
@@ -319,3 +321,42 @@ jobs:
           path: Monet-*-Setup.iso
           if-no-files-found: error
           compression-level: 0
+
+  preview-network-install:
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'codex/monet-0.9.8-5-vm-test'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    permissions:
+      contents: write # GitHub requires push access to read unpublished release assets.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare the runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 ovmf qemu-utils python3-pil xorriso squashfs-tools skopeo
+          sudo chgrp kvm /dev/kvm
+          sudo chmod g+rw /dev/kvm
+          sudo usermod -a -G kvm "$USER"
+          df -h /
+      - name: Download the draft's exact ISO and OCI exports
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p preview/assets
+          gh release download v0.9.8-5 --dir preview/assets --pattern 'Monet-0.9.8-5-Setup.iso' \
+            --pattern 'Monet-0.9.8-5-oci.tar.part-*' --pattern 'Monet-0.9.8-5-test-handoff.tar.gz'
+      - name: Serve the preview over HTTPS and install in the VM
+        run: sg kvm -c 'bash tools/test-preview-network.sh'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: preview-network-install
+          path: |
+            preview/screens/
+            preview/vm-work/qemu.log
+            preview/vm-work/serial.log
+            preview/registry.log
+            preview/install.log

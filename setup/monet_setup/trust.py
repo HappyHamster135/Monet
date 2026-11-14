@@ -7,6 +7,7 @@ import re
 import subprocess
 
 from . import cache, pc
+from .words import _
 
 MEDIA = Path(__file__).resolve().parent.parent
 INSTALLED_MEDIA = Path("/usr/share/monet-setup")
@@ -55,9 +56,24 @@ def update_reference(image):
     return f"{image_repository(image)}:latest"
 
 
+def registry_manifest(image, timeout=20):
+    return subprocess.run(["skopeo", "inspect", "--raw", f"docker://{image}"],
+                          check=True, capture_output=True, timeout=timeout).stdout
+
+
+def registry_error(details):
+    details = details.lower()
+    if "manifest unknown" in details or "name unknown" in details:
+        return _("This version of Monet is unavailable from the download server. Use offline installation media for this version or try again after the image is published.")
+    if any(reason in details for reason in ("unauthorized", "authentication required", "denied:")):
+        return _("The download server refused access to this Monet image.")
+    if "x509:" in details:
+        return _("Setup couldn’t verify the download server’s certificate.")
+    return ""
+
+
 def registry_digest(image):
-    manifest = subprocess.run(["skopeo", "inspect", "--raw", f"docker://{image}"],
-                              check=True, capture_output=True, timeout=120).stdout
+    manifest = registry_manifest(image, timeout=120)
     data = json.loads(manifest)
     # Each graphics variant is a single OCI image for x86-64. Preserve its
     # manifest bytes when copying into the installer's OCI cache.

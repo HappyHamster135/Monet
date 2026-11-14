@@ -1,13 +1,17 @@
 """Wi-Fi and wired connections through NetworkManager's nmcli."""
 
+import os
+from pathlib import Path
 import subprocess
 
+from . import trust
 from .words import _
 
 
 def run(*args, timeout=30):
     try:
-        done = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                              env={**os.environ, "LC_ALL": "C"})
     except (OSError, subprocess.TimeoutExpired):
         return None
     return done.stdout if done.returncode == 0 else None
@@ -48,21 +52,40 @@ def parse_wifi(listing):
     return sorted(nets.values(), key=lambda n: (not n["active"], -n["signal"]))
 
 
-def wifi_networks(rescan=False):
+def wifi_networks(rescan="no"):
     out = run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list",
-              "--rescan", "yes" if rescan else "auto", timeout=40)
+              "--rescan", rescan, timeout=40)
     return parse_wifi(out or "")
 
 
-def wired():
-    """True when a cable connection is up."""
-    out = run("nmcli", "-t", "-f", "TYPE,STATE", "device") or ""
-    return any(f[:2] == ["ethernet", "connected"] for f in map(fields, out.splitlines()))
+def carrier(device):
+    try:
+        return (Path("/sys/class/net") / device / "carrier").read_text().strip() == "1"
+    except OSError:
+        return False
 
 
-def online():
-    """True when NetworkManager reaches the internet."""
-    return (run("nmcli", "networking", "connectivity", "check", timeout=15) or "").strip() == "full"
+def links():
+    out = run("nmcli", "-t", "-f", "TYPE,STATE,DEVICE", "device", "status", timeout=3) or ""
+    connected = [(f[0], f[2]) for f in map(fields, out.splitlines())
+                 if len(f) == 3 and f[1] == "connected"]
+    return (any(kind == "ethernet" and carrier(device) for kind, device in connected),
+            any(kind == "wifi" for kind, _device in connected))
+
+
+def check_connection(image):
+    try:
+        digest = trust.expected(image)
+        source = trust.pinned_reference(image, digest) if digest else image
+        trust.registry_manifest(source, timeout=8)
+    except subprocess.CalledProcessError as error:
+        details = (error.stderr or b"").decode("utf-8", "replace")
+        return trust.registry_error(details) or _("Can’t reach the Monet download server. Check your connection or continue offline.")
+    except subprocess.TimeoutExpired:
+        return _("Can’t reach the Monet download server. Check your connection or continue offline.")
+    except (OSError, ValueError):
+        return _("Setup couldn’t check the download server.")
+    return ""
 
 
 def join(name, password):
@@ -72,7 +95,8 @@ def join(name, password):
     if password:
         args += ["password", password]
     try:
-        done = subprocess.run(args, capture_output=True, text=True, timeout=60)
+        done = subprocess.run(args, capture_output=True, text=True, timeout=60,
+                              env={**os.environ, "LC_ALL": "C"})
     except subprocess.TimeoutExpired:
         return _("The network didn't answer. Try again, or pick another network.")
     except OSError:

@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from . import checkpoint, disks, network, pc, region, system, words
+from . import cache, checkpoint, disks, network, pc, region, system, trust, words
 from .system import account_name
 from .words import N_, _, ntr, tr
 from .qt import (Property, QFontDatabase, QGuiApplication, QLocale, QObject, QProcess, QQmlApplicationEngine, QTime,
@@ -87,6 +87,7 @@ class Setup(QObject):
         self._zone, self._zone_chosen, self._zone_asked = "", False, False
         self._networks, self._wired, self._scanning = [], False, False
         self._joining, self._wifi_error, self._joined = False, "", ""
+        self._checking_links = False
         self._offline = False
         self._disks, self._disk, self._mode = [], -1, ""
         self._bring = False
@@ -107,6 +108,7 @@ class Setup(QObject):
         self._pc = ({"newNvidia": True, "oldNvidia": "", "memory": 16, "tpm": True,
                      **json.loads(os.environ.get("MONET_SETUP_DEMO_PC", "{}"))}
                     if DEMO else pc.check())
+        self._offline_media = False
         # Queued across threads: the callback runs on the window's thread.
         self.workDone.connect(lambda done, result: done(result))
         self._restore()
@@ -119,6 +121,15 @@ class Setup(QObject):
         if DEMO:
             self._demo()
         else:
+            try:
+                self._offline_media = bool(cache.media_source(trust.expected(self._image())))
+            except (OSError, ValueError):
+                pass
+            self._link_timer = QTimer(self)
+            self._link_timer.setInterval(2000)
+            self._link_timer.timeout.connect(self.refresh_links)
+            self._link_timer.start()
+            QTimer.singleShot(0, self.refresh_links)
             QTimer.singleShot(0, self.scan)
             QTimer.singleShot(0, self._load_disks)
             QTimer.singleShot(0, lambda: self._background(pc.untrusted_key, self._found_untrusted))
@@ -336,23 +347,47 @@ class Setup(QObject):
         """Runs work() on a thread and done(result) back on the window's."""
         threading.Thread(target=lambda: self.workDone.emit(done, work()), daemon=True).start()
 
+    def refresh_links(self):
+        if self._checking_links or self._joining or self._proc:
+            return
+        self._checking_links = True
+
+        def done(result):
+            self._checking_links = False
+            if self._joining:
+                return
+            wired, wifi = result
+            if wired != self._wired or (not wifi and self._joined):
+                self._wired = wired
+                if not wifi:
+                    self._joined = ""
+                self._wifi_error = ""
+                self.wifiChanged.emit()
+                if not wired and not wifi:
+                    self.scan()
+            if wifi and not self._joined:
+                self.scan("no")
+
+        self._background(network.links, done)
+
     @Slot()
-    def scan(self):
+    def scan(self, rescan="yes"):
         if DEMO or self._scanning:
             return
         self._scanning = True
         self.wifiChanged.emit()
 
-        def done(result):
-            self._wired, self._networks = result
-            active = next((n["name"] for n in self._networks if n["active"]), "")
-            self._joined = self._joined or active
+        def done(networks):
+            self._networks = networks
+            if not self._joining:
+                self._joined = next((n["name"] for n in networks if n["active"]), "")
             self._scanning = False
             self.wifiChanged.emit()
-            if self._wired or self._joined:
-                self._ask_zone()
 
-        self._background(lambda: (network.wired(), network.wifi_networks(rescan=True)), done)
+        self._background(lambda: network.wifi_networks(rescan), done)
+
+    def _image(self):
+        return pc.image_for(IMAGE, self._pc)
 
     @Slot(str, str)
     def join(self, name, password):
@@ -361,12 +396,18 @@ class Setup(QObject):
         if DEMO:
             QTimer.singleShot(600, lambda: self._joined_done(name, ""))
             return
-        self._background(lambda: network.join(name, password), lambda error: self._joined_done(name, error))
+
+        def connect():
+            error = network.join(name, password) if name else ""
+            return ("", error) if error else (name, network.check_connection(self._image()))
+
+        self._background(connect, lambda result: self._joined_done(*result))
 
     def _joined_done(self, name, error):
         self._joining, self._wifi_error = False, error
-        if not error:
+        if name:
             self._joined = name
+        if not error:
             self._ask_zone()
         self.wifiChanged.emit()
 
@@ -428,6 +469,10 @@ class Setup(QObject):
     @Property(bool, notify=changed)
     def offline(self):
         return self._offline
+
+    @Property(bool, constant=True)
+    def offlineMedia(self):
+        return self._offline_media
 
     @Slot(bool)
     def setOffline(self, value):
@@ -682,7 +727,7 @@ class Setup(QObject):
             return _('Checking the selected drive…')
         if self._mode not in ('erase', 'keep', 'resume'):
             return _('Choose what to keep or erase on the selected drive.')
-        if getattr(self, '_offline', False) and self._mode != 'resume':
+        if getattr(self, '_offline', False) and not (self._offline_media or self._mode == 'resume'):
             return _('Connect to the internet to start a new installation, or choose Resume interrupted installation.')
         if self._mode == "keep" and not disk["keep"]:
             return disk["keepWhy"]
@@ -719,7 +764,7 @@ class Setup(QObject):
         locale = system.LANGUAGES[self._language][1]
         layout, variant = system.KEYBOARDS[self._keyboard][1:]
         plan = {
-            "image": pc.image_for(IMAGE, self._pc), "disk": disk["path"], "mode": self._mode,
+            "image": self._image(), "disk": disk["path"], "mode": self._mode,
             "sizes": disk.get(self._mode), 'identity': disk['identity'], 'layout': disk['layout'],
             'resume': disk['resume']['id'] if self._mode == 'resume' else self._resume_id,
             'gentle': self._gentle,

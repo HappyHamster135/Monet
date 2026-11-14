@@ -428,13 +428,10 @@ ApplicationWindow {
             property string busyText: tr("Connecting…")
             property bool waiting: false
 
-            // Continue joins the chosen network first, then moves on.
             function leave() {
                 setup.setOffline(false)
-                if (setup.wired || (chosen === setup.joined && chosen !== ""))
-                    return true
                 waiting = true
-                setup.join(chosen, password.text)
+                setup.join(setup.wired || chosen === setup.joined ? "" : chosen, password.text)
                 return false
             }
             Connections {
@@ -442,14 +439,15 @@ ApplicationWindow {
                 function onWifiChanged() {
                     if (wifiPage.waiting && !setup.joining) {
                         wifiPage.waiting = false
-                        if (setup.joined === wifiPage.chosen && setup.wifiError === "")
+                        if (setup.wifiError === "")
                             step = 2
                     }
                 }
             }
 
-            Title { text: setup.wired ? tr("You're online") : tr("Connect to Wi-Fi") }
-            Body { text: tr("Connect to download Monet. To resume a completed download, you can continue offline.") }
+            Title { text: tr("Connect to a network") }
+            Body { text: setup.offlineMedia ? tr("This USB includes Monet. You can install without an internet connection.")
+                : tr("Connect to download Monet. To resume a completed download, you can continue offline.") }
             Card {
                 visible: setup.wired
                 height: px(64)
@@ -520,7 +518,6 @@ ApplicationWindow {
             }
             Link {
                 objectName: "resumeOffline"
-                visible: !setup.wired && setup.joined === ""
                 text: tr("Continue offline")
                 onClicked: { setup.setOffline(true); step = 2 }
             }
@@ -984,6 +981,7 @@ ApplicationWindow {
             Row {
                 spacing: px(8)
                 PillButton { text: tr("Try again"); onClicked: setup.retry() }
+                PillButton { text: tr("Change connection"); plain: true; onClicked: step = 1 }
                 PillButton { text: details.visible ? tr("Hide details") : tr("Details"); plain: true; onClicked: details.visible = !details.visible }
             }
             InstallLog { id: details }

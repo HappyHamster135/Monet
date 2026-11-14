@@ -52,7 +52,7 @@ import threading
 import fcntl
 from pathlib import Path
 
-from . import cache, checkpoint, disks, pc, region, resources, system, trust, words
+from . import cache, checkpoint, disks, network, pc, region, resources, system, trust, words
 from .words import _
 
 TOP = "/mnt/monet-top"          # Monet's btrfs, all subvolumes
@@ -312,7 +312,7 @@ def prepare_disk(plan):
 
 def validate_target(plan):
     """Recheck the selected physical drive before any writes, including retries."""
-    if plan.get('offline') and not plan.get('resume'):
+    if plan.get('offline') and not plan.get('resume') and not cache.media_source(plan.get('imageDigest')):
         raise Stop(_('Connect to the internet to start a new installation, or choose Resume interrupted installation.'))
     disk = checkpoint.current_disk(plan.get('disk'))
     if (disk is None or disk not in disks.disks([disk]) or disks.in_use(disk)
@@ -351,22 +351,28 @@ def received():
 def image_size(image):
     """The compressed size of Monet's layers, from its manifest; 0 if unknown."""
     try:
-        raw = json.loads(run("skopeo", "inspect", "--raw", f"docker://{image}", quiet=True, timeout=120))
+        raw = json.loads(trust.registry_manifest(image))
         if "manifests" in raw:
             digest = next(m["digest"] for m in raw["manifests"]
                           if m.get("platform", {}).get("architecture") == "amd64")
             repo = image.rsplit(":", 1)[0] if ":" in image.split("/")[-1] else image
-            raw = json.loads(run("skopeo", "inspect", "--raw", f"docker://{repo}@{digest}", quiet=True, timeout=120))
+            raw = json.loads(trust.registry_manifest(f"{repo}@{digest}"))
         return sum(layer["size"] for layer in raw["layers"])
-    except (Stop, ValueError, KeyError, StopIteration):
-        return 0
+    except subprocess.CalledProcessError as error:
+        details = (error.stderr or b"").decode("utf-8", "replace")
+        log(details.strip())
+        if reason := trust.registry_error(details):
+            raise Stop(reason) from error
+    except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, StopIteration) as error:
+        log(str(error))
+    return 0
 
 
 def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
     """One skopeo copy. True when it finished; False when it failed or stopped
     moving for STALL seconds (then it's stopped, to be started again)."""
     log(f"$ skopeo copy docker://{image} oci:{DOWNLOAD}/oci:latest")
-    with open(LOG, "a") if LOG.parent.exists() else open(os.devnull, "w") as out:
+    with tempfile.TemporaryFile(dir=WORK_TMP) as out:
         flags = ["--preserve-digests", "--remove-signatures"] if "@" in image else []
         proc = popen(["skopeo", "copy", "--retry-times", "3", *flags,
                       f"docker://{image}", f"oci:{DOWNLOAD}/oci:latest"],
@@ -388,13 +394,23 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
             eta = (total - got) / speed if total and speed > 0 and got < total else None
             emit(phase="download", fraction=min(got / total, 0.99) if total else 0.0,
                  got=min(got, total) if total else got, total=total, eta=eta)
-    return proc.returncode == 0
+        if proc.returncode == 0:
+            return True
+        out.seek(max(0, os.fstat(out.fileno()).st_size - 8192))
+        details = out.read().decode("utf-8", "replace")
+        log(details.strip())
+        if reason := trust.registry_error(details):
+            raise Stop(reason)
+        if "no space left on device" in details.lower():
+            raise Stop(_("The installation drive ran out of space. The partial download is kept."))
+    return False
 
 
 def download(plan, tries=8):
     image = plan["image"]
     expected = plan.get("imageDigest")
     source = trust.pinned_reference(image, expected) if expected else image
+    media = cache.media_source(expected)
     folder = Path(DOWNLOAD)
     if (folder / cache.MARKER).exists():
         emit(phase='download', note=_('Checking the saved download…'))
@@ -402,7 +418,7 @@ def download(plan, tries=8):
             emit(phase='download', fraction=1.0, note=_('Using the verified saved download.'))
             return
         log('Saved download failed its integrity check')
-        if plan.get('offline'):
+        if plan.get('offline') and not media:
             raise Stop(_('The saved download is incomplete or damaged. Connect to the internet, then resume the installation again.'))
         # This is only our recorded download subvolume, never a personal folder.
         # Refuse directory links instead of following them during cleanup.
@@ -411,9 +427,18 @@ def download(plan, tries=8):
         if (folder / 'oci').exists():
             shutil.rmtree(folder / 'oci')
         (folder / cache.MARKER).unlink()
+    if media:
+        require_space(folder, DOWNLOAD_RESERVE_BYTES)
+        if not cache.writable_layout_is_safe(folder):
+            raise Stop(_('The saved download location changed. Go back and review the drive.'))
+        emit(phase='download', note=_('Copying Monet from the USB…'))
+        run("skopeo", "copy", "--preserve-digests", "--remove-signatures",
+            media, f"oci:{folder}/oci:latest", live=True, timeout=3600)
+        finish_download(folder, image, expected)
+        emit(phase='download', fraction=1.0)
+        return
     if plan.get('offline'):
         raise Stop(_('The saved download is incomplete or damaged. Connect to the internet, then resume the installation again.'))
-    run("nm-online", "-s", "-q", "-t", "60", check=False, timeout=90)
     total = image_size(source)
     log(f"Monet's download: {total / 1e9:.1f} GB" if total else "Monet's download size isn't known")
     start = received()
@@ -422,20 +447,24 @@ def download(plan, tries=8):
         if not cache.writable_layout_is_safe(folder):
             raise Stop(_('The saved download location changed. Go back and review the drive.'))
         if copy_once(source, total, start):
-            cache.complete(folder, image)
-            # An interrupted copy can reuse blobs already on this drive.
-            if expected:
-                emit(phase="download", note=_("Checking the downloaded image…"))
-                if not cache.valid(folder, image, expected):
-                    raise Stop(_("Setup couldn’t verify the downloaded copy of Monet. Try downloading it again."))
+            finish_download(folder, image, expected)
             emit(phase="download", fraction=1.0, got=total, total=total)
             return
         # A full disk is not a dropped connection. Keep the partial download
         # and explain the actual problem without eight slow network retries.
         require_space(folder, DOWNLOAD_RESERVE_BYTES)
-        emit(phase="download", note="the connection dropped, picking up where it stopped")
-        time.sleep(min(10 * (attempt + 1), 60))
-    raise Stop(_("The connection dropped and didn't come back. Check the Wi-Fi, then try again."))
+        if attempt + 1 < tries:
+            emit(phase="download", note=_("Download interrupted. Retrying with the saved data…"))
+            time.sleep(min(10 * (attempt + 1), 60))
+    raise Stop(_("Setup couldn’t finish downloading Monet. Check the connection and open Details for the download error."))
+
+
+def finish_download(folder, image, expected):
+    cache.complete(folder, image)
+    if expected:
+        emit(phase="download", note=_("Checking the installation image…"))
+        if not cache.valid(folder, image, expected):
+            raise Stop(_("Setup couldn’t verify this copy of Monet. Check the USB or try downloading it again."))
 
 
 # -- 3. installing ----------------------------------------------------------------
@@ -934,6 +963,9 @@ def main(path):
             raise Stop(_('Another installation is still running. Wait for it to finish.')) from None
         isolate_mounts()
         validate_target(plan)
+        if plan['imageDigest'] and not plan.get('resume') and not cache.media_source(plan['imageDigest']):
+            if error := network.check_connection(plan['image']):
+                raise Stop(error)
         if plan.get('gentle'):
             count = resources.gentler()
             log(f'Gentler installation: at most {count} logical CPUs, lower scheduling priority')

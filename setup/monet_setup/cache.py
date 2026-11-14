@@ -9,11 +9,28 @@ import stat
 from .checkpoint import atomic, read_file
 
 MARKER = 'download-complete.json'
+OFFLINE_LAYOUT = Path('/run/initramfs/live/Monet-OCI')
 JSON_LIMIT = 2 * 1024 * 1024
 OCI_MANIFEST = 'application/vnd.oci.image.manifest.v1+json'
 MANIFESTS = {OCI_MANIFEST, 'application/vnd.docker.distribution.manifest.v2+json'}
 INDEXES = {'application/vnd.oci.image.index.v1+json',
            'application/vnd.docker.distribution.manifest.list.v2+json'}
+
+
+def media_source(expected, layout=None):
+    if not expected:
+        return None
+    layout = OFFLINE_LAYOUT if layout is None else layout
+    try:
+        index = json.loads(read_file(layout / 'index.json', JSON_LIMIT))
+        for descriptor in index['manifests']:
+            tag = descriptor.get('annotations', {}).get('org.opencontainers.image.ref.name')
+            if (tag in ('mesa', 'nvidia') and descriptor.get('digest') == expected
+                    and descriptor.get('mediaType') == OCI_MANIFEST):
+                return f'oci:{layout}:{tag}'
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return None
 
 
 def complete(folder, image):
