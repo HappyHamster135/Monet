@@ -188,13 +188,15 @@ COPY image/finish-image.sh /tmp/monet-finish-image
 COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
 # Stage outputs are temporary inputs. Copying them in their own layers would
 # ship those copies alongside the installed files even after deleting them.
-RUN --mount=type=bind,from=build,source=/out,target=/mnt/monet-package,ro \
-    --mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro \
-    --mount=type=bind,source=image/install-update-trust.py,target=/mnt/install-update-trust.py,ro \
-    --mount=type=bind,source=image/monet-update.pub,target=/mnt/monet-update.pub,ro \
+# /mnt can point into the unpopulated /var tree during an atomic image build.
+# Use /tmp, as the native bundle mounts above do.
+RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro \
+    --mount=type=bind,from=password,source=/out,target=/tmp/monet-build-password,ro \
+    --mount=type=bind,source=image/install-update-trust.py,target=/tmp/monet-install-update-trust.py,ro \
+    --mount=type=bind,source=image/monet-update.pub,target=/tmp/monet-update.pub,ro \
     install -d /tmp/monet/password \
- && cp -a /mnt/monet-package/. /tmp/monet/ \
- && cp -a /mnt/monet-password/. /tmp/monet/password/ \
+ && cp -a /tmp/monet-build-package/. /tmp/monet/ \
+ && cp -a /tmp/monet-build-password/. /tmp/monet/password/ \
  && /tmp/monet/install.sh --image \
  && rm -rf /tmp/monet \
  && python3 /tmp/monet-shell-profiles.py /etc/profile.d \
@@ -202,5 +204,5 @@ RUN --mount=type=bind,from=build,source=/out,target=/mnt/monet-package,ro \
  && plymouth-set-default-theme monet \
  && bash /tmp/monet-finish-image \
  && rm /tmp/monet-finish-image \
- && python3 /mnt/install-update-trust.py /mnt/monet-update.pub \
+ && python3 /tmp/monet-install-update-trust.py /tmp/monet-update.pub \
  && bootc container lint

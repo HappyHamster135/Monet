@@ -2496,8 +2496,8 @@ class EverydayScreens(unittest.TestCase):
         self.assertLess(containerfile.index("refresh-native-runtime.py --upgrade"),
                         containerfile.index("FROM runtime AS password"))
         self.assertIn("sh /src/password/build.sh /out || rm -rf /out/*", containerfile)
-        self.assertIn("--mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro", containerfile)
-        self.assertIn("cp -a /mnt/monet-password/. /tmp/monet/password/", containerfile)
+        self.assertIn("--mount=type=bind,from=password,source=/out,target=/tmp/monet-build-password,ro", containerfile)
+        self.assertIn("cp -a /tmp/monet-build-password/. /tmp/monet/password/", containerfile)
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('if [ -x "$SRC/password/monet-password" ]; then', install)
         self.assertIn('"$USERUNITDIR/plasma-polkit-agent.service.d/monet.conf"', install)
