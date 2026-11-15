@@ -653,7 +653,19 @@ kw_default spectaclerc General ocrLanguages "${ocr:+$ocr,}eng"
 # Settings and Store in kept panels open Monet's own apps too.
 dock_shortcuts
 
-# Monet's clock in the panel instead of KDE's, on kept panels too (once).
+# Repair only duplicate sound controls on existing Monet panels. This must run
+# on --keep upgrades too; adopting the entire default bar would reset choices.
+sound_repair="$CONFIG/monet/sound-deduplicated-v1"
+if [ ! -e "$sound_repair" ] && [ -r "$DATADIR/monet/repair-sound.js" ]; then
+    if busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s \
+        "$(cat "$DATADIR/monet/repair-sound.js")" >/dev/null 2>&1; then
+        mkdir -p "$CONFIG/monet" && touch "$sound_repair"
+    else
+        failed=1
+    fi
+fi
+
+# Monet's clock in the panel instead of KDE's (once when adopting the look).
 # Existing layouts belong to the person: automatic upgrades only repair target IDs.
 if [ "${1:-}" != --keep ]; then
 swapped="$CONFIG/monet/clock-placed"

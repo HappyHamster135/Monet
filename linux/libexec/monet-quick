@@ -916,12 +916,14 @@ def went_back(path=WENT_BACK):
 
 def update_check():
     """What `monet update --check --json` found, plus whether it worked."""
-    failure = tr("Monet couldn't look for updates. Check your internet connection and try again.")
+    failure = tr("Monet couldn't check for updates. Try again.")
     try:
         result = subprocess.run([f"{BINDIR}/monet", "update", "--check", "--json"],
                                 capture_output=True, text=True, timeout=300)
-    except (OSError, subprocess.TimeoutExpired):
-        return {"ok": False, "message": failure}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "message": tr("Checking for updates took too long. Try again.")}
+    except OSError as error:
+        return {"ok": False, "message": f"{failure} {error}"}
     if result.returncode == 0:
         for line in reversed(result.stdout.splitlines()):
             try:
@@ -934,6 +936,51 @@ def update_check():
                 return dict(found, ok=True)
     message = (result.stderr or result.stdout).strip().splitlines()
     return {"ok": False, "message": message[-1] if message and result.returncode != 0 else failure}
+
+
+@contextlib.contextmanager
+def update_display_awake():
+    """Hold only this download's display/suspend policy, never saved preferences.
+
+    A private connection releases its cookie even if the Settings helper dies.
+    The root updater separately holds logind's sleep inhibitor, including when
+    it is run from the timer or a terminal. Screen locking remains available.
+    """
+    bus = None
+    try:
+        import dbus
+        bus = dbus.SessionBus(private=True)
+        owner = bus.get_name_owner("org.kde.Solid.PowerManagement")
+        policy = bus.get_object(owner, "/org/kde/Solid/PowerManagement/PolicyAgent", introspect=False)
+        policy.AddInhibition(dbus.UInt32(5), "Monet", tr("Installing updates"),
+                             dbus_interface="org.kde.Solid.PowerManagement.PolicyAgent", timeout=3)
+    except (ImportError, OSError, RuntimeError):
+        pass
+    except Exception as error:
+        # D-Bus is optional on generic installs. Failure to hold the display
+        # must not discard a usable system updater or bypass its sleep guard.
+        print(f"Couldn't keep the update display awake: {error}", file=sys.stderr)
+    try:
+        yield
+    finally:
+        if bus is not None:
+            try:
+                bus.close()
+            except Exception:
+                pass  # A lost bus has already released the connection's hold.
+
+
+def install_updates():
+    with update_display_awake():
+        try:
+            # Large images on slow Wi-Fi can take hours. A timeout used to kill
+            # the waiting pkexec process and lose track of the root transaction.
+            result = subprocess.run([f"{BINDIR}/monet", "update"], capture_output=True, text=True)
+            reply = {"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()}
+        except OSError as error:
+            reply = {"ok": False, "message": str(error)}
+        reply["staged"] = update_waiting()
+        return reply
 
 
 # systemd's stable message IDs, not the (possibly translated) MESSAGE text.
@@ -8171,14 +8218,14 @@ def main(argv):
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "report-saved" and args:
         report_saved(args[0])
-    elif cmd in ("doctor", "update"):
+    elif cmd == "update":
+        emit(install_updates())
+    elif cmd == "doctor":
         try:
             result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=3600)
             reply = {"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()}
         except (OSError, subprocess.TimeoutExpired):
             reply = {"ok": False}
-        if cmd == "update":
-            reply["staged"] = update_waiting()
         emit(reply)
     elif cmd == "update-check":
         emit(update_check())

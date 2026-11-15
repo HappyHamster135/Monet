@@ -1352,11 +1352,12 @@ Shared.MonetWindow {
         case "checking": return i18n("Looking for updates…")
         case "none": return i18n("Monet and your apps are up to date.")
         case "available":
+            if (found.message) return found.message
             return found.system && found.apps > 0 ? i18np("And %1 app update. Install when you're ready.", "And %1 app updates. Install when you're ready.", found.apps || 0)
                 : i18n("Install when you're ready.")
         case "installing": return i18n("Downloading and installing. You can keep using your PC.")
         case "done": return updateStaged ? i18n("The new Monet starts the next time you restart.") : ""
-        case "failed": return updateMessage || i18n("Monet couldn't look for updates. Check your internet connection and try again.")
+        case "failed": return updateMessage || i18n("Monet couldn't finish the update. Try again.")
         default: return pc.autoUpdates === false ? i18n("Monet only updates when you ask it to.")
             : i18n("Automatic updates are on. You can also check now.")
         }

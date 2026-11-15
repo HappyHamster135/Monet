@@ -184,6 +184,22 @@ class LookFeedback(unittest.TestCase):
                 self.wait_for(lambda: self.window.property("updateState") == state)
                 self.assertEqual(action.property("restartReady"), restart_ready)
 
+    def test_app_remote_failure_keeps_the_system_install_button_available(self):
+        self.window.setProperty("page", "updates")
+        action = self.window.findChild(QObject, "updateAction")
+        message = "App updates couldn't be checked. Remote unavailable."
+        self.helper.replies["update-check"] = json.dumps(dict(ok=True, system=True,
+            version="0.9.8-5", apps=0, message=message))
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("updateState") == "available")
+        self.assertEqual(action.property("text"), self.words.i18n("Install"))
+        self.assertEqual(self.window.property("updateMessage"), message)
+        self.helper.replies["update"] = '{"ok":true,"staged":true}'
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("updateState") == "done")
+        self.assertTrue(action.property("restartReady"))
+
     def test_security_shows_unknown_and_pending_checks_in_the_overview(self):
         state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete",
                      firewall="unavailable", selinux="enforcing", autoUpdates="on",

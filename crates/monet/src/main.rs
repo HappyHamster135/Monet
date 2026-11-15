@@ -125,7 +125,8 @@ fn main() -> ExitCode {
             elevate(helper)
         }
         ["update"] => elevate(&["helper", "update"]),
-        ["helper", "update"] => helper_update(args.iter().any(|a| a == "--check"), json),
+        ["helper", "update"] => inhibited_update(args.iter().any(|a| a == "--check"), json,
+            args.iter().any(|a| a == "--inhibited")),
         ["auto-updates", which @ ("on" | "off")] => elevate(&["helper", "auto-updates", *which]),
         ["helper", "auto-updates", which @ ("on" | "off")] => helper_auto_updates(*which == "on"),
         ["rollback"] => elevate(&["helper", "rollback"]),
@@ -1014,6 +1015,8 @@ struct UpdateCheck {
     version: Option<String>,
     /// How many apps have updates.
     apps: usize,
+    /// An app remote can fail without hiding an available OS update.
+    app_error: Option<String>,
 }
 
 /// Reads `bootc upgrade --check`: "Update available for: ..." with an
@@ -1031,6 +1034,53 @@ fn parse_bootc_check(out: &str) -> Option<(bool, Option<String>)> {
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty());
     Some((true, version))
+}
+
+// Keep the real cause in the final line: Settings displays that line. Registry,
+// signature, disk-space and deployment errors are not necessarily network errors.
+fn update_error(summary: &str, output: &std::process::Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let detail = if stderr.trim().is_empty() { &stdout } else { &stderr };
+    let detail = detail.split_whitespace().collect::<Vec<_>>().join(" ");
+    if detail.is_empty() { summary.into() }
+    else {
+        // The final diagnostic follows progress/warnings, so retain the tail.
+        let tail: Vec<char> = detail.chars().rev().take(2000).collect();
+        format!("{summary} {}", tail.into_iter().rev().collect::<String>())
+    }
+}
+
+fn update_lock() -> Res<fs::File> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::create_dir_all(state_dir()).map_err(|e| e.to_string())?;
+    let file = fs::OpenOptions::new().write(true).create(true).truncate(false)
+        .mode(0o600).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(state_dir().join("update.lock")).map_err(|e| e.to_string())?;
+    // The descriptor releases the lock on success, error, or process death.
+    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        let error = std::io::Error::last_os_error();
+        return Err(if error.kind() == std::io::ErrorKind::WouldBlock {
+            "Another Monet update is running. Wait for it to finish, then try again.".into()
+        } else { format!("Couldn't lock the updater: {error}") });
+    }
+    Ok(file)
+}
+
+fn inhibited_update(check: bool, json: bool, inhibited: bool) -> Res<()> {
+    require_root()?;
+    if check || inhibited {
+        return helper_update(check, json);
+    }
+    // One inhibitor spans the OS and app transactions, for both the timer and
+    // manual CLI. Never use --apply: only the person chooses when to restart.
+    let status = Command::new("systemd-inhibit")
+        .args(["--what=sleep", "--mode=block", "--who=Monet", "--why=Installing updates", "--"])
+        .arg(std::env::current_exe().map_err(|e| e.to_string())?)
+        .args(["helper", "update", "--inhibited"])
+        .status().map_err(|e| format!("Couldn't keep the PC awake for the update: {e}"))?;
+    if status.success() { Ok(()) } else { Err(String::new()) }
 }
 
 /// Counts the apps in `flatpak remote-ls --updates --columns=application`.
@@ -1054,36 +1104,47 @@ fn update_is_staged(bootc: bool) -> Option<bool> {
 }
 
 fn check_for_updates() -> Res<UpdateCheck> {
-    let offline = "Monet couldn't look for updates. Check your internet connection and try again.";
     let (system, version) = if has("bootc") {
-        let out = Command::new("bootc").args(["upgrade", "--check"]).output().map_err(|e| e.to_string())?;
+        let out = Command::new("bootc").args(["upgrade", "--check"]).env("LC_ALL", "C")
+            .output().map_err(|e| e.to_string())?;
         if !out.status.success() {
-            return Err(offline.into());
+            return Err(update_error("Monet couldn't check for system updates.", &out));
         }
-        parse_bootc_check(&String::from_utf8_lossy(&out.stdout)).ok_or(offline)?
+        let report = format!("{}\n{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+        parse_bootc_check(&report).ok_or("The system updater returned an unrecognized update report.")?
     } else {
         // rpm-ostree says 77 when there's nothing new.
-        let status = Command::new("rpm-ostree").args(["upgrade", "--check"]).status().map_err(|e| e.to_string())?;
-        match status.code() {
+        let output = Command::new("rpm-ostree").args(["upgrade", "--check"]).env("LC_ALL", "C")
+            .output().map_err(|e| e.to_string())?;
+        match output.status.code() {
             Some(0) => (true, None),
             Some(77) => (false, None),
-            _ => return Err(offline.into()),
+            _ => return Err(update_error("Monet couldn't check for system updates.", &output)),
         }
     };
+    let mut app_error = None;
     let apps = if has("flatpak") {
-        let failed = "App updates couldn't be checked. Check your internet connection and try again.";
-        let out = Command::new("flatpak")
+        let failed = "App updates couldn't be checked.";
+        let result = Command::new("flatpak")
             .args(["remote-ls", "--updates", "--columns=application"])
-            .output()
-            .map_err(|_| failed.to_string())?;
-        if !out.status.success() {
-            return Err(failed.into());
+            .env("LC_ALL", "C")
+            .output();
+        match result {
+            Ok(out) if out.status.success() => count_app_updates(&String::from_utf8_lossy(&out.stdout)),
+            result => {
+                let error = match result {
+                    Ok(out) => update_error(failed, &out),
+                    Err(error) => format!("{failed} {error}"),
+                };
+                if !system { return Err(error); }
+                app_error = Some(error);
+                0
+            }
         }
-        count_app_updates(&String::from_utf8_lossy(&out.stdout))
     } else {
         0
     };
-    Ok(UpdateCheck { system, version, apps })
+    Ok(UpdateCheck { system, version, apps, app_error })
 }
 
 /// Where turning automatic updates off is kept: monet-update.service doesn't
@@ -1117,6 +1178,7 @@ fn helper_auto_updates(on: bool) -> Res<()> {
 /// it, as the start menu's second entry): Settings → Updates → Go back.
 fn helper_rollback() -> Res<()> {
     require_root()?;
+    let _lock = update_lock()?;
     let status = if has("bootc") {
         Command::new("bootc").arg("rollback").status()
     } else {
@@ -1134,10 +1196,12 @@ fn helper_rollback() -> Res<()> {
 /// `monet update`), and daily by itself unless that's turned off (monet-update.timer).
 fn helper_update(check: bool, json: bool) -> Res<()> {
     require_root()?;
+    let _lock = update_lock()?;
     if check {
         let found = check_for_updates()?;
         if json {
-            let value = serde_json::json!({ "system": found.system, "version": found.version, "apps": found.apps });
+            let value = serde_json::json!({ "system": found.system, "version": found.version,
+                "apps": found.apps, "message": found.app_error });
             println!("{value}");
         } else if !found.system && found.apps == 0 {
             println!("Monet and your apps are up to date.");
@@ -1149,20 +1213,21 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
                 println!("{} app update{} ready to install.", found.apps, if found.apps == 1 { " is" } else { "s are" });
             }
             println!("Run `monet update` to install.");
+            if let Some(error) = found.app_error { eprintln!("{error}"); }
         }
         return Ok(());
     }
 
     println!("Downloading the newest Monet…");
     let bootc = has("bootc");
-    let status = if bootc {
-        Command::new("bootc").arg("upgrade").status()
+    let output = if bootc {
+        Command::new("bootc").arg("upgrade").env("LC_ALL", "C").output()
     } else {
-        Command::new("rpm-ostree").arg("upgrade").status()
+        Command::new("rpm-ostree").arg("upgrade").env("LC_ALL", "C").output()
     }
     .map_err(|e| e.to_string())?;
-    if !status.success() {
-        return Err("The update didn't finish. Check your internet connection and try again.".into());
+    if !output.status.success() {
+        return Err(update_error("The system update didn't finish.", &output));
     }
     let staged = update_is_staged(bootc);
     if has("flatpak") {
@@ -1173,12 +1238,12 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
         } else {
             "Some apps couldn't update. Try updating them again."
         };
-        let status = Command::new("flatpak")
+        let output = Command::new("flatpak")
             .args(["update", "-y", "--noninteractive"])
-            .status()
+            .env("LC_ALL", "C").output()
             .map_err(|_| failed.to_string())?;
-        if !status.success() {
-            return Err(failed.into());
+        if !output.status.success() {
+            return Err(update_error(failed, &output));
         }
         // And what no app uses anymore (old runtimes) makes room.
         let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y", "--noninteractive"]).status();

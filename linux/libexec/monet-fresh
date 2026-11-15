@@ -9,12 +9,17 @@ set -u
 
 BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
+DATADIR="@DATADIR@"
 failed=0
 kw() { "$LIBEXECDIR/monet-profile" put --default-only "$@" || { failed=1; return 1; }; }
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 stamp="$CACHE/monet-version"
 version="$("$BINDIR/monet" --version 2>/dev/null)"
+# Rebuilt images may keep the same public version. Content, not just the
+# version label or normalized image timestamps, determines cache validity.
+revision="$(cat "$DATADIR/monet/desktop-revision" 2>/dev/null)"
+[ -z "$revision" ] || version="$version $revision"
 
 # The city chosen in Setup supplies defaults for older accounts too.
 [ -e "$CONFIG/monet/region-defaults-v1" ] || "$LIBEXECDIR/monet-region" || failed=1
@@ -96,6 +101,17 @@ tray_swap() {
 tray_swap tray-brightness-6 org.kde.plasma.brightness
 
 [ -z "$version" ] || [ "$(cat "$stamp" 2>/dev/null)" = "$version" ] && exit "$failed"
-rm -f "$CACHE/ksvg-elements" "$CACHE"/plasma_theme_*.kcache "$CACHE"/plasma-svgelements* "$CACHE/icon-cache.kcache"
-mkdir -p "$CACHE" && printf '%s\n' "$version" > "$stamp"
+rm -f "$CACHE/ksvg-elements" "$CACHE"/plasma_theme_*.kcache "$CACHE"/plasma-svgelements* "$CACHE/icon-cache.kcache" || failed=1
+# Qt's compiled QML and KDE's application index also use source timestamps.
+# Leaving these from the old image can break menu/app loading after an upgrade.
+# Remove only regenerable caches, before the desktop starts, never app data.
+rm -f "$CACHE"/ksycoca6_* || failed=1
+for app in "$CACHE"/* "$CACHE"/*/*; do
+    [ -d "$app" ] && [ ! -L "$app" ] && [ ! -L "$(dirname "$app")" ] || continue
+    [ -d "$app/qmlcache" ] && [ ! -L "$app/qmlcache" ] || continue
+    rm -rf -- "$app/qmlcache" || failed=1
+done
+if [ "$failed" = 0 ]; then
+    mkdir -p "$CACHE" && printf '%s\n' "$version" > "$stamp" || failed=1
+fi
 exit "$failed"

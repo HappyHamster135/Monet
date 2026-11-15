@@ -14,6 +14,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-5: Easier everyday use
 
+- **More reliable updates.** Long downloads can finish without the old one-hour
+  timeout. Updates hold sleep protection, and Settings keeps the display awake
+  while installing. A second update request explains when another update is
+  already running. Failed app-repository checks no longer hide an available system
+  update, and errors retain the actual failure instead of always blaming the
+  internet connection.
+- **Refresh the desktop after an update.** Compiled QML and the application
+  index are rebuilt when Monet's desktop contents change, including repairs
+  that keep the same version. Existing Monet panels remove duplicate sound
+  controls without resetting other panel choices.
+- **A dark handoff at shutdown.** After the application-closing screen,
+  shutdown and restart use a black background instead of the bright painting.
+
 - **Find downloads and launch apps from the menu.** Recently downloaded
   installers appear in the menu. Search can also find a Windows program
   by the name of its extracted folder, even when the file is called

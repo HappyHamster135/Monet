@@ -215,6 +215,7 @@ for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard o
 done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
+put 644 "$SRC/share/monet/repair-sound.js" "$DATADIR/monet/repair-sound.js"
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
     org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.stacks; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
@@ -693,3 +694,13 @@ else
     systemctl enable monet-windows-drive.service monet-windows-files.service >/dev/null 2>&1 || true
     systemctl enable monet-guest-wipe.service >/dev/null 2>&1 || true
 fi
+
+# QML files in OS images can share timestamps across releases. Invalidate the
+# account's compiled caches even when a repaired image keeps its version label.
+(
+    cd "$SRC"
+    find share -type f \( -name '*.qml' -o -name '*.js' \) -print0 | LC_ALL=C sort -z | xargs -0 sha256sum
+    for library in /usr/lib64/libQt6Qml.so.6 /usr/lib/libQt6Qml.so.6; do
+        [ ! -f "$library" ] || sha256sum "$library"
+    done
+) | sha256sum | cut -d' ' -f1 > "$DATADIR/monet/desktop-revision"
