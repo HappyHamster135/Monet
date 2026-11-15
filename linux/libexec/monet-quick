@@ -921,12 +921,25 @@ def went_back(path=WENT_BACK):
     return {"version": str(found.get("version") or ""), "to": str(found.get("to") or "")}
 
 
+def run_as_admin(argv, timeout):
+    """Run a command that becomes root through pkexec. This user can't stop
+    it, and subprocess.run would then wait for it however long it takes: on a
+    timeout, stop waiting instead and let it finish on its own."""
+    process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        out, err = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(OSError):
+            process.kill()
+        raise
+    return subprocess.CompletedProcess(argv, process.returncode, out, err)
+
+
 def update_check():
     """What `monet update --check --json` found, plus whether it worked."""
     failure = tr("Monet couldn't check for updates. Try again.")
     try:
-        result = subprocess.run([f"{BINDIR}/monet", "update", "--check", "--json"],
-                                capture_output=True, text=True, timeout=300)
+        result = run_as_admin([f"{BINDIR}/monet", "update", "--check", "--json"], timeout=300)
     except subprocess.TimeoutExpired:
         return {"ok": False, "message": tr("Checking for updates took too long. Try again.")}
     except OSError as error:

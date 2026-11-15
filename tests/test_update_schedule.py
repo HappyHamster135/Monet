@@ -25,7 +25,7 @@ class UpdateFeedback(unittest.TestCase):
                                  ('{"system": false, "apps": 0}', 1, False),
                                  ('{}', 0, False), ('{"system": false, "apps": -1}', 0, False),
                                  ('{"system": false, "apps": true}', 0, False), ('not json', 0, False)):
-            with self.subTest(output=output, code=code), patch.object(helper.subprocess, "run", return_value=
+            with self.subTest(output=output, code=code), patch.object(helper, "run_as_admin", return_value=
                     subprocess.CompletedProcess([], code, output, "App check failed" if code else "")):
                 result = helper.update_check()
                 self.assertEqual(result["ok"], ok)
@@ -35,10 +35,24 @@ class UpdateFeedback(unittest.TestCase):
     def test_timeout_or_unavailable_helper_returns_a_retryable_error(self):
         helper = quick_helper()
         for error in (OSError("fixture: unavailable"), subprocess.TimeoutExpired("fixture", 300)):
-            with patch.object(helper.subprocess, "run", side_effect=error):
+            with patch.object(helper.subprocess, "Popen", side_effect=error):
                 result = helper.update_check()
                 self.assertFalse(result["ok"])
                 self.assertTrue(result["message"])
+
+    def test_a_check_running_as_root_times_out_without_waiting_for_it(self):
+        """pkexec makes the check root's: killing it fails, and waiting could take forever."""
+        helper = quick_helper()
+
+        class Root:
+            def __init__(self, *args, **kwargs): pass
+            def communicate(self, timeout=None): raise subprocess.TimeoutExpired("monet", timeout)
+            def kill(self): raise PermissionError(1, "Operation not permitted")
+            def wait(self, timeout=None): raise AssertionError("waited for the root check")
+
+        with patch.object(helper.subprocess, "Popen", Root):
+            result = helper.update_check()
+        self.assertEqual(result, {"ok": False, "message": "Checking for updates took too long. Try again."})
 
 
 class UpdateHistory(unittest.TestCase):
