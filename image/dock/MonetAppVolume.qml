@@ -34,12 +34,26 @@ QtObject {
         settings.levels = JSON.stringify(values);
     }
 
+    // False until the stream plays, so the caller tries again then.
     function restore(stream) {
-        if (!stream || stream.corked) return;
+        if (!stream || stream.corked) return false;
         const value = levels()[key(stream)];
-        if (!Number.isFinite(value) || value < 0 || value > 1) return;
-        stream.model.Volume = Math.round(value * normalVolume);
-        // Restoring a positive volume must preserve a deliberate app mute.
-        if (value === 0) stream.model.Muted = true;
+        if (Number.isFinite(value) && value >= 0 && value <= 1) {
+            stream.model.Volume = Math.round(value * normalVolume);
+            // Restoring a positive volume must preserve a deliberate app mute.
+            if (value === 0) stream.model.Muted = true;
+        }
+        return true;
+    }
+
+    // Another mixer moved an app the Home Bar remembers: keep the new level,
+    // so the next track doesn't jump back to the old one. Like the Home Bar's
+    // slider, an app's level is its loudest stream.
+    function follow(stream, streams) {
+        const app = key(stream);
+        const saved = levels()[app];
+        if (!app || !Number.isFinite(saved)) return;
+        const loudest = Math.max(stream.volume, ...streams.filter(other => key(other) === app).map(other => other.volume));
+        if (Math.abs(saved * normalVolume - loudest) >= 2) remember(stream, loudest);
     }
 }

@@ -403,8 +403,18 @@ QtObject {
                 raise
             obj.setProperty('requested', 42)
             wait_for(lambda: at(third, 42) and not stream(third).mute, 'adjust and unmute saved volume')
+            # A change from another mixer sticks, and the next track keeps it.
+            QTest.qWait(1100)
+            pulse.volume_set_all_chans(stream(third), 0.55)
+            wait_for(lambda: at(third, 55), 'another mixer changed the track')
+            QTest.qWait(300)
+            assert at(third, 55), 'the Home Bar put its old level back'
+            third.terminate(); third.wait(timeout=5)
+            wait_for(lambda: stream(third) is None, 'third track removed')
+            fourth = play(); players.append(fourth)
+            wait_for(lambda: at(fourth, 55), "next track kept the other mixer's level")
             assert at(other, 100), 'another app was changed'
-            print('Dock volume: next track, separate app, persistence, zero and unmute passed')
+            print('Dock volume: next track, separate app, persistence, zero, unmute and other mixers passed')
         finally:
             for player in players:
                 if player.poll() is None: player.terminate()

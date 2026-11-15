@@ -22,9 +22,21 @@ def patch_audio(applet):
 
 ''')
     prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Browser players replace streams between tracks, often with an
-            // explicit initial volume. Restore after the stream starts playing.
-            onCorkedChanged: if (!corked) Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
-            Component.onCompleted: Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
+            // explicit initial volume. Restore once, when the stream starts
+            // playing, so pausing never undoes a change made in another mixer.
+            property bool monetRestored: false
+            property double monetRestoredAt: 0
+            function monetRestore(): void {
+                if (monetRestored || !pulseAudio.monetVolume.restore(delegate)) return;
+                monetRestored = true;
+                monetRestoredAt = Date.now();
+            }
+            onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestore())
+            Component.onCompleted: Qt.callLater(() => delegate.monetRestore())
+            // Later changes from any mixer become the app's level. The short
+            // wait skips a player setting its own level as it starts.
+            onVolumeChanged: if (monetRestored && Date.now() - monetRestoredAt > 1000)
+                pulseAudio.monetVolume.follow(delegate, pulseAudio.findStreamsFn(other => other.monetRestored))
 
 ''')
     replace(applet/'qml/ToolTipInstance.qml', '                    stream.model.Volume = v',
