@@ -7,7 +7,8 @@ mkdir -p "$out"
 python3 "$here/bundle.py" capture "$out/runtime.json"
 dnf5 -y install --setopt=install_weak_deps=False \
     cmake gcc-c++ make tar xz python3 binutils extra-cmake-modules \
-    qt6-qtbase-devel kf6-kcoreaddons-devel kf6-ki18n-devel libksysguard-devel
+    qt6-qtbase-devel qt6-qtdeclarative-devel kf6-kcoreaddons-devel kf6-ki18n-devel \
+    kf6-kservice-devel libksysguard-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 testing=OFF
 [ "${MONET_GRAPHICS_TESTING:-0}" = 1 ] && testing=ON

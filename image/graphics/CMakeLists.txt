@@ -3,9 +3,12 @@ cmake_minimum_required(VERSION 3.22)
 project(MonetGraphics LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_AUTOMOC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml)
 find_package(KF6CoreAddons REQUIRED)
 find_package(KF6I18n REQUIRED)
+# KSysGuard's own config doesn't look for everything its process library links publicly
+# (KF6::Service, and Qt Gui/Qml through its formatter), so find those first.
+find_package(KF6Service REQUIRED)
 find_package(KSysGuard REQUIRED)
 set(MONET_GRAPHICS_USE "/usr/libexec/monet-graphics-use" CACHE STRING "The helper that measures each program's share")
 add_library(ksysguard_plugin_monetgraphics MODULE monetgraphics.cpp monetgraphics.h)
