@@ -23,10 +23,16 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the field and the snowy fence go on past both sides, with more boats, lily
   pads, haystacks, trees and farmhouses to see. The picture in the middle stays
   the same, and 16:9 and 16:10 screens are unchanged.
-- **See which apps use the graphics card.** Task Manager's Graphics page now
-  lists each app's share of the graphics card, and names Monet's own desktop
-  parts, such as windows and effects. It works with NVIDIA, AMD and Intel
-  graphics, and only measures while the page is open.
+- **See which apps use the graphics card.** Task Manager's Applications and
+  Processes tabs have a Graphics column beside CPU and Memory, and the
+  Graphics page lists each app's share, naming Monet's own desktop parts such
+  as windows and effects. It works with NVIDIA, AMD and Intel graphics, and
+  only measures while it's on screen.
+- **Smoother on older PCs.** When memory runs low, apps you've minimized and
+  left for ten minutes are compressed in memory, so the app you're using keeps
+  its room; they come back as soon as you open them. Apps on screen, playing
+  sound or still working are never touched. On PCs with 8 GB or less, Zen
+  also puts tabs to sleep after ten minutes and reloads them when you return.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
