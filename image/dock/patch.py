@@ -27,6 +27,11 @@ def patch_audio(applet):
             Component.onCompleted: Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
 
 ''')
+    prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Client metadata can arrive after the stream was created or uncorked.
+            readonly property string monetIdentity: pulseAudio.monetVolume.key(delegate)
+            onMonetIdentityChanged: Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
+
+''')
     replace(applet/'qml/ToolTipInstance.qml', '                    stream.model.Volume = v',
             '''                    pulseAudio.item.monetVolume.remember(stream, Math.max(from, value))
                     stream.model.Volume = v''')
