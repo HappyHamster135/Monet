@@ -154,6 +154,17 @@ class ScrollInputKeepsItsScroll(unittest.TestCase):
         QTest.qWait(50)
         self.assertAlmostEqual(self.y(), position, delta=1)
 
+    def test_touchpad_pixels_still_scroll_right_after_a_notch(self):
+        # Qt skips an update without a wheel angle after one it counts as taken. The first notch
+        # starts the hold; the second is the held one.
+        self.send(angle=-120)
+        QTest.qWait(100)
+        self.send(angle=-120)
+        QTest.qWait(250)  # scrolled, and still held
+        position = self.y()
+        self.send(pixel=-30, phase=Qt.ScrollUpdate)
+        self.assertAlmostEqual(self.y(), position + 30, delta=1)
+
     def test_clicks_reach_the_page_while_it_holds_a_scroll(self):
         self.send(angle=-120)
         QTest.qWait(250)  # scrolled, and still held

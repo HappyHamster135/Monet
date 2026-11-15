@@ -37,6 +37,11 @@ WheelHandler {
             acceptedDevices: input.acceptedDevices
             onWheel: event => input.take(event)
         }
+        // Qt skips a touchpad update that has no wheel angle after a wheel event it counts as
+        // taken, and it counts one as taken when no item turned it down on the way. Under the
+        // panel its own items always do; this plain item does the same over it, so the
+        // touchpad's updates still arrive after a wheel notch.
+        Item { anchors.fill: parent }
     }
     function hold(event) {
         if (event.phase === Qt.ScrollEnd) {
