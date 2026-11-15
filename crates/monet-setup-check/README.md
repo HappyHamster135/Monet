@@ -1,10 +1,10 @@
 # Windows Setup identity checker
 
 This program verifies prepared partitions and, in its explicit `--deploy` mode,
-installs Windows inside WinPE. The integration is on the local follow-up branch;
-it is not in the prepared 0.9.5 candidate or installed on this laptop.
-Remaining installation acceptance is tracked in backlog item 095-52. It adds no daemon or
-background work to the installed desktop.
+installs Windows inside WinPE. The Monet image carries it in
+`share/monet/winpe`, and WinPE's `deploy.cmd` runs it in `--deploy` mode.
+Its history is backlog item 095-52. It adds no daemon or background work to
+the installed desktop.
 
 `monet-setup-check.exe preparation.json D` inspects native Windows storage and
 prints a JSON selection only when the supplied preparation record matches. The

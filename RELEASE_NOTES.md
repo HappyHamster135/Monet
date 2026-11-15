@@ -6,11 +6,44 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.8-5-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
-| Monet-0.9.8-5-Setup.iso              | Monet Setup for writing the USB stick yourself. |
-| Monet-0.9.8-5-Installer.iso          | The Fedora-based fallback installer. |
-| Monet-0.9.8-5-Windows.zip            | Monet Bridge for an existing Windows installation. |
-| Monet-0.9.8-5-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+| **Monet-0.9.8-6-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-6-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-6-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-6-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-6-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8-6: Steadier trips to Windows
+
+- **Trips to Windows recover by themselves.** If the PC's firmware drops
+  Monet from the boot list during a trip, Monet puts itself back first when it
+  returns. If the firmware once ignored a one-time restart into Windows, Monet
+  stops working around it as soon as the firmware follows one. A Windows entry that has started
+  Windows before is no longer replaced after a single failed start, such as
+  Windows finishing an update.
+- **Windows from 0.9.8 finds numbered updates.** Monet Bridge on a Windows set
+  up with 0.9.8 couldn't see updates like 0.9.8-5. Monet gives it the newer
+  updater once, from Linux, so it can update itself again.
+- **Windows setup tries again.** If Monet's setup in Windows fails at the first
+  sign-in, it runs again at the next sign-in instead of stopping there.
+- **Updates finish when Settings closes.** Closing Settings during an update no
+  longer stops the app updates partway through.
+- **Windows programs that ask for a restart open normally.** An installer that
+  finishes by asking to restart, or that you cancel, is no longer reported as a
+  program that failed to open.
+- **App volume works with every mixer.** The Home Bar restores an app's volume
+  once when it starts playing, so pausing and playing never undoes a change
+  made in the sound menu or Settings. That change is also kept for the app's
+  next track.
+- **Sound outputs you can tell apart.** When two devices share a port name,
+  such as Analog Output, the device's name is shown too.
+- **Smaller desktop fixes.** Alt+Tab shows a few windows side by side instead
+  of in a column. In right-to-left languages, Start and End put the bar on the
+  matching side. The keypad's Enter works in the bar editor. A transfer's
+  progress bar no longer stays dimmed once its size is known. Search results in
+  the menu stay correct when a new search finds the same number of apps. A
+  setup step that keeps failing no longer clears the desktop's caches at every
+  sign-in. A stuck update check now gives up after five minutes instead of
+  leaving Settings waiting.
 
 ### New in 0.9.8-5: Easier everyday use
 

@@ -3,9 +3,9 @@
 One USB stick installs everything: Monet, and Windows for the games that need
 it. Some PCs need a firmware setting enabled to trust Linux boot media; see below.
 
-These instructions are for the **0.9.7 preview**. The release page has the USB
+These instructions are for the **0.9.8-6 preview**. The release page has the USB
 maker, Monet Setup, and the Fedora fallback installer.
-[Monet 0.9.7 downloads](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.7)
+[Monet 0.9.8-6 downloads](https://github.com/HappyHamster135/Monet/releases/tag/v0.9.8-6)
 
 You need:
 
@@ -39,7 +39,7 @@ and use 4 KiB physical sectors.
 
 On a Windows PC (this one, or any other):
 
-1. Download **Monet-0.9.7-Make-USB-Stick.exe** from the release page and
+1. Download **Monet-0.9.8-6-Make-USB-Stick.exe** from the release page and
    double-click it. Say **Yes** when Windows asks to let it make changes
    (it writes a whole USB stick).
 
@@ -50,11 +50,11 @@ On a Windows PC (this one, or any other):
 3. It downloads Monet, writes the stick and checks it (about 10-20 minutes),
    then says it's ready.
 
-The USB maker prefers **Monet-0.9.7-Setup.iso**. It checks the downloaded
+The USB maker prefers **Monet-0.9.8-6-Setup.iso**. It checks the downloaded
 installer against the release checksum before writing the stick. If Monet
-Setup is unavailable, it uses **Monet-0.9.7-Installer.iso**, the Fedora fallback.
+Setup is unavailable, it uses **Monet-0.9.8-6-Installer.iso**, the Fedora fallback.
 
-On Linux or a Mac, download **Monet-0.9.7-Setup.iso** and write it with your
+On Linux or a Mac, download **Monet-0.9.8-6-Setup.iso** and write it with your
 disk tool (GNOME Disks, KDE's ISO Image Writer, or balenaEtcher).
 
 ## 2. Install
@@ -76,7 +76,7 @@ before changing firmware security settings.
 
 1. Restart with the USB stick plugged in, and open the boot menu: **F12**
    (Dell, Lenovo, Acer, Gigabyte), **F9** (HP), **Esc** or **F8** (ASUS),
-   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.7**).
+   **F11** (MSI). Choose the USB stick (it's called **Monet-0.9.8-6**).
 2. Monet Setup opens over the harbor at dawn. Choose your language,
    keyboard and time zone (a region, then a city: Setup guesses it, and once
    online, finds where the PC is), and click **Continue**.
@@ -98,7 +98,7 @@ before changing firmware security settings.
    On a PC with TPM 2.0, **Encrypt Monet** is selected by default. Keep the
    recovery key shown at completion; it also unlocks the disk if the TPM cannot.
 
-Use the 0.9.7 Setup stick for the drive review and installation recovery
+Use the 0.9.8-6 Setup stick for the drive review and installation recovery
 described here. Resume needs the recovery information saved by the Setup stick
 that started the installation.
 
@@ -437,6 +437,6 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 ## Already using Bazzite?
 
-Download **Monet-0.9.7-Linux.tar.gz** and run `./monet-0.9.7-linux/install.sh`,
+Download **Monet-0.9.8-6-Linux.tar.gz** and run `./monet-0.9.8-6-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
 (`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).
