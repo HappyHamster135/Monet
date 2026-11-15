@@ -6692,7 +6692,7 @@ class BookmarksFromWindows(unittest.TestCase):
                 helper.return_value.recent.return_value = []
                 self.assertEqual(q.windows_browsers(), {"count": 12, "browsers": ["Edge"], "zen": "none", "shared": "", "profiles": [], "imports": []})
         script = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
-        self.assertIn("            write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *download_preferences())).encode())\n            bookmarks_for_zen(profile)", script)
+        self.assertIn("            write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *lighter, *download_preferences())).encode())\n            bookmarks_for_zen(profile)", script)
         path = (ROOT / "linux/systemd/user/monet-zen.path").read_text(encoding="utf-8")
         self.assertIn("PathChanged=%h/.local/share/monet/windows-bookmarks.html", path)
 
