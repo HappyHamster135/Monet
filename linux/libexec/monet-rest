@@ -14,9 +14,14 @@ Runs every two minutes (monet-rest.timer). With plenty of memory free it only re
 they're ready to rest by the time it's crossed. Without zram, or where the system doesn't let
 an account ask this of its own apps (cgroup memory.reclaim), it does nothing, and looks again
 the next day.
+
+If memory stays nearly full even so, it says which apps use the most, as macOS offers to quit
+apps when it runs out, with a button for Task Manager: at most every half hour.
 """
+import gettext
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,6 +31,8 @@ import time
 
 GIB = 1024 ** 3
 MIB = 1024 ** 2
+LIBEXECDIR = "@LIBEXECDIR@"
+_ = gettext.translation("monet", localedir="@DATADIR@/locale", fallback=True).gettext
 STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/rest.json"
 OLDER_PC = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "monet/older-pc"
 IDLE = 10 * 60          # left this long before it rests
@@ -36,6 +43,17 @@ CHUNK = 128 * MIB       # asked for at a time, so no single request runs long
 SPEND = 3.0             # seconds of asking per run, at most
 WATCH = 1.5             # this much of the room wanted, or less: watch which apps are left
 RETRY = 24 * 3600       # not allowed here: look again after a day
+FULL = 0.05             # this much of memory free, or 512 MB, or less: nearly full
+FULL_FOR = 4 * 60       # that long before it's said
+SAY_AGAIN = 30 * 60     # and then not again for this long
+
+
+def tr(text, *values):
+    """text in the session's language, with %1, %2, ... filled in."""
+    said = _(text)
+    for i, value in reversed(list(enumerate(values, 1))):
+        said = said.replace(f"%{i}", str(value))
+    return said
 
 
 def meminfo(path=Path("/proc/meminfo")):
@@ -323,6 +341,74 @@ def rest(memory, older, state, now, apps, list_windows=windows, playing=sounding
     return asked
 
 
+def app_name(unit):
+    """What a unit is called in the menu (its app's Name, in the session's language), else a
+    name made from the unit's own (my-service.service: my-service)."""
+    found = re.fullmatch(r"app-(?:[^-@]+-)?([^-@]+)(?:@[^@]*\.service|\.service|-[^-@]+\.scope)", unit)
+    if found:
+        app = re.sub(r"\\x([0-9a-f]{2})", lambda m: chr(int(m[1], 16)), found[1])
+        lang = next(filter(None, map(os.environ.get, ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"))), "")
+        lang = re.split(r"[.@:]", lang)[0]
+        home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+        for folder in [home] + [Path(d) for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/share").split(":") if d]:
+            try:
+                text = (folder / "applications" / f"{app}.desktop").read_text(errors="replace")
+            except OSError:
+                continue
+            entry = {}
+            for line in text.split("\n[", 1)[0].splitlines():
+                key, sep, value = line.partition("=")
+                if sep:
+                    entry.setdefault(key.strip(), value.strip())
+            name = entry.get(f"Name[{lang}]") or entry.get(f"Name[{lang.split('_')[0]}]") or entry.get("Name")
+            if name:
+                return name
+        return app.rsplit(".", 1)[-1]
+    return re.sub(r"\.(service|scope)$", "", unit)
+
+
+def size(amount):
+    return f"{amount / GIB:.1f} GB" if amount >= GIB else f"{amount // MIB} MB"
+
+
+def biggest(found, count=3):
+    """The units using the most memory, [(name, bytes)], 256 MB each at least."""
+    sizes = ((read_number(folder / "memory.current") or 0, name) for name, folder in found.items())
+    return [(app_name(name), used) for used, name in sorted(sizes, reverse=True)[:count] if used >= 256 * MIB]
+
+
+def notify(title, body):
+    """A notification with a button for Task Manager, waiting in a unit of its own for the click."""
+    launch = f"{LIBEXECDIR}/monet-quick launch {b'org.kde.plasma-systemmonitor.desktop'.hex()}"
+    script = 'answer="$(notify-send --app-name=Monet --icon=monet --action=open="$1" --wait "$2" "$3")"; ' \
+             f'[ "$answer" = open ] && exec {launch}'
+    try:
+        subprocess.run(["systemd-run", "--user", "--collect", "--quiet", "/bin/sh", "-c", script, "sh",
+                        tr("Open Task Manager"), title, body], timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def warn(memory, state, now, apps, say=notify):
+    """Says which apps use the most when memory has stayed nearly full, at most every half hour."""
+    total, available = memory.get("MemTotal", 0), memory.get("MemAvailable", 0)
+    if not total or available >= max(512 * MIB, total * FULL):
+        state.pop("full_since", None)
+        return False
+    since = state.setdefault("full_since", now)
+    warned = state.get("warned_at")
+    if now - since < FULL_FOR or (warned is not None and now - warned < SAY_AGAIN):
+        return False
+    top = biggest(units(apps))
+    if not top:
+        return False
+    say(tr("Memory is almost full"),
+        tr("Closing an app you don't need keeps your PC responsive. Using the most now: %1.",
+           ", ".join(f"{name} ({size(used)})" for name, used in top)))
+    state["warned_at"] = now
+    return True
+
+
 def main():
     memory = meminfo()
     older = older_pc(memory)
@@ -333,13 +419,15 @@ def main():
         state = state if isinstance(state, dict) else {}
     except (OSError, ValueError):
         state = {}
-    now = time.time()
-    if now - state.get("unsupported_at", 0) < RETRY:
-        return 0
-    state.pop("unsupported_at", None)
-    asked = rest(memory, older, state, now, apps_slice())
-    for name, amount in asked.items():
-        print(f"Rested {name}: asked {amount // MIB} MB into compressed memory", file=sys.stderr)
+    now, apps = time.time(), apps_slice()
+    if now - state.get("unsupported_at", 0) >= RETRY:
+        state.pop("unsupported_at", None)
+        asked = rest(memory, older, state, now, apps)
+        for name, amount in asked.items():
+            print(f"Rested {name}: asked {amount // MIB} MB into compressed memory", file=sys.stderr)
+        if asked:
+            memory = meminfo()  # as it is now
+    warn(memory, state, now, apps)
     try:
         STATE.parent.mkdir(parents=True, exist_ok=True)
         STATE.write_text(json.dumps(state))

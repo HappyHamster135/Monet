@@ -193,6 +193,47 @@ class Kernel(Fixture):
         self.assertEqual(ids, {'org.example.App', 'com.spotify.Client'})
 
 
+class Warning(Fixture):
+    def test_nearly_full_for_a_while_names_the_biggest_apps_at_most_every_half_hour(self):
+        data = Path(self.temp.name) / 'data'
+        (data / 'applications').mkdir(parents=True)
+        (data / 'applications/app.zen_browser.zen.desktop').write_text(
+            '[Desktop Entry]\nName=Zen Browser\nName[sv]=Zen-webbläsaren\n[Desktop Action new]\nName=New window\n')
+        self.unit('app-flatpak-app.zen_browser.zen-1.scope', [10], 8 * 1024)
+        self.unit('true-borders.service', [20], 2 * 1024)
+        self.unit('app-org.kde.dolphin@3.service', [30], 100)   # too small to name
+        said, state = [], {}
+        full, fine = memory(16, 0.4), memory(16, 6)
+        with mock.patch.dict(os.environ, {'XDG_DATA_HOME': str(data), 'XDG_DATA_DIRS': str(data), 'LANGUAGE': '',
+                                          'LC_ALL': '', 'LC_MESSAGES': '', 'LANG': 'C'}):
+            look = lambda now, mem: rest.warn(mem, state, now, self.apps, say=lambda *a: said.append(a))
+            self.assertFalse(look(1000, full))                 # just now: maybe a moment's peak
+            self.assertFalse(look(1000 + rest.FULL_FOR - 1, full))
+            self.assertTrue(look(1000 + rest.FULL_FOR, full))
+            title, body = said[0]
+            self.assertEqual(title, 'Memory is almost full')
+            self.assertIn('Zen Browser (8.0 GB), true-borders (2.0 GB)', body)
+            self.assertNotIn('dolphin', body.lower())
+            self.assertFalse(look(1000 + rest.FULL_FOR + 60, full))  # not again so soon
+            self.assertFalse(look(1500, fine))                       # room again: starts over
+            self.assertNotIn('full_since', state)
+            self.assertEqual(len(said), 1)
+            with mock.patch.dict(os.environ, {'LANG': 'sv_SE.UTF-8'}):
+                self.assertEqual(rest.app_name('app-flatpak-app.zen_browser.zen-1.scope'), 'Zen-webbläsaren')
+        self.assertEqual(rest.app_name('app-org.example.Gone@4.service'), 'Gone')  # no menu entry any more
+        self.assertEqual(rest.size(int(1.25 * GIB)), '1.2 GB')
+        self.assertEqual(rest.size(300 * MIB), '300 MB')
+
+    def test_the_notification_waits_in_its_own_unit_and_opens_task_manager(self):
+        with mock.patch.object(rest.subprocess, 'run') as run:
+            rest.notify('Memory is almost full', 'Using the most now: Zen (8 GB).')
+        command = run.call_args.args[0]
+        self.assertEqual(command[:4], ['systemd-run', '--user', '--collect', '--quiet'])
+        self.assertIn('--action=open="$1" --wait', command[6])
+        self.assertIn('monet-quick launch ' + b'org.kde.plasma-systemmonitor.desktop'.hex(), command[6])
+        self.assertEqual(command[-3:], ['Open Task Manager', 'Memory is almost full', 'Using the most now: Zen (8 GB).'])
+
+
 class Installed(unittest.TestCase):
     def test_timer_unit_and_install(self):
         units = ROOT / 'linux/systemd/user'
