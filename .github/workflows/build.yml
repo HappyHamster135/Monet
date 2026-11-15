@@ -48,7 +48,11 @@ jobs:
         run: |
           # KWin's virtual display uses CPU rendering through udmabuf. The
           # container still has no physical GPU, input devices or host session.
-          sudo modprobe udmabuf
+          # UDMABUF is built into the kernel, not a loadable module.
+          if [ ! -c /dev/udmabuf ]; then
+            IFS=: read -r monet_buffer_major monet_buffer_minor < /sys/class/misc/udmabuf/dev
+            sudo mknod /dev/udmabuf c "$monet_buffer_major" "$monet_buffer_minor"
+          fi
           sudo chown "$(id -u):$(id -g)" /dev/udmabuf
           podman build -f tests/Containerfile -t localhost/monet-desktop-tests:44 .
       - name: Pinned browser test input (the builder verifies its SHA-256)
