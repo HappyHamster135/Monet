@@ -37,6 +37,8 @@ class TransfersNavigation(unittest.TestCase):
         directory = settings.ROOT / "linux/share/plasma/plasmoids/org.monet.transfers/contents/ui"
         source = (directory / "main.qml").read_text()
         imports = source[:source.index("PlasmoidItem {")]
+        dismissal = source[source.index('    // View history only:'):source.index('    property bool busy:')]
+        dismissal = dismissal.replace('Plasmoid.configuration', 'history')
         representation = source.split("    fullRepresentation: ", 1)[1].rsplit("\n}", 1)[0]
         representation = representation.replace("Rectangle {", "Rectangle {\n        anchors.fill: parent", 1)
         qml = imports + '''
@@ -45,6 +47,8 @@ Window {
     id: window; width: 500; height: 480; visible: true
     Item {
         id: root; objectName: "transfersTestRoot"; anchors.fill: parent
+        QtObject { id: history; objectName: "transferHistory"; property var hiddenTransfers: [] }
+        DISMISSAL
         property var localJobs: []
         property string problem: ""
         property bool expanded: true
@@ -108,11 +112,12 @@ Window {
             function resume() { root.actions = root.actions.concat(["native-resume"]) }
             function kill() { root.actions = root.actions.concat(["native-cancel"]) }
         }
-        ListModel { id: nativeJobs; Component.onCompleted: append({jobDetails: nativeJob}) }
+        function fixtureNewNativeJob() { nativeJobs.setProperty(0, "created", new Date(1700000000001)) }
+        ListModel { id: nativeJobs; Component.onCompleted: append({jobDetails: nativeJob, id: 42, created: new Date(1700000000000)}) }
         REPRESENTATION
     }
 }
-'''.replace("REPRESENTATION", representation)
+'''.replace("REPRESENTATION", representation).replace("DISMISSAL", dismissal)
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         qml = 'import "' + (settings.ROOT / "linux/share/monet/widgets").as_uri() + '"\n' + qml
         entry = Path(self.temp.name) / "transfers.qml"; entry.write_text(qml)
@@ -163,6 +168,28 @@ Window {
         value = self.root.fixtureLabels()
         return value.toVariant() if hasattr(value, "toVariant") else value
 
+    def test_hide_running_local_job_survives_refresh_without_cancelling(self):
+        button = next(item for item in self.buttons() if item.objectName() == "hideLocalTransfer")
+        button.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(100)
+        self.assertEqual(len([b for b in self.buttons() if b.objectName() == "hideLocalTransfer"]), 11)
+        self.assertEqual(self.actions(), [])
+        jobs = [dict(job, progress=.75) for job in self.jobs]
+        self.root.setProperty("localJobs", jobs); QTest.qWait(100)
+        self.assertEqual(len([b for b in self.buttons() if b.objectName() == "hideLocalTransfer"]), 11)
+        self.assertEqual(len(self.root.property("localJobs")), 12)
+
+    def test_hide_native_job_does_not_kill_it_and_empty_list_is_visible(self):
+        self.root.setProperty("localJobs", []); QTest.qWait(50)
+        button = next(item for item in self.buttons() if item.objectName() == "hideNativeTransfer")
+        button.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(100)
+        self.assertEqual(self.actions(), [])
+        self.assertFalse(any(b.objectName() == "hideNativeTransfer" for b in self.buttons()))
+        self.assertTrue(any(label['text'] == self.words.i18n("No transfers yet") for label in self.labels()))
+        self.root.findChild(QObject, "nativeTransferJob").setProperty("percentage", 80); QTest.qWait(50)
+        self.assertFalse(any(b.objectName() == "hideNativeTransfer" for b in self.buttons()))
+        self.root.fixtureNewNativeJob(); QTest.qWait(50)
+        self.assertTrue(any(b.objectName() == "hideNativeTransfer" for b in self.buttons()))
+
     def test_completed_transfer_is_compact_and_has_no_finished_progress_bar(self):
         self.root.setProperty("localJobs", [])
         job = self.root.findChild(QObject, "nativeTransferJob")
@@ -174,6 +201,7 @@ Window {
         height = self.root.fixturePreferredHeight()
         self.assertGreaterEqual(height, 220)
         self.assertLessEqual(height, 360)
+        self.assertFalse(any(label["text"] == self.words.i18n("No transfers yet") for label in self.labels()))
         self.window.resize(500, int(height)); QTest.qWait(100)
         self.assertTrue(any(item.objectName() == "openNativeTransferFolder" for item in self.buttons()))
         if os.environ.get("MONET_TRANSFER_COMPACT_CAPTURE"):

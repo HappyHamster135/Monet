@@ -60,7 +60,7 @@ class PanelEditor(unittest.TestCase):
         for p in source.glob('*.qml'):
             (folder / p.name).write_text(p.read_text().replace('@LIBEXECDIR@', str(folder)))
         helper = folder / 'monet-quick'
-        helper.write_text('#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(dict(ok=True, available=True, alignment=sys.argv[3] if len(sys.argv)>3 else "start")))\n')
+        helper.write_text('#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(dict(ok=True, available=True, layout=sys.argv[3] if len(sys.argv)>3 else "three", alignment=sys.argv[3] if len(sys.argv)>3 else "start")))\n')
         helper.chmod(0o700)
         native = Path('/usr/share/plasma/shells/org.kde.plasma.desktop/contents/configuration')
         original = native / 'KdePanelConfiguration.qml'
@@ -141,6 +141,13 @@ Window {
         item = self.item(name); item.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(100)
         return item
+
+    def test_one_and_three_bar_choices_use_layout_helper(self):
+        self.assertTrue(self.item('panelThreeBars').property('checked'))
+        self.click('panelOneBar'); QTest.qWait(200)
+        self.assertTrue(self.item('panelOneBar').property('checked'))
+        self.click('panelThreeBars'); QTest.qWait(200)
+        self.assertTrue(self.item('panelThreeBars').property('checked'))
 
     def test_shape_choices_apply_without_rebuilding_or_changing_height(self):
         self.click('panelDock')

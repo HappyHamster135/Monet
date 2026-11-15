@@ -327,6 +327,25 @@ def dock_volume():
     import pulsectl
     import wave
 
+    source = Path(os.environ['MONET_DOCK_AUDIO_QML'])
+    # PulseAudio discovers Client metadata asynchronously. Exercise the actual
+    # patched delegate with a client arriving after Component.onCompleted.
+    delegate = (source / 'PulseAudio.qml').read_text().split('        component StreamDelegate: QtObject {', 1)[1].split('\n        delegate: StreamDelegate', 1)[0]
+    delayed = TEMP / 'LateClient.qml'
+    delayed.write_text('''import QtQuick
+import "''' + source.as_uri() + '''" as Dock
+QtObject {
+    id: pulseAudio
+    property int normalVolume: 65536
+    property bool ready: false
+    property Dock.MonetAppVolume monetVolume: Dock.MonetAppVolume {}
+    property var fake: ({Client: ready ? {properties:{"application.id":"org.monet.delayed-browser","application.name":"Browser"}} : null,
+                        Muted:false, Corked:false, Volume:65536})
+    property StreamDelegate stream: StreamDelegate { model: pulseAudio.fake }
+    component StreamDelegate: QtObject {''' + delegate + '''
+    Component.onCompleted: monetVolume.settings.levels = '{"id:org.monet.delayed-browser":0.83}'
+    function actual() { return fake.Volume }
+}''')
     start_server()
     clip = TEMP / 'track.wav'
     with wave.open(str(clip), 'wb') as sound:
@@ -350,6 +369,15 @@ QtObject {
         });
     }
 }''')
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(delayed)))
+    delayed_client = component.create()
+    assert delayed_client is not None, [e.toString() for e in component.errors()]
+    QTest.qWait(100)
+    assert delayed_client.actual() == 65536
+    delayed_client.setProperty('ready', True)
+    wait_for(lambda: delayed_client.actual() == round(.83 * 65536), 'late app identity restores saved volume')
+    delayed_client.deleteLater(); QTest.qWait(50)
+
     def controller():
         component = QQmlComponent(engine, QUrl.fromLocalFile(str(harness)))
         obj = component.create()

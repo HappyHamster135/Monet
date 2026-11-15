@@ -6024,6 +6024,23 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
         return {"ok": False}
 
 
+def panel_layout(ident, layout=None):
+    if not re.fullmatch(r'[0-9]{1,10}', str(ident)) or layout not in (None, 'one', 'three'):
+        return {"ok": False}
+    try:
+        script = (Path(DATADIR) / 'monet/panel-layout.js').read_text(encoding='utf-8')
+    except OSError:
+        return {"ok": False}
+    script = script.replace('MONET_PANEL_ID', str(int(ident))).replace('MONET_PANEL_CHOICE', json.dumps(layout))
+    result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                     "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        state = json.loads(result[0])
+        return state if isinstance(state, dict) and isinstance(state.get("ok"), bool) else {"ok": False}
+    except (TypeError, IndexError, ValueError):
+        return {"ok": False}
+
+
 def fit_bars():
     # Only Monet's three bottom islands on the same screen are coordinated.
     # A range lets Plasma resize with its live contents. Fixing both limits to
@@ -8332,6 +8349,10 @@ def main(argv):
         emit(initial_display_sizes())
     elif cmd == "panel-icons" and len(args) in (1, 2):
         result = panel_icons(args[0], args[1] if len(args) == 2 else None)
+        emit(result)
+        return 0 if result.get("ok") else 1
+    elif cmd == "panel-layout" and len(args) in (1, 2):
+        result = panel_layout(args[0], args[1] if len(args) == 2 else None)
         emit(result)
         return 0 if result.get("ok") else 1
     elif cmd == "bar-layout":
