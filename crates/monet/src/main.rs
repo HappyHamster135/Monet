@@ -750,6 +750,9 @@ fn helper_sync() -> Res<()> {
 fn helper_stage_windows() -> Res<Outcome> {
     require_root()?;
     if let Some(done) = windows_setup_status().filter(|o| o.is_done()) {
+        if done == Outcome::Installed {
+            refresh_bridge_updater();
+        }
         return Ok(done);
     }
     let outcome = windows_setup::stage(windows_setup::payload_dir().as_deref())?;
@@ -770,6 +773,25 @@ fn helper_stage_windows() -> Res<Outcome> {
         }
     );
     Ok(outcome)
+}
+
+/// An installed Bridge from 0.9.8 or earlier can't see numbered updates: give it
+/// Monet's updater once, so Windows can update the rest of Bridge itself.
+fn refresh_bridge_updater() {
+    let marker = state_dir().join("windows-updater-current");
+    if marker.exists() {
+        return;
+    }
+    match windows_setup::refresh_updater(windows_setup::payload_dir().as_deref()) {
+        Ok(windows_setup::Updater::NotFound) => {}
+        Ok(found) => {
+            if found == windows_setup::Updater::Refreshed {
+                println!("Monet Bridge's updater in Windows is up to date again.");
+            }
+            let _ = fs::write(&marker, "");
+        }
+        Err(e) => eprintln!("Monet Bridge's updater couldn't be refreshed yet: {e}"),
+    }
 }
 
 /// Removes the one-time "Monet Windows Setup" boot entry after Windows is in.

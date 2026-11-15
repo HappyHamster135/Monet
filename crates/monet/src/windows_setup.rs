@@ -242,6 +242,72 @@ pub fn stage_into(root: &Path, payload: &Path) -> Result<Outcome, String> {
     Ok(Outcome::Staged)
 }
 
+// ------------------------------------------------------- the Bridge's updater
+
+const UPDATER: &[&str] = &["Program Files", "Monet", "Update-Monet.ps1"];
+
+/// Whether a Bridge updater can see numbered updates such as 0.9.8-6.
+fn understands_numbered_updates(script: &str) -> bool {
+    script.contains("function ReleaseOrder")
+}
+
+/// Bridges up to 0.9.8 only accept three-part release tags, so they never see a
+/// numbered update. Monet hands them its newer updater; Windows then installs the
+/// rest of the update itself, checksums and all.
+pub fn updater_is_outdated(root: &Path) -> bool {
+    resolve(root, UPDATER, false)
+        .and_then(|path| fs::read_to_string(path).ok())
+        .is_some_and(|script| !understands_numbered_updates(&script))
+}
+
+pub fn refresh_updater_into(root: &Path, payload: &Path) -> Result<(), String> {
+    let script = fs::read_to_string(payload.join("Update-Monet.ps1"))
+        .map_err(|e| format!("couldn't read the new updater: {e}"))?;
+    if !understands_numbered_updates(&script) {
+        return Err("this copy of Monet has no newer updater".into());
+    }
+    let target = resolve(root, UPDATER, false).ok_or("Monet Bridge's updater wasn't found")?;
+    fs::write(target, script).map_err(|e| format!("couldn't replace the updater: {e}"))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Updater {
+    Refreshed,
+    Current,
+    NotFound,
+}
+
+/// Finds Windows with Monet Bridge and refreshes an outdated updater. Needs root.
+pub fn refresh_updater(payload: Option<&Path>) -> Result<Updater, String> {
+    let Some(payload) = payload else { return Ok(Updater::NotFound) };
+    for vol in volumes().iter().filter(|v| v.fstype == "ntfs") {
+        if !mount(&vol.device, false) {
+            continue;
+        }
+        let root = Path::new(MOUNT_POINT);
+        let found = is_windows_root(root) && bridge_installed(root);
+        let outdated = found && updater_is_outdated(root);
+        let hibernated = is_hibernated(root);
+        unmount();
+        if !found {
+            continue;
+        }
+        if !outdated {
+            return Ok(Updater::Current);
+        }
+        if hibernated {
+            return Err("Windows is hibernated, so its drive can't be changed".into());
+        }
+        if !mount(&vol.device, true) {
+            return Err("Windows' drive couldn't be opened for writing".into());
+        }
+        let result = refresh_updater_into(Path::new(MOUNT_POINT), payload);
+        unmount();
+        return result.map(|()| Updater::Refreshed);
+    }
+    Ok(Updater::NotFound)
+}
+
 // ------------------------------------------------------------- finding Windows
 
 struct Volume {
@@ -453,6 +519,33 @@ mod tests {
         assert!(!root.join("ProgramData/Microsoft/Windows/Start Menu/Programs/StartUp").join(STARTUP_SCRIPT).exists());
         let _ = fs::remove_dir_all(root);
         let _ = fs::remove_dir_all(payload);
+    }
+
+    #[test]
+    fn an_old_bridge_gets_the_updater_that_sees_numbered_updates() {
+        let root = fake_windows("updater-windows");
+        let payload = fake_payload("updater-payload");
+        let installed = root.join("Program Files/Monet");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("monet-bridge.exe"), "bridge").unwrap();
+        fs::write(installed.join("Update-Monet.ps1"), "$release = 'v0.9.8'").unwrap();
+        fs::write(payload.join("Update-Monet.ps1"), "function ReleaseOrder([string]$name) {}").unwrap();
+        assert!(updater_is_outdated(&root));
+        refresh_updater_into(&root, &payload).unwrap();
+        assert!(!updater_is_outdated(&root));
+        assert!(fs::read_to_string(installed.join("Update-Monet.ps1")).unwrap().contains("ReleaseOrder"));
+    }
+
+    #[test]
+    fn an_older_payload_never_replaces_a_newer_updater() {
+        let root = fake_windows("updater-old-windows");
+        let payload = fake_payload("updater-old-payload");
+        let installed = root.join("Program Files/Monet");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("Update-Monet.ps1"), "old").unwrap();
+        fs::write(payload.join("Update-Monet.ps1"), "also old").unwrap();
+        assert!(refresh_updater_into(&root, &payload).is_err());
+        assert_eq!(fs::read_to_string(installed.join("Update-Monet.ps1")).unwrap(), "old");
     }
 
     #[test]
