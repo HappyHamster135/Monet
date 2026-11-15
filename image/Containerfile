@@ -131,6 +131,12 @@ COPY image/launcher /src/launcher
 COPY LICENSE /src/launcher/LICENSE
 RUN sh /src/launcher/build.sh /out
 
+# Task Manager's Graphics column: each program's share of the graphics card.
+FROM runtime AS graphics
+COPY image/graphics /src/graphics
+COPY LICENSE /src/graphics/LICENSE
+RUN sh /src/graphics/build.sh /out
+
 FROM runtime AS pdf-recovery
 COPY image/pdf-recovery /src/pdf-recovery
 COPY image/download-source-rpm.py /src/pdf-recovery/download-source-rpm.py
@@ -171,6 +177,8 @@ RUN --mount=type=bind,from=activity,source=/out,target=/tmp/monet-activity,ro \
     python3 /tmp/monet-activity/bundle.py install /tmp/monet-activity
 RUN --mount=type=bind,from=launcher,source=/out,target=/tmp/monet-launcher,ro \
     python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher
+RUN --mount=type=bind,from=graphics,source=/out,target=/tmp/monet-graphics,ro \
+    python3 /tmp/monet-graphics/bundle.py install /tmp/monet-graphics
 RUN --mount=type=bind,from=window-identity,source=/out,target=/tmp/monet-window-identity,ro \
     python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity
 RUN --mount=type=bind,from=editor-recovery,source=/out,target=/tmp/monet-editor-recovery,ro \

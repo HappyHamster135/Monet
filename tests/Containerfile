@@ -40,6 +40,11 @@ COPY image/launcher /src/launcher
 COPY LICENSE /src/launcher/LICENSE
 RUN MONET_LAUNCHER_TESTING=1 sh /src/launcher/build.sh /out
 
+FROM desktop-runtime AS graphics
+COPY image/graphics /src/graphics
+COPY LICENSE /src/graphics/LICENSE
+RUN MONET_GRAPHICS_TESTING=1 sh /src/graphics/build.sh /out
+
 FROM desktop-runtime AS dock
 COPY image/dock /src/dock
 COPY tests/native/dock-launch /src/dock-launch
@@ -66,6 +71,12 @@ RUN python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher \
  && cp /tmp/monet-launcher/tests/* /opt/monet-test-launcher/ \
  && rm -rf /tmp/monet-launcher
 ENV MONET_LAUNCHER_FIXTURE=/opt/monet-test-launcher/launcher-test
+COPY --from=graphics /out /tmp/monet-graphics
+RUN python3 /tmp/monet-graphics/bundle.py install /tmp/monet-graphics \
+ && mkdir -p /opt/monet-test-graphics \
+ && cp /tmp/monet-graphics/tests/* /opt/monet-test-graphics/ \
+ && rm -rf /tmp/monet-graphics
+ENV MONET_GRAPHICS_FIXTURE=/opt/monet-test-graphics/graphics-column-test
 COPY --from=dock /out /tmp/monet-dock
 RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
  && mkdir -p /opt/monet-test-dock \

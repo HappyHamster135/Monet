@@ -50,3 +50,9 @@ noMargins=false
 name=section-0
 face=Face-monet-totals
 isSeparator=false
+
+# Graphics beside CPU and Memory: Monet's plugin (image/graphics), each app's processes added up.
+[Face-94920553440704][FaceConfig][General]
+sortedColumns=appName,usage,vmPSS,monetGraphics,netInbound,netOutbound,ioCharactersActuallyReadRate,ioCharactersActuallyWrittenRate
+columnWidths=0.28,0.09,0.1,0.09,0.11,0.11,0.11,0.11
+columnDisplay={"appName":"text","usage":"lineScaled","vmPSS":"text","monetGraphics":"text","netInbound":"text","netOutbound":"text","ioCharactersActuallyReadRate":"text","ioCharactersActuallyWrittenRate":"text"}

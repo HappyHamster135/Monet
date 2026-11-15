@@ -10,6 +10,11 @@ column names, which have grown over the years. Prints one line of JSON:
 
 ok is false when no driver here reports use per program. part names Monet's own desktop
 ("windows", "desktop", "xwayland"), which Task Manager words in the person's language.
+
+With --watch it keeps going for Task Manager's Graphics column, a line every two seconds
+with each process's own share, until whoever reads it stops:
+
+    {"version": 1, "ok": true, "pids": {"1201": 7.0, "3300": 41.0}}
 """
 import json
 import os
@@ -17,6 +22,8 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
+import threading
 import time
 
 PROC = Path("/proc")
@@ -107,26 +114,70 @@ def drm_use(before, after, seconds):
     return use
 
 
+def nvidia_columns(line):
+    """The column names of a `nvidia-smi pmon` heading line, or None if it isn't the one naming them."""
+    names = line[1:].split() if line.startswith("#") else []
+    return names if "pid" in names and "sm" in names else None
+
+
+def nvidia_row(columns, line):
+    """(card, pid, percent) from one line of `nvidia-smi pmon`, or None ("-": no work this sample)."""
+    parts = line.split()
+    if not columns or line.startswith("#") or len(parts) < columns.index("sm") + 1:
+        return None
+    row = dict(zip(columns, parts))
+    try:
+        return row.get("gpu", "0"), int(row["pid"]), float(row["sm"])
+    except (KeyError, ValueError):
+        return None
+
+
 def nvidia_use(text):
     """{pid: percent} from `nvidia-smi pmon`: the sm column of each program, found by name.
     A program on several cards counts its busiest one."""
     columns, use = None, {}
     for line in text.splitlines():
-        if line.startswith("#"):
-            names = line[1:].split()
-            if "pid" in names and "sm" in names:
-                columns = names
-            continue
-        parts = line.split()
-        if not columns or len(parts) < columns.index("sm") + 1:
-            continue
-        row = dict(zip(columns, parts))
-        try:
-            pid, share = int(row["pid"]), float(row["sm"])
-        except (KeyError, ValueError):  # "-": no work in this sample
-            continue
-        use[pid] = max(use.get(pid, 0.0), share)
+        columns = nvidia_columns(line) or columns
+        row = nvidia_row(columns, line)
+        if row:
+            use[row[1]] = max(use.get(row[1], 0.0), row[2])
     return use
+
+
+class NvidiaStream:
+    """`nvidia-smi pmon` running on for --watch: its newest share for each program on each card."""
+
+    def __init__(self, command=("nvidia-smi", "pmon", "-s", "u", "-d", "1"), clock=time.monotonic):
+        self.clock, self.latest, self.lock, self.process = clock, {}, threading.Lock(), None
+        if not shutil.which(command[0]):
+            return
+        try:
+            self.process = subprocess.Popen(list(command), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        except OSError:
+            return
+        threading.Thread(target=self.read, args=(self.process.stdout,), daemon=True).start()
+
+    def read(self, lines):
+        columns = None
+        for line in lines:
+            columns = nvidia_columns(line) or columns
+            row = nvidia_row(columns, line)
+            if row:
+                with self.lock:
+                    self.latest[row[:2]] = (row[2], self.clock())
+
+    def use(self, fresh=3.0):
+        """{pid: percent} from the samples of the last few seconds; a program gone since isn't in it."""
+        now, use = self.clock(), {}
+        with self.lock:
+            for (card, pid), (share, at) in self.latest.items():
+                if now - at <= fresh:
+                    use[pid] = max(use.get(pid, 0.0), share)
+        return use
+
+    def stop(self):
+        if self.process and self.process.poll() is None:
+            self.process.kill()
 
 
 def nvidia_report():
@@ -237,5 +288,31 @@ def measure(proc=PROC, nvidia=nvidia_report, clock=time.monotonic, wait=time.sle
     return {"version": 1, "ok": bool(before or after or report), "apps": shown}
 
 
+def watch(write=print, proc=PROC, stream=None, clock=time.monotonic, wait=time.sleep, every=2.0, rounds=None):
+    """For Task Manager's Graphics column: each process's share, a line every two seconds, until
+    whoever reads them stops (or rounds have passed, in a test)."""
+    stream = stream or NvidiaStream()
+    before, then = drm_clients(proc), clock()
+    try:
+        while rounds is None or rounds > 0:
+            wait(every)
+            after, now = drm_clients(proc), clock()
+            use = drm_use(before, after, now - then)
+            for pid, share in stream.use().items():
+                use[pid] = use.get(pid, 0.0) + share
+            write(json.dumps({"version": 1, "ok": bool(before or after or stream.process),
+                              "pids": {str(pid): round(min(share, 100.0), 1) for pid, share in use.items()
+                                       if share >= 0.05}}))
+            before, then = after, now
+            rounds = None if rounds is None else rounds - 1
+    except BrokenPipeError:
+        pass  # Task Manager stopped reading
+    finally:
+        stream.stop()
+
+
 if __name__ == "__main__":
-    print(json.dumps(measure()))
+    if sys.argv[1:] == ["--watch"]:
+        watch(lambda line: print(line, flush=True))
+    else:
+        print(json.dumps(measure()))

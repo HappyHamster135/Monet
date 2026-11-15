@@ -1,0 +1,6 @@
+{
+    "KPlugin": {
+        "Description": "Each program's share of the graphics card, for Monet's Task Manager",
+        "Name": "Monet graphics use"
+    }
+}

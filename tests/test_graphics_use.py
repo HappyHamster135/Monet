@@ -138,6 +138,51 @@ class Drivers(Fixture):
         self.assertEqual(result, {'version': 1, 'ok': False, 'apps': []})
 
 
+class Watching(Fixture):
+    def test_nvidia_stream_keeps_each_programs_newest_share(self):
+        now = [100.0]
+        stream = use.NvidiaStream(command=('/nonexistent/nvidia-smi',), clock=lambda: now[0])
+        self.assertIsNone(stream.process)  # no NVIDIA driver: nothing started
+        stream.read(iter(OLD_PMON.splitlines(True)))
+        self.assertEqual(stream.use(), {1201: 6.0})
+        now[0] = 102.0
+        stream.read(iter(NEW_PMON.splitlines(True)))  # the newer format, from a later driver
+        self.assertEqual(stream.use(), {1201: 7.0, 3300: 41.0})
+        now[0] = 106.0  # nothing since: those programs have stopped or closed
+        self.assertEqual(stream.use(), {})
+        stream.stop()
+
+    def test_watch_prints_each_process_share_every_round_until_reading_stops(self):
+        folder = self.process(100, 'zen', ['/app/bin/zen'], 'app-flatpak-app.zen_browser.zen-1234.scope',
+                              fds=[('/dev/dri/renderD128', self.client(7, {'drm-engine-gfx': '0 ns'}))])
+        times = iter([0.0, 2.0, 4.0])
+        busy = iter(['500000000 ns', '1500000000 ns'])
+
+        class Stream:
+            process, stopped = True, False
+            def use(self):
+                return {3300: 41.0, 4400: 0.01}  # too small to show
+            def stop(self):
+                Stream.stopped = True
+
+        def wait(seconds):
+            (folder / 'fdinfo/3').write_text(self.client(7, {'drm-engine-gfx': next(busy)}))
+
+        lines = []
+        use.watch(lines.append, self.proc, Stream(), clock=lambda: next(times), wait=wait, rounds=2)
+        self.assertEqual([json.loads(line) for line in lines], [
+            {'version': 1, 'ok': True, 'pids': {'100': 25.0, '3300': 41.0}},
+            {'version': 1, 'ok': True, 'pids': {'100': 50.0, '3300': 41.0}}])
+        self.assertTrue(Stream.stopped)
+
+        def gone(line):
+            raise BrokenPipeError()
+        Stream.stopped = False
+        times, busy = iter([0.0, 2.0]), iter(['0 ns'])
+        use.watch(gone, self.proc, Stream(), clock=lambda: next(times), wait=wait)  # returns, never raises
+        self.assertTrue(Stream.stopped)
+
+
 def near(value):
     """Equal to a float within a millionth."""
     class Near(float):
@@ -188,6 +233,61 @@ class Names(Fixture):
         self.assertEqual(result['version'], 1)
         self.assertIsInstance(result['ok'], bool)
         self.assertIsInstance(result['apps'], list)
+
+
+@unittest.skipUnless(os.environ.get('MONET_GRAPHICS_FIXTURE'), 'compiled Graphics column (the desktop test image)')
+class NativeColumn(unittest.TestCase):
+    def test_kdes_own_process_model_shows_each_processs_share(self):
+        fixture = Path(os.environ['MONET_GRAPHICS_FIXTURE'])
+        done = subprocess.run(['sh', str(fixture.with_name('run.sh')), str(fixture)], capture_output=True, text=True,
+                              timeout=60)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
+
+class GraphicsColumn(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('graphics_bundle', ROOT / 'image/graphics/bundle.py')
+        self.bundle = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.bundle)
+
+    def test_the_process_library_is_found_by_whichever_major_version_is_here(self):
+        with tempfile.TemporaryDirectory() as folder:
+            lib = Path(folder)
+            for name in ('libprocesscore.so.10', 'libprocesscore.so.10.6.8', 'libprocesscore.so'):
+                (lib / name).write_text('')
+            self.assertEqual(self.bundle.libraries(lib), ('libQt6Core.so.6', 'libKF6CoreAddons.so.6', 'libKF6I18n.so.6',
+                                                          'libprocesscore.so.10'))
+            (lib / 'libprocesscore.so.11').write_text('')
+            with self.assertRaises(ValueError):
+                self.bundle.libraries(lib)  # two at once: which one the plugin was built for is unclear
+        with tempfile.TemporaryDirectory() as folder, self.assertRaises(ValueError):
+            self.bundle.libraries(Path(folder))
+
+    def test_pages_show_it_beside_cpu_and_memory_and_it_is_built_and_tested(self):
+        pages = ROOT / 'linux/share/plasma-systemmonitor'
+        for page, face, first in (('monet-applications.page', '94920553440704', 'appName'),
+                                  ('monet-processes.page', '94051759765872', 'name')):
+            text = (pages / page).read_text()
+            # KDE's table reads a face's columns from [Face-ID][FaceConfig][General].
+            group = text.split(f'[Face-{face}][FaceConfig][General]\n', 1)[1].split('\n[', 1)[0]
+            settings = dict(line.split('=', 1) for line in group.splitlines() if '=' in line)
+            columns = settings['sortedColumns'].split(',')
+            self.assertEqual(columns[:4], [first, 'usage', 'vmPSS', 'monetGraphics'], page)
+            widths = [float(w) for w in settings['columnWidths'].split(',')]
+            self.assertEqual(len(widths), len(columns), page)
+            self.assertAlmostEqual(sum(widths), 1.0, places=6)
+            self.assertEqual(set(json.loads(settings['columnDisplay'])), set(columns), page)
+        source = (ROOT / 'image/graphics/monetgraphics.cpp').read_text()
+        self.assertIn('QStringLiteral("monetGraphics"), i18nd("monet", "Graphics")', source)
+        self.assertIn('m_watch->setArguments({QStringLiteral("--watch")});', source)
+        self.assertIn('"/usr/libexec/monet-graphics-use"', (ROOT / 'image/graphics/CMakeLists.txt').read_text())
+        image = (ROOT / 'image/Containerfile').read_text()
+        self.assertIn('FROM runtime AS graphics\nCOPY image/graphics /src/graphics', image)
+        self.assertIn('python3 /tmp/monet-graphics/bundle.py install /tmp/monet-graphics', image)
+        tests = (ROOT / 'tests/Containerfile').read_text()
+        self.assertIn('RUN MONET_GRAPHICS_TESTING=1 sh /src/graphics/build.sh /out', tests)
+        self.assertIn('ENV MONET_GRAPHICS_FIXTURE=/opt/monet-test-graphics/graphics-column-test', tests)
+        self.assertIn('image/graphics', (ROOT / 'tools/make-translations.py').read_text())
 
 
 class TaskManager(unittest.TestCase):
