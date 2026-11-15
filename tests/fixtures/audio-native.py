@@ -323,9 +323,98 @@ def check_notification_volume(pulsectl):
         print('Notification volume defaults, mono migration, and stereo playback passed')
 
 
+def dock_volume():
+    import pulsectl
+    import wave
+
+    start_server()
+    clip = TEMP / 'track.wav'
+    with wave.open(str(clip), 'wb') as sound:
+        sound.setnchannels(2); sound.setsampwidth(2); sound.setframerate(8000)
+        sound.writeframes(b'\0' * 4 * 8000 * 30)
+    source = Path(os.environ['MONET_DOCK_AUDIO_QML'])
+    harness = TEMP / 'DockAudio.qml'
+    harness.write_text('''import QtQuick
+import "''' + source.as_uri() + '''" as Dock
+QtObject {
+    property int requested: -1
+    property string appName: "Monet Browser"
+    readonly property Dock.PulseAudio audio: Dock.PulseAudio {}
+    onRequestedChanged: {
+        const streams = audio.streamsForAppName(appName);
+        if (!streams.length) throw new Error("No playback stream");
+        streams.forEach(stream => {
+            audio.monetVolume.remember(stream, requested / 100 * audio.normalVolume);
+            stream.model.Volume = Math.round(requested / 100 * audio.normalVolume);
+            stream.model.Muted = requested === 0;
+        });
+    }
+}''')
+    def controller():
+        component = QQmlComponent(engine, QUrl.fromLocalFile(str(harness)))
+        obj = component.create()
+        assert obj is not None, [e.toString() for e in component.errors()]
+        objects.append((component, obj))
+        return obj
+
+    def play(name='Monet Browser', identity='org.monet.test-browser'):
+        return subprocess.Popen(['paplay', '--client-name=' + name, '--volume=65536',
+                                 '--property=application.id=' + identity, str(clip)],
+                                stdout=log, stderr=log)
+
+    with subprocess.Popen(['wireplumber', '--profile=policy'], stdout=log, stderr=log) as policy, \
+            pulsectl.Pulse('Monet dock test') as pulse:
+        players = []
+        try:
+            def stream(player):
+                return next((item for item in pulse.sink_input_list()
+                             if item.proplist.get('application.process.id') == str(player.pid)), None)
+            def at(player, value):
+                item = stream(player)
+                return item and all(abs(v - value / 100) < .002 for v in item.volume.values)
+            obj = controller()
+            first = play(); players.append(first)
+            wait_for(lambda: at(first, 100), 'first track initial volume')
+            QTest.qWait(100)
+            obj.setProperty('requested', 83)
+            wait_for(lambda: at(first, 83), 'Home Bar changed active track')
+            first.terminate(); first.wait(timeout=5)
+            wait_for(lambda: stream(first) is None, 'first track removed')
+            second = play(); players.append(second)
+            wait_for(lambda: at(second, 83), 'next track retained app volume')
+            QTest.qWait(300)
+            assert at(second, 83), 'player initial volume overwrote the saved choice'
+            other = play('Monet Other Player', 'org.monet.other-player'); players.append(other)
+            wait_for(lambda: at(other, 100), 'unrelated app kept its volume')
+            obj.setProperty('requested', 0)
+            wait_for(lambda: at(second, 0) and stream(second).mute, 'zero app volume')
+            second.terminate(); second.wait(timeout=5)
+            # Closing the controller flushes QSettings, as closing Plasma does.
+            previous = objects.pop()
+            obj.deleteLater(); QTest.qWait(100)
+            del previous
+            obj = controller()
+            third = play(); players.append(third)
+            try:
+                wait_for(lambda: at(third, 0) and stream(third).mute, 'saved zero after controller restart')
+            except AssertionError:
+                print((Path(os.environ['XDG_CONFIG_HOME']) / 'monet/app-volume.ini').read_text())
+                print(stream(third))
+                raise
+            obj.setProperty('requested', 42)
+            wait_for(lambda: at(third, 42) and not stream(third).mute, 'adjust and unmute saved volume')
+            assert at(other, 100), 'another app was changed'
+            print('Dock volume: next track, separate app, persistence, zero and unmute passed')
+        finally:
+            for player in players:
+                if player.poll() is None: player.terminate()
+                player.wait(timeout=5)
+            policy.terminate()
+
+
 try:
     {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
-     'widget': widget, 'notifications': notifications}[sys.argv[1]]()
+     'widget': widget, 'notifications': notifications, 'dock-volume': dock_volume}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()
     QTest.qWait(50)

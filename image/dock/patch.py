@@ -15,8 +15,26 @@ def prepend(path, anchor, addition):
     if addition in path.read_text(): return
     replace(path, anchor, addition + anchor)
 
+def patch_audio(applet):
+    prepend(applet/'qml/PulseAudio.qml', '    signal streamsChanged()', '''    readonly property MonetAppVolume monetVolume: MonetAppVolume {
+        normalVolume: pulseAudio.normalVolume
+    }
+
+''')
+    prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Browser players replace streams between tracks, often with an
+            // explicit initial volume. Restore after the stream starts playing.
+            onCorkedChanged: if (!corked) Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
+            Component.onCompleted: Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
+
+''')
+    replace(applet/'qml/ToolTipInstance.qml', '                    stream.model.Volume = v',
+            '''                    pulseAudio.item.monetVolume.remember(stream, Math.max(from, value))
+                    stream.model.Volume = v''')
+    (applet/'qml/MonetAppVolume.qml').write_bytes(Path(__file__).with_name('MonetAppVolume.qml').read_bytes())
+
 def apply(source):
     applet=source/'applets/taskmanager'
+    patch_audio(applet)
     # Plasma's internal task-manager model is the Home Bar in Monet. Keep the
     # actual System Monitor/Task Manager app distinct in user-facing menus.
     context = applet/'qml/ContextMenu.qml'
@@ -102,7 +120,7 @@ def apply(source):
             height: taskList.height''')
     replace(context, 'text: editModeAction ? editModeAction.text : ""',
             'text: editModeAction ? i18nd("monet", "Customize Home Bar…") : ""')
-    replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml')
+    replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml\n        qml/MonetAppVolume.qml')
     # Standalone build keeps the upstream generated settings in their original folder.
     replace(applet/'CMakeLists.txt','${CMAKE_SOURCE_DIR}/kcms/recentFiles/', '${UPSTREAM_SOURCE}/kcms/recentFiles/')
     prepend(applet/'qml/main.qml','    property Task toolTipOpenedByClick', '''    // Passive hover tracking never takes clicks or grabs away from task controls.

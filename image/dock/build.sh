@@ -25,6 +25,9 @@ curl --fail --location --retry 3 \
 tar -xzf "$work/upstream.tar.gz" -C "$work"
 source="$work/plasma-desktop-v$version"
 python3 "$here/patch.py" "$source"
+# Exercise the exact patched audio bridge against a private sound server in CI.
+mkdir -p "$out/tests/audio"
+cp "$source/applets/taskmanager/qml/PulseAudio.qml" "$here/MonetAppVolume.qml" "$out/tests/audio/"
 cmake -S "$here" -B "$work/build" \
     -DUPSTREAM_SOURCE="$source" -DUPSTREAM_VERSION="$version" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_RPATH=ON
@@ -40,7 +43,7 @@ done
 # Ship the complete corresponding source, licenses and build instructions with
 # the image. The archive contains the patched source plus Monet's build inputs.
 mkdir "$work/monet-build"
-for name in CMakeLists.txt MonetDockMotion.qml MonetDockHover.qml MonetTaskIcon.inc patch.py bundle.py build.sh README.md; do
+for name in CMakeLists.txt MonetDockMotion.qml MonetDockHover.qml MonetAppVolume.qml MonetTaskIcon.inc patch.py bundle.py build.sh README.md; do
     cp "$here/$name" "$work/monet-build/"
 done
 cp "$out/runtime.json" "$work/monet-build/runtime.json"

@@ -26,6 +26,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   controls without resetting other panel choices.
 - **A dark handoff at shutdown.** After the application-closing screen,
   shutdown and restart use a black background instead of the bright painting.
+- **Remember app volume between tracks.** Volume chosen in a Home Bar app
+  preview is saved for that app and restored when its next video or song starts.
 
 - **Find downloads and launch apps from the menu.** Recently downloaded
   installers appear in the menu. Search can also find a Windows program

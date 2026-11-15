@@ -45,7 +45,7 @@ COPY tests/native/dock-launch /src/dock-launch
 RUN sh /src/dock/build.sh /out \
  && cmake -S /src/dock-launch -B /tmp/dock-launch -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /tmp/dock-launch --parallel 2 \
- && mkdir /out/tests \
+ && mkdir -p /out/tests \
  && cp /tmp/dock-launch/dock-launch /out/tests/
 
 FROM desktop-runtime
@@ -68,7 +68,8 @@ ENV MONET_LAUNCHER_FIXTURE=/opt/monet-test-launcher/launcher-test
 COPY --from=dock /out /tmp/monet-dock
 RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
  && mkdir -p /opt/monet-test-dock \
- && cp /tmp/monet-dock/tests/dock-launch /opt/monet-test-dock/ \
+ && cp -a /tmp/monet-dock/tests/. /opt/monet-test-dock/ \
  && rm -rf /tmp/monet-dock
 ENV MONET_DOCK_LAUNCH_FIXTURE=/opt/monet-test-dock/dock-launch
+ENV MONET_DOCK_AUDIO_QML=/opt/monet-test-dock/audio
 CMD ["python3", "tools/test.py", "--require-desktop"]

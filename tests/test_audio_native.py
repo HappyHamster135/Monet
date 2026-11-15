@@ -65,6 +65,12 @@ class NativeAudio(unittest.TestCase):
     def test_notification_volume_sets_both_channels_and_recovers_existing_mono_entries(self):
         self.fixture('notifications')
 
+    @unittest.skipUnless(os.environ.get('MONET_DOCK_AUDIO_QML') and importlib.util.find_spec('pulsectl')
+                         and shutil.which('paplay') and shutil.which('wireplumber'),
+                         'candidate dock audio bridge and WirePlumber playback')
+    def test_dock_volume_survives_track_and_player_replacement(self):
+        self.fixture('dock-volume')
+
     @unittest.skipUnless(shutil.which('plasmawindowed'), 'native Plasma widget host')
     def test_full_sound_widget_tracks_native_level_and_renders(self):
         self.fixture('widget')
