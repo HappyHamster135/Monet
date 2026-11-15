@@ -67,7 +67,7 @@ msgstr "Abbrechen"
 msgid "Allow"
 msgstr "Erlauben"
 
-#: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:24 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
+#: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
 #: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/settings-app/MonetSettings.qml:9036 image/graphics/monetgraphics.cpp:26
 #: image/graphics/monetgraphics.cpp:28
 msgid "Graphics"
@@ -102,11 +102,11 @@ msgstr ""
 msgid "No supported hardware sensors were found."
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/CompactRepresentation.qml:10 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:24 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/CompactRepresentation.qml:10 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21
 msgid "CPU"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:26 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:39 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:79
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:26 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:41 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:79
 msgid "Logical processors"
 msgstr ""
 
@@ -136,8 +136,8 @@ msgid ""
 "Physical drives and mounted filesystems. Their totals can overlap; do not add them together."
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:63 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:32 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:36
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:52
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:63 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:34 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:38
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:54
 msgid "Utilisation"
 msgstr ""
 
@@ -153,19 +153,19 @@ msgstr ""
 msgid "System"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:65 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:41
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:65 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:43
 msgid "Waiting for disk"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:65 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:38 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:53
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:65 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:40 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:55
 msgid "Temperature"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:33 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:38
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:35 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:38
 msgid "Download"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:33 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:39
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:35 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:39
 msgid "Upload"
 msgstr ""
 
@@ -177,19 +177,19 @@ msgstr ""
 msgid "IPv6 address"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:69 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:61
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:69 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:63
 msgid "Downloaded"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:69 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:62
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:69 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:64
 msgid "Uploaded"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:33 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:35 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
 msgid "Read"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:33 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:35 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
 msgid "Write"
 msgstr ""
 
@@ -197,7 +197,7 @@ msgstr ""
 msgid "Capacity"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:71 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:66
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:71 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:68
 msgid "Free space"
 msgstr ""
 
@@ -286,156 +286,160 @@ msgstr ""
 msgid "Now"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:24 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:87 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:87 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21
 #: linux/share/monet/settings-app/MonetSettings.qml:9038
 msgid "Memory"
 msgstr "Arbeitsspeicher"
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:25 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:99 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:22
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:27 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:99 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:22
 #: linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:33
 msgid "Network"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:25 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:106 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:22
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:27 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:106 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:22
 #: linux/share/monet/settings-app/MonetSettings.qml:266 linux/share/monet/settings-app/MonetSettings.qml:6023 linux/share/monet/settings-app/MonetSettings.qml:9039
 #: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:17 linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:57
 msgid "Storage"
 msgstr "Speicher"
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:28
 msgid "Processor workload and temperature"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:28
 msgid "Physical memory and swap"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:27
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:29
 msgid "Graphics workload and video memory"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:27
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:29
 msgid "Traffic across all connections"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:28
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:30
 msgid "Activity and space on mounted drives"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:37
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:39
 msgid "Average frequency"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:40 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:77
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:42 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:77
 msgid "Sockets"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:43
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:45
 msgid "In use"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:44
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:46
 msgid "Free"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:45
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:47
 msgid "Total memory"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:46
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:48
 msgid "Cached"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:47
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:49
 msgid "Swap in use"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:48
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:50
 msgid "Total swap"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:49
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:51
 msgid "Application memory"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:50
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:52
 msgid "Buffers"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:54
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:56
 msgid "Power"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:55
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:57
 msgid "Video memory used"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:56
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:58
 msgid "Video memory total"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:57
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:59
 msgid "Core frequency"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:59
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:61
 msgid "Download speed"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:60
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:62
 msgid "Upload speed"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:64
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:66
 msgid "Read speed"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:65
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:67
 msgid "Write speed"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:67
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:69
 msgid "Used space"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:68
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:70
 msgid "Total space"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:132
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:115
+msgid "Graphics device %1"
+msgstr ""
+
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:116
+msgid "%1 (built into the processor)"
+msgstr ""
+
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:173
 msgid "Resource"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:151 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:405 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:444
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:192 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:405 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:444
 msgid "Resume"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:151 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:405
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:192 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:405
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:444
 msgid "Pause"
 msgstr "Pause"
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:154
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:195
 msgid "Pause the graph and readings for this resource"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:160
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:201
 msgid "Device"
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:168 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:174
-msgid "Graphics device %1"
-msgstr ""
-
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:224
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:265
 msgid "No supported graphics device was found."
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:241
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:282
 msgid "Paused — readings are frozen. Resume to collect a new history."
 msgstr ""
 
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:242
+#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:283
 msgid "Live · updates every second"
 msgstr ""
 

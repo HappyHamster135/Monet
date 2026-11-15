@@ -27,7 +27,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Processes tabs have a Graphics column beside CPU and Memory, and the
   Graphics page lists each app's share, naming Monet's own desktop parts such
   as windows and effects. It works with NVIDIA, AMD and Intel graphics, and
-  only measures while it's on screen.
+  only measures while it's on screen. The Graphics page's device list no
+  longer shows an extra "Graphics device 1" that was every device added
+  together, and the graphics built into the processor is named as such
+  instead of "GPU 2".
 - **Smoother on older PCs.** When memory runs low, apps you've minimized and
   left for ten minutes are compressed in memory, so the app you're using keeps
   its room; they come back as soon as you open them. Apps on screen, playing
