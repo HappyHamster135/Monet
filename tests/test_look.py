@@ -8436,7 +8436,14 @@ class MonetsAppsAreGlass(unittest.TestCase):
         self.assertIn('kind: sheet.restored ? "lily" : "plain"', settings)
         # Settings handles detents and precise touchpad pixels; the actual input
         # path is exercised by test_settings_navigation at each display scale.
-        self.assertIn("ScrollInput { id: pageInput; view: scroller }", settings)
+        self.assertIn("ScrollInput { id: pageInput; view: scroller; onScrollRequested: scroller.leaveFocus() }", settings)
+        # A control scrolled away from isn't pulled back when the page refreshes (test_scroll_input
+        # covers the input itself); moving the focus on follows again.
+        self.assertIn("|| item === leftBehind) return", settings)
+        self.assertIn("Rail { tone: look; onPressedChanged: if (pressed) scroller.leaveFocus() }", settings)
+        store = (SHARE / "monet/store-app/Store.qml").read_text(encoding="utf-8")
+        self.assertIn("if (!focused || focused === leftBehind ||", store)
+        self.assertIn("function onMovementStarted() { root.cancelFocusReveal(watch.view) }", store)
         self.assertIn("target: grid", (SHARE / "monet/games/Games.qml").read_text(encoding="utf-8"))
         self.assertIn("target: page", (SHARE / "monet/games/GamePage.qml").read_text(encoding="utf-8"))
 

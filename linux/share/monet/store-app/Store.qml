@@ -79,11 +79,18 @@ MonetWindow {
     onVisibilityChanged: if (visibility === Window.Windowed) Qt.callLater(fitAvailableScreen)
 
     property Item pendingFocusReveal: null
+    // The control that had focus when its list was scrolled away from it: a list that grows
+    // later (pictures and shelves arriving) doesn't pull it back into view, which stopped the
+    // scroll. Moving the focus on follows again.
+    property Item leftBehind: null
     function scheduleFocusReveal() {
         pendingFocusReveal = activeFocusItem
         Qt.callLater(revealFocusedControl)
     }
     function cancelFocusReveal(view) {
+        for (let item = activeFocusItem; item; item = item.parent) {
+            if (item === view) { leftBehind = activeFocusItem; break }
+        }
         for (let item = pendingFocusReveal; item; item = item.parent) {
             if (item === view) { pendingFocusReveal = null; return }
         }
@@ -93,7 +100,8 @@ MonetWindow {
         pendingFocusReveal = null
         // GridView can focus a non-interactive delegate wrapper. Revealing that
         // wrapper would undo a manual Home/Page scroll to the shelf's header.
-        if (!focused || focused !== activeFocusItem || !focused.visible || !focused.activeFocusOnTab) return
+        if (!focused || focused === leftBehind || focused !== activeFocusItem || !focused.visible
+                || !focused.activeFocusOnTab) return
         for (let view = focused.parent; view; view = view.parent) {
             if (!("contentY" in view) || !("contentHeight" in view) || !view.contentItem) continue
             const top = focused.mapToItem(view.contentItem, 0, 0).y
@@ -106,7 +114,11 @@ MonetWindow {
             view.contentY = Math.max(first, Math.min(last, position))
         }
     }
-    onActiveFocusItemChanged: scheduleFocusReveal()
+    onActiveFocusItemChanged: {
+        // Not when the window gives back the same focus as it's activated again.
+        if (active && activeFocusItem && activeFocusItem !== leftBehind) leftBehind = null
+        scheduleFocusReveal()
+    }
     // Wayland can deliver a configure for the old size after a screen change.
     onWidthChanged: {
         if (width > availableWidth - 32 || width < minimumWidth) Qt.callLater(fitAvailableScreen)
@@ -127,6 +139,7 @@ MonetWindow {
             function onWidthChanged() { watch.queue() }
             function onHeightChanged() { watch.queue() }
             function onVisibleChanged() { watch.queue() }
+            function onMovementStarted() { root.cancelFocusReveal(watch.view) }
         }
     }
     FocusWatch { view: home; reveal: root.scheduleFocusReveal }

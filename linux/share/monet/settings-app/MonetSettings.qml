@@ -3098,7 +3098,7 @@ Shared.MonetWindow {
                 id: scroller
                 objectName: "settingsScroller"
                 Shared.MouseScroll { view: scroller }
-                Shared.ScrollInput { id: pageInput; view: scroller }
+                Shared.ScrollInput { id: pageInput; view: scroller; onScrollRequested: scroller.leaveFocus() }
                 Keys.priority: Keys.AfterItem
                 Keys.onPressed: event => pageInput.key(event)
                 anchors.fill: parent
@@ -3109,12 +3109,19 @@ Shared.MonetWindow {
                 contentHeight: pageLoader.height + 60
                 boundsBehavior: Flickable.StopAtBounds
                 property bool followFocus: true
+                // The control that had focus when the page was scrolled away from it (the wheel,
+                // touchpad, keys, a drag or the scroll bar): a page that grows or shrinks later, as
+                // Wi-Fi's networks come and go, doesn't pull it back into view, which stopped the
+                // scroll. Moving the focus on follows again.
+                property Item leftBehind: null
+                function leaveFocus() { leftBehind = sheet.activeFocusItem }
+                onMovementStarted: leaveFocus()
                 function resumeFocusTracking() { followFocus = sheet.active }
                 function revealFocus() {
                     const item = sheet.activeFocusItem
                     let ancestor = item
                     while (ancestor && ancestor !== scroller.contentItem) ancestor = ancestor.parent
-                    if (!followFocus || !sheet.active || !item || !ancestor) return
+                    if (!followFocus || !sheet.active || !item || !ancestor || item === leftBehind) return
                     const top = item.mapToItem(scroller.contentItem, 0, 0).y
                     if (top < contentY + 12) contentY = Math.max(0, top - 12)
                     else if (top + item.height > contentY + height - 12)
@@ -3133,10 +3140,13 @@ Shared.MonetWindow {
                         if (sheet.active) Qt.callLater(scroller.resumeFocusTracking)
                     }
                     function onActiveFocusItemChanged() {
+                        // Not when the window gives back the same focus as it's activated again.
+                        if (sheet.active && sheet.activeFocusItem && sheet.activeFocusItem !== scroller.leftBehind)
+                            scroller.leftBehind = null
                         if (sheet.active && scroller.followFocus) Qt.callLater(scroller.revealFocus)
                     }
                 }
-                T.ScrollBar.vertical: Rail { tone: look }
+                T.ScrollBar.vertical: Rail { tone: look; onPressedChanged: if (pressed) scroller.leaveFocus() }
 
                 Loader {
                     id: pageLoader
