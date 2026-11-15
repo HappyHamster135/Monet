@@ -305,6 +305,7 @@ pub trait Backend {
     /// Check current native identities and letters before each mutation, never cached discovery.
     fn recheck(&mut self) -> Result<(), String>;
     fn apply(&mut self, setup: &Path, target: &Path) -> Result<(), String>;
+    fn stage_drivers(&mut self, target: &Path, infs: &[PathBuf]) -> Result<(), String>;
     fn boot(&mut self, target: &Path) -> Result<(), String>;
 }
 
@@ -364,7 +365,7 @@ pub fn deploy(
         if !checked_path(target, "Windows/System32/winload.efi")?.is_file() {
             return Err("Windows image application did not produce its boot loader.".into());
         }
-        // This durable phase is written BEFORE enabling any boot path. All retries after it skip DISM.
+        // Once this checkpoint is saved, retries skip reapplying the Windows image.
         save_checkpoint(
             target,
             &Checkpoint {
@@ -373,6 +374,36 @@ pub fn deploy(
                 manifest_sha256: hash.clone(),
                 phase: Phase::Applied,
             },
+        )?;
+    }
+    let driver_infs = held
+        .iter()
+        .filter(|entry| {
+            let path = entry.path.to_ascii_lowercase();
+            path.starts_with("monet/bridge/hardware/drivers/") && path.ends_with(".inf")
+        })
+        .map(|entry| checked_path(setup, &entry.path))
+        .collect::<Result<Vec<_>, _>>()?;
+    if !driver_infs.is_empty() {
+        backend.recheck()?;
+        let error = backend.stage_drivers(target, &driver_infs).err();
+        backend.recheck()?;
+        if let Some(message) = &error {
+            eprintln!("Offline driver staging did not finish. Windows setup will retry the bundled drivers: {message}");
+        }
+        let report = serde_json::json!({
+            "version": 1,
+            "state": if error.is_some() { "deferred" } else { "staged" },
+            "inf_count": driver_infs.len(),
+            "error": error,
+        });
+        let name = "ProgramData/Monet/hardware-prestage.json";
+        let path = checked_path(target, name)?;
+        fs::create_dir_all(path.parent().unwrap()).map_err(|error| error.to_string())?;
+        write_atomic(
+            target,
+            name,
+            &serde_json::to_vec(&report).map_err(|error| error.to_string())?,
         )?;
     }
     backend.recheck()?;

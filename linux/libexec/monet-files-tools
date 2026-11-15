@@ -187,9 +187,7 @@ def extraction_task(request, emit):
     if not source.is_file():
         raise ValueError(tr("Choose an archive to extract."))
     if request['action'] == 'info':
-        parent = source.parent if request.get('findApps') else quick_helper().desktop_dir()
-        if not request.get('findApps'): parent.mkdir(parents=True, exist_ok=True)
-        emit(dict(state='info', source=str(source), destination=str(archive_destination(source, parent))))
+        emit(dict(state='info', source=str(source), destination=str(archive_destination(source))))
         return
     raw = request.get('destination')
     if not isinstance(raw, str) or not 1 <= len(raw) <= 8192 or not Path(raw).is_absolute():
@@ -262,7 +260,7 @@ def cancel_extraction_submission(token):
 def make_extract_dialog(path, find_apps=True, background=False):
     from PySide6.QtCore import QEvent, QProcess, QTimer, Qt
     from PySide6.QtGui import QIcon
-    from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+    from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
                                   QFrame, QLabel, QLayout, QLineEdit, QProgressBar, QPushButton,
                                   QScrollArea, QStyle, QVBoxLayout, QWidget)
     # No source/destination stat, resolve, mkdir or cleanup runs in this process.
@@ -334,6 +332,7 @@ def make_extract_dialog(path, find_apps=True, background=False):
     dialog = ExtractDialog(); dialog.setWindowTitle(tr("Extract and find applications") if find_apps else tr("Extract archive"))
     dialog.setWindowIcon(QIcon.fromTheme("package-x-generic")); dialog.resize(620, 400)
     dialog.extracted = None
+    dialog.show_transfers = False
     outer = QVBoxLayout(dialog); outer.setContentsMargins(20, 20, 20, 20); outer.setSpacing(12)
     outer.setSizeConstraint(QLayout.SetNoConstraint)
     class DetailsArea(QScrollArea):
@@ -388,6 +387,13 @@ def make_extract_dialog(path, find_apps=True, background=False):
     destination = QLineEdit(); destination.setObjectName("extractDestination")
     form.addRow(tr("Extract to:"), destination)
     browse = QPushButton(tr("Choose location…")); layout.addWidget(browse)
+    if background:
+        show_transfers = QCheckBox(tr("Show transfer progress"))
+        show_transfers.setObjectName("showTransferProgress")
+        show_transfers.toggled.connect(lambda checked: setattr(dialog, 'show_transfers', checked))
+        layout.addWidget(show_transfers)
+        background_note = QLabel(tr("Extraction continues in the background. Files opens the folder when it is ready."))
+        background_note.setWordWrap(True); layout.addWidget(background_note)
     progress = QProgressBar(); progress.setObjectName('extractPreparationProgress'); progress.setRange(0, 0)
     progress.setAccessibleName(tr("Preparing extraction")); layout.addWidget(progress)
     status = QLabel(); status.setObjectName("extractStatus"); status.setTextFormat(Qt.PlainText)
@@ -800,6 +806,8 @@ def main():
         if not dialog.exec():
             return 1
         if mode == 'unpack':
+            if not dialog.show_transfers:
+                return 0
             try:
                 subprocess.Popen(['@BINDIR@/monet-files', 'transfers'], start_new_session=True)
             except OSError:

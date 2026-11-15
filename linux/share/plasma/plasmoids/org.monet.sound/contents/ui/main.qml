@@ -65,7 +65,8 @@ PlasmoidItem {
     Plasmoid.icon: silent || muted || !volume ? "audio-volume-muted"
         : volume < 34 ? "audio-volume-low" : volume < 67 ? "audio-volume-medium" : "audio-volume-high"
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
-    Plasmoid.contextualActions: [TaskManagerAction {}]
+    TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
+    Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     toolTipMainText: i18n("Sound")
     toolTipSubText: silent ? i18n("No speakers or headphones") : muted ? i18n("Muted")
         : typeof volume === "number" ? i18n("Volume %1%", volume) : ""

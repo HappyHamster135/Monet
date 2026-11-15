@@ -24,6 +24,29 @@ class FilesTools(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
+    def test_background_extraction_only_opens_transfers_when_requested(self):
+        try:
+            from PySide6.QtWidgets import QApplication
+        except ImportError:
+            self.skipTest('Qt runtime')
+        for show in (False, True):
+            dialog = SimpleNamespace(exec=lambda: 1, show_transfers=show)
+            with patch('PySide6.QtWidgets.QApplication'), patch.object(self.f, 'make_extract_dialog', return_value=dialog), \
+                    patch.object(self.f.sys, 'argv', ['monet-files-tools', 'unpack', '/tmp/archive.zip']), \
+                    patch.object(self.f.subprocess, 'Popen') as opened:
+                self.assertEqual(self.f.main(), 0)
+                if show: self.assertEqual(opened.call_args.args[0][-1], 'transfers')
+                else: opened.assert_not_called()
+
+    def test_every_extraction_suggests_a_new_folder_beside_the_archive(self):
+        archive = self.executable("Downloads/Example.tar.gz")
+        (archive.parent / "Example").mkdir()
+        for find_apps in (False, True):
+            with self.subTest(find_apps=find_apps):
+                events = []
+                self.f.extraction_task({"action": "info", "source": str(archive), "findApps": find_apps}, events.append)
+                self.assertEqual(events[0]["destination"], str(archive.parent / "Example (2)"))
+
     def executable(self, name, header=b"#!/bin/sh\n", mode=0o700):
         path = self.root / name; path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(header); path.chmod(mode)

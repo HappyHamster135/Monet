@@ -154,6 +154,33 @@ impl Backend for WinPe {
             ],
         )
     }
+    fn stage_drivers(&mut self, target: &Path, infs: &[PathBuf]) -> Result<(), String> {
+        println!(
+            "Staging {} verified driver packages in Windows before first start...",
+            infs.len()
+        );
+        let scratch = deployment::checked_path(target, "Windows/Temp")?;
+        let log = deployment::checked_path(target, "Windows/Logs/DISM/monet-drivers.log")?;
+        fs::create_dir_all(&scratch).map_err(|error| error.to_string())?;
+        fs::create_dir_all(log.parent().unwrap()).map_err(|error| error.to_string())?;
+        // Name each sealed INF explicitly and keep the Windows command line bounded.
+        for batch in infs.chunks(32) {
+            self.recheck()?;
+            let status = Command::new(self.system.join("dism.exe"))
+                .arg(format!("/Image:{}", target.display()))
+                .arg(format!("/ScratchDir:{}", scratch.display()))
+                .arg(format!("/LogPath:{}", log.display()))
+                .arg("/Add-Driver")
+                .args(batch.iter().map(|path| format!("/Driver:{}", path.display())))
+                .stdin(Stdio::null())
+                .status()
+                .map_err(|error| error.to_string())?;
+            if !matches!(status.code(), Some(0 | 3010)) {
+                return Err(format!("DISM Add-Driver returned {status}."));
+            }
+        }
+        Ok(())
+    }
     fn boot(&mut self, target: &Path) -> Result<(), String> {
         let letter = self.mount_efi()?;
         let efi = PathBuf::from(format!("{letter}:\\"));

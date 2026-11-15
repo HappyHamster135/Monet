@@ -205,6 +205,10 @@ the missing windows, and an unavailable folder does not replay windows already r
 Existing windows match by their folder/tab layout; their newer selections, scrolling,
 split widths and labels are left alone.
 
+If Files had exactly one window and could not save its tabs, Monet can still reopen
+the window using its saved placement and the app's normal startup preference. The return
+summary says that the previous folders and tabs could not be saved.
+
 The image builds the Files executable and private library together from its installed
 distribution's source RPM, including downstream patches. Original hashes, transitive runtime
 package versions, native exports and linked features must match before installation. Build

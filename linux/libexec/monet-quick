@@ -219,6 +219,7 @@ import tempfile
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
+from collections import deque
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -450,6 +451,58 @@ def pulse_nodes(kind):
     return metadata
 
 
+EVENT_STREAM = "sink-input-by-media-role:event"
+DEFAULT_EVENT_VOLUME = 35
+
+
+def notification_audio(level=None, *, defaults=False):
+    """Use the same saved event stream as the native sound settings."""
+    receipt = CONFIG / "monet/notification-volume-v1"
+    if defaults and receipt.exists():
+        return {"ok": True}
+    try:
+        import pulsectl
+    except ImportError:
+        return {"ok": False}
+    try:
+        with pulsectl.Pulse("Monet", connect=False) as pulse:
+            pulse.connect(timeout=2)
+            current = next((entry for entry in pulse.stream_restore_read() if entry.name == EVENT_STREAM), None)
+            if level is None and (current is None or defaults and not current.mute and current.volume.value_flat == 1):
+                level = DEFAULT_EVENT_VOLUME
+            channels = current.channel_list if current else ["mono"]
+            if level is not None or channels == ["mono"]:
+                # A saved mono volume silences the right channel of stereo sounds in PipeWire.
+                if channels == ["mono"]:
+                    channels = ["front-left", "front-right"]
+                target = level / 100 if level is not None else current.volume.value_flat
+                pulse.stream_restore_write(EVENT_STREAM, apply_immediately=True, volume=target,
+                                           channel_list=channels,
+                                           mute=bool(current and current.mute and not level),
+                                           device=current.device if current else None)
+                # PipeWire acknowledges the write before its event stream is visible to readers.
+                for delay in (0, 0.05, 0.1, 0.2):
+                    time.sleep(delay)
+                    current = next((entry for entry in pulse.stream_restore_read() if entry.name == EVENT_STREAM), None)
+                    if (current is not None and current.channel_list == channels
+                            and all(abs(value - target) <= 0.01 for value in current.volume.values)):
+                        break
+                else:
+                    return {"ok": False}
+            if defaults or level is not None:
+                receipt.parent.mkdir(parents=True, exist_ok=True)
+                receipt.touch()
+            return {"ok": True, "volume": (0 if current.mute else min(100, round(current.volume.value_flat * 100)))
+                    if current else DEFAULT_EVENT_VOLUME}
+    except (pulsectl.PulseError, OSError):
+        return {"ok": False}
+
+
+def test_notification_audio():
+    clip = sound("message-new-instant")
+    return bool(clip and notification_audio().get("ok") and ok("canberra-gtk-play", "--file", str(clip)))
+
+
 def disconnected_port(item):
     """Unknown availability is normal for built-in and virtual devices."""
     ports = item.get("ports")
@@ -460,16 +513,23 @@ def disconnected_port(item):
 
 
 def outputs():
-    """Playable outputs, excluding ports explicitly reported as disconnected."""
+    """Playable outputs, using the active port name where available."""
     found = sinks(run("wpctl", "status") or "")
     metadata = pulse_nodes("sinks")
     playable = []
     for sink in found:
         item = metadata.get(sink["id"])
         if item is not None:
+            props = item["properties"]
             if disconnected_port(item):
                 continue
-            sink["none"] = item["properties"].get("node.name") == "auto_null"
+            sink["none"] = props.get("node.name") == "auto_null"
+            ports = item.get("ports", [])
+            if isinstance(ports, list) and not sink["none"]:
+                active = next((port for port in ports if isinstance(port, dict)
+                               and port.get("name") == item.get("active_port")), {})
+                if active.get("description"):
+                    sink["name"] = active["description"]
         else:
             sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
         playable.append(sink)
@@ -513,7 +573,16 @@ def app_streams(status):
 
 def apps_sound():
     out = []
+    metadata = pulse_nodes("sink-inputs")
     for ident, name in app_streams(run("wpctl", "status") or ""):
+        props = metadata.get(ident, {}).get("properties", {})
+        if props.get("media.role") == "event":
+            continue
+        app_id = str(props.get("application.id") or "").removesuffix(".desktop")
+        binary = props.get("application.process.binary", "").casefold()
+        entry = entry_by_id(app_id + ".desktop") if re.fullmatch(r"[\w.+-]+", app_id) else None
+        discord = {"discord": "Discord", "discordcanary": "Discord Canary", "discordptb": "Discord PTB"}.get(binary)
+        name = (local_name(entry) if entry else "") or discord or props.get("application.name") or name
         level = volume(str(ident))
         if level is not None:
             out.append({"id": ident, "name": name[:1].upper() + name[1:], "volume": level})
@@ -2583,12 +2652,12 @@ def storage_parts(total, free, home, games, apps, user_apps, trash):
 
 
 def downloads_dir():
-    """The account's download destination, with Desktop as the fallback."""
+    """The account's download destination."""
     try:
         path = user_folder(HOME, (CONFIG / 'user-dirs.dirs').read_text(), 'DOWNLOAD')
     except OSError:
         path = None
-    return path or desktop_dir()
+    return path or HOME / 'Downloads'
 
 
 def desktop_dir():
@@ -2624,7 +2693,7 @@ def sync_browser_downloads():
         write_if_changed(prefs, (text.rstrip('\n') + '\n' + '\n'.join(download_preferences()) + '\n').encode())
 
 
-def set_download_path(path):
+def set_download_path(path, *, user_choice=True):
     path = Path(path).resolve(strict=True)
     if path == HOME.resolve():
         raise ValueError(tr('Choose a separate folder for downloads.'))
@@ -2653,6 +2722,10 @@ def set_download_path(path):
         os.replace(temporary, config_file)
     finally:
         Path(temporary).unlink(missing_ok=True)
+    if user_choice:
+        choice = CONFIG / 'monet/downloads-chosen'
+        choice.parent.mkdir(parents=True, exist_ok=True)
+        choice.touch()
     sync_browser_downloads()
     return path
 
@@ -2665,16 +2738,19 @@ ARCHIVE_MIMES = ('application/zip', 'application/x-tar', 'application/x-compress
 
 def files_defaults():
     receipt = CONFIG / 'monet/files-defaults-v1'
+    migration = CONFIG / 'monet/downloads-v2'
+    if not migration.exists():
+        if not receipt.exists():
+            subprocess.run(['xdg-user-dirs-update'], check=True, timeout=10)
+        elif downloads_dir() == desktop_dir() and not (CONFIG / 'monet/downloads-chosen').exists():
+            # Undo Monet's former redirect. Existing files stay where they were saved.
+            target = HOME / gettext.dgettext('xdg-user-dirs', 'Downloads')
+            target.mkdir(parents=True, exist_ok=True)
+            set_download_path(target, user_choice=False)
+        migration.parent.mkdir(parents=True, exist_ok=True)
+        migration.touch()
     if receipt.exists():
         return
-    subprocess.run(['xdg-user-dirs-update'], check=True, timeout=10)
-    current = downloads_dir()
-    # xdg-user-dirs localizes the default folder. Preserve an already chosen path.
-    localized = gettext.dgettext('xdg-user-dirs', 'Downloads')
-    if current in {HOME / 'Downloads', HOME / localized}:
-        target = desktop_dir()
-        target.mkdir(parents=True, exist_ok=True)
-        set_download_path(target)
     # Explicit alternatives such as another archive manager remain available.
     for mime in ARCHIVE_MIMES:
         previous = run('xdg-mime', 'query', 'default', mime)
@@ -2685,6 +2761,189 @@ def files_defaults():
                 '--group', 'Default Applications', '--key', mime, 'monet-archive.desktop;'], check=True, timeout=10)
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.touch()
+
+
+DISK_SERVICE = "org.freedesktop.UDisks2"
+DISK_BLOCK = DISK_SERVICE + ".Block"
+DISK_PARTITION = DISK_SERVICE + ".Partition"
+DISK_TABLE = DISK_SERVICE + ".PartitionTable"
+DISK_FILESYSTEM = DISK_SERVICE + ".Filesystem"
+DISK_FORMATS = {"ext4", "ntfs", "exfat", "vfat"}
+DISK_ALIGNMENT = 1024**2
+
+
+def disk_string(raw):
+    return os.fsdecode(bytes(raw).rstrip(b"\0"))
+
+
+def disk_in_use(path):
+    try:
+        return any((Path("/sys/class/block") / Path(path).name / "holders").iterdir())
+    except OSError:
+        return True
+
+
+def disk_sequence(path):
+    return read_text(Path("/sys/class/block") / Path(path).name / "diskseq")
+
+
+def disk_layouts(objects):
+    """Describe physical drives and include a token for the exact reviewed layout."""
+    system_devices = set()
+    for interfaces in objects.values():
+        block = interfaces.get(DISK_BLOCK)
+        if block and any(mount in ("/", "/usr", "/etc", "/var", "/home")
+                         or mount.startswith(("/boot", "/sysroot", "/run/initramfs"))
+                         for mount in map(disk_string, interfaces.get(DISK_FILESYSTEM, {}).get("MountPoints", []))):
+            system_devices.add(Path(disk_string(block["Device"])).resolve().name)
+
+    def hosts_system(path, seen):
+        name = Path(path).resolve().name
+        if name in system_devices:
+            return True
+        if name in seen:
+            return False
+        seen.add(name)
+        try:
+            holders = list((Path("/sys/class/block") / name / "holders").iterdir())
+        except OSError:
+            return False
+        return any(hosts_system("/dev/" + holder.name, seen) for holder in holders)
+
+    disks = []
+    for object_path, interfaces in objects.items():
+        block = interfaces.get(DISK_BLOCK, {})
+        drive = objects.get(block.get("Drive"), {}).get(DISK_SERVICE + ".Drive", {})
+        if not drive or DISK_PARTITION in interfaces:
+            continue
+        path = disk_string(block["Device"])
+        sequence = disk_sequence(path)
+        if not sequence:
+            continue
+        table = interfaces.get(DISK_TABLE, {})
+        parts = []
+        system = False
+        for part_path in [object_path, *table.get("Partitions", [])]:
+            part_interfaces = objects.get(part_path, {})
+            part_block = part_interfaces.get(DISK_BLOCK, {})
+            if not part_block:
+                raise ValueError("Partition inventory changed")
+            part = part_interfaces.get(DISK_PARTITION, {})
+            device = disk_string(part_block["Device"])
+            mounts = [disk_string(point) for point in part_interfaces.get(DISK_FILESYSTEM, {}).get("MountPoints", [])]
+            system = system or hosts_system(device, set())
+            busy = disk_in_use(device) or bool(part_interfaces.get(DISK_SERVICE + ".Swapspace", {}).get("Active"))
+            item = {
+                "object": str(part_path), "path": device, "size": int(part_block["Size"]),
+                "offset": int(part.get("Offset", 0)), "uuid": str(part.get("UUID") or part_block.get("IdUUID", "")),
+                "name": str(part_block.get("IdLabel") or part.get("Name", "")),
+                "format": str(part_block.get("IdType", "")), "mounts": mounts,
+                "busy": busy, "readonly": bool(part_block.get("ReadOnly")),
+                "container": bool(part.get("IsContainer") or part.get("IsContained")),
+            }
+            if part_path == object_path:
+                whole = item
+            else:
+                parts.append(item)
+        parts.sort(key=lambda part: part["offset"])
+        locked = system or whole["busy"] or whole["readonly"] or not whole["size"]
+        partition_table = str(table.get("Type", ""))
+        gaps = []
+        # Keep room for GPT metadata and align the start of each new partition.
+        # Extended MBR layouts require special rules and can still be reset to GPT.
+        if partition_table in ("gpt", "dos") and not any(part["container"] for part in parts):
+            next_byte = DISK_ALIGNMENT
+            end = whole["size"] - DISK_ALIGNMENT
+            for part in [*parts, {"offset": end, "size": 0}]:
+                aligned = -(-next_byte // DISK_ALIGNMENT) * DISK_ALIGNMENT
+                free = (min(part["offset"], end) - aligned) // DISK_ALIGNMENT * DISK_ALIGNMENT
+                if free >= DISK_ALIGNMENT:
+                    gaps.append({"offset": aligned, "size": free})
+                next_byte = max(next_byte, part["offset"] + part["size"])
+        name = str(drive.get("Model") or drive.get("Vendor") or path).strip()
+        disk = dict(whole, name=name, table=partition_table, system=system, locked=locked,
+                    partitions=parts, gaps=gaps, sequence=sequence,
+                    removable=bool(drive.get("Removable") or drive.get("ConnectionBus") == "usb"))
+        disk["token"] = hashlib.sha256(json.dumps(disk, sort_keys=True).encode()).hexdigest()
+        disks.append(disk)
+    return sorted(disks, key=lambda disk: (not disk["system"], disk["removable"], disk["path"]))
+
+
+def disk_manager(bus):
+    obj = bus.get_object(DISK_SERVICE, "/org/freedesktop/UDisks2", introspect=False)
+    return obj.GetManagedObjects(dbus_interface="org.freedesktop.DBus.ObjectManager", timeout=8)
+
+
+def manage_storage_disks(args):
+    """All writes go through UDisks with normal authorization and fresh device checks."""
+    import dbus
+
+    try:
+        bus = dbus.SystemBus(private=True)
+        disks = disk_layouts(disk_manager(bus))
+        if not args:
+            return {"ok": True, "disks": disks}
+        action, token, target, fmt, size, label_hex = args
+        disk = next((row for row in disks if row["token"] == token), None)
+        if disk is None:
+            return {"ok": False, "message": tr("The disk changed. Refresh the list and choose it again.")}
+        if disk["locked"]:
+            return {"ok": False, "message": tr("This drive is in use by the system or is read-only.")}
+        options = {"auth.no_user_interaction": dbus.Boolean(False)}
+        if action == "erase":
+            if disk["mounts"] or any(part["mounts"] or part["busy"] or part["readonly"] for part in disk["partitions"]):
+                return {"ok": False, "message": tr("Unmount the volumes on this drive first.")}
+            obj = bus.get_object(DISK_SERVICE, disk["object"], introspect=False)
+            obj.Format("gpt", options, signature="sa{sv}", dbus_interface=DISK_BLOCK, timeout=600)
+        elif action == "create":
+            offset, requested = int(target), int(size) * DISK_ALIGNMENT
+            gap = next((gap for gap in disk["gaps"] if gap["offset"] == offset), None)
+            if not gap or not DISK_ALIGNMENT <= requested <= gap["size"] or disk["mounts"]:
+                return {"ok": False, "message": tr("Choose a size that fits the free space.")}
+            obj = bus.get_object(DISK_SERVICE, disk["object"], introspect=False)
+            label = disk_volume_label(label_hex, fmt)
+            obj.CreatePartitionAndFormat(dbus.UInt64(offset), dbus.UInt64(requested), "", "", options,
+                                         fmt, dict(options, label=label), signature="ttssa{sv}sa{sv}",
+                                         dbus_interface=DISK_TABLE, timeout=600)
+        elif action in {"format", "unmount", "delete"}:
+            path = bytes.fromhex(target).decode()
+            volumes = disk["partitions"] if disk["table"] else [disk]
+            part = next((part for part in volumes if part["path"] == path), None)
+            if part is None or part["busy"] or part["readonly"] or part["container"]:
+                return {"ok": False, "message": tr("This volume changed, is in use, or is read-only.")}
+            obj = bus.get_object(DISK_SERVICE, part["object"], introspect=False)
+            if action == "unmount":
+                if part["mounts"]:
+                    obj.Unmount(options, signature="a{sv}", dbus_interface=DISK_FILESYSTEM, timeout=45)
+            elif part["mounts"]:
+                return {"ok": False, "message": tr("Unmount this volume before making changes.")}
+            elif action == "delete" and disk["table"]:
+                obj.Delete(options, signature="a{sv}", dbus_interface=DISK_PARTITION, timeout=600)
+            elif action == "format":
+                label = disk_volume_label(label_hex, fmt)
+                obj.Format(fmt, dict(options, label=label, **{"update-partition-type": dbus.Boolean(True)}),
+                           signature="sa{sv}", dbus_interface=DISK_BLOCK, timeout=600)
+            else:
+                return {"ok": False}
+        else:
+            return {"ok": False}
+        return {"ok": True}
+    except dbus.DBusException as error:
+        return {"ok": False, "message": error.get_dbus_message() or tr("The disk service did not respond.")}
+    except (OSError, UnicodeError, ValueError):
+        return {"ok": False, "message": tr("Check the selected disk, format, size and volume name.")}
+    finally:
+        if "bus" in locals():
+            bus.close()
+
+
+def disk_volume_label(token, fmt):
+    if fmt not in DISK_FORMATS or len(token) > 256:
+        raise ValueError("Invalid format")
+    label = "" if token == "-" else bytes.fromhex(token).decode()
+    if any(ord(char) < 32 or ord(char) == 127 for char in label):
+        raise ValueError("Invalid volume name")
+    return label
 
 
 def storage_capacity():
@@ -3206,7 +3465,7 @@ def printers():
 def whats_new(text):
     """The newest "### New in X: headline" section: its version, headline, and each
     highlight's bold title with its first sentence."""
-    found = re.search(r"(?m)^### New in ([\w.]+)(?::\s*(.+))?$", text)
+    found = re.search(r"(?m)^### New in ([\w.-]+)(?::\s*(.+))?$", text)
     if not found:
         return {}
     body = text[found.end():]
@@ -4451,7 +4710,7 @@ def windows_program(path):
         return False
     PROGRAM_PENDING.write_text(json.dumps({"path": str(found)}))
     if not doorbell("program"):
-        program_here(str(found))
+        return program_here(str(found))
     return True
 
 
@@ -4496,31 +4755,54 @@ def steam_proton(roots=STEAM_ROOTS):
 
 def program_here(path):
     """Run in Monet: in a unit of its own, so it keeps going after Files or Settings close."""
-    command = [f"{LIBEXECDIR}/monet-quick", "program-proton", path.encode().hex()]
+    command = [sys.executable, str(Path(__file__).resolve()), "program-proton", path.encode().hex()]
+    gui_env = [f"--setenv={key}={os.environ[key]}" for key in
+               ("DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
+                "XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME")
+               if key in os.environ]
     if not ok("systemd-run", "--user", "--collect", "--quiet", f"--unit=monet-program-{time.time_ns()}",
-              f"--description={Path(path).name}", *command):
-        subprocess.Popen(command, start_new_session=True, stdin=subprocess.DEVNULL,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              f"--description={Path(path).name}", *gui_env, *command):
+        program_notice(tr("Couldn't open %1", Path(path).name),
+                       tr("The Windows app launcher couldn't start. Try again from Files."), failed=True)
+        return False
+    return True
+
+
+def program_notice(title, detail, *, failed=False):
+    if shutil.which("notify-send"):
+        ok("notify-send", "--app-name=Monet", "--icon=monet-windows",
+           "--urgency=critical" if failed else "--urgency=normal", "--", title, detail)
 
 
 def program_proton(path):
     """Runs a Windows program through Proton (umu-run) in Monet's Windows for programs, then
     brings what it put in the Start menu into the app menu."""
     found = Path(path)
+    failed = tr("Couldn't open %1", found.name)
+    if not found.is_absolute() or not found.is_file() or found.suffix.lower() not in PROGRAM_TYPES:
+        program_notice(failed, tr("The program or installer is missing."), failed=True)
+        return 1
+    if not shutil.which("umu-run"):
+        program_notice(failed, tr("Windows app support is missing. You can open the file in Windows instead."), failed=True)
+        return 1
     env = dict(os.environ, WINEPREFIX=str(PROGRAMS_PREFIX), GAMEID="0")
+    env.pop("PROTONPATH", None)
+    # Standalone umu needs a complete compatibility tool with a runtime manifest.
     proton = steam_proton()
-    if proton:
+    if proton and (proton / "toolmanifest.vdf").is_file():
         env["PROTONPATH"] = str(proton)
-    if not (DATA_HOME / "umu").is_dir() and shutil.which("notify-send"):
-        # The first time: umu fetches the runtime (and Proton, where Steam has none) first.
-        subprocess.Popen(["notify-send", "--app-name=Monet", "--icon=monet-windows", tr("Getting ready for Windows programs"),
-                          tr("The first time takes a few minutes. %1 opens by itself when it's ready.", found.name)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    PROGRAMS_PREFIX.parent.mkdir(parents=True, exist_ok=True)
+    program_notice(tr("Starting %1", found.name),
+                   tr("Preparing Windows app support can take a few minutes the first time."))
     args = ["msiexec", "/i", str(found)] if found.suffix.lower() == ".msi" else [str(found)]
     try:
-        subprocess.run(["umu-run", *args], env=env, cwd=found.parent)
+        PROGRAMS_PREFIX.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(["umu-run", *args], env=env, cwd=found.parent)
     except OSError:
+        program_notice(failed, tr("Windows app support couldn't start. Try opening the file in Windows."), failed=True)
+        return 1
+    if result.returncode:
+        program_notice(failed, tr("Proton exited with code %1. Check the file and your connection, or try opening it in Windows.",
+                                  result.returncode), failed=True)
         return 1
     program_menu()
     return 0
@@ -5362,23 +5644,23 @@ CURSOR_SIZES = (24, 36, 48)
 MONETS_MOTION = "0.8"  # Monet's look: a touch quicker than KDE's
 
 
-def screens():
-    """[(name, scale)] of the screens in use, or []."""
-    try:
-        outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
-    except ValueError:
-        return []
-    return [(o.get("name", ""), o.get("scale", 1)) for o in outputs if o.get("enabled") and o.get("name")]
-
-
-def display_sizes():
-    """Read real per-output scale and pixel density; never infer scale from resolution alone."""
+def display_outputs():
     try:
         outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
     except (ValueError, AttributeError):
         return []
+    return [output for output in outputs if isinstance(output, dict)] if isinstance(outputs, list) else []
+
+
+def screens():
+    """[(name, scale)] of the screens in use, or []."""
+    return [(o["name"], o.get("scale", 1)) for o in display_outputs() if o.get("enabled") and o.get("name")]
+
+
+def display_sizes(outputs=None):
+    """Read real per-output scale and pixel density; never infer scale from resolution alone."""
     shown = []
-    for output in outputs:
+    for output in display_outputs() if outputs is None else outputs:
         try:
             name = output.get("name", "")
             if not output.get("enabled") or not isinstance(name, str) or not re.fullmatch(r"[\w.-]+", name):
@@ -5613,13 +5895,8 @@ def screen_features(outputs=None):
     """The screens that can show HDR, or keep pace with a game (variable refresh rate):
     [{name, hdr, vrr}], each None where the screen can't. kscreen-doctor lists "hdr"
     and "vrrPolicy" (0 never, 1 always, 2 automatic) only for screens that can."""
-    if outputs is None:
-        try:
-            outputs = json.loads(run("kscreen-doctor", "-j") or "{}").get("outputs", [])
-        except ValueError:
-            outputs = []
     found = []
-    for o in outputs:
+    for o in display_outputs() if outputs is None else outputs:
         if not o.get("enabled") or not o.get("name") or ("hdr" not in o and "vrrPolicy" not in o):
             continue
         found.append({"name": o["name"], "hdr": bool(o["hdr"]) if "hdr" in o else None,
@@ -5627,11 +5904,44 @@ def screen_features(outputs=None):
     return found
 
 
+def display_state():
+    outputs = display_outputs()
+    return {"sizes": display_sizes(outputs), "features": screen_features(outputs)}
+
+
 def set_screen_feature(name, what, on):
     """HDR on or off; the refresh rate keeping pace with games (automatic, as KDE has it) or never."""
     if re.fullmatch(r"[\w.-]+", name):
         value = ("enable" if on else "disable") if what == "hdr" else ("automatic" if on else "never")
         run("kscreen-doctor", f"output.{name}.{'hdr' if what == 'hdr' else 'vrrpolicy'}.{value}", timeout=30)
+
+
+def panel_icons(ident, alignment=None):
+    if not re.fullmatch(r'[0-9]{1,10}', str(ident)) or alignment not in (None, 'start', 'center'):
+        return {"ok": False}
+    script = '''(function() {
+var p = panelById(PANEL_ID);
+if (!p) { print(JSON.stringify({ok:false})); return; }
+var tasks = p.widgets("org.kde.plasma.icontasks").concat(p.widgets("org.kde.plasma.taskmanager"));
+var alignment = ALIGNMENT;
+tasks.forEach(function(w) {
+    w.currentConfigGroup = ["General"];
+    if (alignment !== null) {
+        w.writeConfig("monetIconAlignment", alignment);
+        w.writeConfig("fill", true);
+        w.reloadConfig();
+    }
+});
+print(JSON.stringify({ok:true, available:tasks.length > 0,
+    alignment:tasks.length ? String(tasks[0].readConfig("monetIconAlignment", "start")) : ""}));
+})();'''.replace('PANEL_ID', str(int(ident))).replace('ALIGNMENT', json.dumps(alignment))
+    result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                     "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        state = json.loads(result[0])
+        return state if isinstance(state, dict) and isinstance(state.get("ok"), bool) else {"ok": False}
+    except (TypeError, IndexError, ValueError):
+        return {"ok": False}
 
 
 def fit_bars():
@@ -6005,6 +6315,163 @@ def read_text(path):
         return ""
 
 
+WINDOWS_SETUP_UNIT = "monet-windows-setup-ui.service"
+WINDOWS_FIRST_RUN_UNIT = "monet-windows-first-run.service"
+WINDOWS_SETUP_STATUS = Path("/var/lib/monet/windows-setup")
+WINDOWS_SETUP_PROGRESS = Path("/run/monet/windows-progress")
+WINDOWS_SETUP_LOCK = Path("/run/monet/windows-setup.lock")
+WINDOWS_ISO_PAGE = "https://www.microsoft.com/en-us/software-download/windows11"
+WINDOWS_SETUP_RETRYABLE = {"waiting", "download-failed", "failed", "no-space"}
+
+
+def downloaded_windows_iso(*, changed_after=0):
+    """Find a likely complete Windows 11 ISO in the usual download folders.
+
+    This only suggests a file. The preparer still validates the installation media.
+    """
+    import stat
+
+    candidates = []
+    # Older Monet installs saved browser downloads to Desktop by default.
+    for folder in {downloads_dir(), HOME / "Downloads", desktop_dir()}:
+        try:
+            for path in folder.iterdir():
+                if path.suffix.lower() != ".iso" or not re.search(r"win(?:dows)?[\s_.-]*11(?!\d)", path.stem, re.I):
+                    continue
+                try:
+                    info = path.lstat()
+                except OSError:
+                    continue
+                if stat.S_ISREG(info.st_mode):
+                    candidates.append((info.st_mtime_ns, path))
+        except OSError:
+            continue
+    # Retail media has an ISO 9660 primary volume descriptor. Check that the
+    # copy reaches the end of the declared volume before suggesting it.
+    sector = 2048
+    for _, path in sorted(candidates, reverse=True):
+        try:
+            fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            with os.fdopen(fd, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if (not stat.S_ISREG(info.st_mode) or info.st_size < sector * 17
+                        or info.st_ctime_ns <= changed_after):
+                    continue
+                stream.seek(sector * 16)
+                for _ in range(16):
+                    descriptor = stream.read(sector)
+                    if len(descriptor) < sector or descriptor[1:7] != b"CD001\x01" or descriptor[0] == 255:
+                        break
+                    if descriptor[0] == 1:
+                        blocks = int.from_bytes(descriptor[80:84], "little")
+                        if 16 < blocks <= info.st_size // sector:
+                            return path
+                        break
+        except OSError:
+            continue
+    return None
+
+
+def suggested_windows_iso(status, message):
+    if status == "download-failed" and message.startswith("the Windows ISO"):
+        # Offer a replacement that arrived after the failed check. Do not
+        # immediately suggest the same unreadable file again.
+        try:
+            changed_after = WINDOWS_SETUP_PROGRESS.stat().st_mtime_ns
+        except OSError:
+            return None
+        return downloaded_windows_iso(changed_after=changed_after)
+    return downloaded_windows_iso()
+
+
+def windows_setup_running(status):
+    if ok("systemctl", "--user", "is-active", "--quiet", WINDOWS_SETUP_UNIT, WINDOWS_FIRST_RUN_UNIT):
+        return True
+    if status != "preparing":
+        return False
+    # The command-line installer can also be running without a user unit.
+    import fcntl
+
+    try:
+        with WINDOWS_SETUP_LOCK.open("rb") as lock:
+            fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        return False
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+
+
+def windows_setup_state():
+    status = read_text(WINDOWS_SETUP_STATUS)
+    fields = read_text(WINDOWS_SETUP_PROGRESS).split("\t")
+    progress = fields[0]
+    message = fields[1] if len(fields) > 1 else ""
+    active = windows_setup_running(status)
+    media_error = status == "download-failed" and message.startswith("the Windows ISO")
+    interrupted_preparation = status == "preparing" and not active
+    if interrupted_preparation:
+        status, progress = "failed", ""
+    iso = None
+    if status in WINDOWS_SETUP_RETRYABLE and not active:
+        iso = suggested_windows_iso(status, message)
+    return {
+        "status": status,
+        "active": active,
+        # An armed setup leaves progress in /run on this Linux boot. If
+        # we've reached Monet again and setup is still pending, offer recovery.
+        "interrupted": status == "pending" and not progress and not active,
+        "percent": min(100, int(progress)) if re.fullmatch(r"[0-9]{1,3}", progress) else 0,
+        "message": tr("Windows setup did not finish") if interrupted_preparation
+                   else tr(message, *fields[2:]) if message else "",
+        "mediaError": media_error,
+        "iso": iso.as_uri() if iso else "",
+    }
+
+
+def selected_windows_iso(token):
+    from urllib.parse import unquote, urlsplit
+
+    if len(token) > 32768 or not re.fullmatch(r"(?:[a-fA-F0-9]{2})+", token):
+        return None
+    try:
+        url = urlsplit(bytes.fromhex(token).decode("utf-8"))
+        if url.scheme != "file" or url.netloc not in ("", "localhost") or url.query or url.fragment:
+            return None
+        path = Path(unquote(url.path, errors="strict"))
+        if not path.is_absolute() or path.suffix.lower() != ".iso":
+            return None
+        path = path.resolve(strict=True)
+        if path.is_file() and path.stat().st_size > 0:
+            return path
+    except (OSError, ValueError, RuntimeError):
+        pass
+    return None
+
+
+def start_windows_setup(iso=None, *, retry=False):
+    # The unit survives closing Settings. The privileged preparer checks the
+    # installation media before touching partitions.
+    status = read_text(WINDOWS_SETUP_STATUS)
+    if windows_setup_running(status):
+        return False
+    if status == "pending":
+        if not retry or read_text(WINDOWS_SETUP_PROGRESS):
+            return False
+    elif status not in WINDOWS_SETUP_RETRYABLE | {"preparing"}:
+        return False
+    elif iso is None:
+        if status == "download-failed" and not retry:
+            return False
+        fields = read_text(WINDOWS_SETUP_PROGRESS).split("\t")
+        iso = suggested_windows_iso(status, fields[1] if len(fields) > 1 else "")
+    command = ["pkexec", f"{BINDIR}/monet", "helper", "prepare-windows"]
+    if iso is not None:
+        command += ["--iso", str(iso)]
+    return ok("systemd-run", "--user", "--quiet", "--collect", "--expand-environment=no",
+              f"--unit={WINDOWS_SETUP_UNIT}", *command)
+
+
 def about():
     def first(path, key):
         try:
@@ -6037,7 +6504,7 @@ def about():
         "storage": tr("%1 GB free of %2 GB", disk.free // 10**9, disk.total // 10**9),
         "windows": windows.group(1).strip() if windows else "",
         "notice": read_text(Path("/var/lib/monet/switch-notice")),
-        "setup": read_text(Path("/var/lib/monet/windows-setup")),
+        "setup": read_text(WINDOWS_SETUP_STATUS),
         "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
     }
 
@@ -6218,6 +6685,9 @@ def search_catalog():
          N_("stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"), "power#lock", "system-lock-screen"),
         ("download-folder", tr("Download folder"), tr("Storage · Where downloads are saved"),
          N_("download folder; downloads folder; download path; download location; where downloads go; save downloads"), "storage#downloads", "folder-download"),
+        ("disk-partitions", tr("Disks and partitions"), tr("Storage · Manage physical drives"),
+         N_("disks; disk management; format disk; erase disk; create partition; partition manager; external drive"),
+         "storage#disks", "drive-harddisk"),
         ("battery-limit", tr("Battery charge limit"), tr("Power & Sleep · Protect the battery"),
          N_("battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"), "power#battery-limit", "battery"),
         ("keep-awake", tr("Keep awake"), tr("Power & Sleep · Temporarily prevent idle sleep and locking"),
@@ -6226,6 +6696,9 @@ def search_catalog():
          N_("password; passwords; wallet; vault; autofill; save passwords; password manager"), "monet-passwords.desktop", "wallet-open"),
         ("text-size", tr("Make text and windows bigger"), tr("Accessibility · Size of everything"),
          N_("make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"), "accessibility#size", "preferences-desktop-accessibility"),
+        ("display-color", tr("Display colors"), tr("Display · Color profiles and test patterns"),
+         N_("color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"),
+         "display#color", "video-display"),
         ("pointer-size", tr("Make the pointer easier to see"), tr("Accessibility · Pointer size"),
          N_("mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"), "accessibility#pointer", "input-mouse"),
         ("reduce-motion", tr("Reduce motion"), tr("Accessibility · Animation and movement"),
@@ -6284,9 +6757,14 @@ def search_catalog():
             for ident, name, detail, terms, target, icon in rows]
 
 
+SEARCH_WORDS = re.compile(r"[^\W_]+")
+
+
 def search_fold(text):
-    text = "".join(c for c in unicodedata.normalize("NFKD", text.casefold()) if not unicodedata.combining(c))
-    return " ".join(re.findall(r"[^\W_]+", text, re.UNICODE))
+    text = text.casefold()
+    if not text.isascii():
+        text = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return " ".join(SEARCH_WORDS.findall(text))
 
 
 def everyday_search(query):
@@ -6317,6 +6795,224 @@ def everyday_search(query):
         ranked.append((score, entry))
     ranked.sort(key=lambda item: (-item[0], item[1]["name"].casefold()))
     return [{key: value for key, value in entry.items() if key != "terms"} for _, entry in ranked[:6]]
+
+
+# Downloaded apps need to be discoverable before Baloo has indexed or launched them.
+# Search runs in the existing debounced helper process, never on Plasma's GUI thread.
+def installed_app_matches(query):
+    """Keep menu entries searchable when the application runner has no matches yet."""
+    query = search_fold(query[:256])
+    compact = query.replace(" ", "")
+    if len(compact) < 2:
+        return []
+    seen, matches = set(), []
+    for ident, entry in menu_entries():
+        if ident in seen:
+            continue
+        seen.add(ident)
+        if (entry.get("Type") != "Application" or not entry.get("Name")
+                or entry.get("Hidden") == "true" or entry.get("NoDisplay") == "true"
+                or entry.get("OnlyShowIn") and "KDE" not in entry["OnlyShowIn"].split(";")
+                or "KDE" in entry.get("NotShowIn", "").split(";")
+                or entry.get("TryExec") and not shutil.which(entry["TryExec"])):
+            continue
+        name = entry["Name"]
+        title = search_fold(name).replace(" ", "")
+        if not title.startswith(compact):
+            continue
+        row = dict(id="app-" + ident.encode().hex(), name=name, detail=tr("Application"),
+                   icon=entry.get("Icon") or "application-x-executable")
+        matches.append((title != compact, title, ident, row))
+    return [row[-1] for row in sorted(matches)[:8]]
+
+
+def downloaded_app_locations():
+    return downloads_dir(), desktop_dir(), HOME / "Downloads", HOME / "Applications"
+
+
+def downloaded_app_roots():
+    dirs = read_text(CONFIG / "user-dirs.dirs")
+    candidates = (*downloaded_app_locations(),
+                  user_folder(HOME, dirs, "DOCUMENTS") or HOME / "Documents", HOME)
+    roots = []
+    for path in candidates:
+        try:
+            path = Path(path).resolve()
+            if path not in roots and path.is_dir():
+                roots.append(path)
+        except (OSError, RuntimeError):
+            continue
+    return roots
+
+
+def downloaded_app_type(path):
+    suffix = path.suffix.lower()
+    if suffix in PROGRAM_TYPES:
+        return "installer" if suffix == ".msi" or re.search(r"setup|install", path.stem, re.I) else "windows"
+    if suffix == ".appimage":
+        return "appimage"
+    # RPMs use Files' extractor and are never executed as programs.
+    if suffix == ".rpm":
+        return "package"
+    if suffix in {".part", ".crdownload", ".download", ".tmp", ".deb"} or not os.access(path, os.X_OK):
+        return ""
+    if re.search(r"\.so(?:\.|$)", path.name, re.I):
+        return ""
+    try:
+        native_executable(path)
+    except (OSError, ValueError):
+        return ""
+    return "native"
+
+
+def downloaded_apps(query, roots=None, limit=8, budget=None, *, recent=False):
+    query = search_fold(query[:256])
+    tokens = query.split()
+    compact = "".join(tokens)
+    if len(compact) < 2 and not recent:
+        return []
+    roots = dict.fromkeys(os.fspath(root) for root in (downloaded_app_roots() if roots is None else roots))
+    bundle_roots = set()
+    if not recent:
+        home = str(HOME.resolve())
+        for location in downloaded_app_locations():
+            try:
+                resolved = str(location.resolve())
+                if resolved != home:
+                    bundle_roots.add(resolved)
+            except (OSError, RuntimeError):
+                continue
+    recent_cutoff = time.time_ns() - 14 * 86400 * 10**9 if recent else 0
+    found = []
+
+    def entries(root):
+        try:
+            device = os.stat(root).st_dev
+        except OSError:
+            return
+        bundle_location = root in bundle_roots
+        pending = deque([(root, "")])
+        while pending:
+            folder, bundle = pending.popleft()
+            try:
+                with os.scandir(folder) as files:
+                    for entry in files:
+                        if entry.name.startswith('.'):
+                            continue
+                        if entry.is_dir(follow_symlinks=False):
+                            try:
+                                if entry.path in roots or entry.stat(follow_symlinks=False).st_dev != device:
+                                    continue
+                            except OSError:
+                                continue
+                            match = bundle
+                            if bundle_location:
+                                name = search_fold(entry.name)
+                                if name.replace(" ", "").startswith(compact) or f" {query} " in f" {name} ":
+                                    match = entry.name
+                            pending.append((entry.path, match))
+                        else:
+                            yield entry, root, bundle
+            except OSError:
+                continue
+
+    scans = [entries(root) for root in roots]
+    try:
+        while scans and (budget is None or budget > 0):
+            for scan in list(scans):
+                if budget == 0:
+                    break
+                try:
+                    entry, root, bundle = next(scan)
+                except StopIteration:
+                    scans.remove(scan)
+                    continue
+                if budget is not None:
+                    budget -= 1
+                try:
+                    by_name = True
+                    if not recent:
+                        name = search_fold(entry.name)
+                        joined = name.replace(" ", "")
+                        by_name = compact in joined or all(token in name for token in tokens)
+                        if not by_name:
+                            # A bundle can have a generic launcher name several folders down.
+                            # Exclude uninstallers unless their filename matches the query.
+                            if (not bundle or Path(entry.name).suffix.lower() not in PROGRAM_TYPES | {".appimage"}
+                                    or re.match(r"unins(?:tall)?(?:\d|[._ -]|$)", entry.name, re.I)):
+                                continue
+                    if not entry.is_file(follow_symlinks=False):
+                        continue
+                    if recent:
+                        modified = entry.stat(follow_symlinks=False).st_mtime_ns
+                        if modified < recent_cutoff:
+                            continue
+                    path = Path(entry.path)
+                    kind = downloaded_app_type(path)
+                    if not kind:
+                        continue
+                    priority = 0
+                    if not recent:
+                        priority = (int(compact not in (joined, search_fold(path.stem).replace(" ", "")))
+                                    if by_name else 2)
+                        modified = entry.stat(follow_symlinks=False).st_mtime_ns
+                    parent = path.parent
+                    location = parent.relative_to(HOME) if parent.is_relative_to(HOME) else Path(os.path.basename(root)) / parent.relative_to(root)
+                    label = {"installer": tr("Windows installer"), "windows": tr("Windows program"),
+                             "package": tr("Linux package"),
+                             "native": tr("Linux application"), "appimage": tr("Downloaded app")}[kind]
+                    icon = "application-x-ms-dos-executable" if kind in {"installer", "windows"} else "application-x-executable"
+                    if kind == "package":
+                        if not recent:
+                            priority += 2
+                        icon = "package-x-generic"
+                    title = path.name if by_name else f"{bundle} · {path.name}"
+                    result = dict(id="download-" + str(path).encode().hex(), name=title,
+                                  detail=label + " · " + (str(location) if location.parts else tr("Home")), icon=icon)
+                    found.append((priority, -modified, path.name.casefold(), str(path), result))
+                except (OSError, UnicodeError):
+                    continue
+    finally:
+        for scan in scans:
+            scan.close()
+    found.sort(key=lambda row: row[:4])
+    return [row[-1] for row in found[:limit]]
+
+
+def open_downloaded_app(token):
+    if len(token) > 16384 or not re.fullmatch(r'(?:[0-9a-f]{2})+', token):
+        return False
+    try:
+        path = Path(bytes.fromhex(token).decode())
+        if not path.is_absolute() or not path.is_file() or path.is_symlink():
+            return False
+        # Revalidate the result when clicked: removed files and links out of the
+        # download locations cannot turn a stale result into a different command.
+        resolved = path.resolve(strict=True)
+        if resolved != path or not any(path.is_relative_to(root) and
+                                        all(not part.startswith('.') for part in path.relative_to(root).parts)
+                                        for root in downloaded_app_roots()):
+            return False
+        kind = downloaded_app_type(path)
+        if kind in {"installer", "windows"}:
+            return windows_program(str(path))
+        if kind == "appimage":
+            # Keep the file manager's existing executable/trust prompt.
+            return ok("kioclient", "exec", path.as_uri())
+        if kind == "package":
+            subprocess.Popen([f"{LIBEXECDIR}/monet-files-tools", "unpack", str(path)], start_new_session=True)
+            return True
+        if kind == "native":
+            original = path.stat()
+            if not ok("kdialog", "--title", tr("Open application?"), "--yesno",
+                      tr("Open this downloaded application?") + "\n\n" + str(path), timeout=600):
+                return True  # The launch was handled and declined.
+            if path.resolve(strict=True) != path or not os.path.samestat(original, path.stat()):
+                return False
+            return native_run(token)
+    except (OSError, ValueError, RuntimeError):
+        pass
+    return False
 
 
 def open_search_result(ident):
@@ -6507,6 +7203,7 @@ def return_status():
         "missing-app": tr("This app is no longer installed. Install it again, then retry."),
         "folders-restored": tr("Saved folder tabs and split views reopened."),
         "folders-unavailable": tr("Folder tabs could not be confirmed. Reconnect any missing drives, then retry."),
+        "files-window-opened": tr("Files reopened. Its previous folders and tabs could not be saved."),
         "browser-restored": tr("The browser reopened its saved normal tabs. Private tabs stay closed."),
         "browser-opened": tr("Browser opened normally, following its own tab-restore preference."),
         "browser-unavailable": tr("The saved browser session is no longer available. You can open the browser normally."),
@@ -6523,7 +7220,7 @@ def return_status():
         item["name"] = local_name(entry) if entry else item["app"].removesuffix(".desktop")
         item["detail"] = descriptions.get(item["status"], descriptions["unconfirmed"])
         item["canOpen"] = bool(entry)
-        item["needsAttention"] = item["status"] in {"unconfirmed", "missing-app", "folders-unavailable",
+        item["needsAttention"] = item["status"] in {"unconfirmed", "missing-app", "folders-unavailable", "files-window-opened",
             "browser-unavailable", "browser-skipped", "documents-missing", "documents-unconfirmed", "partly-restored", "expired", "trip-unconfirmed"}
     state["retry"] = any(item["retry"] for item in state["items"])
     return state
@@ -7286,6 +7983,8 @@ def main(argv):
         emit(focus(None if args[0] == "off" else int(args[0]), args[1] if len(args) > 1 else "default"))
     elif cmd == "screens":
         emit(screen_features())
+    elif cmd == "display-state":
+        emit(display_state())
     elif cmd in ("screen-hdr", "screen-vrr") and len(args) == 2 and args[1] in ("on", "off"):
         set_screen_feature(args[0], cmd[7:], args[1] == "on")
         emit(screen_features())
@@ -7349,6 +8048,11 @@ def main(argv):
         emit(outputs())
     elif cmd == "apps-sound":
         emit(apps_sound())
+    elif cmd == "notification-audio":
+        level = min(100, int(args[0])) if len(args) == 1 and args[0].isascii() and args[0].isdigit() and len(args[0]) <= 3 else None
+        emit(notification_audio(level, defaults=args == ["defaults"]))
+    elif cmd == "notification-audio-test":
+        emit({"ok": test_notification_audio()})
     elif cmd == "sound":
         emit(bar_sound())
     elif cmd == "mic-mute" and len(args) == 2 and args[0].isdigit() and args[1] in ("on", "off"):
@@ -7433,6 +8137,31 @@ def main(argv):
         new = unseal(args[1], pad[128:])
         emit(change_password(old, new) if old is not None and new
              else {"ok": False, "message": "Monet couldn't change your password."})
+    elif cmd == "windows-setup-status":
+        emit(windows_setup_state())
+    elif cmd == "windows-setup-iso":
+        setup_status = read_text(WINDOWS_SETUP_STATUS)
+        fields = read_text(WINDOWS_SETUP_PROGRESS).split("\t")
+        iso = suggested_windows_iso(setup_status, fields[1] if len(fields) > 1 else "")
+        emit(str(iso) if iso else None)
+    elif cmd == "windows-setup-start":
+        if not args:
+            return 0 if start_windows_setup() else 1
+        if args == ["--retry"]:
+            return 0 if start_windows_setup(retry=True) else 1
+        iso = selected_windows_iso(args[0]) if len(args) == 1 else None
+        if iso is None:
+            emit({"message": tr("Choose a complete Windows 11 ISO file on this PC or a connected drive.")})
+            return 1
+        return 0 if start_windows_setup(iso) else 1
+    elif cmd == "windows-setup-download-page":
+        return 0 if ok("xdg-open", WINDOWS_ISO_PAGE) else 1
+    elif cmd == "open-windows":
+        if read_text(WINDOWS_SETUP_STATUS) in WINDOWS_SETUP_RETRYABLE | {"preparing", "pending"}:
+            open_settings("windows")
+        else:
+            executable = f"{BINDIR}/monet"
+            os.execv(executable, [executable, "windows", "--confirm"])
     elif cmd == "about":
         emit(about())
     elif cmd == "report":
@@ -7443,8 +8172,14 @@ def main(argv):
     elif cmd == "report-saved" and args:
         report_saved(args[0])
     elif cmd in ("doctor", "update"):
-        result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=3600)
-        emit({"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()})
+        try:
+            result = subprocess.run([f"{BINDIR}/monet", cmd], capture_output=True, text=True, timeout=3600)
+            reply = {"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()}
+        except (OSError, subprocess.TimeoutExpired):
+            reply = {"ok": False}
+        if cmd == "update":
+            reply["staged"] = update_waiting()
+        emit(reply)
     elif cmd == "update-check":
         emit(update_check())
     elif cmd == "update-history":
@@ -7515,6 +8250,10 @@ def main(argv):
         emit(display_sizes())
     elif cmd == "display-defaults":
         emit(initial_display_sizes())
+    elif cmd == "panel-icons" and len(args) in (1, 2):
+        result = panel_icons(args[0], args[1] if len(args) == 2 else None)
+        emit(result)
+        return 0 if result.get("ok") else 1
     elif cmd == "bar-layout":
         fit_bars()
     elif cmd == "access-scale" and args and args[0].isdigit() and int(args[0]) in SCALES:
@@ -7625,6 +8364,10 @@ def main(argv):
         subprocess.Popen(["bluedevil-wizard"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "storage":
         emit(storage())
+    elif cmd == "storage-disks" and len(args) in (0, 6):
+        result = manage_storage_disks(args)
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "storage-capacity":
         emit(storage_capacity())
     elif cmd == 'storage-recovery':
@@ -7694,13 +8437,14 @@ def main(argv):
         if found is not None and (not found.is_file() or found.suffix.lower() not in PROGRAM_TYPES):
             return 1
         info = {"path": str(found)} if found else program_info()
-        if info:
-            program_here(info["path"])
+        if info.get("path"):
+            return 0 if program_here(info["path"]) else 1
+        return 1
     elif cmd == "program-proton":
-        return program_proton(unhex(args[0]))
+        return program_proton(unhex(args[0])) if args else 1
     elif cmd == "program-start":
         # An app menu entry of a Windows program that an installer put in the Start menu.
-        program_here(unhex(args[0]))
+        return 0 if args and program_here(unhex(args[0])) else 1
     elif cmd == "windows-apps":
         windows_apps_menu()
     elif cmd == "windows-app":
@@ -7798,8 +8542,27 @@ def main(argv):
     elif cmd == "widgets":
         # Plasma's widget gallery, as the desktop's Add Widgets opens it.
         run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "toggleWidgetExplorer")
-    elif cmd == "search" and len(args) == 1 and len(args[0]) <= 2048 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
-        emit({"results": everyday_search(unhex(args[0]))})
+    elif cmd in ("search", "menu-search") and len(args) == 1 and len(args[0]) <= 2048 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
+        query = unhex(args[0])
+        apps = []
+        if cmd == "menu-search":
+            apps = installed_app_matches(query)
+            names = {search_fold(app["name"]).replace(" ", "") for app in apps}
+            apps += [row for row in downloaded_apps(query) if search_fold(row["name"]).replace(" ", "") not in names]
+        emit({"results": apps + everyday_search(query)})
+    elif cmd == "recent-downloads":
+        roots = [path for path in downloaded_app_roots()
+                 if path in (downloads_dir().resolve(), desktop_dir().resolve(), (HOME / "Downloads").resolve())
+                 and path != HOME.resolve()]
+        emit({"results": downloaded_apps("", roots=roots, limit=3, budget=2000, recent=True)})
+    elif cmd == "menu-app-open" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2}){1,255}", args[0]):
+        opened = launch(unhex(args[0]))
+        emit({"ok": opened})
+        return 0 if opened else 1
+    elif cmd == "download-open" and len(args) == 1:
+        opened = open_downloaded_app(args[0])
+        emit({"ok": opened})
+        return 0 if opened else 1
     elif cmd == "search-open" and len(args) == 1:
         try:
             opened = open_search_result(args[0])

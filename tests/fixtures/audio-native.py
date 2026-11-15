@@ -264,8 +264,68 @@ def widget():
             except subprocess.TimeoutExpired: proc.kill(); proc.wait(timeout=5)
 
 
+def notifications():
+    import pulsectl
+
+    start_server()
+    with subprocess.Popen(['wireplumber', '--profile=policy'], stdout=log, stderr=log) as policy:
+        try:
+            def restore_ready():
+                metadata = subprocess.check_output(['pw-metadata', '-l'], text=True, timeout=5)
+                return 'Found "route-settings" metadata' in metadata
+
+            wait_for(restore_ready, 'stream-restore policy')
+            pactl('load-module', 'module-stream-restore')
+            check_notification_volume(pulsectl)
+        finally:
+            policy.terminate()
+
+
+def check_notification_volume(pulsectl):
+    quick = str(ROOT / 'linux/libexec/monet-quick')
+    event = 'sink-input-by-media-role:event'
+    stereo = ['front-left', 'front-right']
+
+    def level(*args):
+        result = subprocess.check_output([sys.executable, quick, 'notification-audio', *args], timeout=5)
+        return json.loads(result)
+
+    with pulsectl.Pulse('Monet notification test') as pulse:
+        def saved():
+            return next((entry for entry in pulse.stream_restore_read() if entry.name == event), None)
+
+        initial = level('defaults')
+        assert initial == {'ok': True, 'volume': 35}, (initial, pulse.stream_restore_read())
+        assert saved().channel_list == stereo
+        pulse.stream_restore_write(event, channel_list=['mono'], volume=0.41, mute=True)
+        wait_for(lambda: saved().channel_list == ['mono'], 'old mono notification entry')
+        assert level() == {'ok': True, 'volume': 0}
+        assert saved().channel_list == stereo and saved().mute
+        assert all(abs(value - 0.41) < 0.001 for value in saved().volume.values)
+
+        assert level('62') == {'ok': True, 'volume': 62}
+        assert level('defaults') == {'ok': True}
+        assert level() == {'ok': True, 'volume': 62}
+        assert saved().channel_list == stereo and not saved().mute
+        clip = ROOT / 'linux/share/sounds/monet/stereo/message-new-instant.oga'
+        with subprocess.Popen(['paplay', '--property=media.role=event', str(clip)]) as player:
+            def playing():
+                return next((stream for stream in pulse.sink_input_list()
+                             if stream.proplist.get('application.process.id') == str(player.pid)), None)
+
+            try:
+                wait_for(playing, 'stereo notification playback')
+                stream = playing()
+                assert stream.channel_list == stereo and not stream.mute, stream
+                assert all(abs(value - 0.62) < 0.001 for value in stream.volume.values), stream
+            finally:
+                player.terminate()
+        print('Notification volume defaults, mono migration, and stereo playback passed')
+
+
 try:
-    {'native': native_updates, 'fallback': fallback, 'recovery': recovery, 'widget': widget}[sys.argv[1]]()
+    {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
+     'widget': widget, 'notifications': notifications}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()
     QTest.qWait(50)

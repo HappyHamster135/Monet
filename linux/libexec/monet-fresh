@@ -18,7 +18,7 @@ version="$("$BINDIR/monet" --version 2>/dev/null)"
 
 # The city chosen in Setup supplies defaults for older accounts too.
 [ -e "$CONFIG/monet/region-defaults-v1" ] || "$LIBEXECDIR/monet-region" || failed=1
-[ -e "$CONFIG/monet/files-defaults-v1" ] || "$LIBEXECDIR/monet-quick" files-defaults || failed=1
+[ -e "$CONFIG/monet/files-defaults-v1" -a -e "$CONFIG/monet/downloads-v2" ] || "$LIBEXECDIR/monet-quick" files-defaults || failed=1
 
 # A subgroup with menu options but no binding suppresses Plasma's shell defaults.
 # Repair missing bindings even on accounts with the old menu receipts. An explicit

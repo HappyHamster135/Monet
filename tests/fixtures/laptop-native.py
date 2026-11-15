@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from PySide6.QtCore import QObject, Slot, QUrl, QMetaObject, Qt, QTimer
+from PySide6.QtCore import QObject, Property, Signal, Slot, QUrl, QMetaObject, Qt, QTimer
 from PySide6.QtGui import QPalette, QWindow
 from PySide6.QtQml import QQmlEngine, QQmlComponent
 from PySide6.QtQuick import QQuickItem, QQuickWindow
@@ -48,8 +48,25 @@ def action():
     class Words(QObject):
         @Slot(str, str, result=str)
         def i18nd(self, domain, text): return text
+
+    class Panel(QObject):
+        task_manager = None
+
+        @Slot(str, result=QObject)
+        def internalAction(self, name):
+            assert name == "monet-task-manager"
+            return self.task_manager
+
+    class Applet(QObject):
+        contextualActionsAboutToShow = Signal()
+
+        @Property(QObject, constant=True)
+        def containment(self):
+            return panel
+
     app = QApplication([])
     engine = QQmlEngine(); words = Words(); engine.rootContext().setContextObject(words)
+    panel = Panel(); applet = Applet()
     marker = CONFIG / "called"
     helper = CONFIG / "monet-quick"
     helper.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "' + str(marker) + '"\n')
@@ -58,18 +75,27 @@ def action():
     source = source.replace("@LIBEXECDIR@", str(CONFIG))
     component = QQmlComponent(engine)
     component.setData(source.encode(), QUrl.fromLocalFile(str(CONFIG / "TaskManagerAction.qml")))
-    item = component.create()
+    item = component.createWithInitialProperties({"menuApplet": applet})
     assert item is not None, [e.toString() for e in component.errors()]
     assert item.property("text") == "Task Manager"
     matches = engine.newQObject(item).property("isTaskManager")
     for app_id, expected in [("org.kde.plasma-systemmonitor.desktop", True), ("org.kde.plasma-systemmonitor", True),
                               ("plasma-systemmonitor.desktop", True), ("org.other.plasma-systemmonitor.desktop", False)]:
         assert matches.call([engine.toScriptValue(app_id)]).toBool() == expected
+    applet.contextualActionsAboutToShow.emit()
+    assert item.property("showInAppletMenu")
+    panel.task_manager = QObject(panel)
+    applet.contextualActionsAboutToShow.emit()
+    assert not item.property("showInAppletMenu")
+    # The System and Network widgets can still trigger this action directly.
     assert QMetaObject.invokeMethod(item, "trigger")
     for _ in range(100):
         if marker.exists(): break
         QTest.qWait(20)
     assert marker.read_text() == "search-open\nsystem-monitor\n"
+    panel.task_manager = None
+    applet.contextualActionsAboutToShow.emit()
+    assert item.property("showInAppletMenu")
     item.deleteLater(); QTest.qWait(10)
 
 

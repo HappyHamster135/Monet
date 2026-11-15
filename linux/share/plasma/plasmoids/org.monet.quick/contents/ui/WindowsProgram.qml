@@ -58,8 +58,14 @@ PlasmaCore.Dialog {
     }
 
     function runHere() {
-        ask("program-here", () => {})
-        visible = false
+        if (copying) return
+        copying = true
+        problem = ""
+        ask("program-here", (out, code) => {
+            copying = false
+            if (code === 0) visible = false
+            else problem = i18n("Couldn't start the Windows app launcher. Try again from Files.")
+        })
     }
 
     function openInWindows() {
@@ -245,9 +251,7 @@ PlasmaCore.Dialog {
                 font.pixelSize: 14
                 lineHeight: 1.15
                 text: sheet.app ? i18n("It's in your Windows: your PC restarts in Windows and opens it there, so save your work first. Back to Monet brings you back.")
-                    : (sheet.info.installer
-                        ? i18n("Monet runs many Windows programs itself, the way it runs Windows games, and what this one installs shows up in your app menu.")
-                        : i18n("Monet runs many Windows programs itself, the way it runs Windows games."))
+                    : i18n("Try opening this file with Proton. Compatibility depends on the program.")
                     + (sheet.canWindows ? " " + i18n("If it needs Windows, open it there: your PC restarts in Windows and opens it, so save your work first.") : "")
             }
 

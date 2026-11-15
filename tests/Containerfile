@@ -6,7 +6,7 @@ RUN dnf -y install python3 python3-pyside6 python3-gobject python3-dbus python3-
     python3-numpy python3-pillow gtk3 gtk4 nodejs nodejs-npm dbus-daemon dbus-tools \
     plasma-workspace plasma-desktop plasma-systemmonitor plasma-pa \
     kf6-kirigami kf6-kconfig plasma-integration kvantum rsms-inter-fonts \
-    pipewire pipewire-pulseaudio pipewire-utils pulseaudio-utils \
+    pipewire pipewire-pulseaudio pipewire-utils pulseaudio-utils wireplumber python3-pulsectl \
     util-linux procps-ng ntfsprogs dosfstools wimlib-utils cryptsetup openssl \
     diffutils findutils which git dolphin baloo-widgets ark 7zip \
     hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \

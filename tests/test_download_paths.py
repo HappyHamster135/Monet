@@ -30,7 +30,7 @@ class DownloadPaths(unittest.TestCase):
         (self.root / 'profiles.ini').write_text('[Profile0]\nIsRelative=1\nPath=default\n')
         self.quick.zen_root = lambda: self.root
 
-    def test_first_login_defaults_to_localized_desktop_once_and_retains_old_downloads(self):
+    def test_first_login_keeps_a_separate_downloads_folder(self):
         desktop = self.home / 'Skrivbord'; desktop.mkdir()
         downloads = self.home / 'Downloads'; downloads.mkdir()
         (downloads / 'keep.txt').write_text('keep')
@@ -38,13 +38,26 @@ class DownloadPaths(unittest.TestCase):
         # MIME policy is separate from native directory integration in this check.
         with patch.object(self.quick, 'ARCHIVE_MIMES', ()):
             self.quick.files_defaults()
-            self.assertEqual(self.quick.downloads_dir(), desktop)
-            self.assertEqual(subprocess.check_output(['xdg-user-dir', 'DOWNLOAD'], text=True).strip(), str(desktop))
+            self.assertEqual(self.quick.downloads_dir(), downloads)
+            self.assertEqual(subprocess.check_output(['xdg-user-dir', 'DOWNLOAD'], text=True).strip(), str(downloads))
             self.assertEqual((downloads / 'keep.txt').read_text(), 'keep')
             custom = self.home / 'Keep downloads here'; custom.mkdir()
             self.quick.set_download_path(custom)
             self.quick.files_defaults()
             self.assertEqual(self.quick.downloads_dir(), custom)
+
+    def test_old_desktop_redirect_is_migrated_without_moving_files(self):
+        desktop = self.home / 'Desktop'; desktop.mkdir()
+        (desktop / 'keep.txt').write_text('stay here')
+        self.quick.set_download_path(desktop, user_choice=False)
+        (self.config / 'monet').mkdir()
+        (self.config / 'monet/files-defaults-v1').touch()
+        self.quick.files_defaults()
+        self.assertEqual(self.quick.downloads_dir(), self.home / 'Downloads')
+        self.assertEqual((desktop / 'keep.txt').read_text(), 'stay here')
+        self.quick.set_download_path(desktop)
+        self.quick.files_defaults()
+        self.assertEqual(self.quick.downloads_dir(), desktop)
 
     def test_custom_paths_are_literal_in_xdg_and_browser_and_other_prefs_stay(self):
         target = self.home / 'Work "quoted" $HOME $(touch NO) `echo x` \\ å'; target.mkdir()

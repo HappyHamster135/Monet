@@ -33,7 +33,7 @@ def fetch(url, path, sha256=None, size=None):
         raise ValueError(f"Downloaded package does not match the OEM catalog: {path.name}")
 
 
-def build(output, extractor, cache):
+def build(output, extractor, cache, drivers_only=False):
     profile = json.loads((ROOT / "windows/hardware/lenovo-21hl.json").read_text())
     output.mkdir(parents=True, exist_ok=False)
     cache.mkdir(parents=True, exist_ok=True)
@@ -64,6 +64,9 @@ def build(output, extractor, cache):
         manifest["drivers"].append({"name": package["name"], "version": package["version"],
                                     "source_sha256": package["sha256"], "infs": infs, "files": files})
         print(f"Prepared {package['name']} ({len(infs)} driver INFs)")
+    if drivers_only:
+        (output / "repair-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        return
     steam = cache / "SteamSetup.exe"
     fetch(STEAM_URL, steam)
     shutil.copy2(steam, output / steam.name)
@@ -97,8 +100,9 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--innoextract", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
+    parser.add_argument("--drivers-only", action="store_true", help="stage only the verified offline driver payload")
     args = parser.parse_args()
-    build(args.output.resolve(), args.innoextract.resolve(), args.cache.resolve())
+    build(args.output.resolve(), args.innoextract.resolve(), args.cache.resolve(), args.drivers_only)
 
 
 if __name__ == "__main__":

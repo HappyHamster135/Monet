@@ -66,9 +66,8 @@ private slots:
         area.setWidget(root);
         area.resize(640, 400);
         area.show();
-        QTest::qWait(20);
 
-        QVERIFY(form->minimumWidth() >= row->minimumSize().width());
+        QTRY_VERIFY(form->minimumWidth() >= row->minimumSize().width());
         QVERIFY(field->mapTo(page, field->rect().bottomRight()).x() < page->width());
         QVERIFY(tabs->tabBar()->y() >= 4);
         auto stack = tabs->findChild<QStackedWidget *>();
@@ -76,8 +75,8 @@ private slots:
         QVERIFY(stack->y() > tabs->tabBar()->geometry().bottom() + 4);
 
         auto bar = area.horizontalScrollBar();
-        QVERIFY(bar->isVisible());
-        QVERIFY(bar->maximum() > 0);
+        QTRY_VERIFY(bar->isVisible());
+        QTRY_VERIFY(bar->maximum() > 0);
         // Shift+wheel over a field pans the whole module.
         bar->setValue(0);
         QWheelEvent wheel(QPointF(5, 5), QPointF(field->mapToGlobal(QPoint(5, 5))),
@@ -102,8 +101,7 @@ private slots:
         layout->addWidget(wider);
         tabs->addTab(extra, "Another page");
         tabs->setCurrentWidget(extra);
-        QTest::qWait(20);
-        QVERIFY(bar->maximum() > previous);
+        QTRY_VERIFY(bar->maximum() > previous);
         bar->setValue(bar->maximum());
         QVERIFY(wider->mapTo(area.viewport(), wider->rect().bottomRight()).x() < area.viewport()->width());
     }

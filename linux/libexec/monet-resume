@@ -816,7 +816,7 @@ def checkpoint(apps, windows, scene=None):
 
 
 RETURN_STATES = {"waiting", "opening", "opened", "already-running", "unconfirmed", "missing-app", "documents-unconfirmed",
-                 "folders-restored", "folders-unavailable", "browser-restored", "browser-opened",
+                 "folders-restored", "folders-unavailable", "files-window-opened", "browser-restored", "browser-opened",
                  "browser-unavailable", "browser-skipped", "documents-opened", "documents-missing", "expired",
                  "trip-unconfirmed", "partly-restored"}
 
@@ -2032,6 +2032,20 @@ def restore_regular(app, saved, off, launch, initial_ids):
     return False
 
 
+def files_window_only(saved):
+    """A single Files frame can be reopened even when its tabs could not be saved."""
+    groups = saved["groups"][FILES]
+    if not isinstance(groups, list) or len(groups) != 1 or not isinstance(groups[0], dict):
+        return False
+    group = groups[0]
+    windows = saved.get("windows")
+    if "files" not in group or group["files"] is not None or group.get("files_launch") or not isinstance(windows, list):
+        return False
+    frames = [w for w in windows if isinstance(w, dict) and w.get("app") == FILES]
+    return (len(frames) == 1 and group.get("windows") == frames
+            and isinstance(frames[0].get("id"), str) and bool(frames[0]["id"]))
+
+
 def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None):
     """A receipt per confirmed app survives interruption. Failed launches stay retryable."""
     try:
@@ -2084,7 +2098,11 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
         save_return(path, saved, report)
         return []
     initial_ids = {w["id"] for w in before}
-    existing = set(running()) | {w["app"] for w in before}
+    open_windows = {w["app"] for w in before}
+    running_apps = set(running())
+    saved_windows = saved.get("windows", [])
+    windowed_apps = {w.get("app") for w in saved_windows if isinstance(w, dict)
+                     and isinstance(w.get("app"), str)} if isinstance(saved_windows, list) else set()
     receipts = saved.get("done", [])
     done = {a for a in receipts if isinstance(a, str)} if isinstance(receipts, list) else set()
     apps = list(dict.fromkeys(a for a in saved["apps"][:MAX_APPS] if isinstance(a, str) and APP_ID.fullmatch(a)))
@@ -2138,6 +2156,8 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
                 else "browser-unavailable" if result is None else "unconfirmed"
         elif kind == "files":
             item["status"] = "folders-restored" if result else "folders-unavailable"
+        elif kind == "files-window":
+            item["status"] = "files-window-opened" if result else "unconfirmed"
         else:
             item["status"] = ("documents-missing" if item.get("missingCount") else
                               "documents-opened" if item.get("documents") else "opened") if result else "unconfirmed"
@@ -2186,7 +2206,14 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
         elif app == PDF and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
             kind, job = "pdf", restore_pdfs(path, saved, off, before, launch, request is not None or selected is not None)
         elif app in (FILES, BROWSER) and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
-            kind, job = "groups", restore_groups(path, saved, app, off, before)
+            if app == FILES and files_window_only(saved):
+                if FILES in open_windows:
+                    item["status"] = "already-running"
+                    done.add(app)
+                else:
+                    kind, job = "files-window", restore_regular(app, saved, off, launch, initial_ids)
+            else:
+                kind, job = "groups", restore_groups(path, saved, app, off, before)
         elif browser:
             helper = browser_helper()
             state = saved["browser"]
@@ -2206,7 +2233,9 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
             pending = saved.get("files_launch", {}) if files else {}
             pending = pending if isinstance(pending, dict) else {}
             continuing = pending.get("boot") == boot_id() and files_helper().alive(pending) if pending else False
-            if app in existing and not continuing:
+            # A tray process can still be active without the saved window.
+            already_open = app in open_windows or (app in running_apps and app not in windowed_apps)
+            if already_open and not continuing:
                 item["status"] = "already-running"
                 done.add(app)
                 if files:

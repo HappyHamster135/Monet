@@ -122,6 +122,44 @@ class IndependentRecovery(unittest.TestCase):
         self.assertEqual(self.launches, [ONE, TWO])
         self.assertEqual(len(self.live), 2)
 
+    def test_single_files_window_without_tabs_reopens_at_its_saved_frame(self):
+        frame = {"id": "old", "pid": 42, "app": r.FILES, "rect": [10, 10, 500, 400]}
+        self.save(r.FILES, [{"files": None, "windows": [frame]}])
+        r.atomic_write(self.path, dict(r.read_state(self.path), windows=[frame]))
+        reopened = dict(frame, id="new", pid=43, rect=[0, 0, 800, 600])
+
+        def launch(app):
+            self.launches.append(app)
+            self.live.append(reopened)
+
+        args = (self.path, self.off, lambda: [], lambda _: True, launch)
+        self.assertEqual(r.restore(*args), [r.FILES])
+        r.place_windows.assert_called_once_with([frame], [reopened], set())
+        self.assertEqual(r.restore(*args), [])
+        report = r.return_status(self.path, self.off)
+        self.assertEqual(report["items"][0]["status"], "files-window-opened")
+        self.assertFalse(report["retry"])
+        self.assertEqual(self.launches, [r.FILES])
+
+    def test_files_fallback_leaves_existing_windows_and_uncertain_groups_alone(self):
+        frame = {"id": "old", "pid": 42, "app": r.FILES}
+        self.save(r.FILES, [{"files": None, "windows": [frame]}])
+        r.atomic_write(self.path, dict(r.read_state(self.path), windows=[frame]))
+        self.live = [dict(frame, id="existing")]
+        self.assertEqual(self.restore(), [])
+        self.assertEqual(r.return_status(self.path, self.off)["items"][0]["status"], "already-running")
+        r.place_windows.assert_not_called()
+
+        self.live = []
+        for groups in ([{"windows": [frame]}], [{"files": {}, "windows": [frame]}],
+                       [{"files": None, "windows": [frame]}, {"files": None, "windows": []}]):
+            with self.subTest(groups=groups):
+                self.save(r.FILES, groups)
+                r.atomic_write(self.path, dict(r.read_state(self.path), windows=[frame]))
+                self.assertEqual(self.restore(), [])
+                report = r.read_state(r.return_path(self.path))
+                self.assertEqual(report["items"][r.FILES]["status"], "unconfirmed")
+
     def test_cancelled_switch_reopens_only_the_files_window_that_closed(self):
         self.save(r.FILES, [{"files": ONE}, {"files": TWO}])
         self.live = [{"id": "survived", "pid": 10, "app": r.FILES}]

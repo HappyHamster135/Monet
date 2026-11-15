@@ -32,7 +32,8 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "utilities-system-monitor"
-    Plasmoid.contextualActions: [TaskManagerAction { id: taskManager }]
+    TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
+    Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     toolTipMainText: i18nd("monet", "System")
     toolTipSubText: i18nd("monet", "Double-click to open Task Manager")
     preferredRepresentation: fullRepresentation

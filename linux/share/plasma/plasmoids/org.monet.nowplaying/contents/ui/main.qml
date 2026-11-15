@@ -313,8 +313,19 @@ PlasmoidItem {
                                 id: play
                                 implicitWidth: 38
                                 implicitHeight: 38
+                                autoRepeat: false
+                                enabled: row.player !== null && (row.playing ? row.player.canPause : row.player.canPlay)
+                                    && !playRequest.running
                                 Accessible.name: row.playing ? i18nc("the music", "Pause") : i18nc("the music", "Play")
-                                onClicked: row.model.container.PlayPause()
+                                onClicked: {
+                                    playRequest.start()
+                                    if (row.playing) row.player.Pause()
+                                    else row.player.Play()
+                                }
+                                Timer {
+                                    id: playRequest
+                                    interval: 350
+                                }
                                 scale: down ? 0.92 : hovered ? 1.06 : 1
                                 Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
                                 background: Rectangle {

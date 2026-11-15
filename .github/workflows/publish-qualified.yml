@@ -4,7 +4,7 @@ name: Publish qualified images
 # It publishes existing bytes from a draft release; it does not rebuild the OS.
 on:
   push:
-    tags: ['publish-v*']
+    tags: ['publish-v*', 'preview-v*']
 
 permissions:
   contents: write
@@ -20,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify the publication tag
-        run: test "$GITHUB_REF_NAME" = "publish-v$(cat VERSION)"
+        run: |
+          version=$(cat VERSION)
+          test "$GITHUB_REF_NAME" = "publish-v$version" || test "$GITHUB_REF_NAME" = "preview-v$version"
       - name: Make room for the verified exports
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
@@ -37,4 +39,7 @@ jobs:
         run: |
           printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
           trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
-          python3 tools/publish-qualified.py "image/releases/$(cat VERSION).json" "$RUNNER_TEMP/monet-qualified"
+          version=$(cat VERSION)
+          options=()
+          if [[ "$GITHUB_REF_NAME" == "preview-v$version" ]]; then options+=(--versioned-only); fi
+          python3 tools/publish-qualified.py "image/releases/$version.json" "$RUNNER_TEMP/monet-qualified" "${options[@]}"

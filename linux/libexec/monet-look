@@ -128,7 +128,7 @@ plain_names() {
         rm -f "$1.words"
     }
     rename() { # rename <id> <name> [comment]
-        local f old target work interfaces monitor_bin monitor_exec
+        local f old target work interfaces monitor_bin monitor_exec music_exec
         f="$(entry "$1")" || return 1
         mkdir -p "$DATA/applications"
         target="$DATA/applications/$1.desktop"
@@ -147,6 +147,22 @@ plain_names() {
                fi ;;
         esac
         localized "$work" Name "$2"
+        if [ "$f" = /usr/share/applications/org.kde.elisa.desktop ] && grep -qx 'NAME="Monet"' /usr/lib/os-release; then
+            # Qt's native PipeWire stream can repeatedly underrun while Music is paused.
+            # Use PipeWire's PulseAudio interface for Music on the Monet image.
+            music_exec="$(kreadconfig6 --file "$work" --group 'Desktop Entry' --key Exec)"
+            case "$music_exec" in
+                elisa|elisa\ *|/usr/bin/elisa|/usr/bin/elisa\ *)
+                    # Make desktop and file launches use this command instead of the stock D-Bus service.
+                    if ! kwriteconfig6 --file "$work" --group 'Desktop Entry' --key Exec "env QT_AUDIO_BACKEND=pulseaudio $music_exec" ||
+                       ! kwriteconfig6 --file "$work" --group 'Desktop Entry' --key DBusActivatable false; then
+                        failed=1
+                        rm -f "$work"
+                        return 1
+                    fi
+                    ;;
+            esac
+        fi
         if [ "$1" = org.kde.plasma-systemmonitor ]; then
             # KWin requires this declaration before exposing window state on
             # Wayland. Task Manager uses it to suspend work while minimized.
@@ -451,6 +467,14 @@ fi
 # KDE's Light and Dark buttons pick Mist and Smoke, not Breeze.
 look --file kdeglobals --group KDE --key DefaultLightLookAndFeel org.monet.desktop
 look --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.desktop
+
+# Also update existing accounts that still inherit the old switcher from their
+# look-and-feel. The profile writer respects any explicitly chosen layout.
+case "$(kreadconfig6 --file kwinrc --group TabBox --key LayoutName 2>/dev/null)" in
+    ""|org.kde.breeze.desktop|thumbnail_grid|monet-windows)
+        look --file kwinrc --group TabBox --key LayoutName monet-windows
+        ;;
+esac
 
 # Lily, Monet's accent, instead of one picked from the wallpaper.
 look --file kdeglobals --group General --key AccentColor "53,127,114"

@@ -14,8 +14,8 @@ from tests.test_settings_feedback import QT
 ROOT = Path(__file__).resolve().parents[1]
 
 if QT:
-    from PySide6.QtCore import QPoint, QPointF, QLocale, QMetaObject, QUrl, Qt, Q_ARG
-    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QInputDevice, QPointingDevice, QWheelEvent, QWindow
+    from PySide6.QtCore import QEvent, QPoint, QPointF, QLocale, QMetaObject, QUrl, Qt, Q_ARG
+    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QInputDevice, QKeyEvent, QPointingDevice, QWheelEvent, QWindow
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtTest import QSignalSpy, QTest
     from tests.test_settings_feedback import FakeHelper
@@ -116,6 +116,116 @@ class SettingsNavigation(unittest.TestCase):
         if os.environ.get("MONET_NAV_CAPTURE"):
             path = Path(os.environ["MONET_NAV_CAPTURE"]); path.mkdir(parents=True, exist_ok=True)
             self.assertTrue(self.window.grabWindow().save(str(path / (name + ".png"))))
+
+    def test_display_colors_are_searchable_with_an_in_place_test(self):
+        self.helper.replies["display-state"] = json.dumps({
+            "sizes": [{"name": "eDP-1", "width": 3840, "height": 2400, "scale": 200, "highDensity": True}],
+            "features": [{"name": "eDP-1", "hdr": False, "vrr": None}],
+        })
+        self.open("display#color")
+        self.wait_for(lambda: self.window.property("pendingAnchor") == "")
+        self.assertIn(["helper", "display-state"], self.helper.commands)
+        self.assertNotIn(["helper", "display-sizes"], self.helper.commands)
+        self.assertTrue(self.item("screenSizeRow-eDP-1").isVisible())
+        profiles = self.item("openColorProfiles")
+        profiles.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: ["helper", "kde", "display"] in self.helper.commands)
+        self.capture("display-colors")
+
+        parent_size = self.window.size()
+        start_test = self.item("openDisplayTest")
+        start_test.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        test_window = self.window.findChild(QWindow, "displayTestWindow")
+        self.assertIsNotNone(test_window)
+        self.wait_for(test_window.isVisible)
+        self.wait_for(lambda: self.app.focusWindow() == test_window)
+        self.assertEqual(test_window.visibility(), QWindow.FullScreen)
+        self.assertEqual(test_window.screen(), self.window.screen())
+        if os.environ.get("MONET_NAV_CAPTURE"):
+            path = Path(os.environ["MONET_NAV_CAPTURE"]) / "display-test.png"
+            self.assertTrue(test_window.grabWindow().save(str(path)))
+        escape = QKeyEvent(QEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier)
+        QGuiApplication.sendEvent(test_window, escape)
+        self.wait_for(lambda: not test_window.isVisible())
+        self.assertEqual(self.window.size(), parent_size)
+
+    def test_windows_download_failure_uses_selected_iso(self):
+        self.helper.replies["about"] = '{"windows":"Not found","setup":"download-failed"}'
+        self.helper.replies["library"] = "[]"
+        self.helper.replies["windows-setup-status"] = '{"status":"download-failed","active":false,"percent":0}'
+        self.helper.held_commands.add("windows-setup-start")
+        self.open("windows")
+        self.assertTrue(self.item("startWindowsSetup").isVisible())
+        self.assertTrue(self.item("chooseWindowsIso").isVisible())
+        self.assertTrue(self.item("windowsIsoPage").isVisible())
+        setup = self.item("prepareWindowsIso")
+        self.assertFalse(setup.isVisible())
+        iso = QUrl.fromLocalFile("/media/USB/Windows 11.iso")
+        self.assertTrue(self.window.setProperty("windowsIso", iso))
+        self.wait_for(setup.isVisible)
+        setup.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: ["helper", "windows-setup-start", iso.toString().encode().hex()]
+                      in self.helper.commands)
+        self.assertFalse(setup.isVisible())
+        self.assertNotIn(["helper", "windows-setup-start"], self.helper.commands)
+        self.assertNotIn(["monet", "windows"], self.helper.commands)
+        message = "the Windows ISO could not be opened"
+        self.helper.replies["windows-setup-status"] = json.dumps({
+            "status": "download-failed", "mediaError": True, "message": message,
+        })
+        self.helper.done.emit(self.helper.pending_commands.pop(), "", 0, "")
+        self.wait_for(lambda: self.item("windowsSetupDetail").property("text") == message)
+        self.assertFalse(setup.isVisible())
+
+    def test_windows_retry_keeps_failure_detail_and_uses_explicit_retry(self):
+        for state, title, detail in (
+            ({"status": "download-failed", "message": "Microsoft's download service refused the request"},
+             "Retry download", "Microsoft's download service refused the request"),
+            ({"status": "pending", "interrupted": True}, "Try setup again",
+             "This PC returned to Monet before Windows setup finished. Try again to resume the prepared installation."),
+        ):
+            with self.subTest(state=state):
+                self.helper.held_commands.add("windows-setup-start")
+                self.helper.replies.update({"about": '{"windows":"Not found"}', "library": "[]",
+                                            "windows-setup-status": json.dumps(state)})
+                self.open("display")
+                self.open("windows")
+                self.wait_for(lambda: self.item("windowsSetupDetail").property("text") == detail)
+                setup = self.item("startWindowsSetup")
+                self.assertTrue(setup.isVisible())
+                self.assertEqual(setup.property("text"), title)
+                self.assertEqual(self.item("chooseWindowsIso").isVisible(), not state.get("interrupted", False))
+                setup.forceActiveFocus()
+                count = self.helper.commands.count(["helper", "windows-setup-start", "--retry"])
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.wait_for(lambda: self.helper.commands.count(["helper", "windows-setup-start", "--retry"]) == count + 1)
+                self.helper.done.emit(self.helper.pending_commands.pop(), "", 0, "")
+
+    def test_windows_setup_uses_detected_iso_in_one_click(self):
+        iso = "file:///home/fixture/Downloads/Windows11%20x64.iso"
+        self.helper.replies.update({"about": '{"windows":"Not found","setup":"download-failed"}',
+                                    "library": "[]", "windows-setup-status": json.dumps({
+                                        "status": "download-failed", "active": False, "iso": iso})})
+        self.helper.held_commands.add("windows-setup-start")
+        self.open("windows")
+        setup = self.item("prepareWindowsIso")
+        self.wait_for(setup.isVisible)
+        self.assertFalse(self.item("windowsIsoPage").isVisible())
+        setup.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: ["helper", "windows-setup-start", iso.encode().hex()] in self.helper.commands)
+
+    def test_windows_setup_reports_preparation_failure_with_detected_iso(self):
+        message = "a Windows setup partition contains an unexpected filesystem; it was not formatted"
+        self.helper.replies.update({"about": '{"windows":"Not found","setup":"failed"}',
+                                    "library": "[]", "windows-setup-status": json.dumps({
+                                        "status": "failed", "active": False, "message": message,
+                                        "iso": "file:///home/fixture/Downloads/Win11.iso"})})
+        self.open("windows")
+        self.wait_for(lambda: self.item("windowsSetupDetail").property("text") == message)
 
     def assert_visible_in(self, item, view):
         point = item.mapToItem(view, QPointF())

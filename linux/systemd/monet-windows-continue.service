@@ -1,0 +1,10 @@
+[Unit]
+Description=Monet: continue a completed Windows deployment
+ConditionPathExists=/var/lib/monet/windows-staging.json
+After=local-fs.target bootloader-update.service
+Before=monet-windows-setup.service monet-sync.service systemd-user-sessions.service display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-prepare-windows --continue-setup @BINDIR@/monet
+TimeoutStartSec=150

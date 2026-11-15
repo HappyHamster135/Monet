@@ -105,11 +105,50 @@ PlasmoidItem {
         id: page
         readonly property real maximumContentWidth: Math.max(1, root.usableScreen.width - Kirigami.Units.largeSpacing * 2)
         readonly property real maximumContentHeight: Math.max(1, root.usableScreen.height - Kirigami.Units.largeSpacing * 2)
-        Layout.minimumWidth: Math.min(400, maximumContentWidth); Layout.minimumHeight: Math.min(300, maximumContentHeight)
-        Layout.preferredWidth: Math.min(500, maximumContentWidth); Layout.preferredHeight: Math.min(540, maximumContentHeight)
+        Layout.minimumWidth: Math.min(400, maximumContentWidth); Layout.minimumHeight: Math.min(220, maximumContentHeight)
+        Layout.preferredWidth: Math.min(500, maximumContentWidth); Layout.preferredHeight: Math.min(560, maximumContentHeight, Math.max(220, transferList.implicitHeight + 100))
         Layout.maximumWidth: maximumContentWidth; Layout.maximumHeight: maximumContentHeight
         color: Kirigami.Theme.backgroundColor
-        radius: 14
+        radius: 18
+        component TransferButton: C.Button {
+            implicitHeight: Math.max(34, implicitContentHeight + 16)
+            leftPadding: 14; rightPadding: 14; topPadding: 8; bottomPadding: 8
+            activeFocusOnTab: true
+            contentItem: C.Label {
+                text: parent.text; font: parent.font; horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter; color: Kirigami.Theme.textColor
+            }
+            background: Rectangle {
+                radius: 10
+                color: Qt.rgba(0.5, 0.5, 0.5, parent.down ? 0.22 : parent.hovered ? 0.15 : 0.09)
+                border.width: parent.visualFocus ? 2 : 0; border.color: Kirigami.Theme.highlightColor
+            }
+        }
+        component TransferCard: C.Frame {
+            padding: 16
+            background: Rectangle {
+                radius: 14; color: Qt.rgba(0.5, 0.5, 0.5, 0.06)
+                border.color: Qt.rgba(0.5, 0.5, 0.5, 0.12)
+            }
+        }
+        component TransferProgress: C.ProgressBar {
+            id: progress
+            implicitHeight: 6
+            background: Rectangle { radius: 3; color: Qt.rgba(0.5, 0.5, 0.5, 0.13) }
+            contentItem: Item {
+                clip: true
+                Rectangle {
+                    width: progress.indeterminate ? parent.width * 0.3 : parent.width * progress.visualPosition
+                    height: parent.height; radius: 3; color: Kirigami.Theme.highlightColor
+                    SequentialAnimation on opacity {
+                        running: progress.indeterminate; loops: Animation.Infinite
+                        NumberAnimation { to: 0.4; duration: 700 }
+                        NumberAnimation { to: 1; duration: 700 }
+                        onStopped: opacity = 1
+                    }
+                }
+            }
+        }
         property Item pendingReveal: null
         property bool followFocus: true
         readonly property rect focusedBounds: {
@@ -261,7 +300,7 @@ PlasmoidItem {
         spacing: 10
         RowLayout {
             Layout.margins: 12
-            C.Label { text: i18n("Transfers"); font.pixelSize: 25; font.family: "Fraunces 72pt SuperSoft"; Layout.fillWidth: true }
+            C.Label { text: i18n("Transfers"); font.pixelSize: 24; font.family: "Fraunces 72pt SuperSoft"; Layout.fillWidth: true }
             C.ToolButton { id: refreshButton; objectName: "refreshTransfers"; icon.name: "view-refresh"; Accessible.name: i18n("Refresh transfers"); onClicked: root.refresh() }
         }
         Item {
@@ -289,6 +328,7 @@ PlasmoidItem {
                 Keys.onPressed: event => transferInput.key(event)
                 ColumnLayout {
                     id: transferList
+                    spacing: 12
                     width: transferScroll.availableWidth
                     C.Label { visible: root.problem !== ""; text: root.problem; textFormat: Text.PlainText; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                     RowLayout {
@@ -296,7 +336,7 @@ PlasmoidItem {
                         Layout.fillWidth: true; Layout.minimumWidth: 0
                         C.BusyIndicator { running: root.expanded && folderOpen.busy && activity.active; Layout.preferredWidth: 20; Layout.preferredHeight: 20 }
                         C.Label { text: i18n("Opening folder…"); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
-                        C.Button {
+                        TransferButton {
                             id: cancelFolderOpening; visible: folderOpen.cancellable; text: i18n("Cancel opening")
                             onClicked: { folderOpen.cancel(); refreshButton.forceActiveFocus(Qt.TabFocusReason); }
                         }
@@ -316,7 +356,7 @@ PlasmoidItem {
                     }
                     Repeater {
                         model: nativeJobs
-                        delegate: C.Frame {
+                        delegate: TransferCard {
                             required property var model
                             readonly property var job: model.jobDetails
                             visible: !root.representedExtraction(job)
@@ -326,12 +366,12 @@ PlasmoidItem {
                                 C.Label { text: job ? job.summary : ""; textFormat: Text.PlainText; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                                 C.Label { objectName: "nativeTransferDescription"; text: job ? folderOpen.plainText(job.text) : ""; textFormat: Text.PlainText; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                                 C.Label { visible: job && job.state === NotificationManager.Notifications.JobStateStopped; text: job && job.error ? i18n("Failed") : i18n("Completed") }
-                                C.ProgressBar { Layout.fillWidth: true; from: 0; to: 100; value: job ? job.percentage : 0; indeterminate: root.expanded && activity.active && job && job.percentage === 0 && job.state === NotificationManager.Notifications.JobStateRunning }
+                                TransferProgress { visible: job && job.state !== NotificationManager.Notifications.JobStateStopped; Layout.fillWidth: true; Layout.topMargin: 6; Layout.bottomMargin: 6; from: 0; to: 100; value: job ? job.percentage : 0; indeterminate: root.expanded && activity.active && job && job.percentage === 0 && job.state === NotificationManager.Notifications.JobStateRunning }
                                 Flow {
                                     Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
-                                    C.Button { visible: job && job.suspendable && job.state !== NotificationManager.Notifications.JobStateStopped; text: job && job.state === NotificationManager.Notifications.JobStateSuspended ? i18n("Resume") : i18n("Pause"); onClicked: job.state === NotificationManager.Notifications.JobStateSuspended ? job.resume() : job.suspend() }
-                                    C.Button { visible: job && job.killable && job.state !== NotificationManager.Notifications.JobStateStopped; text: i18n("Cancel"); onClicked: job.kill() }
-                                    C.Button {
+                                    TransferButton { visible: job && job.suspendable && job.state !== NotificationManager.Notifications.JobStateStopped; text: job && job.state === NotificationManager.Notifications.JobStateSuspended ? i18n("Resume") : i18n("Pause"); onClicked: job.state === NotificationManager.Notifications.JobStateSuspended ? job.resume() : job.suspend() }
+                                    TransferButton { visible: job && job.killable && job.state !== NotificationManager.Notifications.JobStateStopped; text: i18n("Cancel"); onClicked: job.kill() }
+                                    TransferButton {
                                         objectName: "openNativeTransferFolder"
                                         readonly property url destination: job ? (String(job.effectiveDestUrl) !== "" ? job.effectiveDestUrl : job.destUrl) : ""
                                         visible: String(destination) !== "" && !String(destination).startsWith("trash:")
@@ -346,7 +386,7 @@ PlasmoidItem {
                     Repeater {
                         id: localRepeater
                         model: localRows
-                        delegate: C.Frame {
+                        delegate: TransferCard {
                             required property var model
                             readonly property var modelData: model.job
                             readonly property string transferKey: model.key
@@ -355,14 +395,14 @@ PlasmoidItem {
                                 anchors.fill: parent
                                 C.Label { text: modelData.name; textFormat: Text.PlainText; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideMiddle }
                                 C.Label { text: (modelData.kind === "extract" ? i18n("Extracting") : modelData.kind === "remove" ? i18n("Removing app") : i18n("Store download")) + " · " + root.label(modelData.state); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
-                                C.ProgressBar { Layout.fillWidth: true; from: 0; to: 1; value: Math.max(0, modelData.progress); indeterminate: root.expanded && activity.active && modelData.progress < 0 && ["running","queued"].includes(modelData.state) }
+                                TransferProgress { visible: ["queued", "running", "paused", "cancelling"].includes(modelData.state); Layout.fillWidth: true; Layout.topMargin: 6; Layout.bottomMargin: 6; from: 0; to: 1; value: Math.max(0, modelData.progress); indeterminate: root.expanded && activity.active && modelData.progress < 0 && ["running","queued"].includes(modelData.state) }
                                 C.Label { visible: modelData.error !== ""; text: modelData.error; textFormat: Text.PlainText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                                 Flow {
                                     Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
-                                    C.Button { objectName: "pauseLocalTransfer"; visible: modelData.owner === "files" && ["running","paused"].includes(modelData.state); text: modelData.state === "paused" ? i18n("Resume") : i18n("Pause"); onClicked: root.control(modelData.state === "paused" ? "resume" : "pause", modelData) }
-                                    C.Button { objectName: "cancelLocalTransfer"; visible: ["queued","running","paused"].includes(modelData.state); text: i18n("Cancel"); onClicked: root.control("cancel", modelData) }
-                                    C.Button { objectName: "retryLocalTransfer"; visible: ["failed","cancelled","interrupted"].includes(modelData.state); text: i18n("Retry"); onClicked: root.control("retry", modelData) }
-                                    C.Button {
+                                    TransferButton { objectName: "pauseLocalTransfer"; visible: modelData.owner === "files" && ["running","paused"].includes(modelData.state); text: modelData.state === "paused" ? i18n("Resume") : i18n("Pause"); onClicked: root.control(modelData.state === "paused" ? "resume" : "pause", modelData) }
+                                    TransferButton { objectName: "cancelLocalTransfer"; visible: ["queued","running","paused"].includes(modelData.state); text: i18n("Cancel"); onClicked: root.control("cancel", modelData) }
+                                    TransferButton { objectName: "retryLocalTransfer"; visible: ["failed","cancelled","interrupted"].includes(modelData.state); text: i18n("Retry"); onClicked: root.control("retry", modelData) }
+                                    TransferButton {
                                         objectName: "openLocalTransferFolder"
                                         readonly property url destination: modelData.destinationUrl || ""
                                         visible: modelData.owner === "files" && String(modelData.destinationUrl || "") !== ""
@@ -375,7 +415,7 @@ PlasmoidItem {
                         }
                     }
                     C.Label { visible: root.localJobs.length === 0 && nativeJobs.count === 0; text: i18n("No transfers yet"); Layout.margins: 24 }
-                    C.Label { text: i18n("Transfers keep going when this panel closes. Files’ Undo remains available for native copies and moves."); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.margins: 12 }
+                    C.Label { text: i18n("You can close this panel. Transfers continue in the background."); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.margins: 12 }
                 }
             }
         }

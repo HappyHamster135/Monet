@@ -2,6 +2,7 @@
 Description=Monet: prepare Windows so Monet Bridge installs itself
 # Avoid racing bootupd's writable ESP mount with Monet's read-only probes.
 After=local-fs.target bootloader-update.service
+Wants=monet-windows-continue.service
 
 [Service]
 Type=oneshot

@@ -40,7 +40,17 @@ function Log($text) {
 # windowed program, whose printing a script can't always catch).
 function Installed {
     $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Monet'
-    return [version](Get-ItemProperty -Path $key -Name DisplayVersion).DisplayVersion
+    return (Get-ItemProperty -Path $key -Name DisplayVersion).DisplayVersion
+}
+
+# Monet's fourth number identifies an update after the three-part release.
+function ReleaseOrder([string]$name) {
+    if ($name -notmatch '^\d+\.\d+\.\d+(?:-\d+)?$') { return $null }
+    $parts = $name -split '[.-]'
+    if ($parts.Count -eq 3) { $parts += '0' }
+    $order = $null
+    if ([version]::TryParse(($parts -join '.'), [ref]$order)) { return $order }
+    return $null
 }
 
 # Monet's newest release on GitHub: its version, and its Windows package and checksums.
@@ -48,13 +58,18 @@ function Installed {
 function Newest {
     $releases = Invoke-RestMethod -UseBasicParsing -TimeoutSec 15 `
         -Uri "https://api.github.com/repos/$Repository/releases?per_page=10" -Headers @{ 'User-Agent' = 'Monet-Bridge' }
-    $release = $releases | Where-Object { -not $_.draft -and $_.tag_name -match '^v\d+\.\d+\.\d+$' } |
-        Sort-Object { [version]($_.tag_name -replace '^v', '') } -Descending | Select-Object -First 1
-    $version = $release.tag_name -replace '^v', ''
+    $latest = $releases | Where-Object { -not $_.draft -and $_.tag_name -match '^v\d' } | ForEach-Object {
+        $version = $_.tag_name.Substring(1)
+        $order = ReleaseOrder $version
+        if ($order) { [pscustomobject]@{ Release = $_; Version = $version; Order = $order } }
+    } | Sort-Object Order -Descending | Select-Object -First 1
+    if (-not $latest) { throw 'GitHub did not offer a Monet release.' }
+    $version = $latest.Version
     return [pscustomobject]@{
-        Version = [version]$version
-        Package = $release.assets | Where-Object { $_.name -eq "Monet-$version-Windows.zip" } | Select-Object -First 1
-        Sums    = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
+        Version = $version
+        Order   = $latest.Order
+        Package = $latest.Release.assets | Where-Object { $_.name -eq "Monet-$version-Windows.zip" } | Select-Object -First 1
+        Sums    = $latest.Release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
     }
 }
 
@@ -72,12 +87,14 @@ try {
     $last = if (Test-Path $checked) { (Get-Item $checked).LastWriteTime } else { [datetime]::MinValue }
     if ($CheckOnly -or (Get-Date) - $last -gt [timespan]::FromHours(20)) {
         $have = Installed
+        $installedOrder = ReleaseOrder $have
+        if (-not $installedOrder) { throw "Unrecognized installed Monet Bridge version: $have" }
         $newest = Newest
         if (-not $CheckOnly) { Set-Content -Path $checked -Value (Get-Date -Format o) }
         if ($CheckOnly) {
-            if ($newest.Version -gt $have) { "Monet Bridge $($newest.Version) is out (this is $have)." }
+            if ($newest.Order -gt $installedOrder) { "Monet Bridge $($newest.Version) is out (this is $have)." }
             else { "Monet Bridge $have is the newest." }
-        } elseif ($newest.Version -gt $have -and $newest.Package -and $newest.Sums) {
+        } elseif ($newest.Order -gt $installedOrder -and $newest.Package -and $newest.Sums) {
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
             New-Item -ItemType Directory -Force -Path $work | Out-Null
             $zip = Join-Path $work $newest.Package.name

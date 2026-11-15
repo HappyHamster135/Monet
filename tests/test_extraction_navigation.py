@@ -14,7 +14,7 @@ if QT:
     from PySide6.QtCore import QPoint, QPointF, Qt
     from PySide6.QtGui import QGuiApplication, QWheelEvent
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QDialogButtonBox, QLabel, QLineEdit, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QCheckBox, QDialogButtonBox, QLabel, QLineEdit, QPushButton, QScrollArea
 
 
 @unittest.skipUnless(QT, "requires native Qt Widgets")
@@ -38,8 +38,8 @@ class ExtractionNavigation(unittest.TestCase):
         self.screen = min(QGuiApplication.screens(), key=lambda s: s.availableGeometry().height())
         self.area = self.screen.availableGeometry()
 
-    def make(self, find_apps=True):
-        dialog = self.tool.make_extract_dialog(self.source, find_apps=find_apps)
+    def make(self, find_apps=True, background=False):
+        dialog = self.tool.make_extract_dialog(self.source, find_apps=find_apps, background=background)
         self.dialogs.append(dialog)
         dialog.create(); dialog.windowHandle().setScreen(self.screen)
         dialog.resize(min(620, self.area.width() - 32), min(400, self.area.height() - 48))
@@ -49,6 +49,14 @@ class ExtractionNavigation(unittest.TestCase):
         self.wait(lambda: dialog.findChild(QPushButton, "extractApps").isEnabled())
         QTest.qWait(100)
         return dialog
+
+    def test_background_progress_is_opt_in(self):
+        dialog = self.make(find_apps=False, background=True)
+        choice = dialog.findChild(QCheckBox, "showTransferProgress")
+        self.assertIsNotNone(choice)
+        self.assertFalse(choice.isChecked()); self.assertFalse(dialog.show_transfers)
+        choice.setFocus(); QTest.keyClick(choice, Qt.Key_Space)
+        self.assertTrue(dialog.show_transfers)
 
     def capture(self, dialog, name):
         if os.environ.get("MONET_NAV_CAPTURE"):

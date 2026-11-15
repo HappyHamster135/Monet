@@ -29,6 +29,13 @@ case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
         cp "$ROOT/setup/monet_setup/region.py" "$OUT/libexec/monet_region.py"
+        if [ "${MONET_PACKAGE_FOR_IMAGE:-0}" != 1 ]; then
+            # The portable package runs on Bazzite without the Monet image's Python RPM.
+            python3 -m pip install --disable-pip-version-check --no-deps --only-binary=:all: \
+                --require-hashes --no-compile --target "$OUT/libexec" -r "$ROOT/tools/portable-linux-requirements.txt"
+            install -D -m 644 "$OUT"/libexec/pulsectl-*.dist-info/COPYING "$OUT/share/doc/monet/pulsectl/COPYING"
+            rm -r "$OUT"/libexec/pulsectl-*.dist-info "$OUT/libexec/pulsectl/tests"
+        fi
         # Local validation caches are not executable package content.
         find "$OUT" -type d -name __pycache__ -prune -exec rm -rf {} +
         mkdir -p "$OUT/share/doc/monet/passwords-connector"

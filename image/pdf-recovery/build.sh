@@ -11,8 +11,13 @@ printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
 # Okular's build dependencies pull in curl headers. Use the matching HTTP/3
 # headers so that transaction keeps the library already in the image.
 nghttp3="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' "libnghttp3.$(rpm --eval '%{_arch}')")"
+# The PDF generator links to Poppler in the shipped image. Keep its headers
+# at that exact version even when Fedora offers a newer build to builddep.
+poppler="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' poppler)"
+poppler_qt="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' poppler-qt6)"
 dnf5 -y install --setopt=install_weak_deps=False dnf5-plugins rpm-build cmake gcc-c++ make binutils tar xz \
-    qt6-qtbase-private-devel wayland-devel "libnghttp3-devel-$nghttp3"
+    qt6-qtbase-private-devel wayland-devel "libnghttp3-devel-$nghttp3" \
+    "poppler-devel-$poppler" "poppler-qt6-devel-$poppler_qt"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-pdf.XXXXXX")"
 dnf5 download --srpm --destdir="$work" "$release"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"

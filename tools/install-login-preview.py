@@ -8,6 +8,10 @@ import argparse,datetime,hashlib,importlib.util,json,os,pwd,re,shutil,stat,subpr
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('/var/lib/monet/login-preview')
+POWER_DROPINS=(
+    'plasma-login-wayland.target.d/monet-brightness.conf',
+    'plasma-powerdevil.service.d/monet-login.conf',
+)
 
 def digest(path):
     if path.is_symlink():return 'link:'+str(path.readlink())
@@ -41,7 +45,7 @@ def plan(bundle):
     add(prefix/'start.py',b'from monet_native_preview import launch\nimport sys\nlaunch("login", "/usr/libexec/plasma-login-greeter", sys.argv[1:])\n')
     add(prefix/'monet-login-brightness',(ROOT/'linux/libexec/monet-login-brightness').read_bytes(),0o755)
     add(Path('/etc/systemd/user/plasma-login.service.d/monet-preview.conf'),('[Service]\nExecStart=\nExecStart=/usr/bin/python3 '+str(prefix/'start.py')+'\n').encode())
-    for relative in ['plasma-login-wayland.target.d/monet-brightness.conf']:
+    for relative in POWER_DROPINS:
         add(Path('/etc/systemd/user')/relative,(ROOT/'linux/systemd/user'/relative).read_bytes())
     unit=(ROOT/'linux/systemd/monet-login-brightness.service').read_text().replace('@LIBEXECDIR@',str(prefix))
     add(Path('/etc/systemd/system/monet-login-brightness.service'),unit.encode())
@@ -85,7 +89,8 @@ def restore(receipt):
     receipt=receipt.resolve(strict=True)
     if not receipt.is_relative_to(BASE) or receipt.stat().st_uid!=0:raise ValueError('Use the root-owned preview receipt')
     data=json.loads(receipt.read_text());backups=receipt.parent/'backups';kept=[];restored=[]
-    allowed={str(p) for p in [Path('/etc/systemd/user/plasma-login.service.d/monet-preview.conf'),Path('/etc/systemd/user/monet-login-power.service'),Path('/etc/systemd/user/plasma-login-wayland.target.d/monet-brightness.conf'),Path('/etc/systemd/system/monet-login-brightness.service'),Path('/etc/systemd/system/display-manager.service.wants/monet-login-brightness.service')]}
+    allowed={str(p) for p in [Path('/etc/systemd/user/plasma-login.service.d/monet-preview.conf'),Path('/etc/systemd/user/monet-login-power.service'),Path('/etc/systemd/system/monet-login-brightness.service'),Path('/etc/systemd/system/display-manager.service.wants/monet-login-brightness.service')]}
+    allowed.update(str(Path('/etc/systemd/user')/relative) for relative in POWER_DROPINS)
     account=pwd.getpwnam('plasmalogin');allowed.update(str(Path(account.pw_dir)/'.config'/n) for n in ['kwinoutputconfig.json','powerdevilrc'])
     for row in reversed(data['files']):
         path=Path(row['path'])

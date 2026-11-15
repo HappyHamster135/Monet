@@ -284,7 +284,7 @@ class ProfileUpgrades(unittest.TestCase):
             "kcminputrc": "[Mouse]\ncursorTheme=MyCursor\n[Libinput][123][456][My Touchpad]\nNaturalScroll=false\n",
             "dolphinrc": "[General]\nAlwaysShowTabBar=false\nShowFullPath=false\nShowStatusBar=Disabled\nBrowseThroughArchives=true\n",
             "systemmonitorrc": "[General]\npageOrder=processes.page,custom.page,overview.page\nstartPage=custom.page\nhiddenPages=history.page\n",
-            "kwinrc": "[org.kde.kdecoration2]\nlibrary=org.example.decoration\ntheme=MyFrame\nButtonsOnLeft=\nButtonsOnRight=AX\n",
+            "kwinrc": "[TabBox]\nLayoutName=compact\n[org.kde.kdecoration2]\nlibrary=org.example.decoration\ntheme=MyFrame\nButtonsOnLeft=\nButtonsOnRight=AX\n",
             "kglobalshortcutsrc": "[kwin]\nOverview=Ctrl+Alt+O,Meta+W,Toggle Overview\nGrid View=none,Meta+G,Toggle Grid View\n",
         }
         for name, text in config.items(): (self.config / name).write_text(text)
@@ -321,6 +321,19 @@ class ProfileUpgrades(unittest.TestCase):
         subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
         self.assertIn("ShowStatusBar=FullWidth", (self.config / "dolphinrc").read_text())
         self.assertIn("BrowseThroughArchives=false", (self.config / "dolphinrc").read_text())
+
+        # An account that still inherits Monet's old layout gets the new default.
+        (self.config / "kwinrc").write_text(config["kwinrc"].replace("[TabBox]\nLayoutName=compact\n", ""))
+        inherited = self.root / "defaults"
+        inherited.mkdir()
+        (inherited / "kwinrc").write_text("[TabBox]\nLayoutName=org.kde.breeze.desktop\n")
+        self.env["XDG_CONFIG_DIRS"] = str(inherited)
+        subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
+        self.assertIn("LayoutName=monet-windows\n", (self.config / "kwinrc").read_text())
+        # A user who selects Plasma's old grid keeps that choice.
+        (self.config / "kwinrc").write_text("[TabBox]\nLayoutName=thumbnail_grid\n")
+        subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
+        self.assertIn("LayoutName=thumbnail_grid\n", (self.config / "kwinrc").read_text())
 
     def test_screenshot_keys_migrate_the_defaults_and_keep_custom_bindings(self):
         apps = self.data / "applications"; apps.mkdir()
@@ -416,7 +429,8 @@ class ProfileUpgrades(unittest.TestCase):
                 + f'root=Path({str(self.root)!r})\n'
                 + f'with (root/"calls").open("a") as out: out.write({helper!r}+"\\n")\n'
                 + f'if (root/{("fail-"+helper)!r}).exists(): sys.exit(1)\n'
-                + f'Path({str(flags/receipt)!r}).touch()\n')
+                + f'Path({str(flags/receipt)!r}).touch()\n'
+                + (f'Path({str(flags/"downloads-v2")!r}).touch()\n' if helper == 'monet-quick' else ''))
             script.chmod(0o755)
         env = dict(self.env, XDG_CACHE_HOME=str(self.root/'cache'))
         def fresh(ok=True):

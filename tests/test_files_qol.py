@@ -182,6 +182,16 @@ class Transfers(unittest.TestCase):
             time.sleep(.025)
         self.fail((state, job))
 
+    def test_background_failure_notifies_without_opening_a_transfers_window(self):
+        self.ark('raise SystemExit(1)\n')
+        job = self.queue.submit(self.source, self.root / 'extracted')
+        with patch.object(self.module, 'notify_failure') as notice:
+            self.queue.run(job['token'])
+            notice.assert_called_once_with()
+        self.assertEqual(self.queue.read(job['token'])['state'], 'failed')
+        with patch.object(self.module.subprocess, 'run', side_effect=FileNotFoundError):
+            self.module.notify_failure()  # Missing notification service does not hide the recorded error.
+
     def test_detached_worker_survives_submitter_and_preserves_partial_output_on_retry(self):
         self.ark('from pathlib import Path\nPath("partial").write_text("keep")\nraise SystemExit(1)\n')
         job = self.queue.submit(self.source, self.root / 'extracted')

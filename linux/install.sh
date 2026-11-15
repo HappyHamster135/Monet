@@ -110,6 +110,10 @@ put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
 for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
+if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
+    tree "$SRC/libexec/pulsectl" "$LIBEXECDIR/pulsectl"
+    install -D -m 644 "$SRC/share/doc/monet/pulsectl/COPYING" "$DATADIR/doc/monet/pulsectl/COPYING"
+fi
 install -D -m 755 "$SRC/libexec/monet-prepare-windows" "$LIBEXECDIR/monet-prepare-windows"
 # Ready when you come back (Settings → Play on Windows): root's part.
 put 755 "$SRC/libexec/monet-ready" "$LIBEXECDIR/monet-ready"
@@ -259,6 +263,7 @@ done
 # gliding to where they're put (a KWin effect, in place of KWin's own Stretch).
 tree "$SRC/share/kwin/scripts/monet-snap" "$DATADIR/kwin/scripts/monet-snap"
 tree "$SRC/share/kwin/effects/monet-motion" "$DATADIR/kwin/effects/monet-motion"
+tree "$SRC/share/kwin/tabbox/monet-windows" "$DATADIR/kwin/tabbox/monet-windows"
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
 # The sounds, felt and glass; KDE's Ocean plays the few Monet leaves out.
@@ -289,6 +294,7 @@ install -D -m 644 "$SRC/udev/90-monet-system.rules" /etc/udev/rules.d/90-monet-s
 
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
+put 644 "$SRC/systemd/monet-windows-continue.service" "$UNITDIR/monet-windows-continue.service"
 for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service monet-charge.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
@@ -304,12 +310,15 @@ put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.servic
 put 644 "$SRC/systemd/user/monet-keep-awake.service" "$USERUNITDIR/monet-keep-awake.service"
 put 644 "$SRC/systemd/user/monet-brightness.service" "$USERUNITDIR/monet-brightness.service"
 put 644 "$SRC/systemd/user/plasma-login-wayland.target.d/monet-brightness.conf" "$USERUNITDIR/plasma-login-wayland.target.d/monet-brightness.conf"
+put 644 "$SRC/systemd/user/plasma-powerdevil.service.d/monet-login.conf" "$USERUNITDIR/plasma-powerdevil.service.d/monet-login.conf"
 put 644 "$SRC/systemd/monet-login-brightness.service" "$UNITDIR/monet-login-brightness.service"
 put 644 "$SRC/share/dbus-1/services/org.monet.KeepAwake.service" "$DATADIR/dbus-1/services/org.monet.KeepAwake.service"
 put 644 "$SRC/systemd/user/monet-keys.service" "$USERUNITDIR/monet-keys.service"
 put 644 "$SRC/systemd/user/monet-password-offers.service" "$USERUNITDIR/monet-password-offers.service"
 put 644 "$SRC/systemd/user/plasma-foreground-booster.service.d/monet-session.conf" \
     "$USERUNITDIR/plasma-foreground-booster.service.d/monet-session.conf"
+put 644 "$SRC/systemd/user/plasma-plasmashell.service.d/monet-style.conf" \
+    "$USERUNITDIR/plasma-plasmashell.service.d/monet-style.conf"
 put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
 put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
 put 644 "$SRC/systemd/user/monet-files-place.path" "$USERUNITDIR/monet-files-place.path"
@@ -386,6 +395,9 @@ tree "$SRC/share/monet/monet_runtime" "$DATADIR/monet/monet_runtime"
 put 644 "$SRC/share/monet/stacks.js" "$DATADIR/monet/stacks.js"
 put 644 "$SRC/share/monet/transfers.js" "$DATADIR/monet/transfers.js"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"
+if [ -d "$SRC/share/monet/windows-drivers" ]; then
+    tree "$SRC/share/monet/windows-drivers" "$DATADIR/monet/windows-drivers"
+fi
 cp -r "$SRC/share/monet/textures" "$DATADIR/monet/textures"
 # Pictures for Monet Settings, cut from the paintings.
 cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
@@ -642,6 +654,13 @@ TMP
         install -m 644 "$SRC/share/monet/editmode/MonetDesktopEditMode.qml" "$views/MonetDesktopEditMode.qml"
         install -m 644 "$SRC/share/monet/editmode/DesktopEditMode.qml" "$views/DesktopEditMode.qml"
     fi
+    # Simple bar choices first; preserve KDE's complete editor for Advanced/fallback.
+    configuration=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/configuration
+    if [ -f "$configuration/PanelConfiguration.qml" ]; then
+        [ -f "$configuration/KdePanelConfiguration.qml" ] || mv "$configuration/PanelConfiguration.qml" "$configuration/KdePanelConfiguration.qml"
+        put 644 "$SRC/share/monet/panel/MonetPanelConfiguration.qml" "$configuration/MonetPanelConfiguration.qml"
+        put 644 "$SRC/share/monet/panel/PanelConfiguration.qml" "$configuration/PanelConfiguration.qml"
+    fi
     # The password prompt: KDE's agent built with Monet's page (image/password),
     # started instead of KDE's build. Without it, KDE's prompt stays.
     if [ -x "$SRC/password/monet-password" ]; then
@@ -652,7 +671,8 @@ TMP
     fi
 else
     command -v restorecon >/dev/null && restorecon -R "$BINDIR/monet" "$LIBEXECDIR" "$DATADIR/monet" \
-        "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
+        "$UNITDIR/monet-sync.service" "$UNITDIR/monet-windows-setup.service" "$UNITDIR/monet-windows-continue.service" \
+        /etc/polkit-1/rules.d/49-monet.rules 2>/dev/null || true
     systemctl daemon-reload
     for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"

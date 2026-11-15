@@ -81,12 +81,17 @@ if [ -e "${XDG_STATE_HOME:-$HOME/.local/state}/monet/trip-apps.json" ]; then
     (sleep 5; "$LIBEXECDIR/monet-quick" trip-apps-again) >/dev/null 2>&1 &
 fi
 
+# PipeWire may still be starting when the desktop signs in.
+if [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/monet/notification-volume-v1" ]; then
+    (sleep 5; "$LIBEXECDIR/monet-quick" notification-audio defaults) >/dev/null 2>&1 &
+fi
+
 # Mist or smoke, for the time it is now.
 "$LIBEXECDIR/monet-light" apply 2>/dev/null
 
 # Monet's look, once per account (and again when the look changes).
 looks="${XDG_CONFIG_HOME:-$HOME/.config}/monet"
-current="$looks/look-0.9.8"
+current="$looks/look-0.9.8-5"
 # Only new accounts created from the image carry this marker. Never reset an
 # existing account's display scale during an upgrade or a later sign-in.
 if [ -f "$looks/display-defaults-pending" ]; then

@@ -290,13 +290,25 @@ and printers. It asks for an administrator's password first. Each person's
 settings from before are kept in `~/.local/share/monet/before-reset`, and
 the system's in `/var/lib/monet/before-reset`.
 
-**Windows didn't install.** Choose **Windows** in the app menu. Monet
-offers to try again.
+**Windows didn't install.** Open **Settings → Play on Windows → Set up Windows**
+if Monet Setup reserved space for it. Monet looks for a Windows 11 ISO in your
+download folders and tries the automatic download if it has no ISO. You can
+also start setup from **Windows** in the app menu.
 
-**Microsoft blocked the download.** Choosing **Windows** opens Microsoft's
-download page. Download **Windows 11 Disk Image (ISO)** into **Downloads**,
-then choose **Windows** again. Monet opens the ISO read-only and checks the
-setup and install images before creating or formatting Windows partitions.
+**Microsoft blocked the download.** In **Play on Windows**, choose
+**Open Microsoft’s download page** and download the **Windows 11 Disk Image
+(ISO) for x64 devices**. Monet shows the downloaded filename when it finds the
+ISO. You can also use **Choose ISO…** to select it from any folder or connected
+drive. Click **Set up Windows** to prepare Windows. Monet reads the ISO and
+checks the setup and install images before creating or formatting Windows
+partitions. When preparation finishes, choose **Restart and install**.
+
+**The touchpad or network is missing in Windows.** New installs on the
+ThinkPad P16s Gen 2 Intel (21HK and 21HL) include matching signed drivers
+before the first sign-in. For an existing install, use the offline repair
+bundle built by `tools/prepare-windows-repair.py` on a USB drive, then restart
+Windows. Pair Bluetooth devices once in each OS and use **Back to Monet** so
+Monet can read Windows' saved pairing after a full restart.
 
 **A Linux game runs slowly on a laptop.** It may be using the built-in
 graphics. In Steam: right-click the game → **Properties** → **Launch Options**:

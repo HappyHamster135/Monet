@@ -27,7 +27,8 @@ PlasmoidItem {
     LaunchController { id: appLauncher }
 
     Plasmoid.icon: "monet"
-    Plasmoid.contextualActions: [TaskManagerAction {}]
+    TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
+    Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     toolTipMainText: i18n("Menu")
     toolTipSubText: i18n("Your apps, and a search for everything on this PC")
     preferredRepresentation: compactRepresentation
@@ -45,8 +46,11 @@ PlasmoidItem {
     property var everyApp: null
     readonly property string firstName: (user.fullName || user.loginName || "").trim().split(" ")[0]
     property var everydayResults: []
+    property var recentDownloads: []
+    readonly property string recentDownloadsSource: "'@LIBEXECDIR@/monet-quick' recent-downloads"
     property string everydaySource: ""
     property string everydayQuery: ""
+    property string everydayRunningQuery: ""
     property bool everydayPending: false
     property string everydayError: ""
     property string openingResult: ""
@@ -59,20 +63,23 @@ PlasmoidItem {
         everydayResults = []
         everydayError = ""
         everydayPending = query.trim() !== ""
-        everydaySource = ""
         if (!everydayPending) { everydayReady(); return }
         everydayDelay.restart()
     }
     function runEveryday() {
+        if (everydaySource !== "" || !everydayPending) return
+        everydayRunningQuery = everydayQuery
         const bytes = unescape(encodeURIComponent(everydayQuery.trim().slice(0, 256)))
         let encoded = ""
         for (let i = 0; i < bytes.length; i++) encoded += bytes.charCodeAt(i).toString(16).padStart(2, "0")
-        everydaySource = "'@LIBEXECDIR@/monet-quick' search " + encoded
+        everydaySource = "'@LIBEXECDIR@/monet-quick' menu-search " + encoded
         helper.connectSource(everydaySource)
     }
     function launchEveryday(entry) {
-        if (openingResult !== "" || !entry || !/^[a-z-]+$/.test(entry.id)) return
-        openingResult = "'@LIBEXECDIR@/monet-quick' search-open " + entry.id
+        if (openingResult !== "" || !entry || !/^(?:[a-z-]+|(?:download|app)-(?:[0-9a-f]{2})+)$/.test(entry.id)) return
+        const command = entry.id.startsWith("download-") ? "download-open " + entry.id.slice(9)
+            : entry.id.startsWith("app-") ? "menu-app-open " + entry.id.slice(4) : "search-open " + entry.id
+        openingResult = "'@LIBEXECDIR@/monet-quick' " + command
         helper.connectSource(openingResult)
     }
 
@@ -173,7 +180,16 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
-            if (source === root.everydaySource) {
+            if (source === root.recentDownloadsSource) {
+                let result = {}
+                try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
+                root.recentDownloads = Array.isArray(result.results) ? result.results : []
+            } else if (source === root.everydaySource) {
+                root.everydaySource = ""
+                if (root.everydayRunningQuery !== root.everydayQuery) {
+                    if (!everydayDelay.running) root.runEveryday()
+                    return
+                }
                 let result = {}
                 try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
                 const ok = data["exit code"] === 0 && Array.isArray(result.results)
@@ -239,6 +255,12 @@ PlasmoidItem {
         property bool launchWhenFound: false
         property int everydayIndex: 0
         property int applicationIndex: -1
+        readonly property var supplementalResults: {
+            const names = new Set()
+            for (let row = 0; row < applicationMatches.count; ++row)
+                names.add(String(applicationMatches.data(applicationMatches.index(row, 0), Qt.DisplayRole)).toLocaleLowerCase())
+            return root.everydayResults.filter(entry => !entry.id.startsWith("app-") || !names.has(entry.name.toLocaleLowerCase()))
+        }
         readonly property bool searching: search.text.trim() !== ""
         readonly property var found: root.finder.count > 0 ? root.finder.modelForRow(0) : null
         readonly property Item shownView: searching ? results : everything ? allApps : pinned
@@ -400,11 +422,11 @@ PlasmoidItem {
                 launchMatch(applicationMatches, 0)
             } else if (root.everydayPending) {
                 launchWhenFound = true
-            } else if (root.everydayError !== "" && root.everydayResults.length === 0 && everydayIndex >= 0) {
+            } else if (root.everydayError !== "" && supplementalResults.length === 0 && everydayIndex >= 0) {
                 launchWhenFound = true
                 root.findEveryday(search.text)
-            } else if (root.everydayResults.length > 0 && everydayIndex >= 0) {
-                root.launchEveryday(root.everydayResults[Math.min(everydayIndex, root.everydayResults.length - 1)])
+            } else if (supplementalResults.length > 0 && everydayIndex >= 0) {
+                root.launchEveryday(supplementalResults[Math.min(everydayIndex, supplementalResults.length - 1)])
             } else if (otherMatches.count > 0) {
                 launchMatch(otherMatches, Math.max(results.currentIndex, 0))
             }
@@ -458,6 +480,7 @@ PlasmoidItem {
                 if (root.expanded) {
                     Qt.callLater(page.fitPopup)
                     page.reset()
+                    helper.connectSource(root.recentDownloadsSource)
                 } else {
                     page.launchWhenFound = false
                     nativeSearchDelay.stop()
@@ -517,7 +540,7 @@ PlasmoidItem {
                         results.headerItem.focusApp(0)
                         return
                     }
-                    if (page.searching && root.everydayResults.length > 0) {
+                    if (page.searching && page.supplementalResults.length > 0) {
                         results.headerItem.focusAt(0)
                         return
                     }
@@ -710,10 +733,18 @@ PlasmoidItem {
                     }
 
                     Text {
+                        Layout.fillWidth: true
+                        visible: root.everydayError !== ""
+                        text: root.everydayError
+                        color: page.ink
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
                         id: recentHeading
                         horizontalAlignment: Text.AlignLeft
                         Layout.leftMargin: Kirigami.Units.smallSpacing
-                        text: i18n("Recent")
+                        text: (root.recentDownloads?.length ?? 0) > 0 ? i18n("Recent downloads") : i18n("Recent")
                         color: page.ink
                         font.family: "Fraunces 72pt SuperSoft"
                         font.pixelSize: 20
@@ -726,15 +757,21 @@ PlasmoidItem {
                         Layout.fillHeight: true
                         Layout.minimumHeight: 48
                         clip: true
-                        model: root.recent
+                        readonly property bool showingDownloads: (root.recentDownloads?.length ?? 0) > 0
+                        model: showingDownloads ? root.recentDownloads : root.recent
                         keyNavigationEnabled: true
                         currentIndex: -1
                         activeFocusOnTab: true
                         onActiveFocusChanged: if (activeFocus && currentIndex < 0 && count > 0) currentIndex = 0
                         boundsBehavior: Flickable.StopAtBounds
                         ScrollInput { view: recentFiles }
-                        Keys.onReturnPressed: root.launch(model, currentIndex)
-                        Keys.onEnterPressed: root.launch(model, currentIndex)
+                        function open(index) {
+                            if (index < 0 || index >= count) return
+                            if (showingDownloads) root.launchEveryday(root.recentDownloads[index])
+                            else root.launch(model, index)
+                        }
+                        Keys.onReturnPressed: open(currentIndex)
+                        Keys.onEnterPressed: open(currentIndex)
                         Keys.onUpPressed: {
                             if (currentIndex <= 0) {
                                 pinned.forceActiveFocus()
@@ -751,12 +788,12 @@ PlasmoidItem {
                             required property int index
                             required property var model
                             width: recentFiles.width
-                            icon: model.decoration
-                            name: model.display
-                            detail: model.description || ""
+                            icon: recentFiles.showingDownloads ? root.recentDownloads[index]?.icon || "" : model.decoration
+                            name: recentFiles.showingDownloads ? root.recentDownloads[index]?.name || "" : model.display
+                            detail: recentFiles.showingDownloads ? root.recentDownloads[index]?.detail || "" : model.description || ""
                             current: recentFiles.activeFocus && recentFiles.currentIndex === index
                             speed: root.speed
-                            onActivated: root.launch(recentFiles.model, index)
+                            onActivated: recentFiles.open(index)
                         }
 
                         Text {
@@ -846,8 +883,8 @@ PlasmoidItem {
                     Keys.onDownPressed: incrementCurrentIndex()
                     Keys.onUpPressed: {
                         if (currentIndex <= 0) {
-                            if (root.everydayResults.length > 0)
-                                headerItem.focusAt(root.everydayResults.length - 1)
+                            if (page.supplementalResults.length > 0)
+                                headerItem.focusAt(page.supplementalResults.length - 1)
                             else if (applicationMatches.count > 0)
                                 headerItem.focusApp(applicationMatches.count - 1)
                             else search.forceActiveFocus()
@@ -925,21 +962,21 @@ PlasmoidItem {
                                 }
                                 Keys.onDownPressed: {
                                     if (index + 1 < applicationMatches.count) results.headerItem.focusApp(index + 1)
-                                    else if (root.everydayResults.length > 0) results.headerItem.focusAt(0)
+                                    else if (page.supplementalResults.length > 0) results.headerItem.focusAt(0)
                                     else page.focusOtherResults()
                                 }
                                 Keys.onPressed: event => page.appKey(applicationRow, event)
                             }
                         }
                         Text {
-                            visible: root.everydayResults.length > 0
-                            text: i18n("Suggestions")
+                            visible: page.supplementalResults.length > 0
+                            text: i18n("Apps, downloads and shortcuts")
                             color: page.ink; opacity: 0.65; font.pixelSize: 12
                             topPadding: 6; bottomPadding: 6
                         }
                         Repeater {
                             id: everydayRepeater
-                            model: root.everydayResults
+                            model: page.supplementalResults
                             AppRow {
                                 required property var modelData
                                 required property int index
@@ -963,7 +1000,7 @@ PlasmoidItem {
                                     else search.forceActiveFocus(Qt.BacktabFocusReason)
                                 }
                                 Keys.onDownPressed: {
-                                    if (index + 1 < root.everydayResults.length) results.headerItem.focusAt(index + 1)
+                                    if (index + 1 < page.supplementalResults.length) results.headerItem.focusAt(index + 1)
                                     else page.focusOtherResults()
                                 }
                                 Keys.onPressed: event => page.typeIntoSearch(event)
@@ -997,7 +1034,7 @@ PlasmoidItem {
                         detail: model.description || ""
                         // Lily on the result Enter opens.
                         enabled: !root.finder.querying
-                        current: page.applicationIndex < 0 && (root.everydayResults.length === 0 || page.everydayIndex < 0)
+                        current: page.applicationIndex < 0 && (page.supplementalResults.length === 0 || page.everydayIndex < 0)
                             && !(search.activeFocus && applicationMatches.count > 0) && results.currentIndex === index
                         speed: root.speed
                         onActivated: page.launchMatch(otherMatches, index)
@@ -1009,7 +1046,7 @@ PlasmoidItem {
                         anchors.top: parent.top
                         anchors.topMargin: Kirigami.Units.gridUnit * 2
                         width: parent.width - Kirigami.Units.gridUnit * 4
-                        visible: results.count === 0 && applicationMatches.count === 0 && root.everydayResults.length === 0
+                        visible: results.count === 0 && applicationMatches.count === 0 && page.supplementalResults.length === 0
                             && !root.finder.querying && !root.everydayPending && root.everydayError === ""
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap

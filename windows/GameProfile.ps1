@@ -13,7 +13,8 @@
 
 .PARAMETER RemoveApps
     Also uninstall preinstalled apps that games never need (news, weather,
-    solitaire, Clipchamp, ...). They can be reinstalled from the Microsoft Store.
+    solitaire, Clipchamp, ...), including Windows' provisioned copies.
+    They can be reinstalled from the Microsoft Store.
 
 .PARAMETER DisableMemoryIntegrity
     Turn off Memory Integrity (HVCI). Gains a few percent of FPS, but lowers
@@ -43,6 +44,83 @@ if (-not $isAdmin) {
 function Set-Value($path, $name, $value) {
     if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
     Set-ItemProperty -Path $path -Name $name -Value $value -Type DWord
+}
+
+function Remove-MonetOptionalApps {
+    $apps = @(
+        'Clipchamp.Clipchamp',
+        'Microsoft.BingNews',
+        'Microsoft.BingWeather',
+        'Microsoft.GetHelp',
+        'Microsoft.Getstarted',
+        'Microsoft.MicrosoftOfficeHub',
+        'Microsoft.MicrosoftSolitaireCollection',
+        'Microsoft.OutlookForWindows',
+        'Microsoft.People',
+        'Microsoft.PowerAutomateDesktop',
+        'Microsoft.Todos',
+        'Microsoft.WindowsFeedbackHub',
+        'Microsoft.WindowsMaps',
+        'Microsoft.ZuneMusic',
+        'Microsoft.ZuneVideo',
+        'MicrosoftCorporationII.MicrosoftFamily',
+        'MicrosoftCorporationII.QuickAssist',
+        'Microsoft.Copilot',
+        'microsoft.windowscommunicationsapps',
+        'MSTeams'
+    )
+    $succeeded = $true
+    try {
+        # Deprovision first so Windows does not register these apps for new users.
+        foreach ($package in Get-AppxProvisionedPackage -Online -ErrorAction Stop) {
+            if ($package.DisplayName -notin $apps) { continue }
+            try {
+                Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop | Out-Null
+            } catch {
+                $succeeded = $false
+                Write-Warning "Could not deprovision $($package.DisplayName). $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        $succeeded = $false
+        Write-Warning "Could not read Windows' provisioned apps. $($_.Exception.Message)"
+    }
+    # Windows inventories every user's packages. Read each type once, and read
+    # Main after Bundle removals so we only act on standalone packages left.
+    foreach ($type in 'Bundle', 'Main') {
+        try {
+            $packages = @(Get-AppxPackage -AllUsers -PackageTypeFilter $type -ErrorAction Stop |
+                Where-Object { $_.Name -in $apps })
+        } catch {
+            $succeeded = $false
+            Write-Warning "Could not read Windows' $type app packages. $($_.Exception.Message)"
+            continue
+        }
+        foreach ($package in $packages) {
+            try {
+                Remove-AppxPackage -AllUsers -Package $package.PackageFullName -ErrorAction Stop | Out-Null
+            } catch {
+                $succeeded = $false
+                Write-Warning "Could not remove $($package.PackageFullName). $($_.Exception.Message)"
+            }
+        }
+    }
+    try {
+        $remaining = @(
+            Get-AppxProvisionedPackage -Online -ErrorAction Stop | Where-Object { $_.DisplayName -in $apps } |
+                Select-Object -ExpandProperty DisplayName
+            Get-AppxPackage -AllUsers -PackageTypeFilter Bundle,Main -ErrorAction Stop | Where-Object { $_.Name -in $apps } |
+                Select-Object -ExpandProperty Name
+        ) | Sort-Object -Unique
+        if ($remaining) {
+            Write-Warning "Windows still lists these optional apps: $($remaining -join ', ')."
+            $succeeded = $false
+        }
+    } catch {
+        $succeeded = $false
+        Write-Warning "Could not verify optional app removal. $($_.Exception.Message)"
+    }
+    return $succeeded
 }
 
 Write-Host 'Applying the Monet Game Profile...'
@@ -78,32 +156,24 @@ Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' 'BackgroundModeEnabled' 0
 
 if ($RemoveApps) {
     Write-Host '  Removing apps games never need'
-    $apps = @(
-        'Clipchamp.Clipchamp',
-        'Microsoft.BingNews',
-        'Microsoft.BingWeather',
-        'Microsoft.GetHelp',
-        'Microsoft.Getstarted',
-        'Microsoft.MicrosoftOfficeHub',
-        'Microsoft.OutlookForWindows',
-        'Microsoft.GamingApp',
-        'Microsoft.XboxApp',
-        'Microsoft.MicrosoftSolitaireCollection',
-        'Microsoft.People',
-        'Microsoft.PowerAutomateDesktop',
-        'Microsoft.Todos',
-        'Microsoft.WindowsFeedbackHub',
-        'Microsoft.ZuneMusic',
-        'Microsoft.ZuneVideo',
-        'MicrosoftCorporationII.QuickAssist',
-        'MSTeams'
-    )
-    foreach ($app in $apps) {
-        try {
-            Get-AppxPackage -Name $app -ErrorAction Stop | Remove-AppxPackage -ErrorAction Stop
-        } catch {
-            $cleanupFailed = $true
-            Write-Warning "Could not remove $app. $($_.Exception.Message)"
+    $cleanupFailed = -not (Remove-MonetOptionalApps)
+    Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableWindowsConsumerFeatures' 1
+
+    Set-Value 'HKLM:\SOFTWARE\Policies\Microsoft\EdgeUpdate' 'CreateDesktopShortcutDefault' 0
+    $shortcutFolders = @([Environment]::GetFolderPath('DesktopDirectory'),
+                         [Environment]::GetFolderPath('CommonDesktopDirectory'),
+                         [Environment]::GetFolderPath('Programs'),
+                         [Environment]::GetFolderPath('CommonPrograms'))
+    foreach ($folder in $shortcutFolders) {
+        if ($folder) {
+            $shortcut = Join-Path $folder 'Microsoft Edge.lnk'
+            try {
+                if (Test-Path -LiteralPath $shortcut) {
+                    Remove-Item -LiteralPath $shortcut -ErrorAction Stop
+                }
+            } catch {
+                Write-Warning "Could not remove an Edge shortcut. $($_.Exception.Message)"
+            }
         }
     }
 }

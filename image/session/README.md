@@ -12,5 +12,9 @@ sets the firmware boot target and calls logind. A refused reboot clears the
 target set by that request. Ordinary logout, reboot and update actions use
 Plasma's existing paths.
 
+The Plasma containment menu opens Task Manager from empty desktop and panel
+space. It keeps the existing menu entries and uses the wallpaper's action when
+Monet's wallpaper has already provided one.
+
 Build from the exact Fedora source/runtime and retain source and ABI guards.
 A stock/fallback theme retains KDE's original accept/close behavior.

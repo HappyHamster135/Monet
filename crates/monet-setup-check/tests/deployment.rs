@@ -78,6 +78,17 @@ impl Fixture {
     fn run(&self, host: &mut Fake) -> Result<(), String> {
         deployment::deploy(&self.data, &self.setup, &self.target, host)
     }
+    fn seal_driver(&mut self, name: &str) {
+        let path = self.setup.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, name).unwrap();
+        self.job.files.push(Payload {
+            path: name.into(),
+            size: name.len() as u64,
+            sha256: deployment::digest(name.as_bytes()),
+        });
+        self.data = serde_json::to_vec(&self.job).unwrap();
+    }
     fn phase(&self) -> Phase {
         serde_json::from_slice::<deployment::Checkpoint>(
             &fs::read(self.target.join(CHECKPOINT)).unwrap(),
@@ -94,6 +105,8 @@ struct Fake {
     fail_check: usize,
     fail_apply: bool,
     fail_boot: bool,
+    staged_infs: Vec<PathBuf>,
+    fail_drivers: bool,
 }
 impl Backend for Fake {
     fn recheck(&mut self) -> Result<(), String> {
@@ -117,6 +130,16 @@ impl Backend for Fake {
         .unwrap();
         if self.fail_apply {
             Err("interrupted DISM".into())
+        } else {
+            Ok(())
+        }
+    }
+    fn stage_drivers(&mut self, target: &Path, infs: &[PathBuf]) -> Result<(), String> {
+        assert!(target.join("Windows/System32/winload.efi").is_file());
+        assert_eq!(self.boots, 0);
+        self.staged_infs.extend_from_slice(infs);
+        if self.fail_drivers {
+            Err("fixture DISM rejected the package".into())
         } else {
             Ok(())
         }
@@ -155,6 +178,9 @@ fn verified_payloads_cannot_be_replaced_or_deleted_while_windows_is_applying() {
             );
             self.0.apply(setup, target)
         }
+        fn stage_drivers(&mut self, target: &Path, infs: &[PathBuf]) -> Result<(), String> {
+            self.0.stage_drivers(target, infs)
+        }
         fn boot(&mut self, target: &Path) -> Result<(), String> {
             self.0.boot(target)
         }
@@ -175,6 +201,11 @@ fn fresh_install_verifies_copies_and_becomes_an_idempotent_completed_job() {
     let mut host = Fake::default();
     f.run(&mut host).unwrap();
     assert_eq!(f.phase(), Phase::Complete);
+    assert!(host.staged_infs.is_empty());
+    assert!(!f
+        .target
+        .join("ProgramData/Monet/hardware-prestage.json")
+        .exists());
     assert_eq!(
         fs::read(f.target.join("ProgramData/Monet/Setup/monet-bridge.exe")).unwrap(),
         b"monet/bridge/monet-bridge.exe"
@@ -195,6 +226,60 @@ fn fresh_install_verifies_copies_and_becomes_an_idempotent_completed_job() {
         fs::read_to_string(f.target.join("Windows/System32/winload.efi")).unwrap(),
         "later Windows update"
     );
+}
+
+#[test]
+fn only_sealed_hardware_infs_are_staged_before_boot_with_a_fallback_on_error() {
+    const INF: &str = "monet/bridge/hardware/drivers/input/touchpad.INF";
+    for fail_drivers in [false, true] {
+        let mut f = Fixture::new();
+        f.seal_driver(INF);
+        f.seal_driver("monet/bridge/hardware/drivers/input/touchpad.cat");
+        f.seal_driver("monet/bridge/hardware/helper.inf");
+        fs::write(
+            f.setup.join("monet/bridge/hardware/drivers/unlisted.inf"),
+            b"unsealed",
+        )
+        .unwrap();
+        let mut host = Fake {
+            fail_drivers,
+            ..Fake::default()
+        };
+
+        f.run(&mut host).unwrap();
+        f.run(&mut host).unwrap();
+
+        assert_eq!(f.phase(), Phase::Complete);
+        assert_eq!((host.applies, host.boots), (1, 1));
+        assert_eq!(host.staged_infs, [f.setup.join(INF)]);
+        let report: serde_json::Value = serde_json::from_slice(
+            &fs::read(f.target.join("ProgramData/Monet/hardware-prestage.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            report["state"],
+            if fail_drivers { "deferred" } else { "staged" }
+        );
+        assert_eq!(report["inf_count"], 1);
+        assert_eq!(report["error"].is_string(), fail_drivers);
+        assert!(f
+            .target
+            .join("ProgramData/Monet/Setup/hardware/drivers/input/touchpad.INF")
+            .exists());
+    }
+}
+
+#[test]
+fn damaged_driver_payload_is_rejected_before_any_target_write() {
+    let mut f = Fixture::new();
+    let inf = "monet/bridge/hardware/drivers/network/wifi.inf";
+    f.seal_driver(inf);
+    fs::write(f.setup.join(inf), b"corrupt package").unwrap();
+    let mut host = Fake::default();
+    assert!(f.run(&mut host).is_err());
+    assert_eq!((host.applies, host.boots), (0, 0));
+    assert!(host.staged_infs.is_empty());
+    assert_eq!(fs::read_dir(&f.target).unwrap().count(), 0);
 }
 
 #[test]

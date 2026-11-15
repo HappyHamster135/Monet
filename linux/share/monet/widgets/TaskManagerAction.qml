@@ -5,8 +5,17 @@ import org.kde.taskmanager as TaskManager
 
 PlasmaCore.Action {
     id: action
+    objectName: "monet-task-manager"
     text: i18nd("monet", "Task Manager")
     icon.name: "utilities-system-monitor"
+    property var menuApplet: null
+    property bool showInAppletMenu: true
+    property Connections menu: Connections {
+        target: action.menuApplet
+        function onContextualActionsAboutToShow() {
+            action.showInAppletMenu = !action.menuApplet.containment?.internalAction("monet-task-manager")
+        }
+    }
     // Creating the window model only on demand avoids a resident model in every
     // panel action. Activating a task also restores a minimized Wayland window.
     onTriggered: {

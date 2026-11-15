@@ -35,7 +35,8 @@ PlasmoidItem {
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
 
     Plasmoid.icon: "x-office-calendar"
-    Plasmoid.contextualActions: [TaskManagerAction {}]
+    TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
+    Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     toolTipMainText: Qt.formatDate(now, Qt.locale().dateFormat(Locale.LongFormat))
     toolTipSubText: clockFormat.time(now)
     // A fresh look at the notes whenever the page opens.

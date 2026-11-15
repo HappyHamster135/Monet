@@ -31,22 +31,17 @@ WallpaperItem {
     // image, then leave background transitions/network work paused while locked.
     Component.onCompleted: update(true)
 
-    // The desktop's right-click menu: Windows' two ways to the settings, as Monet Settings' own
-    // pages. KDE's Desktop and Wallpaper and Display Configuration are out of it (monet-fresh):
-    // they opened KDE's dialogs. A wallpaper's entries are the only ones Plasma's menu takes in.
+    // The desktop menu links directly to these pages in Monet Settings.
     contextualActions: [
         TaskManagerAction {},
         PlasmaCore.Action {
-            text: i18n("Toggle desktop stacks")
+            text: i18n("Desktop stacks")
             icon.name: "view-group"
             onTriggered: root.fileTools("stacks-toggle")
         },
+        PlasmaCore.Action { isSeparator: true },
         PlasmaCore.Action {
-            text: i18n("Transfers")
-            icon.name: "folder-download"
-            onTriggered: root.fileTools("transfers")
-        },
-        PlasmaCore.Action {
+            objectName: "monet-display-settings"
             text: i18n("Display settings")
             icon.name: "preferences-desktop-display"
             onTriggered: root.settings("display")

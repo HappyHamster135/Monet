@@ -60,6 +60,11 @@ class NativeAudio(unittest.TestCase):
     def test_disconnect_reconnect_and_late_fallback_do_not_corrupt_the_display(self):
         self.fixture('recovery')
 
+    @unittest.skipUnless(importlib.util.find_spec('pulsectl') and shutil.which('paplay') and shutil.which('wireplumber'),
+                         'WirePlumber stream restore and Pulse playback')
+    def test_notification_volume_sets_both_channels_and_recovers_existing_mono_entries(self):
+        self.fixture('notifications')
+
     @unittest.skipUnless(shutil.which('plasmawindowed'), 'native Plasma widget host')
     def test_full_sound_widget_tracks_native_level_and_renders(self):
         self.fixture('widget')

@@ -88,16 +88,27 @@ class QualifiedPublication(unittest.TestCase):
             path.write_bytes(b"verified export")
             part = {"name": path.name, "bytes": path.stat().st_size,
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
-            self.assertEqual(qualified.verify_parts({"parts": [part]}, folder), [path])
+            self.assertEqual(qualified.verify_parts({"version": "0.9.6", "parts": [part]}, folder), [path])
             for parts in ([], [part, part], [dict(part, name="../" + path.name)]):
                 with self.assertRaises(ValueError):
-                    qualified.verify_parts({"parts": parts}, folder)
+                    qualified.verify_parts({"version": "0.9.6", "parts": parts}, folder)
             path.write_bytes(b"corrupt export!")
             with self.assertRaises(ValueError):
-                qualified.verify_parts({"parts": [part]}, folder)
+                qualified.verify_parts({"version": "0.9.6", "parts": [part]}, folder)
             path.unlink()
             with self.assertRaises(FileNotFoundError):
-                qualified.verify_parts({"parts": [part]}, folder)
+                qualified.verify_parts({"version": "0.9.6", "parts": [part]}, folder)
+
+    def test_archive_parts_can_include_a_version_suffix_and_must_match_the_release(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            path = folder / "Monet-0.9.8-5-oci.tar.part-aa"
+            data = b"verified export"
+            path.write_bytes(data)
+            part = {"name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+            self.assertEqual(qualified.verify_parts({"version": "0.9.8-5", "parts": [part]}, folder), [path])
+            with self.assertRaises(ValueError):
+                qualified.verify_parts({"version": "0.9.8-4", "parts": [part]}, folder)
 
     def test_different_existing_version_is_not_replaced(self):
         record = {"images": {"amd": {"image": "example/monet:0.9.6", "manifest": "sha256:expected"}}}
@@ -121,6 +132,14 @@ class QualifiedPublication(unittest.TestCase):
                 ["oci:exports:nvidia", "example/monet:0.9.8"],
                 ["oci:exports:mesa", "example/monet-amd:0.9.8"],
             ])
+
+    def test_prerelease_verifies_the_versioned_image_without_moving_latest(self):
+        record = {"images": {"amd": {"image": "example/monet:0.9.8-5", "manifest": "sha256:expected"}}}
+        with patch.object(qualified, "remote_digest", side_effect=[None, "sha256:expected"]), \
+                patch.object(qualified.subprocess, "run") as run:
+            qualified.publish(record, Path("exports"), Path("signer"), promote=False)
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0][-2:], ["oci:exports:amd", "example/monet:0.9.8-5"])
 
 
 @unittest.skipIf(os.name == "nt", "Linux systemd installation path")

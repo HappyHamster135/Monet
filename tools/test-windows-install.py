@@ -81,6 +81,7 @@ def make_payload(work, manifest, injected, install_wim):
               "TIMEZONE": "UTC", "UILANG": "en-US", "LOCALE": "en-US", "INPUT": "0409:00000409"}
     (staged / "monet/unattend.xml").write_text(preparation.fill(answer, values))
     (staged / "monet/bridge/monet-bridge.exe").write_text("First-logon fixture; never executed.\n")
+    shutil.copyfile(ROOT / "windows/Setup-Functions.ps1", staged / "monet/bridge/Setup-Functions.ps1")
     (staged / "monet/bridge/Install-Monet.ps1").write_text(r'''param([switch]$FromMonet,[switch]$GameProfile,[switch]$RemoveApps,[switch]$InstallSteam)
 $ErrorActionPreference = 'Stop'
 try {
@@ -98,6 +99,17 @@ try {
     $result = [ordered]@{version=1;username=$env:USERNAME;computer=$env:COMPUTERNAME;build=$os.BuildNumber;caption=$os.Caption;job=$checkpoint.job_id;phase=$checkpoint.phase;isAdministrator=$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator);fromMonet=[bool]$FromMonet;gameProfile=[bool]$GameProfile;removeApps=[bool]$RemoveApps;installSteam=[bool]$InstallSteam}
     $result.setupAutoLogonCount = $count
     $result.setupAutoAdminLogon = $autoAdminLogon
+    # The shell can set the flag in HKCU itself when it opens Start. Read the
+    # template independently to prove specialize seeded the setting.
+    reg.exe load HKLM\MonetTestDefaultUser 'C:\Users\Default\NTUSER.DAT' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not load the default profile for inspection.' }
+    try {
+        $advanced = 'Registry::HKEY_LOCAL_MACHINE\MonetTestDefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+        $result.startWelcomeSeen = Get-ItemPropertyValue -LiteralPath $advanced -Name StartShownOnUpgrade
+    } finally {
+        reg.exe unload HKLM\MonetTestDefaultUser | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Could not unload the default profile.' }
+    }
     $result | ConvertTo-Json | Set-Content -Encoding UTF8 'C:\monet-vm-first-logon.json'
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 'C:\monet-vm-first-logon-error.txt'
@@ -268,7 +280,7 @@ def verify_first_logon(work, manifest, job):
     expected = {"version": 1, "username": TEST_USER, "computer": TEST_COMPUTER, "job": job["id"],
                 "phase": "complete", "isAdministrator": True, "fromMonet": True, "gameProfile": True,
                 "removeApps": True, "installSteam": True, "setupAutoLogonCount": 0,
-                "setupAutoAdminLogon": "0"}
+                "setupAutoAdminLogon": "0", "startWelcomeSeen": 1}
     if any(result.get(key) != value for key, value in expected.items()):
         raise RuntimeError(f"Incorrect first-logon handoff: {result}")
     (work / "first-logon.json").write_text(json.dumps(result, indent=2) + "\n")

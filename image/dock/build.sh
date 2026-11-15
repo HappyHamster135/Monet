@@ -40,7 +40,7 @@ done
 # Ship the complete corresponding source, licenses and build instructions with
 # the image. The archive contains the patched source plus Monet's build inputs.
 mkdir "$work/monet-build"
-for name in CMakeLists.txt MonetDockMotion.qml MonetDockHover.qml patch.py bundle.py build.sh README.md; do
+for name in CMakeLists.txt MonetDockMotion.qml MonetDockHover.qml MonetTaskIcon.inc patch.py bundle.py build.sh README.md; do
     cp "$here/$name" "$work/monet-build/"
 done
 cp "$out/runtime.json" "$work/monet-build/runtime.json"

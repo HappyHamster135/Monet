@@ -75,6 +75,13 @@ Window {
             return result;
         }
         function fixtureAnimations() { return fixtureMotion(root) }
+        function fixturePreferredHeight() { return page.Layout.preferredHeight }
+        function fixtureVisibleProgress(item) {
+            let count = item instanceof T.ProgressBar && item.visible ? 1 : 0
+            for (const child of item.children || []) count += fixtureVisibleProgress(child)
+            return count
+        }
+        function fixtureProgressCount() { return fixtureVisibleProgress(root) }
         QtObject { id: activity; objectName: "transfersTestActivity"; property bool active: true }
         QtObject {
             id: folderOpen; objectName: "transfersTestFolder"
@@ -87,7 +94,7 @@ Window {
             function open(url, exact, item) { root.actions = root.actions.concat(["open:" + String(url)]) }
         }
         QtObject {
-            id: nativeJob
+            id: nativeJob; objectName: "nativeTransferJob"
             property string summary: "Copying a file with a long name into the selected destination folder"
             property string text: "A controlled native copy"
             property int state: NotificationManager.Notifications.JobStateRunning
@@ -155,6 +162,22 @@ Window {
     def labels(self):
         value = self.root.fixtureLabels()
         return value.toVariant() if hasattr(value, "toVariant") else value
+
+    def test_completed_transfer_is_compact_and_has_no_finished_progress_bar(self):
+        self.root.setProperty("localJobs", [])
+        job = self.root.findChild(QObject, "nativeTransferJob")
+        job.setProperty("summary", "Extracting files")
+        job.setProperty("text", "to Desktop")
+        job.setProperty("state", 0)  # NotificationManager.Notifications.JobStateStopped
+        QTest.qWait(100)
+        self.assertEqual(self.root.fixtureProgressCount(), 0)
+        height = self.root.fixturePreferredHeight()
+        self.assertGreaterEqual(height, 220)
+        self.assertLessEqual(height, 360)
+        self.window.resize(500, int(height)); QTest.qWait(100)
+        self.assertTrue(any(item.objectName() == "openNativeTransferFolder" for item in self.buttons()))
+        if os.environ.get("MONET_TRANSFER_COMPACT_CAPTURE"):
+            self.window.grabWindow().save(os.environ["MONET_TRANSFER_COMPACT_CAPTURE"])
 
     def test_tab_and_shift_tab_reveal_each_action_with_native_focus(self):
         refresh = next(item for item in self.buttons() if not item.property("text"))

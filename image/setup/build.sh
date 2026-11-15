@@ -70,8 +70,20 @@ echo LANG=en_US.UTF-8 > "$ROOT/etc/locale.conf"
 echo KEYMAP=us > "$ROOT/etc/vconsole.conf"
 ln -sf ../usr/share/zoneinfo/UTC "$ROOT/etc/localtime"
 
+# Detach each chroot bind tree as a unit. A rootless builder may inherit
+# nested mounts it cannot unmount individually, such as fusectl under sysfs.
+detach_build_mounts() {
+    local fs status=0
+    for fs in dev sys proc; do
+        if mountpoint -q "$ROOT/$fs"; then
+            mount --make-rprivate "$ROOT/$fs" &&
+                umount --lazy "$ROOT/$fs" || status=1
+        fi
+    done
+    return "$status"
+}
+trap 'detach_build_mounts || true' EXIT
 for fs in proc sys dev; do mount --rbind "/$fs" "$ROOT/$fs"; done
-trap 'for fs in dev sys proc; do umount -R "$ROOT/$fs" 2>/dev/null || :; done' EXIT
 chroot "$ROOT" systemctl enable monet-setup.service NetworkManager.service
 chroot "$ROOT" systemctl set-default multi-user.target
 chroot "$ROOT" systemctl mask systemd-firstboot.service
@@ -110,7 +122,7 @@ if ! pack_trust; then
     echo "warning: no fallback for a skipped blue screen on this stick" >&2
     rm -f "$APP/trust-initrd.img"
 fi
-for fs in dev sys proc; do umount -R "$ROOT/$fs"; done
+detach_build_mounts
 trap - EXIT
 
 echo "== The USB stick's start: Microsoft-signed shim, Fedora-signed GRUB, Monet's menu"

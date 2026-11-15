@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KWin/WindowSwitcher",
+    "KPlugin": {
+        "Id": "monet-windows",
+        "Name": "Monet Window Grid",
+        "Description": "A window preview grid that fits the screen",
+        "Icon": "preferences-system-windows-switcher-thumbnail-grid",
+        "License": "GPL-2.0-or-later"
+    },
+    "X-Plasma-API": "declarativeappletscript"
+}

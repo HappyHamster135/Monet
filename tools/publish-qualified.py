@@ -4,6 +4,7 @@
 The input record is committed before the publication tag is pushed. Archives are
 temporary draft-release assets, removed before the public release is opened.
 """
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -18,10 +19,11 @@ def checked(command):
 
 
 def verify_parts(record, folder):
+    prefix = re.escape(f"Monet-{record['version']}-oci.tar.part-")
     paths = []
     for part in record["parts"]:
         name = part["name"]
-        if Path(name).name != name or not re.fullmatch(r"Monet-[0-9.]+-oci\.tar\.part-[a-z]{2}", name):
+        if Path(name).name != name or not re.fullmatch(prefix + r"[a-z]{2}", name):
             raise ValueError("Invalid archive part name")
         path = folder / name
         with path.open("rb") as stream:
@@ -44,7 +46,7 @@ def remote_digest(image):
     return "sha256:" + hashlib.sha256(result.stdout).hexdigest()
 
 
-def publish(record, layout, signer=None):
+def publish(record, layout, signer=None, *, promote=True):
     for variant, info in record["images"].items():
         image, digest = info["image"], info["manifest"]
         current = remote_digest(image)
@@ -58,6 +60,9 @@ def publish(record, layout, signer=None):
                             f"oci:{layout}:{variant}", "docker://" + image], check=True)
         if remote_digest(image) != digest:
             raise RuntimeError(f"Published manifest does not match: {image}")
+        print(f"Verified {image}: {digest}", flush=True)
+    if not promote:
+        return
     # Both versioned images must be verified before either rolling tag moves.
     for info in record["images"].values():
         image = info["image"]
@@ -70,11 +75,16 @@ def publish(record, layout, signer=None):
 
 
 def main():
-    record = json.loads(Path(sys.argv[1]).read_text())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("record", type=Path)
+    parser.add_argument("folder", type=Path)
+    parser.add_argument("--versioned-only", action="store_true")
+    args = parser.parse_args()
+    record = json.loads(args.record.read_text())
     version = Path("VERSION").read_text().strip()
     if record["version"] != version:
         raise ValueError("Release version mismatch")
-    folder = Path(sys.argv[2])
+    folder = args.folder
     folder.mkdir(parents=True, exist_ok=True)
     subprocess.run(["gh", "release", "download", "v" + version, "--dir", str(folder),
                     "--pattern", f"Monet-{version}-oci.tar.part-*"], check=True)
@@ -97,7 +107,7 @@ def main():
         if "sha256:" + hashlib.sha256(raw).hexdigest() != info["manifest"]:
             raise ValueError(f"Unexpected archived manifest: {variant}")
     signer = Path(__file__).with_name("sign-release-image.py") if Path("image/monet-update.pub").is_file() else None
-    publish(record, layout, signer)
+    publish(record, layout, signer, promote=not args.versioned_only)
 
 
 if __name__ == "__main__":

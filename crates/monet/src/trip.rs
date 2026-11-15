@@ -162,18 +162,46 @@ pub fn describe(efi: &dyn EfiVars, paths: &Paths) -> Vec<(BootEntry, Reach)> {
 /// wiped disk leaves only dead ones. Monet stays first in the boot order.
 pub fn add_windows_entry(efi: &mut dyn EfiVars, monet: u16) -> Result<bool, String> {
     let Some(device) = esp::find_windows_loader() else { return Ok(false) };
-    let (disk, part) = esp::disk_and_partition(&device).ok_or_else(|| format!("couldn't tell which disk {device} is on"))?;
+    create_windows_entry(&device, "--create")?;
+    // efibootmgr puts the new entry first; Monet stays the default.
+    let _ = boot::move_to_front(efi, monet);
+    Ok(true)
+}
+
+fn create_windows_entry(device: &str, mode: &str) -> Result<(), String> {
+    let (disk, part) = esp::disk_and_partition(device).ok_or_else(|| format!("couldn't tell which disk {device} is on"))?;
     let out = Command::new("efibootmgr")
-        .args(["--create", "--disk", &disk, "--part", &part.to_string(), "--label", "Windows Boot Manager", "--loader"])
+        .args([mode, "--disk", &disk, "--part", &part.to_string(), "--label", "Windows Boot Manager", "--loader"])
         .arg("\\EFI\\Microsoft\\Boot\\bootmgfw.efi")
         .output()
         .map_err(|e| format!("couldn't run efibootmgr: {e}"))?;
     if !out.status.success() {
         return Err(format!("efibootmgr: {}", String::from_utf8_lossy(&out.stderr).trim()));
     }
-    // efibootmgr puts the new entry first; Monet stays the default.
-    let _ = boot::move_to_front(efi, monet);
-    Ok(true)
+    Ok(())
+}
+
+fn windows_on_esp(entries: &[BootEntry], guid: &str) -> Option<u16> {
+    entries.iter().find(|entry| {
+        entry.option.is_active()
+            && entry.option.partition_guid.as_deref().is_some_and(|value| value.eq_ignore_ascii_case(guid))
+            && entry.option.file_path.as_deref()
+                .is_some_and(|value| value.eq_ignore_ascii_case("\\EFI\\Microsoft\\Boot\\bootmgfw.efi"))
+    }).map(|entry| entry.number)
+}
+
+/// Select only the loader on the sealed shared EFI partition.
+pub fn setup_entry(efi: &dyn EfiVars, guid: &str) -> Result<u16, String> {
+    if guid.len() != 36 || !guid.bytes().all(|c| c.is_ascii_hexdigit() || c == b'-') {
+        return Err("invalid EFI partition identity".into());
+    }
+    let device = fs::canonicalize(Path::new(PARTUUIDS).join(guid)).map_err(|e| e.to_string())?;
+    if let Some(entry) = windows_on_esp(&boot::list_entries(efi).map_err(|e| e.to_string())?, guid) {
+        return Ok(entry);
+    }
+    create_windows_entry(device.to_str().ok_or("invalid EFI partition device path")?, "--create-only")?;
+    windows_on_esp(&boot::list_entries(efi).map_err(|e| e.to_string())?, guid)
+        .ok_or_else(|| "couldn't find the verified Windows boot entry".into())
 }
 
 /// Appends to /var/lib/monet/switch.log, so a trip that went wrong can be
@@ -234,6 +262,44 @@ pub fn cancel_switch(efi: &mut dyn EfiVars, paths: &Paths, monet: u16) -> Result
     request.and(next).and(order).map(|_| ()).map_err(|e| format!("Couldn't cancel the Windows boot target: {e}"))
 }
 
+pub fn cancel_setup(efi: &mut dyn EfiVars, paths: &Paths, monet: u16) -> Result<(), String> {
+    // Keep the recovery receipt if firmware won't restore the default yet.
+    boot::move_to_front(efi, monet).map_err(|e| e.to_string())?;
+    cancel_switch(efi, paths, monet)
+}
+
+pub fn arm_setup(efi: &mut dyn EfiVars, paths: &Paths, trip: &Trip, zone: &str) -> Result<(), String> {
+    use monet_core::request::{self, LaunchRequest};
+
+    if paths.trip().exists() || boot::boot_next(efi).map_err(|e| e.to_string())?.is_some()
+        || !matches!(efi.get(MONET_GUID, LAUNCH_VAR), Err(EfiError::NotFound))
+    {
+        return Err("A different boot is already scheduled.".into());
+    }
+    if trip.entry == trip.monet || !boot::boot_order(efi).map_err(|e| e.to_string())?.contains(&trip.monet) {
+        return Err("Monet's boot entry is missing from the boot order.".into());
+    }
+    let mut req = LaunchRequest::new(None, trip.monet, trip.created).map_err(|e| e.to_string())?
+        .with_zone(Some(zone.into()));
+    req.setup = true;
+    // Recover Monet at the next boot even if power is lost between EFI writes.
+    save(paths, trip)?;
+    let arm = request::write(efi, &req).and_then(|_| boot::set_boot_next(efi, trip.entry))
+        .map_err(|e| e.to_string()).and_then(|_| put_windows_first(efi, trip.entry));
+    if let Err(error) = arm {
+        cancel_setup(efi, paths, trip.monet)?;
+        return Err(error);
+    }
+    if request::peek(efi) != Some(req) || !matches!(boot::boot_next(efi), Ok(Some(next)) if next == trip.entry)
+        || boot::boot_order(efi).ok().and_then(|order| order.first().copied()) != Some(trip.entry)
+    {
+        cancel_setup(efi, paths, trip.monet)?;
+        return Err("The firmware didn't keep the Windows setup boot target.".into());
+    }
+    log(paths, trip.created, &format!("continuing Windows setup via Boot{:04X}; {}", trip.entry, snapshot(efi)));
+    Ok(())
+}
+
 pub fn valid_checkpoint(id: &str) -> bool {
     id.len() == 32 && id.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
@@ -258,8 +324,9 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
     let before = snapshot(efi);
     // Keep Monet bootable even if persisting the recovery receipt fails.
     if trip.method == Method::First {
-        if let Ok(current) = boot::boot_current(efi) {
-            let _ = boot::move_to_front(efi, current);
+        if let Err(error) = boot::move_to_front(efi, trip.monet) {
+            log(paths, now, &format!("couldn't restore Monet's boot order yet: {error}"));
+            return None;
         }
     }
     // Read errors are not evidence that Windows consumed the request. Keep it retryable.
@@ -376,6 +443,32 @@ mod tests {
     fn bound_trip() -> Trip {
         Trip { created: 1000, entry: 4, monet: 1, method: Method::Once,
                checkpoint: Some("a".repeat(32)), boot: "departure".into() }
+    }
+
+    #[test]
+    fn first_start_is_recoverable_and_keeps_other_scheduled_boots() {
+        let paths = Paths::new(temp());
+        let trip = Trip { method: Method::First, checkpoint: None, ..bound_trip() };
+        let mut efi = pc(Some(5), false);
+        boot::move_to_front(&mut efi, trip.monet).unwrap();
+        assert!(arm_setup(&mut efi, &paths, &trip, "UTC").is_err());
+        assert_eq!(boot::boot_next(&efi).unwrap(), Some(5));
+        assert!(!paths.trip().exists());
+
+        efi.delete(GLOBAL_GUID, "BootNext").unwrap();
+        arm_setup(&mut efi, &paths, &trip, "UTC").unwrap();
+        let request = monet_core::request::peek(&efi).unwrap();
+        assert!(request.setup);
+        assert_eq!(request.return_to, trip.monet);
+        assert_eq!(boot::boot_order(&efi).unwrap(), vec![4, 1]);
+        assert_eq!(boot::boot_next(&efi).unwrap(), Some(4));
+
+        // Firmware tried Windows, then fell back to Monet. Clear only this trip.
+        efi.delete(GLOBAL_GUID, "BootNext").unwrap();
+        assert!(check_after_boot(&mut efi, &paths, 1060, false, "return").is_some());
+        assert_eq!(boot::boot_order(&efi).unwrap(), vec![1, 4]);
+        assert!(monet_core::request::peek(&efi).is_none());
+        assert!(!paths.trip().exists());
     }
 
     #[test]

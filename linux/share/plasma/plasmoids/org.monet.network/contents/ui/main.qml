@@ -12,7 +12,8 @@ PlasmoidItem {
     SessionActivity { id: activity; viewVisible: root.visible }
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "preferences-system-network"
-    Plasmoid.contextualActions: [TaskManagerAction { id: taskManager }]
+    TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
+    Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     preferredRepresentation: fullRepresentation
     toolTipMainText: i18nd("monet", "Network")
     Sensors.Sensor { enabled: root.visible && activity.active; updateRateLimit: 2000; id: download; sensorId: "network/all/download" }

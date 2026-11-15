@@ -1,8 +1,11 @@
 """Partition retries use saved identities; all storage is fake or disposable files."""
+from contextlib import redirect_stdout
 import copy
 import fcntl
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from io import StringIO
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,8 +14,162 @@ from threading import Thread
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 from tests.test_installer import load
+
+
+class ManualWindowsMedia(unittest.TestCase):
+    def setUp(self):
+        self.quick = load("linux/libexec/monet-quick", "windows_iso_picker_fixture")
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.folder = Path(self.temporary.name)
+
+    def write_iso(self, path, blocks_written=24):
+        sector = 2048
+        descriptor = bytearray(sector)
+        descriptor[:7] = b"\x01CD001\x01"
+        descriptor[80:84] = (24).to_bytes(4, "little")
+        with path.open("wb") as stream:
+            stream.seek(16 * sector)
+            stream.write(descriptor)
+            stream.truncate(blocks_written * sector)
+
+    def test_selected_file_passes_unchanged_to_privileged_preparation(self):
+        iso = self.folder / "Windows å #1 $LAB %.ISO"
+        iso.write_bytes(b"media fixture")
+        with patch.object(self.quick, "read_text", return_value="download-failed"), \
+                patch.object(self.quick, "ok", side_effect=[False, True]) as run:
+            self.assertEqual(self.quick.main(["windows-setup-start", iso.as_uri().encode().hex()]), 0)
+        self.assertEqual(run.call_args.args, (
+            "systemd-run", "--user", "--quiet", "--collect", "--expand-environment=no",
+            f"--unit={self.quick.WINDOWS_SETUP_UNIT}", "pkexec", f"{self.quick.BINDIR}/monet",
+            "helper", "prepare-windows", "--iso", str(iso.resolve()),
+        ))
+
+    def test_rejects_unusable_selections(self):
+        (self.folder / "empty.iso").touch()
+        (self.folder / "download.iso.part").write_bytes(b"partial")
+        (self.folder / "directory.iso").mkdir()
+        for url in ((self.folder / name).as_uri() for name in
+                    ("empty.iso", "download.iso.part", "directory.iso", "missing.iso")):
+            self.assertIsNone(self.quick.selected_windows_iso(url.encode().hex()), url)
+        self.assertIsNone(self.quick.selected_windows_iso(b"file://remote/windows.iso".hex()))
+
+    def test_offers_complete_windows_media_from_either_download_location(self):
+        downloads, custom = (self.folder / name for name in ("Downloads", "Custom"))
+        downloads.mkdir()
+        custom.mkdir()
+        iso = downloads / "Windows11_Client_x64_en-us.iso"
+        self.write_iso(iso)
+        os.utime(iso, (1, 1))
+        self.write_iso(custom / "Win11_incomplete.iso", 20)
+        self.write_iso(custom / "Win11.iso.part")
+        self.write_iso(custom / "Win10.iso")
+        (custom / "Windows 11 linked.iso").symlink_to(iso)
+        with patch.object(self.quick, "HOME", self.folder), \
+                patch.object(self.quick, "downloads_dir", return_value=custom), \
+                patch.object(self.quick, "read_text", side_effect=["download-failed", "0\tMicrosoft blocked the automatic download"]), \
+                patch.object(self.quick, "ok", return_value=False):
+            self.assertEqual(self.quick.windows_setup_state()["iso"], iso.as_uri())
+            newer = custom / "Win11_x64.iso"
+            self.write_iso(newer)
+            self.assertEqual(self.quick.downloaded_windows_iso(), newer)
+
+    def test_first_run_and_settings_share_localized_download_and_desktop_detection(self):
+        config = self.folder / ".config"
+        config.mkdir()
+        (config / "user-dirs.dirs").write_text(
+            'XDG_DESKTOP_DIR="$HOME/Skrivbord"\nXDG_DOWNLOAD_DIR="$HOME/Hämtningar"\n'
+        )
+        desktop, downloads = self.folder / "Skrivbord", self.folder / "Hämtningar"
+        desktop.mkdir()
+        downloads.mkdir()
+        valid = desktop / "Windows 11 x64 å.iso"
+        self.write_iso(valid)
+        self.write_iso(downloads / "Win11_x64_incomplete.iso", 20)
+        with patch.object(self.quick, "HOME", self.folder), patch.object(self.quick, "CONFIG", config), \
+                patch.object(self.quick, "read_text", side_effect=lambda path: "waiting"
+                             if path == self.quick.WINDOWS_SETUP_STATUS else ""), \
+                patch.object(self.quick, "ok", side_effect=lambda *args: args[0] == "systemd-run") as run:
+            response = StringIO()
+            with redirect_stdout(response):
+                self.quick.main(["windows-setup-iso"])
+            self.assertEqual(json.loads(response.getvalue()), str(valid))
+            self.assertEqual(self.quick.windows_setup_state()["iso"], valid.as_uri())
+            self.assertTrue(self.quick.start_windows_setup())
+            self.assertEqual(run.call_args.args[-2:], ("--iso", str(valid)))
+
+    def test_iso_failure_suggests_the_replacement_without_reoffering_the_failed_file(self):
+        downloads = self.folder / "Downloads"
+        downloads.mkdir()
+        rejected = downloads / "Win11_rejected.iso"
+        self.write_iso(rejected)
+        progress = self.folder / "progress"
+        progress.write_text("0\tthe Windows ISO could not be opened")
+        error_time = rejected.stat().st_ctime_ns
+        os.utime(progress, ns=(error_time, error_time))
+        with patch.object(self.quick, "HOME", self.folder), \
+                patch.object(self.quick, "downloads_dir", return_value=downloads), \
+                patch.object(self.quick, "WINDOWS_SETUP_PROGRESS", progress), \
+                patch.object(self.quick, "read_text", side_effect=lambda path: progress.read_text()
+                             if path == progress else "download-failed"), \
+                patch.object(self.quick, "ok", side_effect=lambda *args: args[0] == "systemd-run") as run:
+            self.assertEqual(self.quick.windows_setup_state()["iso"], "")
+            new = downloads / "Win11_replacement.iso"
+            self.write_iso(new)
+            self.assertEqual(self.quick.windows_setup_state()["iso"], new.as_uri())
+            self.assertTrue(self.quick.start_windows_setup(retry=True))
+            self.assertEqual(run.call_args.args[-2:], ("--iso", str(new)))
+
+    def test_interrupted_preparation_can_retry_only_after_its_worker_releases_the_lock(self):
+        lockfile = self.folder / "windows-setup.lock"
+        with lockfile.open("wb") as lock, patch.object(self.quick, "WINDOWS_SETUP_LOCK", lockfile), \
+                patch.object(self.quick, "read_text", side_effect=lambda path: "preparing"
+                             if path == self.quick.WINDOWS_SETUP_STATUS else "68\tPreparing Windows"), \
+                patch.object(self.quick, "downloaded_windows_iso", return_value=None), \
+                patch.object(self.quick, "ok", side_effect=lambda *args: args[0] == "systemd-run") as run:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            self.assertTrue(self.quick.windows_setup_state()["active"])
+            self.assertFalse(self.quick.start_windows_setup())
+            self.assertFalse(any(call.args[0] == "systemd-run" for call in run.call_args_list))
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            state = self.quick.windows_setup_state()
+            self.assertEqual(state["status"], "failed")
+            self.assertEqual(state["message"], "Windows setup did not finish")
+            self.assertEqual(state["percent"], 0)
+            self.assertTrue(self.quick.start_windows_setup())
+            self.assertEqual(run.call_args.args[-2:], ("helper", "prepare-windows"))
+
+    def test_open_windows_routes_download_failure_to_recovery(self):
+        with patch.object(self.quick, "read_text", return_value="download-failed"), \
+                patch.object(self.quick, "open_settings") as settings, \
+                patch.object(self.quick, "ok") as run:
+            self.quick.main(["open-windows"])
+            self.assertEqual(self.quick.main(["windows-setup-start"]), 1)
+        settings.assert_called_once_with("windows")
+        self.assertFalse(any(call.args[0] == "systemd-run" for call in run.call_args_list))
+
+    def test_windows_setup_only_retries_unarmed_installation_or_download_on_request(self):
+        for status, progress, should_retry in (
+            ("pending", "100\tWindows installs itself at the next restart", False),
+            ("pending", "", True),
+            ("download-failed", "0\tMicrosoft blocked the automatic download", True),
+            ("installed", "", False),
+        ):
+            with self.subTest(status=status, progress=progress), \
+                    patch.object(self.quick, "read_text", side_effect=lambda path:
+                                 progress if path == self.quick.WINDOWS_SETUP_PROGRESS else status), \
+                    patch.object(self.quick, "downloaded_windows_iso", return_value=None), \
+                    patch.object(self.quick, "ok", side_effect=lambda *args: args[0] == "systemd-run") as run:
+                state = self.quick.windows_setup_state()
+                self.assertEqual(state["interrupted"], status == "pending" and not progress)
+                self.assertEqual(self.quick.main(["windows-setup-start", "--retry"]), int(not should_retry))
+                starts = [call.args for call in run.call_args_list if call.args[0] == "systemd-run"]
+                self.assertEqual(len(starts), int(should_retry))
+                if starts:
+                    self.assertEqual(starts[0][-2:], ("helper", "prepare-windows"))
 
 
 class DownloadRecovery(unittest.TestCase):
@@ -92,7 +249,55 @@ class DownloadRecovery(unittest.TestCase):
                 prepare.check_work_dir()
 
 
+class CompletedSetupHandoff(unittest.TestCase):
+    def test_only_a_completed_current_job_is_armed_and_at_most_once(self):
+        prepare = load("linux/libexec/monet-prepare-windows", "windows_handoff_fixture")
+        with tempfile.TemporaryDirectory() as folder:
+            prepare.STATE = Path(folder)
+            prepare.STATUS = prepare.STATE / "windows-setup"
+            prepare.PROGRESS = prepare.STATE / "windows-progress"
+            prepare.STATUS.write_text("pending")
+            job = {"id": "example", "partitions": {"efi": {"guid": "expected-partition"}}}
+            saved = {"version": 1, "job": job}
+            with patch.object(prepare, "read_staging", return_value=saved), \
+                    patch.object(prepare, "root_disk", return_value="/dev/sdz") as root_disk, \
+                    patch.object(prepare, "staged_volumes", return_value=({"path": "/dev/sdz2"}, {})) as volumes, \
+                    patch.object(prepare, "staged_phase", return_value="applied") as phase, \
+                    patch.object(prepare, "windows_zone", return_value="UTC"), \
+                    patch.object(prepare, "run", side_effect=prepare.Stop("failed", "reboot refused")) as run:
+                prepare.continue_completed_setup("/usr/bin/monet")
+                root_disk.assert_not_called()  # A receipt from older media cannot arm the handoff.
+                saved["handoff"] = 1
+                prepare.PROGRESS.touch()
+                prepare.continue_completed_setup("/usr/bin/monet")
+                root_disk.assert_not_called()  # No reboot during the session that prepared WinPE.
+                prepare.PROGRESS.unlink()
+                prepare.continue_completed_setup("/usr/bin/monet")
+                volumes.assert_called_once_with("/dev/sdz", saved)
+                phase.assert_called_once_with("/dev/sdz2", saved)
+                run.assert_not_called()
+                phase.return_value = "complete"
+                with self.assertRaises(prepare.Stop):
+                    prepare.continue_completed_setup("/usr/bin/monet")
+                run.assert_called_once_with("/usr/bin/monet", "helper", "start-windows-setup",
+                                            "expected-partition", "UTC", timeout=45)
+                self.assertEqual(prepare.STATUS.read_text(), "staged")
+                # Even if another service restores the old status, never start this job again.
+                prepare.STATUS.write_text("pending")
+                prepare.continue_completed_setup("/usr/bin/monet")
+                self.assertEqual(run.call_count, 1)
+
+
 class PartitionDiscovery(unittest.TestCase):
+    def test_composefs_resolves_the_installed_disk_before_considering_labels(self):
+        prepare = load("linux/libexec/monet-prepare-windows", "windows_root_fixture")
+        with patch.object(prepare.subprocess, "run", side_effect=(
+            SimpleNamespace(stdout="composefs\n"), SimpleNamespace(stdout="/dev/sdz3[/root]\n"),
+        )) as findmnt, patch.object(prepare, "run", return_value="sdz\n") as lsblk:
+            self.assertEqual(prepare.root_disk(), "/dev/sdz")
+        self.assertEqual([call.args[0][-1] for call in findmnt.call_args_list], ["/", "/sysroot"])
+        lsblk.assert_called_once_with("lsblk", "-no", "PKNAME", "/dev/sdz3", capture=True)
+
     def setUp(self):
         self.p = load("linux/libexec/monet-prepare-windows", "partition_discovery_fixture")
         self.p.log = lambda message: None
@@ -371,7 +576,14 @@ class Recovery(unittest.TestCase):
         file.write_text(json.dumps(plan))
         self.p.STATUS = self.p.STATE / "windows-setup"
         self.p.WORK = self.root / "downloads"
-        for kind in ("blocked", "interrupted", "missing-iso", "empty-iso"):
+        errors = {
+            "blocked": (self.p.Stop("download-failed", "blocked"), "blocked"),
+            "refused": (HTTPError("https://example.invalid", 403, "Forbidden", {}, None),
+                        "Microsoft's download service refused the request"),
+            "offline": (URLError("Offline"), "Monet couldn't connect to Microsoft's download service"),
+            "unexpected": (ValueError("Not JSON"), "Microsoft's download service returned an unexpected response"),
+        }
+        for kind in (*errors, "interrupted", "missing-iso", "empty-iso"):
             with self.subTest(kind=kind):
                 iso = self.root / "input.iso"
                 iso.unlink(missing_ok=True)
@@ -386,13 +598,35 @@ class Recovery(unittest.TestCase):
                         patch.object(self.p, "resume_staged_setup", return_value=None), \
                         patch.object(self.p, "check_work_dir"), \
                         patch.object(self.p.shutil, "disk_usage", return_value=SimpleNamespace(free=32 << 30)), \
-                        patch.object(self.p, "windows_download_link", side_effect=self.p.Stop("download-failed", "blocked") if kind == "blocked" else None,
+                        patch.object(self.p, "windows_download_link", side_effect=errors.get(kind, (None,))[0],
                                      return_value=("https://example.invalid/windows.iso", "English")), \
-                        patch.object(self.p, "download", side_effect=self.p.Stop("download-failed", "interrupted")):
+                        patch.object(self.p, "download", side_effect=self.p.Stop("download-failed", "interrupted")), \
+                        patch.object(self.p, "progress") as progress:
                     self.assertEqual(self.p.prepare_main(), 2)
+                    if kind in errors:
+                        progress.assert_called_with(0, errors[kind][1])
+                self.assertEqual(self.p.STATUS.read_text(), "download-failed")
                 self.assertFalse(self.receipt.exists())
                 self.assertFalse(self.formats())
                 self.assertFalse(self.appends())
+
+    def test_pending_setup_with_no_verified_payload_does_not_download_or_change_storage(self):
+        self.p.STATUS = self.p.STATE / "windows-setup"
+        self.p.STATE.mkdir(parents=True, exist_ok=True)
+        self.p.STATUS.write_text("pending")
+        with patch.object(self.p.sys, "argv", ["monet-prepare-windows"]), \
+                patch.object(self.p.os, "geteuid", return_value=0), \
+                patch.object(self.p.Path, "is_dir", return_value=True), \
+                patch.object(self.p, "root_disk", return_value=self.disk), \
+                patch.object(self.p, "require_setup_payload"), \
+                patch.object(self.p, "windows_download_link") as download, \
+                patch.object(self.p, "make_partitions") as partition, \
+                patch.object(self.p, "progress") as progress:
+            self.assertEqual(self.p.prepare_main(), 2)
+            download.assert_not_called()
+            partition.assert_not_called()
+            progress.assert_called_with(0, "the prepared Windows installation could not be found")
+        self.assertEqual(self.p.STATUS.read_text(), "failed")
 
     def test_invalid_iso_stops_before_partitioning_or_staging(self):
         self.p.STATUS = self.p.STATE / "windows-setup"

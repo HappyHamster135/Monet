@@ -1883,7 +1883,7 @@ fn back() -> Res<()> {
 /// True when Monet sent the PC to Windows on purpose in the last few minutes:
 /// a request still waiting in the firmware, or one the agent just took.
 fn sent_on_purpose() -> bool {
-    let waiting = win::enable_firmware_access() && request::peek(&FirmwareVars).is_some();
+    let waiting = win::enable_firmware_access() && request::peek(&FirmwareVars).is_some_and(|req| !req.setup);
     let recent = fs::read_to_string(asked_path())
         .ok()
         .and_then(|t| t.trim().parse::<u64>().ok())
@@ -1893,15 +1893,38 @@ fn sent_on_purpose() -> bool {
 
 /// Shown once, right after Monet set up Windows by itself.
 fn finish_setup() -> Res<()> {
+    let automatic = win::enable_firmware_access()
+        .then(|| request::peek(&FirmwareVars)).flatten().filter(|req| req.setup);
+    let mut state = State::load();
+    let mut efi = FirmwareVars;
+    if let Some(req) = &automatic {
+        let entries = boot::list_entries(&efi).map_err(|e| e.to_string())?;
+        if !entries.iter().any(|e| e.number == req.return_to && e.is_other_os()) {
+            return Err("Monet's boot entry wasn't found".into());
+        }
+        // Restore the default even if the person chooses to stay in Windows.
+        boot::move_to_front(&mut efi, req.return_to).map_err(|e| e.to_string())?;
+        state.monet_entry = Some(req.return_to);
+        state.save();
+        if let Some(zone) = &req.tz {
+            set_time_zone(zone);
+        }
+        request::clear(&mut efi).map_err(|e| e.to_string())?;
+    }
     // Someone pressed Play (or Restart in Windows) while Windows was still
     // setting up: stay for the game instead of going straight back.
-    if sent_on_purpose() {
+    if automatic.is_none() && sent_on_purpose() {
         log("setup finished during a trip from Monet; staying in Windows");
         return Ok(());
     }
-    let cover = Cover::open(Scene::Back { seconds: RETURN_COUNTDOWN_SECS, why: None });
-    if count_down(cover.as_ref(), Some(tr("Windows is ready for Monet."))) {
-        back()
+    let why = Some(tr("Windows is ready for Monet."));
+    let cover = Cover::open(Scene::Back { seconds: RETURN_COUNTDOWN_SECS, why: why.clone() });
+    if count_down(cover.as_ref(), why) {
+        if automatic.is_some() {
+            go_back(&mut efi, &state, &scan())
+        } else {
+            back()
+        }
     } else {
         Ok(())
     }

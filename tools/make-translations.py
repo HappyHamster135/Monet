@@ -242,7 +242,7 @@ def gather():
         scan(p.read_text(encoding="utf-8"), QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "qml").glob("*.qml")):
         scan(p.read_text(encoding="utf-8"), SETUP_QML_CALLS, js_string, rel(p), add)
-    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave", ROOT / "linux/libexec/monet-files-tools"]:
+    for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave", ROOT / "linux/libexec/monet-files-tools", ROOT / "linux/libexec/monet-file-jobs"]:
         scan(p.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(p), add)
     for p in sorted((ROOT / "linux/share/monet/passwords").glob("*.py")):
         calls = {**PYTHON_CALLS, "self.tr": "s", "VaultError": "s", "BrowserError": "s"}

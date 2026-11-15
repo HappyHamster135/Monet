@@ -31,6 +31,7 @@ def qml_files():
             + list((SHARE / "monet/widgets").glob("*.qml")) + list((SHARE / "monet/logout").glob("*.qml"))
             + list((SHARE / "monet/explorer").glob("*.qml")) + list((SHARE / "monet/editmode").glob("*.qml"))
             + list((SHARE / "monet/games").glob("*.qml"))
+            + list((SHARE / "monet/panel").glob("*.qml"))
             + list((SHARE / "monet/settings-app").glob("*.qml"))
             + list((SHARE / "ksysguard/sensorfaces").rglob("*.qml"))
             + list((ROOT / "image/password").glob("*.qml")) + list((ROOT / "setup/qml").rglob("*.qml")))
@@ -2710,7 +2711,7 @@ class MonetSettings(unittest.TestCase):
         quick = quick_helper()
         with tempfile.TemporaryDirectory() as tmp:
             quick.HOME, quick.CONFIG = Path(tmp), Path(tmp) / ".config"
-            self.assertEqual(quick.downloads_dir(), Path(tmp) / "Desktop")
+            self.assertEqual(quick.downloads_dir(), Path(tmp) / "Downloads")
             quick.CONFIG.mkdir()
             (quick.CONFIG / "user-dirs.dirs").write_text('XDG_DOWNLOAD_DIR="$HOME/Hämtningar"\n', encoding="utf-8")
             self.assertEqual(quick.downloads_dir(), Path(tmp) / "Hämtningar")
@@ -3118,7 +3119,7 @@ Audio
             self.assertEqual(quick.outputs(), [{"id": 53, "name": "Dummy Output", "default": True, "none": True}])
         qml = (SETTINGS_QML).read_text(encoding="utf-8")
         self.assertIn('i18n("No speakers or headphones")', qml)
-        self.assertIn("model: soundColumn.speakers", qml)
+        self.assertIn("model: soundColumn.visibleSpeakers", qml)
 
     def test_no_wifi_row_without_wifi(self):
         # NetworkManager says Wi-Fi is enabled on a PC that has none (the test bench's VM, on a cable).
@@ -3150,7 +3151,8 @@ Audio
     def test_play_on_windows_without_windows(self):
         # Found by the test bench: a Monet-only PC was told "Windows isn't ready" and "Not found".
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
-        self.assertIn('readonly property bool noWindows: sheet.pc.windows === "Not found" && ["", "no-space"].includes(sheet.pc.setup || "")', settings)
+        self.assertIn('readonly property bool noWindows: sheet.pc.windows === "Not found" && setupState === ""', settings)
+        self.assertIn('windowsColumn.setupState === "no-space" ? i18n("Windows needs more disk space")', settings)
         self.assertIn('raise Stop("no-space"', (ROOT / "linux/libexec/monet-prepare-windows").read_text(encoding="utf-8"))
         self.assertIn('windowsColumn.noWindows ? i18n("No Windows on this PC")', settings)
         self.assertIn('&& !windowsColumn.noWindows', settings)
@@ -3299,6 +3301,18 @@ class WhatOtherSystemsHave(unittest.TestCase):
         self.assertIn('onMoved: value => sheet.queue("app-volume " + modelData.id, value)', settings)
         panel = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("onTapped: root.playThrough(place.modelData)", panel)
+
+    def test_mixer_shows_the_application_name_and_hides_event_streams(self):
+        from unittest import mock
+        quick = quick_helper()
+        metadata = {
+            12: {"properties": {"application.process.binary": "Discord", "application.name": "WEBRTC VoiceEngine"}},
+            15: {"properties": {"media.role": "event"}},
+        }
+        with mock.patch.object(quick, "run"), mock.patch.object(quick, "pulse_nodes", return_value=metadata), \
+                mock.patch.object(quick, "app_streams", return_value=[(12, "WEBRTC VoiceEngine"), (15, "Notification")]), \
+                mock.patch.object(quick, "volume", return_value=60):
+            self.assertEqual(quick.apps_sound(), [{"id": 12, "name": "Discord", "volume": 60}])
 
     def test_battery_care_stops_at_80(self):
         import tempfile
@@ -3600,6 +3614,20 @@ class Backups(unittest.TestCase):
 
 
 class ScreensForGames(unittest.TestCase):
+    def test_display_load_shares_one_snapshot_and_filters_invalid_outputs(self):
+        from unittest import mock
+        quick = quick_helper()
+        data = {"outputs": [None, {"name": "eDP-1", "enabled": True, "scale": 2, "hdr": False,
+                                   "size": {"width": 3840, "height": 2400}},
+                            {"name": "HDMI-A-1", "enabled": False, "hdr": True}]}
+        with mock.patch.object(quick, "run", return_value=json.dumps(data)) as run:
+            state = quick.display_state()
+        run.assert_called_once_with("kscreen-doctor", "-j")
+        self.assertEqual([o["name"] for o in state["sizes"]], ["eDP-1"])
+        self.assertEqual(state["sizes"][0]["scale"], 200)
+        self.assertEqual(state["features"], [{"name": "eDP-1", "hdr": False, "vrr": None}])
+        self.assertEqual(quick.everyday_search("OLED")[0]["target"], "display#color")
+
     def test_hdr_and_smoother_games_where_the_screen_can(self):
         from unittest import mock
         quick = quick_helper()
@@ -4026,7 +4054,7 @@ class TheBarStepsAside(unittest.TestCase):
         self.assertNotIn("'none'", said[0] + said[1])
         self.assertNotIn('"none"', look[look.index('aside="$CONFIG/monet/bar-steps-aside"'):])
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
-        self.assertIn('["dodge", i18n("Bar steps aside")', settings)
+        self.assertNotIn('["dodge", i18n("Bar steps aside")', settings)
 
 
 class LaptopGaming(unittest.TestCase):
@@ -4818,7 +4846,9 @@ class WindowsWearsThePainting(unittest.TestCase):
         package = (ROOT / "tools/package.sh").read_text()
         self.assertIn('cp "$ROOT/linux/share/wallpapers/Monet/contents/hours/day.jpg" "$OUT/wallpaper.jpg"', package)
         install = (ROOT / "windows/Install-Monet.ps1").read_text()
-        block = install[install.index("if ($FromMonet) {\n    # A Windows that Monet installed"):]
+        painting_block = re.search(r"if \(\$FromMonet\) \{\n[ \t]+# A Windows that Monet installed", install)
+        self.assertIsNotNone(painting_block)
+        block = install[painting_block.start():]
         self.assertIn("if (Test-Path $painting) {", block)
         self.assertIn("SystemParametersInfo(0x14, 0, $wallpaper, 3)", block)
         # A Windows kept from before gets Bridge's files only, without the painting.
@@ -7264,20 +7294,38 @@ class WindowsPrograms(unittest.TestCase):
             self.assertEqual(q.steam_proton([steam]).name, "Proton 9.0")
             (steam / "steamapps/common/Proton - Experimental").mkdir()
             (steam / "steamapps/common/Proton - Experimental/proton").write_text("#!/bin/sh")
+            (steam / "steamapps/common/Proton - Experimental/toolmanifest.vdf").touch()
             self.assertEqual(q.steam_proton([steam]).name, "Proton - Experimental")
             self.assertIsNone(q.steam_proton([Path(tmp) / "none"]))
             msi = Path(tmp) / "Tool.msi"
             msi.write_bytes(b"\xd0\xcf")
             calls = []
-            with mock.patch.object(q.subprocess, "run", lambda args, **k: calls.append((args, k["env"]))), \
+            with mock.patch.object(q.subprocess, "run", lambda args, **k: calls.append((args, k["env"])) or mock.Mock(returncode=0)), \
                     mock.patch.object(q, "steam_proton", lambda: steam / "steamapps/common/Proton - Experimental"), \
                     mock.patch.object(q, "program_menu", lambda: 0), mock.patch.object(q, "PROGRAMS_PREFIX", Path(tmp) / "prefix"), \
-                    mock.patch.object(q, "DATA_HOME", Path(tmp)), mock.patch.object(q.shutil, "which", lambda n: None):
+                    mock.patch.object(q, "DATA_HOME", Path(tmp)), \
+                    mock.patch.object(q.shutil, "which", lambda n: "/usr/bin/umu-run" if n == "umu-run" else None):
                 self.assertEqual(q.program_proton(str(msi)), 0)
             args, env = calls[0]
             self.assertEqual(args, ["umu-run", "msiexec", "/i", str(msi)])
             self.assertEqual((env["WINEPREFIX"], env["GAMEID"]), (str(Path(tmp) / "prefix"), "0"))
             self.assertTrue(env["PROTONPATH"].endswith("Proton - Experimental"))
+
+    def test_proton_failure_is_reported_without_registering_installers(self):
+        q = self.q
+        from unittest import mock
+        with tempfile_dir() as tmp:
+            path = Path(tmp) / "Tool.exe"
+            path.touch()
+            with mock.patch.object(q.subprocess, "run", return_value=mock.Mock(returncode=12)), \
+                    mock.patch.object(q, "steam_proton", return_value=None), \
+                    mock.patch.object(q, "program_notice") as notice, mock.patch.object(q, "program_menu") as menu, \
+                    mock.patch.object(q, "PROGRAMS_PREFIX", Path(tmp) / "prefix"), \
+                    mock.patch.object(q.shutil, "which", return_value="/usr/bin/umu-run"):
+                self.assertEqual(q.program_proton(str(path)), 1)
+                self.assertIn("12", notice.call_args.args[1])
+                self.assertTrue(notice.call_args.kwargs["failed"])
+                menu.assert_not_called()
 
     def test_what_an_installer_puts_in_the_start_menu_comes_into_the_app_menu(self):
         q = self.q
@@ -7396,7 +7444,7 @@ class WindowsPrograms(unittest.TestCase):
         quick = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn('if (asked[0] === "program") {\n                program.open()', quick)
         sheet = (PLASMA / "plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml").read_text(encoding="utf-8")
-        for line in ('ask("program-here", () => {})', 'ask("program-windows", (out, code, err) => {',
+        for line in ('ask("program-here", (out, code) => {', 'ask("program-windows", (out, code, err) => {',
                      'readonly property bool canWindows: info.windows === "ok"'):
             self.assertIn(line, sheet)
         bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")

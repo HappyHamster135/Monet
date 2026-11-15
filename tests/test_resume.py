@@ -151,6 +151,14 @@ class RestoreReceipt(unittest.TestCase):
         self.assertEqual(started, [])
         self.assertFalse(self.path.exists())
 
+    def test_running_background_process_does_not_replace_a_saved_window(self):
+        frame = {"app": "a.desktop", "id": "old"}
+        r.atomic_write(self.path, dict(self.state, windows=[frame]))
+        r.window_snapshot.side_effect = [[], [dict(frame, id="new")]]
+        started = []
+        self.assertEqual(self.restore(started.append, ("a.desktop", "b.desktop")), ["a.desktop"])
+        self.assertEqual(started, ["a.desktop"])
+
     def test_failed_initial_snapshot_preserves_work_and_retry_reuses_live_apps(self):
         r.window_snapshot.side_effect = OSError("compositor unavailable")
         started = []

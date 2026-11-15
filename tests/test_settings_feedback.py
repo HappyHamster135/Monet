@@ -133,6 +133,50 @@ class LookFeedback(unittest.TestCase):
             QTest.qWait(10)
         self.assertTrue(condition(), 'The asynchronous reply did not arrive')
 
+    def test_notification_audio_can_retry_adjust_volume_and_play(self):
+        self.helper.replies["notification-audio"] = '{"ok":false}'
+        self.window.setProperty("page", "sound")
+        self.wait_for(lambda: self.window.property("notificationAudio").toVariant().get("ok") is False)
+        row = next(item for item in self.window.findChildren(QObject)
+                   if item.property("title") == self.words.i18n("Preview notification sound"))
+        button = next(item for item in row.findChildren(QObject)
+                      if item.metaObject().indexOfProperty("enabledPill") >= 0)
+        slider_row = next(item for item in self.window.findChildren(QObject)
+                          if item.property("title") == self.words.i18n("Notification volume"))
+        slider = next(item for item in slider_row.findChildren(QObject)
+                      if item.metaObject().indexOfProperty("pressed") >= 0 and item.metaObject().indexOfProperty("from") >= 0)
+        self.assertFalse(slider.property("enabled"))
+        self.assertTrue(button.property("enabled"))
+        self.assertEqual(button.property("text"), self.words.i18n("Try again"))
+        self.helper.replies["notification-audio"] = '{"ok":true,"volume":35}'
+        button.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: slider.property("enabled") and slider.property("value") == 35)
+
+        self.helper.replies["notification-audio"] = '{"ok":true,"volume":36}'
+        slider.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Right)
+        self.wait_for(lambda: ["helper", "notification-audio", "36"] in self.helper.commands)
+        self.wait_for(lambda: button.property("enabled"))
+        self.assertEqual(button.property("text"), self.words.i18n("Play test"))
+        self.helper.replies["notification-audio-test"] = '{"ok":true}'
+        button.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertIn(["helper", "notification-audio-test"], self.helper.commands)
+
+    def test_restart_follows_the_staged_update_even_if_an_app_update_fails(self):
+        self.window.setProperty("page", "updates")
+        action = self.item("updateAction")
+        for reply, state, restart_ready in (
+            ({"ok": True, "staged": False}, "done", False),
+            ({"ok": False, "staged": True, "message": "App update failed"}, "failed", True),
+        ):
+            with self.subTest(reply=reply):
+                self.helper.replies["update"] = json.dumps(reply)
+                self.assertTrue(QMetaObject.invokeMethod(self.window, "installUpdates"))
+                self.wait_for(lambda: self.window.property("updateState") == state)
+                self.assertEqual(action.property("restartReady"), restart_ready)
+
     def test_security_shows_unknown_and_pending_checks_in_the_overview(self):
         state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete",
                      firewall="unavailable", selinux="enforcing", autoUpdates="on",
@@ -841,6 +885,27 @@ class LookFeedback(unittest.TestCase):
         self.assertEqual(self.helper.commands.count(["helper", "storage"]), 1)
         self.wait_for(lambda: not self.window.property("storageBusy"))
         self.assertTrue(self.window.property("storageProblem"))  # malformed worker response is retryable
+
+    def test_storage_shows_drives_and_requires_confirmation_before_resetting_gpt(self):
+        drive = dict(name="Test drive", path="/dev/fixture", size=4 * 1024**3, token="a" * 64,
+                     table="gpt", format="", mounts=[], partitions=[], gaps=[],
+                     system=False, locked=False, removable=True)
+        self.helper.replies["storage-disks"] = json.dumps(dict(ok=True, disks=[drive]))
+        self.window.setProperty("page", "storage")
+        self.wait_for(lambda: self.window.property("disksLoaded"))
+        details = self.item("diskDetails-/dev/fixture")
+        QMetaObject.invokeMethod(details, "clicked")
+        erase = self.item("diskErase-/dev/fixture")
+        QMetaObject.invokeMethod(erase, "clicked")
+        dialog = self.window.findChild(QObject, "diskChangeDialog")
+        self.assertTrue(dialog.property("visible"))
+        self.assertFalse(any(cmd[:3] == ["helper", "storage-disks", "erase"] for cmd in self.helper.commands))
+        QMetaObject.invokeMethod(dialog, "reject")
+        self.assertFalse(any(cmd[:3] == ["helper", "storage-disks", "erase"] for cmd in self.helper.commands))
+        QMetaObject.invokeMethod(erase, "clicked")
+        QMetaObject.invokeMethod(dialog, "accept")
+        self.assertTrue(any(cmd[:4] == ["helper", "storage-disks", "erase", drive["token"]]
+                            for cmd in self.helper.commands))
 
     def test_wallet_policy_waits_for_confirmation_and_does_not_poll(self):
         state = dict(enabled=True, policy="session", unlocked=True, manager=True, automaticLogin=True)

@@ -131,18 +131,8 @@ def main():
     from gi.repository import Gio, GLib
     connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     backend = DesktopBackend(connection, Gio, GLib)
-    owned = backend.call(('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus'),
-                         'RequestName', '(su)', (NAME, 4))[0]
-    if owned not in (1, 4):
-        return 1
     loop = GLib.MainLoop()
     controller = Controller(backend)
-    marker = marker_path()
-    marker.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix='awake-', dir=marker.parent)
-    with os.fdopen(fd, 'w') as output:
-        json.dump(dict(owner=connection.get_unique_name()), output)
-    os.replace(temporary, marker)
 
     def quit_later():
         loop.quit()
@@ -192,6 +182,18 @@ def main():
         'NameOwnerChanged', '/org/freedesktop/DBus', None, Gio.DBusSignalFlags.NONE, owner_changed)
     for signum in (signal.SIGINT, signal.SIGTERM):
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signum, quit_later)
+
+    # D-Bus can forward a waiting SetDuration request as soon as the name is owned.
+    owned = backend.call(('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus'),
+                         'RequestName', '(su)', (NAME, 4))[0]
+    if owned not in (1, 4):
+        return 1
+    marker = marker_path()
+    marker.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='awake-', dir=marker.parent)
+    with os.fdopen(fd, 'w') as output:
+        json.dump(dict(owner=connection.get_unique_name()), output)
+    os.replace(temporary, marker)
     try:
         loop.run()
     finally:

@@ -123,8 +123,15 @@ def lsblk(*args):
 
 def root_disk():
     """The disk Monet is installed on."""
-    source = subprocess.run(["findmnt", "-no", "SOURCE", "/"], capture_output=True, text=True).stdout.strip()
-    source = re.sub(r"\[.*\]$", "", source)
+    source = ""
+    # A bootc deployment can mount ComposeFS at / while the installed block
+    # device is mounted at /sysroot. Prefer the live mount to a global label.
+    for mountpoint in ("/", "/sysroot"):
+        value = subprocess.run(["findmnt", "-no", "SOURCE", "--mountpoint", mountpoint],
+                               capture_output=True, text=True).stdout.strip()
+        if value.startswith("/dev/"):
+            source = re.sub(r"\[.*\]$", "", value)
+            break
     if not source.startswith("/dev/"):
         # Inside the installer, / may not show up as a mount; the installer
         # labels Monet's file system "monet".
@@ -851,24 +858,33 @@ def write_setup_handoff(setup_dir, identities):
         if embedded != data:
             raise Stop("failed", "the Windows boot image did not preserve its installation record")
         # Root-owned Linux receipt is published last; a torn staging attempt is never booted.
-        save_state("windows-staging.json", dict(version=1, job=job,
+        save_state("windows-staging.json", dict(version=1, handoff=1, job=job,
                    manifest_sha256=hashlib.sha256(data.encode()).hexdigest(), boot_sha256=file_digest(boot)))
 
 
-def resume_staged_setup(disk):
-    """Resume the same immutable payload; never erase/re-stage an in-progress installation."""
+def read_staging():
     receipt = STATE / "windows-staging.json"
     if not receipt.exists():
         return None
     if receipt.stat().st_size > 1024 * 1024:
         raise Stop("failed", "the saved Windows staging record is too large")
-    saved = json.loads(receipt.read_text())
-    identities = deployment_manifest(disk)
-    job = saved.get("job", {})
-    if saved.get("version") != 1 or job.get("partitions") != identities:
+    return json.loads(receipt.read_text())
+
+
+def staged_volumes(disk, saved):
+    if saved.get("version") != 1 or saved.get("job", {}).get("partitions") != deployment_manifest(disk):
         raise Stop("failed", "the staged Windows installation no longer matches this disk")
     plan = json.loads((STATE / "windows-partitions.json").read_text())
-    win, setup = mapped_partitions(disk, plan)
+    return mapped_partitions(disk, plan)
+
+
+def resume_staged_setup(disk):
+    """Resume the same immutable payload; never erase/re-stage an in-progress installation."""
+    saved = read_staging()
+    if saved is None:
+        return None
+    win, setup = staged_volumes(disk, saved)
+    job = saved["job"]
     mount = MOUNT / "setup-resume"
     mount.mkdir(parents=True, exist_ok=True)
     run("mount", "-o", "ro", setup["path"], mount)
@@ -890,7 +906,11 @@ def resume_staged_setup(disk):
                 raise Stop("failed", "a staged Windows installation file changed; refusing to resume it")
     finally:
         run("umount", mount)
-    listing = subprocess.run(["ntfsls", "-a", "-p", "/", win["path"]], capture_output=True, text=True, timeout=30)
+    return setup["partn"], staged_phase(win["path"], saved)
+
+
+def staged_phase(device, saved):
+    listing = subprocess.run(["ntfsls", "-a", "-p", "/", device], capture_output=True, text=True, timeout=30)
     if listing.returncode:
         raise Stop("failed", "the prepared Windows filesystem could not be inspected")
     names = {n.strip().lower() for n in listing.stdout.splitlines()} - {"", ".", ".."}
@@ -902,23 +922,45 @@ def resume_staged_setup(disk):
             resource.setrlimit(resource.RLIMIT_FSIZE, (4097, 4097))
             resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
         with tempfile.TemporaryFile() as output:
-            out = subprocess.run(["ntfscat", win["path"], "/.monet-setup.json"], stdout=output,
+            out = subprocess.run(["ntfscat", device, "/.monet-setup.json"], stdout=output,
                                  stderr=subprocess.PIPE, timeout=30, preexec_fn=limit_record)
             output.seek(0)
             data = output.read(4097)
         if out.returncode or len(data) > 4096:
             raise Stop("failed", "the Windows installation checkpoint could not be read")
         checkpoint = json.loads(data)
-        if (checkpoint.get("version") != 1 or checkpoint.get("job_id") != job["id"]
+        if (checkpoint.get("version") != 1 or checkpoint.get("job_id") != saved["job"]["id"]
                 or checkpoint.get("manifest_sha256") != saved["manifest_sha256"]
                 or checkpoint.get("phase") not in ("applying", "applied", "complete")):
             raise Stop("failed", "the Windows installation checkpoint belongs to another preparation")
         phase = checkpoint["phase"]
     elif names - {"system volume information", "$recycle.bin", ".monet-setup.next"}:
         raise Stop("failed", "the Windows target contains unrecorded files; refusing to resume it")
-    if phase == "complete" and not has_windows(win["path"]):
+    if phase == "complete" and not has_windows(device):
         raise Stop("failed", "the completed Windows installation is missing its boot loader")
-    return setup["partn"], phase
+    return phase
+
+
+def continue_completed_setup(monet):
+    """Start a newly deployed Windows once, before anyone signs in to Monet."""
+    if not STATUS.is_file() or STATUS.read_text().strip() != "pending" or PROGRESS.exists():
+        return
+    saved = read_staging()
+    if not saved or saved.get("handoff") != 1:
+        return
+    job = saved["job"]
+    attempt = STATE / "windows-first-start.json"
+    if attempt.exists() and json.loads(attempt.read_text()).get("job_id") == job["id"]:
+        return
+    disk = root_disk()
+    win, _ = staged_volumes(disk, saved)
+    if staged_phase(win["path"], saved) != "complete":
+        return
+    # The checkpoint is bound to this seal and these partitions. The setup media is
+    # no longer involved, so don't reread its multi-gigabyte images at boot.
+    save_state(attempt.name, {"job_id": job["id"]})
+    set_status("staged")
+    run(monet, "helper", "start-windows-setup", job["partitions"]["efi"]["guid"], windows_zone(), timeout=45)
 
 
 @contextmanager
@@ -987,9 +1029,11 @@ def stage(media, setup_dev, ui_lang, locale, keyboard, timezone, identities):
         progress(76, "Copying Windows Setup")
         for item in setup_dir.iterdir():
             shutil.rmtree(item) if item.is_dir() else item.unlink()
-        skip = {"install.wim", "install.esd", "install.swm"}
+        # WinPE starts Monet from the RAM image. Keep the signed boot files and
+        # boot.wim, then add the split Windows image. Stock Setup's language
+        # packs and other files under sources take space needed for drivers.
         shutil.copytree(iso_dir, setup_dir, dirs_exist_ok=True, symlinks=True, copy_function=shutil.copyfile,
-                        ignore=lambda d, names: [n for n in names if n.lower() in skip])
+                        ignore=lambda d, names: set(names) - {"boot.wim"} if Path(d) == iso_dir / "sources" else ())
         progress(85, "Preparing Windows Setup")
         run("wimlib-imagex", "split", single, setup_dir / "sources" / "install.swm", "3800", capture=True)
 
@@ -1003,6 +1047,16 @@ def stage(media, setup_dev, ui_lang, locale, keyboard, timezone, identities):
         }
         (monet / "unattend.xml").write_text(fill((winpe / "unattend.xml").read_text(), values))
         shutil.copytree(SHARE / "windows", monet / "bridge", dirs_exist_ok=True, copy_function=shutil.copyfile)
+        dmi = Path("/sys/class/dmi/id")
+        driver_pack = SHARE / "windows-drivers/lenovo-21hl"
+        try:
+            vendor = (dmi / "sys_vendor").read_text().strip()
+            model = (dmi / "product_name").read_text().strip()
+        except OSError:
+            vendor, model = "", ""
+        if vendor.upper() == "LENOVO" and model[:4].upper() in {"21HK", "21HL"} and driver_pack.is_dir():
+            shutil.copytree(driver_pack, monet / "bridge/hardware")
+            log("included the verified ThinkPad P16s Gen 2 offline drivers")
         profiles = wifi_profiles()
         if profiles:
             (monet / "bridge" / "wifi").mkdir(exist_ok=True)
@@ -1047,6 +1101,7 @@ def prepare_main():
     parser.add_argument("--iso", type=Path)
     parser.add_argument("--windows-zone", action="store_true")
     recovery = parser.add_mutually_exclusive_group()
+    recovery.add_argument("--continue-setup", metavar="MONET", help=argparse.SUPPRESS)
     recovery.add_argument("--inspect-recovery", type=Path, metavar="PLAN", help="check a reviewed legacy partition plan without changing storage")
     recovery.add_argument("--recover-plan", type=Path, metavar="PLAN", help="adopt verified unformatted legacy partitions and prepare Windows")
     args = parser.parse_args()
@@ -1059,8 +1114,18 @@ def prepare_main():
         print("monet-prepare-windows needs to run as root.", file=sys.stderr)
         return 1
     if not Path("/sys/firmware/efi").is_dir():
+        if args.continue_setup:
+            return 0
         print("This PC didn't start in UEFI mode.", file=sys.stderr)
         return 1
+
+    if args.continue_setup:
+        try:
+            continue_completed_setup(args.continue_setup)
+            return 0
+        except (Stop, OSError, ValueError, TypeError, KeyError, subprocess.TimeoutExpired) as error:
+            log(f"Automatic Windows continuation stopped: {error}")
+            return 2
 
     if args.inspect_recovery:
         try:
@@ -1070,11 +1135,15 @@ def prepare_main():
             print(f"Recovery inspection stopped: {error}", file=sys.stderr)
             return 2
 
-    set_status("preparing")
-    progress(0, "Getting Windows ready")
     downloaded = False
     media_checked = False
     try:
+        try:
+            was_pending = STATUS.read_text().strip() == "pending"
+        except FileNotFoundError:
+            was_pending = False
+        set_status("preparing")
+        progress(0, "Getting Windows ready")
         disk = root_disk()
         require_setup_payload()
         recovery_plan = json.loads(args.recover_plan.read_text()) if args.recover_plan else None
@@ -1091,6 +1160,8 @@ def prepare_main():
             set_status("pending")
             progress(100, "Windows setup continues at the next restart")
             return 0
+        if was_pending:
+            raise Stop("failed", "the prepared Windows installation could not be found")
         check_work_dir()
         ms_lang, ui, locale, keyboard, timezone = region()
 
@@ -1098,7 +1169,18 @@ def prepare_main():
             if shutil.disk_usage(WORK).free < 16 * 1024**3:
                 raise Stop("no-space", "there isn't enough free space to download Windows")
             progress(4, "Asking Microsoft for Windows 11")
-            url, got = windows_download_link(ms_lang)
+            try:
+                url, got = windows_download_link(ms_lang)
+            except urllib.error.HTTPError as error:
+                error.close()
+                if error.code in (403, 429):
+                    raise Stop("download-failed", "Microsoft's download service refused the request") from error
+                log(f"Microsoft download link request returned HTTP {error.code}")
+                raise Stop("download-failed", "Microsoft's download service couldn't respond") from error
+            except (OSError, HTTPException) as error:
+                raise Stop("download-failed", "Monet couldn't connect to Microsoft's download service") from error
+            except (ValueError, TypeError, KeyError, AttributeError) as error:
+                raise Stop("download-failed", "Microsoft's download service returned an unexpected response") from error
             if got.lower() != ms_lang.lower():
                 ui = "en-US"
             iso = WORK / "windows.iso"

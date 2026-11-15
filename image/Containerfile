@@ -11,7 +11,7 @@ ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
 
 FROM docker.io/library/rust:1 AS build
 RUN apt-get update \
- && apt-get install -y --no-install-recommends mingw-w64 cmake qt6-base-dev python3 \
+ && apt-get install -y --no-install-recommends mingw-w64 cmake qt6-base-dev python3 innoextract ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
@@ -19,9 +19,12 @@ RUN rustup toolchain install \
  && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu \
  && cargo build --release -p monet --target x86_64-unknown-linux-musl \
  && cargo build --release -p monet-bridge -p monet-setup-check --target x86_64-pc-windows-gnu \
- && tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out \
+ && MONET_PACKAGE_FOR_IMAGE=1 tools/package.sh linux target/x86_64-unknown-linux-musl/release/monet /out \
         target/x86_64-pc-windows-gnu/release/monet-bridge.exe \
-        target/x86_64-pc-windows-gnu/release/monet-setup-check.exe
+        target/x86_64-pc-windows-gnu/release/monet-setup-check.exe \
+ && python3 tools/prepare-windows-repair.py --drivers-only --output /out/share/monet/windows-drivers/lenovo-21hl \
+        --innoextract /usr/bin/innoextract --cache /tmp/monet-driver-downloads \
+ && rm -rf /tmp/monet-driver-downloads
 
 # Monet's password prompt: KDE's polkit agent built with Monet's page, against
 # the same Plasma as below. If it can't be built, the image keeps KDE's prompt.
@@ -43,10 +46,10 @@ FROM ${BASE} AS runtime
 # Carlito and Caladea are as wide as Calibri and Cambria, so Word and PowerPoint files keep their
 # lines and pages in the office apps (the image has Liberation for Arial, Times and Courier).
 # rclone puts OneDrive in Files (Settings → Storage → OneDrive).
-RUN dnf5 -y install wimlib-utils ntfsprogs ntfs-3g dosfstools efibootmgr python3 python3-numpy python3-pillow rsync \
+RUN dnf5 -y install wimlib-utils ntfsprogs ntfs-3g dosfstools exfatprogs e2fsprogs udisks2 efibootmgr python3 python3-numpy python3-pillow rsync \
     python3-pyside6 python3-pynacl python3-dbus python3-gobject at-spi2-core lz4-libs binutils \
-    cryptsetup tpm2-tss rclone procps-ng \
- && dnf5 -y install --skip-unavailable kvantum rsms-inter-fonts plymouth-plugin-script umu-launcher \
+    cryptsetup tpm2-tss rclone procps-ng kvantum \
+ && dnf5 -y install --skip-unavailable rsms-inter-fonts plymouth-plugin-script umu-launcher \
     google-carlito-fonts google-crosextra-caladea-fonts \
  && dnf5 clean all
 # The everyday apps, built in rather than downloaded: Photos, Documents, Video,
@@ -131,6 +134,7 @@ COPY LICENSE /src/window-identity/LICENSE
 RUN sh /src/window-identity/build.sh /out
 
 FROM runtime
+RUN dnf5 -y install python3-pulsectl libcanberra-gtk3 && dnf5 clean all
 # Keep common contractions and multi-error typos ahead of unrelated words in
 # native spelling menus. Apps with their own dictionaries remain app-managed.
 RUN dnf5 -y install hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \

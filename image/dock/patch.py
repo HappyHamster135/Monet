@@ -29,7 +29,79 @@ def apply(source):
     replace(context, 'i18nc("action:inmenu", "Unpin from Task Manager")',
             'i18nd("monet", "Unpin from Home Bar")')
     replace(context, 'text: configureAction ? configureAction.text : ""',
-            'text: configureAction ? i18nd("monet", "Configure Home Bar…") : ""')
+            'text: configureAction ? i18nd("monet", "App behavior…") : ""')
+    prepend(context, '    PlasmaExtras.MenuItem {\n        property PlasmaCore.Action configureAction:', '''    PlasmaExtras.MenuItem {
+        text: i18nd("monet", "Task Manager")
+        icon: "utilities-system-monitor"
+        onClicked: backend.openMonetTaskManager()
+    }
+
+''')
+    backend = applet/'backend.cpp'
+    prepend(backend, 'void Backend::setActionGroup(QAction *action) const', '''void Backend::openMonetTaskManager() const
+{
+    const auto service = KService::serviceByStorageId(QStringLiteral("org.kde.plasma-systemmonitor.desktop"));
+    if (!service) {
+        return;
+    }
+    auto *job = new KIO::ApplicationLauncherJob(service);
+    auto *delegate = new KNotificationJobUiDelegate;
+    delegate->setAutoErrorHandlingEnabled(true);
+    job->setUiDelegate(delegate);
+    job->start();
+}
+
+''')
+    prepend(applet/'backend.h', '    Q_INVOKABLE QRect globalRect',
+            '    Q_INVOKABLE void openMonetTaskManager() const;\n')
+    prepend(applet/'qml/main.qml', '    // For making a bottom to top layout', '''    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            id: taskManagerAction
+            text: i18nd("monet", "Task Manager")
+            icon.name: "utilities-system-monitor"
+            onTriggered: backend.openMonetTaskManager()
+        }
+    ]
+    Plasmoid.onContextualActionsAboutToShow: {
+        taskManagerAction.visible = !Plasmoid.containment?.internalAction("monet-task-manager")
+    }
+
+''')
+    prepend(backend, '#include <QAction>\n',
+            '#include <QCache>\n#include <QIcon>\n#include <QPainter>\n#include <QRegularExpression>\n')
+    prepend(backend, 'QVector<Backend *> Backend::s_instances;',
+            '#include "MonetTaskIcon.inc"\n\n')
+    prepend(applet/'backend.h', '    Q_INVOKABLE QRect globalRect',
+            '    Q_INVOKABLE QIcon monetTaskIcon(const QString &appId, const QIcon &decoration) const;\n\n')
+    prepend(applet/'backend.h', '#include <QObject>\n', '#include <QIcon>\n')
+    (applet/'MonetTaskIcon.inc').write_bytes(Path(__file__).with_name('MonetTaskIcon.inc').read_bytes())
+    replace(applet/'qml/Task.qml', 'source: task.model.decoration',
+            'source: task.monetIcon')
+    replace(applet/'qml/Task.qml', 'mainItem.icon = Qt.binding(() => model.decoration);',
+            'mainItem.icon = Qt.binding(() => task.monetIcon);')
+    prepend(applet/'qml/Task.qml', '    readonly property bool isIcon:',
+            '    readonly property var monetIcon: backend.monetTaskIcon(appId, model.decoration)\n')
+    # Icon alignment is independent of the panel's alignment on the screen.
+    prepend(applet/'main.xml', '    <entry name="iconSpacing" type="Int">', '''    <entry name="monetIconAlignment" type="String">
+      <label>Place the app icons at the start or center of their available space.</label>
+      <default>start</default>
+    </entry>
+''')
+    replace(applet/'qml/main.qml', '''            anchors {
+                left: parent.left
+                top: parent.top
+            }
+
+            height: taskList.height''', '''            anchors {
+                left: !tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? undefined : parent.left
+                top: tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? undefined : parent.top
+                horizontalCenter: !tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? parent.horizontalCenter : undefined
+                verticalCenter: tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? parent.verticalCenter : undefined
+            }
+
+            height: taskList.height''')
+    replace(context, 'text: editModeAction ? editModeAction.text : ""',
+            'text: editModeAction ? i18nd("monet", "Customize Home Bar…") : ""')
     replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml')
     # Standalone build keeps the upstream generated settings in their original folder.
     replace(applet/'CMakeLists.txt','${CMAKE_SOURCE_DIR}/kcms/recentFiles/', '${UPSTREAM_SOURCE}/kcms/recentFiles/')

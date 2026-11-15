@@ -1,0 +1,1 @@
+pulsectl==24.12.0 --hash=sha256:13a60be940594f03ead3245b3dfe3aff4a3f9a792af347674bde5e716d4f76d2

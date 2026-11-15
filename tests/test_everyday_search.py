@@ -400,6 +400,7 @@ Window {
         property var everydayResults: []
         property string everydaySource: ""
         property string everydayQuery: ""
+        property string everydayRunningQuery: ""
         property bool everydayPending: false
         property string everydayError: ""
         property string openingResult: ""
@@ -512,6 +513,47 @@ Window {
             QTest.qWait(10)
         self.fail("Search request did not start for " + text)
 
+    def test_downloaded_exe_without_index_entry_opens_through_the_file_handler(self):
+        source = self.query("chatgpt")
+        self.assertIn(" menu-search ", source)
+        token = "/tmp/Downloads/ChatGPT Setup.exe".encode().hex()
+        entry = dict(id="download-" + token, name="ChatGPT Setup.exe", detail="Windows installer · Downloads", icon="application-x-executable")
+        self.deliver(source, [entry])
+        row = self.item("menuSearchResult-" + entry['id'])
+        row.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(30)
+        self.assertTrue(self.root.property("openingResult").endswith(" download-open " + token))
+
+    def test_installed_app_fallback_opens_before_native_runner_finds_it(self):
+        quick = quick_helper()
+        desktop = "chatgpt.desktop"
+        with patch.object(quick, "menu_entries", return_value=[(desktop, {"Type": "Application", "Name": "ChatGPT"})]):
+            matches = quick.installed_app_matches("chat gpt")
+        token = desktop.encode().hex()
+        self.assertEqual([item["id"] for item in matches], ["app-" + token])
+        self.deliver(self.query("chatgpt"), matches)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertTrue(self.root.property("openingResult").endswith(" menu-app-open " + token))
+        self.assertEqual(self.root.property("launched"), "")
+
+    def test_unpacked_application_is_the_first_result_ahead_of_documents(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = Path(folder) / "chatgpt.x86_64/usr/lib/chatgpt/ChatGPT"
+            app.parent.mkdir(parents=True)
+            app.write_bytes(b"\x7fELFfixture")
+            app.chmod(0o700)
+            found = quick_helper().downloaded_apps("chatgpt", roots=[Path(folder)])
+        self.assertEqual([row["name"] for row in found], ["ChatGPT"])
+        source = self.query("chatgpt")
+        self.deliver(source, found)
+        row = self.item("menuSearchResult-" + found[0]["id"])
+        y = row.mapToItem(self.results, 0, 0).y()
+        self.assertGreaterEqual(y, 0)
+        self.assertLessEqual(y + row.height(), self.results.height())
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertTrue(self.root.property("openingResult").endswith(" download-open " + found[0]["id"][9:]))
+        self.assertEqual(self.root.property("launched"), "")
+
     def test_delayed_suggestions_are_visible_without_moving_keyboard_focus(self):
         for query in ("headphones", "birthday", "headphones"):
             source = self.query(query)
@@ -553,8 +595,13 @@ Window {
     def test_enter_waits_for_suggestions_and_stale_responses_cannot_launch(self):
         old = self.query("birthday")
         QTest.keyClick(self.window, Qt.Key_Return)
-        new = self.query("headphones")
+        self.query("headphones")
+        self.assertEqual(self.root.property("everydaySource"), old)
+        QTest.qWait(180)
+        self.assertEqual(self.root.property("everydaySource"), old)
         self.deliver(old, quick_helper().everyday_search("birthday"))
+        new = self.query("headphones")
+        self.assertTrue(new.endswith("headphones".encode().hex()))
         self.assertEqual(self.root.property("everydayResults").toVariant(), [])
         self.assertEqual(self.root.property("openingResult"), "")
         QTest.keyClick(self.window, Qt.Key_Return)
@@ -671,9 +718,11 @@ Window {
         self.finder.setProperty("querying", True)
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertEqual(self.root.property("launched"), "")
-        self.query("different")
+        self.search.setProperty("text", "different")
+        QTest.qWait(180)
         self.finder.setProperty("querying", False)
         self.finder.queryFinished.emit()
+        QTest.qWait(30)
         self.assertEqual(self.root.property("launched"), "")
         self.finder.setProperty("querying", True)
         QTest.keyClick(self.window, Qt.Key_Return)

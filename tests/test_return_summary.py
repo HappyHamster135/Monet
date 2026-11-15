@@ -252,7 +252,10 @@ class ReturnUI(unittest.TestCase):
             context.setContextProperty(name, value)
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects(), self.errors)
-        self.window = self.engine.rootObjects()[0]; QTest.qWait(120)
+        self.window = self.engine.rootObjects()[0]
+        self.wait_for(lambda: not self.window.property("pendingAnchor")
+                      and not self.window.property("returnLoading")
+                      and self.window.property("returnInfo").toVariant()["available"])
 
     def tearDown(self):
         self.window.close(); self.engine.deleteLater(); QTest.qWait(10); self.assertEqual(self.errors, [])
@@ -290,11 +293,13 @@ class ReturnUI(unittest.TestCase):
         self.assertTrue(self.item("returnDismiss").hasActiveFocus())
 
     def test_failed_action_remains_visible_across_successful_refresh_and_can_be_retried(self):
-        self.helper.fail = True; self.press("returnRetryAll"); QTest.qWait(100)
+        self.helper.fail = True; self.press("returnRetryAll")
+        self.wait_for(lambda: self.window.property("returnProblem"))
+        QMetaObject.invokeMethod(self.window, "loadReturn")
+        self.wait_for(lambda: not self.window.property("returnLoading"))
         self.assertTrue(self.window.property("returnProblem"))
-        QMetaObject.invokeMethod(self.window, "loadReturn"); QTest.qWait(50)
-        self.assertTrue(self.window.property("returnProblem"))
-        self.helper.fail = False; self.press("returnRetryAll"); QTest.qWait(100)
+        self.helper.fail = False; self.press("returnRetryAll")
+        self.wait_for(lambda: len(self.helper.actions) == 2 and not self.window.property("returnBusy"))
         self.assertFalse(self.window.property("returnProblem")); self.assertEqual(len(self.helper.actions), 2)
 
     def test_late_refresh_cannot_resurrect_a_dismissed_list_and_focus_is_retained(self):

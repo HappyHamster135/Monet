@@ -39,21 +39,17 @@ try {
     $failures = @()
     $rebootNeeded = $false
     Write-Host 'Repairing Windows drivers. Internet is not needed for this step.'
-    foreach ($driver in $manifest.drivers) {
-        Write-Host "  $($driver.name)"
-        foreach ($inf in $driver.infs) {
-            $path = Resolve-MonetBundleFile $PSScriptRoot $inf
-            # Deliberately omit /reboot. Windows keeps signature enforcement and
-            # device matching enabled; no generic driver updater is involved.
-            & "$env:SystemRoot\System32\pnputil.exe" /add-driver $path /install
-            $result = $LASTEXITCODE
-            $results += [pscustomobject]@{ inf = $inf; exit_code = $result }
-            if ($result -eq 3010) { $rebootNeeded = $true }
-            elseif ($result -ne 0) { $failures += "Driver installation returned $result for $inf" }
-        }
+    $results = @(Install-MonetOfflineDrivers $PSScriptRoot $manifest)
+    foreach ($result in $results) {
+        if ($result.exit_code -eq 3010) { $rebootNeeded = $true }
+        elseif ($result.exit_code -notin @(0, 259)) { $failures += "Driver installation returned $($result.exit_code) for $($result.inf)" }
     }
     & "$env:SystemRoot\System32\pnputil.exe" /scan-devices
     if ($LASTEXITCODE -ne 0) { $failures += 'Windows could not complete a hardware rescan.' }
+
+    # A full shutdown lets Monet read Bluetooth's committed pairing database.
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' `
+        -Name HiberbootEnabled -Value 0 -Type DWord
 
     $wifi = Import-MonetWifi -Source (Join-Path $data 'wifi') -Pending (Join-Path $data 'wifi')
     if ($wifi.Pending -gt 0) { Write-Warning 'Wi-Fi profiles are saved for retry after a restart.' }

@@ -53,6 +53,7 @@ fi
 
 systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service \
+    /etc/systemd/system/monet-windows-continue.service \
     /etc/systemd/system/monet-update.service /etc/systemd/system/monet-update.timer \
     /etc/systemd/system/monet-apps.service /etc/systemd/system/monet-apps.timer \
     /etc/systemd/system/monet-crash@.service /etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service \
@@ -113,6 +114,9 @@ rm -f /etc/polkit-1/rules.d/49-monet.rules /etc/xdg/autostart/monet-session.desk
     /etc/udev/rules.d/90-monet-system.rules
 rm -rf "$PREFIX"/share/locale/*@monet
 rm -rf "$PREFIX/lib/monet/qt"
+if [ -f "$PREFIX/share/doc/monet/pulsectl/COPYING" ]; then
+    rm -rf "$PREFIX/libexec/pulsectl" "$PREFIX/share/doc/monet/pulsectl"
+fi
 # More settings' pages Monet hid for everyone come back (KDE's own locked lines stay as they were).
 if [ -f "$PREFIX/share/monet/hidden-settings-pages" ] && [ -f /etc/xdg/kdeglobals ]; then
     for kcm in $(grep -v '^#' "$PREFIX/share/monet/hidden-settings-pages"); do
@@ -183,6 +187,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/aurorae/themes/MonetSmoke" "$PREFIX/share/aurorae/themes/MonetSmokeSolid" \
     "$PREFIX/share/aurorae/themes/MonetMatte" "$PREFIX/share/aurorae/themes/MonetSmokeMatte" \
     "$PREFIX/share/kwin/scripts/monet-snap" "$PREFIX/share/kwin/effects/monet-motion" \
+    "$PREFIX/share/kwin/tabbox/monet-windows" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
     "$PREFIX/share/doc/monet/passwords-connector" \
     /var/lib/monet
@@ -196,3 +201,7 @@ rm -rf "$PREFIX/share/monet/monet_runtime"
 # Sign-in brightness belongs to the separate system greeter account.
 systemctl disable monet-login-brightness.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-login-brightness.service /etc/systemd/user/monet-login-power.service /etc/systemd/user/plasma-login-wayland.target.d/monet-brightness.conf
+rm -f /etc/systemd/user/plasma-powerdevil.service.d/monet-login.conf
+
+# Remove the shell-only style override; no personal style setting was changed.
+rm -f /etc/systemd/user/plasma-plasmashell.service.d/monet-style.conf

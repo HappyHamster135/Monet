@@ -1,9 +1,9 @@
 //! The Monet cover: Monet's painting over Windows while Windows is only the way to a game,
 //! so a trip there looks like Monet, not like Windows' desktop.
 //!
-//! A full-screen window that never takes the focus and stays off the taskbar: a launcher
-//! (asking to sign in, say) and the game open over it, and when the game closes it's what's
-//! there. Its scenes: a game starting, the way back (counting down), signing in to the
+//! A full-screen window that stays off the taskbar. A launcher and the game can open over
+//! it. The return countdown can take focus so its buttons and keyboard shortcuts work.
+//! Its scenes: a game starting, the way back (counting down), signing in to the
 //! launchers once, and updating games before the PC switches off. Painted off-screen with
 //! GDI+ (the painting, the mark, rounded shapes) and GDI (the words: GDI finds a font for
 //! every script Windows has, and lays out right-to-left languages), then copied in one go.
@@ -30,9 +30,9 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_RETURN};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW, GetSystemMetrics,
     GetWindowLongPtrW, LoadCursorW, PostMessageW, PostQuitMessage, RegisterClassW, SetCursor,
-    SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, GWLP_USERDATA, HWND_BOTTOM,
-    HWND_NOTOPMOST, HWND_TOPMOST, IDC_ARROW, IDC_HAND, MA_NOACTIVATE, MSG, SM_CXSCREEN, SM_CYSCREEN, SWP_NOACTIVATE,
-    SWP_NOMOVE, SWP_NOSIZE,
+    SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, GWLP_USERDATA, GWL_EXSTYLE,
+    HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOPMOST, IDC_ARROW, IDC_HAND, MA_NOACTIVATE, MSG, SM_CXSCREEN, SM_CYSCREEN,
+    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
     SW_SHOWNOACTIVATE, WM_APP, WM_CLOSE, WM_DESTROY, WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE,
     WM_PAINT, WM_SETCURSOR, WNDCLASSW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
 };
@@ -685,15 +685,22 @@ unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
         }
         WM_ERASEBKGND => 1,
         SCENE_CHANGED => {
-            // The way back comes to the front (and takes the keyboard); a held cover stays in
-            // front without the keyboard; the rest stays under whatever opens next.
-            if front() {
-                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            let returning = front();
+            let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            let no_activate = WS_EX_NOACTIVATE as isize;
+            let wanted = if returning { style & !no_activate } else { style | no_activate };
+            let mut flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+            if style != wanted {
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, wanted);
+                flags |= SWP_FRAMECHANGED;
+            }
+            let topmost = returning || shared.held.load(Ordering::SeqCst);
+            let order = if topmost { HWND_TOPMOST } else { HWND_NOTOPMOST };
+            // Raise the cover independently of the foreground request. Windows can decline
+            // focus when another app is active. A countdown can also receive focus by click.
+            SetWindowPos(hwnd, order, 0, 0, 0, 0, flags);
+            if returning && style != wanted {
                 SetForegroundWindow(hwnd);
-            } else if shared.held.load(Ordering::SeqCst) {
-                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-            } else {
-                SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             }
             InvalidateRect(hwnd, null(), 0);
             0

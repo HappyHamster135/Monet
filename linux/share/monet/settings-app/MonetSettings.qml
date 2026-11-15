@@ -74,6 +74,7 @@ Shared.MonetWindow {
     readonly property var statusPages: ["light", "wifi", "bluetooth", "display", "sound", "power"]
     readonly property bool statusPage: statusPages.includes(page)
     onPollingActiveChanged: { if (pollingActive) { refresh(); if (page === "power") loadKeepAwake() } }
+    onActiveChanged: if (active && page === "display") scheduleLoad()
     // Also acknowledge changes made in another display settings window.
     Screen.onDevicePixelRatioChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()
     // Wayland's screen DPR is rounded to an integer; fractional changes also
@@ -83,10 +84,14 @@ Shared.MonetWindow {
     Timer {
         id: displayChanged
         interval: 300
-        onTriggered: if (!sheet.scaleBusy) sheet.ask("display-sizes", out => {
-            const sizes = sheet.json(out, [])
-            sheet.displaySizes = Array.isArray(sizes) ? sizes : []
-        })
+        onTriggered: {
+            if (sheet.scaleBusy) return
+            if (sheet.page === "display") sheet.loadDisplay()
+            else if (sheet.page === "accessibility") sheet.ask("display-sizes", out => {
+                const sizes = sheet.json(out, [])
+                sheet.displaySizes = Array.isArray(sizes) ? sizes : []
+            })
+        }
     }
 
     Timer {
@@ -299,6 +304,9 @@ Shared.MonetWindow {
     // The apps playing sound, each with its own volume.
     property var appsSound: []
     property bool appsSoundLoading: false
+    property var notificationAudio: ({})
+    property string notificationAudioProblem: ""
+    property bool notificationAudioSaving: false
     // Battery care: whether the battery can stop at 80%, and where it stops.
     property var batteryCare: ({})
     property var keepAwakeInfo: ({ active: false, duration: 0, end: 0, remaining: 0, error: "" })
@@ -358,6 +366,11 @@ Shared.MonetWindow {
     property var browserInfo: ({})
     property var storageInfo: ({})
     property bool storageBusy: false
+    property var disks: []
+    property bool disksLoading: false
+    property bool diskBusy: false
+    property bool disksLoaded: false
+    property string diskProblem: ""
     property var retained: []
     property var retainedReview: null
     property bool retainedBusy: false
@@ -508,6 +521,29 @@ Shared.MonetWindow {
     property string busyDevice: ""
     // Windows: the game (or {} for Windows itself) waiting for a yes.
     property var asking: null
+    property var windowsSetup: ({})
+    property bool windowsSetupStarting: false
+    property string windowsSetupProblem: ""
+    property url windowsIso: ""
+
+    function refreshWindowsSetup() {
+        ask("windows-setup-status", (out, code) => {
+            if (code === 0) sheet.windowsSetup = sheet.json(out, sheet.windowsSetup)
+        })
+    }
+
+    function startWindowsSetup(iso, retry) {
+        windowsSetupStarting = true
+        windowsSetupProblem = ""
+        const argument = iso ? " " + hex(String(iso)) : (retry ? " --retry" : "")
+        ask("windows-setup-start" + argument, (out, code) => {
+            if (code !== 0) sheet.windowsSetupProblem = sheet.json(out, {}).message
+                || i18n("Windows setup couldn't start. Wait for any current setup to finish, then try again.")
+            else if (iso) sheet.windowsIso = ""
+            sheet.refreshWindowsSetup()
+            sheet.windowsSetupStarting = false
+        })
+    }
     // When Windows games were last updated (an update trip), as Unix time; 0 if never.
     property real gamesUpdated: 0
     property bool switching: false
@@ -580,11 +616,15 @@ Shared.MonetWindow {
         repeat: true
         triggeredOnStart: true
         running: sheet.pollingActive && sheet.page === "windows"
-        onTriggered: sheet.loadReturn()
+        onTriggered: {
+            sheet.loadReturn()
+            sheet.refreshWindowsSetup()
+        }
     }
     // Updates: "", "checking", "none", "available", "installing", "done" or
     // "failed"; what the check found; and what Monet said.
     property string updateState: ""
+    property bool updateStaged: false
     property var updateFound: ({})
     property string updateMessage: ""
     property var updateHistory: ({ ok: false, items: [], state: "unknown" })
@@ -711,6 +751,15 @@ Shared.MonetWindow {
         })
     }
 
+    function loadDisplay() {
+        ask("display-state", out => {
+            if (sheet.page !== "display") return
+            const state = sheet.json(out, {}) || {}
+            sheet.screenInfo = Array.isArray(state.features) ? state.features : []
+            sheet.displaySizes = Array.isArray(state.sizes) ? state.sizes : []
+        })
+    }
+
     function load() {
         refresh()
         if (page === "light") {
@@ -768,15 +817,9 @@ Shared.MonetWindow {
             })
             ask("windows-browsers", out => sheet.browserInfo = sheet.json(out, sheet.browserInfo))
         } else if (page === "display") {
-            ask("screens", out => {
-                const screens = sheet.json(out, [])
-                sheet.screenInfo = Array.isArray(screens) ? screens : []
-            })
-            ask("display-sizes", out => {
-                const sizes = sheet.json(out, [])
-                sheet.displaySizes = Array.isArray(sizes) ? sizes : []
-            })
+            loadDisplay()
         } else if (page === "storage") {
+            loadDisks()
             if (!storageBusy) ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
             ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))
             ask("shared-files", out => sheet.windowsFiles = sheet.json(out, {}))
@@ -821,6 +864,25 @@ Shared.MonetWindow {
         ask("apps-sound", out => {
             sheet.appsSoundLoading = false
             if (!sheet.dragging) sheet.appsSound = sheet.json(out, sheet.appsSound)
+        })
+    }
+
+    function loadNotificationAudio() {
+        sheet.notificationAudio = {}
+        sheet.notificationAudioProblem = ""
+        ask("notification-audio", out => {
+            const result = sheet.json(out, {})
+            sheet.notificationAudio = result.ok === true ? result : {ok: false}
+        })
+    }
+
+    function setNotificationAudio(level) {
+        sheet.notificationAudioSaving = true
+        ask("notification-audio " + level, out => {
+            const result = sheet.json(out, {})
+            sheet.notificationAudioSaving = false
+            if (result.ok) sheet.notificationAudio = result
+            sheet.notificationAudioProblem = result.ok ? "" : i18n("Couldn't change the notification volume.")
         })
     }
 
@@ -1258,6 +1320,7 @@ Shared.MonetWindow {
             const result = sheet.json(out, { ok: false, message: "" })
             const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
             sheet.updateMessage = lines.length > 0 ? lines[lines.length - 1] : ""
+            sheet.updateStaged = result.staged === true
             sheet.updateState = result.ok ? "done" : "failed"
             sheet.loadUpdateHistory()
         })
@@ -1271,14 +1334,14 @@ Shared.MonetWindow {
             if (found.version && found.version === pc.monet) {
                 return i18n("Fixes for Monet %1 are ready", found.version)
             }
-            return /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/.test(found.version || "") ? i18n("Monet %1 is ready", found.version)
+            return /^\d{1,2}\.\d{1,2}(\.\d{1,2})?(-\d+)?$/.test(found.version || "") ? i18n("Monet %1 is ready", found.version)
                 : i18n("A new Monet is ready")
         }
         if (updateState === "available") {
             return i18np("%1 app update is ready", "%1 app updates are ready", found.apps || 0)
         }
         if (updateState === "done") {
-            return updateFound.system ? i18n("Restart to finish") : i18n("Your apps are up to date")
+            return updateStaged ? i18n("Restart to finish") : i18n("Monet and your apps are up to date.")
         }
         return pc.monet ? i18n("Monet %1", pc.monet) : i18n("Monet")
     }
@@ -1292,7 +1355,7 @@ Shared.MonetWindow {
             return found.system && found.apps > 0 ? i18np("And %1 app update. Install when you're ready.", "And %1 app updates. Install when you're ready.", found.apps || 0)
                 : i18n("Install when you're ready.")
         case "installing": return i18n("Downloading and installing. You can keep using your PC.")
-        case "done": return updateFound.system ? i18n("The new Monet starts the next time you restart.") : i18n("Everything is installed.")
+        case "done": return updateStaged ? i18n("The new Monet starts the next time you restart.") : ""
         case "failed": return updateMessage || i18n("Monet couldn't look for updates. Check your internet connection and try again.")
         default: return pc.autoUpdates === false ? i18n("Monet only updates when you ask it to.")
             : i18n("Automatic updates are on. You can also check now.")
@@ -1623,6 +1686,30 @@ Shared.MonetWindow {
             const result = sheet.json(out, {})
             if (code === 0 && result.measured === true) sheet.storageInfo = result
             else sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+        })
+    }
+    function loadDisks() {
+        if (disksLoading || diskBusy) return
+        disksLoading = true
+        ask("storage-disks", (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.disksLoading = false
+            sheet.disksLoaded = code === 0 && result.ok === true
+            sheet.disks = sheet.disksLoaded && Array.isArray(result.disks) ? result.disks : []
+            if (!sheet.disksLoaded && sheet.diskProblem === "")
+                sheet.diskProblem = i18n("Couldn't read the drives. Try refreshing.")
+        })
+    }
+    function changeDisk(action, disk, target, format, size, name) {
+        if (diskBusy || disksLoading) return
+        diskBusy = true
+        diskProblem = ""
+        ask("storage-disks " + [action, disk.token, target, format, size, name ? hex(name) : "-"].join(" "), (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.diskBusy = false
+            if (code !== 0 || result.ok !== true)
+                sheet.diskProblem = result.message || i18n("The disk operation couldn't finish.")
+            sheet.loadDisks()
         })
     }
     function rememberFiles(value) {
@@ -3495,7 +3582,6 @@ Shared.MonetWindow {
                             ["hours", i18n("Through the day"), i18n("The painting's light follows the sun where you are, from dawn to night")],
                             ["weather", i18n("Weather"), i18n("Rain, fog and snow where you are soften the painting with mist")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
-                            ["dodge", i18n("Bar steps aside"), i18n("The bar slides away when a window comes over it, and back when you point at the bottom of the screen")],
                             ["snap", i18n("Snap layouts"), i18n("Drag a window to the top of the screen for its layouts, and Snap Assist fills the rest. Off, an edge still gives it half the screen and the top all of it")]
                         ]
                         SettingRow {
@@ -4179,6 +4265,53 @@ Shared.MonetWindow {
                         }
                     }
                 }
+                Caption {
+                    tone: look
+                    text: i18n("Display colors")
+                }
+                Card {
+                    tone: look
+                    objectName: "search-color"
+                    Accessible.role: Accessible.Grouping
+                    Accessible.name: i18n("Display colors")
+                    SettingRow {
+                        tone: look
+                        objectName: "openColorProfiles"
+                        divider: false
+                        tappable: true
+                        title: i18n("Color profiles…")
+                        detail: i18n("Choose your display to apply an ICC profile.")
+                        onTapped: sheet.ask("kde display")
+                        Kirigami.Icon {
+                            width: 18
+                            height: 18
+                            source: "go-next-symbolic"
+                            color: look.dim
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        objectName: "openDisplayTest"
+                        tappable: true
+                        title: i18n("Test display colors")
+                        detail: i18n("Check shadow detail, highlights and neutral grays on this display.")
+                        onTapped: {
+                            displayTest.showFullScreen()
+                            displayTest.requestActivate()
+                        }
+                        Kirigami.Icon {
+                            width: 18
+                            height: 18
+                            source: "go-next-symbolic"
+                            color: look.dim
+                        }
+                    }
+                }
+                DisplayTest {
+                    id: displayTest
+                    transientParent: sheet
+                    screen: sheet.screen
+                }
                 // For games and films: HDR, and the refresh rate keeping pace with the game,
                 // on the screens that can (named when there's more than one).
                 Caption {
@@ -4221,11 +4354,6 @@ Shared.MonetWindow {
                         }
                     }
                 }
-                Pill {
-                    tone: look
-                    text: i18n("Arrange displays and size…")
-                    onClicked: sheet.ask("kde display")
-                }
             }
         }
 
@@ -4234,6 +4362,9 @@ Shared.MonetWindow {
             ColumnLayout {
                 id: soundColumn
                 readonly property var speakers: sheet.outputs.filter(o => !o.none)
+                property bool showAllOutputs: false
+                readonly property var visibleSpeakers: showAllOutputs || speakers.length <= 3
+                    ? speakers : [speakers.find(o => o.default) || speakers[0]]
                 spacing: 20
                 PageTitle {
                     readonly property var playing: sheet.outputs.find(o => o.default)
@@ -4277,7 +4408,7 @@ Shared.MonetWindow {
                         }
                     }
                     Repeater {
-                        model: soundColumn.speakers
+                        model: soundColumn.visibleSpeakers
                         SettingRow {
                             tone: look
                             divider: index > 0
@@ -4299,6 +4430,64 @@ Shared.MonetWindow {
                         }
                     }
                 }
+                Pill {
+                    tone: look
+                    visible: soundColumn.speakers.length > 3
+                    text: soundColumn.showAllOutputs ? i18n("Show selected output") : i18n("Show all %1 outputs", soundColumn.speakers.length)
+                    onClicked: soundColumn.showAllOutputs = !soundColumn.showAllOutputs
+                }
+                Card {
+                    tone: look
+                    SliderRow {
+                        id: eventVolume
+                        tone: look
+                        divider: false
+                        enabled: sheet.notificationAudio.ok === true
+                        title: i18n("Notification volume")
+                        value: sheet.notificationAudio.volume ?? 35
+                        onHeld: down => sheet.dragging = down
+                        onMoved: level => {
+                            eventSave.level = Math.round(level)
+                            eventSave.restart()
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        title: i18n("Preview notification sound")
+                        detail: sheet.notificationAudioProblem || (sheet.notificationAudio.ok === false
+                            ? i18n("Notification audio is unavailable.")
+                            : sheet.notificationAudio.ok === true
+                            ? i18n("Plays the current notification tone at the selected volume.")
+                            : i18n("Checking notification audio…"))
+                        Pill {
+                            tone: look
+                            text: sheet.notificationAudio.ok === false ? i18n("Try again") : i18n("Play test")
+                            enabledPill: sheet.notificationAudio.ok === false
+                                || (eventVolume.enabled && !eventSave.running && !sheet.notificationAudioSaving)
+                            onClicked: {
+                                if (sheet.notificationAudio.ok === false) {
+                                    sheet.loadNotificationAudio()
+                                } else {
+                                    sheet.ask("notification-audio-test", out => {
+                                        sheet.notificationAudioProblem = sheet.json(out, {}).ok ? "" : i18n("Couldn't play the test sound.")
+                                    })
+                                }
+                            }
+                        }
+                    }
+                }
+                Timer {
+                    id: eventSave
+                    property int level: 35
+                    interval: 240
+                    onTriggered: {
+                        if (sheet.notificationAudioSaving)
+                            restart()
+                        else
+                            sheet.setNotificationAudio(level)
+                    }
+                }
+                Component.onCompleted: sheet.loadNotificationAudio()
                 // Each app's own volume, as Windows' mixer has it (apps come and go as they play).
                 Caption {
                     tone: look
@@ -5024,11 +5213,12 @@ Shared.MonetWindow {
                     Repeater {
                         id: powerModeOptions
                         model: [
-                            ["power-saver", i18n("Power saver"), i18n("Cooler and quieter, longer on battery"),
+                            ["power-saver", i18n("Power saver"), sheet.powerInfo.hasBattery
+                                ? i18n("Uses less power to extend battery life") : i18n("Favors lower power use and less heat"),
                              "M5 19c0-9 5-14 14-14c0 9-5 14-14 14zM5 19l7-7"],
                             ["balanced", i18n("Balanced"), i18n("Quick when it counts"),
                              "M12 4v16M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0zM8 20h8"],
-                            ["performance", i18n("Performance"), i18n("As fast as it goes, warmer and louder"),
+                            ["performance", i18n("Performance"), i18n("Favors faster response, with potentially more heat and fan noise"),
                              "M13 3L5 13h6l-1 8 8-10h-6z"]
                         ].filter(m => (sheet.powerInfo.modes || []).indexOf(m[0]) !== -1)
                         Rectangle {
@@ -5813,6 +6003,7 @@ Shared.MonetWindow {
                 readonly property real total: sheet.storageInfo.total || 0
                 // Emptying the Trash asks once more.
                 property bool askingTrash: false
+                property string expandedDisk: ""
                 spacing: 20
                 PageTitle {
                     tone: look
@@ -5820,6 +6011,222 @@ Shared.MonetWindow {
                     art: sheet.art
                     text: i18n("Storage")
                     detail: i18n("What fills this PC, and room to make.")
+                }
+                // Physical drives and their volumes are independent of the folder-size scan.
+                Card {
+                    id: disksCard
+                    objectName: "search-disks"
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Disks and partitions")
+                        detail: sheet.diskBusy ? i18n("Working on the disk…")
+                            : sheet.disksLoading ? i18n("Checking connected drives…")
+                            : sheet.diskProblem || (sheet.disks.length === 0 && sheet.disksLoaded
+                                ? i18n("No drives found.") : "")
+                        Pill {
+                            tone: look
+                            text: i18n("Refresh")
+                            enabledPill: !sheet.disksLoading && !sheet.diskBusy
+                            onClicked: {
+                                sheet.diskProblem = ""
+                                sheet.loadDisks()
+                            }
+                        }
+                    }
+                    Repeater {
+                        model: sheet.disks
+                        ColumnLayout {
+                            id: diskRow
+                            required property var modelData
+                            readonly property var drive: modelData
+                            readonly property bool opened: storageColumn.expandedDisk === drive.path
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            SettingRow {
+                                tone: look
+                                title: diskRow.drive.name
+                                detail: sheet.bytes(diskRow.drive.size) + " · " + diskRow.drive.path
+                                    + (diskRow.drive.system ? " · " + i18n("System drive")
+                                    : diskRow.drive.locked ? " · " + i18n("Read-only or in use")
+                                    : diskRow.drive.removable ? " · " + i18n("Removable drive") : "")
+                                Pill {
+                                    objectName: "diskDetails-" + diskRow.drive.path
+                                    tone: look
+                                    text: diskRow.opened ? i18n("Hide details") : i18n("Show details")
+                                    onClicked: storageColumn.expandedDisk = diskRow.opened ? "" : diskRow.drive.path
+                                }
+                            }
+                            ColumnLayout {
+                                visible: diskRow.opened
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 16
+                                Layout.rightMargin: 16
+                                spacing: 0
+                                Repeater {
+                                    model: diskRow.drive.table ? diskRow.drive.partitions
+                                        : diskRow.drive.format ? [diskRow.drive] : []
+                                    SettingRow {
+                                        id: volumeRow
+                                        required property var modelData
+                                        tone: look
+                                        strong: false
+                                        title: modelData.name || i18n("Unnamed volume")
+                                        detail: sheet.bytes(modelData.size) + " · " + modelData.path
+                                            + (modelData.format ? " · " + modelData.format : "")
+                                            + (modelData.mounts.length > 0 ? "\n" + modelData.mounts.join(", ") : "")
+                                        Pill {
+                                            objectName: "diskVolume-" + volumeRow.modelData.path
+                                            tone: look
+                                            visible: !diskRow.drive.locked && !volumeRow.modelData.busy
+                                                && !volumeRow.modelData.readonly && !volumeRow.modelData.container
+                                            enabledPill: !sheet.diskBusy && !sheet.disksLoading
+                                            text: volumeRow.modelData.mounts.length ? i18n("Unmount…") : i18n("Volume actions…")
+                                            onClicked: {
+                                                const volume = volumeRow.modelData
+                                                if (volume.mounts.length)
+                                                    diskChange.review("unmount", diskRow.drive, volume)
+                                                else
+                                                    diskChange.review("format", diskRow.drive, volume)
+                                            }
+                                        }
+                                    }
+                                }
+                                Repeater {
+                                    model: diskRow.drive.gaps
+                                    SettingRow {
+                                        id: freeRow
+                                        required property var modelData
+                                        tone: look
+                                        strong: false
+                                        title: i18n("Unallocated space")
+                                        detail: sheet.bytes(modelData.size) + " · " + i18n("Starts at %1", sheet.bytes(modelData.offset))
+                                        Pill {
+                                            objectName: "diskCreate-" + diskRow.drive.path + "-" + freeRow.modelData.offset
+                                            tone: look
+                                            visible: !diskRow.drive.locked
+                                            enabledPill: !sheet.diskBusy && !sheet.disksLoading
+                                            text: i18n("Create partition…")
+                                            onClicked: diskChange.review("create", diskRow.drive, freeRow.modelData)
+                                        }
+                                    }
+                                }
+                                SettingRow {
+                                    tone: look
+                                    visible: !diskRow.drive.locked
+                                    title: i18n("Partition table")
+                                    detail: diskRow.drive.table ? diskRow.drive.table.toUpperCase() : i18n("No partition table")
+                                    Pill {
+                                        objectName: "diskErase-" + diskRow.drive.path
+                                        tone: look
+                                        enabledPill: !sheet.diskBusy && !sheet.disksLoading
+                                        text: diskRow.drive.table || diskRow.drive.format ? i18n("Erase disk…") : i18n("Initialize disk…")
+                                        onClicked: diskChange.review("erase", diskRow.drive, null)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                QQC2.Dialog {
+                    id: diskChange
+                    objectName: "diskChangeDialog"
+                    parent: QQC2.Overlay.overlay
+                    anchors.centerIn: parent
+                    width: Math.min(470, parent ? parent.width - 32 : 470)
+                    modal: true
+                    standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+                    property string action: ""
+                    property var drive: ({})
+                    property var target: ({})
+                    onOpened: standardButton(QQC2.Dialog.Ok).text = Qt.binding(() => action === "erase"
+                        ? i18n("Create GPT") : action === "create" ? i18n("Create")
+                        : action === "unmount" ? i18n("Unmount") : action === "delete" ? i18n("Delete") : i18n("Format"))
+                    function review(operation, drive, target) {
+                        action = operation
+                        this.drive = drive
+                        this.target = target || ({})
+                        fileSystem.currentIndex = 0
+                        volumeName.text = ""
+                        sizeMiB.value = operation === "create" ? sizeMiB.to : 1
+                        open()
+                    }
+                    title: action === "erase" ? i18n("Create a new GPT partition table")
+                        : action === "create" ? i18n("Create partition")
+                        : action === "unmount" ? i18n("Unmount volume")
+                        : action === "delete" ? i18n("Delete partition") : i18n("Format volume")
+                    onAccepted: sheet.changeDisk(action, drive,
+                        action === "create" ? target.offset : target.path ? sheet.hex(target.path) : "-",
+                        fileSystem.currentValue || "-", sizeMiB.value, volumeName.text)
+                    contentItem: ColumnLayout {
+                        spacing: 12
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            text: (diskChange.drive.name || "") + " · " + (diskChange.target.path || diskChange.drive.path || "")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            text: diskChange.action === "erase" ? i18n("This removes every partition and its files from the selected drive.")
+                                : diskChange.action === "delete" || diskChange.action === "format"
+                                    ? i18n("This deletes all files on the selected volume.")
+                                : diskChange.action === "unmount" ? i18n("Close any files on this volume before unmounting it.") : ""
+                            visible: text !== ""
+                            wrapMode: Text.Wrap
+                        }
+                        QQC2.ComboBox {
+                            visible: diskChange.action === "format" && !!diskChange.drive.table || diskChange.action === "delete"
+                            Accessible.name: i18n("Volume action")
+                            Layout.fillWidth: true
+                            model: [i18n("Format volume"), i18n("Delete partition")]
+                            onActivated: index => diskChange.action = index === 0 ? "format" : "delete"
+                            currentIndex: diskChange.action === "delete" ? 1 : 0
+                        }
+                        QQC2.ComboBox {
+                            id: fileSystem
+                            Layout.fillWidth: true
+                            visible: diskChange.action === "format" || diskChange.action === "create"
+                            Accessible.name: i18n("File system")
+                            textRole: "name"
+                            valueRole: "id"
+                            model: [{name: i18n("Ext4 · Monet"), id: "ext4"},
+                                    {name: i18n("NTFS · Windows"), id: "ntfs"},
+                                    {name: i18n("exFAT · Shared storage"), id: "exfat"},
+                                    {name: "FAT32", id: "vfat"}]
+                        }
+                        QQC2.TextField {
+                            id: volumeName
+                            Layout.fillWidth: true
+                            visible: fileSystem.visible
+                            maximumLength: 32
+                            placeholderText: i18n("Volume name (optional)")
+                        }
+                        RowLayout {
+                            visible: diskChange.action === "create"
+                            Layout.fillWidth: true
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                text: i18n("Size in MiB")
+                                wrapMode: Text.Wrap
+                            }
+                            QQC2.SpinBox {
+                                id: sizeMiB
+                                editable: true
+                                from: 1
+                                to: Math.max(1, Math.min(2147483647, Math.floor((diskChange.target.size || 0) / 1048576)))
+                            }
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            visible: diskChange.action === "create"
+                            text: i18n("%1 selected · %2 available",
+                                       sheet.bytes(sizeMiB.value * 1048576), sheet.bytes(diskChange.target.size))
+                            wrapMode: Text.Wrap
+                        }
+                    }
                 }
                 Card {
                     tone: look
@@ -7575,10 +7982,23 @@ Shared.MonetWindow {
             id: windowsPage
             ColumnLayout {
                 id: windowsColumn
-                // A Monet-only PC: no Windows to restart in (`monet` says Not found), and none on its
-                // way (Setup left no room for one, monet-prepare-windows' no-space, or wasn't asked).
-                readonly property bool noWindows: sheet.pc.windows === "Not found" && ["", "no-space"].includes(sheet.pc.setup || "")
+                readonly property string setupState: sheet.pc.windows === "Ready" ? ""
+                    : sheet.windowsSetup.interrupted ? "interrupted" : (sheet.windowsSetup.status ?? sheet.pc.setup ?? "")
+                readonly property bool setupActive: sheet.windowsSetupStarting || sheet.windowsSetup.active === true || setupState === "preparing"
+                readonly property bool needsSetup: ["waiting", "preparing", "download-failed", "failed", "no-space", "interrupted"].includes(setupState)
+                readonly property bool noWindows: sheet.pc.windows === "Not found" && setupState === ""
+                readonly property string setupIso: String(sheet.windowsIso) || (sheet.windowsSetup.iso || "")
+                readonly property string isoName: decodeURIComponent(setupIso.split("/").pop())
                 spacing: 20
+                FileDialog {
+                    id: windowsIsoPicker
+                    title: i18n("Choose a Windows 11 ISO")
+                    nameFilters: [i18n("Disk images") + " (*.iso *.ISO)"]
+                    onAccepted: {
+                        sheet.windowsIso = selectedFile
+                        sheet.windowsSetupProblem = ""
+                    }
+                }
                 PageTitle {
                     tone: look
                     entry: sheet.entry("windows")
@@ -7609,9 +8029,16 @@ Shared.MonetWindow {
                                     : sheet.asking && sheet.asking.task === "launchers" ? i18n("Sign in to your game launchers?")
                                     : sheet.asking && sheet.asking.task === "update" ? i18n("Update Windows games?")
                                     : sheet.asking ? i18n("Restart in Windows?")
+                                    : windowsColumn.setupState === "pending" ? i18n("Windows is ready to install")
+                                    : windowsColumn.setupActive ? i18n("Getting Windows ready")
+                                    : windowsColumn.setupState === "interrupted" ? i18n("Windows setup did not finish")
+                                    : windowsColumn.setupState === "failed" ? i18n("Windows setup stopped")
+                                    : windowsColumn.setupState === "no-space" ? i18n("Windows needs more disk space")
+                                    : windowsColumn.needsSetup && windowsColumn.setupIso !== "" ? i18n("Windows ISO ready to use")
+                                    : windowsColumn.setupState === "download-failed" ? (sheet.windowsSetup.mediaError
+                                        ? i18n("Windows couldn't read that ISO") : i18n("Windows download didn't finish"))
+                                    : windowsColumn.needsSetup ? i18n("Set up Windows")
                                     : (sheet.pc.notice || "") !== "" ? i18n("The last trip didn't reach Windows")
-                                    : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Getting Windows ready")
-                                    : sheet.pc.setup === "pending" ? i18n("Windows is ready to install")
                                     : windowsColumn.noWindows ? i18n("No Windows on this PC")
                                     : sheet.pc.windows === "Ready" ? i18n("Windows is ready")
                                     : (sheet.pc.windows || "") === "" ? i18n("Windows")
@@ -7622,14 +8049,23 @@ Shared.MonetWindow {
                                 wrapMode: Text.Wrap
                             }
                             Text {
+                                objectName: "windowsSetupDetail"
                                 horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.switching ? i18n("Your PC restarts in a moment.")
                                     : sheet.switchProblem !== "" ? sheet.switchProblem
-                                    : !sheet.asking && (sheet.pc.notice || "") !== "" ? i18n(sheet.pc.notice)
-                                    : sheet.pc.setup === "waiting" || sheet.pc.setup === "preparing" ? i18n("Monet is downloading Windows for your games. Keep using your PC; Monet asks before it restarts.")
-                                    : sheet.pc.setup === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
+                                    : windowsColumn.setupState === "pending" ? i18n("Restart to install it. It takes about 10 minutes, then you're back in Monet.")
                                         + (typeof sheet.info.battery === "number" && !sheet.info.plugged ? " " + i18n("Plug in the charger first.") : "")
+                                    : windowsColumn.setupActive ? i18n("You can keep using Monet while Windows is prepared. Monet asks before restarting.")
+                                    : windowsColumn.setupState === "interrupted" ? i18n("This PC returned to Monet before Windows setup finished. Try again to resume the prepared installation.")
+                                    : windowsColumn.setupState === "failed" ? (sheet.windowsSetup.message
+                                        || i18n("Open Check Monet below for details about the failure."))
+                                    : windowsColumn.setupState === "no-space" ? i18n("Check that your disk has room reserved for Windows and enough free space in Monet to download it.")
+                                    : windowsColumn.needsSetup && windowsColumn.setupIso !== "" ? i18n("Monet will prepare Windows in the reserved space and ask before restarting.")
+                                    : windowsColumn.setupState === "download-failed" ? (sheet.windowsSetup.message
+                                        || i18n("Try the download again or choose a Windows 11 x64 ISO from any folder or connected drive."))
+                                    : windowsColumn.needsSetup ? i18n("Download Windows 11 from Microsoft for games that need it. Monet asks before restarting.")
+                                    : !sheet.asking && (sheet.pc.notice || "") !== "" ? i18n(sheet.pc.notice)
                                     : sheet.asking && sheet.asking.id ? i18n("Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first.")
                                     : sheet.asking && sheet.asking.task === "launchers" ? i18n("Your PC restarts in Windows with your game launchers ready. Sign in to each once, then choose Back to Monet. Save your work first.")
                                     : sheet.asking && sheet.asking.task === "update" ? i18n("Your PC restarts in Windows, updates it and your games, and switches off when they're done, within an hour and a half. Save your work first.")
@@ -7660,13 +8096,13 @@ Shared.MonetWindow {
                         Pill {
                             tone: look
                             kind: "sun"
-                            visible: !sheet.switching && sheet.pc.setup !== "waiting" && sheet.pc.setup !== "preparing" && !windowsColumn.noWindows
+                            visible: !sheet.switching && !windowsColumn.setupActive && !windowsColumn.needsSetup && !windowsColumn.noWindows
                             text: sheet.asking && sheet.asking.id ? i18n("Restart & Play")
                                 : sheet.asking ? i18n("Restart")
-                                : sheet.pc.setup === "pending" ? i18n("Restart and install")
+                                : windowsColumn.setupState === "pending" ? i18n("Restart and install")
                                 : i18n("Restart in Windows")
                             onClicked: {
-                                if (sheet.pc.setup === "pending" && !sheet.asking) {
+                                if (windowsColumn.setupState === "pending" && !sheet.asking) {
                                     sheet.ask("restart")
                                 } else if (sheet.asking) {
                                     sheet.restart()
@@ -7678,9 +8114,75 @@ Shared.MonetWindow {
                         }
                     }
                 }
+                Card {
+                    tone: look
+                    visible: windowsColumn.needsSetup
+                    SettingRow {
+                        tone: look
+                        visible: windowsColumn.setupActive || sheet.windowsSetupProblem !== ""
+                            || windowsColumn.setupState === "interrupted" || windowsColumn.setupIso === ""
+                        title: i18n("Windows setup")
+                        detail: sheet.windowsSetupProblem !== "" ? sheet.windowsSetupProblem
+                            : windowsColumn.setupState === "preparing" ? (sheet.windowsSetup.message
+                                || i18n("Setup progress: %1%", sheet.windowsSetup.percent ?? 0))
+                            : ""
+                        Pill {
+                            objectName: "startWindowsSetup"
+                            tone: look
+                            kind: "sun"
+                            visible: windowsColumn.setupActive || windowsColumn.setupState === "interrupted" || windowsColumn.setupIso === ""
+                            enabledPill: !windowsColumn.setupActive
+                            text: windowsColumn.setupActive ? i18n("Setting up…")
+                                : windowsColumn.setupState === "interrupted" ? i18n("Try setup again")
+                                : windowsColumn.setupState === "download-failed" ? i18n("Retry download")
+                                : i18n("Set up Windows…")
+                            onClicked: sheet.startWindowsSetup("", ["interrupted", "download-failed"].includes(windowsColumn.setupState))
+                        }
+                    }
+                    SettingRow {
+                        visible: !windowsColumn.setupActive && windowsColumn.setupState !== "interrupted"
+                        tone: look
+                        title: i18n("Windows 11 ISO")
+                        detail: windowsColumn.isoName
+                        Pill {
+                            objectName: "chooseWindowsIso"
+                            tone: look
+                            kind: windowsColumn.setupState === "download-failed" && windowsColumn.isoName === "" ? "sun" : "plain"
+                            text: windowsColumn.isoName === "" ? i18n("Choose ISO…") : i18n("Change ISO…")
+                            onClicked: windowsIsoPicker.open()
+                        }
+                    }
+                    SettingRow {
+                        visible: !windowsColumn.setupActive && windowsColumn.setupState !== "interrupted" && windowsColumn.isoName !== ""
+                        tone: look
+                        title: i18n("Prepare Windows")
+                        detail: i18n("Administrator access is required to prepare the reserved space.")
+                        Pill {
+                            objectName: "prepareWindowsIso"
+                            tone: look
+                            kind: "sun"
+                            text: i18n("Set up Windows…")
+                            onClicked: sheet.startWindowsSetup(windowsColumn.setupIso)
+                        }
+                    }
+                    SettingRow {
+                        visible: !windowsColumn.setupActive && windowsColumn.setupState !== "interrupted" && windowsColumn.setupIso === ""
+                        tone: look
+                        divider: false
+                        title: i18n("Need an ISO?")
+                        Pill {
+                            objectName: "windowsIsoPage"
+                            tone: look
+                            text: i18n("Open Microsoft’s download page")
+                            onClicked: sheet.ask("windows-setup-download-page", (out, code) => {
+                                if (code !== 0) sheet.windowsSetupProblem = i18n("Monet couldn't open Microsoft’s download page.")
+                            })
+                        }
+                    }
+                }
                 GridLayout {
                     Layout.fillWidth: true
-                    visible: sheet.games.length > 0 && !windowsColumn.noWindows
+                    visible: sheet.games.length > 0 && !windowsColumn.noWindows && !windowsColumn.needsSetup
                     columns: 4
                     columnSpacing: 12
                     rowSpacing: 12
@@ -7705,7 +8207,7 @@ Shared.MonetWindow {
                 Text {
                     horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
-                    visible: sheet.games.length === 0 && !windowsColumn.noWindows
+                    visible: sheet.games.length === 0 && !windowsColumn.noWindows && !windowsColumn.needsSetup
                     text: i18n("Your Windows games show up here once Windows has started with Monet Bridge.")
                     color: look.dim
                     font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
@@ -7714,7 +8216,7 @@ Shared.MonetWindow {
                 // Trips that make the next ones smoother: signed in everywhere, everything up to date.
                 Card {
                     tone: look
-                    visible: (sheet.games.length > 0 || sheet.pc.windows === "Ready") && !windowsColumn.noWindows
+                    visible: (sheet.games.length > 0 || sheet.pc.windows === "Ready") && !windowsColumn.noWindows && !windowsColumn.needsSetup
                     SettingRow {
                         tone: look
                         title: i18n("Game launchers")
@@ -8112,19 +8614,21 @@ Shared.MonetWindow {
                         }
                         Pill {
                             tone: look
-                            kind: sheet.updateState === "available" || (sheet.updateState === "done" && sheet.updateFound.system) ? "lily" : "plain"
-                            visible: !(sheet.updateState === "done" && !sheet.updateFound.system)
+                            objectName: "updateAction"
+                            readonly property bool restartReady: sheet.updateStaged && ["done", "failed"].includes(sheet.updateState)
+                            kind: sheet.updateState === "available" || restartReady ? "lily" : "plain"
+                            visible: sheet.updateState !== "done" || restartReady
                             text: sheet.updateState === "checking" ? i18n("Checking…")
                                 : sheet.updateState === "installing" ? i18n("Installing…")
                                 : sheet.updateState === "available" ? i18n("Install")
-                                : sheet.updateState === "done" ? i18n("Restart now")
+                                : restartReady ? i18n("Restart now")
                                 : sheet.updateState === "failed" ? i18n("Try again")
                                 : i18n("Check for updates")
                             enabledPill: sheet.updateState !== "checking" && sheet.updateState !== "installing"
                             onClicked: {
                                 if (sheet.updateState === "available") {
                                     sheet.installUpdates()
-                                } else if (sheet.updateState === "done") {
+                                } else if (restartReady) {
                                     sheet.ask("restart")
                                 } else {
                                     sheet.checkUpdates()

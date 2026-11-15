@@ -6,11 +6,45 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.8-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
-| Monet-0.9.8-Setup.iso              | Monet Setup for writing the USB stick yourself. |
-| Monet-0.9.8-Installer.iso          | The Fedora-based fallback installer. |
-| Monet-0.9.8-Windows.zip            | Monet Bridge for an existing Windows installation. |
-| Monet-0.9.8-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+| **Monet-0.9.8-5-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-5-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-5-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-5-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-5-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8-5: Easier everyday use
+
+- **Find downloads and launch apps from the menu.** Recently downloaded
+  installers appear in the menu. Search can also find a Windows program
+  by the name of its extracted folder, even when the file is called
+  Setup.exe. Downloads has its own folder again, and extraction suggests
+  a folder next to the archive.
+  Starting a Windows program shows progress or a launch error when Proton fails.
+  Finder also offers downloaded RPM files through the extractor.
+- **Set notification volume and hear a preview.** The default is 35%.
+  Sound settings prioritize the selected output when several are available.
+  Music uses PipeWire's PulseAudio interface to avoid repeated stream errors
+  while paused.
+- **Customize the Home Bar and switch windows.** Panel settings explain how
+  to center icons or choose a different bar layout. Right-click the desktop
+  or the Home Bar to open Task Manager. Alt+Tab shows a scrollable grid of
+  titled window previews.
+- **Check your display and manage disks in Settings.** Display has a full-screen
+  test for shadows, highlights and neutral grays, alongside per-monitor color
+  profiles and supported HDR controls. The desktop menu opens Display in Monet
+  Settings with a single entry. Storage lists disks and their partitions,
+  with actions to format or create partitions on available disks.
+- **Reopen work after Windows.** A background process alone no longer counts
+  as a reopened window. Files can reopen its window and explain when its tabs
+  could not be saved.
+- **Recover an interrupted Windows setup.** Play on Windows shows why an ISO
+  download failed, offers a retry or an ISO picker, and can retry a prepared
+  installation if the restart returned to Monet. First-run setup and Settings
+  detect completed Windows downloads in Downloads and on the desktop.
+  A verified deployment starts
+  Windows automatically to finish setup. Monet Bridge restores Monet as the
+  default when Windows is ready. On supported ThinkPads, Setup prepares
+  signed touchpad, network and Bluetooth drivers before Windows starts.
 
 ### New in 0.9.8: Security at a glance
 

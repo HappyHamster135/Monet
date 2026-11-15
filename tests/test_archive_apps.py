@@ -177,7 +177,7 @@ class ArchiveApps(unittest.TestCase):
         self.assertEqual(self.source.read_bytes(), b'fixture')
         self.assertTrue(suggested.is_symlink())
 
-    def test_plain_archive_defaults_to_desktop_and_dropped_folder_extracts_there(self):
+    def test_plain_archive_defaults_next_to_source_and_honors_a_dropped_folder(self):
         from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
         from PySide6.QtGui import QDragEnterEvent, QDropEvent
         from PySide6.QtWidgets import QFrame
@@ -190,7 +190,7 @@ class ArchiveApps(unittest.TestCase):
             dialog = self.tool.make_extract_dialog(self.source, find_apps=False)
         self.dialogs.append(dialog); dialog.show()
         self.wait(lambda: dialog.findChild(QPushButton, 'extractApps').isEnabled())
-        self.assertEqual(Path(dialog.findChild(QLineEdit, 'extractDestination').text()).parent, desktop)
+        self.assertEqual(Path(dialog.findChild(QLineEdit, 'extractDestination').text()).parent, self.source.parent)
         drop = dialog.findChild(QFrame, 'extractDropTarget')
         mime = QMimeData(); mime.setUrls([QUrl.fromLocalFile(str(target))])
         enter = QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)

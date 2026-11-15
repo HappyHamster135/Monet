@@ -196,10 +196,23 @@ pub fn bridge_installed(root: &Path) -> bool {
     resolve(root, &["Program Files", "Monet", "monet-bridge.exe"], false).is_some()
 }
 
+fn first_logon_is_prepared(root: &Path) -> bool {
+    resolve(root, &[".monet-setup.json"], false).is_some()
+        && !unfinished_install(root)
+        && resolve(root, &["Windows", "Panther", "unattend.xml"], false).is_some_and(|path| path.is_file())
+        && resolve(root, &["ProgramData", "Monet", "Setup", "Install-Monet.ps1"], false)
+            .is_some_and(|path| path.is_file())
+}
+
 /// Copies the payload into a mounted, writable Windows drive.
 pub fn stage_into(root: &Path, payload: &Path) -> Result<Outcome, String> {
     if bridge_installed(root) {
         return Ok(Outcome::Installed);
+    }
+    // WinPE already arranged an elevated first-logon command. Adding the
+    // Startup fallback as well launches a duplicate that prompts for UAC.
+    if first_logon_is_prepared(root) {
+        return Ok(Outcome::Staged);
     }
     let setup = resolve(root, &["ProgramData", "Monet", "Setup"], true).ok_or("couldn't create the setup folder")?;
     for name in PAYLOAD {
@@ -296,6 +309,10 @@ pub fn stage(payload: Option<&Path>) -> Result<Outcome, String> {
         if bridge_installed(root) {
             unmount();
             return Ok(Outcome::Installed);
+        }
+        if first_logon_is_prepared(root) {
+            unmount();
+            return Ok(Outcome::Staged);
         }
         if is_hibernated(root) {
             unmount();
@@ -418,6 +435,23 @@ mod tests {
             assert!(root.join("ProgramData/Monet/Setup/Setup-Functions.ps1").is_file());
             let _ = fs::remove_dir_all(root);
         }
+        let _ = fs::remove_dir_all(payload);
+    }
+
+    #[test]
+    fn verified_first_logon_keeps_its_payload_and_no_duplicate_startup() {
+        let root = fake_windows("native-first-logon");
+        let payload = fake_payload("native-first-logon-payload");
+        fs::write(root.join(".monet-setup.json"), r#"{"version":1,"phase":"complete"}"#).unwrap();
+        fs::create_dir_all(root.join("Windows/Panther")).unwrap();
+        fs::write(root.join("Windows/Panther/unattend.xml"), "answer file").unwrap();
+        let setup = root.join("ProgramData/Monet/Setup");
+        fs::create_dir_all(&setup).unwrap();
+        fs::write(setup.join("Install-Monet.ps1"), "verified script").unwrap();
+        assert_eq!(stage_into(&root, &payload).unwrap(), Outcome::Staged);
+        assert_eq!(fs::read_to_string(setup.join("Install-Monet.ps1")).unwrap(), "verified script");
+        assert!(!root.join("ProgramData/Microsoft/Windows/Start Menu/Programs/StartUp").join(STARTUP_SCRIPT).exists());
+        let _ = fs::remove_dir_all(root);
         let _ = fs::remove_dir_all(payload);
     }
 

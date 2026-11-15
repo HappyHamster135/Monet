@@ -24,6 +24,9 @@ pub struct LaunchRequest {
     /// tasks reads it as opening Windows.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub task: Option<String>,
+    /// A first start to complete installation and then return to Monet.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub setup: bool,
     /// Boot entry to return to afterwards (the Monet entry).
     pub return_to: u16,
     /// Unix time the request was made.
@@ -32,6 +35,10 @@ pub struct LaunchRequest {
     /// shows the same time. A Monet Bridge from before it leaves Windows' own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tz: Option<String>,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 /// A Windows time zone's name: letters, digits, spaces and a little punctuation, as tzutil
@@ -53,7 +60,7 @@ impl LaunchRequest {
                 return Err(EfiError::Invalid(format!("not a valid game id: {id}")));
             }
         }
-        Ok(LaunchRequest { v: 1, game, task: None, return_to, created: now, tz: None })
+        Ok(LaunchRequest { v: 1, game, task: None, setup: false, return_to, created: now, tz: None })
     }
 
     /// With Monet's time zone, when it's a name Windows could have.
@@ -91,6 +98,9 @@ impl LaunchRequest {
         if req.task.as_deref().is_some_and(|t| !TASKS.contains(&t)) {
             return Err(EfiError::Invalid("unknown task".into()));
         }
+        if req.setup && (req.game.is_some() || req.task.is_some()) {
+            return Err(EfiError::Invalid("setup request has a game or task".into()));
+        }
         // A time zone that isn't one is dropped, not the trip.
         let mut req = req;
         req.tz = req.tz.filter(|z| is_windows_zone(z));
@@ -111,19 +121,23 @@ pub fn peek(efi: &dyn EfiVars) -> Option<LaunchRequest> {
     LaunchRequest::decode(&efi.get(MONET_GUID, LAUNCH_VAR).ok()?).ok()
 }
 
-/// Reads and removes the pending request, if there is one.
+/// Reads and removes a desktop trip. The first-start setup owns its request.
 pub fn take(efi: &mut dyn EfiVars) -> Result<Option<LaunchRequest>> {
     let data = match efi.get(MONET_GUID, LAUNCH_VAR) {
         Ok(data) => data,
         Err(EfiError::NotFound) => return Ok(None),
         Err(e) => return Err(e),
     };
-    // Always remove it, even if it is unreadable, so it can't get stuck.
+    let request = LaunchRequest::decode(&data);
+    if request.as_ref().is_ok_and(|req| req.setup) {
+        return Ok(None);
+    }
+    // Remove even unreadable desktop requests so they can't get stuck.
     match efi.delete(MONET_GUID, LAUNCH_VAR) {
         Ok(()) | Err(EfiError::NotFound) => {}
         Err(e) => return Err(e),
     }
-    LaunchRequest::decode(&data).map(Some)
+    request.map(Some)
 }
 
 pub fn clear(efi: &mut dyn EfiVars) -> Result<()> {
@@ -149,6 +163,21 @@ mod tests {
         assert_eq!(take(&mut efi).unwrap(), Some(req));
         assert_eq!(take(&mut efi).unwrap(), None);
         assert_eq!(peek(&efi), None);
+    }
+
+    #[test]
+    fn only_setup_can_claim_the_first_start_request() {
+        let mut efi = MemoryEfi::default();
+        let mut req = LaunchRequest::new(None, 3, 1000).unwrap();
+        assert!(!req.encode().windows(5).any(|bytes| bytes == b"setup"));
+        req.setup = true;
+        write(&mut efi, &req).unwrap();
+        assert_eq!(take(&mut efi).unwrap(), None);
+        assert_eq!(peek(&efi), Some(req.clone()));
+        clear(&mut efi).unwrap();
+        assert_eq!(peek(&efi), None);
+        req.game = Some("steam:730".into());
+        assert!(LaunchRequest::decode(&req.encode()).is_err());
     }
 
     #[test]

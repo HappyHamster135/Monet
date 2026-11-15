@@ -9,6 +9,49 @@ def replace(name,old,new):
  if new in s:return
  if s.count(old)!=1:raise ValueError('Unsupported logout source: '+name)
  p.write_text(s.replace(old,new))
+
+root = source / 'containmentactions/contextmenu'
+replace('menu.h', '    QAction *m_openTerminalAction = nullptr;', '''    QAction *m_monetTaskManagerAction = nullptr;
+    QAction *m_openTerminalAction = nullptr;''')
+replace('menu.cpp', '    if (!m_runCommandAction) {', '''    if (!m_runCommandAction) {
+        m_monetTaskManagerAction = new QAction(i18nd("monet", "Task Manager"), this);
+        m_monetTaskManagerAction->setIcon(QIcon::fromTheme(u"utilities-system-monitor"_s));
+        connect(m_monetTaskManagerAction, &QAction::triggered, this, [this]() {
+            if (auto service = KService::serviceByStorageId(u"org.kde.plasma-systemmonitor.desktop"_s)) {
+                auto *job = new KIO::ApplicationLauncherJob(service);
+                job->start();
+            }
+        });
+''')
+replace('menu.cpp', '    return actions;\n}', '''    const auto hasAvailableAction = [&actions](QLatin1StringView name) {
+        return std::any_of(actions.cbegin(), actions.cend(), [name](QAction *action) {
+            return action && action->objectName() == name && action->isVisible() && action->isEnabled();
+        });
+    };
+    // Keep Plasma's display shortcut when the wallpaper doesn't provide one.
+    if (hasAvailableAction(QLatin1String("monet-display-settings"))) {
+        actions.removeAll(m_configureDisplaysAction);
+    }
+    // The containment also covers empty panel space and desktops that use another wallpaper.
+    if (!hasAvailableAction(QLatin1String("monet-task-manager")) && KService::serviceByStorageId(u"org.kde.plasma-systemmonitor.desktop"_s)) {
+        // Panel applet menus also include these containment actions. Let applets
+        // use their own fallback only when this panel does not supply it.
+        const auto type = cont->containmentType();
+        if ((type == Plasma::Containment::Panel || type == Plasma::Containment::CustomPanel)
+                && cont->containmentActions().value(u"RightButton;NoModifier"_s) == this
+                && !cont->internalAction(u"monet-task-manager"_s)) {
+            cont->setInternalAction(u"monet-task-manager"_s, m_monetTaskManagerAction);
+        }
+        const auto first = std::find_if(actions.begin(), actions.end(), [](QAction *action) {
+            return action && !action->isSeparator();
+        });
+        actions.insert(first, m_monetTaskManagerAction);
+    }
+    return actions;
+}''')
+replace('menu.cpp', '#include <QAction>', '#include <algorithm>\n#include <QAction>')
+
+root=source/'logout-greeter'
 replace('greeter.h','    bool m_running = false;','    bool m_running = false;\n    bool m_leaving = false;')
 replace('greeter.h','    void promptAll();','    void promptAll();\n    void updateMonetCover();')
 replace('greeter.cpp','#include <QScreen>','#include <QScreen>\n#include <QQuickItem>\n#include <QDBusServiceWatcher>\n#include <LayerShellQt/Window>')

@@ -141,7 +141,8 @@ int main(int argc, char **argv) {
         };
         click(0, Qt::RightButton);
         until([&] { return menuAction(QStringLiteral("Unpin from Home Bar")); }, "Home Bar unpin label missing");
-        require(menuAction(QStringLiteral("Configure Home Bar…")), "Home Bar configuration label missing");
+        require(menuAction(QStringLiteral("Customize Home Bar…")), "Home Bar configuration label missing");
+        require(menuAction(QStringLiteral("Task Manager")), "Task Manager action missing from the Home Bar");
         for (auto widget : QApplication::topLevelWidgets())
             if (auto menu = qobject_cast<QMenu *>(widget)) menu->close();
         QTest::qWait(50);

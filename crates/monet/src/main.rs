@@ -18,7 +18,7 @@ use std::fs;
 use std::ffi::CStr;
 use std::io::{BufRead, IsTerminal, Write};
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -137,6 +137,7 @@ fn main() -> ExitCode {
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
         ["helper", "stage-windows"] => helper_stage_windows().map(|_| ()),
+        ["helper", "start-windows-setup", guid, zone] => helper_start_windows_setup(guid, zone),
         ["helper", "prepare-windows"] => helper_prepare_windows(option_value(&args, "--iso")),
         ["setup-notice"] => {
             if let Some(message) = notice() {
@@ -801,6 +802,33 @@ fn helper_prepare_windows(iso: Option<String>) -> Res<()> {
     }
 }
 
+fn helper_start_windows_setup(guid: &str, zone: &str) -> Res<()> {
+    require_root()?;
+    let mut efi = efi()?;
+    let paths = trip_paths();
+    let current = boot::boot_current(&efi).map_err(|e| e.to_string())?;
+    if !boot::list_entries(&efi).map_err(|e| e.to_string())?.iter()
+        .any(|entry| entry.number == current && entry.option.is_active() && entry.is_other_os())
+    {
+        return Err("Couldn't identify the running Monet boot entry.".into());
+    }
+    let windows = trip::setup_entry(&efi, guid)?;
+    let trip = Trip { created: now(), entry: windows, monet: current, method: Method::First,
+        checkpoint: None, boot: boot_id()? };
+    trip::arm_setup(&mut efi, &paths, &trip, zone)?;
+
+    // Runs during startup, before user sessions. A firmware restart is required.
+    let restart = Command::new("systemctl")
+        .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
+        .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1")
+        .args(["--no-wall", "reboot"]).status();
+    if restart.is_ok_and(|status| status.success()) {
+        return Ok(());
+    }
+    trip::cancel_setup(&mut efi, &paths, current)?;
+    Err("Couldn't restart to finish Windows setup. Open Play on Windows to continue.".into())
+}
+
 /// When Monet's own Windows install didn't finish: try again, from a file
 /// in Downloads if there is one, then restart into the Windows install.
 /// "Monet and Windows": right after the first sign-in, Windows downloads with
@@ -810,14 +838,6 @@ fn first_run_windows() -> Res<()> {
     if windows_setup_status() != Some(Outcome::Waiting) {
         return Ok(());
     }
-    let title = say(t!("Getting Windows ready for your games"), &[]);
-    let text = say(
-        t!("Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."),
-        &[],
-    );
-    let _ = Command::new("notify-send")
-        .args(["--app-name=Monet", "--icon=monet-windows", title.as_str(), text.as_str()])
-        .status();
     finish_windows_setup(false)
 }
 
@@ -837,6 +857,20 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
     };
     if ask_first && !ask(t!("Set up Windows?"), &question, t!("Set Up")) {
         return Ok(());
+    }
+    if !ask_first {
+        let title = say(t!("Getting Windows ready for your games"), &[]);
+        let text = say(
+            if iso.is_some() {
+                t!("You can keep using Monet while Windows is prepared. Monet asks before restarting.")
+            } else {
+                t!("Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts.")
+            },
+            &[],
+        );
+        let _ = Command::new("notify-send")
+            .args(["--app-name=Monet", "--icon=monet-windows", title.as_str(), text.as_str()])
+            .status();
     }
     let mut args = vec!["helper".to_string(), "prepare-windows".to_string()];
     if let Some(p) = &iso {
@@ -863,15 +897,25 @@ fn finish_windows_setup(ask_first: bool) -> Res<()> {
                 t!("Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."),
                 t!("Restart"),
             ) {
-                let _ = Command::new("systemctl").arg("reboot").status();
+                // Windows Setup needs the firmware to process BootNext.
+                let reboot = Command::new("systemctl")
+                    .env("SYSTEMCTL_SKIP_AUTO_SOFT_REBOOT", "1")
+                    .env("SYSTEMCTL_SKIP_AUTO_KEXEC", "1")
+                    .args(["--check-inhibitors=yes", "reboot"])
+                    .status();
+                if !reboot.is_ok_and(|status| status.success()) {
+                    return Err(t!("The restart was blocked. Save your work, then choose Restart and install in Play on Windows.").into());
+                }
             }
             Ok(())
         }
         Some(Outcome::DownloadFailed) => {
-            let text = t!("Microsoft didn't allow the automatic download. Download Windows 11 from Microsoft's page \
-                        (choose \"Download Windows 11 Disk Image (ISO)\"), keep it in Downloads, then choose Windows again.");
-            if ask(t!("Download Windows"), text, t!("Open Microsoft's Page")) {
-                let _ = Command::new("xdg-open").arg("https://www.microsoft.com/software-download/windows11").status();
+            let reason = reason.as_deref().unwrap_or(t!("Windows setup stopped before it could use the installation media"));
+            let reason = capitalized(&say(reason, &[]));
+            let help = say(t!("Open Play on Windows to retry the download or choose a Windows 11 ISO."), &[]);
+            if ask(t!("Windows setup stopped"), &format!("{reason}.\n\n{help}"), t!("Open Settings")) {
+                let Some(dir) = windows_setup::libexec_dir() else { return Ok(()); };
+                let _ = Command::new(dir.join("monet-quick")).args(["open", "windows"]).status();
             }
             Ok(())
         }
@@ -912,33 +956,16 @@ fn windows_log_tail() -> String {
     lines[lines.len().saturating_sub(12)..].join("\n")
 }
 
-/// The Downloads folder as the account names it in `user-dirs.dirs` (xdg-user-dirs:
-/// "Hämtningar" in Swedish), else ~/Downloads.
-fn downloads_dir(home: &Path, user_dirs: &str) -> PathBuf {
-    user_dirs
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("XDG_DOWNLOAD_DIR="))
-        .map(|value| PathBuf::from(value.trim_matches('"').replace("$HOME", &home.to_string_lossy())))
-        .filter(|path| path.is_absolute() && path != home)
-        .unwrap_or_else(|| home.join("Downloads"))
-}
-
-/// A Windows 11 ISO the user downloaded, newest first.
+/// Use the same Windows media suggestion as Play on Windows in Settings.
 fn downloaded_windows_iso() -> Option<PathBuf> {
-    let home = PathBuf::from(std::env::var_os("HOME")?);
-    let config = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
-    let dir = downloads_dir(&home, &fs::read_to_string(config.join("user-dirs.dirs")).unwrap_or_default());
-    let mut isos: Vec<_> = fs::read_dir(dir)
+    let helper = windows_setup::libexec_dir()?.join("monet-quick");
+    let output = Command::new(helper).arg("windows-setup-iso").output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    serde_json::from_slice::<Option<PathBuf>>(&output.stdout)
         .ok()?
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| {
-            let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
-            name.ends_with(".iso") && name.contains("win")
-        })
-        .collect();
-    isos.sort_by_key(|p| std::cmp::Reverse(fs::metadata(p).and_then(|m| m.modified()).ok()));
-    isos.into_iter().next()
+        .filter(|path| path.is_absolute())
 }
 
 /// Shows a progress dialog fed by the setup script until it finishes, and
@@ -1009,6 +1036,21 @@ fn parse_bootc_check(out: &str) -> Option<(bool, Option<String>)> {
 /// Counts the apps in `flatpak remote-ls --updates --columns=application`.
 fn count_app_updates(out: &str) -> usize {
     out.lines().filter(|l| !l.trim().is_empty() && !l.starts_with("Application")).count()
+}
+
+fn update_is_staged(bootc: bool) -> Option<bool> {
+    let (program, command) = if bootc { ("bootc", "status") } else { ("rpm-ostree", "status") };
+    let result = Command::new(program).args([command, "--json"]).output().ok()?;
+    if !result.status.success() {
+        return None;
+    }
+    let data: serde_json::Value = serde_json::from_slice(&result.stdout).ok()?;
+    if bootc {
+        let deployments = data.get("status")?;
+        return Some(deployments.get("staged").is_some_and(serde_json::Value::is_object));
+    }
+    let deployments = data.get("deployments")?.as_array()?;
+    Some(deployments.iter().any(|entry| entry.get("staged").and_then(serde_json::Value::as_bool) == Some(true)))
 }
 
 fn check_for_updates() -> Res<UpdateCheck> {
@@ -1112,7 +1154,8 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
     }
 
     println!("Downloading the newest Monet…");
-    let status = if has("bootc") {
+    let bootc = has("bootc");
+    let status = if bootc {
         Command::new("bootc").arg("upgrade").status()
     } else {
         Command::new("rpm-ostree").arg("upgrade").status()
@@ -1121,10 +1164,15 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
     if !status.success() {
         return Err("The update didn't finish. Check your internet connection and try again.".into());
     }
+    let staged = update_is_staged(bootc);
     if has("flatpak") {
         println!("Updating your apps…");
         // Apps that fail to update keep working as they are.
-        let failed = "Some apps couldn't update. They still work as before. Restart to apply any downloaded system update, then try again.";
+        let failed = if staged == Some(true) {
+            "Some apps couldn't update. Restart to apply the downloaded system update, then try the apps again."
+        } else {
+            "Some apps couldn't update. Try updating them again."
+        };
         let status = Command::new("flatpak")
             .args(["update", "-y", "--noninteractive"])
             .status()
@@ -1135,7 +1183,11 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
         // And what no app uses anymore (old runtimes) makes room.
         let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y", "--noninteractive"]).status();
     }
-    println!("Done. Restart your PC to use the newest Monet.");
+    println!("{}", match staged {
+        Some(true) => "Done. Restart your PC to use the newest Monet.",
+        Some(false) => "Monet and your apps are up to date.",
+        None => "Updates finished. Check Settings → Updates for any pending restart.",
+    });
     Ok(())
 }
 
@@ -1284,16 +1336,6 @@ mod tests {
         let mut input = std::io::Cursor::new("continue\n");
         assert!(await_saved_apps(&mut input, &mut Closed).is_err());
         assert_eq!(input.position(), 0);
-    }
-
-    #[test]
-    fn finds_downloads_where_the_account_keeps_them() {
-        let home = Path::new("/home/claude");
-        let swedish = "# written by xdg-user-dirs-update\nXDG_DESKTOP_DIR=\"$HOME/Skrivbord\"\nXDG_DOWNLOAD_DIR=\"$HOME/Hämtningar\"\n";
-        assert_eq!(downloads_dir(home, swedish), PathBuf::from("/home/claude/Hämtningar"));
-        assert_eq!(downloads_dir(home, ""), PathBuf::from("/home/claude/Downloads"));
-        // Turned off (the folder is home itself) means none of its own.
-        assert_eq!(downloads_dir(home, "XDG_DOWNLOAD_DIR=\"$HOME/\"\n"), PathBuf::from("/home/claude/Downloads"));
     }
 
     #[test]
