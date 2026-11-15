@@ -10,7 +10,8 @@ PlasmaCore.Action {
     icon.name: "utilities-system-monitor"
     property var menuApplet: null
     property bool showInAppletMenu: true
-    property Connections menu: Connections {
+    // Not "menu": that is Plasma's own submenu property on an Action.
+    property Connections menuWatch: Connections {
         target: action.menuApplet
         function onContextualActionsAboutToShow() {
             action.showInAppletMenu = !action.menuApplet.containment?.internalAction("monet-task-manager")
