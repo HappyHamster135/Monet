@@ -76,8 +76,18 @@ WallpaperItem {
     readonly property string photo: /^file:\/\/\/.+\/$/.test(root.configuration.PhotoFolder || "") ? root.configuration.PhotoFolder : ""
     readonly property string series: ["hours", "lilies", "haystacks", "magpie"].indexOf(root.configuration.Series) >= 0
         || (root.configuration.Series === "photo" && photo !== "") ? root.configuration.Series : "hours"
-    readonly property string folder: series === "photo" ? photo : "file://@DATADIR@/wallpapers/Monet/contents/" + series + "/"
+    // Each painting comes in three shapes, 16:9, 21:9 and 32:9, the wider ones showing more of the
+    // scene to each side. The one nearest this screen's shape is cropped the least; a screen
+    // between two shapes takes the nearer by ratio. A photo is painted only in its own shape.
+    readonly property bool sized: width > 0 && height > 0
+    readonly property real aspect: sized ? width / height : 16 / 9
+    readonly property string shape: series === "photo" ? ""
+        : aspect > Math.sqrt(64 / 27 * 32 / 9) ? "32x9/" : aspect > Math.sqrt(16 / 9 * 64 / 27) ? "21x9/" : ""
+    readonly property string folder: series === "photo" ? photo : "file://@DATADIR@/wallpapers/Monet/contents/" + series + "/" + shape
     onFolderChanged: update()
+    // The first painting waits for the screen's size, so it is the right shape from the start;
+    // a moment more, for the shape to follow the size before it is chosen.
+    onSizedChanged: if (sized) Qt.callLater(update, true)
     // Each light starts at this minute of the day, then drifts into the next: these where
     // the place isn't known, or the sun doesn't rise and set today (far north and south).
     readonly property var hours: [
@@ -147,7 +157,7 @@ WallpaperItem {
     property bool focusing: false
 
     function update(force) {
-        if (!force && !activity.active) return;
+        if (!sized || (!force && !activity.active)) return;
         focusing = session !== null && Date.now() / 1000 < +session[2]
         const pinned = hours.findIndex(h => h.name === fixed)
         if (pinned >= 0 && !focusing) {

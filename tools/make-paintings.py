@@ -5,6 +5,10 @@ boats, and one bright sun. Every painting uses the same brushstrokes in the
 same places; only the light changes. That way the desktop can fade from one
 hour to the next and it looks like the light moving, not a slideshow.
 
+Wider screens get wider paintings, not a crop: the same harbor (or pond, field,
+fence) runs on past both sides of the 16:9 picture, which stays exactly as it is
+in the middle. What is added out there draws numbers of its own.
+
 Run from the repository root:  python3 tools/make-paintings.py [--scale 0.5]
 Needs Pillow and NumPy. Writes linux/share/wallpapers/Monet/contents/.
 """
@@ -19,6 +23,10 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "linux" / "share" / "wallpapers" / "Monet" / "contents"
 HORIZON = 0.56
+# Each shape of screen and its width at 2160 high: 16:9, then ultrawide (21:9, as
+# 3440x1440 and 5120x2160) and super ultrawide (32:9). The wider ones go in their own
+# folder beside the 16:9 paintings; the wallpaper picks the closest to its screen.
+ASPECTS = {"16x9": 3840, "21x9": 5120, "32x9": 7680}
 
 
 def rgb(h):
@@ -80,25 +88,34 @@ def gradient(stops, n):
     return np.stack([np.interp(t, pos, cols[:, i]) for i in range(3)], axis=1)
 
 
-def smooth_noise(rng, w, h, cell):
-    """Low-frequency noise in [-1, 1]: random values on a coarse grid, enlarged smoothly."""
+def smooth_noise(rng, w, h, cell, e=0, more=None):
+    """Low-frequency noise in [-1, 1]: random values on a coarse grid, enlarged smoothly.
+
+    With e, the grid goes on e pixels past each side, its new cells drawn from more,
+    so the middle keeps the 16:9 painting's mottling."""
     gw, gh = max(2, w // cell + 2), max(2, h // cell + 2)
     grid = rng.uniform(-1, 1, (gh, gw)).astype(np.float32)
+    left = right = 0
+    if e:
+        left, right = -(-e // cell) + 2, max(0, -(-(w + e - gw * cell) // cell)) + 2
+        grid = np.concatenate([more.uniform(-1, 1, (gh, left)).astype(np.float32), grid,
+                               more.uniform(-1, 1, (gh, right)).astype(np.float32)], axis=1)
     img = Image.fromarray(((grid + 1) * 127.5).astype(np.uint8), "L")
-    img = img.resize((gw * cell, gh * cell), Image.BICUBIC).crop((0, 0, w, h))
+    img = img.resize(((gw + left + right) * cell, gh * cell), Image.BICUBIC)
+    img = img.crop((left * cell - e, 0, left * cell - e + w + 2 * e, h))
     return np.asarray(img).astype(np.float32) / 127.5 - 1
 
 
-def light_field(hour, w, h, noise_a, noise_b):
-    """The underpainting: smooth color everywhere, before any brushstroke."""
+def light_field(hour, w, h, noise_a, noise_b, e=0):
+    """The underpainting: smooth color everywhere, before any brushstroke. e more on each side."""
     hz = int(h * hour.get("horizon", HORIZON))
     sky = gradient(hour["sky"], hz)
     water = gradient(hour["water"], h - hz)
-    field = np.repeat(np.concatenate([sky, water])[:, None, :], w, axis=1)
+    field = np.repeat(np.concatenate([sky, water])[:, None, :], w + 2 * e, axis=1)
 
     # The glow of the sun (or moon), and its glow on the water.
     L = hour["light"]
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    yy, xx = np.mgrid[0:h, -e:w + e].astype(np.float32)
     lx, ly = L["x"] * w, L["y"] * h
     d = np.hypot(xx - lx, (yy - ly) * 1.25) / (L["reach"] * h)
     glow = np.exp(-(d**2) * 1.6)[..., None] * L["strength"]
@@ -110,9 +127,9 @@ def light_field(hour, w, h, noise_a, noise_b):
     col = np.where(below, col, 0)[..., None]
     field = field * (1 - col) + rgb(L["glow"]) * col
 
-    # Mist hugging the horizon.
+    # Mist hugging the horizon, in the 16:9 picture's own average color.
     haze = np.exp(-(((yy - hz) / (h * 0.06)) ** 2))[..., None] * 0.35
-    field = field * (1 - haze) + field.mean(axis=(0, 1)) * haze
+    field = field * (1 - haze) + field[:, e:e + w].mean(axis=(0, 1)) * haze
 
     # Mottled paint, so no area is a flat gradient.
     field *= 1 + 0.05 * noise_a[..., None]
@@ -137,12 +154,16 @@ def stroke_polygon(cx, cy, length, width, angle, bend):
 
 
 class Brushwork:
-    """The strokes of one painting. Built once, drawn in each hour's colors."""
+    """The strokes of one painting. Built once, drawn in each hour's colors.
 
-    def __init__(self, w, h, seed=1872, horizon=HORIZON):
-        self.w, self.h = w, h
+    w is the 16:9 picture's width; e more on each side are brushed with numbers of
+    their own (more), so the picture's own strokes stay where they were."""
+
+    def __init__(self, w, h, seed=1872, horizon=HORIZON, e=0):
+        self.w, self.h, self.e = w, h, e
         self.hz = int(h * horizon)
         self.rng = np.random.default_rng(seed)
+        self.more = np.random.default_rng(seed + 1)
         self.s = w / 3840
         self.strokes = []
         # Broad, thin strokes blend the underpainting; smaller ones on top
@@ -158,12 +179,19 @@ class Brushwork:
         self.strokes.append((layer, cx, cy, length, width, angle, bend, jitter, alpha, tint, offset))
 
     def _sky(self, step, size, alpha):
-        rng, s = self.rng, self.s
+        s = self.s
+        self._sky_rows(step, size, alpha, self.rng, -60 * s, self.w + 60 * s)
+        if self.e:
+            self._sky_rows(step, size, alpha, self.more, -self.e - 60 * s, 0)
+            self._sky_rows(step, size, alpha, self.more, self.w, self.w + self.e + 60 * s)
+
+    def _sky_rows(self, step, size, alpha, rng, x0, x1):
+        s = self.s
         step *= s
         y = 0.0
         while y < self.hz + 10 * s:
-            x = -60 * s + rng.uniform(0, step)
-            while x < self.w + 60 * s:
+            x = x0 + rng.uniform(0, step)
+            while x < x1:
                 cy = y + rng.normal(0, step * 0.35)
                 # Long, loose strokes high up; shorter and flatter near the horizon.
                 depth = min(1.0, max(cy, 0) / self.hz) if self.hz else 1
@@ -178,14 +206,21 @@ class Brushwork:
             y += step * rng.uniform(0.55, 0.8)
 
     def _water(self, step, size, alpha):
-        rng, s = self.rng, self.s
+        s = self.s
+        self._water_rows(step, size, alpha, self.rng, -80 * s, self.w + 80 * s)
+        if self.e:
+            self._water_rows(step, size, alpha, self.more, -self.e - 80 * s, 0)
+            self._water_rows(step, size, alpha, self.more, self.w, self.w + self.e + 80 * s)
+
+    def _water_rows(self, step, size, alpha, rng, x0, x1):
+        s = self.s
         y = float(self.hz)
         while y < self.h + 20 * s:
             depth = (y - self.hz) / (self.h - self.hz)
             # Strokes grow as the water comes closer.
             grow = (0.35 + 1.4 * depth) * size
-            x = -80 * s + rng.uniform(0, 80 * s)
-            while x < self.w + 80 * s:
+            x = x0 + rng.uniform(0, 80 * s)
+            while x < x1:
                 length = rng.uniform(60, 140) * s * grow * (1 + 1.6 * rng.random() ** 3)  # now and then a long sweep
                 width = rng.uniform(12, 22) * s * grow
                 self._add("water", x, y + rng.normal(0, 3 * s * grow), length, width,
@@ -206,20 +241,20 @@ def to255(c, alpha):
 
 
 def paint(hour, brushwork, noise, scene=None):
-    w, h, s, hz = brushwork.w, brushwork.h, brushwork.s, brushwork.hz
-    field = light_field(hour, w, h, *noise)
+    w, h, s, hz, e = brushwork.w, brushwork.h, brushwork.s, brushwork.hz, brushwork.e
+    field = light_field(hour, w, h, *noise, e)
     base = Image.fromarray((field * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6 * s))
     canvas = base.convert("RGBA")
 
     def sample(x, y):
-        xi = int(min(max(x, 0), w - 1))
+        xi = int(min(max(x + e, 0), w + 2 * e - 1))
         yi = int(min(max(y, 0), h - 1))
         return field[yi, xi]
 
     accents = {"sky": rgb(hour["accent_sky"]), "water": rgb(hour["accent_water"])}
     rng = np.random.default_rng(7)
 
-    p = Painter(canvas)
+    p = Painter(canvas, e)
     for kind, cx, cy, length, width, angle, bend, jitter, alpha, tint, offset in brushwork.strokes:
         # Keep sky strokes above the water and the other way around.
         if kind == "sky":
@@ -242,7 +277,7 @@ def paint(hour, brushwork, noise, scene=None):
     (scene or harbor_scene)(p, hour, w, h, hz, s, rng)
 
     img = p.canvas.convert("RGB").filter(ImageFilter.GaussianBlur(0.6 * s))
-    return grain(img, s)
+    return grain(img, s, e)
 
 
 class Painter:
@@ -250,15 +285,24 @@ class Painter:
 
     Each shape is drawn as its own small patch, blurred, and composited, so
     overlapping strokes mix the way glazes do, without dark fringes.
+
+    Everything is placed as in the 16:9 picture: x from 0 to its width. A wider
+    canvas has e more pixels on each side, at x below 0 and past the width.
     """
 
-    def __init__(self, canvas):
-        self.canvas = canvas
+    def __init__(self, canvas, e=0):
+        self.canvas, self.e = canvas, e
+
+    def sides(self, w):
+        """The stretches added on each side of the 16:9 picture, as (x0, x1): none for 16:9."""
+        return [(-self.e, 0), (w, w + self.e)] if self.e else []
 
     def shape(self, points, color, alpha, blur=0.0, ellipse=None):
         if ellipse:
             x0, y0, x1, y1 = ellipse
+            x0, x1 = x0 + self.e, x1 + self.e
         else:
+            points = [(x + self.e, y) for x, y in points]
             xs = [x for x, _ in points]
             ys = [y for _, y in points]
             x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
@@ -295,6 +339,7 @@ class Painter:
             return
         bank = bristles()
         mask, tone = bank[int(abs(x * 7.31 + y * 3.17)) % len(bank)]  # the same stamp wherever the stroke repeats
+        x += self.e
         ca, sa = math.cos(angle), math.sin(angle)
         hx, hy = abs(ca) * length / 2 + abs(sa) * width / 2 + 2, abs(sa) * length / 2 + abs(ca) * width / 2 + 2
         left, top = int(math.floor(x - hx)), int(math.floor(y - hy))
@@ -347,6 +392,22 @@ def bristles(n=8, length=320, width=64):
     return BANK
 
 
+def stretches(p, w, rng, busy=(0.12, 0.3), quiet=(0.06, 0.16), first=True):
+    """The added sides, cut into stretches from the 16:9 picture's edge outward, busy and
+    quiet by turns (busy first unless first is False): (x0, x1, busy) each."""
+    out = []
+    for a, b in p.sides(w):
+        outward = 1 if a >= w else -1
+        at, end, on = (a, b, first) if outward > 0 else (b, a, first)
+        while (end - at) * outward > 0:
+            step = rng.uniform(*(busy if on else quiet)) * w
+            nxt = at + outward * step
+            nxt = min(nxt, end) if outward > 0 else max(nxt, end)
+            out.append((min(at, nxt), max(at, nxt), on))
+            at, on = nxt, not on
+    return out
+
+
 def harbor_scene(p, hour, w, h, hz, s, rng):
     """The Hours: the harbor, the sun and its reflection, the boats."""
     harbor(p, hour, w, h, hz, s)
@@ -357,45 +418,82 @@ def harbor_scene(p, hour, w, h, hz, s, rng):
         harbor_lights(p, w, h, hz, s, rng)
 
 
+def harbor_stretches(p, w):
+    """Where the harbor goes on past the picture: quays and masts, then open water."""
+    return stretches(p, w, np.random.default_rng(13), busy=(0.14, 0.3), quiet=(0.05, 0.14))
+
+
 def harbor(p, hour, w, h, hz, s):
     """Masts, cranes and smoke dissolving in the mist along the horizon."""
     rng = np.random.default_rng(11)
     mist = rgb(hour["mist"])
     haze = rgb(hour["sky"][2][1])
     for x0, x1, count in ((0.02, 0.27, 13), (0.72, 0.99, 11)):
-        # Hulls and warehouses: low strokes along the waterline.
-        x = x0 * w
-        while x < x1 * w:
-            bw = rng.uniform(90, 220) * s
-            bh = rng.uniform(12, 34) * s
-            p.lay(x + bw / 2, hz - bh * 0.35, bw, bh, rng.normal(0, 0.01) + (math.pi if bh > 23 * s else 0),
-                  mist * 0.8 + haze * 0.2, rng.uniform(0.2, 0.36), 0.1)
-            x += bw * rng.uniform(0.6, 1.2)
+        quay(p, x0 * w, x1 * w, hz, s, rng, mist, haze)
         for _ in range(count):
             x = (x0 + (x1 - x0) * rng.beta(1.6, 1.6)) * w
-            tall = rng.uniform(0.04, 0.17) * h
-            # Opaque but pale: far away things lose their darkness, not their body.
-            fade = rng.uniform(0.25, 0.6)
-            color = mist * (1 - fade) + haze * fade
-            # A soft stroke for its body, then the brush pulled up it from the water, running dry at the top.
-            width, lean, bend, alpha = rng.uniform(6, 10) * s, rng.normal(0, 0.02), rng.normal(0, 0.15), \
-                rng.uniform(0.55, 0.8)
-            p.stroke(x, hz - tall / 2, tall, width, math.pi / 2 + lean, bend, color, alpha * 0.6, 2.4 * s)
-            dx = math.sin(lean) * tall / 2
-            sweep(p, x - dx, hz + 2 * s, x + dx, hz - tall, width + 2 * s, color, alpha, 0.1)
-            if rng.random() < 0.35:
-                y = hz - tall * rng.uniform(0.55, 0.85)
-                p.lay(x + rng.normal(0, 6 * s), y, tall * rng.uniform(0.15, 0.3), 6 * s,
-                      rng.normal(0, 0.12), color, 0.55, 0.1)
+            mast(p, x, hz, h, s, rng, mist, haze)
     # Smoke drifting up from the chimneys on the right.
     for chimney in (0.80, 0.88):
         x, y = chimney * w, hz - rng.uniform(0.10, 0.14) * h
-        for i in range(22):
-            x += rng.uniform(6, 16) * s
-            y -= rng.uniform(5, 11) * s
-            r = (16 + i * 4) * s
-            p.lay(x, y, r * 2.6, r, rng.normal(-0.35, 0.2) + (math.pi if rng.normal(0, 0.5) > 0 else 0),
-                  mist * 0.5 + haze * 0.5, 0.18 * (1 - i / 26), 0.08)
+        smoke(p, x, y, s, rng, mist, haze)
+    # On a wider screen the harbor goes on: more quays and masts, a chimney smoking
+    # here and there, and stretches of open water between them.
+    more = np.random.default_rng(12)
+    for x0, x1, busy in harbor_stretches(p, w):
+        if busy:
+            quay(p, x0, x1, hz, s, more, mist, haze)
+            for _ in range(int(46 * (x1 - x0) / w) + 1):
+                mast(p, mix(x0, x1, more.beta(1.4, 1.4)), hz, h, s, more, mist, haze)
+            if x1 - x0 > 0.18 * w:
+                x = mix(x0, x1, more.uniform(0.3, 0.7))
+                smoke(p, x, hz - mast(p, x, hz, h, s, more, mist, haze, tall=more.uniform(0.10, 0.14) * h), s, more,
+                      mist, haze)
+        else:
+            # A few low hulls on the open stretch.
+            for _ in range(more.integers(0, 3)):
+                x = mix(x0, x1, more.random())
+                quay(p, x, x + more.uniform(120, 300) * s, hz, s, more, mist, haze)
+
+
+def quay(p, x0, x1, hz, s, rng, mist, haze):
+    """Hulls and warehouses: low strokes along the waterline."""
+    x = x0
+    while x < x1:
+        bw = rng.uniform(90, 220) * s
+        bh = rng.uniform(12, 34) * s
+        p.lay(x + bw / 2, hz - bh * 0.35, bw, bh, rng.normal(0, 0.01) + (math.pi if bh > 23 * s else 0),
+              mist * 0.8 + haze * 0.2, rng.uniform(0.2, 0.36), 0.1)
+        x += bw * rng.uniform(0.6, 1.2)
+
+
+def mast(p, x, hz, h, s, rng, mist, haze, tall=None):
+    """A mast, crane or chimney standing up out of the mist; returns how tall."""
+    tall = rng.uniform(0.04, 0.17) * h if tall is None else tall
+    # Opaque but pale: far away things lose their darkness, not their body.
+    fade = rng.uniform(0.25, 0.6)
+    color = mist * (1 - fade) + haze * fade
+    # A soft stroke for its body, then the brush pulled up it from the water, running dry at the top.
+    width, lean, bend, alpha = rng.uniform(6, 10) * s, rng.normal(0, 0.02), rng.normal(0, 0.15), \
+        rng.uniform(0.55, 0.8)
+    p.stroke(x, hz - tall / 2, tall, width, math.pi / 2 + lean, bend, color, alpha * 0.6, 2.4 * s)
+    dx = math.sin(lean) * tall / 2
+    sweep(p, x - dx, hz + 2 * s, x + dx, hz - tall, width + 2 * s, color, alpha, 0.1)
+    if rng.random() < 0.35:
+        y = hz - tall * rng.uniform(0.55, 0.85)
+        p.lay(x + rng.normal(0, 6 * s), y, tall * rng.uniform(0.15, 0.3), 6 * s,
+              rng.normal(0, 0.12), color, 0.55, 0.1)
+    return tall
+
+
+def smoke(p, x, y, s, rng, mist, haze):
+    """Smoke drifting up from a chimney's top at (x, y)."""
+    for i in range(22):
+        x += rng.uniform(6, 16) * s
+        y -= rng.uniform(5, 11) * s
+        r = (16 + i * 4) * s
+        p.lay(x, y, r * 2.6, r, rng.normal(-0.35, 0.2) + (math.pi if rng.normal(0, 0.5) > 0 else 0),
+              mist * 0.5 + haze * 0.5, 0.18 * (1 - i / 26), 0.08)
 
 
 def halo(p, hour, w, h, s):
@@ -454,74 +552,98 @@ def boats(p, hour, w, h, s):
     mist = rgb(hour["mist"])
     rim = rgb(hour["reflection"])
     for bx, by, size, a in ((0.25, 0.80, 1.2, 0.92), (0.41, 0.695, 0.62, 0.74), (0.13, 0.66, 0.42, 0.52)):
-        x, y = bx * w, by * h
-        k = s * size
-        L = 250 * k
-        soft = 2.2 * k
-        # Hull: two overlapping dark dabs, the ends lifted, light catching the rim; then the brush
-        # dragged along it in a few strokes, so its paint shows.
-        p.stroke(x, y, L, 36 * k, -0.03, 0.9, mist, a, soft)
-        p.stroke(x - L * 0.06, y + 8 * k, L * 0.8, 22 * k, -0.02, 0.6, mist * 0.85, a * 0.8, soft)
-        for u, dy, tone in ((-0.22, 2, 1.12), (0.08, -2, 0.9), (0.24, 6, 1.06)):
-            p.lay(x + u * L, y + dy * k, L * 0.42, 18 * k, -0.03 + u * 0.25 + (math.pi if tone < 1 else 0),
-                  mist * tone, a * 0.5, 0.2)
-        p.lay(x + L * 0.05, y - 13 * k, L * 0.6, 6 * k, -0.04, mix(mist, rim, 0.5), 0.1 * a, 0.1)
+        boat(p, bx * w, by * h, size, a, mist, rim, s, rng)
+    # Farther boats out on the water a wider screen shows, one each side.
+    more = np.random.default_rng(4)
+    for (x0, x1), (at, by, size, a) in zip(p.sides(w), ((0.45, 0.69, 0.5, 0.6), (0.55, 0.645, 0.36, 0.48))):
+        if x1 - x0 > 0.1 * w:
+            boat(p, mix(x0, x1, at), by * h, size, a, mist, rim, s, more)
 
-        def daub(x0, y0, x1, y1, width, bend, tone=1.0, alpha=1.0):
-            # One stroke from where the brush lands (wide) to where it lifts, in boat units, its bristles showing.
-            x0, y0, x1, y1 = fx + x0 * k, y + y0 * k, fx + x1 * k, y + y1 * k
-            length, angle = math.hypot(x1 - x0, y1 - y0), math.atan2(y1 - y0, x1 - x0)
-            p.stroke((x0 + x1) / 2, (y0 + y1) / 2, length, width * k, angle, bend, mist * tone, a * alpha, 1.3 * k)
-            p.lay((x0 + x1) / 2, (y0 + y1) / 2, length * 0.9, width * k * 0.7, angle, mist * tone * 1.15,
-                  a * alpha * 0.4, 0.2)
 
-        def head(cx, cy, r):
-            # A dab and a smaller one beside it: round enough, never a circle.
-            p.dot(fx + cx * k, y + cy * k, r * k, mist, a, 1.3 * k)
-            p.dot(fx + (cx + 0.35 * r) * k, y + (cy + 0.4 * r) * k, 0.7 * r * k, mist, a, 1.3 * k)
+def boat(p, x, y, size, a, mist, rim, s, rng):
+    """A rowboat with a standing rower and a passenger, at (x, y)."""
+    k = s * size
+    L = 250 * k
+    soft = 2.2 * k
+    # Hull: two overlapping dark dabs, the ends lifted, light catching the rim; then the brush
+    # dragged along it in a few strokes, so its paint shows.
+    p.stroke(x, y, L, 36 * k, -0.03, 0.9, mist, a, soft)
+    p.stroke(x - L * 0.06, y + 8 * k, L * 0.8, 22 * k, -0.02, 0.6, mist * 0.85, a * 0.8, soft)
+    for u, dy, tone in ((-0.22, 2, 1.12), (0.08, -2, 0.9), (0.24, 6, 1.06)):
+        p.lay(x + u * L, y + dy * k, L * 0.42, 18 * k, -0.03 + u * 0.25 + (math.pi if tone < 1 else 0),
+              mist * tone, a * 0.5, 0.2)
+    p.lay(x + L * 0.05, y - 13 * k, L * 0.6, 6 * k, -0.04, mix(mist, rim, 0.5), 0.1 * a, 0.1)
 
-        # The figures are a few quick dark strokes, as Monet put them down.
-        lean, nod, hunch = rng.uniform(-1, 1, 3)
-        # The rower, standing at the stern: back, a darker stroke into it, the
-        # head, an arm reaching for the oar, and the oar dipping into the water.
-        fx = x + L * 0.24
-        daub(12 + 4 * lean, -102, -4, 2, 22, 0.5)
-        daub(7 + 4 * lean, -94, -5, -24, 12, 0.3, tone=0.82)
-        head(13 + 6 * lean + 2 * nod, -111, 9)
-        daub(14 + 4 * lean, -88, 34, -68, 8, 0.3)
-        daub(28, -78, 90, 66, 5.5, 0.12, alpha=0.85)
-        # A passenger hunched in the bow: a broad back, the shoulders, the head.
-        fx = x - L * 0.17
-        daub(8 + 4 * hunch, -54, -4, 10, 36, 0.7)
-        daub(-14, -38, 16 + 3 * hunch, -44, 12, 0.4, tone=0.88)
-        head(5 + 5 * hunch, -62, 9.5)
-        # Its reflection, broken by ripples.
-        for i in range(7):
-            p.lay(x + rng.normal(0, L * 0.1), y + (30 + i * 14) * k, L * rng.uniform(0.4, 0.9) * (1 - i * 0.09),
-                  13 * k, math.pi if i % 2 else 0, mist, a * (0.42 - i * 0.05), 0.12)
+    def daub(x0, y0, x1, y1, width, bend, tone=1.0, alpha=1.0):
+        # One stroke from where the brush lands (wide) to where it lifts, in boat units, its bristles showing.
+        x0, y0, x1, y1 = fx + x0 * k, y + y0 * k, fx + x1 * k, y + y1 * k
+        length, angle = math.hypot(x1 - x0, y1 - y0), math.atan2(y1 - y0, x1 - x0)
+        p.stroke((x0 + x1) / 2, (y0 + y1) / 2, length, width * k, angle, bend, mist * tone, a * alpha, 1.3 * k)
+        p.lay((x0 + x1) / 2, (y0 + y1) / 2, length * 0.9, width * k * 0.7, angle, mist * tone * 1.15,
+              a * alpha * 0.4, 0.2)
+
+    def head(cx, cy, r):
+        # A dab and a smaller one beside it: round enough, never a circle.
+        p.dot(fx + cx * k, y + cy * k, r * k, mist, a, 1.3 * k)
+        p.dot(fx + (cx + 0.35 * r) * k, y + (cy + 0.4 * r) * k, 0.7 * r * k, mist, a, 1.3 * k)
+
+    # The figures are a few quick dark strokes, as Monet put them down.
+    lean, nod, hunch = rng.uniform(-1, 1, 3)
+    # The rower, standing at the stern: back, a darker stroke into it, the
+    # head, an arm reaching for the oar, and the oar dipping into the water.
+    fx = x + L * 0.24
+    daub(12 + 4 * lean, -102, -4, 2, 22, 0.5)
+    daub(7 + 4 * lean, -94, -5, -24, 12, 0.3, tone=0.82)
+    head(13 + 6 * lean + 2 * nod, -111, 9)
+    daub(14 + 4 * lean, -88, 34, -68, 8, 0.3)
+    daub(28, -78, 90, 66, 5.5, 0.12, alpha=0.85)
+    # A passenger hunched in the bow: a broad back, the shoulders, the head.
+    fx = x - L * 0.17
+    daub(8 + 4 * hunch, -54, -4, 10, 36, 0.7)
+    daub(-14, -38, 16 + 3 * hunch, -44, 12, 0.4, tone=0.88)
+    head(5 + 5 * hunch, -62, 9.5)
+    # Its reflection, broken by ripples.
+    for i in range(7):
+        p.lay(x + rng.normal(0, L * 0.1), y + (30 + i * 14) * k, L * rng.uniform(0.4, 0.9) * (1 - i * 0.09),
+              13 * k, math.pi if i % 2 else 0, mist, a * (0.42 - i * 0.05), 0.12)
 
 
 def harbor_lights(p, w, h, hz, s, rng):
     warm = rgb("#FFB766")
     for x0, x1, n in ((0.04, 0.30, 9), (0.70, 0.97, 8)):
         for _ in range(n):
-            x = rng.uniform(x0, x1) * w
-            y = hz - rng.uniform(4, 40) * s
-            r = rng.uniform(2.5, 4.5) * s
-            p.dot(x, y, r * 4, warm, 0.22, 6 * s)
-            p.dot(x, y, r, warm, 0.95, 0.8 * s)
-            for i in range(5):
-                p.lay(x + rng.normal(0, 4 * s), hz + (10 + i * 14) * s, rng.uniform(16, 38) * s, 6 * s,
-                      math.pi if i % 2 else 0, warm, 0.6 - i * 0.1, 0.15)
+            harbor_light(p, rng.uniform(x0, x1) * w, hz, s, rng, warm)
+    more = np.random.default_rng(14)
+    for x0, x1, busy in harbor_stretches(p, w):
+        for _ in range(int(32 * (x1 - x0) / w) + 1 if busy else 0):
+            harbor_light(p, more.uniform(x0, x1), hz, s, more, warm)
 
 
-def grain(img, s):
-    """Canvas texture: fine noise, a little stronger in the shadows."""
+def harbor_light(p, x, hz, s, rng, warm):
+    """A lamp on the quay and its light running down the water."""
+    y = hz - rng.uniform(4, 40) * s
+    r = rng.uniform(2.5, 4.5) * s
+    p.dot(x, y, r * 4, warm, 0.22, 6 * s)
+    p.dot(x, y, r, warm, 0.95, 0.8 * s)
+    for i in range(5):
+        p.lay(x + rng.normal(0, 4 * s), hz + (10 + i * 14) * s, rng.uniform(16, 38) * s, 6 * s,
+              math.pi if i % 2 else 0, warm, 0.6 - i * 0.1, 0.15)
+
+
+def grain(img, s, e=0):
+    """Canvas texture: fine noise, a little stronger in the shadows. The same weave and noise
+    as the 16:9 picture in its middle; the e columns on each side draw noise of their own."""
     rng = np.random.default_rng(5)
     arr = np.asarray(img).astype(np.float32)
-    n = rng.normal(0, 3.2, arr.shape[:2]).astype(np.float32)[..., None]
-    weave = (np.sin(np.arange(arr.shape[1]) * 1.9 / max(s, 0.25))[None, :, None]
-             * np.sin(np.arange(arr.shape[0]) * 1.7 / max(s, 0.25))[:, None, None]) * 1.4
+    h, width = arr.shape[:2]
+    n = rng.normal(0, 3.2, (h, width - 2 * e)).astype(np.float32)
+    if e:
+        more = np.random.default_rng(6)
+        n = np.concatenate([more.normal(0, 3.2, (h, e)).astype(np.float32), n,
+                            more.normal(0, 3.2, (h, e)).astype(np.float32)], axis=1)
+    n = n[..., None]
+    weave = (np.sin(np.arange(-e, width - e) * 1.9 / max(s, 0.25))[None, :, None]
+             * np.sin(np.arange(h) * 1.7 / max(s, 0.25))[:, None, None]) * 1.4
     lum = arr.mean(axis=2, keepdims=True) / 255
     arr = arr + (n + weave) * (1.15 - lum * 0.5)
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
@@ -716,19 +838,29 @@ def lily(p, x, y, r, color, c, s, rng):
             p.shape(petal((x, y + r * 0.02), tip, r * 0.2, side * 0.3), mix(c["green"], c["bright"], 0.4), 0.9, 0.8 * s)
 
 
+def willow(p, x, h, s, rng, leaf):
+    """One stroke of a willow's reflection, falling down the water from the bank."""
+    y = rng.beta(1.2, 2.6) * 0.85 * h
+    fade = 1 - y / (0.9 * h)
+    length, width, angle, bend = rng.uniform(160, 520) * s, rng.uniform(24, 60) * s, \
+        math.pi / 2 + rng.normal(0, 0.08), rng.normal(0, 0.35)
+    color, alpha = leaf * rng.uniform(0.8, 1.2), rng.uniform(0.06, 0.16) * (0.4 + fade)
+    # A soft glaze, then the brush pulled down the water through it (or up), its bristles showing.
+    p.stroke(x, y, length, width, angle, bend, color, alpha, 14 * s)
+    p.lay(x, y, length * 0.9, width * 0.7, angle + (math.pi if bend > 0 else 0), color, alpha * 1.2, 0.14)
+
+
 def lilies_scene(p, hour, w, h, hz, s, rng):
     leaf = rgb(hour["foliage"])
     # The willows on the bank, upside down in the water: long falling strokes.
     for x0, x1, n in ((-0.04, 0.24, 90), (0.76, 1.04, 80), (0.4, 0.54, 26)):
         for _ in range(n):
-            x, y = rng.uniform(x0, x1) * w, rng.beta(1.2, 2.6) * 0.85 * h
-            fade = 1 - y / (0.9 * h)
-            length, width, angle, bend = rng.uniform(160, 520) * s, rng.uniform(24, 60) * s, \
-                math.pi / 2 + rng.normal(0, 0.08), rng.normal(0, 0.35)
-            color, alpha = leaf * rng.uniform(0.8, 1.2), rng.uniform(0.06, 0.16) * (0.4 + fade)
-            # A soft glaze, then the brush pulled down the water through it (or up), its bristles showing.
-            p.stroke(x, y, length, width, angle, bend, color, alpha, 14 * s)
-            p.lay(x, y, length * 0.9, width * 0.7, angle + (math.pi if bend > 0 else 0), color, alpha * 1.2, 0.14)
+            willow(p, rng.uniform(x0, x1) * w, h, s, rng, leaf)
+    # A wider screen shows more of the bank: open water, then the next willows.
+    more = np.random.default_rng(8)
+    for x0, x1, busy in stretches(p, w, np.random.default_rng(9), busy=(0.12, 0.26), quiet=(0.07, 0.15), first=False):
+        for _ in range(int(320 * (x1 - x0) / w) if busy else 0):
+            willow(p, more.uniform(x0, x1), h, s, more, leaf)
     # The sky's light on the water, in broken dabs.
     refl = rgb(hour["reflection"])
     L = hour["light"]
@@ -759,6 +891,31 @@ def lilies_scene(p, hour, w, h, hz, s, rng):
     pads.sort(key=lambda pad: pad[1])  # far ones first, so nearer pads lie over them
     for x, y, rx, ry in pads:
         pad(p, x, y, rx, ry, math.atan2(L["y"] * h - y, L["x"] * w - x), c, s, rng)
+    # More islands on the water a wider screen shows, placed clear of the others.
+    more = np.random.default_rng(10)
+    found = []
+    for x0, x1 in p.sides(w):
+        n = max(1, round((x1 - x0) / (0.24 * w)))
+        for i in range(n):
+            cx = mix(x0, x1, (i + 0.5) / n) + more.normal(0, 0.03 * w)
+            cy, spread, count = float(more.choice((0.24, 0.5, 0.8))) + more.normal(0, 0.04), more.uniform(0.06, 0.1), \
+                int(more.uniform(8, 16))
+            placed = 0
+            for _ in range(count * 4):
+                y = (cy + more.normal(0, spread * 0.35)) * h
+                depth = min(1.0, max(0.03, y / h))
+                x = min(max(cx + more.normal(0, spread * w), x0), x1)
+                rx = more.uniform(55, 110) * s * (0.3 + 1.6 * depth)
+                ry = rx * (0.22 + 0.3 * depth)
+                if all(((x - px) / (rx + prx)) ** 2 + ((y - py) / (ry + pry)) ** 2 > 1.0
+                       for px, py, prx, pry in pads + found):
+                    found.append((x, y, rx, ry))
+                    placed += 1
+                    if placed == count:
+                        break
+    found.sort(key=lambda pad: pad[1])
+    for x, y, rx, ry in found:
+        pad(p, x, y, rx, ry, math.atan2(L["y"] * h - y, L["x"] * w - x), c, s, more)
     # Flowers last, so no pad covers one, and never two in the same spot.
     blooms = []
     for x, y, rx, ry in pads:
@@ -768,6 +925,13 @@ def lilies_scene(p, hour, w, h, hz, s, rng):
             if all(math.hypot(fx - bx, (fy - by) * 1.6) > (fr + br) * 1.5 for bx, by, br in blooms):
                 blooms.append((fx, fy, fr))
                 lily(p, fx, fy, fr, color, c, s, rng)
+    for x, y, rx, ry in found:
+        if more.random() < 0.22:
+            fx, fy, fr = x + more.normal(0, rx * 0.2), y - ry * 0.35, rx * more.uniform(0.45, 0.68)
+            color = c["flowers"][more.integers(len(c["flowers"]))]
+            if all(math.hypot(fx - bx, (fy - by) * 1.6) > (fr + br) * 1.5 for bx, by, br in blooms):
+                blooms.append((fx, fy, fr))
+                lily(p, fx, fy, fr, color, c, s, more)
 
 
 # Haystacks -----------------------------------------------------------------
@@ -834,23 +998,44 @@ def haystacks_scene(p, hour, w, h, hz, s, rng):
             p.lay(x + (dx - 0.5) * r * 1.2, hz - r * (0.25 + 0.5 * dy), r * (0.6 + 0.4 * ln), r * 0.6,
                   -math.pi / 2 + (tilt - 0.5) * 1.6, color, alpha * 0.55, 0.06)
         x += r * rng.uniform(0.9, 1.6)
+    # On a wider screen the trees go on along the horizon, past both sides.
+    more, leaves = np.random.default_rng(1892), np.random.default_rng(1893)
+    for x0, x1 in p.sides(w):
+        x = x0 - 40 * s
+        while x < x1 + 40 * s:
+            r = more.uniform(40, 110) * s
+            color, alpha = mix(mist, haze, more.uniform(0.3, 0.6)), more.uniform(0.3, 0.55)
+            p.dot(x, hz - r * 0.45, r, color, alpha * 0.7, 10 * s)
+            for dx, dy, ln, tilt in leaves.random((5, 4)):
+                p.lay(x + (dx - 0.5) * r * 1.2, hz - r * (0.25 + 0.5 * dy), r * (0.6 + 0.4 * ln), r * 0.6,
+                      -math.pi / 2 + (tilt - 0.5) * 1.6, color, alpha * 0.55, 0.06)
+            x += r * more.uniform(0.9, 1.6)
     # The poplars and roofs stay soft in the distance, a little of the brush showing in the poplars.
     for _ in range(9):
         x, tall = rng.uniform(0.05, 0.95) * w, rng.uniform(0.07, 0.13) * h
-        width = rng.uniform(16, 26) * s
-        p.stroke(x, hz - tall / 2, tall, width, math.pi / 2, 0, mix(mist, haze, 0.35), 0.4, 6 * s)
-        sweep(p, x, hz, x + (own.random() - 0.5) * 6 * s, hz - tall, width * 0.8, mix(mist, haze, 0.35), 0.15, 0.08)
+        poplar(p, x, tall, hz, s, rng, own, mist, haze)
+    for x0, x1 in p.sides(w):
+        for _ in range(round(10 * (x1 - x0) / w)):
+            x, tall = more.uniform(x0, x1), more.uniform(0.07, 0.13) * h
+            poplar(p, x, tall, hz, s, more, leaves, mist, haze)
     for _ in range(7):
         x = rng.uniform(0.55, 0.9) * w
         p.stroke(x, hz - 14 * s, rng.uniform(40, 80) * s, rng.uniform(14, 24) * s, 0, 0, mix(mist, haze, 0.25), 0.4, 3 * s)
+    # Another hamlet's roofs on each side a wider screen shows.
+    for x0, x1 in p.sides(w):
+        at = mix(x0, x1, more.uniform(0.3, 0.7))
+        for _ in range(round(9 * (x1 - x0) / w)):
+            x = min(max(at + more.normal(0, 0.05 * w), x0), x1)
+            p.stroke(x, hz - 14 * s, more.uniform(40, 80) * s, more.uniform(14, 24) * s, 0, 0,
+                     mix(mist, haze, 0.25), 0.4, 3 * s)
     # Stubble: short strokes across the field, bigger nearer.
     near, far = rgb(hour["water"][0][1]), rgb(hour["water"][2][1])
-    for _ in range(int(1400 * s * s * 16) // 16 + 300):
-        y = hz + (h - hz) * rng.uniform(0.04, 1) ** 1.6
-        depth = (y - hz) / (h - hz)
-        p.lay(rng.uniform(0, w), y, rng.uniform(20, 60) * s * (0.4 + depth), rng.uniform(6, 13) * s * (0.4 + depth),
-              rng.normal(0, 0.25), mix(near, far, depth * rng.uniform(0.6, 1.1)) * rng.uniform(0.9, 1.15),
-              rng.uniform(0.25, 0.5), 0.14)
+    count = int(1400 * s * s * 16) // 16 + 300
+    for _ in range(count):
+        stubble(p, rng.uniform, hz, h, s, rng, near, far, 0, w)
+    for x0, x1 in p.sides(w):
+        for _ in range(int(count * (x1 - x0) / w)):
+            stubble(p, more.uniform, hz, h, s, more, near, far, x0, x1)
     halo(p, hour, w, h, s)
     L = hour["light"]
     if L["r"] > 0:
@@ -860,68 +1045,93 @@ def haystacks_scene(p, hour, w, h, hz, s, rng):
     side = 1 if L["x"] > 0.5 else -1  # the side the light comes from
     # Every random number below is drawn whatever the light, so all four
     # hours keep the same strokes; only their colors and the shadow move.
+    # The widest screens show a smaller stack far off on each side, painted first.
+    for (x0, x1), (at, fb, fw, fh) in zip(p.sides(w), ((0.4, 0.66, 0.17, 0.13), (0.62, 0.63, 0.13, 0.1))):
+        if x1 - x0 > 0.3 * w:
+            haystack(p, hour, mix(x0, x1, at), fb * h, fw * h, fh * h, h, s, np.random.default_rng(1894 + int(at * 10)),
+                     L, side, lit, shade_col, warm, haze)
     for fx, fb, fw, fh in sorted(STACKS, key=lambda st: st[1]):
-        cx, base, sw, sh = fx * w, fb * h, fw * h, fh * h
-        k = (sw / (0.42 * h)) ** 0.5  # the far stack takes smaller strokes
-        # The long shadow, thrown away from the light across the stubble: a thin
-        # glaze, then flat strokes along it, some cooled by the sky.
-        long = 1.9 if L["r"] > 0 else 0.9
-        near_l, near_r = (cx - sw * 0.42, base), (cx + sw * 0.42, base)
-        far_l = (cx - side * sw * long - sw * 0.25, base + sh * 0.12)
-        far_r = (cx - side * sw * long + sw * 0.25, base + sh * 0.2)
-        p.shape([near_l, near_r, far_r, far_l], shade_col, 0.28, 16 * s)
-        axis = math.atan2((far_l[1] + far_r[1]) / 2 - base, (far_l[0] + far_r[0]) / 2 - cx)
-        for u, v, ln, wd, tone, a in rng.random((140, 6)):
-            x = mix(mix(near_l[0], near_r[0], v), mix(far_l[0], far_r[0], v), u)
-            y = mix(mix(near_l[1], near_r[1], v), mix(far_l[1], far_r[1], v), u)
-            p.lay(x, y, (50 + 90 * ln) * s * k, (9 + 12 * wd) * s * k, axis + (a - 0.5) * 0.12 + (math.pi if a > 0.5 else 0),
-                  mix(shade_col * 0.9, haze, tone * 0.4), (0.55 - 0.3 * u) * (0.7 + 0.3 * a), 0.1)
-        outline = stack_outline(cx, base, sw, sh, rng)
-        p.shape(outline, mix(shade_col, lit, 0.45), 0.9, 3 * s)
-        top, apex = base - sh * 0.45, base - sh
-        x0, x1, y0 = cx - sw / 2, cx + sw / 2, base - sh * 1.05
-        area = sw * sh / (0.42 * 0.32 * h * h)
-        # Broad strokes block in the light and the shade, then smaller ones on
-        # top break the color: warm and cool side by side, none of them alike.
-        for n, size in ((520, 2.8), (1500, 1.2)):
-            for _ in range(int(n * area)):
-                x, y = rng.uniform(x0, x1), rng.uniform(y0, base)
-                if not inside(outline, x, y):
-                    continue
-                # Lit toward the light, cooler away from it; the top catches the most.
-                t = np.clip(0.5 + 0.65 * side * (x - cx) / (sw / 2) + 0.25 * (top - y) / sh, 0, 1)
-                # The thatch runs down from the top; the hay below stands upright.
-                if y < top:
-                    angle = math.atan2(y - apex, x - cx) + rng.normal(0, 0.3)
-                else:
-                    angle = math.pi / 2 + rng.normal(0, 0.35)
-                color = mix(shade_col, lit, t) * rng.uniform(0.9, 1.08) + warm * (t - 0.5 + rng.normal(0, 0.7))
-                if rng.random() < 0.15:  # broken color: the sky in the shade, the light in the light
-                    color = mix(color, haze if t < 0.5 else lit * 1.12, 0.4)
-                # Pulled down the thatch or up the hay, one way or the other; short near the ground, so
-                # none hangs below the stack's foot.
-                p.lay(x, y, rng.uniform(24, 64) * s * size * k * min(1.0, 0.3 + (base - y) / (0.35 * sh)),
-                      rng.uniform(10, 20) * s * size * k,
-                      angle + (math.pi if rng.normal(0, 0.45) > 0 else 0), np.clip(color, 0, 1), rng.uniform(0.55, 0.9),
-                      0.16)
-        # The shadow under the eaves and at the foot: dabs, not a ruled band.
-        for yy, depth, alpha in ((top + sh * 0.05, 1.0, 0.25), (base - sh * 0.01, 0.7, 0.4)):
-            for i in range(9):
-                p.lay(cx + sw * (-0.36 + 0.72 * i / 8) + rng.normal(0, sw * 0.03), yy + rng.normal(0, sh * 0.018),
-                      sw * rng.uniform(0.1, 0.17), sh * rng.uniform(0.03, 0.06),
-                      rng.normal(0, 0.12) + (math.pi if rng.normal(0, 0.4) > 0 else 0), shade_col * depth,
-                      alpha * rng.uniform(0.5, 1.05), 0.1)
-        # Loose hay along the edge and light caught on the side that faces it,
-        # broken off here and there so the silhouette is never a line.
-        for (ax, ay), (bx, by), (keep, f, ln, out) in zip(outline[:-2], outline[1:-1], rng.random((len(outline), 4))):
-            x, y = mix(ax, bx, f), mix(ay, by, f)
-            along = math.atan2(by - ay, bx - ax)
-            t = np.clip(0.5 + 0.65 * side * (x - cx) / (sw / 2), 0, 1)
-            p.lay(x, y, (20 + 40 * ln) * s * k, (6 + 6 * out) * s * k, along + (out - 0.5) * 0.5,
-                  np.clip(mix(shade_col, lit, t) * (0.95 + 0.1 * ln), 0, 1), 0.7, 0.14)
-            if side * (x - cx) > sw * 0.12 and keep < 0.45:
-                p.lay(x, y, math.hypot(bx - ax, by - ay) * (0.6 + 0.8 * ln), (5 + 4 * out) * s * k, along,
-                      np.clip(lit * 1.12 + warm * 0.5, 0, 1), 0.6, 0.1)
+        haystack(p, hour, fx * w, fb * h, fw * h, fh * h, h, s, rng, L, side, lit, shade_col, warm, haze)
+
+
+def poplar(p, x, tall, hz, s, rng, own, mist, haze):
+    """A poplar far off, soft in the distance, a little of the brush showing."""
+    width = rng.uniform(16, 26) * s
+    p.stroke(x, hz - tall / 2, tall, width, math.pi / 2, 0, mix(mist, haze, 0.35), 0.4, 6 * s)
+    sweep(p, x, hz, x + (own.random() - 0.5) * 6 * s, hz - tall, width * 0.8, mix(mist, haze, 0.35), 0.15, 0.08)
+
+
+def stubble(p, across, hz, h, s, rng, near, far, x0, x1):
+    """One short stroke of stubble, bigger nearer, somewhere between x0 and x1."""
+    y = hz + (h - hz) * rng.uniform(0.04, 1) ** 1.6
+    depth = (y - hz) / (h - hz)
+    p.lay(across(x0, x1), y, rng.uniform(20, 60) * s * (0.4 + depth), rng.uniform(6, 13) * s * (0.4 + depth),
+          rng.normal(0, 0.25), mix(near, far, depth * rng.uniform(0.6, 1.1)) * rng.uniform(0.9, 1.15),
+          rng.uniform(0.25, 0.5), 0.14)
+
+
+def haystack(p, hour, cx, base, sw, sh, h, s, rng, L, side, lit, shade_col, warm, haze):
+    """One stack and its long shadow, its foot at (cx, base), sw wide and sh tall."""
+    k = (sw / (0.42 * h)) ** 0.5  # the far stack takes smaller strokes
+    # The long shadow, thrown away from the light across the stubble: a thin
+    # glaze, then flat strokes along it, some cooled by the sky.
+    long = 1.9 if L["r"] > 0 else 0.9
+    near_l, near_r = (cx - sw * 0.42, base), (cx + sw * 0.42, base)
+    far_l = (cx - side * sw * long - sw * 0.25, base + sh * 0.12)
+    far_r = (cx - side * sw * long + sw * 0.25, base + sh * 0.2)
+    p.shape([near_l, near_r, far_r, far_l], shade_col, 0.28, 16 * s)
+    axis = math.atan2((far_l[1] + far_r[1]) / 2 - base, (far_l[0] + far_r[0]) / 2 - cx)
+    for u, v, ln, wd, tone, a in rng.random((140, 6)):
+        x = mix(mix(near_l[0], near_r[0], v), mix(far_l[0], far_r[0], v), u)
+        y = mix(mix(near_l[1], near_r[1], v), mix(far_l[1], far_r[1], v), u)
+        p.lay(x, y, (50 + 90 * ln) * s * k, (9 + 12 * wd) * s * k, axis + (a - 0.5) * 0.12 + (math.pi if a > 0.5 else 0),
+              mix(shade_col * 0.9, haze, tone * 0.4), (0.55 - 0.3 * u) * (0.7 + 0.3 * a), 0.1)
+    outline = stack_outline(cx, base, sw, sh, rng)
+    p.shape(outline, mix(shade_col, lit, 0.45), 0.9, 3 * s)
+    top, apex = base - sh * 0.45, base - sh
+    x0, x1, y0 = cx - sw / 2, cx + sw / 2, base - sh * 1.05
+    area = sw * sh / (0.42 * 0.32 * h * h)
+    # Broad strokes block in the light and the shade, then smaller ones on
+    # top break the color: warm and cool side by side, none of them alike.
+    for n, size in ((520, 2.8), (1500, 1.2)):
+        for _ in range(int(n * area)):
+            x, y = rng.uniform(x0, x1), rng.uniform(y0, base)
+            if not inside(outline, x, y):
+                continue
+            # Lit toward the light, cooler away from it; the top catches the most.
+            t = np.clip(0.5 + 0.65 * side * (x - cx) / (sw / 2) + 0.25 * (top - y) / sh, 0, 1)
+            # The thatch runs down from the top; the hay below stands upright.
+            if y < top:
+                angle = math.atan2(y - apex, x - cx) + rng.normal(0, 0.3)
+            else:
+                angle = math.pi / 2 + rng.normal(0, 0.35)
+            color = mix(shade_col, lit, t) * rng.uniform(0.9, 1.08) + warm * (t - 0.5 + rng.normal(0, 0.7))
+            if rng.random() < 0.15:  # broken color: the sky in the shade, the light in the light
+                color = mix(color, haze if t < 0.5 else lit * 1.12, 0.4)
+            # Pulled down the thatch or up the hay, one way or the other; short near the ground, so
+            # none hangs below the stack's foot.
+            p.lay(x, y, rng.uniform(24, 64) * s * size * k * min(1.0, 0.3 + (base - y) / (0.35 * sh)),
+                  rng.uniform(10, 20) * s * size * k,
+                  angle + (math.pi if rng.normal(0, 0.45) > 0 else 0), np.clip(color, 0, 1), rng.uniform(0.55, 0.9),
+                  0.16)
+    # The shadow under the eaves and at the foot: dabs, not a ruled band.
+    for yy, depth, alpha in ((top + sh * 0.05, 1.0, 0.25), (base - sh * 0.01, 0.7, 0.4)):
+        for i in range(9):
+            p.lay(cx + sw * (-0.36 + 0.72 * i / 8) + rng.normal(0, sw * 0.03), yy + rng.normal(0, sh * 0.018),
+                  sw * rng.uniform(0.1, 0.17), sh * rng.uniform(0.03, 0.06),
+                  rng.normal(0, 0.12) + (math.pi if rng.normal(0, 0.4) > 0 else 0), shade_col * depth,
+                  alpha * rng.uniform(0.5, 1.05), 0.1)
+    # Loose hay along the edge and light caught on the side that faces it,
+    # broken off here and there so the silhouette is never a line.
+    for (ax, ay), (bx, by), (keep, f, ln, out) in zip(outline[:-2], outline[1:-1], rng.random((len(outline), 4))):
+        x, y = mix(ax, bx, f), mix(ay, by, f)
+        along = math.atan2(by - ay, bx - ax)
+        t = np.clip(0.5 + 0.65 * side * (x - cx) / (sw / 2), 0, 1)
+        p.lay(x, y, (20 + 40 * ln) * s * k, (6 + 6 * out) * s * k, along + (out - 0.5) * 0.5,
+              np.clip(mix(shade_col, lit, t) * (0.95 + 0.1 * ln), 0, 1), 0.7, 0.14)
+        if side * (x - cx) > sw * 0.12 and keep < 0.45:
+            p.lay(x, y, math.hypot(bx - ax, by - ay) * (0.6 + 0.8 * ln), (5 + 4 * out) * s * k, along,
+                  np.clip(lit * 1.12 + warm * 0.5, 0, 1), 0.6, 0.1)
 
 
 # The Magpie ----------------------------------------------------------------
@@ -1181,9 +1391,12 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
     side = 1 if L["x"] > 0.5 else -1  # the side the light comes from
     # The winter air is still: the sky laid over again in broad, quiet strokes of its own colors.
     ref = np.asarray(p.canvas.convert("RGB").filter(ImageFilter.GaussianBlur(40 * s)), np.float32) / 255
-    for u, v, ln, wd, tilt, tone in rng.random((int(1100 * s) + 100, 6)):
-        x, y = (u * 1.08 - 0.04) * w, v ** 0.9 * (hz + 0.01 * h)
-        color = ref[int(min(max(y, 0), h - 1)), int(min(max(x, 0), w - 1))] * (0.985 + 0.04 * tone)
+
+    def look(x, y):  # the painting so far, blurred, at (x, y)
+        return ref[int(min(max(y, 0), h - 1)), int(min(max(x + p.e, 0), w + 2 * p.e - 1))]
+
+    def air(x, y, ln, wd, tilt, tone):
+        color = look(x, y) * (0.985 + 0.04 * tone)
         note = 0.22 * min(1.0, color.mean() / 0.55) ** 2  # a cooler note or a warmer one, fainter in the dark
         if tone > 0.88:
             color = mix(color, rgb(hour["accent_sky"]), note)
@@ -1191,20 +1404,36 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
             color = mix(color, warm, note)
         p.lay(x, y, (180 + 320 * ln) * s, (46 + 50 * wd) * s, -0.12 + (tilt - 0.5) * 0.8 + (math.pi if tone > 0.5 else 0),
               np.clip(color, 0, 1), 0.3 + 0.35 * ln, 0.035)
+
+    for u, v, ln, wd, tilt, tone in rng.random((int(1100 * s) + 100, 6)):
+        air((u * 1.08 - 0.04) * w, v ** 0.9 * (hz + 0.01 * h), ln, wd, tilt, tone)
+    # A wider screen shows more of the field on each side, painted with numbers of its own.
+    more = np.random.default_rng(1870)
+    for x0, x1 in p.sides(w):
+        for u, v, ln, wd, tilt, tone in more.random((int((1100 * s + 100) * (x1 - x0) / (1.08 * w)), 6)):
+            air(mix(x0 - 0.02 * w, x1 + 0.02 * w, u), v ** 0.9 * (hz + 0.01 * h), ln, wd, tilt, tone)
     halo(p, hour, w, h, s)
     if L["r"] > 0:
         disc(p, L["x"] * w, L["y"] * h, L["r"] * h, rgb(L["color"]), s)
     # Far off: frosted woods along the horizon, pale in the cold air.
     crowns = rng.random(40)
-    for u, v, tone, ln, tilt in rng.random((int(1300 * s) + 200, 5)):
+
+    def woods(x, u, v, tone, ln, tilt, crowns):
         y = hz + 0.006 * h - (0.012 + 0.03 * eased(crowns, u)) * h * v ** 0.7
         color = mix(snow, haze, 0.5) if tone > 0.78 else mix(mist, haze, 0.5 + 0.4 * tone)
-        p.lay((u * 1.04 - 0.02) * w, y, (30 + 44 * ln) * s, (16 + 18 * ln) * s, -math.pi / 2 + (tilt - 0.5) * 2.4,
+        p.lay(x, y, (30 + 44 * ln) * s, (16 + 18 * ln) * s, -math.pi / 2 + (tilt - 0.5) * 2.4,
               np.clip(color, 0, 1), 0.2 + 0.25 * ln, 0.05)
+
+    for u, v, tone, ln, tilt in rng.random((int(1300 * s) + 200, 5)):
+        woods((u * 1.04 - 0.02) * w, u, v, tone, ln, tilt, crowns)
+    for x0, x1 in p.sides(w):
+        tops = more.random(max(4, int(40 * (x1 - x0) / w)))
+        tops[-1 if x0 < 0 else 0] = crowns[0 if x0 < 0 else -1]  # meeting the woods already there
+        for u, v, tone, ln, tilt in more.random((int((1300 * s + 200) * (x1 - x0) / (1.04 * w)), 5)):
+            woods(mix(x0 - 0.02 * w, x1 + 0.02 * w, u), u, v, tone, ln, tilt, tops)
     # The snow, laid warm where the light reaches it and cool in its hollows, flecked with both.
-    for u, v, tone, ln, tilt, fleck in rng.random((int(3000 * s) + 400, 6)):
+    def snowfall(x, v, tone, ln, tilt, fleck):
         y = hz + (h - hz) * (0.01 + 0.99 * v) ** 1.25
-        x = (u * 1.04 - 0.02) * w
         depth = (y - hz) / (h - hz)
         drift = math.sin(x / (700 * s) + y / (150 * s) + math.sin(x / (1300 * s)) * 2)
         color = mix(snow, shade, np.clip(0.18 - 0.12 * drift + 0.3 * (tone - 0.5), 0, 0.55))
@@ -1213,19 +1442,29 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
         elif fleck < 0.16:
             color = mix(color, rgb(hour["accent_water"]), 0.5)
         # Laid into the ground's own color, and closer to it where the two are far apart, as by night.
-        ground = ref[int(min(max(y, 0), h - 1)), int(min(max(x, 0), w - 1))]
+        ground = look(x, y)
         color = mix(ground, color, 0.6 * min(1.0, 0.15 / max(0.15, float(np.abs(color - ground).mean()))))
         p.lay(x, y, (40 + 120 * ln ** 2) * s * (0.35 + depth), (16 + 28 * tone * ln) * s * (0.35 + depth),
               (tilt - 0.5) * (0.2 + 0.6 * depth) + (math.pi if fleck > 0.5 else 0), np.clip(color, 0, 1),
               0.3 + 0.35 * ln, 0.045)
+
+    for u, v, tone, ln, tilt, fleck in rng.random((int(3000 * s) + 400, 6)):
+        snowfall((u * 1.04 - 0.02) * w, v, tone, ln, tilt, fleck)
+    for x0, x1 in p.sides(w):
+        for u, v, tone, ln, tilt, fleck in more.random((int((3000 * s + 400) * (x1 - x0) / (1.04 * w)), 6)):
+            snowfall(mix(x0 - 0.02 * w, x1 + 0.02 * w, u), v, tone, ln, tilt, fleck)
     far = mix(mist, haze, 0.4)
     for tx, tall in ((0.04, 0.25), (0.12, 0.32), (0.2, 0.21), (0.5, 0.19), (0.57, 0.3), (0.93, 0.27), (0.98, 0.22)):
         tree(p, tx * w, hz + 0.03 * h, tall * h, far, mix(snow, haze, 0.25), mix(shade, haze, 0.4), side, s, rng,
              frost=1.0, levels=4, alpha=0.75)
+    for x0, x1 in p.sides(w):
+        for _ in range(round(6 * (x1 - x0) / w)):
+            tree(p, more.uniform(x0, x1), hz + 0.03 * h, more.uniform(0.18, 0.32) * h, far, mix(snow, haze, 0.25),
+                 mix(shade, haze, 0.4), side, s, more, frost=1.0, levels=4, alpha=0.75)
     # Hedges on the slope behind the fence: a dark tangle of twigs, lower toward their ends, snow lying along
     # their tops in lumps and frost on the twigs that stick out of it.
     hedge = mix(mist, wood, 0.45)
-    for hx0, hx1, hy in ((0.0, 0.24, 0.53), (0.44, 0.6, 0.51)):
+    def hedge_row(hx0, hx1, hy, rng):
         tops, sags = rng.random(10), rng.random(14)
 
         def crown(x, hy=hy, hx0=hx0, hx1=hx1, tops=tops):
@@ -1246,8 +1485,23 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
             y = crown(x) + 2 * s
             sweep(p, x, y, x + (tilt - 0.5) * 40 * s, y - (10 + 26 * v) * s, (3 + 3 * tone) * s,
                   mix(snow, shade, 0.2 + 0.4 * tone) if tone > 0.45 else hedge * 0.8, 0.7, 0.05)
+    for hx0, hx1, hy in ((0.0, 0.24, 0.53), (0.44, 0.6, 0.51)):
+        hedge_row(hx0, hx1, hy, rng)
+    for x0, x1 in p.sides(w):
+        if x1 - x0 > 0.12 * w:
+            span = min(0.24, 0.6 * (x1 - x0) / w)
+            at = more.uniform(x0 / w, x1 / w - span)
+            hedge_row(at, at + span, more.uniform(0.51, 0.535), more)
     farmhouse(p, 0.84 * w, 0.95 * w, 0.455 * h, 0.405 * h, 0.56 * h, hour, side, s, rng)
     farmhouse(p, 0.63 * w, 0.8 * w, 0.43 * h, 0.35 * h, 0.57 * h, hour, side, s, rng, lit=True)
+    for (x0, x1), (at, wide, eave, ridge, foot, by) in zip(
+            p.sides(w), ((0.3, 0.12, 0.44, 0.37, 0.565, 0.75), (0.45, 0.1, 0.45, 0.395, 0.56, -0.25))):
+        if x1 - x0 > 0.3 * w:
+            hx = mix(x0, x1, at)
+            farmhouse(p, hx, hx + wide * w, eave * h, ridge * h, foot * h, hour, side, s, more)
+            # A frosted tree beside it: by is how far off, in its widths (after it, or before it).
+            tx = hx + by * wide * w + (wide * w if by > 0 else 0)
+            tree(p, tx, (foot + 0.015) * h, 0.33 * h, mix(wood, mist, 0.25), snow, shade, side, s, more, levels=5)
     tree(p, 0.6 * w, 0.58 * h, 0.4 * h, mix(wood, mist, 0.25), snow, shade, side, s, rng, levels=5)
 
     # The fence runs from near on the left to farther on the right, its top as uneven as the weaving.
@@ -1290,29 +1544,97 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
             break
         if not gate0 - 40 * s < x < gate1 + 40 * s:
             stakes.append((x, x + (tilt - 0.5) * 50 * s, crest(x) - (4 + 60 * rise ** 2) * s, (tone, rise, tilt, step)))
-    # The shadows first, on the snow toward us: a glaze, broad strokes along it, a grain the way the light runs
-    # with light from the sky coming back into it, and the stakes' shadows falling on past it in stripes.
-    for x0, x1 in runs:
-        xs = np.linspace(x0, x1, 40)
-        p.shape([(x, base(x)) for x in xs] + [cast(x, crest(x)) for x in xs[::-1]], shade, 0.34 * strength, 12 * s)
-    for u, v, ln, wd, tone in rng.random((360, 5)):
-        x = along(u)
-        (sx, sy), (ex, ey) = cast(x, mix(base(x), crest(x), v)), cast(x + 40 * s, mix(base(x), crest(x), v))
-        p.lay(sx, sy, (100 + 180 * ln) * s, (16 + 24 * wd) * s * min(2.0, 0.6 + 0.5 * length),
-              math.atan2(ey - sy, ex - sx) + (tone - 0.5) * 0.1 + (math.pi if tone > 0.5 else 0),
-              np.clip(mix(shade, shade * 0.8, tone), 0, 1), (0.18 + 0.2 * tone) * (1 - 0.4 * v) * strength, 0.05)
-    ray = math.atan2(length, shift)  # from the fence toward us: each stroke lands near the fence and drags out
-    for u, v, ln, wd, tone in rng.random((180, 5)):
-        x = along(u)
-        (bx, by), (cx, cy) = (x, base(x)), cast(x, crest(x))
-        color = mix(shade, shade * 0.8, tone) if tone < 0.6 else mix(shade, snow, 0.3 + 0.6 * (tone - 0.6))
-        reach = math.hypot(cx - bx, cy - by) * (0.2 + 0.3 * ln) + 30 * s
-        a = ray + (wd - 0.5) * 0.12
-        p.lay(mix(bx, cx, 0.6 * v) + math.cos(a) * reach / 2, mix(by, cy, 0.6 * v) + math.sin(a) * reach / 2, reach,
-              (24 + 30 * wd) * s, a, np.clip(color, 0, 1), (0.12 + 0.14 * ln) * strength, 0.05)
-    for x, tx, ty, (tone, rise, tilt, step) in stakes:
-        sweep(p, *cast(x, crest(x)), *cast(tx, ty), (8 + 5 * tone) * s * min(2.0, 0.6 + 0.5 * length), shade * 0.85,
-              0.4 * strength, 0.05)
+    def fence_shadows(runs, along, crest, stakes, rng, n1, n2):
+        # The shadows first, on the snow toward us: a glaze, broad strokes along it, a grain the way the light runs
+        # with light from the sky coming back into it, and the stakes' shadows falling on past it in stripes.
+        for x0, x1 in runs:
+            xs = np.linspace(x0, x1, 40)
+            p.shape([(x, base(x)) for x in xs] + [cast(x, crest(x)) for x in xs[::-1]], shade, 0.34 * strength, 12 * s)
+        for u, v, ln, wd, tone in rng.random((n1, 5)):
+            x = along(u)
+            (sx, sy), (ex, ey) = cast(x, mix(base(x), crest(x), v)), cast(x + 40 * s, mix(base(x), crest(x), v))
+            p.lay(sx, sy, (100 + 180 * ln) * s, (16 + 24 * wd) * s * min(2.0, 0.6 + 0.5 * length),
+                  math.atan2(ey - sy, ex - sx) + (tone - 0.5) * 0.1 + (math.pi if tone > 0.5 else 0),
+                  np.clip(mix(shade, shade * 0.8, tone), 0, 1), (0.18 + 0.2 * tone) * (1 - 0.4 * v) * strength, 0.05)
+        ray = math.atan2(length, shift)  # from the fence toward us: each stroke lands near the fence and drags out
+        for u, v, ln, wd, tone in rng.random((n2, 5)):
+            x = along(u)
+            (bx, by), (cx, cy) = (x, base(x)), cast(x, crest(x))
+            color = mix(shade, shade * 0.8, tone) if tone < 0.6 else mix(shade, snow, 0.3 + 0.6 * (tone - 0.6))
+            reach = math.hypot(cx - bx, cy - by) * (0.2 + 0.3 * ln) + 30 * s
+            a = ray + (wd - 0.5) * 0.12
+            p.lay(mix(bx, cx, 0.6 * v) + math.cos(a) * reach / 2, mix(by, cy, 0.6 * v) + math.sin(a) * reach / 2, reach,
+                  (24 + 30 * wd) * s, a, np.clip(color, 0, 1), (0.12 + 0.14 * ln) * strength, 0.05)
+        for x, tx, ty, (tone, rise, tilt, step) in stakes:
+            sweep(p, *cast(x, crest(x)), *cast(tx, ty), (8 + 5 * tone) * s * min(2.0, 0.6 + 0.5 * length), shade * 0.85,
+                  0.4 * strength, 0.05)
+
+    def fence_body(runs, along, crest, low, stakes, rng, n_wattle, n_withies, n_snow, drift, n_drifts):
+        # The wattle: dark withies woven along it, a few catching the light.
+        for x0, x1 in runs:
+            xs = np.linspace(x0, x1, 60)
+            p.shape([(x, top(x) + 4 * s) for x in xs] + [(x, base(x)) for x in xs[::-1]], wood * 0.4, 0.95, 3 * s)
+        for u, row, ln, tone, tilt in rng.random((n_wattle, 5)):
+            x = along(u)
+            p.lay(x, mix(base(x), top(x), 0.1 + 0.6 * row), (70 + 120 * ln) * s, (14 + 12 * tone) * s,
+                  -0.06 + (tilt - 0.5) * 0.3 + (math.pi if tilt > 0.5 else 0), np.clip(wood * (0.35 + 0.4 * tone), 0, 1),
+                  0.8, 0.2)
+        for u, row, ln, tone, tilt in rng.random((n_withies, 5)):
+            x = along(u)
+            withy = tone > 0.8  # a withy catching the light: long and thin
+            color = mix(wood, snow, 0.3) if withy else wood * (0.3 + 0.5 * tone)
+            p.stroke(x, mix(base(x), top(x), 0.06 + 0.8 * row), (60 + 120 * ln if withy else 40 + 90 * ln) * s,
+                     (2 + 2 * tone if withy else 3 + 4 * tone) * s, -0.06 + (tilt - 0.5) * 0.5, 1.2 * (tilt - 0.5),
+                     np.clip(color, 0, 1), 0.85, 1.1 * s)
+        snowbank(p, runs, crest, low, snow, shade, warm, side, s, rng, n_snow)
+        # The stakes, standing up out of the snow here and there, thin and leaning, a few with snow on top.
+        for x, tx, ty, (tone, rise, tilt, step) in stakes:
+            limb(p, [(x, low(x)), (mix(x, tx, 0.5) + (tone - 0.5) * 6 * s, mix(low(x), ty, 0.5)), (tx, ty)],
+                 (6 + 4 * tone) * s, (3 + 3 * tone) * s, wood * (0.45 + 0.3 * tone), 0.92, 1.2 * s)
+            if rise > 0.4:
+                heap(p, tx, ty + 2 * s, 9 * s, 5 * s, snow, shade, side, (tone, rise, tilt, step))
+        # Snow drifted against the foot of the fence, in its own shadow.
+        for u, ln, tone, tilt in rng.random((n_drifts, 4)):
+            x = mix(*drift, u) * w
+            p.lay(x, base(x) + 6 * s, (60 + 90 * ln) * s, (12 + 14 * tone) * s, -0.06 + (math.pi if tilt > 0.5 else 0),
+                  np.clip(mix(snow, shade, 0.7 + 0.2 * tone), 0, 1), 0.6, 0.06)
+
+    def fence_beyond(x0, x1):
+        """The fence going on past one side: its run, its own lumps of snow (meeting the ones
+        already there), its stakes."""
+        left = x0 < 0
+        r0, r1 = (x0 - 0.02 * w, -0.02 * w) if left else (1.02 * w, x1 + 0.02 * w)
+        reach = (r1 - r0) / w
+
+        def piece(n, seam, power=1.0):
+            vals = more.random(max(4, int(n * reach))) ** power
+            vals[-1 if left else 0] = seam
+            return vals
+
+        own_lumps = piece(60, lumps[0 if left else -1])
+        own_drapes = piece(16, drapes[0 if left else -1], 1.3)
+        own_hangs = piece(80, hangs[0 if left else -1])
+
+        def own_crest(x):
+            return top(x) - (6 + 26 * eased(own_lumps, (x - r0) / (r1 - r0))) * s
+
+        def own_low(x):
+            u = (x - r0) / (r1 - r0)
+            return top(x) + (0.08 + 0.55 * eased(own_drapes, u) + 0.2 * eased(own_hangs, u)) * (base(x) - top(x))
+
+        own_stakes, x = [], r0
+        for step, rise, tilt, tone in more.random((int(40 * reach) + 4, 4)):
+            x += (120 + 320 * step) * s
+            if x > r1:
+                break
+            own_stakes.append((x, x + (tilt - 0.5) * 50 * s, own_crest(x) - (4 + 60 * rise ** 2) * s,
+                               (tone, rise, tilt, step)))
+        return ((r0, r1),), (lambda u: mix(r0, r1, u)), own_crest, own_low, own_stakes, reach
+
+    beyond = [fence_beyond(x0, x1) for x0, x1 in p.sides(w)]
+    for b_runs, b_along, b_crest, b_low, b_stakes, reach in beyond:
+        fence_shadows(b_runs, b_along, b_crest, b_stakes, more, int(360 * reach / 0.94), int(180 * reach / 0.94))
+    fence_shadows(runs, along, crest, stakes, rng, 360, 180)
     gb = base((gate0 + gate1) / 2)
     gate_h = 0.1 * h
     rails = [gb - gate_h * f for f in (0.15, 0.55, 0.9)]
@@ -1330,34 +1652,10 @@ def magpie_scene(p, hour, w, h, hz, s, rng):
             (cx0, cy0), (cx1, cy1) = cast(mix(ax, bx, t0), mix(ay, by, t0)), cast(mix(ax, bx, t1), mix(ay, by, t1))
             sweep(p, cx0 + (dx - 0.5) * 8 * s, cy0 + (dy - 0.5) * 8 * s, cx1, cy1, width * s * (1.8 + 0.8 * wd),
                   shade * 0.85, 0.42 * strength, 0.05)
-    # The wattle: dark withies woven along it, a few catching the light.
-    for x0, x1 in runs:
-        xs = np.linspace(x0, x1, 60)
-        p.shape([(x, top(x) + 4 * s) for x in xs] + [(x, base(x)) for x in xs[::-1]], wood * 0.4, 0.95, 3 * s)
-    for u, row, ln, tone, tilt in rng.random((260, 5)):
-        x = along(u)
-        p.lay(x, mix(base(x), top(x), 0.1 + 0.6 * row), (70 + 120 * ln) * s, (14 + 12 * tone) * s,
-              -0.06 + (tilt - 0.5) * 0.3 + (math.pi if tilt > 0.5 else 0), np.clip(wood * (0.35 + 0.4 * tone), 0, 1),
-              0.8, 0.2)
-    for u, row, ln, tone, tilt in rng.random((700, 5)):
-        x = along(u)
-        withy = tone > 0.8  # a withy catching the light: long and thin
-        color = mix(wood, snow, 0.3) if withy else wood * (0.3 + 0.5 * tone)
-        p.stroke(x, mix(base(x), top(x), 0.06 + 0.8 * row), (60 + 120 * ln if withy else 40 + 90 * ln) * s,
-                 (2 + 2 * tone if withy else 3 + 4 * tone) * s, -0.06 + (tilt - 0.5) * 0.5, 1.2 * (tilt - 0.5),
-                 np.clip(color, 0, 1), 0.85, 1.1 * s)
-    snowbank(p, runs, crest, low, snow, shade, warm, side, s, rng, 1600)
-    # The stakes, standing up out of the snow here and there, thin and leaning, a few with snow on top.
-    for x, tx, ty, (tone, rise, tilt, step) in stakes:
-        limb(p, [(x, low(x)), (mix(x, tx, 0.5) + (tone - 0.5) * 6 * s, mix(low(x), ty, 0.5)), (tx, ty)],
-             (6 + 4 * tone) * s, (3 + 3 * tone) * s, wood * (0.45 + 0.3 * tone), 0.92, 1.2 * s)
-        if rise > 0.4:
-            heap(p, tx, ty + 2 * s, 9 * s, 5 * s, snow, shade, side, (tone, rise, tilt, step))
-    # Snow drifted against the foot of the fence, in its own shadow.
-    for u, ln, tone, tilt in rng.random((200, 4)):
-        x = mix(-0.02, 1.02, u) * w
-        p.lay(x, base(x) + 6 * s, (60 + 90 * ln) * s, (12 + 14 * tone) * s, -0.06 + (math.pi if tilt > 0.5 else 0),
-              np.clip(mix(snow, shade, 0.7 + 0.2 * tone), 0, 1), 0.6, 0.06)
+    for b_runs, b_along, b_crest, b_low, b_stakes, reach in beyond:
+        fence_body(b_runs, b_along, b_crest, b_low, b_stakes, more, int(260 * reach / 0.94), int(700 * reach / 0.94),
+                   int(1600 * reach / 0.94), (b_runs[0][0] / w, b_runs[0][1] / w), int(200 * reach / 1.04))
+    fence_body(runs, along, crest, low, stakes, rng, 260, 700, 1600, (-0.02, 1.02), 200)
     # The gate: rough sticks, two posts, three rails, a brace and two palings, each bowed a little (the rails
     # sag under the snow). Each is a dark core, then four strokes laid end to end, none quite in line or the
     # same width, and the light caught along the posts.
@@ -1398,12 +1696,14 @@ SERIES = {
 }
 
 
-def render(scale=1.0, only=None, series="hours"):
+def render(scale=1.0, only=None, series="hours", aspect="16x9"):
     w, h = int(3840 * scale), int(2160 * scale)
+    e = (int(ASPECTS[aspect] * scale) - w) // 2
     kind = SERIES[series]
-    brushwork = Brushwork(w, h, kind["seed"], kind["horizon"])
-    rng = np.random.default_rng(99)
-    noise = (smooth_noise(rng, w, h, int(260 * scale) or 1), smooth_noise(rng, w, h, int(120 * scale) or 1))
+    brushwork = Brushwork(w, h, kind["seed"], kind["horizon"], e)
+    rng, more = np.random.default_rng(99), np.random.default_rng(199)
+    noise = (smooth_noise(rng, w, h, int(260 * scale) or 1, e, more),
+             smooth_noise(rng, w, h, int(120 * scale) or 1, e, more))
     out = {}
     for name, hour in kind["hours"].items():
         if only and name not in only:
@@ -1418,14 +1718,17 @@ def main():
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--series", choices=list(SERIES), nargs="*", default=list(SERIES))
+    ap.add_argument("--aspect", choices=list(ASPECTS), nargs="*", default=list(ASPECTS))
     args = ap.parse_args()
     for series in args.series:
-        paintings = render(args.scale, args.only, series)
-        folder = args.out / series
-        folder.mkdir(parents=True, exist_ok=True)
-        for name, img in paintings.items():
-            img.save(folder / f"{name}.jpg", quality=90, optimize=True, progressive=True, subsampling=0)
-            print("painted", folder / f"{name}.jpg")
+        for aspect in args.aspect:
+            paintings = render(args.scale, args.only, series, aspect)
+            # 16:9 beside the series' name, as always; the wider ones in a folder of their own.
+            folder = args.out / series / ("" if aspect == "16x9" else aspect)
+            folder.mkdir(parents=True, exist_ok=True)
+            for name, img in paintings.items():
+                img.save(folder / f"{name}.jpg", quality=90, optimize=True, progressive=True, subsampling=0)
+                print("painted", folder / f"{name}.jpg")
 
 
 if __name__ == "__main__":

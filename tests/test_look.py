@@ -421,6 +421,91 @@ class Paintings(unittest.TestCase):
         self.assertTrue((self.WALL / "images/3840x2160.jpg").resolve().is_file())
         self.assertTrue((self.WALL / "images_dark/3840x2160.jpg").resolve().is_file())
 
+    # Each painting in three shapes: 16:9 beside its series' name, ultrawide (21:9) and super
+    # ultrawide (32:9) in folders of their own, which show more of the scene to each side.
+    SHAPES = (("", 3840), ("21x9/", 5120), ("32x9/", 7680))
+
+    @staticmethod
+    def jpeg_size(path):
+        """(width, height) from a JPEG's frame header, without decoding it."""
+        data = path.read_bytes()
+        at = 2
+        while at + 9 < len(data):
+            marker, length = data[at + 1], int.from_bytes(data[at + 2:at + 4], "big")
+            if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                return int.from_bytes(data[at + 7:at + 9], "big"), int.from_bytes(data[at + 5:at + 7], "big")
+            at += 2 + length
+        return None
+
+    def test_every_painting_comes_in_three_shapes(self):
+        for series in ("hours", "lilies", "haystacks", "magpie"):
+            for hour in ("dawn", "day", "dusk", "night"):
+                for folder, width in self.SHAPES:
+                    path = self.WALL / series / f"{folder}{hour}.jpg"
+                    self.assertEqual(self.jpeg_size(path), (width, 2160), path)
+        # KDE's own wallpaper dialog picks the nearest size from these.
+        for folder, hour in (("images", "dawn"), ("images_dark", "night")):
+            for shape, width in self.SHAPES:
+                link = self.WALL / folder / f"{width}x2160.jpg"
+                self.assertEqual(link.resolve(), (self.WALL / "hours" / f"{shape}{hour}.jpg").resolve())
+
+    def test_a_wider_painting_has_the_same_picture_in_its_middle(self):
+        try:
+            import numpy as np
+            from PIL import Image
+        except ImportError as e:
+            self.skipTest(f"no NumPy or Pillow ({e})")
+        for series in ("hours", "lilies", "haystacks", "magpie"):
+            base = np.asarray(Image.open(self.WALL / series / "day.jpg"), np.int16)
+            for folder, width in self.SHAPES[1:]:
+                wide = np.asarray(Image.open(self.WALL / series / f"{folder}day.jpg"), np.int16)
+                e = (width - 3840) // 2
+                # Away from its edges, where the strokes beside it reach in, it is the same picture.
+                middle = np.abs(wide[:, e + 200:e + 3640] - base[:, 200:3640]).mean()
+                self.assertLess(middle, 1.0, f"{series} {folder}")
+
+    def test_the_painter_paints_every_shape_around_the_same_picture(self):
+        try:
+            import numpy as np  # noqa: F401 (the painter needs it)
+            from PIL import Image  # noqa: F401
+        except ImportError as e:
+            self.skipTest(f"no NumPy or Pillow ({e})")
+        spec = importlib.util.spec_from_file_location("make_paintings", ROOT / "tools/make-paintings.py")
+        painter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(painter)
+        self.assertEqual(painter.ASPECTS, {"16x9": 3840, "21x9": 5120, "32x9": 7680})
+        for series in painter.SERIES:
+            base = np.asarray(painter.render(0.1, ["dusk"], series)["dusk"], np.int16)
+            for aspect, width in list(painter.ASPECTS.items())[1:]:
+                wide = np.asarray(painter.render(0.1, ["dusk"], series, aspect)["dusk"], np.int16)
+                self.assertEqual(wide.shape, (216, int(width * 0.1), 3), f"{series} {aspect}")
+                e = (wide.shape[1] - base.shape[1]) // 2
+                self.assertLess(np.abs(wide[:, e + 20:e + 364] - base[:, 20:364]).mean(), 1.0, f"{series} {aspect}")
+                # And something is painted out there: not one flat color.
+                self.assertGreater(wide[:, :e].std(), 4, f"{series} {aspect}")
+
+    def test_the_wallpaper_takes_the_shape_nearest_its_screen(self):
+        wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
+        self.assertIn('"file://@DATADIR@/wallpapers/Monet/contents/" + series + "/" + shape', wallpaper)
+        # The first painting waits for the screen's size, so it never starts in the wrong shape.
+        self.assertIn("if (!sized || (!force && !activity.active)) return;", wallpaper)
+        self.assertIn("onSizedChanged: if (sized) Qt.callLater(update, true)", wallpaper)
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError as e:
+            self.skipTest(f"no Qt for Python ({e})")
+        app = QCoreApplication.instance() or QCoreApplication([])  # noqa: F841 (QJSEngine needs one)
+        shape = re.search(r"readonly property string shape: (.*?)\n    readonly property string folder", wallpaper, re.S).group(1)
+        js = QJSEngine()
+        for width, height, series, expected in (
+                (1920, 1080, "hours", ""), (2560, 1600, "lilies", ""), (1280, 1024, "hours", ""),
+                (2560, 1080, "hours", "21x9/"), (3440, 1440, "magpie", "21x9/"), (3840, 1600, "hours", "21x9/"),
+                (5120, 2160, "haystacks", "21x9/"), (3840, 1080, "hours", "32x9/"), (5120, 1440, "lilies", "32x9/"),
+                (7680, 2160, "hours", "32x9/"), (3440, 1440, "photo", "")):
+            js.evaluate(f'var series = "{series}"; var aspect = {width} / {height};')
+            self.assertEqual(js.evaluate(shape).toString(), expected, f"{width}x{height} {series}")
+
     def test_hours_agree(self):
         # The wallpaper, the placard and the light switch use the same hours.
         wallpaper = (PLASMA / "wallpapers/org.monet.hours/contents/ui/main.qml").read_text()
