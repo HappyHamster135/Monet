@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Move real Plasma applets on a private virtual Wayland desktop; never the host."""
 import json
+import configparser
 import shutil
 from pathlib import Path
 import subprocess
@@ -10,7 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from tools.test import private_session
+from tools.test import private_session, stop
 from tests.test_look import quick_helper
 
 with private_session() as env:
@@ -19,14 +20,16 @@ with private_session() as env:
     def inert(script):
         for original, substitute in aliases.items(): script=script.replace(original,substitute)
         return script
+    env.update(KWIN_COMPOSE="O2", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
     processes = []
     logpath = Path(env['HOME']) / 'panel-fixture.log'
     log = logpath.open('w')
     def launch(args):
-        process = subprocess.Popen(args, env=env, stdout=log, stderr=log)
+        process = subprocess.Popen(args, env=env, stdout=log, stderr=log, start_new_session=True)
         processes.append(process)
         return process
     def evaluate(script):
+        assert compositor_process.poll() is None, 'Private compositor stopped'
         result = subprocess.run(['busctl', '--address='+env['DBUS_SESSION_BUS_ADDRESS'], '--json=short',
             'call', 'org.kde.plasmashell', '/PlasmaShell', 'org.kde.PlasmaShell', 'evaluateScript', 's', inert(script)],
             env=env, capture_output=True, text=True, timeout=10)
@@ -42,6 +45,7 @@ with private_session() as env:
             time.sleep(.1)
         raise AssertionError('Private Plasma did not start')
     try:
+        print('Native panels: starting private display', flush=True)
         # Keep widget faces inert so no session services are started. KDE plugin
         # aliases avoid loading compiled applets. Real Plasma containments and
         # applet objects still exercise ownership, ordering and KConfig persistence.
@@ -52,14 +56,22 @@ with private_session() as env:
             (package/'metadata.json').write_text(json.dumps({'KPackageStructure':'Plasma/Applet',
                 'KPlugin':{'Id':plugin,'Name':name,'Version':'1.0','License':'MIT'},'X-Plasma-API-Minimum-Version':'6.0'}))
             (package/'contents/ui/main.qml').write_text('import QtQuick\nimport org.kde.plasma.plasmoid\nPlasmoidItem { preferredRepresentation: fullRepresentation; fullRepresentation: Rectangle { implicitWidth:32; implicitHeight:32; color: "red" } }\n')
-        Path(env['XDG_CONFIG_HOME'],'kdeglobals').write_text('[KDE]\nLookAndFeelPackage=org.kde.breeze.desktop\n')
+        # A controlled initial layout also keeps stock tray/session services out
+        # of the fixture. The unrelated top panel must survive every switch.
+        look = Path(env['XDG_DATA_HOME'])/'plasma/look-and-feel/org.monet.fixture.desktop'
+        (look/'contents/layouts').mkdir(parents=True)
+        (look/'metadata.json').write_text(json.dumps({'KPackageStructure':'Plasma/LookAndFeel',
+            'KPlugin':{'Id':'org.monet.fixture.desktop','Name':'Panel fixture','Version':'1.0','License':'MIT'}}))
+        (look/'contents/layouts/org.kde.plasma.desktop-layout.js').write_text(
+            'var p=new Panel; p.location="top"; p.addWidget("org.monet.custom");\n')
+        Path(env['XDG_CONFIG_HOME'],'kdeglobals').write_text('[KDE]\nLookAndFeelPackage=org.monet.fixture.desktop\n')
         # Fedora marks KWin with CAP_SYS_NICE. A cap-drop=ALL test container
         # correctly refuses to execute that file. A byte copy has no file
         # capabilities and needs none for this virtual, software-only display.
         compositor = Path(env['HOME']) / 'kwin_wayland'
         shutil.copyfile(shutil.which('kwin_wayland'), compositor)
         compositor.chmod(0o700)
-        launch([str(compositor),'--virtual','--width','1280','--height','800','--no-lockscreen',
+        compositor_process=launch([str(compositor),'--virtual','--width','1280','--height','800','--no-lockscreen',
                 '--no-global-shortcuts','--no-kactivities','--socket','monet-panel-test'])
         for _ in range(100):
             if Path(env['XDG_RUNTIME_DIR'],'monet-panel-test').exists(): break
@@ -67,9 +79,10 @@ with private_session() as env:
         env.update(QT_QPA_PLATFORM='wayland', WAYLAND_DISPLAY='monet-panel-test')
         launch(['/usr/libexec/kactivitymanagerd'])
         shell=launch(['plasmashell','--no-respawn']); ready()
+        print('Native panels: creating initial bars', flush=True)
         time.sleep(1)
-        evaluate('panels().forEach(p=>p.remove());')
-        time.sleep(.5)
+        other = state('panels().filter(p=>p.location!=="bottom").map(p=>[p.id,p.widgets().map(w=>w.id)])')
+        assert len(other) == 1 and len(other[0][1]) == 1, other
         for align, body in [
             ('left', "p.addWidget('org.monet.menu'); p.addWidget('org.monet.games');"),
             ('center', "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General']; t.writeConfig('launchers',['applications:org.kde.konsole.desktop']);"),
@@ -79,25 +92,40 @@ with private_session() as env:
             evaluate('var p=panelById('+str(ident)+'); '+body)
         time.sleep(.5)
         selected=state('panels().find(p=>p.widgets("org.monet.quick").length).id')
-        original=state('[].concat.apply([],panels().map(p=>p.widgets().map(w=>w.id)))')
+        original=state('[].concat.apply([],panels().filter(p=>p.location==="bottom").map(p=>p.widgets().map(w=>w.id)))')
         q=quick_helper()
         def snapshot():
-            return state('panels().map(p=>({id:p.id,mode:p.lengthMode,widgets:p.widgets().map(w=>({id:w.id,type:w.type,index:w.index})).sort((a,b)=>a.index-b.index)}))')
+            return state('panels().filter(p=>p.location==="bottom").map(p=>({id:p.id,mode:p.lengthMode,widgets:p.widgets().map(w=>({id:w.id,type:w.type,index:w.index})).sort((a,b)=>a.index-b.index)}))')
         with patch.object(q,'DATADIR',str(ROOT/'linux/share')), patch.object(q,'busjson',side_effect=lambda *args:evaluate(args[-1])):
             for choice in ('one','three','one'):
+                print('Native panels: switching to '+choice, flush=True)
                 result=q.panel_layout(str(selected),choice)
                 assert result.get('ok'), result
                 time.sleep(.4)
                 data=snapshot(); assert len(data)==(1 if choice=='one' else 3), data
                 widgets=[w for p in data for w in p['widgets']]
+                assert all(w['index'] >= 0 for w in widgets), data
                 assert all(any(w['id']==ident for w in widgets) for ident in original), data
                 assert len([w for w in widgets if w['type']=='org.monet.sound'])==1, data
                 if choice=='one': assert data[0]['widgets'][0]['type']=='org.monet.menu', data
-            task='panels()[0].widgets("org.kde.plasma.icontasks")[0]'
+                assert state('panels().filter(p=>p.location!=="bottom").map(p=>[p.id,p.widgets().map(w=>w.id)])') == other
+            task='panelById('+str(selected)+').widgets("org.kde.plasma.icontasks")[0]'
             assert json.loads(evaluate('var t='+task+'; t.currentConfigGroup=["General"]; print(JSON.stringify(t.readConfig("launchers",[])));')[0])==['applications:org.kde.konsole.desktop']
-            assert json.loads(evaluate('var w=panels()[0].widgets("org.monet.custom")[0]; w.currentConfigGroup=["General"]; print(JSON.stringify(w.readConfig("preserved","")));')[0])=='yes'
-            # KConfig saves on shutdown; verify the selected layout survives login.
-            shell.terminate(); shell.wait(timeout=5)
+            assert json.loads(evaluate('var w=panelById('+str(selected)+').widgets("org.monet.custom")[0]; w.currentConfigGroup=["General"]; print(JSON.stringify(w.readConfig("preserved","")));')[0])=='yes'
+            # Wait for Plasma's normal KConfig sync, then restart only this
+            # process group. SIGTERM can run session-shutdown handlers in CI.
+            saved = Path(env['XDG_CONFIG_HOME'])/'plasma-org.kde.plasma.desktop-appletsrc'
+            section = 'Containments]['+str(selected)+'][MonetBar'
+            for _ in range(200):
+                config = configparser.ConfigParser(interpolation=None, strict=False)
+                config.read(saved)
+                if config.get(section, 'role', fallback='') == 'one' and all(
+                    config.get('Containments]['+str(selected)+'][Applets]['+str(w['id']), 'plugin', fallback='') == w['type']
+                    for w in data[0]['widgets']): break
+                time.sleep(.1)
+            else: raise AssertionError('Plasma did not save the chosen layout')
+            print('Native panels: restarting private Plasma', flush=True)
+            stop(shell)
             shell=launch(['plasmashell','--no-respawn']); ready(); time.sleep(.4)
             assert q.panel_layout(str(selected))['layout']=='one'
             data=snapshot(); assert len(data)==1, data
@@ -107,9 +135,10 @@ with private_session() as env:
     except Exception:
         log.flush(); print(logpath.read_text()[-8000:],file=sys.stderr); raise
     finally:
+        print('Native panels: stopping private processes', flush=True)
         for process in reversed(processes):
             if process.poll() is None:
-                process.terminate()
-                try: process.wait(timeout=5)
-                except subprocess.TimeoutExpired: process.kill(); process.wait()
+                # This is a disposable session. Stop its process groups without
+                # running compositor logout/session-shutdown handlers.
+                stop(process)
         log.close()
