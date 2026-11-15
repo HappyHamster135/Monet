@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Move real Plasma applets on a private virtual Wayland desktop; never the host."""
 import json
+import configparser
 import shutil
 from pathlib import Path
 import subprocess
@@ -111,9 +112,20 @@ with private_session() as env:
             task='panelById('+str(selected)+').widgets("org.kde.plasma.icontasks")[0]'
             assert json.loads(evaluate('var t='+task+'; t.currentConfigGroup=["General"]; print(JSON.stringify(t.readConfig("launchers",[])));')[0])==['applications:org.kde.konsole.desktop']
             assert json.loads(evaluate('var w=panelById('+str(selected)+').widgets("org.monet.custom")[0]; w.currentConfigGroup=["General"]; print(JSON.stringify(w.readConfig("preserved","")));')[0])=='yes'
-            # KConfig saves on shutdown; verify the selected layout survives login.
+            # Wait for Plasma's normal KConfig sync, then restart only this
+            # process group. SIGTERM can run session-shutdown handlers in CI.
+            saved = Path(env['XDG_CONFIG_HOME'])/'plasma-org.kde.plasma.desktop-appletsrc'
+            section = 'Containments]['+str(selected)+'][MonetBar'
+            for _ in range(200):
+                config = configparser.ConfigParser(interpolation=None, strict=False)
+                config.read(saved)
+                if config.get(section, 'role', fallback='') == 'one' and all(
+                    config.get('Containments]['+str(selected)+'][Applets]['+str(w['id']), 'plugin', fallback='') == w['type']
+                    for w in data[0]['widgets']): break
+                time.sleep(.1)
+            else: raise AssertionError('Plasma did not save the chosen layout')
             print('Native panels: restarting private Plasma', flush=True)
-            shell.terminate(); shell.wait(timeout=5)
+            stop(shell)
             shell=launch(['plasmashell','--no-respawn']); ready(); time.sleep(.4)
             assert q.panel_layout(str(selected))['layout']=='one'
             data=snapshot(); assert len(data)==1, data

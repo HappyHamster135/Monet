@@ -359,6 +359,7 @@ QtObject {
     property int requested: -1
     property string appName: "Monet Browser"
     readonly property Dock.PulseAudio audio: Dock.PulseAudio {}
+    function hasStream(pid) { return audio.streamsForAppName(appName).some(stream => stream.pid === pid) }
     onRequestedChanged: {
         const streams = audio.streamsForAppName(appName);
         if (!streams.length) throw new Error("No playback stream");
@@ -403,7 +404,7 @@ QtObject {
             obj = controller()
             first = play(); players.append(first)
             wait_for(lambda: at(first, 100), 'first track initial volume')
-            QTest.qWait(100)
+            wait_for(lambda: obj.hasStream(first.pid), 'first track appears in Home Bar')
             obj.setProperty('requested', 83)
             wait_for(lambda: at(first, 83), 'Home Bar changed active track')
             first.terminate(); first.wait(timeout=5)
@@ -423,8 +424,11 @@ QtObject {
             del previous
             obj = controller()
             third = play(); players.append(third)
+            wait_for(lambda: obj.hasStream(third.pid), 'restarted track appears in Home Bar')
             try:
-                wait_for(lambda: at(third, 0) and stream(third).mute, 'saved zero after controller restart')
+                # A muted stream is effectively zero. WirePlumber can retain a
+                # nonzero underlying gain for unmute without producing sound.
+                wait_for(lambda: stream(third) and stream(third).mute, 'saved zero after controller restart')
             except AssertionError:
                 print((Path(os.environ['XDG_CONFIG_HOME']) / 'monet/app-volume.ini').read_text())
                 print(stream(third))
