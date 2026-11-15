@@ -92,22 +92,34 @@ impl Paths {
     fn bad(&self) -> PathBuf {
         self.dir.join("bad-entries")
     }
+    /// Windows entries that have started Windows on an earlier trip.
+    fn good(&self) -> PathBuf {
+        self.dir.join("good-entries")
+    }
     pub fn notice(&self) -> PathBuf {
         self.dir.join("switch-notice")
     }
 }
 
 pub fn bad_entries(paths: &Paths) -> Vec<u16> {
-    fs::read_to_string(paths.bad())
+    read_entries(&paths.bad())
+}
+
+fn save_bad_entries(paths: &Paths, entries: &[u16]) {
+    write_entries(&paths.bad(), entries);
+}
+
+fn read_entries(path: &Path) -> Vec<u16> {
+    fs::read_to_string(path)
         .unwrap_or_default()
         .split_whitespace()
         .filter_map(|w| u16::from_str_radix(w, 16).ok())
         .collect()
 }
 
-fn save_bad_entries(paths: &Paths, entries: &[u16]) {
+fn write_entries(path: &Path, entries: &[u16]) {
     let text: Vec<String> = entries.iter().map(|n| format!("{n:04X}")).collect();
-    let _ = fs::write(paths.bad(), text.join("\n"));
+    let _ = fs::write(path, text.join("\n"));
 }
 
 pub fn firmware_skips_boot_next(paths: &Paths) -> bool {
@@ -373,6 +385,11 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
             bad.retain(|n| *n != trip.entry);
             save_bad_entries(paths, &bad);
         }
+        let mut good = read_entries(&paths.good());
+        if !good.contains(&trip.entry) {
+            good.push(trip.entry);
+            write_entries(&paths.good(), &good);
+        }
         // A BootNext that's gone was used: this firmware follows it after all
         // (one skipped trip can be someone picking Monet in the boot menu).
         if trip.method == Method::First && next.is_none() && firmware_skips_boot_next(paths) {
@@ -399,7 +416,10 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
             t!("Windows didn't start: this PC skipped Monet's one-time start. Next time, Monet asks it a different way.")
                 .to_string()
         }
-        Arrival::Failed if setup_done && trip.method == Method::Once => {
+        // An entry that has started Windows before isn't blamed for one failed
+        // start: Windows finishing its updates restarts through the boot order,
+        // which brings the PC back to Monet before Bridge can take the request.
+        Arrival::Failed if setup_done && trip.method == Method::Once && !read_entries(&paths.good()).contains(&trip.entry) => {
             // That entry can't start; Monet uses another one, or makes one.
             let mut bad = bad_entries(paths);
             if !bad.contains(&trip.entry) {
@@ -650,6 +670,25 @@ mod tests {
         let mut efi = pc(Some(1), false);
         check_after_boot(&mut efi, &paths, 1060, true, "return");
         assert!(firmware_skips_boot_next(&paths));
+    }
+
+    #[test]
+    fn an_entry_that_started_windows_before_is_not_blamed_for_one_failure() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        check_after_boot(&mut pc(None, false), &paths, 1060, true, "first-return");
+        save(&paths, &Trip { boot: "second".into(), ..bound_trip() }).unwrap();
+        let notice = check_after_boot(&mut pc(None, true), &paths, 1060, true, "second-return").unwrap();
+        assert!(bad_entries(&paths).is_empty());
+        assert!(notice.contains("didn't finish"));
+    }
+
+    #[test]
+    fn an_entry_that_never_started_windows_is_still_replaced() {
+        let paths = Paths::new(temp());
+        save(&paths, &bound_trip()).unwrap();
+        check_after_boot(&mut pc(None, true), &paths, 1060, true, "return");
+        assert_eq!(bad_entries(&paths), vec![4]);
     }
 
     #[test]

@@ -216,6 +216,9 @@ def save_state(name, plan):
 
 def save_partition_plan(plan):
     save_state("windows-partitions.json", plan)
+    # A new Windows can reuse an old boot entry's number: it has to start once
+    # before a failed trip is put down to Windows itself.
+    (STATE / "good-entries").unlink(missing_ok=True)
 
 
 def new_partition_plan(disk, table):
