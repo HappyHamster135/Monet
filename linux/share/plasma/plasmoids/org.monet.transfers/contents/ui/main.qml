@@ -19,6 +19,17 @@ PlasmoidItem {
     toolTipSubText: i18n("Copies, downloads and extractions")
     preferredRepresentation: compactRepresentation
     property var localJobs: []
+    // View history only: dismissing never controls a job or removes its output.
+    readonly property var hiddenTransfers: Plasmoid.configuration.hiddenTransfers || []
+    readonly property var visibleLocalJobs: localJobs.filter(job => !hiddenTransfers.includes(localKey(job)))
+    function localKey(job) { return job.owner + ":" + job.token; }
+    function nativeKey(model) {
+        const created = new Date(model.created).getTime();
+        return model.id !== undefined && Number.isFinite(created) ? "native:" + model.id + ":" + created : "";
+    }
+    function hideTransfer(key) {
+        if (key && !hiddenTransfers.includes(key)) Plasmoid.configuration.hiddenTransfers = hiddenTransfers.concat([key]);
+    }
     property bool busy: false
     property bool watchReady: false
     property string problem: ""
@@ -247,8 +258,8 @@ PlasmoidItem {
         function syncLocalJobs() {
             const focus = focusedJob();
             // Progress updates keep the delegate and its keyboard focus alive.
-            for (let i = 0; i < root.localJobs.length; i++) {
-                const job = root.localJobs[i]; const key = job.owner + ":" + job.token;
+            for (let i = 0; i < root.visibleLocalJobs.length; i++) {
+                const job = root.visibleLocalJobs[i]; const key = job.owner + ":" + job.token;
                 let at = i;
                 while (at < localRows.count && localRows.get(at).key !== key) at++;
                 if (at === localRows.count) localRows.insert(i, {key: key, job: job});
@@ -257,14 +268,14 @@ PlasmoidItem {
                     localRows.setProperty(i, "job", job);
                 }
             }
-            if (localRows.count > root.localJobs.length) localRows.remove(root.localJobs.length, localRows.count - root.localJobs.length);
+            if (localRows.count > root.visibleLocalJobs.length) localRows.remove(root.visibleLocalJobs.length, localRows.count - root.visibleLocalJobs.length);
             scheduleReveal();
             if (focus) Qt.callLater(() => page.restoreJobFocus(focus));
         }
         Component.onCompleted: { syncLocalJobs(); Qt.callLater(fitPopup); Qt.callLater(focusFolderError); Qt.callLater(focusFolderActivity); }
         Connections {
             target: root
-            function onLocalJobsChanged() { page.syncLocalJobs(); }
+            function onVisibleLocalJobsChanged() { page.syncLocalJobs(); }
             function onProblemChanged() { if (root.problem !== "") Qt.callLater(page.focusTransferProblem); }
             function onExpandedChanged() { if (root.expanded) Qt.callLater(page.fitPopup); }
         }
@@ -355,15 +366,35 @@ PlasmoidItem {
                         }
                     }
                     Repeater {
+                        id: nativeRepeater
+                        property int shownCount: 0
+                        function recount() {
+                            let count = 0;
+                            for (let i = 0; i < nativeRepeater.count; i++) if (nativeRepeater.itemAt(i) && nativeRepeater.itemAt(i).visible) count++;
+                            nativeRepeater.shownCount = count;
+                        }
+                        onItemAdded: Qt.callLater(recount)
+                        onItemRemoved: Qt.callLater(recount)
                         model: nativeJobs
                         delegate: TransferCard {
                             required property var model
                             readonly property var job: model.jobDetails
-                            visible: !root.representedExtraction(job)
+                            readonly property string transferKey: root.nativeKey(model)
+                            visible: !root.representedExtraction(job) && !root.hiddenTransfers.includes(transferKey)
+                            onVisibleChanged: Qt.callLater(nativeRepeater.recount)
                             Layout.fillWidth: true; Layout.minimumWidth: 0
                             ColumnLayout {
                                 anchors.fill: parent
-                                C.Label { text: job ? job.summary : ""; textFormat: Text.PlainText; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    C.Label { text: job ? job.summary : ""; textFormat: Text.PlainText; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
+                                    C.ToolButton {
+                                        objectName: "hideNativeTransfer"; icon.name: "window-close"; Layout.alignment: Qt.AlignTop; implicitWidth: 32; implicitHeight: 32; enabled: transferKey !== ""
+                                        Accessible.name: i18n("Hide from Transfers")
+                                        C.ToolTip.text: i18n("Hide from Transfers"); C.ToolTip.visible: hovered
+                                        onClicked: { refreshButton.forceActiveFocus(Qt.TabFocusReason); root.hideTransfer(transferKey); }
+                                    }
+                                }
                                 C.Label { objectName: "nativeTransferDescription"; text: job ? folderOpen.plainText(job.text) : ""; textFormat: Text.PlainText; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                                 C.Label { visible: job && job.state === NotificationManager.Notifications.JobStateStopped; text: job && job.error ? i18n("Failed") : i18n("Completed") }
                                 TransferProgress { visible: job && job.state !== NotificationManager.Notifications.JobStateStopped; Layout.fillWidth: true; Layout.topMargin: 6; Layout.bottomMargin: 6; from: 0; to: 100; value: job ? job.percentage : 0; indeterminate: root.expanded && activity.active && job && job.percentage === 0 && job.state === NotificationManager.Notifications.JobStateRunning }
@@ -393,7 +424,16 @@ PlasmoidItem {
                             Layout.fillWidth: true; Layout.minimumWidth: 0
                             ColumnLayout {
                                 anchors.fill: parent
-                                C.Label { text: modelData.name; textFormat: Text.PlainText; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideMiddle }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    C.Label { text: modelData.name; textFormat: Text.PlainText; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideMiddle }
+                                    C.ToolButton {
+                                        objectName: "hideLocalTransfer"; icon.name: "window-close"; implicitWidth: 32; implicitHeight: 32
+                                        Accessible.name: i18n("Hide from Transfers")
+                                        C.ToolTip.text: i18n("Hide from Transfers"); C.ToolTip.visible: hovered
+                                        onClicked: { refreshButton.forceActiveFocus(Qt.TabFocusReason); root.hideTransfer(transferKey); }
+                                    }
+                                }
                                 C.Label { text: (modelData.kind === "extract" ? i18n("Extracting") : modelData.kind === "remove" ? i18n("Removing app") : i18n("Store download")) + " · " + root.label(modelData.state); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                                 TransferProgress { visible: ["queued", "running", "paused", "cancelling"].includes(modelData.state); Layout.fillWidth: true; Layout.topMargin: 6; Layout.bottomMargin: 6; from: 0; to: 1; value: Math.max(0, modelData.progress); indeterminate: root.expanded && activity.active && modelData.progress < 0 && ["running","queued"].includes(modelData.state) }
                                 C.Label { visible: modelData.error !== ""; text: modelData.error; textFormat: Text.PlainText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
@@ -414,7 +454,7 @@ PlasmoidItem {
                             }
                         }
                     }
-                    C.Label { visible: root.localJobs.length === 0 && nativeJobs.count === 0; text: i18n("No transfers yet"); Layout.margins: 24 }
+                    C.Label { visible: localRows.count === 0 && nativeRepeater.shownCount === 0; text: i18n("No transfers yet"); Layout.margins: 24 }
                     C.Label { text: i18n("You can close this panel. Transfers continue in the background."); wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.margins: 12 }
                 }
             }

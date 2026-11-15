@@ -36,6 +36,9 @@ Item {
     property int draftSize: panel.thickness
     property string icons: ""
     property bool iconsAvailable: false
+    property string barLayout: ""
+    property bool layoutAvailable: false
+    property bool layoutBusy: false
     property bool busy: false
     property string problem: ""
     property bool surfaceResizePending: false
@@ -147,7 +150,30 @@ Item {
         busy = true
         runner.connectSource("@LIBEXECDIR@/monet-quick panel-icons " + plasmoid.id + (alignment ? " " + alignment : ""))
     }
-    Component.onCompleted: requestIcons("")
+    function requestLayout(layout) {
+        layoutBusy = true
+        layoutRunner.connectSource("@LIBEXECDIR@/monet-quick panel-layout " + plasmoid.id + (layout ? " " + layout : ""))
+    }
+    Component.onCompleted: { requestIcons(""); requestLayout("") }
+    P5Support.DataSource {
+        id: layoutRunner
+        engine: "executable"
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            editor.layoutBusy = false
+            try {
+                const result = JSON.parse(data.stdout)
+                if (data["exit code"] !== 0 || !result.ok) throw new Error()
+                editor.layoutAvailable = result.available
+                editor.barLayout = result.layout
+                editor.problem = result.available ? "" : i18nd("monet", "This screen has extra bars. Use Advanced to arrange them first.")
+                editor.requestIcons("")
+                editor.schedulePlacement(true)
+            } catch (e) {
+                editor.problem = i18nd("monet", "Could not change the bar layout. Close this editor and try again.")
+            }
+        }
+    }
     P5Support.DataSource {
         id: runner
         engine: "executable"
@@ -159,7 +185,6 @@ Item {
                 if (data["exit code"] !== 0 || !result.ok) throw new Error()
                 editor.iconsAvailable = result.available
                 editor.icons = result.alignment
-                editor.problem = ""
             } catch (e) {
                 editor.problem = i18nd("monet", "Could not read the app layout. Close this editor and try again.")
             }
@@ -276,6 +301,23 @@ Item {
                     Layout.fillWidth: true
                     spacing: 10
                     Hint { text: i18nd("monet", "Drag items on the bar to reorder them.") }
+                    Heading { text: i18nd("monet", "Bar layout") }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Choice {
+                            objectName: "panelOneBar"; text: i18nd("monet", "One bar")
+                            checked: editor.barLayout === "one"
+                            enabled: editor.layoutAvailable && !editor.layoutBusy
+                            onClicked: editor.requestLayout("one")
+                        }
+                        Choice {
+                            objectName: "panelThreeBars"; text: i18nd("monet", "Three bars")
+                            checked: editor.barLayout === "three"
+                            enabled: editor.layoutAvailable && !editor.layoutBusy
+                            onClicked: editor.requestLayout("three")
+                        }
+                    }
+                    Hint { text: i18nd("monet", "Includes the menu, apps, quick settings, sound and clock. Your pins and widgets stay with you.") }
                     Heading { text: i18nd("monet", "Bar shape") }
                     RowLayout {
                         Layout.fillWidth: true

@@ -28,6 +28,11 @@ The same USB maker works for supported x86-64 UEFI PCs with NVIDIA, AMD or Intel
 graphics. The installer detects the destination PC, not the PC used to make the stick.
 Monet is a preview; individual laptop hardware still needs testing.
 
+Right-click the Home Bar and choose **Customize Home Bar → Layout** to switch
+between **One bar** and **Three bars**. Monet keeps your pinned apps and widgets
+and supplies any missing everyday controls. In **Transfers**, the **×** beside
+an entry hides it from the list; the transfer continues and its files stay intact.
+
 ## How it works
 
 ```

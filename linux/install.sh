@@ -215,6 +215,7 @@ for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard o
 done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
+put 644 "$SRC/share/monet/panel-layout.js" "$DATADIR/monet/panel-layout.js"
 put 644 "$SRC/share/monet/repair-sound.js" "$DATADIR/monet/repair-sound.js"
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
     org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.stacks; do
