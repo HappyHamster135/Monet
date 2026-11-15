@@ -54,7 +54,10 @@ KWin.TabBoxSwitcher {
                         const width = Math.min(preferredWidth, Math.floor(availableWidth / columns));
                         const idealHeight = Math.round(width * 0.52) + titleHeight + gap * 3;
                         const height = Math.min(idealHeight, Math.floor(availableHeight / rows));
-                        if (height >= minHeight && width * height > bestArea) {
+                        // When a few windows fit at full size either way, a
+                        // row reads better than a column: prefer fewer rows.
+                        if (height >= minHeight && (width * height > bestArea
+                                || best && width * height === bestArea && rows < best.rows)) {
                             bestArea = width * height;
                             best = {columns, rows, width, height};
                         }
