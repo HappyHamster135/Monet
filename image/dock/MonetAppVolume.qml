@@ -34,9 +34,10 @@ QtObject {
         settings.levels = JSON.stringify(values);
     }
 
-    // False until the stream plays, so the caller tries again then.
+    // False until the stream plays and says which app it is, so the caller
+    // tries again then.
     function restore(stream) {
-        if (!stream || stream.corked) return false;
+        if (!stream || stream.corked || !key(stream)) return false;
         const value = levels()[key(stream)];
         if (Number.isFinite(value) && value >= 0 && value <= 1) {
             stream.model.Volume = Math.round(value * normalVolume);

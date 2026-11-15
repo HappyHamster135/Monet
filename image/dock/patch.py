@@ -26,13 +26,13 @@ def patch_audio(applet):
             // playing, so pausing never undoes a change made in another mixer.
             property bool monetRestored: false
             property double monetRestoredAt: 0
-            function monetRestore(): void {
-                if (monetRestored || !pulseAudio.monetVolume.restore(delegate)) return;
+            function monetRestore(again: bool): void {
+                if ((monetRestored && !again) || !pulseAudio.monetVolume.restore(delegate)) return;
                 monetRestored = true;
                 monetRestoredAt = Date.now();
             }
-            onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestore())
-            Component.onCompleted: Qt.callLater(() => delegate.monetRestore())
+            onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestore(false))
+            Component.onCompleted: Qt.callLater(() => delegate.monetRestore(false))
             // Later changes from any mixer become the app's level. The short
             // wait skips a player setting its own level as it starts.
             onVolumeChanged: if (monetRestored && Date.now() - monetRestoredAt > 1000)
@@ -41,7 +41,7 @@ def patch_audio(applet):
 ''')
     prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Client metadata can arrive after the stream was created or uncorked.
             readonly property string monetIdentity: pulseAudio.monetVolume.key(delegate)
-            onMonetIdentityChanged: Qt.callLater(() => pulseAudio.monetVolume.restore(delegate))
+            onMonetIdentityChanged: Qt.callLater(() => delegate.monetRestore(true))
 
 ''')
     replace(applet/'qml/ToolTipInstance.qml', '                    stream.model.Volume = v',
