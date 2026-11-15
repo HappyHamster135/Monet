@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Move real Plasma applets on a private virtual Wayland desktop; never the host."""
 import json
-import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -53,7 +53,13 @@ with private_session() as env:
                 'KPlugin':{'Id':plugin,'Name':name,'Version':'1.0','License':'MIT'},'X-Plasma-API-Minimum-Version':'6.0'}))
             (package/'contents/ui/main.qml').write_text('import QtQuick\nimport org.kde.plasma.plasmoid\nPlasmoidItem { preferredRepresentation: fullRepresentation; fullRepresentation: Rectangle { implicitWidth:32; implicitHeight:32; color: "red" } }\n')
         Path(env['XDG_CONFIG_HOME'],'kdeglobals').write_text('[KDE]\nLookAndFeelPackage=org.kde.breeze.desktop\n')
-        launch(['kwin_wayland','--virtual','--width','1280','--height','800','--no-lockscreen',
+        # Fedora marks KWin with CAP_SYS_NICE. A cap-drop=ALL test container
+        # correctly refuses to execute that file. A byte copy has no file
+        # capabilities and needs none for this virtual, software-only display.
+        compositor = Path(env['HOME']) / 'kwin_wayland'
+        shutil.copyfile(shutil.which('kwin_wayland'), compositor)
+        compositor.chmod(0o700)
+        launch([str(compositor),'--virtual','--width','1280','--height','800','--no-lockscreen',
                 '--no-global-shortcuts','--no-kactivities','--socket','monet-panel-test'])
         for _ in range(100):
             if Path(env['XDG_RUNTIME_DIR'],'monet-panel-test').exists(): break
