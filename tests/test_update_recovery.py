@@ -132,6 +132,34 @@ class FreshCaches(unittest.TestCase):
                 run()
                 self.assertEqual(regenerated.read_text(), 'valid')
 
+    def test_a_failing_setup_step_does_not_empty_the_caches_at_every_login(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            cache, config, data, helpers = [root / name for name in ('cache', 'config', 'data', 'bin')]
+            for p in (cache, config / 'monet', data / 'monet', helpers):
+                p.mkdir(parents=True)
+            for name in ('monet', 'monet-profile', 'monet-region', 'monet-quick'):
+                file = helpers / name
+                # Region setup keeps failing; it retries by its own flag.
+                file.write_text('#!/bin/sh\n' + {'monet': 'echo "monet 0.9.8-6"\n', 'monet-region': 'exit 1\n'}.get(name, 'exit 0\n'))
+                file.chmod(0o755)
+            script = root / 'fresh'
+            script.write_text((ROOT / 'linux/libexec/monet-fresh').read_text()
+                .replace('@BINDIR@', str(helpers)).replace('@LIBEXECDIR@', str(helpers))
+                .replace('@DATADIR@', str(data)))
+            env = dict(os.environ, XDG_CACHE_HOME=str(cache), XDG_CONFIG_HOME=str(config))
+            compiled = cache / 'plasmashell/qmlcache/code.qmlc'
+            compiled.parent.mkdir(parents=True)
+            compiled.write_text('stale')
+            first = subprocess.run(['bash', str(script)], env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(first.returncode, 1, 'the failed step is still reported')
+            self.assertFalse(compiled.exists())
+            self.assertTrue((cache / 'monet-version').exists())
+            compiled.parent.mkdir(parents=True)
+            compiled.write_text('valid')
+            subprocess.run(['bash', str(script)], env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(compiled.read_text(), 'valid')
+
 
 class SoundRepair(unittest.TestCase):
     def test_duplicate_controls_are_removed_once_without_changing_other_panels(self):
