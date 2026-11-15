@@ -19,7 +19,7 @@ with private_session() as env:
     def inert(script):
         for original, substitute in aliases.items(): script=script.replace(original,substitute)
         return script
-    env.update(KWIN_COMPOSE="Q", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
+    env.update(KWIN_COMPOSE="O2", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
     processes = []
     logpath = Path(env['HOME']) / 'panel-fixture.log'
     log = logpath.open('w')
@@ -28,6 +28,7 @@ with private_session() as env:
         processes.append(process)
         return process
     def evaluate(script):
+        assert compositor_process.poll() is None, 'Private compositor stopped'
         result = subprocess.run(['busctl', '--address='+env['DBUS_SESSION_BUS_ADDRESS'], '--json=short',
             'call', 'org.kde.plasmashell', '/PlasmaShell', 'org.kde.PlasmaShell', 'evaluateScript', 's', inert(script)],
             env=env, capture_output=True, text=True, timeout=10)
@@ -60,7 +61,7 @@ with private_session() as env:
         compositor = Path(env['HOME']) / 'kwin_wayland'
         shutil.copyfile(shutil.which('kwin_wayland'), compositor)
         compositor.chmod(0o700)
-        launch([str(compositor),'--virtual','--width','1280','--height','800','--no-lockscreen',
+        compositor_process=launch([str(compositor),'--virtual','--width','1280','--height','800','--no-lockscreen',
                 '--no-global-shortcuts','--no-kactivities','--socket','monet-panel-test'])
         for _ in range(100):
             if Path(env['XDG_RUNTIME_DIR'],'monet-panel-test').exists(): break

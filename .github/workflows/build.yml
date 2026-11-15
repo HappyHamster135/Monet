@@ -45,7 +45,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Native Qt and KDE test runtime
-        run: podman build -f tests/Containerfile -t localhost/monet-desktop-tests:44 .
+        run: |
+          # KWin's virtual display uses CPU rendering through udmabuf. The
+          # container still has no physical GPU, input devices or host session.
+          sudo modprobe udmabuf
+          sudo chown "$(id -u):$(id -g)" /dev/udmabuf
+          podman build -f tests/Containerfile -t localhost/monet-desktop-tests:44 .
       - name: Pinned browser test input (the builder verifies its SHA-256)
         run: |
           mkdir -p target/desktop-tests
@@ -56,6 +61,7 @@ jobs:
         run: |
           mkdir -p target/desktop-tests
           podman run --rm --init --userns=keep-id --network=none --cap-drop=ALL --security-opt=no-new-privileges \
+            --device=/dev/udmabuf \
             -v "$PWD:/src:ro" -v "$PWD/target/desktop-tests:/results" \
             -e MONET_TEST_BROWSER_UPSTREAM=/results/upstream.xpi \
             localhost/monet-desktop-tests:44 \
