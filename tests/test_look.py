@@ -2492,7 +2492,9 @@ class EverydayScreens(unittest.TestCase):
         self.assertIn('grep -q \'engine->load("qrc:/qml/KdeQuickAuthDialog.qml")\' QuickAuthDialog.cpp', build)
         containerfile = (ROOT / "image/Containerfile").read_text()
         self.assertIn("ARG BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable", containerfile)
-        self.assertIn("FROM ${BASE} AS password", containerfile)
+        self.assertIn("FROM runtime AS password", containerfile)
+        self.assertLess(containerfile.index("refresh-native-runtime.py --upgrade"),
+                        containerfile.index("FROM runtime AS password"))
         self.assertIn("sh /src/password/build.sh /out || rm -rf /out/*", containerfile)
         self.assertIn("--mount=type=bind,from=password,source=/out,target=/mnt/monet-password,ro", containerfile)
         self.assertIn("cp -a /mnt/monet-password/. /tmp/monet/password/", containerfile)
