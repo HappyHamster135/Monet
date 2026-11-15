@@ -1240,7 +1240,7 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
         return Ok(());
     }
 
-    println!("Downloading the newest Monet…");
+    progress("Downloading the newest Monet…");
     let bootc = has("bootc");
     let output = if bootc {
         Command::new("bootc").arg("upgrade").env("LC_ALL", "C").output()
@@ -1253,7 +1253,7 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
     }
     let staged = update_is_staged(bootc);
     if has("flatpak") {
-        println!("Updating your apps…");
+        progress("Updating your apps…");
         // Apps that fail to update keep working as they are.
         let failed = if staged == Some(true) {
             "Some apps couldn't update. Restart to apply the downloaded system update, then try the apps again."
@@ -1270,12 +1270,18 @@ fn helper_update(check: bool, json: bool) -> Res<()> {
         // And what no app uses anymore (old runtimes) makes room.
         let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y", "--noninteractive"]).status();
     }
-    println!("{}", match staged {
+    progress(match staged {
         Some(true) => "Done. Restart your PC to use the newest Monet.",
         Some(false) => "Monet and your apps are up to date.",
         None => "Updates finished. Check Settings → Updates for any pending restart.",
     });
     Ok(())
+}
+
+/// A line for whoever started the update. Settings may have closed since: the
+/// update carries on instead of stopping at a closed pipe.
+fn progress(line: &str) {
+    let _ = writeln!(std::io::stdout(), "{line}");
 }
 
 fn helper_make_default() -> Res<()> {
