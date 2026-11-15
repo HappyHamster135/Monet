@@ -336,10 +336,13 @@ Item {
                         visible: panel.lengthMode !== Panel.FillAvailable
                         Layout.fillWidth: true
                         Repeater {
+                            // Plasma places a bar by screen side, so in a
+                            // right-to-left language Start is the right side.
+                            readonly property bool mirrored: !editor.vertical && Qt.application.layoutDirection === Qt.RightToLeft
                             model: [
-                                {name: editor.vertical ? i18nd("monet", "Top") : i18nd("monet", "Start"), alignment: Qt.AlignLeft},
+                                {name: editor.vertical ? i18nd("monet", "Top") : i18nd("monet", "Start"), alignment: mirrored ? Qt.AlignRight : Qt.AlignLeft},
                                 {name: i18nd("monet", "Center"), alignment: Qt.AlignCenter},
-                                {name: editor.vertical ? i18nd("monet", "Bottom") : i18nd("monet", "End"), alignment: Qt.AlignRight}]
+                                {name: editor.vertical ? i18nd("monet", "Bottom") : i18nd("monet", "End"), alignment: mirrored ? Qt.AlignLeft : Qt.AlignRight}]
                             Choice {
                                 required property var modelData
                                 text: modelData.name
