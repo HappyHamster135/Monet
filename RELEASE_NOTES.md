@@ -33,6 +33,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   its room; they come back as soon as you open them. Apps on screen, playing
   sound or still working are never touched. On PCs with 8 GB or less, Zen
   also puts tabs to sleep after ten minutes and reloads them when you return.
+- **Kinder to laptops and full memory.** The automatic update skips its turn
+  while a laptop's battery is under half and not charging, or in Power Saver,
+  and tries again at the next start or the next day. Check for updates in
+  Settings still works any time. When memory stays nearly full for a few
+  minutes, a notification names the apps using the most, with a button to open
+  Task Manager. If memory runs out completely, Linux now closes the largest app
+  instead of the whole PC freezing while it struggles.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
