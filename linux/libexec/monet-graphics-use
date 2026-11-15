@@ -15,6 +15,12 @@ With --watch it keeps going for Task Manager's Graphics column, a line every two
 with each process's own share, until whoever reads it stops:
 
     {"version": 1, "ok": true, "pids": {"1201": 7.0, "3300": 41.0}}
+
+With --devices it names the graphics devices as KDE's system monitor counts them (gpu0, gpu1, ...),
+for Task Manager's device list: KDE calls one it finds no name for "GPU 2", and that is
+usually the graphics built into the processor, which people don't know they have.
+
+    {"version": 1, "devices": [{"id": "gpu1", "maker": "AMD", "name": "AMD Radeon Graphics", "builtIn": true}]}
 """
 import json
 import os
@@ -31,6 +37,13 @@ PROC = Path("/proc")
 PARTS = {"kwin_wayland": "windows", "plasmashell": "desktop", "Xwayland": "xwayland"}
 STEAM = {"steam.desktop", "com.valvesoftware.Steam.desktop"}
 SHOWN = 8
+# The graphics devices KDE's system monitor reads (ksystemstats): PCI display devices of these
+# makers, numbered in the order udev lists them, which is their place in /sys/devices.
+PCI = Path("/sys/bus/pci/devices")
+PCI_IDS = (Path("/usr/share/hwdata/pci.ids"), Path("/usr/share/misc/pci.ids"))
+DISPLAY = {"0x030000", "0x030200", "0x038000"}  # VGA, 3D and other display controllers
+MAKERS = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
+FALLBACK = {"AMD": "AMD Radeon Graphics", "NVIDIA": "NVIDIA graphics", "Intel": "Intel Graphics"}
 
 
 def read(path, limit=65536):
@@ -311,8 +324,63 @@ def watch(write=print, proc=PROC, stream=None, clock=time.monotonic, wait=time.s
         stream.stop()
 
 
+def pci_model(vendor, device, files=PCI_IDS):
+    """The device's line in the PCI ID list (pci.ids), as "Navi 31 [Radeon RX 7900 XT]", or ""."""
+    vendor, device = vendor.lower().removeprefix("0x"), device.lower().removeprefix("0x")
+    for path in files:
+        try:
+            with path.open(encoding="utf-8", errors="replace") as lines:
+                inside = False
+                for line in lines:
+                    if not line.strip() or line.startswith("#"):
+                        continue
+                    if not line.startswith("\t"):
+                        if inside:
+                            break
+                        inside = line[:4].lower() == vendor
+                    elif inside and not line.startswith("\t\t") and line[1:5].lower() == device:
+                        return line[5:].strip()
+        except OSError:
+            continue
+    return ""
+
+
+def built_in(maker, model, path):
+    """The processor's own graphics: Intel's sits right on the processor's bus; AMD's are named
+    for the chip (Raphael) or as Radeon Graphics or a Radeon 780M, never as an RX or Pro card."""
+    if maker == "Intel":
+        return path.parent.name.startswith("pci")  # /sys/devices/pci0000:00/0000:00:02.0
+    if maker == "AMD":
+        product = re.search(r"\[(.*)\]", model)
+        return (not product or "Graphics" in product[1] or "Vega" in product[1]
+                or re.search(r"\b\d{3}M\b", product[1]) is not None) and not re.search(
+                    r"\bRX\b|\bPro\b|FirePro|Instinct", model)
+    return False
+
+
+def devices(pci=PCI, files=PCI_IDS):
+    """Each graphics device KDE's system monitor reads, by its id there (gpu0, gpu1...)."""
+    found = []
+    for link in pci.glob("*") if pci.is_dir() else []:
+        vendor, kind = read(link / "vendor").strip(), read(link / "class").strip()
+        if kind in DISPLAY and vendor in MAKERS:
+            found.append((link.resolve(), vendor, read(link / "device").strip()))
+    named = []
+    for number, (path, vendor, device) in enumerate(sorted(found, key=lambda item: item[0].parts)):
+        maker, model = MAKERS[vendor], pci_model(vendor, device, files)
+        product = re.search(r"\[(.*)\]", model)
+        name = product[1].strip() if product else ""
+        if name and not name.lower().startswith(maker.lower()):
+            name = maker + " " + name
+        named.append({"id": f"gpu{number}", "maker": maker, "name": name or FALLBACK[maker],
+                      "builtIn": built_in(maker, model, path)})
+    return named
+
+
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--watch"]:
+    if sys.argv[1:] == ["--devices"]:
+        print(json.dumps({"version": 1, "devices": devices()}))
+    elif sys.argv[1:] == ["--watch"]:
         watch(lambda line: print(line, flush=True))
     else:
         print(json.dumps(measure()))

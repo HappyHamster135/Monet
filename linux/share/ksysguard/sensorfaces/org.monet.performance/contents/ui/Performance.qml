@@ -5,6 +5,7 @@ import QtQuick.Templates as T
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.ksysguard.sensors as Sensors
+import org.kde.plasma.plasma5support as P5Support
 
 ColumnLayout {
     id: dashboard
@@ -19,7 +20,8 @@ ColumnLayout {
     readonly property bool monitoringActive: activity.active
     readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     readonly property color accent: dark ? "#62B6A6" : "#357F72"
-    readonly property var graphics: Array.from(availableSensors).filter(id => /^gpu\/[^/]+\/usage$/.test(id))
+    // Each graphics device, not KDE's sum of them all (gpu/all), which has no name of its own.
+    readonly property var graphics: Array.from(availableSensors).filter(id => /^gpu\/(?!all\/)[^/]+\/usage$/.test(id))
     readonly property string gpu: graphics.length ? graphics[Math.min(graphicsIndex, graphics.length - 1)].replace(/\/usage$/, "") : ""
     readonly property var headings: [i18nd("monet", "CPU"), i18nd("monet", "Memory"), i18nd("monet", "Graphics"),
         i18nd("monet", "Network"), i18nd("monet", "Storage")]
@@ -74,6 +76,45 @@ ColumnLayout {
     onSectionChanged: paused = false
     onGraphicsIndexChanged: paused = false
     onGraphicsChanged: graphicsIndex = Math.max(0, Math.min(graphicsIndex, graphics.length - 1))
+
+    // KDE calls a graphics device it finds no name for "GPU 2", and that is usually the graphics
+    // built into the processor. Monet's helper names them as KDE counts them (gpu0, gpu1, ...).
+    property string helper: "@LIBEXECDIR@/monet-graphics-use"
+    property var graphicsNamed: []
+    property bool graphicsAsked: false
+    readonly property bool graphicsShown: section === 2 && monitoringActive
+    onGraphicsShownChanged: if (graphicsShown) askGraphicsNames()
+    Component.onCompleted: if (graphicsShown) askGraphicsNames()
+    function askGraphicsNames() {
+        if (graphicsAsked) return
+        graphicsAsked = true
+        namer.connectSource("'" + helper.replace(/'/g, "'\\''") + "' --devices")
+    }
+    P5Support.DataSource {
+        id: namer
+        engine: "executable"
+        connectedSources: []
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            try {
+                const result = JSON.parse(data.stdout)
+                if (data["exit code"] === 0 && result.version === 1 && Array.isArray(result.devices))
+                    dashboard.graphicsNamed = result.devices
+            } catch (_) {}
+        }
+    }
+    function graphicsLabel(index, kdeName) {
+        const id = String(graphics[index] || "").split("/")[1] || ""
+        const said = String(kdeName || "")
+        const ours = graphicsNamed.length === graphics.length ? graphicsNamed.find(device => device.id === id) : undefined
+        // KDE's own name where it found one that says who made it (NVIDIA's comes from the driver).
+        const maker = /nvidia|geforce|quadro/i.test(said) ? "NVIDIA" : /\bamd\b|radeon/i.test(said) ? "AMD"
+            : /intel/i.test(said) ? "Intel" : ""
+        if (ours && maker && maker !== ours.maker) return said  // counted another way: KDE's alone
+        const name = maker ? said : ours ? ours.name : said
+        if (!name) return i18nd("monet", "Graphics device %1", index + 1)
+        return ours && ours.builtIn ? i18nd("monet", "%1 (built into the processor)", name) : name
+    }
     spacing: 16
 
     QQC2.TabBar {
@@ -165,13 +206,13 @@ ColumnLayout {
             model: dashboard.graphics
             currentIndex: dashboard.graphicsIndex
             onActivated: dashboard.graphicsIndex = currentIndex
-            displayText: gpuName.value || i18nd("monet", "Graphics device %1", currentIndex + 1)
+            displayText: dashboard.graphicsLabel(currentIndex, gpuName.value)
             delegate: QQC2.ItemDelegate {
                 id: gpuDelegate
                 required property int index
                 required property string modelData
                 width: parent ? parent.width : implicitWidth
-                text: deviceName.value || i18nd("monet", "Graphics device %1", index + 1)
+                text: dashboard.graphicsLabel(index, deviceName.value)
                 Sensors.Sensor {
                     id: deviceName
                     sensorId: gpuDelegate.modelData.replace(/\/usage$/, "/name")

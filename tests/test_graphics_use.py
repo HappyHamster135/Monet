@@ -312,5 +312,126 @@ class TaskManager(unittest.TestCase):
         self.assertTrue(re.search(r'fill "\$DATADIR"/ksysguard/sensorfaces/org\.monet\.\*/contents/ui/\*\.qml', install))
 
 
+PCI_IDS = """# The PCI ID list's own form: vendors, their devices indented, subsystems twice.
+1002  Advanced Micro Devices, Inc. [AMD/ATI]
+\t13c0  Granite Ridge [Radeon Graphics]
+\t164e  Raphael
+\t15bf  Phoenix1 [Radeon 780M]
+\t744c  Navi 31 [Radeon RX 7900 XT/7900 XTX/7900M]
+\t\t1002 0e3b  Radeon RX 7900 GRE
+10de  NVIDIA Corporation
+\t2c02  GB203 [GeForce RTX 5080]
+\t1e87  TU104M [GeForce RTX 2080 Mobile]
+8086  Intel Corporation
+\t3e9b  CoffeeLake-H GT2 [UHD Graphics 630]
+\t56a0  DG2 [Arc A770]
+C 03  Display controller
+"""
+
+
+class Devices(unittest.TestCase):
+    """Task Manager's device list names each graphics device as KDE counts them, so the graphics
+    built into the processor isn't just "GPU 2"."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = Path(folder.name)
+        self.ids = self.root / 'pci.ids'
+        self.ids.write_text(PCI_IDS)
+        (self.root / 'bus').mkdir()
+
+    def device(self, path, vendor, device, kind='0x030000'):
+        folder = self.root / 'devices' / path
+        folder.mkdir(parents=True)
+        for name, value in (('vendor', vendor), ('device', device), ('class', kind)):
+            (folder / name).write_text(value + '\n')
+        (self.root / 'bus' / folder.name).symlink_to(folder)
+
+    def named(self):
+        return use.devices(self.root / 'bus', (self.ids,))
+
+    def test_a_desktop_with_an_nvidia_card_and_the_processors_own_graphics(self):
+        # KDE's order is the devices' place in /sys/devices: the card on 00:01.1 before 00:08.1.
+        self.device('pci0000:00/0000:00:08.1/0000:7c:00.0', '0x1002', '0x164e')
+        self.device('pci0000:00/0000:00:01.1/0000:01:00.0', '0x10de', '0x2c02')
+        self.device('pci0000:00/0000:00:14.3', '0x8086', '0x51f0', '0x028000')  # Wi-Fi: not graphics
+        self.assertEqual(self.named(), [
+            {'id': 'gpu0', 'maker': 'NVIDIA', 'name': 'NVIDIA GeForce RTX 5080', 'builtIn': False},
+            {'id': 'gpu1', 'maker': 'AMD', 'name': 'AMD Radeon Graphics', 'builtIn': True}])
+
+    def test_a_laptop_with_intel_graphics_and_an_nvidia_chip(self):
+        self.device('pci0000:00/0000:00:02.0', '0x8086', '0x3e9b')
+        self.device('pci0000:00/0000:00:01.0/0000:01:00.0', '0x10de', '0x1e87', '0x030200')
+        self.assertEqual(self.named(), [
+            {'id': 'gpu0', 'maker': 'NVIDIA', 'name': 'NVIDIA GeForce RTX 2080 Mobile', 'builtIn': False},
+            {'id': 'gpu1', 'maker': 'Intel', 'name': 'Intel UHD Graphics 630', 'builtIn': True}])
+
+    def test_cards_and_built_in_graphics_are_told_apart(self):
+        self.device('pci0000:00/0000:00:01.1/0000:01:00.0/0000:02:00.0/0000:03:00.0', '0x1002', '0x744c')
+        self.device('pci0000:00/0000:00:01.2/0000:04:00.0', '0x8086', '0x56a0')
+        self.device('pci0000:00/0000:00:08.1/0000:c5:00.0', '0x1002', '0x15bf')
+        self.device('pci0000:00/0000:00:08.1/0000:c6:00.0', '0x1002', '0x13c0')
+        self.device('pci0000:00/0000:00:09.0/0000:07:00.0', '0x1a03', '0x2000')  # a server's own: KDE skips it
+        self.assertEqual([(d['name'], d['builtIn']) for d in self.named()], [
+            ('AMD Radeon RX 7900 XT/7900 XTX/7900M', False), ('Intel Arc A770', False),
+            ('AMD Radeon 780M', True), ('AMD Radeon Graphics', True)])
+
+    def test_a_device_the_list_does_not_know_is_named_for_its_maker(self):
+        self.device('pci0000:00/0000:00:08.1/0000:7c:00.0', '0x1002', '0x9999')
+        self.ids.unlink()
+        self.assertEqual(self.named(), [{'id': 'gpu0', 'maker': 'AMD', 'name': 'AMD Radeon Graphics', 'builtIn': True}])
+
+    def test_the_helper_prints_them(self):
+        shown = subprocess.run([sys.executable, str(ROOT / 'linux/libexec/monet-graphics-use'), '--devices'],
+                               capture_output=True, text=True, timeout=30)
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        result = json.loads(shown.stdout)
+        self.assertEqual(result['version'], 1)
+        self.assertIsInstance(result['devices'], list)
+
+
+class DeviceList(unittest.TestCase):
+    """The device list leaves out KDE's sum of all devices and names each from the helper."""
+
+    page = (ROOT / 'linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml').read_text()
+
+    def test_the_sum_of_all_devices_is_not_a_device(self):
+        self.assertIn(r'/^gpu\/(?!all\/)[^/]+\/usage$/', self.page)
+        self.assertIn('namer.connectSource("\'" + helper.replace(', self.page)
+        self.assertIn("' --devices\")", self.page)
+        self.assertIn('displayText: dashboard.graphicsLabel(currentIndex, gpuName.value)', self.page)
+        self.assertIn('text: dashboard.graphicsLabel(index, deviceName.value)', self.page)
+
+    def test_each_device_is_labelled_as_people_know_it(self):
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError:
+            self.skipTest('requires PySide6')
+        self.app = QCoreApplication.instance() or QCoreApplication([])
+        body = re.search(r'    function graphicsLabel\(index, kdeName\) \{\n.*?\n    \}\n', self.page, re.S)[0]
+        engine = QJSEngine()
+        engine.evaluate('function i18nd(domain, text, value) { return text.replace("%1", value) }')
+        def label(graphics, named, index, kde):
+            script = ('(function() { const graphics = %s; const graphicsNamed = %s;\n%s\nreturn graphicsLabel(%d, %s) })()'
+                      % (json.dumps(graphics), json.dumps(named), body, index, json.dumps(kde)))
+            value = engine.evaluate(script)
+            self.assertFalse(value.isError(), value.toString())
+            return value.toString()
+        desktop = ['gpu/gpu0/usage', 'gpu/gpu1/usage']
+        named = [{'id': 'gpu0', 'maker': 'NVIDIA', 'name': 'NVIDIA GeForce RTX 5080', 'builtIn': False},
+                 {'id': 'gpu1', 'maker': 'AMD', 'name': 'AMD Radeon Graphics', 'builtIn': True}]
+        self.assertEqual(label(desktop, named, 0, 'NVIDIA GeForce RTX 5080'), 'NVIDIA GeForce RTX 5080')
+        self.assertEqual(label(desktop, named, 1, 'GPU 2'), 'AMD Radeon Graphics (built into the processor)')
+        self.assertEqual(label(desktop, named, 1, 'Raphael'), 'AMD Radeon Graphics (built into the processor)')
+        # Until the helper answers, or where it counted another way, KDE's own names stand.
+        self.assertEqual(label(desktop, [], 1, 'GPU 2'), 'GPU 2')
+        self.assertEqual(label(desktop, named[:1], 1, 'GPU 2'), 'GPU 2')
+        swapped = [dict(named[1], id='gpu0'), dict(named[0], id='gpu1')]
+        self.assertEqual(label(desktop, swapped, 0, 'NVIDIA GeForce RTX 5080'), 'NVIDIA GeForce RTX 5080')
+        self.assertEqual(label(desktop, [], 0, ''), 'Graphics device 1')
+
+
 if __name__ == '__main__':
     unittest.main()
