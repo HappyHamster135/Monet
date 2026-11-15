@@ -1,0 +1,36 @@
+#!/bin/sh
+# Whether heavy background work (downloading and installing an update) may run now, the way
+# macOS keeps such work for when the battery can take it: on mains or USB-C power, on a PC
+# without a battery, or on a battery that is charging or at least half full; never in Power
+# Saver. A wireless mouse's or headset's battery doesn't count. Exits 0 yes, 1 not now.
+#
+#   MONET_POWER_ROOT     another root for /sys (tests)
+#   MONET_POWER_PROFILE  the power profile, instead of asking for it (tests)
+root="${MONET_POWER_ROOT:-}/sys/class/power_supply"
+if [ -n "${MONET_POWER_PROFILE+set}" ]; then
+    profile="$MONET_POWER_PROFILE"
+else
+    profile="$(busctl get-property net.hadess.PowerProfiles /net/hadess/PowerProfiles \
+        net.hadess.PowerProfiles ActiveProfile 2>/dev/null || busctl get-property \
+        org.freedesktop.UPower.PowerProfiles /org/freedesktop/UPower/PowerProfiles \
+        org.freedesktop.UPower.PowerProfiles ActiveProfile 2>/dev/null)"
+fi
+case "$profile" in *power-saver*) exit 1 ;; esac
+
+batteries=0
+for supply in "$root"/*; do
+    [ -r "$supply/type" ] || continue
+    case "$(cat "$supply/type")" in
+        Mains | USB | USB_C | USB_PD | USB_PD_DRP)
+            [ "$(cat "$supply/online" 2>/dev/null)" = 1 ] && exit 0
+            ;;
+        Battery)
+            [ "$(cat "$supply/scope" 2>/dev/null)" = Device ] && continue
+            batteries=$((batteries + 1))
+            case "$(cat "$supply/status" 2>/dev/null)" in Charging | Full) exit 0 ;; esac
+            level="$(cat "$supply/capacity" 2>/dev/null)"
+            case "$level" in '' | *[!0-9]*) ;; *) [ "$level" -ge 50 ] && exit 0 ;; esac
+            ;;
+    esac
+done
+[ "$batteries" = 0 ]

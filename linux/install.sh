@@ -28,9 +28,11 @@ LIBEXECDIR="$PREFIX/libexec"
 if [ "$IMAGE" = 1 ]; then
     UNITDIR=/usr/lib/systemd/system
     USERUNITDIR=/usr/lib/systemd/user
+    TMPFILESDIR=/usr/lib/tmpfiles.d
 else
     UNITDIR=/etc/systemd/system
     USERUNITDIR=/etc/systemd/user
+    TMPFILESDIR=/etc/tmpfiles.d
 fi
 
 # Run the system part as root, then finish in the user's own session.
@@ -107,7 +109,7 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -356,6 +358,9 @@ put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.serv
 put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
 put 644 "$SRC/systemd/user/monet-rest.service" "$USERUNITDIR/monet-rest.service"
 put 644 "$SRC/systemd/user/monet-rest.timer" "$USERUNITDIR/monet-rest.timer"
+# Stay responsive when memory runs out (applied at every start; now too, outside an image build).
+put 644 "$SRC/tmpfiles/monet-memory.conf" "$TMPFILESDIR/monet-memory.conf"
+[ "$IMAGE" = 1 ] || systemd-tmpfiles --create "$TMPFILESDIR/monet-memory.conf" >/dev/null 2>&1 || true
 # Safety: a new Monet on trial at its first start, Reset this PC before the sign-in screen,
 # and the encrypted disk's key into the security chip (at the first start, and again when needed).
 for unit in monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
