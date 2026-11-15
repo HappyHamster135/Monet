@@ -98,22 +98,27 @@ RUN sh /src/editor-recovery/build.sh /out
 
 FROM runtime AS task-manager
 COPY image/task-manager /src/task-manager
+COPY image/download-source-rpm.py /src/task-manager/download-source-rpm.py
 RUN sh /src/task-manager/build.sh /out
 
 FROM runtime AS login
 COPY image/login /src/login
+COPY image/download-source-rpm.py /src/login/download-source-rpm.py
 RUN sh /src/login/build.sh /out
 
 FROM runtime AS session
 COPY image/session /src/session
+COPY image/download-source-rpm.py /src/session/download-source-rpm.py
 RUN sh /src/session/build.sh /out
 
 FROM runtime AS files-recovery
 COPY image/files-recovery /src/files-recovery
+COPY image/download-source-rpm.py /src/files-recovery/download-source-rpm.py
 RUN sh /src/files-recovery/build.sh /out
 
 FROM runtime AS archive-recovery
 COPY image/archive-recovery /src/archive-recovery
+COPY image/download-source-rpm.py /src/archive-recovery/download-source-rpm.py
 RUN sh /src/archive-recovery/build.sh /out
 
 FROM runtime AS activity
@@ -128,6 +133,7 @@ RUN sh /src/launcher/build.sh /out
 
 FROM runtime AS pdf-recovery
 COPY image/pdf-recovery /src/pdf-recovery
+COPY image/download-source-rpm.py /src/pdf-recovery/download-source-rpm.py
 RUN sh /src/pdf-recovery/build.sh /out
 
 FROM runtime AS window-identity

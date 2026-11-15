@@ -18,7 +18,9 @@ dnf5 -y install --setopt=install_weak_deps=False \
     kf6-kuserfeedback-devel kf6-kfilemetadata-devel kf6-baloo-devel baloo-widgets-devel PackageKit-Qt6-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-files.XXXXXX")"
-dnf5 download --srpm --destdir="$work" "$release"
+helper="$here/download-source-rpm.py"
+[ -f "$helper" ] || helper="$here/../download-source-rpm.py"
+python3 "$helper" dolphin "$work"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/dolphin.spec"
 source="$(python3 -c 'from pathlib import Path; import sys; paths=[p.parent for p in Path(sys.argv[1]).rglob("CMakeLists.txt") if p.parent.name=="dolphin-"+sys.argv[2]]; assert len(paths)==1,paths; print(paths[0])' "$work/rpm/BUILD" "$version")"
@@ -40,6 +42,7 @@ install -m 755 "$work/build/bin/$library" "$out/$library"
 # Native preview checks should not read tens of MiB of unused DWARF on launch.
 strip --strip-debug "$out/dolphin" "$out/$library"
 mkdir "$work/monet-build"
+cp "$helper" "$work/monet-build/download-source-rpm.py"
 for name in build.sh bundle.py patch.py thumbnail-jobs.py monetfiles.h view-state.cpp window-state.cpp experience.h experience.cpp README.md; do cp "$here/$name" "$work/monet-build/"; done
 cp -r "$here/tests" "$work/monet-build/tests"
 cp "$out/runtime.json" "$work/monet-build/"

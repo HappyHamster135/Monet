@@ -14,7 +14,9 @@ dnf5 -y install --setopt=install_weak_deps=False cmake gcc-c++ make tar xz pytho
     kf6-kitemmodels-devel kf6-kirigami-devel kf6-kirigami-addons-devel libksysguard-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-task-manager.XXXXXX")"
-dnf5 download --srpm --destdir="$work" "$release"
+helper="$here/download-source-rpm.py"
+[ -f "$helper" ] || helper="$here/../download-source-rpm.py"
+python3 "$helper" plasma-systemmonitor "$work"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/plasma-systemmonitor.spec"
 source="$work/rpm/BUILD/plasma-systemmonitor-$version-build/plasma-systemmonitor-$version"
@@ -24,6 +26,7 @@ cmake -S "$source" -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_P
 cmake --build "$work/build" --target plasma-systemmonitor --parallel 4
 install -m 755 "$work/build/bin/plasma-systemmonitor" "$out/plasma-systemmonitor"
 cp -r "$here" "$work/monet-task-manager"
+cp "$helper" "$work/monet-task-manager/download-source-rpm.py"
 tar -cJf "$out/source.tar.xz" -C "$work" "$release.src.rpm" monet-task-manager
 cp "$here/bundle.py" "$here/README.md" "$out/"
 python3 "$here/bundle.py" seal "$out"

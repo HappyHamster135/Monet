@@ -27,6 +27,7 @@ WORKDIR /src
 
 FROM desktop-runtime AS archive-recovery
 COPY image/archive-recovery /src/archive-recovery
+COPY image/download-source-rpm.py /src/archive-recovery/download-source-rpm.py
 RUN sh /src/archive-recovery/build.sh /out
 
 FROM desktop-runtime AS activity

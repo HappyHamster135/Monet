@@ -14,7 +14,9 @@ dnf5 -y install --setopt=install_weak_deps=False cmake gcc-c++ make tar xz pytho
     layer-shell-qt-devel plasma-workspace-devel libkscreen-devel pam-devel libX11-devel systemd-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-login.XXXXXX")"
-dnf5 download --srpm --destdir="$work" "$release"
+helper="$here/download-source-rpm.py"
+[ -f "$helper" ] || helper="$here/../download-source-rpm.py"
+python3 "$helper" plasma-login-manager "$work"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/plasma-login-manager.spec"
 source="$work/rpm/BUILD/plasma-login-manager-$version-build/plasma-login-manager-$version"
@@ -24,6 +26,7 @@ cmake -S "$source" -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_P
 cmake --build "$work/build" --target plasma-login-greeter --parallel 4
 install -m 755 "$work/build/bin/plasma-login-greeter" "$out/plasma-login-greeter"
 cp -r "$here" "$work/monet-login"
+cp "$helper" "$work/monet-login/download-source-rpm.py"
 # Local test imports can leave bytecode beside these scripts. Ship source only.
 tar --exclude=__pycache__ --exclude='*.pyc' -cJf "$out/source.tar.xz" -C "$work" "$release.src.rpm" monet-login
 cp "$here/bundle.py" "$here/README.md" "$out/"

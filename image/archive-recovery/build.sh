@@ -17,7 +17,9 @@ dnf5 -y install --setopt=install_weak_deps=False \
     kf6-breeze-icons-devel libarchive-devel libzip-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-archives.XXXXXX")"
-dnf5 download --srpm --destdir="$work" "$release"
+helper="$here/download-source-rpm.py"
+[ -f "$helper" ] || helper="$here/../download-source-rpm.py"
+python3 "$helper" ark "$work"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/ark.spec"
 source="$(python3 -c 'from pathlib import Path; import sys; paths=[p.parent for p in Path(sys.argv[1]).rglob("CMakeLists.txt") if p.parent.name=="ark-"+sys.argv[2]]; assert len(paths)==1,paths; print(paths[0])' "$work/rpm/BUILD" "$version")"
@@ -36,6 +38,7 @@ for plugin in kerfuffle_libarchive_readonly.so kerfuffle_libzip.so; do
     strip --strip-debug "$out/$plugin"
 done
 mkdir "$work/monet-build"
+cp "$helper" "$work/monet-build/download-source-rpm.py"
 cp "$here/build.sh" "$here/patch.py" "$here/bundle.py" "$here/README.md" "$here/rpmheader.h" "$work/monet-build/"
 cp "$out/runtime.json" "$work/monet-build/"
 tar -cJf "$out/source.tar.xz" -C "$work" rpm "$release.src.rpm" monet-build

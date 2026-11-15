@@ -14,7 +14,9 @@ dnf5 -y install --setopt=install_weak_deps=False cmake gcc-c++ make tar xz pytho
     plasma-activities-devel kscreenlocker-devel libX11-devel PackageKit-Qt6-devel
 python3 "$here/bundle.py" verify "$out/runtime.json"
 work="$(mktemp -d "${TMPDIR:-/tmp}/monet-session.XXXXXX")"
-dnf5 download --srpm --destdir="$work" "$release"
+helper="$here/download-source-rpm.py"
+[ -f "$helper" ] || helper="$here/../download-source-rpm.py"
+python3 "$helper" plasma-workspace "$work"
 rpm -i --define "_topdir $work/rpm" "$work/$release.src.rpm"
 rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/plasma-workspace.spec"
 source="$work/rpm/BUILD/plasma-workspace-$version-build/plasma-workspace-$version"
@@ -29,6 +31,7 @@ plugin="$(find "$work/build" -type f -name 'org.kde.contextmenu.so')"
 test -f "$plugin"
 install -m 755 "$plugin" "$out/org.kde.contextmenu.so"
 mkdir "$work/monet-session"
+cp "$helper" "$work/monet-session/download-source-rpm.py"
 cp "$here/CMakeLists.txt" "$here/README.md" "$here/build.sh" "$here/bundle.py" "$here/patch.py" "$work/monet-session/"
 tar -cJf "$out/source.tar.xz" -C "$work" "$release.src.rpm" rpm monet-session
 cp "$here/bundle.py" "$here/README.md" "$out/"
