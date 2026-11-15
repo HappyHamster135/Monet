@@ -90,7 +90,8 @@ class ScrollInputKeepsItsScroll(unittest.TestCase):
         for child in item.childItems():
             yield from self.items(child)
 
-    def send(self, angle=0, pixel=0, phase=Qt.NoScrollPhase, at=(200, 200)):
+    def send(self, angle=0, pixel=0, phase=None, at=(200, 200)):
+        phase = Qt.NoScrollPhase if phase is None else phase
         point = QPointF(*at)
         precise = phase != Qt.NoScrollPhase
         event = QWheelEvent(point, QPointF(self.view.mapToGlobal(QPoint(*at))), QPoint(0, pixel), QPoint(0, angle),
