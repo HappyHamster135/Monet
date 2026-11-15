@@ -14,6 +14,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
+- **One bar or three.** Right-click the Home Bar and choose Customize Home Bar,
+  then Layout, to switch between One bar and Three bars. Your pinned apps and
+  widgets stay, and any missing everyday controls are added. In Transfers, the
+  × beside an entry hides it from the list while the transfer itself continues.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
@@ -34,8 +38,6 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   once when it starts playing, so pausing and playing never undoes a change
   made in the sound menu or Settings. That change is also kept for the app's
   next track.
-- **Sound outputs you can tell apart.** When two devices share a port name,
-  such as Analog Output, the device's name is shown too.
 - **Smaller desktop fixes.** Alt+Tab shows a few windows side by side instead
   of in a column. In right-to-left languages, Start and End put the bar on the
   matching side. The keypad's Enter works in the bar editor. A transfer's
@@ -43,7 +45,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the menu stay correct when a new search finds the same number of apps. A
   setup step that keeps failing no longer clears the desktop's caches at every
   sign-in. A stuck update check now gives up after five minutes instead of
-  leaving Settings waiting.
+  leaving Settings waiting. When two sound devices share a port name, such as
+  Analog Output, the device's name is shown too.
 
 ### New in 0.9.8-5: Easier everyday use
 
