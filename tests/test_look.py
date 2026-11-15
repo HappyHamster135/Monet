@@ -3916,7 +3916,12 @@ class SmallFixesFor090(unittest.TestCase):
         self.assertEqual(workflow.count('--build-arg VERSION="$VERSION"'), 2)
         settings = self.SETTINGS.read_text(encoding="utf-8")
         self.assertIn('i18n("Fixes for Monet %1 are ready", found.version)', settings)
-        self.assertIn("/^\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$/.test(found.version", settings)
+        version_pattern = re.search(r"/([^/\n]+)/\.test\(found\.version", settings)
+        self.assertIsNotNone(version_pattern)
+        for version, accepted in (("0.9.8", True), ("0.9", True), ("0.9.8-5", True),
+                                  ("", False), ("0.9.8-", False), ("0.9.8-latest", False)):
+            with self.subTest(version=version):
+                self.assertEqual(re.fullmatch(version_pattern[1], version) is not None, accepted)
 
     def test_settings_list_keeps_clear_of_the_scrollbar(self):
         settings = self.SETTINGS.read_text(encoding="utf-8")
