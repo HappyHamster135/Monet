@@ -23,6 +23,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the field and the snowy fence go on past both sides, with more boats, lily
   pads, haystacks, trees and farmhouses to see. The picture in the middle stays
   the same, and 16:9 and 16:10 screens are unchanged.
+- **See which apps use the graphics card.** Task Manager's Graphics page now
+  lists each app's share of the graphics card, and names Monet's own desktop
+  parts, such as windows and effects. It works with NVIDIA, AMD and Intel
+  graphics, and only measures while the page is open.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
