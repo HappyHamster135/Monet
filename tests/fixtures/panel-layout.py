@@ -55,7 +55,15 @@ with private_session() as env:
             (package/'metadata.json').write_text(json.dumps({'KPackageStructure':'Plasma/Applet',
                 'KPlugin':{'Id':plugin,'Name':name,'Version':'1.0','License':'MIT'},'X-Plasma-API-Minimum-Version':'6.0'}))
             (package/'contents/ui/main.qml').write_text('import QtQuick\nimport org.kde.plasma.plasmoid\nPlasmoidItem { preferredRepresentation: fullRepresentation; fullRepresentation: Rectangle { implicitWidth:32; implicitHeight:32; color: "red" } }\n')
-        Path(env['XDG_CONFIG_HOME'],'kdeglobals').write_text('[KDE]\nLookAndFeelPackage=org.kde.breeze.desktop\n')
+        # A controlled initial layout also keeps stock tray/session services out
+        # of the fixture. The unrelated top panel must survive every switch.
+        look = Path(env['XDG_DATA_HOME'])/'plasma/look-and-feel/org.monet.fixture.desktop'
+        (look/'contents/layouts').mkdir(parents=True)
+        (look/'metadata.json').write_text(json.dumps({'KPackageStructure':'Plasma/LookAndFeel',
+            'KPlugin':{'Id':'org.monet.fixture.desktop','Name':'Panel fixture','Version':'1.0','License':'MIT'}}))
+        (look/'contents/layouts/org.kde.plasma.desktop-layout.js').write_text(
+            'var p=new Panel; p.location="top"; p.addWidget("org.monet.custom");\n')
+        Path(env['XDG_CONFIG_HOME'],'kdeglobals').write_text('[KDE]\nLookAndFeelPackage=org.monet.fixture.desktop\n')
         # Fedora marks KWin with CAP_SYS_NICE. A cap-drop=ALL test container
         # correctly refuses to execute that file. A byte copy has no file
         # capabilities and needs none for this virtual, software-only display.
@@ -72,8 +80,8 @@ with private_session() as env:
         shell=launch(['plasmashell','--no-respawn']); ready()
         print('Native panels: creating initial bars', flush=True)
         time.sleep(1)
-        evaluate('panels().forEach(p=>p.remove());')
-        time.sleep(.5)
+        other = state('panels().filter(p=>p.location!=="bottom").map(p=>[p.id,p.widgets().map(w=>w.id)])')
+        assert len(other) == 1 and len(other[0][1]) == 1, other
         for align, body in [
             ('left', "p.addWidget('org.monet.menu'); p.addWidget('org.monet.games');"),
             ('center', "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General']; t.writeConfig('launchers',['applications:org.kde.konsole.desktop']);"),
@@ -83,10 +91,10 @@ with private_session() as env:
             evaluate('var p=panelById('+str(ident)+'); '+body)
         time.sleep(.5)
         selected=state('panels().find(p=>p.widgets("org.monet.quick").length).id')
-        original=state('[].concat.apply([],panels().map(p=>p.widgets().map(w=>w.id)))')
+        original=state('[].concat.apply([],panels().filter(p=>p.location==="bottom").map(p=>p.widgets().map(w=>w.id)))')
         q=quick_helper()
         def snapshot():
-            return state('panels().map(p=>({id:p.id,mode:p.lengthMode,widgets:p.widgets().map(w=>({id:w.id,type:w.type,index:w.index})).sort((a,b)=>a.index-b.index)}))')
+            return state('panels().filter(p=>p.location==="bottom").map(p=>({id:p.id,mode:p.lengthMode,widgets:p.widgets().map(w=>({id:w.id,type:w.type,index:w.index})).sort((a,b)=>a.index-b.index)}))')
         with patch.object(q,'DATADIR',str(ROOT/'linux/share')), patch.object(q,'busjson',side_effect=lambda *args:evaluate(args[-1])):
             for choice in ('one','three','one'):
                 print('Native panels: switching to '+choice, flush=True)
@@ -99,9 +107,10 @@ with private_session() as env:
                 assert all(any(w['id']==ident for w in widgets) for ident in original), data
                 assert len([w for w in widgets if w['type']=='org.monet.sound'])==1, data
                 if choice=='one': assert data[0]['widgets'][0]['type']=='org.monet.menu', data
-            task='panels()[0].widgets("org.kde.plasma.icontasks")[0]'
+                assert state('panels().filter(p=>p.location!=="bottom").map(p=>[p.id,p.widgets().map(w=>w.id)])') == other
+            task='panelById('+str(selected)+').widgets("org.kde.plasma.icontasks")[0]'
             assert json.loads(evaluate('var t='+task+'; t.currentConfigGroup=["General"]; print(JSON.stringify(t.readConfig("launchers",[])));')[0])==['applications:org.kde.konsole.desktop']
-            assert json.loads(evaluate('var w=panels()[0].widgets("org.monet.custom")[0]; w.currentConfigGroup=["General"]; print(JSON.stringify(w.readConfig("preserved","")));')[0])=='yes'
+            assert json.loads(evaluate('var w=panelById('+str(selected)+').widgets("org.monet.custom")[0]; w.currentConfigGroup=["General"]; print(JSON.stringify(w.readConfig("preserved","")));')[0])=='yes'
             # KConfig saves on shutdown; verify the selected layout survives login.
             print('Native panels: restarting private Plasma', flush=True)
             shell.terminate(); shell.wait(timeout=5)

@@ -854,7 +854,7 @@ enabled when their Qt runtime is available. Individual modules/classes can be
 passed as positional arguments; `--summary PATH` records counts and skip reasons.
 
 The Build workflow's required `desktop` job builds `tests/Containerfile` using
-Fedora 44's matching Qt/PySide/KDE packages, then runs as an ordinary user with
+Fedora's matching Qt/PySide/KDE packages, then runs as an ordinary user with
 networking disabled and a read-only checkout. `--require-desktop` checks required
 Python, QML, native plugins and tools before running tests, and fails on
 unexpected skips. It runs the JavaScript submission checks and rebuilds the
@@ -864,6 +864,10 @@ The rebuilt payload must also match the bundled signed connector and its source
 receipt. Native Ark fixtures extract real ZIP and tar downloads into temporary
 folders, then scan without running the downloaded programs. Failed extraction,
 name collisions and cancellation/process cleanup have separate regression cases.
+Native panel migration tests run real Plasma and KWin on a private Wayland
+display. They need access to the kernel's `/dev/udmabuf` software buffer device;
+no physical GPU is passed through. The fixture uses inert widget faces and
+checks ownership, order, existing pins, other panels and persistence after restart.
 
 Reproduce that job locally:
 
@@ -874,15 +878,15 @@ curl --fail --location --retry 3 \
   https://addons.mozilla.org/firefox/downloads/file/5078406/keepassxc_browser-1.10.4.1.xpi \
   -o target/desktop-tests/upstream.xpi
 podman run --rm --init --userns=keep-id --network=none --cap-drop=ALL \
-  --security-opt=no-new-privileges \
+  --security-opt=no-new-privileges --device=/dev/udmabuf \
   -v "$PWD:/src:ro" -v "$PWD/target/desktop-tests:/results" \
   -e MONET_TEST_BROWSER_UPSTREAM=/results/upstream.xpi \
   localhost/monet-desktop-tests:44 \
   python3 tools/test.py --require-desktop --summary /results/summary.json
 ```
 
-On an SELinux host, add `--security-opt=label=disable` for these explicitly
-mounted source/results directories. To use the host's installed runtimes,
+On an SELinux host, add `--security-opt=label=disable` to the build and run
+commands for the private test services and explicitly mounted directories. To use the host's installed runtimes,
 put Node on PATH and set `MONET_TEST_BROWSER_UPSTREAM` to the downloaded archive.
 Also provide `MONET_ELECTRON_BINARY` from `tests/install-electron-runtime.py`
 and `MONET_TEST_ELECTRON_DBUS` pointing to `node_modules/dbus-next` installed
