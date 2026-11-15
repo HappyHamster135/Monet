@@ -32,6 +32,23 @@ class Playback(unittest.TestCase):
         self.assertTrue(outputs[2]["none"])
         self.assertEqual(run.call_count, 2)  # No per-device inspect processes.
 
+    def test_port_names_are_used_and_shared_ones_also_name_the_device(self):
+        status = '''Audio
+ ├─ Sinks:
+ │  *   65. Built-in Audio Analog Stereo [vol: 0.60]
+ │      73. USB DAC Analog Stereo [vol: 0.40]
+ │      85. Navi 21 HDMI/DP Audio Digital Stereo (HDMI) [vol: 1.00]
+ ├─ Sources:
+'''
+        def sink(ident, port):
+            return {"index": ident + 3000, "properties": {"object.id": str(ident), "node.name": f"sink{ident}"},
+                    "active_port": "out", "ports": [{"name": "out", "description": port, "availability": "available"}]}
+        metadata = [sink(65, "Analog Output"), sink(73, "Analog Output"), sink(85, "HDMI / DisplayPort")]
+        with patch.object(self.q, "run", side_effect=[status, json.dumps(metadata)]):
+            names = [o["name"] for o in self.q.outputs()]
+        self.assertEqual(names, ["Analog Output · Built-in Audio Analog Stereo",
+                                 "Analog Output · USB DAC Analog Stereo", "HDMI / DisplayPort"])
+
     def test_missing_or_malformed_metadata_keeps_wpctl_fallback(self):
         for raw in (None, "bad json", "{}", '[null, {"properties": null}]'):
             with self.subTest(raw=raw), patch.object(self.q, "run", side_effect=[

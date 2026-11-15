@@ -529,10 +529,17 @@ def outputs():
                 active = next((port for port in ports if isinstance(port, dict)
                                and port.get("name") == item.get("active_port")), {})
                 if active.get("description"):
-                    sink["name"] = active["description"]
+                    sink["device"], sink["name"] = sink["name"], active["description"]
         else:
             sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
         playable.append(sink)
+    # Two devices can share a port name ("Headphones", "Analog Output"); then
+    # also say which device each one is.
+    names = [sink["name"] for sink in playable]
+    for sink in playable:
+        device = sink.pop("device", None)
+        if device and device != sink["name"] and names.count(sink["name"]) > 1:
+            sink["name"] = f"{sink['name']} · {device}"
     return playable
 
 
