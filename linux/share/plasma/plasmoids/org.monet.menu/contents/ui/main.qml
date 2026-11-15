@@ -255,7 +255,11 @@ PlasmoidItem {
         property bool launchWhenFound: false
         property int everydayIndex: 0
         property int applicationIndex: -1
+        // Bumped whenever the matched apps change, even to the same number,
+        // so the results below never hide or repeat an app from a past search.
+        property int applicationRevision: 0
         readonly property var supplementalResults: {
+            void applicationRevision
             const names = new Set()
             for (let row = 0; row < applicationMatches.count; ++row)
                 names.add(String(applicationMatches.data(applicationMatches.index(row, 0), Qt.DisplayRole)).toLocaleLowerCase())
@@ -344,6 +348,14 @@ PlasmoidItem {
             sourceModel: page.found
             dynamicSortFilter: false
             filterRowCallback: (row, parent) => page.applicationResult(row, parent)
+        }
+        Connections {
+            target: applicationMatches
+            function onRowsInserted() { ++page.applicationRevision }
+            function onRowsRemoved() { ++page.applicationRevision }
+            function onModelReset() { ++page.applicationRevision }
+            function onLayoutChanged() { ++page.applicationRevision }
+            function onDataChanged() { ++page.applicationRevision }
         }
         KItemModels.KSortFilterProxyModel {
             id: otherMatches
