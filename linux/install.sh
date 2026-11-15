@@ -107,7 +107,7 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -354,6 +354,8 @@ for unit in monet-keep-prepare.service monet-keep.service monet-keep.timer; do
 done
 put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.service"
 put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
+put 644 "$SRC/systemd/user/monet-rest.service" "$USERUNITDIR/monet-rest.service"
+put 644 "$SRC/systemd/user/monet-rest.timer" "$USERUNITDIR/monet-rest.timer"
 # Safety: a new Monet on trial at its first start, Reset this PC before the sign-in screen,
 # and the encrypted disk's key into the security chip (at the first start, and again when needed).
 for unit in monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
@@ -481,7 +483,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
     systemctl enable monet-keep-prepare.service monet-keep.timer
-    systemctl --global enable monet-backup.timer
+    systemctl --global enable monet-backup.timer monet-rest.timer
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
     systemctl enable monet-pairings.service
@@ -686,7 +688,7 @@ else
     # The homes become a subvolume at the next start, before anyone signs in.
     systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true
-    systemctl --global enable monet-backup.timer >/dev/null 2>&1 || true
+    systemctl --global enable monet-backup.timer monet-rest.timer >/dev/null 2>&1 || true
     # Started now, so the next shutdown already puts a staged update on trial.
     systemctl enable --now monet-boot-arm.service >/dev/null 2>&1 || true
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \

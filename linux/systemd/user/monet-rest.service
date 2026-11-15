@@ -1,0 +1,7 @@
+[Unit]
+Description=Monet: rest the apps you've left when memory runs low
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-rest
+Nice=10

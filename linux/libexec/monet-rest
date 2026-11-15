@@ -1,0 +1,352 @@
+#!/usr/bin/python3
+"""Rests the apps you've left: when memory runs low, apps minimized (or without a window)
+for a while give their least used memory to compressed swap (zram), so what you're using
+keeps its room.
+
+Linux does this by itself once memory is nearly gone, but from every program alike: the
+desktop and the app in front of you too, which then stutter. Monet asks earlier, and only
+of apps you have left: never one with a window on screen, one playing or recording sound,
+or one still at work. An app takes its memory back from zram as it uses it again, in a
+fraction of a second. An older PC keeps more room free than a newer one.
+
+Runs every two minutes (monet-rest.timer). With plenty of memory free it only reads
+/proc/meminfo and stops; nearer the line it starts watching which apps have been left, so
+they're ready to rest by the time it's crossed. Without zram, or where the system doesn't let
+an account ask this of its own apps (cgroup memory.reclaim), it does nothing, and looks again
+the next day.
+"""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+GIB = 1024 ** 3
+MIB = 1024 ** 2
+STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/rest.json"
+OLDER_PC = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "monet/older-pc"
+IDLE = 10 * 60          # left this long before it rests
+BUSY = 0.02             # more than 2% of a processor since the last look: still at work
+WORTH = 64 * MIB        # less than this of its own memory: not worth it
+AGAIN = 30 * 60         # rested once: not again for this long, unless it has grown since
+CHUNK = 128 * MIB       # asked for at a time, so no single request runs long
+SPEND = 3.0             # seconds of asking per run, at most
+WATCH = 1.5             # this much of the room wanted, or less: watch which apps are left
+RETRY = 24 * 3600       # not allowed here: look again after a day
+
+
+def meminfo(path=Path("/proc/meminfo")):
+    """/proc/meminfo in bytes."""
+    found = {}
+    try:
+        for line in path.read_text().splitlines():
+            name, _, value = line.partition(":")
+            parts = value.split()
+            if parts and parts[0].isdigit():
+                found[name] = int(parts[0]) * (1024 if parts[1:] == ["kB"] else 1)
+    except OSError:
+        pass
+    return found
+
+
+def older_pc(memory):
+    """As monet-session worked it out at sign-in (8 GB or less, or a spinning disk), else by memory."""
+    try:
+        said = OLDER_PC.read_text().splitlines()
+        if len(said) >= 2 and said[1] in ("yes", "no"):
+            return said[1] == "yes"
+    except OSError:
+        pass
+    return memory.get("MemTotal", 0) < 9 * GIB
+
+
+def room_wanted(memory, older):
+    """How much memory should stay available: 30% on an older PC, 20% otherwise, 1.5 GB at least."""
+    return max(int(1.5 * GIB), int(memory.get("MemTotal", 0) * (0.30 if older else 0.20)))
+
+
+def apps_slice(proc=Path("/proc"), cgroup=Path("/sys/fs/cgroup")):
+    """This account's app.slice, where Plasma starts each app in a unit of its own."""
+    own = ""
+    try:
+        own = (proc / "self/cgroup").read_text().strip().rsplit("::", 1)[-1]
+    except OSError:
+        pass
+    marker = f"/user@{os.getuid()}.service/app.slice"
+    if marker in own:
+        return cgroup / own.lstrip("/").split(marker, 1)[0].lstrip("/") / marker.lstrip("/")
+    return cgroup / f"user.slice/user-{os.getuid()}.slice/user@{os.getuid()}.service/app.slice"
+
+
+def read_number(path, key=None):
+    """A number from a cgroup file: the file itself, or the line starting with key."""
+    try:
+        text = path.read_text()
+    except OSError:
+        return None
+    if key is None:
+        return int(text.split()[0]) if text.split() and text.split()[0].isdigit() else None
+    for line in text.splitlines():
+        name, _, value = line.partition(" ")
+        if name == key and value.strip().isdigit():
+            return int(value)
+    return None
+
+
+def units(apps):
+    """Each app's unit under app.slice, as {name: folder}: Plasma's app-*.scope and app-*.service
+    units, and the account's own services. Monet's own are left out."""
+    found = {}
+    try:
+        for folder in apps.iterdir():
+            if folder.is_dir() and folder.name.endswith((".scope", ".service")) and not folder.name.startswith("monet-"):
+                found[folder.name] = folder
+    except OSError:
+        pass
+    return found
+
+
+def pids_of(folder):
+    """The processes in a unit, its own and those of any groups within it."""
+    found = set()
+    try:
+        for procs in [folder / "cgroup.procs", *folder.glob("**/cgroup.procs")]:
+            found.update(int(p) for p in procs.read_text().split() if p.isdigit())
+    except OSError:
+        pass
+    return found
+
+
+def unit_of(pid, proc=Path("/proc")):
+    """The app.slice unit a process runs in, or ""."""
+    try:
+        path = (proc / str(pid) / "cgroup").read_text().strip().rsplit("::", 1)[-1]
+    except OSError:
+        return ""
+    parts = path.split("/")
+    return parts[parts.index("app.slice") + 1] if "app.slice" in parts[:-1] else ""
+
+
+def sounding(pactl="pactl"):
+    """What's playing or recording sound now (a paused stream doesn't count): its processes,
+    and the app ids a Flatpak's streams carry, whose own process numbers are the sandbox's."""
+    found, ids = set(), set()
+    if not shutil.which(pactl):
+        return found, ids
+    for kind in ("sink-inputs", "source-outputs"):
+        try:
+            done = subprocess.run([pactl, "-f", "json", "list", kind], capture_output=True, text=True, timeout=5)
+            streams = json.loads(done.stdout or "[]") if done.returncode == 0 else []
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            continue
+        for stream in streams if isinstance(streams, list) else []:
+            if not isinstance(stream, dict) or stream.get("corked"):
+                continue
+            props = stream.get("properties") or {}
+            for key in ("application.process.id", "pipewire.sec.pid"):
+                value = str(props.get(key, ""))
+                if value.isdigit():
+                    found.add(int(value))
+            for key in ("pipewire.access.portal.app_id", "application.id"):
+                value = str(props.get(key, ""))
+                if "." in value:
+                    ids.add(value)
+    return found, ids
+
+
+WINDOWS_JS = r"""
+const shown = workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.deleted);
+callDBus(%(name)s, "/Rest", "org.monet.Rest", "windows",
+         JSON.stringify(shown.map(w => ({pid: w.pid, minimized: w.minimized, active: w.active}))));
+"""
+
+
+def windows():
+    """Every app window KWin has: [{pid, minimized, active}], from a moment's script in KWin;
+    None when that can't be asked (no KWin, no Qt for Python)."""
+    try:
+        from PySide6.QtCore import ClassInfo, QCoreApplication, QEventLoop, QObject, QTimer, Slot
+        from PySide6.QtDBus import QDBusConnection, QDBusMessage
+    except ImportError:
+        return None
+    app = QCoreApplication.instance() or QCoreApplication([])  # noqa: F841 (the bus needs one)
+    bus, loop, result = QDBusConnection.sessionBus(), QEventLoop(), []
+    if not bus.isConnected():
+        return None
+
+    def call(path, interface, method, *args):
+        message = QDBusMessage.createMethodCall("org.kde.KWin", path, interface, method)
+        message.setArguments(list(args))
+        reply = bus.call(message, timeout=1500)
+        if reply.type() == QDBusMessage.ErrorMessage:
+            raise RuntimeError(reply.errorName())
+        return reply.arguments()
+
+    @ClassInfo(**{"D-Bus Interface": "org.monet.Rest"})
+    class Receiver(QObject):
+        @Slot(str)
+        def windows(self, text):
+            try:
+                result.append(json.loads(text))
+            except ValueError:
+                pass
+            loop.quit()
+
+    receiver = Receiver()
+    name, script_name = f"org.monet.Rest.p{os.getpid()}", f"monet-rest-{os.getpid()}"
+    if not bus.registerService(name):
+        return None
+    try:
+        if not bus.registerObject("/Rest", receiver, QDBusConnection.ExportAllSlots):
+            return None
+        with tempfile.TemporaryDirectory(prefix="monet-rest-") as folder:
+            script = Path(folder) / "main.js"
+            script.write_text(WINDOWS_JS % {"name": json.dumps(name)}, encoding="utf-8")
+            ident = call("/Scripting", "org.kde.kwin.Scripting", "loadScript", str(script), script_name)[0]
+            if ident < 0:
+                return None
+            try:
+                call(f"/Scripting/Script{ident}", "org.kde.kwin.Script", "run")
+                timer = QTimer()
+                timer.setSingleShot(True)
+                timer.timeout.connect(loop.quit)
+                timer.start(3000)
+                if not result:
+                    loop.exec()
+            finally:
+                call("/Scripting", "org.kde.kwin.Scripting", "unloadScript", script_name)
+    except RuntimeError:
+        return None
+    finally:
+        bus.unregisterObject("/Rest")
+        bus.unregisterService(name)
+    return result[0] if result and isinstance(result[0], list) else None
+
+
+def ask(folder, amount):
+    """Asks the kernel to take up to amount bytes of a unit's least used memory (into zram).
+    True if it could; False if it took less (all it found), None if it isn't allowed here."""
+    try:
+        handle = os.open(folder / "memory.reclaim", os.O_WRONLY)  # never made: the kernel's file or none
+    except OSError:
+        return None
+    try:
+        os.write(handle, str(amount).encode())
+        return True
+    except BlockingIOError:  # EAGAIN: less than asked was reclaimable
+        return False
+    except OSError:
+        return None
+    finally:
+        os.close(handle)
+
+
+def plan(now, state, found, shown, playing, proc=Path("/proc")):
+    """Which units have been left long enough to rest, longest left first, updating state.
+
+    found: {unit: folder}; shown: KWin's windows; playing: (processes, app ids) with sound."""
+    pids_playing, ids_playing = playing
+    seen = state.setdefault("apps", {})
+    for name in list(seen):
+        if name not in found:
+            del seen[name]  # closed
+    by_unit = {}
+    for window in shown:
+        by_unit.setdefault(unit_of(window.get("pid", 0), proc), []).append(window)
+    ready = []
+    for name, folder in found.items():
+        pids = pids_of(folder)
+        mine = by_unit.get(name, [])
+        cpu = read_number(folder / "cpu.stat", "usage_usec")
+        entry = seen.setdefault(name, {})
+        before, before_at = entry.get("cpu"), entry.get("at")
+        entry["cpu"], entry["at"] = cpu, now
+        busy = cpu is not None and before is not None and before_at and now > before_at \
+            and (cpu - before) / 1e6 / (now - before_at) > BUSY
+        left = all(w.get("minimized") and not w.get("active") for w in mine)
+        heard = pids & pids_playing or any(app.replace("-", "\\x2d") in name or app in name for app in ids_playing)
+        if not pids or not left or busy or heard:
+            entry.pop("idle_since", None)
+            continue
+        since = entry.setdefault("idle_since", now)
+        anon = read_number(folder / "memory.stat", "anon") or 0
+        if now - since < IDLE or anon < WORTH:
+            continue
+        current = read_number(folder / "memory.current") or 0
+        if now - entry.get("rested_at", 0) < AGAIN and current < entry.get("rested_size", 0) * 1.25:
+            continue
+        ready.append((since, name, folder, anon))
+    return [(name, folder, anon) for since, name, folder, anon in sorted(ready)]
+
+
+def rest(memory, older, state, now, apps, list_windows=windows, playing=sounding, asker=ask,
+         clock=time.monotonic, proc=Path("/proc")):
+    """One look: notes which apps have been left, and when memory runs low rests them.
+    Returns what it asked of each unit."""
+    want = room_wanted(memory, older)
+    available = memory.get("MemAvailable", 0)
+    if available >= want * WATCH:
+        state.pop("apps", None)  # plenty free: nothing to watch
+        return {}
+    found = units(apps)
+    shown = list_windows() if found else None
+    if shown is None:
+        return {}  # which app is in front is unknown: rest nothing
+    ready = plan(now, state, found, shown, playing(), proc)
+    if available >= want or memory.get("SwapFree", 0) < WORTH:
+        return {}  # watching only: room enough yet, or the compressed swap is full
+    # Compressed, memory takes about a third of its room: ask for half again what's missing.
+    need, asked, start = int((want - available) * 1.5), {}, clock()
+    for name, folder, anon in ready:
+        budget = min(int(anon * 0.75), need)
+        taken = 0
+        while taken < budget and clock() - start < SPEND:
+            step = min(CHUNK, budget - taken)
+            done = asker(folder, step)
+            if done is None:
+                state["unsupported_at"] = now
+                return asked
+            taken += step
+            if not done:
+                break
+        if taken:
+            asked[name] = taken
+            entry = state["apps"][name]
+            entry["rested_at"] = now
+            entry["rested_size"] = read_number(folder / "memory.current") or 0
+            need -= taken
+        if need <= 0 or clock() - start >= SPEND:
+            break
+    return asked
+
+
+def main():
+    memory = meminfo()
+    older = older_pc(memory)
+    if memory.get("MemAvailable", 0) >= room_wanted(memory, older) * WATCH:
+        return 0
+    try:
+        state = json.loads(STATE.read_text())
+        state = state if isinstance(state, dict) else {}
+    except (OSError, ValueError):
+        state = {}
+    now = time.time()
+    if now - state.get("unsupported_at", 0) < RETRY:
+        return 0
+    state.pop("unsupported_at", None)
+    asked = rest(memory, older, state, now, apps_slice())
+    for name, amount in asked.items():
+        print(f"Rested {name}: asked {amount // MIB} MB into compressed memory", file=sys.stderr)
+    try:
+        STATE.parent.mkdir(parents=True, exist_ok=True)
+        STATE.write_text(json.dumps(state))
+    except OSError:
+        pass
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,10 @@
+[Unit]
+Description=Monet: look at memory every two minutes, and rest the apps you've left when it runs low
+
+[Timer]
+OnActiveSec=3min
+OnUnitActiveSec=2min
+AccuracySec=20s
+
+[Install]
+WantedBy=timers.target
