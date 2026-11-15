@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import sys
 import tarfile
@@ -74,17 +75,80 @@ def publish(record, layout, signer=None, *, promote=True):
         print(f"Verified {image} and {latest}: {info['manifest']}", flush=True)
 
 
+def promote_existing(record, previous, folder):
+    root = Path(__file__).resolve().parents[1]
+    repositories = runpy.run_path(str(root / "image/install-update-trust.py"))["REPOSITORIES"]
+    images = record["images"]
+    old_images = previous["images"]
+    if images.keys() != old_images.keys() or len(images) != len(repositories):
+        raise ValueError("Both release variants are required for promotion")
+
+    sources = {}
+    policy = {}
+    for variant, info in images.items():
+        repository, _, tag = info["image"].rpartition(":")
+        old = old_images[variant]
+        if (repository not in repositories or repository in policy or tag != record["version"]
+                or old["image"] != f"{repository}:{previous['version']}"
+                or any(not re.fullmatch(r"sha256:[a-f0-9]{64}", item["manifest"]) for item in (info, old))):
+            raise ValueError(f"Unexpected release target: {variant}")
+        if remote_digest(info["image"]) != info["manifest"]:
+            raise RuntimeError(f"Versioned image does not match: {info['image']}")
+        sources[variant] = (f"{repository}@{info['manifest']}", f"{repository}:latest",
+                            info["manifest"], old["manifest"])
+        policy[repository] = [{"type": "sigstoreSigned", "keyPath": str(root / "image/monet-update.pub"),
+                               "signedIdentity": {"type": "matchRepository"}}]
+
+    def check_rolling(target, digest, old_digest):
+        current = remote_digest(target)
+        if current not in (digest, old_digest):
+            raise RuntimeError(f"Rolling tag has changed unexpectedly: {target}")
+        return current
+
+    for _, target, digest, old_digest in sources.values():
+        check_rolling(target, digest, old_digest)
+
+    folder.mkdir(parents=True, exist_ok=True)
+    registries = folder / "registries.d"
+    registries.mkdir(exist_ok=True)
+    (registries / "monet.yaml").write_text("docker:\n" + "".join(
+        f"  {repository}:\n    use-sigstore-attachments: true\n" for repository in policy))
+    policy_file = folder / "policy.json"
+    policy_file.write_text(json.dumps({"default": [{"type": "reject"}], "transports": {"docker": policy}}))
+    copy = ["skopeo", "--registries.d", str(registries), "--policy", str(policy_file),
+            "copy", "--preserve-digests", "--remove-signatures"]
+
+    # Verify both signatures before changing either rolling tag. The signatures
+    # remain attached to these digests in the same repositories after retagging.
+    for variant, (source, _, _, _) in sources.items():
+        subprocess.run([*copy, f"docker://{source}", f"oci:{folder / 'verified'}:{variant}"], check=True)
+        print(f"Verified signature for {source}", flush=True)
+    for _, target, digest, old_digest in sources.values():
+        check_rolling(target, digest, old_digest)
+    for source, target, digest, old_digest in sources.values():
+        if check_rolling(target, digest, old_digest) != digest:
+            subprocess.run([*copy, f"docker://{source}", f"docker://{target}"], check=True)
+        if remote_digest(target) != digest:
+            raise RuntimeError(f"Rolling manifest does not match: {target}")
+        print(f"Verified {target}: {digest}", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("record", type=Path)
     parser.add_argument("folder", type=Path)
-    parser.add_argument("--versioned-only", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--versioned-only", action="store_true")
+    mode.add_argument("--promote-existing-from", type=Path, metavar="PREVIOUS_RECORD")
     args = parser.parse_args()
     record = json.loads(args.record.read_text())
     version = Path("VERSION").read_text().strip()
     if record["version"] != version:
         raise ValueError("Release version mismatch")
     folder = args.folder
+    if args.promote_existing_from:
+        promote_existing(record, json.loads(args.promote_existing_from.read_text()), folder)
+        return
     folder.mkdir(parents=True, exist_ok=True)
     subprocess.run(["gh", "release", "download", "v" + version, "--dir", str(folder),
                     "--pattern", f"Monet-{version}-oci.tar.part-*"], check=True)

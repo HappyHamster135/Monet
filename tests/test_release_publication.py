@@ -142,6 +142,58 @@ class QualifiedPublication(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][-2:], ["oci:exports:amd", "example/monet:0.9.8-5"])
 
 
+class PromoteExisting(unittest.TestCase):
+    def setUp(self):
+        self.repositories = {"amd": "ghcr.io/happyhamster135/monet-amd", "nvidia": "ghcr.io/happyhamster135/monet"}
+        self.candidate = self.record("0.9.8-5", ("a", "b"))
+        self.previous = self.record("0.9.8", ("c", "d"))
+        self.remote = {info["image"]: info["manifest"] for info in self.candidate["images"].values()}
+        self.remote.update({repo + ":latest": self.previous["images"][variant]["manifest"]
+                            for variant, repo in self.repositories.items()})
+
+    def record(self, version, digits):
+        return {"version": version, "images": {
+            variant: {"image": f"{repo}:{version}", "manifest": "sha256:" + digit * 64}
+            for (variant, repo), digit in zip(self.repositories.items(), digits)
+        }}
+
+    def test_both_signatures_are_verified_before_promoting_the_recorded_digests(self):
+        def copy(command, *, check):
+            source, target = command[-2:]
+            if target.startswith("docker://"):
+                self.remote[target.removeprefix("docker://")] = source.split("@", 1)[1]
+
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(qualified, "remote_digest", side_effect=self.remote.get), \
+                patch.object(qualified.subprocess, "run", side_effect=copy) as run:
+            qualified.promote_existing(self.candidate, self.previous, Path(folder))
+            qualified.promote_existing(self.candidate, self.previous, Path(folder))
+        targets = [call.args[0][-1] for call in run.call_args_list]
+        self.assertEqual([target.split(":", 1)[0] for target in targets],
+                         ["oci", "oci", "docker", "docker", "oci", "oci"])
+        for variant, repo in self.repositories.items():
+            self.assertEqual(self.remote[repo + ":latest"], self.candidate["images"][variant]["manifest"])
+
+    def test_unexpected_rolling_digest_stops_before_copying(self):
+        self.remote[self.repositories["nvidia"] + ":latest"] = "sha256:" + "f" * 64
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(qualified, "remote_digest", side_effect=self.remote.get), \
+                patch.object(qualified.subprocess, "run") as run:
+            with self.assertRaisesRegex(RuntimeError, "Rolling tag has changed unexpectedly"):
+                qualified.promote_existing(self.candidate, self.previous, Path(folder))
+            run.assert_not_called()
+
+    def test_second_signature_failure_keeps_both_rolling_tags(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(qualified, "remote_digest", side_effect=self.remote.get), \
+                patch.object(qualified.subprocess, "run",
+                             side_effect=[None, subprocess.CalledProcessError(1, "skopeo")]) as run:
+            with self.assertRaises(subprocess.CalledProcessError):
+                qualified.promote_existing(self.candidate, self.previous, Path(folder))
+        self.assertEqual(run.call_count, 2)
+        self.assertTrue(all(call.args[0][-1].startswith("oci:") for call in run.call_args_list))
+
+
 @unittest.skipIf(os.name == "nt", "Linux systemd installation path")
 class PortableSources(unittest.TestCase):
     def test_nvidia_dropin_installs_with_systemd_escaping_from_a_portable_source(self):
