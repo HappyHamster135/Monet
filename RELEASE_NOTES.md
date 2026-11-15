@@ -40,6 +40,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   minutes, a notification names the apps using the most, with a button to open
   Task Manager. If memory runs out completely, Linux now closes the largest app
   instead of the whole PC freezing while it struggles.
+- **Scrolling keeps going.** A long scroll with the mouse wheel or touchpad in
+  Monet's own apps no longer stops partway when a drop-down list or number box
+  passes under the pointer, as on Settings' Storage page, and no longer changes
+  it. Pages that refresh themselves, like Wi-Fi's in Settings or a Store page
+  filling in, no longer pull you back to the setting you last used once you've
+  scrolled away from it.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
