@@ -1,6 +1,12 @@
 /* Vertical scrolling shared by Monet's app panels and menu. Editors and other focused
  * controls handle their keys first; the view forwards unhandled page keys here.
- * Mouse/touchpad input stays in the panel under the pointer, with no polling. */
+ * Mouse/touchpad input stays in the panel under the pointer, with no polling.
+ *
+ * Once the panel is scrolling it keeps the scroll, until the fingers leave the touchpad or the
+ * wheel rests a moment, as browsers do. Otherwise a control that takes the wheel itself (KDE's
+ * combo boxes and spin boxes) stops the page when it moves under the pointer, and has its value
+ * changed instead, for the rest of that swipe. A scroll that starts on such a control is still
+ * the control's. */
 import QtQuick
 import org.kde.kirigami as Kirigami
 
@@ -13,6 +19,34 @@ WheelHandler {
 
     property real animatedPosition: 0
     property bool applyingWheelPosition: false
+
+    // While it's true, a layer over the panel takes the wheel before what's under the pointer.
+    property bool holding: false
+    readonly property Timer holdEnd: Timer {
+        interval: 400
+        onTriggered: input.holding = false
+    }
+    readonly property Item holdLayer: Item {
+        parent: input.view
+        anchors.fill: parent
+        z: 1000000
+        // Only there during a scroll, so clicks, hovers and drags never meet it.
+        visible: input.holding && input.enabled
+        WheelHandler {
+            target: null
+            acceptedDevices: input.acceptedDevices
+            onWheel: event => input.take(event)
+        }
+    }
+    function hold(event) {
+        if (event.phase === Qt.ScrollEnd) {
+            holdEnd.stop()
+            holding = false
+        } else {
+            holding = true
+            holdEnd.restart()
+        }
+    }
     readonly property NumberAnimation wheelAnimation: NumberAnimation {
         target: input
         property: "animatedPosition"
@@ -29,7 +63,10 @@ WheelHandler {
         }
         function onMovementStarted() { input.stopWheelAnimation() }
         function onVisibleChanged() {
-            if (!input.view.visible) input.stopWheelAnimation()
+            if (!input.view.visible) {
+                input.stopWheelAnimation()
+                input.holding = false
+            }
         }
     }
     onAnimatedPositionChanged: {
@@ -83,7 +120,8 @@ WheelHandler {
         }
         event.accepted = true
     }
-    onWheel: event => {
+    onWheel: event => take(event)
+    function take(event) {
         // Preserve touchpad pixels; a mouse detent scrolls the usual 96px.
         // Keep horizontal gestures in their original handler.
         if (event.pixelDelta.x !== 0 && event.pixelDelta.y === 0
@@ -91,6 +129,7 @@ WheelHandler {
             event.accepted = false
             return
         }
+        hold(event)
         const page = event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)
         const notches = event.angleDelta.y / 120
         if (page && notches !== 0) scrollTo(view.contentY - notches * view.height)
