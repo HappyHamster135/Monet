@@ -2072,6 +2072,26 @@ ZEN_PREFS = ('user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", t
              'user_pref("datareporting.policy.firstRunURL", "");',
              'user_pref("zen.updates.show-update-notification", false);')
 ZEN_IMPORTS = {"userChrome.css": '@import url("monet/zen.css");', "userContent.css": '@import url("monet/newtab.css");'}
+# On an older PC (8 GB of memory or less, or a spinning disk) Zen puts a tab to sleep once it has
+# been left for ten minutes: it gives its memory back, and loads again when it's shown. A faster
+# PC keeps Zen's own timing; user.js is applied at every start, so only what an older PC needs.
+ZEN_LIGHTER = ('user_pref("zen.tab-unloader.enabled", true);',
+               'user_pref("zen.tab-unloader.timeout-minutes", 10);',
+               # Firefox's own: under memory pressure, the least recently used tabs sleep first.
+               'user_pref("browser.tabs.unloadOnLowMemory", true);',
+               'user_pref("browser.tabs.min_inactive_duration_before_unload", 600000);')
+OLDER_PC = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "monet" / "older-pc"
+
+
+def older_here():
+    """Whether this is an older PC, as monet-session worked it out at sign-in, else worked out now."""
+    try:
+        said = OLDER_PC.read_text().splitlines()
+        if len(said) >= 2 and said[1] in ("yes", "no"):
+            return said[1] == "yes"
+    except OSError:
+        pass
+    return older_pc()
 
 
 # Firefox's (so Zen's) profile for each installation, by an id for where it's installed: a hash of
@@ -2144,7 +2164,7 @@ def zen():
     except OSError:
         return []
     files["newtab.css"] = newtab.encode()
-    dressed = []
+    dressed, older = [], older_here()
     for profile in zen_profiles(zen_root()):
         chrome = profile / "chrome"
         try:
@@ -2160,7 +2180,8 @@ def zen():
             prefs = profile / "user.js"
             text = prefs.read_text(encoding="utf-8") if prefs.is_file() else ""
             text = without_download_preferences(text)
-            write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *download_preferences())).encode())
+            lighter = ZEN_LIGHTER if older else ()
+            write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *lighter, *download_preferences())).encode())
             bookmarks_for_zen(profile)
         except OSError:
             continue

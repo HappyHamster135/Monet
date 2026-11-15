@@ -1173,6 +1173,33 @@ class Icons(unittest.TestCase):
             quick.zen()  # again: nothing changes
             self.assertEqual({p: p.read_bytes() for p in root.rglob("*") if p.is_file()}, before)
 
+    def test_zen_sleeps_unused_tabs_sooner_on_an_older_pc(self):
+        import tempfile
+        quick = quick_helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            apps, root = Path(tmp) / "applications", Path(tmp) / ".zen"
+            apps.mkdir()
+            (apps / "app.zen_browser.zen.desktop").write_text("[Desktop Entry]\nName=Zen\n")
+            quick.app_dirs = lambda: [apps]
+            quick.zen_root = lambda: root
+            quick.DATADIR = str(SHARE)
+            quick.OLDER_PC = Path(tmp) / "older-pc"
+            for older, said in ((True, "monet 0.9.8-6 MemTotal: 7900000 kB\nyes\n"),
+                                (False, "monet 0.9.8-6 MemTotal: 32000000 kB\nno\n")):
+                quick.OLDER_PC.write_text(said)
+                quick.older_pc = lambda: self.fail("monet-session's answer is used")
+                quick.zen()
+                prefs = (root / "monet.default/user.js").read_text()
+                part = prefs[prefs.index("// Monet: begin"):prefs.index("// Monet: end")]
+                for line in quick.ZEN_LIGHTER:
+                    self.assertEqual(line in part, older, (older, line))
+                self.assertIn('user_pref("zen.urlbar.replace-newtab", false);', part)
+            self.assertIn('user_pref("zen.tab-unloader.timeout-minutes", 10);', quick.ZEN_LIGHTER)
+            # Not worked out yet at sign-in: asked now.
+            quick.OLDER_PC.unlink()
+            quick.older_pc = lambda: True
+            self.assertTrue(quick.older_here())
+
     def test_zen_claims_monets_profile_an_older_monet_made(self):
         quick = quick_helper()
         with tempfile_dir() as tmp:
