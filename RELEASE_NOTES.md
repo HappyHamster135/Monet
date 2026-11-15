@@ -18,6 +18,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   then Layout, to switch between One bar and Three bars. Your pinned apps and
   widgets stay, and any missing everyday controls are added. In Transfers, the
   × beside an entry hides it from the list while the transfer itself continues.
+- **Paintings that fit ultrawide screens.** On a 21:9 or 32:9 monitor, each
+  painting is now painted wider instead of being cut off. The harbor, the pond,
+  the field and the snowy fence go on past both sides, with more boats, lily
+  pads, haystacks, trees and farmhouses to see. The picture in the middle stays
+  the same, and 16:9 and 16:10 screens are unchanged.
 - **Trips to Windows recover by themselves.** If the PC's firmware drops
   Monet from the boot list during a trip, Monet puts itself back first when it
   returns. If the firmware once ignored a one-time restart into Windows, Monet
