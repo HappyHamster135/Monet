@@ -134,7 +134,8 @@ Item {
         function onActiveFocusItemChanged() { Qt.callLater(editor.revealFocus) }
     }
     Keys.onPressed: event => {
-        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && event.modifiers === Qt.NoModifier) {
+        // The keypad's Enter always carries the keypad modifier.
+        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & ~Qt.KeypadModifier) === Qt.NoModifier) {
             const item = editor.Window.window ? editor.Window.window.activeFocusItem : null
             if (item instanceof T.AbstractButton && item.visible && item.enabled) {
                 if (!event.isAutoRepeat) item.clicked()
