@@ -306,6 +306,11 @@ pub fn valid_checkpoint(id: &str) -> bool {
 
 /// Puts Windows first in BootOrder for a Method::First trip.
 pub fn put_windows_first(efi: &mut dyn EfiVars, entry: u16) -> Result<(), String> {
+    put_first(efi, entry)
+}
+
+/// Puts `entry` first in BootOrder, adding it when the firmware left it out.
+fn put_first(efi: &mut dyn EfiVars, entry: u16) -> Result<(), String> {
     let mut order = boot::boot_order(efi).unwrap_or_default();
     order.retain(|n| *n != entry);
     order.insert(0, entry);
@@ -324,16 +329,23 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
     let before = snapshot(efi);
     // Keep Monet bootable even if persisting the recovery receipt fails.
     if trip.method == Method::First {
-        if let Err(error) = boot::move_to_front(efi, trip.monet) {
+        // Some firmware drops an entry from BootOrder while another one is
+        // first; Monet still started from it, so put it back in front.
+        let restored = match boot::move_to_front(efi, trip.monet) {
+            Err(EfiError::Invalid(_)) => put_first(efi, trip.monet),
+            other => other.map(|_| ()).map_err(|e| e.to_string()),
+        };
+        if let Err(error) = restored {
             log(paths, now, &format!("couldn't restore Monet's boot order yet: {error}"));
             return None;
         }
     }
     // Read errors are not evidence that Windows consumed the request. Keep it retryable.
-    let next_left = match boot::boot_next(efi) {
-        Ok(next) => next == Some(trip.entry),
+    let next = match boot::boot_next(efi) {
+        Ok(next) => next,
         Err(_) => return None,
     };
+    let next_left = next == Some(trip.entry);
     let request_left = match efi.get(MONET_GUID, LAUNCH_VAR) {
         Ok(_) => true,
         Err(EfiError::NotFound) => false,
@@ -360,6 +372,12 @@ pub fn check_after_boot(efi: &mut dyn EfiVars, paths: &Paths, now: u64, setup_do
         if bad.contains(&trip.entry) {
             bad.retain(|n| *n != trip.entry);
             save_bad_entries(paths, &bad);
+        }
+        // A BootNext that's gone was used: this firmware follows it after all
+        // (one skipped trip can be someone picking Monet in the boot menu).
+        if trip.method == Method::First && next.is_none() && firmware_skips_boot_next(paths) {
+            let _ = fs::remove_file(paths.skips_boot_next());
+            log(paths, now, "the firmware followed BootNext again; trips go back to a one-time start");
         }
         let _ = fs::remove_file(paths.notice());
         return None;
@@ -599,6 +617,39 @@ mod tests {
         assert!(notice.contains("didn't finish"));
         assert!(bad_entries(&paths).is_empty());
         assert_eq!(boot::boot_order(&efi).unwrap(), vec![1, 4]);
+    }
+
+    #[test]
+    fn a_first_trip_puts_monet_back_even_when_the_firmware_dropped_it() {
+        let paths = Paths::new(temp());
+        save(&paths, &Trip { method: Method::First, ..bound_trip() }).unwrap();
+        let mut efi = pc(None, false);
+        efi.set(GLOBAL_GUID, "BootOrder", &monet_core::efi::write_u16_list(&[4]), ATTR_DEFAULT).unwrap();
+        assert!(check_after_boot(&mut efi, &paths, 1060, true, "return").is_none());
+        assert_eq!(boot::boot_order(&efi).unwrap(), vec![1, 4]);
+        assert!(!paths.trip().exists());
+        assert!(paths.returned().exists());
+    }
+
+    #[test]
+    fn a_followed_boot_next_forgets_an_old_skip() {
+        let paths = Paths::new(temp());
+        fs::write(paths.skips_boot_next(), "").unwrap();
+        save(&paths, &Trip { method: Method::First, ..bound_trip() }).unwrap();
+        let mut efi = pc(None, false);
+        check_after_boot(&mut efi, &paths, 1060, true, "return");
+        assert!(!firmware_skips_boot_next(&paths));
+    }
+
+    #[test]
+    fn an_ignored_boot_next_keeps_the_skip() {
+        let paths = Paths::new(temp());
+        fs::write(paths.skips_boot_next(), "").unwrap();
+        save(&paths, &Trip { method: Method::First, ..bound_trip() }).unwrap();
+        // Bridge asked for Monet with BootNext; the firmware left it unused.
+        let mut efi = pc(Some(1), false);
+        check_after_boot(&mut efi, &paths, 1060, true, "return");
+        assert!(firmware_skips_boot_next(&paths));
     }
 
     #[test]
