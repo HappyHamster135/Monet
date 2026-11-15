@@ -13,6 +13,29 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("qualified_release", ROOT / "tools/publish-qualified.py")
 qualified = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(qualified)
+CHECK_SPEC = importlib.util.spec_from_file_location("release_checks", ROOT / "tools/require-release-checks.py")
+checks = importlib.util.module_from_spec(CHECK_SPEC)
+CHECK_SPEC.loader.exec_module(checks)
+
+
+class ReleaseChecks(unittest.TestCase):
+    def test_both_required_jobs_must_pass_even_when_the_build_is_still_packaging(self):
+        run = {"id": 1, "status": "in_progress"}
+        jobs = lambda _: [{"name": "test", "conclusion": "success"},
+                          {"name": "desktop", "conclusion": "success"}]
+        self.assertTrue(checks.check_runs([run], jobs))
+
+    def test_missing_or_pending_desktop_checks_do_not_publish(self):
+        self.assertFalse(checks.check_runs([], lambda _: []))
+        self.assertFalse(checks.check_runs([{"id": 1, "status": "in_progress"}],
+                         lambda _: [{"name": "test", "conclusion": "success"}]))
+
+    def test_failed_or_cancelled_desktop_checks_block_publication(self):
+        for conclusion in ("failure", "cancelled", "skipped", None):
+            with self.subTest(conclusion=conclusion), self.assertRaises(RuntimeError):
+                checks.check_runs([{"id": 1, "status": "completed"}],
+                    lambda _: [{"name": "test", "conclusion": "success"},
+                               {"name": "desktop", "conclusion": conclusion}])
 
 
 class ImagePublication(unittest.TestCase):

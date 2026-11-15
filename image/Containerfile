@@ -26,12 +26,6 @@ RUN rustup toolchain install \
         --innoextract /usr/bin/innoextract --cache /tmp/monet-driver-downloads \
  && rm -rf /tmp/monet-driver-downloads
 
-# Monet's password prompt: KDE's polkit agent built with Monet's page, against
-# the same Plasma as below. If it can't be built, the image keeps KDE's prompt.
-FROM ${BASE} AS password
-COPY image/password /src/password
-RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
-
 FROM ${BASE} AS runtime
 # Tools for installing Windows from Monet: splitting Windows' install image
 # (wimlib), formatting its partition (ntfsprogs), and boot entries; ntfs-3g's
@@ -75,9 +69,17 @@ RUN dnf5 -y install --skip-unavailable tesseract-langpack-ara tesseract-langpack
 RUN dnf5 -y install fprintd-pam && dnf5 clean all \
  && { authselect enable-feature with-fingerprint || { echo "fingerprint left off: authselect refused" >&2; authselect current; }; }
 
-# Native build headers require matching util-linux, Brotli and ICU libraries. Update the shipped
-# runtime first, so adding development packages cannot silently change its ABI.
-RUN dnf5 -y upgrade libblkid libmount libuuid libbrotli libicu && dnf5 clean all
+# A stable base can lag the repository's native development headers. Upgrade
+# the actual desktop dependency closure in the shipped runtime first. Every
+# native stage still verifies that installing headers leaves this ABI unchanged.
+RUN --mount=type=bind,source=image,target=/tmp/monet-native-runtime,ro \
+    python3 /tmp/monet-native-runtime/refresh-native-runtime.py --upgrade \
+ && dnf5 clean all
+
+# Build the password prompt against that same aligned runtime too.
+FROM runtime AS password
+COPY image/password /src/password
+RUN mkdir -p /out && { sh /src/password/build.sh /out || rm -rf /out/*; }
 
 # Build the native notification applet against the fully assembled runtime.
 # Development packages stay in this stage; a mismatch fails rather than shipping

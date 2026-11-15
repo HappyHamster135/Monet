@@ -156,6 +156,7 @@ jobs:
     secrets: inherit
     permissions:
       contents: read
+      actions: read
       packages: write
 
   release:
