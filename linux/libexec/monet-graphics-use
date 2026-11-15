@@ -1,0 +1,241 @@
+#!/usr/bin/python3
+"""What each app uses of the graphics card right now, for Task Manager's Graphics page.
+
+Runs only while that page is in view. AMD's and Intel's drivers keep each program's
+busy time on every engine of the card (DRM fdinfo): it is read twice, a second apart.
+NVIDIA's driver reports a share per program through nvidia-smi pmon, read here by its
+column names, which have grown over the years. Prints one line of JSON:
+
+    {"version": 1, "ok": true, "apps": [{"name": "Zen Browser", "part": "", "percent": 3.5}]}
+
+ok is false when no driver here reports use per program. part names Monet's own desktop
+("windows", "desktop", "xwayland"), which Task Manager words in the person's language.
+"""
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import time
+
+PROC = Path("/proc")
+# Monet's desktop is itself a few programs; each is named for what it draws.
+PARTS = {"kwin_wayland": "windows", "plasmashell": "desktop", "Xwayland": "xwayland"}
+STEAM = {"steam.desktop", "com.valvesoftware.Steam.desktop"}
+SHOWN = 8
+
+
+def read(path, limit=65536):
+    try:
+        with open(path, "rb") as stream:
+            return stream.read(limit).decode("utf-8", "replace")
+    except OSError:
+        return ""
+
+
+def drm_client(text):
+    """(device, client id, {engine: (busy, total, capacity)}) from one DRM fdinfo, or None.
+
+    busy is nanoseconds of work so far (total None), or Intel xe's cycles of work with
+    total the cycles that have passed (drm-total-cycles-*). capacity is how many engines
+    of that kind the card has, which together can be busy longer than the time passed."""
+    fields = {}
+    for line in text.splitlines():
+        key, sep, value = line.partition(":")
+        if sep:
+            fields[key.strip()] = value.split()[0] if value.split() else ""
+    client = fields.get("drm-client-id")
+    if not client:
+        return None
+    engines = {}
+    for key, value in fields.items():
+        if not value.isdigit():
+            continue
+        if key.startswith("drm-engine-") and not key.startswith("drm-engine-capacity-"):
+            name = key[len("drm-engine-"):]
+            capacity = fields.get(f"drm-engine-capacity-{name}", "1")
+            engines[name] = (int(value), None, max(1, int(capacity)) if capacity.isdigit() else 1)
+        elif key.startswith("drm-cycles-"):
+            name = key[len("drm-cycles-"):]
+            total = fields.get(f"drm-total-cycles-{name}", "")
+            if total.isdigit():
+                engines[name] = (int(value), int(total), 1)
+    return fields.get("drm-pdev") or fields.get("drm-driver", ""), client, engines
+
+
+def drm_clients(proc=PROC):
+    """Every DRM client this account can see: {(device, client): (pid, engines)}. A client
+    open in several processes (a parent and its children) belongs to the first one."""
+    found = {}
+    for task in sorted((p for p in proc.iterdir() if p.name.isdigit()), key=lambda p: int(p.name)):
+        try:
+            fds = os.listdir(task / "fd")
+        except OSError:
+            continue
+        for fd in fds:
+            try:
+                if not os.readlink(task / "fd" / fd).startswith("/dev/dri/"):
+                    continue
+            except OSError:
+                continue
+            client = drm_client(read(task / "fdinfo" / fd))
+            if client and client[2]:
+                found.setdefault(client[:2], (int(task.name), client[2]))
+    return found
+
+
+def drm_use(before, after, seconds):
+    """{pid: percent} between two readings: each client's busiest engine, its share of the time."""
+    use = {}
+    for key, (pid, engines) in after.items():
+        earlier = before.get(key)
+        if not earlier:
+            continue
+        busiest = 0.0
+        for name, (busy, total, capacity) in engines.items():
+            was = earlier[1].get(name)
+            if not was or busy < was[0]:
+                continue
+            if total is not None:
+                span = total - (was[1] or 0)
+                share = (busy - was[0]) / span if span > 0 else 0.0
+            else:
+                share = (busy - was[0]) / (seconds * 1e9 * capacity) if seconds > 0 else 0.0
+            busiest = max(busiest, share)
+        use[pid] = use.get(pid, 0.0) + min(busiest, 1.0) * 100
+    return use
+
+
+def nvidia_use(text):
+    """{pid: percent} from `nvidia-smi pmon`: the sm column of each program, found by name.
+    A program on several cards counts its busiest one."""
+    columns, use = None, {}
+    for line in text.splitlines():
+        if line.startswith("#"):
+            names = line[1:].split()
+            if "pid" in names and "sm" in names:
+                columns = names
+            continue
+        parts = line.split()
+        if not columns or len(parts) < columns.index("sm") + 1:
+            continue
+        row = dict(zip(columns, parts))
+        try:
+            pid, share = int(row["pid"]), float(row["sm"])
+        except (KeyError, ValueError):  # "-": no work in this sample
+            continue
+        use[pid] = max(use.get(pid, 0.0), share)
+    return use
+
+
+def nvidia_report():
+    """One sample of nvidia-smi pmon (it takes about a second), or "" without NVIDIA's driver."""
+    if not shutil.which("nvidia-smi"):
+        return ""
+    try:
+        done = subprocess.run(["nvidia-smi", "pmon", "-c", "1", "-s", "u"], capture_output=True, text=True,
+                              timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return done.stdout if done.returncode == 0 else ""
+
+
+def data_dirs():
+    home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    rest = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    return [home] + [Path(d) for d in rest.split(":") if d]
+
+
+def menu_name(app):
+    """An app's name in the menu, in the session's language, from its .desktop file."""
+    lang = next(filter(None, map(os.environ.get, ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"))), "")
+    lang = re.split(r"[.@:]", lang)[0]
+    for folder in data_dirs():
+        text = read(folder / "applications" / app)
+        if not text:
+            continue
+        entry, inside = {}, False
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("["):
+                inside = line == "[Desktop Entry]"
+            elif inside and "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                entry.setdefault(key.strip(), value.strip())
+        return entry.get(f"Name[{lang}]") or entry.get(f"Name[{lang.split('_')[0]}]") or entry.get("Name", "")
+    return ""
+
+
+def app_of_unit(unit):
+    """The menu entry an app's systemd unit is named after (app-[launcher-]ID@RANDOM.service or
+    app-[launcher-]ID-RANDOM.scope, the ID's own dashes written \\x2d), or ""."""
+    found = re.fullmatch(r"app-(?:[^-@]+-)?([^-@]+)(?:@[^@]*\.service|\.service|-[^-@]+\.scope)", unit)
+    return re.sub(r"\\x([0-9a-f]{2})", lambda m: chr(int(m[1], 16)), found[1]) + ".desktop" if found else ""
+
+
+def program(pid, proc=PROC):
+    """A program's own name: its first argument's file name (a Windows program's too, through
+    Proton), without .exe; else the kernel's short name for it."""
+    first = read(proc / str(pid) / "cmdline").split("\0", 1)[0]
+    name = re.split(r"[\\/]", first)[-1]
+    name = re.sub(r"\.exe$", "", name, flags=re.I)
+    return name or read(proc / str(pid) / "comm").strip() or str(pid)
+
+
+# Programs that draw for the program that started them: counted as that program.
+HELPERS = {"QtWebEngineProcess"}
+
+
+def parent(pid, proc=PROC):
+    """The process that started this one, or None."""
+    stat = read(proc / str(pid) / "stat")
+    after = stat.rpartition(")")[2].split()  # the name, in parentheses, may itself hold spaces
+    return int(after[1]) if len(after) > 1 and after[1].isdigit() and int(after[1]) > 1 else None
+
+
+def owner(pid, proc=PROC):
+    """(key, name, part) of what a process belongs to: Monet's desktop, an app in the menu,
+    a game Steam started (named for itself, not Steam), or the program itself."""
+    for _ in range(4):
+        up = parent(pid, proc) if program(pid, proc) in HELPERS else None
+        if not up:
+            break
+        pid = up
+    comm = read(proc / str(pid) / "comm").strip()
+    if comm in PARTS:
+        return "part:" + PARTS[comm], comm, PARTS[comm]
+    unit = read(proc / str(pid) / "cgroup").strip().rsplit("/", 1)[-1]
+    app = app_of_unit(unit)
+    if app and not (app in STEAM and comm not in ("steam", "steamwebhelper")):
+        name = menu_name(app)
+        if name:
+            return app, name, ""
+    name = program(pid, proc)
+    return "program:" + name, name, ""
+
+
+def measure(proc=PROC, nvidia=nvidia_report, clock=time.monotonic, wait=time.sleep, gap=1.0):
+    """The apps using the graphics card, busiest first, as the JSON-ready result."""
+    before, start = drm_clients(proc), clock()
+    report = nvidia()  # about a second already: the DRM readings' gap while it samples
+    left = gap - (clock() - start)
+    if before and left > 0:
+        wait(left)
+    after, seconds = drm_clients(proc), clock() - start
+    use = drm_use(before, after, seconds)
+    for pid, share in nvidia_use(report).items():
+        use[pid] = use.get(pid, 0.0) + share
+    apps = {}
+    for pid, share in use.items():
+        key, name, part = owner(pid, proc)
+        app = apps.setdefault(key, {"name": name, "part": part, "percent": 0.0})
+        app["percent"] += share
+    shown = sorted((a for a in apps.values() if a["percent"] >= 0.05), key=lambda a: -a["percent"])[:SHOWN]
+    for app in shown:
+        app["percent"] = round(min(app["percent"], 100.0), 1)
+    return {"version": 1, "ok": bool(before or after or report), "apps": shown}
+
+
+if __name__ == "__main__":
+    print(json.dumps(measure()))

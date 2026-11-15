@@ -224,6 +224,15 @@ ColumnLayout {
         text: i18nd("monet", "No supported graphics device was found.")
         wrapMode: Text.Wrap
     }
+    // Which apps the graphics card is working for, measured only while this is in view.
+    Kirigami.Separator { Layout.fillWidth: true; visible: graphicsApps.visible }
+    GraphicsApps {
+        id: graphicsApps
+        Layout.fillWidth: true
+        visible: dashboard.section === 2
+        sampling: visible && dashboard.monitoringActive && !dashboard.paused
+        accent: dashboard.accent
+    }
     QQC2.Label {
         Layout.fillWidth: true
         color: Kirigami.Theme.disabledTextColor

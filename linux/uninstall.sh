@@ -136,7 +136,7 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
-for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
