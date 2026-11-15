@@ -166,7 +166,8 @@ class LookFeedback(unittest.TestCase):
 
     def test_restart_follows_the_staged_update_even_if_an_app_update_fails(self):
         self.window.setProperty("page", "updates")
-        action = self.item("updateAction")
+        action = self.window.findChild(QObject, "updateAction")
+        self.assertIsNotNone(action)
         self.helper.replies["update-check"] = '{"ok":true,"system":true,"version":"0.9.8-5"}'
         for reply, state, restart_ready in (
             ({"ok": True, "staged": False}, "done", False),
