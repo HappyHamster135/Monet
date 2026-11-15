@@ -138,13 +138,15 @@ PlasmoidItem {
             contentItem: Item {
                 clip: true
                 Rectangle {
+                    id: fill
                     width: progress.indeterminate ? parent.width * 0.3 : parent.width * progress.visualPosition
                     height: parent.height; radius: 3; color: Kirigami.Theme.highlightColor
                     SequentialAnimation on opacity {
                         running: progress.indeterminate; loops: Animation.Infinite
                         NumberAnimation { to: 0.4; duration: 700 }
                         NumberAnimation { to: 1; duration: 700 }
-                        onStopped: opacity = 1
+                        // Known progress never stays at the pulse's dim point.
+                        onStopped: fill.opacity = 1
                     }
                 }
             }
