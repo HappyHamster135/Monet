@@ -63,6 +63,25 @@ function Done {
 trap {
     Write-Host ''
     Write-Host "Monet couldn't be installed: $_" -ForegroundColor Red
+    # Monet's own setup tries again at the next sign-in, as the Startup fallback
+    # does, while its setup files are still here. A successful run removes it.
+    if ($FromMonet -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'Install-Monet.ps1'))) {
+        try {
+            $options = ''
+            if ($GameProfile) { $options += ' -GameProfile' }
+            if ($RemoveApps) { $options += ' -RemoveApps' }
+            if ($InstallSteam) { $options += ' -InstallSteam' }
+            $retry = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\StartUp\Finish Monet setup.cmd'
+            Set-Content -Path $retry -Encoding ASCII -Value @(
+                '@echo off',
+                'rem Added by Monet. Installs Monet Bridge once, then removes itself.',
+                "start `"`" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"%ProgramData%\Monet\Setup\Install-Monet.ps1`" -FromMonet$options"
+            )
+            Write-Host 'Monet tries again the next time you sign in.'
+        } catch {
+            Write-Host "Monet couldn't arrange another try: $_"
+        }
+    }
     Done
     exit 1
 }
