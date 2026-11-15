@@ -7334,6 +7334,24 @@ class WindowsPrograms(unittest.TestCase):
                 self.assertTrue(notice.call_args.kwargs["failed"])
                 menu.assert_not_called()
 
+    def test_installers_waiting_for_a_restart_and_programs_closed_later_are_not_failures(self):
+        q = self.q
+        from unittest import mock
+        with tempfile_dir() as tmp:
+            path = Path(tmp) / "Tool.msi"
+            path.touch()
+            for code, ran_for, menu_runs, result in ((3010 & 0xFF, 5, 1, 0), (1602 & 0xFF, 5, 0, 0), (1, 600, 1, 0)):
+                clock = iter((0, ran_for))
+                with mock.patch.object(q.subprocess, "run", return_value=mock.Mock(returncode=code)), \
+                        mock.patch.object(q.time, "monotonic", lambda: next(clock)), \
+                        mock.patch.object(q, "steam_proton", return_value=None), \
+                        mock.patch.object(q, "program_notice") as notice, mock.patch.object(q, "program_menu") as menu, \
+                        mock.patch.object(q, "PROGRAMS_PREFIX", Path(tmp) / "prefix"), \
+                        mock.patch.object(q.shutil, "which", return_value="/usr/bin/umu-run"):
+                    self.assertEqual(q.program_proton(str(path)), result, code)
+                    self.assertEqual(menu.call_count, menu_runs, code)
+                    self.assertFalse(any(call.kwargs.get("failed") for call in notice.call_args_list), code)
+
     def test_what_an_installer_puts_in_the_start_menu_comes_into_the_app_menu(self):
         q = self.q
         self.assertEqual(q.lnk_target(windows_shortcut("C:\\Program Files\\Paint.NET\\paintdotnet.exe")),

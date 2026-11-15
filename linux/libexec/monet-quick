@@ -4821,6 +4821,12 @@ def program_notice(title, detail, *, failed=False):
            "--urgency=critical" if failed else "--urgency=normal", "--", title, detail)
 
 
+# Windows Installer's own codes, as Proton passes them on (the low byte): installed but
+# waiting for a restart (3010, 1641), and cancelled in the installer (1602).
+PROGRAM_DONE = {3010 & 0xFF, 1641 & 0xFF}
+PROGRAM_CANCELLED = 1602 & 0xFF
+
+
 def program_proton(path):
     """Runs a Windows program through Proton (umu-run) in Monet's Windows for programs, then
     brings what it put in the Start menu into the app menu."""
@@ -4841,15 +4847,22 @@ def program_proton(path):
     program_notice(tr("Starting %1", found.name),
                    tr("Preparing Windows app support can take a few minutes the first time."))
     args = ["msiexec", "/i", str(found)] if found.suffix.lower() == ".msi" else [str(found)]
+    # Preparing a new prefix takes minutes, so a failed first start takes longer to show.
+    patience = 60 if (PROGRAMS_PREFIX / "drive_c").is_dir() else 300
     try:
         PROGRAMS_PREFIX.parent.mkdir(parents=True, exist_ok=True)
+        started = time.monotonic()
         result = subprocess.run(["umu-run", *args], env=env, cwd=found.parent)
     except OSError:
         program_notice(failed, tr("Windows app support couldn't start. Try opening the file in Windows."), failed=True)
         return 1
-    if result.returncode:
+    code = result.returncode
+    if code == PROGRAM_CANCELLED:
+        return 0
+    # A program that ran for a while and then closed with a code of its own opened fine.
+    if code and code not in PROGRAM_DONE and time.monotonic() - started < patience:
         program_notice(failed, tr("Proton exited with code %1. Check the file and your connection, or try opening it in Windows.",
-                                  result.returncode), failed=True)
+                                  code), failed=True)
         return 1
     program_menu()
     return 0
