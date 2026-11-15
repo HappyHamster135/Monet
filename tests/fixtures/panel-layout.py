@@ -19,11 +19,12 @@ with private_session() as env:
     def inert(script):
         for original, substitute in aliases.items(): script=script.replace(original,substitute)
         return script
+    env.update(KWIN_COMPOSE="Q", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
     processes = []
     logpath = Path(env['HOME']) / 'panel-fixture.log'
     log = logpath.open('w')
     def launch(args):
-        process = subprocess.Popen(args, env=env, stdout=log, stderr=log)
+        process = subprocess.Popen(args, env=env, stdout=log, stderr=log, start_new_session=True)
         processes.append(process)
         return process
     def evaluate(script):
@@ -90,6 +91,7 @@ with private_session() as env:
                 time.sleep(.4)
                 data=snapshot(); assert len(data)==(1 if choice=='one' else 3), data
                 widgets=[w for p in data for w in p['widgets']]
+                assert all(w['index'] >= 0 for w in widgets), data
                 assert all(any(w['id']==ident for w in widgets) for ident in original), data
                 assert len([w for w in widgets if w['type']=='org.monet.sound'])==1, data
                 if choice=='one': assert data[0]['widgets'][0]['type']=='org.monet.menu', data

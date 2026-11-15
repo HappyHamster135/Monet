@@ -18,7 +18,7 @@ class PanelLayouts(unittest.TestCase):
         from PySide6.QtQml import QJSEngine
         self.engine = QJSEngine(); self.quick = quick_helper()
         self.engine.evaluate('''
-        var printed='', all=[], sequence=20, failMove=false;
+        var printed='', all=[], sequence=20, failMove=false, failAfter=-1, moveCount=0;
         var knownWidgetTypes=['org.monet.menu','org.monet.games','org.kde.plasma.icontasks',
             'org.kde.plasma.marginsseparator','org.kde.plasma.trash','org.monet.weather',
             'org.monet.quick','org.monet.sound','org.kde.plasma.systemtray','org.monet.clock'];
@@ -41,7 +41,7 @@ class PanelLayouts(unittest.TestCase):
                         set:function(n){var items=this.parent.items; items.splice(items.indexOf(this),1); items.splice(Math.max(0,Math.min(n,items.length-1)),0,this)}});
                     w.remove=function(){this.parent.items=this.parent.items.filter(x=>x.id!==this.id)};
                 } else {
-                    if(failMove) { failMove=false; return null; }
+                    if(failMove || moveCount++===failAfter) { failMove=false; failAfter=-1; return null; }
                     w.remove();
                 }
                 w.parent=this; this.items.push(w); return w;
@@ -106,6 +106,12 @@ class PanelLayouts(unittest.TestCase):
     def test_failed_move_preserves_original_panels_and_widgets(self):
         before=self.state('all.map(p=>[p.id,p.items.map(w=>w.id)])')
         self.js('failMove=true')
+        self.assertFalse(self.choose('right','one')['ok'])
+        self.assertEqual(self.state('all.map(p=>[p.id,p.items.map(w=>w.id)])'),before)
+
+    def test_failure_after_several_moves_restores_all_original_panels(self):
+        before=self.state('all.map(p=>[p.id,p.items.map(w=>w.id)])')
+        self.js('failAfter=2')
         self.assertFalse(self.choose('right','one')['ok'])
         self.assertEqual(self.state('all.map(p=>[p.id,p.items.map(w=>w.id)])'),before)
 

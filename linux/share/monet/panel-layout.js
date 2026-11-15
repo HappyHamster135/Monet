@@ -23,7 +23,7 @@ function monetTray(tray) {
 
 // Executed by monet-quick inside Plasma. Move applets, never recreate users' pins.
 (function () {
-    var selected = panelById(MONET_PANEL_ID), choice = MONET_PANEL_CHOICE;
+    var selected = panelById(MONET_PANEL_ID), choice = MONET_PANEL_CHOICE, plan = MONET_PANEL_PLAN;
     function reply(value) { print(JSON.stringify(value)); }
     if (!selected || selected.screen < 0) { reply({ok:false}); return; }
     var roles = ["left", "middle", "right"];
@@ -33,6 +33,82 @@ function monetTray(tray) {
     }
     function write(object, key, value) {
         object.currentConfigGroup = ["MonetBar"]; object.writeConfig(key, value);
+    }
+    function locate(id) {
+        var found = null;
+        panels().some(function (p) {
+            var w = p.widgetById(id);
+            if (w) { found = {widget:w, panel:p}; return true; }
+            return false;
+        });
+        return found;
+    }
+    function later() { reply({ok:true, pending:plan}); }
+    if (plan) {
+        if (plan.rollback) {
+            // Restore ownership one widget per event-loop turn, too.
+            for (var i = 0; i < plan.original.length; i++) {
+                var original = plan.original[i], found = locate(original.id), home = panelById(original.panel);
+                if (!found || !home) { reply({ok:false}); return; }
+                if (found.panel.id !== home.id) {
+                    home.addWidget(found.widget); later(); return;
+                }
+            }
+            plan.added.forEach(function (id) { var found = locate(id); if (found) found.widget.remove(); });
+            plan.members.forEach(function (id) {
+                plan.original.filter(function (r) { return r.panel === id; }).reverse().forEach(function (r) {
+                    var found = locate(r.id); if (found) found.widget.index = 0;
+                });
+            });
+            plan.created.forEach(function (id) { var p = panelById(id); if (p && !p.widgets().length) p.remove(); });
+            reply({ok:false}); return;
+        }
+        try {
+            // Plasma saves AppletOrder with Qt.callLater. Wait for its view to
+            // register every applet before moving the next one or reordering.
+            var ready = plan.order.every(function (entry) {
+                var p = panelById(entry.panel);
+                if (!p) throw new Error("panel removed");
+                return p.widgets().every(function (w) { return w.index >= 0; });
+            });
+            if (!ready) { later(); return; }
+            if (plan.next < plan.moves.length) {
+                var move = plan.moves[plan.next], found = locate(move.id), target = panelById(move.to);
+                if (!found || !target) throw new Error("widget removed");
+                if (found.panel.id !== target.id) target.addWidget(found.widget);
+                if (!target.widgetById(move.id)) throw new Error("move");
+                plan.next++; later(); return;
+            }
+            var orders = {};
+            plan.order.forEach(function (entry) {
+                if (!orders[entry.panel]) orders[entry.panel] = [];
+                orders[entry.panel] = orders[entry.panel].concat(entry.ids);
+            });
+            Object.keys(orders).forEach(function (id) {
+                var p = panelById(Number(id));
+                orders[id].slice().reverse().forEach(function (id) {
+                    var w = p.widgetById(id); if (!w || w.index < 0) throw new Error("placement");
+                    w.index = 0;
+                });
+            });
+            // All applets must be visibly registered before their old panels go.
+            if (plan.choice === "one" && plan.members.some(function (id) {
+                var p = panelById(id); return id !== selected.id && p && p.widgets().length;
+            })) throw new Error("remaining");
+            plan.order.forEach(function (entry) {
+                var p = panelById(entry.panel);
+                entry.ids.forEach(function (id) { write(p.widgetById(id), "role", entry.role); });
+                write(p, "group", plan.group); write(p, "role", plan.choice === "one" ? "one" : entry.role);
+                p.alignment = plan.choice === "one" || entry.role === "middle" ? "center" : entry.role;
+                p.offset = plan.choice === "one" || entry.role === "middle" ? 0 : 16;
+                p.floating = plan.choice === "three";
+                p.lengthMode = plan.choice === "one" ? "fill" : "fit";
+            });
+            if (plan.choice === "one") plan.members.forEach(function (id) {
+                var p = panelById(id); if (p && id !== selected.id) p.remove();
+            });
+            reply({ok:true, available:true, layout:plan.choice}); return;
+        } catch (error) { plan.rollback = true; later(); return; }
     }
     function has(p, type) { return p.widgets(type).length > 0; }
     function role(p) {
@@ -117,15 +193,18 @@ function monetTray(tray) {
             if (entry.type === "org.monet.menu" || entry.type === "org.kde.plasma.icontasks") buckets[entry.role].unshift(row);
             else buckets[entry.role].push(row);
         });
+        plan = {choice:choice, group:groupId, next:0, moves:[], order:[],
+            members:members.map(function (p) { return p.id; }),
+            created:created.map(function (p) { return p.id; }),
+            added:added.map(function (w) { return w.id; }),
+            original:rows.map(function (r) { return {id:r.widget.id, panel:r.panel.id}; })};
         roles.forEach(function (r) {
             var p = destinations[r];
+            plan.order.push({panel:p.id, role:r, ids:buckets[r].map(function (row) { return row.widget.id; })});
             buckets[r].forEach(function (row) {
-                if (row.panel.id !== p.id) p.addWidget(row.widget);
-                if (!p.widgetById(row.widget.id)) throw new Error("move");
+                if (row.panel.id !== p.id) plan.moves.push({id:row.widget.id, to:p.id});
             });
         });
-        // Never remove a panel until every widget has arrived at its destination.
-        if (choice === "one" && members.some(function (p) { return p.id !== selected.id && p.widgets().length; })) throw new Error("remaining");
     } catch (error) {
         // An unavailable widget or failed move must leave the old layout usable.
         rows.forEach(function (row) {
@@ -138,23 +217,5 @@ function monetTray(tray) {
         created.forEach(function (p) { if (!p.widgets().length) p.remove(); });
         reply({ok:false}); return;
     }
-    var combined = [];
-    roles.forEach(function (r) {
-        var p = destinations[r];
-        buckets[r].forEach(function (row) { write(row.widget, "role", r); });
-        if (choice === "three") buckets[r].slice().reverse().forEach(function (row) { row.widget.index = 0; });
-        else combined = combined.concat(buckets[r]);
-        write(p, "group", groupId); write(p, "role", choice === "one" ? "one" : r);
-        p.alignment = choice === "one" || r === "middle" ? "center" : r;
-        p.offset = choice === "one" || r === "middle" ? 0 : 16;
-        p.floating = choice === "three";
-        p.lengthMode = choice === "one" ? "fill" : "fit";
-    });
-    if (choice === "one") {
-        // Move to the front in reverse order. Plasma clamps an append index to
-        // the penultimate slot, so assigning 0..N would swap the last two items.
-        combined.reverse().forEach(function (row) { row.widget.index = 0; });
-        members.forEach(function (p) { if (p.id !== selected.id) p.remove(); });
-    }
-    reply({ok:true, available:true, layout:choice});
+    later();
 })();

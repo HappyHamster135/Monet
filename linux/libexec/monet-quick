@@ -5999,13 +5999,36 @@ def panel_layout(ident, layout=None):
     except OSError:
         return {"ok": False}
     script = script.replace('MONET_PANEL_ID', str(int(ident))).replace('MONET_PANEL_CHOICE', json.dumps(layout))
-    result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
-                     "org.kde.PlasmaShell", "evaluateScript", "s", script)
-    try:
-        state = json.loads(result[0])
-        return state if isinstance(state, dict) and isinstance(state.get("ok"), bool) else {"ok": False}
-    except (TypeError, IndexError, ValueError):
-        return {"ok": False}
+    # A separate D-Bus turn per move lets Plasma finish its layout and save
+    # AppletOrder. Moving a whole island in one script can lose visible items.
+    import fcntl
+    lock_dir = RUNTIME / "monet"
+    lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with (lock_dir / "panel-layout.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        pending = None
+        deadline = time.monotonic() + 15
+        rollback = False
+        while True:
+            result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                             "org.kde.PlasmaShell", "evaluateScript", "s",
+                             script.replace('MONET_PANEL_PLAN', json.dumps(pending)))
+            try:
+                state = json.loads(result[0])
+                if not isinstance(state, dict) or not isinstance(state.get("ok"), bool):
+                    return {"ok": False}
+            except (TypeError, IndexError, ValueError):
+                return {"ok": False}
+            pending = state.get("pending")
+            if not state["ok"] or not isinstance(pending, dict):
+                return state
+            if time.monotonic() >= deadline:
+                if rollback:
+                    return {"ok": False}  # Keep every remaining panel and applet.
+                pending["rollback"] = True
+                rollback = True
+                deadline = time.monotonic() + 15
+            time.sleep(0.05)
 
 
 def fit_bars():
