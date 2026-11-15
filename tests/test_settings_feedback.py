@@ -167,13 +167,19 @@ class LookFeedback(unittest.TestCase):
     def test_restart_follows_the_staged_update_even_if_an_app_update_fails(self):
         self.window.setProperty("page", "updates")
         action = self.item("updateAction")
+        self.helper.replies["update-check"] = '{"ok":true,"system":true,"version":"0.9.8-5"}'
         for reply, state, restart_ready in (
             ({"ok": True, "staged": False}, "done", False),
             ({"ok": False, "staged": True, "message": "App update failed"}, "failed", True),
         ):
             with self.subTest(reply=reply):
+                self.window.setProperty("updateState", "idle")
                 self.helper.replies["update"] = json.dumps(reply)
-                self.assertTrue(QMetaObject.invokeMethod(self.window, "installUpdates"))
+                action.forceActiveFocus()
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.wait_for(lambda: self.window.property("updateState") == "available")
+                self.assertEqual(action.property("text"), self.words.i18n("Install"))
+                QTest.keyClick(self.window, Qt.Key_Return)
                 self.wait_for(lambda: self.window.property("updateState") == state)
                 self.assertEqual(action.property("restartReady"), restart_ready)
 
