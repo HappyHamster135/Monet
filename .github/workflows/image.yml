@@ -52,6 +52,28 @@ jobs:
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
+      # Docker Hub limits pulls from shared runners, and a weekly rebuild failed on it. Google
+      # and AWS mirror its official images: the build's are fetched from the first that answers
+      # and kept under Docker Hub's own name, so podman build finds them and never asks Docker
+      # Hub. The Containerfile is read as checked out, so the weekly rebuild of a release works too.
+      - name: The build's Docker Hub images, from a mirror
+        if: inputs.promote == ''
+        run: |
+          for name in $(sed -n 's/^FROM docker\.io\/library\/\([^ ]*\).*/\1/p' image/Containerfile); do
+            pulled=
+            for source in "mirror.gcr.io/library/$name" "public.ecr.aws/docker/library/$name" "docker.io/library/$name"; do
+              for attempt in 1 2; do
+                if sudo podman pull -q "$source" >/dev/null; then pulled=$source; break 2; fi
+                sleep 10
+              done
+            done
+            if [ -z "$pulled" ]; then
+              echo "Could not download $name from Docker Hub or its mirrors." >&2
+              exit 1
+            fi
+            [ "$pulled" = "docker.io/library/$name" ] || sudo podman tag "$pulled" "docker.io/library/$name"
+            echo "docker.io/library/$name from $pulled"
+          done
       - name: Build
         id: build
         if: inputs.promote == ''
@@ -156,6 +178,28 @@ jobs:
       - name: The released Monet (the weekly rebuild never ships unreleased work)
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
+      # Docker Hub limits pulls from shared runners, and a weekly rebuild failed on it. Google
+      # and AWS mirror its official images: the build's are fetched from the first that answers
+      # and kept under Docker Hub's own name, so podman build finds them and never asks Docker
+      # Hub. The Containerfile is read as checked out, so the weekly rebuild of a release works too.
+      - name: The build's Docker Hub images, from a mirror
+        if: inputs.promote == ''
+        run: |
+          for name in $(sed -n 's/^FROM docker\.io\/library\/\([^ ]*\).*/\1/p' image/Containerfile); do
+            pulled=
+            for source in "mirror.gcr.io/library/$name" "public.ecr.aws/docker/library/$name" "docker.io/library/$name"; do
+              for attempt in 1 2; do
+                if sudo podman pull -q "$source" >/dev/null; then pulled=$source; break 2; fi
+                sleep 10
+              done
+            done
+            if [ -z "$pulled" ]; then
+              echo "Could not download $name from Docker Hub or its mirrors." >&2
+              exit 1
+            fi
+            [ "$pulled" = "docker.io/library/$name" ] || sudo podman tag "$pulled" "docker.io/library/$name"
+            echo "docker.io/library/$name from $pulled"
+          done
       - name: Build
         if: inputs.promote == ''
         run: |

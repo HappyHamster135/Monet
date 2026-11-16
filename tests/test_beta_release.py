@@ -408,6 +408,52 @@ class Workflows(unittest.TestCase):
             self.assertIn("TAG=${BETA:-$VERSION}", run)
             self.assertNotIn('"$IMAGE" "$VERSION" "$NVIDIA_DIGEST"', run)
 
+    def mirror_pulls(self, failing):
+        """Runs the mirror step of both image jobs with a podman whose pulls from `failing` fail."""
+        runs = []
+        for name in ("image", "image-amd"):
+            steps = [step.get("name") for step in self.image[name]["steps"]]
+            mirror = steps.index("The build's Docker Hub images, from a mirror")
+            self.assertEqual(steps[mirror + 1], "Build")
+            self.assertEqual(steps[mirror - 1], "The released Monet (the weekly rebuild never ships unreleased work)")
+            self.assertEqual(self.image[name]["steps"][mirror]["if"], "inputs.promote == ''")
+            with tempfile.TemporaryDirectory() as folder:
+                folder = Path(folder)
+                for tool, body in (("sudo", 'exec "$@"'), ("sleep", "exit 0"),
+                                   ("podman", 'echo "$*" >> "$LOG"\n'
+                                              'if [ "$1" = pull ]; then for f in $FAILING; do '
+                                              'case "$3" in "$f"*) exit 125;; esac; done; fi')):
+                    (folder / tool).write_text("#!/bin/sh\n" + body + "\n")
+                    (folder / tool).chmod(0o755)
+                env = dict(os.environ, PATH=f"{folder}:{os.environ['PATH']}", LOG=str(folder / "log"),
+                           FAILING=" ".join(failing))
+                result = subprocess.run(["bash", "-e", "-c", self.image[name]["steps"][mirror]["run"]],
+                                        cwd=ROOT, env=env, capture_output=True, text=True)
+                log = (folder / "log").read_text().splitlines() if (folder / "log").exists() else []
+                runs.append((result, log))
+        return runs
+
+    def test_docker_hubs_images_come_from_a_mirror_under_their_own_name(self):
+        # Every Docker Hub image the build starts from (today Rust's) is fetched before the build.
+        self.assertIn("FROM docker.io/library/rust:1 AS build", (ROOT / "image/Containerfile").read_text())
+        for result, log in self.mirror_pulls([]):
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log, ["pull -q mirror.gcr.io/library/rust:1",
+                                   "tag mirror.gcr.io/library/rust:1 docker.io/library/rust:1"])
+        # Google's mirror down: AWS's; both down: Docker Hub itself, tried twice each.
+        for result, log in self.mirror_pulls(["mirror.gcr.io"]):
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log[-2:], ["pull -q public.ecr.aws/docker/library/rust:1",
+                                        "tag public.ecr.aws/docker/library/rust:1 docker.io/library/rust:1"])
+        for result, log in self.mirror_pulls(["mirror.gcr.io", "public.ecr.aws"]):
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log, ["pull -q mirror.gcr.io/library/rust:1"] * 2
+                             + ["pull -q public.ecr.aws/docker/library/rust:1"] * 2 + ["pull -q docker.io/library/rust:1"])
+        for result, log in self.mirror_pulls(["mirror.gcr.io", "public.ecr.aws", "docker.io"]):
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Could not download rust:1", result.stderr)
+            self.assertEqual(len(log), 6)
+
     def test_shell_steps_parse(self):
         count = 0
         for jobs in (self.build, self.image):
