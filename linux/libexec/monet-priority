@@ -1,0 +1,180 @@
+#!/usr/bin/python3
+"""Steam's shader processing, out of your way: it only uses what the rest of the PC leaves.
+
+Before a game's first start ("Processing Vulkan shaders"), and in the background whenever Steam
+has a moment, Steam works through a game's shaders with fossilize_replay: a process and helpers
+of its own on every processor, at the same priority as everything else, so the whole PC stutters
+until it's done. This moves each of them, every thread, to idle priority, for the processors
+(SCHED_IDLE) and for the disk (the idle I/O class). With nothing else wanting the PC, as while
+Steam shows its progress before a game starts, they still run flat out; the moment anything
+else wants a processor or the disk, it has it. Helpers and threads they start later inherit it.
+
+Only this account's own processes, and only Steam's shader tool: Linux lets anyone lower their
+own programs' priority, so nothing needs an administrator, and nothing else is touched. While
+Steam runs (the process ~/.steam/steam.pid names), it looks every two seconds; otherwise it only
+checks every half minute whether Steam has started.
+"""
+import ctypes
+from functools import lru_cache
+import os
+from pathlib import Path
+import platform
+import sys
+import time
+
+PROC = "/proc"
+STEAM_PID = Path.home() / ".steam/steam.pid"
+LOOK = 2                    # seconds between looks while Steam runs
+REST = 30                   # seconds between asking whether Steam has started
+NAME = "fossilize_repla"    # fossilize_replay as the kernel names a process (15 letters at most)
+TOOL = "fossilize_replay"
+IOPRIO_SET = {"x86_64": 251, "aarch64": 30}.get(platform.machine())  # the system call's number
+IOPRIO_WHO_PROCESS = 1      # one thread, by its id
+IDLE_IO = 3 << 13           # IOPRIO_CLASS_IDLE
+
+
+def read(path):
+    """A small /proc file, in one read."""
+    handle = os.open(path, os.O_RDONLY)
+    try:
+        return os.read(handle, 65536)
+    finally:
+        os.close(handle)
+
+
+def process(pid, proc=PROC):
+    """(name, parent, start) from /proc/PID/stat, or None once it's gone. The start, in clock
+    ticks since boot, tells a process from a later one given the same number."""
+    try:
+        text = read(f"{proc}/{pid}/stat")
+    except OSError:
+        return None
+    head, sep, tail = text.rpartition(b")")  # The name may hold spaces and brackets itself.
+    fields = tail.split()
+    if not sep or len(fields) < 20 or not fields[1].isdigit() or not fields[19].isdigit():
+        return None
+    return head.partition(b"(")[2].decode(errors="replace"), int(fields[1]), int(fields[19])
+
+
+def owners(pid, proc=PROC):
+    """A process's real and effective user, from /proc/PID/status; empty once it's gone."""
+    try:
+        for line in read(f"{proc}/{pid}/status").splitlines():
+            if line.startswith(b"Uid:"):
+                return {int(n) for n in line.split()[1:3]}
+    except (OSError, ValueError):
+        pass
+    return set()
+
+
+def steam_running(pid_file=STEAM_PID, proc=PROC, uid=None):
+    """Whether Steam is running: the process its PID file names is alive, this account's, and
+    Steam's (steam, or the steam.sh that starts it), not a later one given the same number."""
+    uid = os.getuid() if uid is None else uid
+    try:
+        pid = int(pid_file.read_text().split()[0])
+        command = read(f"{proc}/{pid}/cmdline")
+    except (OSError, ValueError, IndexError):
+        return False
+    words = command.split(b"\0")[:2]
+    return owners(pid, proc) == {uid} and any(b"steam" in os.path.basename(w).lower() for w in words)
+
+
+def idle_processor(tid):
+    os.sched_setscheduler(tid, os.SCHED_IDLE, os.sched_param(0))
+
+
+@lru_cache(maxsize=1)
+def libc():
+    return ctypes.CDLL(None, use_errno=True)
+
+
+def idle_disk(tid):
+    if IOPRIO_SET is None:
+        return  # Unknown here: the processors alone, then.
+    if libc().syscall(ctypes.c_long(IOPRIO_SET), ctypes.c_long(IOPRIO_WHO_PROCESS), ctypes.c_long(tid),
+                      ctypes.c_long(IDLE_IO)) != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+
+
+class Shaders:
+    """Steam's shader processes, and which of their threads are idle already."""
+
+    def __init__(self, proc=PROC, uid=None, processor=idle_processor, disk=idle_disk, say=None):
+        self.proc = str(proc)
+        self.uid = os.getuid() if uid is None else uid
+        self.processor, self.disk = processor, disk
+        self.say = say or (lambda text: print(text, file=sys.stderr, flush=True))
+        self.known = {}  # pid: (start, ids of its threads made idle)
+
+    def shader_tool(self, pid):
+        """Whether a process named like it is Steam's shader tool, and this account's."""
+        try:
+            exe = os.readlink(f"{self.proc}/{pid}/exe")
+        except OSError:
+            return False  # gone, or not this account's
+        return os.path.basename(exe.removesuffix(" (deleted)")) == TOOL and owners(pid, self.proc) == {self.uid}
+
+    def look(self):
+        """One look through /proc: each shader process new since the last one, and each thread new
+        in one already known, to idle. Only a process's name is read, unless it's the tool's."""
+        try:
+            pids = sorted(int(name) for name in os.listdir(self.proc) if name.isdigit())  # parents first
+        except OSError:
+            return
+        alive = set()
+        for pid in pids:
+            seen = process(pid, self.proc)
+            if seen is None:
+                continue  # gone
+            name, parent, start = seen
+            entry = self.known.get(pid)
+            if entry is None or entry[0] != start:
+                self.known.pop(pid, None)  # Ended, and its number given to another.
+                if name != NAME or not self.shader_tool(pid):
+                    continue
+                entry = self.known[pid] = (start, set())
+                if parent not in self.known:  # One line for each run, not for each helper.
+                    self.say(f"Steam's shader processing (process {pid}) runs at idle priority")
+            if self.idle(pid, entry[1]):
+                alive.add(pid)
+        for pid in set(self.known) - alive:
+            del self.known[pid]
+
+    def idle(self, pid, done):
+        """Each thread of a process not idle yet, to idle; False once the process is gone."""
+        try:
+            threads = {int(t) for t in os.listdir(f"{self.proc}/{pid}/task") if t.isdigit()}
+        except OSError:
+            return False
+        done.intersection_update(threads)
+        for tid in sorted(threads - done):
+            try:
+                self.processor(tid)
+                self.disk(tid)
+            except ProcessLookupError:
+                continue  # That thread just ended.
+            except OSError as error:
+                self.say(f"Steam's shader processing (thread {tid}) stays as it is: {error}")
+            done.add(tid)  # Either way, not asked again.
+        return True
+
+
+def turn(shaders, steam=steam_running):
+    """One look while Steam runs; the seconds until the next."""
+    if not steam():
+        shaders.known.clear()
+        return REST
+    shaders.look()
+    return LOOK
+
+
+def main():
+    shaders = Shaders()
+    while True:
+        time.sleep(turn(shaders))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

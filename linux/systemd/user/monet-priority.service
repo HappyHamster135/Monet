@@ -1,0 +1,15 @@
+[Unit]
+Description=Monet: Steam's shader processing at idle priority, so it never slows the PC down
+# With the desktop, and gone with it. Looks for Steam's shader processes only while Steam runs.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-priority
+Restart=on-failure
+RestartSec=10
+Slice=background.slice
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical-session.target

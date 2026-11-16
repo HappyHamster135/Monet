@@ -109,7 +109,7 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -370,6 +370,8 @@ put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.serv
 put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
 put 644 "$SRC/systemd/user/monet-rest.service" "$USERUNITDIR/monet-rest.service"
 put 644 "$SRC/systemd/user/monet-rest.timer" "$USERUNITDIR/monet-rest.timer"
+# Steam's shader processing only uses what the rest of the PC leaves.
+put 644 "$SRC/systemd/user/monet-priority.service" "$USERUNITDIR/monet-priority.service"
 # Stay responsive when memory runs out (applied at every start; now too, outside an image build).
 put 644 "$SRC/tmpfiles/monet-memory.conf" "$TMPFILESDIR/monet-memory.conf"
 [ "$IMAGE" = 1 ] || systemd-tmpfiles --create "$TMPFILESDIR/monet-memory.conf" >/dev/null 2>&1 || true
@@ -504,6 +506,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl --global enable monet-work.service
     systemctl enable monet-keep-prepare.service monet-keep.timer
     systemctl --global enable monet-backup.timer monet-rest.timer
+    systemctl --global enable monet-priority.service
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
     systemctl enable monet-pairings.service
@@ -714,6 +717,7 @@ else
     systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true
     systemctl --global enable monet-backup.timer monet-rest.timer >/dev/null 2>&1 || true
+    systemctl --global enable monet-priority.service >/dev/null 2>&1 || true
     # Started now, so the next shutdown already puts a staged update on trial.
     systemctl enable --now monet-boot-arm.service >/dev/null 2>&1 || true
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \

@@ -28,7 +28,7 @@ if [ "$(id -u)" -ne 0 ]; then
         sed -i -e '/^\[KDE Control Module Restrictions\]$/,/^\[/{/^\[KDE Control Module Restrictions\]$/d;/^\[/!d}' \
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
-    systemctl --user stop monet-keep-awake.service monet-brightness.service >/dev/null 2>&1 || true
+    systemctl --user stop monet-keep-awake.service monet-brightness.service monet-priority.service >/dev/null 2>&1 || true
     systemctl --user disable --now monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
@@ -77,6 +77,9 @@ rm -f /etc/systemd/system/monet-keep-prepare.service /etc/systemd/system/monet-k
     /etc/systemd/system/monet-keep.timer /etc/systemd/user/monet-backup.service /etc/systemd/user/monet-backup.timer \
     /etc/systemd/user/monet-rest.service /etc/systemd/user/monet-rest.timer /etc/tmpfiles.d/monet-memory.conf \
     /etc/tmpfiles.d/monet-steam.conf
+# Steam's shader processing back at Steam's own priority (from the next sign-in).
+systemctl --global disable monet-priority.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-priority.service
 # No more trials for new Monets, resets or re-learning the security chip. An encrypted disk
 # stays encrypted, and still unlocks by itself: that's systemd's part.
 systemctl disable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
@@ -141,7 +144,7 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
-for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
