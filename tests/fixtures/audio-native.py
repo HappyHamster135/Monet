@@ -346,6 +346,26 @@ QtObject {
     Component.onCompleted: monetVolume.settings.levels = '{"id:org.monet.delayed-browser":0.83}'
     function actual() { return fake.Volume }
 }''')
+    # PipeWire applies a player's own starting volume (paplay --volume, a
+    # browser's level) only once its stream is set up, which can be just after
+    # the Home Bar restored the app's level. Like the sound server, this stream
+    # reports whatever was written to it last.
+    late = TEMP / 'LatePlayer.qml'
+    late.write_text('''import QtQuick
+import "''' + source.as_uri() + '''" as Dock
+QtObject {
+    id: pulseAudio
+    property int normalVolume: 65536
+    property Dock.MonetAppVolume monetVolume: Dock.MonetAppVolume {}
+    property int level: 65536
+    readonly property var fake: ({Client: {properties: {"application.id": "org.monet.late-player"}}, Muted: false, Corked: false,
+                                  get Volume() { return pulseAudio.level }, set Volume(value) { pulseAudio.level = value }})
+    property StreamDelegate stream: StreamDelegate { model: pulseAudio.fake }
+    function findStreamsFn(fn) { return [stream].filter(fn) }
+    component StreamDelegate: QtObject {''' + delegate + '''
+    Component.onCompleted: monetVolume.settings.levels = '{"id:org.monet.late-player":0.83}'
+    function saved() { return monetVolume.levels()["id:org.monet.late-player"] }
+}''')
     start_server()
     clip = TEMP / 'track.wav'
     with wave.open(str(clip), 'wb') as sound:
@@ -383,6 +403,20 @@ QtObject {
     delayed_client.setProperty('ready', True)
     wait_for(lambda: delayed_client.actual() == round(.83 * 65536), 'late app identity restores saved volume')
     delayed_client.deleteLater(); QTest.qWait(50)
+
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(late)))
+    late_player = component.create()
+    assert late_player is not None, [e.toString() for e in component.errors()]
+    wait_for(lambda: late_player.property('level') == round(.83 * 65536), 'saved volume restored')
+    late_player.setProperty('level', 65536)
+    wait_for(lambda: late_player.property('level') == round(.83 * 65536), "the player's late starting volume was put back")
+    # After the start, another mixer's change is the app's new level.
+    QTest.qWait(1100)
+    late_player.setProperty('level', round(.55 * 65536))
+    QTest.qWait(100)
+    assert late_player.property('level') == round(.55 * 65536), "another mixer's later change was undone"
+    assert abs(late_player.saved() - .55) < .002, late_player.saved()
+    late_player.deleteLater(); QTest.qWait(50)
 
     def controller():
         component = QQmlComponent(engine, QUrl.fromLocalFile(str(harness)))

@@ -47,6 +47,13 @@ QtObject {
         return true;
     }
 
+    // True when the app has a saved level and this stream is somewhere else.
+    function moved(stream) {
+        const value = levels()[key(stream)];
+        return Number.isFinite(value) && value >= 0 && value <= 1
+            && Math.abs(Math.round(value * normalVolume) - stream.volume) >= 2;
+    }
+
     // Another mixer moved an app the Home Bar remembers: keep the new level,
     // so the next track doesn't jump back to the old one. Like the Home Bar's
     // slider, an app's level is its loudest stream.

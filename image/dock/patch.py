@@ -33,10 +33,21 @@ def patch_audio(applet):
             }
             onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestore(false))
             Component.onCompleted: Qt.callLater(() => delegate.monetRestore(false))
-            // Later changes from any mixer become the app's level. The short
-            // wait skips a player setting its own level as it starts.
-            onVolumeChanged: if (monetRestored && Date.now() - monetRestoredAt > 1000)
-                pulseAudio.monetVolume.follow(delegate, pulseAudio.findStreamsFn(other => other.monetRestored))
+            // Later changes from any mixer become the app's level. A change in
+            // the first second is the player setting its own level as it
+            // starts. The sound server applies that level only once the stream
+            // is set up, which can be after the restore above, so put the
+            // app's level back then (a few times at most).
+            property int monetRetries: 0
+            onVolumeChanged: {
+                if (!monetRestored) return;
+                if (Date.now() - monetRestoredAt > 1000)
+                    pulseAudio.monetVolume.follow(delegate, pulseAudio.findStreamsFn(other => other.monetRestored));
+                else if (monetRetries < 5 && pulseAudio.monetVolume.moved(delegate)) {
+                    monetRetries++;
+                    Qt.callLater(() => pulseAudio.monetVolume.restore(delegate));
+                }
+            }
 
 ''')
     prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Client metadata can arrive after the stream was created or uncorked.
