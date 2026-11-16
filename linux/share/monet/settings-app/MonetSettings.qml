@@ -3870,6 +3870,7 @@ Shared.MonetWindow {
                         }
                     }
                     SettingRow {
+                        objectName: "manageWiredConnections"
                         tone: look
                         tappable: true
                         title: i18n("Manage wired connections…")

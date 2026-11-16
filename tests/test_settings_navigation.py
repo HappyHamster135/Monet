@@ -165,8 +165,9 @@ class SettingsNavigation(unittest.TestCase):
         caption = self.item("search-lan")
         self.assertTrue(caption.isVisible())
         self.assertEqual(self.window.property("highlightedItem"), caption)
-        manage = next(item for item in self.window.findChildren(QObject)
-                      if item.property("title") == self.words.i18n("Manage wired connections…"))
+        # Found by name in the window's items: wrapping every QObject in the window (timers,
+        # attached objects) tripped an assertion in Fedora's PySide in the next test.
+        manage = self.item("manageWiredConnections")
         manage.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Return)
         self.wait_for(lambda: ["helper", "kde", "wifi"] in self.helper.commands)
