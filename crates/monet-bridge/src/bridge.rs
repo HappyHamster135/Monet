@@ -1697,7 +1697,11 @@ impl faceit::Pc for KitPc<'_> {
         download_https(url, to)
     }
     fn signature(&self, file: &Path) -> Option<faceit::Signature> {
-        authenticode(file)
+        // Who signed it, in the log: what to look at when Windows' word and FACEIT's name differ.
+        let found = authenticode(file);
+        let said = found.as_ref().map(|s| format!("{} ({})", s.subject, if s.valid { "valid" } else { "not valid" }));
+        log(&format!("{}: signed by {}", file.display(), said.as_deref().unwrap_or("nobody Windows could tell")));
+        found
     }
     fn run(&self, part: &faceit::Part, _file: &Path) -> bool {
         run_kit_installer(self.kit, part, &|| self.stopped())
