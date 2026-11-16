@@ -200,6 +200,81 @@ class LookFeedback(unittest.TestCase):
         self.wait_for(lambda: self.window.property("updateState") == "done")
         self.assertTrue(action.property("restartReady"))
 
+    def test_betas_show_only_when_asked_and_install_only_from_their_own_button(self):
+        beta = {"version": "0.9.8-7", "number": 1, "tag": "0.9.8-7-beta.1",
+                "notes": "https://github.com/HappyHamster135/Monet/releases/tag/v0.9.8-7-beta.1"}
+        # The choice is kept (QtCore's Settings): each test starts and ends with it off.
+        self.window.setProperty("showBetas", False)
+        self.helper.replies["about"] = json.dumps({"monet": "0.9.8-6", "beta": 0})
+        self.helper.replies["update-check"] = json.dumps(dict(ok=True, system=False, apps=0, beta=beta, betaMessage=None))
+        self.window.setProperty("page", "updates")
+        self.wait_for(lambda: self.item("updateTitle").property("text") == "Monet 0.9.8-6")
+        switch, row, action = self.item("betaSwitch"), self.item("betaRow"), self.item("updateAction")
+        self.assertFalse(self.window.property("showBetas"))
+        self.assertFalse(row.property("visible"))
+
+        # Off, the normal check never asks for a beta.
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("updateState") == "none")
+        self.assertIn(["helper", "update-check"], self.helper.commands)
+        self.assertFalse(row.property("visible"))
+
+        # Turned on, it looks at once and shows the beta, with its notes; nothing installs.
+        switch.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: row.property("visible"))
+        self.assertIn(["helper", "update-check", "beta"], self.helper.commands)
+        self.assertEqual(row.property("title"), "Monet 0.9.8-7 beta 1")
+        self.assertIn("Not fully tested yet", row.property("detail"))
+        self.assertTrue(self.item("betaNotes").property("visible"))
+        install = self.item("betaInstall")
+        self.assertEqual(install.property("text"), self.words.i18n("Install beta"))
+        self.assertFalse(any(command[1] in ("update", "install-beta") for command in self.helper.commands))
+
+        # Install beta: exactly the one shown, then a restart.
+        self.helper.replies["install-beta"] = '{"ok":true,"staged":true,"message":"Done. Restart your PC to use the beta."}'
+        install.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("betaState") == "done")
+        self.assertIn(["helper", "install-beta", "0.9.8-7-beta.1"], self.helper.commands)
+        self.assertFalse(any(command[1] == "update" for command in self.helper.commands))
+        self.assertTrue(self.item("betaRestart").property("visible"))
+        self.assertFalse(install.property("visible"))
+
+        # Turned off: no beta shown, and the check is the release's again.
+        switch.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: not row.property("visible"))
+        count = self.helper.commands.count(["helper", "update-check"])
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.helper.commands.count(["helper", "update-check"]) == count + 1)
+
+    def test_a_beta_says_so_and_its_release_is_not_called_fixes(self):
+        self.window.setProperty("showBetas", False)
+        self.helper.replies["about"] = json.dumps({"monet": "0.9.8-7", "beta": 2})
+        self.window.setProperty("page", "updates")
+        self.wait_for(lambda: self.item("updateTitle").property("text") == "Monet 0.9.8-7 beta 2")
+        self.helper.replies["update-check"] = '{"ok":true,"system":true,"apps":0,"version":"0.9.8-7"}'
+        action = self.item("updateAction")
+        action.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("updateState") == "available")
+        self.assertEqual(self.item("updateTitle").property("text"), "Monet 0.9.8-7 is ready")
+        # No beta found, or none could be looked for: said plainly, with nothing to install.
+        self.helper.replies["update-check"] = json.dumps(dict(ok=True, system=False, apps=0, beta=None,
+                                                              betaMessage="Monet couldn't look for a new version."))
+        self.window.setProperty("updateState", "")
+        self.item("betaSwitch").forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        row = self.item("betaRow")
+        self.wait_for(lambda: row.property("visible"))
+        self.assertEqual(row.property("title"), "No newer beta right now")
+        self.assertEqual(row.property("detail"), "Monet couldn't look for a new version.")
+        self.assertFalse(self.item("betaInstall").property("visible"))
+        self.window.setProperty("showBetas", False)
+
     def test_security_shows_unknown_and_pending_checks_in_the_overview(self):
         state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete",
                      firewall="unavailable", selinux="enforcing", autoUpdates="on",

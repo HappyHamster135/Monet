@@ -61,7 +61,8 @@ function Installed {
     return (Get-ItemProperty -Path $key -Name DisplayVersion).DisplayVersion
 }
 
-# Monet's fourth number identifies an update after the three-part release.
+# Monet's fourth number identifies an update after the three-part release. A beta
+# (v0.9.8-7-beta.1) isn't one, so Bridge never installs a beta by itself.
 # (Monet hands this updater to a Bridge from 0.9.8 and before, as long as it has this function.)
 function ReleaseOrder([string]$name) {
     if ($name -notmatch '^\d+\.\d+\.\d+(?:-\d+)?$') { return $null }

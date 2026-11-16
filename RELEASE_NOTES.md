@@ -153,6 +153,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   0.9.8-6, it kept your own copy of its Applications and Processes pages, so
   the Graphics column beside CPU and Memory never appeared. It's added there
   now, after Memory, and your other columns stay as you had them.
+- **Try the next Monet early.** Turn on Show beta versions in Settings →
+  Updates to see betas, new versions that aren't fully tested yet, with their
+  release notes. One installs only when you choose Install beta, never by
+  itself, and once that version is released your PC moves to it on its own.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

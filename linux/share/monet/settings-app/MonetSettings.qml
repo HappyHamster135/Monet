@@ -53,6 +53,11 @@ Shared.MonetWindow {
         property alias windowWidth: sheet.width
         property alias windowHeight: sheet.height
     }
+    // Updates → Show beta versions, kept the same way: this person's choice, not the PC's.
+    Settings {
+        category: "Updates"
+        property alias showBetas: sheet.showBetas
+    }
     property string page: "light"
     property var searchResults: []
     property int searchRevision: 0
@@ -656,6 +661,15 @@ Shared.MonetWindow {
     property string updateMessage: ""
     property var updateHistory: ({ ok: false, items: [], state: "unknown" })
     property bool updateHistoryBusy: false
+    // Betas, for whoever turns on Show beta versions: what the last check offered ({ version,
+    // number, tag, notes }, or null), why it couldn't look, and installing it: "", "installing",
+    // "done" or "failed". Only Install beta installs one; the release replaces it by itself.
+    property bool showBetas: false
+    property var betaFound: null
+    property bool betaChecked: false
+    property string betaMessage: ""
+    property string betaState: ""
+    property bool betaStaged: false
     // Firmware for the PC's own parts (fwupd): the same states, and the updates.
     // Security: what keeps the PC safe (monet-quick security), the fix that's running, asking
     // before the restart into the firmware settings, and Monet's key asked for.
@@ -1200,14 +1214,47 @@ Shared.MonetWindow {
 
     function checkUpdates() {
         updateState = "checking"
-        ask("update-check", out => {
+        const betas = showBetas
+        ask("update-check" + (betas ? " beta" : ""), out => {
             const found = sheet.json(out, { ok: false })
             sheet.updateFound = found
             sheet.updateMessage = found.message || ""
             sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
+            if (betas && found.ok) {
+                sheet.betaFound = found.beta || null
+                sheet.betaMessage = found.betaMessage || ""
+                sheet.betaChecked = true
+            }
             sheet.loadUpdateHistory()
         })
         checkFirmware()
+    }
+
+    // Show beta versions: turned on, it looks for one at once.
+    function flipBetas() {
+        showBetas = !showBetas
+        if (!showBetas) {
+            betaFound = null
+            betaChecked = false
+            betaMessage = ""
+            if (betaState !== "installing") betaState = ""
+        } else if (updateState !== "checking" && updateState !== "installing" && betaState !== "installing") {
+            checkUpdates()
+        }
+    }
+
+    // Install beta: the one shown, and only from its own button.
+    function installBeta() {
+        const beta = betaFound
+        if (!beta || !/^\d{1,6}\.\d{1,6}\.\d{1,6}(-\d{1,6})?-beta\.[1-9]\d{0,5}$/.test(beta.tag || "")) return
+        betaState = "installing"
+        ask("install-beta " + beta.tag, out => {
+            const result = sheet.json(out, { ok: false, message: "" })
+            const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
+            sheet.betaMessage = result.ok ? "" : lines.length > 0 ? lines[lines.length - 1] : ""
+            sheet.betaStaged = result.staged === true
+            sheet.betaState = result.ok ? "done" : "failed"
+        })
     }
 
     function loadProfileHistory() {
@@ -1410,8 +1457,9 @@ Shared.MonetWindow {
         const found = updateFound
         if (updateState === "available" && found.system) {
             // The same Monet built again on a fixed base: fixes, not a new version. Older images
-            // carry their base's version ("44.20261012.1"), which isn't Monet's to show.
-            if (found.version && found.version === pc.monet) {
+            // carry their base's version ("44.20261012.1"), which isn't Monet's to show. On a
+            // beta, the same version is its release.
+            if (found.version && found.version === pc.monet && !(pc.beta > 0)) {
                 return i18n("Fixes for Monet %1 are ready", found.version)
             }
             return /^\d{1,2}\.\d{1,2}(\.\d{1,2})?(-\d+)?$/.test(found.version || "") ? i18n("Monet %1 is ready", found.version)
@@ -1423,6 +1471,7 @@ Shared.MonetWindow {
         if (updateState === "done") {
             return updateStaged ? i18n("Restart to finish") : i18n("Monet and your apps are up to date.")
         }
+        if (pc.monet && pc.beta > 0) return i18n("Monet %1", i18n("%1 beta %2", pc.monet, pc.beta))
         return pc.monet ? i18n("Monet %1", pc.monet) : i18n("Monet")
     }
 
@@ -8880,6 +8929,7 @@ Shared.MonetWindow {
                             Layout.fillWidth: true
                             spacing: 3
                             Text {
+                                objectName: "updateTitle"
                                 horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
                                 text: sheet.updateTitle()
@@ -8919,6 +8969,7 @@ Shared.MonetWindow {
                                 : sheet.updateState === "failed" ? i18n("Try again")
                                 : i18n("Check for updates")
                             enabledPill: sheet.updateState !== "checking" && sheet.updateState !== "installing"
+                                && sheet.betaState !== "installing"
                             onClicked: {
                                 if (sheet.updateState === "available") {
                                     sheet.installUpdates()
@@ -8945,6 +8996,70 @@ Shared.MonetWindow {
                         Switch {
                             tone: look
                             active: sheet.pc.autoUpdates !== false
+                        }
+                    }
+                }
+                // Betas: new versions out for testing, shown only to whoever asks, installed only
+                // from their own button. A PC on one moves to the release by itself once it's out.
+                Card {
+                    tone: look
+                    objectName: "betaCard"
+                    SettingRow {
+                        tone: look
+                        objectName: "betaSwitch"
+                        divider: false
+                        tappable: true
+                        checkable: true
+                        checked: sheet.showBetas
+                        title: i18n("Show beta versions")
+                        detail: i18n("Try new versions before everyone else. They're not fully tested yet, and they install only when you choose.")
+                        onTapped: sheet.flipBetas()
+                        Switch {
+                            tone: look
+                            active: sheet.showBetas
+                        }
+                    }
+                    SettingRow {
+                        id: betaRow
+                        readonly property var beta: sheet.betaFound
+                        tone: look
+                        objectName: "betaRow"
+                        visible: sheet.showBetas && (sheet.betaChecked || sheet.betaState !== "")
+                        title: beta ? i18n("Monet %1", i18n("%1 beta %2", beta.version, beta.number)) : i18n("No newer beta right now")
+                        detail: sheet.betaState === "installing" ? i18n("Downloading and installing. You can keep using your PC.")
+                            : sheet.betaState === "done" ? i18n("The beta starts the next time you restart.")
+                            : sheet.betaState === "failed" ? (sheet.betaMessage || i18n("Monet couldn't finish the update. Try again."))
+                            : sheet.betaMessage !== "" ? sheet.betaMessage
+                            : beta ? i18n("Not fully tested yet. Once it's released, your PC moves to the release by itself.")
+                            : i18n("When there's one, it shows here.")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                tone: look
+                                objectName: "betaNotes"
+                                visible: !!betaRow.beta
+                                text: i18n("Release notes")
+                                onClicked: Qt.openUrlExternally(betaRow.beta.notes)
+                            }
+                            Pill {
+                                tone: look
+                                objectName: "betaInstall"
+                                visible: !!betaRow.beta && sheet.betaState !== "done"
+                                kind: "lily"
+                                text: sheet.betaState === "installing" ? i18n("Installing…")
+                                    : sheet.betaState === "failed" ? i18n("Try again") : i18n("Install beta")
+                                enabledPill: sheet.betaState !== "installing" && sheet.updateState !== "checking"
+                                    && sheet.updateState !== "installing"
+                                onClicked: sheet.installBeta()
+                            }
+                            Pill {
+                                tone: look
+                                objectName: "betaRestart"
+                                visible: sheet.betaState === "done" && sheet.betaStaged
+                                kind: "lily"
+                                text: i18n("Restart now")
+                                onClicked: sheet.ask("restart")
+                            }
                         }
                     }
                 }
@@ -9306,7 +9421,7 @@ Shared.MonetWindow {
                         }
                         Text {
                             horizontalAlignment: Text.AlignLeft
-                            text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.monet) : i18n("Impression")
+                            text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.beta > 0 ? i18n("%1 beta %2", sheet.pc.monet, sheet.pc.beta) : sheet.pc.monet) : i18n("Impression")
                             color: "#E6FFFFFF"
                             font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                         }

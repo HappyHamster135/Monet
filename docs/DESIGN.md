@@ -736,7 +736,17 @@ a day (`monet-update.timer`, at low priority: the apps at once, a new Monet
 put in place for the next restart, never while you work), until Update
 automatically is turned off (`monet auto-updates off`, kept as
 `/var/lib/monet/auto-updates-off`). Bazzite's and KDE's own updaters stay
-masked, so only Monet's runs. Date & Time shows the time as your clocks will,
+masked, so only Monet's runs. Betas are for whoever turns on Show beta
+versions (kept in Settings' own `settings.conf`, not the PC's): the check then
+also asks `:beta`, and offers the newest beta that's fully out and newer than
+this Monet, with its release notes and its own Install beta. That switches the
+PC to the beta's own tag (`bootc switch --enforce-container-sigpolicy
+…:0.9.8-7-beta.1`, signed and checked like every release), which never moves,
+so automatic updates bring no beta. On a beta, the daily update and Check for
+updates look only at `:latest` and switch back to it once that's the beta's
+version or newer (not one that already went back on this PC). Updates names
+the beta it runs ("Monet 0.9.8-7 beta 1", from the running deployment's tag).
+A beta's installers keep the PC on that beta the same way. Date & Time shows the time as your clocks will,
 sets it from the internet and finds a time zone by its city; 24-hour time
 switches the locale Plasma exports at sign-in (`plasma-localerc`'s
 `[Formats] LC_TIME`, en_US ↔ en_GB, so dates follow), which Monet's clock,
@@ -1352,7 +1362,9 @@ is in use and installs on the way out. Two minutes after sign-in the
 window ever flashes over a game) asks GitHub for Monet's releases at most
 once a day (every Monet is a pre-release while it's a preview, so not
 `releases/latest`; a release still missing its Windows package or
-`SHA256SUMS.txt` is passed over), and when the newest is newer than Bridge it
+`SHA256SUMS.txt` is passed over, and so is a beta, `v0.9.8-7-beta.1`, which
+`ReleaseOrder` doesn't take for a release: Bridge follows releases only, even
+on a PC whose Monet is a beta), and when the newest is newer than Bridge it
 downloads `Monet-X-Windows.zip`, checks it against the release's
 `SHA256SUMS.txt` (listed there exactly once) and only then moves it, in one
 step, to `update-ready`. `update-checked` records the last look, and

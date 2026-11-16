@@ -38,10 +38,14 @@ function Invoke-RestMethod {
         [pscustomobject]@{tag_name=$tag; draft=$tag -eq 'v0.9.9'; assets=@(
             [pscustomobject]@{name="Monet-$($tag.Substring(1))-Windows.zip"}, [pscustomobject]@{name='SHA256SUMS.txt'})}
     }
+    # A beta's release carries its version's Windows package too (tools/beta-release.py).
+    [pscustomobject]@{tag_name='v0.9.8-13-beta.1'; draft=$false; assets=@(
+        [pscustomobject]@{name='Monet-0.9.8-13-Windows.zip'}, [pscustomobject]@{name='SHA256SUMS.txt'})}
 }
 Assert ((ReleaseOrder '0.9.8-5') -gt (ReleaseOrder '0.9.8')) 'A numbered update follows the base release'
 Assert ((ReleaseOrder '0.9.9') -gt (ReleaseOrder '0.9.8-12')) 'A later base release follows earlier updates'
 Assert ($null -eq (ReleaseOrder '0.9.8-test')) 'Unrecognized suffixes must be skipped'
+Assert ($null -eq (ReleaseOrder '0.9.8-13-beta.1')) 'A beta is never a release Bridge installs by itself'
 $latest = Newest
 Assert ($latest.Version -eq '0.9.8-12' -and $latest.Package.name -eq 'Monet-0.9.8-12-Windows.zip') 'Select the newest published numeric update and its exact asset'
 function Invoke-RestMethod {

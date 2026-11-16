@@ -1,4 +1,5 @@
 """Automatic retries obey the network gate; no real updater is invoked."""
+import contextlib
 import os
 import json
 from pathlib import Path
@@ -53,6 +54,74 @@ class UpdateFeedback(unittest.TestCase):
         with patch.object(helper.subprocess, "Popen", Root):
             result = helper.update_check()
         self.assertEqual(result, {"ok": False, "message": "Checking for updates took too long. Try again."})
+
+
+class Betas(unittest.TestCase):
+    """Settings' side of betas: looked for only when asked, installed only by name."""
+    BETA = {"version": "0.9.8-7", "number": 2, "tag": "0.9.8-7-beta.2",
+            "notes": "https://github.com/HappyHamster135/Monet/releases/tag/v0.9.8-7-beta.2"}
+
+    def setUp(self):
+        self.helper = quick_helper()
+
+    def check(self, report, beta):
+        with patch.object(self.helper, "run_as_admin",
+                          return_value=subprocess.CompletedProcess([], 0, json.dumps(report), "")) as run:
+            return self.helper.update_check(beta=beta), run.call_args.args[0]
+
+    def test_the_release_check_is_unchanged_and_a_beta_is_asked_for_only_with_the_switch(self):
+        result, command = self.check({"system": False, "apps": 0}, False)
+        self.assertEqual(command[1:], ["update", "--check", "--json"])
+        self.assertEqual(result, {"system": False, "apps": 0, "ok": True})
+        result, command = self.check({"system": True, "apps": 1, "version": "0.9.8-7", "beta": self.BETA,
+                                      "betaMessage": None}, True)
+        self.assertEqual(command[1:], ["update", "--check", "--json", "--beta"])
+        self.assertEqual(result["beta"], self.BETA)
+        self.assertTrue(result["ok"] and result["system"])
+
+    def test_only_a_well_formed_beta_of_monets_own_is_offered(self):
+        for change in ({"tag": "0.9.8-7-beta.0"}, {"tag": "latest"}, {"number": 3}, {"version": "0.9.8-6"},
+                       {"notes": "https://example.invalid/v0.9.8-7-beta.2"}, {"tag": "0.9.8-7-beta.2 --apply"}):
+            with self.subTest(change=change):
+                result, _ = self.check({"system": False, "apps": 0, "beta": dict(self.BETA, **change)}, True)
+                self.assertTrue(result["ok"])
+                self.assertIsNone(result["beta"])
+        result, _ = self.check({"system": False, "apps": 0, "beta": None, "betaMessage": "No network"}, True)
+        self.assertEqual((result["beta"], result["betaMessage"]), (None, "No network"))
+        result, _ = self.check({"system": False, "apps": 0, "beta": "0.9.8-7-beta.2", "betaMessage": 5}, True)
+        self.assertEqual((result["beta"], result["betaMessage"]), (None, None))
+
+    def test_install_beta_installs_exactly_the_one_named(self):
+        with patch.object(self.helper.subprocess, "run",
+                          return_value=subprocess.CompletedProcess([], 0, "Done. Restart your PC to use the beta.", "")) as run, \
+                patch.object(self.helper, "update_display_awake", contextlib.nullcontext), \
+                patch.object(self.helper, "update_waiting", return_value=True):
+            for bad in ("", "latest", "0.9.8-7", "0.9.8-7-beta.2;reboot", "--apply", "0.9.8-7-beta.02"):
+                self.assertFalse(self.helper.install_beta(bad)["ok"], bad)
+            run.assert_not_called()
+            reply = self.helper.install_beta("0.9.8-7-beta.2")
+        self.assertEqual(run.call_args.args[0][1:], ["update", "--beta", "0.9.8-7-beta.2"])
+        self.assertEqual(reply, {"ok": True, "message": "Done. Restart your PC to use the beta.", "staged": True})
+
+    def test_the_running_beta_is_read_from_its_image_tag(self):
+        signed = "ostree-image-signed:docker://ghcr.io/happyhamster135/"
+        for deployments, number in (
+            ([{"booted": True, "container-image-reference": signed + "monet:0.9.8-7-beta.2"}], 2),
+            ([{"booted": True, "container-image-reference": signed + "monet-amd:0.9.9-beta.12"}], 12),
+            ([{"booted": True, "container-image-reference": signed + "monet:latest"},
+              {"staged": True, "container-image-reference": signed + "monet:0.9.8-7-beta.2"}], 0),
+            ([{"booted": False, "container-image-reference": signed + "monet:0.9.8-7-beta.2"}], 0),
+            ([{"booted": True, "container-image-reference": "ostree-image-signed:docker://ghcr.io/other/monet:0.9.8-7-beta.2"}], 0),
+            ([{"booted": True, "container-image-reference": signed + "monet@sha256:" + "a" * 64}], 0),
+            ([{"booted": True}], 0), ("bad", 0), (None, 0),
+        ):
+            with self.subTest(deployments=deployments):
+                self.assertEqual(self.helper.running_beta(deployments), number)
+        bus = json.dumps({"type": "aa{sv}", "data": [
+            {"booted": {"type": "b", "data": True},
+             "container-image-reference": {"type": "s", "data": signed + "monet:0.9.8-7-beta.3"}}]})
+        with patch.object(self.helper, "run", side_effect=[None, bus]):
+            self.assertEqual(self.helper.installed_beta(), 3)
 
 
 class UpdateHistory(unittest.TestCase):

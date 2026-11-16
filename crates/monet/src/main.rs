@@ -9,6 +9,7 @@ macro_rules! t {
     };
 }
 
+mod beta;
 mod efivarfs;
 mod esp;
 mod trip;
@@ -49,6 +50,10 @@ Usage:
   monet update              Install the newest Monet and app updates (Monet starts
                             the new version at the next restart)
   monet update --check      Only look: is there anything new?
+  monet update --beta       Install the newest beta: a Monet that's out for testing
+                            before its release (that release replaces it by itself)
+  monet update --check --beta
+                            Also look for a beta
   monet auto-updates on|off Update by itself in the background (on unless turned off)
   monet rollback            Go back to the Monet from before the last update (at the
                             next restart)
@@ -81,6 +86,8 @@ fn main() -> ExitCode {
     }
     let confirm = args.iter().any(|a| a == "--confirm");
     let json = args.iter().any(|a| a == "--json");
+    let check = args.iter().any(|a| a == "--check");
+    let wants_beta = args.iter().any(|a| a == "--beta");
     let mut words = Vec::new();
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
@@ -125,13 +132,29 @@ fn main() -> ExitCode {
         ["windows"] => switch(None, None, confirm),
         ["doctor"] => doctor(),
         ["make-default"] => elevate(&["helper", "make-default"]),
-        ["update"] if args.iter().any(|a| a == "--check") => {
-            let helper: &[&str] = if json { &["helper", "update", "--check", "--json"] } else { &["helper", "update", "--check"] };
+        ["update"] if check => {
+            let helper: &[&str] = match (json, wants_beta) {
+                (true, true) => &["helper", "update", "--check", "--json", "--beta"],
+                (true, false) => &["helper", "update", "--check", "--json"],
+                (false, true) => &["helper", "update", "--check", "--beta"],
+                (false, false) => &["helper", "update", "--check"],
+            };
             elevate(helper)
         }
+        // A beta, only when asked for: the newest, or the one Settings showed.
+        ["update", wanted @ ..] if wants_beta && wanted.len() <= 1 => {
+            if wanted.iter().any(|tag| beta::Beta::parse(tag).is_none()) {
+                Err("That isn't one of Monet's betas.".to_string())
+            } else {
+                let mut helper = vec!["helper", "update", "--beta"];
+                helper.extend(wanted);
+                elevate(&helper)
+            }
+        }
         ["update"] => elevate(&["helper", "update"]),
-        ["helper", "update"] => inhibited_update(args.iter().any(|a| a == "--check"), json,
-            args.iter().any(|a| a == "--inhibited")),
+        ["helper", "update"] => inhibited_update(check, json, args.iter().any(|a| a == "--inhibited"), wants_beta, None),
+        ["helper", "update", wanted] if wants_beta && !check =>
+            inhibited_update(false, json, args.iter().any(|a| a == "--inhibited"), true, Some(*wanted)),
         ["auto-updates", which @ ("on" | "off")] => elevate(&["helper", "auto-updates", *which]),
         ["helper", "auto-updates", which @ ("on" | "off")] => helper_auto_updates(*which == "on"),
         ["rollback"] => elevate(&["helper", "rollback"]),
@@ -1099,18 +1122,25 @@ fn update_lock() -> Res<fs::File> {
     Ok(file)
 }
 
-fn inhibited_update(check: bool, json: bool, inhibited: bool) -> Res<()> {
+/// `beta`: with `check`, look for a beta too; without, install one (the newest, or `wanted`).
+fn inhibited_update(check: bool, json: bool, inhibited: bool, beta: bool, wanted: Option<&str>) -> Res<()> {
     require_root()?;
+    if wanted.is_some_and(|tag| beta::Beta::parse(tag).is_none()) {
+        return Err("That isn't one of Monet's betas.".into());
+    }
     if check || inhibited {
-        return helper_update(check, json);
+        return if beta && !check { helper_install_beta(wanted) } else { helper_update(check, json, beta) };
     }
     // One inhibitor spans the OS and app transactions, for both the timer and
     // manual CLI. Never use --apply: only the person chooses when to restart.
-    let status = Command::new("systemd-inhibit")
-        .args(["--what=sleep", "--mode=block", "--who=Monet", "--why=Installing updates", "--"])
+    let mut command = Command::new("systemd-inhibit");
+    command.args(["--what=sleep", "--mode=block", "--who=Monet", "--why=Installing updates", "--"])
         .arg(std::env::current_exe().map_err(|e| e.to_string())?)
-        .args(["helper", "update", "--inhibited"])
-        .status().map_err(|e| format!("Couldn't keep the PC awake for the update: {e}"))?;
+        .args(["helper", "update", "--inhibited"]);
+    if beta {
+        command.arg("--beta").args(wanted);
+    }
+    let status = command.status().map_err(|e| format!("Couldn't keep the PC awake for the update: {e}"))?;
     if status.success() { Ok(()) } else { Err(String::new()) }
 }
 
@@ -1134,8 +1164,119 @@ fn update_is_staged(bootc: bool) -> Option<bool> {
     Some(deployments.iter().any(|entry| entry.get("staged").and_then(serde_json::Value::as_bool) == Some(true)))
 }
 
+// ------------------------------------------------- betas (beta.rs)
+
+/// The Monet this PC starts next, from rpm-ostree, which reads it on bootc's systems too.
+fn followed_image() -> Option<beta::Image> {
+    let out = Command::new("rpm-ostree").args(["status", "--json"]).env("LC_ALL", "C").output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    beta::next_image(&serde_json::from_slice(&out.stdout).ok()?)
+}
+
+/// The beta this PC is on (or starts at the next restart), if it's one of Monet's.
+fn followed_beta() -> Option<(beta::Image, beta::Beta)> {
+    let image = followed_image()?;
+    let beta = image.beta()?;
+    Some((image, beta))
+}
+
+/// What the registry says of an image; None when it has no such image.
+fn inspect(image: &str, tags: bool) -> Res<Option<beta::Inspected>> {
+    let mut command = Command::new("skopeo");
+    command.args(["--command-timeout", "120s", "inspect"]);
+    if !tags {
+        command.arg("--no-tags");
+    }
+    let out = command.arg(format!("docker://{image}")).env("LC_ALL", "C").output()
+        .map_err(|e| format!("Monet couldn't look for a new version. {e}"))?;
+    if !out.status.success() {
+        if String::from_utf8_lossy(&out.stderr).to_lowercase().contains("manifest unknown") {
+            return Ok(None);
+        }
+        return Err(update_error("Monet couldn't look for a new version.", &out));
+    }
+    beta::parse_inspect(&out.stdout).map(Some).ok_or_else(|| "The download server's answer wasn't understood.".into())
+}
+
+/// The update that didn't start on this PC, so it went back (monet-boot's note).
+fn went_back_digest() -> Option<String> {
+    let note: serde_json::Value = serde_json::from_slice(&fs::read(state_dir().join("went-back.json")).ok()?).ok()?;
+    note.get("digest")?.as_str().map(str::to_string)
+}
+
+/// For a PC on a beta: the release it moves to, once that's the beta's version or newer.
+fn release_after_beta(image: &beta::Image, on: &beta::Beta) -> Res<Option<beta::Inspected>> {
+    let Some(latest) = inspect(&format!("{}:latest", image.repository), false)? else {
+        return Ok(None);
+    };
+    Ok(beta::leaves_beta(on, &latest, went_back_digest().as_deref()).then_some(latest))
+}
+
+/// The newest beta that's fully out (`:beta` points at it) and newer than `image`.
+fn newest_beta(image: &beta::Image) -> Res<Option<beta::Beta>> {
+    if !image.official() {
+        return Ok(None);
+    }
+    let Some(rolling) = inspect(&format!("{}:beta", image.repository), true)? else {
+        return Ok(None);
+    };
+    // One still being published has its own tag but isn't :beta yet: the one before is.
+    let newer = beta::betas(&rolling.tags).into_iter().filter(|b| image.older_than(b, monet_core::VERSION));
+    for candidate in newer.take(3) {
+        let found = inspect(&format!("{}:{}", image.repository, candidate.tag()), false)?;
+        if found.is_some_and(|found| found.digest == rolling.digest) {
+            return Ok(Some(candidate));
+        }
+    }
+    Ok(None)
+}
+
+/// Moves this PC to another tag of its image, checked against Monet's key like every update.
+fn switch_command(bootc: bool, image: &str) -> Command {
+    let mut command;
+    if bootc {
+        command = Command::new("bootc");
+        command.args(["switch", "--enforce-container-sigpolicy", image]);
+    } else {
+        command = Command::new("rpm-ostree");
+        command.args(["rebase", &format!("ostree-image-signed:docker://{image}")]);
+    }
+    command.env("LC_ALL", "C");
+    command
+}
+
+/// Installs a beta, only ever when someone chose it (Settings → Updates → Install beta, or
+/// `monet update --beta`). The PC then follows that beta's own tag, which never moves, so the
+/// daily update brings no other beta, and moves back to the release once that's out.
+fn helper_install_beta(wanted: Option<&str>) -> Res<()> {
+    require_root()?;
+    let _lock = update_lock()?;
+    let image = followed_image().filter(beta::Image::official)
+        .ok_or("Betas come only for Monet's own system images.")?;
+    let offered = newest_beta(&image)?.ok_or("There's no newer beta right now.")?;
+    if wanted.is_some_and(|tag| tag != offered.tag()) {
+        return Err("The beta on offer has changed. Check for updates again.".into());
+    }
+    progress(&format!("Downloading Monet {} beta {}…", offered.version, offered.number));
+    let output = switch_command(has("bootc"), &format!("{}:{}", image.repository, offered.tag()))
+        .output().map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(update_error("The beta didn't install.", &output));
+    }
+    progress("Done. Restart your PC to use the beta.");
+    Ok(())
+}
+
 fn check_for_updates() -> Res<UpdateCheck> {
-    let (system, version) = if has("bootc") {
+    let (system, version) = if let Some((image, on)) = followed_beta() {
+        // On a beta: only the release of its version, or a newer one, is an update.
+        match release_after_beta(&image, &on)? {
+            Some(latest) => (true, latest.version),
+            None => (false, None),
+        }
+    } else if has("bootc") {
         let out = Command::new("bootc").args(["upgrade", "--check"]).env("LC_ALL", "C")
             .output().map_err(|e| e.to_string())?;
         if !out.status.success() {
@@ -1225,40 +1366,70 @@ fn helper_rollback() -> Res<()> {
 
 /// Looks for updates, or installs them: when someone asks (Settings → Updates,
 /// `monet update`), and daily by itself unless that's turned off (monet-update.timer).
-fn helper_update(check: bool, json: bool) -> Res<()> {
+fn helper_update(check: bool, json: bool, beta: bool) -> Res<()> {
     require_root()?;
     let _lock = update_lock()?;
     if check {
         let found = check_for_updates()?;
+        // A beta, for whoever asked to see them: looked for after the release, and a beta
+        // that can't be looked for never hides what the check found.
+        let offered = beta.then(|| followed_image().map_or(Ok(None), |image| newest_beta(&image)));
         if json {
-            let value = serde_json::json!({ "system": found.system, "version": found.version,
+            let mut value = serde_json::json!({ "system": found.system, "version": found.version,
                 "apps": found.apps, "message": found.app_error });
+            if let Some(offered) = &offered {
+                value["beta"] = match offered {
+                    Ok(Some(b)) => serde_json::json!({ "version": b.version, "number": b.number,
+                        "tag": b.tag(), "notes": b.notes() }),
+                    _ => serde_json::Value::Null,
+                };
+                value["betaMessage"] = offered.as_ref().err().map_or(serde_json::Value::Null, |e| e.as_str().into());
+            }
             println!("{value}");
-        } else if !found.system && found.apps == 0 {
-            println!("Monet and your apps are up to date.");
         } else {
-            if found.system {
-                println!("A new version of Monet is ready to install.");
+            if !found.system && found.apps == 0 {
+                println!("Monet and your apps are up to date.");
+            } else {
+                if found.system {
+                    println!("A new version of Monet is ready to install.");
+                }
+                if found.apps > 0 {
+                    println!("{} app update{} ready to install.", found.apps, if found.apps == 1 { " is" } else { "s are" });
+                }
+                println!("Run `monet update` to install.");
+                if let Some(error) = found.app_error { eprintln!("{error}"); }
             }
-            if found.apps > 0 {
-                println!("{} app update{} ready to install.", found.apps, if found.apps == 1 { " is" } else { "s are" });
+            match offered {
+                Some(Ok(Some(b))) => println!("Monet {} beta {} is out to try. Run `monet update --beta` to install it.",
+                    b.version, b.number),
+                Some(Ok(None)) => println!("There's no newer beta right now."),
+                Some(Err(error)) => eprintln!("{error}"),
+                None => {}
             }
-            println!("Run `monet update` to install.");
-            if let Some(error) = found.app_error { eprintln!("{error}"); }
         }
         return Ok(());
     }
 
     progress("Downloading the newest Monet…");
     let bootc = has("bootc");
-    let output = if bootc {
-        Command::new("bootc").arg("upgrade").env("LC_ALL", "C").output()
-    } else {
-        Command::new("rpm-ostree").arg("upgrade").env("LC_ALL", "C").output()
-    }
-    .map_err(|e| e.to_string())?;
-    if !output.status.success() {
-        return Err(update_error("The system update didn't finish.", &output));
+    let output = match followed_beta() {
+        // On a beta: its release (or a newer one) once that's out. Until then the beta
+        // stays, and only Install beta brings another.
+        Some((image, on)) => match release_after_beta(&image, &on)? {
+            Some(_) => Some(switch_command(bootc, &format!("{}:latest", image.repository)).output()),
+            None => None,
+        },
+        None => Some(if bootc {
+            Command::new("bootc").arg("upgrade").env("LC_ALL", "C").output()
+        } else {
+            Command::new("rpm-ostree").arg("upgrade").env("LC_ALL", "C").output()
+        }),
+    };
+    if let Some(output) = output {
+        let output = output.map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(update_error("The system update didn't finish.", &output));
+        }
     }
     let staged = update_is_staged(bootc);
     if has("flatpak") {
@@ -1438,6 +1609,18 @@ mod tests {
         let mut input = std::io::Cursor::new("continue\n");
         assert!(await_saved_apps(&mut input, &mut Closed).is_err());
         assert_eq!(input.position(), 0);
+    }
+
+    #[test]
+    fn betas_and_their_releases_are_switched_to_with_the_signature_checked() {
+        let command = switch_command(true, "ghcr.io/happyhamster135/monet:0.9.8-7-beta.1");
+        assert_eq!(command.get_program(), "bootc");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["switch", "--enforce-container-sigpolicy", "ghcr.io/happyhamster135/monet:0.9.8-7-beta.1"]);
+        let command = switch_command(false, "ghcr.io/happyhamster135/monet-amd:latest");
+        assert_eq!(command.get_program(), "rpm-ostree");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, ["rebase", "ostree-image-signed:docker://ghcr.io/happyhamster135/monet-amd:latest"]);
     }
 
     #[test]

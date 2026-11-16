@@ -170,7 +170,9 @@
     monet-quick about                    this PC, as JSON
     monet-quick report                   save a report (logs, the PC, Monet's records) in Documents; its name as JSON
     monet-quick doctor                   run `monet doctor`
-    monet-quick update-check             is there a newer Monet, or app updates? as JSON
+    monet-quick update-check [beta]      is there a newer Monet, or app updates? as JSON (and a beta
+                                         to try, with beta)
+    monet-quick install-beta TAG         install that beta, when someone chose it
     monet-quick update-history           recent automatic results, read-only and on demand
     monet-quick update                   install them now (by itself, it does once a day)
     monet-quick auto-updates on|off      update by itself, or only when asked
@@ -1132,11 +1134,29 @@ def run_as_admin(argv, timeout):
     return subprocess.CompletedProcess(argv, process.returncode, out, err)
 
 
-def update_check():
-    """What `monet update --check --json` found, plus whether it worked."""
+# A beta's image tag (tools/beta-release.py), and where its notes are.
+BETA_TAG = re.compile(r"(\d+\.\d+\.\d+(?:-\d+)?)-beta\.([1-9][0-9]{0,5})")
+BETA_NOTES = "https://github.com/HappyHamster135/Monet/releases/tag/v"
+
+
+def offered_beta(found):
+    """The beta `monet update --check --beta` offered, checked, or None."""
+    if not isinstance(found, dict) or not isinstance(found.get("tag"), str):
+        return None
+    match = BETA_TAG.fullmatch(found["tag"])
+    if not match or found.get("version") != match[1] or found.get("number") != int(match[2]) \
+            or found.get("notes") != BETA_NOTES + found["tag"]:
+        return None
+    return {"version": match[1], "number": int(match[2]), "tag": found["tag"], "notes": found["notes"]}
+
+
+def update_check(beta=False):
+    """What `monet update --check --json` found, plus whether it worked. With `beta`, also the
+    newest beta newer than this Monet ("beta", or None) and why one couldn't be looked for."""
     failure = tr("Monet couldn't check for updates. Try again.")
     try:
-        result = run_as_admin([f"{BINDIR}/monet", "update", "--check", "--json"], timeout=300)
+        result = run_as_admin([f"{BINDIR}/monet", "update", "--check", "--json", *(["--beta"] if beta else [])],
+                              timeout=300)
     except subprocess.TimeoutExpired:
         return {"ok": False, "message": tr("Checking for updates took too long. Try again.")}
     except OSError as error:
@@ -1150,6 +1170,10 @@ def update_check():
             if (isinstance(found, dict) and isinstance(found.get("system"), bool)
                     and type(found.get("apps")) is int and found["apps"] >= 0
                     and (found.get("version") is None or isinstance(found["version"], str))):
+                if beta:
+                    message = found.get("betaMessage")
+                    found = dict(found, beta=offered_beta(found.get("beta")),
+                                 betaMessage=message if isinstance(message, str) else None)
                 return dict(found, ok=True)
     message = (result.stderr or result.stdout).strip().splitlines()
     return {"ok": False, "message": message[-1] if message and result.returncode != 0 else failure}
@@ -1185,6 +1209,53 @@ def update_display_awake():
                 bus.close()
             except Exception:
                 pass  # A lost bus has already released the connection's hold.
+
+
+def install_beta(tag):
+    """Installs the beta Settings showed, only when someone chose it. It's used from the next
+    restart, and the release of its version replaces it by itself (monet update)."""
+    if not BETA_TAG.fullmatch(tag or ""):
+        return {"ok": False, "message": tr("Monet couldn't finish the update. Try again."), "staged": update_waiting()}
+    with update_display_awake():
+        try:
+            result = subprocess.run([f"{BINDIR}/monet", "update", "--beta", tag], capture_output=True, text=True)
+            reply = {"ok": result.returncode == 0, "message": (result.stdout + result.stderr).strip()}
+        except OSError as error:
+            reply = {"ok": False, "message": str(error)}
+        reply["staged"] = update_waiting()
+        return reply
+
+
+def running_beta(deployments):
+    """The number of the beta this Monet is (0 for a release): its image's own tag, as
+    `rpm-ostree status` names it for the deployment that's running."""
+    if not isinstance(deployments, list):
+        return 0
+    booted = [entry for entry in deployments if isinstance(entry, dict) and entry.get("booted") is True]
+    reference = booted[0].get("container-image-reference") if len(booted) == 1 else None
+    if not isinstance(reference, str) or "@" in reference:
+        return 0
+    match = BETA_TAG.fullmatch(reference.rpartition(":")[2])
+    return int(match[2]) if match and "/happyhamster135/monet" in reference else 0
+
+
+def installed_beta():
+    try:
+        status = json.loads(run("rpm-ostree", "status", "--json", timeout=15) or "{}")
+    except ValueError:
+        status = None
+    if isinstance(status, dict) and isinstance(status.get("deployments"), list):
+        return running_beta(status["deployments"])
+    # A fresh encrypted install keeps the OSTree repository private (as update_waiting).
+    service = "org.projectatomic.rpmostree1"
+    deployments = busjson("--system", "--allow-interactive-authorization=no", "get-property",
+                          service, "/org/projectatomic/rpmostree1/Sysroot",
+                          service + ".Sysroot", "Deployments")
+    try:
+        return running_beta([{name: entry[name]["data"] for name in ("booted", "container-image-reference")
+                              if name in entry} for entry in deployments or []])
+    except (KeyError, TypeError):
+        return 0
 
 
 def install_updates():
@@ -7791,6 +7862,8 @@ def about():
         "notice": read_text(Path("/var/lib/monet/switch-notice")),
         "setup": read_text(WINDOWS_SETUP_STATUS),
         "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
+        # A beta's number (Settings shows "Monet 0.9.8-7 beta 1"); 0 for a release.
+        "beta": installed_beta(),
     }
 
 
@@ -9727,7 +9800,9 @@ def main(argv):
             reply = {"ok": False}
         emit(reply)
     elif cmd == "update-check":
-        emit(update_check())
+        emit(update_check(beta=args[:1] == ["beta"]))
+    elif cmd == "install-beta" and len(args) == 1:
+        emit(install_beta(args[0]))
     elif cmd == "update-history":
         emit(update_history())
     elif cmd == 'profile-recovery':

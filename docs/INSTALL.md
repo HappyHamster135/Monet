@@ -343,6 +343,46 @@ monet update              # install, then restart
 monet auto-updates off    # only when you ask (on turns it back)
 ```
 
+### Testing a beta
+
+A beta is the next Monet, out to try before it's released to everyone. It
+isn't fully tested yet. To see betas, turn on **Settings → Updates → Show
+beta versions**. When there's a beta newer than your Monet, Updates shows it
+with a link to its release notes. Choose **Install beta**, then **Restart
+now**, and Updates says which one you're on, like "Monet 0.9.8-7 beta 1".
+
+A beta only ever installs when you choose Install beta: automatic updates
+and Check for updates bring releases only. On a beta, the next beta comes
+the same way, from its button. Once the release of that version (or a newer
+one) is out, the daily update moves your PC to it by itself, and you're back
+on releases. Turning Show beta versions off keeps the beta you have until
+then. Betas are signed with the same key as every release, and checked the
+same way.
+
+From a terminal:
+
+```sh
+monet update --check --beta   # is there a beta?
+monet update --beta           # install it, then restart
+```
+
+**First beta on Monet 0.9.8-6 or earlier**, which don't have the switch yet:
+install it once with bootc, with the number from the beta's release page (here
+beta 1 of 0.9.8-7):
+
+```sh
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/happyhamster135/monet:0.9.8-7-beta.1
+```
+
+If `sudo bootc status` shows `monet-amd` (AMD or Intel graphics, or an older
+NVIDIA card), use `ghcr.io/happyhamster135/monet-amd:0.9.8-7-beta.1` instead.
+Restart when it's done. From then on, Settings → Updates has the switch.
+
+To install a beta from a USB stick, download its `Monet-X-Setup.iso` from the
+beta's release page and drop it onto Make-USB-Stick.exe. A PC installed from
+it stays on that beta in the same way. Monet Bridge in Windows keeps updating
+from releases only.
+
 ### First signed update from 0.9.7
 
 Monet 0.9.8 Setup and the Fedora fallback configure signature verification for
