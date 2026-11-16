@@ -8,7 +8,7 @@
 #   monet-look --reset   the same, and what someone changed since goes back to Monet's (Settings' Put back)
 #   monet-look --names   only give the apps their plain names
 #   monet-look --store   repair old Store shortcuts without changing the desktop's look
-#   monet-look --games-gpu  only start games on a laptop's NVIDIA chip
+#   monet-look --games-gpu  only which graphics games start on (a laptop's NVIDIA chip, a desktop's card)
 #   monet-look --keys    only Windows' keyboard shortcuts (monet-keys.service, before KWin reads them)
 #   monet-look --widget-keys  only Windows+A for Quick Settings and Windows+G for Games (Plasma running)
 set -u
@@ -50,11 +50,12 @@ ocr_language() {
 # this account's menu, marked as Monet's so uninstalling takes them away.
 # Also on its own (--names): monet-names.path runs it when the apps chosen at
 # setup have arrived, so they get their plain names too.
+# Where apps keep their menu entries: Flathub's, for the whole PC and for this account, and the image's.
+MENUS=(/var/lib/flatpak/exports/share/applications "$DATA/flatpak/exports/share/applications" /usr/share/applications)
 entry() { # entry <id>: where the app keeps its menu entry
-    local f
-    for f in "/var/lib/flatpak/exports/share/applications/$1.desktop" \
-             "$DATA/flatpak/exports/share/applications/$1.desktop" "/usr/share/applications/$1.desktop"; do
-        [ -f "$f" ] && { echo "$f"; return 0; }
+    local d
+    for d in "${MENUS[@]}"; do
+        [ -f "$d/$1.desktop" ] && { echo "$d/$1.desktop"; return 0; }
     done
     return 1
 }
@@ -280,41 +281,133 @@ plain_names() {
     fi
 }
 
-# A laptop with an NVIDIA chip beside its built-in graphics, NVIDIA's driver loaded.
-hybrid_nvidia() {
-    local d cards=0 nvidia=0
-    [ -d /sys/module/nvidia ] || return 1
-    for d in /sys/bus/pci/devices/*; do
+# The PC's graphics. A menu entry's PrefersNonDefaultGPU starts an app on the graphics the PC
+# doesn't start on (boot_vga): the strong one on a laptop that starts on its built-in graphics,
+# but the weak one on a PC that starts on a card of its own while the processor's graphics are on
+# too (a desktop with a Ryzen 7000 or newer, say). Steam's entry has it, and Steam's games
+# inherit it.
+SYS=/sys
+
+# Each display controller: its PCI address, maker, 1 if the PC starts on it, and 1 if it's the
+# processor's own. Intel's sit on the root bus (00:02.0), a Ryzen's behind AMD's internal bridge
+# (00:08.x, where every Ryzen with graphics has had them); a card in a slot, or a laptop's NVIDIA
+# or Radeon chip, is behind a port of its own. NVIDIA's are never the processor's.
+graphics() {
+    local d address parent vendor builtin
+    for d in "$SYS"/bus/pci/devices/*; do
         case "$(cat "$d/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
-        cards=$((cards + 1))
-        [ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] && nvidia=1
+        address="${d##*/}"
+        parent="$(basename "$(dirname "$(readlink -f "$d")")")"
+        vendor="$(cat "$d/vendor" 2>/dev/null)"
+        builtin=0
+        case "$address $parent" in ????:00:*|*" "????:00:08.?) builtin=1 ;; esac
+        [ "$vendor" = 0x10de ] && builtin=0
+        echo "$address $vendor $(cat "$d/boot_vga" 2>/dev/null || echo 0) $builtin"
     done
-    [ "$nvidia" = 1 ] && [ "$cards" -gt 1 ]
 }
 
-# On such a laptop, games and the emulators that are games start on the NVIDIA
-# chip (PrefersNonDefaultGPU), from copies of their menu entries marked as
-# Monet's. Everything else keeps to the built-in graphics, Steam and the
-# launchers that stay open in the tray too, which saves the battery; Proton's
-# games choose the NVIDIA chip by themselves. At sign-in and as apps arrive.
-games_gpu() {
-    local app f mine work
-    hybrid_nvidia || return 0
-    for app in org.prismlauncher.PrismLauncher org.vinegarhq.Sober org.libretro.RetroArch net.retrodeck.retrodeck \
-        org.DolphinEmu.dolphin-emu net.pcsx2.PCSX2 net.rpcs3.RPCS3 org.ppsspp.PPSSPP info.cemu.Cemu sh.ppy.osu \
-        net.supertuxkart.SuperTuxKart; do
-        f="$(entry "$app")" || continue
-        mine="$DATA/applications/$app.desktop"
-        # Your own copy stays yours; Monet's is made again when the app's changes.
-        if [ -e "$mine" ]; then
-            grep -q '^X-Monet=true$' "$mine" && [ "$f" -nt "$mine" ] || continue
+# A laptop: a battery of its own (not a mouse's or a controller's), or a portable case, as its
+# firmware says (notebook, laptop, sub notebook, convertible, detachable...).
+laptop() {
+    local s
+    for s in "$SYS"/class/power_supply/*; do
+        [ "$(cat "$s/type" 2>/dev/null)" = Battery ] && [ "$(cat "$s/scope" 2>/dev/null)" != Device ] && return 0
+    done
+    case "$(cat "$SYS/class/dmi/id/chassis_type" 2>/dev/null)" in 8|9|10|14|31|32) return 0 ;; esac
+    return 1
+}
+
+# A laptop with an NVIDIA chip beside its built-in graphics, NVIDIA's driver loaded, that starts
+# on the built-in graphics.
+hybrid_nvidia() {
+    local address vendor boot builtin cards=0 nvidia=0 first=""
+    [ -d "$SYS/module/nvidia" ] && laptop || return 1
+    while read -r address vendor boot builtin; do
+        cards=$((cards + 1))
+        [ "$vendor" = 0x10de ] && nvidia=1
+        [ "$boot" = 1 ] && first="$vendor"
+    done < <(graphics)
+    [ "$nvidia" = 1 ] && [ "$cards" -gt 1 ] && [ -n "$first" ] && [ "$first" != 0x10de ]
+}
+
+# A PC that starts on a card of its own while the processor's graphics are on too.
+card_first() {
+    local address vendor boot builtin card=0 builtin_too=0
+    while read -r address vendor boot builtin; do
+        if [ "$boot" = 1 ]; then
+            [ "$builtin" = 0 ] && card=1
+        elif [ "$builtin" = 1 ]; then
+            builtin_too=1
         fi
-        mkdir -p "$DATA/applications"
-        work="$(mktemp "$DATA/applications/.monet-gpu-XXXXXX")" || { failed=1; return 1; }
-        sed -e '/^PrefersNonDefaultGPU=/d' \
-            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nPrefersNonDefaultGPU=true/' "$f" > "$work" || { failed=1; rm -f "$work"; return 1; }
-        "$PROFILE" file "$mine" "$work" || failed=1
-        rm -f "$work"
+    done < <(graphics)
+    [ "$card" = 1 ] && [ "$builtin_too" = 1 ]
+}
+
+GAMES="org.prismlauncher.PrismLauncher org.vinegarhq.Sober org.libretro.RetroArch net.retrodeck.retrodeck
+    org.DolphinEmu.dolphin-emu net.pcsx2.PCSX2 net.rpcs3.RPCS3 org.ppsspp.PPSSPP info.cemu.Cemu sh.ppy.osu
+    net.supertuxkart.SuperTuxKart"
+
+# Whether this account's copy of a menu entry is one Monet made for the graphics.
+gpu_mine() { # gpu_mine <copy> <id>
+    grep -q '^X-Monet=true$' "$1" 2>/dev/null || return 1
+    grep -q '^X-Monet-GPU=' "$1" && return 0
+    # Those made before 0.9.8-7 have no word of their own: a game's, asking for the other graphics.
+    case " $GAMES " in *[[:space:]]"$2"[[:space:]]*) grep -q '^PrefersNonDefaultGPU=true$' "$1" ;; *) return 1 ;; esac
+}
+
+# Monet's copy of an app's menu entry: "prefer" asks for the other graphics, "default" takes that
+# away (and KDE's older word for it), so the app starts on the graphics the PC starts on.
+gpu_copy() { # gpu_copy <id> <entry> <prefer|default>
+    local mine="$DATA/applications/$1.desktop" work
+    if [ -e "$mine" ]; then
+        # Your own copy stays yours; Monet's is made again when the app's changes, or the PC's graphics.
+        gpu_mine "$mine" "$1" || return 0
+        [ "$2" -nt "$mine" ] || [ "$(sed -n 's/^X-Monet-GPU=//p' "$mine" | head -1)" != "$3" ] || return 0
+    fi
+    mkdir -p "$DATA/applications"
+    work="$(mktemp "$DATA/applications/.monet-gpu-XXXXXX")" || { failed=1; return 1; }
+    if [ "$3" = prefer ]; then
+        sed -e '/^PrefersNonDefaultGPU=/d' -e '/^X-Monet-GPU=/d' \
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nX-Monet-GPU=prefer\nPrefersNonDefaultGPU=true/' "$2"
+    else
+        sed -e '/^PrefersNonDefaultGPU=/d' -e '/^X-KDE-RunOnDiscreteGpu=/d' -e '/^X-Monet-GPU=/d' \
+            -e '0,/^\[Desktop Entry\]$/s//[Desktop Entry]\nX-Monet=true\nX-Monet-GPU=default/' "$2"
+    fi > "$work" || { failed=1; rm -f "$work"; return 1; }
+    "$PROFILE" file "$mine" "$work" || failed=1
+    rm -f "$work"
+}
+
+# Which graphics games start on, at sign-in and as apps arrive. On a laptop with NVIDIA beside its
+# built-in graphics, games and the emulators that are games start on the NVIDIA chip; everything
+# else keeps to the built-in graphics, Steam and the launchers that stay open in the tray too,
+# which saves the battery, and Proton's games choose the NVIDIA chip by themselves. On a PC that
+# starts on a card of its own with the processor's graphics on too, every app whose menu entry
+# asks for the other graphics (Steam's, Heroic's, Lutris's...) gets a copy that doesn't, so it
+# and its games stay on the card. Anywhere else, or once the PC changes (the processor's graphics
+# turned off), Monet's copies go. Steam starting with the PC needs none: systemd starts the
+# apps that start by themselves, and doesn't read the key.
+games_gpu() {
+    local app d f id
+    local -A want=()
+    if card_first; then
+        for d in "${MENUS[@]}"; do
+            while IFS= read -r f; do
+                id="$(basename "$f" .desktop)"
+                f="$(entry "$id")" && grep -qE '^(PrefersNonDefaultGPU|X-KDE-RunOnDiscreteGpu)=true$' "$f" && want[$id]=default
+            done < <(grep -lE '^(PrefersNonDefaultGPU|X-KDE-RunOnDiscreteGpu)=true$' "$d"/*.desktop 2>/dev/null)
+        done
+    elif hybrid_nvidia; then
+        for app in $GAMES; do
+            entry "$app" >/dev/null && want[$app]=prefer
+        done
+    fi
+    for f in "$DATA"/applications/*.desktop; do
+        id="$(basename "$f" .desktop)"
+        [ -f "$f" ] && [ -z "${want[$id]:-}" ] && gpu_mine "$f" "$id" || continue
+        "$PROFILE" remove "$f" || failed=1
+    done
+    for id in "${!want[@]}"; do
+        gpu_copy "$id" "$(entry "$id")" "${want[$id]}"
     done
 }
 

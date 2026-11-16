@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -1518,7 +1519,7 @@ class MonetsOwn(unittest.TestCase):
         # Every menu entry (and More settings group) monet-look writes carries the mark uninstall.sh
         # looks for (and localized() puts an app's names in other languages under it, and rename()
         # its own name among its keywords).
-        for function in ("stand_in", "rename", "hide", "group_name", "games_gpu"):
+        for function in ("stand_in", "rename", "hide", "group_name", "gpu_copy"):
             body = self.LOOK.split(function + "() {", 1)[1].split("\n}", 1)[0]
             self.assertIn("X-Monet=true", body, function)
         self.assertIn('"$HOME"/.local/share/systemsettings/categories/*.desktop 2>/dev/null | xargs -r rm -f', uninstall)
@@ -4375,21 +4376,181 @@ class LaptopGaming(unittest.TestCase):
 
     def test_games_start_on_the_nvidia_chip(self):
         look = (ROOT / "linux/libexec/monet-look").read_text()
-        games = look.split("games_gpu() {", 1)[1].split("\n}\n", 1)[0]
-        self.assertIn("hybrid_nvidia || return 0", games)
-        self.assertIn("PrefersNonDefaultGPU=true", games)
+        games = look.split('GAMES="', 1)[1].split('"', 1)[0]
         for app in ("org.prismlauncher.PrismLauncher", "org.libretro.RetroArch", "net.pcsx2.PCSX2"):
             self.assertIn(app, games)
         # Not the launchers that stay open in the tray: they'd keep the NVIDIA chip awake.
         for app in ("com.valvesoftware.Steam", "com.heroicgameslauncher.hgl", "io.itch.itch"):
             self.assertNotIn(app, games)
-        # Your own copy stays yours; Monet's follows the app's.
-        self.assertIn("grep -q '^X-Monet=true$' \"$mine\" && [ \"$f\" -nt \"$mine\" ] || continue", games)
-        self.assertIn('[ -d /sys/module/nvidia ] || return 1', look)
+        self.assertIn('[ -d "$SYS/module/nvidia" ] && laptop || return 1', look)
         self.assertIn('"$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1\n',
                       (ROOT / "linux/libexec/monet-session").read_text())
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-look --games-gpu",
                       (ROOT / "linux/systemd/user/monet-frames.service").read_text())
+        # A change of graphics (the processor's turned off in the firmware) runs it again at sign-in.
+        self.assertIn("grep -H . /sys/bus/pci/devices/*/boot_vga", (ROOT / "linux/libexec/monet-session").read_text())
+
+
+@unittest.skipIf(sys.platform == "win32", "bash on Windows is WSL's, which can't see this folder")
+class WhichGraphics(unittest.TestCase):
+    """0.9.8-7: games on the right graphics. A desktop starting on its NVIDIA card with a Ryzen's
+    graphics on too (an RTX 5080 and a Radeon 610M) ran Steam and its games on the 610M: Steam's
+    menu entry asks for the graphics the PC doesn't start on, and Monet took the desktop for a
+    laptop. monet-look's own functions, run against a pretend /sys and menu."""
+    LOOK = (ROOT / "linux/libexec/monet-look").read_text()
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        base = Path(self.temp.name)
+        self.sys, self.data, self.home = base / "sys", base / "data", base / "home"
+        self.flathub, self.image = base / "flatpak/applications", base / "usr/applications"
+        for folder in (self.sys / "bus/pci/devices", self.data / "applications", self.home, self.flathub, self.image):
+            folder.mkdir(parents=True)
+        self.menu(self.image, "steam", "Name=Steam\nExec=steam %U\nPrefersNonDefaultGPU=true\nX-KDE-RunOnDiscreteGpu=true\n"
+                  "Actions=Library;\n\n[Desktop Action Library]\nName=Library\nExec=steam steam://open/games\n")
+        self.menu(self.flathub, "com.heroicgameslauncher.hgl", "Name=Heroic\nExec=flatpak run com.heroicgameslauncher.hgl\n"
+                  "PrefersNonDefaultGPU=true\n")
+        self.menu(self.flathub, "org.prismlauncher.PrismLauncher", "Name=Prism Launcher\nExec=flatpak run org.prismlauncher.PrismLauncher\n")
+        self.menu(self.image, "org.kde.kate", "Name=Kate\nExec=kate\n")
+
+    def menu(self, folder, app, body):
+        (folder / f"{app}.desktop").write_text("[Desktop Entry]\nType=Application\n" + body)
+
+    def gpu(self, address, vendor, boot=None, parent="0000:00:01.1", kind="0x030000"):
+        real = self.sys / "devices/pci0000:00" / (parent or "") / address
+        real.mkdir(parents=True)
+        (real / "class").write_text(kind + "\n")
+        (real / "vendor").write_text(vendor + "\n")
+        if boot is not None:
+            (real / "boot_vga").write_text(f"{boot}\n")
+        (self.sys / "bus/pci/devices" / address).symlink_to(real)
+
+    def laptop(self):
+        (self.sys / "class/power_supply/BAT0").mkdir(parents=True)
+        (self.sys / "class/power_supply/BAT0/type").write_text("Battery\n")
+
+    def desktop(self):
+        (self.sys / "class/dmi/id").mkdir(parents=True, exist_ok=True)
+        (self.sys / "class/dmi/id/chassis_type").write_text("3\n")
+        mouse = self.sys / "class/power_supply/hidpp_battery_0"  # a wireless mouse's battery
+        mouse.mkdir(parents=True)
+        (mouse / "type").write_text("Battery\n")
+        (mouse / "scope").write_text("Device\n")
+
+    def nvidia_driver(self):
+        (self.sys / "module/nvidia").mkdir(parents=True, exist_ok=True)
+
+    def run_look(self, call="games_gpu"):
+        functions = re.search(r"\nentry\(\) \{.*?\n\}\n", self.LOOK, re.S).group(0)
+        block = "# The PC's graphics." + self.LOOK.split("\n# The PC's graphics.", 1)[1].split('\nif [ "${1:-}" = --games-gpu ]; then', 1)[0]
+        script = (f'set -u\nfailed=0\nDATA="{self.data}"\nPROFILE="{ROOT / "linux/libexec/monet-profile"}"\n{functions}\n{block}\n'
+                  f'SYS="{self.sys}"\nMENUS=("{self.flathub}" "{self.data / "flatpak/applications"}" "{self.image}")\n'
+                  f'{call}\nexit "$failed"\n')
+        env = dict(os.environ, HOME=str(self.home), XDG_DATA_HOME=str(self.data), XDG_STATE_HOME=str(self.home / ".local/state"),
+                   XDG_CONFIG_HOME=str(self.home / ".config"))
+        return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
+
+    def copies(self):
+        return {f.stem: f.read_text() for f in (self.data / "applications").glob("*.desktop")}
+
+    def test_a_desktop_on_its_card_with_the_ryzens_graphics_on_keeps_steam_on_the_card(self):
+        self.desktop()
+        self.nvidia_driver()
+        self.gpu("0000:01:00.0", "0x10de", boot=1)                           # RTX 5080, in a slot
+        self.gpu("0000:0d:00.0", "0x1002", boot=0, parent="0000:00:08.1")    # Radeon 610M, the Ryzen's
+        self.gpu("0000:00:14.0", "0x1022", kind="0x0c0330")                  # not graphics (USB)
+        self.assertEqual(self.run_look("card_first && echo card; hybrid_nvidia && echo laptop; true").stdout, "card\n")
+        done = self.run_look()
+        self.assertEqual(done.returncode, 0, done.stderr)
+        copies = self.copies()
+        self.assertEqual(sorted(copies), ["com.heroicgameslauncher.hgl", "steam"])  # Prism and Kate don't ask
+        steam = copies["steam"]
+        self.assertNotIn("PrefersNonDefaultGPU", steam)
+        self.assertNotIn("RunOnDiscreteGpu", steam)
+        self.assertIn("[Desktop Entry]\nX-Monet=true\nX-Monet-GPU=default\nType=Application\nName=Steam\nExec=steam %U\n", steam)
+        self.assertIn("[Desktop Action Library]\nName=Library\n", steam)
+        # Again: nothing to do.
+        before = {f.name: f.stat().st_mtime_ns for f in (self.data / "applications").iterdir()}
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertEqual({f.name: f.stat().st_mtime_ns for f in (self.data / "applications").iterdir()}, before)
+        # One of them changed by hand since: the person's now.
+        heroic = self.data / "applications/com.heroicgameslauncher.hgl.desktop"
+        heroic.write_text(heroic.read_text() + "Name[sv]=Mitt Heroic\n")
+        # The Ryzen's graphics turned off in the firmware: Monet's copies go, and come back with them.
+        shutil.rmtree(self.sys / "devices/pci0000:00/0000:00:08.1")
+        (self.sys / "bus/pci/devices/0000:0d:00.0").unlink()
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertEqual(list(self.copies()), ["com.heroicgameslauncher.hgl"])
+        self.gpu("0000:0d:00.0", "0x1002", boot=0, parent="0000:00:08.1")
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertEqual(sorted(self.copies()), ["com.heroicgameslauncher.hgl", "steam"])
+        self.assertIn("Name[sv]=Mitt Heroic", self.copies()["com.heroicgameslauncher.hgl"])
+
+    def test_your_own_copy_stays_yours_and_monets_follows_the_app(self):
+        self.desktop()
+        self.gpu("0000:01:00.0", "0x10de", boot=1)
+        self.gpu("0000:00:02.0", "0x8086", boot=0, parent=None)  # Intel's, on the root bus
+        self.menu(self.data / "applications", "com.heroicgameslauncher.hgl", "Name=My Heroic\nExec=heroic\nPrefersNonDefaultGPU=true\n")
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertIn("Name=My Heroic", self.copies()["com.heroicgameslauncher.hgl"])
+        self.assertIn("X-Monet-GPU=default", self.copies()["steam"])
+        # Steam updated: its copy is made again from the new entry.
+        time.sleep(0.05)
+        self.menu(self.image, "steam", "Name=Steam Deck UI\nExec=steam %U\nPrefersNonDefaultGPU=true\n")
+        os.utime(self.image / "steam.desktop", (time.time() + 5, time.time() + 5))
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertIn("Name=Steam Deck UI", self.copies()["steam"])
+        # Steam no longer asks for the other graphics: no copy needed.
+        self.menu(self.image, "steam", "Name=Steam\nExec=steam %U\n")
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertNotIn("steam", self.copies())
+        self.assertIn("Name=My Heroic", self.copies()["com.heroicgameslauncher.hgl"])
+
+    def test_a_laptop_starting_on_its_built_in_graphics_starts_games_on_nvidia(self):
+        self.laptop()
+        self.nvidia_driver()
+        self.gpu("0000:05:00.0", "0x1002", boot=1, parent="0000:00:08.1")    # the Ryzen's
+        self.gpu("0000:01:00.0", "0x10de", kind="0x030200")                  # NVIDIA, a 3D controller
+        self.assertEqual(self.run_look("card_first && echo card; hybrid_nvidia && echo laptop; true").stdout, "laptop\n")
+        self.assertEqual(self.run_look().returncode, 0)
+        copies = self.copies()
+        self.assertEqual(sorted(copies), ["org.prismlauncher.PrismLauncher"])  # Steam stays on the built-in graphics
+        self.assertIn("[Desktop Entry]\nX-Monet=true\nX-Monet-GPU=prefer\nPrefersNonDefaultGPU=true\n", copies["org.prismlauncher.PrismLauncher"])
+
+    def test_desktops_and_single_graphics_leave_the_menu_alone(self):
+        self.desktop()
+        self.nvidia_driver()
+        # Started on the motherboard's graphics with an NVIDIA card in too: the card is the "other"
+        # one there, as the key means; Monet's copies from before (it took this for a laptop) go.
+        self.gpu("0000:0d:00.0", "0x1002", boot=1, parent="0000:00:08.1")
+        self.gpu("0000:01:00.0", "0x10de", boot=0)
+        self.menu(self.data / "applications", "org.prismlauncher.PrismLauncher",
+                  "X-Monet=true\nPrefersNonDefaultGPU=true\nName=Prism Launcher\n")  # as 0.9.8-6 made it
+        self.menu(self.data / "applications", "org.kde.dolphin", "X-Monet=true\nName=Files\n")  # Monet's, not for graphics
+        self.assertEqual(self.run_look("card_first && echo card; hybrid_nvidia && echo laptop; true").stdout, "")
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertEqual(sorted(self.copies()), ["org.kde.dolphin"])
+        # One card alone, or a laptop that starts on NVIDIA with nothing beside it: nothing either.
+        for path in (self.sys / "bus/pci/devices").iterdir():
+            path.unlink()
+        shutil.rmtree(self.sys / "devices")
+        self.gpu("0000:01:00.0", "0x10de", boot=1)
+        self.laptop()
+        self.assertEqual(self.run_look("card_first && echo card; hybrid_nvidia && echo laptop; true").stdout, "")
+        self.assertEqual(self.run_look().returncode, 0)
+        self.assertEqual(sorted(self.copies()), ["org.kde.dolphin"])
+
+    def test_what_a_laptop_is(self):
+        is_laptop = lambda: self.run_look("laptop && echo yes; true").stdout == "yes\n"
+        self.assertFalse(is_laptop())
+        self.desktop()
+        self.assertFalse(is_laptop())  # A mouse's battery and a desktop case.
+        (self.sys / "class/dmi/id/chassis_type").write_text("10\n")
+        self.assertTrue(is_laptop())   # A notebook, as its firmware says.
+        (self.sys / "class/dmi/id/chassis_type").write_text("3\n")
+        self.laptop()
+        self.assertTrue(is_laptop())   # A battery of its own.
 
     def test_lact_in_the_store(self):
         content = (SHARE / "monet/store/content.yaml").read_text()

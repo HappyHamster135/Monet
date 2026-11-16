@@ -19,20 +19,23 @@ say() {
     "$LIBEXECDIR/monet-quick" say "$@" 2>/dev/null || printf '%s' "$1"
 }
 
-# What the jobs that can wait look at: this Monet, the menu's apps and Zen's profiles.
+# What the jobs that can wait look at: this Monet, the menu's apps, Zen's profiles, and the
+# graphics the PC starts on (the processor's turned on or off in the firmware, NVIDIA's driver).
 # Anything new there and they run again (while signed in, their .path units see to it).
 apps_now() {
     { "$BINDIR/monet" --version
       stat -c '%n %Y' /var/lib/flatpak/exports/share/applications "$DATA/flatpak/exports/share/applications" \
           "$DATA/applications" "$HOME/.var/app/app.zen_browser.zen/.zen"
+      grep -H . /sys/bus/pci/devices/*/boot_vga
+      ls -d /sys/module/nvidia
     } 2>/dev/null | cksum
 }
 apps_seen="$CACHE/monet/apps-seen"
 
 # The jobs that can wait, run a minute after sign-in at the lowest priority (below) so the
 # desktop starts without them: apps Monet hasn't painted get its canvas under their icons
-# (it looks through every icon theme), games start on a laptop's NVIDIA chip, and Zen
-# wears Monet's look.
+# (it looks through every icon theme), games start on the right graphics (a laptop's NVIDIA
+# chip, a desktop's card), and Zen wears Monet's look.
 if [ "${1:-}" = --later ]; then
     "$LIBEXECDIR/monet-quick" frames >/dev/null 2>&1
     "$LIBEXECDIR/monet-look" --games-gpu >/dev/null 2>&1

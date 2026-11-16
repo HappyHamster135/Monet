@@ -246,6 +246,25 @@ def file_update(target, candidate, alias=False):
         finish(state, key, {"fields": fields(wanted)}, encode(after))
 
 
+def file_remove(target):
+    """A launcher Monet made and no longer needs, taken away while it's still as Monet made it (a
+    person's own, or one they changed, stays), so that Monet may make it again if it's needed."""
+    if Path(target).is_symlink(): return
+    path = safe_path(target, DATA)
+    with lock():
+        state = load(); key = "file:" + str(path)
+        if not path.exists(): return
+        before = path.read_bytes(); owner = state["owned"].get(key)
+        if len(before) > 256 * 1024 or fields(before).get("[Desktop Entry]\nX-Monet") != "true": return
+        if owner is not None and fields(before) != owner.get("fields"): return
+        journal(state, key, "file", str(path), base64.b64encode(before).decode(), None)
+        path.unlink()
+        state["owned"].pop(key, None)
+        token = os.environ.get("MONET_PROFILE_RUN")
+        if token: state["runs"][token]["changes"][key].update(after=None, pending=False)
+        save(state)
+
+
 def run(command):
     sources = [Path(__file__), Path(command[0]), Path(__file__).with_name("monet-light")]
     revision = hashlib.sha256(b"\0".join([*(p.read_bytes() for p in sources),
@@ -383,6 +402,7 @@ def main(args):
         default = "--default-only" in args; force = os.environ.get("MONET_PROFILE_FORCE") == "1"
         put([a for a in args[1:] if a != "--default-only"], default, force)
     elif args[0] == "file": file_update(args[1], args[2], "--alias" in args)
+    elif args[0] == "remove" and len(args) == 2: file_remove(args[1])
     elif args[0] == "run": return run(args[1:])
     elif args[0] == "rollback": return rollback(args[1])
     elif args[0] == 'recovery': print(json.dumps(recovery()))
