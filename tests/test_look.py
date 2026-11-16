@@ -1668,6 +1668,13 @@ class DesktopWidgets(unittest.TestCase):
         self.assertGreater(session.index('"$LIBEXECDIR/monet-widgets"'), session.index('"$LIBEXECDIR/monet-look" --keep'))
         self.assertNotIn("widgets-placed", (ROOT / "linux/libexec/monet-look").read_text())
         self.assertIn("monet-widgets", (ROOT / "linux/install.sh").read_text())
+        # Settings' placard switch adds it back the same way.
+        from unittest import mock
+        quick = quick_helper()
+        with mock.patch.object(quick, "plasma_script") as script:
+            quick.set_placard(True)
+        self.assertIn('card.writeConfig("monetDefaultPlacement", true);', script.call_args.args[0])
+        self.assertNotIn("gridUnit", script.call_args.args[0])
         self.assertIn("monet-widgets", (ROOT / "linux/uninstall.sh").read_text())
         # New accounts on the image start with Monet's look, and so its layout; the look then lays the
         # panels out afresh only when they aren't Monet's islands yet.

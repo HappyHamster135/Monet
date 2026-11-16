@@ -6533,9 +6533,14 @@ def look_reset():
 def set_placard(show):
     if show:
         plasma_script(
+            # Placed like a new desktop's cards: beside Weather and Calendar where they are
+            # still where Monet set them, or in a free spot on a desktop arranged by hand.
             'desktops().forEach(function (d) {'
-            '  if (d.widgets("org.monet.placard").length === 0)'
-            '    d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12);'
+            '  if (d.widgets("org.monet.placard").length > 0) return;'
+            '  var card = d.addWidget("org.monet.placard");'
+            '  card.currentConfigGroup = ["General"];'
+            '  card.writeConfig("monetDefaultPlacement", true);'
+            '  card.reloadConfig();'
             '})')
     else:
         plasma_script(
