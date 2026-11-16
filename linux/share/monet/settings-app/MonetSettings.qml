@@ -514,8 +514,10 @@ Shared.MonetWindow {
     property var monetLink: ({})
     property bool monetLinkBusy: false
     property bool monetLinkForgetPending: false
+    property var monetLinkFilePending: null
     property string monetLinkProblem: ""
     property string monetLinkDraft: ""
+    property string monetLinkSaved: ""
     // About → Save a report: being written, and the name of the one saved.
     property bool reporting: false
     // About → Command-line tools: BoxBuddy on its way from Flathub.
@@ -1811,20 +1813,40 @@ Shared.MonetWindow {
     function runMonetLink(command, text, finished) {
         if (monetLinkBusy) return
         monetLinkBusy = true
-        if (command !== "status") monetLinkProblem = ""
+        if (command !== "status") {
+            monetLinkProblem = ""
+            monetLinkSaved = ""
+        }
         waiting[helper.runLink(command, text)] = (out, code) => {
             monetLinkBusy = false
             const result = sheet.json(out, {})
             if (code === 0 && result.phase) {
+                if (result.files && JSON.stringify(result.files) === JSON.stringify(sheet.monetLink.files))
+                    result.files = sheet.monetLink.files
                 sheet.monetLink = result
+                if (result.savedFile) sheet.monetLinkSaved = result.savedFile
                 if (finished) finished()
             } else if (command !== "status" || Object.keys(sheet.monetLink).length > 0) {
                 sheet.monetLinkProblem = result.error || i18n("Monet Link couldn't finish. Try again.")
             }
             if (monetLinkForgetPending) {
                 monetLinkForgetPending = false
+                monetLinkFilePending = null
                 forgetMonetLink()
+            } else if (monetLinkFilePending) {
+                const pending = monetLinkFilePending
+                monetLinkFilePending = null
+                runMonetLink(pending.command, pending.payload)
             }
+        }
+    }
+
+    function runMonetLinkFile(command, data) {
+        const payload = JSON.stringify(data)
+        if (monetLinkBusy) {
+            monetLinkFilePending = {command, payload}
+        } else {
+            runMonetLink(command, payload)
         }
     }
 
@@ -4109,7 +4131,7 @@ Shared.MonetWindow {
                         title: i18n("Monet Link")
                         detail: {
                             if (linkCard.phase === "removing") return i18n("Removing this pairing when the relay is reachable.")
-                            if (linkCard.phase === "ready") return i18n("Pair once and share notes over the internet.")
+                            if (linkCard.phase === "ready") return i18n("Pair once and share with your phone over the internet.")
                             if (linkCard.phase === "starting" && linkCard.link.problem === "setup")
                                 return i18n("Check this PC's relay configuration.")
                             if (linkCard.link.problem === "offline") return i18n("Relay unavailable. Monet Link will retry.")
@@ -4200,6 +4222,17 @@ Shared.MonetWindow {
                                 })
                             }
                         }
+                        Pill {
+                            objectName: "monetLinkSendFile"
+                            tone: look
+                            text: i18n("Choose a file to send…")
+                            visible: linkCard.link.fileRelay === true && typeof helper.monetLinkPath === "function"
+                            enabledPill: !sheet.monetLinkBusy
+                            onClicked: {
+                                linkSource.pair = linkCard.link.pairId
+                                linkSource.open()
+                            }
+                        }
                         Text {
                             readonly property var sent: linkCard.link.sent || []
                             visible: sent.length > 0
@@ -4210,6 +4243,104 @@ Shared.MonetWindow {
                                 : sent[0] === "Received" ? i18n("Last note received")
                                 : sent[0] === "Expired" ? i18n("Last note expired")
                                 : i18n("Last note’s receipt could not be verified")
+                        }
+                    }
+                    FileDialog {
+                        id: linkSource
+                        objectName: "monetLinkSourceDialog"
+                        property string pair: ""
+                        title: i18n("Choose a file to send to your phone")
+                        acceptLabel: i18n("Send file")
+                        onAccepted: sheet.runMonetLinkFile("send-file", {pair, path: helper.monetLinkPath(selectedFile)})
+                    }
+                    FolderDialog {
+                        id: linkDestination
+                        objectName: "monetLinkDestinationDialog"
+                        property var file: null
+                        property string pair: ""
+                        title: i18n("Choose where to save the file")
+                        onAccepted: {
+                            if (file) sheet.runMonetLinkFile("save-file", {
+                                pair, id: file.id, incoming: file.incoming, folder: helper.monetLinkPath(selectedFolder)
+                            })
+                            file = null
+                        }
+                        onRejected: file = null
+                    }
+                    Repeater {
+                        model: linkCard.link.files || []
+                        RowLayout {
+                            Layout.fillWidth: true
+                            required property var modelData
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.filename
+                                    textFormat: Text.PlainText
+                                    wrapMode: Text.Wrap
+                                    color: look.ink
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: (modelData.incoming ? i18n("From phone") : i18n("To phone"))
+                                        + " · " + i18n(modelData.status)
+                                    textFormat: Text.PlainText
+                                    wrapMode: Text.Wrap
+                                    color: look.dim
+                                }
+                            }
+                            Pill {
+                                objectName: "monetLinkSaveFile"
+                                tone: look
+                                text: i18n("Save…")
+                                visible: modelData.canSave && typeof helper.monetLinkPath === "function"
+                                enabledPill: !sheet.monetLinkBusy
+                                onClicked: {
+                                    linkDestination.pair = linkCard.link.pairId
+                                    linkDestination.file = modelData
+                                    linkDestination.open()
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                text: i18n("Remove…")
+                                visible: modelData.canSave
+                                enabledPill: !sheet.monetLinkBusy
+                                onClicked: {
+                                    removeLinkFile.pair = linkCard.link.pairId
+                                    removeLinkFile.file = modelData
+                                    removeLinkFile.open()
+                                }
+                            }
+                        }
+                    }
+                    Text {
+                        visible: sheet.monetLinkSaved !== ""
+                        Layout.fillWidth: true
+                        text: i18n("Saved") + " · " + sheet.monetLinkSaved
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                        color: look.dim
+                        Accessible.role: Accessible.AlertMessage
+                    }
+                    QQC2.Dialog {
+                        id: removeLinkFile
+                        anchors.centerIn: QQC2.Overlay.overlay
+                        property var file: null
+                        property string pair: ""
+                        title: i18n("Remove this file from Monet Link?")
+                        modal: true
+                        standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+                        onAccepted: {
+                            if (file) sheet.runMonetLinkFile("remove-file", {pair, id: file.id, incoming: file.incoming})
+                        }
+                        onClosed: file = null
+                        QQC2.Label {
+                            width: 330
+                            wrapMode: Text.Wrap
+                            text: removeLinkFile.file ? removeLinkFile.file.filename : ""
+                            textFormat: Text.PlainText
                         }
                     }
                     Repeater {
@@ -4260,7 +4391,7 @@ Shared.MonetWindow {
                         QQC2.Label {
                             width: 330
                             wrapMode: Text.Wrap
-                            text: i18n("This removes the pairing, queued notes and Link history from this PC.")
+                            text: i18n("This removes the pairing, queued notes and files, and Link history from this PC.")
                         }
                     }
                     QQC2.Dialog {

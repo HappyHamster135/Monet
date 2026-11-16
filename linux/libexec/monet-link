@@ -10,17 +10,20 @@ import hmac
 import http.client
 import io
 import json
+import mimetypes
 import os
 from pathlib import Path
 import re
 import secrets
 import shutil
 import ssl
+import stat
 import subprocess
 import sys
 import tempfile
 from threading import Thread
 import time
+import unicodedata
 from urllib.parse import urlsplit
 
 from cryptography.exceptions import InvalidTag
@@ -34,6 +37,24 @@ MAX_ITEMS = 64
 MAX_NOTE = 32768
 PREFIX = "monet-link:"
 POLL_INTERVAL = 5
+FILE_BYTES = 64 * 1024 * 1024
+FILE_CHUNK = 256 * 1024
+FILE_OVERHEAD = 28
+FILE_MANIFEST = 4096
+FILE_BATCH = 16
+FILE_OUTBOX = "fileOutbox"
+FILE_INBOX = "fileInbox"
+FILE_LIMIT_INBOX = 4
+FILE_LIMIT_OUTBOX = 2
+FILE_LIMIT_HISTORY = 128
+FILE_UPLOADING = {"Queued", "Uploading", "Waiting for phone"}
+FILE_READY = "Ready to save"
+FILE_RECOVERABLE = {"Could not verify receipt", "Cancelled"}
+FILE_SEND_COPIES = FILE_UPLOADING | FILE_RECOVERABLE
+FILE_DOWNLOAD_COPIES = {"Downloading", FILE_READY}
+FILE_DISK_NAME = re.compile(r"(?:in|out)-[0-9a-f]{32}")
+FILE_DIGEST = re.compile(r"[0-9a-f]{64}")
+FILE_MIME = re.compile(r"[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,62}/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,62}")
 
 
 def encode(value):
@@ -76,7 +97,7 @@ def comparison_code(config, identifier):
                                           "sha256")[:4], "big") % 1000000).zfill(6)
 
 
-def request(config, method, resource, body=None, token=None):
+def request(config, method, resource, body=None, token=None, *, response_limit=MAX_ENVELOPE):
     url = origin(config["url"])
     tls = ssl.create_default_context()
     if config.get("cert"):
@@ -89,8 +110,8 @@ def request(config, method, resource, body=None, token=None):
             "Authorization": "Bearer " + (token or config["token"]), "Content-Type": "application/octet-stream",
         })
         result = connection.getresponse()
-        data = result.read(MAX_ENVELOPE + 1)
-        if len(data) > MAX_ENVELOPE:
+        data = result.read(response_limit + 1)
+        if len(data) > response_limit:
             raise ValueError("Relay response exceeded its allowed size")
         return result.status, data
     finally:
@@ -105,13 +126,17 @@ def save(path, state):
         os.fsync(file.fileno())
     try:
         os.replace(temporary, path)
-        fd = os.open(path.parent, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        sync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 @contextmanager
@@ -136,6 +161,235 @@ def edit_pair(path, pair, *, revoking=False):
         if state is None or state["config"]["pair"] != pair or bool(state.get("revoking")) != revoking:
             raise PairingChanged
         yield state
+
+
+def safe_filename(name):
+    return (isinstance(name, str) and bool(name.strip()) and name not in (".", "..")
+            and len(name.encode("utf-8")) <= 255 and not any(
+                char in "/\\" or unicodedata.category(char) in ("Cc", "Cf") for char in name))
+
+
+def file_info(body):
+    name, mime, size, digest, expiry = (body[key] for key in ("filename", "mime", "bytes", "sha256", "expires"))
+    if (not safe_filename(name) or not isinstance(mime, str) or not FILE_MIME.fullmatch(mime)
+            or type(size) is not int or not 0 < size <= FILE_BYTES
+            or not isinstance(digest, str) or not FILE_DIGEST.fullmatch(digest)
+            or type(expiry) is not int or not time.time() < expiry <= time.time() + RETENTION + 60):
+        raise ValueError("Invalid file information.")
+    return {"filename": name, "mime": mime, "bytes": size, "sha256": digest, "expires": expiry}
+
+
+def chunks_for(size):
+    return (size + FILE_CHUNK - 1) // FILE_CHUNK
+
+
+def chunk_length(size, index):
+    return min(FILE_CHUNK, size - index * FILE_CHUNK) + FILE_OVERHEAD
+
+
+def file_directory(path, pair):
+    if not ID.fullmatch(pair):
+        raise ValueError("Invalid pairing ID.")
+    return path.parent / "files" / pair
+
+
+def file_payload(path, pair, incoming, identifier):
+    if not ID.fullmatch(identifier):
+        raise ValueError("Invalid file ID.")
+    return file_directory(path, pair) / (('in-' if incoming else 'out-') + identifier)
+
+
+def clear_file_payloads(path, state):
+    storage = file_directory(path, state["config"]["pair"])
+    if storage.exists():
+        shutil.rmtree(storage)
+    state.pop(FILE_OUTBOX, None)
+    state.pop(FILE_INBOX, None)
+
+
+def prune_files(path, state):
+    keep = set()
+    changed = False
+    now = time.time()
+    for key, prefix, stored in ((FILE_OUTBOX, "out-", FILE_SEND_COPIES), (FILE_INBOX, "in-", FILE_DOWNLOAD_COPIES)):
+        table = state.get(key, {})
+        for identifier, record in list(table.items()):
+            if record["expires"] <= now:
+                del table[identifier]
+                changed = True
+            elif record["status"] in stored:
+                keep.add(prefix + identifier)
+    storage = file_directory(path, state["config"]["pair"])
+    if storage.is_dir():
+        for file in storage.iterdir():
+            if FILE_DISK_NAME.fullmatch(file.name) and file.name not in keep:
+                file.unlink(missing_ok=True)
+    return changed
+
+
+def active_files(records, statuses):
+    return sum(item["status"] in statuses and item["expires"] > time.time() for item in records.values())
+
+
+def require_file_slot(state):
+    if state is None or not state["paired"] or state.get("revoking") or state.get("problem") == "revoked":
+        raise ValueError("Pair a phone first.")
+    if not state.get("fileRelay"):
+        raise ValueError("The relay needs file support.")
+    outbox = state.get(FILE_OUTBOX, {})
+    if active_files(outbox, FILE_SEND_COPIES) >= FILE_LIMIT_OUTBOX or len(outbox) >= FILE_LIMIT_HISTORY:
+        raise ValueError("The file outbox is full.")
+
+
+def local_path(text):
+    if not isinstance(text, str) or not Path(text).is_absolute() or "\x00" in text:
+        raise ValueError("Choose a local file or folder.")
+    return Path(text)
+
+
+def queue_file(path, source, expected_pair):
+    if not safe_filename(source.name):
+        raise ValueError("Choose a file with a valid name.")
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with path.with_suffix(".file-import.lock").open("a") as guard:
+        fcntl.flock(guard, fcntl.LOCK_EX)
+        with edit(path) as state:
+            if state and state["paired"] and not state.get("revoking") and prune_files(path, state):
+                save(path, state)
+            require_file_slot(state)
+            config = state["config"]
+            pair = config["pair"]
+            if pair != expected_pair:
+                raise ValueError("The phone pairing changed. Choose the file again.")
+            storage = file_directory(path, pair)
+            storage.mkdir(mode=0o700, parents=True, exist_ok=True)
+            for abandoned in storage.glob(".upload-*"):
+                abandoned.unlink(missing_ok=True)
+            temporary = tempfile.NamedTemporaryFile(dir=storage, prefix=".upload-", delete=False)
+        identifier = secrets.token_hex(16)
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            with temporary, os.fdopen(os.open(source, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW), "rb") as original:
+                before = os.fstat(original.fileno())
+                if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= FILE_BYTES:
+                    raise ValueError("Choose a nonempty file up to 64 MiB.")
+                for index, data in enumerate(iter(lambda: original.read(FILE_CHUNK), b"")):
+                    size += len(data)
+                    if size > FILE_BYTES:
+                        raise ValueError("Choose a file up to 64 MiB.")
+                    digest.update(data)
+                    temporary.write(encrypt(config, "pc", f"{identifier}:{index}", "file-chunk", data))
+                after = os.fstat(original.fileno())
+                if size != before.st_size or before.st_mtime_ns != after.st_mtime_ns or size != after.st_size:
+                    raise ValueError("The file changed while Link was reading it. Choose it again.")
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            mime = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
+            manifest = file_info({"filename": source.name, "mime": mime, "bytes": size,
+                                  "sha256": digest.hexdigest(), "expires": int(time.time()) + RETENTION})
+            sealed = encrypt(config, "pc", identifier, "file-manifest", pack(manifest))
+            frame = size.to_bytes(8, "big") + sealed
+            if len(sealed) > FILE_MANIFEST:
+                raise ValueError("File information is too long.")
+            with edit_pair(path, pair) as current:
+                require_file_slot(current)
+                os.replace(temporary.name, file_payload(path, pair, False, identifier))
+                sync_directory(storage)
+                current.setdefault(FILE_OUTBOX, {})[identifier] = {**manifest, "manifest": encode(frame), "status": "Queued"}
+                save(path, current)
+        finally:
+            Path(temporary.name).unlink(missing_ok=True)
+
+
+def transferable(record, incoming):
+    return (record["expires"] > time.time()
+            and (record["status"] == FILE_READY if incoming else record["status"] in FILE_RECOVERABLE))
+
+
+def read_chunk(stream, size, index):
+    stream.seek(index * (FILE_CHUNK + FILE_OVERHEAD))
+    expected = chunk_length(size, index)
+    chunk = stream.read(expected)
+    if len(chunk) != expected:
+        raise OSError("Saved file chunks are incomplete.")
+    return chunk
+
+
+def verify_file(stream, config, sender, identifier, record, output=None):
+    digest = hashlib.sha256()
+    size = record["bytes"]
+    for index in range(chunks_for(size)):
+        sealed = read_chunk(stream, size, index)
+        content = seal(config, sender, f"{identifier}:{index}", "file-chunk", sealed)
+        digest.update(content)
+        if output is not None:
+            output.write(content)
+    return hmac.compare_digest(digest.hexdigest(), record["sha256"])
+
+
+def copy_to_folder(path, payload):
+    identifier, incoming, pair, folder = file_action(payload, save_file=True)
+    key = FILE_INBOX if incoming else FILE_OUTBOX
+    with edit(path) as state:
+        if state is None or state.get("revoking") or state.get("problem") == "revoked":
+            raise ValueError("The file is unavailable.")
+        record = state.get(key, {}).get(identifier)
+        if record is None or not transferable(record, incoming) or not safe_filename(record["filename"]):
+            raise ValueError("The file is unavailable.")
+        config = state["config"]
+        if pair != config["pair"]:
+            raise ValueError("The phone pairing changed. Choose the file again.")
+        source = file_payload(path, config["pair"], incoming, identifier)
+        stream = source.open("rb")
+    try:
+        with stream, tempfile.NamedTemporaryFile(dir=folder, prefix=".monet-link-", delete=False) as destination:
+            try:
+                if not verify_file(stream, config, "phone" if incoming else "pc", identifier, record, destination):
+                    raise ValueError("The saved file did not match the expected digest.")
+                destination.flush()
+                os.fsync(destination.fileno())
+                return publish_file(Path(destination.name), folder, record["filename"], identifier)
+            finally:
+                Path(destination.name).unlink(missing_ok=True)
+    except (InvalidTag, OSError) as error:
+        raise ValueError("Could not save the file. Check the folder and available storage.") from error
+
+
+def publish_file(temporary, folder, name, identifier):
+    original = Path(name)
+    for index in range(100):
+        candidate = name if index == 0 else f"{original.stem} ({index}){original.suffix}"
+        if len(candidate.encode("utf-8")) > 255:
+            candidate = f"File-{identifier[:8]} ({index})"
+        try:
+            os.link(temporary, folder / candidate)
+        except FileExistsError:
+            continue
+        sync_directory(folder)
+        return candidate
+    raise ValueError("This folder already contains copies of the file. Choose another folder.")
+
+
+def file_action(payload, *, save_file=False):
+    value = json.loads(payload)
+    if (not isinstance(value, dict) or not isinstance(value.get("id"), str) or not ID.fullmatch(value["id"])
+            or type(value.get("incoming")) is not bool or not isinstance(value.get("pair"), str)
+            or not ID.fullmatch(value["pair"])):
+        raise ValueError("Invalid file selection.")
+    return value["id"], value["incoming"], value["pair"], local_path(value.get("folder")) if save_file else None
+
+
+def remove_file(path, state, payload):
+    identifier, incoming, pair, _ = file_action(payload)
+    if pair != state["config"]["pair"]:
+        raise ValueError("The phone pairing changed. Choose the file again.")
+    record = state.get(FILE_INBOX if incoming else FILE_OUTBOX, {}).get(identifier)
+    if record is None or not transferable(record, incoming):
+        raise ValueError("The file is unavailable.")
+    record["status"] = "Removed"
+    save(path, state)
+    file_payload(path, state["config"]["pair"], incoming, identifier).unlink(missing_ok=True)
 
 
 def queue(state, body):
@@ -259,6 +513,207 @@ def sync(path, state, on_note):
         require_status(code, 200)
 
 
+class FileSync:
+    def __init__(self, path, state, notification):
+        self.path = path
+        self.config = state["config"]
+        self.pair = self.config["pair"]
+        self.notification = notification
+
+    def call(self, method, route, body=None, limit=4096):
+        with edit_pair(self.path, self.pair):
+            pass
+        return request(self.config, method, route, body, response_limit=limit)
+
+    def status(self, table, identifier, status):
+        with edit_pair(self.path, self.pair) as current:
+            record = current.get(table, {}).get(identifier)
+            if record is not None and record["status"] != status:
+                record["status"] = status
+                save(self.path, current)
+
+    def run(self):
+        code, data = self.call("GET", "/v1/files/inbox", limit=1024)
+        if code != 404:
+            require_status(code, 200)
+        with edit_pair(self.path, self.pair) as state:
+            changed = prune_files(self.path, state)
+            if state.get("fileRelay") != (code != 404):
+                state["fileRelay"] = code != 404
+                changed = True
+            if changed:
+                save(self.path, state)
+        if code == 404:
+            return False
+        identifiers = json.loads(data)
+        if (not isinstance(identifiers, list) or len(identifiers) > FILE_LIMIT_OUTBOX
+                or any(not isinstance(identifier, str) or not ID.fullmatch(identifier) for identifier in identifiers)):
+            raise ValueError("Unexpected file inbox.")
+        more = False
+        for identifier, record in state.get(FILE_INBOX, {}).items():
+            if record["status"] == "Downloading" and identifier not in identifiers:
+                self.status(FILE_INBOX, identifier, "File unavailable")
+        for identifier, record in state.get(FILE_OUTBOX, {}).items():
+            if record["status"] in FILE_UPLOADING and self.upload(identifier, record):
+                more = True
+        for identifier in dict.fromkeys(identifiers):
+            if self.receive(identifier):
+                more = True
+        with edit_pair(self.path, self.pair) as current:
+            if prune_files(self.path, current):
+                save(self.path, current)
+        return more
+
+    def upload(self, identifier, record):
+        frame = decode(record["manifest"])
+        route = "/v1/files/outbox/" + identifier
+        code, data = self.call("GET", route)
+        if code == 404:
+            code, _ = self.call("PUT", route, frame)
+            if code == 429:
+                return False
+            require_status(code, 200, 201)
+            code, data = self.call("GET", route)
+        require_status(code, 200)
+        progress = json.loads(data)
+        size = record["bytes"]
+        count = chunks_for(size)
+        start = progress["next"]
+        if (type(start) is not int or not 0 <= start <= count or progress["chunks"] != count
+                or progress["bytes"] != size or progress["state"] not in {"uploading", "ready", "received", "cancelled"}):
+            raise ValueError("Invalid file upload progress.")
+        if progress["state"] == "cancelled":
+            self.status(FILE_OUTBOX, identifier, "Cancelled")
+            return False
+        stop = min(start + FILE_BATCH, count)
+        if start < stop:
+            source = file_payload(self.path, self.pair, False, identifier)
+            if not source.is_file() or source.stat().st_size != size + count * FILE_OVERHEAD:
+                code, _ = self.call("DELETE", route)
+                require_status(code, 204, 404)
+                self.status(FILE_OUTBOX, identifier, "File unavailable")
+                return False
+            self.status(FILE_OUTBOX, identifier, "Uploading")
+            with source.open("rb") as file:
+                for index in range(start, stop):
+                    code, _ = self.call("PUT", f"{route}/{index}", read_chunk(file, size, index))
+                    if code == 410:
+                        self.status(FILE_OUTBOX, identifier, "Cancelled")
+                        return False
+                    require_status(code, 200, 201)
+        if stop < count:
+            return True
+        code, receipt = self.call("GET", route + "/receipt")
+        if code == 202:
+            status = "Waiting for phone"
+        elif code == 410:
+            status = "Cancelled"
+        else:
+            require_status(code, 200)
+            try:
+                valid = len(receipt) == FILE_OVERHEAD + 32 and hmac.compare_digest(
+                    seal(self.config, "phone", identifier, "file-receipt", receipt), hashlib.sha256(frame).digest())
+            except (InvalidTag, ValueError):
+                valid = False
+            status = "Received" if valid else "Could not verify receipt"
+        self.status(FILE_OUTBOX, identifier, status)
+        return False
+
+    def incoming(self, route, identifier):
+        with edit_pair(self.path, self.pair) as current:
+            inbox = current.get(FILE_INBOX, {})
+            known = inbox.get(identifier)
+            if known is not None or len(inbox) >= FILE_LIMIT_HISTORY or active_files(inbox, FILE_DOWNLOAD_COPIES) >= FILE_LIMIT_INBOX:
+                return known
+        code, frame = self.call("GET", route, limit=8 + FILE_MANIFEST)
+        if code in (404, 410):
+            return None
+        require_status(code, 200)
+        try:
+            if len(frame) <= 8 + FILE_OVERHEAD:
+                return None
+            manifest = json.loads(seal(self.config, "phone", identifier, "file-manifest", frame[8:]))
+            record = file_info(manifest)
+            if int.from_bytes(frame[:8], "big") != record["bytes"]:
+                return None
+        except (InvalidTag, KeyError, TypeError, ValueError):
+            return None
+        record.update(manifest=encode(frame), status="Downloading")
+        with edit_pair(self.path, self.pair) as current:
+            current.setdefault(FILE_INBOX, {})[identifier] = record
+            save(self.path, current)
+        return record
+
+    def acknowledge(self, route, receipt):
+        code, _ = self.call("PUT", route + "/receipt", receipt)
+        require_status(code, 200, 404, 410)
+
+    def store_chunk(self, path, index, sealed):
+        with edit_pair(self.path, self.pair):
+            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            created = not path.exists()
+            with os.fdopen(os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), "r+b") as file:
+                offset = index * (FILE_CHUNK + FILE_OVERHEAD)
+                if os.fstat(file.fileno()).st_size < offset:
+                    raise OSError("Previously saved file chunks are missing.")
+                file.truncate(offset)
+                file.seek(offset)
+                file.write(sealed)
+                file.flush()
+                os.fsync(file.fileno())
+            if created:
+                sync_directory(path.parent)
+
+    def receive(self, identifier):
+        route = "/v1/files/inbox/" + identifier
+        record = self.incoming(route, identifier)
+        if record is None:
+            return False
+        if "receipt" in record:
+            self.acknowledge(route, decode(record["receipt"]))
+            return False
+        if record["status"] != "Downloading":
+            return False
+        source = file_payload(self.path, self.pair, True, identifier)
+        length = source.stat().st_size if source.is_file() else 0
+        size = record["bytes"]
+        count = chunks_for(size)
+        expected_length = size + count * FILE_OVERHEAD
+        if length > expected_length:
+            self.status(FILE_INBOX, identifier, "Could not verify file")
+            return False
+        start = count if length == expected_length else length // (FILE_CHUNK + FILE_OVERHEAD)
+        stop = min(start + FILE_BATCH, count)
+        try:
+            for index in range(start, stop):
+                expected = chunk_length(size, index)
+                code, sealed = self.call("GET", f"{route}/{index}", limit=expected)
+                if code in (404, 410):
+                    self.status(FILE_INBOX, identifier, "File unavailable")
+                    return False
+                require_status(code, 200)
+                if len(sealed) != expected:
+                    raise ValueError("Incorrect file chunk length.")
+                seal(self.config, "phone", f"{identifier}:{index}", "file-chunk", sealed)
+                self.store_chunk(source, index, sealed)
+            if stop < count:
+                return True
+            with source.open("rb") as stream:
+                if not verify_file(stream, self.config, "phone", identifier, record):
+                    raise ValueError("The file digest did not match.")
+        except (InvalidTag, ValueError):
+            self.status(FILE_INBOX, identifier, "Could not verify file")
+            return False
+        receipt = encrypt(self.config, "pc", identifier, "file-receipt", hashlib.sha256(decode(record["manifest"])).digest())
+        with edit_pair(self.path, self.pair) as current:
+            current[FILE_INBOX][identifier].update(receipt=encode(receipt), status=FILE_READY)
+            save(self.path, current)
+        if self.notification is not None:
+            self.notification(self.pair)
+        self.acknowledge(route, receipt)
+        return False
+
+
 def user_path(variable, default):
     directory = Path(os.environ.get(variable) or Path.home() / default)
     return directory if directory.is_absolute() else Path.home() / default
@@ -305,14 +760,15 @@ def advance(path, state, operator, on_note):
         require_status(code, 204, 401)
         with edit_pair(path, config["pair"], revoking=True):
             path.unlink()
-        return
+        return False
     if not config.get("expires"):
         provisioning(path, state, operator)
     if state["paired"] or config["expires"] > time.time():
         sync(path, state, on_note)
+    return FileSync(path, state, on_note).run() if state["paired"] else False
 
 
-def watch_once(path, operator, on_note=None):
+def watch_once(path, operator, on_note=None, next_batch=None):
     with edit(path) as state:
         if state is None:
             return False
@@ -321,7 +777,8 @@ def watch_once(path, operator, on_note=None):
     problem = None
     expired = False
     try:
-        advance(path, state, operator, on_note)
+        if advance(path, state, operator, on_note) and next_batch is not None:
+            next_batch()
     except PairingChanged:
         return True
     except RelayRejected as error:
@@ -346,6 +803,8 @@ def watch_once(path, operator, on_note=None):
                     current.pop("problem", None)
                 else:
                     current["problem"] = problem
+                    if problem == "revoked":
+                        clear_file_payloads(path, current)
                 save(path, current)
     except PairingChanged:
         pass
@@ -388,6 +847,11 @@ def show_handoff_notice(path, pair):
 
 def watch(path, operator):
     notice = None
+    file_work = False
+
+    def next_batch():
+        nonlocal file_work
+        file_work = True
 
     def notify(pair):
         nonlocal notice
@@ -401,8 +865,9 @@ def watch(path, operator):
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with path.with_suffix(".watch.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        while watch_once(path, operator, notify):
-            time.sleep(POLL_INTERVAL)
+        while watch_once(path, operator, notify, next_batch):
+            time.sleep(1 if file_work else POLL_INTERVAL)
+            file_work = False
 
 
 def pending_phone(state):
@@ -429,6 +894,19 @@ def invitation_image(config):
         return "data:image/png;base64," + base64.b64encode(data.getvalue()).decode("ascii")
 
 
+def file_rows(state):
+    active = []
+    history = []
+    for table, incoming, stored in ((FILE_INBOX, True, FILE_DOWNLOAD_COPIES), (FILE_OUTBOX, False, FILE_SEND_COPIES)):
+        for identifier, record in reversed(state.get(table, {}).items()):
+            if record["status"] == "Removed" or record["expires"] <= time.time():
+                continue
+            row = {"id": identifier, "filename": record["filename"], "bytes": record["bytes"],
+                   "status": record["status"], "incoming": incoming, "canSave": transferable(record, incoming)}
+            (active if record["status"] in stored else history).append(row)
+    return active + history[:10]
+
+
 def view(path, operator):
     try:
         state = json.loads(path.read_text())
@@ -445,7 +923,8 @@ def view(path, operator):
                  if item["message"]["type"] == "note" and item["message"]["expires"] > time.time()]
         sent = ["Expired" if item["status"] == "Queued" and item["expires"] <= time.time() else item["status"]
                 for item in state["outbox"].values()]
-        return {"phase": "paired", "problem": problem, "notes": notes[-10:][::-1], "sent": sent[-10:][::-1]}
+        return {"phase": "paired", "problem": problem, "notes": notes[-10:][::-1], "sent": sent[-10:][::-1],
+                "pairId": config["pair"], "fileRelay": state.get("fileRelay", False), "files": file_rows(state)}
     if not config.get("expires"):
         return {"phase": "starting", "problem": problem}
     if config["expires"] <= time.time():
@@ -464,7 +943,18 @@ def input_text():
 
 
 def change(path, operator, command):
-    text = input_text() if command in ("approve", "send") else None
+    text = input_text() if command in ("approve", "send", "send-file", "save-file", "remove-file") else None
+    if command == "send-file":
+        source = json.loads(text)
+        if not isinstance(source, dict) or not isinstance(source.get("pair"), str) or not ID.fullmatch(source["pair"]):
+            raise ValueError("Invalid file selection.")
+        try:
+            queue_file(path, local_path(source.get("path")), source["pair"])
+        except OSError as error:
+            raise ValueError("Could not read or queue the selected file.") from error
+        return {}
+    if command == "save-file":
+        return {"savedFile": copy_to_folder(path, text)}
     with edit(path) as state:
         if command == "invite":
             if state is not None:
@@ -481,6 +971,7 @@ def change(path, operator, command):
         elif command == "forget":
             state["revoking"] = True
             state.pop("problem", None)
+            clear_file_payloads(path, state)
         elif command == "approve":
             identifier = pending_phone(state)
             code = text
@@ -501,12 +992,17 @@ def change(path, operator, command):
             if len(pack(message)) + 28 > MAX_ENVELOPE:
                 raise ValueError("This note exceeds the handoff size limit.")
             queue(state, message)
+        elif command == "remove-file":
+            remove_file(path, state, text)
+            return {}
         save(path, state)
+    return {}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("watch", "status", "invite", "forget", "approve", "send"))
+    parser.add_argument("command", choices=("watch", "status", "invite", "forget", "approve", "send",
+                                            "send-file", "save-file", "remove-file"))
     args = parser.parse_args()
     os.umask(0o077)
     path = user_path("XDG_STATE_HOME", ".local/state") / "monet/link/state.json"
@@ -515,10 +1011,11 @@ def main():
         if args.command == "watch":
             watch(path, operator)
             return 0
-        if args.command != "status":
-            change(path, operator, args.command)
-        print(json.dumps(view(path, operator)))
+        result = change(path, operator, args.command) if args.command != "status" else {}
+        print(json.dumps({**view(path, operator), **result}))
         return 0
+    except PairingChanged:
+        print(json.dumps({"error": "The phone pairing changed. Choose the file again."}))
     except (OSError, KeyError, TypeError, ImportError):
         print(json.dumps({"error": "Monet Link couldn’t read or write its setup. Check the relay configuration."}))
     except ValueError as error:

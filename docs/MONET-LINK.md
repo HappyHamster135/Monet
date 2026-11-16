@@ -8,9 +8,16 @@ notes locally even while a relay request is in progress and shows **Received**
 after verifying the phone's receipt. A user service handles retries while
 Settings is closed.
 
+With a current relay and phone app, **Choose a file to send…** queues a file
+up to 64 MiB. The encrypted local copy stays queued through a disconnect or
+desktop service restart. Select **Save…** beside a completed file and choose
+a folder. Link adds a numbered suffix if a file with that name already exists.
+**Remove…** clears the Link copy and leaves any files saved outside Link.
+
 A new phone handoff can show a generic desktop notification. **Open Phone
 settings** opens the list of received handoffs. The notification contains no
-handoff text or addresses. Retrying a receipt keeps the same local entry.
+handoff text, filenames or addresses. Retrying a receipt keeps the same local
+entry.
 
 During this development phase, the phone needs the Monet Link debug APK from
 the Monet Phone repository. The PC needs access to a Monet Link development
@@ -45,9 +52,10 @@ the units, or run `systemctl --user daemon-reload` and
 
 ## Remove a phone
 
-Use **Forget phone** in Settings. If the relay is offline, the PC pauses
-handoffs and retries revocation when the relay returns. Once revocation succeeds,
-the PC clears the pairing and its Link history. On the phone, choose
+Use **Forget phone** in Settings. The PC clears the encrypted file copies in
+Link. If the relay is offline, it pauses handoffs and retries revocation when
+the relay returns. Once revocation succeeds, the PC clears the pairing and
+the remaining Link history. On the phone, choose
 **Forget computer** to clear local history and revoke the pairing after it
 can reach the relay.
 

@@ -36,6 +36,12 @@ class SettingsHelper(games.Helper):
         self.start(self._next, f"{LIBEXECDIR}/monet-link", [command], data=text.encode("utf-8", "replace"))
         return self._next
 
+    @Slot(QUrl, result=str)
+    def monetLinkPath(self, url):
+        if url.isLocalFile() and not url.host() and not url.hasQuery() and not url.hasFragment():
+            return url.toLocalFile()
+        return ""
+
     @Slot(str, result=QUrl)
     def monetLinkUrl(self, text):
         value = text.strip()

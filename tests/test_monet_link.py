@@ -47,7 +47,9 @@ class MonetLinkSync(unittest.TestCase):
         link.save(self.path, self.state)
         waiting, respond = Event(), Event()
 
-        def slow_relay(config, method, route):
+        def slow_relay(config, method, route, body=None, **options):
+            if route == "/v1/files/inbox":
+                return 404, b""
             if (method, route) == ("GET", "/v1/outbox/" + first):
                 waiting.set()
                 self.assertTrue(respond.wait(5))
@@ -69,6 +71,8 @@ class MonetLinkSync(unittest.TestCase):
         self.assertEqual(sent.pop(first)["status"], "Received")
         (_, item), = sent.items()
         self.assertEqual(item["status"], "Queued")
+        self.assertFalse(link.view(self.path, self.operator)["fileRelay"])
+        self.assertIsNone(link.view(self.path, self.operator)["problem"])
 
     def test_forget_keeps_a_late_inbound_note_from_restoring_local_state(self):
         identifier = "b" * 32
@@ -109,7 +113,9 @@ class MonetLinkSync(unittest.TestCase):
         receipts = []
         notices = []
 
-        def request(config, method, resource, body=None):
+        def request(config, method, resource, body=None, **options):
+            if resource == "/v1/files/inbox":
+                return 404, b""
             if (method, resource) == ("GET", "/v1/inbox"):
                 return 200, link.pack([identifier])
             if (method, resource) == ("GET", route):
@@ -153,3 +159,161 @@ class MonetLinkSync(unittest.TestCase):
             link.save(self.path, self.state)
             link.show_handoff_notice(self.path, self.config["pair"])
             self.assertEqual(launch.call_count, 1)
+
+    def test_file_upload_resumes_from_relay_cursor_without_original(self):
+        self.state["fileRelay"] = True
+        link.save(self.path, self.state)
+        content = b"x" * link.FILE_CHUNK + b"end"
+        source = self.path.parent / "drawing.bin"
+        source.write_bytes(content)
+        link.queue_file(self.path, source, self.config["pair"])
+        source.unlink()
+        (identifier, file), = self.read()[link.FILE_OUTBOX].items()
+        route = "/v1/files/outbox/" + identifier
+        frame = link.decode(file["manifest"])
+        self.assertEqual(json.loads(link.seal(self.config, "pc", identifier, "file-manifest", frame[8:]))["sha256"],
+                         hashlib.sha256(content).hexdigest())
+        transfers = []
+
+        def relay(config, method, resource, body=None, **options):
+            if resource == "/v1/files/inbox":
+                return 200, b"[]"
+            if resource == route:
+                return 200, link.pack({"state": "uploading", "bytes": len(content), "chunks": 2, "next": 1})
+            if resource == route + "/1":
+                self.assertEqual(method, "PUT")
+                transfers.append(link.seal(config, "pc", identifier + ":1", "file-chunk", body))
+                return 201, b""
+            self.assertEqual(resource, route + "/receipt")
+            return 200, link.encrypt(config, "phone", identifier, "file-receipt", hashlib.sha256(frame).digest())
+
+        with patch.object(link, "request", relay):
+            self.assertFalse(link.FileSync(self.path, self.read(), None).run())
+        self.assertEqual(transfers, [b"end"])
+        self.assertEqual(self.read()[link.FILE_OUTBOX][identifier]["status"], "Received")
+        self.assertFalse(link.file_payload(self.path, self.config["pair"], False, identifier).exists())
+
+    def test_file_download_recovers_a_torn_chunk_and_preserves_existing_file(self):
+        link.save(self.path, self.state)
+        identifier = "b" * 32
+        route = "/v1/files/inbox/" + identifier
+        name = "Photo från mobilen.bin"
+        original = b"a" * link.FILE_CHUNK + b"last"
+        manifest = {"filename": name, "bytes": len(original), "mime": "application/octet-stream",
+                    "sha256": hashlib.sha256(original).hexdigest(), "expires": int(time.time()) + 3600}
+        frame = len(original).to_bytes(8, "big") + link.encrypt(self.config, "phone", identifier, "file-manifest", link.pack(manifest))
+        received, receipts, notices = [], [], []
+        available = False
+
+        def relay(config, method, resource, body=None, **options):
+            if resource == "/v1/files/inbox":
+                return 200, link.pack([identifier])
+            if resource == route:
+                return 200, frame
+            if resource == route + "/receipt":
+                receipts.append(body)
+                return (503 if len(receipts) == 1 else 200), b""
+            index = int(resource.rsplit("/", 1)[-1])
+            if index == 1 and not available:
+                return 503, b""
+            received.append(index)
+            part = original[index * link.FILE_CHUNK:(index + 1) * link.FILE_CHUNK]
+            return 200, link.encrypt(config, "phone", f"{identifier}:{index}", "file-chunk", part)
+
+        with patch.object(link, "request", relay):
+            with self.assertRaises(link.RelayRejected):
+                link.FileSync(self.path, self.read(), notices.append).run()
+            self.assertEqual(self.read()[link.FILE_INBOX][identifier]["status"], "Downloading")
+            partial = link.file_payload(self.path, self.config["pair"], True, identifier)
+            with partial.open("ab") as handle:
+                handle.write(b"interrupted write")
+            available = True
+            with self.assertRaises(link.RelayRejected):
+                link.FileSync(self.path, self.read(), notices.append).run()
+            link.FileSync(self.path, self.read(), notices.append).run()
+        self.assertEqual(received, [0, 1])
+        self.assertEqual(notices, [self.config["pair"]])
+        self.assertEqual(len(receipts), 2)
+        self.assertEqual(receipts[0], receipts[1])
+        self.assertEqual(link.seal(self.config, "pc", identifier, "file-receipt", receipts[0]), hashlib.sha256(frame).digest())
+        folder = self.path.parent / "downloads"
+        folder.mkdir()
+        (folder / name).write_bytes(b"An existing file")
+        action = {"id": identifier, "incoming": True, "folder": str(folder), "pair": self.config["pair"]}
+        saved = link.copy_to_folder(self.path, json.dumps(action))
+        self.assertEqual(saved, "Photo från mobilen (1).bin")
+        self.assertEqual((folder / name).read_bytes(), b"An existing file")
+        self.assertEqual((folder / saved).read_bytes(), original)
+        with patch.object(link, "input_text", return_value=json.dumps(action)):
+            link.change(self.path, self.operator, "remove-file")
+        self.assertFalse(partial.exists())
+        self.assertEqual(link.view(self.path, self.operator)["files"], [])
+        self.assertEqual((folder / saved).read_bytes(), original)
+
+    def test_unverified_receipt_keeps_a_recoverable_copy(self):
+        self.state["fileRelay"] = True
+        link.save(self.path, self.state)
+        source = self.path.parent / "keep.bin"
+        content = b"The local file"
+        source.write_bytes(content)
+        link.queue_file(self.path, source, self.config["pair"])
+        source.unlink()
+        identifier, = self.read()[link.FILE_OUTBOX]
+
+        def relay(config, method, resource, body=None, **options):
+            if resource == "/v1/files/inbox":
+                return 200, b"[]"
+            if resource.endswith("/receipt"):
+                return 200, link.encrypt(config, "phone", identifier, "file-receipt", b"\x00" * 32)
+            return 200, link.pack({"bytes": len(content), "chunks": 1, "next": 1, "state": "received"})
+
+        with patch.object(link, "request", relay):
+            link.FileSync(self.path, self.read(), None).run()
+        row, = link.view(self.path, self.operator)["files"]
+        self.assertEqual(row["status"], "Could not verify receipt")
+        self.assertTrue(row["canSave"])
+        action = {"id": identifier, "incoming": False, "pair": self.config["pair"], "folder": str(self.path.parent)}
+        self.assertEqual(link.copy_to_folder(self.path, json.dumps(action)), source.name)
+        self.assertEqual(source.read_bytes(), content)
+
+    def test_file_import_rejects_stale_pair_and_unsafe_names(self):
+        self.state["fileRelay"] = True
+        link.save(self.path, self.state)
+        source = self.path.parent / "selected.bin"
+        source.write_bytes(b"selected only for the old peer")
+        with self.assertRaisesRegex(ValueError, "pairing changed"):
+            link.queue_file(self.path, source, "e" * 32)
+        self.assertFalse(self.read().get(link.FILE_OUTBOX))
+        for name in ("../../notes", "C:\\notes", "bad\u202e.bin", ".."):
+            with self.subTest(name=name):
+                self.assertFalse(link.safe_filename(name))
+
+    def test_forget_during_file_fetch_does_not_restore_the_payload(self):
+        identifier = "b" * 32
+        original = b"data"
+        manifest = {"filename": "data.bin", "mime": "application/octet-stream", "bytes": len(original),
+                    "sha256": hashlib.sha256(original).hexdigest(), "expires": int(time.time()) + 3600}
+        frame = len(original).to_bytes(8, "big") + link.encrypt(self.config, "phone", identifier, "file-manifest", link.pack(manifest))
+        link.save(self.path, self.state)
+        held, released = Event(), Event()
+
+        def relay(config, method, resource, body=None, **options):
+            if resource == "/v1/files/inbox":
+                return 200, link.pack([identifier])
+            if resource == "/v1/files/inbox/" + identifier:
+                return 200, frame
+            held.set()
+            self.assertTrue(released.wait(5))
+            return 200, link.encrypt(config, "phone", identifier + ":0", "file-chunk", original)
+
+        with patch.object(link, "request", relay), ThreadPoolExecutor(max_workers=2) as pool:
+            sync = pool.submit(link.FileSync(self.path, self.read(), None).run)
+            try:
+                self.assertTrue(held.wait(2))
+                pool.submit(link.change, self.path, self.operator, "forget").result(timeout=2)
+            finally:
+                released.set()
+            with self.assertRaises(link.PairingChanged):
+                sync.result(timeout=2)
+        self.assertFalse(self.read().get(link.FILE_INBOX))
+        self.assertFalse(link.file_directory(self.path, self.config["pair"]).exists())

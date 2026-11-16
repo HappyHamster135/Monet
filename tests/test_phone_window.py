@@ -58,13 +58,17 @@ if QT:
                 self.link["sent"] = ["Queued"]
             if command == "forget":
                 self.link = {"phase": "ready"}
-            output = json.dumps(self.link)
+            output = json.dumps({**self.link, **({"savedFile": "Saved file.bin"} if command == "save-file" else {})})
             QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, output, 0, ""))
             return ticket
 
         @Slot(str, result=QUrl)
         def monetLinkUrl(self, text):
             return self.link_url(text)
+
+        @Slot(QUrl, result=str)
+        def monetLinkPath(self, url):
+            return url.toLocalFile() if url.isLocalFile() and not url.host() else ""
 
 
 @unittest.skipUnless(QT and os.environ.get("MONET_PHONE_WINDOW_ROOT"), "requires the isolated Qt Phone fixture")
@@ -107,7 +111,10 @@ class PhoneWindow(unittest.TestCase):
         self.assertIsInstance(self.window, QQuickWindow)
         self.window.setWidth(760)
         self.window.setHeight(600)
-        QTest.qWait(450)
+        for _ in range(60):
+            if len(self.window.property("phoneList").toVariant()) == 2:
+                break
+            QTest.qWait(50)
         self.assertEqual(self.window.property("page"), "phone")
         self.assertEqual(len(self.window.property("phoneList").toVariant()), 2)
 
@@ -225,6 +232,45 @@ class PhoneWindow(unittest.TestCase):
         self.click(self.buttons("Read")[0])
         self.assertEqual(self.buttons("Open link"), [])
         self.assertEqual(opened, [url])
+
+    def test_monet_link_selects_files_and_saves_through_the_folder_picker(self):
+        pair, identifier = "a" * 32, "b" * 32
+        filename = "<b>Phone file.bin"
+        self.helper.link = {"phase": "paired", "pairId": pair, "fileRelay": True, "files": [
+            {"id": identifier, "filename": filename, "status": "Ready to save", "incoming": True, "canSave": True},
+        ]}
+        self.window.setProperty("monetLink", self.helper.link)
+        QTest.qWait(60)
+        self.assertTrue(any(item.property("text") == filename for item in self.items()))
+        item = next(item for item in self.items() if item.objectName() == "monetLinkSendFile")
+        self.click(item)
+        source = self.artifacts / "To phone with spaces.bin"
+        source.write_bytes(b"a file")
+        picker = self.window.findChild(QObject, "monetLinkSourceDialog")
+        self.assertTrue(picker.property("visible"))
+        self.assertTrue(picker.setProperty("selectedFile", QUrl.fromLocalFile(str(source))))
+        picker.accepted.emit()
+        picker.close()
+        QTest.qWait(100)
+        planned = [(command, json.loads(payload)) for command, payload in self.helper.link_calls if command == "send-file"]
+        self.assertEqual(planned, [("send-file", {"pair": pair, "path": str(source)})])
+
+        save_file = next(item for item in self.items() if item.objectName() == "monetLinkSaveFile")
+        self.assertTrue(save_file.isVisible())
+        save_file.clicked.emit()
+        destination = self.window.findChild(QObject, "monetLinkDestinationDialog")
+        for _ in range(30):
+            if destination.property("visible"):
+                break
+            QTest.qWait(40)
+        self.assertTrue(destination.property("visible"))
+        self.assertTrue(destination.setProperty("selectedFolder", QUrl.fromLocalFile(str(self.artifacts))))
+        destination.accepted.emit()
+        destination.close()
+        QTest.qWait(100)
+        planned = [(command, json.loads(payload)) for command, payload in self.helper.link_calls if command == "save-file"]
+        self.assertEqual(planned, [("save-file", {"pair": pair, "id": identifier, "incoming": True, "folder": str(self.artifacts)})])
+        self.assertEqual(self.window.property("monetLinkSaved"), "Saved file.bin")
 
     def test_monet_link_forget_waits_for_a_status_read(self):
         self.helper.link = {"phase": "paired"}
