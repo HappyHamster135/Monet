@@ -50,7 +50,7 @@ Item {
 
     Item {
         id: editModeUi
-        visible: editModeItem.open || xAnim.running
+        visible: editModeItem.open
         x: Math.round(editModeItem.open ? editModeRect.x + editModeRect.width / 2 - zoomedWidth / 2 : 0)
         y: Math.round(editModeItem.open ? editModeRect.y + editModeRect.height / 2 - zoomedHeight / 2 + toolBar.height / 2 : 0)
         width: editModeItem.open ? zoomedWidth : editModeItem.roundedRootWidth
@@ -92,6 +92,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
 
                 Text {
+                    visible: toolBar.width >= 440
                     horizontalAlignment: Text.AlignLeft
                     Layout.fillWidth: true
                     text: i18nd("monet", "Drag a widget to move it. Point at one to resize or remove it.")
@@ -145,40 +146,18 @@ Item {
             PlasmaExtras.MenuItem {
                 text: i18nd("monet", "Add a bar…")
                 icon: "list-add"
-                onClicked: containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
+                onClicked: Qt.callLater(() => {
+                    if (editModeItem.open)
+                        containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
+                })
             }
             PlasmaExtras.MenuItem {
                 readonly property QtObject manage: containment ? containment.plasmoid.corona.action("manage-containments") : null
                 text: i18nd("monet", "Manage desktops and bars")
                 icon: "configure"
                 visible: manage ? manage.visible : false
-                onClicked: manage.trigger()
-            }
-        }
-
-        Behavior on x {
-            NumberAnimation {
-                id: xAnim
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on y {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on width {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
-            }
-        }
-        Behavior on height {
-            NumberAnimation {
-                duration: Kirigami.Units.longDuration
-                easing.type: Easing.InOutQuad
+                enabled: manage?.enabled ?? false
+                onClicked: manage?.trigger()
             }
         }
 

@@ -42,6 +42,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   nothing until you click Begin Installation. It also asks for an
   administrator with a password first, so you can always sign in and look
   after the PC afterwards.
+- **Smoother widget editing.** The widget gallery's list scrolls on smaller
+  screens, Remove takes a widget off only the desktop or bar you're editing,
+  and Done in a bar's widget gallery brings you back to that bar's settings.
+  On a narrow screen, edit mode keeps its buttons in view.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

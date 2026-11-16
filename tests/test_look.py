@@ -2634,7 +2634,7 @@ class EverydayScreens(unittest.TestCase):
             self.assertIn(part, entry)
         gallery = (explorer / "MonetWidgetExplorer.qml").read_text(encoding="utf-8")
         for part in ("root.widgetExplorer", "pendingUninstallTimer.running", "explorer.addApplet(pluginName)",
-                     "explorer.removeAllInstances(pluginName)", '"text/x-plasmoidservicename"', "widgetsModel.searchTerm",
+                     'applet.internalAction("remove")', '"text/x-plasmoidservicename"', "widgetsModel.searchTerm",
                      "KItemModels.KSortFilterProxyModel",
                      # Done ends the editing: the desktop comes back to full size.
                      "containment.corona.editMode = false"):
