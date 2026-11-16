@@ -57,7 +57,7 @@ msgstr "Λεπτομέρειες"
 #: linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4043 linux/share/monet/settings-app/MonetSettings.qml:5006
 #: linux/share/monet/settings-app/MonetSettings.qml:5092 linux/share/monet/settings-app/MonetSettings.qml:6673 linux/share/monet/settings-app/MonetSettings.qml:6795
 #: linux/share/monet/settings-app/MonetSettings.qml:7821 linux/share/monet/settings-app/MonetSettings.qml:7999 linux/share/monet/settings-app/MonetSettings.qml:8326
-#: linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:273 linux/share/monet/store-app/Downloads.qml:149
+#: linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:330 linux/share/monet/store-app/Downloads.qml:209
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1340
 msgid "Cancel"
@@ -237,8 +237,8 @@ msgstr ""
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/FullRepresentation.qml:32 linux/share/monet/settings-app/MonetSettings.qml:3022 linux/share/monet/settings-app/MonetSettings.qml:3295
 #: linux/share/monet/settings-app/MonetSettings.qml:3819 linux/share/monet/settings-app/MonetSettings.qml:4200 linux/share/monet/settings-app/MonetSettings.qml:4607
 #: linux/share/monet/settings-app/MonetSettings.qml:4644 linux/share/monet/settings-app/MonetSettings.qml:4745 linux/share/monet/settings-app/MonetSettings.qml:8145
-#: linux/share/monet/settings-app/MonetSettings.qml:8858 linux/share/monet/settings-app/MonetSettings.qml:9178 linux/share/monet/store-app/Downloads.qml:71
-#: linux/share/monet/store-app/Store.qml:829 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
+#: linux/share/monet/settings-app/MonetSettings.qml:8858 linux/share/monet/settings-app/MonetSettings.qml:9178 linux/share/monet/store-app/Downloads.qml:97
+#: linux/share/monet/store-app/Store.qml:904 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:462 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:573 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:472
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:475 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:678 setup/qml/Main.qml:986
 msgid "Try again"
@@ -774,7 +774,7 @@ msgid "Remove all"
 msgstr "Αφαίρεση όλων"
 
 #: linux/share/monet/explorer/MonetWidgetExplorer.qml:693 linux/share/monet/games/Apps.qml:812 linux/share/monet/settings-app/MonetSettings.qml:5255
-#: linux/share/monet/settings-app/MonetSettings.qml:8057 linux/share/monet/store-app/AppPage.qml:215
+#: linux/share/monet/settings-app/MonetSettings.qml:8057 linux/share/monet/store-app/AppPage.qml:241
 msgid "Remove"
 msgstr "Αφαίρεση"
 
@@ -835,7 +835,7 @@ msgstr ""
 
 #: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:447
 #: linux/share/monet/games/Games.qml:868 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
-#: linux/share/monet/store-app/Store.qml:174 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
+#: linux/share/monet/store-app/Store.qml:178 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "Παιχνίδια"
 
@@ -884,8 +884,8 @@ msgstr ""
 msgid "Windows programs"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:626
-#: linux/share/monet/store-app/Store.qml:638
+#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:701
+#: linux/share/monet/store-app/Store.qml:713
 msgid "Find an app"
 msgstr "Βρείτε μια εφαρμογή"
 
@@ -897,7 +897,7 @@ msgstr ""
 msgid "Apps called “%1”"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:874
+#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:949
 msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "%1 εφαρμογή"
@@ -925,7 +925,7 @@ msgid "No apps here."
 msgstr ""
 
 #: linux/share/monet/games/Apps.qml:762 linux/share/monet/settings-app/MonetSettings.qml:3999 linux/share/monet/settings-app/MonetSettings.qml:6966
-#: linux/share/monet/store-app/AppPage.qml:209 linux/share/monet/store-app/Downloads.qml:139 linux/share/monet/store-app/Home.qml:224
+#: linux/share/monet/store-app/AppPage.qml:232 linux/share/monet/store-app/Downloads.qml:196 linux/share/monet/store-app/Home.qml:224
 msgid "Open"
 msgstr "Ανοιχτό"
 
@@ -1104,8 +1104,8 @@ msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:236 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:95
-#: linux/share/monet/store-app/AppPage.qml:398 setup/qml/Main.qml:223
+#: linux/share/monet/games/GamePage.qml:236 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
+#: setup/qml/Main.qml:223
 msgid "Back"
 msgstr "Πίσω"
 
@@ -1273,7 +1273,7 @@ msgid "Add to Steam"
 msgstr "Προσθήκη στο Steam"
 
 #: linux/share/monet/games/Games.qml:831 linux/share/monet/games/Games.qml:1458 linux/share/monet/games/MonetWindow.qml:146
-#: linux/share/monet/store-app/Store.qml:1095 linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282
+#: linux/share/monet/store-app/Store.qml:1172 linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282
 #: linux/share/monet/passwords/app_support_ui.py:42 crates/monet-usb/src/gui.rs:157
 msgid "Close"
 msgstr "Κλείσιμο"
@@ -2622,7 +2622,7 @@ msgstr ""
 msgid "Until turned off or you sign out"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1636 linux/share/monet/store-app/Store.qml:435
+#: linux/share/monet/settings-app/MonetSettings.qml:1636 linux/share/monet/store-app/Store.qml:482
 msgid "Finishing…"
 msgstr ""
 
@@ -4795,7 +4795,7 @@ msgstr "Οριστικό άδειασμα"
 msgid "Empty Trash"
 msgstr "Άδειασμα κάδου"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6723 linux/share/monet/store-app/Downloads.qml:48 linux/share/monet/store-app/Store.qml:183
+#: linux/share/monet/settings-app/MonetSettings.qml:6723 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:187
 msgid "Downloads"
 msgstr "Λήψεις"
 
@@ -5502,7 +5502,7 @@ msgstr ""
 msgid "Getting %1…"
 msgstr "Λήψη %1…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7605 linux/share/monet/store-app/Downloads.qml:142
+#: linux/share/monet/settings-app/MonetSettings.qml:7605 linux/share/monet/store-app/Downloads.qml:199
 msgid "Open %1"
 msgstr "Άνοιγμα %1"
 
@@ -5874,7 +5874,7 @@ msgid "Restart now"
 msgstr "Επανεκκίνηση τώρα"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8146 linux/share/monet/settings-app/MonetSettings.qml:8856 linux/share/monet/settings-app/MonetSettings.qml:9179
-#: linux/share/monet/store-app/AppPage.qml:201 linux/share/monet/store-app/Home.qml:217 setup/qml/Main.qml:232
+#: linux/share/monet/store-app/AppPage.qml:222 linux/share/monet/store-app/Home.qml:217 setup/qml/Main.qml:232
 msgid "Install"
 msgstr "Εγκατάσταση"
 
@@ -6200,7 +6200,7 @@ msgstr ""
 msgid "Retry pending"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8512 linux/share/monet/store-app/AppPage.qml:288 linux/share/monet/store-app/Downloads.qml:165
+#: linux/share/monet/settings-app/MonetSettings.qml:8512 linux/share/monet/store-app/AppPage.qml:353 linux/share/monet/store-app/Downloads.qml:233
 msgid "Dismiss"
 msgstr ""
 
@@ -6212,7 +6212,7 @@ msgstr ""
 msgid "Retry documents"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8532 linux/share/monet/store-app/AppPage.qml:282 linux/share/monet/store-app/Downloads.qml:157
+#: linux/share/monet/settings-app/MonetSettings.qml:8532 linux/share/monet/store-app/AppPage.qml:343 linux/share/monet/store-app/Downloads.qml:221
 #: linux/share/monet/widgets/LaunchFeedback.qml:43 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:446 image/launcher/coordinator.cpp:363
 msgid "Retry"
 msgstr ""
@@ -6621,127 +6621,131 @@ msgid "Opens in Windows"
 msgstr "Ανοίγει στα Windows"
 
 #: linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191 linux/share/monet/store-app/Home.qml:394
-#: linux/share/monet/store-app/Store.qml:182 linux/share/monet/store-app/Store.qml:434
+#: linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
 msgid "Installed"
 msgstr "Εγκατεστημένο"
 
-#: linux/share/monet/store-app/AppCard.qml:94 linux/share/monet/store-app/AppPage.qml:221 linux/share/monet/store-app/Framed.qml:192
+#: linux/share/monet/store-app/AppCard.qml:94 linux/share/monet/store-app/AppPage.qml:248 linux/share/monet/store-app/Framed.qml:192
 #: linux/share/monet/store-app/Home.qml:395
 msgid "Part of Monet"
 msgstr "Μέρος του Monet"
 
-#: linux/share/monet/store-app/AppCard.qml:95 linux/share/monet/store-app/AppPage.qml:230 linux/share/monet/store-app/Framed.qml:193
+#: linux/share/monet/store-app/AppCard.qml:95 linux/share/monet/store-app/AppPage.qml:263 linux/share/monet/store-app/Framed.qml:193
 #: linux/share/monet/store-app/Home.qml:230
 msgid "Working on it…"
 msgstr "Σε εξέλιξη…"
 
-#: linux/share/monet/store-app/AppPage.qml:54
+#: linux/share/monet/store-app/AppPage.qml:72
 msgid "Can run programs outside its own space"
 msgstr "Μπορεί να εκτελεί προγράμματα έξω από τον δικό της χώρο"
 
-#: linux/share/monet/store-app/AppPage.qml:55
+#: linux/share/monet/store-app/AppPage.qml:73
 msgid "All your files"
 msgstr "Όλα τα αρχεία σας"
 
-#: linux/share/monet/store-app/AppPage.qml:56
+#: linux/share/monet/store-app/AppPage.qml:74
 msgid "Your home folder"
 msgstr "Ο προσωπικός σας φάκελος"
 
-#: linux/share/monet/store-app/AppPage.qml:57
+#: linux/share/monet/store-app/AppPage.qml:75
 msgid "Some of your folders"
 msgstr "Κάποιοι από τους φακέλους σας"
 
-#: linux/share/monet/store-app/AppPage.qml:58
+#: linux/share/monet/store-app/AppPage.qml:76
 msgid "Devices like cameras, microphones and controllers"
 msgstr "Συσκευές όπως κάμερες, μικρόφωνα και χειριστήρια"
 
-#: linux/share/monet/store-app/AppPage.qml:59
+#: linux/share/monet/store-app/AppPage.qml:77
 msgid "The internet"
 msgstr "Το διαδίκτυο"
 
-#: linux/share/monet/store-app/AppPage.qml:178 linux/share/monet/store-app/Shelf.qml:129 linux/share/monet/store-app/Shelf.qml:143
+#: linux/share/monet/store-app/AppPage.qml:197 linux/share/monet/store-app/Shelf.qml:129 linux/share/monet/store-app/Shelf.qml:143
 msgid "Checked by Flathub"
 msgstr "Ελέγχθηκε από το Flathub"
 
-#: linux/share/monet/store-app/AppPage.qml:273 linux/share/monet/store-app/Downloads.qml:149 linux/share/monet/store-app/Store.qml:431
-msgid "Cancelling…"
+#: linux/share/monet/store-app/AppPage.qml:331 linux/share/monet/store-app/Downloads.qml:211
+msgid "Cancel removing %1"
 msgstr ""
 
-#: linux/share/monet/store-app/AppPage.qml:411
-msgid "Next"
-msgstr "Επόμενο"
+#: linux/share/monet/store-app/AppPage.qml:332 linux/share/monet/store-app/Downloads.qml:212
+msgid "Cancel downloading %1"
+msgstr ""
 
-#: linux/share/monet/store-app/AppPage.qml:497
+#: linux/share/monet/store-app/AppPage.qml:344 linux/share/monet/store-app/Downloads.qml:224
+msgid "Retry %1"
+msgstr ""
+
+#: linux/share/monet/store-app/AppPage.qml:354 linux/share/monet/store-app/Downloads.qml:235
+msgid "Dismiss %1"
+msgstr ""
+
+#: linux/share/monet/store-app/AppPage.qml:468
+msgid "Previous screenshot"
+msgstr ""
+
+#: linux/share/monet/store-app/AppPage.qml:484
+msgid "Next screenshot"
+msgstr ""
+
+#: linux/share/monet/store-app/AppPage.qml:571
 msgid "What it can reach"
 msgstr "Σε τι έχει πρόσβαση"
 
-#: linux/share/monet/store-app/AppPage.qml:507
+#: linux/share/monet/store-app/AppPage.qml:581
 msgid "Flatpak didn't say this time."
 msgstr "Το Flatpak δεν απάντησε αυτή τη φορά."
 
-#: linux/share/monet/store-app/AppPage.qml:507
+#: linux/share/monet/store-app/AppPage.qml:581
 msgid "Asking Flatpak…"
 msgstr "Ερώτηση στο Flatpak…"
 
-#: linux/share/monet/store-app/AppPage.qml:514
+#: linux/share/monet/store-app/AppPage.qml:588
 msgid "Only its own space"
 msgstr "Μόνο ο δικός της χώρος"
 
-#: linux/share/monet/store-app/AppPage.qml:546
+#: linux/share/monet/store-app/AppPage.qml:620
 msgid "About it"
 msgstr "Σχετικά"
 
-#: linux/share/monet/store-app/AppPage.qml:556
+#: linux/share/monet/store-app/AppPage.qml:630
 msgid "Version %1, %2"
 msgstr "Έκδοση %1, %2"
 
-#: linux/share/monet/store-app/AppPage.qml:557
+#: linux/share/monet/store-app/AppPage.qml:631
 msgid "Version %1"
 msgstr "Έκδοση %1"
 
-#: linux/share/monet/store-app/AppPage.qml:558
+#: linux/share/monet/store-app/AppPage.qml:632
 msgid "Free and open source"
 msgstr "Ελεύθερο και ανοιχτού κώδικα"
 
-#: linux/share/monet/store-app/AppPage.qml:558
+#: linux/share/monet/store-app/AppPage.qml:632
 msgid "Not open source"
 msgstr "Κλειστού κώδικα"
 
-#: linux/share/monet/store-app/AppPage.qml:559
+#: linux/share/monet/store-app/AppPage.qml:633
 msgid "Download: %1"
 msgstr "Λήψη: %1"
 
-#: linux/share/monet/store-app/AppPage.qml:560
+#: linux/share/monet/store-app/AppPage.qml:634
 msgid "On disk: %1"
 msgstr "Στον δίσκο: %1"
 
-#: linux/share/monet/store-app/AppPage.qml:575
+#: linux/share/monet/store-app/AppPage.qml:649
 msgid "Its website"
 msgstr "Ο ιστότοπός της"
 
-#: linux/share/monet/store-app/AppPage.qml:590
+#: linux/share/monet/store-app/AppPage.qml:664
 msgid "More like this"
 msgstr "Παρόμοιες εφαρμογές"
 
-#: linux/share/monet/store-app/Downloads.qml:55
+#: linux/share/monet/store-app/Downloads.qml:81
 msgid ""
 "Downloads keep going when you close the Store. After a restart or interruption, you can retry here."
 msgstr ""
 
-#: linux/share/monet/store-app/Downloads.qml:78
+#: linux/share/monet/store-app/Downloads.qml:104
 msgid "Nothing downloading. Choose an app in the Store to get started."
-msgstr ""
-
-#: linux/share/monet/store-app/Downloads.qml:151
-msgid "Cancel %1"
-msgstr ""
-
-#: linux/share/monet/store-app/Downloads.qml:160
-msgid "Retry %1"
-msgstr ""
-
-#: linux/share/monet/store-app/Downloads.qml:167
-msgid "Dismiss %1"
 msgstr ""
 
 #: linux/share/monet/store-app/Home.qml:35 linux/share/monet/store-app/Shelf.qml:43 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:179
@@ -6781,423 +6785,440 @@ msgstr "Όλα"
 msgid "No apps here yet."
 msgstr "Δεν υπάρχουν ακόμα εφαρμογές εδώ."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:586 linux/libexec/monet-quick:7327
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7327
 msgid "Store"
 msgstr "Κατάστημα"
 
-#: linux/share/monet/store-app/Store.qml:166
+#: linux/share/monet/store-app/Store.qml:170
 msgid "Play"
 msgstr "Παίξτε"
 
-#: linux/share/monet/store-app/Store.qml:166
+#: linux/share/monet/store-app/Store.qml:170
 msgid "Launchers, old consoles and new games. Steam is already here."
 msgstr ""
 "Εφαρμογές παιχνιδιών, παλιές κονσόλες και νέα παιχνίδια. Το Steam είναι ήδη εδώ."
 
-#: linux/share/monet/store-app/Store.qml:167
+#: linux/share/monet/store-app/Store.qml:171
 msgid "Talk & stream"
 msgstr "Συνομιλίες και streaming"
 
-#: linux/share/monet/store-app/Store.qml:167
+#: linux/share/monet/store-app/Store.qml:171
 msgid "Friends, calls, and going live."
 msgstr "Φίλοι, κλήσεις και ζωντανές μεταδόσεις."
 
-#: linux/share/monet/store-app/Store.qml:168
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Music & film"
 msgstr "Μουσική και ταινίες"
 
-#: linux/share/monet/store-app/Store.qml:168
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Something to listen to, and something to watch."
 msgstr "Κάτι να ακούσετε και κάτι να δείτε."
 
-#: linux/share/monet/store-app/Store.qml:169
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Work & make"
 msgstr "Δουλειά και δημιουργία"
 
-#: linux/share/monet/store-app/Store.qml:169
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Writing, drawing, editing, sending, and tools for the command line."
 msgstr ""
 "Γράψιμο, ζωγραφική, επεξεργασία, αποστολή και εργαλεία για τη γραμμή εντολών."
 
-#: linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Everyday"
 msgstr "Καθημερινές"
 
-#: linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Passwords, sharing, and the small things that help."
 msgstr "Κωδικοί πρόσβασης, κοινή χρήση και μικρά πράγματα που βοηθούν."
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:177
 msgid "Monet's picks"
 msgstr "Επιλογές του Monet"
 
-#: linux/share/monet/store-app/Store.qml:175
+#: linux/share/monet/store-app/Store.qml:179
 msgid "Photos & drawing"
 msgstr "Φωτογραφίες και σχέδιο"
 
-#: linux/share/monet/store-app/Store.qml:176
+#: linux/share/monet/store-app/Store.qml:180
 msgid "Music & video"
 msgstr "Μουσική και βίντεο"
 
-#: linux/share/monet/store-app/Store.qml:177
+#: linux/share/monet/store-app/Store.qml:181
 msgid "Writing & office"
 msgstr "Κείμενο και γραφείο"
 
-#: linux/share/monet/store-app/Store.qml:178
+#: linux/share/monet/store-app/Store.qml:182
 msgid "Internet & chat"
 msgstr "Διαδίκτυο και συνομιλία"
 
-#: linux/share/monet/store-app/Store.qml:179
+#: linux/share/monet/store-app/Store.qml:183
 msgid "Learning"
 msgstr "Μάθηση"
 
-#: linux/share/monet/store-app/Store.qml:180
+#: linux/share/monet/store-app/Store.qml:184
 msgid "Developer tools"
 msgstr "Προγραμματισμός"
 
-#: linux/share/monet/store-app/Store.qml:181
+#: linux/share/monet/store-app/Store.qml:185
 msgid "Tools"
 msgstr "Εργαλεία"
 
-#: linux/share/monet/store-app/Store.qml:184 linux/share/monet/store-app/Store.qml:967
+#: linux/share/monet/store-app/Store.qml:188 linux/share/monet/store-app/Store.qml:1042
 msgid "On your Windows"
 msgstr "Στα Windows σας"
 
-#: linux/share/monet/store-app/Store.qml:190
+#: linux/share/monet/store-app/Store.qml:194
 msgctxt "a kind of app, a filter in the Store"
 msgid "Action"
 msgstr "Δράση"
 
-#: linux/share/monet/store-app/Store.qml:191
+#: linux/share/monet/store-app/Store.qml:195
 msgctxt "a kind of app, a filter in the Store"
 msgid "Arcade"
 msgstr "Arcade"
 
-#: linux/share/monet/store-app/Store.qml:192
+#: linux/share/monet/store-app/Store.qml:196
 msgctxt "a kind of app, a filter in the Store"
 msgid "Strategy"
 msgstr "Στρατηγική"
 
-#: linux/share/monet/store-app/Store.qml:193
+#: linux/share/monet/store-app/Store.qml:197
 msgctxt "a kind of app, a filter in the Store"
 msgid "Puzzles"
 msgstr "Παζλ"
 
-#: linux/share/monet/store-app/Store.qml:194
+#: linux/share/monet/store-app/Store.qml:198
 msgctxt "a kind of app, a filter in the Store"
 msgid "Adventure & role-playing"
 msgstr "Περιπέτεια και RPG"
 
-#: linux/share/monet/store-app/Store.qml:195
+#: linux/share/monet/store-app/Store.qml:199
 msgctxt "a kind of app, a filter in the Store"
 msgid "Simulation & sports"
 msgstr "Προσομοίωση και αθλητικά"
 
-#: linux/share/monet/store-app/Store.qml:196
+#: linux/share/monet/store-app/Store.qml:200
 msgctxt "a kind of app, a filter in the Store"
 msgid "Board & cards"
 msgstr "Επιτραπέζια και χαρτιά"
 
-#: linux/share/monet/store-app/Store.qml:197
+#: linux/share/monet/store-app/Store.qml:201
 msgctxt "a kind of app, a filter in the Store"
 msgid "For kids"
 msgstr "Για παιδιά"
 
-#: linux/share/monet/store-app/Store.qml:198
+#: linux/share/monet/store-app/Store.qml:202
 msgctxt "a kind of app, a filter in the Store"
 msgid "Emulators"
 msgstr "Εξομοιωτές"
 
-#: linux/share/monet/store-app/Store.qml:199
+#: linux/share/monet/store-app/Store.qml:203
 msgctxt "a kind of app, a filter in the Store"
 msgid "Drawing & painting"
 msgstr "Σχέδιο και ζωγραφική"
 
-#: linux/share/monet/store-app/Store.qml:200
+#: linux/share/monet/store-app/Store.qml:204
 msgctxt "a kind of app, a filter in the Store"
 msgid "Photos"
 msgstr "Φωτογραφίες"
 
-#: linux/share/monet/store-app/Store.qml:201
+#: linux/share/monet/store-app/Store.qml:205
 msgctxt "a kind of app, a filter in the Store"
 msgid "Vector"
 msgstr "Διανυσματικά"
 
-#: linux/share/monet/store-app/Store.qml:202
+#: linux/share/monet/store-app/Store.qml:206
 msgctxt "a kind of app, a filter in the Store"
 msgid "3D"
 msgstr "3D"
 
-#: linux/share/monet/store-app/Store.qml:203
+#: linux/share/monet/store-app/Store.qml:207
 msgctxt "a kind of app, a filter in the Store"
 msgid "Viewers"
 msgstr "Προβολή"
 
-#: linux/share/monet/store-app/Store.qml:204
+#: linux/share/monet/store-app/Store.qml:208
 msgctxt "a kind of app, a filter in the Store"
 msgid "Scanning"
 msgstr "Σάρωση"
 
-#: linux/share/monet/store-app/Store.qml:205
+#: linux/share/monet/store-app/Store.qml:209
 msgctxt "a kind of app, a filter in the Store"
 msgid "Players"
 msgstr "Αναπαραγωγή"
 
-#: linux/share/monet/store-app/Store.qml:206
+#: linux/share/monet/store-app/Store.qml:210
 msgctxt "a kind of app, a filter in the Store"
 msgid "Making music"
 msgstr "Δημιουργία μουσικής"
 
-#: linux/share/monet/store-app/Store.qml:207
+#: linux/share/monet/store-app/Store.qml:211
 msgctxt "a kind of app, a filter in the Store"
 msgid "Editing"
 msgstr "Επεξεργασία"
 
-#: linux/share/monet/store-app/Store.qml:208
+#: linux/share/monet/store-app/Store.qml:212
 msgctxt "a kind of app, a filter in the Store"
 msgid "Video & TV"
 msgstr "Βίντεο και τηλεόραση"
 
-#: linux/share/monet/store-app/Store.qml:209
+#: linux/share/monet/store-app/Store.qml:213
 msgctxt "a kind of app, a filter in the Store"
 msgid "Recording"
 msgstr "Εγγραφή"
 
-#: linux/share/monet/store-app/Store.qml:210
+#: linux/share/monet/store-app/Store.qml:214
 msgctxt "a kind of app, a filter in the Store"
 msgid "Writing"
 msgstr "Γράψιμο"
 
-#: linux/share/monet/store-app/Store.qml:211
+#: linux/share/monet/store-app/Store.qml:215
 msgctxt "a kind of app, a filter in the Store"
 msgid "Money"
 msgstr "Οικονομικά"
 
-#: linux/share/monet/store-app/Store.qml:212
+#: linux/share/monet/store-app/Store.qml:216
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calendars & planning"
 msgstr "Ημερολόγια και οργάνωση"
 
-#: linux/share/monet/store-app/Store.qml:213
+#: linux/share/monet/store-app/Store.qml:217
 msgctxt "a kind of app, a filter in the Store"
 msgid "Email"
 msgstr "Email"
 
-#: linux/share/monet/store-app/Store.qml:214
+#: linux/share/monet/store-app/Store.qml:218
 msgctxt "a kind of app, a filter in the Store"
 msgid "Chat"
 msgstr "Συνομιλία"
 
-#: linux/share/monet/store-app/Store.qml:215
+#: linux/share/monet/store-app/Store.qml:219
 msgctxt "a kind of app, a filter in the Store"
 msgid "Browsers"
 msgstr "Περιηγητές"
 
-#: linux/share/monet/store-app/Store.qml:216
+#: linux/share/monet/store-app/Store.qml:220
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calls"
 msgstr "Κλήσεις"
 
-#: linux/share/monet/store-app/Store.qml:217
+#: linux/share/monet/store-app/Store.qml:221
 msgctxt "a kind of app, a filter in the Store"
 msgid "Sharing & downloads"
 msgstr "Κοινή χρήση και λήψεις"
 
-#: linux/share/monet/store-app/Store.qml:218
+#: linux/share/monet/store-app/Store.qml:222
 msgctxt "a kind of app, a filter in the Store"
 msgid "News"
 msgstr "Ειδήσεις"
 
-#: linux/share/monet/store-app/Store.qml:219
+#: linux/share/monet/store-app/Store.qml:223
 msgctxt "a kind of app, a filter in the Store"
 msgid "Remote access"
 msgstr "Απομακρυσμένη πρόσβαση"
 
-#: linux/share/monet/store-app/Store.qml:220
+#: linux/share/monet/store-app/Store.qml:224
 msgctxt "a kind of app, a filter in the Store"
 msgid "Science"
 msgstr "Επιστήμη"
 
-#: linux/share/monet/store-app/Store.qml:221
+#: linux/share/monet/store-app/Store.qml:225
 msgctxt "a kind of app, a filter in the Store"
 msgid "Math"
 msgstr "Μαθηματικά"
 
-#: linux/share/monet/store-app/Store.qml:222
+#: linux/share/monet/store-app/Store.qml:226
 msgctxt "a kind of app, a filter in the Store"
 msgid "Languages"
 msgstr "Γλώσσες"
 
-#: linux/share/monet/store-app/Store.qml:223
+#: linux/share/monet/store-app/Store.qml:227
 msgctxt "a kind of app, a filter in the Store"
 msgid "Computing & data"
 msgstr "Πληροφορική και δεδομένα"
 
-#: linux/share/monet/store-app/Store.qml:224
+#: linux/share/monet/store-app/Store.qml:228
 msgctxt "a kind of app, a filter in the Store"
 msgid "Code editors"
 msgstr "Επεξεργαστές κώδικα"
 
-#: linux/share/monet/store-app/Store.qml:225
+#: linux/share/monet/store-app/Store.qml:229
 msgctxt "a kind of app, a filter in the Store"
 msgid "Version control"
 msgstr "Έλεγχος εκδόσεων"
 
-#: linux/share/monet/store-app/Store.qml:226
+#: linux/share/monet/store-app/Store.qml:230
 msgctxt "a kind of app, a filter in the Store"
 msgid "Web"
 msgstr "Web"
 
-#: linux/share/monet/store-app/Store.qml:227
+#: linux/share/monet/store-app/Store.qml:231
 msgctxt "a kind of app, a filter in the Store"
 msgid "Debugging"
 msgstr "Αποσφαλμάτωση"
 
-#: linux/share/monet/store-app/Store.qml:228
+#: linux/share/monet/store-app/Store.qml:232
 msgctxt "a kind of app, a filter in the Store"
 msgid "Electronics"
 msgstr "Ηλεκτρονικά"
 
-#: linux/share/monet/store-app/Store.qml:229
+#: linux/share/monet/store-app/Store.qml:233
 msgctxt "a kind of app, a filter in the Store"
 msgid "System"
 msgstr "Σύστημα"
 
-#: linux/share/monet/store-app/Store.qml:230
+#: linux/share/monet/store-app/Store.qml:234
 msgctxt "a kind of app, a filter in the Store"
 msgid "Files"
 msgstr "Αρχεία"
 
-#: linux/share/monet/store-app/Store.qml:231
+#: linux/share/monet/store-app/Store.qml:235
 msgctxt "a kind of app, a filter in the Store"
 msgid "Text"
 msgstr "Κείμενο"
 
-#: linux/share/monet/store-app/Store.qml:232
+#: linux/share/monet/store-app/Store.qml:236
 msgctxt "a kind of app, a filter in the Store"
 msgid "Security"
 msgstr "Ασφάλεια"
 
-#: linux/share/monet/store-app/Store.qml:233
+#: linux/share/monet/store-app/Store.qml:237
 msgctxt "a kind of app, a filter in the Store"
 msgid "Terminals"
 msgstr "Τερματικά"
 
-#: linux/share/monet/store-app/Store.qml:234
+#: linux/share/monet/store-app/Store.qml:238
 msgctxt "a kind of app, a filter in the Store"
 msgid "Clocks & calculators"
 msgstr "Ρολόγια και αριθμομηχανές"
 
-#: linux/share/monet/store-app/Store.qml:430
+#: linux/share/monet/store-app/Store.qml:476
 msgid "Waiting its turn"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:432
+#: linux/share/monet/store-app/Store.qml:477
+msgid "Installing… This part can't be cancelled."
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:478
+msgid "Cancelling…"
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:479
 msgid "Cancelled. You can try again whenever you're ready."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:433
+#: linux/share/monet/store-app/Store.qml:480
 msgid "Interrupted. Retry to finish removing this app."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:433
+#: linux/share/monet/store-app/Store.qml:480
 msgid "Interrupted. Retry to continue the download."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:434
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Removed"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:435
+#: linux/share/monet/store-app/Store.qml:482 linux/share/monet/store-app/Store.qml:493
 msgid "Removing…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:435
+#: linux/share/monet/store-app/Store.qml:482
 msgid "Downloading & installing… %1%"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:436
+#: linux/share/monet/store-app/Store.qml:483
 msgid "There isn't enough free space. Free some space, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:437
+#: linux/share/monet/store-app/Store.qml:484
 msgid ""
 "The download stopped because Flathub couldn't be reached. Check your connection, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:438
+#: linux/share/monet/store-app/Store.qml:485
 msgid "Only an administrator of this PC can install and remove apps."
 msgstr ""
 "Μόνο ένας διαχειριστής αυτού του υπολογιστή μπορεί να εγκαθιστά και να αφαιρεί εφαρμογές."
 
-#: linux/share/monet/store-app/Store.qml:439
+#: linux/share/monet/store-app/Store.qml:486
 msgid "The download couldn't start. Try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:440
+#: linux/share/monet/store-app/Store.qml:487
 msgid "The download list couldn't be saved. Check free space and try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:441
+#: linux/share/monet/store-app/Store.qml:488
 msgid "That didn't work. Try again in a moment."
 msgstr "Δεν πέτυχε. Δοκιμάστε ξανά σε λίγο."
 
-#: linux/share/monet/store-app/Store.qml:469
+#: linux/share/monet/store-app/Store.qml:493
+msgid "Downloading…"
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:511
+msgctxt "an app, then how its download or removal is going"
+msgid "%1: %2"
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:546
 msgid ""
 "The saved download list couldn't be read or saved. Check free space and folder access, then try again. Your existing list has been kept."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:715
+#: linux/share/monet/store-app/Store.qml:790
 msgid "Yours"
 msgstr "Δικές σας"
 
-#: linux/share/monet/store-app/Store.qml:821
+#: linux/share/monet/store-app/Store.qml:896
 msgid ""
 "The app catalog is unavailable. Check your connection and try again. Your downloads are still available."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:821
+#: linux/share/monet/store-app/Store.qml:896
 msgid "Opening the Store…"
 msgstr "Άνοιγμα του Καταστήματος…"
 
-#: linux/share/monet/store-app/Store.qml:870
+#: linux/share/monet/store-app/Store.qml:945
 msgid ""
 "Apps in your Windows. Each opens there: your PC restarts in Windows, and Back to Monet brings you back."
 msgstr ""
 "Εφαρμογές στα Windows σας. Καθεμία ανοίγει εκεί: ο υπολογιστής σας επανεκκινεί στα Windows και το «Επιστροφή στο Monet» σας φέρνει πίσω."
 
-#: linux/share/monet/store-app/Store.qml:872
+#: linux/share/monet/store-app/Store.qml:947
 msgid "Apps you installed from the Store. They update by themselves."
 msgstr ""
 "Εφαρμογές που εγκαταστήσατε από το Κατάστημα. Ενημερώνονται μόνες τους."
 
-#: linux/share/monet/store-app/Store.qml:873
+#: linux/share/monet/store-app/Store.qml:948
 msgid "Apps you install from the Store show up here."
 msgstr "Οι εφαρμογές που εγκαθιστάτε από το Κατάστημα εμφανίζονται εδώ."
 
-#: linux/share/monet/store-app/Store.qml:902
+#: linux/share/monet/store-app/Store.qml:977
 msgid "Apps for “%1”"
 msgstr "Εφαρμογές για «%1»"
 
-#: linux/share/monet/store-app/Store.qml:926
+#: linux/share/monet/store-app/Store.qml:1001
 msgid "Looking for %1?"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:938
+#: linux/share/monet/store-app/Store.qml:1013
 msgid ""
 "These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:939
+#: linux/share/monet/store-app/Store.qml:1014
 msgid ""
 "No suggestions are available in this catalog. Check the publisher's website for a web version or supported systems."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:996
+#: linux/share/monet/store-app/Store.qml:1071
 msgid "For Monet"
 msgstr "Για το Monet"
 
-#: linux/share/monet/store-app/Store.qml:1024
+#: linux/share/monet/store-app/Store.qml:1099
 msgid ""
 "Nothing in the Store goes by “%1”. Try other words, or what it's for: “photo editor”, “music”."
 msgstr ""
