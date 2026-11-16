@@ -134,6 +134,22 @@ class Safety(unittest.TestCase):
         with self.assertRaises(SystemExit), mock.patch.object(vm, "remembered", lambda name: "j"):
             vm.main(["tests", "tests.test_look; rm -rf ~"])
 
+    def test_a_worktrees_git_file_stays_out_of_the_tar(self):
+        import io
+        import tarfile
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / ".git").write_text("gitdir: /elsewhere/.git/worktrees/x\n")
+            (root / "tests").mkdir()
+            (root / "tests/test_x.py").write_text("x = 1\r\n")
+            (root / "tests/.git").write_text("gitdir: ../.git/modules/tests\n")  # a submodule's
+            (root / "target").write_text("")
+            (root / "tests/__pycache__").mkdir()
+            (root / "tests/__pycache__/test_x.pyc").write_bytes(b"\0")
+            with tarfile.open(fileobj=io.BytesIO(vm.checkout(root))) as tar:
+                self.assertEqual(tar.getnames(), ["tests/test_x.py"])
+                self.assertEqual(tar.extractfile("tests/test_x.py").read(), b"x = 1\n")
+
     def test_the_vm_is_made_strong_enough(self):
         script = (ROOT / "tools/hyperv-vm.ps1").read_text(encoding="utf-8")
         self.assertIn("[int]$MemoryGB = 16", script)
