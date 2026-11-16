@@ -387,6 +387,9 @@ class MenuSearchUI(unittest.TestCase):
         functions = "\n".join(re.search(r"    (function " + name + r"\(.*?\n    })", source, re.S).group(1)
                               for name in ("findEveryday", "runEveryday", "launchEveryday"))
         receiver = re.search(r"onNewData: (\(source, data\) => \{.*?\n        })", source, re.S).group(1)
+        # All apps is the real menu's model without the games launchers add, launched by source row.
+        without_games = re.search(r"(    property var launcherGames: .*?\n    function launchFromAllApps\(row\) \{.*?\n    })",
+                                  source, re.S).group(1)
         qml = imports + '''
 import QtQuick.Window
 Window {
@@ -429,6 +432,7 @@ Window {
         }
         function showAppMenu(item, id) { requestedMenu = id }
         property var everyApp: empty
+        WITHOUT_GAMES
         property var recent: empty
         property var apps: QtObject {
             property var favoritesModel: empty
@@ -463,7 +467,7 @@ Window {
         REPRESENTATION
     }
 }
-'''.replace("RECEIVER", receiver).replace("FUNCTIONS", functions).replace("REPRESENTATION", representation)
+'''.replace("RECEIVER", receiver).replace("FUNCTIONS", functions).replace("WITHOUT_GAMES", without_games).replace("REPRESENTATION", representation)
         if getattr(self, "native_runner", False):
             qml = re.sub(r'property var finder: QtObject \{.*?\n        }',
                          'property var finder: Kicker.RunnerModel { mergeResults: true }', qml, count=1, flags=re.S)

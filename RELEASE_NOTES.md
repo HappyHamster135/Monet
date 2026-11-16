@@ -69,6 +69,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   once when it starts playing, so pausing and playing never undoes a change
   made in the sound menu or Settings. That change is also kept for the app's
   next track.
+- **Games stay in Games.** The menu's All apps no longer lists the games
+  Steam, Heroic and Lutris add there, like Counter-Strike 2. They're in Games,
+  and searching the menu still finds them.
 - **Smaller desktop fixes.** Alt+Tab shows a few windows side by side instead
   of in a column. In right-to-left languages, Start and End put the bar on the
   matching side. The keypad's Enter works in the bar editor. A transfer's

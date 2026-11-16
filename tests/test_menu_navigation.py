@@ -1,5 +1,6 @@
 """Native menu keys/layout/input, with real delegates and inert external models."""
 import gettext
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -88,6 +89,20 @@ class MenuNavigation(unittest.TestCase):
         for key in (Qt.Key_Return, Qt.Key_Enter):
             self.root.setProperty("launched", "")
             QTest.keyClick(self.window, key); self.assertEqual(self.root.property("launched"), "native-1")
+
+    def test_all_apps_leaves_out_the_games_launchers_add_and_opens_the_right_app(self):
+        self.page.setProperty("everything", True)
+        view = self.item("menuAllApps")
+        self.assertEqual(view.property("count"), 40)
+        games = {"stdout": json.dumps({"ok": True, "ids": ["fixture-1.desktop", "fixture-3.desktop"]}), "exit code": 0}
+        answered = self.root.property("complete").call([self.engine.toScriptValue(self.root.property("launcherGamesSource")),
+                                                         self.engine.toScriptValue(games)])
+        self.assertFalse(answered.isError(), answered.toString()); QTest.qWait(30)
+        self.assertEqual(view.property("count"), 38)
+        view.forceActiveFocus(); view.setProperty("currentIndex", 1)
+        self.root.setProperty("launched", "")
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.root.property("launched"), "native-2")  # the second app shown is the third in KDE's list
 
     def test_escape_returns_through_search_and_all_apps_before_closing(self):
         self.reset(); self.page.setProperty("everything", True)

@@ -44,6 +44,25 @@ PlasmoidItem {
     }
     // Every app from A to Z, once KDE's model has read them.
     property var everyApp: null
+    // Games are in Games: All apps leaves out the entry Steam, Heroic and Lutris each add for a
+    // game, which Monet's helper finds by how it starts (search still finds them).
+    property var launcherGames: ({})
+    readonly property string launcherGamesSource: "'@LIBEXECDIR@/monet-quick' menu-games"
+    readonly property KItemModels.KSortFilterProxyModel appsWithoutGames: KItemModels.KSortFilterProxyModel {
+        sourceModel: root.everyApp
+        filterRowCallback: (row, parent) => !root.launcherGame(row, parent)
+    }
+    function launcherGame(row, parent) {
+        const model = everyApp
+        if (!model) return false
+        const role = model.KItemModels.KRoleNames.role("favoriteId")
+        const id = role < 0 ? "" : String(model.data(model.index(row, 0, parent), role) || "")
+        return id !== "" && launcherGames[id.replace(/^applications:/, "")] === true
+    }
+    function launchFromAllApps(row) {
+        if (everyApp && row >= 0 && row < appsWithoutGames.count)
+            launch(everyApp, appsWithoutGames.mapToSource(appsWithoutGames.index(row, 0)).row)
+    }
     readonly property string firstName: (user.fullName || user.loginName || "").trim().split(" ")[0]
     property var everydayResults: []
     property var recentDownloads: []
@@ -99,7 +118,10 @@ PlasmoidItem {
         showFavoritesPlaceholder: true
         highlightNewlyInstalledApps: false
 
-        onRefreshed: root.everyApp = root.findEveryApp()
+        onRefreshed: {
+            root.everyApp = root.findEveryApp()
+            helper.connectSource(root.launcherGamesSource)
+        }
 
         Component.onCompleted: {
             favoritesModel.initForClient("org.monet.menu.favorites.instance-" + Plasmoid.id)
@@ -197,6 +219,14 @@ PlasmoidItem {
                 root.everydayError = ok ? "" : i18n("Suggestions couldn't load. Other search results are still available.")
                 root.everydayPending = false
                 root.everydayReady()
+            } else if (source === root.launcherGamesSource) {
+                let result = {}
+                try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
+                const games = {}
+                if (data["exit code"] === 0 && Array.isArray(result.ids))
+                    result.ids.forEach(id => { if (typeof id === "string") games[id] = true })
+                root.launcherGames = games
+                root.appsWithoutGames.invalidateFilter()
             } else if (source === root.openingResult) {
                 let result = {}
                 try { result = JSON.parse(data.stdout || "{}") } catch (error) {}
@@ -832,7 +862,7 @@ PlasmoidItem {
                     anchors.fill: parent
                     visible: !page.searching && page.everything
                     clip: true
-                    model: root.everyApp
+                    model: root.appsWithoutGames
                     keyNavigationEnabled: true
                     currentIndex: -1
                     activeFocusOnTab: true
@@ -854,8 +884,8 @@ PlasmoidItem {
                         font.italic: true
                         font.pixelSize: 18
                     }
-                    Keys.onReturnPressed: root.launch(model, currentIndex)
-                    Keys.onEnterPressed: root.launch(model, currentIndex)
+                    Keys.onReturnPressed: root.launchFromAllApps(currentIndex)
+                    Keys.onEnterPressed: root.launchFromAllApps(currentIndex)
                     Keys.onUpPressed: {
                         if (currentIndex <= 0) {
                             search.forceActiveFocus()
@@ -875,7 +905,7 @@ PlasmoidItem {
                         launching: root.isStarting(model.favoriteId || "")
                         current: allApps.activeFocus && allApps.currentIndex === index
                         speed: root.speed
-                        onActivated: root.launch(allApps.model, index)
+                        onActivated: root.launchFromAllApps(index)
                         onMenuRequested: root.showAppMenu(appRow, model.favoriteId || "")
                     }
                 }

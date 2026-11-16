@@ -1619,6 +1619,35 @@ def desktop_entry(text):
     return entry
 
 
+# Games are in Games. The menu's All apps leaves out the entry Steam, Heroic and Lutris each add
+# for a game (Counter-Strike 2, Transport Fever 3); search still finds them.
+LAUNCHER_GAME = re.compile(r"steam://(?:rungameid|run|launch)/|heroic://launch|lutris:rungame(?:id)?/")
+
+
+def launcher_games(dirs=None):
+    """The menu ids (Counter-Strike 2.desktop) of the entries that start a Steam, Heroic or Lutris
+    game. A nearer folder's entry hides a farther one of the same id, as it does in the menu."""
+    found, seen = [], set()
+    for folder in app_dirs() if dirs is None else dirs:
+        try:
+            paths = sorted(folder.rglob("*.desktop"))
+        except OSError:
+            continue
+        for path in paths:
+            menu_id = "-".join(path.relative_to(folder).parts)
+            if menu_id in seen:
+                continue
+            seen.add(menu_id)
+            try:
+                with path.open(encoding="utf-8", errors="replace") as text:
+                    entry = desktop_entry(text.read(65536))
+            except OSError:
+                continue
+            if LAUNCHER_GAME.search(entry.get("Exec", "")):
+                found.append(menu_id)
+    return found
+
+
 def native_executable(path):
     """An explicitly selected native executable; registering it never runs it."""
     path = Path(path).absolute()
@@ -8695,6 +8724,8 @@ def main(argv):
             names = {search_fold(app["name"]).replace(" ", "") for app in apps}
             apps += [row for row in downloaded_apps(query) if search_fold(row["name"]).replace(" ", "") not in names]
         emit({"results": apps + everyday_search(query)})
+    elif cmd == "menu-games" and not args:
+        emit({"ok": True, "ids": launcher_games()})
     elif cmd == "recent-downloads":
         roots = [path for path in downloaded_app_roots()
                  if path in (downloads_dir().resolve(), desktop_dir().resolve(), (HOME / "Downloads").resolve())
