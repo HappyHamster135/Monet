@@ -247,19 +247,19 @@ msgstr "Спробувати ще раз"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:51
 msgid "Windows and effects"
-msgstr ""
+msgstr "Вікна й ефекти"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:52
 msgid "Desktop, wallpaper and Home Bar"
-msgstr ""
+msgstr "Стільниця, шпалери й Головна панель"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:53
 msgid "Windows of older apps"
-msgstr ""
+msgstr "Вікна старих застосунків"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:58
 msgid "Apps using graphics"
-msgstr ""
+msgstr "Застосунки, що використовують графіку"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:93 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:442
 msgid "%1%"
@@ -267,11 +267,11 @@ msgstr "%1%"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:101
 msgid "No app is using the graphics card right now."
-msgstr ""
+msgstr "Зараз жоден застосунок не використовує відеокарту."
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:108
 msgid "This graphics driver does not report how much each app uses."
-msgstr ""
+msgstr "Цей графічний драйвер не повідомляє, скільки використовує кожен застосунок."
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/HistoryChart.qml:121
 msgid "Waiting for sensor readings…"
@@ -411,7 +411,7 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:116
 msgid "%1 (built into the processor)"
-msgstr ""
+msgstr "%1 (вбудована в процесор)"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:173
 msgid "Resource"
@@ -819,23 +819,23 @@ msgstr "Застосунки"
 
 #: linux/share/monet/games/Apps.qml:103
 msgid "%1 didn't open. Try again, or open it from the menu."
-msgstr ""
+msgstr "Не вдалося відкрити %1. Спробуйте ще раз або відкрийте з меню."
 
 #: linux/share/monet/games/Apps.qml:116
 msgid "The shortcut couldn't be removed."
-msgstr ""
+msgstr "Не вдалося прибрати ярлик."
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:171
 msgid "From the Store"
-msgstr ""
+msgstr "З Крамниці"
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:172
 msgid "Came with Monet"
-msgstr ""
+msgstr "Разом із Monet"
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:173
 msgid "Added by you"
-msgstr ""
+msgstr "Додано вами"
 
 #: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8192
 #: linux/libexec/monet-files-tools:712
@@ -844,7 +844,7 @@ msgstr "Програма для Windows"
 
 #: linux/share/monet/games/Apps.qml:139 linux/share/monet/settings-app/MonetSettings.qml:221 linux/share/monet/settings-app/MonetSettings.qml:3864
 msgid "Internet"
-msgstr ""
+msgstr "Інтернет"
 
 #: linux/share/monet/games/Apps.qml:139 setup/monet_setup/app.py:45
 msgid "Office"
@@ -852,7 +852,7 @@ msgstr "Офіс"
 
 #: linux/share/monet/games/Apps.qml:140
 msgid "Sound and video"
-msgstr ""
+msgstr "Звук і відео"
 
 #: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
 #: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5344 linux/share/monet/settings-app/MonetSettings.qml:6281
@@ -862,11 +862,11 @@ msgstr "Ігри"
 
 #: linux/share/monet/games/Apps.qml:140
 msgid "Development"
-msgstr ""
+msgstr "Розробка"
 
 #: linux/share/monet/games/Apps.qml:141
 msgid "Utilities"
-msgstr ""
+msgstr "Утиліти"
 
 #: linux/share/monet/games/Apps.qml:141 linux/share/monet/games/Apps.qml:141 setup/monet_setup/system.py:107
 msgid "Other"
@@ -874,7 +874,7 @@ msgstr "Інше"
 
 #: linux/share/monet/games/Apps.qml:145
 msgid "Not opened yet"
-msgstr ""
+msgstr "Ще не відкривали"
 
 #: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:350 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
@@ -900,11 +900,11 @@ msgstr "Усі застосунки"
 
 #: linux/share/monet/games/Apps.qml:170
 msgid "Recently used"
-msgstr ""
+msgstr "Нещодавні"
 
 #: linux/share/monet/games/Apps.qml:174
 msgid "Windows programs"
-msgstr ""
+msgstr "Програми для Windows"
 
 #: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:701
 #: linux/share/monet/store-app/Store.qml:713
@@ -913,11 +913,11 @@ msgstr "Знайти застосунок"
 
 #: linux/share/monet/games/Apps.qml:413
 msgid "Kinds"
-msgstr ""
+msgstr "Категорії"
 
 #: linux/share/monet/games/Apps.qml:515
 msgid "Apps called “%1”"
-msgstr ""
+msgstr "Застосунки за запитом «%1»"
 
 #: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:949
 msgid "%1 app"
@@ -933,19 +933,19 @@ msgstr "Ім’я"
 
 #: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Apps.qml:839
 msgid "Last opened"
-msgstr ""
+msgstr "Востаннє відкрито"
 
 #: linux/share/monet/games/Apps.qml:685
 msgid "No app is called “%1”."
-msgstr ""
+msgstr "Немає застосунків із назвою «%1»."
 
 #: linux/share/monet/games/Apps.qml:686
 msgid "The apps you open will be here."
-msgstr ""
+msgstr "Тут з’являться застосунки, які ви відкриваєте."
 
 #: linux/share/monet/games/Apps.qml:687
 msgid "No apps here."
-msgstr ""
+msgstr "Тут немає застосунків."
 
 #: linux/share/monet/games/Apps.qml:762 linux/share/monet/settings-app/MonetSettings.qml:4016 linux/share/monet/settings-app/MonetSettings.qml:7016
 #: linux/share/monet/store-app/AppPage.qml:232 linux/share/monet/store-app/Downloads.qml:196 linux/share/monet/store-app/Home.qml:224
@@ -954,31 +954,31 @@ msgstr "Відкрита"
 
 #: linux/share/monet/games/Apps.qml:769
 msgid "Update or remove in the Store"
-msgstr ""
+msgstr "Оновити або вилучити в Крамниці"
 
 #: linux/share/monet/games/Apps.qml:776
 msgid "Remove…"
-msgstr ""
+msgstr "Прибрати…"
 
 #: linux/share/monet/games/Apps.qml:798
 msgid "Remove %1 from your apps? The program itself stays where it is."
-msgstr ""
+msgstr "Прибрати %1 з ваших застосунків? Сама програма залишиться на місці."
 
 #: linux/share/monet/games/Apps.qml:835
 msgid "Came from"
-msgstr ""
+msgstr "Звідки"
 
 #: linux/share/monet/games/Apps.qml:837
 msgid "Kind"
-msgstr ""
+msgstr "Категорія"
 
 #: linux/share/monet/games/GamePage.qml:25
 msgid "Its download is paused in %1."
-msgstr ""
+msgstr "Її завантаження призупинено в %1."
 
 #: linux/share/monet/games/GamePage.qml:26
 msgid "It's waiting its turn in %1's downloads."
-msgstr ""
+msgstr "Вона чекає своєї черги в завантаженнях %1."
 
 #: linux/share/monet/games/GamePage.qml:27
 msgid "Steam is downloading it: %1%."
@@ -986,12 +986,12 @@ msgstr "Steam завантажує її: %1%."
 
 #: linux/share/monet/games/GamePage.qml:28
 msgid "%1 is downloading it."
-msgstr ""
+msgstr "%1 завантажує її."
 
 #: linux/share/monet/games/GamePage.qml:29
 msgid ""
 "You own it, and it isn't installed yet. Install opens %1, which downloads it."
-msgstr ""
+msgstr "Вона у вас є, але ще не встановлена. «Встановити» відкриє %1, і він її завантажить."
 
 #: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1699
 msgid ""
@@ -1059,7 +1059,7 @@ msgstr "Час у грі"
 
 #: linux/share/monet/games/GamePage.qml:50
 msgid "Size once installed"
-msgstr ""
+msgstr "Розмір після встановлення"
 
 #: linux/share/monet/games/GamePage.qml:50
 msgid "Size on disk"
@@ -1068,40 +1068,40 @@ msgstr "Розмір на диску"
 #: linux/share/monet/games/GamePage.qml:58
 msgid ""
 "Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
-msgstr ""
+msgstr "Минулого разу FACEIT не вдалося завантажити у Windows. Перевірте підключення до інтернету й спробуйте ще раз."
 
 #: linux/share/monet/games/GamePage.qml:59
 msgid ""
 "Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
-msgstr ""
+msgstr "Минулого разу Windows не змогла підтвердити, що інсталятор випустив FACEIT, тож Monet не запустив його. Спробуйте пізніше."
 
 #: linux/share/monet/games/GamePage.qml:60
 msgid ""
 "Last time, FACEIT's installer closed before it finished. Try again whenever you like."
-msgstr ""
+msgstr "Минулого разу інсталятор FACEIT закрився, не завершивши роботу. Спробуйте ще раз, коли забажаєте."
 
 #: linux/share/monet/games/GamePage.qml:61
 msgid "Last time, you came back before FACEIT was set up."
-msgstr ""
+msgstr "Минулого разу ви повернулися до того, як FACEIT було налаштовано."
 
 #: linux/share/monet/games/GamePage.qml:64
 msgid ""
 "Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
-msgstr ""
+msgstr "«Грати на FACEIT» перезапустить комп’ютер у Windows і відкриє FACEIT, а потім %1. «Грати» й надалі запускає гру тут."
 
 #: linux/share/monet/games/GamePage.qml:65
 msgid "Steam in Windows installs it the first time."
-msgstr ""
+msgstr "Першого разу її встановить Steam у Windows."
 
 #: linux/share/monet/games/GamePage.qml:66
 msgid ""
 "%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
-msgstr ""
+msgstr "%1 працює тут, але матчі й античит FACEIT працюють лише у Windows. Monet може один раз налаштувати там FACEIT за допомогою його власних інсталяторів."
 
 #: linux/share/monet/games/GamePage.qml:68
 msgid ""
 "Monet couldn't look in Windows at this start, so setting up checks what's there first."
-msgstr ""
+msgstr "Під час цього запуску Monet не зміг зазирнути у Windows, тож під час налаштування він спершу перевірить, що там уже є."
 
 #: linux/share/monet/games/GamePage.qml:75 linux/share/monet/settings-app/MonetSettings.qml:7844
 msgid "Secure Boot"
@@ -1110,12 +1110,12 @@ msgstr "Secure Boot"
 #: linux/share/monet/games/GamePage.qml:76 linux/share/monet/games/GamePage.qml:82
 msgctxt "a protection is"
 msgid "On"
-msgstr ""
+msgstr "Увімкнено"
 
 #: linux/share/monet/games/GamePage.qml:77
 msgid ""
 "Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
-msgstr ""
+msgstr "Вимкнено. FACEIT потрібно, щоб він був увімкнений: у Налаштуваннях, у розділі «Безпека», показано, як це зробити, щоб Monet і далі запускався."
 
 #: linux/share/monet/games/GamePage.qml:78 linux/share/monet/settings-app/MonetSettings.qml:7849
 msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
@@ -1124,29 +1124,29 @@ msgstr ""
 
 #: linux/share/monet/games/GamePage.qml:79
 msgid "Couldn't check."
-msgstr ""
+msgstr "Не вдалося перевірити."
 
 #: linux/share/monet/games/GamePage.qml:82
 msgid "TPM 2.0"
-msgstr ""
+msgstr "TPM 2.0"
 
 #: linux/share/monet/games/GamePage.qml:83
 msgid ""
 "Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
-msgstr ""
+msgstr "Не знайдено. Він потрібен FACEIT: у більшості комп’ютерів він є в процесорі й вмикається в налаштуваннях мікропрограми (Intel PTT або AMD fTPM)."
 
 #: linux/share/monet/games/GamePage.qml:85
 msgid "Virtualization-based security"
-msgstr ""
+msgstr "Безпека на основі віртуалізації"
 
 #: linux/share/monet/games/GamePage.qml:85
 msgid "On in Windows"
-msgstr ""
+msgstr "Увімкнено у Windows"
 
 #: linux/share/monet/games/GamePage.qml:86
 msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
-msgstr ""
+msgstr "Вимкнено у Windows. FACEIT вимагає її від деяких гравців: увімкніть віртуалізацію та IOMMU в налаштуваннях мікропрограми, а потім «Цілісність пам’яті» в «Безпеці Windows»."
 
 #: linux/share/monet/games/GamePage.qml:243 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
 #: setup/qml/Main.qml:223
@@ -1155,11 +1155,11 @@ msgstr "Назад"
 
 #: linux/share/monet/games/GamePage.qml:262 linux/share/monet/games/Games.qml:498
 msgid "Install with %1"
-msgstr ""
+msgstr "Встановити через %1"
 
 #: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:499
 msgid "Show downloads"
-msgstr ""
+msgstr "Показати завантаження"
 
 #: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:504
 #: linux/share/monet/settings-app/MonetSettings.qml:288 linux/share/monet/settings-app/MonetSettings.qml:3427 linux/share/monet/settings-app/MonetSettings.qml:8388
@@ -1180,23 +1180,23 @@ msgstr "Додати до улюблених"
 
 #: linux/share/monet/games/GamePage.qml:370
 msgid "Ready in Windows"
-msgstr ""
+msgstr "Готово у Windows"
 
 #: linux/share/monet/games/GamePage.qml:370
 msgid "Not set up in Windows yet"
-msgstr ""
+msgstr "Ще не налаштовано у Windows"
 
 #: linux/share/monet/games/GamePage.qml:427
 msgid "Play on FACEIT"
-msgstr ""
+msgstr "Грати на FACEIT"
 
 #: linux/share/monet/games/GamePage.qml:427
 msgid "Set up FACEIT"
-msgstr ""
+msgstr "Налаштувати FACEIT"
 
 #: linux/share/monet/games/GamePage.qml:435
 msgid "Security settings"
-msgstr ""
+msgstr "Налаштування безпеки"
 
 #: linux/share/monet/games/Games.qml:255 linux/share/monet/settings-app/MonetSettings.qml:1150 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
 #: linux/libexec/monet-quick:9981
@@ -1206,26 +1206,26 @@ msgstr "Monet не вдалося перейти у Windows."
 #: linux/share/monet/games/Games.qml:295
 msgid ""
 "That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page."
-msgstr ""
+msgstr "Це не схоже на ключ Steam. Він складається з 32 літер і цифр і береться зі сторінки ключа Steam."
 
 #: linux/share/monet/games/Games.qml:308
 msgid "Monet couldn't keep the key. Try again."
-msgstr ""
+msgstr "Monet не вдалося зберегти ключ. Спробуйте ще раз."
 
 #: linux/share/monet/games/Games.qml:314
 msgid ""
 "Steam didn't accept this key. Check that it's copied whole, or make a new one."
-msgstr ""
+msgstr "Steam не прийняв цей ключ. Перевірте, чи його скопійовано повністю, або створіть новий."
 
 #: linux/share/monet/games/Games.qml:315 linux/share/monet/games/Games.qml:1005
 msgid ""
 "Steam didn't share the games of %1. Add a key made while signed in to that account."
-msgstr ""
+msgstr "Steam не відкрив список ігор %1. Додайте ключ, створений під цим обліковим записом."
 
 #: linux/share/monet/games/Games.qml:316
 msgid ""
 "Steam couldn't be reached. The key is kept, and Games tries again when it opens."
-msgstr ""
+msgstr "Не вдалося зв’язатися зі Steam. Ключ збережено, і «Ігри» спробують знову під час наступного відкриття."
 
 #: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8426
 #: linux/share/monet/settings-app/MonetSettings.qml:9323 linux/libexec/monet-quick:8882 linux/libexec/monet-quick:8882
@@ -1264,7 +1264,7 @@ msgstr "%1 МБ"
 
 #: linux/share/monet/games/Games.qml:367
 msgid "%1 · Download paused"
-msgstr ""
+msgstr "%1 · Завантаження призупинено"
 
 #: linux/share/monet/games/Games.qml:368
 msgid "%1 · Downloading, %2%"
@@ -1272,19 +1272,19 @@ msgstr "%1 · Завантаження, %2%"
 
 #: linux/share/monet/games/Games.qml:369
 msgid "%1 · Downloading"
-msgstr ""
+msgstr "%1 · Завантаження"
 
 #: linux/share/monet/games/Games.qml:370
 msgid "%1 · Waiting to download"
-msgstr ""
+msgstr "%1 · Очікує завантаження"
 
 #: linux/share/monet/games/Games.qml:371
 msgid "%1 · Not installed, %2"
-msgstr ""
+msgstr "%1 · Не встановлено, %2"
 
 #: linux/share/monet/games/Games.qml:372
 msgid "%1 · Not installed"
-msgstr ""
+msgstr "%1 · Не встановлено"
 
 #: linux/share/monet/games/Games.qml:404
 msgid "All games"
@@ -1312,7 +1312,7 @@ msgstr "Відкрити її сторінку"
 
 #: linux/share/monet/games/Games.qml:507
 msgid "Install in Monet"
-msgstr ""
+msgstr "Встановити в Monet"
 
 #: linux/share/monet/games/Games.qml:511
 msgid "Remove from favorites"
@@ -1371,7 +1371,7 @@ msgstr "Показати"
 
 #: linux/share/monet/games/Games.qml:942
 msgid "All"
-msgstr ""
+msgstr "Усі"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
 #: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
@@ -1380,29 +1380,29 @@ msgstr "Встановлено"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/games/Games.qml:1366
 msgid "Not installed"
-msgstr ""
+msgstr "Не встановлено"
 
 #: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1861
 msgid "Steam key"
-msgstr ""
+msgstr "Ключ Steam"
 
 #: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1032
 msgid "Add Steam key"
-msgstr ""
+msgstr "Додати ключ Steam"
 
 #: linux/share/monet/games/Games.qml:1004
 msgid ""
 "Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again."
-msgstr ""
+msgstr "Steam не прийняв ваш ключ, тож показано лише ігри Steam, встановлені тут. Створіть новий ключ і додайте його знову."
 
 #: linux/share/monet/games/Games.qml:1027
 msgid ""
 "Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once."
-msgstr ""
+msgstr "«Ігри» показують ігри Steam, встановлені тут. Щоб бачити всі свої ігри в Steam, один раз додайте ключ Steam."
 
 #: linux/share/monet/games/Games.qml:1032
 msgid "Change key"
-msgstr ""
+msgstr "Змінити ключ"
 
 #: linux/share/monet/games/Games.qml:1077
 msgid ""
@@ -1446,11 +1446,11 @@ msgstr "Ви ще ні в що не грали"
 
 #: linux/share/monet/games/Games.qml:1478
 msgid "All installed"
-msgstr ""
+msgstr "Усе встановлено"
 
 #: linux/share/monet/games/Games.qml:1479
 msgid "Nothing installed here yet"
-msgstr ""
+msgstr "Тут поки нічого не встановлено"
 
 #: linux/share/monet/games/Games.qml:1480 linux/share/monet/settings-app/MonetSettings.qml:7709
 msgid "No games yet"
@@ -1466,11 +1466,11 @@ msgstr "Тут з’являються ігри, у які ви граєте, с
 
 #: linux/share/monet/games/Games.qml:1491
 msgid "Every game you own here is installed."
-msgstr ""
+msgstr "Усі ваші ігри тут встановлено."
 
 #: linux/share/monet/games/Games.qml:1492
 msgid "Choose a game you own and Install, and it shows up here."
-msgstr ""
+msgstr "Виберіть свою гру й натисніть «Встановити» — вона з’явиться тут."
 
 #: linux/share/monet/games/Games.qml:1493
 msgid ""
@@ -1488,11 +1488,11 @@ msgstr "Не вдалося відкрити Windows"
 
 #: linux/share/monet/games/Games.qml:1679 crates/monet/src/main.rs:361
 msgid "Set up FACEIT in Windows?"
-msgstr ""
+msgstr "Налаштувати FACEIT у Windows?"
 
 #: linux/share/monet/games/Games.qml:1680 crates/monet/src/main.rs:356
 msgid "Play %1 on FACEIT?"
-msgstr ""
+msgstr "Грати в %1 на FACEIT?"
 
 #: linux/share/monet/games/Games.qml:1681
 msgid "%1 needs Windows"
@@ -1509,12 +1509,12 @@ msgstr "Перезапустити у Windows?"
 #: linux/share/monet/games/Games.qml:1695
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
-msgstr ""
+msgstr "Комп’ютер перезапуститься у Windows і завантажить із FACEIT його власні інсталятори: спершу античит, потім застосунок FACEIT. Кожен відкриється перед вами, щоб ви прочитали його умови й прийняли їх, лише якщо згодні. Потім увійдіть у FACEIT і Steam та виберіть «Назад у Monet»."
 
 #: linux/share/monet/games/Games.qml:1697
 msgid ""
 "Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
-msgstr ""
+msgstr "Комп’ютер перезапуститься у Windows і відкриє FACEIT, а потім %1. Коли вийдете з гри, ви знову будете тут. Спершу збережіть свою роботу."
 
 #: linux/share/monet/games/Games.qml:1707
 msgid ""
@@ -1546,7 +1546,7 @@ msgstr ""
 
 #: linux/share/monet/games/Games.qml:1741
 msgid "Restart & Set up"
-msgstr ""
+msgstr "Перезапустити & налаштувати"
 
 #: linux/share/monet/games/Games.qml:1742 linux/share/monet/settings-app/MonetSettings.qml:8482
 msgid "Restart & Play"
@@ -1562,49 +1562,49 @@ msgstr "Перезапустити"
 
 #: linux/share/monet/games/Games.qml:1808
 msgid "See every game you own on Steam"
-msgstr ""
+msgstr "Усі ваші ігри зі Steam"
 
 #: linux/share/monet/games/Games.qml:1817
 msgid ""
 "Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
-msgstr ""
+msgstr "Steam надає список ваших ігор за ключем, який можете створити лише ви. Monet зберігає ключ на цьому комп’ютері й використовує його лише для того, щоб запитати в Steam цей список. Ваш пароль йому не потрібен."
 
 #: linux/share/monet/games/Games.qml:1828
 msgid ""
 "Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr ""
+msgstr "Відкрийте сторінку ключа Steam і увійдіть як %1. Введіть monet як ім’я домену, погодьтеся з умовами й підтвердьте в застосунку Steam на телефоні. Потім скопіюйте ключ і вставте його сюди."
 
 #: linux/share/monet/games/Games.qml:1829
 msgid ""
 "Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr ""
+msgstr "Відкрийте сторінку ключа Steam і увійдіть. Введіть monet як ім’я домену, погодьтеся з умовами й підтвердьте в застосунку Steam на телефоні. Потім скопіюйте ключ і вставте його сюди."
 
 #: linux/share/monet/games/Games.qml:1834
 msgid "Open Steam's key page"
-msgstr ""
+msgstr "Відкрити сторінку ключа Steam"
 
 #: linux/share/monet/games/Games.qml:1869
 msgid "A key is kept. Paste a new one to change it."
-msgstr ""
+msgstr "Ключ збережено. Щоб змінити його, вставте новий."
 
 #: linux/share/monet/games/Games.qml:1869
 msgid "Paste your Steam key"
-msgstr ""
+msgstr "Вставте ключ Steam"
 
 #: linux/share/monet/games/Games.qml:1884
 msgid "Asking Steam…"
-msgstr ""
+msgstr "Запит до Steam…"
 
 #: linux/share/monet/games/Games.qml:1887
 msgid "Steam lists %1 game you own."
 msgid_plural "Steam lists %1 games you own."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "У Steam у вас %1 гра."
+msgstr[1] "У Steam у вас %1 гри."
+msgstr[2] "У Steam у вас %1 ігор."
 
 #: linux/share/monet/games/Games.qml:1897
 msgid "Forget key"
-msgstr ""
+msgstr "Забути ключ"
 
 #: linux/share/monet/games/Games.qml:1910 linux/share/monet/settings-app/MonetSettings.qml:5029 linux/share/monet/settings-app/MonetSettings.qml:9374
 msgid "Save"
@@ -1801,23 +1801,23 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:170
 msgid "This screen has extra bars. Use Advanced to arrange them first."
-msgstr ""
+msgstr "На цьому екрані є додаткові панелі. Спершу розставте їх у розділі «Додатково»."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:174
 msgid "Could not change the bar layout. Close this editor and try again."
-msgstr ""
+msgstr "Не вдалося змінити розташування панелей. Закрийте редактор і спробуйте ще раз."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:190
 msgid "Could not read the app layout. Close this editor and try again."
-msgstr ""
+msgstr "Не вдалося прочитати розташування застосунків. Закрийте редактор і спробуйте ще раз."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:257
 msgid "Home Bar"
-msgstr ""
+msgstr "Головна панель"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273
 msgid "Layout"
-msgstr ""
+msgstr "Розташування"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273 linux/share/monet/settings-app/MonetSettings.qml:1226
 msgid "Appearance"
@@ -1825,64 +1825,64 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273
 msgid "Behavior"
-msgstr ""
+msgstr "Поведінка"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:304
 msgid "Drag items on the bar to reorder them."
-msgstr ""
+msgstr "Перетягуйте елементи на панелі, щоб змінити їхній порядок."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:305
 msgid "Bar layout"
-msgstr ""
+msgstr "Розташування панелей"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:309
 msgid "One bar"
-msgstr ""
+msgstr "Одна панель"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:315
 msgid "Three bars"
-msgstr ""
+msgstr "Три панелі"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:321
 msgid ""
 "Includes the menu, apps, quick settings, sound and clock. Your pins and widgets stay with you."
-msgstr ""
+msgstr "Містить меню, застосунки, швидкі налаштування, звук і годинник. Закріплені елементи й віджети залишаться з вами."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:322
 msgid "Bar shape"
-msgstr ""
+msgstr "Форма панелі"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:326
 msgid "Full-width bar"
-msgstr ""
+msgstr "Панель на всю ширину"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:326
 msgid "Compact dock"
-msgstr ""
+msgstr "Компактний док"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:357
 msgid "Screen edge"
-msgstr ""
+msgstr "Край екрана"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:363 linux/share/monet/panel/MonetPanelConfiguration.qml:387
 msgid "Bottom"
-msgstr ""
+msgstr "Знизу"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:364 linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403
 msgid "Top"
-msgstr ""
+msgstr "Згори"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:365
 msgid "Left"
-msgstr ""
+msgstr "Ліворуч"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:366
 msgid "Right"
-msgstr ""
+msgstr "Праворуч"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:375
 msgid "Bar position along edge"
-msgstr ""
+msgstr "Положення панелі вздовж краю"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
 msgid "Start"
@@ -1890,35 +1890,35 @@ msgstr "Старт"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:386 linux/share/monet/panel/MonetPanelConfiguration.qml:410
 msgid "Center"
-msgstr ""
+msgstr "По центру"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:387
 msgid "End"
-msgstr ""
+msgstr "У кінці"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:397
 msgid "App icon position"
-msgstr ""
+msgstr "Положення значків застосунків"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:416
 msgid "Places app icons within the space between the other items on this bar."
-msgstr ""
+msgstr "Розміщує значки застосунків у просторі між іншими елементами цієї панелі."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:424 linux/share/monet/panel/MonetPanelConfiguration.qml:444
 msgid "Bar width"
-msgstr ""
+msgstr "Ширина панелі"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:424 linux/share/monet/panel/MonetPanelConfiguration.qml:444
 msgid "Bar height"
-msgstr ""
+msgstr "Висота панелі"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:429
 msgid "Small"
-msgstr ""
+msgstr "Малий"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:430
 msgid "Medium"
-msgstr ""
+msgstr "Середній"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:431 linux/share/monet/settings-app/MonetSettings.qml:6224
 msgid "Large"
@@ -1926,116 +1926,116 @@ msgstr "Великий"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:457
 msgid "Decrease bar size"
-msgstr ""
+msgstr "Зменшити панель"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:466
 msgid "Bar size in pixels"
-msgstr ""
+msgstr "Розмір панелі в пікселях"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:478
 msgid "Increase bar size"
-msgstr ""
+msgstr "Збільшити панель"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:485
 msgid "Apply size"
-msgstr ""
+msgstr "Застосувати розмір"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:492
 msgid "Floating bar"
-msgstr ""
+msgstr "Плаваюча панель"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:496
 msgid "Flush with edge"
-msgstr ""
+msgstr "Впритул до краю"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:501
 msgid "Floating"
-msgstr ""
+msgstr "Плаваюча"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:506
 msgid "Background opacity"
-msgstr ""
+msgstr "Непрозорість тла"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:513
 msgid "Adaptive"
-msgstr ""
+msgstr "Адаптивна"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:514
 msgid "Opaque"
-msgstr ""
+msgstr "Непрозора"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:515
 msgid "Translucent"
-msgstr ""
+msgstr "Напівпрозора"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:530
 msgid "Bar visibility"
-msgstr ""
+msgstr "Видимість панелі"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:533
 msgid "Reserve space"
-msgstr ""
+msgstr "Резервувати місце"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:534
 msgid "Maximized windows stop at the bar."
-msgstr ""
+msgstr "Розгорнуті вікна не заходять на панель."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:535
 msgid "Keep visible"
-msgstr ""
+msgstr "Завжди видима"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:536
 msgid "The bar stays above windows."
-msgstr ""
+msgstr "Панель залишається над вікнами."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:537
 msgid "Dodge windows"
-msgstr ""
+msgstr "Поступатися вікнам"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:538
 msgid "Hide the bar when a window overlaps it."
-msgstr ""
+msgstr "Ховати панель, коли її перекриває вікно."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:539
 msgid "Auto-hide"
-msgstr ""
+msgstr "Автоприховування"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:540
 msgid "Move the pointer to the screen edge to show the bar."
-msgstr ""
+msgstr "Щоб показати панель, наведіть вказівник на край екрана."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:568
 msgid "Add widgets…"
-msgstr ""
+msgstr "Додати віджети…"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:573
 msgid "Advanced…"
-msgstr ""
+msgstr "Додатково…"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:9 linux/share/monet/settings-app/MonetSettings.qml:4476
 msgid "Test display colors"
-msgstr ""
+msgstr "Перевірка кольорів екрана"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:41
 msgid "Close test"
-msgstr ""
+msgstr "Закрити перевірку"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:63
 msgid ""
 "Look for steps that blend together near black or white. Turn off Night Light before checking the grays for a tint."
-msgstr ""
+msgstr "Шукайте сходинки, що зливаються біля чорного чи білого. Перш ніж перевіряти сірі на відтінок, вимкніть «Нічне світло»."
 
 #: linux/share/monet/settings-app/DisplayTest.qml:70
 msgid "Shadow detail"
-msgstr ""
+msgstr "Деталі в тінях"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:71
 msgid "Highlight detail"
-msgstr ""
+msgstr "Деталі у світлих тонах"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:72
 msgid "Neutral grays"
-msgstr ""
+msgstr "Нейтральні сірі"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:133
 msgid "Search couldn't finish. Try again."
@@ -2075,7 +2075,7 @@ msgstr "прикріплення розкладки помічник вікна 
 #: linux/share/monet/settings-app/MonetSettings.qml:220
 msgctxt "Settings search words, space-separated"
 msgid "title bar titlebar borderless window frame buttons"
-msgstr ""
+msgstr "заголовок вікна смуга заголовка без рамки рамка вікна кнопки titlebar title bar borderless"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:222
 msgctxt "Settings search words, space-separated"
@@ -2179,7 +2179,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:254
 msgctxt "Settings search words, space-separated"
 msgid "restart reboot reopen apps again windows remember session"
-msgstr ""
+msgstr "перезапуск перезавантаження знову відкрити застосунки вікна запам’ятати сеанс restart reboot reopen"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:255 linux/share/monet/settings-app/MonetSettings.qml:7272
 msgid "Privacy"
@@ -2399,7 +2399,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:557
 msgid ""
 "Windows setup couldn't start. Wait for any current setup to finish, then try again."
-msgstr ""
+msgstr "Не вдалося почати встановлення Windows. Дочекайтеся завершення поточного встановлення й спробуйте ще раз."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:607
 msgid "The return summary couldn't load. Try again."
@@ -2417,21 +2417,21 @@ msgstr "Налаштування"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:927
 msgid "Couldn't change the notification volume."
-msgstr ""
+msgstr "Не вдалося змінити гучність сповіщень."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1116 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:217
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:121 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:138
 msgid "%1 isn't connected now. Connect it and try again."
-msgstr ""
+msgstr "Пристрій %1 зараз не підключено. Підключіть його й спробуйте ще раз."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1117 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:139
 msgid "The microphone didn't switch to %1. Try again."
-msgstr ""
+msgstr "Не вдалося перемкнути мікрофон на %1. Спробуйте ще раз."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1135 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:218 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:122
 msgctxt "%1 is speakers, headphones or a screen"
 msgid "Sound didn't switch to %1. Try again."
-msgstr ""
+msgstr "Не вдалося перемкнути звук на %1. Спробуйте ще раз."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1191
 msgid "An automatic update is in progress."
@@ -2760,7 +2760,7 @@ msgstr "Новий Monet запуститься після наступного 
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1440
 msgid "Monet couldn't finish the update. Try again."
-msgstr ""
+msgstr "Monet не вдалося завершити оновлення. Спробуйте ще раз."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1441
 msgid "Monet only updates when you ask it to."
@@ -2903,11 +2903,11 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1796
 msgid "Couldn't read the drives. Try refreshing."
-msgstr ""
+msgstr "Не вдалося прочитати диски. Спробуйте оновити список."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1807
 msgid "The disk operation couldn't finish."
-msgstr ""
+msgstr "Не вдалося завершити операцію з диском."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1825
 msgid "Password settings couldn't finish. Try again."
@@ -3219,12 +3219,12 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3701
 msgid "Title bars appear when you point at the top"
-msgstr ""
+msgstr "Заголовки вікон з’являються, коли наводите вказівник угору"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3701
 msgid ""
 "Windows go without a title bar until you move the pointer to the top of one. Then it slides down, with the buttons. Off, every window keeps its glass title bar"
-msgstr ""
+msgstr "Вікна залишаються без заголовка, доки ви не наведете вказівник на верх вікна. Тоді заголовок висувається разом із кнопками. Якщо вимкнено, кожне вікно зберігає свій скляний заголовок"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3720
 msgctxt "how see-through Monet's glass is"
@@ -3316,11 +3316,11 @@ msgstr "Підключення…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3855
 msgid "Unmanaged"
-msgstr ""
+msgstr "Не керується"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3856
 msgid "Cable unplugged"
-msgstr ""
+msgstr "Кабель від’єднано"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3857 linux/share/monet/settings-app/MonetSettings.qml:3868 linux/share/monet/settings-app/MonetSettings.qml:4157
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:509
@@ -3329,7 +3329,7 @@ msgstr "Не підключено"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3866 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:504
 msgid "Connected to LAN"
-msgstr ""
+msgstr "Підключено до LAN"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3867
 msgid "Connected to %1"
@@ -3337,19 +3337,19 @@ msgstr "Підключено до %1"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3871
 msgid "LAN (Ethernet)"
-msgstr ""
+msgstr "LAN (Ethernet)"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3878
 msgid "Checking wired connections…"
-msgstr ""
+msgstr "Перевірка дротових підключень…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3879
 msgid "No Ethernet adapter detected"
-msgstr ""
+msgstr "Адаптер Ethernet не знайдено"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3880
 msgid "Wired connection details unavailable"
-msgstr ""
+msgstr "Відомості про дротове підключення недоступні"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3894 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:508 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:526
 msgid "Unavailable"
@@ -3357,24 +3357,24 @@ msgstr "Недоступно"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3898
 msgid "Network adapter"
-msgstr ""
+msgstr "Мережевий адаптер"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3901
 msgid "Default gateway"
-msgstr ""
+msgstr "Основний шлюз"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3902
 msgid "DNS servers"
-msgstr ""
+msgstr "DNS-сервери"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3917
 msgid "Manage wired connections…"
-msgstr ""
+msgstr "Керувати дротовими підключеннями…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3918
 msgid ""
 "Edit Ethernet profiles, IP addresses and DNS in system network settings."
-msgstr ""
+msgstr "Профілі Ethernet, IP-адреси та DNS змінюються в системних налаштуваннях мережі."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:499
 msgid "Wi-Fi"
@@ -3621,19 +3621,19 @@ msgstr "Тепліші кольори від заходу до світанку,
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4450 linux/share/monet/settings-app/MonetSettings.qml:4456 linux/libexec/monet-quick:7925
 msgid "Display colors"
-msgstr ""
+msgstr "Кольори екрана"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4462
 msgid "Color profiles…"
-msgstr ""
+msgstr "Колірні профілі…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4463
 msgid "Choose your display to apply an ICC profile."
-msgstr ""
+msgstr "Виберіть екран, щоб застосувати профіль ICC."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4477
 msgid "Check shadow detail, highlights and neutral grays on this display."
-msgstr ""
+msgstr "Перевірте деталі в тінях і світлих тонах та нейтральні сірі на цьому екрані."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4500
 msgid "Games and films"
@@ -3692,39 +3692,39 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4633
 msgid "Show selected output"
-msgstr ""
+msgstr "Показати вибраний вихід"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4633
 msgid "Show all %1 outputs"
-msgstr ""
+msgstr "Показати всі виходи (%1)"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4643
 msgid "Notification volume"
-msgstr ""
+msgstr "Гучність сповіщень"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4653
 msgid "Preview notification sound"
-msgstr ""
+msgstr "Прослухати звук сповіщення"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4655
 msgid "Notification audio is unavailable."
-msgstr ""
+msgstr "Звук сповіщень недоступний."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4657
 msgid "Plays the current notification tone at the selected volume."
-msgstr ""
+msgstr "Відтворює поточний сигнал сповіщення з вибраною гучністю."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4658
 msgid "Checking notification audio…"
-msgstr ""
+msgstr "Перевірка звуку сповіщень…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4661
 msgid "Play test"
-msgstr ""
+msgstr "Прослухати"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4669
 msgid "Couldn't play the test sound."
-msgstr ""
+msgstr "Не вдалося відтворити тестовий звук."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4692 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:586
 msgid "Apps playing sound"
@@ -3732,11 +3732,11 @@ msgstr "Застосунки, що відтворюють звук"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4724
 msgid "Record from"
-msgstr ""
+msgstr "Записувати з"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4732
 msgid "Microphones"
-msgstr ""
+msgstr "Мікрофони"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4772 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7934
 msgid "Microphone"
@@ -3749,24 +3749,24 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:4778
 msgid ""
 "Connect a microphone or headset. If it still isn't found, its channels can be set up in Advanced sound settings below."
-msgstr ""
+msgstr "Підключіть мікрофон або гарнітуру. Якщо його все одно не знайдено, його канали можна налаштувати в розділі «Додаткові налаштування звуку» нижче."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4784
 msgid "Microphone volume"
-msgstr ""
+msgstr "Гучність мікрофона"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4792
 msgid "Advanced sound settings…"
-msgstr ""
+msgstr "Додаткові налаштування звуку…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4793
 msgid "Each sound device's profile and channels"
-msgstr ""
+msgstr "Профіль і канали кожного звукового пристрою"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4798
 msgid ""
 "Only needed for a device's profile or channels, such as surround sound or an interface's direct monitoring."
-msgstr ""
+msgstr "Потрібні лише для профілю чи каналів пристрою, наприклад для об’ємного звуку або прямого моніторингу на аудіоінтерфейсі."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4821
 msgid "Your clock, and where in the world it keeps time."
@@ -4105,11 +4105,11 @@ msgstr "Енергозбереження"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5464
 msgid "Uses less power to extend battery life"
-msgstr ""
+msgstr "Споживає менше енергії, щоб батарея працювала довше"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5464
 msgid "Favors lower power use and less heat"
-msgstr ""
+msgstr "Менше споживання енергії й нагрівання"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5466
 msgid "Balanced"
@@ -4125,7 +4125,7 @@ msgstr "Продуктивність"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5468
 msgid "Favors faster response, with potentially more heat and fan noise"
-msgstr ""
+msgstr "Швидший відгук, але можливі більше нагрівання й шум вентиляторів"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5538
 msgid "Plugged in"
@@ -4235,16 +4235,16 @@ msgstr "Вимкнути екран"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5683
 msgid "When you restart"
-msgstr ""
+msgstr "Під час перезапуску"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5696 linux/share/monet/settings-app/MonetSettings.qml:8694 linux/libexec/monet-quick:7956
 msgid "Reopen your work"
-msgstr ""
+msgstr "Знову відкривати вашу роботу"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5697
 msgid ""
 "After a restart, a sign-out or a trip to Windows, your apps come back on the same screens and desktops, where they were, with saved documents and Files tabs. Unsaved changes and private tabs aren't kept."
-msgstr ""
+msgstr "Після перезапуску, виходу із системи чи подорожі у Windows ваші застосунки повертаються на ті самі екрани й робочі столи, туди, де були, зі збереженими документами та вкладками «Файлів». Незбережені зміни й приватні вкладки не зберігаються."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5716
 msgid "More power settings…"
@@ -4686,31 +4686,31 @@ msgstr "Що займає місце на комп’ютері і як його
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6304 linux/libexec/monet-quick:7914
 msgid "Disks and partitions"
-msgstr ""
+msgstr "Диски й розділи"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6305
 msgid "Working on the disk…"
-msgstr ""
+msgstr "Робота з диском…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6306
 msgid "Checking connected drives…"
-msgstr ""
+msgstr "Перевірка підключених дисків…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6308
 msgid "No drives found."
-msgstr ""
+msgstr "Диски не знайдено."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6333
 msgid "System drive"
-msgstr ""
+msgstr "Системний диск"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6334
 msgid "Read-only or in use"
-msgstr ""
+msgstr "Лише читання або використовується"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6335
 msgid "Removable drive"
-msgstr ""
+msgstr "Знімний диск"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6339 setup/qml/Main.qml:913 setup/qml/Main.qml:987
 msgid "Hide details"
@@ -4718,131 +4718,131 @@ msgstr "Сховати подробиці"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6339
 msgid "Show details"
-msgstr ""
+msgstr "Показати подробиці"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6357
 msgid "Unnamed volume"
-msgstr ""
+msgstr "Том без назви"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6367
 msgid "Unmount…"
-msgstr ""
+msgstr "Від’єднати…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6367
 msgid "Volume actions…"
-msgstr ""
+msgstr "Дії з томом…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6385
 msgid "Unallocated space"
-msgstr ""
+msgstr "Нерозподілений простір"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6386
 msgid "Starts at %1"
-msgstr ""
+msgstr "Починається з %1"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6392
 msgid "Create partition…"
-msgstr ""
+msgstr "Створити розділ…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6400
 msgid "Partition table"
-msgstr ""
+msgstr "Таблиця розділів"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6401
 msgid "No partition table"
-msgstr ""
+msgstr "Немає таблиці розділів"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6406
 msgid "Erase disk…"
-msgstr ""
+msgstr "Стерти диск…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6406
 msgid "Initialize disk…"
-msgstr ""
+msgstr "Ініціалізувати диск…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6426
 msgid "Create GPT"
-msgstr ""
+msgstr "Створити GPT"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6426
 msgid "Create"
-msgstr ""
+msgstr "Створити"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Unmount"
-msgstr ""
+msgstr "Від’єднати"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Delete"
-msgstr ""
+msgstr "Видалити"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Format"
-msgstr ""
+msgstr "Форматувати"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6437
 msgid "Create a new GPT partition table"
-msgstr ""
+msgstr "Створити нову таблицю розділів GPT"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6438
 msgid "Create partition"
-msgstr ""
+msgstr "Створити розділ"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6439
 msgid "Unmount volume"
-msgstr ""
+msgstr "Від’єднати том"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6440 linux/share/monet/settings-app/MonetSettings.qml:6465
 msgid "Delete partition"
-msgstr ""
+msgstr "Видалити розділ"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6440 linux/share/monet/settings-app/MonetSettings.qml:6465
 msgid "Format volume"
-msgstr ""
+msgstr "Форматувати том"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6454
 msgid "This removes every partition and its files from the selected drive."
-msgstr ""
+msgstr "Усі розділи та їхні файли на вибраному диску буде видалено."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6456
 msgid "This deletes all files on the selected volume."
-msgstr ""
+msgstr "Усі файли на вибраному томі буде видалено."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6457
 msgid "Close any files on this volume before unmounting it."
-msgstr ""
+msgstr "Перш ніж від’єднати том, закрийте всі файли на ньому."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6463
 msgid "Volume action"
-msgstr ""
+msgstr "Дія з томом"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6473
 msgid "File system"
-msgstr ""
+msgstr "Файлова система"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6476
 msgid "Ext4 · Monet"
-msgstr ""
+msgstr "Ext4 · Monet"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6477
 msgid "NTFS · Windows"
-msgstr ""
+msgstr "NTFS · Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6478
 msgid "exFAT · Shared storage"
-msgstr ""
+msgstr "exFAT · Спільне сховище"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6486
 msgid "Volume name (optional)"
-msgstr ""
+msgstr "Назва тому (необов’язково)"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6493
 msgid "Size in MiB"
-msgstr ""
+msgstr "Розмір у МіБ"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6506
 msgid "%1 selected · %2 available"
-msgstr ""
+msgstr "Вибрано %1 · доступно %2"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6518 linux/libexec/monet-quick:7944
 msgid "Windows files"
@@ -4890,7 +4890,7 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6555
 msgid "Free space couldn't be read."
-msgstr ""
+msgstr "Не вдалося визначити вільне місце."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6555 linux/share/monet/settings-app/MonetSettings.qml:6634
 msgid "Measuring…"
@@ -4907,7 +4907,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:6624
 msgid ""
 "Some files are shared between folders, so the folders add up to more than the space in use. The bar shows only what is in use."
-msgstr ""
+msgstr "Деякі файли спільні для кількох тек, тож разом теки займають більше, ніж зайнято насправді. Смуга показує лише зайняте місце."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6625
 msgid ""
@@ -6144,7 +6144,7 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8271
 msgid "After your last restart"
-msgstr ""
+msgstr "Після останнього перезапуску"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8271
 msgid "After your last return"
@@ -6196,11 +6196,11 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8377
 msgid "Choose a Windows 11 ISO"
-msgstr ""
+msgstr "Виберіть ISO-образ Windows 11"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8378
 msgid "Disk images"
-msgstr ""
+msgstr "Образи дисків"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8389
 msgid "Games that need Windows, a restart away."
@@ -6228,31 +6228,31 @@ msgstr "Підготовка Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8416 linux/libexec/monet-quick:7651
 msgid "Windows setup did not finish"
-msgstr ""
+msgstr "Встановлення Windows не завершилося"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8417 crates/monet/src/main.rs:948
 msgid "Windows setup stopped"
-msgstr ""
+msgstr "Встановлення Windows зупинилося"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8418
 msgid "Windows needs more disk space"
-msgstr ""
+msgstr "Windows потрібно більше місця на диску"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8419
 msgid "Windows ISO ready to use"
-msgstr ""
+msgstr "ISO-образ Windows готовий"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8421
 msgid "Windows couldn't read that ISO"
-msgstr ""
+msgstr "Windows не змогла прочитати цей ISO-образ"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8421
 msgid "Windows download didn't finish"
-msgstr ""
+msgstr "Завантаження Windows не завершилося"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8422
 msgid "Set up Windows"
-msgstr ""
+msgstr "Встановіть Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8423
 msgid "The last trip didn't reach Windows"
@@ -6287,36 +6287,36 @@ msgstr "Спершу підключіть зарядний пристрій."
 #: linux/share/monet/settings-app/MonetSettings.qml:8441 crates/monet/src/main.rs:897
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
-msgstr ""
+msgstr "Поки Windows готується, можна користуватися Monet. Перед перезапуском Monet запитає вас."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8442
 msgid ""
 "This PC returned to Monet before Windows setup finished. Try again to resume the prepared installation."
-msgstr ""
+msgstr "Комп’ютер повернувся в Monet до завершення встановлення Windows. Спробуйте ще раз, щоб продовжити підготовлене встановлення."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8444
 msgid "Open Check Monet below for details about the failure."
-msgstr ""
+msgstr "Відкрийте «Перевірку Monet» нижче, щоб дізнатися подробиці про збій."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8445
 msgid ""
 "Check that your disk has room reserved for Windows and enough free space in Monet to download it."
-msgstr ""
+msgstr "Перевірте, чи на диску є місце, зарезервоване для Windows, а в Monet достатньо вільного місця, щоб її завантажити."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8446
 msgid ""
 "Monet will prepare Windows in the reserved space and ask before restarting."
-msgstr ""
+msgstr "Monet підготує Windows у зарезервованому місці й запитає перед перезапуском."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8448
 msgid ""
 "Try the download again or choose a Windows 11 x64 ISO from any folder or connected drive."
-msgstr ""
+msgstr "Спробуйте завантажити ще раз або виберіть ISO-образ Windows 11 x64 з будь-якої теки чи підключеного диска."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8449
 msgid ""
 "Download Windows 11 from Microsoft for games that need it. Monet asks before restarting."
-msgstr ""
+msgstr "Завантажте Windows 11 із сайту Microsoft для ігор, яким вона потрібна. Перед перезапуском Monet запитає вас."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8452
 msgid ""
@@ -6357,59 +6357,59 @@ msgstr "Перезапустити у Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8506
 msgid "Windows setup"
-msgstr ""
+msgstr "Встановлення Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8509
 msgid "Setup progress: %1%"
-msgstr ""
+msgstr "Перебіг встановлення: %1%"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8517
 msgid "Setting up…"
-msgstr ""
+msgstr "Встановлення…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8518
 msgid "Try setup again"
-msgstr ""
+msgstr "Повторити встановлення"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8519
 msgid "Retry download"
-msgstr ""
+msgstr "Повторити завантаження"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8520 linux/share/monet/settings-app/MonetSettings.qml:8546
 msgid "Set up Windows…"
-msgstr ""
+msgstr "Встановити Windows…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8527
 msgid "Windows 11 ISO"
-msgstr ""
+msgstr "ISO-образ Windows 11"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8533
 msgid "Choose ISO…"
-msgstr ""
+msgstr "Вибрати ISO…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8533
 msgid "Change ISO…"
-msgstr ""
+msgstr "Змінити ISO…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8540
 msgid "Prepare Windows"
-msgstr ""
+msgstr "Підготувати Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8541
 msgid "Administrator access is required to prepare the reserved space."
-msgstr ""
+msgstr "Щоб підготувати зарезервоване місце, потрібні права адміністратора."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8554
 msgid "Need an ISO?"
-msgstr ""
+msgstr "Потрібен ISO-образ?"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8558
 msgid "Open Microsoft’s download page"
-msgstr ""
+msgstr "Відкрити сторінку завантаження Microsoft"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8560
 msgid "Monet couldn't open Microsoft’s download page."
-msgstr ""
+msgstr "Monet не вдалося відкрити сторінку завантаження Microsoft."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8593
 msgid ""
@@ -6474,7 +6474,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:8695
 msgid ""
 "After Windows or a restart, your apps come back where they were, with saved documents and Files tabs. Zen follows its tab-restore preference. Unsaved changes and private tabs aren't kept."
-msgstr ""
+msgstr "Після Windows чи перезапуску ваші застосунки повертаються туди, де були, зі збереженими документами та вкладками «Файлів». Zen дотримується свого налаштування відновлення вкладок. Незбережені зміни й приватні вкладки не зберігаються."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8713
 msgid ""
@@ -6879,11 +6879,11 @@ msgstr "Перевірено Flathub"
 
 #: linux/share/monet/store-app/AppPage.qml:332 linux/share/monet/store-app/Downloads.qml:211
 msgid "Cancel removing %1"
-msgstr ""
+msgstr "Скасувати вилучення %1"
 
 #: linux/share/monet/store-app/AppPage.qml:333 linux/share/monet/store-app/Downloads.qml:212
 msgid "Cancel downloading %1"
-msgstr ""
+msgstr "Скасувати завантаження %1"
 
 #: linux/share/monet/store-app/AppPage.qml:345 linux/share/monet/store-app/Downloads.qml:224
 msgid "Retry %1"
@@ -6895,11 +6895,11 @@ msgstr ""
 
 #: linux/share/monet/store-app/AppPage.qml:469
 msgid "Previous screenshot"
-msgstr ""
+msgstr "Попередній знімок екрана"
 
 #: linux/share/monet/store-app/AppPage.qml:485
 msgid "Next screenshot"
-msgstr ""
+msgstr "Наступний знімок екрана"
 
 #: linux/share/monet/store-app/AppPage.qml:572
 msgid "What it can reach"
@@ -7307,7 +7307,7 @@ msgstr ""
 
 #: linux/share/monet/store-app/Store.qml:477
 msgid "Installing… This part can't be cancelled."
-msgstr ""
+msgstr "Встановлення… Цей етап не можна скасувати."
 
 #: linux/share/monet/store-app/Store.qml:478
 msgid "Cancelling…"
@@ -7365,12 +7365,12 @@ msgstr "Не вдалося. Спробуйте ще раз трохи згод�
 
 #: linux/share/monet/store-app/Store.qml:493
 msgid "Downloading…"
-msgstr ""
+msgstr "Завантаження…"
 
 #: linux/share/monet/store-app/Store.qml:511
 msgctxt "an app, then how its download or removal is going"
 msgid "%1: %2"
-msgstr ""
+msgstr "%1: %2"
 
 #: linux/share/monet/store-app/Store.qml:546
 msgid ""
@@ -7723,7 +7723,7 @@ msgstr "Закріплені"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
 msgid "Manage apps"
-msgstr ""
+msgstr "Керувати застосунками"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
@@ -7732,7 +7732,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
-msgstr ""
+msgstr "Нещодавні завантаження"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
@@ -7748,7 +7748,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
-msgstr ""
+msgstr "Застосунки, завантаження й ярлики"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
@@ -7893,7 +7893,7 @@ msgstr "Застосунок Windows"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:67
 msgid "Couldn't start the Windows app launcher. Try again from Files."
-msgstr ""
+msgstr "Не вдалося запустити засіб запуску застосунків Windows. Спробуйте знову з «Файлів»."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228
 msgid "A Windows installer"
@@ -7916,7 +7916,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:254
 msgid ""
 "Try opening this file with Proton. Compatibility depends on the program."
-msgstr ""
+msgstr "Спробуйте відкрити цей файл через Proton. Сумісність залежить від програми."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:255
 msgid ""
@@ -7974,7 +7974,7 @@ msgstr "Налаштування: %1"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:499
 msgid "LAN"
-msgstr ""
+msgstr "LAN"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:537
 msgid "Warm after sunset"
@@ -8325,7 +8325,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:395 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:396 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:434
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:435
 msgid "Hide from Transfers"
-msgstr ""
+msgstr "Сховати з «Передавання»"
 
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:439
 msgid "Extracting"
@@ -8345,7 +8345,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:460
 msgid "You can close this panel. Transfers continue in the background."
-msgstr ""
+msgstr "Цю панель можна закрити. Передавання триває у фоні."
 
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/config/config.qml:6
 msgid "Place"
@@ -8665,11 +8665,11 @@ msgstr ""
 
 #: image/dock/patch.py:281
 msgid "App behavior…"
-msgstr ""
+msgstr "Поведінка застосунку…"
 
 #: image/dock/patch.py:353
 msgid "Customize Home Bar…"
-msgstr ""
+msgstr "Налаштувати Головну панель…"
 
 #: image/launcher/coordinator.cpp:198
 msgid "This app is no longer available. Install it again, then retry."
@@ -9554,37 +9554,37 @@ msgstr "Тихий океан"
 #: setup/monet_setup/trust.py:69
 msgid ""
 "This version of Monet isn’t on the download server. Try again later, or make a new installer."
-msgstr ""
+msgstr "Цієї версії Monet немає на сервері завантаження. Спробуйте пізніше або створіть новий інсталятор."
 
 #: setup/monet_setup/trust.py:71
 msgid ""
 "The download server refused to send Monet. Try again later, or make a new installer."
-msgstr ""
+msgstr "Сервер завантаження відмовився надіслати Monet. Спробуйте пізніше або створіть новий інсталятор."
 
 #: setup/monet_setup/trust.py:73
 msgid ""
 "Setup couldn’t verify the download server’s certificate. Check the PC’s date and time, or try another network."
-msgstr ""
+msgstr "Інсталятору не вдалося перевірити сертифікат сервера завантаження. Перевірте дату й час на комп’ютері або спробуйте іншу мережу."
 
 #: linux/libexec/monet-quick:789
 msgid "Input %1"
-msgstr ""
+msgstr "Вхід %1"
 
 #: linux/libexec/monet-quick:789
 msgid "Inputs %1–%2"
-msgstr ""
+msgstr "Входи %1–%2"
 
 #: linux/libexec/monet-quick:1137
 msgid "Monet couldn't check for updates. Try again."
-msgstr ""
+msgstr "Monet не вдалося перевірити оновлення. Спробуйте ще раз."
 
 #: linux/libexec/monet-quick:1141
 msgid "Checking for updates took too long. Try again."
-msgstr ""
+msgstr "Перевірка оновлень тривала занадто довго. Спробуйте ще раз."
 
 #: linux/libexec/monet-quick:1172
 msgid "Installing updates"
-msgstr ""
+msgstr "Встановлення оновлень"
 
 #: linux/libexec/monet-quick:1589
 msgid "Keep blocked"
@@ -9672,35 +9672,35 @@ msgstr ""
 
 #: linux/libexec/monet-quick:3318
 msgid "The disk changed. Refresh the list and choose it again."
-msgstr ""
+msgstr "Диск змінився. Оновіть список і виберіть його знову."
 
 #: linux/libexec/monet-quick:3320
 msgid "This drive is in use by the system or is read-only."
-msgstr ""
+msgstr "Цей диск використовується системою або доступний лише для читання."
 
 #: linux/libexec/monet-quick:3324
 msgid "Unmount the volumes on this drive first."
-msgstr ""
+msgstr "Спершу від’єднайте томи на цьому диску."
 
 #: linux/libexec/monet-quick:3331
 msgid "Choose a size that fits the free space."
-msgstr ""
+msgstr "Виберіть розмір, що вміщається у вільне місце."
 
 #: linux/libexec/monet-quick:3342
 msgid "This volume changed, is in use, or is read-only."
-msgstr ""
+msgstr "Цей том змінився, використовується або доступний лише для читання."
 
 #: linux/libexec/monet-quick:3348
 msgid "Unmount this volume before making changes."
-msgstr ""
+msgstr "Від’єднайте цей том, перш ніж вносити зміни."
 
 #: linux/libexec/monet-quick:3361
 msgid "The disk service did not respond."
-msgstr ""
+msgstr "Служба дисків не відповіла."
 
 #: linux/libexec/monet-quick:3363
 msgid "Check the selected disk, format, size and volume name."
-msgstr ""
+msgstr "Перевірте вибраний диск, формат, розмір і назву тому."
 
 #: linux/libexec/monet-quick:3531
 msgid "Recovered installations"
@@ -9728,33 +9728,33 @@ msgstr "У «Відео»."
 
 #: linux/libexec/monet-quick:5895
 msgid "The Windows app launcher couldn't start. Try again from Files."
-msgstr ""
+msgstr "Засіб запуску застосунків Windows не запустився. Спробуйте знову з «Файлів»."
 
 #: linux/libexec/monet-quick:5918
 msgid "The program or installer is missing."
-msgstr ""
+msgstr "Програма або інсталятор відсутні."
 
 #: linux/libexec/monet-quick:5921
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
-msgstr ""
+msgstr "Підтримки застосунків Windows немає. Натомість можна відкрити файл у Windows."
 
 #: linux/libexec/monet-quick:5929
 msgid "Starting %1"
-msgstr ""
+msgstr "Запуск %1"
 
 #: linux/libexec/monet-quick:5930
 msgid "Preparing Windows app support can take a few minutes the first time."
-msgstr ""
+msgstr "Першого разу підготовка підтримки застосунків Windows може тривати кілька хвилин."
 
 #: linux/libexec/monet-quick:5939
 msgid "Windows app support couldn't start. Try opening the file in Windows."
-msgstr ""
+msgstr "Не вдалося запустити підтримку застосунків Windows. Спробуйте відкрити файл у Windows."
 
 #: linux/libexec/monet-quick:5946
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
-msgstr ""
+msgstr "Proton завершився з кодом %1. Перевірте файл і підключення або спробуйте відкрити його у Windows."
 
 #: linux/libexec/monet-quick:6773
 msgid "Open it again"
@@ -9806,12 +9806,12 @@ msgstr "тека завантажень; розташування заванта
 
 #: linux/libexec/monet-quick:7914
 msgid "Storage · Manage physical drives"
-msgstr ""
+msgstr "Сховище · Керування фізичними дисками"
 
 #: linux/libexec/monet-quick:7915
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
-msgstr ""
+msgstr "диски; керування дисками; форматувати диск; стерти диск; створити розділ; розділи; зовнішній диск"
 
 #: linux/libexec/monet-quick:7917
 msgid "Battery charge limit"
@@ -9856,12 +9856,12 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7925
 msgid "Display · Color profiles and test patterns"
-msgstr ""
+msgstr "Екран · Колірні профілі й тестові зображення"
 
 #: linux/libexec/monet-quick:7926
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
-msgstr ""
+msgstr "колірний профіль; ICC; OLED; калібрування кольору; тест екрана; тест монітора; кольори виглядають неправильно"
 
 #: linux/libexec/monet-quick:7928
 msgid "Make the pointer easier to see"
@@ -9915,7 +9915,7 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7938
 msgid "Internet · Wireless networks"
-msgstr ""
+msgstr "Інтернет · Бездротові мережі"
 
 #: linux/libexec/monet-quick:7939
 msgid ""
@@ -9924,15 +9924,15 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7940
 msgid "LAN settings"
-msgstr ""
+msgstr "Налаштування LAN"
 
 #: linux/libexec/monet-quick:7940
 msgid "Internet · Ethernet and IP settings"
-msgstr ""
+msgstr "Інтернет · Налаштування Ethernet та IP"
 
 #: linux/libexec/monet-quick:7941
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
-msgstr ""
+msgstr "lan; ethernet; дротова мережа; мережевий кабель; ip-адреса; шлюз; dns"
 
 #: linux/libexec/monet-quick:7942
 msgid "Birthdays and repeating notes"
@@ -10015,12 +10015,12 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7956
 msgid "Power & Sleep · Your apps come back after a restart"
-msgstr ""
+msgstr "Живлення & сон · Застосунки повертаються після перезапуску"
 
 #: linux/libexec/monet-quick:7957
 msgid ""
 "reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"
-msgstr ""
+msgstr "відкрити застосунки після перезапуску; відновити застосунки; запам’ятати відкриті застосунки; вікна там, де були"
 
 #: linux/libexec/monet-quick:7959
 msgid "Choose default apps"
@@ -10116,11 +10116,11 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8192
 msgid "Windows installer"
-msgstr ""
+msgstr "Інсталятор для Windows"
 
 #: linux/libexec/monet-quick:8193
 msgid "Linux package"
-msgstr ""
+msgstr "Пакет Linux"
 
 #: linux/libexec/monet-quick:8194 linux/libexec/monet-files-tools:712
 msgid "Linux application"
@@ -10128,19 +10128,19 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8194
 msgid "Downloaded app"
-msgstr ""
+msgstr "Завантажений застосунок"
 
 #: linux/libexec/monet-quick:8202
 msgid "Home"
-msgstr ""
+msgstr "Домашня папка"
 
 #: linux/libexec/monet-quick:8238
 msgid "Open application?"
-msgstr ""
+msgstr "Відкрити застосунок?"
 
 #: linux/libexec/monet-quick:8239
 msgid "Open this downloaded application?"
-msgstr ""
+msgstr "Відкрити цей завантажений застосунок?"
 
 #: linux/libexec/monet-quick:8652
 msgid "Waiting to reopen."
@@ -10183,7 +10183,7 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8661
 msgid "Files reopened. Its previous folders and tabs could not be saved."
-msgstr ""
+msgstr "«Файли» знову відкрито. Попередні теки й вкладки не вдалося зберегти."
 
 #: linux/libexec/monet-quick:8662
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
@@ -10229,16 +10229,16 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8674
 msgid "Private browsing stays closed. You can open the browser normally."
-msgstr ""
+msgstr "Приватний перегляд залишається закритим. Браузер можна відкрити як зазвичай."
 
 #: linux/libexec/monet-quick:8730
 msgid "Some apps didn't reopen"
-msgstr ""
+msgstr "Деякі застосунки не відкрилися знову"
 
 #: linux/libexec/monet-quick:8731
 msgid ""
 "Everything else is back where it was. Review what's missing and try again."
-msgstr ""
+msgstr "Усе інше повернулося на свої місця. Перегляньте, чого бракує, і спробуйте ще раз."
 
 #: linux/libexec/monet-quick:8735
 msgid "Back in Monet"
@@ -10310,7 +10310,7 @@ msgstr ""
 
 #: linux/libexec/monet-quick:9641
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
-msgstr ""
+msgstr "Виберіть повний ISO-файл Windows 11 на цьому комп’ютері або підключеному диску."
 
 #: linux/libexec/monet-quick:9768
 msgid "Couldn't check phones. Try again."
@@ -10487,12 +10487,12 @@ msgstr ""
 
 #: linux/libexec/monet-files-tools:391
 msgid "Show transfer progress"
-msgstr ""
+msgstr "Показувати перебіг передавання"
 
 #: linux/libexec/monet-files-tools:395
 msgid ""
 "Extraction continues in the background. Files opens the folder when it is ready."
-msgstr ""
+msgstr "Розпакування триває у фоні. «Файли» відкриють теку, коли все буде готово."
 
 #: linux/libexec/monet-files-tools:398
 msgid "Preparing extraction"
@@ -10703,25 +10703,25 @@ msgstr ""
 
 #: linux/libexec/monet-file-jobs:32
 msgid "Extraction did not finish"
-msgstr ""
+msgstr "Розпакування не завершилося"
 
 #: linux/libexec/monet-file-jobs:33
 msgid ""
 "Open Transfers in Files to see the problem or try again. Partial files were kept."
-msgstr ""
+msgstr "Відкрийте «Передавання» у «Файлах», щоб побачити проблему або спробувати знову. Частково розпаковані файли збережено."
 
 #: linux/libexec/monet-rest:387
 msgid "Open Task Manager"
-msgstr ""
+msgstr "Відкрити Диспетчер завдань"
 
 #: linux/libexec/monet-rest:405
 msgid "Memory is almost full"
-msgstr ""
+msgstr "Пам’ять майже заповнена"
 
 #: linux/libexec/monet-rest:406
 msgid ""
 "Closing an app you don't need keeps your PC responsive. Using the most now: %1."
-msgstr ""
+msgstr "Закрийте непотрібний застосунок, щоб комп’ютер не гальмував. Найбільше зараз використовують: %1."
 
 #: linux/share/monet/passwords/app.py:91 linux/share/monet/passwords/app_fill.py:32
 msgid "This action is not available."
@@ -12176,24 +12176,24 @@ msgstr "Застосунки й ігри для Monet"
 #: linux/share/applications/monet-apps.desktop:3
 msgctxt "an app's name in the menu"
 msgid "Apps"
-msgstr ""
+msgstr "Застосунки"
 
 #: linux/share/applications/monet-apps.desktop:4
 msgctxt "what an app is, under its name in the menu"
 msgid "App Library"
-msgstr ""
+msgstr "Бібліотека застосунків"
 
 #: linux/share/applications/monet-apps.desktop:5
 msgctxt "an app's description in the menu"
 msgid "Every app you have, by where it came from and what it does"
-msgstr ""
+msgstr "Усі ваші застосунки — за походженням і призначенням"
 
 #: linux/share/applications/monet-apps.desktop:9
 msgctxt ""
 "words the menu's search finds an app by; keep the semicolons between them"
 msgid ""
 "apps;applications;programs;library;installed;manage;uninstall;remove;store;"
-msgstr ""
+msgstr "застосунки;програми;бібліотека;встановлені;керування;видалити;вилучити;крамниця;apps;applications;"
 
 #: linux/share/applications/monet-archive.desktop:3
 msgctxt "an app's name in the menu"
@@ -12557,36 +12557,36 @@ msgstr ""
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Title Bars"
-msgstr ""
+msgstr "Заголовки вікон Monet"
 
 #: linux/share/kwin/scripts/monet-titles/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Windows without title bars until you point at the top of one: then its title bar slides down over it, with its buttons"
-msgstr ""
+msgstr "Вікна без заголовків, доки ви не наведете вказівник на верх вікна: тоді його заголовок висувається поверх разом із кнопками"
 
 #: linux/share/kwin/scripts/monet-work/metadata.json
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Work"
-msgstr ""
+msgstr "Відновлення роботи Monet"
 
 #: linux/share/kwin/scripts/monet-work/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Tells Monet when windows open, close or move, so your apps come back where they were after a restart"
-msgstr ""
+msgstr "Повідомляє Monet, коли вікна відкриваються, закриваються чи переміщуються, щоб після перезапуску застосунки повернулися на свої місця"
 
 #: linux/share/kwin/tabbox/monet-windows/metadata.json
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Window Grid"
-msgstr ""
+msgstr "Сітка вікон Monet"
 
 #: linux/share/kwin/tabbox/monet-windows/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid "A window preview grid that fits the screen"
-msgstr ""
+msgstr "Сітка мініатюр вікон за розміром екрана"
 
 #: linux/share/plasma/desktoptheme/monet/metadata.json
 msgctxt ""
@@ -12971,7 +12971,7 @@ msgstr ""
 #: crates/monet/src/main.rs:367
 msgid ""
 "Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
-msgstr ""
+msgstr "Комп’ютер перезапуститься у Windows і відкриє FACEIT, а потім гру. Коли ви вийдете з гри, він повернеться в Monet."
 
 #: crates/monet/src/main.rs:368
 msgid ""
@@ -12988,7 +12988,7 @@ msgstr ""
 #: crates/monet/src/main.rs:370
 msgid ""
 "Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
-msgstr ""
+msgstr "Комп’ютер перезапуститься у Windows, де для вас відкриються власні інсталятори FACEIT. Приймайте їхні умови, лише якщо згодні, а потім увійдіть. Відкриті застосунки закриються."
 
 #: crates/monet/src/main.rs:371
 msgid ""
@@ -13073,19 +13073,19 @@ msgstr ""
 #: crates/monet/src/main.rs:939
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
-msgstr ""
+msgstr "Перезапуск заблоковано. Збережіть роботу, а потім виберіть «Перезапустити та встановити» в «Грати у Windows»."
 
 #: crates/monet/src/main.rs:945
 msgid "Windows setup stopped before it could use the installation media"
-msgstr ""
+msgstr "Встановлення Windows зупинилося, не встигнувши використати інсталяційний носій"
 
 #: crates/monet/src/main.rs:947
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
-msgstr ""
+msgstr "Відкрийте «Грати у Windows», щоб повторити завантаження або вибрати ISO-образ Windows 11."
 
 #: crates/monet/src/main.rs:948
 msgid "Open Settings"
-msgstr ""
+msgstr "Відкрити Налаштування"
 
 #: crates/monet/src/main.rs:957
 msgid "there isn't enough free space for Windows"
@@ -13311,34 +13311,34 @@ msgstr "Натисніть «Скасувати», щоб залишитися �
 
 #: crates/monet-bridge/src/bridge.rs:1723
 msgid "Downloading %1 from %2"
-msgstr ""
+msgstr "Завантаження %1 з %2"
 
 #: crates/monet-bridge/src/bridge.rs:1724
 msgid "Checking that %1 made it"
-msgstr ""
+msgstr "Перевірка, що це файл від %1"
 
 #: crates/monet-bridge/src/bridge.rs:1725
 msgid "%1's installer is open"
-msgstr ""
+msgstr "Інсталятор %1 відкрито"
 
 #: crates/monet-bridge/src/bridge.rs:1760
 msgid ""
 "%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet."
-msgstr ""
+msgstr "Не вдалося завантажити %1. Перевірте підключення до інтернету й спробуйте знову з «Ігор» у Monet."
 
 #: crates/monet-bridge/src/bridge.rs:1761
 msgid ""
 "Windows couldn't confirm that %1 made its installer, so Monet didn't run it."
-msgstr ""
+msgstr "Windows не змогла підтвердити, що інсталятор випустив %1, тож Monet не запустив його."
 
 #: crates/monet-bridge/src/bridge.rs:1762
 msgid ""
 "%1 wasn't installed. You can try again from Games in Monet whenever you like."
-msgstr ""
+msgstr "%1 не встановлено. Можна спробувати знову з «Ігор» у Monet, коли забажаєте."
 
 #: crates/monet-bridge/src/bridge.rs:1827
 msgid "%1 isn't set up in Windows. Set it up from Games in Monet."
-msgstr ""
+msgstr "%1 не налаштовано у Windows. Налаштуйте його з «Ігор» у Monet."
 
 #: crates/monet-bridge/src/bridge.rs:1905
 msgid "Windows Update: downloading"
@@ -13467,9 +13467,9 @@ msgstr ""
 
 #: crates/monet-bridge/src/cover.rs:339 crates/monet-bridge/src/cover.rs:359
 msgid "Setting up %1"
-msgstr ""
+msgstr "Налаштування %1"
 
 #: crates/monet-bridge/src/cover.rs:341
 msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
-msgstr ""
+msgstr "Тут по черзі відкриються його власні інсталятори. Прочитайте їхні умови й приймайте їх, лише якщо згодні: Monet ніколи не робить цього за вас і нічого не вимикає."
