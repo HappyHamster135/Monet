@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Apps
+GenericName=App Library
+Comment=Every app you have, by where it came from and what it does
+Exec=@LIBEXECDIR@/monet-games --apps
+Icon=applications-all
+Categories=System;
+Keywords=apps;applications;programs;library;installed;manage;uninstall;remove;store;
+StartupNotify=true
+SingleMainWindow=true

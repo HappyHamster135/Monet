@@ -6971,7 +6971,7 @@ class GamesTheApp(unittest.TestCase):
     def test_games_is_an_app(self):
         app = (ROOT / "linux/libexec/monet-games").read_text(encoding="utf-8")
         # Its taskbar entry and icon come from its menu entry; one window, brought forward again.
-        self.assertIn('app.setDesktopFileName("monet-games")', app)
+        self.assertIn('app.setDesktopFileName("monet-apps" if apps else "monet-games")', app)
         self.assertIn("if already_open(name):\n        return 0", app)
         self.assertIn('PROGRAMS = {"helper": f"{LIBEXECDIR}/monet-quick", "monet": f"{BINDIR}/monet"}', app)
         entry = (SHARE / "applications/monet-games.desktop").read_text(encoding="utf-8")

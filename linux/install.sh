@@ -181,6 +181,8 @@ put 644 "$SRC/share/applications/monet-settings.desktop" "$DATADIR/applications/
 put 644 "$SRC/share/applications/monet-passwords.desktop" "$DATADIR/applications/monet-passwords.desktop"
 # Games, the app with every game (the panel's Games button and Windows+G open it).
 put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/monet-games.desktop"
+# Apps, Games' sibling: every app in the menu, by where it came from and what it does.
+put 644 "$SRC/share/applications/monet-apps.desktop" "$DATADIR/applications/monet-apps.desktop"
 # The Store, Monet's own: Flathub's apps, and the Windows apps on the PC.
 put 644 "$SRC/share/applications/monet-store.desktop" "$DATADIR/applications/monet-store.desktop"
 # Windows+Alt+G: the last 30 seconds of a game, saved (its shortcut comes with Monet's look).

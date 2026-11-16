@@ -151,7 +151,8 @@ rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applicat
     "$PREFIX/share/kio/servicemenus/monet-archive-open.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-earlier.desktop" "$PREFIX/share/applications/monet-replay.desktop" \
     "$PREFIX/share/applications/monet-windows-program.desktop" "$PREFIX/share/kio/servicemenus/monet-windows-program.desktop" \
-    "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-store.desktop"
+    "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-apps.desktop" \
+    "$PREFIX/share/applications/monet-store.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-performance.page"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-startup.page"

@@ -2,6 +2,7 @@
 """Games: every game you have, Monet's and Windows', in one library of its own.
 
     monet-games          open Games (or bring back the one that's open)
+    monet-games --apps   open Apps, every app in the menu in a library of its own the same way
 
 The window (DATADIR/monet/games/Games.qml) lists what `monet-quick library` finds, plays a
 game where it plays, and asks before restarting in Windows (`monet play`). This side runs
@@ -358,15 +359,18 @@ def glaze(window, context, tries=8):
 
 
 def main():
+    # Apps (--apps) is Games' sibling: the same window, its own library (monet-quick app-library).
+    apps = sys.argv[1:2] == ["--apps"]
+    kind = "apps" if apps else "games"
     app = QGuiApplication(sys.argv)
     # Monet's menu entry: its name, its icon, its place in the taskbar.
-    app.setDesktopFileName("monet-games")
-    app.setApplicationName("games")
+    app.setDesktopFileName("monet-apps" if apps else "monet-games")
+    app.setApplicationName(kind)
     app.setOrganizationName("monet")
     words = Words()
-    app.setApplicationDisplayName(words.i18n("Games"))
-    app.setWindowIcon(QIcon.fromTheme("monet-windows"))
-    name = f"monet-games-{os.getuid()}"
+    app.setApplicationDisplayName(words.i18n("Apps") if apps else words.i18n("Games"))
+    app.setWindowIcon(QIcon.fromTheme("applications-all" if apps else "monet-windows"))
+    name = f"monet-{kind}-{os.getuid()}"
     if already_open(name):
         return 0
     QLocalServer.removeServer(name)
@@ -383,11 +387,11 @@ def main():
     engine.rootContext().setContextProperty("art", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
     engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
     engine.rootContext().setContextProperty("blurBehind", False)
-    startup_event("games", "qml-load-start", STARTUP_STARTED)
-    engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/games/Games.qml"))
+    startup_event(kind, "qml-load-start", STARTUP_STARTED)
+    engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/games/{'Apps' if apps else 'Games'}.qml"))
     if not engine.rootObjects():
         return 1
-    startup = StartupTiming("games", engine.rootObjects()[0], STARTUP_STARTED)
+    startup = StartupTiming(kind, engine.rootObjects()[0], STARTUP_STARTED)
     glaze(engine.rootObjects()[0], engine.rootContext())
     return app.exec()
 

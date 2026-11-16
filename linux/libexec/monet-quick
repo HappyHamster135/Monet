@@ -1732,6 +1732,116 @@ def launcher_games(dirs=None):
     return found
 
 
+# Apps (monet-games --apps) ------------------------------------------------------
+# Every app in the menu, as Games lists games: where it came from, what kind of app it is and
+# when it was last opened (KDE notes that for the menu's recently used). Games launchers add
+# are in Games, not here.
+
+APP_GROUPS = (  # the first group a .desktop file's Categories name
+    ("games", {"Game"}),
+    ("office", {"Office", "WordProcessor", "Spreadsheet", "Presentation", "Calendar", "ContactManagement", "Finance"}),
+    ("graphics", {"Graphics", "2DGraphics", "3DGraphics", "Photography", "RasterGraphics", "VectorGraphics", "Scanning"}),
+    ("media", {"AudioVideo", "Audio", "Video", "Music", "Player", "Recorder"}),
+    ("development", {"Development", "IDE"}),
+    ("internet", {"Network", "WebBrowser", "Email", "Chat", "InstantMessaging", "P2P", "FileTransfer"}),
+    ("utilities", {"Utility", "Accessories", "Archiving", "Calculator", "FileManager", "TextEditor", "Clock"}),
+    ("system", {"System", "Settings", "Monitor", "PackageManager", "TerminalEmulator", "Security"}),
+)
+KDE_USAGE = DATA_HOME / "kactivitymanagerd/resources/database"
+
+
+def local_value(entry, key):
+    """An entry's KEY in the session's language (KEY[pt_BR], then KEY[pt]), else its KEY."""
+    lang = next(filter(None, map(os.environ.get, ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"))), "")
+    lang = re.split(r"[.@:]", lang)[0]
+    return entry.get(f"{key}[{lang}]") or entry.get(f"{key}[{lang.split('_')[0]}]") or entry.get(key, "")
+
+
+def last_opened(database=None):
+    """When each app was last opened, as KDE's menu notes it: {"org.kde.dolphin.desktop": seconds}."""
+    import sqlite3
+    path = KDE_USAGE if database is None else database
+    if not path.is_file():
+        return {}
+    try:
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1) as db:
+            rows = db.execute("SELECT targettedResource, MAX(lastUpdate) FROM ResourceScoreCache "
+                              "WHERE targettedResource LIKE 'applications:%' GROUP BY targettedResource").fetchall()
+    except sqlite3.Error:
+        return {}
+    return {str(resource)[len("applications:"):]: int(when or 0) for resource, when in rows}
+
+
+def shown_in_menu(entry):
+    """What the menu shows of a .desktop file: an app, not hidden, meant for this desktop."""
+    if entry.get("Type") != "Application" or entry.get("NoDisplay", "").lower() == "true" \
+            or entry.get("Hidden", "").lower() == "true":
+        return False
+    only, never = entry.get("OnlyShowIn", ""), entry.get("NotShowIn", "")
+    if only and "KDE" not in only.split(";") or "KDE" in never.split(";"):
+        return False
+    tried = entry.get("TryExec", "")
+    return not tried or bool(shutil.which(tried) or Path(tried).is_file())
+
+
+def app_source(folder, entry):
+    """Where an app came from: "windows" (a Windows program), "store" (Flatpak's, the Store's),
+    "mine" (added on this account) or "system" (came with Monet)."""
+    categories = entry.get("Categories", "")
+    if "X-Monet-Windows-Programs" in categories or "X-Monet-Windows-Apps" in categories:
+        return "windows"
+    if entry.get("X-Flatpak") or "flatpak/exports" in str(folder):
+        return "store"
+    return "mine" if folder == DATA_HOME / "applications" else "system"
+
+
+def app_library(dirs=None, used=None):
+    """[{id, name, detail, icon, source, store, group, last, removable}] for the Apps window."""
+    folders = app_dirs() if dirs is None else dirs
+    used = last_opened() if used is None else used
+    seen, found = set(), []
+    for folder in folders:
+        try:
+            paths = sorted(folder.rglob("*.desktop"))
+        except OSError:
+            continue
+        for path in paths:
+            app_id = "-".join(path.relative_to(folder).parts)
+            if app_id in seen:
+                continue
+            seen.add(app_id)
+            try:
+                with path.open(encoding="utf-8", errors="replace") as text:
+                    entry = desktop_entry(text.read(65536))
+            except OSError:
+                continue
+            name = " ".join(local_name(entry).split())
+            if not name or not shown_in_menu(entry) or LAUNCHER_GAME.search(entry.get("Exec", "")):
+                continue
+            categories = set(entry.get("Categories", "").split(";"))
+            source = app_source(folder, entry)
+            found.append({
+                "id": app_id, "name": name,
+                "detail": " ".join((local_value(entry, "Comment") or local_value(entry, "GenericName")).split())[:200],
+                "icon": entry.get("Icon", "") or "application-x-executable",
+                "source": source,
+                "store": (entry.get("X-Flatpak") or path.stem) if source == "store" else "",
+                "group": next((group for group, names in APP_GROUPS if categories & names), "other"),
+                "last": used.get(app_id, 0),
+                "removable": source == "mine" and path.parent == folder and app_id.startswith("monet-local-")})
+    return sorted(found, key=lambda app: search_fold(app["name"]))
+
+
+def app_remove(app_id, folder=None):
+    """Removes a shortcut added on this account (Monet's "Add an app"); never anything else."""
+    folder = DATA_HOME / "applications" if folder is None else folder
+    path = folder / app_id
+    if not re.fullmatch(r"monet-local-[0-9a-f]{24}\.desktop", app_id) or not path.is_file() or path.is_symlink():
+        return False
+    path.unlink()
+    return True
+
+
 def native_executable(path):
     """An explicitly selected native executable; registering it never runs it."""
     path = Path(path).absolute()
@@ -8811,6 +8921,15 @@ def main(argv):
             names = {search_fold(app["name"]).replace(" ", "") for app in apps}
             apps += [row for row in downloaded_apps(query) if search_fold(row["name"]).replace(" ", "") not in names]
         emit({"results": apps + everyday_search(query)})
+    elif cmd == "app-library" and not args:
+        emit(app_library())
+    elif cmd == "app-remove" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2}){1,255}", args[0]):
+        removed = app_remove(unhex(args[0]))
+        emit({"ok": removed})
+        return 0 if removed else 1
+    elif cmd == "store-app" and len(args) == 1 and re.fullmatch(r"[A-Za-z][\w-]*(?:\.[\w-]+){2,}", args[0]):
+        subprocess.Popen([f"{LIBEXECDIR}/monet-store", args[0]], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     elif cmd == "menu-games" and not args:
         emit({"ok": True, "ids": launcher_games()})
     elif cmd == "recent-downloads":
