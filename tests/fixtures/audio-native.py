@@ -360,6 +360,11 @@ QtObject {
     property string appName: "Monet Browser"
     readonly property Dock.PulseAudio audio: Dock.PulseAudio {}
     function hasStream(pid) { return audio.streamsForAppName(appName).some(stream => stream.pid === pid) }
+    // What the Home Bar keeps for the test player, from 0 to 1 (-1: nothing).
+    function savedLevel() {
+        const level = audio.monetVolume.levels()["id:org.monet.test-browser"];
+        return Number.isFinite(level) ? level : -1;
+    }
     onRequestedChanged: {
         const streams = audio.streamsForAppName(appName);
         if (!streams.length) throw new Error("No playback stream");
@@ -439,12 +444,19 @@ QtObject {
             QTest.qWait(1100)
             pulse.volume_set_all_chans(stream(third), 0.55)
             wait_for(lambda: at(third, 55), 'another mixer changed the track')
+            # The Home Bar keeps it once it has seen the change, which it hears after the server
+            # (and WirePlumber restores the next track too, so only this shows Monet's part).
+            wait_for(lambda: abs(obj.savedLevel() - 0.55) < 0.002, "the Home Bar kept the other mixer's level")
             QTest.qWait(300)
             assert at(third, 55), 'the Home Bar put its old level back'
             third.terminate(); third.wait(timeout=5)
             wait_for(lambda: stream(third) is None, 'third track removed')
             fourth = play(); players.append(fourth)
-            wait_for(lambda: at(fourth, 55), "next track kept the other mixer's level")
+            try:
+                wait_for(lambda: at(fourth, 55), "next track kept the other mixer's level")
+            except AssertionError:
+                print('saved', obj.savedLevel(), 'fourth', stream(fourth))
+                raise
             assert at(other, 100), 'another app was changed'
             print('Dock volume: next track, separate app, persistence, zero, unmute and other mixers passed')
         finally:
