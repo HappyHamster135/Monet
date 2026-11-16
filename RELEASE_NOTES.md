@@ -144,6 +144,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   can't be told apart by window, as in Chrome or a tab that isn't showing, the
   app keeps one slider. And a level you set for Spotify in the Home Bar now
   stays when the next song starts, instead of going back to Spotify's own.
+- **File dialogs that fit an ultrawide screen.** On an ultrawide monitor, the
+  window for opening a file or choosing a folder no longer opens as a long,
+  low strip across the screen. It opens the size it would on a regular screen,
+  centered on the app that asked, so names, sizes and dates all fit. Make it
+  bigger or smaller and it keeps your size from then on.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

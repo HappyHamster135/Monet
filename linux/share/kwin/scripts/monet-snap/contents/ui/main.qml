@@ -11,7 +11,8 @@
  * the layouts for the window you're in. Both take the arrows, Tab, Enter, Space and Esc while
  * they're up, as in Windows. Dragged away again, a window gets its own size back.
  * And a window stretched to the top or bottom of the screen by its edge takes the whole height.
- * The bar's islands stay on one row while widgets are being edited.
+ * The bar's islands stay on one row while widgets are being edited. And on an ultrawide screen,
+ * a file or folder dialog opens as wide as on a 16:9 one, not as a strip across it (dialogs.js).
  *
  * KWin's own edge tiling and top-edge maximizing are off (monet-look): this does both.
  */
@@ -19,6 +20,7 @@ import QtQuick
 import QtQuick.Window as QuickWindow
 import org.kde.kwin
 import org.kde.kirigami as Kirigami
+import "dialogs.js" as Dialogs
 
 Item {
     id: root
@@ -226,9 +228,23 @@ Item {
         }
         liningUp = false
     }
+    // KDE's file and folder dialogs open half as wide as the screen the first time, a strip across
+    // an ultrawide (dialogs.js): one opens as wide as on a 16:9 screen as tall instead, once, as
+    // it appears, and KDE keeps that size, or the one you give it, from then on. Only as they
+    // open, with snap layouts on or off: never a window already open, nor an app's own.
+    function fitDialog(w) {
+        if (!w || !w.output) {
+            return
+        }
+        const r = Dialogs.fitted(w, Workspace.screens.map(s => s.geometry), Workspace.clientArea(KWin.MaximizeArea, w))
+        if (r) {
+            w.frameGeometry = Qt.rect(r.x, r.y, r.width, r.height)
+        }
+    }
     Component.onCompleted: {
         Workspace.stackingOrder.forEach(watch)
         Workspace.windowAdded.connect(watch)
+        Workspace.windowAdded.connect(fitDialog)
     }
 
     function started(w) {
