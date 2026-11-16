@@ -104,6 +104,14 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Store says it can't be cancelled instead of showing a Cancel that wouldn't
   work, and with animations turned off its waiting bar holds still. Back and
   Forward also put the keys back where they were on an app's page.
+- **Your whole game library in Games.** Games now shows every game you own in
+  Steam, and in Epic, GOG and Amazon through Heroic or Lutris, not just the
+  ones installed. Each says whether it's installed, downloading and how far
+  along, or not installed yet, and All, Installed and Not installed pick which
+  to see. Install opens the launcher's own install window, and a download in
+  progress opens its downloads. For Steam, add your own Steam key once (Games
+  shows you how); it never asks for your password, and works offline from the
+  last list it got.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
