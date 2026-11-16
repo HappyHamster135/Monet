@@ -1649,7 +1649,9 @@ class DesktopWidgets(unittest.TestCase):
         for theme in ("org.monet.desktop", "org.monet.smoke.desktop"):
             layout = (PLASMA / "look-and-feel" / theme / "contents/layouts/org.kde.plasma.desktop-layout.js").read_text()
             for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
-                self.assertIn(f'd.addWidget("{widget}"', layout)
+                self.assertIn(f'addDesktopCard(d, "{widget}")', layout)
+            # Placed by the desktop once Plasma knows the screen, not at fixed coordinates.
+            self.assertIn('card.writeConfig("monetDefaultPlacement", true)', layout)
         # Any desktop without them gets them once: also one laid out before Monet had widgets, or where
         # Plasma's first layout found no desktop. Every desktop, whatever its activity, and done only once
         # Plasma had one: until then, again at every sign-in, after the look.
@@ -1657,7 +1659,8 @@ class DesktopWidgets(unittest.TestCase):
         self.assertIn("desktops().forEach(", placing)
         self.assertNotIn("desktopsForActivity", placing)
         for widget in ("org.monet.placard", "org.monet.weather", "org.monet.calendar"):
-            self.assertIn(f'd.addWidget("{widget}"', placing)
+            self.assertIn(f'"{widget}"', placing)
+        self.assertIn('card.writeConfig("monetDefaultPlacement", true);', placing)
         self.assertIn('d.widgets("org.monet.weather").length > 0', placing)
         self.assertIn('*"desktops "[1-9]*) mkdir -p "$CONFIG/monet" && touch "$placed"', placing)
         self.assertIn("busctl --user status org.kde.plasmashell", placing)

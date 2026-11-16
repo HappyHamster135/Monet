@@ -4,6 +4,9 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
+    <entry name="monetDefaultPlacement" type="Bool">
+      <default>false</default>
+    </entry>
     <!-- The series on the wall, so the card names it (monet-light writes it with the wallpaper's). -->
     <entry name="Series" type="String">
       <default>hours</default>

@@ -33,6 +33,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **A quicker start with NVIDIA graphics.** The check that keeps Flatpak apps'
   NVIDIA drivers matched now runs half a minute after the PC starts, instead
   of holding up the start by several seconds.
+- **Desktop cards fit the screen.** On a new desktop, the placard, Weather and
+  Calendar are set out to suit your screen, small or large, wide or turned on
+  its side, with their tops lined up and none of them cut off at an edge. Once
+  you arrange them yourself, they stay just where you put them.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

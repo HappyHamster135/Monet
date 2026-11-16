@@ -10,6 +10,14 @@ function set(object, key, value) {
     try { object[key] = value } catch (e) {}
 }
 
+function addDesktopCard(desktop, plugin) {
+    // Use the live containment to place the cards once Plasma knows the screen.
+    var card = desktop.addWidget(plugin)
+    card.currentConfigGroup = ["General"]
+    card.writeConfig("monetDefaultPlacement", true)
+    card.reloadConfig()
+}
+
 function island(alignment) {
     var p = new Panel
     p.location = "bottom"
@@ -31,12 +39,9 @@ for (var i = 0; i < desktops.length; i++) {
     d.wallpaperPlugin = "org.monet.hours"
     d.currentConfigGroup = ["General"]
     d.writeConfig("iconSize", 3)
-    d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12)
-    var width = 1920
-    try { width = screenGeometry(d.screen).width } catch (e) {}
-    var right = width - gridUnit * 22
-    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10)
-    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12)
+    addDesktopCard(d, "org.monet.placard")
+    addDesktopCard(d, "org.monet.weather")
+    addDesktopCard(d, "org.monet.calendar")
 }
 
 var left = island("left")

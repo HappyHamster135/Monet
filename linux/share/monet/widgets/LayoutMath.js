@@ -4,6 +4,54 @@ function overlaps(a, b, gap) {
         && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
 }
 
+function desktopDefaults(items, area, cell) {
+    const width = Math.floor(area.width / cell) * cell;
+    const height = Math.floor(area.height / cell) * cell;
+    const margin = width >= 1100 && height >= 650 ? 3 * cell : cell;
+    const right = width - margin;
+    const bottom = height - margin;
+    const round = n => Math.ceil(n / cell) * cell;
+    const byType = {};
+    items.forEach(item => {
+        byType[item.type] = {id: item.id, x: margin, y: margin,
+            width: round(Math.max(item.minWidth, item.preferredWidth)),
+            height: round(Math.max(item.minHeight, item.preferredHeight))};
+    });
+    const {placard, weather, calendar} = byType;
+    // Keep the top edges aligned and the two cards flush at the right.
+    weather.x = right - weather.width;
+    calendar.x = right - calendar.width;
+    calendar.y = weather.y + weather.height + cell;
+    if (placard.x + placard.width + cell <= Math.min(weather.x, calendar.x)
+            && calendar.y + calendar.height <= bottom && placard.y + placard.height <= bottom) {
+        return [placard, weather, calendar];
+    }
+    // A short or portrait desktop can use two rows. Let the allocator try
+    // the remaining combinations and minimum sizes when space is tighter.
+    weather.x = margin;
+    weather.y = placard.y + placard.height + cell;
+    calendar.y = weather.y;
+    if (weather.x + weather.width + cell <= calendar.x
+            && Math.max(weather.y + weather.height, calendar.y + calendar.height) <= bottom) {
+        return [placard, weather, calendar];
+    }
+    const minimum = ["placard", "weather", "calendar"].map(type => {
+        const item = items.find(candidate => candidate.type === type);
+        return Object.assign({}, byType[type], {width: round(item.minWidth), height: round(item.minHeight),
+            minWidth: item.minWidth, minHeight: item.minHeight});
+    });
+    if (minimum.reduce((total, item) => total + item.width, 2 * cell) <= right - margin
+            && minimum.every(item => item.height <= bottom - margin)) {
+        let x = margin;
+        return minimum.map(item => {
+            const rect = {id:item.id, x:x, y:margin, width:item.width, height:item.height};
+            x += item.width + cell;
+            return rect;
+        });
+    }
+    return arrange(minimum, area, area, cell);
+}
+
 function arrange(items, before, area, cell) {
     var gap = cell, edge = cell, placed = [], wanted = [], crowded = false;
     var ratio = Math.min(1, area.width / before.width, area.height / before.height);

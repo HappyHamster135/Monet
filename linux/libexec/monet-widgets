@@ -23,13 +23,13 @@ desktops().forEach(function (d) {
     seen++;
     if (d.widgets("org.monet.weather").length > 0 || d.widgets("org.monet.calendar").length > 0)
         return;
-    var width = 1920;
-    try { width = screenGeometry(d.screen).width } catch (e) {}
-    var right = width - gridUnit * 22;
-    if (d.widgets("org.monet.placard").length === 0)
-        d.addWidget("org.monet.placard", gridUnit * 3, gridUnit * 3, gridUnit * 24, gridUnit * 12);
-    d.addWidget("org.monet.weather", right, gridUnit * 3, gridUnit * 19, gridUnit * 10);
-    d.addWidget("org.monet.calendar", right + gridUnit * 7, gridUnit * 14, gridUnit * 12, gridUnit * 12);
+    ["org.monet.placard", "org.monet.weather", "org.monet.calendar"].forEach(function (plugin) {
+        if (d.widgets(plugin).length) return;
+        var card = d.addWidget(plugin);
+        card.currentConfigGroup = ["General"];
+        card.writeConfig("monetDefaultPlacement", true);
+        card.reloadConfig();
+    });
 });
 print("desktops " + seen);
 JS

@@ -12,6 +12,8 @@ Item {
     property var last: null
     property bool pending: false
     property bool initialized: false
+    property bool custom: false
+    property var editStart: null
     property var ancestors: []
     readonly property bool isLeader: leader()
     property url storageFile: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet/widget-layouts.conf"
@@ -58,6 +60,7 @@ Item {
         saved.sync();
         try {
             const record = JSON.parse(saved.value(storageKey(), "{}"));
+            custom = record.custom === true;
             const restored = {};
             Object.keys(record.snapshots || {}).slice(-20).forEach(key => {
                 if (validSnapshot(record.snapshots[key])) restored[key] = record.snapshots[key];
@@ -65,13 +68,13 @@ Item {
             snapshots = restored;
             last = snapshots[layout.configKey] || snapshots[record.lastKey] || null;
         } catch (e) {
-            snapshots = {}; last = null;
+            snapshots = {}; last = null; custom = false;
         }
     }
     function persist() {
         const keys = Object.keys(snapshots);
         while (keys.length > 20) delete snapshots[keys.shift()];
-        const value = JSON.stringify({snapshots:snapshots,lastKey:layout.configKey});
+        const value = JSON.stringify({snapshots:snapshots,lastKey:layout.configKey,custom:custom});
         if (value === savedValue) return;
         savedValue = value;
         saved.setValue(storageKey(), value);
@@ -80,8 +83,7 @@ Item {
     function capture(edited = false) {
         if (!layout || !initialized || !isLeader
                 || (!edited && (pending || layout.editMode || layout.relayoutLock))) return;
-        const items = containers().map(c => ({id:c.applet.plasmoid.id,x:c.x,y:c.y,width:c.width,height:c.height,
-                                              minWidth:Math.max(48,c.Layout.minimumWidth),minHeight:Math.max(48,c.Layout.minimumHeight)}));
+        const items = containers().map(metrics);
         // Edit mode temporarily reserves room for the panels; keep the screen's saved area.
         const previous = snapshots[layout.configKey];
         const area = edited && previous ? previous.area : {width:layout.width,height:layout.height};
@@ -89,22 +91,54 @@ Item {
         snapshots[layout.configKey] = last;
         persist();
     }
+    function metrics(c) {
+        return {id:c.applet.plasmoid.id, x:c.x, y:c.y, width:c.width, height:c.height,
+            minWidth:Math.max(48,c.Layout.minimumWidth), minHeight:Math.max(48,c.Layout.minimumHeight)};
+    }
+    function editGeometry() {
+        return JSON.stringify(containers().map(c => [c.applet.plasmoid.id,c.x,c.y,c.width,c.height])
+            .sort((a,b) => a[0]-b[0]));
+    }
     function schedule() { pending = true; settle.restart(); }
     function fit() {
         if (!layout || !isLeader) { pending=false; return; }
         if (!initialized || layout.relayoutLock || layout.editMode) return;
-        const source = snapshots[layout.configKey] || last;
-        if (!source) { pending=false; capture(); return; }
         const area = {width:layout.width,height:Math.min(layout.height,layout.containmentItem.height-80)};
+        if (area.width < layout.cellWidth * 3 || area.height < layout.cellWidth * 3) return;
         const known = snapshots[layout.configKey];
+        const source = known || last;
         const children = containers();
-        const items = children.map(c => source.items.find(r => r.id===c.applet.plasmoid.id)
-            || {id:c.applet.plasmoid.id,x:c.x,y:c.y,width:c.width,height:c.height,
-                minWidth:c.Layout.minimumWidth,minHeight:c.Layout.minimumHeight});
+        const stock = !custom && children.length === 3 && ["placard", "weather", "calendar"].every(type =>
+            children.some(c => c.applet.plasmoid.pluginName === "org.monet." + type
+                && c.applet.plasmoid.configuration?.monetDefaultPlacement === true));
+        const items = children.map(c => {
+            const item = metrics(c);
+            const previous = source?.items.find(r => r.id === item.id);
+            if (previous) {
+                item.x = previous.x; item.y = previous.y;
+                item.width = previous.width; item.height = previous.height;
+            }
+            return item;
+        });
         const valid = items.every((r,i) => r.x>=0 && r.y>=0 && r.x+r.width<=area.width
             && r.y+r.height<=area.height && !items.slice(0,i).some(p => LayoutMath.overlaps(p,r,0)));
-        const rects = known && valid && known.area.width===layout.width && known.area.height===layout.height
-            ? items : LayoutMath.arrange(items,source.area,area,layout.cellWidth);
+        let rects = items;
+        if (stock) {
+            children.forEach((c, index) => {
+                items[index].type = c.applet.plasmoid.pluginName.slice("org.monet.".length);
+                items[index].preferredWidth = Math.max(0,c.Layout.preferredWidth);
+                items[index].preferredHeight = Math.max(0,c.Layout.preferredHeight);
+            });
+            rects = LayoutMath.desktopDefaults(items,area,layout.cellWidth);
+        } else if (!valid || (source && (!known || known.area.width!==layout.width || known.area.height!==layout.height))) {
+            rects = LayoutMath.arrange(items,source?.area || area,area,layout.cellWidth);
+        }
+        if (rects.every(r => children.some(c => c.applet.plasmoid.id===r.id
+                && c.x===r.x && c.y===r.y && c.width===r.width && c.height===r.height))) {
+            pending=false;
+            capture();
+            return;
+        }
         children.forEach(c => layout.releaseSpace(c));
         rects.forEach(r => {
             const c = children.find(c => c.applet.plasmoid.id===r.id);
@@ -133,8 +167,7 @@ Item {
         load();
         initialized = true;
         pending = false;
-        // Restore before capturing Plasma's temporary startup geometry.
-        if (!last) capture();
+        // Wait for the desktop and panel geometry before taking the first snapshot.
         schedule();
     }
     // Plasma reparents representations after construction. Watch that lifecycle
@@ -172,10 +205,17 @@ Item {
     Connections {
         target: guard.layout
         function onEditModeChanged() {
-            if (!guard.layout.editMode && guard.isLeader) {
+            if (!guard.isLeader) return;
+            if (guard.layout.editMode) {
+                guard.editStart = guard.editGeometry();
+            } else {
                 if (!guard.initialized) { guard.load(); guard.initialized = true; }
                 // Done is a new arrangement, not a screen resize to restore from the old snapshot.
-                guard.capture(true);
+                if (guard.custom || guard.editStart === null || guard.editStart !== guard.editGeometry()) {
+                    guard.custom = true;
+                    guard.capture(true);
+                }
+                guard.editStart = null;
                 guard.schedule();
             }
         }
