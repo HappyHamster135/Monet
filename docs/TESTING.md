@@ -2290,6 +2290,17 @@ still a release step. Local evidence is in `target/098-security-vm/`.
 - [ ] Settings â†’ Play on Windows â†’ Open your apps again off: after the next trip nothing reopens; on again, it does
 - [ ] With Ready when you come back on too: the apps are open behind the lock screen when you unlock
 
+### Your desktop as you left it (after 0.9.8-7)
+
+- [ ] `systemctl --user status monet-work` is active and `~/.local/state/monet/work.json` updates a few seconds after moving a window (not while the screen is locked)
+- [ ] Two screens, two desktops: Kate with two documents on screen 2 / desktop 2, Files with two tabs maximized on screen 1, Zen and Konsole on screen 1 / desktop 1 (Konsole minimized). Restart from the menu: after sign-in each comes back once, on its own screen, desktop, place and size, Kate with its documents, Files with its tabs; no notice
+- [ ] Close Konsole, then restart within two seconds: Konsole stays closed, the rest comes back
+- [ ] Sign out and in again (same boot): the same apps come back once; cancel a sign-out at an app's save question and the desktop carries on as it was
+- [ ] Hold the power button to switch off while apps are open (after a minute of using them): at the next start they come back as they were then
+- [ ] Swap the two monitors' cables: each window still opens on its own monitor
+- [ ] Uninstall an app that was open, restart: a notice says some apps didn't reopen; Settings, Power & Sleep shows it with Retry
+- [ ] Settings, Power & Sleep, Reopen your work off: after the next restart nothing reopens; on again, it does. A trip to Windows still reopens its apps exactly once
+
 ### A guest (after 0.9.3)
 
 - [ ] Settings â†’ Accounts â†’ Guest asks for an administrator's password, then the sign-in screen lists Guest with Monet's parasol painting; Guest signs in with no password and gets Monet's look

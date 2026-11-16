@@ -1427,11 +1427,67 @@ it, `monet` (the person's side, before it asks the helper to switch) runs
 Plasma starts each app in (`app-[LAUNCHER-]ID@RANDOM.service` or
 `app-[LAUNCHER-]ID-RANDOM.scope`, the menu entry's name with its dashes
 escaped), without Steam, Monet's own, the hidden ones and those that start at
-every sign-in anyway, at most twelve, into `~/.local/state/monet/trip-apps.json`.
-At the next sign-in within twelve hours `monet-session` starts them again,
-once, those not running yet. Browsers and the like reopen their own windows
-and tabs. Settings → Play on Windows → **Open your apps again** turns it off
-(`~/.config/monet/trip-apps-off`).
+every sign-in anyway, at most 64, with KWin's places for their windows and the
+documents, Files tabs and Zen session `monet-resume` knows how to reopen, into
+`~/.local/state/monet/trip-apps.json`, bound to that trip. At the sign-in back
+from Windows `monet-session` starts them again, once, those not running yet
+(docs/RESTORATION.md has the details). **Reopen your work** turns it off
+(`~/.config/monet/trip-apps-off`), the same switch as after a restart, below.
+
+**Your work after a restart.** The same happens after any restart, shutdown
+or sign-out, and after a crash or a power cut, with nothing to do first. KDE's
+own restore can't do it on Wayland: at a Plasma sign-out
+`plasma-fallback-session-save` writes only each app's id (one per app, no
+windows) to `plasmasessionrestorerc` and `plasma-fallback-session-restore`
+starts them again plainly, without places, documents or a second window;
+KWin 6.8 keeps X11 apps' places only, and its xdg-session-management-v1
+restore needs apps that ask for it with the session id they were started
+with (Qt 6.11, Monet's, speaks only the older xx- version). Nothing at all is
+saved for `systemctl reboot`, a crash or a power cut. So Monet keeps its own,
+the trip's picture of your work (version 4 in `monet-resume`), fresh while the
+desktop is used:
+
+- *Watching.* The Monet Work KWin script (`share/kwin/scripts/monet-work`)
+  tells `monet-work.service` (`libexec/monet-work`, one per sign-in, on the
+  session bus as `org.monet.Work`) when windows open, move or change desktop,
+  screen, size or state (at most once a second), and the KWin id of each
+  window that closes, at once. Never a title or anything a window shows.
+- *Pictures.* `monet-work` takes one (`monet-quick capture_work`: the KWin
+  snapshot, the apps that reopen and their documents and tabs, nothing
+  private) three quiet seconds after a change, half a minute at most while
+  changes keep coming, every five minutes while Kate, KWrite, Files or
+  Documents is open (their tabs change without their windows), and writes it
+  to `~/.local/state/monet/work.json` only when it differs. Nothing while the
+  screen is locked, while a switch to Windows is closing the apps (the trip
+  has its own), or while the last sign-in's work is still reopening.
+- *A restart begins.* Plasma starts `org.kde.Shutdown` (plasma-shutdown, a
+  D-Bus-activated service) for each restart, shutdown and sign-out, before
+  ksmserver and KWin ask a single app to close, and ends it when one is
+  cancelled; `systemctl reboot` and the like come with logind's
+  `PrepareForShutdown`. `monet-work` watches both (watching never starts
+  either): the windows you closed since the last picture are taken out of it
+  and nothing more is written, so what the restart itself closes comes back.
+  A cancelled sign-out starts pictures again half a minute later.
+- *The next sign-in.* `monet-session` runs `monet-quick trip-apps-again` at
+  every sign-in: a trip's return first, then the last sign-in's picture
+  (another logind session, also after a sign-out on the same boot) becomes
+  `work-return.json`, once, and reopens with the trip's machinery: no app
+  twice (those running already, starting by themselves at sign-in, or just
+  reopened by a trip are left alone, and a trip that ended the last session
+  keeps its own return), each window on its monitor (by its maker, model and
+  serial, wherever it's plugged in now, else its port, else where it opens),
+  desktop, place, size, maximized, full screen, above, minimized, with the
+  order and the active window on an untouched desktop. Slow apps get forty
+  seconds after a start. A browser whose own session can't be confirmed opens
+  as from the menu; private browsing stays closed. With everything back,
+  nothing is said; what couldn't reopen gets one notice and a summary with
+  Retry on Power & Sleep.
+- *KDE's restore* is off so nothing opens twice (`/etc/xdg/ksmserverrc` and
+  `monet-look`: `loginMode=emptySession`); the first sign-in after updating
+  reopens what KDE saved at its last sign-out, once. An account that chooses
+  KDE's own in KDE's Desktop Session settings keeps KDE's for restarts.
+- Settings → Power & Sleep → **Reopen your work** (and the same switch on Play
+  on Windows) turns it all off and forgets what was waiting, never files.
 
 ## The last 30 seconds
 

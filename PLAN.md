@@ -325,6 +325,13 @@ Restoration follow-up, in order:
   return, and wait for startup resizing before placement. Up to 64 eligible apps survive the
   checkpoint instead of twelve. Seventy-one focused checks and a live three-window/two-desktop
   return pass. The CLI stops on checkpoint-save failure; this part needs a new image to test.
+- Your work after a restart — implemented 2026-11-16 (0.9.8-7): the same checkpoint, kept fresh
+  by `monet-work` (Monet Work KWin script, debounced pictures, frozen the moment
+  `org.kde.Shutdown` or logind's `PrepareForShutdown` appears, closes just before trimmed), is
+  handed once to the next sign-in and reopened with the trip's adapters; KDE's Wayland restore
+  (app ids only) is off. Windows find their monitor by EDID. Unit, QJSEngine and private-bus
+  checks pass; needs a real restart, sign-out and power-off on the image (docs/TESTING.md).
+  Follow-up: reopen right after a KWin crash, multiple windows of regular apps, activities.
 - The product target is one continuous desktop around a Windows game: unchanged work before
   and after, native sign-ins preserved, and no routine recovery decisions. Remaining work
   includes complete per-app multi-window capture, broader app-specific recovery and hardware

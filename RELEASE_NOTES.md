@@ -112,6 +112,14 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   progress opens its downloads. For Steam, add your own Steam key once (Games
   shows you how); it never asks for your password, and works offline from the
   last list it got.
+- **Your desktop as you left it.** After a restart, a shutdown or signing out,
+  and even after a crash or a power cut, the apps you had open come back by
+  themselves: each window on the same screen and desktop, in the same place
+  and size, maximized or full screen as it was, with your saved documents and
+  Files tabs. Monet keeps a fresh note of your work as you go, so there's
+  nothing to do first. Apps you closed stay closed, nothing opens twice, and
+  if something can't come back, a note says so with Retry. Turn it off in
+  Settings, Power & Sleep, Reopen your work.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

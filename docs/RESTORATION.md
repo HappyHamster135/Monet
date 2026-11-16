@@ -1,7 +1,9 @@
 # Restoring work after Windows
 
-Editor, Files and Zen restoration are wired into the existing **Open your apps again** setting.
-Before a Windows trip, `monet-quick remember-apps` captures running app IDs and KWin window
+Editor, Files and Zen restoration are wired into the **Reopen your work** setting (formerly
+**Open your apps again**; the same `trip-apps-off` marker). The same adapters reopen the work of
+the last sign-in after a restart, a sign-out, a crash or a power cut (`monet-work`, checkpoint
+version 4; see DESIGN.md, "Your work after a restart"). Before a Windows trip, `monet-quick remember-apps` captures running app IDs and KWin window
 geometry and desktop assignments. At the next Monet boot, `trip-apps-again` reopens them
 and places new windows. Up to 64 eligible apps are retained (previously only twelve).
 
