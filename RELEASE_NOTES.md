@@ -179,6 +179,21 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   processor's own graphics turned on too, Steam and its games could start on
   the weaker built-in graphics. They now stay on the card. Laptops still use
   the stronger graphics for games and the built-in ones for everything else.
+- **Games by name in Task Manager.** A Steam game you're playing shows up in
+  Task Manager by its own name and with its own icon, so R.E.P.O. is called
+  R.E.P.O. instead of app3241660. Apps that came from the Store, like
+  Chromium, show their name and icon there too.
+- **See what each app is showing.** Under an app's name, Task Manager now says
+  what its front window shows, so a busy browser says ChatGPT, or "ChatGPT
+  and 3 more". A web app you installed from your browser goes by its own name
+  and icon. Only the windows' titles are used, never what's inside them.
+- **Processes tell you their app.** On the Processes page, each process says
+  which app it belongs to, so REPO.exe says R.E.P.O. and chrome says Chromium.
+- **Applications that add up.** The rows on the Applications page now add up
+  to the CPU, memory, network and storage figures above them. Programs an app
+  started count in that app's row, your other programs share a row named
+  after what's running there, like Java (8), and System holds the rest: the
+  PC's own services and Linux itself. Click a row to see what's busiest in it.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

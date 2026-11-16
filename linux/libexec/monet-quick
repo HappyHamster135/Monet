@@ -5007,6 +5007,194 @@ def task_manager_graphics(folder=None):
     return changed
 
 
+# Task Manager's names: each app by its own name and picture. KDE names a row by the menu
+# entry its systemd unit is named after (libksysguard: the ID in app-[LAUNCHER-]ID-RANDOM.scope).
+# Steam starts each game in a scope of its own, app-steam-app<id>-<n>.scope, so KDE looks for
+# app<id>.desktop, which nothing has, and the row said app3241660. For each Steam game installed
+# here Monet keeps a hidden entry of that name (NoDisplay: never in the menu, search or Monet's
+# lists) with the game's name and Steam's own icon for it, written only when one of them changed
+# and gone once the game is uninstalled (a drive that isn't mounted now keeps its games'). An
+# entry someone made of that name stays theirs. Made as Steam's libraries change
+# (monet-game-names.path) and a minute after sign-in.
+
+GAME_ENTRY = "X-Monet-Steam-Game"
+STEAM_ICON_PICTURE = re.compile(r"(?:icon|[0-9a-f]{40})\.(?:jpg|png)")
+FLATPAK_APPS = (Path("/var/lib/flatpak/exports/share/applications"), DATA_HOME / "flatpak/exports/share/applications")
+
+
+def steam_icon_names(dirs=None):
+    """The steam_icon_<id> icons Steam put in an icon theme (as it does adding a game to the menu)."""
+    found = set()
+    for base in data_dirs() if dirs is None else dirs:
+        for path in (base / "icons/hicolor").glob("*/apps/steam_icon_*.png"):
+            found.add(path.stem)
+    return found
+
+
+def steam_game_icon(appid, pictures, themed=()):
+    """A game's own icon as Steam keeps it: steam_icon_<id> from the icon theme, else the icon in
+    Steam's picture cache (appid_icon.jpg, or appid/ named by its checksum), else a game pad."""
+    if f"steam_icon_{appid}" in themed:
+        return f"steam_icon_{appid}"
+    from urllib.parse import unquote, urlparse
+    for name, uri in sorted(pictures.get(appid, {}).items()):
+        if STEAM_ICON_PICTURE.fullmatch(name):
+            return unquote(urlparse(uri).path)
+    return "applications-games"
+
+
+def one_line(text):
+    """Text on one line, without control characters."""
+    return re.sub(r"[\x00-\x1f\x7f]", "", " ".join(str(text).split()))
+
+
+def game_names_icons(games=None, dirs=None):
+    """{appid: (name, icon)} of each Steam game installed here. games: steam_games()' (Steam's
+    folder, appid, name, manifest) of each."""
+    themed, pictures, found = steam_icon_names(dirs), {}, {}
+    for steam, appid, name, _ in steam_games() if games is None else games:
+        if steam not in pictures:
+            pictures[steam] = steam_pictures(steam)
+        if one_line(name) and appid.isdigit():
+            found[appid] = (one_line(name), steam_game_icon(appid, pictures[steam], themed))
+    return found
+
+
+def game_entries(games=None, dirs=None):
+    """{app<id>.desktop: its text} for each Steam game installed here, as Task Manager looks it up."""
+    def value(text):
+        return text.replace("\\", "\\\\")
+    return {f"app{appid}.desktop": (
+        f"[Desktop Entry]\nType=Application\nName={value(name)}\nIcon={value(icon)}\n"
+        # Never in the menu; should anything open it, Steam shows the game.
+        f"Exec=xdg-open steam://nav/games/details/{appid}\nNoDisplay=true\nX-Monet=true\n{GAME_ENTRY}={appid}\n")
+        for appid, (name, icon) in game_names_icons(games, dirs).items()}
+
+
+def steam_listed(roots=None):
+    """The games every Steam library lists as its own (libraryfolders.vdf), with drives not mounted now."""
+    listed = set()
+    for steam in STEAM_ROOTS if roots is None else roots:
+        try:
+            tree = vdf((steam / "steamapps/libraryfolders.vdf").read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        for library in pick(tree, "libraryfolders").values():
+            apps = pick(library, "apps") if isinstance(library, dict) else {}
+            listed.update(str(appid) for appid in apps if str(appid).isdigit())
+    return listed
+
+
+def game_names(apps=None, entries=None, listed=None):
+    """Keeps Monet's hidden entries for Steam's games in this account's menu folder: writes the
+    ones that changed, takes away those of games no longer installed, never touches an entry
+    someone made. Returns {"written": [...], "removed": [...]}."""
+    apps = DATA_HOME / "applications" if apps is None else Path(apps)
+    entries = game_entries() if entries is None else entries
+    listed = steam_listed() if listed is None else listed
+    written, removed = [], []
+
+    def ours(path):
+        try:
+            entry = desktop_entry(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            return False
+        return entry.get("X-Monet") == "true" and entry.get(GAME_ENTRY, "").isdigit()
+
+    for path in sorted(apps.glob("app*.desktop")) if apps.is_dir() else ():
+        appid = path.name[3:-8]
+        if path.name not in entries and appid.isdigit() and appid not in listed and ours(path):
+            path.unlink(missing_ok=True)
+            removed.append(path.name)
+    for name, text in sorted(entries.items()):
+        path = apps / name
+        try:
+            if path.read_text(encoding="utf-8") == text or not ours(path):
+                continue
+        except FileNotFoundError:
+            pass
+        except (OSError, UnicodeDecodeError):
+            continue
+        apps.mkdir(parents=True, exist_ok=True)
+        temporary = apps / f".{name}.monet-new"
+        temporary.write_text(text, encoding="utf-8")
+        os.replace(temporary, path)
+        written.append(name)
+    return {"written": written, "removed": removed}
+
+
+FLATPAK_ICONS = (Path("/var/lib/flatpak/exports/share/icons"), DATA_HOME / "flatpak/exports/share/icons")
+
+
+def shown_icons(icons, flatpak_icons=FLATPAK_ICONS):
+    """{icon: what Task Manager can show}: the name where an icon theme on the session's path has
+    it, else the file Flatpak exported (the folder KDE missed), else the name as it was."""
+    names = {i for i in icons if ICON_NAME.fullmatch(i)}
+    themed = set(icon_files(names)) if names else set()
+    shown = {}
+    for icon in icons:
+        candidates = []
+        if icon in names and icon not in themed:
+            for root in flatpak_icons:
+                for path in (root / "hicolor").glob(f"*/apps/{icon}.*"):
+                    if path.suffix.lower() in (".png", ".svg"):
+                        candidates.append((0, icon_size(path.relative_to(root / "hicolor").parts[:1]), path))
+        found = own_icon(candidates)
+        shown[icon] = str(found) if found else icon
+    return shown
+
+
+def app_names(ids, dirs=None, games=None, flatpak_icons=FLATPAK_ICONS):
+    """{id: {"name", "icon"}} for the apps KDE's Task Manager couldn't name (and windows it
+    couldn't): a Steam game (app<id>) by its name and Steam's icon; else the menu entry named after
+    the id, in any folder Flatpak exports to and in any letter case, one a portal named for its
+    browser (org.chromium.Chromium.flextop.chrome-<id>-Default for a web app's chrome-<id>-Default),
+    or one whose StartupWMClass or X-Flatpak is the id. Ids it can't find are left out."""
+    found, wanted = {}, [i for i in dict.fromkeys(ids) if re.fullmatch(r"[\w.+@-]{1,255}", i)]
+    steam_ids = {m[1]: i for i in wanted if (m := re.fullmatch(r"app(\d+)", i))}
+    if steam_ids:
+        known = game_names_icons([g for g in (steam_games() if games is None else games) if g[1] in steam_ids])
+        found.update({steam_ids[appid]: {"name": name, "icon": icon} for appid, (name, icon) in known.items()})
+    rest = [i for i in wanted if i not in found]
+    if not rest:
+        return found
+    folders = list(dict.fromkeys([*app_dirs(), *FLATPAK_APPS] if dirs is None else dirs))
+    listing = []  # (menu id, path), nearest folder first
+    for folder in folders:
+        try:
+            paths = sorted(folder.rglob("*.desktop"))
+        except OSError:
+            continue
+        listing += [("-".join(p.relative_to(folder).parts), p) for p in paths]
+    read = {}
+
+    def entry_of(path):
+        if path not in read:
+            try:
+                read[path] = desktop_entry(path.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                read[path] = {}
+        entry = read[path]
+        return entry if entry.get("Type") == "Application" and entry.get("Hidden") != "true" and entry.get("Name") else None
+
+    named = {}
+    for ident in rest:
+        file, low = f"{ident}.desktop", ident.lower()
+        tries = (lambda menu, path: menu == file,
+                 lambda menu, path: menu.lower() == file.lower(),
+                 lambda menu, path: menu.lower().endswith(f".{low}.desktop"),
+                 lambda menu, path: low in ((entry_of(path) or {}).get("StartupWMClass", "").lower(),
+                                            (entry_of(path) or {}).get("X-Flatpak", "").lower()))
+        for test in tries:
+            entry = next((e for menu, path in listing if test(menu, path) and (e := entry_of(path))), None)
+            if entry:
+                named[ident] = (one_line(local_name(entry)), entry.get("Icon", ""))
+                break
+    icons = shown_icons({icon for _, icon in named.values() if icon}, flatpak_icons)
+    found.update({ident: {"name": name, "icon": icons.get(icon, icon)} for ident, (name, icon) in named.items()})
+    return found
+
+
 def steam_drives(steam=OWN_STEAM, mounts=None):
     """Steam's libraries on the PC's other drives, found again where the drives are mounted now
     (above), in both of Steam's lists. Steam must be closed. Each list is kept as it was before
@@ -10066,6 +10254,10 @@ def main(argv):
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
     elif cmd == "task-manager-graphics":
         emit({"changed": task_manager_graphics()})
+    elif cmd == "game-names":
+        emit(game_names())
+    elif cmd == "app-names" and 0 < len(args) <= 64 and all(re.fullmatch(r"(?:[0-9a-f]{2}){1,255}", a) for a in args):
+        emit(app_names([unhex(a) for a in args]))
     elif cmd == "steam-drives":
         import fcntl
         lock_dir = RUNTIME / "monet"

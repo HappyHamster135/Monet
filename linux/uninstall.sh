@@ -30,6 +30,7 @@ if [ "$(id -u)" -ne 0 ]; then
     fi
     systemctl --user stop monet-keep-awake.service monet-brightness.service monet-priority.service >/dev/null 2>&1 || true
     systemctl --user disable --now monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-game-names.path >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
     # Zen back to its own look (monet-quick zen): Monet's folder, its two imports and its part of user.js.
@@ -112,6 +113,8 @@ rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer 
     /etc/systemd/user/monet-files-place.path /etc/systemd/user/monet-files-place.service \
     /etc/systemd/user/monet-frames.path /etc/systemd/user/monet-frames.service \
     /etc/systemd/user/monet-zen.path /etc/systemd/user/monet-zen.service /etc/systemd/user/monet-onedrive.service
+systemctl --global disable monet-game-names.path >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-game-names.path /etc/systemd/user/monet-game-names.service
 # Background updates come back the way Bazzite has them.
 systemctl unmask uupd.timer ublue-update.timer rpm-ostreed-automatic.timer bootc-fetch-apply-updates.timer \
     flatpak-system-update.timer >/dev/null 2>&1 || true

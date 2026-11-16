@@ -1,0 +1,11 @@
+[Unit]
+Description=Monet: each Steam game by its own name in Task Manager, as games arrive and leave
+
+[Path]
+# Steam's own folder, native and Flatpak: its games' manifests, and the list of every
+# library (libraryfolders.vdf), which also changes for games on other drives.
+PathChanged=%h/.local/share/Steam/steamapps
+PathChanged=%h/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps
+
+[Install]
+WantedBy=default.target

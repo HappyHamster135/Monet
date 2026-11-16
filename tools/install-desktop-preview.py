@@ -298,7 +298,8 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
                         lines[i] = line.replace('Exec=' + command, 'Exec=' + str(HELPERS / 'monet-store'), 1)
         # Keep names, icons, arguments, actions and custom launch commands.
         add(target, ''.join(lines).encode())
-    for name in ('monet-password-offers.service', 'monet-frames.path', 'monet-frames.service', 'monet-light.timer', 'monet-light.service', 'monet-light-sync.service', 'monet-listening.service'):
+    for name in ('monet-password-offers.service', 'monet-frames.path', 'monet-frames.service', 'monet-light.timer', 'monet-light.service', 'monet-light-sync.service', 'monet-listening.service',
+                 'monet-game-names.path', 'monet-game-names.service'):
         text = render(ROOT / 'linux/systemd/user' / name).decode()
         for helper in ('monet-quick', 'monet-light', 'monet-passwords'):
             text = text.replace('/usr/libexec/' + helper, str(HELPERS / helper))

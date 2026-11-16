@@ -107,7 +107,51 @@ def patch(source):
                     }''')
     replace('const currentPage = pageStack.currentItem.controller.fileName', 'const currentPage = pageStack.currentItem?.controller?.fileName || ""')
     replace('newPage.savePage()', 'newPage.save()')
+    check_faces(source)
     path.write_text(text)
+
+
+# What Monet's Applications and Processes faces (linux/share/ksysguard/sensorfaces) find in
+# KDE's tables at run time: each app's processes, its overrides, its cells and columns. Without
+# these the faces leave KDE's tables as they are; the build stops so it's seen first.
+FACE_ANCHORS = {
+    'src/faces/applicationstable/contents/ui/ApplicationsTableView.qml': (
+        'property alias sourceModel: appModel\n',
+        'property var selectedApplications: {',
+        'property alias columnDisplay: displayModel.columnDisplay\n',
+        'sourceModel.data(sourceModel.index(row, 0, parent), Process.ProcessDataModel.PIDs)',
+        'property int commandColumn\n',
+        'property int iconColumn: enabledAttributes.indexOf("iconName")\n',
+        'property var hiddenAttributes: []\n',
+        'applicationOverrides: {\n',
+        'delegate: DelegateChooser {\n        role: "displayStyle"\n',
+        'Table.FirstCellDelegate {',
+        'roleValue: "lineScaled"',
+        'DelegateChoice { Table.TextCellDelegate { } }'),
+    'src/faces/applicationstable/contents/ui/FullRepresentation.qml': (
+        'ApplicationsTableView {\n                id: table\n',),
+    'src/faces/processtable/contents/ui/ProcessTableView.qml': (
+        'property alias processModel: processModel\n',
+        'property bool flatList\n',
+        'property int pidColumn\n',
+        'model: Table.ProcessSortFilterModel {\n',
+        'Table.ComponentCacheProxyModel {\n',
+        'Table.ColumnDisplayModel {\n'),
+    'src/table/BaseTableView.qml': (
+        'property alias view: tableView\n',
+        'property alias delegate: tableView.delegate\n',
+        'TreeView {\n'),
+    'src/table/BaseCellDelegate.qml': ('TreeViewDelegate\n',),
+    'src/table/FirstCellDelegate.qml': ('property string iconName\n', 'property real iconSize'),
+}
+
+
+def check_faces(source):
+    for name, anchors in FACE_ANCHORS.items():
+        text = (Path(source) / name).read_text()
+        for anchor in anchors:
+            if anchor not in text:
+                raise ValueError('Task Manager source changed: review Monet\'s table faces against ' + name + ': ' + anchor[:60])
 
 
 if __name__ == '__main__':

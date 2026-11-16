@@ -341,6 +341,9 @@ put 644 "$SRC/systemd/user/monet-frames.path" "$USERUNITDIR/monet-frames.path"
 put 644 "$SRC/systemd/user/monet-frames.service" "$USERUNITDIR/monet-frames.service"
 put 644 "$SRC/systemd/user/monet-zen.path" "$USERUNITDIR/monet-zen.path"
 put 644 "$SRC/systemd/user/monet-zen.service" "$USERUNITDIR/monet-zen.service"
+# Each Steam game by its own name in Task Manager (monet-quick game-names).
+put 644 "$SRC/systemd/user/monet-game-names.path" "$USERUNITDIR/monet-game-names.path"
+put 644 "$SRC/systemd/user/monet-game-names.service" "$USERUNITDIR/monet-game-names.service"
 # OneDrive in Files, for each person who connects it (Settings → Storage).
 put 644 "$SRC/systemd/user/monet-onedrive.service" "$USERUNITDIR/monet-onedrive.service"
 # Ready when you come back: armed on the way to Windows, decided before the sign-in
@@ -504,6 +507,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
     systemctl --global enable monet-work.service
+    systemctl --global enable monet-game-names.path
     systemctl enable monet-keep-prepare.service monet-keep.timer
     systemctl --global enable monet-backup.timer monet-rest.timer
     systemctl --global enable monet-priority.service
@@ -713,6 +717,7 @@ else
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service monet-listening.service >/dev/null 2>&1 || true
     systemctl --global enable monet-work.service >/dev/null 2>&1 || true
+    systemctl --global enable monet-game-names.path >/dev/null 2>&1 || true
     # The homes become a subvolume at the next start, before anyone signs in.
     systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true

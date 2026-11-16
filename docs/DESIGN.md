@@ -968,6 +968,49 @@ links in beside each crash `systemd-coredump@` catches, hands it to
 app is still open (only a tab, or a game under Steam, stopped), or for what
 isn't in the menu. KDE's crash reporter isn't there: Bazzite leaves it out.
 
+**Task Manager** (KDE's System Monitor, with Monet's pages in
+`share/plasma-systemmonitor` and faces in `share/ksysguard/sensorfaces`)
+says what is what. KDE names an app's row by the menu entry its systemd unit
+is named after (libksysguard's `processcore/cgroup.cpp`: the ID in
+`app-[LAUNCHER-]ID-RANDOM.scope`, looked up as `ID.desktop`). Steam starts
+each game in `app-steam-app<id>-<n>.scope`, so KDE looked for
+`app3241660.desktop` and showed that. `monet-quick game-names` keeps a hidden
+entry of that name for each Steam game installed (`NoDisplay`, `X-Monet`,
+`X-Monet-Steam-Game`): the name from its `appmanifest_<id>.acf` in any
+library, the icon Steam's own (`steam_icon_<id>` in the icon theme, else its
+picture cache), written only when they change, gone once the game is
+uninstalled (a drive that isn't mounted keeps its games'), and never over
+someone's own entry. `monet-game-names.path` runs it as Steam's libraries
+change, and the jobs after sign-in once. Rows KDE still couldn't name (a game
+started before its entry, a Flatpak app whose entry KDE missed) are asked of
+`monet-quick app-names` once and named through KDE's own overrides
+(`AppNames.qml`), which search, Quit and the details sidebar read too.
+
+Under each app's name its first cell (`AppCell.qml`, in place of KDE's) says
+what its front window shows, from Plasma's window list matched to the row's
+processes by the window's process (`MonitorWindows.qml`): a browser's
+"ChatGPT, and 3 more", without the browser's name at the end; a web app's
+window by the web app's own name and icon. Only titles, never what's in a
+window. On the Processes page each process says its app, by the same names
+(`ProcessCell.qml`: each process in the list, where the app's group begins in
+the tree). Monet's faces find KDE's tables at run time and leave them KDE's
+own if they look different; the Task Manager build (`image/task-manager`)
+refuses a KDE source whose tables changed, so that's seen first.
+
+The Applications rows add up to the cards above them (`Accounting.qml`). KDE's
+rows hold this account's apps and Background Services, from units under its
+own systemd manager, so a program run from an SSH login, a timer or
+`systemd-run`, or one an app moved into a unit of its own, was in no row: on the
+owner's PC eight `java` processes using fourteen cores, the rows at 20% and the
+card at 88%. Every process of the account now joins the row of the app that
+started it (KDE's sums for that row become its own processes' and theirs,
+through the same overrides), else Other, named for its program when that's
+most of it ("Java (8)"); System is the rest of each card: the PC's services,
+other accounts, and the kernel with its interrupts. Both are rows of Monet's
+under KDE's (`PinnedRow.qml`), each opening to its busiest processes. CPU is
+the same measure on both sides (KDE's rows scaled to every processor, as the
+card is).
+
 ## Motion
 
 | Name | Duration | Curve | Used for |
