@@ -60,6 +60,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   a PC without Wi-Fi. Click it to open Settings at LAN (Ethernet), on the page
   now called Internet, where each network adapter shows its IP addresses,
   gateway and DNS servers, with Wi-Fi just below as before.
+- **App volume from the first second.** A video or song that starts right
+  after another sometimes began at full volume because its player set its own
+  level a moment after the Home Bar had restored the app's. The Home Bar now
+  puts the app's level back then too.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
