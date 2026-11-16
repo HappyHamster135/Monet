@@ -6,11 +6,25 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.8-6-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
-| Monet-0.9.8-6-Setup.iso              | Monet Setup for writing the USB stick yourself. |
-| Monet-0.9.8-6-Installer.iso          | The Fedora-based fallback installer. |
-| Monet-0.9.8-6-Windows.zip            | Monet Bridge for an existing Windows installation. |
-| Monet-0.9.8-6-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+| **Monet-0.9.8-7-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-7-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-7-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-7-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-7-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8-7: Find your way back in the Store
+
+- **Back to exactly where you were.** In the Store, Back after an app's page
+  takes you to the very spot you left in the list, whether the front page, a
+  section or a search, instead of a little above or below it.
+- **Back and Forward through the Store.** Back also steps back through the
+  sections and app pages you visited, each where you left it, and Forward goes
+  the other way again, as in a browser.
+- **The mouse's back and forward buttons.** The side buttons on a mouse go
+  back and forward in the Store, and so do Alt+Left and Alt+Right. With a
+  picture open, Back closes the picture first.
+- **The keys stay with the list.** After Back, typing and the arrow keys go to
+  the list or the search again, not to the app page that just closed.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
