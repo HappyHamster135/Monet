@@ -69,6 +69,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   once when it starts playing, so pausing and playing never undoes a change
   made in the sound menu or Settings. That change is also kept for the app's
   next track.
+- **Clearer sound settings.** Settings → Sound lets you choose the
+  microphone to record from. An audio interface such as a Focusrite Scarlett is
+  listed once for each of its inputs ("Input 1", "Input 2") instead of three
+  times under internal names, and a game controller's name isn't said twice.
+  An app playing several streams, like a browser with a tab for each, has one
+  volume slider. Advanced sound settings say what they're for: a device's
+  profile and channels.
 - **Games stay in Games.** The menu's All apps no longer lists the games
   Steam, Heroic and Lutris add there, like Counter-Strike 2. They're in Games,
   and searching the menu still finds them.
