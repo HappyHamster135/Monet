@@ -275,8 +275,9 @@ class InGames(unittest.TestCase):
             self.assertEqual(literal, "FACEIT")
         # Mist and smoke: the page's own colors.
         self.assertNotIn("Kirigami.Theme", card)
-        # Ordinary Play stays as it is.
-        self.assertIn('text: page.game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")', page)
+        # Ordinary Play stays as it is (after Install and Show downloads, for a game not yet here).
+        self.assertIn(': page.game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")', page)
+        self.assertIn("onClicked: page.app.play(page.game)", page)
 
     def test_the_restart(self):
         games = (GAMES / "Games.qml").read_text(encoding="utf-8")
