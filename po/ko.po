@@ -53,13 +53,13 @@ msgstr "간단히 보기"
 msgid "Details"
 msgstr "세부 정보"
 
-#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1415
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1458
 #: linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4043 linux/share/monet/settings-app/MonetSettings.qml:5006
 #: linux/share/monet/settings-app/MonetSettings.qml:5092 linux/share/monet/settings-app/MonetSettings.qml:6673 linux/share/monet/settings-app/MonetSettings.qml:6795
 #: linux/share/monet/settings-app/MonetSettings.qml:7821 linux/share/monet/settings-app/MonetSettings.qml:7999 linux/share/monet/settings-app/MonetSettings.qml:8326
 #: linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:273 linux/share/monet/store-app/Downloads.qml:149
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445
-#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1331
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1340
 msgid "Cancel"
 msgstr "취소"
 
@@ -694,7 +694,7 @@ msgstr ""
 msgid "Drag a widget to move it. Point at one to resize or remove it."
 msgstr "위젯을 끌어서 옮기세요. 위젯에 포인터를 올리면 크기를 바꾸거나 제거할 수 있어요."
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:223
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:270
 msgid "More"
 msgstr "더 보기"
 
@@ -813,7 +813,7 @@ msgstr ""
 msgid "Added by you"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:7496
+#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:7541
 #: linux/libexec/monet-files-tools:712
 msgid "Windows program"
 msgstr "Windows 프로그램"
@@ -830,8 +830,8 @@ msgstr "오피스"
 msgid "Sound and video"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:410
-#: linux/share/monet/games/Games.qml:831 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
+#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:447
+#: linux/share/monet/games/Games.qml:868 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
 #: linux/share/monet/store-app/Store.qml:174 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "게임"
@@ -852,17 +852,17 @@ msgstr "기타"
 msgid "Not opened yet"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:211 linux/share/monet/widgets/DayNotes.qml:117
+#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:248 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
 msgid "Today"
 msgstr "오늘"
 
-#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:212 linux/share/monet/settings-app/MonetSettings.qml:6922
+#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:249 linux/share/monet/settings-app/MonetSettings.qml:6922
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34
 msgid "Yesterday"
 msgstr "어제"
 
-#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:213
+#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:250
 msgid "%1 day ago"
 msgid_plural "%1 days ago"
 msgstr[0] "%1일 전"
@@ -898,7 +898,7 @@ msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "앱 %1개"
 
-#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:711 linux/share/monet/store-app/Shelf.qml:86
+#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:748 linux/share/monet/store-app/Shelf.qml:86
 #: setup/qml/Main.qml:549
 msgid "Name"
 msgstr "이름"
@@ -944,314 +944,438 @@ msgstr ""
 msgid "Kind"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:20
+#: linux/share/monet/games/GamePage.qml:22
 msgid "Steam is downloading it: %1%."
 msgstr "Steam에서 받는 중: %1%."
 
-#: linux/share/monet/games/GamePage.qml:22 linux/share/monet/games/Games.qml:1383
+#: linux/share/monet/games/GamePage.qml:24 linux/share/monet/games/Games.qml:1426
 msgid ""
 "Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "플레이어들이 Monet에서 실행되지 않는다고 보고해서 Windows에서 플레이해요. Steam에서 \"Windows games\"로 옮기면(속성, 설치된 파일, 설치 폴더 이동) 플레이를 누를 때 다운로드 없이 거기서 시작해요."
 
-#: linux/share/monet/games/GamePage.qml:24 linux/share/monet/games/Games.qml:1385
+#: linux/share/monet/games/GamePage.qml:26 linux/share/monet/games/Games.qml:1428
 msgid ""
 "Its anti-cheat only lets it play in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "안티치트 때문에 Windows에서만 플레이할 수 있어요. Steam에서 \"Windows games\"로 옮기면(속성, 설치된 파일, 설치 폴더 이동) 플레이를 누를 때 다운로드 없이 거기서 시작해요."
 
-#: linux/share/monet/games/GamePage.qml:26 linux/share/monet/games/Games.qml:1387
+#: linux/share/monet/games/GamePage.qml:28 linux/share/monet/games/Games.qml:1430
 msgid ""
 "Players report it doesn't run in Monet, and it isn't installed in Windows yet. Restart in Windows and install it with %1."
 msgstr ""
 "플레이어들이 Monet에서 실행되지 않는다고 보고했는데, 아직 Windows에 설치되어 있지 않아요. Windows로 다시 시작해서 %1(으)로 설치하세요."
 
-#: linux/share/monet/games/GamePage.qml:28 linux/share/monet/games/Games.qml:1389
+#: linux/share/monet/games/GamePage.qml:30 linux/share/monet/games/Games.qml:1432
 msgid ""
 "Its anti-cheat only lets it play in Windows, and it isn't installed there yet. Restart in Windows and install it with %1."
 msgstr ""
 "안티치트 때문에 Windows에서만 실행할 수 있는데, 아직 Windows에 설치되어 있지 않아요. Windows로 다시 시작해서 %1(으)로 설치하세요."
 
-#: linux/share/monet/games/GamePage.qml:29
+#: linux/share/monet/games/GamePage.qml:31
 msgid ""
 "Installed once, in Windows' Games folder: it plays here and in Windows."
 msgstr "Windows의 Games 폴더에 한 번만 설치: 여기서도 Windows에서도 플레이해요."
 
-#: linux/share/monet/games/GamePage.qml:31
+#: linux/share/monet/games/GamePage.qml:33
 msgid ""
 "Players report it doesn't run in Monet: Play restarts your PC in Windows and opens it."
 msgstr ""
 "Monet에서는 실행되지 않는다고 플레이어들이 알려 왔어요: 플레이를 누르면 PC가 Windows로 다시 시작해 게임을 열어요."
 
-#: linux/share/monet/games/GamePage.qml:33
+#: linux/share/monet/games/GamePage.qml:35
 msgid ""
 "Its anti-cheat only lets it play in Windows: Play restarts your PC in Windows and opens it."
 msgstr "안티치트 때문에 Windows에서만 플레이할 수 있어요: 플레이를 누르면 PC가 Windows로 다시 시작해 게임을 열어요."
 
-#: linux/share/monet/games/GamePage.qml:35
+#: linux/share/monet/games/GamePage.qml:37
 msgid ""
 "It's installed in Windows: Play restarts your PC in Windows and opens it, and when you quit, you're back here."
 msgstr "Windows에 설치되어 있어요: 플레이를 누르면 PC가 Windows로 다시 시작해 게임을 열고, 끝내면 여기로 돌아와요."
 
-#: linux/share/monet/games/GamePage.qml:38
+#: linux/share/monet/games/GamePage.qml:40
 msgid "Plays on"
 msgstr "플레이 환경"
 
-#: linux/share/monet/games/GamePage.qml:38
+#: linux/share/monet/games/GamePage.qml:40
 msgid "Monet and Windows"
 msgstr "Monet와 Windows"
 
-#: linux/share/monet/games/GamePage.qml:39
+#: linux/share/monet/games/GamePage.qml:41
 msgid "Last played"
 msgstr "마지막 플레이"
 
-#: linux/share/monet/games/GamePage.qml:40 linux/share/monet/games/Games.qml:711
+#: linux/share/monet/games/GamePage.qml:42 linux/share/monet/games/Games.qml:748
 msgid "Play time"
 msgstr "플레이 시간"
 
-#: linux/share/monet/games/GamePage.qml:41
+#: linux/share/monet/games/GamePage.qml:43
 msgid "Size on disk"
 msgstr "디스크 크기"
 
-#: linux/share/monet/games/GamePage.qml:189 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:95
+#: linux/share/monet/games/GamePage.qml:51
+msgid ""
+"Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:52
+msgid ""
+"Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:53
+msgid ""
+"Last time, FACEIT's installer closed before it finished. Try again whenever you like."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:54
+msgid "Last time, you came back before FACEIT was set up."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:57
+msgid ""
+"Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:58
+msgid "Steam in Windows installs it the first time."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:59
+msgid ""
+"%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:61
+msgid ""
+"Monet couldn't look in Windows at this start, so setting up checks what's there first."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:68 linux/share/monet/settings-app/MonetSettings.qml:7794
+msgid "Secure Boot"
+msgstr "보안 부팅"
+
+#: linux/share/monet/games/GamePage.qml:69 linux/share/monet/games/GamePage.qml:75
+msgctxt "a protection is"
+msgid "On"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:70
+msgid ""
+"Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:71 linux/share/monet/settings-app/MonetSettings.qml:7799
+msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
+msgstr "이 PC는 UEFI 모드로 시작되지 않아서 보안 부팅을 켤 수 없어요."
+
+#: linux/share/monet/games/GamePage.qml:72
+msgid "Couldn't check."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:75
+msgid "TPM 2.0"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:76
+msgid ""
+"Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:78
+msgid "Virtualization-based security"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:78
+msgid "On in Windows"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:79
+msgid ""
+"Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:236 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:95
 #: linux/share/monet/store-app/AppPage.qml:398 setup/qml/Main.qml:223
 msgid "Back"
 msgstr "뒤로"
 
-#: linux/share/monet/games/GamePage.qml:208 linux/share/monet/games/Games.qml:342 linux/share/monet/games/Games.qml:346
+#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:383
 #: linux/share/monet/settings-app/MonetSettings.qml:286 linux/share/monet/settings-app/MonetSettings.qml:3411 linux/share/monet/settings-app/MonetSettings.qml:8239
 msgid "Play on Windows"
 msgstr "Windows에서 플레이"
 
-#: linux/share/monet/games/GamePage.qml:208 linux/share/monet/games/Games.qml:342 linux/share/monet/games/Games.qml:349
+#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:386
 msgid "Play in Monet"
 msgstr "Monet에서 플레이"
 
-#: linux/share/monet/games/GamePage.qml:216 linux/share/monet/games/Games.qml:1100
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:1137
 msgid "Favorite"
 msgstr "즐겨찾기"
 
-#: linux/share/monet/games/GamePage.qml:216 linux/share/monet/games/Games.qml:350
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:387
 msgid "Add to favorites"
 msgstr "즐겨찾기에 추가"
 
-#: linux/share/monet/games/Games.qml:152 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
-#: linux/libexec/monet-quick:9009
+#: linux/share/monet/games/GamePage.qml:361
+msgid "Ready in Windows"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:361
+msgid "Not set up in Windows yet"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:418
+msgid "Play on FACEIT"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:418
+msgid "Set up FACEIT"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:426
+msgid "Security settings"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:189 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
+#: linux/libexec/monet-quick:9056
 msgid "Monet couldn't switch to Windows."
 msgstr "Monet가 Windows로 전환하지 못했어요."
 
-#: linux/share/monet/games/Games.qml:201 linux/share/monet/games/Games.qml:202 linux/share/monet/settings-app/MonetSettings.qml:8277
-#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:7948 linux/libexec/monet-quick:7948
+#: linux/share/monet/games/Games.qml:238 linux/share/monet/games/Games.qml:239 linux/share/monet/settings-app/MonetSettings.qml:8277
+#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:7993 linux/libexec/monet-quick:7993
 msgid "Windows"
 msgstr "Windows"
 
-#: linux/share/monet/games/Games.qml:206 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
+#: linux/share/monet/games/Games.qml:243 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
 msgid "Never"
 msgstr "안 함"
 
-#: linux/share/monet/games/Games.qml:217
+#: linux/share/monet/games/Games.qml:254
 msgid "Not played yet"
 msgstr "아직 플레이하지 않음"
 
-#: linux/share/monet/games/Games.qml:218
+#: linux/share/monet/games/Games.qml:255
 msgid "%1 minute"
 msgid_plural "%1 minutes"
 msgstr[0] "%1분"
 
-#: linux/share/monet/games/Games.qml:219 linux/share/monet/settings-app/MonetSettings.qml:1917
+#: linux/share/monet/games/Games.qml:256 linux/share/monet/settings-app/MonetSettings.qml:1917
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1시간"
 
-#: linux/share/monet/games/Games.qml:223 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:260 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 GB"
 msgstr "%1GB"
 
-#: linux/share/monet/games/Games.qml:224 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:261 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 MB"
 msgstr "%1MB"
 
-#: linux/share/monet/games/Games.qml:228
+#: linux/share/monet/games/Games.qml:265
 msgid "%1 · Downloading, %2%"
 msgstr "%1 · 다운로드 중, %2%"
 
-#: linux/share/monet/games/Games.qml:260
+#: linux/share/monet/games/Games.qml:297
 msgid "All games"
 msgstr "모든 게임"
 
-#: linux/share/monet/games/Games.qml:262
+#: linux/share/monet/games/Games.qml:299
 msgid "Favorites"
 msgstr "즐겨찾기"
 
-#: linux/share/monet/games/Games.qml:264 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
+#: linux/share/monet/games/Games.qml:301 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
 msgid "Recently played"
 msgstr "최근 플레이한 게임"
 
-#: linux/share/monet/games/Games.qml:265
+#: linux/share/monet/games/Games.qml:302
 msgid "Plays on Monet"
 msgstr "Monet에서 플레이"
 
-#: linux/share/monet/games/Games.qml:266
+#: linux/share/monet/games/Games.qml:303
 msgid "Plays on Windows"
 msgstr "Windows에서 플레이"
 
-#: linux/share/monet/games/Games.qml:344
+#: linux/share/monet/games/Games.qml:381
 msgid "Open its page"
 msgstr "페이지 열기"
 
-#: linux/share/monet/games/Games.qml:350
+#: linux/share/monet/games/Games.qml:387
 msgid "Remove from favorites"
 msgstr "즐겨찾기에서 빼기"
 
-#: linux/share/monet/games/Games.qml:352 linux/share/monet/games/Games.qml:1423
+#: linux/share/monet/games/Games.qml:389 linux/share/monet/games/Games.qml:1467
 msgid "Show in Steam"
 msgstr "Steam에서 보기"
 
-#: linux/share/monet/games/Games.qml:354
+#: linux/share/monet/games/Games.qml:391
 msgid "Uninstall…"
 msgstr "제거…"
 
-#: linux/share/monet/games/Games.qml:448 linux/share/monet/games/Games.qml:468
+#: linux/share/monet/games/Games.qml:485 linux/share/monet/games/Games.qml:505
 msgid "Find a game"
 msgstr "게임 찾기"
 
-#: linux/share/monet/games/Games.qml:551
+#: linux/share/monet/games/Games.qml:588
 msgid "Stores"
 msgstr "스토어"
 
-#: linux/share/monet/games/Games.qml:640
+#: linux/share/monet/games/Games.qml:677
 msgid "Open Windows"
 msgstr "Windows 열기"
 
-#: linux/share/monet/games/Games.qml:681
+#: linux/share/monet/games/Games.qml:718
 msgid "Games called “%1”"
 msgstr "‘%1’ 이름의 게임"
 
-#: linux/share/monet/games/Games.qml:691 linux/share/monet/settings-app/MonetSettings.qml:1830
+#: linux/share/monet/games/Games.qml:728 linux/share/monet/settings-app/MonetSettings.qml:1830
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "게임 %1개"
 
-#: linux/share/monet/games/Games.qml:705 linux/share/monet/store-app/Shelf.qml:78
+#: linux/share/monet/games/Games.qml:742 linux/share/monet/store-app/Shelf.qml:78
 msgid "Sort by"
 msgstr "정렬"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
+#: linux/share/monet/games/Games.qml:748 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "최근 항목"
 
-#: linux/share/monet/games/Games.qml:711
+#: linux/share/monet/games/Games.qml:748
 msgid "Size"
 msgstr "크기"
 
-#: linux/share/monet/games/Games.qml:781
+#: linux/share/monet/games/Games.qml:818
 msgid ""
 "Install each game once: add Windows games to Steam here, and a game you install there plays in Monet and in Windows."
 msgstr ""
 "게임은 한 번만 설치하세요: 여기서 Windows 게임을 Steam에 추가하면, 그곳에 설치한 게임을 Monet과 Windows 모두에서 플레이할 수 있어요."
 
-#: linux/share/monet/games/Games.qml:786 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Adding…"
 msgstr "추가하는 중…"
 
-#: linux/share/monet/games/Games.qml:786 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Add to Steam"
 msgstr "Steam에 추가"
 
-#: linux/share/monet/games/Games.qml:794 linux/share/monet/games/Games.qml:1415 linux/share/monet/games/MonetWindow.qml:146
+#: linux/share/monet/games/Games.qml:831 linux/share/monet/games/Games.qml:1458 linux/share/monet/games/MonetWindow.qml:146
 #: linux/share/monet/store-app/Store.qml:1095 linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282
 #: linux/share/monet/passwords/app_support_ui.py:42 crates/monet-usb/src/gui.rs:157
 msgid "Close"
 msgstr "닫기"
 
-#: linux/share/monet/games/Games.qml:901
+#: linux/share/monet/games/Games.qml:938
 msgid "Continue playing"
 msgstr "이어서 플레이"
 
-#: linux/share/monet/games/Games.qml:1172
+#: linux/share/monet/games/Games.qml:1209
 msgid "No game called that"
 msgstr "그런 이름의 게임이 없어요"
 
-#: linux/share/monet/games/Games.qml:1173
+#: linux/share/monet/games/Games.qml:1210
 msgid "No favorites yet"
 msgstr "아직 즐겨찾기가 없어요"
 
-#: linux/share/monet/games/Games.qml:1174
+#: linux/share/monet/games/Games.qml:1211
 msgid "Nothing played yet"
 msgstr "아직 플레이한 게임이 없어요"
 
-#: linux/share/monet/games/Games.qml:1175 linux/share/monet/settings-app/MonetSettings.qml:7659
+#: linux/share/monet/games/Games.qml:1212 linux/share/monet/settings-app/MonetSettings.qml:7659
 msgid "No games yet"
 msgstr "아직 게임이 없어요"
 
-#: linux/share/monet/games/Games.qml:1184
+#: linux/share/monet/games/Games.qml:1221
 msgid "Tap the star on a game to keep it here."
 msgstr "게임의 별을 누르면 여기에 남아요."
 
-#: linux/share/monet/games/Games.qml:1185
+#: linux/share/monet/games/Games.qml:1222
 msgid "The games you play show up here, the latest first."
 msgstr "플레이한 게임이 최신순으로 여기에 나타나요."
 
-#: linux/share/monet/games/Games.qml:1186
+#: linux/share/monet/games/Games.qml:1223
 msgid ""
 "Install games with Steam, Heroic or Lutris here, or in Windows. They show up here by themselves."
 msgstr "여기서 Steam, Heroic, Lutris로 게임을 설치하거나 Windows에서 설치하세요. 알아서 여기에 나타나요."
 
-#: linux/share/monet/games/Games.qml:1194 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
+#: linux/share/monet/games/Games.qml:1231 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
 msgid "Open Steam"
 msgstr "Steam 열기"
 
-#: linux/share/monet/games/Games.qml:1368 linux/share/monet/settings-app/MonetSettings.qml:8260
+#: linux/share/monet/games/Games.qml:1405 linux/share/monet/settings-app/MonetSettings.qml:8260
 msgid "Couldn't open Windows"
 msgstr "Windows를 열 수 없어요"
 
-#: linux/share/monet/games/Games.qml:1369
+#: linux/share/monet/games/Games.qml:1406 crates/monet/src/main.rs:361
+msgid "Set up FACEIT in Windows?"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1407 crates/monet/src/main.rs:356
+msgid "Play %1 on FACEIT?"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1408
 msgid "%1 needs Windows"
 msgstr "%1에는 Windows가 필요해요"
 
-#: linux/share/monet/games/Games.qml:1370 linux/share/monet/settings-app/MonetSettings.qml:8261
+#: linux/share/monet/games/Games.qml:1409 linux/share/monet/settings-app/MonetSettings.qml:8261
 msgid "Play %1?"
 msgstr "%1 플레이할까요?"
 
-#: linux/share/monet/games/Games.qml:1371 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:356
+#: linux/share/monet/games/Games.qml:1410 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:363
 msgid "Restart in Windows?"
 msgstr "Windows로 다시 시작할까요?"
 
-#: linux/share/monet/games/Games.qml:1391
+#: linux/share/monet/games/Games.qml:1422
+msgid ""
+"Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1424
+msgid ""
+"Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1434
 msgid ""
 "Your PC restarts in Windows and opens it in the EA app. Choose Download and pick %1 as where to install it: the game is there already, so the EA app only checks it."
 msgstr ""
 "PC가 Windows로 다시 시작해 EA 앱에서 게임을 열어요. 다운로드를 고르고 설치 위치로 %1을(를) 선택하세요. 게임이 이미 거기에 있어서 EA 앱은 확인만 해요."
 
-#: linux/share/monet/games/Games.qml:1393
+#: linux/share/monet/games/Games.qml:1436
 msgid ""
 "Your PC restarts in Windows and opens it. If %1 there asks to install it, choose its option to locate the game instead and pick %2: it's there already."
 msgstr ""
 "PC가 Windows로 다시 시작해서 열어요. 거기서 %1이(가) 설치하라고 하면, 대신 게임 위치를 찾는 옵션을 고르고 %2을(를) 선택하세요. 이미 거기 있어요."
 
-#: linux/share/monet/games/Games.qml:1394 linux/share/monet/settings-app/MonetSettings.qml:8302
+#: linux/share/monet/games/Games.qml:1437 linux/share/monet/settings-app/MonetSettings.qml:8302
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr "PC가 Windows로 다시 시작되고 게임이 열려요. 게임을 끝내면 여기로 돌아와요. 먼저 작업을 저장하세요."
 
-#: linux/share/monet/games/Games.qml:1395 linux/share/monet/settings-app/MonetSettings.qml:8306
+#: linux/share/monet/games/Games.qml:1438 linux/share/monet/settings-app/MonetSettings.qml:8306
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr "PC가 Windows로 다시 시작돼요. 열린 앱이 닫히니 먼저 작업을 저장하세요."
 
-#: linux/share/monet/games/Games.qml:1401 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
+#: linux/share/monet/games/Games.qml:1444 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
 msgid ""
 "Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1424 linux/share/monet/settings-app/MonetSettings.qml:8333
+#: linux/share/monet/games/Games.qml:1468
+msgid "Restart & Set up"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1469 linux/share/monet/settings-app/MonetSettings.qml:8333
 msgid "Restart & Play"
 msgstr "다시 시작 & 플레이"
 
-#: linux/share/monet/games/Games.qml:1424 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
+#: linux/share/monet/games/Games.qml:1469 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
 #: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1319
 #: linux/share/monet/settings-app/MonetSettings.qml:7832 linux/share/monet/settings-app/MonetSettings.qml:7852 linux/share/monet/settings-app/MonetSettings.qml:8112
-#: linux/share/monet/settings-app/MonetSettings.qml:8334 setup/qml/Main.qml:231 crates/monet/src/main.rs:366
-#: crates/monet/src/main.rs:921
+#: linux/share/monet/settings-app/MonetSettings.qml:8334 setup/qml/Main.qml:231 crates/monet/src/main.rs:375
+#: crates/monet/src/main.rs:930
 msgid "Restart"
 msgstr "다시 시작"
 
@@ -1820,7 +1944,7 @@ msgid "privacy recent files history forget remember fingerprint finger"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:256 linux/share/monet/settings-app/MonetSettings.qml:6134 linux/share/monet/settings-app/MonetSettings.qml:7027
-#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7228 linux/share/monet/passwords/app.py:304
+#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7273 linux/share/monet/passwords/app.py:304
 #: linux/share/monet/passwords/app.py:334 linux/share/monet/passwords/app.py:886
 msgid "Passwords"
 msgstr "비밀번호"
@@ -2035,7 +2159,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:673 linux/share/monet/settings-app/MonetSettings.qml:2819 linux/share/monet/settings-app/MonetSettings.qml:5326
-#: linux/libexec/monet-quick:7265
+#: linux/libexec/monet-quick:7310
 msgid "Settings"
 msgstr "설정"
 
@@ -2096,7 +2220,7 @@ msgstr ""
 msgid "Keyboard and pointer"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7217
+#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7262
 msgid "Screen locking"
 msgstr "화면 잠금"
 
@@ -3127,7 +3251,7 @@ msgstr "벨 울리기"
 msgid "Send a file…"
 msgstr "파일 보내기…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7270
+#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7315
 #: linux/libexec/monet-files-tools:788
 msgid "Files"
 msgstr "파일"
@@ -3214,7 +3338,7 @@ msgstr "야간 조명"
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "해 질 녘부터 해 뜰 때까지 따뜻한 색으로, 눈이 편안해요"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7232
+#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7277
 msgid "Display colors"
 msgstr ""
 
@@ -3276,7 +3400,7 @@ msgstr "음량"
 msgid "Play sound through"
 msgstr "소리를 재생할 장치"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7239
+#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7284
 msgid "Headphones and speakers"
 msgstr ""
 
@@ -3332,7 +3456,7 @@ msgstr ""
 msgid "Microphones"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7241
+#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7286
 msgid "Microphone"
 msgstr "마이크"
 
@@ -3486,7 +3610,7 @@ msgstr "관리자"
 msgid "Standard account"
 msgstr "표준 계정"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:8669
+#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:8714
 msgid "Guest"
 msgstr "게스트"
 
@@ -3640,7 +3764,7 @@ msgstr "이모지"
 msgid "Next keyboard layout"
 msgstr "다음 자판"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7276
+#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7321
 msgid "Screenshot"
 msgstr "스크린샷"
 
@@ -3738,7 +3862,7 @@ msgstr "이 시간 동안 사용하지 않으면"
 msgid "It wakes where you left off"
 msgstr "깨우면 하던 그대로 이어져요"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7226
+#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7271
 msgid "Keep awake"
 msgstr "절전 방지"
 
@@ -4082,7 +4206,7 @@ msgstr "Windows 북마크"
 msgid "Choose HTML file"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8018
+#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8063
 msgid "From Windows"
 msgstr "Windows에서"
 
@@ -4214,7 +4338,7 @@ msgstr "보통"
 msgid "Larger"
 msgstr "더 크게"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7237
+#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7282
 msgid "Reduce motion"
 msgstr "동작 줄이기"
 
@@ -4259,7 +4383,7 @@ msgstr ""
 msgid "What fills this PC, and room to make."
 msgstr "이 PC를 무엇이 채우고 있는지 보고, 공간을 확보해요."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7221
+#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7266
 msgid "Disks and partitions"
 msgstr ""
 
@@ -4419,7 +4543,7 @@ msgstr ""
 msgid "%1 selected · %2 available"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7251
+#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7296
 msgid "Windows files"
 msgstr ""
 
@@ -4608,8 +4732,8 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6728 linux/share/monet/settings-app/MonetSettings.qml:6768 linux/share/monet/settings-app/MonetSettings.qml:6859
 #: linux/share/monet/settings-app/MonetSettings.qml:7520 linux/share/monet/settings-app/MonetSettings.qml:7627 linux/share/monet/settings-app/MonetSettings.qml:7650
-#: setup/qml/Main.qml:1341 linux/libexec/monet-quick:4131 linux/libexec/monet-quick:7147
-#: linux/libexec/monet-quick:8017 linux/share/monet/passwords/app.py:183 linux/share/monet/passwords/app.py:211
+#: setup/qml/Main.qml:1341 linux/libexec/monet-quick:4131 linux/libexec/monet-quick:7192
+#: linux/libexec/monet-quick:8062 linux/share/monet/passwords/app.py:183 linux/share/monet/passwords/app.py:211
 msgid "Show"
 msgstr "보기"
 
@@ -4778,7 +4902,7 @@ msgid ""
 "Games aren't copied: Steam and the other stores download them again. Neither is the Trash."
 msgstr "게임은 복사하지 않습니다. Steam과 다른 스토어에서 다시 내려받을 수 있습니다. 휴지통도 복사하지 않습니다."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7228
+#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7273
 msgid "Saved logins, app access and vault unlocking"
 msgstr ""
 
@@ -5057,7 +5181,7 @@ msgstr "인쇄 중"
 msgid "Turned off"
 msgstr "꺼짐"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7350 crates/monet/src/main.rs:289
+#: linux/share/monet/settings-app/MonetSettings.qml:7350 crates/monet/src/main.rs:294
 msgid "Ready"
 msgstr "준비됨"
 
@@ -5166,7 +5290,7 @@ msgid ""
 msgstr ""
 "Windows 키 + Alt + G를 누르면 화면의 마지막 30초가 동영상 폴더에 저장됩니다. 처음에는 녹화할 화면을 고르세요."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5453
+#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5498
 msgid "Shared with Windows"
 msgstr "Windows와 공유"
 
@@ -5361,17 +5485,9 @@ msgstr ""
 msgid "Device security"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7794
-msgid "Secure Boot"
-msgstr "보안 부팅"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:7798
 msgid "On. The PC checks the boot software against keys it trusts."
 msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7799
-msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
-msgstr "이 PC는 UEFI 모드로 시작되지 않아서 보안 부팅을 켤 수 없어요."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7800
 msgid "Couldn’t check Secure Boot."
@@ -5725,11 +5841,11 @@ msgstr "Windows가 필요한 게임도 다시 시작 한 번이면 돼요."
 msgid "Restarting in Windows…"
 msgstr "Windows로 다시 시작하는 중…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8262 crates/monet/src/main.rs:354
+#: linux/share/monet/settings-app/MonetSettings.qml:8262 crates/monet/src/main.rs:360
 msgid "Sign in to your game launchers?"
 msgstr "게임 런처에 로그인할까요?"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8263 crates/monet/src/main.rs:355
+#: linux/share/monet/settings-app/MonetSettings.qml:8263 crates/monet/src/main.rs:362
 msgid "Update Windows games?"
 msgstr "Windows 게임을 업데이트할까요?"
 
@@ -5737,15 +5853,15 @@ msgstr "Windows 게임을 업데이트할까요?"
 msgid "Windows is ready to install"
 msgstr "Windows를 설치할 준비가 됐어요"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8266 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:997
+#: linux/share/monet/settings-app/MonetSettings.qml:8266 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:1006
 msgid "Getting Windows ready"
 msgstr "Windows 준비 중"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:6958
+#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:7003
 msgid "Windows setup did not finish"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8268 crates/monet/src/main.rs:939
+#: linux/share/monet/settings-app/MonetSettings.qml:8268 crates/monet/src/main.rs:948
 msgid "Windows setup stopped"
 msgstr ""
 
@@ -5777,7 +5893,7 @@ msgstr "지난번에는 Windows로 전환하지 못했어요"
 msgid "No Windows on this PC"
 msgstr "이 PC에는 Windows가 없어요"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8276 crates/monet/src/main.rs:919
+#: linux/share/monet/settings-app/MonetSettings.qml:8276 crates/monet/src/main.rs:928
 msgid "Windows is ready"
 msgstr "Windows가 준비됐어요"
 
@@ -5798,7 +5914,7 @@ msgstr "다시 시작하면 설치돼요. 10분 정도 걸리고, 끝나면 Mone
 msgid "Plug in the charger first."
 msgstr "먼저 충전기를 연결하세요."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8292 crates/monet/src/main.rs:888
+#: linux/share/monet/settings-app/MonetSettings.qml:8292 crates/monet/src/main.rs:897
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
 msgstr ""
@@ -6115,7 +6231,7 @@ msgstr ""
 msgid "Copy report"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7259
+#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7304
 msgid "Undo desktop changes"
 msgstr ""
 
@@ -6181,7 +6297,7 @@ msgstr "요청할 때만 업데이트해요."
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Monet와 앱이 알아서 최신 상태를 유지해요."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7257
+#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7302
 msgid "Check for updates"
 msgstr "업데이트 확인"
 
@@ -6351,7 +6467,7 @@ msgstr "%1초"
 msgid "Save a report"
 msgstr "보고서 저장"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7148
+#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7193
 msgid "In Documents, as %1."
 msgstr "문서 폴더에 %1(으)로 저장했어요."
 
@@ -6383,7 +6499,7 @@ msgstr "가져오는 중…"
 msgid "Get BoxBuddy"
 msgstr "BoxBuddy 받기"
 
-#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5405
+#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5450
 msgid "Opens in Windows"
 msgstr "Windows에서 열립니다"
 
@@ -6548,7 +6664,7 @@ msgstr "전체"
 msgid "No apps here yet."
 msgstr "아직 여기에 앱이 없어요."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:586 linux/libexec/monet-quick:7282
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:586 linux/libexec/monet-quick:7327
 msgid "Store"
 msgstr "스토어"
 
@@ -7095,7 +7211,7 @@ msgid "The note could not be saved. Try again."
 msgstr ""
 
 #: linux/share/monet/widgets/TaskManagerAction.qml:9 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:52 image/dock/patch.py:80
-#: image/dock/patch.py:106 linux/libexec/monet-quick:7274
+#: image/dock/patch.py:106 linux/libexec/monet-quick:7319
 msgid "Task Manager"
 msgstr ""
 
@@ -7273,7 +7389,7 @@ msgstr "연 파일이 여기에 표시돼요."
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7358 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7403 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
@@ -7426,7 +7542,7 @@ msgstr ""
 msgid "A Windows installer"
 msgstr "Windows 설치 프로그램"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5320
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5365
 msgid "A Windows program"
 msgstr "Windows 프로그램"
 
@@ -7621,11 +7737,11 @@ msgstr "소리 설정…"
 msgid "Images"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7280
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7325
 msgid "Documents"
 msgstr "문서"
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7278
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7323
 msgid "Archives"
 msgstr ""
 
@@ -7713,7 +7829,7 @@ msgstr ""
 msgid "Reading drive space…"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8283
+#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8328
 msgid "Open Files"
 msgstr "파일 열기"
 
@@ -8212,7 +8328,7 @@ msgstr ""
 msgid "Opening %1 wasn't confirmed"
 msgstr ""
 
-#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5214 linux/libexec/monet-quick:5236
+#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5259 linux/libexec/monet-quick:5281
 msgid "Couldn't open %1"
 msgstr ""
 
@@ -8316,7 +8432,7 @@ msgstr "다시 묻고 다시 시작"
 msgid "You're online"
 msgstr "인터넷에 연결됐어요"
 
-#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7245
+#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7290
 msgid "Connect to Wi-Fi"
 msgstr "Wi-Fi에 연결"
 
@@ -9234,570 +9350,570 @@ msgstr "마지막 30초를 저장했습니다"
 msgid "In Videos."
 msgstr "동영상 폴더에 있습니다."
 
-#: linux/libexec/monet-quick:5215
+#: linux/libexec/monet-quick:5260
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr ""
 
-#: linux/libexec/monet-quick:5238
+#: linux/libexec/monet-quick:5283
 msgid "The program or installer is missing."
 msgstr ""
 
-#: linux/libexec/monet-quick:5241
+#: linux/libexec/monet-quick:5286
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr ""
 
-#: linux/libexec/monet-quick:5249
+#: linux/libexec/monet-quick:5294
 msgid "Starting %1"
 msgstr ""
 
-#: linux/libexec/monet-quick:5250
+#: linux/libexec/monet-quick:5295
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
 
-#: linux/libexec/monet-quick:5259
+#: linux/libexec/monet-quick:5304
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:5266
+#: linux/libexec/monet-quick:5311
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:6093
+#: linux/libexec/monet-quick:6138
 msgid "Open it again"
 msgstr "다시 열기"
 
-#: linux/libexec/monet-quick:6093
+#: linux/libexec/monet-quick:6138
 msgid "%1 closed unexpectedly"
 msgstr "%1 앱이 예기치 않게 종료됐어요"
 
-#: linux/libexec/monet-quick:6511
+#: linux/libexec/monet-quick:6556
 msgid "Choose a connected screen and a supported size."
 msgstr ""
 
-#: linux/libexec/monet-quick:6516
+#: linux/libexec/monet-quick:6561
 msgid ""
 "The screen size couldn't be changed. Check the display connection and try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7037
+#: linux/libexec/monet-quick:7082
 msgid "%1 GB free of %2 GB"
 msgstr "%2GB 중 %1GB 사용 가능"
 
-#: linux/libexec/monet-quick:7148
+#: linux/libexec/monet-quick:7193
 msgid "Saved a report"
 msgstr "보고서를 저장했어요"
 
-#: linux/libexec/monet-quick:7217
+#: linux/libexec/monet-quick:7262
 msgid "Power & Sleep · Automatic screen locking"
 msgstr "전원 & 절전 · 자동 화면 잠금"
 
-#: linux/libexec/monet-quick:7218
+#: linux/libexec/monet-quick:7263
 msgid ""
 "stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"
 msgstr "화면 잠금 끄기; 자동 화면 잠금; 화면 잠금 타이머"
 
-#: linux/libexec/monet-quick:7219
+#: linux/libexec/monet-quick:7264
 msgid "Download folder"
 msgstr "다운로드 폴더"
 
-#: linux/libexec/monet-quick:7219
+#: linux/libexec/monet-quick:7264
 msgid "Storage · Where downloads are saved"
 msgstr "저장 공간 · 다운로드 저장 위치"
 
-#: linux/libexec/monet-quick:7220
+#: linux/libexec/monet-quick:7265
 msgid ""
 "download folder; downloads folder; download path; download location; where downloads go; save downloads"
 msgstr "다운로드 폴더; 다운로드 위치; 다운로드 경로"
 
-#: linux/libexec/monet-quick:7221
+#: linux/libexec/monet-quick:7266
 msgid "Storage · Manage physical drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7222
+#: linux/libexec/monet-quick:7267
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
 
-#: linux/libexec/monet-quick:7224
+#: linux/libexec/monet-quick:7269
 msgid "Battery charge limit"
 msgstr "배터리 충전 제한"
 
-#: linux/libexec/monet-quick:7224
+#: linux/libexec/monet-quick:7269
 msgid "Power & Sleep · Protect the battery"
 msgstr "전원 & 절전 · 배터리 보호"
 
-#: linux/libexec/monet-quick:7225
+#: linux/libexec/monet-quick:7270
 msgid ""
 "battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"
 msgstr "배터리 충전 제한; 배터리 보호; 80에서 충전 중지"
 
-#: linux/libexec/monet-quick:7226
+#: linux/libexec/monet-quick:7271
 msgid "Power & Sleep · Temporarily prevent idle sleep and locking"
 msgstr "전원 & 절전 · 사용하지 않을 때 절전과 잠금을 일시적으로 방지"
 
-#: linux/libexec/monet-quick:7227
+#: linux/libexec/monet-quick:7272
 msgid ""
 "keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"
 msgstr "화면 켜진 상태로 유지; 절전 방지; 프레젠테이션 모드"
 
-#: linux/libexec/monet-quick:7229
+#: linux/libexec/monet-quick:7274
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""
 
-#: linux/libexec/monet-quick:7230
+#: linux/libexec/monet-quick:7275
 msgid "Make text and windows bigger"
 msgstr ""
 
-#: linux/libexec/monet-quick:7230
+#: linux/libexec/monet-quick:7275
 msgid "Accessibility · Size of everything"
 msgstr ""
 
-#: linux/libexec/monet-quick:7231
+#: linux/libexec/monet-quick:7276
 msgid ""
 "make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"
 msgstr ""
 
-#: linux/libexec/monet-quick:7232
+#: linux/libexec/monet-quick:7277
 msgid "Display · Color profiles and test patterns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7233
+#: linux/libexec/monet-quick:7278
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
 
-#: linux/libexec/monet-quick:7235
+#: linux/libexec/monet-quick:7280
 msgid "Make the pointer easier to see"
 msgstr ""
 
-#: linux/libexec/monet-quick:7235
+#: linux/libexec/monet-quick:7280
 msgid "Accessibility · Pointer size"
 msgstr ""
 
-#: linux/libexec/monet-quick:7236
+#: linux/libexec/monet-quick:7281
 msgid "mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7237
+#: linux/libexec/monet-quick:7282
 msgid "Accessibility · Animation and movement"
 msgstr ""
 
-#: linux/libexec/monet-quick:7238
+#: linux/libexec/monet-quick:7283
 msgid "reduce motion; stop animations; less movement; disable animation"
 msgstr ""
 
-#: linux/libexec/monet-quick:7239
+#: linux/libexec/monet-quick:7284
 msgid "Sound · Choose where sound plays"
 msgstr ""
 
-#: linux/libexec/monet-quick:7240
+#: linux/libexec/monet-quick:7285
 msgid ""
 "headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"
 msgstr ""
 
-#: linux/libexec/monet-quick:7241
+#: linux/libexec/monet-quick:7286
 msgid "Sound · Microphone volume"
 msgstr ""
 
-#: linux/libexec/monet-quick:7242
+#: linux/libexec/monet-quick:7287
 msgid "microphone; mic; people cannot hear me; input volume; recording sound"
 msgstr ""
 
-#: linux/libexec/monet-quick:7243
+#: linux/libexec/monet-quick:7288
 msgid "Connect a Bluetooth device"
 msgstr ""
 
-#: linux/libexec/monet-quick:7243
+#: linux/libexec/monet-quick:7288
 msgid "Bluetooth · Pair headphones, a mouse or a controller"
 msgstr ""
 
-#: linux/libexec/monet-quick:7244
+#: linux/libexec/monet-quick:7289
 msgid ""
 "bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7245
+#: linux/libexec/monet-quick:7290
 msgid "Internet · Wireless networks"
 msgstr ""
 
-#: linux/libexec/monet-quick:7246
+#: linux/libexec/monet-quick:7291
 msgid ""
 "wifi; wi-fi; wireless internet; connect internet; no internet; network connection"
 msgstr ""
 
-#: linux/libexec/monet-quick:7247
+#: linux/libexec/monet-quick:7292
 msgid "LAN settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7247
+#: linux/libexec/monet-quick:7292
 msgid "Internet · Ethernet and IP settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7248
+#: linux/libexec/monet-quick:7293
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7249
+#: linux/libexec/monet-quick:7294
 msgid "Birthdays and repeating notes"
 msgstr ""
 
-#: linux/libexec/monet-quick:7249
+#: linux/libexec/monet-quick:7294
 msgid "Calendar · Notes that repeat every year, month, week or day"
 msgstr ""
 
-#: linux/libexec/monet-quick:7250
+#: linux/libexec/monet-quick:7295
 msgid ""
 "birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"
 msgstr ""
 
-#: linux/libexec/monet-quick:7251
+#: linux/libexec/monet-quick:7296
 msgid "Storage · Your shared folder and access to Windows files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7252
+#: linux/libexec/monet-quick:7297
 msgid ""
 "windows files; files from windows; shared with windows; shared folder; windows documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:7253
+#: linux/libexec/monet-quick:7298
 msgid "Quiet notifications"
 msgstr ""
 
-#: linux/libexec/monet-quick:7253
+#: linux/libexec/monet-quick:7298
 msgid "Notifications · Do Not Disturb and app popups"
 msgstr ""
 
-#: linux/libexec/monet-quick:7254
+#: linux/libexec/monet-quick:7299
 msgid ""
 "do not disturb; quiet notifications; stop notifications; mute app; popups; focus time"
 msgstr ""
 
-#: linux/libexec/monet-quick:7255
+#: linux/libexec/monet-quick:7300
 msgid "Back up or restore files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7255
+#: linux/libexec/monet-quick:7300
 msgid "Backups · Copies and earlier versions"
 msgstr ""
 
-#: linux/libexec/monet-quick:7256
+#: linux/libexec/monet-quick:7301
 msgid ""
 "backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"
 msgstr ""
 
-#: linux/libexec/monet-quick:7257
+#: linux/libexec/monet-quick:7302
 msgid "Updates · New versions and recovery"
 msgstr ""
 
-#: linux/libexec/monet-quick:7258
+#: linux/libexec/monet-quick:7303
 msgid ""
 "update; updates; upgrade; new version; system rollback; previous working version"
 msgstr ""
 
-#: linux/libexec/monet-quick:7259
+#: linux/libexec/monet-quick:7304
 msgid "Recovery · Review saved settings and shortcuts"
 msgstr ""
 
-#: linux/libexec/monet-quick:7260
+#: linux/libexec/monet-quick:7305
 msgid ""
 "recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"
 msgstr ""
 
-#: linux/libexec/monet-quick:7261
+#: linux/libexec/monet-quick:7306
 msgid "Restore work after Windows"
 msgstr ""
 
-#: linux/libexec/monet-quick:7261
+#: linux/libexec/monet-quick:7306
 msgid "Play on Windows · Reopen apps when you return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7262
+#: linux/libexec/monet-quick:7307
 msgid ""
 "restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"
 msgstr ""
 
-#: linux/libexec/monet-quick:7263
+#: linux/libexec/monet-quick:7308
 msgid "Choose default apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:7263
+#: linux/libexec/monet-quick:7308
 msgid "Default Apps · Browser, email and files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7264
+#: linux/libexec/monet-quick:7309
 msgid "default apps; change default browser; open with; email app; pdf app"
 msgstr ""
 
-#: linux/libexec/monet-quick:7265
+#: linux/libexec/monet-quick:7310
 msgid "Personalize Monet and manage your devices"
 msgstr ""
 
-#: linux/libexec/monet-quick:7266
+#: linux/libexec/monet-quick:7311
 msgid ""
 "control panel; system preferences; system settings; gnome settings; kde settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7270
+#: linux/libexec/monet-quick:7315
 msgid "Browse folders and connected drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7271
+#: linux/libexec/monet-quick:7316
 msgid ""
 "file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"
 msgstr ""
 
-#: linux/libexec/monet-quick:7272
+#: linux/libexec/monet-quick:7317
 msgid "Text Editor"
 msgstr ""
 
-#: linux/libexec/monet-quick:7272
+#: linux/libexec/monet-quick:7317
 msgid "Edit plain text and code"
 msgstr ""
 
-#: linux/libexec/monet-quick:7273
+#: linux/libexec/monet-quick:7318
 msgid ""
 "notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
 msgstr ""
 
-#: linux/libexec/monet-quick:7274
+#: linux/libexec/monet-quick:7319
 msgid "See running apps, CPU, graphics, memory, network and temperatures"
 msgstr ""
 
-#: linux/libexec/monet-quick:7275
+#: linux/libexec/monet-quick:7320
 msgid ""
 "task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
 msgstr ""
 
-#: linux/libexec/monet-quick:7276
+#: linux/libexec/monet-quick:7321
 msgid "Capture your screen or a selected area"
 msgstr ""
 
-#: linux/libexec/monet-quick:7277
+#: linux/libexec/monet-quick:7322
 msgid ""
 "snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
 msgstr ""
 
-#: linux/libexec/monet-quick:7278
+#: linux/libexec/monet-quick:7323
 msgid "Open and extract compressed files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7279
+#: linux/libexec/monet-quick:7324
 msgid ""
 "7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
 msgstr ""
 
-#: linux/libexec/monet-quick:7280
+#: linux/libexec/monet-quick:7325
 msgid "Read PDFs and annotate documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:7281
+#: linux/libexec/monet-quick:7326
 msgid ""
 "preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
 msgstr ""
 
-#: linux/libexec/monet-quick:7282
+#: linux/libexec/monet-quick:7327
 msgid "Find and install apps for Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:7283
+#: linux/libexec/monet-quick:7328
 msgid ""
 "app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
 msgstr ""
 
-#: linux/libexec/monet-quick:7311
+#: linux/libexec/monet-quick:7356
 msgid "how can i do please my the a an to where is are find open"
 msgstr ""
 
-#: linux/libexec/monet-quick:7496
+#: linux/libexec/monet-quick:7541
 msgid "Windows installer"
 msgstr ""
 
-#: linux/libexec/monet-quick:7497
+#: linux/libexec/monet-quick:7542
 msgid "Linux package"
 msgstr ""
 
-#: linux/libexec/monet-quick:7498 linux/libexec/monet-files-tools:712
+#: linux/libexec/monet-quick:7543 linux/libexec/monet-files-tools:712
 msgid "Linux application"
 msgstr ""
 
-#: linux/libexec/monet-quick:7498
+#: linux/libexec/monet-quick:7543
 msgid "Downloaded app"
 msgstr ""
 
-#: linux/libexec/monet-quick:7506
+#: linux/libexec/monet-quick:7551
 msgid "Home"
 msgstr ""
 
-#: linux/libexec/monet-quick:7542
+#: linux/libexec/monet-quick:7587
 msgid "Open application?"
 msgstr ""
 
-#: linux/libexec/monet-quick:7543
+#: linux/libexec/monet-quick:7588
 msgid "Open this downloaded application?"
 msgstr ""
 
-#: linux/libexec/monet-quick:7732
+#: linux/libexec/monet-quick:7777
 msgid "Waiting to reopen."
 msgstr ""
 
-#: linux/libexec/monet-quick:7733
+#: linux/libexec/monet-quick:7778
 msgid ""
 "The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
 msgstr ""
 
-#: linux/libexec/monet-quick:7734
+#: linux/libexec/monet-quick:7779
 msgid "Opening and checking its window…"
 msgstr ""
 
-#: linux/libexec/monet-quick:7735
+#: linux/libexec/monet-quick:7780
 msgid "Opened a window. The app controls its own tabs and documents."
 msgstr ""
 
-#: linux/libexec/monet-quick:7736
+#: linux/libexec/monet-quick:7781
 msgid "Already running; left as it was. Its saved work was not opened again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7737
+#: linux/libexec/monet-quick:7782
 msgid ""
 "Opening wasn't confirmed. Retry checks an existing launch before opening another."
 msgstr ""
 
-#: linux/libexec/monet-quick:7738
+#: linux/libexec/monet-quick:7783
 msgid "This app is no longer installed. Install it again, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7739
+#: linux/libexec/monet-quick:7784
 msgid "Saved folder tabs and split views reopened."
 msgstr ""
 
-#: linux/libexec/monet-quick:7740
+#: linux/libexec/monet-quick:7785
 msgid ""
 "Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7741
+#: linux/libexec/monet-quick:7786
 msgid "Files reopened. Its previous folders and tabs could not be saved."
 msgstr ""
 
-#: linux/libexec/monet-quick:7742
+#: linux/libexec/monet-quick:7787
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
 msgstr ""
 
-#: linux/libexec/monet-quick:7743
+#: linux/libexec/monet-quick:7788
 msgid "Browser opened normally, following its own tab-restore preference."
 msgstr ""
 
-#: linux/libexec/monet-quick:7744
+#: linux/libexec/monet-quick:7789
 msgid ""
 "The saved browser session is no longer available. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7745
+#: linux/libexec/monet-quick:7790
 msgid ""
 "Private or unsupported browser session left closed. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7746
+#: linux/libexec/monet-quick:7791
 msgid ""
 "Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
 msgstr ""
 
-#: linux/libexec/monet-quick:7747
+#: linux/libexec/monet-quick:7792
 msgid ""
 "The app opened with requests for its saved documents. Check the app for any unsaved changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:7748
+#: linux/libexec/monet-quick:7793
 msgid ""
 "Some saved documents are unavailable. Reconnect their drive, then choose Retry documents, or check Backups."
 msgstr ""
 
-#: linux/libexec/monet-quick:7749
+#: linux/libexec/monet-quick:7794
 msgid ""
 "The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."
 msgstr ""
 
-#: linux/libexec/monet-quick:7750
+#: linux/libexec/monet-quick:7795
 msgid "This recovery checkpoint has expired. You can open the app normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7802
+#: linux/libexec/monet-quick:7847
 msgid "Some work needs attention. Review what opened and what you can retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7803
+#: linux/libexec/monet-quick:7848
 msgid "Review which apps reopened and how they handled your saved work."
 msgstr ""
 
-#: linux/libexec/monet-quick:7805
+#: linux/libexec/monet-quick:7850
 msgid "Review return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7805
+#: linux/libexec/monet-quick:7850
 msgid "Back in Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8011
+#: linux/libexec/monet-quick:8056
 msgid "Your screenshots and clips from Windows are in Pictures and Videos."
 msgstr "Windows의 스크린샷과 클립은 사진과 비디오에 있어요."
 
-#: linux/libexec/monet-quick:8013
+#: linux/libexec/monet-quick:8058
 msgid "Your screenshots from Windows are in Pictures › Screenshots."
 msgstr "Windows의 스크린샷은 사진 › Screenshots에 있어요."
 
-#: linux/libexec/monet-quick:8015
+#: linux/libexec/monet-quick:8060
 msgid "Your clips from Windows are in Videos."
 msgstr "Windows의 클립은 비디오에 있어요."
 
-#: linux/libexec/monet-quick:8212
+#: linux/libexec/monet-quick:8257
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "드라이브를 열 수 없습니다. 다시 연결해 보세요."
 
-#: linux/libexec/monet-quick:8216
+#: linux/libexec/monet-quick:8261
 msgid "earlier"
 msgstr "이전"
 
-#: linux/libexec/monet-quick:8220
+#: linux/libexec/monet-quick:8265
 msgid "Monet can't write on this drive."
 msgstr "Monet이 이 드라이브에 쓸 수 없습니다."
 
-#: linux/libexec/monet-quick:8228 linux/libexec/monet-quick:8252
+#: linux/libexec/monet-quick:8273 linux/libexec/monet-quick:8297
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr "복사를 마치지 못했습니다. 다음에 드라이브를 연결하면 Monet이 다시 시도합니다."
 
-#: linux/libexec/monet-quick:8267
+#: linux/libexec/monet-quick:8312
 msgid "Your files haven't been copied for a week"
 msgstr "일주일 동안 파일이 복사되지 않았습니다"
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8313
 msgid "Plug in %1 and Monet copies them."
 msgstr "%1을 연결하면 Monet이 복사합니다."
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8313
 msgid "your backup drive"
 msgstr "백업 드라이브"
 
-#: linux/libexec/monet-quick:8284
+#: linux/libexec/monet-quick:8329
 msgid "Your files from Windows are here"
 msgstr "Windows의 파일이 여기 있습니다"
 
-#: linux/libexec/monet-quick:8285
+#: linux/libexec/monet-quick:8330
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr "문서, 사진, 음악, 동영상, 다운로드 폴더와 바탕 화면에 있습니다."
 
-#: linux/libexec/monet-quick:8696
+#: linux/libexec/monet-quick:8741
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
 
-#: linux/libexec/monet-quick:8823
+#: linux/libexec/monet-quick:8868
 msgid "Couldn't check phones. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:9005
+#: linux/libexec/monet-quick:9052
 msgid "Windows can't get this program this time."
 msgstr "이번에는 이 프로그램을 Windows로 보낼 수 없어요."
 
@@ -9833,7 +9949,7 @@ msgid ""
 "Windows couldn't be started. Your PC hasn't restarted. Save your work and try again."
 msgstr ""
 
-#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:373
+#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:382
 msgid ""
 "Monet couldn't start the safe switch. Your PC hasn't restarted. Try again from your desktop."
 msgstr ""
@@ -9890,7 +10006,7 @@ msgid ""
 "The switch was cancelled. Some apps couldn't be reopened. Review your recovery list in Settings."
 msgstr ""
 
-#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:705
+#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:714
 msgid "The switch to Windows was cancelled."
 msgstr ""
 
@@ -12362,170 +12478,180 @@ msgctxt "an app's name in the menu"
 msgid "System Details"
 msgstr ""
 
-#: crates/monet/src/main.rs:248 crates/monet/src/main.rs:339
+#: crates/monet/src/main.rs:253 crates/monet/src/main.rs:344
 msgid ""
 "Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."
 msgstr "Windows가 아직 설치되지 않았어요. 설정을 마치려면 앱 메뉴에서 Windows를 선택하세요."
 
-#: crates/monet/src/main.rs:250
+#: crates/monet/src/main.rs:255
 msgid ""
 "Windows is encrypted with BitLocker. Type its recovery key in Settings › Games & Controllers, and Monet opens it and sets it up."
 msgstr ""
 "Windows가 BitLocker로 암호화되어 있습니다. 설정 › 게임 & 컨트롤러에서 복구 키를 입력하면 Monet이 열고 설정합니다."
 
-#: crates/monet/src/main.rs:255
+#: crates/monet/src/main.rs:260
 msgid ""
 "Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."
 msgstr ""
 "Windows가 절전 상태라서 Monet가 아직 설정할 수 없어요. Windows를 열고 다시 시작을 선택하면 나머지는 Monet가 마무리해요."
 
-#: crates/monet/src/main.rs:263
+#: crates/monet/src/main.rs:268
 msgid "This PC didn't start in UEFI mode, so Monet can't switch to Windows."
 msgstr "이 PC가 UEFI 모드로 시작되지 않아서 Monet가 Windows로 전환할 수 없어요."
 
-#: crates/monet/src/main.rs:270 crates/monet/src/main.rs:593
+#: crates/monet/src/main.rs:275 crates/monet/src/main.rs:602
 msgid ""
 "Windows wasn't found on this PC. Install Windows first, then try again."
 msgstr "이 PC에서 Windows를 찾지 못했어요. 먼저 Windows를 설치한 다음 다시 시도하세요."
 
-#: crates/monet/src/main.rs:290
+#: crates/monet/src/main.rs:295
 msgid "Not found"
 msgstr "찾을 수 없음"
 
-#: crates/monet/src/main.rs:292
+#: crates/monet/src/main.rs:297
 msgid "Unavailable (not a UEFI system)"
 msgstr "사용할 수 없음(UEFI 시스템 아님)"
 
-#: crates/monet/src/main.rs:351
+#: crates/monet/src/main.rs:357
 msgid "Play %1 on Windows?"
 msgstr "Windows에서 %1 플레이할까요?"
 
-#: crates/monet/src/main.rs:352
+#: crates/monet/src/main.rs:358
 msgid "Open in Windows?"
 msgstr "Windows에서 열까요?"
 
-#: crates/monet/src/main.rs:353
+#: crates/monet/src/main.rs:359
 msgid "Play on Windows?"
 msgstr "Windows에서 플레이할까요?"
 
-#: crates/monet/src/main.rs:359
+#: crates/monet/src/main.rs:366
 msgid "Your PC will restart in Windows and open it. Open apps will close."
 msgstr "PC가 Windows로 다시 시작되어 이 앱을 엽니다. 열려 있는 앱은 닫힙니다."
 
-#: crates/monet/src/main.rs:360
+#: crates/monet/src/main.rs:367
+msgid ""
+"Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
+msgstr ""
+
+#: crates/monet/src/main.rs:368
 msgid ""
 "Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."
 msgstr "PC가 Windows로 다시 시작되고 게임이 시작돼요. 게임을 끝내면 Monet로 돌아와요."
 
-#: crates/monet/src/main.rs:361
+#: crates/monet/src/main.rs:369
 msgid ""
 "Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."
 msgstr "PC가 Windows로 다시 시작되고, 게임 런처에 로그인할 수 있게 준비돼요. 열린 앱은 닫혀요."
 
-#: crates/monet/src/main.rs:362
+#: crates/monet/src/main.rs:370
+msgid ""
+"Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
+msgstr ""
+
+#: crates/monet/src/main.rs:371
 msgid ""
 "Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."
 msgstr "PC가 Windows로 다시 시작되어 Windows와 게임을 업데이트하고, 끝나면 전원이 꺼져요. 열린 앱은 닫혀요."
 
-#: crates/monet/src/main.rs:363
+#: crates/monet/src/main.rs:372
 msgid "Your PC will restart in Windows. Open apps will close."
 msgstr "PC가 Windows로 다시 시작돼요. 열린 앱은 닫혀요."
 
-#: crates/monet/src/main.rs:365
+#: crates/monet/src/main.rs:374
 msgid ""
 "Save your work first. Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: crates/monet/src/main.rs:597
+#: crates/monet/src/main.rs:606
 msgid ""
 "Monet seems to have started from the Windows entry, which shouldn't happen."
 msgstr "Monet가 Windows 부팅 항목으로 시작된 것 같아요. 원래는 일어나면 안 되는 일이에요."
 
-#: crates/monet/src/main.rs:636
+#: crates/monet/src/main.rs:645
 msgid ""
 "This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu."
 msgstr ""
 "이 PC의 펌웨어가 Windows 전환 설정을 유지하지 않았어요. 다시 시작한 다음 PC의 부팅 메뉴에서 Windows를 선택하세요."
 
-#: crates/monet/src/main.rs:667
+#: crates/monet/src/main.rs:676
 msgid ""
 "The restart was blocked. The switch to Windows was cancelled. Save your work and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:685
+#: crates/monet/src/main.rs:694
 msgid ""
 "Monet couldn't identify your desktop account. Start Windows from your desktop and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:691
+#: crates/monet/src/main.rs:700
 msgid "Your desktop account could not be found. The switch was cancelled."
 msgstr ""
 
-#: crates/monet/src/main.rs:815
+#: crates/monet/src/main.rs:824
 msgid "This copy of Monet can't install Windows by itself."
 msgstr "이 Monet에서는 Windows를 알아서 설치할 수 없어요."
 
-#: crates/monet/src/main.rs:874
+#: crates/monet/src/main.rs:883
 msgid ""
 "Monet can install Windows from %1. Your PC restarts and Windows installs itself."
 msgstr "Monet가 %1 파일로 Windows를 설치할 수 있어요. PC가 다시 시작되고 Windows가 알아서 설치돼요."
 
-#: crates/monet/src/main.rs:877
+#: crates/monet/src/main.rs:886
 msgid ""
 "Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. This takes about 30 minutes."
 msgstr ""
 "Windows가 아직 설치되지 않았어요. Monet가 Microsoft에서 Windows(약 7GB)를 다운로드해 설치해요. 30분 정도 걸려요."
 
-#: crates/monet/src/main.rs:881
+#: crates/monet/src/main.rs:890
 msgid "Set up Windows?"
 msgstr "Windows를 설정할까요?"
 
-#: crates/monet/src/main.rs:881
+#: crates/monet/src/main.rs:890
 msgid "Set Up"
 msgstr "설정하기"
 
-#: crates/monet/src/main.rs:885
+#: crates/monet/src/main.rs:894
 msgid "Getting Windows ready for your games"
 msgstr "게임용 Windows 준비 중"
 
-#: crates/monet/src/main.rs:890
+#: crates/monet/src/main.rs:899
 msgid ""
 "Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."
 msgstr ""
 "Monet가 Windows(약 7GB)를 다운로드하고 있어요. PC는 계속 사용해도 돼요. 다시 시작하기 전에 Monet가 물어봐요."
 
-#: crates/monet/src/main.rs:920
+#: crates/monet/src/main.rs:929
 msgid ""
 "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."
 msgstr "지금 다시 시작해서 Windows를 설치할까요? 10분 정도 걸리고, 끝나면 Monet로 돌아와요."
 
-#: crates/monet/src/main.rs:930
+#: crates/monet/src/main.rs:939
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
 msgstr ""
 
-#: crates/monet/src/main.rs:936
+#: crates/monet/src/main.rs:945
 msgid "Windows setup stopped before it could use the installation media"
 msgstr ""
 
-#: crates/monet/src/main.rs:938
+#: crates/monet/src/main.rs:947
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
 msgstr ""
 
-#: crates/monet/src/main.rs:939
+#: crates/monet/src/main.rs:948
 msgid "Open Settings"
 msgstr ""
 
-#: crates/monet/src/main.rs:948
+#: crates/monet/src/main.rs:957
 msgid "there isn't enough free space for Windows"
 msgstr "Windows를 설치할 여유 공간이 부족해요"
 
-#: crates/monet/src/main.rs:949
+#: crates/monet/src/main.rs:958
 msgid ""
 "Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."
 msgstr "Windows에는 디스크 공간이 따로 약 72GB 필요하고, 다운로드하는 동안 Monet에도 16GB의 여유 공간이 필요해요."
 
-#: crates/monet/src/main.rs:954
+#: crates/monet/src/main.rs:963
 msgid ""
 "Windows couldn't be set up this time. Choose Windows in the app menu to try again."
 msgstr "이번에는 Windows를 설정하지 못했어요. 다시 시도하려면 앱 메뉴에서 Windows를 선택하세요."
@@ -12720,136 +12846,177 @@ msgstr ""
 msgid "The USB device did not keep what was written. Verification failed."
 msgstr ""
 
-#: crates/monet-bridge/src/bridge.rs:1212
+#: crates/monet-bridge/src/bridge.rs:1230
 msgid ""
 "Monet couldn't find this game in Windows. It may have been uninstalled."
 msgstr "Monet가 Windows에서 이 게임을 찾지 못했어요. 제거되었을 수 있어요."
 
-#: crates/monet-bridge/src/bridge.rs:1422 crates/monet-bridge/src/cover.rs:300
+#: crates/monet-bridge/src/bridge.rs:1440 crates/monet-bridge/src/cover.rs:303
 msgid "Your PC restarts in Monet in %1 s."
 msgstr "%1초 후 PC가 Monet로 다시 시작돼요."
 
-#: crates/monet-bridge/src/bridge.rs:1423
+#: crates/monet-bridge/src/bridge.rs:1441
 msgid "Click Cancel to stay in Windows."
 msgstr "Windows에 머무르려면 취소를 클릭하세요."
 
-#: crates/monet-bridge/src/bridge.rs:1516
+#: crates/monet-bridge/src/bridge.rs:1723
+msgid "Downloading %1 from %2"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1724
+msgid "Checking that %1 made it"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1725
+msgid "%1's installer is open"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1760
+msgid ""
+"%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1761
+msgid ""
+"Windows couldn't confirm that %1 made its installer, so Monet didn't run it."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1762
+msgid ""
+"%1 wasn't installed. You can try again from Games in Monet whenever you like."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1827
+msgid "%1 isn't set up in Windows. Set it up from Games in Monet."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1905
 msgid "Windows Update: downloading"
 msgstr "Windows Update: 다운로드 중"
 
-#: crates/monet-bridge/src/bridge.rs:1517
+#: crates/monet-bridge/src/bridge.rs:1906
 msgid "Windows Update: installing"
 msgstr "Windows Update: 설치 중"
 
-#: crates/monet-bridge/src/bridge.rs:1518
+#: crates/monet-bridge/src/bridge.rs:1907
 msgid "Windows Update: done"
 msgstr "Windows Update: 완료"
 
-#: crates/monet-bridge/src/bridge.rs:1519
+#: crates/monet-bridge/src/bridge.rs:1908
 msgid "Windows Update: couldn't finish, it tries again next time"
 msgstr "Windows Update: 끝내지 못했어요. 다음에 다시 시도해요"
 
-#: crates/monet-bridge/src/bridge.rs:1520
+#: crates/monet-bridge/src/bridge.rs:1909
 msgid "Windows Update: looking for updates"
 msgstr "Windows Update: 업데이트 확인 중"
 
-#: crates/monet-bridge/src/bridge.rs:1526
+#: crates/monet-bridge/src/bridge.rs:1915
 msgid "Steam: nothing updating right now"
 msgstr "Steam: 지금 업데이트 중인 항목 없음"
 
-#: crates/monet-bridge/src/bridge.rs:1528
+#: crates/monet-bridge/src/bridge.rs:1917
 msgid "Steam: updating (%1)"
 msgstr "Steam: 업데이트 중 (%1)"
 
-#: crates/monet-bridge/src/bridge.rs:1534
+#: crates/monet-bridge/src/bridge.rs:1923
 msgid "Downloads: quiet"
 msgstr "다운로드: 없음"
 
-#: crates/monet-bridge/src/bridge.rs:1536
+#: crates/monet-bridge/src/bridge.rs:1925
 msgid "Downloads: %1 MB/s"
 msgstr "다운로드: %1 MB/s"
 
-#: crates/monet-bridge/src/bridge.rs:1927
+#: crates/monet-bridge/src/bridge.rs:2324
 msgid "Windows is ready for Monet."
 msgstr "Monet에서 쓸 Windows가 준비됐어요."
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Sign in"
 msgstr "로그인"
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Open launcher"
 msgstr "런처 열기"
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Signed in"
 msgstr "로그인됨"
 
-#: crates/monet-bridge/src/cover.rs:287 crates/monet-bridge/src/cover.rs:327
+#: crates/monet-bridge/src/cover.rs:290 crates/monet-bridge/src/cover.rs:330
 msgid "Starting in Windows"
 msgstr "Windows에서 시작하는 중"
 
-#: crates/monet-bridge/src/cover.rs:291
+#: crates/monet-bridge/src/cover.rs:294
 msgid ""
 "When you quit the game, your PC goes back to Monet. If a launcher asks you to sign in, do it once: it remembers you."
 msgstr "게임을 종료하면 PC가 Monet로 돌아가요. 런처가 로그인을 요청하면 한 번만 로그인하세요. 다음부터는 기억해요."
 
-#: crates/monet-bridge/src/cover.rs:293
+#: crates/monet-bridge/src/cover.rs:296
 msgid "Back to Monet now"
 msgstr "지금 Monet로 돌아가기"
 
-#: crates/monet-bridge/src/cover.rs:296
+#: crates/monet-bridge/src/cover.rs:299
 msgid "The game closed"
 msgstr "게임이 종료됐어요"
 
-#: crates/monet-bridge/src/cover.rs:298 crates/monet-bridge/src/cover.rs:313 crates/monet-bridge/src/cover.rs:339
+#: crates/monet-bridge/src/cover.rs:301 crates/monet-bridge/src/cover.rs:316 crates/monet-bridge/src/cover.rs:347
+#: crates/monet-bridge/src/cover.rs:355
 msgid "Back to Monet"
 msgstr "Monet로 돌아가기"
 
-#: crates/monet-bridge/src/cover.rs:302
+#: crates/monet-bridge/src/cover.rs:305
 msgid "Go now"
 msgstr "지금 돌아가기"
 
-#: crates/monet-bridge/src/cover.rs:302
+#: crates/monet-bridge/src/cover.rs:305
 msgid "Stay in Windows"
 msgstr "Windows에 머무르기"
 
-#: crates/monet-bridge/src/cover.rs:305
+#: crates/monet-bridge/src/cover.rs:308 crates/monet-bridge/src/cover.rs:337
 msgid "In Windows, once"
 msgstr "Windows에서, 한 번만"
 
-#: crates/monet-bridge/src/cover.rs:307 crates/monet-bridge/src/cover.rs:340
+#: crates/monet-bridge/src/cover.rs:310 crates/monet-bridge/src/cover.rs:356
 msgid "Sign in to your game launchers"
 msgstr "게임 런처에 로그인"
 
-#: crates/monet-bridge/src/cover.rs:309
+#: crates/monet-bridge/src/cover.rs:312
 msgid ""
 "Open each one and sign in, with Remember me ticked. Then the games you play from Monet start without asking."
 msgstr ""
 "각 런처를 열고 로그인 상태 유지를 체크한 채로 로그인하세요. 그러면 Monet에서 플레이하는 게임이 묻지 않고 바로 시작돼요."
 
-#: crates/monet-bridge/src/cover.rs:316
+#: crates/monet-bridge/src/cover.rs:319
 msgid "In Windows, then off"
 msgstr "Windows에서, 끝나면 전원 끄기"
 
-#: crates/monet-bridge/src/cover.rs:318 crates/monet-bridge/src/cover.rs:341
+#: crates/monet-bridge/src/cover.rs:321 crates/monet-bridge/src/cover.rs:357
 msgid "Updating your games"
 msgstr "게임 업데이트 중"
 
-#: crates/monet-bridge/src/cover.rs:320
+#: crates/monet-bridge/src/cover.rs:323
 msgid ""
 "Windows and your game launchers are bringing everything up to date. The PC switches off by itself when they're done."
 msgstr "Windows와 게임 런처가 모든 것을 최신 상태로 업데이트하고 있어요. 끝나면 PC가 알아서 꺼져요."
 
-#: crates/monet-bridge/src/cover.rs:324
+#: crates/monet-bridge/src/cover.rs:327
 msgid "Switch off now"
 msgstr "지금 전원 끄기"
 
-#: crates/monet-bridge/src/cover.rs:329 crates/monet-bridge/src/cover.rs:342
+#: crates/monet-bridge/src/cover.rs:332 crates/monet-bridge/src/cover.rs:358
 msgid "Getting %1 ready"
 msgstr "%1 준비 중"
 
-#: crates/monet-bridge/src/cover.rs:331
+#: crates/monet-bridge/src/cover.rs:334
 msgid ""
 "Your game needs it here. Windows installs it once, from what Monet fetched for it, and then your game starts."
 msgstr "게임에 여기서 필요해요. Monet이 받아 둔 것으로 Windows가 한 번만 설치하고, 그다음 게임이 시작돼요."
+
+#: crates/monet-bridge/src/cover.rs:339 crates/monet-bridge/src/cover.rs:359
+msgid "Setting up %1"
+msgstr ""
+
+#: crates/monet-bridge/src/cover.rs:341
+msgid ""
+"Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
+msgstr ""

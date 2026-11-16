@@ -53,13 +53,13 @@ msgstr "कम विवरण"
 msgid "Details"
 msgstr "विवरण"
 
-#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1415
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1458
 #: linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4043 linux/share/monet/settings-app/MonetSettings.qml:5006
 #: linux/share/monet/settings-app/MonetSettings.qml:5092 linux/share/monet/settings-app/MonetSettings.qml:6673 linux/share/monet/settings-app/MonetSettings.qml:6795
 #: linux/share/monet/settings-app/MonetSettings.qml:7821 linux/share/monet/settings-app/MonetSettings.qml:7999 linux/share/monet/settings-app/MonetSettings.qml:8326
 #: linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:273 linux/share/monet/store-app/Downloads.qml:149
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445
-#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1331
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1340
 msgid "Cancel"
 msgstr "रद्द करें"
 
@@ -695,7 +695,7 @@ msgid "Drag a widget to move it. Point at one to resize or remove it."
 msgstr ""
 "विजेट को खींचकर खिसकाएं। साइज़ बदलने या हटाने के लिए उस पर पॉइंटर ले जाएं।"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:223
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:270
 msgid "More"
 msgstr "ज़्यादा"
 
@@ -816,7 +816,7 @@ msgstr ""
 msgid "Added by you"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:7496
+#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:7541
 #: linux/libexec/monet-files-tools:712
 msgid "Windows program"
 msgstr "Windows प्रोग्राम"
@@ -833,8 +833,8 @@ msgstr "ऑफ़िस"
 msgid "Sound and video"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:410
-#: linux/share/monet/games/Games.qml:831 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
+#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:447
+#: linux/share/monet/games/Games.qml:868 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
 #: linux/share/monet/store-app/Store.qml:174 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "गेम"
@@ -855,17 +855,17 @@ msgstr "अन्य"
 msgid "Not opened yet"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:211 linux/share/monet/widgets/DayNotes.qml:117
+#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:248 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
 msgid "Today"
 msgstr "आज"
 
-#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:212 linux/share/monet/settings-app/MonetSettings.qml:6922
+#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:249 linux/share/monet/settings-app/MonetSettings.qml:6922
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34
 msgid "Yesterday"
 msgstr "कल"
 
-#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:213
+#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:250
 msgid "%1 day ago"
 msgid_plural "%1 days ago"
 msgstr[0] "%1 दिन पहले"
@@ -903,7 +903,7 @@ msgid_plural "%1 apps"
 msgstr[0] "%1 ऐप"
 msgstr[1] "%1 ऐप"
 
-#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:711 linux/share/monet/store-app/Shelf.qml:86
+#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:748 linux/share/monet/store-app/Shelf.qml:86
 #: setup/qml/Main.qml:549
 msgid "Name"
 msgstr "नाम"
@@ -949,323 +949,448 @@ msgstr ""
 msgid "Kind"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:20
+#: linux/share/monet/games/GamePage.qml:22
 msgid "Steam is downloading it: %1%."
 msgstr "Steam इसे डाउनलोड कर रहा है: %1%."
 
-#: linux/share/monet/games/GamePage.qml:22 linux/share/monet/games/Games.qml:1383
+#: linux/share/monet/games/GamePage.qml:24 linux/share/monet/games/Games.qml:1426
 msgid ""
 "Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "खिलाड़ियों के मुताबिक यह Monet में नहीं चलता, इसलिए यह Windows में खेला जाता है। Steam में इसे \"Windows games\" में ले जाएँ (Properties, Installed Files, Move install folder), फिर “चलाएं” इसे वहीं शुरू करेगा, बिना कुछ डाउनलोड किए।"
 
-#: linux/share/monet/games/GamePage.qml:24 linux/share/monet/games/Games.qml:1385
+#: linux/share/monet/games/GamePage.qml:26 linux/share/monet/games/Games.qml:1428
 msgid ""
 "Its anti-cheat only lets it play in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "इसका एंटी-चीट इसे सिर्फ़ Windows में चलने देता है। Steam में इसे \"Windows games\" में ले जाएँ (Properties, Installed Files, Move install folder), फिर “चलाएं” इसे वहीं शुरू करेगा, बिना कुछ डाउनलोड किए।"
 
-#: linux/share/monet/games/GamePage.qml:26 linux/share/monet/games/Games.qml:1387
+#: linux/share/monet/games/GamePage.qml:28 linux/share/monet/games/Games.qml:1430
 msgid ""
 "Players report it doesn't run in Monet, and it isn't installed in Windows yet. Restart in Windows and install it with %1."
 msgstr ""
 "खिलाड़ियों के मुताबिक यह Monet में नहीं चलता, और यह अभी Windows में इंस्टॉल नहीं है। Windows में रीस्टार्ट करें और इसे %1 से इंस्टॉल करें।"
 
-#: linux/share/monet/games/GamePage.qml:28 linux/share/monet/games/Games.qml:1389
+#: linux/share/monet/games/GamePage.qml:30 linux/share/monet/games/Games.qml:1432
 msgid ""
 "Its anti-cheat only lets it play in Windows, and it isn't installed there yet. Restart in Windows and install it with %1."
 msgstr ""
 "इसका एंटी-चीट इसे सिर्फ़ Windows में चलने देता है, और वहाँ यह अभी इंस्टॉल नहीं है। Windows में रीस्टार्ट करें और इसे %1 से इंस्टॉल करें।"
 
-#: linux/share/monet/games/GamePage.qml:29
+#: linux/share/monet/games/GamePage.qml:31
 msgid ""
 "Installed once, in Windows' Games folder: it plays here and in Windows."
 msgstr ""
 "एक बार इंस्टॉल, Windows के Games फ़ोल्डर में: यह यहाँ भी चलता है और Windows में भी।"
 
-#: linux/share/monet/games/GamePage.qml:31
+#: linux/share/monet/games/GamePage.qml:33
 msgid ""
 "Players report it doesn't run in Monet: Play restarts your PC in Windows and opens it."
 msgstr ""
 "खिलाड़ियों के मुताबिक़ यह Monet में नहीं चलता: “चलाएं” आपके PC को Windows में रीस्टार्ट करके इसे खोलता है।"
 
-#: linux/share/monet/games/GamePage.qml:33
+#: linux/share/monet/games/GamePage.qml:35
 msgid ""
 "Its anti-cheat only lets it play in Windows: Play restarts your PC in Windows and opens it."
 msgstr ""
 "इसका एंटी-चीट इसे सिर्फ़ Windows में चलने देता है: “चलाएं” आपके PC को Windows में रीस्टार्ट करके इसे खोलता है।"
 
-#: linux/share/monet/games/GamePage.qml:35
+#: linux/share/monet/games/GamePage.qml:37
 msgid ""
 "It's installed in Windows: Play restarts your PC in Windows and opens it, and when you quit, you're back here."
 msgstr ""
 "यह Windows में इंस्टॉल है: “चलाएं” आपके PC को Windows में रीस्टार्ट करके इसे खोलता है, और बंद करने पर आप यहीं लौट आते हैं।"
 
-#: linux/share/monet/games/GamePage.qml:38
+#: linux/share/monet/games/GamePage.qml:40
 msgid "Plays on"
 msgstr "चलता है"
 
-#: linux/share/monet/games/GamePage.qml:38
+#: linux/share/monet/games/GamePage.qml:40
 msgid "Monet and Windows"
 msgstr "Monet और Windows"
 
-#: linux/share/monet/games/GamePage.qml:39
+#: linux/share/monet/games/GamePage.qml:41
 msgid "Last played"
 msgstr "आख़िरी बार खेला"
 
-#: linux/share/monet/games/GamePage.qml:40 linux/share/monet/games/Games.qml:711
+#: linux/share/monet/games/GamePage.qml:42 linux/share/monet/games/Games.qml:748
 msgid "Play time"
 msgstr "खेलने का समय"
 
-#: linux/share/monet/games/GamePage.qml:41
+#: linux/share/monet/games/GamePage.qml:43
 msgid "Size on disk"
 msgstr "डिस्क पर आकार"
 
-#: linux/share/monet/games/GamePage.qml:189 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:95
+#: linux/share/monet/games/GamePage.qml:51
+msgid ""
+"Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:52
+msgid ""
+"Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:53
+msgid ""
+"Last time, FACEIT's installer closed before it finished. Try again whenever you like."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:54
+msgid "Last time, you came back before FACEIT was set up."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:57
+msgid ""
+"Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:58
+msgid "Steam in Windows installs it the first time."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:59
+msgid ""
+"%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:61
+msgid ""
+"Monet couldn't look in Windows at this start, so setting up checks what's there first."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:68 linux/share/monet/settings-app/MonetSettings.qml:7794
+msgid "Secure Boot"
+msgstr "Secure Boot"
+
+#: linux/share/monet/games/GamePage.qml:69 linux/share/monet/games/GamePage.qml:75
+msgctxt "a protection is"
+msgid "On"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:70
+msgid ""
+"Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:71 linux/share/monet/settings-app/MonetSettings.qml:7799
+msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
+msgstr ""
+"यह पीसी UEFI मोड में शुरू नहीं हुआ, इसलिए Secure Boot चालू नहीं हो सकता।"
+
+#: linux/share/monet/games/GamePage.qml:72
+msgid "Couldn't check."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:75
+msgid "TPM 2.0"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:76
+msgid ""
+"Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:78
+msgid "Virtualization-based security"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:78
+msgid "On in Windows"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:79
+msgid ""
+"Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:236 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:95
 #: linux/share/monet/store-app/AppPage.qml:398 setup/qml/Main.qml:223
 msgid "Back"
 msgstr "वापस"
 
-#: linux/share/monet/games/GamePage.qml:208 linux/share/monet/games/Games.qml:342 linux/share/monet/games/Games.qml:346
+#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:383
 #: linux/share/monet/settings-app/MonetSettings.qml:286 linux/share/monet/settings-app/MonetSettings.qml:3411 linux/share/monet/settings-app/MonetSettings.qml:8239
 msgid "Play on Windows"
 msgstr "Windows में खेलें"
 
-#: linux/share/monet/games/GamePage.qml:208 linux/share/monet/games/Games.qml:342 linux/share/monet/games/Games.qml:349
+#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:386
 msgid "Play in Monet"
 msgstr "Monet में खेलें"
 
-#: linux/share/monet/games/GamePage.qml:216 linux/share/monet/games/Games.qml:1100
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:1137
 msgid "Favorite"
 msgstr "पसंदीदा"
 
-#: linux/share/monet/games/GamePage.qml:216 linux/share/monet/games/Games.qml:350
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:387
 msgid "Add to favorites"
 msgstr "पसंदीदा में जोड़ें"
 
-#: linux/share/monet/games/Games.qml:152 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
-#: linux/libexec/monet-quick:9009
+#: linux/share/monet/games/GamePage.qml:361
+msgid "Ready in Windows"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:361
+msgid "Not set up in Windows yet"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:418
+msgid "Play on FACEIT"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:418
+msgid "Set up FACEIT"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:426
+msgid "Security settings"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:189 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
+#: linux/libexec/monet-quick:9056
 msgid "Monet couldn't switch to Windows."
 msgstr "Monet से Windows पर स्विच नहीं हो सका।"
 
-#: linux/share/monet/games/Games.qml:201 linux/share/monet/games/Games.qml:202 linux/share/monet/settings-app/MonetSettings.qml:8277
-#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:7948 linux/libexec/monet-quick:7948
+#: linux/share/monet/games/Games.qml:238 linux/share/monet/games/Games.qml:239 linux/share/monet/settings-app/MonetSettings.qml:8277
+#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:7993 linux/libexec/monet-quick:7993
 msgid "Windows"
 msgstr "Windows"
 
-#: linux/share/monet/games/Games.qml:206 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
+#: linux/share/monet/games/Games.qml:243 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
 msgid "Never"
 msgstr "कभी नहीं"
 
-#: linux/share/monet/games/Games.qml:217
+#: linux/share/monet/games/Games.qml:254
 msgid "Not played yet"
 msgstr "अभी तक नहीं खेला"
 
-#: linux/share/monet/games/Games.qml:218
+#: linux/share/monet/games/Games.qml:255
 msgid "%1 minute"
 msgid_plural "%1 minutes"
 msgstr[0] "%1 मिनट"
 msgstr[1] "%1 मिनट"
 
-#: linux/share/monet/games/Games.qml:219 linux/share/monet/settings-app/MonetSettings.qml:1917
+#: linux/share/monet/games/Games.qml:256 linux/share/monet/settings-app/MonetSettings.qml:1917
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1 घंटा"
 msgstr[1] "%1 घंटे"
 
-#: linux/share/monet/games/Games.qml:223 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:260 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/monet/games/Games.qml:224 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:261 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/monet/games/Games.qml:228
+#: linux/share/monet/games/Games.qml:265
 msgid "%1 · Downloading, %2%"
 msgstr "%1 · डाउनलोड हो रहा है, %2%"
 
-#: linux/share/monet/games/Games.qml:260
+#: linux/share/monet/games/Games.qml:297
 msgid "All games"
 msgstr "सभी गेम"
 
-#: linux/share/monet/games/Games.qml:262
+#: linux/share/monet/games/Games.qml:299
 msgid "Favorites"
 msgstr "पसंदीदा"
 
-#: linux/share/monet/games/Games.qml:264 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
+#: linux/share/monet/games/Games.qml:301 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
 msgid "Recently played"
 msgstr "हाल ही में खेले गए"
 
-#: linux/share/monet/games/Games.qml:265
+#: linux/share/monet/games/Games.qml:302
 msgid "Plays on Monet"
 msgstr "Monet पर चलने वाले"
 
-#: linux/share/monet/games/Games.qml:266
+#: linux/share/monet/games/Games.qml:303
 msgid "Plays on Windows"
 msgstr "Windows पर चलने वाले"
 
-#: linux/share/monet/games/Games.qml:344
+#: linux/share/monet/games/Games.qml:381
 msgid "Open its page"
 msgstr "इसका पेज खोलें"
 
-#: linux/share/monet/games/Games.qml:350
+#: linux/share/monet/games/Games.qml:387
 msgid "Remove from favorites"
 msgstr "पसंदीदा से हटाएं"
 
-#: linux/share/monet/games/Games.qml:352 linux/share/monet/games/Games.qml:1423
+#: linux/share/monet/games/Games.qml:389 linux/share/monet/games/Games.qml:1467
 msgid "Show in Steam"
 msgstr "Steam में दिखाएँ"
 
-#: linux/share/monet/games/Games.qml:354
+#: linux/share/monet/games/Games.qml:391
 msgid "Uninstall…"
 msgstr "अनइंस्टॉल करें…"
 
-#: linux/share/monet/games/Games.qml:448 linux/share/monet/games/Games.qml:468
+#: linux/share/monet/games/Games.qml:485 linux/share/monet/games/Games.qml:505
 msgid "Find a game"
 msgstr "गेम खोजें"
 
-#: linux/share/monet/games/Games.qml:551
+#: linux/share/monet/games/Games.qml:588
 msgid "Stores"
 msgstr "स्टोर"
 
-#: linux/share/monet/games/Games.qml:640
+#: linux/share/monet/games/Games.qml:677
 msgid "Open Windows"
 msgstr "Windows खोलें"
 
-#: linux/share/monet/games/Games.qml:681
+#: linux/share/monet/games/Games.qml:718
 msgid "Games called “%1”"
 msgstr "“%1” नाम वाले गेम"
 
-#: linux/share/monet/games/Games.qml:691 linux/share/monet/settings-app/MonetSettings.qml:1830
+#: linux/share/monet/games/Games.qml:728 linux/share/monet/settings-app/MonetSettings.qml:1830
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "%1 गेम"
 msgstr[1] "%1 गेम"
 
-#: linux/share/monet/games/Games.qml:705 linux/share/monet/store-app/Shelf.qml:78
+#: linux/share/monet/games/Games.qml:742 linux/share/monet/store-app/Shelf.qml:78
 msgid "Sort by"
 msgstr "क्रम"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
+#: linux/share/monet/games/Games.qml:748 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "हाल ही में"
 
-#: linux/share/monet/games/Games.qml:711
+#: linux/share/monet/games/Games.qml:748
 msgid "Size"
 msgstr "आकार"
 
-#: linux/share/monet/games/Games.qml:781
+#: linux/share/monet/games/Games.qml:818
 msgid ""
 "Install each game once: add Windows games to Steam here, and a game you install there plays in Monet and in Windows."
 msgstr ""
 "हर गेम एक ही बार इंस्टॉल करें: यहाँ Steam में Windows गेम जोड़ें, फिर वहाँ इंस्टॉल किया गया गेम Monet और Windows दोनों में चलेगा।"
 
-#: linux/share/monet/games/Games.qml:786 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Adding…"
 msgstr "जोड़ा जा रहा है…"
 
-#: linux/share/monet/games/Games.qml:786 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Add to Steam"
 msgstr "Steam में जोड़ें"
 
-#: linux/share/monet/games/Games.qml:794 linux/share/monet/games/Games.qml:1415 linux/share/monet/games/MonetWindow.qml:146
+#: linux/share/monet/games/Games.qml:831 linux/share/monet/games/Games.qml:1458 linux/share/monet/games/MonetWindow.qml:146
 #: linux/share/monet/store-app/Store.qml:1095 linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282
 #: linux/share/monet/passwords/app_support_ui.py:42 crates/monet-usb/src/gui.rs:157
 msgid "Close"
 msgstr "बंद करें"
 
-#: linux/share/monet/games/Games.qml:901
+#: linux/share/monet/games/Games.qml:938
 msgid "Continue playing"
 msgstr "खेलना जारी रखें"
 
-#: linux/share/monet/games/Games.qml:1172
+#: linux/share/monet/games/Games.qml:1209
 msgid "No game called that"
 msgstr "इस नाम का कोई गेम नहीं"
 
-#: linux/share/monet/games/Games.qml:1173
+#: linux/share/monet/games/Games.qml:1210
 msgid "No favorites yet"
 msgstr "अभी कोई पसंदीदा नहीं"
 
-#: linux/share/monet/games/Games.qml:1174
+#: linux/share/monet/games/Games.qml:1211
 msgid "Nothing played yet"
 msgstr "अभी तक कुछ नहीं खेला"
 
-#: linux/share/monet/games/Games.qml:1175 linux/share/monet/settings-app/MonetSettings.qml:7659
+#: linux/share/monet/games/Games.qml:1212 linux/share/monet/settings-app/MonetSettings.qml:7659
 msgid "No games yet"
 msgstr "अभी कोई गेम नहीं"
 
-#: linux/share/monet/games/Games.qml:1184
+#: linux/share/monet/games/Games.qml:1221
 msgid "Tap the star on a game to keep it here."
 msgstr "किसी गेम का तारा दबाएं और वह यहाँ रहेगा।"
 
-#: linux/share/monet/games/Games.qml:1185
+#: linux/share/monet/games/Games.qml:1222
 msgid "The games you play show up here, the latest first."
 msgstr "आप जो गेम खेलते हैं वे यहाँ दिखते हैं, सबसे नया पहले।"
 
-#: linux/share/monet/games/Games.qml:1186
+#: linux/share/monet/games/Games.qml:1223
 msgid ""
 "Install games with Steam, Heroic or Lutris here, or in Windows. They show up here by themselves."
 msgstr ""
 "यहाँ Steam, Heroic या Lutris से, या Windows में गेम इंस्टॉल करें। वे अपने आप यहाँ दिखेंगे।"
 
-#: linux/share/monet/games/Games.qml:1194 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
+#: linux/share/monet/games/Games.qml:1231 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
 msgid "Open Steam"
 msgstr "Steam खोलें"
 
-#: linux/share/monet/games/Games.qml:1368 linux/share/monet/settings-app/MonetSettings.qml:8260
+#: linux/share/monet/games/Games.qml:1405 linux/share/monet/settings-app/MonetSettings.qml:8260
 msgid "Couldn't open Windows"
 msgstr "Windows नहीं खुल सका"
 
-#: linux/share/monet/games/Games.qml:1369
+#: linux/share/monet/games/Games.qml:1406 crates/monet/src/main.rs:361
+msgid "Set up FACEIT in Windows?"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1407 crates/monet/src/main.rs:356
+msgid "Play %1 on FACEIT?"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1408
 msgid "%1 needs Windows"
 msgstr "%1 के लिए Windows चाहिए"
 
-#: linux/share/monet/games/Games.qml:1370 linux/share/monet/settings-app/MonetSettings.qml:8261
+#: linux/share/monet/games/Games.qml:1409 linux/share/monet/settings-app/MonetSettings.qml:8261
 msgid "Play %1?"
 msgstr "%1 खेलें?"
 
-#: linux/share/monet/games/Games.qml:1371 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:356
+#: linux/share/monet/games/Games.qml:1410 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:363
 msgid "Restart in Windows?"
 msgstr "Windows में रीस्टार्ट करें?"
 
-#: linux/share/monet/games/Games.qml:1391
+#: linux/share/monet/games/Games.qml:1422
+msgid ""
+"Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1424
+msgid ""
+"Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1434
 msgid ""
 "Your PC restarts in Windows and opens it in the EA app. Choose Download and pick %1 as where to install it: the game is there already, so the EA app only checks it."
 msgstr ""
 "आपका PC Windows में रीस्टार्ट होकर इसे EA ऐप में खोलता है। Download चुनें और इंस्टॉल करने की जगह %1 चुनें: गेम पहले से वहाँ है, इसलिए EA ऐप बस उसे जाँचता है।"
 
-#: linux/share/monet/games/Games.qml:1393
+#: linux/share/monet/games/Games.qml:1436
 msgid ""
 "Your PC restarts in Windows and opens it. If %1 there asks to install it, choose its option to locate the game instead and pick %2: it's there already."
 msgstr ""
 "आपका PC Windows में रीस्टार्ट होकर इसे खोलेगा। अगर वहाँ %1 इसे इंस्टॉल करने को कहे, तो उसकी जगह गेम ढूँढने का विकल्प चुनें और %2 चुनें: यह वहाँ पहले से है।"
 
-#: linux/share/monet/games/Games.qml:1394 linux/share/monet/settings-app/MonetSettings.qml:8302
+#: linux/share/monet/games/Games.qml:1437 linux/share/monet/settings-app/MonetSettings.qml:8302
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होकर गेम खोलेगा। गेम बंद करने पर आप यहीं वापस आ जाएंगे। पहले अपना काम सेव कर लें।"
 
-#: linux/share/monet/games/Games.qml:1395 linux/share/monet/settings-app/MonetSettings.qml:8306
+#: linux/share/monet/games/Games.qml:1438 linux/share/monet/settings-app/MonetSettings.qml:8306
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होगा। खुले ऐप बंद हो जाएंगे, इसलिए पहले अपना काम सेव कर लें।"
 
-#: linux/share/monet/games/Games.qml:1401 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
+#: linux/share/monet/games/Games.qml:1444 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
 msgid ""
 "Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1424 linux/share/monet/settings-app/MonetSettings.qml:8333
+#: linux/share/monet/games/Games.qml:1468
+msgid "Restart & Set up"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1469 linux/share/monet/settings-app/MonetSettings.qml:8333
 msgid "Restart & Play"
 msgstr "रीस्टार्ट & खेलें"
 
-#: linux/share/monet/games/Games.qml:1424 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
+#: linux/share/monet/games/Games.qml:1469 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
 #: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1319
 #: linux/share/monet/settings-app/MonetSettings.qml:7832 linux/share/monet/settings-app/MonetSettings.qml:7852 linux/share/monet/settings-app/MonetSettings.qml:8112
-#: linux/share/monet/settings-app/MonetSettings.qml:8334 setup/qml/Main.qml:231 crates/monet/src/main.rs:366
-#: crates/monet/src/main.rs:921
+#: linux/share/monet/settings-app/MonetSettings.qml:8334 setup/qml/Main.qml:231 crates/monet/src/main.rs:375
+#: crates/monet/src/main.rs:930
 msgid "Restart"
 msgstr "रीस्टार्ट करें"
 
@@ -1843,7 +1968,7 @@ msgid "privacy recent files history forget remember fingerprint finger"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:256 linux/share/monet/settings-app/MonetSettings.qml:6134 linux/share/monet/settings-app/MonetSettings.qml:7027
-#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7228 linux/share/monet/passwords/app.py:304
+#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7273 linux/share/monet/passwords/app.py:304
 #: linux/share/monet/passwords/app.py:334 linux/share/monet/passwords/app.py:886
 msgid "Passwords"
 msgstr "पासवर्ड"
@@ -2061,7 +2186,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:673 linux/share/monet/settings-app/MonetSettings.qml:2819 linux/share/monet/settings-app/MonetSettings.qml:5326
-#: linux/libexec/monet-quick:7265
+#: linux/libexec/monet-quick:7310
 msgid "Settings"
 msgstr "सेटिंग"
 
@@ -2122,7 +2247,7 @@ msgstr ""
 msgid "Keyboard and pointer"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7217
+#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7262
 msgid "Screen locking"
 msgstr "स्क्रीन लॉक"
 
@@ -3167,7 +3292,7 @@ msgstr "घंटी बजाएं"
 msgid "Send a file…"
 msgstr "फ़ाइल भेजें…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7270
+#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7315
 #: linux/libexec/monet-files-tools:788
 msgid "Files"
 msgstr "फ़ाइलें"
@@ -3254,7 +3379,7 @@ msgstr "नाइट लाइट"
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "सूर्यास्त से सूर्योदय तक गर्म रंग, आंखों के लिए आरामदेह"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7232
+#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7277
 msgid "Display colors"
 msgstr ""
 
@@ -3316,7 +3441,7 @@ msgstr "वॉल्यूम"
 msgid "Play sound through"
 msgstr "आवाज़ किस पर चलाएं"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7239
+#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7284
 msgid "Headphones and speakers"
 msgstr ""
 
@@ -3372,7 +3497,7 @@ msgstr ""
 msgid "Microphones"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7241
+#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7286
 msgid "Microphone"
 msgstr "माइक्रोफ़ोन"
 
@@ -3526,7 +3651,7 @@ msgstr "एडमिन"
 msgid "Standard account"
 msgstr "सामान्य खाता"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:8669
+#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:8714
 msgid "Guest"
 msgstr "अतिथि"
 
@@ -3682,7 +3807,7 @@ msgstr "इमोजी"
 msgid "Next keyboard layout"
 msgstr "अगला कीबोर्ड लेआउट"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7276
+#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7321
 msgid "Screenshot"
 msgstr "स्क्रीनशॉट"
 
@@ -3781,7 +3906,7 @@ msgstr "इतनी देर कुछ न छूने पर"
 msgid "It wakes where you left off"
 msgstr "जहां छोड़ा था, वहीं से जागेगा"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7226
+#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7271
 msgid "Keep awake"
 msgstr "सक्रिय रखें"
 
@@ -4127,7 +4252,7 @@ msgstr "Windows से बुकमार्क"
 msgid "Choose HTML file"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8018
+#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8063
 msgid "From Windows"
 msgstr "Windows से"
 
@@ -4260,7 +4385,7 @@ msgstr "सामान्य"
 msgid "Larger"
 msgstr "और बड़ा"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7237
+#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7282
 msgid "Reduce motion"
 msgstr "हलचल कम करें"
 
@@ -4306,7 +4431,7 @@ msgstr ""
 msgid "What fills this PC, and room to make."
 msgstr "इस पीसी में क्या भरा है, और जगह कैसे बनाएं।"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7221
+#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7266
 msgid "Disks and partitions"
 msgstr ""
 
@@ -4466,7 +4591,7 @@ msgstr ""
 msgid "%1 selected · %2 available"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7251
+#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7296
 msgid "Windows files"
 msgstr ""
 
@@ -4655,8 +4780,8 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6728 linux/share/monet/settings-app/MonetSettings.qml:6768 linux/share/monet/settings-app/MonetSettings.qml:6859
 #: linux/share/monet/settings-app/MonetSettings.qml:7520 linux/share/monet/settings-app/MonetSettings.qml:7627 linux/share/monet/settings-app/MonetSettings.qml:7650
-#: setup/qml/Main.qml:1341 linux/libexec/monet-quick:4131 linux/libexec/monet-quick:7147
-#: linux/libexec/monet-quick:8017 linux/share/monet/passwords/app.py:183 linux/share/monet/passwords/app.py:211
+#: setup/qml/Main.qml:1341 linux/libexec/monet-quick:4131 linux/libexec/monet-quick:7192
+#: linux/libexec/monet-quick:8062 linux/share/monet/passwords/app.py:183 linux/share/monet/passwords/app.py:211
 msgid "Show"
 msgstr "दिखाएं"
 
@@ -4832,7 +4957,7 @@ msgid ""
 msgstr ""
 "गेम कॉपी नहीं होते: Steam और दूसरे स्टोर उन्हें फिर से डाउनलोड कर लेते हैं। ट्रैश भी नहीं।"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7228
+#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7273
 msgid "Saved logins, app access and vault unlocking"
 msgstr ""
 
@@ -5114,7 +5239,7 @@ msgstr "प्रिंट हो रहा है"
 msgid "Turned off"
 msgstr "बंद है"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7350 crates/monet/src/main.rs:289
+#: linux/share/monet/settings-app/MonetSettings.qml:7350 crates/monet/src/main.rs:294
 msgid "Ready"
 msgstr "तैयार"
 
@@ -5227,7 +5352,7 @@ msgid ""
 msgstr ""
 "Windows कुंजी + Alt + G स्क्रीन के आख़िरी 30 सेकंड वीडियो में सहेजता है। पहली बार, रिकॉर्ड होने वाली स्क्रीन चुनें।"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5453
+#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5498
 msgid "Shared with Windows"
 msgstr "Windows के साथ साझा"
 
@@ -5428,18 +5553,9 @@ msgstr ""
 msgid "Device security"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7794
-msgid "Secure Boot"
-msgstr "Secure Boot"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:7798
 msgid "On. The PC checks the boot software against keys it trusts."
 msgstr ""
-
-#: linux/share/monet/settings-app/MonetSettings.qml:7799
-msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
-msgstr ""
-"यह पीसी UEFI मोड में शुरू नहीं हुआ, इसलिए Secure Boot चालू नहीं हो सकता।"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:7800
 msgid "Couldn’t check Secure Boot."
@@ -5797,11 +5913,11 @@ msgstr "जिन गेम को Windows चाहिए, वे बस एक
 msgid "Restarting in Windows…"
 msgstr "Windows में रीस्टार्ट हो रहा है…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8262 crates/monet/src/main.rs:354
+#: linux/share/monet/settings-app/MonetSettings.qml:8262 crates/monet/src/main.rs:360
 msgid "Sign in to your game launchers?"
 msgstr "क्या आप अपने गेम लॉन्चर में साइन इन करना चाहते हैं?"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8263 crates/monet/src/main.rs:355
+#: linux/share/monet/settings-app/MonetSettings.qml:8263 crates/monet/src/main.rs:362
 msgid "Update Windows games?"
 msgstr "क्या आप Windows गेम अपडेट करना चाहते हैं?"
 
@@ -5809,15 +5925,15 @@ msgstr "क्या आप Windows गेम अपडेट करना च�
 msgid "Windows is ready to install"
 msgstr "Windows इंस्टॉल होने के लिए तैयार है"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8266 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:997
+#: linux/share/monet/settings-app/MonetSettings.qml:8266 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:1006
 msgid "Getting Windows ready"
 msgstr "Windows तैयार हो रहा है"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:6958
+#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:7003
 msgid "Windows setup did not finish"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8268 crates/monet/src/main.rs:939
+#: linux/share/monet/settings-app/MonetSettings.qml:8268 crates/monet/src/main.rs:948
 msgid "Windows setup stopped"
 msgstr ""
 
@@ -5849,7 +5965,7 @@ msgstr "पिछली कोशिश Windows तक नहीं पहुं
 msgid "No Windows on this PC"
 msgstr "इस PC पर Windows नहीं है"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8276 crates/monet/src/main.rs:919
+#: linux/share/monet/settings-app/MonetSettings.qml:8276 crates/monet/src/main.rs:928
 msgid "Windows is ready"
 msgstr "Windows तैयार है"
 
@@ -5871,7 +5987,7 @@ msgstr ""
 msgid "Plug in the charger first."
 msgstr "पहले चार्जर लगा लें।"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8292 crates/monet/src/main.rs:888
+#: linux/share/monet/settings-app/MonetSettings.qml:8292 crates/monet/src/main.rs:897
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
 msgstr ""
@@ -6193,7 +6309,7 @@ msgstr ""
 msgid "Copy report"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7259
+#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7304
 msgid "Undo desktop changes"
 msgstr ""
 
@@ -6262,7 +6378,7 @@ msgstr "सिर्फ़ तब, जब आप कहें।"
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Monet और आपके ऐप खुद को अप-टू-डेट रखते हैं।"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7257
+#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7302
 msgid "Check for updates"
 msgstr "अपडेट जांचें"
 
@@ -6436,7 +6552,7 @@ msgstr "%1 सेकंड"
 msgid "Save a report"
 msgstr "रिपोर्ट सहेजें"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7148
+#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7193
 msgid "In Documents, as %1."
 msgstr "दस्तावेज़ में, %1 नाम से।"
 
@@ -6468,7 +6584,7 @@ msgstr "ला रहा है…"
 msgid "Get BoxBuddy"
 msgstr "BoxBuddy पाएँ"
 
-#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5405
+#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5450
 msgid "Opens in Windows"
 msgstr "Windows में खुलता है"
 
@@ -6633,7 +6749,7 @@ msgstr "सभी"
 msgid "No apps here yet."
 msgstr "यहाँ अभी कोई ऐप नहीं है।"
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:586 linux/libexec/monet-quick:7282
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:586 linux/libexec/monet-quick:7327
 msgid "Store"
 msgstr "स्टोर"
 
@@ -7181,7 +7297,7 @@ msgid "The note could not be saved. Try again."
 msgstr ""
 
 #: linux/share/monet/widgets/TaskManagerAction.qml:9 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:52 image/dock/patch.py:80
-#: image/dock/patch.py:106 linux/libexec/monet-quick:7274
+#: image/dock/patch.py:106 linux/libexec/monet-quick:7319
 msgid "Task Manager"
 msgstr ""
 
@@ -7360,7 +7476,7 @@ msgstr "आप जो फ़ाइलें खोलेंगे, वे यह
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7358 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7403 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
@@ -7516,7 +7632,7 @@ msgstr ""
 msgid "A Windows installer"
 msgstr "एक Windows इंस्टॉलर"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5320
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5365
 msgid "A Windows program"
 msgstr "एक Windows प्रोग्राम"
 
@@ -7712,11 +7828,11 @@ msgstr "आवाज़ की सेटिंग…"
 msgid "Images"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7280
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7325
 msgid "Documents"
 msgstr "दस्तावेज़"
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7278
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7323
 msgid "Archives"
 msgstr ""
 
@@ -7804,7 +7920,7 @@ msgstr ""
 msgid "Reading drive space…"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8283
+#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8328
 msgid "Open Files"
 msgstr "फ़ाइलें खोलें"
 
@@ -8304,7 +8420,7 @@ msgstr ""
 msgid "Opening %1 wasn't confirmed"
 msgstr ""
 
-#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5214 linux/libexec/monet-quick:5236
+#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5259 linux/libexec/monet-quick:5281
 msgid "Couldn't open %1"
 msgstr ""
 
@@ -8411,7 +8527,7 @@ msgstr "फिर से पूछें और रीस्टार्ट क�
 msgid "You're online"
 msgstr "आप ऑनलाइन हैं"
 
-#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7245
+#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7290
 msgid "Connect to Wi-Fi"
 msgstr "Wi-Fi से कनेक्ट करें"
 
@@ -9341,570 +9457,570 @@ msgstr "आख़िरी 30 सेकंड सहेजे गए"
 msgid "In Videos."
 msgstr "वीडियो में।"
 
-#: linux/libexec/monet-quick:5215
+#: linux/libexec/monet-quick:5260
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr ""
 
-#: linux/libexec/monet-quick:5238
+#: linux/libexec/monet-quick:5283
 msgid "The program or installer is missing."
 msgstr ""
 
-#: linux/libexec/monet-quick:5241
+#: linux/libexec/monet-quick:5286
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr ""
 
-#: linux/libexec/monet-quick:5249
+#: linux/libexec/monet-quick:5294
 msgid "Starting %1"
 msgstr ""
 
-#: linux/libexec/monet-quick:5250
+#: linux/libexec/monet-quick:5295
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
 
-#: linux/libexec/monet-quick:5259
+#: linux/libexec/monet-quick:5304
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:5266
+#: linux/libexec/monet-quick:5311
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:6093
+#: linux/libexec/monet-quick:6138
 msgid "Open it again"
 msgstr "फिर से खोलें"
 
-#: linux/libexec/monet-quick:6093
+#: linux/libexec/monet-quick:6138
 msgid "%1 closed unexpectedly"
 msgstr "%1 अचानक बंद हो गया"
 
-#: linux/libexec/monet-quick:6511
+#: linux/libexec/monet-quick:6556
 msgid "Choose a connected screen and a supported size."
 msgstr ""
 
-#: linux/libexec/monet-quick:6516
+#: linux/libexec/monet-quick:6561
 msgid ""
 "The screen size couldn't be changed. Check the display connection and try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7037
+#: linux/libexec/monet-quick:7082
 msgid "%1 GB free of %2 GB"
 msgstr "%2 GB में से %1 GB खाली"
 
-#: linux/libexec/monet-quick:7148
+#: linux/libexec/monet-quick:7193
 msgid "Saved a report"
 msgstr "रिपोर्ट सहेजी गई"
 
-#: linux/libexec/monet-quick:7217
+#: linux/libexec/monet-quick:7262
 msgid "Power & Sleep · Automatic screen locking"
 msgstr "पावर & स्लीप · स्क्रीन अपने आप लॉक होना"
 
-#: linux/libexec/monet-quick:7218
+#: linux/libexec/monet-quick:7263
 msgid ""
 "stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"
 msgstr "स्क्रीन लॉक बंद करें; अपने आप स्क्रीन लॉक; स्क्रीन लॉक टाइमर"
 
-#: linux/libexec/monet-quick:7219
+#: linux/libexec/monet-quick:7264
 msgid "Download folder"
 msgstr "डाउनलोड फ़ोल्डर"
 
-#: linux/libexec/monet-quick:7219
+#: linux/libexec/monet-quick:7264
 msgid "Storage · Where downloads are saved"
 msgstr "स्टोरेज · डाउनलोड कहाँ सहेजे जाते हैं"
 
-#: linux/libexec/monet-quick:7220
+#: linux/libexec/monet-quick:7265
 msgid ""
 "download folder; downloads folder; download path; download location; where downloads go; save downloads"
 msgstr "डाउनलोड फ़ोल्डर; डाउनलोड का स्थान; डाउनलोड पथ"
 
-#: linux/libexec/monet-quick:7221
+#: linux/libexec/monet-quick:7266
 msgid "Storage · Manage physical drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7222
+#: linux/libexec/monet-quick:7267
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
 
-#: linux/libexec/monet-quick:7224
+#: linux/libexec/monet-quick:7269
 msgid "Battery charge limit"
 msgstr "बैटरी चार्ज सीमा"
 
-#: linux/libexec/monet-quick:7224
+#: linux/libexec/monet-quick:7269
 msgid "Power & Sleep · Protect the battery"
 msgstr "पावर & स्लीप · बैटरी की सुरक्षा"
 
-#: linux/libexec/monet-quick:7225
+#: linux/libexec/monet-quick:7270
 msgid ""
 "battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"
 msgstr "बैटरी चार्ज सीमा; बैटरी की सुरक्षा; 80 पर चार्ज करना रोकें"
 
-#: linux/libexec/monet-quick:7226
+#: linux/libexec/monet-quick:7271
 msgid "Power & Sleep · Temporarily prevent idle sleep and locking"
 msgstr "पावर & स्लीप · निष्क्रिय होने पर स्लीप और लॉक को अस्थायी रूप से रोकें"
 
-#: linux/libexec/monet-quick:7227
+#: linux/libexec/monet-quick:7272
 msgid ""
 "keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"
 msgstr "स्क्रीन चालू रखें; स्लीप रोकें; प्रस्तुति मोड"
 
-#: linux/libexec/monet-quick:7229
+#: linux/libexec/monet-quick:7274
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""
 
-#: linux/libexec/monet-quick:7230
+#: linux/libexec/monet-quick:7275
 msgid "Make text and windows bigger"
 msgstr ""
 
-#: linux/libexec/monet-quick:7230
+#: linux/libexec/monet-quick:7275
 msgid "Accessibility · Size of everything"
 msgstr ""
 
-#: linux/libexec/monet-quick:7231
+#: linux/libexec/monet-quick:7276
 msgid ""
 "make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"
 msgstr ""
 
-#: linux/libexec/monet-quick:7232
+#: linux/libexec/monet-quick:7277
 msgid "Display · Color profiles and test patterns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7233
+#: linux/libexec/monet-quick:7278
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
 
-#: linux/libexec/monet-quick:7235
+#: linux/libexec/monet-quick:7280
 msgid "Make the pointer easier to see"
 msgstr ""
 
-#: linux/libexec/monet-quick:7235
+#: linux/libexec/monet-quick:7280
 msgid "Accessibility · Pointer size"
 msgstr ""
 
-#: linux/libexec/monet-quick:7236
+#: linux/libexec/monet-quick:7281
 msgid "mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7237
+#: linux/libexec/monet-quick:7282
 msgid "Accessibility · Animation and movement"
 msgstr ""
 
-#: linux/libexec/monet-quick:7238
+#: linux/libexec/monet-quick:7283
 msgid "reduce motion; stop animations; less movement; disable animation"
 msgstr ""
 
-#: linux/libexec/monet-quick:7239
+#: linux/libexec/monet-quick:7284
 msgid "Sound · Choose where sound plays"
 msgstr ""
 
-#: linux/libexec/monet-quick:7240
+#: linux/libexec/monet-quick:7285
 msgid ""
 "headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"
 msgstr ""
 
-#: linux/libexec/monet-quick:7241
+#: linux/libexec/monet-quick:7286
 msgid "Sound · Microphone volume"
 msgstr ""
 
-#: linux/libexec/monet-quick:7242
+#: linux/libexec/monet-quick:7287
 msgid "microphone; mic; people cannot hear me; input volume; recording sound"
 msgstr ""
 
-#: linux/libexec/monet-quick:7243
+#: linux/libexec/monet-quick:7288
 msgid "Connect a Bluetooth device"
 msgstr ""
 
-#: linux/libexec/monet-quick:7243
+#: linux/libexec/monet-quick:7288
 msgid "Bluetooth · Pair headphones, a mouse or a controller"
 msgstr ""
 
-#: linux/libexec/monet-quick:7244
+#: linux/libexec/monet-quick:7289
 msgid ""
 "bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7245
+#: linux/libexec/monet-quick:7290
 msgid "Internet · Wireless networks"
 msgstr ""
 
-#: linux/libexec/monet-quick:7246
+#: linux/libexec/monet-quick:7291
 msgid ""
 "wifi; wi-fi; wireless internet; connect internet; no internet; network connection"
 msgstr ""
 
-#: linux/libexec/monet-quick:7247
+#: linux/libexec/monet-quick:7292
 msgid "LAN settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7247
+#: linux/libexec/monet-quick:7292
 msgid "Internet · Ethernet and IP settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7248
+#: linux/libexec/monet-quick:7293
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7249
+#: linux/libexec/monet-quick:7294
 msgid "Birthdays and repeating notes"
 msgstr ""
 
-#: linux/libexec/monet-quick:7249
+#: linux/libexec/monet-quick:7294
 msgid "Calendar · Notes that repeat every year, month, week or day"
 msgstr ""
 
-#: linux/libexec/monet-quick:7250
+#: linux/libexec/monet-quick:7295
 msgid ""
 "birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"
 msgstr ""
 
-#: linux/libexec/monet-quick:7251
+#: linux/libexec/monet-quick:7296
 msgid "Storage · Your shared folder and access to Windows files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7252
+#: linux/libexec/monet-quick:7297
 msgid ""
 "windows files; files from windows; shared with windows; shared folder; windows documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:7253
+#: linux/libexec/monet-quick:7298
 msgid "Quiet notifications"
 msgstr ""
 
-#: linux/libexec/monet-quick:7253
+#: linux/libexec/monet-quick:7298
 msgid "Notifications · Do Not Disturb and app popups"
 msgstr ""
 
-#: linux/libexec/monet-quick:7254
+#: linux/libexec/monet-quick:7299
 msgid ""
 "do not disturb; quiet notifications; stop notifications; mute app; popups; focus time"
 msgstr ""
 
-#: linux/libexec/monet-quick:7255
+#: linux/libexec/monet-quick:7300
 msgid "Back up or restore files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7255
+#: linux/libexec/monet-quick:7300
 msgid "Backups · Copies and earlier versions"
 msgstr ""
 
-#: linux/libexec/monet-quick:7256
+#: linux/libexec/monet-quick:7301
 msgid ""
 "backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"
 msgstr ""
 
-#: linux/libexec/monet-quick:7257
+#: linux/libexec/monet-quick:7302
 msgid "Updates · New versions and recovery"
 msgstr ""
 
-#: linux/libexec/monet-quick:7258
+#: linux/libexec/monet-quick:7303
 msgid ""
 "update; updates; upgrade; new version; system rollback; previous working version"
 msgstr ""
 
-#: linux/libexec/monet-quick:7259
+#: linux/libexec/monet-quick:7304
 msgid "Recovery · Review saved settings and shortcuts"
 msgstr ""
 
-#: linux/libexec/monet-quick:7260
+#: linux/libexec/monet-quick:7305
 msgid ""
 "recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"
 msgstr ""
 
-#: linux/libexec/monet-quick:7261
+#: linux/libexec/monet-quick:7306
 msgid "Restore work after Windows"
 msgstr ""
 
-#: linux/libexec/monet-quick:7261
+#: linux/libexec/monet-quick:7306
 msgid "Play on Windows · Reopen apps when you return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7262
+#: linux/libexec/monet-quick:7307
 msgid ""
 "restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"
 msgstr ""
 
-#: linux/libexec/monet-quick:7263
+#: linux/libexec/monet-quick:7308
 msgid "Choose default apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:7263
+#: linux/libexec/monet-quick:7308
 msgid "Default Apps · Browser, email and files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7264
+#: linux/libexec/monet-quick:7309
 msgid "default apps; change default browser; open with; email app; pdf app"
 msgstr ""
 
-#: linux/libexec/monet-quick:7265
+#: linux/libexec/monet-quick:7310
 msgid "Personalize Monet and manage your devices"
 msgstr ""
 
-#: linux/libexec/monet-quick:7266
+#: linux/libexec/monet-quick:7311
 msgid ""
 "control panel; system preferences; system settings; gnome settings; kde settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7270
+#: linux/libexec/monet-quick:7315
 msgid "Browse folders and connected drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7271
+#: linux/libexec/monet-quick:7316
 msgid ""
 "file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"
 msgstr ""
 
-#: linux/libexec/monet-quick:7272
+#: linux/libexec/monet-quick:7317
 msgid "Text Editor"
 msgstr ""
 
-#: linux/libexec/monet-quick:7272
+#: linux/libexec/monet-quick:7317
 msgid "Edit plain text and code"
 msgstr ""
 
-#: linux/libexec/monet-quick:7273
+#: linux/libexec/monet-quick:7318
 msgid ""
 "notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
 msgstr ""
 
-#: linux/libexec/monet-quick:7274
+#: linux/libexec/monet-quick:7319
 msgid "See running apps, CPU, graphics, memory, network and temperatures"
 msgstr ""
 
-#: linux/libexec/monet-quick:7275
+#: linux/libexec/monet-quick:7320
 msgid ""
 "task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
 msgstr ""
 
-#: linux/libexec/monet-quick:7276
+#: linux/libexec/monet-quick:7321
 msgid "Capture your screen or a selected area"
 msgstr ""
 
-#: linux/libexec/monet-quick:7277
+#: linux/libexec/monet-quick:7322
 msgid ""
 "snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
 msgstr ""
 
-#: linux/libexec/monet-quick:7278
+#: linux/libexec/monet-quick:7323
 msgid "Open and extract compressed files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7279
+#: linux/libexec/monet-quick:7324
 msgid ""
 "7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
 msgstr ""
 
-#: linux/libexec/monet-quick:7280
+#: linux/libexec/monet-quick:7325
 msgid "Read PDFs and annotate documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:7281
+#: linux/libexec/monet-quick:7326
 msgid ""
 "preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
 msgstr ""
 
-#: linux/libexec/monet-quick:7282
+#: linux/libexec/monet-quick:7327
 msgid "Find and install apps for Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:7283
+#: linux/libexec/monet-quick:7328
 msgid ""
 "app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
 msgstr ""
 
-#: linux/libexec/monet-quick:7311
+#: linux/libexec/monet-quick:7356
 msgid "how can i do please my the a an to where is are find open"
 msgstr ""
 
-#: linux/libexec/monet-quick:7496
+#: linux/libexec/monet-quick:7541
 msgid "Windows installer"
 msgstr ""
 
-#: linux/libexec/monet-quick:7497
+#: linux/libexec/monet-quick:7542
 msgid "Linux package"
 msgstr ""
 
-#: linux/libexec/monet-quick:7498 linux/libexec/monet-files-tools:712
+#: linux/libexec/monet-quick:7543 linux/libexec/monet-files-tools:712
 msgid "Linux application"
 msgstr ""
 
-#: linux/libexec/monet-quick:7498
+#: linux/libexec/monet-quick:7543
 msgid "Downloaded app"
 msgstr ""
 
-#: linux/libexec/monet-quick:7506
+#: linux/libexec/monet-quick:7551
 msgid "Home"
 msgstr ""
 
-#: linux/libexec/monet-quick:7542
+#: linux/libexec/monet-quick:7587
 msgid "Open application?"
 msgstr ""
 
-#: linux/libexec/monet-quick:7543
+#: linux/libexec/monet-quick:7588
 msgid "Open this downloaded application?"
 msgstr ""
 
-#: linux/libexec/monet-quick:7732
+#: linux/libexec/monet-quick:7777
 msgid "Waiting to reopen."
 msgstr ""
 
-#: linux/libexec/monet-quick:7733
+#: linux/libexec/monet-quick:7778
 msgid ""
 "The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
 msgstr ""
 
-#: linux/libexec/monet-quick:7734
+#: linux/libexec/monet-quick:7779
 msgid "Opening and checking its window…"
 msgstr ""
 
-#: linux/libexec/monet-quick:7735
+#: linux/libexec/monet-quick:7780
 msgid "Opened a window. The app controls its own tabs and documents."
 msgstr ""
 
-#: linux/libexec/monet-quick:7736
+#: linux/libexec/monet-quick:7781
 msgid "Already running; left as it was. Its saved work was not opened again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7737
+#: linux/libexec/monet-quick:7782
 msgid ""
 "Opening wasn't confirmed. Retry checks an existing launch before opening another."
 msgstr ""
 
-#: linux/libexec/monet-quick:7738
+#: linux/libexec/monet-quick:7783
 msgid "This app is no longer installed. Install it again, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7739
+#: linux/libexec/monet-quick:7784
 msgid "Saved folder tabs and split views reopened."
 msgstr ""
 
-#: linux/libexec/monet-quick:7740
+#: linux/libexec/monet-quick:7785
 msgid ""
 "Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7741
+#: linux/libexec/monet-quick:7786
 msgid "Files reopened. Its previous folders and tabs could not be saved."
 msgstr ""
 
-#: linux/libexec/monet-quick:7742
+#: linux/libexec/monet-quick:7787
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
 msgstr ""
 
-#: linux/libexec/monet-quick:7743
+#: linux/libexec/monet-quick:7788
 msgid "Browser opened normally, following its own tab-restore preference."
 msgstr ""
 
-#: linux/libexec/monet-quick:7744
+#: linux/libexec/monet-quick:7789
 msgid ""
 "The saved browser session is no longer available. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7745
+#: linux/libexec/monet-quick:7790
 msgid ""
 "Private or unsupported browser session left closed. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7746
+#: linux/libexec/monet-quick:7791
 msgid ""
 "Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
 msgstr ""
 
-#: linux/libexec/monet-quick:7747
+#: linux/libexec/monet-quick:7792
 msgid ""
 "The app opened with requests for its saved documents. Check the app for any unsaved changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:7748
+#: linux/libexec/monet-quick:7793
 msgid ""
 "Some saved documents are unavailable. Reconnect their drive, then choose Retry documents, or check Backups."
 msgstr ""
 
-#: linux/libexec/monet-quick:7749
+#: linux/libexec/monet-quick:7794
 msgid ""
 "The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."
 msgstr ""
 
-#: linux/libexec/monet-quick:7750
+#: linux/libexec/monet-quick:7795
 msgid "This recovery checkpoint has expired. You can open the app normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7802
+#: linux/libexec/monet-quick:7847
 msgid "Some work needs attention. Review what opened and what you can retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7803
+#: linux/libexec/monet-quick:7848
 msgid "Review which apps reopened and how they handled your saved work."
 msgstr ""
 
-#: linux/libexec/monet-quick:7805
+#: linux/libexec/monet-quick:7850
 msgid "Review return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7805
+#: linux/libexec/monet-quick:7850
 msgid "Back in Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8011
+#: linux/libexec/monet-quick:8056
 msgid "Your screenshots and clips from Windows are in Pictures and Videos."
 msgstr "Windows के आपके स्क्रीनशॉट और क्लिप Pictures और Videos में हैं।"
 
-#: linux/libexec/monet-quick:8013
+#: linux/libexec/monet-quick:8058
 msgid "Your screenshots from Windows are in Pictures › Screenshots."
 msgstr "Windows के आपके स्क्रीनशॉट Pictures › Screenshots में हैं।"
 
-#: linux/libexec/monet-quick:8015
+#: linux/libexec/monet-quick:8060
 msgid "Your clips from Windows are in Videos."
 msgstr "Windows के आपके क्लिप Videos में हैं।"
 
-#: linux/libexec/monet-quick:8212
+#: linux/libexec/monet-quick:8257
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "ड्राइव नहीं खुली। इसे फिर से लगाकर देखें।"
 
-#: linux/libexec/monet-quick:8216
+#: linux/libexec/monet-quick:8261
 msgid "earlier"
 msgstr "पिछली"
 
-#: linux/libexec/monet-quick:8220
+#: linux/libexec/monet-quick:8265
 msgid "Monet can't write on this drive."
 msgstr "Monet इस ड्राइव पर नहीं लिख सकता।"
 
-#: linux/libexec/monet-quick:8228 linux/libexec/monet-quick:8252
+#: linux/libexec/monet-quick:8273 linux/libexec/monet-quick:8297
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr "कॉपी पूरी नहीं हुई। अगली बार ड्राइव लगने पर Monet फिर कोशिश करेगा।"
 
-#: linux/libexec/monet-quick:8267
+#: linux/libexec/monet-quick:8312
 msgid "Your files haven't been copied for a week"
 msgstr "आपकी फ़ाइलें एक हफ़्ते से कॉपी नहीं हुईं"
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8313
 msgid "Plug in %1 and Monet copies them."
 msgstr "%1 लगाएँ और Monet उन्हें कॉपी कर देगा।"
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8313
 msgid "your backup drive"
 msgstr "आपकी बैकअप ड्राइव"
 
-#: linux/libexec/monet-quick:8284
+#: linux/libexec/monet-quick:8329
 msgid "Your files from Windows are here"
 msgstr "Windows से आपकी फ़ाइलें यहाँ हैं"
 
-#: linux/libexec/monet-quick:8285
+#: linux/libexec/monet-quick:8330
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr "दस्तावेज़, चित्र, संगीत, वीडियो, डाउनलोड में और डेस्कटॉप पर।"
 
-#: linux/libexec/monet-quick:8696
+#: linux/libexec/monet-quick:8741
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
 
-#: linux/libexec/monet-quick:8823
+#: linux/libexec/monet-quick:8868
 msgid "Couldn't check phones. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:9005
+#: linux/libexec/monet-quick:9052
 msgid "Windows can't get this program this time."
 msgstr "इस बार Windows यह प्रोग्राम नहीं ले सकता।"
 
@@ -9940,7 +10056,7 @@ msgid ""
 "Windows couldn't be started. Your PC hasn't restarted. Save your work and try again."
 msgstr ""
 
-#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:373
+#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:382
 msgid ""
 "Monet couldn't start the safe switch. Your PC hasn't restarted. Try again from your desktop."
 msgstr ""
@@ -9997,7 +10113,7 @@ msgid ""
 "The switch was cancelled. Some apps couldn't be reopened. Review your recovery list in Settings."
 msgstr ""
 
-#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:705
+#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:714
 msgid "The switch to Windows was cancelled."
 msgstr ""
 
@@ -12480,181 +12596,191 @@ msgctxt "an app's name in the menu"
 msgid "System Details"
 msgstr ""
 
-#: crates/monet/src/main.rs:248 crates/monet/src/main.rs:339
+#: crates/monet/src/main.rs:253 crates/monet/src/main.rs:344
 msgid ""
 "Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."
 msgstr ""
 "Windows अभी इंस्टॉल नहीं हुआ है। सेटअप पूरा करने के लिए ऐप मेन्यू में Windows चुनें।"
 
-#: crates/monet/src/main.rs:250
+#: crates/monet/src/main.rs:255
 msgid ""
 "Windows is encrypted with BitLocker. Type its recovery key in Settings › Games & Controllers, and Monet opens it and sets it up."
 msgstr ""
 "Windows BitLocker से एन्क्रिप्ट है। इसकी रिकवरी कुंजी सेटिंग › गेम & कंट्रोलर में लिखें, और Monet इसे खोलकर तैयार कर देगा।"
 
-#: crates/monet/src/main.rs:255
+#: crates/monet/src/main.rs:260
 msgid ""
 "Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."
 msgstr ""
 "Windows स्लीप में है, इसलिए Monet अभी इसे सेट अप नहीं कर सकता। Windows खोलें, रीस्टार्ट चुनें, और बाकी काम Monet पूरा कर देगा।"
 
-#: crates/monet/src/main.rs:263
+#: crates/monet/src/main.rs:268
 msgid "This PC didn't start in UEFI mode, so Monet can't switch to Windows."
 msgstr ""
 "यह पीसी UEFI मोड में शुरू नहीं हुआ, इसलिए Monet से Windows पर स्विच नहीं हो सकता।"
 
-#: crates/monet/src/main.rs:270 crates/monet/src/main.rs:593
+#: crates/monet/src/main.rs:275 crates/monet/src/main.rs:602
 msgid ""
 "Windows wasn't found on this PC. Install Windows first, then try again."
 msgstr ""
 "इस पीसी पर Windows नहीं मिला। पहले Windows इंस्टॉल करें, फिर दोबारा कोशिश करें।"
 
-#: crates/monet/src/main.rs:290
+#: crates/monet/src/main.rs:295
 msgid "Not found"
 msgstr "नहीं मिला"
 
-#: crates/monet/src/main.rs:292
+#: crates/monet/src/main.rs:297
 msgid "Unavailable (not a UEFI system)"
 msgstr "उपलब्ध नहीं (UEFI सिस्टम नहीं है)"
 
-#: crates/monet/src/main.rs:351
+#: crates/monet/src/main.rs:357
 msgid "Play %1 on Windows?"
 msgstr "Windows में %1 खेलें?"
 
-#: crates/monet/src/main.rs:352
+#: crates/monet/src/main.rs:358
 msgid "Open in Windows?"
 msgstr "Windows में खोलें?"
 
-#: crates/monet/src/main.rs:353
+#: crates/monet/src/main.rs:359
 msgid "Play on Windows?"
 msgstr "Windows में खेलें?"
 
-#: crates/monet/src/main.rs:359
+#: crates/monet/src/main.rs:366
 msgid "Your PC will restart in Windows and open it. Open apps will close."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होकर इसे खोलेगा। खुले ऐप बंद हो जाएँगे।"
 
-#: crates/monet/src/main.rs:360
+#: crates/monet/src/main.rs:367
+msgid ""
+"Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
+msgstr ""
+
+#: crates/monet/src/main.rs:368
 msgid ""
 "Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होकर गेम शुरू करेगा। गेम बंद करने पर यह Monet में वापस आ जाएगा।"
 
-#: crates/monet/src/main.rs:361
+#: crates/monet/src/main.rs:369
 msgid ""
 "Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होगा और आपके गेम लॉन्चर साइन इन के लिए तैयार रहेंगे। खुले ऐप बंद हो जाएंगे।"
 
-#: crates/monet/src/main.rs:362
+#: crates/monet/src/main.rs:370
+msgid ""
+"Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
+msgstr ""
+
+#: crates/monet/src/main.rs:371
 msgid ""
 "Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."
 msgstr ""
 "आपका पीसी Windows में रीस्टार्ट होगा, Windows और आपके गेम अपडेट करेगा, और पूरा होने पर बंद हो जाएगा। खुले ऐप बंद हो जाएंगे।"
 
-#: crates/monet/src/main.rs:363
+#: crates/monet/src/main.rs:372
 msgid "Your PC will restart in Windows. Open apps will close."
 msgstr "आपका पीसी Windows में रीस्टार्ट होगा। खुले ऐप बंद हो जाएंगे।"
 
-#: crates/monet/src/main.rs:365
+#: crates/monet/src/main.rs:374
 msgid ""
 "Save your work first. Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: crates/monet/src/main.rs:597
+#: crates/monet/src/main.rs:606
 msgid ""
 "Monet seems to have started from the Windows entry, which shouldn't happen."
 msgstr ""
 "लगता है Monet, Windows वाली बूट एंट्री से शुरू हुआ है। ऐसा नहीं होना चाहिए।"
 
-#: crates/monet/src/main.rs:636
+#: crates/monet/src/main.rs:645
 msgid ""
 "This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu."
 msgstr ""
 "इस पीसी के फ़र्मवेयर ने Windows पर स्विच करना याद नहीं रखा। रीस्टार्ट करें और पीसी के बूट मेन्यू में Windows चुनें।"
 
-#: crates/monet/src/main.rs:667
+#: crates/monet/src/main.rs:676
 msgid ""
 "The restart was blocked. The switch to Windows was cancelled. Save your work and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:685
+#: crates/monet/src/main.rs:694
 msgid ""
 "Monet couldn't identify your desktop account. Start Windows from your desktop and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:691
+#: crates/monet/src/main.rs:700
 msgid "Your desktop account could not be found. The switch was cancelled."
 msgstr ""
 
-#: crates/monet/src/main.rs:815
+#: crates/monet/src/main.rs:824
 msgid "This copy of Monet can't install Windows by itself."
 msgstr "Monet की यह कॉपी खुद Windows इंस्टॉल नहीं कर सकती।"
 
-#: crates/monet/src/main.rs:874
+#: crates/monet/src/main.rs:883
 msgid ""
 "Monet can install Windows from %1. Your PC restarts and Windows installs itself."
 msgstr ""
 "Monet %1 से Windows इंस्टॉल कर सकता है। आपका पीसी रीस्टार्ट होगा और Windows अपने-आप इंस्टॉल हो जाएगा।"
 
-#: crates/monet/src/main.rs:877
+#: crates/monet/src/main.rs:886
 msgid ""
 "Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. This takes about 30 minutes."
 msgstr ""
 "Windows अभी इंस्टॉल नहीं हुआ है। Monet इसे Microsoft से डाउनलोड (करीब 7 GB) करके इंस्टॉल करता है। इसमें करीब 30 मिनट लगते हैं।"
 
-#: crates/monet/src/main.rs:881
+#: crates/monet/src/main.rs:890
 msgid "Set up Windows?"
 msgstr "Windows सेट अप करें?"
 
-#: crates/monet/src/main.rs:881
+#: crates/monet/src/main.rs:890
 msgid "Set Up"
 msgstr "सेट अप करें"
 
-#: crates/monet/src/main.rs:885
+#: crates/monet/src/main.rs:894
 msgid "Getting Windows ready for your games"
 msgstr "आपके गेम के लिए Windows तैयार हो रहा है"
 
-#: crates/monet/src/main.rs:890
+#: crates/monet/src/main.rs:899
 msgid ""
 "Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."
 msgstr ""
 "Monet अभी Windows डाउनलोड कर रहा है (करीब 7 GB)। आप अपना पीसी इस्तेमाल करते रह सकते हैं; रीस्टार्ट से पहले Monet आपसे पूछेगा।"
 
-#: crates/monet/src/main.rs:920
+#: crates/monet/src/main.rs:929
 msgid ""
 "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."
 msgstr ""
 "Windows इंस्टॉल करने के लिए अभी रीस्टार्ट करें? इसमें करीब 10 मिनट लगते हैं, फिर आप Monet में वापस आ जाएंगे।"
 
-#: crates/monet/src/main.rs:930
+#: crates/monet/src/main.rs:939
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
 msgstr ""
 
-#: crates/monet/src/main.rs:936
+#: crates/monet/src/main.rs:945
 msgid "Windows setup stopped before it could use the installation media"
 msgstr ""
 
-#: crates/monet/src/main.rs:938
+#: crates/monet/src/main.rs:947
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
 msgstr ""
 
-#: crates/monet/src/main.rs:939
+#: crates/monet/src/main.rs:948
 msgid "Open Settings"
 msgstr ""
 
-#: crates/monet/src/main.rs:948
+#: crates/monet/src/main.rs:957
 msgid "there isn't enough free space for Windows"
 msgstr "Windows के लिए काफ़ी खाली जगह नहीं है"
 
-#: crates/monet/src/main.rs:949
+#: crates/monet/src/main.rs:958
 msgid ""
 "Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."
 msgstr ""
 "Windows को डिस्क पर अपने लिए करीब 72 GB चाहिए, और डाउनलोड होते समय Monet में 16 GB खाली जगह।"
 
-#: crates/monet/src/main.rs:954
+#: crates/monet/src/main.rs:963
 msgid ""
 "Windows couldn't be set up this time. Choose Windows in the app menu to try again."
 msgstr ""
@@ -12853,140 +12979,181 @@ msgstr ""
 msgid "The USB device did not keep what was written. Verification failed."
 msgstr ""
 
-#: crates/monet-bridge/src/bridge.rs:1212
+#: crates/monet-bridge/src/bridge.rs:1230
 msgid ""
 "Monet couldn't find this game in Windows. It may have been uninstalled."
 msgstr ""
 "Monet को Windows में यह गेम नहीं मिला। हो सकता है इसे अनइंस्टॉल कर दिया गया हो।"
 
-#: crates/monet-bridge/src/bridge.rs:1422 crates/monet-bridge/src/cover.rs:300
+#: crates/monet-bridge/src/bridge.rs:1440 crates/monet-bridge/src/cover.rs:303
 msgid "Your PC restarts in Monet in %1 s."
 msgstr "आपका पीसी %1 सेकंड में Monet में रीस्टार्ट होगा।"
 
-#: crates/monet-bridge/src/bridge.rs:1423
+#: crates/monet-bridge/src/bridge.rs:1441
 msgid "Click Cancel to stay in Windows."
 msgstr "Windows में रहने के लिए “रद्द करें” पर क्लिक करें।"
 
-#: crates/monet-bridge/src/bridge.rs:1516
+#: crates/monet-bridge/src/bridge.rs:1723
+msgid "Downloading %1 from %2"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1724
+msgid "Checking that %1 made it"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1725
+msgid "%1's installer is open"
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1760
+msgid ""
+"%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1761
+msgid ""
+"Windows couldn't confirm that %1 made its installer, so Monet didn't run it."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1762
+msgid ""
+"%1 wasn't installed. You can try again from Games in Monet whenever you like."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1827
+msgid "%1 isn't set up in Windows. Set it up from Games in Monet."
+msgstr ""
+
+#: crates/monet-bridge/src/bridge.rs:1905
 msgid "Windows Update: downloading"
 msgstr "Windows Update: डाउनलोड हो रहा है"
 
-#: crates/monet-bridge/src/bridge.rs:1517
+#: crates/monet-bridge/src/bridge.rs:1906
 msgid "Windows Update: installing"
 msgstr "Windows Update: इंस्टॉल हो रहा है"
 
-#: crates/monet-bridge/src/bridge.rs:1518
+#: crates/monet-bridge/src/bridge.rs:1907
 msgid "Windows Update: done"
 msgstr "Windows Update: पूरा हुआ"
 
-#: crates/monet-bridge/src/bridge.rs:1519
+#: crates/monet-bridge/src/bridge.rs:1908
 msgid "Windows Update: couldn't finish, it tries again next time"
 msgstr "Windows Update: पूरा नहीं हो सका, अगली बार फिर कोशिश करेगा"
 
-#: crates/monet-bridge/src/bridge.rs:1520
+#: crates/monet-bridge/src/bridge.rs:1909
 msgid "Windows Update: looking for updates"
 msgstr "Windows Update: अपडेट खोज रहा है"
 
-#: crates/monet-bridge/src/bridge.rs:1526
+#: crates/monet-bridge/src/bridge.rs:1915
 msgid "Steam: nothing updating right now"
 msgstr "Steam: अभी कुछ भी अपडेट नहीं हो रहा"
 
-#: crates/monet-bridge/src/bridge.rs:1528
+#: crates/monet-bridge/src/bridge.rs:1917
 msgid "Steam: updating (%1)"
 msgstr "Steam: अपडेट हो रहे हैं (%1)"
 
-#: crates/monet-bridge/src/bridge.rs:1534
+#: crates/monet-bridge/src/bridge.rs:1923
 msgid "Downloads: quiet"
 msgstr "डाउनलोड: कुछ नहीं"
 
-#: crates/monet-bridge/src/bridge.rs:1536
+#: crates/monet-bridge/src/bridge.rs:1925
 msgid "Downloads: %1 MB/s"
 msgstr "डाउनलोड: %1 MB/s"
 
-#: crates/monet-bridge/src/bridge.rs:1927
+#: crates/monet-bridge/src/bridge.rs:2324
 msgid "Windows is ready for Monet."
 msgstr "Windows, Monet के लिए तैयार है।"
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Sign in"
 msgstr "साइन इन करें"
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Open launcher"
 msgstr "लॉन्चर खोलें"
 
-#: crates/monet-bridge/src/cover.rs:244
+#: crates/monet-bridge/src/cover.rs:247
 msgid "Signed in"
 msgstr "साइन इन है"
 
-#: crates/monet-bridge/src/cover.rs:287 crates/monet-bridge/src/cover.rs:327
+#: crates/monet-bridge/src/cover.rs:290 crates/monet-bridge/src/cover.rs:330
 msgid "Starting in Windows"
 msgstr "Windows में शुरू हो रहा है"
 
-#: crates/monet-bridge/src/cover.rs:291
+#: crates/monet-bridge/src/cover.rs:294
 msgid ""
 "When you quit the game, your PC goes back to Monet. If a launcher asks you to sign in, do it once: it remembers you."
 msgstr ""
 "गेम बंद करने पर आपका पीसी Monet पर वापस जाएगा। अगर कोई लॉन्चर साइन इन करने को कहे, तो एक बार कर लें: वह आपको याद रखेगा।"
 
-#: crates/monet-bridge/src/cover.rs:293
+#: crates/monet-bridge/src/cover.rs:296
 msgid "Back to Monet now"
 msgstr "अभी Monet पर वापस जाएं"
 
-#: crates/monet-bridge/src/cover.rs:296
+#: crates/monet-bridge/src/cover.rs:299
 msgid "The game closed"
 msgstr "गेम बंद हो गया"
 
-#: crates/monet-bridge/src/cover.rs:298 crates/monet-bridge/src/cover.rs:313 crates/monet-bridge/src/cover.rs:339
+#: crates/monet-bridge/src/cover.rs:301 crates/monet-bridge/src/cover.rs:316 crates/monet-bridge/src/cover.rs:347
+#: crates/monet-bridge/src/cover.rs:355
 msgid "Back to Monet"
 msgstr "Monet पर वापस जाएं"
 
-#: crates/monet-bridge/src/cover.rs:302
+#: crates/monet-bridge/src/cover.rs:305
 msgid "Go now"
 msgstr "अभी वापस जाएं"
 
-#: crates/monet-bridge/src/cover.rs:302
+#: crates/monet-bridge/src/cover.rs:305
 msgid "Stay in Windows"
 msgstr "Windows में रहें"
 
-#: crates/monet-bridge/src/cover.rs:305
+#: crates/monet-bridge/src/cover.rs:308 crates/monet-bridge/src/cover.rs:337
 msgid "In Windows, once"
 msgstr "Windows में, एक बार"
 
-#: crates/monet-bridge/src/cover.rs:307 crates/monet-bridge/src/cover.rs:340
+#: crates/monet-bridge/src/cover.rs:310 crates/monet-bridge/src/cover.rs:356
 msgid "Sign in to your game launchers"
 msgstr "अपने गेम लॉन्चर में साइन इन करें"
 
-#: crates/monet-bridge/src/cover.rs:309
+#: crates/monet-bridge/src/cover.rs:312
 msgid ""
 "Open each one and sign in, with Remember me ticked. Then the games you play from Monet start without asking."
 msgstr ""
 "हर एक को खोलें और “मुझे याद रखें” पर टिक करके साइन इन करें। फिर Monet से खेले जाने वाले गेम बिना पूछे शुरू होंगे।"
 
-#: crates/monet-bridge/src/cover.rs:316
+#: crates/monet-bridge/src/cover.rs:319
 msgid "In Windows, then off"
 msgstr "Windows में, फिर बंद"
 
-#: crates/monet-bridge/src/cover.rs:318 crates/monet-bridge/src/cover.rs:341
+#: crates/monet-bridge/src/cover.rs:321 crates/monet-bridge/src/cover.rs:357
 msgid "Updating your games"
 msgstr "आपके गेम अपडेट हो रहे हैं"
 
-#: crates/monet-bridge/src/cover.rs:320
+#: crates/monet-bridge/src/cover.rs:323
 msgid ""
 "Windows and your game launchers are bringing everything up to date. The PC switches off by itself when they're done."
 msgstr ""
 "Windows और आपके गेम लॉन्चर सब कुछ अप-टू-डेट कर रहे हैं। पूरा होने पर पीसी अपने-आप बंद हो जाएगा।"
 
-#: crates/monet-bridge/src/cover.rs:324
+#: crates/monet-bridge/src/cover.rs:327
 msgid "Switch off now"
 msgstr "अभी बंद करें"
 
-#: crates/monet-bridge/src/cover.rs:329 crates/monet-bridge/src/cover.rs:342
+#: crates/monet-bridge/src/cover.rs:332 crates/monet-bridge/src/cover.rs:358
 msgid "Getting %1 ready"
 msgstr "%1 तैयार किया जा रहा है"
 
-#: crates/monet-bridge/src/cover.rs:331
+#: crates/monet-bridge/src/cover.rs:334
 msgid ""
 "Your game needs it here. Windows installs it once, from what Monet fetched for it, and then your game starts."
 msgstr ""
 "आपके गेम को यहाँ इसकी ज़रूरत है। Monet ने जो लाकर रखा है, उससे Windows इसे एक बार इंस्टॉल करता है, फिर आपका गेम शुरू होता है।"
+
+#: crates/monet-bridge/src/cover.rs:339 crates/monet-bridge/src/cover.rs:359
+msgid "Setting up %1"
+msgstr ""
+
+#: crates/monet-bridge/src/cover.rs:341
+msgid ""
+"Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
+msgstr ""
