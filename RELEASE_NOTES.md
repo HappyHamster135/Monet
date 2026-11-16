@@ -133,6 +133,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   you move on. Apps that draw their own title bar look just as they did. If
   you'd rather keep a title bar on every window, turn off Title bars appear
   when you point at the top in Settings → Light & Wallpaper.
+- **Scrolling in Zen carries on.** When a scroll inside a box on a web page,
+  like a code block or a chat, reaches the box's end, the page itself scrolls
+  on. Before, the next turns of the wheel went to the box for a second and a
+  half and seemed not to register.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

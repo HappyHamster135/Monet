@@ -1236,6 +1236,10 @@ class Icons(unittest.TestCase):
                      'user_pref("zen.updates.show-update-notification", false);'):
             self.assertIn(line, prefs)
         self.assertIn('user_pref("browser.shell.checkDefaultBrowser", false);', prefs)
+        # A scroll that reaches the end of a box on the page carries on into the page, and the
+        # wheel's next turns aren't held for that box for 1.5 s.
+        self.assertIn('user_pref("apz.allow_immediate_handoff", true);', prefs)
+        self.assertIn('user_pref("mousewheel.transaction.timeout", 400);', prefs)
         newtab = (SHARE / "monet/zen/newtab.css").read_text()
         self.assertIn('@-moz-document url("about:newtab"), url("about:home")', newtab)
         self.assertEqual(newtab.count("{"), newtab.count("}"))

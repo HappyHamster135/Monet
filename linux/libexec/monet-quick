@@ -2406,7 +2406,12 @@ ZEN_PREFS = ('user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", t
              'user_pref("startup.homepage_override_url", "");',
              'user_pref("browser.startup.homepage_override.mstone", "ignore");',
              'user_pref("datareporting.policy.firstRunURL", "");',
-             'user_pref("zen.updates.show-update-notification", false);')
+             'user_pref("zen.updates.show-update-notification", false);',
+             # Scrolling: when a box on a page (a code block, a chat, a map) reaches its end, the same
+             # scroll carries on into the page, and the wheel's next turns aren't kept for that box
+             # for 1.5 s (Firefox's wheel transaction), which felt like turns that didn't register.
+             'user_pref("apz.allow_immediate_handoff", true);',
+             'user_pref("mousewheel.transaction.timeout", 400);')
 ZEN_IMPORTS = {"userChrome.css": '@import url("monet/zen.css");', "userContent.css": '@import url("monet/newtab.css");'}
 # On an older PC (8 GB of memory or less, or a spinning disk) Zen puts a tab to sleep once it has
 # been left for ten minutes: it gives its memory back, and loads again when it's shown. A faster
