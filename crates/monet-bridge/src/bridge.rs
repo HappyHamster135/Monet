@@ -25,6 +25,7 @@ use monet_core::games::{self, Game, GameList, ESP_PATH};
 use monet_core::request::{self, LaunchRequest};
 
 use crate::cover::{self, Cover, Press, Scene};
+use crate::faceit::{self, Kit, Place};
 use crate::launchers;
 use crate::parse;
 use crate::win::{self, Answer, FirmwareVars};
@@ -1087,6 +1088,7 @@ fn agent() -> Res<()> {
     share_with_epic();
     share_with_ubisoft();
     add_wifi();
+    note_kits();
     if let Err(e) = publish(&scan()) {
         log(&e);
     }
@@ -1155,8 +1157,24 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
     match req.task.as_deref() {
         Some("launchers") => return sign_in_trip(efi, state),
         Some("update") => return update_trip(efi, now(), false),
+        Some(task) if task.ends_with("-setup") => {
+            if let Some(kit) = faceit::kit_for(task) {
+                return kit_setup_trip(efi, state, kit);
+            }
+        }
         _ => {}
     }
+    // A game played on its platform (Counter-Strike 2 on FACEIT): the platform's programs open
+    // first, as the person, and the game after.
+    let before = match req.task.as_deref().and_then(faceit::kit_for) {
+        Some(kit) if req.game.as_deref() == Some(kit.game) => {
+            if !kit_ready_to_play(efi, state, kit) {
+                return;
+            }
+            vec![format!("kit-open:{}", kit.key)]
+        }
+        _ => Vec::new(),
+    };
     let Some(id) = req.game else {
         log("opened Windows from Monet");
         return;
@@ -1261,7 +1279,7 @@ fn handle(efi: &mut FirmwareVars, state: &mut State, req: LaunchRequest) {
         }
     };
 
-    let pending = Pending { game: id.clone(), created: now(), open: Vec::new(), quietly: false };
+    let pending = Pending { game: id.clone(), created: now(), open: before, quietly: false };
     if !run_as_person(&pending) {
         log("launch task missing; starting the game directly");
         match (known, &steam_appid) {
@@ -1485,6 +1503,373 @@ fn sign_in_trip(efi: &mut FirmwareVars, state: &mut State) {
     }
 }
 
+// ------------------------------------------------------------- FACEIT, for Counter-Strike 2
+
+// CS2 plays in Monet; FACEIT's matches and anti-cheat only in Windows (faceit.rs). Setting it up
+// is a trip of its own (`faceit-setup`, asked for in Monet's Games): FACEIT's own installers,
+// downloaded here, checked, and gone through by the person. Playing on it (`faceit` with the
+// game) opens FACEIT before the game. Nothing here signs in, accepts terms or turns a
+// protection off.
+
+/// Where a platform's installers wait while they're checked and run: in Monet's own folder,
+/// which only administrators can change (the person can read and run what's in it).
+fn kit_dir(kit: &Kit) -> PathBuf {
+    data_dir().join(kit.key)
+}
+
+/// What Monet Bridge notes for Monet (`faceit.json`), read from Windows' drive in Monet.
+fn kit_record_path(kit: &Kit) -> PathBuf {
+    data_dir().join(format!("{}.json", kit.key))
+}
+
+fn kit_record(kit: &Kit) -> faceit::Record {
+    faceit::Record::read(fs::read(kit_record_path(kit)).ok().as_deref())
+}
+
+fn keep_kit_record(kit: &Kit, record: &faceit::Record) {
+    let path = kit_record_path(kit);
+    let temp = path.with_extension("json.new");
+    if fs::write(&temp, record.to_json()).and_then(|()| fs::rename(&temp, &path)).is_err() {
+        log(&format!("couldn't keep {}", path.display()));
+    }
+}
+
+/// Which parts of each platform Windows has, for Monet (at each sign-in): only once there's
+/// something to say, for someone who has one or set one up.
+fn note_kits() {
+    let kit = &faceit::FACEIT;
+    let mut record = kit_record(kit);
+    record.look(kit, kit_part_installed, now());
+    if kit_record_path(kit).exists() || record.installed.values().any(|&there| there) {
+        keep_kit_record(kit, &record);
+    }
+}
+
+/// A part's program, where its installer puts it.
+fn kit_program(part: &faceit::Part) -> Option<PathBuf> {
+    let program_files = std::env::var_os("ProgramFiles").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("C:\\Program Files"));
+    let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    part.places.iter().find_map(|place| {
+        let path = match place {
+            Place::ProgramFiles(rest) => program_files.join(rest),
+            Place::LocalAppData(rest) => local.as_ref()?.join(rest),
+        };
+        path.is_file().then_some(path)
+    })
+}
+
+/// A part's shortcut in the Start menu (the person's own, then everyone's), a folder or two in.
+fn kit_shortcut(part: &faceit::Part) -> Option<PathBuf> {
+    let menu = "Microsoft\\Windows\\Start Menu\\Programs";
+    for root in ["APPDATA", "ProgramData"].into_iter().filter_map(std::env::var_os).map(|v| PathBuf::from(v).join(menu)) {
+        let mut folders = vec![(root, 0)];
+        while let Some((folder, depth)) = folders.pop() {
+            let Ok(entries) = fs::read_dir(&folder) else { continue };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let Ok(kind) = entry.file_type() else { continue };
+                let named = path.file_stem().is_some_and(|s| part.shortcuts.iter().any(|n| s.to_string_lossy().eq_ignore_ascii_case(n)));
+                if kind.is_dir() && !kind.is_symlink() && depth < 2 {
+                    folders.push((path, depth + 1));
+                } else if kind.is_file() && named && path.extension().is_some_and(|x| x.eq_ignore_ascii_case("lnk")) {
+                    return Some(path);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Whether a part is installed: its program, its service (which stays when its folder moves) or
+/// its shortcut in the Start menu.
+fn kit_part_installed(part: &faceit::Part) -> bool {
+    kit_program(part).is_some()
+        || part.service.is_some_and(|s| win::reg_machine_dword(&format!("SYSTEM\\CurrentControlSet\\Services\\{s}"), "Start").is_some())
+        || kit_shortcut(part).is_some()
+}
+
+/// What Windows says of the protections FACEIT asks for, for Monet to show (as administrator:
+/// Secure Boot's state needs it). Only asked, never changed.
+const PROTECTIONS: &str = r#"
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$o = [ordered]@{ secureBoot = $null; tpm = ''; vbs = $null; memoryIntegrity = $null }
+try { $o.secureBoot = [bool](Confirm-SecureBootUEFI) } catch {}
+$t = Get-CimInstance -Namespace 'root/cimv2/Security/MicrosoftTpm' -ClassName Win32_Tpm -ErrorAction SilentlyContinue
+if ($t -and $t.IsEnabled_InitialValue) { $o.tpm = ([string]$t.SpecVersion).Split(',')[0].Trim() }
+$g = Get-CimInstance -Namespace 'root/Microsoft/Windows/DeviceGuard' -ClassName Win32_DeviceGuard -ErrorAction SilentlyContinue
+if ($g) { $o.vbs = ($g.VirtualizationBasedSecurityStatus -eq 2); $o.memoryIntegrity = (@($g.SecurityServicesRunning) -contains 2) }
+ConvertTo-Json -InputObject $o -Compress
+"#;
+
+fn kit_protections() -> Option<faceit::Security> {
+    let out = Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", PROTECTIONS])
+        .creation_flags(win::CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
+    faceit::security(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// Downloads over HTTPS only, redirects too, with Windows' own curl: the address it came from
+/// in the end.
+fn download_https(url: &str, to: &Path) -> Res<String> {
+    let system = std::env::var_os("SystemRoot").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("C:\\Windows"));
+    let out = Command::new(system.join("System32\\curl.exe"))
+        .args(["--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--location", "--max-redirs", "5"])
+        .args(["--fail", "--silent", "--show-error", "--connect-timeout", "30", "--max-time", "1200"])
+        .args(["--write-out", "%{url_effective}", "--output"])
+        .arg(to)
+        .arg(url)
+        .creation_flags(win::CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() || !to.is_file() {
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Windows' word on a file's Authenticode signature (Get-AuthenticodeSignature: checked all the
+/// way to a certificate Windows trusts). The file's name goes in by the environment, never into
+/// the script.
+const SIGNATURE: &str = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; \
+    $s = Get-AuthenticodeSignature -LiteralPath $env:MONET_FILE; \
+    ConvertTo-Json -Compress -InputObject ([ordered]@{ status = [string]$s.Status; subject = [string]$s.SignerCertificate.Subject })";
+
+fn authenticode(file: &Path) -> Option<faceit::Signature> {
+    let out = Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", SIGNATURE])
+        .env("MONET_FILE", file)
+        .creation_flags(win::CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
+    faceit::signature(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// A platform's installer in its folder, when Windows says its maker signed it.
+fn kit_installer_checked(kit: &Kit, part: &faceit::Part) -> Option<PathBuf> {
+    let file = kit_dir(kit).join(part.file);
+    authenticode(&file).is_some_and(|s| s.valid && kit.signed_by_maker(&s.subject)).then_some(file)
+}
+
+/// Runs a platform's installer as the person (the `\Monet\Launch` task, which checks it again),
+/// in its own window, and waits until it has closed, or Back to Monet. False when it never started.
+fn run_kit_installer(kit: &Kit, part: &faceit::Part, stop: &dyn Fn() -> bool) -> bool {
+    let pending = Pending { game: String::new(), created: now(), open: vec![format!("kit-install:{}:{}", kit.key, part.key)], quietly: false };
+    if !run_as_person(&pending) {
+        return false;
+    }
+    // Its program, and the one Inno Setup unpacks it into (`NAME.tmp`).
+    let stem = part.file.trim_end_matches(".exe").to_lowercase();
+    let names = [format!("{stem}.exe"), format!("{stem}.tmp")];
+    let running = || win::processes().iter().any(|p| names.contains(&p.exe_name.to_lowercase()));
+    let asked = Instant::now();
+    while !running() {
+        if asked.elapsed() > Duration::from_secs(90) || stop() {
+            return false;
+        }
+        sleep(Duration::from_millis(500));
+    }
+    let open = Instant::now();
+    while running() && open.elapsed() < Duration::from_secs(60 * 60) && !stop() {
+        sleep(Duration::from_secs(1));
+    }
+    // One that hands over to a program of its own (an updater) may be done a moment after.
+    let closed = Instant::now();
+    while !kit_part_installed(part) && closed.elapsed() < Duration::from_secs(30) && !stop() {
+        sleep(Duration::from_secs(1));
+    }
+    true
+}
+
+/// Setting a platform up on this PC, with the cover saying how it's going.
+struct KitPc<'a> {
+    kit: &'static Kit,
+    cover: Option<&'a Cover>,
+    back: std::cell::Cell<bool>,
+}
+
+impl faceit::Pc for KitPc<'_> {
+    fn installed(&self, part: &faceit::Part) -> bool {
+        kit_part_installed(part)
+    }
+    fn download(&self, url: &str, to: &Path) -> Result<String, String> {
+        download_https(url, to)
+    }
+    fn signature(&self, file: &Path) -> Option<faceit::Signature> {
+        authenticode(file)
+    }
+    fn run(&self, part: &faceit::Part, _file: &Path) -> bool {
+        run_kit_installer(self.kit, part, &|| self.stopped())
+    }
+    fn pause(&self) {
+        let since = Instant::now();
+        while since.elapsed() < Duration::from_secs(10) && !self.stopped() {
+            sleep(Duration::from_millis(200));
+        }
+    }
+    fn stopped(&self) -> bool {
+        if self.cover.is_some_and(|c| c.pressed() == Some(Press::BackNow)) {
+            self.back.set(true);
+        }
+        self.back.get()
+    }
+    fn doing(&self, part: &faceit::Part, doing: faceit::Doing) {
+        let (line, said) = match doing {
+            faceit::Doing::Downloading => (trf("Downloading %1 from %2", &[part.name, self.kit.name]), "downloading"),
+            faceit::Doing::Checking => (trf("Checking that %1 made it", &[self.kit.name]), "checking"),
+            faceit::Doing::Installing => (trf("%1's installer is open", &[part.name]), "installing"),
+        };
+        log(&format!("{}: {said}", part.name));
+        if let Some(cover) = self.cover {
+            cover.show(Scene::SettingUp { name: self.kit.name.into(), line });
+        }
+    }
+}
+
+/// A trip to set up a platform (FACEIT), asked for in Monet's Games: what's missing of it, from
+/// its maker's own installers, then its app and Steam to sign in to. Back to Monet ends it.
+fn kit_setup_trip(efi: &mut FirmwareVars, state: &mut State, kit: &'static Kit) {
+    log(&format!("setting up {}", kit.name));
+    let cover = Cover::open(Scene::SettingUp { name: kit.name.into(), line: String::new() });
+    let mut record = kit_record(kit);
+    record.security = kit_protections();
+    record.start_setup(kit, now());
+    keep_kit_record(kit, &record);
+    let dir = kit_dir(kit);
+    let _ = fs::create_dir_all(&dir);
+    let pc = KitPc { kit, cover: cover.as_ref(), back: std::cell::Cell::new(false) };
+    let steps = faceit::set_up(kit, &pc, &dir, |part, step| {
+        log(&format!("{}: {step:?}", part.name));
+        record.note(part, step, now());
+        keep_kit_record(kit, &record);
+    });
+    let _ = fs::remove_dir(&dir);
+    if pc.back.get() {
+        if let Err(e) = go_back(efi, state, &scan()) {
+            log(&e);
+        }
+        return;
+    }
+    if let Some(problem) = faceit::first_problem(&steps) {
+        let why = match problem {
+            faceit::Step::NoDownload => trf("%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet.", &[kit.name]),
+            faceit::Step::NotSigned => trf("Windows couldn't confirm that %1 made its installer, so Monet didn't run it.", &[kit.name]),
+            _ => trf("%1 wasn't installed. You can try again from Games in Monet whenever you like.", &[kit.name]),
+        };
+        if count_down(cover.as_ref(), Some(why)) {
+            if let Err(e) = go_back(efi, state, &scan()) {
+                log(&e);
+            }
+        }
+        return;
+    }
+    kit_sign_in(efi, state, kit, cover);
+}
+
+/// Signing in, once it's set up: the platform's app opens (as the person), and the cover lists
+/// it with Steam, each with Sign in, as on the trip to sign in to launchers.
+fn kit_sign_in(efi: &mut FirmwareVars, state: &mut State, kit: &'static Kit, cover: Option<Cover>) {
+    let open = |key: String| {
+        run_as_person(&Pending { game: String::new(), created: now(), open: vec![key], quietly: false });
+    };
+    open(format!("kit-open:{}", kit.key));
+    let steam = || launchers::installed().into_iter().find(|l| l.key == "steam");
+    let rows = || -> Vec<(String, bool)> {
+        let mut rows = vec![(kit.name.to_string(), false)];
+        rows.extend(steam().map(|s| (s.name.to_string(), launchers::signed_in(s.key))));
+        rows
+    };
+    let Some(cover) = cover.or_else(|| Cover::open(Scene::Launchers { rows: rows() })) else {
+        log("no cover; staying in Windows");
+        return;
+    };
+    cover.show(Scene::Launchers { rows: rows() });
+    let mut looked = Instant::now();
+    loop {
+        match cover.pressed() {
+            Some(Press::Open(0)) => open(format!("kit-open:{}", kit.key)),
+            Some(Press::Open(_)) => open("steam".into()),
+            Some(Press::BackNow) => {
+                if let Err(e) = go_back(efi, state, &scan()) {
+                    log(&e);
+                }
+                return;
+            }
+            _ => {}
+        }
+        if looked.elapsed() > Duration::from_secs(5) {
+            cover.show(Scene::Launchers { rows: rows() });
+            looked = Instant::now();
+        }
+        sleep(Duration::from_millis(200));
+    }
+}
+
+/// Before a game played on a platform (FACEIT): whether the platform is set up here, noted for
+/// Monet with what Windows says of its protections. When it isn't (any more), the cover says
+/// so and it's back to Monet.
+fn kit_ready_to_play(efi: &mut FirmwareVars, state: &State, kit: &'static Kit) -> bool {
+    let mut record = kit_record(kit);
+    record.look(kit, kit_part_installed, now());
+    record.security = kit_protections();
+    keep_kit_record(kit, &record);
+    if record.ready(kit) {
+        log(&format!("{} first, then the game", kit.name));
+        return true;
+    }
+    log(&format!("{} isn't set up in Windows", kit.name));
+    let cover = Cover::open(Scene::Back { seconds: RETURN_COUNTDOWN_SECS, why: None });
+    let why = trf("%1 isn't set up in Windows. Set it up from Games in Monet.", &[kit.name]);
+    if count_down(cover.as_ref(), Some(why)) {
+        if let Err(e) = go_back(efi, state, &scan()) {
+            log(&e);
+        }
+    }
+    false
+}
+
+/// The person's side of a platform (the `\Monet\Launch` task, never as administrator):
+/// `kit-install:KIT:PART` opens its installer once Windows says again that its maker signed
+/// it (Windows asks for an administrator itself when the installer wants one), and
+/// `kit-open:KIT` opens its programs, before a game too.
+fn kit_as_person(key: &str, before_game: bool) {
+    let install = key.strip_prefix("kit-install:").and_then(|rest| rest.split_once(':')).and_then(|(kit, part)| {
+        let kit = faceit::kit_for(kit)?;
+        Some((kit, kit.part(part)?))
+    });
+    if let Some((kit, part)) = install {
+        match kit_installer_checked(kit, part) {
+            Some(file) if win::open_uri(&file.to_string_lossy()) => log(&format!("{}'s installer is open", part.name)),
+            Some(_) => log(&format!("couldn't open {}'s installer", part.name)),
+            None => log(&format!("{}'s installer isn't signed by {}: not run", part.name, kit.name)),
+        }
+    } else if let Some(kit) = key.strip_prefix("kit-open:").and_then(faceit::kit_for) {
+        open_kit(kit, before_game);
+    }
+}
+
+/// Opens a platform's programs in order (its anti-cheat, then its app), by their Start menu
+/// shortcuts, else their programs, as the Start menu would. Before a game, waits for the
+/// anti-cheat's program to run first, a minute at most, as FACEIT wants it running before the
+/// game starts.
+fn open_kit(kit: &Kit, before_game: bool) {
+    for part in kit.parts {
+        match kit_shortcut(part).or_else(|| kit_program(part)) {
+            Some(path) if win::open_uri(&path.to_string_lossy()) => log(&format!("opened {}", part.name)),
+            _ => log(&format!("couldn't open {}", part.name)),
+        }
+    }
+    let watched: Vec<String> = kit.parts.iter().filter_map(|p| p.process).map(str::to_lowercase).collect();
+    let since = Instant::now();
+    while before_game && !watched.is_empty() && since.elapsed() < Duration::from_secs(60) {
+        if win::processes().iter().any(|p| watched.contains(&p.exe_name.to_lowercase())) {
+            return;
+        }
+        sleep(Duration::from_millis(500));
+    }
+}
+
 // ------------------------------------------------------------- updating, then off
 
 /// An update trip that's restarting Windows to finish its updates.
@@ -1657,8 +2042,16 @@ fn launch_pending() -> Res<()> {
     // the folder for files on both sides in Explorer.
     share_with_steam();
     pin_shared_files();
-    if !pending.open.is_empty() {
-        for key in &pending.open {
+    // A platform's installer or programs (FACEIT's), then the game, if there's one.
+    let (kits, open): (Vec<&String>, Vec<&String>) = pending.open.iter().partition(|key| key.starts_with("kit-"));
+    for key in &kits {
+        kit_as_person(key, !pending.game.is_empty());
+    }
+    if !kits.is_empty() && open.is_empty() && pending.game.is_empty() {
+        return Ok(());
+    }
+    if !open.is_empty() {
+        for key in open {
             // A launcher to install with its own window (Battle.net's), as the person.
             if let Some(launcher) = key.strip_prefix("install:") {
                 if !installer_command(launcher).status().is_ok_and(|s| s.success()) {
@@ -1941,7 +2334,7 @@ fn finish_setup() -> Res<()> {
 /// made-up games and launchers (MONET_LANGID=0x407 for German, say).
 fn cover_preview(args: &[String]) -> Res<()> {
     let [which, out, rest @ ..] = args else {
-        return Err("Usage: monet-bridge cover-preview starting|back|launchers|updating|preparing OUT.png [PICTURES]".into());
+        return Err("Usage: monet-bridge cover-preview starting|back|launchers|updating|preparing|setting-up OUT.png [PICTURES]".into());
     };
     let scene = match which.as_str() {
         "starting" => Scene::Starting { game: "VALORANT".into() },
@@ -1953,6 +2346,7 @@ fn cover_preview(args: &[String]) -> Res<()> {
             lines: vec![updates_line_windows("installing"), updates_line_steam(2), updates_line_downloads(24_000_000)],
         },
         "preparing" => Scene::Preparing { launcher: "Battle.net".into() },
+        "setting-up" => Scene::SettingUp { name: "FACEIT".into(), line: "Downloading FACEIT Anti-Cheat from FACEIT".into() },
         _ => return Err(format!("no scene called {which}")),
     };
     let dir = rest.first().map(PathBuf::from).unwrap_or_else(|| {

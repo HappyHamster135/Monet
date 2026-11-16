@@ -5966,7 +5966,7 @@ class ASmootherTripToWindows(unittest.TestCase):
         self.assertIn('["windows"] if args.iter().any(|a| a == "--update") => switch(None, Some("update"), confirm)', main)
         self.assertIn('command.args(["--task", task])', main)
         core = (ROOT / "crates/monet-core/src/request.rs").read_text(encoding="utf-8")
-        self.assertIn('pub const TASKS: &[&str] = &["launchers", "update"];', core)
+        self.assertIn('pub const TASKS: &[&str] = &["launchers", "update", "faceit-setup", "faceit"];', core)
         bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
         self.assertIn('Some("launchers") => return sign_in_trip(efi, state)', bridge)
         self.assertIn('Some("update") => return update_trip(efi, now(), false)', bridge)

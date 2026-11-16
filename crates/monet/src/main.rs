@@ -37,8 +37,11 @@ Monet: play Windows games with one click.
 Usage:
   monet                     Show status
   monet play <game>         Restart in Windows and start a game
+  monet play steam:730 --faceit
+                            Restart in Windows and open FACEIT, then Counter-Strike 2
   monet windows             Restart in Windows
   monet windows --launchers Restart in Windows to sign in to the game launchers once
+  monet windows --faceit    Restart in Windows to set up FACEIT with its own installers
   monet windows --update    Restart in Windows to update it and its games, then switch off
   monet games [--json]      List Windows games
   monet games --updated     When Windows games were last updated (Unix time), if ever
@@ -113,10 +116,12 @@ fn main() -> ExitCode {
             Ok(())
         }
         ["games"] => list_games(json),
+        ["play", id] if args.iter().any(|a| a == "--faceit") => switch(Some(id), Some("faceit"), confirm),
         ["play", id] => switch(Some(id), None, confirm),
         ["windows"] if args.iter().any(|a| a == "--first-run") => first_run_windows(),
         ["windows"] if args.iter().any(|a| a == "--launchers") => switch(None, Some("launchers"), confirm),
         ["windows"] if args.iter().any(|a| a == "--update") => switch(None, Some("update"), confirm),
+        ["windows"] if args.iter().any(|a| a == "--faceit") => switch(None, Some("faceit-setup"), confirm),
         ["windows"] => switch(None, None, confirm),
         ["doctor"] => doctor(),
         ["make-default"] => elevate(&["helper", "make-default"]),
@@ -348,17 +353,21 @@ fn switch(game: Option<&str>, task: Option<&str>, confirm: bool) -> Res<()> {
         // An app in Windows' Start menu (monet-quick's sheet asks first; this is for without it).
         let app = game.is_some_and(|id| id.starts_with("app:"));
         let title = match (&name, game, task) {
+            (Some(name), _, Some("faceit")) => say(t!("Play %1 on FACEIT?"), &[name.as_str()]),
             (Some(name), _, _) => say(t!("Play %1 on Windows?"), &[name.as_str()]),
             (None, Some(_), _) if app => t!("Open in Windows?").to_string(),
             (None, Some(_), _) => t!("Play on Windows?").to_string(),
             (None, None, Some("launchers")) => t!("Sign in to your game launchers?").to_string(),
+            (None, None, Some("faceit-setup")) => t!("Set up FACEIT in Windows?").to_string(),
             (None, None, Some(_)) => t!("Update Windows games?").to_string(),
             (None, None, None) => t!("Restart in Windows?").to_string(),
         };
         let text = match (game, task) {
             (Some(_), _) if app => t!("Your PC will restart in Windows and open it. Open apps will close."),
+            (Some(_), Some("faceit")) => t!("Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."),
             (Some(_), _) => t!("Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."),
             (None, Some("launchers")) => t!("Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."),
+            (None, Some("faceit-setup")) => t!("Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."),
             (None, Some(_)) => t!("Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."),
             (None, None) => t!("Your PC will restart in Windows. Open apps will close."),
         };
@@ -404,7 +413,7 @@ fn doctor() -> Res<()> {
 
     match efi.get(GLOBAL_GUID, "SecureBoot") {
         Ok(v) if v.first() == Some(&1) => ok("Secure Boot is on"),
-        Ok(_) => warn("Secure Boot is off. Some anti-cheat games (Valorant, Call of Duty) need it on."),
+        Ok(_) => warn("Secure Boot is off. Some anti-cheat games (Valorant, Call of Duty, FACEIT) need it on."),
         Err(_) => warn("Couldn't read the Secure Boot state"),
     }
 

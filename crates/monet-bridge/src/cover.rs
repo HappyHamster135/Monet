@@ -53,6 +53,9 @@ pub enum Scene {
     Updating { lines: Vec<String> },
     /// Installing the launcher a game in the shared Games folder needs, before the game.
     Preparing { launcher: String },
+    /// Setting up a game's platform (FACEIT) with its own installers, which the person goes
+    /// through: its name, and what's happening.
+    SettingUp { name: String, line: String },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -330,6 +333,19 @@ fn lay_out(l: &mut Layout, scene: &Scene) {
             l.gap(16.0);
             l.text(BODY, body, &tr("Your game needs it here. Windows installs it once, from what Monet fetched for it, and then your game starts."));
         }
+        Scene::SettingUp { name, line } => {
+            l.text(CAPTION, caption, &tr("In Windows, once"));
+            l.gap(8.0);
+            l.text(TITLE, 0xFFFFFF, &trf("Setting up %1", &[name]));
+            l.gap(16.0);
+            l.text(BODY, body, &tr("Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."));
+            if !line.is_empty() {
+                l.gap(24.0);
+                l.lines(std::slice::from_ref(line));
+            }
+            l.gap(32.0);
+            l.buttons(&[(tr("Back to Monet"), false, Press::BackNow)]);
+        }
     }
 }
 
@@ -340,6 +356,7 @@ fn title_of(scene: &Scene) -> String {
         Scene::Launchers { .. } => tr("Sign in to your game launchers"),
         Scene::Updating { .. } => tr("Updating your games"),
         Scene::Preparing { launcher } => trf("Getting %1 ready", &[launcher]),
+        Scene::SettingUp { name, .. } => trf("Setting up %1", &[name]),
     }
 }
 

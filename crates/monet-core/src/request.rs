@@ -50,8 +50,10 @@ pub fn is_windows_zone(name: &str) -> bool {
 }
 
 /// "launchers": sign in to the game launchers once, then back. "update": bring Windows and its
-/// games up to date, then switch off.
-pub const TASKS: &[&str] = &["launchers", "update"];
+/// games up to date, then switch off. "faceit-setup": install FACEIT with its own installers, as
+/// the person asked in Games, and sign in. "faceit" (with Counter-Strike 2): FACEIT opens first,
+/// then the game.
+pub const TASKS: &[&str] = &["launchers", "update", "faceit-setup", "faceit"];
 
 impl LaunchRequest {
     pub fn new(game: Option<String>, return_to: u16, now: u64) -> Result<Self> {
@@ -206,6 +208,12 @@ mod tests {
         assert_eq!(LaunchRequest::decode(&req.encode()).unwrap(), req);
         assert!(LaunchRequest::new(None, 3, 0).unwrap().with_task(Some("format-c".into())).is_err());
         assert!(LaunchRequest::decode(br#"{"v":1,"task":"format-c","return_to":3,"created":0}"#).is_err());
+        // FACEIT: set up on a trip of its own, or opened before Counter-Strike 2.
+        let setup = LaunchRequest::new(None, 3, 1000).unwrap().with_task(Some("faceit-setup".into())).unwrap();
+        assert_eq!(LaunchRequest::decode(&setup.encode()).unwrap(), setup);
+        let play = LaunchRequest::new(Some("steam:730".into()), 3, 1000).unwrap().with_task(Some("faceit".into())).unwrap();
+        assert_eq!(String::from_utf8(play.encode()).unwrap(), r#"{"v":1,"game":"steam:730","task":"faceit","return_to":3,"created":1000}"#);
+        assert_eq!(LaunchRequest::decode(&play.encode()).unwrap(), play);
         // A Bridge from before tasks ignores what it doesn't know: it just opens Windows.
         #[derive(serde::Deserialize)]
         struct Older {
