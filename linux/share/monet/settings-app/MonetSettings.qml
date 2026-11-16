@@ -249,7 +249,8 @@ Shared.MonetWindow {
         { id: "power", name: i18n("Power & Sleep"),
           glyph: "M12 3v8M7 6.5a7 7 0 1 0 10 0",
           words: i18nc("Settings search words, space-separated",
-                      "power sleep suspend screen off energy battery lid button shutdown performance saver mode lock locker wake away password") },
+                      "power sleep suspend screen off energy battery lid button shutdown performance saver mode lock locker wake away password")
+              + " " + i18nc("Settings search words, space-separated", "restart reboot reopen apps again windows remember session") },
         { id: "privacy", name: i18n("Privacy"), glyph: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 6 0v3",
           words: i18nc("Settings search words, space-separated",
                       "privacy recent files history forget remember fingerprint finger") },
@@ -635,6 +636,17 @@ Shared.MonetWindow {
             sheet.refreshWindowsSetup()
         }
     }
+    // While a restart's apps are still reopening, its summary on Power & Sleep keeps up.
+    Timer {
+        interval: 1800
+        repeat: true
+        running: sheet.pollingActive && sheet.page === "power" && sheet.returnInfo.busy === true
+        onTriggered: sheet.loadReturn()
+    }
+    function setReopenWork(on) {
+        sheet.ready = sheet.changed(sheet.ready, ["apps"], on)
+        sheet.ask("trip-apps " + (on ? "on" : "off"), out => sheet.ready = sheet.json(out, sheet.ready))
+    }
     // Updates: "", "checking", "none", "available", "installing", "done" or
     // "failed"; what the check found; and what Monet said.
     property string updateState: ""
@@ -817,6 +829,9 @@ Shared.MonetWindow {
             loadKeepAwake()
             ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
             ask("battery-care", out => sheet.batteryCare = sheet.json(out, sheet.batteryCare))
+            // Reopen your work, and what didn't reopen after the last restart.
+            ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
+            loadReturn()
         } else if (page === "input") {
             ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo))
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))  // Windows+Z goes with Snap layouts
@@ -5661,6 +5676,39 @@ Shared.MonetWindow {
                         }
                     }
                 }
+                Caption {
+                    tone: look
+                    text: i18n("When you restart")
+                }
+                Card {
+                    tone: look
+                    // After a restart, a sign-out, a crash or a power cut, and after Windows: the same
+                    // switch as Play on Windows' (monet-work keeps the work; monet-quick reopens it).
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        tappable: true
+                        checkable: true
+                        checked: sheet.ready.apps !== false
+                        objectName: "search-reopen"
+                        title: i18n("Reopen your work")
+                        detail: i18n("After a restart, a sign-out or a trip to Windows, your apps come back on the same screens and desktops, where they were, with saved documents and Files tabs. Unsaved changes and private tabs aren't kept.")
+                        onTapped: sheet.setReopenWork(sheet.ready.apps === false)
+                        Switch {
+                            tone: look
+                            active: sheet.ready.apps !== false
+                        }
+                    }
+                }
+                // Only when something didn't reopen after the last restart: with everything back,
+                // there's nothing to say.
+                Loader {
+                    Layout.fillWidth: true
+                    active: sheet.returnInfo.available === true && sheet.returnInfo.kind === "restart"
+                        && (sheet.returnInfo.items || []).some(item => item.needsAttention === true || item.retry === true)
+                    visible: active
+                    sourceComponent: returnSummary
+                }
                 Pill {
                     tone: look
                     text: i18n("More power settings…")
@@ -8211,6 +8259,105 @@ Shared.MonetWindow {
             }
         }
 
+        // What reopened after the last trip or restart, and what to retry: on Play on Windows,
+        // and on Power & Sleep after a restart.
+        Component {
+            id: returnSummary
+            Card {
+                id: summary
+                readonly property string returnTitle: sheet.returnInfo.kind === "restart"
+                    ? i18n("After your last restart") : i18n("After your last return")
+                objectName: "search-return"
+                tone: look
+                Accessible.role: Accessible.Grouping
+                Accessible.name: returnTitle
+                SettingRow {
+                    tone: look
+                    divider: false
+                    title: summary.returnTitle
+                    detail: sheet.returnInfo.busy ? i18n("Reopening your work…")
+                        : sheet.returnInfo.available ? i18n("What opened, and what still needs attention. Open app uses its normal startup settings.")
+                        : i18n("After a trip to Windows, your recovery summary appears here. Save your work before leaving; unsaved changes and private tabs aren't captured.")
+                    Row {
+                        spacing: 8
+                        Pill {
+                            objectName: "returnRetryAll"
+                            tone: look
+                            visible: sheet.returnInfo.retry === true
+                            text: i18n("Retry pending")
+                            enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
+                            onClicked: sheet.returnAction("retry", "")
+                        }
+                        Pill {
+                            objectName: "returnDismiss"
+                            tone: look
+                            visible: sheet.returnInfo.available === true
+                            text: i18n("Dismiss")
+                            enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
+                            onClicked: sheet.returnAction("dismiss", "")
+                        }
+                    }
+                }
+                Repeater {
+                    model: sheet.returnInfo.items || []
+                    SettingRow {
+                        required property var modelData
+                        tone: look
+                        title: modelData.name
+                        detail: modelData.detail + ((modelData.missing || []).length > 0
+                            ? "\n" + i18n("Unavailable: %1", modelData.missing.join(", ")) : "")
+                        Row {
+                            spacing: 8
+                            Pill {
+                                objectName: "returnRetry-" + modelData.app
+                                tone: look
+                                visible: modelData.retry === true
+                                text: modelData.missingCount > 0 ? i18n("Retry documents") : i18n("Retry")
+                                enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
+                                onClicked: sheet.returnAction("retry", modelData.app)
+                            }
+                            Pill {
+                                objectName: "returnOpen-" + modelData.app
+                                tone: look
+                                visible: modelData.canOpen === true
+                                text: i18n("Open app")
+                                enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
+                                onClicked: sheet.returnAction("open", modelData.app)
+                            }
+                            Pill {
+                                tone: look
+                                visible: modelData.missingCount > 0
+                                text: i18n("Backups")
+                                onClicked: sheet.open("backups")
+                            }
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    Layout.margins: 18
+                    visible: sheet.returnInfo.available === true
+                    text: i18n("Dismiss forgets this recovery list, not your files. Apps already running are left alone.")
+                    color: look.dim
+                    font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
+                    wrapMode: Text.Wrap
+                }
+                SettingRow {
+                    tone: look
+                    visible: sheet.returnProblem !== "" || sheet.returnReadProblem !== ""
+                    title: sheet.returnProblem || sheet.returnReadProblem
+                    strong: false
+                    Pill {
+                        objectName: "returnRefresh"
+                        tone: look
+                        text: i18n("Refresh")
+                        enabledPill: !sheet.returnLoading && !sheet.returnBusy
+                        onClicked: sheet.loadReturn()
+                    }
+                }
+            }
+        }
+
         Component {
             id: windowsPage
             ColumnLayout {
@@ -8482,96 +8629,9 @@ Shared.MonetWindow {
                         }
                     }
                 }
-                Card {
-                    id: returnCard
-                    objectName: "search-return"
-                    tone: look
-                    Accessible.role: Accessible.Grouping
-                    Accessible.name: i18n("After your last return")
-                    SettingRow {
-                        tone: look
-                        divider: false
-                        title: i18n("After your last return")
-                        detail: sheet.returnInfo.busy ? i18n("Reopening your work…")
-                            : sheet.returnInfo.available ? i18n("What opened, and what still needs attention. Open app uses its normal startup settings.")
-                            : i18n("After a trip to Windows, your recovery summary appears here. Save your work before leaving; unsaved changes and private tabs aren't captured.")
-                        Row {
-                            spacing: 8
-                            Pill {
-                                objectName: "returnRetryAll"
-                                tone: look
-                                visible: sheet.returnInfo.retry === true
-                                text: i18n("Retry pending")
-                                enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
-                                onClicked: sheet.returnAction("retry", "")
-                            }
-                            Pill {
-                                objectName: "returnDismiss"
-                                tone: look
-                                visible: sheet.returnInfo.available === true
-                                text: i18n("Dismiss")
-                                enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
-                                onClicked: sheet.returnAction("dismiss", "")
-                            }
-                        }
-                    }
-                    Repeater {
-                        model: sheet.returnInfo.items || []
-                        SettingRow {
-                            required property var modelData
-                            tone: look
-                            title: modelData.name
-                            detail: modelData.detail + ((modelData.missing || []).length > 0
-                                ? "\n" + i18n("Unavailable: %1", modelData.missing.join(", ")) : "")
-                            Row {
-                                spacing: 8
-                                Pill {
-                                    objectName: "returnRetry-" + modelData.app
-                                    tone: look
-                                    visible: modelData.retry === true
-                                    text: modelData.missingCount > 0 ? i18n("Retry documents") : i18n("Retry")
-                                    enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
-                                    onClicked: sheet.returnAction("retry", modelData.app)
-                                }
-                                Pill {
-                                    objectName: "returnOpen-" + modelData.app
-                                    tone: look
-                                    visible: modelData.canOpen === true
-                                    text: i18n("Open app")
-                                    enabledPill: !sheet.returnBusy && !sheet.returnInfo.busy
-                                    onClicked: sheet.returnAction("open", modelData.app)
-                                }
-                                Pill {
-                                    tone: look
-                                    visible: modelData.missingCount > 0
-                                    text: i18n("Backups")
-                                    onClicked: sheet.open("backups")
-                                }
-                            }
-                        }
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.margins: 18
-                        visible: sheet.returnInfo.available === true
-                        text: i18n("Dismiss forgets this recovery list, not your files. Apps already running are left alone.")
-                        color: look.dim
-                        font.pixelSize: Math.max(14, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 2)
-                        wrapMode: Text.Wrap
-                    }
-                    SettingRow {
-                        tone: look
-                        visible: sheet.returnProblem !== "" || sheet.returnReadProblem !== ""
-                        title: sheet.returnProblem || sheet.returnReadProblem
-                        strong: false
-                        Pill {
-                            objectName: "returnRefresh"
-                            tone: look
-                            text: i18n("Refresh")
-                            enabledPill: !sheet.returnLoading && !sheet.returnBusy
-                            onClicked: sheet.loadReturn()
-                        }
-                    }
+                Loader {
+                    Layout.fillWidth: true
+                    sourceComponent: returnSummary
                 }
                 Card {
                     tone: look
@@ -8622,17 +8682,16 @@ Shared.MonetWindow {
                             active: sheet.ready.on === true
                         }
                     }
-                    // The apps that were open before the trip start again (monet-quick remembers them).
+                    // The apps that were open before the trip start again (monet-quick remembers them),
+                    // as after a restart: the same switch as Power & Sleep's.
                     SettingRow {
                         tone: look
                         tappable: true
-                        title: i18n("Open your apps again")
-                        detail: i18n("Reopen apps, saved documents and Files tabs after Windows. Zen follows its tab-restore preference. Save your work first; private tabs aren't restored.")
-                        onTapped: {
-                            const on = sheet.ready.apps === false
-                            sheet.ready = sheet.changed(sheet.ready, ["apps"], on)
-                            sheet.ask("trip-apps " + (on ? "on" : "off"), out => sheet.ready = sheet.json(out, sheet.ready))
-                        }
+                        checkable: true
+                        checked: sheet.ready.apps !== false
+                        title: i18n("Reopen your work")
+                        detail: i18n("After Windows or a restart, your apps come back where they were, with saved documents and Files tabs. Zen follows its tab-restore preference. Unsaved changes and private tabs aren't kept.")
+                        onTapped: sheet.setReopenWork(sheet.ready.apps === false)
                         Switch {
                             tone: look
                             active: sheet.ready.apps !== false

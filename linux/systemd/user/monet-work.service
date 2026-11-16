@@ -1,0 +1,17 @@
+[Unit]
+Description=Monet: keeps a recent picture of your open apps and windows, to reopen after a restart
+# With the desktop, and gone with it. It stops writing the moment a restart, shutdown or sign-out
+# begins (monet-work), so the apps those close come back.
+PartOf=graphical-session.target
+After=graphical-session.target plasma-kwin_wayland.service
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-work
+Restart=on-failure
+RestartSec=10
+Nice=10
+Slice=background.slice
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical-session.target

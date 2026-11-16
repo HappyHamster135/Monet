@@ -65,6 +65,9 @@ systemctl --global disable monet-ready-lock.service monet-listening.service >/de
 rm -f /etc/systemd/system/monet-ready-leave.service /etc/systemd/system/monet-ready-boot.service \
     /etc/systemd/user/monet-ready-lock.service /etc/plasmalogin.conf.d/zz-monet-ready.conf /run/monet/ready-auto \
     /etc/systemd/user/monet-replay.service /etc/systemd/user/monet-listening.service
+# Your work after a restart: no more pictures of it.
+systemctl --global disable monet-work.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-work.service
 # Backups: no more earlier versions (the ones kept go, with Monet; the files themselves
 # stay), and no more copies to a drive (what's on it stays there).
 systemctl disable --now monet-keep.timer monet-keep-prepare.service >/dev/null 2>&1 || true
@@ -137,7 +140,7 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
-for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do
@@ -189,7 +192,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/aurorae/themes/MonetSmoke" "$PREFIX/share/aurorae/themes/MonetSmokeSolid" \
     "$PREFIX/share/aurorae/themes/MonetMatte" "$PREFIX/share/aurorae/themes/MonetSmokeMatte" \
     "$PREFIX/share/kwin/scripts/monet-snap" "$PREFIX/share/kwin/effects/monet-motion" \
-    "$PREFIX/share/kwin/tabbox/monet-windows" \
+    "$PREFIX/share/kwin/scripts/monet-work" "$PREFIX/share/kwin/tabbox/monet-windows" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
     "$PREFIX/share/doc/monet/passwords-connector" \
     /var/lib/monet

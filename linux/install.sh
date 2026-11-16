@@ -109,7 +109,7 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -270,6 +270,8 @@ done
 # gliding to where they're put (a KWin effect, in place of KWin's own Stretch).
 tree "$SRC/share/kwin/scripts/monet-snap" "$DATADIR/kwin/scripts/monet-snap"
 tree "$SRC/share/kwin/effects/monet-motion" "$DATADIR/kwin/effects/monet-motion"
+# Your work after a restart: tells monet-work.service when windows open, close or move.
+tree "$SRC/share/kwin/scripts/monet-work" "$DATADIR/kwin/scripts/monet-work"
 tree "$SRC/share/kwin/tabbox/monet-windows" "$DATADIR/kwin/tabbox/monet-windows"
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
@@ -344,6 +346,8 @@ done
 put 644 "$SRC/systemd/user/monet-ready-lock.service" "$USERUNITDIR/monet-ready-lock.service"
 # The question, as in Windows, when a program starts accepting connections (Settings → Security).
 put 644 "$SRC/systemd/user/monet-listening.service" "$USERUNITDIR/monet-listening.service"
+# Your work, kept fresh while the desktop is used and reopened after a restart (Settings → Power & Sleep).
+put 644 "$SRC/systemd/user/monet-work.service" "$USERUNITDIR/monet-work.service"
 # The last 30 seconds, kept while Games & Controllers' switch is on (each person turns it on).
 put 644 "$SRC/systemd/user/monet-replay.service" "$USERUNITDIR/monet-replay.service"
 # Windows' Games folder into Steam's libraries before Steam starts with the session.
@@ -490,6 +494,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl --global enable monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
+    systemctl --global enable monet-work.service
     systemctl enable monet-keep-prepare.service monet-keep.timer
     systemctl --global enable monet-backup.timer monet-rest.timer
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
@@ -554,6 +559,10 @@ ABOUT
     rm -f /etc/xdg/autostart/input-remapper-autoload.desktop
     # And KDE's welcome, which Plasma starts at the first sign-in and after updates.
     printf '[General]\nLastSeenVersion=9999\nShowUpdatePage=false\n' > /etc/xdg/plasma-welcomerc
+    # Monet reopens your work after a restart itself, on its screens and desktops (monet-work):
+    # KDE's own restore, which only starts each app again, stays off so nothing opens twice.
+    # Choosing it in KDE's Desktop Session settings hands restarts back to KDE (monet-quick).
+    command -v kwriteconfig6 >/dev/null && kwriteconfig6 --file /etc/xdg/ksmserverrc --group General --key loginMode emptySession
     # Zen is the browser (Monet Setup's everyday apps bring it): web links open
     # in it, unless someone picks another in Settings → Default Apps.
     browser=app.zen_browser.zen.desktop
@@ -693,6 +702,7 @@ else
     systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service monet-listening.service >/dev/null 2>&1 || true
+    systemctl --global enable monet-work.service >/dev/null 2>&1 || true
     # The homes become a subvolume at the next start, before anyone signs in.
     systemctl enable monet-keep-prepare.service >/dev/null 2>&1 || true
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true

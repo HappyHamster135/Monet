@@ -35,8 +35,10 @@
     monet-quick ready-lock               (at such a sign-in) lock before the desktop shows
     monet-quick remember-apps [GAME]     (just before a trip to Windows) the apps open now, to start again after,
                                          and the game it's for, as played; prints the checkpoint ID
-    monet-quick trip-apps-again          (at the sign-in after it) start them again
-    monet-quick trip-apps on|off         whether the apps that were open start again after Windows
+    monet-quick trip-apps-again          (at every sign-in) start them again, then the last sign-in's
+                                         work (monet-work), after a restart, a sign-out or a crash
+    monet-quick work-capture             this sign-in's work now, as monet-work keeps it, as JSON
+    monet-quick trip-apps on|off         Reopen your work: the apps open before a restart or Windows
     monet-quick startup                  how long the last start took: the PC, Monet, your desktop, as JSON
     monet-quick batteries                everything with a battery (this laptop, mouse, controllers...), as JSON
     monet-quick battery-care             whether the battery can stop at 80%, and where it stops, as JSON
@@ -7769,6 +7771,9 @@ def search_catalog():
          N_("recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"), "recovery", "document-revert"),
         ("restore-work", tr("Restore work after Windows"), tr("Play on Windows · Reopen apps when you return"),
          N_("restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"), "windows#return", "view-restore"),
+        ("reopen-work", tr("Reopen your work"), tr("Power & Sleep · Your apps come back after a restart"),
+         N_("reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"),
+         "power#reopen", "view-restore"),
         ("default-apps", tr("Choose default apps"), tr("Default Apps · Browser, email and files"),
          N_("default apps; change default browser; open with; email app; pdf app"), "apps", "preferences-desktop-default-applications"),
         ("settings", tr("Settings"), tr("Personalize Monet and manage your devices"),
@@ -8109,8 +8114,14 @@ def ready_state():
 # the apps that start with every sign-in anyway are left to themselves.
 
 TRIP_APPS = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "monet/trip-apps.json"
+# The same switch (Settings: Reopen your work) covers restarts, sign-outs, crashes and power cuts:
+# monet-work keeps this sign-in's work (WORK) fresh, and the next sign-in reopens it once (WORK_RETURN).
 TRIP_APPS_OFF = CONFIG / "monet/trip-apps-off"
 TRIP_APPS_FRESH = 12 * 3600
+WORK = TRIP_APPS.with_name("work.json")
+WORK_RETURN = TRIP_APPS.with_name("work-return.json")
+WORK_AGAIN = TRIP_APPS.with_name("work-again.json")  # this sign-in's reopening: {session, done}
+KDE_RESTORE = ("restorePreviousLogout", "restoreSavedSession")
 PLAYED_WINDOWS = TRIP_APPS.parent / "played-windows.json"  # {windows game id: when Monet sent it there}
 NOT_AGAIN = {"steam.desktop", "com.valvesoftware.Steam.desktop", "monet-settings.desktop", "monet-windows.desktop",
              "org.kde.plasmashell.desktop", "org.kde.krunner.desktop", "org.kde.spectacle.desktop",
@@ -8165,6 +8176,19 @@ def resume_helper():
     return module
 
 
+def reopenable(apps):
+    """The apps Monet opens again: in the menu, not Monet's own or Steam, and not those that
+    start by themselves at sign-in anyway (they'd open twice)."""
+    keep = []
+    for app in apps:
+        entry = entry_by_id(app)
+        if (app not in NOT_AGAIN and entry and entry.get("Type") == "Application" and entry.get("NoDisplay") != "true"
+                and not starts_anyway(app)):
+            if app not in keep:
+                keep.append(app)
+    return keep
+
+
 def remember_apps(apps=None, game=None):
     """Just before a trip to Windows: the apps to start again when Monet's back, and the game
     the trip is for, as played now (Recently played shows it)."""
@@ -8181,15 +8205,8 @@ def remember_apps(apps=None, game=None):
     desktop = resume.desktop_snapshot() if live else {}
     windows = desktop.get("windows", [])
     apps = list(dict.fromkeys(running_apps() + [w["app"] for w in windows])) if live else apps
-    keep = []
-    for app in apps:
-        entry = entry_by_id(app)
-        if (app not in NOT_AGAIN and entry and entry.get("Type") == "Application" and entry.get("NoDisplay") != "true"
-                and not starts_anyway(app)):
-            if app not in keep:
-                keep.append(app)
     # Live capture must succeed before replacing the previous work checkpoint.
-    keep = keep[:resume.MAX_APPS]
+    keep = reopenable(apps)[:resume.MAX_APPS]
     saved = resume.checkpoint(keep, windows, desktop.get("scene")) if live else {"time": int(time.time()), "apps": keep}
     if TRIP_APPS_OFF.exists():
         return []
@@ -8224,19 +8241,231 @@ def trip_apps_again(selected=None, request=None):
 
 
 def set_trip_apps(on):
+    """Settings' Reopen your work. Off also forgets what was waiting to reopen, never your files."""
     if on:
         TRIP_APPS_OFF.unlink(missing_ok=True)
     else:
         TRIP_APPS_OFF.parent.mkdir(parents=True, exist_ok=True)
         TRIP_APPS_OFF.write_text("")
         resume = resume_helper()
-        resume.discard(TRIP_APPS, resume.read_state(TRIP_APPS))
-        resume.return_path(TRIP_APPS).unlink(missing_ok=True)
+        for path in (TRIP_APPS, WORK, WORK_RETURN):
+            resume.discard(path, resume.read_state(path))
+            resume.return_path(path).unlink(missing_ok=True)
 
 
-def return_status():
-    state = resume_helper().return_status(TRIP_APPS, TRIP_APPS_OFF, TRIP_APPS_FRESH)
-    state["busy"] = state["busy"] or return_worker_active()
+# Your work after a restart ---------------------------------------------------
+# monet-work (monet-work.service, with the Monet Work KWin script) keeps a recent picture of this
+# sign-in's work in WORK. At the next sign-in, monet-session runs `trip-apps-again`: the last
+# sign-in's picture becomes WORK_RETURN, once, and reopens with the trip's own machinery (Kate,
+# KWrite and PDF documents, Files tabs, Zen's session, KWin places) after any trip's return.
+# KDE's own session restore stays off (monet-look sets ksmserverrc's loginMode to an empty
+# session), so no app opens twice; an account that chose KDE's in its settings keeps KDE's.
+
+def session_key():
+    """This sign-in, the same in every Monet process of it: the boot and logind's session."""
+    session = os.environ.get("XDG_SESSION_ID") or (run("loginctl", "show-user", str(os.getuid()), "-p", "Display",
+                                                        "--value") or "").strip()
+    return f"{resume_helper().boot_id()}:{session}"
+
+
+def kde_restores():
+    """Whether this account chose KDE's own session restore (System Settings → Desktop Session)."""
+    group = ""
+    try:
+        lines = (CONFIG / "ksmserverrc").read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return False
+    for line in lines:
+        line = line.strip()
+        if line.startswith("["):
+            group = line
+        elif group == "[General]" and line.partition("=")[0].strip().split("[")[0] == "loginMode":
+            return line.partition("=")[2].strip() in KDE_RESTORE
+    return False
+
+
+def departing():
+    """A switch to Windows is closing the apps: the trip keeps its own checkpoint of them."""
+    resume = resume_helper()
+    saved = resume.read_state(TRIP_APPS)
+    stamp = saved.get("time")
+    return (saved.get("version") == 3 and bool(saved.get("boot")) and saved.get("boot") == resume.boot_id()
+            and not saved.get("cancelled_boot") and type(stamp) in (int, float) and 0 <= time.time() - stamp <= 1800)
+
+
+def capture_work(session):
+    """monet-work's picture of the work open now, or None while Reopen your work is off."""
+    if TRIP_APPS_OFF.exists():
+        return None
+    resume = resume_helper()
+    desktop = resume.desktop_snapshot()
+    windows = [w for w in desktop.get("windows", []) if isinstance(w, dict) and isinstance(w.get("app"), str)]
+    apps = reopenable(list(dict.fromkeys(running_apps() + [w["app"] for w in windows])))[:resume.MAX_APPS]
+    return resume.work_checkpoint(apps, windows, desktop.get("scene"), session)
+
+
+def save_work(saved):
+    return resume_helper().save_work(WORK, WORK_RETURN, saved, TRIP_APPS_OFF)
+
+
+def trim_work(closed, session):
+    return resume_helper().trim_work(WORK, closed, session)
+
+
+def work_settled(session):
+    """This sign-in's reopening is over: monet-work's pictures may begin."""
+    marker = resume_helper().read_state(WORK_AGAIN)
+    return marker.get("session") == session and marker.get("done") is True
+
+
+def mark_work_again(session, done):
+    try:
+        resume_helper().atomic_write(WORK_AGAIN, {"session": session, "done": done, "time": int(time.time())})
+    except OSError:
+        pass
+    if done:  # monet-work waits for this; tell it now rather than when its wait runs out.
+        run("busctl", "--user", "--timeout=2", "call", "org.monet.Work", "/org/monet/Work", "org.monet.Work", "Changed", timeout=5)
+
+
+def wait_for_desktop(resume, tries=30):
+    """KWin answers before the first app is placed (it may still be starting at sign-in)."""
+    for _ in range(tries):
+        try:
+            resume.window_snapshot()
+            return True
+        except OSError:
+            time.sleep(1)
+    return False
+
+
+def kde_saved_apps(fresh=3 * 86400):
+    """The apps KDE's own restore listed at its last sign-out (plasmasessionrestorerc), if recent."""
+    path = TRIP_APPS.parent.parent / "plasmasessionrestorerc"
+    try:
+        if time.time() - path.stat().st_mtime > fresh:
+            return []
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[:1000]
+    except OSError:
+        return []
+    found = [line.partition("=")[2].strip() for line in lines if line.partition("=")[0].strip() == "appId"]
+    return list(dict.fromkeys(app if app.endswith(".desktop") else app + ".desktop"
+                              for app in found if re.fullmatch(r"[\w.+-]+", app.removesuffix(".desktop"))))
+
+
+def first_work(resume, session):
+    """The first sign-in with Monet's own reopening: what KDE's restore would have opened, once,
+    as KDE did (no places yet). From the next restart on, monet-work's picture has them all."""
+    import uuid
+    apps = reopenable(kde_saved_apps())[:resume.MAX_APPS]
+    if not apps:
+        return
+    saved = {"version": 4, "kind": "work", "id": uuid.uuid4().hex, "time": int(time.time()), "boot": resume.boot_id(),
+             "session": "kde", "apps": apps, "windows": [], "documents": {}, "done": [],
+             "handed": {"session": session, "time": time.time()}}
+    with resume.restore_lock(WORK_RETURN):
+        if not WORK_RETURN.exists():
+            resume.atomic_write(WORK_RETURN, saved)
+
+
+def reopen_work():
+    """At sign-in, once: a trip's apps (trip_apps_again), then the last sign-in's work, after a
+    restart, a sign-out, a crash or a power cut. Returns the apps started."""
+    resume = resume_helper()
+    session = session_key()
+    first = not WORK_AGAIN.exists() and not WORK.exists() and not WORK_RETURN.exists()
+    mark_work_again(session, False)
+    started = []
+    try:
+        try:
+            resume.hand_over(WORK, WORK_RETURN, session)
+        except (BlockingIOError, OSError):
+            pass  # Taken over by monet-work's first picture instead.
+        trip = resume.read_state(TRIP_APPS)
+        if first and not trip and not TRIP_APPS_OFF.exists() and not kde_restores():
+            first_work(resume, session)
+        if trip:
+            started += trip_apps_again() or []
+            queue_return_notice()
+        work = resume.read_state(WORK_RETURN)
+        handed = work.get("handed") if isinstance(work.get("handed"), dict) else {}
+        if work.get("version") != 4 or handed.get("session") != session or work.get("automatic"):
+            return started
+        with resume.restore_lock(WORK_RETURN):
+            work = resume.read_state(WORK_RETURN)
+            if work.get("automatic"):
+                return started
+            # Turned off, a trip that ended the last session (it reopened them), or KDE's own
+            # restore chosen in KDE's settings: nothing opens twice.
+            if TRIP_APPS_OFF.exists() or kde_restores() or (trip and resume.trip_owns_return(trip, work)):
+                resume.discard(WORK_RETURN, work)
+                resume.return_path(WORK_RETURN).unlink(missing_ok=True)
+                return started
+            work["automatic"] = True
+            # Apps that start by themselves now, or that the trip just opened, aren't opened again.
+            gone = {app for app in work.get("apps", []) if isinstance(app, str) and (app in started or starts_anyway(app))} \
+                if isinstance(work.get("apps"), list) else set()
+            if gone:
+                work["apps"] = [app for app in work["apps"] if app not in gone]
+                if isinstance(work.get("windows"), list):
+                    work["windows"] = [w for w in work["windows"] if not (isinstance(w, dict) and w.get("app") in gone)]
+                for key in ("groups", "documents"):
+                    if isinstance(work.get(key), dict):
+                        for app in gone:
+                            work[key].pop(app, None)
+                if resume.BROWSER in gone:
+                    work.pop("browser", None)
+            resume.atomic_write(WORK_RETURN, work)
+        wait_for_desktop(resume)
+        started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH)
+        # Everything back where it was needs no summary or word; what couldn't reopen has both.
+        report = resume.read_return(WORK_RETURN)
+        if any(item.get("status") in RESTART_ATTENTION for item in report.get("items", {}).values()):
+            queue_return_notice(WORK_RETURN, attention=True)
+        elif not WORK_RETURN.exists():
+            resume.return_path(WORK_RETURN).unlink(missing_ok=True)
+        return started
+    except (BlockingIOError, OSError):
+        return started
+    finally:
+        mark_work_again(session, True)
+
+
+# A restart's summary only asks for attention when something couldn't reopen (private browsing
+# staying closed is how it should be).
+RESTART_ATTENTION = {"unconfirmed", "missing-app", "folders-unavailable", "documents-missing",
+                     "partly-restored", "browser-unavailable", "files-window-opened"}
+
+
+def return_sources():
+    return ((TRIP_APPS, "trip"), (WORK_RETURN, "restart"))
+
+
+def return_source(ident):
+    """The checkpoint a return's buttons belong to (a trip's or a restart's)."""
+    resume = resume_helper()
+    for path, _ in return_sources():
+        saved = resume.read_state(path)
+        if saved and resume.trip_id(saved) == ident:
+            return path
+        try:
+            if resume.read_return(path, saved).get("id") == ident:
+                return path
+        except OSError:
+            continue
+    return TRIP_APPS
+
+
+def return_status(ident=None):
+    """The return with that id, or the latest (a trip's or a restart's), for Settings."""
+    resume = resume_helper()
+    found = []
+    for path, kind in return_sources():
+        if kind == "restart" and not path.exists() and not resume.return_path(path).exists():
+            continue
+        found.append(dict(resume.return_status(path, TRIP_APPS_OFF, TRIP_APPS_FRESH), kind=kind))
+    state = next((s for s in found if ident is not None and s.get("id") == ident), None) \
+        or max((s for s in found if s.get("available")), key=lambda s: s.get("updated", 0), default=found[0])
+    state["busy"] = any(s["busy"] for s in found) or return_worker_active()
     descriptions = {
         "waiting": tr("Waiting to reopen."),
         "trip-unconfirmed": tr("The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."),
@@ -8258,14 +8487,18 @@ def return_status():
         "documents-unconfirmed": tr("The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."),
         "expired": tr("This recovery checkpoint has expired. You can open the app normally."),
     }
+    restart = state.get("kind") == "restart"
+    if restart:
+        descriptions["browser-skipped"] = tr("Private browsing stays closed. You can open the browser normally.")
     for item in state["items"]:
         item["retry"] = item["retry"] and not state["busy"]
         entry = entry_by_id(item["app"])
         item["name"] = local_name(entry) if entry else item["app"].removesuffix(".desktop")
         item["detail"] = descriptions.get(item["status"], descriptions["unconfirmed"])
         item["canOpen"] = bool(entry)
-        item["needsAttention"] = item["status"] in {"unconfirmed", "missing-app", "folders-unavailable", "files-window-opened",
-            "browser-unavailable", "browser-skipped", "documents-missing", "documents-unconfirmed", "partly-restored", "expired", "trip-unconfirmed"}
+        item["needsAttention"] = item["status"] in (RESTART_ATTENTION if restart else {
+            "unconfirmed", "missing-app", "folders-unavailable", "files-window-opened", "browser-unavailable",
+            "browser-skipped", "documents-missing", "documents-unconfirmed", "partly-restored", "expired", "trip-unconfirmed"})
     state["retry"] = any(item["retry"] for item in state["items"])
     return state
 
@@ -8275,20 +8508,24 @@ def return_worker_active():
         in ("active", "activating", "reloading")
 
 
-def queue_return_notice():
-    """One quiet entry point per trip, independent of the restore worker's lifetime."""
+def queue_return_notice(path=None, attention=False):
+    """One quiet entry point per trip, independent of the restore worker's lifetime. After a
+    restart (attention), only when something couldn't reopen: everything back needs no word."""
+    path = path or TRIP_APPS
     resume = resume_helper()
     try:
-        with resume.restore_lock(TRIP_APPS):
+        with resume.restore_lock(path):
             if TRIP_APPS_OFF.exists():
                 return False
-            saved = resume.read_state(TRIP_APPS)
-            if saved.get("boot") == resume.boot_id():
+            saved = resume.read_state(path)
+            if saved.get("version") != 4 and saved.get("boot") == resume.boot_id():
                 return False
-            report = resume.read_return(TRIP_APPS, saved)
+            report = resume.read_return(path, saved)
             if not report.get("items"):
                 return False
-            marker = TRIP_APPS.with_suffix(".notice.json")
+            if attention and not any(item.get("status") in RESTART_ATTENTION for item in report["items"].values()):
+                return False
+            marker = path.with_suffix(".notice.json")
             if resume.read_state(marker).get("id") == report["id"]:
                 return True
             accepted = ok("systemd-run", "--user", "--quiet", "--collect",
@@ -8304,20 +8541,26 @@ def queue_return_notice():
 
 
 def show_return_notice(ident):
-    state = return_status()
+    state = return_status(ident)
     if state.get("id") != ident or not state.get("available"):
         return
-    attention = any(item["needsAttention"] for item in state["items"])
-    body = tr("Some work needs attention. Review what opened and what you can retry.") if attention else \
-        tr("Review which apps reopened and how they handled your saved work.")
+    if state.get("kind") == "restart":
+        title, page = tr("Some apps didn't reopen"), "power#return"
+        body = tr("Everything else is back where it was. Review what's missing and try again.")
+        action = tr("Review")
+    else:
+        attention = any(item["needsAttention"] for item in state["items"])
+        title, page, action = tr("Back in Monet"), "windows#return", tr("Review return")
+        body = tr("Some work needs attention. Review what opened and what you can retry.") if attention else \
+            tr("Review which apps reopened and how they handled your saved work.")
     answer = run("notify-send", "--app-name=Monet", "--icon=monet", "--hint=string:desktop-entry:monet-settings",
-        f"--action=open={tr('Review return')}", "--wait", tr("Back in Monet"), body, timeout=3600)
+        f"--action=open={action}", "--wait", title, body, timeout=3600)
     if (answer or "").strip() == "open":
-        open_settings("windows#return")
+        open_settings(page)
 
 
 def retry_return(ident, app=None):
-    state = return_status()
+    state = return_status(ident)
     if state.get("id") != ident or not re.fullmatch(r"[0-9a-f]{32}", ident):
         return False
     if state["busy"] or return_worker_active():
@@ -8337,8 +8580,8 @@ def open_return_app(ident, app):
     if return_worker_active():
         return False
     try:
-        with resume.restore_lock(TRIP_APPS):
-            state = return_status()
+        with resume.restore_lock(return_source(ident)):
+            state = return_status(ident)
             item = next((item for item in state["items"] if item["app"] == app), None)
             if state.get("id") != ident or not item or not item["canOpen"]:
                 return False
@@ -8999,19 +9242,28 @@ def main(argv):
                 show_return_notice(ident)
                 return 0
             if cmd == "return-run":
-                trip_apps_again(selected=app, request=ident)
+                if return_source(ident) == WORK_RETURN:
+                    resume_helper().restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch,
+                                            TRIP_APPS_FRESH, selected=app, request=ident)
+                else:
+                    trip_apps_again(selected=app, request=ident)
                 return 0
             result = retry_return(ident, app) if cmd == "return-retry" else \
                 open_return_app(ident, app) if cmd == "return-open" and app else \
-                resume_helper().clear_return(TRIP_APPS, TRIP_APPS_OFF, ident) if cmd == "return-dismiss" and not app else False
+                resume_helper().clear_return(return_source(ident), TRIP_APPS_OFF, ident) \
+                if cmd == "return-dismiss" and not app else False
             emit({"ok": result, "state": return_status()})
             return 0 if result else 1
         except OSError:
             emit({"ok": False})
             return 1
     elif cmd == "trip-apps-again":
-        trip_apps_again()
-        queue_return_notice()
+        # At sign-in: a trip's apps, then the last sign-in's work (a restart, a sign-out, a crash).
+        reopen_work()
+    elif cmd == "work-capture":
+        # Once, by hand: this sign-in's picture now (monet-work takes them by itself).
+        saved = capture_work(session_key())
+        emit({"saved": bool(saved and save_work(saved)), "apps": (saved or {}).get("apps", [])})
     elif cmd == "trip-apps" and args and args[0] in ("on", "off"):
         set_trip_apps(args[0] == "on")
         emit(ready_state())

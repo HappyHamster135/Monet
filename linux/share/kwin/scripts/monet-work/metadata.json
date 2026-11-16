@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Window Management",
+        "Description": "Tells Monet when windows open, close or move, so your apps come back where they were after a restart",
+        "EnabledByDefault": true,
+        "Icon": "view-restore",
+        "Id": "monet-work",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet Work",
+        "Version": "0.9.8"
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}

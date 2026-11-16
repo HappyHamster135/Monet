@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Work checkpoints for a trip to Windows. Imported by monet-quick, never root.
+"""Work checkpoints: your apps and windows, reopened after a restart or a trip to Windows.
 
-Version 3 binds recovery to a confirmed trip: saved local Kate/KWrite documents,
-PDF tabs/pages, Files tabs, Zen's native normal session and KWin placement. Other apps own their
-recovery. No window titles, credentials or document contents are copied here.
+Imported by monet-quick and monet-work, never root. Version 3 binds recovery to a confirmed trip:
+saved local Kate/KWrite documents, PDF tabs/pages, Files tabs, Zen's native normal session and
+KWin placement. Version 4 is the same picture of your work, kept fresh while the desktop is in
+use (monet-work) and handed to the next sign-in once: after a restart, a sign-out, a crash or a
+power cut. Other apps own their recovery. No window titles, credentials or document contents are
+copied here.
 """
 import configparser
 import copy
@@ -152,6 +155,11 @@ function appId(w) {
     return /^[\w.+-]+$/.test(id) ? (id.endsWith(".desktop") ? id : id + ".desktop") : "";
 }
 function rect(r) { return {x:r.x, y:r.y, width:r.width, height:r.height}; }
+// A screen by the monitor's own name (its EDID), so a window finds it again on another port.
+function display(o) {
+    return o ? {name:String(o.name || ""), maker:String(o.manufacturer || ""), model:String(o.model || ""),
+                serial:String(o.serialNumber || "")} : {};
+}
 function windows() {
     return workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.transient && appId(w));
 }
@@ -159,8 +167,9 @@ function capture(w) {
     let area = workspace.clientArea(KWin.MaximizeArea, w);
     let g = w.frameGeometry;
     return {app:appId(w), id:String(w.internalId), pid:w.pid, role:String(w.windowRole || ""),
-            rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "",
-            outputs:workspace.screens.map(o => ({name:o.name, area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
+            rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "", display:display(w.output),
+            outputs:workspace.screens.map(o => ({name:o.name, display:display(o),
+                area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
             maximized:Math.abs(g.x-area.x)<2 && Math.abs(g.y-area.y)<2 &&
                       Math.abs(g.width-area.width)<2 && Math.abs(g.height-area.height)<2,
             minimized:w.minimized, fullscreen:w.fullScreen,
@@ -762,13 +771,14 @@ def editor_documents(app, windows):
         return []
 
 
-def checkpoint(apps, windows, scene=None):
+def checkpoint(apps, windows, scene=None, settle=True):
     # Kate flushes its document list on a 5 s timer. Let pending changes reach its
     # own checkpoint; don't ask it to save/overwrite the user's document contents.
     # Zen normally writes changes on a 15 s timer. Let pending tab closures reach
     # its own checkpoint too, especially when only private windows remain open.
+    # A work checkpoint taken while the desktop is in use doesn't wait: the next one follows.
     delay = 16 if BROWSER in apps else (5.2 if any(app in EDITORS for app in apps) else 0)
-    if delay and windows:
+    if delay and windows and settle:
         time.sleep(delay)
         # Use the arrangement at departure, not the one before the native save wait.
         if scene is not None:
@@ -899,10 +909,12 @@ def return_status(path, off, freshness=12 * 3600):
         return {"available": False, "busy": False, "items": []}
     saved = read_state(path)
     # A cancelled switch is not a return. Keep its checkpoint without replaying it.
-    if saved and saved.get("boot") == boot_id() and saved.get("cancelled_boot") != boot_id():
+    # Work handed to a new sign-in is one, also after a sign-out on the same boot.
+    if (saved and saved.get("version") != 4 and saved.get("boot") == boot_id()
+            and saved.get("cancelled_boot") != boot_id()):
         return {"available": False, "busy": False, "items": []}
     report = read_return(path, saved)
-    if not report and saved.get("version") in (2, 3):
+    if not report and saved.get("version") in (2, 3, 4):
         report = initial_return(saved)
     if not report:
         return {"available": False, "busy": restoring(path), "items": []}
@@ -998,6 +1010,10 @@ def usable(saved, now, boot, freshness):
     stamp = saved.get("time")
     if (type(stamp) not in (float, int) or not math.isfinite(stamp) or not isinstance(saved.get("apps"), list) or not boot):
         return False
+    if saved.get("version") == 4:
+        # Your work belongs to the sign-in it was handed to (hand_over), however long the PC was off.
+        handed = saved.get("handed")
+        return isinstance(handed, dict) and isinstance(handed.get("session"), str) and bool(handed["session"])
     if saved.get("cancelled_boot"):
         return saved.get("version") == 3 and saved["cancelled_boot"] == saved.get("boot") == boot
     if saved.get("boot") == boot:
@@ -1026,6 +1042,35 @@ def placed_rect(saved, area):
         return None
 
 
+def matching_output(saved, outputs):
+    """The screen a window was on: the same monitor by its own name (maker, model and serial)
+    wherever it's plugged in now, else the same port. None found: {} (the window's own screen)."""
+    outputs = [o for o in outputs if isinstance(o, dict) and isinstance(o.get("area"), dict)] \
+        if isinstance(outputs, list) else []
+    want = saved.get("display") if isinstance(saved.get("display"), dict) else {}
+    port = saved.get("screen") if isinstance(saved.get("screen"), str) else ""
+
+    def same(o, keys):
+        have = o.get("display") if isinstance(o.get("display"), dict) else {}
+        return all(isinstance(want.get(k), str) and want[k] and have.get(k) == want[k] for k in keys)
+    if want.get("serial"):
+        found = [o for o in outputs if same(o, ("maker", "model", "serial"))]
+        if len(found) == 1:
+            return found[0]
+    if want.get("model"):
+        found = [o for o in outputs if same(o, ("maker", "model"))]
+        # Two of the same monitor without serials: the port tells them apart.
+        named = [o for o in found if port and o.get("name") == port]
+        if len(named) == 1 or len(found) == 1:
+            return (named or found)[0]
+        if found:
+            return {}
+    # The same port, unless another monitor is plugged in there now.
+    named = [o for o in outputs if port and o.get("name") == port and not (
+        want.get("model") and isinstance(o.get("display"), dict) and o["display"].get("model"))]
+    return named[0] if len(named) == 1 else {}
+
+
 def place_windows(saved, current, initial_ids, identities=None):
     """Only touch newly launched windows; never move ones the user already had open."""
     placements = []
@@ -1038,14 +1083,15 @@ def place_windows(saved, current, initial_ids, identities=None):
             continue
         window = next((w for w in candidates if w.get("role") == previous.get("role")), candidates[0])
         used.add(window["id"])
-        output = next((o for o in window.get("outputs", []) if o.get("name") == previous.get("screen")), {})
+        output = matching_output(previous, window.get("outputs", []))
         target = placed_rect(previous, output.get("area", window.get("area", {})))
         if target:
             placements.append({"id": window["id"], "saved": previous, "rect": target})
     if not placements:
         return []
-    # Screens can disappear during a trip. Find the old output when available;
-    # otherwise keep the window on an available screen. Never activate a window.
+    # Screens can disappear or change ports during a trip or a restart. Find the old
+    # monitor when available; otherwise keep the window on an available screen.
+    # Never activate a window.
     body = "const places = " + json.dumps(placements) + r""";
 let changed = [];
 for (const p of places) {
@@ -2002,14 +2048,14 @@ def restore_editors(path, saved, app, off, before, launch, manual):
     return confirmed and all(g.get("status") in ("documents-opened", "already-running", "opened") for g in groups)
 
 
-def restore_regular(app, saved, off, launch, initial_ids):
+def restore_regular(app, saved, off, launch, initial_ids, wait=8):
     start_app(app, saved, launch)
-    deadline = time.monotonic() + 8
+    deadline = time.monotonic() + wait
     frames = saved.get("windows", [])
     frames = [w for w in frames if isinstance(w, dict) and w.get("app") == app] if isinstance(frames, list) else []
     previous_shape = None
     # Each app gets its own deadline; one failed launcher cannot hold up the others.
-    for _ in range(20):
+    for _ in range(round(wait * 2.5)):
         yield
         if off.exists() or time.monotonic() > deadline:
             return False
@@ -2068,7 +2114,8 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
     if (saved.get("version") == 3 and not saved.get("cancelled_boot") and not saved["trip_return"]) \
             or not usable(saved, time.time(), boot_id(), freshness):
         # Same-boot login after a cancelled switch must retain the checkpoint.
-        if saved.get("boot") != boot_id():
+        # Work not yet handed to a sign-in is the live session's own: left as it is.
+        if saved.get("boot") != boot_id() and saved.get("version") != 4:
             report = saved.get("return", {})
             if not valid_return(report) and saved.get("version") in (2, 3):
                 report = initial_return(saved)
@@ -2116,6 +2163,8 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
     save_return(path, saved, report)
     started = []
     jobs = {}
+    # Right after a start, disks are cold and apps open slowly: wait longer for their windows.
+    wait = 40 if saved.get("version") == 4 else 8
 
     def completed(app, kind, result):
         item = report["items"][app]
@@ -2205,13 +2254,14 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
             kind, job = "editors", restore_editors(path, saved, app, off, before, launch, request is not None or selected is not None)
         elif app == PDF and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
             kind, job = "pdf", restore_pdfs(path, saved, off, before, launch, request is not None or selected is not None)
-        elif app in (FILES, BROWSER) and isinstance(saved.get("groups"), dict) and app in saved["groups"]:
+        elif app in (FILES, BROWSER) and isinstance(saved.get("groups"), dict) and app in saved["groups"] \
+                and not (app == BROWSER and plain_browser(saved)):
             if app == FILES and files_window_only(saved):
                 if FILES in open_windows:
                     item["status"] = "already-running"
                     done.add(app)
                 else:
-                    kind, job = "files-window", restore_regular(app, saved, off, launch, initial_ids)
+                    kind, job = "files-window", restore_regular(app, saved, off, launch, initial_ids, wait)
             else:
                 kind, job = "groups", restore_groups(path, saved, app, off, before)
         elif browser:
@@ -2243,9 +2293,14 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
                     saved.pop("files_launch", None)
             elif files:
                 kind, job = "files", restore_files(path, saved, off, before)
+            elif app == BROWSER and saved.get("version") == 4 and isinstance(saved_windows, list) \
+                    and sum(isinstance(w, dict) and w.get("app") == BROWSER for w in saved_windows) > 1:
+                # Several browser windows opened as from the menu: the browser places its own,
+                # rather than one window taking another's frame.
+                job = restore_regular(app, {"windows": []}, off, launch, initial_ids, wait)
             else:
                 item.update(document_counts(app, saved) if app in EDITORS else {})
-                job = restore_regular(app, saved, off, launch, initial_ids)
+                job = restore_regular(app, saved, off, launch, initial_ids, wait)
         if job is not None and advance(app, kind, job):
             jobs[app] = (kind, job)
         saved["done"] = sorted(done)
@@ -2276,3 +2331,162 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
     if set(apps).issubset(done):
         discard(path, saved)
     return started
+
+
+# Your work, after a restart ---------------------------------------------------
+# monet-work keeps a recent version-4 checkpoint of this sign-in (work.json) while the desktop is
+# used. The next sign-in takes it over once (work-return.json) and reopens it with the trip's
+# machinery above; Settings' return summary and Retry work the same way.
+
+def browser_private(windows):
+    """A browser started for private browsing only: it stays closed, as on a trip."""
+    helper = browser_helper()
+    for pid in {w.get("pid") for w in windows if isinstance(w, dict) and w.get("app") == BROWSER}:
+        try:
+            profile = helper.profile_path(helper.profile_for_pid(pid))
+            if profile is not None and helper.private_start(pid, profile):
+                return True
+        except (OSError, ValueError):
+            return True
+    return False
+
+
+def plain_browser(saved):
+    """After a restart, a browser whose own session can't be confirmed opens as from the menu,
+    following its own tab-restore preference, rather than staying closed."""
+    groups = saved.get("groups", {}).get(BROWSER) if isinstance(saved.get("groups"), dict) else None
+    if saved.get("version") != 4 or not isinstance(groups, list) or not groups:
+        return False
+    states = [g.get("browser") for g in groups if isinstance(g, dict)]
+    if any(isinstance(s, dict) and s.get("private") is True for s in states):
+        return False
+    helper = browser_helper()
+    try:
+        return not any(helper.valid(s) and helper.prepare(s) is not None for s in states)
+    except (OSError, ValueError):
+        return True
+
+
+def work_checkpoint(apps, windows, scene, session):
+    """The trip's picture of your work, taken without waiting while you use the desktop."""
+    saved = checkpoint(apps, windows, scene, settle=False)
+    saved.update(version=4, kind="work", session=session)
+    groups = saved.get("groups", {}).get(BROWSER) if isinstance(saved.get("groups"), dict) else None
+    if BROWSER in apps and not any(browser_helper().valid(g.get("browser")) for g in groups or []):
+        if browser_private(windows):
+            for group in groups or []:
+                group["browser"] = {"mode": "skip", "private": True}
+            if not groups:
+                saved["browser"] = {"mode": "skip", "private": True}
+        else:
+            # Just opened, or a session the browser hasn't written yet: it opens as from the menu.
+            saved.pop("browser", None)
+            if groups is not None:
+                saved["groups"].pop(BROWSER, None)
+    return saved
+
+
+def trim_closed(saved, closed):
+    """Windows closed just before a restart stay closed; an app with none left isn't reopened.
+    Apps without windows (in the tray) are kept."""
+    closed = {c for c in closed if isinstance(c, str)}
+    windows = saved.get("windows")
+    if not closed or not isinstance(windows, list):
+        return False
+    gone = [w for w in windows if isinstance(w, dict) and w.get("id") in closed]
+    if not gone:
+        return False
+    saved["windows"] = [w for w in windows if not (isinstance(w, dict) and w.get("id") in closed)]
+    groups = saved.get("groups") if isinstance(saved.get("groups"), dict) else {}
+    for app, entries in list(groups.items()):
+        if not isinstance(entries, list):
+            continue
+        kept = []
+        for group in entries:
+            frames = group.get("windows") if isinstance(group, dict) else None
+            if not isinstance(frames, list):
+                kept.append(group)
+                continue
+            left = [w for w in frames if not (isinstance(w, dict) and w.get("id") in closed)]
+            if frames and not left:
+                continue
+            if len(left) != len(frames):
+                group["windows"] = left
+                if isinstance(group.get("editor_windows"), list):
+                    group["editor_windows"] = [e for e in group["editor_windows"]
+                                               if not (isinstance(e, dict) and e.get("id") in closed)]
+            kept.append(group)
+        if kept:
+            groups[app] = kept
+        else:
+            groups.pop(app)
+    remaining = {w.get("app") for w in saved["windows"] if isinstance(w, dict)}
+    for app in {w.get("app") for w in gone} - remaining:
+        if isinstance(saved.get("apps"), list):
+            saved["apps"] = [a for a in saved["apps"] if a != app]
+        if isinstance(saved.get("documents"), dict):
+            saved["documents"].pop(app, None)
+        groups.pop(app, None)
+        if app == BROWSER:
+            saved.pop("browser", None)
+        if app == FILES:
+            saved.pop("files", None)
+    return True
+
+
+def same_work(a, b):
+    """Only a different picture is worth writing again."""
+    strip = lambda s: {k: v for k, v in s.items() if k not in ("id", "time")}
+    return isinstance(a, dict) and isinstance(b, dict) and strip(a) == strip(b)
+
+
+def hand_over(live, path, session):
+    """A new sign-in takes the last one's work to reopen, once. The earlier return list goes."""
+    with restore_lock(live), restore_lock(path):
+        saved = read_state(live)
+        if (saved.get("version") != 4 or not isinstance(saved.get("session"), str)
+                or not session or saved["session"] == session):
+            return False
+        previous = read_state(path)
+        if previous:
+            discard(path, previous)
+        return_path(path).unlink(missing_ok=True)
+        saved["handed"] = {"session": session, "time": time.time()}
+        atomic_write(path, saved)
+        live.unlink(missing_ok=True)
+        return True
+
+
+def save_work(live, path, saved, off):
+    """This sign-in's newest picture, never over an earlier sign-in's work still to reopen."""
+    current = read_state(live)
+    if current.get("version") == 4 and current.get("session") != saved["session"]:
+        hand_over(live, path, saved["session"])  # Busy reopening: BlockingIOError, try later.
+    with restore_lock(live):
+        if off.exists():
+            return False
+        current = read_state(live)
+        if current.get("version") == 4 and current.get("session") != saved["session"]:
+            return False  # Another sign-in's work arrived meanwhile; the next look hands it over.
+        if same_work(current, saved):
+            return False
+        atomic_write(live, saved)
+        return True
+
+
+def trim_work(live, closed, session):
+    """Just before a restart or sign-out: take the windows closed since the last look out."""
+    with restore_lock(live):
+        saved = read_state(live)
+        if saved.get("version") != 4 or saved.get("session") != session or not trim_closed(saved, closed):
+            return False
+        atomic_write(live, saved)  # Still the last look's picture, and time.
+        return True
+
+
+def trip_owns_return(trip, work):
+    """A trip to Windows ended the last session: it reopens the work, not this checkpoint too."""
+    stamp, since = trip.get("time"), work.get("time")
+    return (trip.get("version") == 3 and isinstance(trip.get("boot"), str) and trip["boot"]
+            and trip["boot"] == work.get("boot") and not trip.get("cancelled_boot")
+            and type(stamp) in (int, float) and type(since) in (int, float) and since <= stamp + 120)

@@ -518,6 +518,11 @@ look --file kwinrc --group Plugins --key slidingpopupsEnabled true
 # tiling, top-edge maximizing and Stretch effect, which would answer the same drags.
 look --file kwinrc --group Plugins --key monet-snapEnabled true
 look --file kwinrc --group Plugins --key monet-motionEnabled true
+# Your work after a restart: Monet Work (share/kwin) tells monet-work when windows change, and
+# Monet reopens the apps on their screens and desktops. KDE's own restore only starts each app
+# again, so it stays off and nothing opens twice; choosing it in KDE's settings keeps KDE's.
+look --file kwinrc --group Plugins --key monet-workEnabled true
+kw_default ksmserverrc General loginMode emptySession
 look --file kwinrc --group Plugins --key maximizeEnabled false
 look --file kwinrc --group Windows --key ElectricBorderMaximize false
 look --file kwinrc --group Windows --key ElectricBorderTiling false

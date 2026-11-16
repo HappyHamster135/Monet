@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+"""Your work, kept: a recent picture of the open apps and their windows, while you use the desktop.
+
+monet-work.service runs this in each sign-in, so that after a restart, a shutdown, a sign-out, a
+crash or a power cut the apps that were open come back where they were (monet-quick
+trip-apps-again, at the next sign-in). The Monet Work KWin script says when windows change; a
+picture follows once things settle (three quiet seconds, half a minute at most while they keep
+changing), and every five minutes while an app whose documents or tabs change inside it is open.
+The picture is monet-resume's: app ids, KWin's window places and the apps' own document lists,
+never a title or what a window shows.
+
+None is taken while the screen is locked, while the last sign-in's work is still reopening, or
+while a switch to Windows closes the apps (the trip keeps its own). The moment a restart, a
+shutdown or a sign-out begins, Plasma's logout (org.kde.Shutdown, started for each one) or the
+system's (logind's PrepareForShutdown), windows closed since the last picture are taken out and
+nothing more is written: the apps the logout itself closes still come back. A cancelled one
+starts pictures again half a minute later.
+"""
+import getpass
+import importlib.machinery
+import importlib.util
+from pathlib import Path
+import sys
+import time
+
+QUIET = 3        # seconds without changes before a picture
+LONGEST = 30     # at most this long while changes keep coming
+REFRESH = 300    # documents and tabs change inside apps: a fresh picture this often while one is open
+THAW = 30        # after a cancelled restart or sign-out
+SETTLE = 180     # at most this long waiting for the last sign-in's work to reopen
+DOCUMENT_APPS = {"org.kde.kate.desktop", "org.kde.kwrite.desktop", "org.kde.dolphin.desktop", "org.kde.okular.desktop"}
+NAME, PATH = "org.monet.Work", "/org/monet/Work"
+
+
+class Watch:
+    """When to take a picture. No clocks, timers or buses here: monet-work's loop asks."""
+
+    def __init__(self, now):
+        self.started = now
+        self.dirty_since = None   # the first change not in a picture yet
+        self.last_change = None
+        self.generation = 0       # changes seen, so one during a picture isn't lost
+        self.closed = set()       # windows closed since the last picture
+        self.leaving = set()      # "logout", "shutdown": what's ending the session
+        self.thaw = {}            # a cancelled one, and when pictures may start again
+        self.trim_due = False
+        self.locked = False
+        self.held = None          # "departing" or "settling": waiting on something without news
+        self.last_picture = None
+        self.documents = False
+        self.failures = 0
+
+    def changed(self, now):
+        self.held = None  # Ask again soon: this may be the news a hold waits for.
+        self.generation += 1
+        if self.dirty_since is None:
+            self.dirty_since = now
+        self.last_change = now
+
+    def window_closed(self, ident, now):
+        # The logout closing windows: they come back. Only closes before it count.
+        if self.leaving or not isinstance(ident, str):
+            return
+        self.closed.add(ident)
+        self.changed(now)
+
+    def leave(self, reason):
+        if not self.leaving and self.closed:
+            self.trim_due = True
+        self.leaving.add(reason)
+        self.thaw.pop(reason, None)
+
+    def stay(self, reason, now):
+        if reason in self.leaving:
+            self.thaw[reason] = now + THAW
+
+    def lock(self, locked):
+        self.locked = bool(locked)
+
+    def due(self, now, settled=True, departing=False):
+        """'trim', 'picture' or None."""
+        for reason, when in list(self.thaw.items()):
+            if now >= when:
+                del self.thaw[reason]
+                self.leaving.discard(reason)
+                if not self.leaving:
+                    self.changed(now)  # Closes during a cancelled sign-out: the next picture sees them.
+        if self.trim_due:
+            self.trim_due = False
+            return "trim"
+        self.held = "departing" if departing else None if settled or now - self.started >= SETTLE else "settling"
+        if self.leaving or self.locked or self.held:
+            return None
+        if self.dirty_since is not None:
+            if now - self.last_change >= QUIET or now - self.dirty_since >= LONGEST:
+                return "picture"
+            return None
+        if self.last_picture is None or (self.documents and now - self.last_picture >= REFRESH):
+            return "picture"
+        return None
+
+    def wait(self, now):
+        """Seconds until it's worth asking again, or None to wait for news."""
+        waits = [when - now for when in self.thaw.values()]
+        if self.trim_due:
+            waits.append(0)
+        elif self.leaving or self.locked:
+            pass  # Unlocking and a cancelled sign-out are news of their own.
+        elif self.held == "departing":
+            waits.append(30)  # A switch to Windows that stops without a restart.
+        elif self.held == "settling":
+            waits.append(SETTLE - (now - self.started))  # Or sooner: reopening says when it's done.
+        else:
+            if self.dirty_since is not None:
+                waits.append(min(QUIET - (now - self.last_change), LONGEST - (now - self.dirty_since)))
+            elif self.last_picture is None:
+                waits.append(0)
+            elif self.documents:
+                waits.append(REFRESH - (now - self.last_picture))
+        return max(0.2, min(waits)) if waits else None
+
+    def taken(self):
+        """What a picture starting now will include."""
+        return self.generation, set(self.closed)
+
+    def pictured(self, now, taken, apps):
+        generation, closed = taken
+        self.closed -= closed
+        if self.generation == generation:
+            self.dirty_since = self.last_change = None
+        self.last_picture = now
+        self.documents = any(app in DOCUMENT_APPS for app in apps)
+        self.failures = 0
+
+    def failed(self, now):
+        # Compositor busy, or the last sign-in's work still reopening: try again shortly, then
+        # less and less often (6, 12, 24, 48 and 96 seconds) while it stays that way.
+        self.failures = min(self.failures + 1, 5)
+        self.changed(now)
+        self.dirty_since = self.last_change = now + QUIET * 2 ** self.failures - QUIET
+
+    def trimmed(self, closed):
+        self.closed -= closed
+
+
+def load_quick():
+    path = Path(__file__).with_name("monet-quick").resolve(strict=True)
+    loader = importlib.machinery.SourceFileLoader("monet_quick", str(path))
+    quick = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(quick)
+    return quick
+
+
+def picture(quick, watch, session, now):
+    taken = watch.taken()
+    try:
+        saved = quick.capture_work(session)
+        if watch.leaving:
+            return  # A restart began while looking: the last picture before it stands.
+        if saved is not None:
+            quick.save_work(saved)
+    except (BlockingIOError, OSError, RuntimeError, ValueError):
+        watch.failed(time.monotonic())
+        return
+    watch.pictured(time.monotonic(), taken, (saved or {}).get("apps", []))
+
+
+def trim(quick, watch, session, tries=5):
+    closed = set(watch.closed)
+    for _ in range(tries):
+        try:
+            quick.trim_work(closed, session)
+            watch.trimmed(closed)
+            return
+        except BlockingIOError:
+            time.sleep(0.2)  # A picture being written this instant.
+        except (OSError, ValueError):
+            return
+
+
+def serve(quick, bus=None, system=None):
+    """Listen on the session bus (and logind's on the system bus); None if already listening.
+    Returns what must stay alive while the event loop runs."""
+    from PySide6.QtCore import ClassInfo, QObject, QTimer, Slot, SLOT
+    from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusServiceWatcher
+    session = quick.session_key()
+    watch = Watch(time.monotonic())
+    bus = bus or QDBusConnection.sessionBus()
+    system = system or QDBusConnection.systemBus()
+    timer = QTimer()
+    timer.setSingleShot(True)
+    busy = []
+
+    def schedule():
+        delay = watch.wait(time.monotonic())
+        if delay is None:
+            timer.stop()
+        else:
+            timer.start(int(delay * 1000))
+
+    def check():
+        if busy:
+            return  # Asked again from inside a picture's KWin call; that one reschedules.
+        busy.append(True)
+        try:
+            now = time.monotonic()
+            action = watch.due(now, quick.work_settled(session), quick.departing())
+            if action == "trim":
+                trim(quick, watch, session)
+            elif action == "picture":
+                picture(quick, watch, session, now)
+        finally:
+            busy.clear()
+            schedule()
+    timer.timeout.connect(check)
+
+    @ClassInfo(**{"D-Bus Interface": NAME})
+    class Service(QObject):
+        @Slot()
+        def Changed(self):
+            watch.changed(time.monotonic())
+            schedule()
+
+        @Slot(str)
+        def Closed(self, ident):
+            watch.window_closed(ident, time.monotonic())
+            schedule()
+
+    class Signals(QObject):
+        @Slot(QDBusMessage)
+        def shutdown(self, message):
+            starting = message.arguments()[:1] == [True]
+            watch.leave("shutdown") if starting else watch.stay("shutdown", time.monotonic())
+            schedule()
+
+        @Slot(QDBusMessage)
+        def screen(self, message):
+            watch.lock(message.arguments()[:1] == [True])
+            schedule()
+
+    service, signals = Service(), Signals()
+    if not bus.registerService(NAME):
+        return None  # Already watching in this sign-in.
+    if not bus.registerObject(PATH, service, QDBusConnection.ExportAllSlots):
+        bus.unregisterService(NAME)
+        return None
+    # Plasma starts org.kde.Shutdown for each restart, shutdown and sign-out and ends it when one
+    # is cancelled. Watching its owner never starts it.
+    logout = QDBusServiceWatcher("org.kde.Shutdown", bus, QDBusServiceWatcher.WatchForOwnerChange)
+    logout.serviceRegistered.connect(lambda _: (watch.leave("logout"), schedule()))
+    logout.serviceUnregistered.connect(lambda _: (watch.stay("logout", time.monotonic()), schedule()))
+    if bus.interface().isServiceRegistered("org.kde.Shutdown").value():
+        watch.leave("logout")
+    if system.isConnected():
+        system.connect("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+                       "PrepareForShutdown", signals, SLOT("shutdown(QDBusMessage)"))
+    bus.connect("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver",
+                "ActiveChanged", signals, SLOT("screen(QDBusMessage)"))
+    locked = bus.call(QDBusMessage.createMethodCall("org.freedesktop.ScreenSaver", "/ScreenSaver",
+                                                    "org.freedesktop.ScreenSaver", "GetActive"), timeout=1500)
+    if locked.type() == QDBusMessage.ReplyMessage:
+        watch.lock(locked.arguments()[:1] == [True])
+    schedule()
+    return {"watch": watch, "timer": timer, "service": service, "signals": signals, "logout": logout}
+
+
+def main():
+    if getpass.getuser() == "guest":
+        return 0  # A guest's desktop starts fresh every time.
+    quick = load_quick()
+    resume = quick.resume_helper()  # Loaded once for the whole sign-in, not at every look.
+    quick.resume_helper = lambda: resume
+    from PySide6.QtCore import QCoreApplication
+    app = QCoreApplication(sys.argv[:1])
+    alive = serve(quick)
+    return app.exec() if alive is not None else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
