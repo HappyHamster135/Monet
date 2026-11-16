@@ -511,6 +511,10 @@ Shared.MonetWindow {
     property bool phoneFailed: false
     property bool phoneSending: false
     property string phoneFileState: ""
+    property var monetLink: ({})
+    property bool monetLinkBusy: false
+    property string monetLinkProblem: ""
+    property string monetLinkDraft: ""
     // About → Save a report: being written, and the name of the one saved.
     property bool reporting: false
     // About → Command-line tools: BoxBuddy on its way from Flathub.
@@ -1801,6 +1805,22 @@ Shared.MonetWindow {
             if (sheet.phoneList.some(p => p.id === sheet.phoneAsked && p.paired))
                 sheet.phoneAsked = ""
         })
+    }
+
+    function runMonetLink(command, text, finished) {
+        if (monetLinkBusy) return
+        monetLinkBusy = true
+        if (command !== "status") monetLinkProblem = ""
+        waiting[helper.runLink(command, text)] = (out, code) => {
+            monetLinkBusy = false
+            const result = sheet.json(out, {})
+            if (code === 0 && result.phase) {
+                sheet.monetLink = result
+                if (finished) finished()
+            } else if (command !== "status" || Object.keys(sheet.monetLink).length > 0) {
+                sheet.monetLinkProblem = result.error || i18n("Monet Link couldn't finish. Try again.")
+            }
+        }
     }
 
     function sendPhoneFile(ident) {
@@ -4055,7 +4075,205 @@ Shared.MonetWindow {
                     entry: sheet.entry("phone")
                     art: sheet.art
                     text: i18n("Phone")
-                    detail: i18n("Texts, notifications and files between your phone and this PC.")
+                    detail: i18n("Pair your phone and share with this PC.")
+                }
+                Timer {
+                    interval: 2500
+                    repeat: true
+                    triggeredOnStart: true
+                    running: sheet.page === "phone" && sheet.pollingActive && typeof helper.runLink === "function"
+                    onTriggered: sheet.runMonetLink("status", "")
+                }
+                Card {
+                    id: linkCard
+                    tone: look
+                    readonly property var link: sheet.monetLink
+                    readonly property string phase: link.phase || ""
+                    visible: phase !== "" && phase !== "disabled"
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Monet Link")
+                        detail: {
+                            if (linkCard.phase === "removing") return i18n("Removing this pairing when the relay is reachable.")
+                            if (linkCard.phase === "ready") return i18n("Pair once and share notes over the internet.")
+                            if (linkCard.phase === "starting" && linkCard.link.problem === "setup")
+                                return i18n("Check this PC's relay configuration.")
+                            if (linkCard.link.problem === "offline") return i18n("Relay unavailable. Monet Link will retry.")
+                            switch (linkCard.phase) {
+                            case "starting": return i18n("Getting an invitation…")
+                            case "scan": return i18n("Open Together → Monet Link on your phone and scan this QR.")
+                            case "confirm": return i18n("Check that the phone shows this same pairing code.")
+                            case "expired": return i18n("This invitation expired.")
+                            case "revoked": return i18n("The relay removed this pairing.")
+                            case "paired": return i18n("Phone paired")
+                            default: return ""
+                            }
+                        }
+                        Pill {
+                            tone: look
+                            visible: linkCard.phase === "ready"
+                            text: i18n("Pair a phone")
+                            enabledPill: !sheet.monetLinkBusy
+                            onClicked: sheet.runMonetLink("invite", "")
+                        }
+                    }
+                    Image {
+                        objectName: "monetLinkQr"
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: Math.min(360, linkCard.width - 36)
+                        Layout.preferredHeight: width
+                        Layout.bottomMargin: 16
+                        visible: linkCard.phase === "scan"
+                        source: visible ? (linkCard.link.qr || "") : ""
+                        fillMode: Image.PreserveAspectFit
+                        cache: false
+                        smooth: false
+                        Accessible.name: i18n("Monet Link pairing QR")
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 18
+                        Layout.rightMargin: 18
+                        Layout.bottomMargin: 16
+                        visible: linkCard.phase === "confirm"
+                        Text {
+                            text: linkCard.link.code || ""
+                            color: look.ink
+                            font.pixelSize: 32
+                            font.letterSpacing: 6
+                        }
+                        QQC2.TextField {
+                            id: phoneCode
+                            objectName: "monetLinkCode"
+                            placeholderText: i18n("Code from your phone")
+                            Accessible.name: placeholderText
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            maximumLength: 6
+                            validator: RegularExpressionValidator { regularExpression: /^[0-9]{6}$/ }
+                            onVisibleChanged: if (!visible) clear()
+                        }
+                        Pill {
+                            tone: look
+                            text: i18n("Confirm pairing")
+                            enabledPill: phoneCode.acceptableInput && !sheet.monetLinkBusy
+                            onClicked: sheet.runMonetLink("approve", phoneCode.text, () => phoneCode.clear())
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: 18
+                        spacing: 10
+                        visible: linkCard.phase === "paired"
+                        QQC2.TextArea {
+                            objectName: "monetLinkDraft"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 100
+                            placeholderText: i18n("Write a note")
+                            Accessible.name: placeholderText
+                            textFormat: TextEdit.PlainText
+                            wrapMode: TextEdit.Wrap
+                            text: sheet.monetLinkDraft
+                            onTextChanged: sheet.monetLinkDraft = text
+                        }
+                        Pill {
+                            tone: look
+                            text: i18n("Send to phone")
+                            enabledPill: sheet.monetLinkDraft.trim() !== "" && !sheet.monetLinkBusy
+                            onClicked: {
+                                const draft = sheet.monetLinkDraft
+                                sheet.runMonetLink("send", draft, () => {
+                                    if (sheet.monetLinkDraft === draft) sheet.monetLinkDraft = ""
+                                })
+                            }
+                        }
+                        Text {
+                            readonly property var sent: linkCard.link.sent || []
+                            visible: sent.length > 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            color: look.dim
+                            text: !sent.length ? "" : sent[0] === "Queued" ? i18n("Last note queued")
+                                : sent[0] === "Received" ? i18n("Last note received")
+                                : sent[0] === "Expired" ? i18n("Last note expired")
+                                : i18n("Last note’s receipt could not be verified")
+                        }
+                    }
+                    Repeater {
+                        model: linkCard.link.notes || []
+                        SettingRow {
+                            tone: look
+                            title: i18n("Note from your phone")
+                            detail: modelData.length > 180 ? modelData.slice(0, 180) + "…" : modelData
+                            Pill {
+                                tone: look
+                                text: i18n("Read")
+                                onClicked: {
+                                    receivedNote.text = modelData
+                                    notePreview.open()
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        strong: false
+                        visible: sheet.monetLinkProblem !== ""
+                        title: i18n("Monet Link needs attention")
+                        detail: sheet.monetLinkProblem
+                        Accessible.role: Accessible.AlertMessage
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: ["starting", "scan", "confirm", "expired", "paired", "revoked"].includes(linkCard.phase)
+                        title: linkCard.phase === "paired" ? i18n("Phone pairing") : i18n("Pairing invitation")
+                        Pill {
+                            tone: look
+                            text: linkCard.phase === "paired" ? i18n("Forget phone…") : i18n("Discard invitation")
+                            enabledPill: !sheet.monetLinkBusy
+                            onClicked: {
+                                if (linkCard.phase === "paired") forgetLink.open()
+                                else sheet.runMonetLink("forget", "")
+                            }
+                        }
+                    }
+                    QQC2.Dialog {
+                        id: forgetLink
+                        anchors.centerIn: QQC2.Overlay.overlay
+                        title: i18n("Forget this phone?")
+                        modal: true
+                        standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
+                        onAccepted: sheet.runMonetLink("forget", "", () => sheet.monetLinkDraft = "")
+                        QQC2.Label {
+                            width: 330
+                            wrapMode: Text.Wrap
+                            text: i18n("This removes the pairing, queued notes and Link history from this PC.")
+                        }
+                    }
+                    QQC2.Dialog {
+                        id: notePreview
+                        anchors.centerIn: QQC2.Overlay.overlay
+                        title: i18n("Note from your phone")
+                        modal: true
+                        standardButtons: QQC2.Dialog.Close
+                        onClosed: receivedNote.clear()
+                        QQC2.ScrollView {
+                            width: Math.min(440, sheet.width - 80)
+                            height: Math.min(300, sheet.height - 160)
+                            QQC2.TextArea {
+                                id: receivedNote
+                                readOnly: true
+                                selectByMouse: true
+                                wrapMode: TextEdit.Wrap
+                                textFormat: TextEdit.PlainText
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: linkCard.visible
+                    text: i18n("Local network · KDE Connect")
                 }
                 Card {
                     tone: look

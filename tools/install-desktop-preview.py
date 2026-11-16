@@ -27,6 +27,7 @@ LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-store', 'monet-s
 LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
 LOCAL |= {'monet-session', 'monet-passwords', 'monet-passwords-browser', 'monet-keep-awake', 'monet-brightness'}
 LOCAL |= {'monet-look', 'monet-fresh', 'monet-region', 'monet-files', 'monet-file-jobs'}
+LOCAL.add('monet-link')
 
 
 def digest(path):
@@ -140,6 +141,9 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
         add(DATA / 'monet' / name, render(ROOT / 'linux/share/monet' / name, local_helpers=True))
     add(DATA / 'applications/monet-archive.desktop', render(ROOT / 'linux/share/applications/monet-archive.desktop', local_helpers=True))
     add(CONFIG / 'systemd/user/monet-fresh.service', render(ROOT / 'linux/systemd/user/monet-fresh.service', local_helpers=True))
+    for name in ('monet-link.service', 'monet-link.path'):
+        add(CONFIG / 'systemd/user' / name, render(ROOT / 'linux/systemd/user' / name, local_helpers=True))
+    add(CONFIG / 'systemd/user/default.target.wants/monet-link.path', CONFIG / 'systemd/user/monet-link.path')
     # Layout packages are resolved as a unit. Keep installed logout and other
     # unrelated files while replacing only Monet's current layout instructions.
     for name in ('org.monet.desktop', 'org.monet.smoke.desktop'):

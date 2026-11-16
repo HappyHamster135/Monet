@@ -16,7 +16,7 @@ from importlib.machinery import SourceFileLoader
 
 STARTUP_STARTED = time.monotonic()
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer
 from PySide6.QtQml import QQmlApplicationEngine
@@ -27,6 +27,14 @@ DATADIR = "@DATADIR@"
 _loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")
 games = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_games", _loader))
 _loader.exec_module(games)
+
+
+class SettingsHelper(games.Helper):
+    @Slot(str, str, result=int)
+    def runLink(self, command, text):
+        self._next += 1
+        self.start(self._next, f"{LIBEXECDIR}/monet-link", [command], data=text.encode("utf-8", "replace"))
+        return self._next
 
 
 def main():
@@ -46,7 +54,7 @@ def main():
     server = QLocalServer()
     server.setSocketOptions(QLocalServer.UserAccessOption)
     server.listen(name)
-    helper = games.Helper()
+    helper = SettingsHelper()
     activity = games.WindowActivity()
     area = games.WindowArea()
     clock = games.BootClock()

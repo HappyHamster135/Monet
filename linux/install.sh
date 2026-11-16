@@ -109,6 +109,7 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
+put 755 "$SRC/libexec/monet-link" "$LIBEXECDIR/monet-link"
 for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
@@ -312,6 +313,10 @@ put 644 "$SRC/systemd/user/monet-light.service" "$USERUNITDIR/monet-light.servic
 put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
+put 644 "$SRC/systemd/user/monet-link.service" "$USERUNITDIR/monet-link.service"
+put 644 "$SRC/systemd/user/monet-link.path" "$USERUNITDIR/monet-link.path"
+install -d "$USERUNITDIR/default.target.wants"
+ln -sfn ../monet-link.path "$USERUNITDIR/default.target.wants/monet-link.path"
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 put 644 "$SRC/systemd/user/monet-keep-awake.service" "$USERUNITDIR/monet-keep-awake.service"
 put 644 "$SRC/systemd/user/monet-brightness.service" "$USERUNITDIR/monet-brightness.service"

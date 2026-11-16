@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync Monet Link handoffs
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-link watch
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=yes

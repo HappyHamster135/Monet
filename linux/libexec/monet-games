@@ -237,7 +237,7 @@ class Helper(QObject):
         self.start(ticket, program, [str(a) for a in command[1:]])
         return ticket
 
-    def start(self, ticket, program, args):
+    def start(self, ticket, program, args, data=None):
         process = QProcess(self)
 
         def finished(code, _status):
@@ -253,6 +253,11 @@ class Helper(QObject):
 
         process.finished.connect(finished)
         process.errorOccurred.connect(failed)
+        if data is not None:
+            def write_input():
+                process.write(data)
+                process.closeWriteChannel()
+            process.started.connect(write_input)
         process.start(program, args)
 
 

@@ -31,6 +31,8 @@ if QT:
                          for ident, name in (("first_phone", "First test phone"), ("second_phone", "Second test phone"))]
             self.discovery = (json.dumps(self.rows), 0)
             self.sharing = ('{"state":"dispatched"}', 0)
+            self.link = {"phase": "disabled"}
+            self.link_calls = []
             self.delay = 30
 
         @Slot("QVariantList", result=int)
@@ -40,6 +42,21 @@ if QT:
             self.calls.append(list(command))
             out, code = self.discovery if command[1] == "phones" else self.sharing if command[1] == "phone-send" else ("{}", 0)
             QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, out, code, ""))
+            return ticket
+
+        @Slot(str, str, result=int)
+        def runLink(self, command, payload):
+            self.ticket += 1
+            ticket = self.ticket
+            self.link_calls.append((command, payload))
+            if command == "invite":
+                self.link = {"phase": "confirm", "code": "008125"}
+            if command == "approve":
+                self.link = {"phase": "paired", "notes": ["<b>A plain text note</b>"]}
+            if command == "send":
+                self.link["sent"] = ["Queued"]
+            output = json.dumps(self.link)
+            QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, output, 0, ""))
             return ticket
 
 
@@ -73,6 +90,7 @@ class PhoneWindow(unittest.TestCase):
         context = self.engine.rootContext()
         context.setContextObject(self.words)
         for name, value in {"helper": self.helper, "firstPage": "phone", "blurBehind": False,
+                            "windowArea": {"width": 1024, "height": 768},
                             "pictures": (ROOT / "linux/share/monet/settings").as_uri() + "/",
                             "brush": (ROOT / "linux/share/monet/textures/brush.png").as_uri()}.items():
             context.setContextProperty(name, value)
@@ -141,6 +159,24 @@ class PhoneWindow(unittest.TestCase):
             self.assertLessEqual(point.x() + button.width(), row.width())
             self.assertGreaterEqual(point.y(), 0)
             self.assertLessEqual(point.y() + button.height(), row.height())
+
+    def test_monet_link_pairs_and_sends_from_the_phone_page(self):
+        self.helper.link = {"phase": "ready"}
+        QTest.qWait(2600)
+        self.click(self.buttons("Pair a phone")[0])
+        self.assertIn(("invite", ""), self.helper.link_calls)
+        code = next(item for item in self.items() if item.objectName() == "monetLinkCode")
+        self.assertFalse(self.buttons("Confirm pairing")[0].property("enabledPill"))
+        code.setProperty("text", "008125")
+        self.click(self.buttons("Confirm pairing")[0])
+        self.assertIn(("approve", "008125"), self.helper.link_calls)
+        draft = next(item for item in self.items() if item.objectName() == "monetLinkDraft")
+        draft.setProperty("text", "A new line\nand an emoji 🏠")
+        self.click(self.buttons("Send to phone")[0])
+        self.assertIn(("send", "A new line\nand an emoji 🏠"), self.helper.link_calls)
+        self.assertEqual(draft.property("text"), "")
+        self.assertTrue(any(item.property("text") == "Last note queued" for item in self.items()))
+        self.assertTrue(any(item.property("detail") == "<b>A plain text note</b>" for item in self.items()))
 
     def test_cancellation_failure_and_invalid_results_allow_retry(self):
         for output, code, state in (("{\"state\":\"canceled\"}", 0, "canceled"),

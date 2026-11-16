@@ -10,6 +10,8 @@ if [ "$(id -u)" -ne 0 ]; then
     # The app menu's Windows apps (monet-quick windows-apps), with their icons.
     rm -f "$HOME"/.local/share/applications/monet-windows-app-*.desktop \
         "$HOME"/.local/share/icons/hicolor/256x256/apps/monet-windows-app-*.png
+    systemctl --user stop monet-link.path monet-link.service >/dev/null 2>&1 || true
+    rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/monet/link"
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/monet"
     rm -f "${XDG_STATE_HOME:-$HOME/.local/state}/monet/trip-apps.json" \
         "${XDG_STATE_HOME:-$HOME/.local/state}/monet/trip-apps.lock"
@@ -137,6 +139,8 @@ rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
+rm -f "$PREFIX/libexec/monet-link" /etc/systemd/user/monet-link.service /etc/systemd/user/monet-link.path \
+    /etc/systemd/user/default.target.wants/monet-link.path
 for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done

@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+"""Monet Link v1 desktop peer, used by Phone settings and the user service."""
+
+import argparse
+import base64
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import hmac
+import http.client
+import io
+import json
+import os
+from pathlib import Path
+import re
+import secrets
+import ssl
+import sys
+import tempfile
+import time
+from urllib.parse import urlsplit
+
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+MAX_ENVELOPE = 64 * 1024
+RETENTION = 7 * 24 * 60 * 60
+ID = re.compile(r"[0-9a-f]{32}")
+TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
+MAX_ITEMS = 64
+MAX_NOTE = 32768
+PREFIX = "monet-link:"
+POLL_INTERVAL = 5
+
+
+def encode(value):
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def decode(value):
+    return base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+
+
+def pack(value):
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def origin(value):
+    url = urlsplit(value)
+    if (url.scheme != "https" or not url.hostname or url.username is not None or url.password is not None
+            or url.path not in ("", "/") or "?" in value or "#" in value or any(char.isspace() for char in value)):
+        raise ValueError("Use the HTTPS relay address without a path")
+    return url
+
+
+def seal(config, sender, identifier, kind, value, nonce=None):
+    associated = f"monet-link-v1|{config['pair']}|{sender}|{identifier}|{kind}".encode("ascii")
+    # RFC 5869 extract and a single SHA-256 expansion block.
+    extracted = hmac.digest(bytes.fromhex(config["pair"]), decode(config["secret"]), "sha256")
+    key = hmac.digest(extracted, f"monet-link-v1|{sender}|{kind}".encode("ascii") + b"\x01", "sha256")
+    cipher = AESGCM(key)
+    if nonce is not None:
+        return nonce + cipher.encrypt(nonce, value, associated)
+    return cipher.decrypt(value[:12], value[12:], associated)
+
+
+def encrypt(config, sender, identifier, kind, value):
+    return seal(config, sender, identifier, kind, value, secrets.token_bytes(12))
+
+
+def comparison_code(config, identifier):
+    return str(int.from_bytes(hmac.digest(decode(config["secret"]), b"pairing:" + identifier.encode("ascii"),
+                                          "sha256")[:4], "big") % 1000000).zfill(6)
+
+
+def request(config, method, resource, body=None, token=None):
+    url = origin(config["url"])
+    tls = ssl.create_default_context()
+    if config.get("cert"):
+        # Narrow this connection's trust store to the certificate carried by the QR.
+        tls = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        tls.load_verify_locations(cadata=decode(config["cert"]))
+    connection = http.client.HTTPSConnection(url.hostname, url.port, context=tls, timeout=4)
+    try:
+        connection.request(method, resource, body=body, headers={
+            "Authorization": "Bearer " + (token or config["token"]), "Content-Type": "application/octet-stream",
+        })
+        result = connection.getresponse()
+        data = result.read(MAX_ENVELOPE + 1)
+        if len(data) > MAX_ENVELOPE:
+            raise ValueError("Relay response exceeded its allowed size")
+        return result.status, data
+    finally:
+        connection.close()
+
+
+def save(path, state):
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as file:
+        temporary = Path(file.name)
+        file.write(pack(state))
+        file.flush()
+        os.fsync(file.fileno())
+    try:
+        os.replace(temporary, path)
+        fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@contextmanager
+def edit(path):
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with path.with_suffix(".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield json.loads(path.read_text()) if path.exists() else None
+
+
+def new_state(config):
+    return {"config": config, "paired": False, "outbox": {}, "inbox": {}}
+
+
+def queue(state, body):
+    state["outbox"] = {key: item for key, item in state["outbox"].items() if item["expires"] > time.time()}
+    if len(state["outbox"]) >= MAX_ITEMS:
+        oldest = next((key for key, item in state["outbox"].items() if item["status"] != "Queued"), None)
+        if oldest is None:
+            raise ValueError("Outbox is full")
+        del state["outbox"][oldest]
+    identifier = secrets.token_hex(16)
+    state["outbox"][identifier] = {
+        "envelope": encode(encrypt(state["config"], "pc", identifier, "message", pack(body))),
+        "expires": body["expires"], "status": "Queued",
+    }
+    return identifier
+
+
+def validate_message(message):
+    if not isinstance(message, dict) or message.get("type") not in ("hello", "note") or type(message.get("expires")) is not int:
+        raise ValueError("Invalid handoff")
+    if not int(time.time()) < message["expires"] <= int(time.time()) + RETENTION + 60:
+        raise ValueError("Handoff expired or has an invalid expiry")
+    if message["type"] == "note":
+        if not isinstance(message.get("text"), str) or not 0 < len(message["text"].encode()) <= MAX_NOTE:
+            raise ValueError("Note exceeds its allowed size")
+
+
+class RelayRejected(OSError):
+    def __init__(self, status):
+        super().__init__(f"Relay returned HTTP {status}")
+        self.status = status
+
+
+def require_status(code, *expected):
+    if code not in expected:
+        raise RelayRejected(code)
+
+
+def sync(path, state):
+    config = state["config"]
+    for identifier, item in list(state["outbox"].items()):
+        if item["status"] != "Queued":
+            continue
+        if item["expires"] <= time.time():
+            item["status"] = "Expired"
+            save(path, state)
+            continue
+        body = decode(item["envelope"])
+        route = "/v1/outbox/" + identifier
+        code, receipt = request(config, "GET", route)
+        if code == 404:
+            code, _ = request(config, "PUT", route, body)
+            if code == 429:
+                break
+            require_status(code, 200, 201)
+            continue
+        if code == 202:
+            continue
+        require_status(code, 200)
+        try:
+            verified = hmac.compare_digest(seal(config, "phone", identifier, "receipt", receipt), hashlib.sha256(body).digest())
+        except (InvalidTag, ValueError):
+            verified = False
+        if not verified:
+            item["status"] = "Receipt could not be verified"
+            save(path, state)
+            continue
+        item["status"] = "Received"
+        save(path, state)
+
+    code, data = request(config, "GET", "/v1/inbox")
+    require_status(code, 200)
+    identifiers = json.loads(data)
+    if not isinstance(identifiers, list) or len(identifiers) > MAX_ITEMS:
+        raise ValueError("Unexpected inbox data")
+    for identifier in identifiers:
+        if not isinstance(identifier, str) or not ID.fullmatch(identifier):
+            raise ValueError("Unexpected handoff ID")
+        item = state["inbox"].get(identifier)
+        route = "/v1/inbox/" + identifier
+        if item is None:
+            code, body = request(config, "GET", route)
+            if code == 404:
+                continue
+            require_status(code, 200)
+            try:
+                message = json.loads(seal(config, "phone", identifier, "message", body))
+                validate_message(message)
+            except (InvalidTag, ValueError):
+                continue
+            if message["type"] == "hello":
+                if state["paired"] or message["expires"] != config["expires"]:
+                    continue
+            elif not state["paired"]:
+                continue
+            # Bound local history, preserving the records whose receipt may still be in flight.
+            state["inbox"] = {key: old for key, old in state["inbox"].items()
+                              if old["message"]["expires"] > time.time()}
+            if len(state["inbox"]) >= 1024:
+                raise ValueError("Inbox is full")
+            item = {"message": message, "receipt": encode(encrypt(config, "pc", identifier, "receipt",
+                                                                 hashlib.sha256(body).digest()))}
+            state["inbox"][identifier] = item
+            save(path, state)
+        if item["message"]["type"] == "hello" and state.get("approved") != identifier:
+            continue
+        code, _ = request(config, "PUT", route + "/receipt", decode(item["receipt"]))
+        require_status(code, 200)
+
+
+def user_path(variable, default):
+    directory = Path(os.environ.get(variable) or Path.home() / default)
+    return directory if directory.is_absolute() else Path.home() / default
+
+
+def read_operator(path):
+    if path.stat().st_mode & 0o077:
+        raise ValueError("Make relay.json private to your account.")
+    config = json.loads(path.read_text(encoding="utf-8"))
+    url = origin(config["url"])
+    if url.port == 0:
+        raise ValueError("Use a valid relay port.")
+    if not TOKEN.fullmatch(config["provisioningKey"]):
+        raise ValueError("The relay provisioning key is invalid.")
+    tls = {"url": config["url"]}
+    if config.get("certificate"):
+        certificate = path.parent / config["certificate"]
+        tls["cert"] = encode(ssl.PEM_cert_to_DER_cert(certificate.read_text(encoding="ascii")))
+    return tls, config["provisioningKey"]
+
+
+def provisioning(path, state, operator):
+    config = state["config"]
+    # Re-read the operator key on a retry so the operator can rotate it.
+    tls, key = read_operator(operator)
+    if any(tls.get(field) != config.get(field) for field in ("url", "cert")):
+        raise ValueError("The relay changed. Remove this invitation and try again.")
+    body = (config["token"] + "\n" + config["code"]).encode("ascii")
+    code, data = request(config, "PUT", "/v1/invitations/" + config["pair"], body, token=key)
+    require_status(code, 200)
+    expiry = json.loads(data)["expires"]
+    if type(expiry) is not int or expiry > int(time.time()) + 360:
+        raise ValueError("Check the clocks on this PC and the relay.")
+    config["expires"] = expiry
+    save(path, state)
+
+
+def advance(path, state, operator):
+    config = state["config"]
+    if state.get("revoking"):
+        code, _ = request(config, "DELETE", "/v1/pair/" + config["pair"])
+        require_status(code, 204, 401)
+        path.unlink()
+        return
+    if not config.get("expires"):
+        provisioning(path, state, operator)
+    if state["paired"] or config["expires"] > time.time():
+        sync(path, state)
+    if state.pop("problem", None):
+        save(path, state)
+
+
+def watch(path, operator):
+    while True:
+        with edit(path) as state:
+            if state is None:
+                return
+            problem = None
+            try:
+                advance(path, state, operator)
+            except RelayRejected as error:
+                if error.status == 401:
+                    problem = "revoked" if state["config"].get("expires") else "setup"
+                elif error.status == 410 and not state["config"].get("expires"):
+                    state["config"]["expires"] = int(time.time())
+                    save(path, state)
+                elif error.status in (409, 429) and not state["config"].get("expires"):
+                    problem = "setup"
+                else:
+                    problem = "offline"
+            except (OSError, http.client.HTTPException):
+                problem = "offline"
+            except (ValueError, KeyError, TypeError):
+                problem = "setup"
+            if problem and state.get("problem") != problem:
+                state["problem"] = problem
+                save(path, state)
+            if not path.exists():
+                return
+        time.sleep(POLL_INTERVAL)
+
+
+def pending_phone(state):
+    if state["paired"] or state["config"].get("expires", 0) <= time.time():
+        return None
+    for identifier, item in state["inbox"].items():
+        if item["message"]["type"] == "hello":
+            return identifier
+    return None
+
+
+def invitation_payload(config):
+    shared = {key: config[key] for key in ("v", "pair", "url", "secret", "expires", "cert") if key in config}
+    shared["invite"] = config["code"]
+    return PREFIX + encode(pack(shared))
+
+
+def invitation_image(config):
+    import qrcode
+
+    with io.BytesIO() as data:
+        qrcode.make(invitation_payload(config), box_size=4,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L).save(data, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(data.getvalue()).decode("ascii")
+
+
+def view(path, operator):
+    try:
+        state = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {"phase": "ready" if operator.is_file() else "disabled"}
+    config = state["config"]
+    if state.get("revoking"):
+        return {"phase": "removing", "problem": state.get("problem")}
+    problem = state.get("problem")
+    if problem == "revoked":
+        return {"phase": "revoked"}
+    if state["paired"]:
+        notes = [item["message"]["text"] for item in state["inbox"].values()
+                 if item["message"]["type"] == "note" and item["message"]["expires"] > time.time()]
+        sent = ["Expired" if item["status"] == "Queued" and item["expires"] <= time.time() else item["status"]
+                for item in state["outbox"].values()]
+        return {"phase": "paired", "problem": problem, "notes": notes[-10:][::-1], "sent": sent[-10:][::-1]}
+    if not config.get("expires"):
+        return {"phase": "starting", "problem": problem}
+    if config["expires"] <= time.time():
+        return {"phase": "expired"}
+    identifier = pending_phone(state)
+    if identifier:
+        return {"phase": "confirm", "code": comparison_code(config, identifier), "problem": problem}
+    return {"phase": "scan", "qr": invitation_image(config), "problem": problem}
+
+
+def input_text():
+    data = sys.stdin.buffer.read(MAX_NOTE + 1)
+    if len(data) > MAX_NOTE:
+        raise ValueError("Enter a note under 32 KiB.")
+    return data.decode("utf-8")
+
+
+def change(path, operator, command):
+    with edit(path) as state:
+        if command == "invite":
+            if state is not None:
+                raise ValueError("Remove the current pairing or invitation first.")
+            tls, _ = read_operator(operator)
+            import qrcode  # Check that the QR can be generated before creating state.
+            config = {**tls, "v": 1, "pair": secrets.token_hex(16), "secret": encode(secrets.token_bytes(32)),
+                      "token": secrets.token_urlsafe(32), "code": secrets.token_urlsafe(32)}
+            if len(invitation_payload({**config, "expires": int(time.time()) + 300})) > 2900:
+                raise ValueError("The relay address and certificate are too large for a pairing QR.")
+            state = new_state(config)
+        elif state is None or state.get("revoking"):
+            raise ValueError("No active phone or invitation.")
+        elif command == "forget":
+            state["revoking"] = True
+            state.pop("problem", None)
+        elif command == "approve":
+            identifier = pending_phone(state)
+            code = input_text()
+            if not identifier or not re.fullmatch(r"[0-9]{6}", code) or not hmac.compare_digest(
+                    code, comparison_code(state["config"], identifier)):
+                raise ValueError("Enter the six digits shown on the phone.")
+            state["approved"] = identifier
+            state["paired"] = True
+            state["config"].pop("code", None)
+        elif command == "send":
+            if not state["paired"] or state.get("problem") == "revoked":
+                raise ValueError("Pair a phone first.")
+            note = input_text()
+            if not note.strip():
+                raise ValueError("Write a note first.")
+            message = {"type": "note", "text": note, "expires": int(time.time()) + RETENTION}
+            validate_message(message)
+            if len(pack(message)) + 28 > MAX_ENVELOPE:
+                raise ValueError("This note exceeds the handoff size limit.")
+            queue(state, message)
+        save(path, state)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=("watch", "status", "invite", "forget", "approve", "send"))
+    args = parser.parse_args()
+    os.umask(0o077)
+    path = user_path("XDG_STATE_HOME", ".local/state") / "monet/link/state.json"
+    operator = user_path("XDG_CONFIG_HOME", ".config") / "monet/link/relay.json"
+    try:
+        if args.command == "watch":
+            watch(path, operator)
+            return 0
+        if args.command != "status":
+            change(path, operator, args.command)
+        print(json.dumps(view(path, operator)))
+        return 0
+    except (OSError, KeyError, TypeError, ImportError):
+        print(json.dumps({"error": "Monet Link couldn’t read or write its setup. Check the relay configuration."}))
+    except ValueError as error:
+        print(json.dumps({"error": str(error)}))
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
