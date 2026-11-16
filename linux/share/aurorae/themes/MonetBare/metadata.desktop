@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Monet (no title bar)
+Comment=Monet's window frame without a title bar: one slides down when you point at the top of a window
+X-KDE-PluginInfo-Author=Monet
+X-KDE-PluginInfo-Name=MonetBare
+X-KDE-PluginInfo-Version=0.9.8-7
+X-KDE-PluginInfo-License=GPL-3.0-or-later
+X-KDE-PluginInfo-EnabledByDefault=true

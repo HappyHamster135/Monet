@@ -52,7 +52,7 @@
     monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
     monet-quick light hours|mist|smoke
     monet-quick prefs                    the Light & Wallpaper switches, as JSON
-    monet-quick pref hours|placard|glass|weather|dodge|snap on|off
+    monet-quick pref hours|placard|glass|weather|dodge|snap|titles on|off
     monet-quick glass solid|matte|frosted|clear  how see-through panels, windows and widgets are
     monet-quick sound                    where the sound can play and the apps playing, as JSON
     monet-quick mute on|off              the speakers or headphones playing
@@ -983,7 +983,8 @@ def prefs():
     glass = glass_level(saved.get("glass"))
     series = saved.get("series") if saved.get("series") in SERIES else "hours"
     return {"hours": saved.get("hours", True), "placard": saved.get("placard", True), "glass": glass, "series": series,
-            "weather": saved.get("weather", True), "dodge": saved.get("dodge", True), "snap": saved.get("snap", True)}
+            "weather": saved.get("weather", True), "dodge": saved.get("dodge", True), "snap": saved.get("snap", True),
+            "titles": saved.get("titles", True)}
 
 
 # Monet's paintings, each in four lights (wallpapers/Monet/contents/), one for each season (monet-light),
@@ -7321,12 +7322,25 @@ def set_snap(on):
     return all(results[:3]) and results[3] is not None
 
 
+def set_titles(on):
+    """Settings' Title bars appear when you point at the top: windows KWin frames go without a
+    title bar (monet-light gives them the bare frame, the shadow alone) and Monet Titles slides
+    one down over a window's top when the pointer reaches it; off, the glass title bars there
+    were, in the light and glass there are. Both at once, without signing out."""
+    switched = kwrite("kwinrc", "Script-monet-titles", "Hover", "true" if on else "false")
+    framed = run(f"{LIBEXECDIR}/monet-light", "apply", timeout=30) is not None
+    told = busctl("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "reconfigure") is not None
+    return switched and framed and told
+
+
 def look_reset():
     applied = run(f"{LIBEXECDIR}/monet-look", "--reset", timeout=300) is not None
     painted = run(f"{LIBEXECDIR}/monet-light", "paint", "wall", timeout=60) is not None
     values = prefs()
     dodge = set_dodge(values["dodge"])
     snap = set_snap(values["snap"])
+    # Title bars that appear at the top keep as chosen: monet-look never writes the script's
+    # switch, and monet-light (just above) picks the frame from the choice.
     return {"done": applied and painted and dodge and snap}
 
 
@@ -9539,7 +9553,7 @@ def main(argv):
         set_light(args[0])
     elif cmd == "prefs":
         emit(prefs())
-    elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass", "weather", "dodge", "snap"):
+    elif cmd == "pref" and len(args) == 2 and args[0] in ("hours", "placard", "glass", "weather", "dodge", "snap", "titles"):
         save_pref(args[0], args[1] == "on")
         values = prefs()
         if args[0] == "placard":
@@ -9548,6 +9562,8 @@ def main(argv):
             set_dodge(values["dodge"])
         elif args[0] == "snap":
             set_snap(values["snap"])
+        elif args[0] == "titles":
+            set_titles(values["titles"])
         else:
             run(f"{LIBEXECDIR}/monet-light", "paint" if args[0] in ("hours", "weather") else "apply", timeout=30)
     elif cmd == "glass" and args and args[0] in GLASS:

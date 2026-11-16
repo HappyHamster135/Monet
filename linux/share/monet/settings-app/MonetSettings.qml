@@ -216,7 +216,8 @@ Shared.MonetWindow {
                       "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors")
               + " " + i18nc("Settings search words, space-separated", "photo picture own painted")
               + " " + i18nc("Settings search words, space-separated", "transparent transparency see-through frosted matte solid blur")
-              + " " + i18nc("Settings search words, space-separated", "snap layouts assist windows side by side halves tiling") },
+              + " " + i18nc("Settings search words, space-separated", "snap layouts assist windows side by side halves tiling")
+              + " " + i18nc("Settings search words, space-separated", "title bar titlebar borderless window frame buttons") },
         { id: "wifi", name: i18n("Internet"), glyph: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20M2 12h20M12 2c-5 5-5 15 0 20M12 2c5 5 5 15 0 20",
           words: i18nc("Settings search words, space-separated",
                       "wifi wi-fi wireless network internet password") },
@@ -3696,7 +3697,8 @@ Shared.MonetWindow {
                             ["hours", i18n("Through the day"), i18n("The painting's light follows the sun where you are, from dawn to night")],
                             ["weather", i18n("Weather"), i18n("Rain, fog and snow where you are soften the painting with mist")],
                             ["placard", i18n("Placard"), i18n("The time and the painting's name on the desktop")],
-                            ["snap", i18n("Snap layouts"), i18n("Drag a window to the top of the screen for its layouts, and Snap Assist fills the rest. Off, an edge still gives it half the screen and the top all of it")]
+                            ["snap", i18n("Snap layouts"), i18n("Drag a window to the top of the screen for its layouts, and Snap Assist fills the rest. Off, an edge still gives it half the screen and the top all of it")],
+                            ["titles", i18n("Title bars appear when you point at the top"), i18n("Windows go without a title bar until you move the pointer to the top of one. Then it slides down, with the buttons. Off, every window keeps its glass title bar")]
                         ]
                         SettingRow {
                             tone: look

@@ -4,9 +4,11 @@ dab of paint swells up beneath the sign: lily to tuck the window away, ochre
 to fill the screen, the sun's vermilion to close.
 
 Writes KWin (Aurorae) themes to linux/share/aurorae/themes: Monet (mist) and
-MonetSmoke, each with glass and solid, picked by monet-light like the rest.
+MonetSmoke, each with glass and solid, picked by monet-light like the rest. And
+MonetBare, the shadow alone, for title bars that appear when you point at the
+top (Monet Titles, share/kwin/scripts/monet-titles, draws those).
 
-Run from the repository root:  python3 tools/make-decoration.py
+Run from the repository root:  python3 tools/make-decoration.py  (--bare: only MonetBare)
 """
 
 import base64
@@ -33,6 +35,10 @@ RADIUS, RADIUS_BOTTOM = 14, 10
 MIDDLE = 24
 BUTTON = 26
 K = 3  # pictures are kept at three times the size, sharp on HiDPI screens
+# The bare frame: no title bar and no glass of its own, only the soft ink shadow around the
+# window's square corners. Ink is the same in mist and smoke and none of the glass shows, so one
+# frame does for every light and glass. Monet Titles slides a title bar down over the window.
+BARE = "MonetBare"
 
 # Glass and ink as in the app style (tools/make-kvantum.py), so the title bar
 # runs into the window without a seam.
@@ -106,6 +112,9 @@ def outline(x0, y0, x1, y1, top, bottom, steps=18):
     out = []
     for cx, cy, r, start in ((x0 + top, y0 + top, top, 180), (x1 - top, y0 + top, top, 270),
                              (x1 - bottom, y1 - bottom, bottom, 0), (x0 + bottom, y1 - bottom, bottom, 90)):
+        if r == 0:
+            out.append((cx, cy))  # a square corner
+            continue
         for i in range(steps + 1):
             a = math.radians(start + 90 * i / steps)
             out.append((cx + r * math.cos(a), cy + r * math.sin(a)))
@@ -141,19 +150,19 @@ def paint(rgba):
     return f'fill="#{rgba[0]:02X}{rgba[1]:02X}{rgba[2]:02X}" fill-opacity="{rgba[3] / 255:.3g}"'
 
 
-def frame_size():
-    margins = (SIDE + RADIUS, TOP + BAR, SIDE + RADIUS, RADIUS_BOTTOM + BOTTOM)
+def frame_size(bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM):
+    margins = (SIDE + radius, TOP + bar, SIDE + radius, radius_bottom + BOTTOM)
     return margins, margins[0] + MIDDLE + margins[2], margins[1] + MIDDLE + margins[3]
 
 
-def shadow_image(active):
+def shadow_image(active, bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM):
     """The soft ink shadow, a little below the window; none under the glass."""
-    _, w, h = frame_size()
+    _, w, h = frame_size(bar, radius, radius_bottom)
     blur, drop, strength = (16, 10, 0.48) if active else (10, 6, 0.26)
     glass, lifted = Image.new("L", (w * K, h * K), 0), Image.new("L", (w * K, h * K), 0)
     for img, dy in ((glass, 0), (lifted, drop)):
         d = ImageDraw.Draw(img)
-        d.polygon([(x * K, (y + dy) * K) for x, y in outline(SIDE, TOP, w - SIDE, h - BOTTOM, RADIUS, RADIUS_BOTTOM)], fill=255)
+        d.polygon([(x * K, (y + dy) * K) for x, y in outline(SIDE, TOP, w - SIDE, h - BOTTOM, radius, radius_bottom)], fill=255)
     soft = np.asarray(lifted.filter(ImageFilter.GaussianBlur(blur * K / 2))).astype(np.float32) / 255
     rgba = np.zeros((h * K, w * K, 4), np.uint8)
     rgba[..., :3] = INK
@@ -202,6 +211,34 @@ def flat(sheet, prefix, how):
     """Filling the screen: no corners, no shadow, only the glass."""
     for piece in ("topleft", "top", "topright", "left", "center", "right", "bottomleft", "bottom", "bottomright"):
         sheet.element(f"{prefix}-{piece}", 4, 4, lambda x, y: f'<rect x="{x}" y="{y}" width="4" height="4" {how}/>')
+
+
+def bare_frame(sheet, prefix, active):
+    """The bare frame's nine pieces: each only the part of the shadow inside its box. They end
+    where the window begins, so nothing of the frame lies under the window, even a see-through one."""
+    (left, top, right, bottom), w, h = frame_size(0, 0, 0)
+    shadow = shadow_image(active, 0, 0, 0)
+    xs, ys = (0, left, w - right, w), (0, top, h - bottom, h)
+    names = ("topleft", "top", "topright", "left", "center", "right", "bottomleft", "bottom", "bottomright")
+    for n, piece in enumerate(names):
+        i, j = n % 3, n // 3
+        box = (xs[i], ys[j], xs[i + 1], ys[j + 1])
+        pw, ph = box[2] - box[0], box[3] - box[1]
+
+        def draw(x, y, box=box, pw=pw, ph=ph, piece=piece):
+            return "" if piece == "center" else image(x, y, pw, ph, shadow.crop(tuple(v * K for v in box)))
+        sheet.element(f"{prefix}-{piece}", pw, ph, draw)
+
+
+def bare_svg():
+    """No mask: KWin then blurs nothing behind the frame, which has no glass to blur behind."""
+    sheet = Sheet("Monet's bare window frame: the shadow alone, for title bars that appear when you point at the top.")
+    bare_frame(sheet, "decoration", True)
+    bare_frame(sheet, "decoration-inactive", False)
+    clear = 'fill="#000000" fill-opacity="0"'
+    flat(sheet, "decoration-maximized", clear)
+    flat(sheet, "decoration-maximized-inactive", clear)
+    return sheet.svg()
 
 
 def decoration_svg(light, fill):
@@ -341,10 +378,53 @@ PaddingRight={SIDE}
 """
 
 
-def metadata(ident, name):
+# The bare frame: no title bar and no buttons; with KDE's border size None (monet-look), no
+# border either. Aurorae still draws the title's words, into the shadow above the window, so
+# they're in a color no one sees. KWin still gives every window room to resize outside it,
+# along the sides and bottom.
+def bare_rc():
+    return f"""[General]
+ActiveTextColor=0,0,0,0
+InactiveTextColor=0,0,0,0
+TitleAlignment=Center
+TitleVerticalAlignment=Center
+Animation=160
+UseTextShadow=false
+HaloActive=false
+HaloInactive=false
+
+[Layout]
+BorderLeft={BORDER}
+BorderRight={BORDER}
+BorderBottom={BORDER}
+TitleEdgeTop=0
+TitleEdgeBottom=0
+TitleEdgeLeft=0
+TitleEdgeRight=0
+TitleEdgeTopMaximized=0
+TitleEdgeBottomMaximized=0
+TitleEdgeLeftMaximized=0
+TitleEdgeRightMaximized=0
+TitleBorderLeft=0
+TitleBorderRight=0
+TitleHeight=0
+ButtonWidth=0
+ButtonHeight=0
+ButtonSpacing=0
+ButtonMarginTop=0
+ButtonMarginTopMaximized=0
+ExplicitButtonSpacer=0
+PaddingTop={TOP}
+PaddingBottom={BOTTOM}
+PaddingLeft={SIDE}
+PaddingRight={SIDE}
+"""
+
+
+def metadata(ident, name, comment="Monet's window frame: glass, ink, and a dab of paint under the pointer"):
     return f"""[Desktop Entry]
 Name={name}
-Comment=Monet's window frame: glass, ink, and a dab of paint under the pointer
+Comment={comment}
 X-KDE-PluginInfo-Author=Monet
 X-KDE-PluginInfo-Name={ident}
 X-KDE-PluginInfo-Version={VERSION}
@@ -380,7 +460,18 @@ def main():
             for kind in BUTTONS:
                 write(folder / f"{kind}.svg", buttons[kind])
             print("wrote", folder.relative_to(ROOT))
+    write_bare()
+
+
+def write_bare():
+    folder = OUT / BARE
+    write(folder / "metadata.desktop", metadata(BARE, "Monet (no title bar)", "Monet's window frame without a title bar: "
+                                                "one slides down when you point at the top of a window"))
+    write(folder / f"{BARE}rc", bare_rc())
+    write(folder / "decoration.svg", bare_svg())
+    print("wrote", folder.relative_to(ROOT))
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    write_bare() if sys.argv[1:] == ["--bare"] else main()

@@ -104,6 +104,12 @@ drifts() {
     grep -q '"hours": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo off || echo on
 }
 
+# Title bars that appear when you point at the top (Settings → Light & Wallpaper, on unless
+# turned off): windows go without, and Monet Titles (share/kwin/scripts) brings one down.
+titles() {
+    grep -q '"titles": false' "$CONFIG/monet/prefs.json" 2>/dev/null && echo kept || echo hover
+}
+
 # The painting: through the whole day, dawn to night, whatever Mist or Smoke the colors keep
 # (people wanted the day and the seasons on the wall with the colors they picked; Mist kept
 # to dawn and day before, Smoke to dusk and night), or, when it stays, the light that goes
@@ -307,11 +313,13 @@ apply() {
             ;;
     esac
 
-    # Window frames, mist or smoke, glass, matte or solid.
+    # Window frames, mist or smoke, glass, matte or solid; or, while title bars appear when you
+    # point at the top, the bare frame: the shadow alone, the same in every light and glass.
     local frame=__aurorae__svg__Monet
     [ "$light" = smoke ] && frame="${frame}Smoke"
     [ "$style" = monet-solid ] && frame="${frame}Solid"
     [ "$style" = monet-matte ] && frame="${frame}Matte"
+    [ "$(titles)" = hover ] && frame=__aurorae__svg__MonetBare
     current="$(ini kwinrc org.kde.kdecoration2 theme)"
     case "$current" in
         __aurorae__svg__Monet*)

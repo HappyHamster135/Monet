@@ -125,6 +125,14 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   it again and tells Steam where they are before it starts. When Steam starts
   with your PC, it waits a moment for your drives to be ready, so you don't
   have to add them again.
+- **Cleaner windows.** Apps now have the whole window to themselves, with no
+  title bar across the top. Move the pointer to the top of a window, or to the
+  top of the screen when it fills it, and the title bar slides down with the
+  app's name and the minimize, maximize and close buttons. Drag it to move the
+  window, double-click it to fill the screen, and it slides away again when
+  you move on. Apps that draw their own title bar look just as they did. If
+  you'd rather keep a title bar on every window, turn off Title bars appear
+  when you point at the top in Settings → Light & Wallpaper.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

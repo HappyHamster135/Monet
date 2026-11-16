@@ -194,7 +194,7 @@ hairline reads as a second box inside the first.
 | GTK apps (the Store, Flathub's) | `tools/make-gtk.py`: KDE's own colors for GTK first, then paper or smoke, lily and the sun, as named colors and, for libadwaita 1.6 and newer, as CSS variables. GTK 4 apps draw their own title bar, so they also get Monet's window buttons: the sign alone, and under the pointer the title bars' dab (lily, ochre, the sun). Their page and section titles are in Fraunces. `monet-light` puts the sheet in place of KDE's own `gtk.css`, which for GTK 4 also imports KDE's window shape (`kde_window_geometry.css`); Monet's imports it too. Until 0.9.4 that second import made KDE's file look like someone's own, so GTK 4 apps never got Monet's sheet |
 | Zen, the browser | `linux/share/monet/zen`, which `monet-quick zen` copies into each Zen profile and imports from `userChrome.css` and `userContent.css` (at sign-in, and as Zen arrives or makes its profile: `monet-zen.path`; before Zen's first start, Monet makes its profile, already dressed). Behind the sidebar and around the page, the painting blurred and washed in paper or smoke (`tools/make-zen.py`); lily for the accent; Monet's paper and smoke for what pops up; radius 12. Tabs: an ink wash under the pointer, the open one on a pebble of paper. The address field is a well with a lily ring while you type; on a page it floats as a sheet with Monet's soft shadow. The space's name in Fraunces. Zen's welcome and its default-browser question are skipped: Monet makes it the browser. A new tab opens on the painting itself, by daylight in Mist and by night in Smoke. Zen follows the PC's light. Its own theme picker can't override Monet's colors; uninstalling Monet gives Zen its own look back |
 | Monet Settings | An app window in Monet's frame, as Games: the list on glass, a solid paper page |
-| Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light` |
+| Title bars | Monet's own window frames (`tools/make-decoration.py`, KWin's Aurorae): the app style's glass, so title bar and window are one sheet, radius 14 at the top and 10 below, a wide soft shadow in ink. The buttons are signs brushed in ink; under the pointer a dab of paint swells up beneath the sign (lily to minimize, ochre to maximize, the sun to close). One frame per light and glass (`Monet`, `MonetSmoke`, and `Solid` of each), switched by `monet-light`. While title bars appear when you point at the top (the default since 0.9.8-7), `MonetBare` instead: the shadow alone, and Monet Titles brings the title bar |
 | Terminal | Konsole color schemes with opacity and blur; a thin cursor, room around the text, the menu behind a button |
 
 Two global themes carry this into KDE's settings: **Mist** and **Smoke**
@@ -996,6 +996,38 @@ old shortcuts while making the new ones switched the new ones off. KDE's
 shortcut list (More settings) shows them as "While Snap Assist or the snap
 layouts are open". (A full-screen QML effect could have taken the keyboard, but
 it replaces the whole picture of the desktop.)
+
+## Title bars that appear when you point at the top
+
+Since 0.9.8-7 the windows KWin frames have no title bar until you point at their
+top, as Zen's compact mode does with its toolbar. Settings → Light & Wallpaper →
+**Title bars appear when you point at the top**, on unless turned off
+(`monet-quick pref titles`, kept in `prefs.json`, which updates and Put back
+leave alone), applies at once.
+
+- **The bare frame.** `monet-light` gives windows `MonetBare`
+  (`make-decoration.py`): the ink shadow alone, no title bar, buttons or border.
+  KWin still gives room to resize along the sides and bottom (Aurorae has none
+  above a window, with either frame). Off, the glass frame of the light and glass
+  comes back exactly as before.
+- **Monet Titles** (a KWin script, `share/kwin/scripts/monet-titles`): the
+  pointer resting 150 ms in a window's top 6 pixels, or at the screen's top over
+  a window that fills it, slides a 40-pixel bar of the frames' matte glass down
+  over the window (220 ms; 160 ms back up 400 ms after the pointer leaves; cut
+  with animations off): icon, title in Fraunces, the frames' own buttons. Drag
+  to move (KWin's move, so snap layouts work), double-click to fill the screen,
+  right-click for KWin's window menu. A frame can't draw over the app, and a
+  taller frame would push the app down, so the bar is a window of KWin's own (a
+  tooltip to KWin: no focus taken, no scale effect) lying over the window's top;
+  the app never moves or changes size.
+- **Which windows.** Only those KWin frames with no title bar in the frame
+  (`decorationHasAlpha`, a frame top of at most 4 pixels). Apps drawing their own
+  (GTK, Chromium, Electron, Zen, Monet's apps) are unchanged; never full-screen
+  windows, Plasma's or KWin's own, nor under a menu, another window or a panel
+  along that edge (hidden ones too), nor in the overview. KWin's keys stay
+  (Alt+F3, Alt+Space). KWin moves only the active window: the script activates
+  it first and waits for an X11 app to take the focus. Touch screens have no
+  pointer to bring the bar: on a tablet, turn it off.
 
 ## Sound
 

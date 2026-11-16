@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Monet" }],
+        "Category": "Window Management",
+        "Description": "Windows without title bars until you point at the top of one: then its title bar slides down over it, with its buttons",
+        "EnabledByDefault": true,
+        "Icon": "window",
+        "Id": "monet-titles",
+        "License": "GPL-3.0-or-later",
+        "Name": "Monet Title Bars",
+        "Version": "0.9.8"
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}

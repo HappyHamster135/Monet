@@ -738,24 +738,27 @@ class Light(unittest.TestCase):
         self.assertEqual(profile.read_text(), "[Appearance]\nColorScheme=MyTerminalColors\n")
 
     def test_window_frames_follow_the_light(self):
+        # With title bars kept on windows (Settings; the bare frame, while they appear when you
+        # point at the top, is tests/test_title_bars.py).
         kde = FakeKDE(self.tmp.name, hour=21)
+        prefs = Path(self.tmp.name) / "config/monet/prefs.json"
+        prefs.parent.mkdir(parents=True, exist_ok=True)
+        prefs.write_text('{"titles": false}')
         kde.light("apply")
         frame = "kwinrc|org.kde.kdecoration2|theme"
         kde.set(frame, "__aurorae__svg__Monet")
         kde.light("apply")
         self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmoke")
         # Without glass, the solid frame.
-        prefs = Path(self.tmp.name) / "config/monet/prefs.json"
-        prefs.parent.mkdir(parents=True, exist_ok=True)
-        prefs.write_text('{"glass": false}')
+        prefs.write_text('{"titles": false, "glass": false}')
         kde.light("apply")
         self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmokeSolid")
         # Matte glass (Settings' Glass slider), with KWin's blur stronger and grained.
-        prefs.write_text('{"glass": "matte"}')
+        prefs.write_text('{"titles": false, "glass": "matte"}')
         kde.light("apply")
         self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmokeMatte")
         self.assertEqual(kde.settings()["kwinrc|Effect-blur|NoiseStrength"], "5")
-        prefs.write_text('{"glass": "clear"}')
+        prefs.write_text('{"titles": false, "glass": "clear"}')
         kde.light("apply")
         self.assertEqual(kde.settings()[frame], "__aurorae__svg__MonetSmoke")
         self.assertEqual(kde.settings()["kwinrc|Effect-blur|BlurStrength"], "3")
@@ -2135,7 +2138,7 @@ class SnapLikeWindows(unittest.TestCase):
                                    ("kwinrc", "Windows", "ElectricBorderTiling", "false")])
         self.assertEqual(called, [("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "reconfigure")] * 2)
         source = (ROOT / "linux/libexec/monet-quick").read_text()
-        self.assertIn('args[0] in ("hours", "placard", "glass", "weather", "dodge", "snap")', source)
+        self.assertIn('args[0] in ("hours", "placard", "glass", "weather", "dodge", "snap", "titles")', source)
         self.assertIn('dodge = set_dodge(values["dodge"])\n    snap = set_snap(values["snap"])', source)  # Put back keeps it
         # An update keeps the choice: monet-look's record, not a plain write, for KWin's own edges.
         look = (ROOT / "linux/libexec/monet-look").read_text()

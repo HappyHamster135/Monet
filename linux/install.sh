@@ -266,6 +266,11 @@ done
 for theme in Monet MonetMatte MonetSolid MonetSmoke MonetSmokeMatte MonetSmokeSolid; do
     tree "$SRC/share/aurorae/themes/$theme" "$DATADIR/aurorae/themes/$theme"
 done
+# And the bare one, its shadow alone, while title bars appear when you point at the top: Monet
+# Titles (a KWin script) slides one down over a window's top, with the frames' buttons.
+tree "$SRC/share/aurorae/themes/MonetBare" "$DATADIR/aurorae/themes/MonetBare"
+tree "$SRC/share/kwin/scripts/monet-titles" "$DATADIR/kwin/scripts/monet-titles"
+fill "$DATADIR"/kwin/scripts/monet-titles/contents/ui/*.qml
 # Snap layouts, edges and corners, full height, Snap Assist (a KWin script), and windows
 # gliding to where they're put (a KWin effect, in place of KWin's own Stretch).
 tree "$SRC/share/kwin/scripts/monet-snap" "$DATADIR/kwin/scripts/monet-snap"
