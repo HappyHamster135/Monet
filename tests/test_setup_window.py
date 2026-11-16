@@ -1,4 +1,5 @@
 """Installer keyboard navigation, rendering and completion without touching a disk."""
+import json
 import os
 from contextlib import ExitStack
 from pathlib import Path
@@ -13,6 +14,7 @@ try:
     from monet_setup import app
     from monet_setup.qt import QObject, QProcess, QGuiApplication, QQmlApplicationEngine, QUrl
     from PySide6.QtCore import QMetaObject, QPointF, Qt
+    from PySide6.QtQml import QQmlExpression
     from PySide6.QtQuick import QQuickItem
     from PySide6.QtTest import QTest
     QT = True
@@ -111,8 +113,9 @@ class SetupWindow(unittest.TestCase):
         self.worker("import sys; sys.stdout.write('{\"done\": true}')")
         self.assertEqual(self.window.property("phase"), "done")
         self.assertFalse(self.window.property("showingKey"))
-        self.assertTrue(any(item.property("text") == "Restart" and item.property("visible")
-                            for item in self.window.findChildren(QObject)))
+        # The window's own items, not every QObject in it: wrapping those leaves PySide
+        # with stale types for later windows (Fedora's PySide stops on an assertion).
+        self.assertTrue(self.shown("Restart"))
 
     def test_unsuccessful_exit_is_not_success(self):
         self.worker("print('{\"done\": true}', flush=True); raise SystemExit(7)")
@@ -249,7 +252,17 @@ class SetupWindow(unittest.TestCase):
             pending.extend(reversed(item.childItems()))
 
     def shown(self, text):
-        return any(item.property("text") == text and item.isVisible() for item in self.visual_items())
+        # Read inside QML: after the dropdowns' rows have been in Python, PySide hands back Setup's
+        # Option rows with a broken type (Fedora's build stops on an assertion), so the window's
+        # items don't pass through Python here.
+        texts = QQmlExpression(self.engine.rootContext(), self.window, """
+            JSON.stringify((function walk(item, found) {
+                if (!item.visible) return found
+                if (typeof item.text === "string") found.push(item.text)
+                for (let i = 0; i < item.children.length; ++i) walk(item.children[i], found)
+                return found
+            })(contentItem, []))""").evaluate()[0]
+        return text in json.loads(texts)
 
     def network_page(self, wired=False, joined="", networks=()):
         self.setup._wired, self.setup._joined, self.setup._networks = wired, joined, list(networks)
@@ -278,9 +291,15 @@ class SetupWindow(unittest.TestCase):
         self.assertTrue(self.shown("Connected with a cable"))
         self.assertFalse(self.shown("No networks found"))
         self.assertTrue(next_button.isEnabled())
-        with mock.patch.object(self.setup, "scan") as scan:
+        with mock.patch.object(app, "DEMO", False), \
+             mock.patch.object(app.network, "wired", return_value=False), \
+             mock.patch.object(app.network, "wifi_networks", return_value=[]) as scan:
             self.links((True, False))           # nothing new: nothing is said again
             self.links((False, False))          # pulled out: look for Wi-Fi again
+            for _ in range(100):
+                if not self.setup.scanning:
+                    break
+                QTest.qWait(10)
             scan.assert_called_once()
         self.assertFalse(self.setup.wired)
         self.assertFalse(self.shown("Connected with a cable"))
@@ -295,7 +314,11 @@ class SetupWindow(unittest.TestCase):
         harbor = {"name": "Harbor", "signal": 92, "secure": True, "active": True}
         self.network_page(joined="Harbor", networks=[harbor])
         self.assertTrue(self.shown("Connected"))
-        with mock.patch.object(self.setup, "scan") as scan:
+        # Counted at NetworkManager's end, not by swapping the Qt object's own slot for a mock,
+        # which trips an assertion in Fedora's PySide.
+        with mock.patch.object(app, "DEMO", False), \
+             mock.patch.object(app.network, "wired", return_value=False), \
+             mock.patch.object(app.network, "wifi_networks", return_value=[]) as scan:
             self.links(None)
             self.links((False, True))
             self.assertEqual(self.setup.joined, "Harbor")
@@ -305,6 +328,10 @@ class SetupWindow(unittest.TestCase):
             self.setup._joining = False
             scan.assert_not_called()
             self.links((False, False))
+            for _ in range(100):
+                if not self.setup.scanning:
+                    break
+                QTest.qWait(10)
             scan.assert_called_once()
         self.assertEqual(self.setup.joined, "")
         self.assertFalse(self.shown("Connected"))
