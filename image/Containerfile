@@ -200,6 +200,7 @@ COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
 # Use /tmp, as the native bundle mounts above do.
 RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro \
     --mount=type=bind,from=password,source=/out,target=/tmp/monet-build-password,ro \
+    --mount=type=bind,source=image/nvidia-flatpak,target=/tmp/monet-nvidia-flatpak,ro \
     --mount=type=bind,source=image/install-update-trust.py,target=/tmp/monet-install-update-trust.py,ro \
     --mount=type=bind,source=image/monet-update.pub,target=/tmp/monet-update.pub,ro \
     install -d /tmp/monet/password \
@@ -210,6 +211,7 @@ RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro 
  && python3 /tmp/monet-shell-profiles.py /etc/profile.d \
  && rm /tmp/monet-shell-profiles.py \
  && plymouth-set-default-theme monet \
+ && bash /tmp/monet-nvidia-flatpak/install.sh \
  && bash /tmp/monet-finish-image \
  && rm /tmp/monet-finish-image \
  && python3 /tmp/monet-install-update-trust.py /tmp/monet-update.pub \

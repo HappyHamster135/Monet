@@ -25,6 +25,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   picture open, Back closes the picture first.
 - **The keys stay with the list.** After Back, typing and the arrow keys go to
   the list or the search again, not to the app page that just closed.
+- **Wi-Fi in every language.** Quick Settings shows the Wi-Fi tile again when
+  Monet is set to a language other than English.
+- **A quicker start with NVIDIA graphics.** The check that keeps Flatpak apps'
+  NVIDIA drivers matched now runs half a minute after the PC starts, instead
+  of holding up the start by several seconds.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
