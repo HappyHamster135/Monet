@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -14,8 +15,8 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def module(name, file):
-    loader = importlib.machinery.SourceFileLoader(name, str(ROOT / "linux/libexec" / file))
+def module(name, file, folder=ROOT / "linux/libexec"):
+    loader = importlib.machinery.SourceFileLoader(name, str(folder / file))
     value = importlib.util.module_from_spec(importlib.util.spec_from_loader(name, loader))
     loader.exec_module(value)
     return value
@@ -192,6 +193,164 @@ class DownloadErrors(unittest.TestCase):
                                   ("Could not resolve host", "offline"),
                                   ("Deploy not allowed for user", "not-allowed")):
             self.assertEqual(store.trouble(message), expected)
+
+
+WORKER = ROOT / "tests/fixtures/store-install-worker.py"
+fixture = module("store_install_fixture", WORKER.name, WORKER.parent)
+
+
+class FlatpakTransaction(unittest.TestCase):
+    """What each phase asks of Flatpak (a pretend one), and the name of what went wrong in it."""
+
+    def transaction(self, phase, failures=None, installed=False, action="install"):
+        modules, seen = fixture.fake_flatpak(failures, installed)
+        progress = []
+        with patch.dict(sys.modules, modules):
+            result = store.flatpak_transaction(action, APP["ref"], "system", progress.append, lambda: False, phase=phase)
+        return result, seen, progress
+
+    def test_the_download_only_downloads_and_the_install_only_installs(self):
+        result, seen, progress = self.transaction("fetch")
+        self.assertEqual((result, seen["runs"], seen["installed"]),
+                         ({"ok": True}, [("fetch", ("install", "flathub", APP["ref"]))], False))
+        # Only real progress is said: a meter ticking in place is a stalled pull.
+        self.assertEqual(progress, [0.0, 0.4, 1.0])
+        result, seen, progress = self.transaction("deploy")
+        self.assertEqual((result, seen["runs"], seen["installed"], progress),
+                         ({"ok": True}, [("deploy", ("install", "flathub", APP["ref"]))], True, []))
+        result, seen, _ = self.transaction("fetch", installed=True)
+        self.assertEqual((result, seen["runs"]), ({"ok": True, "installed": True}, []))
+
+    def test_what_went_wrong_keeps_its_name_in_either_phase(self):
+        for phase, action, installed in (("fetch", "install", False), ("deploy", "install", False), ("", "remove", True)):
+            for message, name in (("No space left on device", "no-space"),
+                                  ("Deploy not allowed for user", "not-allowed"),
+                                  ("While pulling " + APP["ref"] + " from remote flathub: Could not resolve host", "offline"),
+                                  ("Something else", "failed")):
+                with self.subTest(phase=phase, message=message):
+                    result, _, _ = self.transaction(phase, {phase: message}, installed, action)
+                    self.assertEqual(result, {"error": name})
+
+
+@unittest.skipIf(os.name == "nt", "Linux download process")
+class InstallSupervision(unittest.TestCase):
+    """An install downloads in a process of its own, which a stall or Cancel stops."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.log = Path(self.temp.name) / "worker.log"
+        self.progress = []
+
+    def command(self, scenario):
+        return [sys.executable, str(WORKER), str(ROOT / "linux/libexec/monet-store"), scenario, str(self.log)]
+
+    def install(self, scenario, cancelled=lambda: False, **options):
+        return store.install_app(APP["ref"], "system", self.progress.append, cancelled, command=self.command(scenario), **options)
+
+    def events(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
+
+    def steps(self):
+        return [event[1:] for event in self.events()]
+
+    def clock(self, step):
+        """A clock that moves only once the download is under way, `step` seconds at each look."""
+        now = [0]
+
+        def clock():
+            if self.progress:
+                now[0] += step
+            return now[0]
+        return clock, now
+
+    def assertStopped(self, pid):
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+
+    def test_an_install_downloads_in_its_own_process_and_installs_only_a_complete_download(self):
+        self.assertEqual(store.install_command(APP["ref"], "user")[1:],
+                         [str(ROOT / "linux/libexec/monet-store"), "--install-worker", APP["ref"], "user"])
+        with patch.object(store, "install_command", lambda ref, scope: self.command("complete")):
+            self.assertEqual(store.transact("install", APP["ref"], self.progress.append, lambda: False, "system"), {"ok": True})
+        self.assertEqual(self.steps(), [["fetch", "start"], ["fetch", "end"], ["deploy", "start"], ["deploy", "end"]])
+        workers = {event[0] for event in self.events()}
+        self.assertEqual(len(workers), 1)
+        self.assertNotIn(os.getpid(), workers)
+        self.assertEqual(self.progress, [0.5, 1, 1])
+        # A download that fails, or a process that ends without a word, installs nothing.
+        for scenario, result in (("fetch:No space left on device", {"error": "no-space"}), ("crash", {"error": "failed"})):
+            with self.subTest(scenario):
+                self.log.unlink()
+                self.assertEqual(self.install(scenario), result)
+                self.assertEqual(self.steps(), [["fetch", "start"]])
+
+    def test_removing_needs_no_download_process(self):
+        with patch.object(store, "flatpak_transaction", return_value={"ok": True}) as transaction, \
+                patch.object(store, "install_app", side_effect=AssertionError("download process")):
+            self.assertEqual(store.transact("remove", APP["ref"], scope="user"), {"ok": True})
+        self.assertEqual(transaction.call_args.args[:3], ("remove", APP["ref"], "user"))
+        self.assertEqual(store.transact("install", APP["ref"], scope="elsewhere"), {"error": "failed"})
+        refused = subprocess.run([sys.executable, str(ROOT / "linux/libexec/monet-store"), "--install-worker", "--delete", "system"],
+                                 capture_output=True, timeout=30)
+        self.assertEqual((refused.returncode, refused.stdout), (2, b""))
+
+    def test_a_download_without_progress_for_the_idle_limit_is_offline_and_stopped(self):
+        self.assertEqual(store.DOWNLOAD_IDLE_SECONDS, 45)
+        clock, now = self.clock(15)
+        started = time.monotonic()
+        self.assertEqual(self.install("stall", clock=clock), {"error": "offline"})
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertGreaterEqual(now[0], store.DOWNLOAD_IDLE_SECONDS)
+        self.assertEqual(self.progress, [0.1])
+        self.assertEqual(self.steps(), [["fetch", "start"]])
+        self.assertStopped(self.events()[0][0])  # Even though it ignored SIGTERM.
+
+    def test_slow_but_steady_progress_is_not_a_stall(self):
+        clock, now = self.clock(5)
+        self.assertEqual(self.install("steady", clock=clock), {"ok": True})
+        self.assertGreater(now[0], store.DOWNLOAD_IDLE_SECONDS)
+        self.assertEqual(self.progress, [step / 10 for step in range(1, 11)] + [1])
+
+    def test_cancel_stops_the_download_but_never_the_install(self):
+        queue = jobs.Queue(Path(self.temp.name) / "queue")
+
+        def press_cancel(when):
+            deadline = time.monotonic() + 10
+            while when not in self.steps() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            queue.change(APP["id"], "cancel")
+            with self.log.open("a") as stream:
+                stream.write(json.dumps([os.getpid(), "cancel", "pressed"]) + "\n")
+
+        for scenario, when, state, steps in (
+                ("slow-fetch", ["fetch", "start"], "cancelled", [["fetch", "start"], ["cancel", "pressed"]]),
+                ("wait-for-cancel", ["deploy", "start"], "done",
+                 [["fetch", "start"], ["fetch", "end"], ["deploy", "start"], ["cancel", "pressed"], ["deploy", "end"]])):
+            with self.subTest(scenario):
+                self.log.unlink(missing_ok=True)
+                queue.submit(APP, "install")
+                presser = threading.Thread(target=press_cancel, args=(when,))
+                presser.start()
+                started = time.monotonic()
+                queue.run(lambda job, progress, cancelled: store.install_app(
+                    job["ref"], job["installation"], progress, cancelled, command=self.command(scenario)))
+                presser.join(10)
+                self.assertLess(time.monotonic() - started, 8)  # The whole download would take ten seconds.
+                self.assertEqual(queue.read()[0]["state"], state)
+                self.assertEqual(self.steps(), steps)
+                self.assertStopped(self.events()[0][0])
+
+    def test_what_went_wrong_reaches_the_store_by_its_name(self):
+        downloaded = [["fetch", "start"], ["fetch", "end"], ["deploy", "start"]]
+        for scenario, name, steps in (("fetch:No space left on device", "no-space", [["fetch", "start"]]),
+                                      ("fetch:Could not resolve host: dl.flathub.org", "offline", [["fetch", "start"]]),
+                                      ("deploy:No space left on device", "no-space", downloaded),
+                                      ("deploy:Deploy not allowed for user", "not-allowed", downloaded)):
+            with self.subTest(scenario):
+                self.log.unlink(missing_ok=True)
+                self.assertEqual(self.install(scenario), {"error": name})
+                self.assertEqual(self.steps(), steps)
 
 
 try:

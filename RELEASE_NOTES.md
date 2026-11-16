@@ -50,6 +50,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   stop at the search too. With large text, Settings' cards and buttons wrap
   their words instead of running past the edge, and the Store's most-installed
   list stays in view in a narrow window.
+- **Downloads that stall can be cancelled.** If the connection drops partway
+  through a Store download, Cancel now stops it straight away, and after 45
+  seconds without progress the Store says Flathub couldn't be reached, so you
+  can try again. An app is only installed once all of it has downloaded, and
+  the last step of installing it is never cut short.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
