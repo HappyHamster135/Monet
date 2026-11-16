@@ -646,6 +646,45 @@ PlasmoidItem {
                     font.family: "Fraunces 72pt SuperSoft"
                     font.pixelSize: 20
                 }
+                // Every app in a library of its own (Apps), as Games has games: from All apps.
+                Rectangle {
+                    id: appLibrary
+                    objectName: "menuAppLibrary"
+                    visible: page.everything
+                    function go() {
+                        helper.connectSource("'@LIBEXECDIR@/monet-quick' launch 6d6f6e65742d617070732e6465736b746f70")
+                        root.expanded = false
+                    }
+                    readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
+                    implicitWidth: libraryLabel.implicitWidth + 24
+                    implicitHeight: 30
+                    radius: 11
+                    color: dark ? Qt.rgba(1, 1, 1, libraryHover.hovered ? 0.16 : 0.1)
+                        : Qt.rgba(0.11, 0.106, 0.098, libraryHover.hovered ? 0.11 : 0.07)
+                    scale: libraryTap.pressed ? 0.96 : 1
+                    border.width: activeFocus ? 2 : 0
+                    border.color: dark ? "#4DB4A0" : "#357F72"
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: go()
+                    Keys.onEnterPressed: go()
+                    Keys.onSpacePressed: go()
+                    Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+                    Behavior on scale { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                    Text {
+                        id: libraryLabel
+                        anchors.centerIn: parent
+                        text: i18n("Manage apps")
+                        color: page.ink
+                        font.family: "Inter"
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+                    HoverHandler { id: libraryHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { id: libraryTap; onTapped: appLibrary.go() }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: i18n("Manage apps")
+                    Accessible.onPressAction: go()
+                }
                 // The way to the other list: a pebble of the glass, as Monet's buttons are, its
                 // arrow pointing where it goes ("All apps ›", "‹ Pinned").
                 Rectangle {

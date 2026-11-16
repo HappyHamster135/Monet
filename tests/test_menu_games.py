@@ -68,6 +68,8 @@ class LauncherGames(unittest.TestCase):
         self.assertIn("helper.connectSource(root.launcherGamesSource)", menu)
         self.assertIn("root.appsWithoutGames.invalidateFilter()", menu)
         self.assertNotIn("root.launch(allApps.model, index)", menu)
+        # From All apps, Apps: every app in a library of its own.
+        self.assertIn("helper.connectSource(\"'@LIBEXECDIR@/monet-quick' launch %s\")" % "monet-apps.desktop".encode().hex(), menu)
 
 
 if __name__ == "__main__":
