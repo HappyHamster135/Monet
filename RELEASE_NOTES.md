@@ -46,6 +46,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   screens, Remove takes a widget off only the desktop or bar you're editing,
   and Done in a bar's widget gallery brings you back to that bar's settings.
   On a narrow screen, edit mode keeps its buttons in view.
+- **Search within Tab's reach.** In Settings and the Store, Tab and Shift+Tab
+  stop at the search too. With large text, Settings' cards and buttons wrap
+  their words instead of running past the edge, and the Store's most-installed
+  list stays in view in a narrow window.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

@@ -244,7 +244,11 @@ class SettingsNavigation(unittest.TestCase):
         self.assertLessEqual(point.x() + item.width(), view.width() + 1, item.objectName())
 
     def test_tab_reaches_every_sidebar_page_and_more_settings_with_visible_focus(self):
-        search = self.item("settingsSearch"); search.forceActiveFocus(Qt.TabFocusReason)
+        search = self.item("settingsSearch")
+        first_page = self.item("settingsPage-light")
+        first_page.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Backtab)
+        self.assertTrue(search.hasActiveFocus())
         nav = self.item("settingsNavigation"); seen = set()
         expected = {"settingsPage-" + p["id"] for p in self.window.property("pages").toVariant()}
         for _ in range(len(expected) + 5):

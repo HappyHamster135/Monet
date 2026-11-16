@@ -2065,6 +2065,8 @@ Shared.MonetWindow {
         property var tone
         default property alias rows: list.data
         Layout.fillWidth: true
+        Layout.minimumWidth: 0
+        Layout.maximumWidth: parent && parent.width > 0 ? parent.width : Infinity
         implicitHeight: list.implicitHeight
         radius: 16
         color: tone.wash
@@ -2289,6 +2291,8 @@ Shared.MonetWindow {
         property string kind: "plain"
         property bool enabledPill: true
         signal clicked()
+        Layout.minimumWidth: 0
+        Layout.maximumWidth: parent && parent.width > 0 ? parent.width : Infinity
         implicitWidth: label.implicitWidth + (kind === "sun" ? 40 : 32)
         implicitHeight: Math.max(kind === "sun" ? 44 : 40, label.implicitHeight + 18)
         radius: kind === "sun" ? 20 : 12
@@ -2307,9 +2311,11 @@ Shared.MonetWindow {
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
-            horizontalAlignment: Text.AlignLeft
+            horizontalAlignment: Text.AlignHCenter
             id: label
             anchors.centerIn: parent
+            width: Math.min(implicitWidth, Math.max(1, pill.width - 24))
+            wrapMode: Text.Wrap
             text: pill.text
             color: pill.kind === "plain" ? pill.tone.ink : "#FFFFFF"
             font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3))
@@ -2803,6 +2809,7 @@ Shared.MonetWindow {
                             id: search
                             objectName: "settingsSearch"
                             Layout.fillWidth: true
+                            activeFocusOnTab: true
                             maximumLength: 256
                             color: look.ink
                             font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
