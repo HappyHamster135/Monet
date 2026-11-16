@@ -51,6 +51,10 @@ PlasmoidItem {
     property bool outputsBusy: false
     // Speakers, headphones, a screen: where the sound can play.
     property var outputs: []
+    // A move to another output underway (its request), the output asked for, and why it didn't move.
+    property string outputRequest: ""
+    property var outputWanted: null
+    property string outputError: ""
     property bool quietBusy: false
     property string quietError: ""
     property string quietRequest: ""
@@ -96,11 +100,25 @@ PlasmoidItem {
                 }
             } else if (source === root.helper + " outputs") {
                 root.outputsBusy = false
+                // A move underway answers with the outputs as they are after it.
+                if (root.outputRequest) return
                 try {
                     // PipeWire's stand-in on a PC with no speakers isn't a place to play.
                     root.outputs = JSON.parse(data["stdout"]).filter(o => !o.none)
+                    if (root.outputs.some(o => o.default && root.sameOutput(o, root.outputWanted))) root.outputError = ""
                 } catch (e) {
                 }
+            } else if (command.startsWith(root.helper + " output ")) {
+                if (source !== root.outputRequest) return
+                root.outputRequest = ""
+                let result = {}
+                try {
+                    result = JSON.parse(data["stdout"] || "{}")
+                } catch (e) {
+                }
+                if (Array.isArray(result.outputs)) root.outputs = result.outputs.filter(o => !o.none)
+                root.outputError = result.ok === true && data["exit code"] === 0 ? "" : root.outputFailure(result.problem)
+                root.refresh()
             } else if (source.startsWith(root.helper + " quiet ")) {
                 root.quietBusy = false
                 try {
@@ -129,7 +147,7 @@ PlasmoidItem {
             statusRequest = requestSource(activity.nativeReady ? "status quick" : "status")
             runner.connectSource(statusRequest)
         }
-        if (!outputsBusy) {
+        if (!outputsBusy && !outputRequest) {
             outputsBusy = true
             runner.connectSource(helper + " outputs")
         }
@@ -176,12 +194,28 @@ PlasmoidItem {
             minutes: known ? power.minutes : null})
     }
 
+    // One move at a time; it shows as asked for until the helper has seen the sound play there.
     function playThrough(output) {
-        if (!Number.isInteger(output.id)) {
+        if (!output || !Number.isInteger(output.id) || outputRequest) {
             return
         }
-        outputs = outputs.map(o => Object.assign({}, o, { default: o.id === output.id }))
-        run("output " + output.id)
+        outputWanted = output
+        outputError = ""
+        outputRequest = requestSource("output " + output.id + deviceKey(output))
+        runner.connectSource(outputRequest)
+    }
+    // The device's own name, as the helper gave it in hex: it still finds the device after PipeWire
+    // has numbered it again (plugged in, unplugged, a new profile). Older answers have none.
+    function deviceKey(device) {
+        return /^(?:[0-9a-f]{2})+$/.test(device.key || "") ? " " + device.key : ""
+    }
+    function sameOutput(a, b) {
+        return !!a && !!b && (a.key && b.key ? a.key === b.key : a.id === b.id)
+    }
+    function outputFailure(problem) {
+        const name = outputWanted ? outputWanted.name : ""
+        return problem === "gone" ? i18n("%1 isn't connected now. Connect it and try again.", name)
+            : i18nc("%1 is speakers, headphones or a screen", "Sound didn't switch to %1. Try again.", name)
     }
 
     // Arguments are fixed words or numbers, never user text.
@@ -615,11 +649,20 @@ PlasmoidItem {
                                 id: place
                                 required property var modelData
                                 readonly property bool chosen: modelData.default === true
+                                // Asked for, and not yet seen playing there.
+                                readonly property bool moving: root.outputRequest !== "" && root.sameOutput(modelData, root.outputWanted)
                                 implicitWidth: Math.min(placeName.implicitWidth, 170) + 22
                                 implicitHeight: 26
                                 radius: 13
-                                color: chosen ? "#357F72"
+                                color: chosen ? "#357F72" : moving ? Qt.rgba(0.208, 0.498, 0.447, 0.4)
                                     : root.smoke ? Qt.rgba(1, 1, 1, placeHover.hovered ? 0.14 : 0.08) : Qt.rgba(1, 1, 1, placeHover.hovered ? 0.5 : 0.34)
+                                SequentialAnimation on opacity {
+                                    running: place.moving && root.speed > 0
+                                    loops: Animation.Infinite
+                                    onRunningChanged: if (!running) place.opacity = 1
+                                    NumberAnimation { to: 0.55; duration: Math.round(420 * root.speed) }
+                                    NumberAnimation { to: 1; duration: Math.round(420 * root.speed) }
+                                }
                                 activeFocusOnTab: true
                                 Keys.onSpacePressed: root.playThrough(modelData)
                                 Keys.onReturnPressed: root.playThrough(modelData)
@@ -627,6 +670,7 @@ PlasmoidItem {
                                 border.color: activeFocus ? "#357F72" : root.smoke ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.7)
                                 Accessible.role: Accessible.RadioButton
                                 Accessible.name: i18nc("%1 is speakers, headphones or a screen", "Play through %1", modelData.name)
+                                Accessible.description: moving ? i18n("Changing…") : ""
                                 Accessible.checked: chosen
                                 Text {
                                     id: placeName
@@ -647,6 +691,23 @@ PlasmoidItem {
                                     onTapped: root.playThrough(place.modelData)
                                 }
                             }
+                        }
+                    }
+                    // Still playing where it was: why, and another go at the same output.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 28
+                        visible: root.outputError !== ""
+                        PlasmaComponents.Label {
+                            Layout.fillWidth: true
+                            text: root.outputError
+                            wrapMode: Text.Wrap
+                            Accessible.name: text
+                        }
+                        ActionButton {
+                            text: i18n("Try again")
+                            enabled: root.outputRequest === "" && root.outputWanted !== null
+                            onClicked: root.playThrough(root.outputWanted)
                         }
                     }
                 }

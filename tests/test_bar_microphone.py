@@ -119,7 +119,7 @@ Settings
 
     def test_the_settings_page_chooses_the_microphone(self):
         settings = (ROOT / "linux/share/monet/settings-app/MonetSettings.qml").read_text(encoding="utf-8")
-        self.assertIn('ask("input " + input.id, (out, code) => {', settings)
+        self.assertIn('ask("input " + input.id + deviceKey(input), (out, code) => {', settings)
         self.assertIn('onTapped: sheet.pickMicrophone(modelData)', settings)
         self.assertIn('ask("microphones", out =>', settings)
         with patch.object(self.quick, "available_microphones", return_value=[{"id": 1, "name": "Mic", "default": True}]), \

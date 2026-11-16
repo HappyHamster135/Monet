@@ -68,10 +68,14 @@ Shared.MonetWindow {
     property var windowsFiles: ({})
     property bool outputBusy: false
     property string outputProblem: ""
+    // The output last asked for (and microphoneWanted, the microphone), for Try again: by its
+    // name, it's found again even if PipeWire has given it another number since.
+    property var outputWanted: null
     // Microphones to choose from (an interface's inputs each by name), and a change underway.
     property var microphones: []
     property bool microphoneBusy: false
     property string microphoneProblem: ""
+    property var microphoneWanted: null
     property bool statusBusy: false
     readonly property bool pollingActive: visible && visibility !== Window.Minimized
         && (typeof windowActivity === "undefined" || windowActivity.active)
@@ -782,7 +786,7 @@ Shared.MonetWindow {
         } else if (page === "bluetooth") {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
-            ask("outputs", out => sheet.outputs = sheet.json(out, []))
+            ask("outputs", out => { if (!sheet.outputBusy) sheet.outputs = sheet.json(out, []) })
             loadMicrophones()
             loadAppsSound()
         } else if (page === "about") {
@@ -1066,34 +1070,54 @@ Shared.MonetWindow {
 
     function loadMicrophones() {
         if (microphoneBusy) return
-        ask("microphones", out => { if (!sheet.microphoneBusy) sheet.microphones = sheet.json(out, sheet.microphones) })
+        ask("microphones", out => {
+            if (sheet.microphoneBusy) return
+            const found = sheet.json(out, sheet.microphones)
+            sheet.microphones = Array.isArray(found) ? found : []
+            // In use after all (chosen elsewhere, or it came back): nothing left to try again.
+            if (sheet.microphones.some(m => m.default && sheet.sameDevice(m, sheet.microphoneWanted))) sheet.microphoneProblem = ""
+        })
     }
+    // A device's own name, as the helper gave it in hex: the helper finds the device by it however
+    // PipeWire numbers it by then (plugged in, unplugged, a new profile). Older answers have none.
+    function deviceKey(device) {
+        return /^(?:[0-9a-f]{2})+$/.test(device.key || "") ? " " + device.key : ""
+    }
+    function sameDevice(a, b) {
+        return !!a && !!b && (a.key && b.key ? a.key === b.key : a.id === b.id)
+    }
+    // Said done only once the helper has seen the change; else why not, beside Try again.
     function pickMicrophone(input) {
-        if (!Number.isInteger(input.id) || microphoneBusy || input.default === true) return
+        if (!input || !Number.isInteger(input.id) || microphoneBusy || input.default === true) return
         microphoneBusy = true
         microphoneProblem = ""
-        ask("input " + input.id, (out, code) => {
+        microphoneWanted = input
+        ask("input " + input.id + deviceKey(input), (out, code) => {
             const result = sheet.json(out, {})
             if (result.sound && Array.isArray(result.sound.inputs)) sheet.microphones = result.sound.inputs
             sheet.microphoneBusy = false
             sheet.microphoneProblem = code === 0 && result.ok === true ? ""
-                : i18n("The microphone could not be changed. Check its connection and try again.")
+                : result.problem === "gone" ? i18n("%1 isn't connected now. Connect it and try again.", input.name)
+                : i18n("The microphone didn't switch to %1. Try again.", input.name)
             sheet.refresh()  // the volume slider is the chosen microphone's
         })
     }
 
     function pickOutput(output) {
-        if (!Number.isInteger(output.id) || outputBusy) {
+        if (!output || !Number.isInteger(output.id) || outputBusy) {
             return
         }
         outputBusy = true
         outputProblem = ""
-        ask("output " + output.id, (out, code) => {
+        outputWanted = output
+        ask("output " + output.id + deviceKey(output), (out, code) => {
             const result = sheet.json(out, {})
             if (Array.isArray(result.outputs)) sheet.outputs = result.outputs
             sheet.outputBusy = false
             sheet.outputProblem = code === 0 && result.ok === true ? ""
-                : i18n("The sound output could not be changed. Check its connection and try again.")
+                : result.problem === "gone" ? i18n("%1 isn't connected now. Connect it and try again.", output.name)
+                : i18nc("%1 is speakers, headphones or a screen", "Sound didn't switch to %1. Try again.", output.name)
+            sheet.refresh()  // the volume slider is the chosen output's
         })
     }
 
@@ -4554,6 +4578,8 @@ Shared.MonetWindow {
                             tappable: !sheet.outputBusy
                             strong: false
                             title: modelData.name
+                            // Asked for: checked only once the sound is seen playing there.
+                            detail: sheet.outputBusy && sheet.sameDevice(modelData, sheet.outputWanted) ? i18n("Changing…") : ""
                             onTapped: sheet.pickOutput(modelData)
                             lead: Glyph {
                                 width: 18
@@ -4566,6 +4592,21 @@ Shared.MonetWindow {
                                 tone: look
                                 active: modelData.default === true
                             }
+                        }
+                    }
+                    SettingRow {
+                        objectName: "outputProblem"
+                        tone: look
+                        visible: sheet.outputProblem !== "" && !sheet.outputBusy
+                        divider: soundColumn.speakers.length > 0
+                        strong: false
+                        title: sheet.outputProblem
+                        Accessible.role: Accessible.AlertMessage
+                        Pill {
+                            tone: look
+                            text: i18n("Try again")
+                            enabledPill: !sheet.outputBusy && sheet.outputWanted !== null
+                            onClicked: sheet.pickOutput(sheet.outputWanted)
                         }
                     }
                 }
@@ -4630,11 +4671,6 @@ Shared.MonetWindow {
                 // Each app's own volume, as Windows' mixer has it (apps come and go as they play).
                 Caption {
                     tone: look
-                    visible: sheet.outputBusy || sheet.outputProblem !== ""
-                    text: sheet.outputBusy ? i18n("Changing sound output…") : sheet.outputProblem
-                }
-                Caption {
-                    tone: look
                     visible: sheet.appsSound.length > 0
                     text: i18n("Apps playing sound")
                 }
@@ -4667,13 +4703,14 @@ Shared.MonetWindow {
                 }
                 Caption {
                     tone: look
-                    visible: sheet.microphones.length > 1
+                    visible: sheet.microphones.length > 1 || sheet.microphoneProblem !== ""
                     text: i18n("Record from")
                 }
                 Card {
                     tone: look
                     objectName: "search-microphone-choice"
-                    visible: sheet.microphones.length > 1
+                    // Kept while it says why a microphone wasn't chosen, even if that one has gone.
+                    visible: sheet.microphones.length > 1 || sheet.microphoneProblem !== ""
                     Accessible.role: Accessible.Grouping
                     Accessible.name: i18n("Microphones")
                     Repeater {
@@ -4686,6 +4723,8 @@ Shared.MonetWindow {
                             tappable: !sheet.microphoneBusy
                             strong: false
                             title: modelData.name
+                            // Asked for: checked only once it's seen in use.
+                            detail: sheet.microphoneBusy && sheet.sameDevice(modelData, sheet.microphoneWanted) ? i18n("Changing…") : ""
                             onTapped: sheet.pickMicrophone(modelData)
                             Check {
                                 tone: look
@@ -4693,11 +4732,21 @@ Shared.MonetWindow {
                             }
                         }
                     }
-                }
-                Caption {
-                    tone: look
-                    visible: sheet.microphoneBusy || sheet.microphoneProblem !== ""
-                    text: sheet.microphoneBusy ? i18n("Changing microphone…") : sheet.microphoneProblem
+                    SettingRow {
+                        objectName: "microphoneProblem"
+                        tone: look
+                        visible: sheet.microphoneProblem !== "" && !sheet.microphoneBusy
+                        divider: sheet.microphones.length > 0
+                        strong: false
+                        title: sheet.microphoneProblem
+                        Accessible.role: Accessible.AlertMessage
+                        Pill {
+                            tone: look
+                            text: i18n("Try again")
+                            enabledPill: !sheet.microphoneBusy && sheet.microphoneWanted !== null
+                            onClicked: sheet.pickMicrophone(sheet.microphoneWanted)
+                        }
+                    }
                 }
                 Card {
                     tone: look

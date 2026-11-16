@@ -21,10 +21,11 @@
                                         Do not disturb indefinitely, for a duration, or until 08:00 tomorrow
     monet-quick volume 0-100
     monet-quick mic 0-100
-monet-quick mic-mute ID on|off        mute/unmute the displayed microphone, with verified feedback
-monet-quick input ID                 select an available microphone, with verified feedback
+    monet-quick mic-mute ID on|off [KEY]  mute/unmute the displayed microphone, with verified feedback
+    monet-quick input ID [KEY]           select an available microphone, with verified feedback
     monet-quick outputs                  speakers and headphones, as JSON
-    monet-quick output ID
+    monet-quick output ID [KEY]          play through one, with verified feedback; KEY is the hex
+                                         of its node.name, which still finds it if PipeWire renumbers
     monet-quick hotspot                  this PC's own Wi-Fi network for phones: on, its name and password, as JSON
     monet-quick hotspot-on|hotspot-off
     monet-quick ready                    whether Ready when you come back is on for you, as JSON
@@ -566,7 +567,11 @@ def outputs():
                 if active.get("description"):
                     sink["device"], sink["name"] = sink["name"], active["description"]
         else:
-            sink["none"] = 'node.name = "auto_null"' in (run("wpctl", "inspect", str(sink["id"])) or "")
+            props = node_details(sink["id"], {})[1]
+            sink["none"] = props.get("node.name") == "auto_null"
+        key = None if sink["none"] else node_key(props)
+        if key:
+            sink["key"] = key
         playable.append(sink)
     # Two devices can share a port name ("Headphones", "Analog Output"); then
     # also say which device each one is.
@@ -580,14 +585,59 @@ def outputs():
     return playable
 
 
-def output_action(ident):
-    """Only select a current playback device, and acknowledge the observed default."""
+# A device's number is PipeWire's for now: after a plug, a profile switch or WirePlumber starting
+# again, the number a panel showed may be another device's. Its node.name stays, so a choice
+# carries that too (as hex, being the device's own text) and is found by it when it's acted on.
+AUDIO_KEY = re.compile(r"(?:[0-9a-f]{2}){1,1024}")
+# Up to a second and a half for WirePlumber to show a change it was asked for; usually the first read does.
+AUDIO_SETTLE = (0.05, 0.1, 0.15, 0.25, 0.4, 0.5)
+
+
+def node_key(props):
+    name = props.get("node.name")
+    if not isinstance(name, str) or not name or "\0" in name:
+        return None
+    return name.encode("utf-8").hex()
+
+
+def audio_choice(devices, ident, key=None):
+    """The device someone picked, numbered as it is now: by its name when the panel knew it, else
+    by the number it showed. Of two with one name (which WirePlumber avoids), only by that number."""
+    if not key:
+        return next((device for device in devices if device["id"] == ident), None)
+    named = [device for device in devices if device.get("key") == key]
+    return next((device for device in named if device["id"] == ident), named[0] if len(named) == 1 else None)
+
+
+def audio_settled(read, done, gone):
+    """Read again until the change shows, the device has gone, or the time is up."""
+    state = read()
+    for delay in AUDIO_SETTLE:
+        if done(state) or gone(state):
+            break
+        time.sleep(delay)
+        state = read()
+    return state
+
+
+def output_action(ident, key=None):
+    """Play through the output picked, and say so only once WirePlumber has it as the default:
+    {"ok": true}, or else the problem, "gone" (not connected now) or "unchanged" (it didn't switch)."""
     before = outputs()
-    if not any(o["id"] == ident and not o["none"] for o in before):
-        return {"ok": False, "outputs": before}
-    changed = ok("wpctl", "set-default", str(ident))
-    after = outputs()
-    return {"ok": bool(changed and any(o["id"] == ident and o["default"] for o in after)), "outputs": after}
+    chosen = audio_choice([o for o in before if not o["none"]], ident, key)
+    if not chosen:
+        return {"ok": False, "outputs": before, "problem": "gone"}
+    if not ok("wpctl", "set-default", str(chosen["id"])):
+        return {"ok": False, "outputs": outputs(), "problem": "unchanged"}
+
+    def same(output):
+        return not output["none"] and (output.get("key") == key if key else output["id"] == chosen["id"])
+
+    after = audio_settled(outputs, lambda state: any(same(o) and o["default"] for o in state),
+                          lambda state: not any(same(o) for o in state))
+    if any(same(o) and o["default"] for o in after):
+        return {"ok": True, "outputs": after}
+    return {"ok": False, "outputs": after, "problem": "unchanged" if any(same(o) for o in after) else "gone"}
 
 
 def app_streams(status):
@@ -748,30 +798,47 @@ def available_microphones():
                 or str(props.get("api.alsa.split.parent") or "").lower() == "true"
                 or (props.get("node.name") and props.get("node.name") in behind)):
             continue
-        shown.append(dict(source, name=source_name(source.get("name", ""), description, props)))
+        name, key = source_name(source.get("name", ""), description, props), node_key(props)
+        shown.append(dict(source, name=name, key=key) if key else dict(source, name=name))
     return shown
 
 
-def microphone_action(action, value, source_id=None):
-    """Acknowledge capture changes only after WirePlumber reports the actual result."""
+def microphone_action(action, value, source_id=None, key=None):
+    """Acknowledge capture changes only after WirePlumber reports the actual result: {"ok": true},
+    or else the problem, "gone" (not connected, or for mute no longer the microphone in use) or
+    "unchanged" (it didn't change)."""
     if action == "mute" and value in ("on", "off"):
-        # Use the selected source's id, so an unplug/default change cannot unmute
-        # a different microphone between displaying the control and verification.
+        # The microphone shown, by its name when known (its number may be another's by now), so an
+        # unplug or a new default can't mute or unmute a different one between showing and checking.
+        def same(mic):
+            return bool(mic) and (mic.get("key") == key if key else mic["id"] == source_id)
+
         current = bar_sound().get("microphone")
-        if not current or current["id"] != source_id:
-            return {"ok": False, "sound": bar_sound()}
-        ident = current["id"]
-        changed = ok("wpctl", "set-mute", str(ident), "1" if value == "on" else "0")
-        state = bar_sound()
-        mic = state.get("microphone")
-        return {"ok": bool(changed and mic and mic["id"] == ident and mic["muted"] == (value == "on")), "sound": state}
+        if not same(current):
+            return {"ok": False, "sound": bar_sound(), "problem": "gone"}
+        if not ok("wpctl", "set-mute", str(current["id"]), "1" if value == "on" else "0"):
+            return {"ok": False, "sound": bar_sound(), "problem": "unchanged"}
+        state = audio_settled(bar_sound, lambda s: same(s.get("microphone")) and s["microphone"]["muted"] == (value == "on"),
+                              lambda s: not same(s.get("microphone")))
+        if same(state.get("microphone")) and state["microphone"]["muted"] == (value == "on"):
+            return {"ok": True, "sound": state}
+        return {"ok": False, "sound": state, "problem": "unchanged" if same(state.get("microphone")) else "gone"}
     if action == "input" and value.isdigit():
-        ident = int(value)
-        if not any(source["id"] == ident for source in available_microphones()):
-            return {"ok": False, "sound": bar_sound()}
-        changed = ok("wpctl", "set-default", str(ident))
-        state = bar_sound()
-        return {"ok": bool(changed and state.get("microphone") and state["microphone"]["id"] == ident), "sound": state}
+        chosen = audio_choice(available_microphones(), int(value), key)
+        if not chosen:
+            return {"ok": False, "sound": bar_sound(), "problem": "gone"}
+        if not ok("wpctl", "set-default", str(chosen["id"])):
+            return {"ok": False, "sound": bar_sound(), "problem": "unchanged"}
+
+        def same(mic):
+            return mic.get("key") == key if key else mic["id"] == chosen["id"]
+
+        state = audio_settled(bar_sound, lambda s: any(same(m) and m["default"] for m in s.get("inputs") or []),
+                              lambda s: not any(same(m) for m in s.get("inputs") or []))
+        inputs = state.get("inputs") or []
+        if any(same(m) and m["default"] for m in inputs):
+            return {"ok": True, "sound": state}
+        return {"ok": False, "sound": state, "problem": "unchanged" if any(same(m) for m in inputs) else "gone"}
     return {"ok": False}
 
 
@@ -8501,17 +8568,19 @@ def main(argv):
         emit({"ok": test_notification_audio()})
     elif cmd == "sound":
         emit(bar_sound())
-    elif cmd == "mic-mute" and len(args) == 2 and args[0].isdigit() and args[1] in ("on", "off"):
-        emit(microphone_action("mute", args[1], int(args[0])))
-    elif cmd == "input" and args and args[0].isdigit():
-        emit(microphone_action("input", args[0]))
+    # A device's KEY, when the panel knew it, finds it however PipeWire numbers it now.
+    elif cmd == "mic-mute" and len(args) in (2, 3) and args[0].isdigit() and args[1] in ("on", "off") \
+            and all(AUDIO_KEY.fullmatch(key) for key in args[2:]):
+        emit(microphone_action("mute", args[1], int(args[0]), *args[2:]))
+    elif cmd == "input" and len(args) in (1, 2) and args[0].isdigit() and all(AUDIO_KEY.fullmatch(key) for key in args[1:]):
+        emit(microphone_action("input", args[0], None, *args[1:]))
     elif cmd == "mute" and args and args[0] in ("on", "off"):
         run("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if args[0] == "on" else "0")
     elif cmd == "app-volume" and len(args) == 2 and re.fullmatch(r"\d+(?:,\d+){0,63}", args[0]) and args[1].isdigit():
         for ident in args[0].split(","):
             run("wpctl", "set-volume", ident, f"{min(int(args[1]), 100)}%")
-    elif cmd == "output" and args and args[0].isdigit():
-        emit(output_action(int(args[0])))
+    elif cmd == "output" and len(args) in (1, 2) and args[0].isdigit() and all(AUDIO_KEY.fullmatch(key) for key in args[1:]):
+        emit(output_action(int(args[0]), *args[1:]))
     elif cmd == "brightness" and args and args[0].isdigit():
         set_brightness(max(1, min(int(args[0]), 100)))
     elif cmd == "keyboard" and args and args[0].isdigit():

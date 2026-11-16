@@ -61,14 +61,19 @@ class Playback(unittest.TestCase):
         before = [{"id": 65, "none": False, "default": True},
                   {"id": 73, "none": False, "default": False}]
         after = [dict(o, default=o["id"] == 73) for o in before]
-        for success, observed, expected in ((True, after, True), (False, before, False),
-                                            (True, before, False), (True, [], False)):
+        # One that doesn't show is read again for a moment, then said: still there, or gone.
+        for success, observed, expected, reads in ((True, after, {"ok": True}, 2),
+                                                   (False, before, {"ok": False, "problem": "unchanged"}, 2),
+                                                   (True, before, {"ok": False, "problem": "unchanged"}, 8),
+                                                   (True, [], {"ok": False, "problem": "gone"}, 2)):
             with self.subTest(success=success, observed=observed), \
-                    patch.object(self.q, "outputs", side_effect=[before, observed]), \
-                    patch.object(self.q, "ok", return_value=success) as change:
+                    patch.object(self.q, "outputs", side_effect=[before] + [observed] * 8) as read, \
+                    patch.object(self.q, "ok", return_value=success) as change, patch.object(self.q.time, "sleep") as wait:
                 result = self.q.output_action(73)
-                self.assertEqual(result, {"ok": expected, "outputs": observed})
+                self.assertEqual(result, dict(expected, outputs=observed))
                 change.assert_called_once_with("wpctl", "set-default", "73")
+                self.assertEqual(read.call_count, reads)
+                self.assertLessEqual(sum(call.args[0] for call in wait.call_args_list), 2)
 
     def test_removed_disconnected_or_dummy_output_cannot_be_selected(self):
         with patch.object(self.q, "outputs", return_value=[{"id": 80, "none": True, "default": True}]), \

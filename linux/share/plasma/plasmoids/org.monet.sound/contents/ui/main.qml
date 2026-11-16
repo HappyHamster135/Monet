@@ -37,9 +37,16 @@ PlasmoidItem {
     // Where it can play and the apps playing (monet-quick sound): while open, and now and then.
     property var sound: ({ outputs: [], apps: [], inputs: [], microphone: null })
     readonly property var microphone: sound.microphone || null
-    property bool microphoneBusy: false
+    // A change underway is its request; one at a time, and the panel's own reading waits for it.
+    // What was asked for stays, so Try again asks for the same device even if PipeWire renumbered it.
+    property string microphoneRequest: ""
+    readonly property bool microphoneBusy: microphoneRequest !== ""
+    property var microphoneAsked: null
     property string microphoneMessage: ""
-    property bool outputBusy: false
+    property bool microphoneFailed: false
+    property string outputRequest: ""
+    readonly property bool outputBusy: outputRequest !== ""
+    property var outputWanted: null
     property string outputMessage: ""
     property bool soundKnown: false
     // While a slider is held, don't let a refresh move it.
@@ -60,6 +67,10 @@ PlasmoidItem {
         const source = command + " # monet-sound-" + (++requestSerial);
         runner.connectSource(source);
         return source;
+    }
+    // A change's own source, kept before it's connected: a cached source may reply during connectSource.
+    function requestSource(args) {
+        return helper + " " + args + " # monet-sound-" + (++requestSerial)
     }
 
     Plasmoid.icon: silent || muted || !volume ? "audio-volume-muted"
@@ -82,38 +93,52 @@ PlasmoidItem {
             if (command === root.helper + " sound") {
                 if (source !== root.soundRequest) return
                 root.soundRequest = ""
+                // Read before a change finished; the change answers with the sound after it.
+                if (root.outputBusy || root.microphoneBusy) return
                 try {
                     const next = JSON.parse(out)
                     if (!root.dragging) {
                         const before = root.microphone || {}
                         const after = next.microphone || {}
-                        if (!root.microphoneBusy && (before.id !== after.id || before.muted !== after.muted))
+                        if ((before.key || before.id) !== (after.key || after.id) || before.muted !== after.muted) {
                             root.microphoneMessage = ""
+                            root.microphoneFailed = false
+                        }
                         root.sound = next
                     }
                     root.soundKnown = true
                 } catch (e) {
                 }
             } else if (command.startsWith(root.helper + " output ")) {
-                root.outputBusy = false
+                if (source !== root.outputRequest) return
+                root.outputRequest = ""
                 try {
                     const result = JSON.parse(out)
-                    if (Array.isArray(result.outputs)) root.sound = Object.assign({}, root.sound, { outputs: result.outputs })
+                    if (Array.isArray(result.outputs))
+                        root.sound = Object.assign({}, root.sound, { outputs: result.outputs.filter(o => !o.none) })
+                    const name = root.outputWanted ? root.outputWanted.name : ""
                     root.outputMessage = result.ok === true && data["exit code"] === 0 ? ""
-                        : i18n("The sound output could not be changed. Check its connection and try again.")
+                        : result.problem === "gone" ? i18n("%1 isn't connected now. Connect it and try again.", name)
+                        : i18nc("%1 is speakers, headphones or a screen", "Sound didn't switch to %1. Try again.", name)
                 } catch (e) {
                     root.outputMessage = i18n("The sound output could not be changed. Try again.")
                 }
                 root.refresh()
             } else if (command.startsWith(root.helper + " mic-mute ") || command.startsWith(root.helper + " input ")) {
-                root.microphoneBusy = false
+                if (source !== root.microphoneRequest) return
+                root.microphoneRequest = ""
+                const asked = root.microphoneAsked || {}
                 try {
                     const result = JSON.parse(out)
                     if (result.sound) root.sound = result.sound
-                    root.microphoneMessage = result.ok
+                    root.microphoneFailed = !(result.ok === true && data["exit code"] === 0)
+                    root.microphoneMessage = !root.microphoneFailed
                         ? (root.microphone && root.microphone.muted ? i18n("Microphone muted") : i18n("Microphone ready"))
-                        : i18n("The microphone could not be changed. Check its connection and try again.")
+                        : asked.mute || !asked.device ? i18n("The microphone could not be changed. Check its connection and try again.")
+                        : result.problem === "gone" ? i18n("%1 isn't connected now. Connect it and try again.", asked.device.name)
+                        : i18n("The microphone didn't switch to %1. Try again.", asked.device.name)
                 } catch (e) {
+                    root.microphoneFailed = true
                     root.microphoneMessage = i18n("The microphone could not be changed. Try again.")
                 }
                 root.look()
@@ -129,7 +154,7 @@ PlasmoidItem {
         if (!dragging) { volume = audioLevel.volume; muted = audioLevel.muted; }
     }
     function look() {
-        if (!activity.active || soundRequest) return
+        if (!activity.active || soundRequest || outputBusy || microphoneBusy) return
         // Keep the identity before connecting: a cached source may reply during
         // connectSource, and activity can change while the widget is created.
         soundRequest = helper + " sound # monet-sound-" + (++requestSerial)
@@ -169,25 +194,39 @@ PlasmoidItem {
         muted = !muted
         run("mute " + (muted ? "on" : "off"))
     }
+    // The device's own name, as the helper gave it in hex: it still finds the device after PipeWire
+    // has numbered it again (plugged in, unplugged, a new profile). Older answers have none.
+    function deviceKey(device) {
+        return /^(?:[0-9a-f]{2})+$/.test(device.key || "") ? " " + device.key : ""
+    }
+    function sameDevice(a, b) {
+        return !!a && !!b && (a.key && b.key ? a.key === b.key : a.id === b.id)
+    }
     function playThrough(output) {
-        if (!Number.isInteger(output.id) || outputBusy) {
+        if (!output || !Number.isInteger(output.id) || outputBusy || microphoneBusy) {
             return
         }
-        outputBusy = true
+        outputWanted = output
         outputMessage = ""
-        run("output " + output.id)
+        outputRequest = requestSource("output " + output.id + deviceKey(output))
+        runner.connectSource(outputRequest)
     }
     function muteMicrophone() {
-        if (!microphone || microphoneBusy) return
-        microphoneBusy = true
-        microphoneMessage = ""
-        run("mic-mute " + microphone.id + " " + (microphone.muted ? "off" : "on"))
+        if (microphone) askMicrophone({ device: microphone, mute: microphone.muted ? "off" : "on" })
     }
     function useMicrophone(input) {
-        if (!Number.isInteger(input.id) || microphoneBusy) return
-        microphoneBusy = true
+        askMicrophone({ device: input })
+    }
+    // { device, mute: "on"|"off" } mutes or unmutes the microphone in use; { device } uses it.
+    function askMicrophone(asked) {
+        const device = asked && asked.device
+        if (!device || !Number.isInteger(device.id) || microphoneBusy || outputBusy) return
+        microphoneAsked = asked
         microphoneMessage = ""
-        run("input " + input.id)
+        microphoneFailed = false
+        microphoneRequest = requestSource((asked.mute ? "mic-mute " + device.id + " " + asked.mute : "input " + device.id)
+                                          + deviceKey(device))
+        runner.connectSource(microphoneRequest)
     }
 
     // The native reader keeps the closed icon current. Probe the app/output list
@@ -408,11 +447,22 @@ PlasmoidItem {
             }
 
             // Where the sound plays, when it could play in more than one place: a tap moves it.
-            PlasmaComponents.Label {
+            RowLayout {
                 Layout.fillWidth: true
                 visible: root.outputBusy || root.outputMessage !== ""
-                wrapMode: Text.Wrap
-                text: root.outputBusy ? i18n("Changing sound output…") : root.outputMessage
+                PlasmaComponents.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: root.outputBusy ? i18n("Changing sound output…") : root.outputMessage
+                    Accessible.name: text
+                }
+                // Another go at the same output, found by its name if PipeWire has renumbered it.
+                ActionButton {
+                    visible: !root.outputBusy && root.outputWanted !== null
+                    text: i18n("Try again")
+                    enabled: !root.microphoneBusy
+                    onClicked: root.playThrough(root.outputWanted)
+                }
             }
             PlasmaComponents.Label {
                 Layout.leftMargin: 2
@@ -429,10 +479,13 @@ PlasmoidItem {
                         id: place
                         required property var modelData
                         readonly property bool chosen: modelData.default === true
+                        // Asked for, and not yet seen playing there.
+                        readonly property bool moving: root.outputBusy && root.sameDevice(modelData, root.outputWanted)
                         Layout.fillWidth: true
                         implicitHeight: 34
                         radius: 12
                         color: chosen ? Qt.rgba(0.208, 0.498, 0.447, root.smoke ? 0.4 : 0.22)
+                            : moving ? Qt.rgba(0.208, 0.498, 0.447, root.smoke ? 0.2 : 0.11)
                             : placeHover.hovered ? (root.smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.4)) : "transparent"
                         activeFocusOnTab: true
                         Keys.onSpacePressed: root.playThrough(modelData)
@@ -441,6 +494,7 @@ PlasmoidItem {
                         border.color: "#357F72"
                         Accessible.role: Accessible.RadioButton
                         Accessible.name: i18nc("%1 is speakers, headphones or a screen", "Play through %1", modelData.name)
+                        Accessible.description: moving ? i18n("Changing…") : ""
                         Accessible.checked: chosen
                         PlasmaComponents.Label {
                             anchors.left: parent.left
@@ -485,7 +539,7 @@ PlasmoidItem {
                     ActionButton {
                         text: root.microphoneBusy ? i18n("Changing…") : root.microphone && root.microphone.muted ? i18n("Unmute") : i18n("Mute")
                         Accessible.name: root.microphone && root.microphone.muted ? i18n("Unmute microphone") : i18n("Mute microphone")
-                        enabled: !root.microphoneBusy && root.microphone !== null
+                        enabled: !root.microphoneBusy && !root.outputBusy && root.microphone !== null
                         onClicked: root.muteMicrophone()
                     }
                 }
@@ -493,19 +547,33 @@ PlasmoidItem {
                     model: (root.sound.inputs || []).length > 1 ? root.sound.inputs : []
                     ActionButton {
                         required property var modelData
+                        // Asked for, and not yet seen in use.
+                        readonly property bool moving: root.microphoneBusy && !!root.microphoneAsked
+                            && !root.microphoneAsked.mute && root.sameDevice(modelData, root.microphoneAsked.device)
                         Layout.fillWidth: true
-                        text: modelData.name
+                        text: moving ? i18n("Changing…") : modelData.name
                         checked: modelData.default === true
-                        enabled: !root.microphoneBusy
+                        enabled: !root.microphoneBusy && !root.outputBusy
                         Accessible.name: i18n("Use microphone %1", modelData.name)
                         onClicked: root.useMicrophone(modelData)
                     }
                 }
-                PlasmaComponents.Label {
+                RowLayout {
                     Layout.fillWidth: true
                     visible: root.microphoneMessage !== ""
-                    text: root.microphoneMessage
-                    wrapMode: Text.WordWrap
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+                        text: root.microphoneMessage
+                        wrapMode: Text.WordWrap
+                        Accessible.name: text
+                    }
+                    // The same change again, to the same microphone.
+                    ActionButton {
+                        visible: root.microphoneFailed && root.microphoneAsked !== null
+                        text: i18n("Try again")
+                        enabled: !root.microphoneBusy && !root.outputBusy
+                        onClicked: root.askMicrophone(root.microphoneAsked)
+                    }
                 }
             }
 

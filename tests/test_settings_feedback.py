@@ -875,6 +875,88 @@ class LookFeedback(unittest.TestCase):
         self.assertTrue(self.window.property("restored"))
         self.assertFalse(self.window.property("restoreFailed"))
 
+    def sound_row(self, title):
+        pending = [self.window.contentItem()]
+        while pending:
+            item = pending.pop()
+            if item.property("title") == title and item.metaObject().indexOfProperty("tappable") >= 0:
+                return item
+            pending.extend(item.childItems())
+        return None
+
+    def retry(self, row):
+        pending = list(row.childItems())
+        while pending:
+            item = pending.pop()
+            if item.metaObject().indexOfProperty("enabledPill") >= 0 and item.property("text") == "Try again":
+                return item
+            pending.extend(item.childItems())
+        self.fail("No Try again beside " + row.property("title"))
+
+    def test_sound_output_waits_for_the_switch_and_tries_the_same_device_again(self):
+        speakers = dict(id=65, name="Speakers", default=True, none=False, key="73706b")
+        phones = dict(id=73, name="Headphones", default=False, none=False, key="686470")
+        self.helper.replies["outputs"] = json.dumps([speakers, phones])
+        self.helper.held_commands.add("output")
+        self.window.setProperty("page", "sound")
+        self.wait_for(lambda: self.sound_row("Headphones") is not None)
+        row = self.sound_row("Headphones")
+        QMetaObject.invokeMethod(row, "tapped")
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        self.assertEqual(self.helper.commands[-1], ["helper", "output", "73", "686470"])
+        self.assertEqual(row.property("detail"), "Changing…")
+        QMetaObject.invokeMethod(self.sound_row("Speakers"), "tapped")  # one change at a time
+        QTest.qWait(20)
+        self.assertEqual([cmd for cmd in self.helper.commands if cmd[1] == "output"], [["helper", "output", "73", "686470"]])
+
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(
+            dict(ok=False, problem="unchanged", outputs=[speakers, phones])), 0, "")
+        problem = self.item("outputProblem")
+        self.wait_for(lambda: problem.property("visible"))
+        self.assertEqual(problem.property("title"), "Sound didn't switch to Headphones. Try again.")
+        self.assertEqual(row.property("detail"), "")
+        # WirePlumber has numbered the headphones 91 since: Try again still asks for them by name.
+        QMetaObject.invokeMethod(self.retry(problem), "clicked")
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        self.assertEqual(self.helper.commands[-1], ["helper", "output", "73", "686470"])
+        self.assertFalse(problem.property("visible"))
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(
+            dict(ok=True, outputs=[dict(speakers, default=False), dict(phones, id=91, default=True)])), 0, "")
+        self.wait_for(lambda: self.window.property("outputBusy") is False)
+        self.assertFalse(problem.property("visible"))
+        self.assertEqual([o["id"] for o in self.window.property("outputs").toVariant() if o["default"]], [91])
+
+    def test_microphone_choice_says_when_it_has_gone_and_keeps_try_again(self):
+        built_in = dict(id=57, name="Built-in Microphone", default=True, key="6d6963")
+        scarlett = dict(id=74, name="Focusrite Scarlett 2i2 USB · Input 1", default=False, key="736331")
+        self.helper.replies.update(microphones=json.dumps([built_in, scarlett]), outputs="[]")
+        self.helper.held_commands.add("input")
+        self.window.setProperty("page", "sound")
+        self.wait_for(lambda: self.sound_row(scarlett["name"]) is not None)
+        QMetaObject.invokeMethod(self.sound_row(scarlett["name"]), "tapped")
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        self.assertEqual(self.helper.commands[-1], ["helper", "input", "74", "736331"])
+        # Unplugged meanwhile: said so, and the card stays to say it though one microphone is left.
+        self.helper.replies["microphones"] = json.dumps([built_in])
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(
+            dict(ok=False, problem="gone", sound=dict(inputs=[built_in]))), 0, "")
+        problem = self.item("microphoneProblem")
+        self.wait_for(lambda: problem.property("visible"))
+        self.assertEqual(problem.property("title"),
+                         "Focusrite Scarlett 2i2 USB · Input 1 isn't connected now. Connect it and try again.")
+        self.assertTrue(self.item("search-microphone-choice").property("visible"))
+        QMetaObject.invokeMethod(self.window, "loadMicrophones"); QTest.qWait(20)
+        self.assertTrue(problem.property("visible"))
+        # Plugged in again: Try again finds it by name, and once it's in use the message goes.
+        QMetaObject.invokeMethod(self.retry(problem), "clicked")
+        self.wait_for(lambda: bool(self.helper.pending_commands))
+        self.assertEqual(self.helper.commands[-1], ["helper", "input", "74", "736331"])
+        chosen = [dict(built_in, default=False), dict(scarlett, id=80, default=True)]
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(dict(ok=True, sound=dict(inputs=chosen))), 0, "")
+        self.wait_for(lambda: not self.window.property("microphoneBusy"))
+        self.assertFalse(problem.property("visible"))
+        self.assertEqual(self.window.property("microphoneProblem"), "")
+
     def test_polling_is_scoped_coalesced_and_stops_when_minimized(self):
         self.window.setProperty("page", "about"); QTest.qWait(20)
         self.helper.commands.clear()
