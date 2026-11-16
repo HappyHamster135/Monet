@@ -78,6 +78,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   even if something was plugged in or out a moment before. It's shown as
   chosen once the sound has really moved, and if it couldn't switch, Monet
   says why, with Try again beside it.
+- **Monet Setup sees the cable.** A network cable plugged in or pulled out
+  after Setup has started shows on its network page within seconds, without
+  Look again, and so does Wi-Fi that drops. If the download server can't send
+  this version of Monet, or its certificate can't be checked, Setup now says
+  so before it changes anything on the drive, instead of after minutes of
+  trying.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

@@ -1,13 +1,25 @@
 """Wi-Fi and wired connections through NetworkManager's nmcli."""
 
+import os
+from pathlib import Path
 import subprocess
 
 from .words import _
 
+NET = Path("/sys/class/net")
+
+
+def plain_env():
+    """nmcli in plain English, so its states and errors read the same in every language,
+    with UTF-8 kept: in the C locale it writes a Wi-Fi name like "Café" as "Caf?"."""
+    env = {k: v for k, v in os.environ.items() if k != "LANGUAGE"}
+    env["LC_ALL"] = "C.UTF-8"
+    return env
+
 
 def run(*args, timeout=30):
     try:
-        done = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=plain_env())
     except (OSError, subprocess.TimeoutExpired):
         return None
     return done.stdout if done.returncode == 0 else None
@@ -54,10 +66,28 @@ def wifi_networks(rescan=False):
     return parse_wifi(out or "")
 
 
+def unplugged(device):
+    """True when the network port says its cable is out. NetworkManager waits a few
+    seconds before it calls the connection gone; a port that doesn't say counts as in."""
+    try:
+        return (NET / device / "carrier").read_text().strip() == "0"
+    except (OSError, ValueError):
+        return False
+
+
+def links():
+    """(cable, Wi-Fi): whether each is connected now, or None when NetworkManager didn't say."""
+    out = run("nmcli", "-t", "-f", "TYPE,STATE,DEVICE", "device", "status", timeout=5)
+    if out is None:
+        return None
+    connected = [(f[0], f[2]) for f in map(fields, out.splitlines()) if len(f) == 3 and f[1] == "connected"]
+    return (any(kind == "ethernet" and not unplugged(device) for kind, device in connected),
+            any(kind == "wifi" for kind, _device in connected))
+
+
 def wired():
     """True when a cable connection is up."""
-    out = run("nmcli", "-t", "-f", "TYPE,STATE", "device") or ""
-    return any(f[:2] == ["ethernet", "connected"] for f in map(fields, out.splitlines()))
+    return bool((links() or (False, False))[0])
 
 
 def online():
@@ -72,7 +102,7 @@ def join(name, password):
     if password:
         args += ["password", password]
     try:
-        done = subprocess.run(args, capture_output=True, text=True, timeout=60)
+        done = subprocess.run(args, capture_output=True, text=True, timeout=60, env=plain_env())
     except subprocess.TimeoutExpired:
         return _("The network didn't answer. Try again, or pick another network.")
     except OSError:

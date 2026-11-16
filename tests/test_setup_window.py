@@ -248,6 +248,96 @@ class SetupWindow(unittest.TestCase):
             yield item
             pending.extend(reversed(item.childItems()))
 
+    def shown(self, text):
+        return any(item.property("text") == text and item.isVisible() for item in self.visual_items())
+
+    def network_page(self, wired=False, joined="", networks=()):
+        self.setup._wired, self.setup._joined, self.setup._networks = wired, joined, list(networks)
+        self.setup._zone_asked = True     # no time zone lookup on the internet from a test
+        self.setup.wifiChanged.emit()
+        self.window.setProperty("step", 1)
+        QTest.qWait(200)
+
+    def links(self, answer):
+        with mock.patch.object(app.network, "links", return_value=answer):
+            self.setup.refresh_links()
+            for _ in range(100):
+                if not self.setup._checking_links:
+                    break
+                QTest.qWait(10)
+        QTest.qWait(100)
+
+    def test_a_cable_plugged_in_or_pulled_out_shows_without_looking_again(self):
+        # A desktop without Wi-Fi whose cable went in after Setup looked.
+        self.network_page()
+        next_button = self.window.findChild(QQuickItem, "nextButton")
+        self.assertFalse(next_button.isEnabled())
+        self.assertTrue(self.shown("No networks found"))
+        self.links((True, False))
+        self.assertTrue(self.setup.wired)
+        self.assertTrue(self.shown("Connected with a cable"))
+        self.assertFalse(self.shown("No networks found"))
+        self.assertTrue(next_button.isEnabled())
+        with mock.patch.object(self.setup, "scan") as scan:
+            self.links((True, False))           # nothing new: nothing is said again
+            self.links((False, False))          # pulled out: look for Wi-Fi again
+            scan.assert_called_once()
+        self.assertFalse(self.setup.wired)
+        self.assertFalse(self.shown("Connected with a cable"))
+        self.assertTrue(self.window.findChild(QQuickItem, "resumeOffline").isVisible())
+        self.links((True, False))
+        next_button.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        QTest.qWait(100)
+        self.assertEqual(self.window.property("step"), 2)
+
+    def test_lost_wifi_shows_and_a_silent_network_manager_changes_nothing(self):
+        harbor = {"name": "Harbor", "signal": 92, "secure": True, "active": True}
+        self.network_page(joined="Harbor", networks=[harbor])
+        self.assertTrue(self.shown("Connected"))
+        with mock.patch.object(self.setup, "scan") as scan:
+            self.links(None)
+            self.links((False, True))
+            self.assertEqual(self.setup.joined, "Harbor")
+            self.setup._joining = True           # a join in progress says it itself
+            self.links((False, False))
+            self.assertEqual(self.setup.joined, "Harbor")
+            self.setup._joining = False
+            scan.assert_not_called()
+            self.links((False, False))
+            scan.assert_called_once()
+        self.assertEqual(self.setup.joined, "")
+        self.assertFalse(self.shown("Connected"))
+        self.assertTrue(self.window.findChild(QQuickItem, "resumeOffline").isVisible())
+
+    def test_a_wifi_join_that_fails_says_why_and_offline_stays_available(self):
+        self.network_page(networks=[{"name": "Harbor", "signal": 92, "secure": True, "active": False},
+                                    {"name": "Le Havre", "signal": 51, "secure": True, "active": False}])
+        password = next(item for item in self.visual_items() if item.property("secret") is True and item.isVisible())
+        next_button = self.window.findChild(QQuickItem, "nextButton")
+        self.assertTrue(next_button.isEnabled())
+        answers = ["That password didn't work.", ""]
+        with mock.patch.object(app, "DEMO", False), \
+             mock.patch.object(app.network, "join", side_effect=lambda name, key: answers.pop(0)) as join:
+            for attempt in ("wrong", "right"):
+                password.setProperty("text", attempt)
+                next_button.forceActiveFocus()
+                QTest.keyClick(self.window, Qt.Key_Return)
+                for _ in range(100):
+                    if not self.setup.joining:
+                        break
+                    QTest.qWait(10)
+                QTest.qWait(100)
+                if attempt == "wrong":
+                    self.assertEqual(self.window.property("step"), 1)
+                    self.assertTrue(self.shown("That password didn't work."))
+                    self.assertEqual(self.setup.joined, "")
+                    self.assertTrue(self.window.findChild(QQuickItem, "resumeOffline").isVisible())
+        self.assertEqual([call.args for call in join.call_args_list], [("Harbor", "wrong"), ("Harbor", "right")])
+        self.assertEqual(self.window.property("step"), 2)
+        self.assertEqual(self.setup.joined, "Harbor")
+        self.assertEqual(self.setup.wifiError, "")
+
     def test_tab_reaches_continue_and_enter_advances(self):
         for key in (Qt.Key_Return, Qt.Key_Enter):
             with self.subTest(key=key):

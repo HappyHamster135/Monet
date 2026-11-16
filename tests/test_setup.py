@@ -10,6 +10,7 @@ import json
 import os
 import re
 import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -23,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "setup"))
 sys.dont_write_bytecode = True
 
-from monet_setup import disks, install, network, pc, system  # noqa: E402
+from monet_setup import disks, install, network, pc, system, trust  # noqa: E402
 
 GB = 10**9
 
@@ -391,6 +392,180 @@ class InstallerCommands(unittest.TestCase):
                         os.kill(int(pid.read_text()), signal.SIGTERM)
                     except ProcessLookupError:
                         pass
+
+
+class Connections(unittest.TestCase):
+    """nmcli is pretend: a script that answers what each test says and notes how it was asked."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = Path(folder.name)
+        nmcli = self.root / "bin/nmcli"
+        nmcli.parent.mkdir()
+        nmcli.write_text(f"#!{sys.executable}\n" + (
+            "import json, os, sys\n"
+            "from pathlib import Path\n"
+            "root = Path(__file__).resolve().parent.parent\n"
+            "with open(root / 'calls', 'a', encoding='utf-8') as f:\n"
+            "    f.write(json.dumps([sys.argv[1:], os.environ.get('LC_ALL'), os.environ.get('LANGUAGE')]) + '\\n')\n"
+            "sys.stdout.buffer.write((root / 'answer').read_bytes())\n"
+            "sys.stderr.buffer.write((root / 'complaint').read_bytes())\n"
+            "sys.exit(int((root / 'code').read_text()))\n"))
+        nmcli.chmod(0o755)
+        self.answer("")
+        environment = mock.patch.dict(os.environ, {"PATH": f"{nmcli.parent}{os.pathsep}{os.environ['PATH']}",
+                                                   "LANG": "sv_SE.UTF-8", "LANGUAGE": "sv"})
+        environment.start()
+        self.addCleanup(environment.stop)
+        os.environ.pop("LC_ALL", None)
+
+    def answer(self, out, code=0, complaint=""):
+        (self.root / "answer").write_bytes(out.encode())
+        (self.root / "complaint").write_bytes(complaint.encode())
+        (self.root / "code").write_text(str(code))
+
+    def calls(self):
+        return [json.loads(line) for line in (self.root / "calls").read_text(encoding="utf-8").splitlines()]
+
+    def test_nmcli_answers_in_plain_english_and_keeps_wifi_names(self):
+        # C.UTF-8, not C: in the C locale nmcli writes "Café" as "Caf?", and joining "Caf?" fails.
+        self.answer("*:Café Argenteuil:80:WPA2\n:Giverny 5G:70:WPA3\n")
+        self.assertEqual([n["name"] for n in network.wifi_networks()], ["Café Argenteuil", "Giverny 5G"])
+        self.answer("", code=4, complaint="Error: Connection activation failed: Secrets were required, but not provided.\n")
+        self.assertEqual(network.join("Café Argenteuil", "wrong"), "That password didn't work.")
+        listing, joining = self.calls()
+        self.assertEqual(joining[0], ["device", "wifi", "connect", "Café Argenteuil", "password", "wrong"])
+        for args, lc_all, language in (listing, joining):
+            self.assertEqual((lc_all, language), ("C.UTF-8", None), args)
+
+    def test_a_cable_counts_while_it_is_plugged_in(self):
+        port = self.root / "net/enp1s0"
+        port.mkdir(parents=True)
+        listing = "ethernet:connected:enp1s0\nwifi:disconnected:wlp2s0\nloopback:connected (externally):lo\n"
+        with mock.patch.object(network, "NET", self.root / "net"):
+            self.answer(listing)
+            (port / "carrier").write_text("1\n")
+            self.assertEqual(network.links(), (True, False))
+            self.assertTrue(network.wired())
+            # Pulled out: NetworkManager still says connected for a few seconds; the port doesn't.
+            (port / "carrier").write_text("0\n")
+            self.assertEqual(network.links(), (False, False))
+            self.assertFalse(network.wired())
+            # A port that doesn't say is believed to have its cable.
+            (port / "carrier").unlink()
+            self.assertEqual(network.links(), (True, False))
+            self.answer("ethernet:unavailable:enp1s0\nwifi:connected:wlp2s0\n")
+            self.assertEqual(network.links(), (False, True))
+            # NetworkManager didn't answer: nobody can say, so nothing changes.
+            self.answer("", code=8, complaint="Error: NetworkManager is not running.\n")
+            self.assertIsNone(network.links())
+            self.assertFalse(network.wired())
+        self.assertEqual(self.calls()[0][0], ["-t", "-f", "TYPE,STATE,DEVICE", "device", "status"])
+
+
+class DownloadServer(unittest.TestCase):
+    """What skopeo says when Monet's download server (the image registry) can't send it."""
+    IMAGE = "ghcr.io/happyhamster135/monet:0.9.8-7"
+    DIGEST = "sha256:" + "a" * 64
+    MISSING = ('time="2026-11-16T10:41:20Z" level=fatal msg="Error parsing image name '
+               '\\"docker://ghcr.io/happyhamster135/monet@sha256:aaaa\\": reading manifest '
+               'sha256:aaaa in ghcr.io/happyhamster135/monet: manifest unknown"\n')
+    REFUSED = "FATA[0001] reading manifest sha256:aaaa in ghcr.io/happyhamster135/monet: unauthorized: authentication required\n"
+    CERTIFICATE = ('FATA[0000] pinging container registry ghcr.io: Get "https://ghcr.io/v2/": '
+                   'tls: failed to verify certificate: x509: certificate has expired or is not yet valid\n')
+    UNREACHABLE = ('FATA[0030] pinging container registry ghcr.io: Get "https://ghcr.io/v2/": '
+                   'dial tcp: lookup ghcr.io on 127.0.0.53:53: no such host\n')
+
+    def failed(self, complaint):
+        return subprocess.CalledProcessError(1, ["skopeo"], output=b"", stderr=complaint.encode())
+
+    def test_answers_that_no_retry_can_get_past_are_told(self):
+        self.assertIn("isn’t on the download server", trust.registry_error(self.MISSING))
+        self.assertIn("refused to send Monet", trust.registry_error(self.REFUSED))
+        self.assertIn("refused to send Monet", trust.registry_error("denied: requested access to the resource is denied"))
+        self.assertIn("date and time", trust.registry_error(self.CERTIFICATE))
+        for passing in (self.UNREACHABLE, "received unexpected HTTP status: 503 Service Unavailable",
+                        "read tcp 10.0.2.15:43210->140.82.121.33:443: read: connection reset by peer", ""):
+            self.assertEqual(trust.registry_error(passing), "", passing)
+
+    def test_download_size_and_copy_say_why_the_server_wont_send_it(self):
+        events = []
+        with mock.patch.object(install, "log", side_effect=events.append):
+            for complaint, reason in ((self.MISSING, "isn’t on the download server"),
+                                      (self.REFUSED, "refused to send Monet"), (self.CERTIFICATE, "date and time")):
+                with self.subTest(reason=reason):
+                    with mock.patch.object(trust, "registry_manifest", side_effect=self.failed(complaint)):
+                        with self.assertRaisesRegex(install.Stop, reason):
+                            install.image_size(f"ghcr.io/happyhamster135/monet@{self.DIGEST}")
+                    with self.assertRaisesRegex(install.Stop, reason):
+                        self.copy(complaint)
+            # No answer yet, or an answer that might be different next time: the retries go on.
+            for failure in (self.failed(self.UNREACHABLE), subprocess.TimeoutExpired(["skopeo"], 120), OSError("skopeo")):
+                with mock.patch.object(trust, "registry_manifest", side_effect=failure):
+                    self.assertEqual(install.image_size(self.IMAGE), 0)
+            self.assertFalse(self.copy(self.UNREACHABLE))
+            self.assertIn("no such host", events[-1])
+            # A drive that filled up isn't a dropped connection.
+            with self.assertRaisesRegex(install.Stop, "running out of space"):
+                self.copy("FATA[0412] writing blob: write /mnt/monet-top/download/oci/blobs/x: no space left on device\n")
+            layers = json.dumps({"schemaVersion": 2, "layers": [{"size": 3 * GB}, {"size": 2 * GB}]}).encode()
+            with mock.patch.object(trust, "registry_manifest", return_value=layers) as asked:
+                self.assertEqual(install.image_size(f"ghcr.io/happyhamster135/monet@{self.DIGEST}"), 5 * GB)
+            self.assertEqual(asked.call_args.args[0], f"ghcr.io/happyhamster135/monet@{self.DIGEST}")
+
+    def copy(self, complaint):
+        clock = types.SimpleNamespace(now=0.0)
+        fake_time = types.SimpleNamespace(time=lambda: clock.now, sleep=lambda n: setattr(clock, "now", clock.now + n))
+
+        class Failing:
+            returncode = None
+
+            def __init__(self, args, stdout, stderr):
+                stdout.write(b"Copying blob sha256:bbbb\n" + complaint.encode())
+                stdout.flush()
+
+            def poll(self):
+                self.returncode = 1 if clock.now > 4 else None
+                return self.returncode
+
+        with mock.patch.object(install, "received", return_value=0), redirect_stdout(io.StringIO()):
+            return install.copy_once(f"ghcr.io/happyhamster135/monet@{self.DIGEST}", 5 * GB, 0,
+                                     popen=Failing, clock=fake_time)
+
+    def test_the_server_is_asked_before_the_drive_is_touched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = {"image": self.IMAGE, "disk": "/dev/nvme0n1", "mode": "erase", "language": "en_US.UTF-8"}
+            path = Path(tmp) / "plan.json"
+            commands, events = [], []
+            with mock.patch.object(install, "STATE", Path(tmp) / "state/install.json"), \
+                 mock.patch.object(trust, "expected", return_value=self.DIGEST), \
+                 mock.patch.object(install, "isolate_mounts"), mock.patch.object(install, "validate_target"), \
+                 mock.patch.object(install, "log"), \
+                 mock.patch.object(install, "run", side_effect=lambda *args, **kwargs: commands.append(args) or ""), \
+                 mock.patch.object(install, "emit", side_effect=lambda **event: events.append(event)), \
+                 mock.patch.object(install, "prepare_disk", side_effect=install.Stop("the drive was prepared")) as prepare:
+                for complaint, prepared in ((self.MISSING, False), (self.REFUSED, False), (self.UNREACHABLE, True)):
+                    with self.subTest(complaint=complaint), \
+                         mock.patch.object(trust, "registry_manifest", side_effect=self.failed(complaint)) as asked:
+                        path.write_text(json.dumps(plan))
+                        prepare.reset_mock()
+                        with self.assertRaises(SystemExit):
+                            install.main(path)
+                        self.assertEqual(asked.call_args.args[0], f"ghcr.io/happyhamster135/monet@{self.DIGEST}")
+                        self.assertEqual(prepare.called, prepared)
+                        self.assertIn(("nm-online", "-s", "-q", "-t", "60"), commands)
+                        if not prepared:
+                            self.assertEqual(events[-1]["phase"], "disk")
+                            self.assertEqual(events[-1]["error"], trust.registry_error(complaint))
+                # Resuming after the drive was prepared asks nothing more before it carries on.
+                with mock.patch.object(trust, "registry_manifest") as asked, \
+                     mock.patch.object(install.checkpoint, "resume", side_effect=ValueError("synthetic")):
+                    path.write_text(json.dumps(dict(plan, resume="synthetic-receipt")))
+                    with self.assertRaises(SystemExit):
+                        install.main(path)
+                    asked.assert_not_called()
+                    self.assertIn("could not be verified", events[-1]["error"])
 
 
 class ThisPC(unittest.TestCase):

@@ -348,17 +348,46 @@ def received():
     return total
 
 
+def refused(details):
+    """Stops when the download server's answer means Monet can't come from it, so the
+    person reads why instead of waiting through retries that can't help."""
+    details = details.strip()
+    if details:
+        log(details[-4096:])
+    if reason := trust.registry_error(details):
+        raise Stop(reason)
+
+
+def manifest(image, timeout=120):
+    """Monet's manifest from the download server; None when it didn't answer (logged)."""
+    try:
+        return trust.registry_manifest(image, timeout=timeout)
+    except subprocess.CalledProcessError as error:
+        refused((error.stderr or b"").decode("utf-8", "replace"))
+    except (OSError, subprocess.TimeoutExpired) as error:
+        log(f"The download server didn't answer: {error}")
+    return None
+
+
+def check_server(plan):
+    """Before anything is written to the drive: stop when the download server says
+    it can't send this Monet. One that doesn't answer is left to the download's retries."""
+    image, expected = plan["image"], plan.get("imageDigest")
+    run("nm-online", "-s", "-q", "-t", "60", check=False, timeout=90)
+    manifest(trust.pinned_reference(image, expected) if expected else image, timeout=60)
+
+
 def image_size(image):
     """The compressed size of Monet's layers, from its manifest; 0 if unknown."""
     try:
-        raw = json.loads(run("skopeo", "inspect", "--raw", f"docker://{image}", quiet=True, timeout=120))
+        raw = json.loads(manifest(image) or b"null")
         if "manifests" in raw:
             digest = next(m["digest"] for m in raw["manifests"]
                           if m.get("platform", {}).get("architecture") == "amd64")
             repo = image.rsplit(":", 1)[0] if ":" in image.split("/")[-1] else image
-            raw = json.loads(run("skopeo", "inspect", "--raw", f"docker://{repo}@{digest}", quiet=True, timeout=120))
+            raw = json.loads(manifest(f"{repo}@{digest}") or b"null")
         return sum(layer["size"] for layer in raw["layers"])
-    except (Stop, ValueError, KeyError, StopIteration):
+    except (ValueError, KeyError, StopIteration, TypeError):
         return 0
 
 
@@ -366,7 +395,7 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
     """One skopeo copy. True when it finished; False when it failed or stopped
     moving for STALL seconds (then it's stopped, to be started again)."""
     log(f"$ skopeo copy docker://{image} oci:{DOWNLOAD}/oci:latest")
-    with open(LOG, "a") if LOG.parent.exists() else open(os.devnull, "w") as out:
+    with tempfile.TemporaryFile(dir=WORK_TMP) as out:
         flags = ["--preserve-digests", "--remove-signatures"] if "@" in image else []
         proc = popen(["skopeo", "copy", "--retry-times", "3", *flags,
                       f"docker://{image}", f"oci:{DOWNLOAD}/oci:latest"],
@@ -388,7 +417,14 @@ def copy_once(image, total, start, popen=subprocess.Popen, clock=time):
             eta = (total - got) / speed if total and speed > 0 and got < total else None
             emit(phase="download", fraction=min(got / total, 0.99) if total else 0.0,
                  got=min(got, total) if total else got, total=total, eta=eta)
-    return proc.returncode == 0
+        if proc.returncode == 0:
+            return True
+        out.seek(max(0, os.fstat(out.fileno()).st_size - 8192))
+        details = out.read().decode("utf-8", "replace")
+    refused(details)
+    if "no space left on device" in details.lower():
+        raise Stop(_('The installation drive is running out of space. The partial download is kept. Free space on this drive or choose another drive, then try again.'))
+    return False
 
 
 def download(plan, tries=8):
@@ -934,6 +970,8 @@ def main(path):
             raise Stop(_('Another installation is still running. Wait for it to finish.')) from None
         isolate_mounts()
         validate_target(plan)
+        if not plan.get('resume'):
+            check_server(plan)
         if plan.get('gentle'):
             count = resources.gentler()
             log(f'Gentler installation: at most {count} logical CPUs, lower scheduling priority')

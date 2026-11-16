@@ -87,6 +87,7 @@ class Setup(QObject):
         self._zone, self._zone_chosen, self._zone_asked = "", False, False
         self._networks, self._wired, self._scanning = [], False, False
         self._joining, self._wifi_error, self._joined = False, "", ""
+        self._checking_links = False
         self._offline = False
         self._disks, self._disk, self._mode = [], -1, ""
         self._bring = False
@@ -119,6 +120,11 @@ class Setup(QObject):
         if DEMO:
             self._demo()
         else:
+            # A cable plugged in or pulled out, or Wi-Fi lost, shows within seconds, without Look again.
+            self._links = QTimer(self)
+            self._links.setInterval(2000)
+            self._links.timeout.connect(self.refresh_links)
+            self._links.start()
             QTimer.singleShot(0, self.scan)
             QTimer.singleShot(0, self._load_disks)
             QTimer.singleShot(0, lambda: self._background(pc.untrusted_key, self._found_untrusted))
@@ -353,6 +359,31 @@ class Setup(QObject):
                 self._ask_zone()
 
         self._background(lambda: (network.wired(), network.wifi_networks(rescan=True)), done)
+
+    def refresh_links(self):
+        if self._checking_links or self._scanning or self._joining or self._proc:
+            return
+        self._checking_links = True
+
+        def done(links):
+            self._checking_links = False
+            # Not while a scan or a join is saying it, and nothing when NetworkManager didn't answer.
+            if links is None or self._scanning or self._joining:
+                return
+            wired, wifi = links
+            lost = bool(self._joined) and not wifi
+            if wired == self._wired and not lost:
+                return
+            self._wired, self._wifi_error = wired, ""
+            if lost:
+                self._joined = ""
+            self.wifiChanged.emit()
+            if wired:
+                self._ask_zone()
+            elif not wifi:
+                self.scan()
+
+        self._background(network.links, done)
 
     @Slot(str, str)
     def join(self, name, password):
