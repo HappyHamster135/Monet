@@ -68,6 +68,45 @@ msgstr "Avbryt"
 msgid "Allow"
 msgstr "Tillåt"
 
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/AppCell.qml:39
+msgid "%2 and 1 more"
+msgid_plural "%2 and %1 more"
+msgstr[0] "%2 och 1 till"
+msgstr[1] "%2 och %1 till"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:105
+msgid "%1 (%2)"
+msgstr "%1 (%2)"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:106
+msgid "Other processes from you"
+msgstr "Dina andra processer"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:107
+msgid "Yours, outside your apps"
+msgstr "Dina, utanför dina appar"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:119 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:64 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:69
+#: linux/share/monet/games/Apps.qml:141 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:37
+msgid "System"
+msgstr ""
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:120
+msgid "Services and the kernel"
+msgstr "Tjänster och kärnan"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/PinnedRow.qml:152
+msgid "Hide what's in %1"
+msgstr "Dölj innehållet i %1"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/PinnedRow.qml:152
+msgid "Show what's in %1"
+msgstr "Visa innehållet i %1"
+
+#: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/PinnedRow.qml:188
+msgid "Nothing busy right now."
+msgstr "Inget är upptaget just nu."
+
 #: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
 #: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/settings-app/MonetSettings.qml:9434 image/graphics/monetgraphics.cpp:26
 #: image/graphics/monetgraphics.cpp:28
@@ -148,11 +187,6 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:64
 msgid "User"
-msgstr ""
-
-#: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:64 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:69 linux/share/monet/games/Apps.qml:141
-#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:37
-msgid "System"
 msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:65 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:43
@@ -838,7 +872,7 @@ msgstr "Följde med Monet"
 msgid "Added by you"
 msgstr "Tillagt av dig"
 
-#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8324
+#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8512
 #: linux/libexec/monet-files-tools:712
 msgid "Windows program"
 msgstr "Windows-program"
@@ -1213,7 +1247,7 @@ msgid "Security settings"
 msgstr "Säkerhetsinställningar"
 
 #: linux/share/monet/games/Games.qml:255 linux/share/monet/settings-app/MonetSettings.qml:1164 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
-#: linux/libexec/monet-quick:10117
+#: linux/libexec/monet-quick:10309
 msgid "Monet couldn't switch to Windows."
 msgstr "Monet kunde inte byta till Windows."
 
@@ -1246,7 +1280,7 @@ msgstr ""
 "Det gick inte att nå Steam. Nyckeln är sparad, och Spel försöker igen när appen öppnas."
 
 #: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8475
-#: linux/share/monet/settings-app/MonetSettings.qml:9438 linux/libexec/monet-quick:9014 linux/libexec/monet-quick:9014
+#: linux/share/monet/settings-app/MonetSettings.qml:9438 linux/libexec/monet-quick:9202 linux/libexec/monet-quick:9202
 msgid "Windows"
 msgstr "Windows"
 
@@ -1379,7 +1413,7 @@ msgstr "Storlek"
 #: linux/share/monet/games/Games.qml:936 linux/share/monet/settings-app/MonetSettings.qml:6827 linux/share/monet/settings-app/MonetSettings.qml:6867
 #: linux/share/monet/settings-app/MonetSettings.qml:6958 linux/share/monet/settings-app/MonetSettings.qml:7619 linux/share/monet/settings-app/MonetSettings.qml:7726
 #: linux/share/monet/settings-app/MonetSettings.qml:7749 setup/qml/Main.qml:1341 linux/libexec/monet-quick:4219
-#: linux/libexec/monet-quick:7972 linux/libexec/monet-quick:9083 linux/share/monet/passwords/app.py:183
+#: linux/libexec/monet-quick:8160 linux/libexec/monet-quick:9271 linux/share/monet/passwords/app.py:183
 #: linux/share/monet/passwords/app.py:211
 msgid "Show"
 msgstr "Visa"
@@ -2213,7 +2247,7 @@ msgid "privacy recent files history forget remember fingerprint finger"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:263 linux/share/monet/settings-app/MonetSettings.qml:6233 linux/share/monet/settings-app/MonetSettings.qml:7126
-#: linux/share/monet/settings-app/MonetSettings.qml:7350 linux/libexec/monet-quick:8053 linux/share/monet/passwords/app.py:304
+#: linux/share/monet/settings-app/MonetSettings.qml:7350 linux/libexec/monet-quick:8241 linux/share/monet/passwords/app.py:304
 #: linux/share/monet/passwords/app.py:334 linux/share/monet/passwords/app.py:886
 msgid "Passwords"
 msgstr "Lösenord"
@@ -2433,7 +2467,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:700 linux/share/monet/settings-app/MonetSettings.qml:2884 linux/share/monet/settings-app/MonetSettings.qml:5392
-#: linux/libexec/monet-quick:8093
+#: linux/libexec/monet-quick:8281
 msgid "Settings"
 msgstr "Inställningar"
 
@@ -2494,7 +2528,7 @@ msgstr ""
 msgid "Keyboard and pointer"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1274 linux/libexec/monet-quick:8042
+#: linux/share/monet/settings-app/MonetSettings.qml:1274 linux/libexec/monet-quick:8230
 msgid "Screen locking"
 msgstr "Skärmlåsning"
 
@@ -3557,7 +3591,7 @@ msgstr "Ring"
 msgid "Send a file…"
 msgstr "Skicka en fil…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4332 linux/share/monet/settings-app/MonetSettings.qml:5394 linux/libexec/monet-quick:8098
+#: linux/share/monet/settings-app/MonetSettings.qml:4332 linux/share/monet/settings-app/MonetSettings.qml:5394 linux/libexec/monet-quick:8286
 #: linux/libexec/monet-files-tools:788
 msgid "Files"
 msgstr "Filer"
@@ -3644,7 +3678,7 @@ msgstr "Nattljus"
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "Varmare färger från solnedgång till soluppgång, skonsammare för ögonen"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4499 linux/share/monet/settings-app/MonetSettings.qml:4505 linux/libexec/monet-quick:8057
+#: linux/share/monet/settings-app/MonetSettings.qml:4499 linux/share/monet/settings-app/MonetSettings.qml:4505 linux/libexec/monet-quick:8245
 msgid "Display colors"
 msgstr "Skärmfärger"
 
@@ -3707,7 +3741,7 @@ msgstr "Volym"
 msgid "Play sound through"
 msgstr "Spela upp ljud via"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4626 linux/libexec/monet-quick:8064
+#: linux/share/monet/settings-app/MonetSettings.qml:4626 linux/libexec/monet-quick:8252
 msgid "Headphones and speakers"
 msgstr ""
 
@@ -3763,7 +3797,7 @@ msgstr "Spela in från"
 msgid "Microphones"
 msgstr "Mikrofoner"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4821 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:8066
+#: linux/share/monet/settings-app/MonetSettings.qml:4821 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:8254
 msgid "Microphone"
 msgstr "Mikrofon"
 
@@ -3915,7 +3949,7 @@ msgstr "Administratör"
 msgid "Standard account"
 msgstr "Standardkonto"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5210 linux/libexec/monet-quick:9746
+#: linux/share/monet/settings-app/MonetSettings.qml:5210 linux/libexec/monet-quick:9934
 msgid "Guest"
 msgstr "Gäst"
 
@@ -4069,7 +4103,7 @@ msgstr "Emoji"
 msgid "Next keyboard layout"
 msgstr "Nästa tangentbordslayout"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5404 linux/libexec/monet-quick:8104
+#: linux/share/monet/settings-app/MonetSettings.qml:5404 linux/libexec/monet-quick:8292
 msgid "Screenshot"
 msgstr "Skärmbild"
 
@@ -4168,7 +4202,7 @@ msgstr "Efter så här lång tid utan aktivitet"
 msgid "It wakes where you left off"
 msgstr "Den vaknar där du slutade"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5633 linux/libexec/monet-quick:8051
+#: linux/share/monet/settings-app/MonetSettings.qml:5633 linux/libexec/monet-quick:8239
 msgid "Keep awake"
 msgstr "Håll vaken"
 
@@ -4263,7 +4297,7 @@ msgstr "Släck skärmen"
 msgid "When you restart"
 msgstr "När du startar om"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5745 linux/share/monet/settings-app/MonetSettings.qml:8743 linux/libexec/monet-quick:8088
+#: linux/share/monet/settings-app/MonetSettings.qml:5745 linux/share/monet/settings-app/MonetSettings.qml:8743 linux/libexec/monet-quick:8276
 msgid "Reopen your work"
 msgstr "Öppna ditt arbete igen"
 
@@ -4529,7 +4563,7 @@ msgstr "Bokmärken från Windows"
 msgid "Choose HTML file"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6119 linux/share/monet/settings-app/MonetSettings.qml:6223 linux/libexec/monet-quick:9084
+#: linux/share/monet/settings-app/MonetSettings.qml:6119 linux/share/monet/settings-app/MonetSettings.qml:6223 linux/libexec/monet-quick:9272
 msgid "From Windows"
 msgstr "Från Windows"
 
@@ -4587,7 +4621,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6168 linux/share/monet/settings-app/MonetSettings.qml:7861 linux/share/monet/settings-app/MonetSettings.qml:8087
-#: linux/libexec/monet-quick:8864
+#: linux/libexec/monet-quick:9052
 msgid "Review"
 msgstr ""
 
@@ -4663,7 +4697,7 @@ msgstr "Normal"
 msgid "Larger"
 msgstr "Större"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6281 linux/libexec/monet-quick:8062
+#: linux/share/monet/settings-app/MonetSettings.qml:6281 linux/libexec/monet-quick:8250
 msgid "Reduce motion"
 msgstr "Minska rörelser"
 
@@ -4709,7 +4743,7 @@ msgstr ""
 msgid "What fills this PC, and room to make."
 msgstr "Vad som fyller datorn, och plats att frigöra."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6353 linux/libexec/monet-quick:8046
+#: linux/share/monet/settings-app/MonetSettings.qml:6353 linux/libexec/monet-quick:8234
 msgid "Disks and partitions"
 msgstr "Diskar och partitioner"
 
@@ -4870,7 +4904,7 @@ msgstr "Storlek i MiB"
 msgid "%1 selected · %2 available"
 msgstr "%1 valt · %2 tillgängligt"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6567 linux/libexec/monet-quick:8076
+#: linux/share/monet/settings-app/MonetSettings.qml:6567 linux/libexec/monet-quick:8264
 msgid "Windows files"
 msgstr ""
 
@@ -5230,7 +5264,7 @@ msgid ""
 msgstr ""
 "Spel kopieras inte: Steam och de andra butikerna laddar ner dem igen. Inte papperskorgen heller."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7127 linux/share/monet/settings-app/MonetSettings.qml:7351 linux/libexec/monet-quick:8053
+#: linux/share/monet/settings-app/MonetSettings.qml:7127 linux/share/monet/settings-app/MonetSettings.qml:7351 linux/libexec/monet-quick:8241
 msgid "Saved logins, app access and vault unlocking"
 msgstr ""
 
@@ -5626,7 +5660,7 @@ msgid ""
 msgstr ""
 "Windows-tangenten + Alt + G sparar de senaste 30 sekunderna på skärmen i Videoklipp. Första gången väljer du skärmen som ska spelas in."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7579 linux/share/monet/settings-app/MonetSettings.qml:7722 linux/libexec/monet-quick:6263
+#: linux/share/monet/settings-app/MonetSettings.qml:7579 linux/share/monet/settings-app/MonetSettings.qml:7722 linux/libexec/monet-quick:6451
 msgid "Shared with Windows"
 msgstr "Delas med Windows"
 
@@ -6252,7 +6286,7 @@ msgstr "Windows är redo att installeras"
 msgid "Getting Windows ready"
 msgstr "Förbereder Windows"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8465 linux/libexec/monet-quick:7781
+#: linux/share/monet/settings-app/MonetSettings.qml:8465 linux/libexec/monet-quick:7969
 msgid "Windows setup did not finish"
 msgstr "Windows-installationen slutfördes inte"
 
@@ -6587,7 +6621,7 @@ msgstr ""
 msgid "Copy report"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8813 linux/libexec/monet-quick:8084
+#: linux/share/monet/settings-app/MonetSettings.qml:8813 linux/libexec/monet-quick:8272
 msgid "Undo desktop changes"
 msgstr ""
 
@@ -6656,7 +6690,7 @@ msgstr "Bara när du ber om det."
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Monet och dina appar håller sig själva uppdaterade."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8970 linux/libexec/monet-quick:8082
+#: linux/share/monet/settings-app/MonetSettings.qml:8970 linux/libexec/monet-quick:8270
 msgid "Check for updates"
 msgstr "Sök efter uppdateringar"
 
@@ -6723,21 +6757,21 @@ msgstr ""
 msgid "New in Monet %1"
 msgstr "Nytt i Monet %1"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9188 linux/libexec/monet-session:212
+#: linux/share/monet/settings-app/MonetSettings.qml:9188 linux/libexec/monet-session:218
 msgid "Monet went back to %1"
 msgstr "Monet gick tillbaka till %1"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9188 linux/libexec/monet-session:212
+#: linux/share/monet/settings-app/MonetSettings.qml:9188 linux/libexec/monet-session:218
 msgid "Monet went back"
 msgstr "Monet gick tillbaka"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9190 linux/libexec/monet-session:214
+#: linux/share/monet/settings-app/MonetSettings.qml:9190 linux/libexec/monet-session:220
 msgid ""
 "Monet %1 didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
 "Monet %1 startade inte ordentligt på den här datorn, så Monet gick tillbaka av sig själv. Dina filer är som de var, och den dagliga uppdateringen väntar på nästa."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9191 linux/libexec/monet-session:216
+#: linux/share/monet/settings-app/MonetSettings.qml:9191 linux/libexec/monet-session:222
 msgid ""
 "The new Monet didn't start properly on this PC, so it went back by itself. Your files are as they were, and the daily update waits for the next one."
 msgstr ""
@@ -6869,7 +6903,7 @@ msgstr "%1 s"
 msgid "Save a report"
 msgstr "Spara en rapport"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9485 linux/libexec/monet-quick:7973
+#: linux/share/monet/settings-app/MonetSettings.qml:9485 linux/libexec/monet-quick:8161
 msgid "In Documents, as %1."
 msgstr "I Dokument, som %1."
 
@@ -6901,7 +6935,7 @@ msgstr "Hämtar …"
 msgid "Get BoxBuddy"
 msgstr "Hämta BoxBuddy"
 
-#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:6215
+#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:6403
 msgid "Opens in Windows"
 msgstr "Öppnas i Windows"
 
@@ -7065,7 +7099,7 @@ msgstr "Alla"
 msgid "No apps here yet."
 msgstr "Inga appar här än."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:8110
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:8298
 msgid "Store"
 msgstr "Butik"
 
@@ -7627,7 +7661,7 @@ msgid "The note could not be saved. Try again."
 msgstr ""
 
 #: linux/share/monet/widgets/TaskManagerAction.qml:9 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:52 image/dock/patch.py:283
-#: image/dock/patch.py:309 linux/libexec/monet-quick:8102
+#: image/dock/patch.py:309 linux/libexec/monet-quick:8290
 msgid "Task Manager"
 msgstr ""
 
@@ -7807,7 +7841,7 @@ msgstr "Filer du öppnar dyker upp här."
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:8186 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:8374 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
@@ -7963,7 +7997,7 @@ msgstr ""
 msgid "A Windows installer"
 msgstr "Ett installationsprogram för Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:6130
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:6318
 msgid "A Windows program"
 msgstr "Ett Windows-program"
 
@@ -8158,11 +8192,11 @@ msgstr "Ljudinställningar…"
 msgid "Images"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:8108
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:8296
 msgid "Documents"
 msgstr "Dokument"
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:8106
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:8294
 msgid "Archives"
 msgstr ""
 
@@ -8250,7 +8284,7 @@ msgstr ""
 msgid "Reading drive space…"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:9349
+#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:9537
 msgid "Open Files"
 msgstr "Öppna Filer"
 
@@ -8758,7 +8792,7 @@ msgstr ""
 msgid "Opening %1 wasn't confirmed"
 msgstr "Det gick inte att bekräfta att %1 öppnades"
 
-#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:6024 linux/libexec/monet-quick:6046
+#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:6212 linux/libexec/monet-quick:6234
 msgid "Couldn't open %1"
 msgstr "Det gick inte att öppna %1"
 
@@ -8866,7 +8900,7 @@ msgstr "Fråga igen och starta om"
 msgid "You're online"
 msgstr "Du är uppkopplad"
 
-#: setup/qml/Main.qml:451 linux/libexec/monet-quick:8070
+#: setup/qml/Main.qml:451 linux/libexec/monet-quick:8258
 msgid "Connect to Wi-Fi"
 msgstr "Anslut till Wi-Fi"
 
@@ -9799,607 +9833,607 @@ msgstr "De senaste 30 sekunderna är sparade"
 msgid "In Videos."
 msgstr "I Videoklipp."
 
-#: linux/libexec/monet-quick:6025
+#: linux/libexec/monet-quick:6213
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr ""
 "Startprogrammet för Windows-appar kunde inte starta. Försök igen från Filer."
 
-#: linux/libexec/monet-quick:6048
+#: linux/libexec/monet-quick:6236
 msgid "The program or installer is missing."
 msgstr "Programmet eller installationsprogrammet saknas."
 
-#: linux/libexec/monet-quick:6051
+#: linux/libexec/monet-quick:6239
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr "Stöd för Windows-appar saknas. Du kan öppna filen i Windows i stället."
 
-#: linux/libexec/monet-quick:6059
+#: linux/libexec/monet-quick:6247
 msgid "Starting %1"
 msgstr "Startar %1"
 
-#: linux/libexec/monet-quick:6060
+#: linux/libexec/monet-quick:6248
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
 "Det kan ta några minuter att förbereda stödet för Windows-appar första gången."
 
-#: linux/libexec/monet-quick:6069
+#: linux/libexec/monet-quick:6257
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
 "Stödet för Windows-appar kunde inte starta. Försök öppna filen i Windows."
 
-#: linux/libexec/monet-quick:6076
+#: linux/libexec/monet-quick:6264
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
 "Proton avslutades med kod %1. Kontrollera filen och anslutningen, eller försök öppna den i Windows."
 
-#: linux/libexec/monet-quick:6903
+#: linux/libexec/monet-quick:7091
 msgid "Open it again"
 msgstr "Öppna igen"
 
-#: linux/libexec/monet-quick:6903
+#: linux/libexec/monet-quick:7091
 msgid "%1 closed unexpectedly"
 msgstr "%1 stängdes oväntat"
 
-#: linux/libexec/monet-quick:7321
+#: linux/libexec/monet-quick:7509
 msgid "Choose a connected screen and a supported size."
 msgstr ""
 
-#: linux/libexec/monet-quick:7326
+#: linux/libexec/monet-quick:7514
 msgid ""
 "The screen size couldn't be changed. Check the display connection and try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7860
+#: linux/libexec/monet-quick:8048
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB ledigt av %2 GB"
 
-#: linux/libexec/monet-quick:7973
+#: linux/libexec/monet-quick:8161
 msgid "Saved a report"
 msgstr "Rapporten är sparad"
 
-#: linux/libexec/monet-quick:8042
+#: linux/libexec/monet-quick:8230
 msgid "Power & Sleep · Automatic screen locking"
 msgstr "Ström & vila · Automatisk skärmlåsning"
 
-#: linux/libexec/monet-quick:8043
+#: linux/libexec/monet-quick:8231
 msgid ""
 "stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"
 msgstr ""
 "sluta låsa skärmen; skärmen låser sig; automatisk skärmlåsning; skärmlåstimer; stäng av skärmlåsning; lås skärmen"
 
-#: linux/libexec/monet-quick:8044
+#: linux/libexec/monet-quick:8232
 msgid "Download folder"
 msgstr "Nedladdningsmapp"
 
-#: linux/libexec/monet-quick:8044
+#: linux/libexec/monet-quick:8232
 msgid "Storage · Where downloads are saved"
 msgstr "Lagring · Här sparas nedladdningar"
 
-#: linux/libexec/monet-quick:8045
+#: linux/libexec/monet-quick:8233
 msgid ""
 "download folder; downloads folder; download path; download location; where downloads go; save downloads"
 msgstr ""
 "nedladdningsmapp; hämtningsmapp; sökväg för nedladdningar; plats för nedladdningar; var nedladdningar hamnar; spara nedladdningar"
 
-#: linux/libexec/monet-quick:8046
+#: linux/libexec/monet-quick:8234
 msgid "Storage · Manage physical drives"
 msgstr "Lagring · Hantera fysiska enheter"
 
-#: linux/libexec/monet-quick:8047
+#: linux/libexec/monet-quick:8235
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
 "diskar; diskhantering; formatera disk; radera disk; skapa partition; partitionshanterare; extern enhet; extern hårddisk"
 
-#: linux/libexec/monet-quick:8049
+#: linux/libexec/monet-quick:8237
 msgid "Battery charge limit"
 msgstr "Batteriets laddgräns"
 
-#: linux/libexec/monet-quick:8049
+#: linux/libexec/monet-quick:8237
 msgid "Power & Sleep · Protect the battery"
 msgstr "Ström & vila · Skydda batteriet"
 
-#: linux/libexec/monet-quick:8050
+#: linux/libexec/monet-quick:8238
 msgid ""
 "battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"
 msgstr ""
 "batterigräns; batteriets laddgräns; laddgräns; laddningsgräns; skydda batteriet; sluta ladda vid 80; batteriskydd"
 
-#: linux/libexec/monet-quick:8051
+#: linux/libexec/monet-quick:8239
 msgid "Power & Sleep · Temporarily prevent idle sleep and locking"
 msgstr "Ström & vila · Förhindra tillfälligt vila och låsning vid inaktivitet"
 
-#: linux/libexec/monet-quick:8052
+#: linux/libexec/monet-quick:8240
 msgid ""
 "keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"
 msgstr ""
 "håll vaken; håll datorn vaken; förhindra viloläge tillfälligt; presentationsläge; håll skärmen på"
 
-#: linux/libexec/monet-quick:8054
+#: linux/libexec/monet-quick:8242
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""
 
-#: linux/libexec/monet-quick:8055
+#: linux/libexec/monet-quick:8243
 msgid "Make text and windows bigger"
 msgstr ""
 
-#: linux/libexec/monet-quick:8055
+#: linux/libexec/monet-quick:8243
 msgid "Accessibility · Size of everything"
 msgstr ""
 
-#: linux/libexec/monet-quick:8056
+#: linux/libexec/monet-quick:8244
 msgid ""
 "make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"
 msgstr ""
 
-#: linux/libexec/monet-quick:8057
+#: linux/libexec/monet-quick:8245
 msgid "Display · Color profiles and test patterns"
 msgstr "Skärm · Färgprofiler och testmönster"
 
-#: linux/libexec/monet-quick:8058
+#: linux/libexec/monet-quick:8246
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
 "färgprofil; färgprofiler; ICC; OLED; färgkalibrering; skärmtest; bildskärmstest; färgerna ser fel ut"
 
-#: linux/libexec/monet-quick:8060
+#: linux/libexec/monet-quick:8248
 msgid "Make the pointer easier to see"
 msgstr ""
 
-#: linux/libexec/monet-quick:8060
+#: linux/libexec/monet-quick:8248
 msgid "Accessibility · Pointer size"
 msgstr ""
 
-#: linux/libexec/monet-quick:8061
+#: linux/libexec/monet-quick:8249
 msgid "mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:8062
+#: linux/libexec/monet-quick:8250
 msgid "Accessibility · Animation and movement"
 msgstr ""
 
-#: linux/libexec/monet-quick:8063
+#: linux/libexec/monet-quick:8251
 msgid "reduce motion; stop animations; less movement; disable animation"
 msgstr ""
 
-#: linux/libexec/monet-quick:8064
+#: linux/libexec/monet-quick:8252
 msgid "Sound · Choose where sound plays"
 msgstr ""
 
-#: linux/libexec/monet-quick:8065
+#: linux/libexec/monet-quick:8253
 msgid ""
 "headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"
 msgstr ""
 
-#: linux/libexec/monet-quick:8066
+#: linux/libexec/monet-quick:8254
 msgid "Sound · Microphone volume"
 msgstr ""
 
-#: linux/libexec/monet-quick:8067
+#: linux/libexec/monet-quick:8255
 msgid "microphone; mic; people cannot hear me; input volume; recording sound"
 msgstr ""
 
-#: linux/libexec/monet-quick:8068
+#: linux/libexec/monet-quick:8256
 msgid "Connect a Bluetooth device"
 msgstr ""
 
-#: linux/libexec/monet-quick:8068
+#: linux/libexec/monet-quick:8256
 msgid "Bluetooth · Pair headphones, a mouse or a controller"
 msgstr ""
 
-#: linux/libexec/monet-quick:8069
+#: linux/libexec/monet-quick:8257
 msgid ""
 "bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:8070
+#: linux/libexec/monet-quick:8258
 msgid "Internet · Wireless networks"
 msgstr "Internet · Trådlösa nätverk"
 
-#: linux/libexec/monet-quick:8071
+#: linux/libexec/monet-quick:8259
 msgid ""
 "wifi; wi-fi; wireless internet; connect internet; no internet; network connection"
 msgstr ""
 
-#: linux/libexec/monet-quick:8072
+#: linux/libexec/monet-quick:8260
 msgid "LAN settings"
 msgstr "LAN-inställningar"
 
-#: linux/libexec/monet-quick:8072
+#: linux/libexec/monet-quick:8260
 msgid "Internet · Ethernet and IP settings"
 msgstr "Internet · Ethernet- och IP-inställningar"
 
-#: linux/libexec/monet-quick:8073
+#: linux/libexec/monet-quick:8261
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
 msgstr ""
 "lan; ethernet; trådbundet nätverk; nätverkskabel; ip-adress; gateway; dns"
 
-#: linux/libexec/monet-quick:8074
+#: linux/libexec/monet-quick:8262
 msgid "Birthdays and repeating notes"
 msgstr ""
 
-#: linux/libexec/monet-quick:8074
+#: linux/libexec/monet-quick:8262
 msgid "Calendar · Notes that repeat every year, month, week or day"
 msgstr ""
 
-#: linux/libexec/monet-quick:8075
+#: linux/libexec/monet-quick:8263
 msgid ""
 "birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"
 msgstr ""
 
-#: linux/libexec/monet-quick:8076
+#: linux/libexec/monet-quick:8264
 msgid "Storage · Your shared folder and access to Windows files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8077
+#: linux/libexec/monet-quick:8265
 msgid ""
 "windows files; files from windows; shared with windows; shared folder; windows documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:8078
+#: linux/libexec/monet-quick:8266
 msgid "Quiet notifications"
 msgstr ""
 
-#: linux/libexec/monet-quick:8078
+#: linux/libexec/monet-quick:8266
 msgid "Notifications · Do Not Disturb and app popups"
 msgstr ""
 
-#: linux/libexec/monet-quick:8079
+#: linux/libexec/monet-quick:8267
 msgid ""
 "do not disturb; quiet notifications; stop notifications; mute app; popups; focus time"
 msgstr ""
 
-#: linux/libexec/monet-quick:8080
+#: linux/libexec/monet-quick:8268
 msgid "Back up or restore files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8080
+#: linux/libexec/monet-quick:8268
 msgid "Backups · Copies and earlier versions"
 msgstr ""
 
-#: linux/libexec/monet-quick:8081
+#: linux/libexec/monet-quick:8269
 msgid ""
 "backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"
 msgstr ""
 
-#: linux/libexec/monet-quick:8082
+#: linux/libexec/monet-quick:8270
 msgid "Updates · New versions and recovery"
 msgstr ""
 
-#: linux/libexec/monet-quick:8083
+#: linux/libexec/monet-quick:8271
 msgid ""
 "update; updates; upgrade; new version; system rollback; previous working version"
 msgstr ""
 
-#: linux/libexec/monet-quick:8084
+#: linux/libexec/monet-quick:8272
 msgid "Recovery · Review saved settings and shortcuts"
 msgstr ""
 
-#: linux/libexec/monet-quick:8085
+#: linux/libexec/monet-quick:8273
 msgid ""
 "recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"
 msgstr ""
 
-#: linux/libexec/monet-quick:8086
+#: linux/libexec/monet-quick:8274
 msgid "Restore work after Windows"
 msgstr ""
 
-#: linux/libexec/monet-quick:8086
+#: linux/libexec/monet-quick:8274
 msgid "Play on Windows · Reopen apps when you return"
 msgstr ""
 
-#: linux/libexec/monet-quick:8087
+#: linux/libexec/monet-quick:8275
 msgid ""
 "restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"
 msgstr ""
 
-#: linux/libexec/monet-quick:8088
+#: linux/libexec/monet-quick:8276
 msgid "Power & Sleep · Your apps come back after a restart"
 msgstr "Ström & vila · Dina appar kommer tillbaka efter en omstart"
 
-#: linux/libexec/monet-quick:8089
+#: linux/libexec/monet-quick:8277
 msgid ""
 "reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"
 msgstr ""
 "öppna appar igen efter omstart; appar efter omstart; kom ihåg öppna appar; återställ appar efter avstängning; fönster där de var; återställ session"
 
-#: linux/libexec/monet-quick:8091
+#: linux/libexec/monet-quick:8279
 msgid "Choose default apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:8091
+#: linux/libexec/monet-quick:8279
 msgid "Default Apps · Browser, email and files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8092
+#: linux/libexec/monet-quick:8280
 msgid "default apps; change default browser; open with; email app; pdf app"
 msgstr ""
 
-#: linux/libexec/monet-quick:8093
+#: linux/libexec/monet-quick:8281
 msgid "Personalize Monet and manage your devices"
 msgstr ""
 
-#: linux/libexec/monet-quick:8094
+#: linux/libexec/monet-quick:8282
 msgid ""
 "control panel; system preferences; system settings; gnome settings; kde settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:8098
+#: linux/libexec/monet-quick:8286
 msgid "Browse folders and connected drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:8099
+#: linux/libexec/monet-quick:8287
 msgid ""
 "file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"
 msgstr ""
 
-#: linux/libexec/monet-quick:8100
+#: linux/libexec/monet-quick:8288
 msgid "Text Editor"
 msgstr ""
 
-#: linux/libexec/monet-quick:8100
+#: linux/libexec/monet-quick:8288
 msgid "Edit plain text and code"
 msgstr ""
 
-#: linux/libexec/monet-quick:8101
+#: linux/libexec/monet-quick:8289
 msgid ""
 "notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
 msgstr ""
 
-#: linux/libexec/monet-quick:8102
+#: linux/libexec/monet-quick:8290
 msgid "See running apps, CPU, graphics, memory, network and temperatures"
 msgstr ""
 
-#: linux/libexec/monet-quick:8103
+#: linux/libexec/monet-quick:8291
 msgid ""
 "task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
 msgstr ""
 
-#: linux/libexec/monet-quick:8104
+#: linux/libexec/monet-quick:8292
 msgid "Capture your screen or a selected area"
 msgstr ""
 
-#: linux/libexec/monet-quick:8105
+#: linux/libexec/monet-quick:8293
 msgid ""
 "snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
 msgstr ""
 
-#: linux/libexec/monet-quick:8106
+#: linux/libexec/monet-quick:8294
 msgid "Open and extract compressed files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8107
+#: linux/libexec/monet-quick:8295
 msgid ""
 "7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
 msgstr ""
 
-#: linux/libexec/monet-quick:8108
+#: linux/libexec/monet-quick:8296
 msgid "Read PDFs and annotate documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:8109
+#: linux/libexec/monet-quick:8297
 msgid ""
 "preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
 msgstr ""
 
-#: linux/libexec/monet-quick:8110
+#: linux/libexec/monet-quick:8298
 msgid "Find and install apps for Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8111
+#: linux/libexec/monet-quick:8299
 msgid ""
 "app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
 msgstr ""
 
-#: linux/libexec/monet-quick:8139
+#: linux/libexec/monet-quick:8327
 msgid "how can i do please my the a an to where is are find open"
 msgstr ""
 
-#: linux/libexec/monet-quick:8324
+#: linux/libexec/monet-quick:8512
 msgid "Windows installer"
 msgstr "Windows-installationsprogram"
 
-#: linux/libexec/monet-quick:8325
+#: linux/libexec/monet-quick:8513
 msgid "Linux package"
 msgstr "Linux-paket"
 
-#: linux/libexec/monet-quick:8326 linux/libexec/monet-files-tools:712
+#: linux/libexec/monet-quick:8514 linux/libexec/monet-files-tools:712
 msgid "Linux application"
 msgstr ""
 
-#: linux/libexec/monet-quick:8326
+#: linux/libexec/monet-quick:8514
 msgid "Downloaded app"
 msgstr "Nedladdad app"
 
-#: linux/libexec/monet-quick:8334
+#: linux/libexec/monet-quick:8522
 msgid "Home"
 msgstr "Hemmapp"
 
-#: linux/libexec/monet-quick:8370
+#: linux/libexec/monet-quick:8558
 msgid "Open application?"
 msgstr "Öppna programmet?"
 
-#: linux/libexec/monet-quick:8371
+#: linux/libexec/monet-quick:8559
 msgid "Open this downloaded application?"
 msgstr "Öppna det här nedladdade programmet?"
 
-#: linux/libexec/monet-quick:8784
+#: linux/libexec/monet-quick:8972
 msgid "Waiting to reopen."
 msgstr ""
 
-#: linux/libexec/monet-quick:8785
+#: linux/libexec/monet-quick:8973
 msgid ""
 "The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
 msgstr ""
 
-#: linux/libexec/monet-quick:8786
+#: linux/libexec/monet-quick:8974
 msgid "Opening and checking its window…"
 msgstr ""
 
-#: linux/libexec/monet-quick:8787
+#: linux/libexec/monet-quick:8975
 msgid "Opened a window. The app controls its own tabs and documents."
 msgstr ""
 
-#: linux/libexec/monet-quick:8788
+#: linux/libexec/monet-quick:8976
 msgid "Already running; left as it was. Its saved work was not opened again."
 msgstr ""
 
-#: linux/libexec/monet-quick:8789
+#: linux/libexec/monet-quick:8977
 msgid ""
 "Opening wasn't confirmed. Retry checks an existing launch before opening another."
 msgstr ""
 
-#: linux/libexec/monet-quick:8790
+#: linux/libexec/monet-quick:8978
 msgid "This app is no longer installed. Install it again, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:8791
+#: linux/libexec/monet-quick:8979
 msgid "Saved folder tabs and split views reopened."
 msgstr ""
 
-#: linux/libexec/monet-quick:8792
+#: linux/libexec/monet-quick:8980
 msgid ""
 "Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:8793
+#: linux/libexec/monet-quick:8981
 msgid "Files reopened. Its previous folders and tabs could not be saved."
 msgstr "Filer öppnades igen. Tidigare mappar och flikar kunde inte sparas."
 
-#: linux/libexec/monet-quick:8794
+#: linux/libexec/monet-quick:8982
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
 msgstr ""
 
-#: linux/libexec/monet-quick:8795
+#: linux/libexec/monet-quick:8983
 msgid "Browser opened normally, following its own tab-restore preference."
 msgstr ""
 
-#: linux/libexec/monet-quick:8796
+#: linux/libexec/monet-quick:8984
 msgid ""
 "The saved browser session is no longer available. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8797
+#: linux/libexec/monet-quick:8985
 msgid ""
 "Private or unsupported browser session left closed. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8798
+#: linux/libexec/monet-quick:8986
 msgid ""
 "Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
 msgstr ""
 
-#: linux/libexec/monet-quick:8799
+#: linux/libexec/monet-quick:8987
 msgid ""
 "The app opened with requests for its saved documents. Check the app for any unsaved changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:8800
+#: linux/libexec/monet-quick:8988
 msgid ""
 "Some saved documents are unavailable. Reconnect their drive, then choose Retry documents, or check Backups."
 msgstr ""
 
-#: linux/libexec/monet-quick:8801
+#: linux/libexec/monet-quick:8989
 msgid ""
 "The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."
 msgstr ""
 
-#: linux/libexec/monet-quick:8802
+#: linux/libexec/monet-quick:8990
 msgid "This recovery checkpoint has expired. You can open the app normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8806
+#: linux/libexec/monet-quick:8994
 msgid "Private browsing stays closed. You can open the browser normally."
 msgstr "Privat surfning förblir stängd. Du kan öppna webbläsaren som vanligt."
 
-#: linux/libexec/monet-quick:8862
+#: linux/libexec/monet-quick:9050
 msgid "Some apps didn't reopen"
 msgstr "Vissa appar öppnades inte igen"
 
-#: linux/libexec/monet-quick:8863
+#: linux/libexec/monet-quick:9051
 msgid ""
 "Everything else is back where it was. Review what's missing and try again."
 msgstr "Allt annat är tillbaka där det var. Se vad som saknas och försök igen."
 
-#: linux/libexec/monet-quick:8867
+#: linux/libexec/monet-quick:9055
 msgid "Back in Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8867
+#: linux/libexec/monet-quick:9055
 msgid "Review return"
 msgstr ""
 
-#: linux/libexec/monet-quick:8868
+#: linux/libexec/monet-quick:9056
 msgid "Some work needs attention. Review what opened and what you can retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:8869
+#: linux/libexec/monet-quick:9057
 msgid "Review which apps reopened and how they handled your saved work."
 msgstr ""
 
-#: linux/libexec/monet-quick:9077
+#: linux/libexec/monet-quick:9265
 msgid "Your screenshots and clips from Windows are in Pictures and Videos."
 msgstr "Dina skärmbilder och klipp från Windows finns i Bilder och Videoklipp."
 
-#: linux/libexec/monet-quick:9079
+#: linux/libexec/monet-quick:9267
 msgid "Your screenshots from Windows are in Pictures › Screenshots."
 msgstr "Dina skärmbilder från Windows finns i Bilder › Screenshots."
 
-#: linux/libexec/monet-quick:9081
+#: linux/libexec/monet-quick:9269
 msgid "Your clips from Windows are in Videos."
 msgstr "Dina klipp från Windows finns i Videoklipp."
 
-#: linux/libexec/monet-quick:9278
+#: linux/libexec/monet-quick:9466
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "Enheten kunde inte öppnas. Försök ansluta den igen."
 
-#: linux/libexec/monet-quick:9282
+#: linux/libexec/monet-quick:9470
 msgid "earlier"
 msgstr "tidigare"
 
-#: linux/libexec/monet-quick:9286
+#: linux/libexec/monet-quick:9474
 msgid "Monet can't write on this drive."
 msgstr "Monet kan inte skriva till den här enheten."
 
-#: linux/libexec/monet-quick:9294 linux/libexec/monet-quick:9318
+#: linux/libexec/monet-quick:9482 linux/libexec/monet-quick:9506
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr ""
 "Kopieringen blev inte klar. Monet försöker igen nästa gång enheten ansluts."
 
-#: linux/libexec/monet-quick:9333
+#: linux/libexec/monet-quick:9521
 msgid "Your files haven't been copied for a week"
 msgstr "Dina filer har inte kopierats på en vecka"
 
-#: linux/libexec/monet-quick:9334
+#: linux/libexec/monet-quick:9522
 msgid "Plug in %1 and Monet copies them."
 msgstr "Anslut %1 så kopierar Monet dem."
 
-#: linux/libexec/monet-quick:9334
+#: linux/libexec/monet-quick:9522
 msgid "your backup drive"
 msgstr "din säkerhetskopieringsenhet"
 
-#: linux/libexec/monet-quick:9350
+#: linux/libexec/monet-quick:9538
 msgid "Your files from Windows are here"
 msgstr "Dina filer från Windows är här"
 
-#: linux/libexec/monet-quick:9351
+#: linux/libexec/monet-quick:9539
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr ""
 "I Dokument, Bilder, Musik, Videoklipp, Hämtade filer och på skrivbordet."
 
-#: linux/libexec/monet-quick:9773
+#: linux/libexec/monet-quick:9961
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
 "Välj en komplett Windows 11-ISO-fil på den här datorn eller en ansluten enhet."
 
-#: linux/libexec/monet-quick:9902
+#: linux/libexec/monet-quick:10090
 msgid "Couldn't check phones. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:10113
+#: linux/libexec/monet-quick:10305
 msgid "Windows can't get this program this time."
 msgstr "Windows kan inte få det här programmet den här gången."
 
@@ -10797,15 +10831,15 @@ msgid ""
 msgstr ""
 "Öppna Överföringar i Filer för att se problemet eller försöka igen. Delvis uppackade filer har sparats."
 
-#: linux/libexec/monet-rest:387
+#: linux/libexec/monet-rest:451
 msgid "Open Task Manager"
 msgstr "Öppna Aktivitetshanteraren"
 
-#: linux/libexec/monet-rest:405
+#: linux/libexec/monet-rest:469
 msgid "Memory is almost full"
 msgstr "Minnet är nästan fullt"
 
-#: linux/libexec/monet-rest:406
+#: linux/libexec/monet-rest:470
 msgid ""
 "Closing an app you don't need keeps your PC responsive. Using the most now: %1."
 msgstr ""
@@ -12124,138 +12158,138 @@ msgstr "Gör klart för omstart"
 msgid "Windows installs itself at the next restart"
 msgstr "Windows installerar sig självt vid nästa omstart"
 
-#: linux/libexec/monet-session:69
+#: linux/libexec/monet-session:75
 msgid "Finish setting up Windows"
 msgstr "Slutför installationen av Windows"
 
-#: linux/libexec/monet-session:171
+#: linux/libexec/monet-session:177
 msgid "Adding your apps"
 msgstr "Lägger till dina appar"
 
-#: linux/libexec/monet-session:172
+#: linux/libexec/monet-session:178
 msgid ""
 "Your apps download in the background and show up in the menu as they arrive."
 msgstr "Dina appar laddas ner i bakgrunden och dyker upp i menyn en efter en."
 
-#: linux/libexec/monet-session:197
+#: linux/libexec/monet-session:203
 msgid "See what's new"
 msgstr "Se vad som är nytt"
 
-#: linux/libexec/monet-session:198
+#: linux/libexec/monet-session:204
 msgid "Monet %1 is here"
 msgstr "Monet %1 är här"
 
-#: linux/libexec/monet-session:225
+#: linux/libexec/monet-session:231
 msgid "Monet is as it came"
 msgstr "Monet är som ny"
 
-#: linux/libexec/monet-session:226
+#: linux/libexec/monet-session:232
 msgid ""
 "Your files, games and apps are all here. Your settings from before are kept, in case you want one back."
 msgstr ""
 "Dina filer, spel och appar finns kvar. Dina tidigare inställningar är sparade, om du vill ha tillbaka någon."
 
-#: linux/libexec/monet-look:233
+#: linux/libexec/monet-look:234
 msgctxt "an app's name in the menu"
 msgid "Files"
 msgstr "Filer"
 
-#: linux/libexec/monet-look:233
+#: linux/libexec/monet-look:234
 msgctxt "an app's name in the menu"
 msgid "Terminal"
 msgstr "Terminal"
 
-#: linux/libexec/monet-look:233
+#: linux/libexec/monet-look:234
 msgctxt "an app's name in the menu"
 msgid "Text Editor"
 msgstr "Textredigerare"
 
-#: linux/libexec/monet-look:233
+#: linux/libexec/monet-look:234
 msgctxt "an app's name in the menu"
 msgid "Photos"
 msgstr "Bilder"
 
-#: linux/libexec/monet-look:234
+#: linux/libexec/monet-look:235
 msgctxt "an app's name in the menu"
 msgid "Documents"
 msgstr "Dokument"
 
-#: linux/libexec/monet-look:234
+#: linux/libexec/monet-look:235
 msgctxt "an app's name in the menu"
 msgid "Archives"
 msgstr "Arkiv"
 
-#: linux/libexec/monet-look:234
+#: linux/libexec/monet-look:235
 msgctxt "an app's name in the menu"
 msgid "Screenshot"
 msgstr "Skärmbild"
 
-#: linux/libexec/monet-look:234
+#: linux/libexec/monet-look:235
 msgctxt "an app's name in the menu"
 msgid "Calculator"
 msgstr "Kalkylator"
 
-#: linux/libexec/monet-look:235
+#: linux/libexec/monet-look:236
 msgctxt "an app's name in the menu"
 msgid "Music"
 msgstr "Musik"
 
-#: linux/libexec/monet-look:235
+#: linux/libexec/monet-look:236
 msgctxt "an app's name in the menu"
 msgid "Videos"
 msgstr "Video"
 
-#: linux/libexec/monet-look:235
+#: linux/libexec/monet-look:236
 msgctxt "an app's name in the menu"
 msgid "Disk Usage"
 msgstr "Diskanvändning"
 
-#: linux/libexec/monet-look:235
+#: linux/libexec/monet-look:236
 msgctxt "an app's name in the menu"
 msgid "Disks"
 msgstr "Diskar"
 
-#: linux/libexec/monet-look:236
+#: linux/libexec/monet-look:237
 msgctxt "an app's name in the menu"
 msgid "Task Manager"
 msgstr ""
 
-#: linux/libexec/monet-look:237 linux/share/applications/monet-settings.desktop:231
+#: linux/libexec/monet-look:238 linux/share/applications/monet-settings.desktop:231
 msgctxt "an app's name in the menu"
 msgid "Phone"
 msgstr "Telefon"
 
-#: linux/libexec/monet-look:237
+#: linux/libexec/monet-look:238
 msgctxt "an app's name in the menu"
 msgid "Phone Messages"
 msgstr "Sms"
 
-#: linux/libexec/monet-look:254 linux/share/applications/monet-settings.desktop:297
+#: linux/libexec/monet-look:255 linux/share/applications/monet-settings.desktop:297
 msgctxt "an app's name in the menu"
 msgid "Display"
 msgstr "Skärm"
 
-#: linux/libexec/monet-look:254 linux/share/applications/monet-settings.desktop:330
+#: linux/libexec/monet-look:255 linux/share/applications/monet-settings.desktop:330
 msgctxt "an app's name in the menu"
 msgid "Sound"
 msgstr "Ljud"
 
-#: linux/libexec/monet-look:255 linux/share/applications/monet-settings.desktop:602
+#: linux/libexec/monet-look:256 linux/share/applications/monet-settings.desktop:602
 msgctxt "an app's name in the menu"
 msgid "Default Apps"
 msgstr "Standardappar"
 
-#: linux/libexec/monet-look:255
+#: linux/libexec/monet-look:256
 msgctxt "an app's name in the menu"
 msgid "Desktop"
 msgstr "Skrivbord"
 
-#: linux/libexec/monet-look:223 linux/libexec/monet-look:227 linux/share/applications/monet-store.desktop:3
+#: linux/libexec/monet-look:224 linux/libexec/monet-look:228 linux/share/applications/monet-store.desktop:3
 msgctxt "an app's name in the menu"
 msgid "Store"
 msgstr "Butik"
 
-#: linux/libexec/monet-look:223 linux/libexec/monet-look:227 linux/share/applications/monet-store.desktop:63
+#: linux/libexec/monet-look:224 linux/libexec/monet-look:228 linux/share/applications/monet-store.desktop:63
 msgctxt "an app's description in the menu"
 msgid "Apps and games for Monet"
 msgstr "Appar och spel för Monet"
