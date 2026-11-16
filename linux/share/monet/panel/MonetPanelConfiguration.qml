@@ -382,7 +382,7 @@ Item {
                             // right-to-left language Start is the right side.
                             readonly property bool mirrored: !editor.vertical && Qt.application.layoutDirection === Qt.RightToLeft
                             model: [
-                                {name: editor.vertical ? i18nd("monet", "Top") : i18nd("monet", "Start"), alignment: mirrored ? Qt.AlignRight : Qt.AlignLeft},
+                                {name: editor.vertical ? i18nd("monet", "Top") : i18ndc("monet", "where on the bar: at its start, not the verb", "Start"), alignment: mirrored ? Qt.AlignRight : Qt.AlignLeft},
                                 {name: i18nd("monet", "Center"), alignment: Qt.AlignCenter},
                                 {name: editor.vertical ? i18nd("monet", "Bottom") : i18nd("monet", "End"), alignment: mirrored ? Qt.AlignLeft : Qt.AlignRight}]
                             Choice {
@@ -400,7 +400,7 @@ Item {
                         Layout.fillWidth: true
                         Choice {
                             objectName: "panelIconsStart"
-                            text: editor.vertical ? i18nd("monet", "Top") : i18nd("monet", "Start")
+                            text: editor.vertical ? i18nd("monet", "Top") : i18ndc("monet", "where on the bar: at its start, not the verb", "Start")
                             checked: editor.icons === "start"
                             enabled: !editor.busy
                             onClicked: editor.requestIcons("start")

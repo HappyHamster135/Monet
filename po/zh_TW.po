@@ -69,8 +69,8 @@ msgid "Allow"
 msgstr "允許"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
-#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/games/Apps.qml:139 linux/share/monet/settings-app/MonetSettings.qml:9319
-#: image/graphics/monetgraphics.cpp:26 image/graphics/monetgraphics.cpp:28
+#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/settings-app/MonetSettings.qml:9319 image/graphics/monetgraphics.cpp:26
+#: image/graphics/monetgraphics.cpp:28
 msgid "Graphics"
 msgstr "顯示卡"
 
@@ -239,7 +239,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:3836 linux/share/monet/settings-app/MonetSettings.qml:4217 linux/share/monet/settings-app/MonetSettings.qml:4624
 #: linux/share/monet/settings-app/MonetSettings.qml:4661 linux/share/monet/settings-app/MonetSettings.qml:4762 linux/share/monet/settings-app/MonetSettings.qml:8195
 #: linux/share/monet/settings-app/MonetSettings.qml:8919 linux/share/monet/settings-app/MonetSettings.qml:9239 linux/share/monet/store-app/Downloads.qml:97
-#: linux/share/monet/store-app/Store.qml:904 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
+#: linux/share/monet/store-app/Store.qml:905 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:462 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:573 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:472
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:475 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:678 setup/qml/Main.qml:986
 msgid "Try again"
@@ -704,7 +704,7 @@ msgid "Maximize"
 msgstr ""
 
 #: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:235 linux/share/monet/games/Games.qml:1040 linux/share/monet/games/Games.qml:1090
-#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1172
+#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1173
 #: linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282 linux/share/monet/passwords/app_support_ui.py:42
 #: crates/monet-usb/src/gui.rs:157
 msgid "Close"
@@ -846,13 +846,18 @@ msgstr "網路"
 msgid "Office"
 msgstr "文書軟體"
 
+#: linux/share/monet/games/Apps.qml:139
+msgctxt "a kind of app: drawing, photos and design"
+msgid "Graphics"
+msgstr "圖形"
+
 #: linux/share/monet/games/Apps.qml:140
 msgid "Sound and video"
 msgstr "影音"
 
 #: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
 #: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5344 linux/share/monet/settings-app/MonetSettings.qml:6281
-#: linux/share/monet/store-app/Store.qml:178 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
+#: linux/share/monet/store-app/Store.qml:179 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "遊戲"
 
@@ -900,8 +905,8 @@ msgstr "最近使用"
 msgid "Windows programs"
 msgstr "Windows 程式"
 
-#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:701
-#: linux/share/monet/store-app/Store.qml:713
+#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:702
+#: linux/share/monet/store-app/Store.qml:714
 msgid "Find an app"
 msgstr "尋找 App"
 
@@ -913,7 +918,7 @@ msgstr "類別"
 msgid "Apps called “%1”"
 msgstr "名為「%1」的 App"
 
-#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:949
+#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:950
 msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "%1 個 App"
@@ -1082,7 +1087,8 @@ msgstr "第一次會由 Windows 中的 Steam 安裝它。"
 #: linux/share/monet/games/GamePage.qml:66
 msgid ""
 "%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
-msgstr "%1 可以在這裡玩，但 FACEIT 的對戰和反作弊只能在 Windows 中執行。Monet 可以用 FACEIT 自己的安裝程式，在那裡一次裝好 FACEIT。"
+msgstr ""
+"%1 可以在這裡玩，但 FACEIT 的對戰和反作弊只能在 Windows 中執行。Monet 可以用 FACEIT 自己的安裝程式，在那裡一次裝好 FACEIT。"
 
 #: linux/share/monet/games/GamePage.qml:68
 msgid ""
@@ -1131,7 +1137,8 @@ msgstr "已在 Windows 中開啟"
 #: linux/share/monet/games/GamePage.qml:86
 msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
-msgstr "在 Windows 中已關閉。FACEIT 會要求部分玩家開啟它：先在韌體設定中開啟虛擬化和 IOMMU，再到「Windows 安全性」開啟「記憶體完整性」。"
+msgstr ""
+"在 Windows 中已關閉。FACEIT 會要求部分玩家開啟它：先在韌體設定中開啟虛擬化和 IOMMU，再到「Windows 安全性」開啟「記憶體完整性」。"
 
 #: linux/share/monet/games/GamePage.qml:243 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
 #: setup/qml/Main.qml:223
@@ -1353,7 +1360,7 @@ msgid "All"
 msgstr "全部"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
-#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:187 linux/share/monet/store-app/Store.qml:482
 msgid "Installed"
 msgstr "已安裝"
 
@@ -1406,7 +1413,7 @@ msgstr "繼續遊玩"
 msgid "Install"
 msgstr "安裝"
 
-#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:171
 msgid "Play"
 msgstr "開始"
 
@@ -1486,7 +1493,8 @@ msgstr "要重新啟動進入 Windows 嗎？"
 #: linux/share/monet/games/Games.qml:1695
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
-msgstr "電腦會重新啟動進入 Windows，並從 FACEIT 下載它自己的安裝程式：先是反作弊，接著是 FACEIT App。每個安裝程式都會為您開啟，請閱讀條款，只有在您同意時才接受。然後登入 FACEIT 和 Steam，並選擇「返回 Monet」。"
+msgstr ""
+"電腦會重新啟動進入 Windows，並從 FACEIT 下載它自己的安裝程式：先是反作弊，接著是 FACEIT App。每個安裝程式都會為您開啟，請閱讀條款，只有在您同意時才接受。然後登入 FACEIT 和 Steam，並選擇「返回 Monet」。"
 
 #: linux/share/monet/games/Games.qml:1697
 msgid ""
@@ -1541,17 +1549,20 @@ msgstr "查看您在 Steam 上擁有的所有遊戲"
 #: linux/share/monet/games/Games.qml:1817
 msgid ""
 "Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
-msgstr "Steam 會透過只有您能建立的金鑰，分享您擁有的遊戲清單。Monet 會把金鑰保存在這台電腦上，只用它向 Steam 取得這份清單。它絕不需要您的密碼。"
+msgstr ""
+"Steam 會透過只有您能建立的金鑰，分享您擁有的遊戲清單。Monet 會把金鑰保存在這台電腦上，只用它向 Steam 取得這份清單。它絕不需要您的密碼。"
 
 #: linux/share/monet/games/Games.qml:1828
 msgid ""
 "Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr "開啟 Steam 的金鑰頁面，以 %1 的身分登入。在網域名稱中輸入 monet，同意條款，並在手機上的 Steam App 中核准。然後複製金鑰並貼到這裡。"
+msgstr ""
+"開啟 Steam 的金鑰頁面，以 %1 的身分登入。在網域名稱中輸入 monet，同意條款，並在手機上的 Steam App 中核准。然後複製金鑰並貼到這裡。"
 
 #: linux/share/monet/games/Games.qml:1829
 msgid ""
 "Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr "開啟 Steam 的金鑰頁面並登入。在網域名稱中輸入 monet，同意條款，並在手機上的 Steam App 中核准。然後複製金鑰並貼到這裡。"
+msgstr ""
+"開啟 Steam 的金鑰頁面並登入。在網域名稱中輸入 monet，同意條款，並在手機上的 Steam App 中核准。然後複製金鑰並貼到這裡。"
 
 #: linux/share/monet/games/Games.qml:1834
 msgid "Open Steam's key page"
@@ -1844,9 +1855,10 @@ msgstr "右側"
 msgid "Bar position along edge"
 msgstr "工作列在邊緣上的位置"
 
-#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403
+msgctxt "where on the bar: at its start, not the verb"
 msgid "Start"
-msgstr "開始"
+msgstr "起始"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:386 linux/share/monet/panel/MonetPanelConfiguration.qml:410
 msgid "Center"
@@ -2776,7 +2788,7 @@ msgstr ""
 msgid "Until turned off or you sign out"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:483
 msgid "Finishing…"
 msgstr ""
 
@@ -4164,7 +4176,8 @@ msgstr "重新開啟您的工作"
 #: linux/share/monet/settings-app/MonetSettings.qml:5697
 msgid ""
 "After a restart, a sign-out or a trip to Windows, your apps come back on the same screens and desktops, where they were, with saved documents and Files tabs. Unsaved changes and private tabs aren't kept."
-msgstr "重新啟動、登出或進入 Windows 再回來後，您的 App 會回到原本螢幕和桌面上的原位，並帶著已儲存的文件和「檔案」分頁。未儲存的變更和隱私分頁不會保留。"
+msgstr ""
+"重新啟動、登出或進入 Windows 再回來後，您的 App 會回到原本螢幕和桌面上的原位，並帶著已儲存的文件和「檔案」分頁。未儲存的變更和隱私分頁不會保留。"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5716
 msgid "More power settings…"
@@ -4937,7 +4950,7 @@ msgstr "永久清空"
 msgid "Empty Trash"
 msgstr "清空垃圾桶"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:187
+#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:188
 msgid "Downloads"
 msgstr "下載"
 
@@ -6343,7 +6356,8 @@ msgstr "從 Windows 回來後，Monet 會在鎖定畫面後先啟動桌面，輸
 #: linux/share/monet/settings-app/MonetSettings.qml:8695
 msgid ""
 "After Windows or a restart, your apps come back where they were, with saved documents and Files tabs. Zen follows its tab-restore preference. Unsaved changes and private tabs aren't kept."
-msgstr "從 Windows 回來或重新啟動後，您的 App 會回到原位，並帶著已儲存的文件和「檔案」分頁。Zen 會依照它自己的分頁還原偏好設定。未儲存的變更和隱私分頁不會保留。"
+msgstr ""
+"從 Windows 回來或重新啟動後，您的 App 會回到原位，並帶著已儲存的文件和「檔案」分頁。Zen 會依照它自己的分頁還原偏好設定。未儲存的變更和隱私分頁不會保留。"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8713
 msgid ""
@@ -6851,431 +6865,431 @@ msgstr "全部"
 msgid "No apps here yet."
 msgstr "這裡還沒有 App。"
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7978
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:7978
 msgid "Store"
 msgstr "商店"
 
-#: linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/store-app/Store.qml:171
 msgid "Launchers, old consoles and new games. Steam is already here."
 msgstr "啟動器、懷舊遊戲機和新遊戲。Steam 已經裝好了。"
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Talk & stream"
 msgstr "聊天與直播"
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Friends, calls, and going live."
 msgstr "朋友、通話和直播。"
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Music & film"
 msgstr "音樂與影視"
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Something to listen to, and something to watch."
 msgstr "有得聽，也有得看。"
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Work & make"
 msgstr "工作與創作"
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Writing, drawing, editing, sending, and tools for the command line."
 msgstr "寫作、繪圖、編輯、傳送，還有命令列工具。"
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Everyday"
 msgstr "常用"
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Passwords, sharing, and the small things that help."
 msgstr "密碼、分享，還有各種實用小工具。"
 
-#: linux/share/monet/store-app/Store.qml:177
+#: linux/share/monet/store-app/Store.qml:178
 msgid "Monet's picks"
 msgstr "Monet 精選"
 
-#: linux/share/monet/store-app/Store.qml:179
+#: linux/share/monet/store-app/Store.qml:180
 msgid "Photos & drawing"
 msgstr "相片與繪圖"
 
-#: linux/share/monet/store-app/Store.qml:180
+#: linux/share/monet/store-app/Store.qml:181
 msgid "Music & video"
 msgstr "音樂與影片"
 
-#: linux/share/monet/store-app/Store.qml:181
+#: linux/share/monet/store-app/Store.qml:182
 msgid "Writing & office"
 msgstr "寫作與文書"
 
-#: linux/share/monet/store-app/Store.qml:182
+#: linux/share/monet/store-app/Store.qml:183
 msgid "Internet & chat"
 msgstr "網路與聊天"
 
-#: linux/share/monet/store-app/Store.qml:183
+#: linux/share/monet/store-app/Store.qml:184
 msgid "Learning"
 msgstr "學習"
 
-#: linux/share/monet/store-app/Store.qml:184
+#: linux/share/monet/store-app/Store.qml:185
 msgid "Developer tools"
 msgstr "開發工具"
 
-#: linux/share/monet/store-app/Store.qml:185
+#: linux/share/monet/store-app/Store.qml:186
 msgid "Tools"
 msgstr "工具"
 
-#: linux/share/monet/store-app/Store.qml:188 linux/share/monet/store-app/Store.qml:1042
+#: linux/share/monet/store-app/Store.qml:189 linux/share/monet/store-app/Store.qml:1043
 msgid "On your Windows"
 msgstr "您的 Windows"
 
-#: linux/share/monet/store-app/Store.qml:194
+#: linux/share/monet/store-app/Store.qml:195
 msgctxt "a kind of app, a filter in the Store"
 msgid "Action"
 msgstr "動作"
 
-#: linux/share/monet/store-app/Store.qml:195
+#: linux/share/monet/store-app/Store.qml:196
 msgctxt "a kind of app, a filter in the Store"
 msgid "Arcade"
 msgstr "街機"
 
-#: linux/share/monet/store-app/Store.qml:196
+#: linux/share/monet/store-app/Store.qml:197
 msgctxt "a kind of app, a filter in the Store"
 msgid "Strategy"
 msgstr "策略"
 
-#: linux/share/monet/store-app/Store.qml:197
+#: linux/share/monet/store-app/Store.qml:198
 msgctxt "a kind of app, a filter in the Store"
 msgid "Puzzles"
 msgstr "益智"
 
-#: linux/share/monet/store-app/Store.qml:198
+#: linux/share/monet/store-app/Store.qml:199
 msgctxt "a kind of app, a filter in the Store"
 msgid "Adventure & role-playing"
 msgstr "冒險與角色扮演"
 
-#: linux/share/monet/store-app/Store.qml:199
+#: linux/share/monet/store-app/Store.qml:200
 msgctxt "a kind of app, a filter in the Store"
 msgid "Simulation & sports"
 msgstr "模擬與運動"
 
-#: linux/share/monet/store-app/Store.qml:200
+#: linux/share/monet/store-app/Store.qml:201
 msgctxt "a kind of app, a filter in the Store"
 msgid "Board & cards"
 msgstr "桌遊與紙牌"
 
-#: linux/share/monet/store-app/Store.qml:201
+#: linux/share/monet/store-app/Store.qml:202
 msgctxt "a kind of app, a filter in the Store"
 msgid "For kids"
 msgstr "兒童"
 
-#: linux/share/monet/store-app/Store.qml:202
+#: linux/share/monet/store-app/Store.qml:203
 msgctxt "a kind of app, a filter in the Store"
 msgid "Emulators"
 msgstr "模擬器"
 
-#: linux/share/monet/store-app/Store.qml:203
+#: linux/share/monet/store-app/Store.qml:204
 msgctxt "a kind of app, a filter in the Store"
 msgid "Drawing & painting"
 msgstr "繪畫"
 
-#: linux/share/monet/store-app/Store.qml:204
+#: linux/share/monet/store-app/Store.qml:205
 msgctxt "a kind of app, a filter in the Store"
 msgid "Photos"
 msgstr "相片"
 
-#: linux/share/monet/store-app/Store.qml:205
+#: linux/share/monet/store-app/Store.qml:206
 msgctxt "a kind of app, a filter in the Store"
 msgid "Vector"
 msgstr "向量圖"
 
-#: linux/share/monet/store-app/Store.qml:206
+#: linux/share/monet/store-app/Store.qml:207
 msgctxt "a kind of app, a filter in the Store"
 msgid "3D"
 msgstr "3D"
 
-#: linux/share/monet/store-app/Store.qml:207
+#: linux/share/monet/store-app/Store.qml:208
 msgctxt "a kind of app, a filter in the Store"
 msgid "Viewers"
 msgstr "檢視器"
 
-#: linux/share/monet/store-app/Store.qml:208
+#: linux/share/monet/store-app/Store.qml:209
 msgctxt "a kind of app, a filter in the Store"
 msgid "Scanning"
 msgstr "掃描"
 
-#: linux/share/monet/store-app/Store.qml:209
+#: linux/share/monet/store-app/Store.qml:210
 msgctxt "a kind of app, a filter in the Store"
 msgid "Players"
 msgstr "播放器"
 
-#: linux/share/monet/store-app/Store.qml:210
+#: linux/share/monet/store-app/Store.qml:211
 msgctxt "a kind of app, a filter in the Store"
 msgid "Making music"
 msgstr "音樂製作"
 
-#: linux/share/monet/store-app/Store.qml:211
+#: linux/share/monet/store-app/Store.qml:212
 msgctxt "a kind of app, a filter in the Store"
 msgid "Editing"
 msgstr "編輯"
 
-#: linux/share/monet/store-app/Store.qml:212
+#: linux/share/monet/store-app/Store.qml:213
 msgctxt "a kind of app, a filter in the Store"
 msgid "Video & TV"
 msgstr "影片與電視"
 
-#: linux/share/monet/store-app/Store.qml:213
+#: linux/share/monet/store-app/Store.qml:214
 msgctxt "a kind of app, a filter in the Store"
 msgid "Recording"
 msgstr "錄製"
 
-#: linux/share/monet/store-app/Store.qml:214
+#: linux/share/monet/store-app/Store.qml:215
 msgctxt "a kind of app, a filter in the Store"
 msgid "Writing"
 msgstr "寫作"
 
-#: linux/share/monet/store-app/Store.qml:215
+#: linux/share/monet/store-app/Store.qml:216
 msgctxt "a kind of app, a filter in the Store"
 msgid "Money"
 msgstr "理財"
 
-#: linux/share/monet/store-app/Store.qml:216
+#: linux/share/monet/store-app/Store.qml:217
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calendars & planning"
 msgstr "行事曆與規劃"
 
-#: linux/share/monet/store-app/Store.qml:217
+#: linux/share/monet/store-app/Store.qml:218
 msgctxt "a kind of app, a filter in the Store"
 msgid "Email"
 msgstr "電子郵件"
 
-#: linux/share/monet/store-app/Store.qml:218
+#: linux/share/monet/store-app/Store.qml:219
 msgctxt "a kind of app, a filter in the Store"
 msgid "Chat"
 msgstr "聊天"
 
-#: linux/share/monet/store-app/Store.qml:219
+#: linux/share/monet/store-app/Store.qml:220
 msgctxt "a kind of app, a filter in the Store"
 msgid "Browsers"
 msgstr "瀏覽器"
 
-#: linux/share/monet/store-app/Store.qml:220
+#: linux/share/monet/store-app/Store.qml:221
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calls"
 msgstr "通話"
 
-#: linux/share/monet/store-app/Store.qml:221
+#: linux/share/monet/store-app/Store.qml:222
 msgctxt "a kind of app, a filter in the Store"
 msgid "Sharing & downloads"
 msgstr "分享與下載"
 
-#: linux/share/monet/store-app/Store.qml:222
+#: linux/share/monet/store-app/Store.qml:223
 msgctxt "a kind of app, a filter in the Store"
 msgid "News"
 msgstr "新聞"
 
-#: linux/share/monet/store-app/Store.qml:223
+#: linux/share/monet/store-app/Store.qml:224
 msgctxt "a kind of app, a filter in the Store"
 msgid "Remote access"
 msgstr "遠端存取"
 
-#: linux/share/monet/store-app/Store.qml:224
+#: linux/share/monet/store-app/Store.qml:225
 msgctxt "a kind of app, a filter in the Store"
 msgid "Science"
 msgstr "科學"
 
-#: linux/share/monet/store-app/Store.qml:225
+#: linux/share/monet/store-app/Store.qml:226
 msgctxt "a kind of app, a filter in the Store"
 msgid "Math"
 msgstr "數學"
 
-#: linux/share/monet/store-app/Store.qml:226
+#: linux/share/monet/store-app/Store.qml:227
 msgctxt "a kind of app, a filter in the Store"
 msgid "Languages"
 msgstr "語言"
 
-#: linux/share/monet/store-app/Store.qml:227
+#: linux/share/monet/store-app/Store.qml:228
 msgctxt "a kind of app, a filter in the Store"
 msgid "Computing & data"
 msgstr "電腦與資料"
 
-#: linux/share/monet/store-app/Store.qml:228
+#: linux/share/monet/store-app/Store.qml:229
 msgctxt "a kind of app, a filter in the Store"
 msgid "Code editors"
 msgstr "程式碼編輯器"
 
-#: linux/share/monet/store-app/Store.qml:229
+#: linux/share/monet/store-app/Store.qml:230
 msgctxt "a kind of app, a filter in the Store"
 msgid "Version control"
 msgstr "版本控制"
 
-#: linux/share/monet/store-app/Store.qml:230
+#: linux/share/monet/store-app/Store.qml:231
 msgctxt "a kind of app, a filter in the Store"
 msgid "Web"
 msgstr "網頁"
 
-#: linux/share/monet/store-app/Store.qml:231
+#: linux/share/monet/store-app/Store.qml:232
 msgctxt "a kind of app, a filter in the Store"
 msgid "Debugging"
 msgstr "除錯"
 
-#: linux/share/monet/store-app/Store.qml:232
+#: linux/share/monet/store-app/Store.qml:233
 msgctxt "a kind of app, a filter in the Store"
 msgid "Electronics"
 msgstr "電子"
 
-#: linux/share/monet/store-app/Store.qml:233
+#: linux/share/monet/store-app/Store.qml:234
 msgctxt "a kind of app, a filter in the Store"
 msgid "System"
 msgstr "系統"
 
-#: linux/share/monet/store-app/Store.qml:234
+#: linux/share/monet/store-app/Store.qml:235
 msgctxt "a kind of app, a filter in the Store"
 msgid "Files"
 msgstr "檔案"
 
-#: linux/share/monet/store-app/Store.qml:235
+#: linux/share/monet/store-app/Store.qml:236
 msgctxt "a kind of app, a filter in the Store"
 msgid "Text"
 msgstr "文字"
 
-#: linux/share/monet/store-app/Store.qml:236
+#: linux/share/monet/store-app/Store.qml:237
 msgctxt "a kind of app, a filter in the Store"
 msgid "Security"
 msgstr "安全性"
 
-#: linux/share/monet/store-app/Store.qml:237
+#: linux/share/monet/store-app/Store.qml:238
 msgctxt "a kind of app, a filter in the Store"
 msgid "Terminals"
 msgstr "終端機"
 
-#: linux/share/monet/store-app/Store.qml:238
+#: linux/share/monet/store-app/Store.qml:239
 msgctxt "a kind of app, a filter in the Store"
 msgid "Clocks & calculators"
 msgstr "時鐘與計算機"
 
-#: linux/share/monet/store-app/Store.qml:476
+#: linux/share/monet/store-app/Store.qml:477
 msgid "Waiting its turn"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:477
+#: linux/share/monet/store-app/Store.qml:478
 msgid "Installing… This part can't be cancelled."
 msgstr "正在安裝… 這一步無法取消。"
 
-#: linux/share/monet/store-app/Store.qml:478
+#: linux/share/monet/store-app/Store.qml:479
 msgid "Cancelling…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:479
+#: linux/share/monet/store-app/Store.qml:480
 msgid "Cancelled. You can try again whenever you're ready."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to finish removing this app."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to continue the download."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Store.qml:482
 msgid "Removed"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482 linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:483 linux/share/monet/store-app/Store.qml:494
 msgid "Removing…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/store-app/Store.qml:483
 msgid "Downloading & installing… %1%"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:483
+#: linux/share/monet/store-app/Store.qml:484
 msgid "There isn't enough free space. Free some space, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:484
+#: linux/share/monet/store-app/Store.qml:485
 msgid ""
 "The download stopped because Flathub couldn't be reached. Check your connection, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:485
+#: linux/share/monet/store-app/Store.qml:486
 msgid "Only an administrator of this PC can install and remove apps."
 msgstr "只有這台電腦的系統管理員才能安裝和移除 App。"
 
-#: linux/share/monet/store-app/Store.qml:486
+#: linux/share/monet/store-app/Store.qml:487
 msgid "The download couldn't start. Try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:487
+#: linux/share/monet/store-app/Store.qml:488
 msgid "The download list couldn't be saved. Check free space and try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:488
+#: linux/share/monet/store-app/Store.qml:489
 msgid "That didn't work. Try again in a moment."
 msgstr "沒有成功。請稍後再試。"
 
-#: linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:494
 msgid "Downloading…"
 msgstr "正在下載…"
 
-#: linux/share/monet/store-app/Store.qml:511
+#: linux/share/monet/store-app/Store.qml:512
 msgctxt "an app, then how its download or removal is going"
 msgid "%1: %2"
 msgstr "%1：%2"
 
-#: linux/share/monet/store-app/Store.qml:546
+#: linux/share/monet/store-app/Store.qml:547
 msgid ""
 "The saved download list couldn't be read or saved. Check free space and folder access, then try again. Your existing list has been kept."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:790
+#: linux/share/monet/store-app/Store.qml:791
 msgid "Yours"
 msgstr "我的"
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid ""
 "The app catalog is unavailable. Check your connection and try again. Your downloads are still available."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid "Opening the Store…"
 msgstr "正在開啟商店…"
 
-#: linux/share/monet/store-app/Store.qml:945
+#: linux/share/monet/store-app/Store.qml:946
 msgid ""
 "Apps in your Windows. Each opens there: your PC restarts in Windows, and Back to Monet brings you back."
 msgstr "您 Windows 裡的 App。它們都在那裡開啟：電腦會重新啟動進入 Windows，按「返回 Monet」就能回來。"
 
-#: linux/share/monet/store-app/Store.qml:947
+#: linux/share/monet/store-app/Store.qml:948
 msgid "Apps you installed from the Store. They update by themselves."
 msgstr "您從商店安裝的 App。它們會自動更新。"
 
-#: linux/share/monet/store-app/Store.qml:948
+#: linux/share/monet/store-app/Store.qml:949
 msgid "Apps you install from the Store show up here."
 msgstr "您從商店安裝的 App 會顯示在這裡。"
 
-#: linux/share/monet/store-app/Store.qml:977
+#: linux/share/monet/store-app/Store.qml:978
 msgid "Apps for “%1”"
 msgstr "「%1」相關 App"
 
-#: linux/share/monet/store-app/Store.qml:1001
+#: linux/share/monet/store-app/Store.qml:1002
 msgid "Looking for %1?"
-msgstr ""
-
-#: linux/share/monet/store-app/Store.qml:1013
-msgid ""
-"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
 msgstr ""
 
 #: linux/share/monet/store-app/Store.qml:1014
 msgid ""
+"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:1015
+msgid ""
 "No suggestions are available in this catalog. Check the publisher's website for a web version or supported systems."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:1071
+#: linux/share/monet/store-app/Store.qml:1072
 msgid "For Monet"
 msgstr "適用於 Monet"
 
-#: linux/share/monet/store-app/Store.qml:1099
+#: linux/share/monet/store-app/Store.qml:1100
 msgid ""
 "Nothing in the Store goes by “%1”. Try other words, or what it's for: “photo editor”, “music”."
 msgstr "商店裡沒有叫「%1」的 App。試試其他字詞，或搜尋它的用途：「相片編輯器」、「音樂」。"
@@ -8089,6 +8103,10 @@ msgstr "%1 分鐘"
 #: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:265
 msgid "Scroll to change the minutes"
 msgstr "捲動以變更分鐘數"
+
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+msgid "Start"
+msgstr "開始"
 
 #: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:328 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:337
 msgctxt "a timer: quiet notifications, a day on the painting"
@@ -11987,17 +12005,17 @@ msgctxt "an app's name in the menu"
 msgid "Apps"
 msgstr "App"
 
-#: linux/share/applications/monet-apps.desktop:4
+#: linux/share/applications/monet-apps.desktop:33
 msgctxt "what an app is, under its name in the menu"
 msgid "App Library"
 msgstr "App 資料庫"
 
-#: linux/share/applications/monet-apps.desktop:5
+#: linux/share/applications/monet-apps.desktop:63
 msgctxt "an app's description in the menu"
 msgid "Every app you have, by where it came from and what it does"
 msgstr "您的所有 App，依來源和用途分類"
 
-#: linux/share/applications/monet-apps.desktop:9
+#: linux/share/applications/monet-apps.desktop:96
 msgctxt ""
 "words the menu's search finds an app by; keep the semicolons between them"
 msgid ""
@@ -12780,7 +12798,8 @@ msgstr "電腦會重新啟動進入 Windows，並備妥遊戲啟動器讓您登�
 #: crates/monet/src/main.rs:370
 msgid ""
 "Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
-msgstr "電腦會重新啟動進入 Windows，FACEIT 自己的安裝程式會在那裡為您開啟。只有在您同意時才接受條款，然後登入。開啟中的 App 將會關閉。"
+msgstr ""
+"電腦會重新啟動進入 Windows，FACEIT 自己的安裝程式會在那裡為您開啟。只有在您同意時才接受條款，然後登入。開啟中的 App 將會關閉。"
 
 #: crates/monet/src/main.rs:371
 msgid ""

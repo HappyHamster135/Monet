@@ -136,7 +136,7 @@ MonetWindow {
                  windows: i18n("Windows program") }[source] || ""
     }
     function kindName(group) {
-        return { internet: i18n("Internet"), office: i18n("Office"), graphics: i18n("Graphics"),
+        return { internet: i18n("Internet"), office: i18n("Office"), graphics: i18nc("a kind of app: drawing, photos and design", "Graphics"),
                  media: i18n("Sound and video"), games: i18n("Games"), development: i18n("Development"),
                  utilities: i18n("Utilities"), system: i18n("System"), other: i18n("Other") }[group] || i18n("Other")
     }

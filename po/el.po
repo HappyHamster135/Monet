@@ -69,8 +69,8 @@ msgid "Allow"
 msgstr "Να επιτραπεί"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
-#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/games/Apps.qml:139 linux/share/monet/settings-app/MonetSettings.qml:9319
-#: image/graphics/monetgraphics.cpp:26 image/graphics/monetgraphics.cpp:28
+#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/settings-app/MonetSettings.qml:9319 image/graphics/monetgraphics.cpp:26
+#: image/graphics/monetgraphics.cpp:28
 msgid "Graphics"
 msgstr "Γραφικά"
 
@@ -239,7 +239,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:3836 linux/share/monet/settings-app/MonetSettings.qml:4217 linux/share/monet/settings-app/MonetSettings.qml:4624
 #: linux/share/monet/settings-app/MonetSettings.qml:4661 linux/share/monet/settings-app/MonetSettings.qml:4762 linux/share/monet/settings-app/MonetSettings.qml:8195
 #: linux/share/monet/settings-app/MonetSettings.qml:8919 linux/share/monet/settings-app/MonetSettings.qml:9239 linux/share/monet/store-app/Downloads.qml:97
-#: linux/share/monet/store-app/Store.qml:904 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
+#: linux/share/monet/store-app/Store.qml:905 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:462 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:573 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:472
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:475 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:678 setup/qml/Main.qml:986
 msgid "Try again"
@@ -271,7 +271,8 @@ msgstr "Καμία εφαρμογή δεν χρησιμοποιεί την κά�
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:108
 msgid "This graphics driver does not report how much each app uses."
-msgstr "Αυτό το πρόγραμμα οδήγησης γραφικών δεν αναφέρει πόσο χρησιμοποιεί κάθε εφαρμογή."
+msgstr ""
+"Αυτό το πρόγραμμα οδήγησης γραφικών δεν αναφέρει πόσο χρησιμοποιεί κάθε εφαρμογή."
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/HistoryChart.qml:121
 msgid "Waiting for sensor readings…"
@@ -704,7 +705,7 @@ msgid "Maximize"
 msgstr ""
 
 #: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:235 linux/share/monet/games/Games.qml:1040 linux/share/monet/games/Games.qml:1090
-#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1172
+#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1173
 #: linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282 linux/share/monet/passwords/app_support_ui.py:42
 #: crates/monet-usb/src/gui.rs:157
 msgid "Close"
@@ -849,13 +850,18 @@ msgstr "Διαδίκτυο"
 msgid "Office"
 msgstr "Εφαρμογές γραφείου"
 
+#: linux/share/monet/games/Apps.qml:139
+msgctxt "a kind of app: drawing, photos and design"
+msgid "Graphics"
+msgstr "Γραφικά"
+
 #: linux/share/monet/games/Apps.qml:140
 msgid "Sound and video"
 msgstr "Ήχος και βίντεο"
 
 #: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
 #: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5344 linux/share/monet/settings-app/MonetSettings.qml:6281
-#: linux/share/monet/store-app/Store.qml:178 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
+#: linux/share/monet/store-app/Store.qml:179 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "Παιχνίδια"
 
@@ -904,8 +910,8 @@ msgstr "Πρόσφατα"
 msgid "Windows programs"
 msgstr "Προγράμματα Windows"
 
-#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:701
-#: linux/share/monet/store-app/Store.qml:713
+#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:702
+#: linux/share/monet/store-app/Store.qml:714
 msgid "Find an app"
 msgstr "Βρείτε μια εφαρμογή"
 
@@ -917,7 +923,7 @@ msgstr "Κατηγορίες"
 msgid "Apps called “%1”"
 msgstr "Εφαρμογές με όνομα «%1»"
 
-#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:949
+#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:950
 msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "%1 εφαρμογή"
@@ -959,7 +965,8 @@ msgstr "Αφαίρεση…"
 
 #: linux/share/monet/games/Apps.qml:798
 msgid "Remove %1 from your apps? The program itself stays where it is."
-msgstr "Αφαίρεση του %1 από τις εφαρμογές σας; Το ίδιο το πρόγραμμα μένει εκεί που είναι."
+msgstr ""
+"Αφαίρεση του %1 από τις εφαρμογές σας; Το ίδιο το πρόγραμμα μένει εκεί που είναι."
 
 #: linux/share/monet/games/Apps.qml:835
 msgid "Came from"
@@ -988,7 +995,8 @@ msgstr "Το %1 το κατεβάζει."
 #: linux/share/monet/games/GamePage.qml:29
 msgid ""
 "You own it, and it isn't installed yet. Install opens %1, which downloads it."
-msgstr "Το έχετε, αλλά δεν έχει εγκατασταθεί ακόμα. Το «Εγκατάσταση» ανοίγει το %1, που το κατεβάζει."
+msgstr ""
+"Το έχετε, αλλά δεν έχει εγκατασταθεί ακόμα. Το «Εγκατάσταση» ανοίγει το %1, που το κατεβάζει."
 
 #: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1699
 msgid ""
@@ -1065,17 +1073,20 @@ msgstr "Μέγεθος στον δίσκο"
 #: linux/share/monet/games/GamePage.qml:58
 msgid ""
 "Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
-msgstr "Την τελευταία φορά, η λήψη του FACEIT στα Windows δεν ήταν δυνατή. Ελέγξτε τη σύνδεση στο διαδίκτυο και δοκιμάστε ξανά."
+msgstr ""
+"Την τελευταία φορά, η λήψη του FACEIT στα Windows δεν ήταν δυνατή. Ελέγξτε τη σύνδεση στο διαδίκτυο και δοκιμάστε ξανά."
 
 #: linux/share/monet/games/GamePage.qml:59
 msgid ""
 "Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
-msgstr "Την τελευταία φορά, τα Windows δεν μπόρεσαν να επιβεβαιώσουν ότι το πρόγραμμα εγκατάστασης είναι του FACEIT, οπότε το Monet δεν το εκτέλεσε. Δοκιμάστε ξανά αργότερα."
+msgstr ""
+"Την τελευταία φορά, τα Windows δεν μπόρεσαν να επιβεβαιώσουν ότι το πρόγραμμα εγκατάστασης είναι του FACEIT, οπότε το Monet δεν το εκτέλεσε. Δοκιμάστε ξανά αργότερα."
 
 #: linux/share/monet/games/GamePage.qml:60
 msgid ""
 "Last time, FACEIT's installer closed before it finished. Try again whenever you like."
-msgstr "Την τελευταία φορά, το πρόγραμμα εγκατάστασης του FACEIT έκλεισε πριν ολοκληρωθεί. Δοκιμάστε ξανά όποτε θέλετε."
+msgstr ""
+"Την τελευταία φορά, το πρόγραμμα εγκατάστασης του FACEIT έκλεισε πριν ολοκληρωθεί. Δοκιμάστε ξανά όποτε θέλετε."
 
 #: linux/share/monet/games/GamePage.qml:61
 msgid "Last time, you came back before FACEIT was set up."
@@ -1084,7 +1095,8 @@ msgstr "Την τελευταία φορά, επιστρέψατε πριν ρυ
 #: linux/share/monet/games/GamePage.qml:64
 msgid ""
 "Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
-msgstr "Το «Παιχνίδι στο FACEIT» κάνει επανεκκίνηση του υπολογιστή σας στα Windows και ανοίγει το FACEIT και μετά το %1. Το «Παίξτε» εξακολουθεί να το παίζει εδώ, όπως πάντα."
+msgstr ""
+"Το «Παιχνίδι στο FACEIT» κάνει επανεκκίνηση του υπολογιστή σας στα Windows και ανοίγει το FACEIT και μετά το %1. Το «Παίξτε» εξακολουθεί να το παίζει εδώ, όπως πάντα."
 
 #: linux/share/monet/games/GamePage.qml:65
 msgid "Steam in Windows installs it the first time."
@@ -1093,12 +1105,14 @@ msgstr "Το Steam στα Windows το εγκαθιστά την πρώτη φο
 #: linux/share/monet/games/GamePage.qml:66
 msgid ""
 "%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
-msgstr "Το %1 παίζει εδώ, αλλά οι αγώνες και το anti-cheat του FACEIT λειτουργούν μόνο στα Windows. Το Monet μπορεί να ρυθμίσει εκεί το FACEIT μία φορά, με τα δικά του προγράμματα εγκατάστασης του FACEIT."
+msgstr ""
+"Το %1 παίζει εδώ, αλλά οι αγώνες και το anti-cheat του FACEIT λειτουργούν μόνο στα Windows. Το Monet μπορεί να ρυθμίσει εκεί το FACEIT μία φορά, με τα δικά του προγράμματα εγκατάστασης του FACEIT."
 
 #: linux/share/monet/games/GamePage.qml:68
 msgid ""
 "Monet couldn't look in Windows at this start, so setting up checks what's there first."
-msgstr "Το Monet δεν μπόρεσε να κοιτάξει στα Windows σε αυτή την εκκίνηση, οπότε η ρύθμιση ελέγχει πρώτα τι υπάρχει εκεί."
+msgstr ""
+"Το Monet δεν μπόρεσε να κοιτάξει στα Windows σε αυτή την εκκίνηση, οπότε η ρύθμιση ελέγχει πρώτα τι υπάρχει εκεί."
 
 #: linux/share/monet/games/GamePage.qml:75 linux/share/monet/settings-app/MonetSettings.qml:7844
 msgid "Secure Boot"
@@ -1112,7 +1126,8 @@ msgstr "Ενεργό"
 #: linux/share/monet/games/GamePage.qml:77
 msgid ""
 "Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
-msgstr "Ανενεργή. Το FACEIT τη χρειάζεται ενεργή: οι Ρυθμίσεις, στην Ασφάλεια, δείχνουν πώς, ώστε το Monet να συνεχίσει να ξεκινά."
+msgstr ""
+"Ανενεργή. Το FACEIT τη χρειάζεται ενεργή: οι Ρυθμίσεις, στην Ασφάλεια, δείχνουν πώς, ώστε το Monet να συνεχίσει να ξεκινά."
 
 #: linux/share/monet/games/GamePage.qml:78 linux/share/monet/settings-app/MonetSettings.qml:7849
 msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
@@ -1130,7 +1145,8 @@ msgstr "TPM 2.0"
 #: linux/share/monet/games/GamePage.qml:83
 msgid ""
 "Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
-msgstr "Δεν βρέθηκε. Το FACEIT χρειάζεται ένα: οι περισσότεροι υπολογιστές το έχουν στον επεξεργαστή και ενεργοποιείται στις ρυθμίσεις υλικολογισμικού (Intel PTT ή AMD fTPM)."
+msgstr ""
+"Δεν βρέθηκε. Το FACEIT χρειάζεται ένα: οι περισσότεροι υπολογιστές το έχουν στον επεξεργαστή και ενεργοποιείται στις ρυθμίσεις υλικολογισμικού (Intel PTT ή AMD fTPM)."
 
 #: linux/share/monet/games/GamePage.qml:85
 msgid "Virtualization-based security"
@@ -1143,7 +1159,8 @@ msgstr "Ενεργή στα Windows"
 #: linux/share/monet/games/GamePage.qml:86
 msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
-msgstr "Ανενεργή στα Windows. Το FACEIT τη ζητά από ορισμένους παίκτες: ενεργοποιήστε την εικονικοποίηση και το IOMMU στις ρυθμίσεις υλικολογισμικού και μετά την Ακεραιότητα μνήμης στην Ασφάλεια των Windows."
+msgstr ""
+"Ανενεργή στα Windows. Το FACEIT τη ζητά από ορισμένους παίκτες: ενεργοποιήστε την εικονικοποίηση και το IOMMU στις ρυθμίσεις υλικολογισμικού και μετά την Ακεραιότητα μνήμης στην Ασφάλεια των Windows."
 
 #: linux/share/monet/games/GamePage.qml:243 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
 #: setup/qml/Main.qml:223
@@ -1203,7 +1220,8 @@ msgstr "Το Monet δεν μπόρεσε να μεταβεί στα Windows."
 #: linux/share/monet/games/Games.qml:295
 msgid ""
 "That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page."
-msgstr "Αυτό δεν μοιάζει με κλειδί Steam. Έχει 32 γράμματα και αριθμούς και το βρίσκετε στη σελίδα κλειδιών του Steam."
+msgstr ""
+"Αυτό δεν μοιάζει με κλειδί Steam. Έχει 32 γράμματα και αριθμούς και το βρίσκετε στη σελίδα κλειδιών του Steam."
 
 #: linux/share/monet/games/Games.qml:308
 msgid "Monet couldn't keep the key. Try again."
@@ -1212,17 +1230,20 @@ msgstr "Το Monet δεν μπόρεσε να κρατήσει το κλειδί
 #: linux/share/monet/games/Games.qml:314
 msgid ""
 "Steam didn't accept this key. Check that it's copied whole, or make a new one."
-msgstr "Το Steam δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράφηκε ολόκληρο ή δημιουργήστε νέο."
+msgstr ""
+"Το Steam δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράφηκε ολόκληρο ή δημιουργήστε νέο."
 
 #: linux/share/monet/games/Games.qml:315 linux/share/monet/games/Games.qml:1005
 msgid ""
 "Steam didn't share the games of %1. Add a key made while signed in to that account."
-msgstr "Το Steam δεν κοινοποίησε τα παιχνίδια του %1. Προσθέστε ένα κλειδί που δημιουργήθηκε ενώ ήσασταν συνδεδεμένοι σε αυτόν τον λογαριασμό."
+msgstr ""
+"Το Steam δεν κοινοποίησε τα παιχνίδια του %1. Προσθέστε ένα κλειδί που δημιουργήθηκε ενώ ήσασταν συνδεδεμένοι σε αυτόν τον λογαριασμό."
 
 #: linux/share/monet/games/Games.qml:316
 msgid ""
 "Steam couldn't be reached. The key is kept, and Games tries again when it opens."
-msgstr "Δεν ήταν δυνατή η σύνδεση με το Steam. Το κλειδί διατηρείται και τα Παιχνίδια θα δοκιμάσουν ξανά όταν ανοίξουν."
+msgstr ""
+"Δεν ήταν δυνατή η σύνδεση με το Steam. Το κλειδί διατηρείται και τα Παιχνίδια θα δοκιμάσουν ξανά όταν ανοίξουν."
 
 #: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8426
 #: linux/share/monet/settings-app/MonetSettings.qml:9323 linux/libexec/monet-quick:8882 linux/libexec/monet-quick:8882
@@ -1368,7 +1389,7 @@ msgid "All"
 msgstr "Όλα"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
-#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:187 linux/share/monet/store-app/Store.qml:482
 msgid "Installed"
 msgstr "Εγκατεστημένο"
 
@@ -1387,12 +1408,14 @@ msgstr "Προσθήκη κλειδιού Steam"
 #: linux/share/monet/games/Games.qml:1004
 msgid ""
 "Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again."
-msgstr "Το Steam δεν δέχτηκε το κλειδί σας, οπότε εμφανίζονται μόνο τα παιχνίδια Steam που είναι εγκατεστημένα εδώ. Δημιουργήστε νέο κλειδί και προσθέστε το ξανά."
+msgstr ""
+"Το Steam δεν δέχτηκε το κλειδί σας, οπότε εμφανίζονται μόνο τα παιχνίδια Steam που είναι εγκατεστημένα εδώ. Δημιουργήστε νέο κλειδί και προσθέστε το ξανά."
 
 #: linux/share/monet/games/Games.qml:1027
 msgid ""
 "Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once."
-msgstr "Τα Παιχνίδια δείχνουν τα παιχνίδια Steam που είναι εγκατεστημένα εδώ. Για να βλέπετε κάθε παιχνίδι που έχετε στο Steam, προσθέστε μία φορά το κλειδί Steam σας."
+msgstr ""
+"Τα Παιχνίδια δείχνουν τα παιχνίδια Steam που είναι εγκατεστημένα εδώ. Για να βλέπετε κάθε παιχνίδι που έχετε στο Steam, προσθέστε μία φορά το κλειδί Steam σας."
 
 #: linux/share/monet/games/Games.qml:1032
 msgid "Change key"
@@ -1422,7 +1445,7 @@ msgstr "Συνεχίστε το παιχνίδι"
 msgid "Install"
 msgstr "Εγκατάσταση"
 
-#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:171
 msgid "Play"
 msgstr "Παίξτε"
 
@@ -1503,12 +1526,14 @@ msgstr "Επανεκκίνηση στα Windows;"
 #: linux/share/monet/games/Games.qml:1695
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
-msgstr "Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows και κατεβάζει από το FACEIT τα δικά του προγράμματα εγκατάστασης: πρώτα το anti-cheat του και μετά την εφαρμογή FACEIT. Το καθένα ανοίγει για εσάς, ώστε να διαβάσετε τους όρους του και να τους αποδεχτείτε μόνο αν συμφωνείτε. Μετά συνδεθείτε στο FACEIT και στο Steam και επιλέξτε «Επιστροφή στο Monet»."
+msgstr ""
+"Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows και κατεβάζει από το FACEIT τα δικά του προγράμματα εγκατάστασης: πρώτα το anti-cheat του και μετά την εφαρμογή FACEIT. Το καθένα ανοίγει για εσάς, ώστε να διαβάσετε τους όρους του και να τους αποδεχτείτε μόνο αν συμφωνείτε. Μετά συνδεθείτε στο FACEIT και στο Steam και επιλέξτε «Επιστροφή στο Monet»."
 
 #: linux/share/monet/games/Games.qml:1697
 msgid ""
 "Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
-msgstr "Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows και ανοίγει το FACEIT και μετά το %1. Μόλις κλείσετε το παιχνίδι, επιστρέφετε εδώ. Αποθηκεύστε πρώτα την εργασία σας."
+msgstr ""
+"Ο υπολογιστής σας κάνει επανεκκίνηση στα Windows και ανοίγει το FACEIT και μετά το %1. Μόλις κλείσετε το παιχνίδι, επιστρέφετε εδώ. Αποθηκεύστε πρώτα την εργασία σας."
 
 #: linux/share/monet/games/Games.qml:1707
 msgid ""
@@ -1561,17 +1586,20 @@ msgstr "Δείτε κάθε παιχνίδι που έχετε στο Steam"
 #: linux/share/monet/games/Games.qml:1817
 msgid ""
 "Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
-msgstr "Το Steam κοινοποιεί τη λίστα με τα παιχνίδια σας μέσω ενός κλειδιού που μόνο εσείς μπορείτε να δημιουργήσετε. Το Monet κρατά το κλειδί σε αυτόν τον υπολογιστή και το χρησιμοποιεί μόνο για να ζητήσει αυτή τη λίστα από το Steam. Δεν χρειάζεται ποτέ τον κωδικό σας."
+msgstr ""
+"Το Steam κοινοποιεί τη λίστα με τα παιχνίδια σας μέσω ενός κλειδιού που μόνο εσείς μπορείτε να δημιουργήσετε. Το Monet κρατά το κλειδί σε αυτόν τον υπολογιστή και το χρησιμοποιεί μόνο για να ζητήσει αυτή τη λίστα από το Steam. Δεν χρειάζεται ποτέ τον κωδικό σας."
 
 #: linux/share/monet/games/Games.qml:1828
 msgid ""
 "Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr "Ανοίξτε τη σελίδα κλειδιών του Steam και συνδεθείτε ως %1. Πληκτρολογήστε monet ως όνομα τομέα, συμφωνήστε και εγκρίνετε από την εφαρμογή Steam στο τηλέφωνό σας. Μετά αντιγράψτε το κλειδί και επικολλήστε το εδώ."
+msgstr ""
+"Ανοίξτε τη σελίδα κλειδιών του Steam και συνδεθείτε ως %1. Πληκτρολογήστε monet ως όνομα τομέα, συμφωνήστε και εγκρίνετε από την εφαρμογή Steam στο τηλέφωνό σας. Μετά αντιγράψτε το κλειδί και επικολλήστε το εδώ."
 
 #: linux/share/monet/games/Games.qml:1829
 msgid ""
 "Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
-msgstr "Ανοίξτε τη σελίδα κλειδιών του Steam και συνδεθείτε. Πληκτρολογήστε monet ως όνομα τομέα, συμφωνήστε και εγκρίνετε από την εφαρμογή Steam στο τηλέφωνό σας. Μετά αντιγράψτε το κλειδί και επικολλήστε το εδώ."
+msgstr ""
+"Ανοίξτε τη σελίδα κλειδιών του Steam και συνδεθείτε. Πληκτρολογήστε monet ως όνομα τομέα, συμφωνήστε και εγκρίνετε από την εφαρμογή Steam στο τηλέφωνό σας. Μετά αντιγράψτε το κλειδί και επικολλήστε το εδώ."
 
 #: linux/share/monet/games/Games.qml:1834
 msgid "Open Steam's key page"
@@ -1796,15 +1824,18 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:170
 msgid "This screen has extra bars. Use Advanced to arrange them first."
-msgstr "Αυτή η οθόνη έχει επιπλέον γραμμές. Τακτοποιήστε τες πρώτα από το «Για προχωρημένους»."
+msgstr ""
+"Αυτή η οθόνη έχει επιπλέον γραμμές. Τακτοποιήστε τες πρώτα από το «Για προχωρημένους»."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:174
 msgid "Could not change the bar layout. Close this editor and try again."
-msgstr "Δεν ήταν δυνατή η αλλαγή της διάταξης γραμμών. Κλείστε αυτόν τον επεξεργαστή και δοκιμάστε ξανά."
+msgstr ""
+"Δεν ήταν δυνατή η αλλαγή της διάταξης γραμμών. Κλείστε αυτόν τον επεξεργαστή και δοκιμάστε ξανά."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:190
 msgid "Could not read the app layout. Close this editor and try again."
-msgstr "Δεν ήταν δυνατή η ανάγνωση της διάταξης εφαρμογών. Κλείστε αυτόν τον επεξεργαστή και δοκιμάστε ξανά."
+msgstr ""
+"Δεν ήταν δυνατή η ανάγνωση της διάταξης εφαρμογών. Κλείστε αυτόν τον επεξεργαστή και δοκιμάστε ξανά."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:257
 msgid "Home Bar"
@@ -1841,7 +1872,8 @@ msgstr "Τρεις γραμμές"
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:321
 msgid ""
 "Includes the menu, apps, quick settings, sound and clock. Your pins and widgets stay with you."
-msgstr "Περιλαμβάνει το μενού, τις εφαρμογές, τις γρήγορες ρυθμίσεις, τον ήχο και το ρολόι. Τα καρφιτσωμένα και τα γραφικά στοιχεία σας μένουν μαζί σας."
+msgstr ""
+"Περιλαμβάνει το μενού, τις εφαρμογές, τις γρήγορες ρυθμίσεις, τον ήχο και το ρολόι. Τα καρφιτσωμένα και τα γραφικά στοιχεία σας μένουν μαζί σας."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:322
 msgid "Bar shape"
@@ -1879,9 +1911,10 @@ msgstr "Δεξιά"
 msgid "Bar position along edge"
 msgstr "Θέση γραμμής κατά μήκος της άκρης"
 
-#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403
+msgctxt "where on the bar: at its start, not the verb"
 msgid "Start"
-msgstr "Έναρξη"
+msgstr "Αρχή"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:386 linux/share/monet/panel/MonetPanelConfiguration.qml:410
 msgid "Center"
@@ -1897,7 +1930,8 @@ msgstr "Θέση εικονιδίων εφαρμογών"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:416
 msgid "Places app icons within the space between the other items on this bar."
-msgstr "Τοποθετεί τα εικονίδια εφαρμογών στον χώρο ανάμεσα στα άλλα στοιχεία αυτής της γραμμής."
+msgstr ""
+"Τοποθετεί τα εικονίδια εφαρμογών στον χώρο ανάμεσα στα άλλα στοιχεία αυτής της γραμμής."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:424 linux/share/monet/panel/MonetPanelConfiguration.qml:444
 msgid "Bar width"
@@ -1997,7 +2031,8 @@ msgstr "Αυτόματη απόκρυψη"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:540
 msgid "Move the pointer to the screen edge to show the bar."
-msgstr "Μετακινήστε τον δείκτη στην άκρη της οθόνης για να εμφανιστεί η γραμμή."
+msgstr ""
+"Μετακινήστε τον δείκτη στην άκρη της οθόνης για να εμφανιστεί η γραμμή."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:568
 msgid "Add widgets…"
@@ -2018,7 +2053,8 @@ msgstr "Κλείσιμο δοκιμής"
 #: linux/share/monet/settings-app/DisplayTest.qml:63
 msgid ""
 "Look for steps that blend together near black or white. Turn off Night Light before checking the grays for a tint."
-msgstr "Αναζητήστε διαβαθμίσεις που συγχωνεύονται κοντά στο μαύρο ή στο λευκό. Απενεργοποιήστε τον Νυχτερινό φωτισμό πριν ελέγξετε τα γκρι για απόχρωση."
+msgstr ""
+"Αναζητήστε διαβαθμίσεις που συγχωνεύονται κοντά στο μαύρο ή στο λευκό. Απενεργοποιήστε τον Νυχτερινό φωτισμό πριν ελέγξετε τα γκρι για απόχρωση."
 
 #: linux/share/monet/settings-app/DisplayTest.qml:70
 msgid "Shadow detail"
@@ -2069,7 +2105,8 @@ msgstr "προσάρτηση διατάξεις βοήθεια παράθυρα 
 #: linux/share/monet/settings-app/MonetSettings.qml:220
 msgctxt "Settings search words, space-separated"
 msgid "title bar titlebar borderless window frame buttons"
-msgstr "γραμμή τίτλου τίτλος χωρίς πλαίσιο πλαίσιο παραθύρου κουμπιά titlebar title bar borderless"
+msgstr ""
+"γραμμή τίτλου τίτλος χωρίς πλαίσιο πλαίσιο παραθύρου κουμπιά titlebar title bar borderless"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:222
 msgctxt "Settings search words, space-separated"
@@ -2171,7 +2208,8 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:254
 msgctxt "Settings search words, space-separated"
 msgid "restart reboot reopen apps again windows remember session"
-msgstr "επανεκκίνηση άνοιγμα ξανά εφαρμογές παράθυρα απομνημόνευση συνεδρία restart reboot reopen"
+msgstr ""
+"επανεκκίνηση άνοιγμα ξανά εφαρμογές παράθυρα απομνημόνευση συνεδρία restart reboot reopen"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:255 linux/share/monet/settings-app/MonetSettings.qml:7272
 msgid "Privacy"
@@ -2393,7 +2431,8 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:557
 msgid ""
 "Windows setup couldn't start. Wait for any current setup to finish, then try again."
-msgstr "Η εγκατάσταση των Windows δεν μπόρεσε να ξεκινήσει. Περιμένετε να ολοκληρωθεί η τρέχουσα εγκατάσταση και δοκιμάστε ξανά."
+msgstr ""
+"Η εγκατάσταση των Windows δεν μπόρεσε να ξεκινήσει. Περιμένετε να ολοκληρωθεί η τρέχουσα εγκατάσταση και δοκιμάστε ξανά."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:607
 msgid "The return summary couldn't load. Try again."
@@ -2416,7 +2455,8 @@ msgstr "Δεν ήταν δυνατή η αλλαγή της έντασης ει�
 #: linux/share/monet/settings-app/MonetSettings.qml:1116 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:217
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:121 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:138
 msgid "%1 isn't connected now. Connect it and try again."
-msgstr "Η συσκευή %1 δεν είναι συνδεδεμένη τώρα. Συνδέστε την και δοκιμάστε ξανά."
+msgstr ""
+"Η συσκευή %1 δεν είναι συνδεδεμένη τώρα. Συνδέστε την και δοκιμάστε ξανά."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1117 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:139
 msgid "The microphone didn't switch to %1. Try again."
@@ -2829,7 +2869,7 @@ msgstr ""
 msgid "Until turned off or you sign out"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:483
 msgid "Finishing…"
 msgstr ""
 
@@ -3220,7 +3260,8 @@ msgstr "Οι γραμμές τίτλου εμφανίζονται όταν δε�
 #: linux/share/monet/settings-app/MonetSettings.qml:3701
 msgid ""
 "Windows go without a title bar until you move the pointer to the top of one. Then it slides down, with the buttons. Off, every window keeps its glass title bar"
-msgstr "Τα παράθυρα δεν έχουν γραμμή τίτλου μέχρι να μετακινήσετε τον δείκτη στο πάνω μέρος ενός από αυτά. Τότε αυτή γλιστρά προς τα κάτω, μαζί με τα κουμπιά. Όταν είναι ανενεργό, κάθε παράθυρο κρατά τη γυάλινη γραμμή τίτλου του"
+msgstr ""
+"Τα παράθυρα δεν έχουν γραμμή τίτλου μέχρι να μετακινήσετε τον δείκτη στο πάνω μέρος ενός από αυτά. Τότε αυτή γλιστρά προς τα κάτω, μαζί με τα κουμπιά. Όταν είναι ανενεργό, κάθε παράθυρο κρατά τη γυάλινη γραμμή τίτλου του"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3720
 msgctxt "how see-through Monet's glass is"
@@ -3372,7 +3413,8 @@ msgstr "Διαχείριση ενσύρματων συνδέσεων…"
 #: linux/share/monet/settings-app/MonetSettings.qml:3918
 msgid ""
 "Edit Ethernet profiles, IP addresses and DNS in system network settings."
-msgstr "Επεξεργαστείτε προφίλ Ethernet, διευθύνσεις IP και DNS στις ρυθμίσεις δικτύου του συστήματος."
+msgstr ""
+"Επεξεργαστείτε προφίλ Ethernet, διευθύνσεις IP και DNS στις ρυθμίσεις δικτύου του συστήματος."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:499
 msgid "Wi-Fi"
@@ -3633,7 +3675,8 @@ msgstr "Επιλέξτε την οθόνη σας για να εφαρμόσετ
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4477
 msgid "Check shadow detail, highlights and neutral grays on this display."
-msgstr "Ελέγξτε τη λεπτομέρεια σκιών, τα φωτεινά σημεία και τα ουδέτερα γκρι σε αυτή την οθόνη."
+msgstr ""
+"Ελέγξτε τη λεπτομέρεια σκιών, τα φωτεινά σημεία και τα ουδέτερα γκρι σε αυτή την οθόνη."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4500
 msgid "Games and films"
@@ -3749,7 +3792,8 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:4778
 msgid ""
 "Connect a microphone or headset. If it still isn't found, its channels can be set up in Advanced sound settings below."
-msgstr "Συνδέστε ένα μικρόφωνο ή ακουστικά με μικρόφωνο. Αν εξακολουθεί να μη βρίσκεται, τα κανάλια του ρυθμίζονται στις Ρυθμίσεις ήχου για προχωρημένους παρακάτω."
+msgstr ""
+"Συνδέστε ένα μικρόφωνο ή ακουστικά με μικρόφωνο. Αν εξακολουθεί να μη βρίσκεται, τα κανάλια του ρυθμίζονται στις Ρυθμίσεις ήχου για προχωρημένους παρακάτω."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4784
 msgid "Microphone volume"
@@ -3766,7 +3810,8 @@ msgstr "Προφίλ και κανάλια κάθε συσκευής ήχου"
 #: linux/share/monet/settings-app/MonetSettings.qml:4798
 msgid ""
 "Only needed for a device's profile or channels, such as surround sound or an interface's direct monitoring."
-msgstr "Χρειάζονται μόνο για το προφίλ ή τα κανάλια μιας συσκευής, όπως ο ήχος surround ή η άμεση παρακολούθηση μιας κάρτας ήχου."
+msgstr ""
+"Χρειάζονται μόνο για το προφίλ ή τα κανάλια μιας συσκευής, όπως ο ήχος surround ή η άμεση παρακολούθηση μιας κάρτας ήχου."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4821
 msgid "Your clock, and where in the world it keeps time."
@@ -4124,7 +4169,8 @@ msgstr "Επιδόσεις"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5468
 msgid "Favors faster response, with potentially more heat and fan noise"
-msgstr "Προτιμά ταχύτερη απόκριση, με πιθανώς περισσότερη θερμότητα και θόρυβο ανεμιστήρα"
+msgstr ""
+"Προτιμά ταχύτερη απόκριση, με πιθανώς περισσότερη θερμότητα και θόρυβο ανεμιστήρα"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5538
 msgid "Plugged in"
@@ -4243,7 +4289,8 @@ msgstr "Ξανάνοιγμα της δουλειάς σας"
 #: linux/share/monet/settings-app/MonetSettings.qml:5697
 msgid ""
 "After a restart, a sign-out or a trip to Windows, your apps come back on the same screens and desktops, where they were, with saved documents and Files tabs. Unsaved changes and private tabs aren't kept."
-msgstr "Μετά από επανεκκίνηση, αποσύνδεση ή ένα ταξίδι στα Windows, οι εφαρμογές σας επιστρέφουν στις ίδιες οθόνες και επιφάνειες εργασίας, εκεί που ήταν, με τα αποθηκευμένα έγγραφα και τις καρτέλες των Αρχείων. Οι μη αποθηκευμένες αλλαγές και οι ιδιωτικές καρτέλες δεν διατηρούνται."
+msgstr ""
+"Μετά από επανεκκίνηση, αποσύνδεση ή ένα ταξίδι στα Windows, οι εφαρμογές σας επιστρέφουν στις ίδιες οθόνες και επιφάνειες εργασίας, εκεί που ήταν, με τα αποθηκευμένα έγγραφα και τις καρτέλες των Αρχείων. Οι μη αποθηκευμένες αλλαγές και οι ιδιωτικές καρτέλες δεν διατηρούνται."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5716
 msgid "More power settings…"
@@ -4800,7 +4847,8 @@ msgstr "Διαμόρφωση τόμου"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6454
 msgid "This removes every partition and its files from the selected drive."
-msgstr "Αυτό αφαιρεί κάθε διαμέρισμα και τα αρχεία του από τον επιλεγμένο δίσκο."
+msgstr ""
+"Αυτό αφαιρεί κάθε διαμέρισμα και τα αρχεία του από τον επιλεγμένο δίσκο."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6456
 msgid "This deletes all files on the selected volume."
@@ -4905,7 +4953,8 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:6624
 msgid ""
 "Some files are shared between folders, so the folders add up to more than the space in use. The bar shows only what is in use."
-msgstr "Ορισμένα αρχεία είναι κοινά σε περισσότερους φακέλους, οπότε οι φάκελοι αθροίζουν περισσότερο από τον χώρο που χρησιμοποιείται. Η μπάρα δείχνει μόνο ό,τι χρησιμοποιείται."
+msgstr ""
+"Ορισμένα αρχεία είναι κοινά σε περισσότερους φακέλους, οπότε οι φάκελοι αθροίζουν περισσότερο από τον χώρο που χρησιμοποιείται. Η μπάρα δείχνει μόνο ό,τι χρησιμοποιείται."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6625
 msgid ""
@@ -5021,7 +5070,7 @@ msgstr "Οριστικό άδειασμα"
 msgid "Empty Trash"
 msgstr "Άδειασμα κάδου"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:187
+#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:188
 msgid "Downloads"
 msgstr "Λήψεις"
 
@@ -6283,36 +6332,43 @@ msgstr "Συνδέστε πρώτα τον φορτιστή."
 #: linux/share/monet/settings-app/MonetSettings.qml:8441 crates/monet/src/main.rs:897
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
-msgstr "Μπορείτε να συνεχίσετε να χρησιμοποιείτε το Monet όσο προετοιμάζονται τα Windows. Το Monet ρωτά πριν κάνει επανεκκίνηση."
+msgstr ""
+"Μπορείτε να συνεχίσετε να χρησιμοποιείτε το Monet όσο προετοιμάζονται τα Windows. Το Monet ρωτά πριν κάνει επανεκκίνηση."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8442
 msgid ""
 "This PC returned to Monet before Windows setup finished. Try again to resume the prepared installation."
-msgstr "Αυτός ο υπολογιστής επέστρεψε στο Monet πριν ολοκληρωθεί η εγκατάσταση των Windows. Δοκιμάστε ξανά για να συνεχιστεί η προετοιμασμένη εγκατάσταση."
+msgstr ""
+"Αυτός ο υπολογιστής επέστρεψε στο Monet πριν ολοκληρωθεί η εγκατάσταση των Windows. Δοκιμάστε ξανά για να συνεχιστεί η προετοιμασμένη εγκατάσταση."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8444
 msgid "Open Check Monet below for details about the failure."
-msgstr "Ανοίξτε τον «Έλεγχο Monet» παρακάτω για λεπτομέρειες σχετικά με την αποτυχία."
+msgstr ""
+"Ανοίξτε τον «Έλεγχο Monet» παρακάτω για λεπτομέρειες σχετικά με την αποτυχία."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8445
 msgid ""
 "Check that your disk has room reserved for Windows and enough free space in Monet to download it."
-msgstr "Ελέγξτε ότι ο δίσκος σας έχει χώρο δεσμευμένο για τα Windows και αρκετό ελεύθερο χώρο στο Monet για να τα κατεβάσει."
+msgstr ""
+"Ελέγξτε ότι ο δίσκος σας έχει χώρο δεσμευμένο για τα Windows και αρκετό ελεύθερο χώρο στο Monet για να τα κατεβάσει."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8446
 msgid ""
 "Monet will prepare Windows in the reserved space and ask before restarting."
-msgstr "Το Monet θα προετοιμάσει τα Windows στον δεσμευμένο χώρο και θα ρωτήσει πριν κάνει επανεκκίνηση."
+msgstr ""
+"Το Monet θα προετοιμάσει τα Windows στον δεσμευμένο χώρο και θα ρωτήσει πριν κάνει επανεκκίνηση."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8448
 msgid ""
 "Try the download again or choose a Windows 11 x64 ISO from any folder or connected drive."
-msgstr "Δοκιμάστε ξανά τη λήψη ή επιλέξτε ένα ISO των Windows 11 x64 από οποιονδήποτε φάκελο ή συνδεδεμένο δίσκο."
+msgstr ""
+"Δοκιμάστε ξανά τη λήψη ή επιλέξτε ένα ISO των Windows 11 x64 από οποιονδήποτε φάκελο ή συνδεδεμένο δίσκο."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8449
 msgid ""
 "Download Windows 11 from Microsoft for games that need it. Monet asks before restarting."
-msgstr "Κατεβάστε τα Windows 11 από τη Microsoft για τα παιχνίδια που τα χρειάζονται. Το Monet ρωτά πριν κάνει επανεκκίνηση."
+msgstr ""
+"Κατεβάστε τα Windows 11 από τη Microsoft για τα παιχνίδια που τα χρειάζονται. Το Monet ρωτά πριν κάνει επανεκκίνηση."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8452
 msgid ""
@@ -6392,7 +6448,8 @@ msgstr "Προετοιμασία των Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8541
 msgid "Administrator access is required to prepare the reserved space."
-msgstr "Απαιτείται πρόσβαση διαχειριστή για την προετοιμασία του δεσμευμένου χώρου."
+msgstr ""
+"Απαιτείται πρόσβαση διαχειριστή για την προετοιμασία του δεσμευμένου χώρου."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8554
 msgid "Need an ISO?"
@@ -6470,7 +6527,8 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:8695
 msgid ""
 "After Windows or a restart, your apps come back where they were, with saved documents and Files tabs. Zen follows its tab-restore preference. Unsaved changes and private tabs aren't kept."
-msgstr "Μετά τα Windows ή μια επανεκκίνηση, οι εφαρμογές σας επιστρέφουν εκεί που ήταν, με τα αποθηκευμένα έγγραφα και τις καρτέλες των Αρχείων. Το Zen ακολουθεί τη δική του ρύθμιση επαναφοράς καρτελών. Οι μη αποθηκευμένες αλλαγές και οι ιδιωτικές καρτέλες δεν διατηρούνται."
+msgstr ""
+"Μετά τα Windows ή μια επανεκκίνηση, οι εφαρμογές σας επιστρέφουν εκεί που ήταν, με τα αποθηκευμένα έγγραφα και τις καρτέλες των Αρχείων. Το Zen ακολουθεί τη δική του ρύθμιση επαναφοράς καρτελών. Οι μη αποθηκευμένες αλλαγές και οι ιδιωτικές καρτέλες δεν διατηρούνται."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8713
 msgid ""
@@ -6994,436 +7052,436 @@ msgstr "Όλα"
 msgid "No apps here yet."
 msgstr "Δεν υπάρχουν ακόμα εφαρμογές εδώ."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7978
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:7978
 msgid "Store"
 msgstr "Κατάστημα"
 
-#: linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/store-app/Store.qml:171
 msgid "Launchers, old consoles and new games. Steam is already here."
 msgstr ""
 "Εφαρμογές παιχνιδιών, παλιές κονσόλες και νέα παιχνίδια. Το Steam είναι ήδη εδώ."
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Talk & stream"
 msgstr "Συνομιλίες και streaming"
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Friends, calls, and going live."
 msgstr "Φίλοι, κλήσεις και ζωντανές μεταδόσεις."
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Music & film"
 msgstr "Μουσική και ταινίες"
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Something to listen to, and something to watch."
 msgstr "Κάτι να ακούσετε και κάτι να δείτε."
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Work & make"
 msgstr "Δουλειά και δημιουργία"
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Writing, drawing, editing, sending, and tools for the command line."
 msgstr ""
 "Γράψιμο, ζωγραφική, επεξεργασία, αποστολή και εργαλεία για τη γραμμή εντολών."
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Everyday"
 msgstr "Καθημερινές"
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Passwords, sharing, and the small things that help."
 msgstr "Κωδικοί πρόσβασης, κοινή χρήση και μικρά πράγματα που βοηθούν."
 
-#: linux/share/monet/store-app/Store.qml:177
+#: linux/share/monet/store-app/Store.qml:178
 msgid "Monet's picks"
 msgstr "Επιλογές του Monet"
 
-#: linux/share/monet/store-app/Store.qml:179
+#: linux/share/monet/store-app/Store.qml:180
 msgid "Photos & drawing"
 msgstr "Φωτογραφίες και σχέδιο"
 
-#: linux/share/monet/store-app/Store.qml:180
+#: linux/share/monet/store-app/Store.qml:181
 msgid "Music & video"
 msgstr "Μουσική και βίντεο"
 
-#: linux/share/monet/store-app/Store.qml:181
+#: linux/share/monet/store-app/Store.qml:182
 msgid "Writing & office"
 msgstr "Κείμενο και γραφείο"
 
-#: linux/share/monet/store-app/Store.qml:182
+#: linux/share/monet/store-app/Store.qml:183
 msgid "Internet & chat"
 msgstr "Διαδίκτυο και συνομιλία"
 
-#: linux/share/monet/store-app/Store.qml:183
+#: linux/share/monet/store-app/Store.qml:184
 msgid "Learning"
 msgstr "Μάθηση"
 
-#: linux/share/monet/store-app/Store.qml:184
+#: linux/share/monet/store-app/Store.qml:185
 msgid "Developer tools"
 msgstr "Προγραμματισμός"
 
-#: linux/share/monet/store-app/Store.qml:185
+#: linux/share/monet/store-app/Store.qml:186
 msgid "Tools"
 msgstr "Εργαλεία"
 
-#: linux/share/monet/store-app/Store.qml:188 linux/share/monet/store-app/Store.qml:1042
+#: linux/share/monet/store-app/Store.qml:189 linux/share/monet/store-app/Store.qml:1043
 msgid "On your Windows"
 msgstr "Στα Windows σας"
 
-#: linux/share/monet/store-app/Store.qml:194
+#: linux/share/monet/store-app/Store.qml:195
 msgctxt "a kind of app, a filter in the Store"
 msgid "Action"
 msgstr "Δράση"
 
-#: linux/share/monet/store-app/Store.qml:195
+#: linux/share/monet/store-app/Store.qml:196
 msgctxt "a kind of app, a filter in the Store"
 msgid "Arcade"
 msgstr "Arcade"
 
-#: linux/share/monet/store-app/Store.qml:196
+#: linux/share/monet/store-app/Store.qml:197
 msgctxt "a kind of app, a filter in the Store"
 msgid "Strategy"
 msgstr "Στρατηγική"
 
-#: linux/share/monet/store-app/Store.qml:197
+#: linux/share/monet/store-app/Store.qml:198
 msgctxt "a kind of app, a filter in the Store"
 msgid "Puzzles"
 msgstr "Παζλ"
 
-#: linux/share/monet/store-app/Store.qml:198
+#: linux/share/monet/store-app/Store.qml:199
 msgctxt "a kind of app, a filter in the Store"
 msgid "Adventure & role-playing"
 msgstr "Περιπέτεια και RPG"
 
-#: linux/share/monet/store-app/Store.qml:199
+#: linux/share/monet/store-app/Store.qml:200
 msgctxt "a kind of app, a filter in the Store"
 msgid "Simulation & sports"
 msgstr "Προσομοίωση και αθλητικά"
 
-#: linux/share/monet/store-app/Store.qml:200
+#: linux/share/monet/store-app/Store.qml:201
 msgctxt "a kind of app, a filter in the Store"
 msgid "Board & cards"
 msgstr "Επιτραπέζια και χαρτιά"
 
-#: linux/share/monet/store-app/Store.qml:201
+#: linux/share/monet/store-app/Store.qml:202
 msgctxt "a kind of app, a filter in the Store"
 msgid "For kids"
 msgstr "Για παιδιά"
 
-#: linux/share/monet/store-app/Store.qml:202
+#: linux/share/monet/store-app/Store.qml:203
 msgctxt "a kind of app, a filter in the Store"
 msgid "Emulators"
 msgstr "Εξομοιωτές"
 
-#: linux/share/monet/store-app/Store.qml:203
+#: linux/share/monet/store-app/Store.qml:204
 msgctxt "a kind of app, a filter in the Store"
 msgid "Drawing & painting"
 msgstr "Σχέδιο και ζωγραφική"
 
-#: linux/share/monet/store-app/Store.qml:204
+#: linux/share/monet/store-app/Store.qml:205
 msgctxt "a kind of app, a filter in the Store"
 msgid "Photos"
 msgstr "Φωτογραφίες"
 
-#: linux/share/monet/store-app/Store.qml:205
+#: linux/share/monet/store-app/Store.qml:206
 msgctxt "a kind of app, a filter in the Store"
 msgid "Vector"
 msgstr "Διανυσματικά"
 
-#: linux/share/monet/store-app/Store.qml:206
+#: linux/share/monet/store-app/Store.qml:207
 msgctxt "a kind of app, a filter in the Store"
 msgid "3D"
 msgstr "3D"
 
-#: linux/share/monet/store-app/Store.qml:207
+#: linux/share/monet/store-app/Store.qml:208
 msgctxt "a kind of app, a filter in the Store"
 msgid "Viewers"
 msgstr "Προβολή"
 
-#: linux/share/monet/store-app/Store.qml:208
+#: linux/share/monet/store-app/Store.qml:209
 msgctxt "a kind of app, a filter in the Store"
 msgid "Scanning"
 msgstr "Σάρωση"
 
-#: linux/share/monet/store-app/Store.qml:209
+#: linux/share/monet/store-app/Store.qml:210
 msgctxt "a kind of app, a filter in the Store"
 msgid "Players"
 msgstr "Αναπαραγωγή"
 
-#: linux/share/monet/store-app/Store.qml:210
+#: linux/share/monet/store-app/Store.qml:211
 msgctxt "a kind of app, a filter in the Store"
 msgid "Making music"
 msgstr "Δημιουργία μουσικής"
 
-#: linux/share/monet/store-app/Store.qml:211
+#: linux/share/monet/store-app/Store.qml:212
 msgctxt "a kind of app, a filter in the Store"
 msgid "Editing"
 msgstr "Επεξεργασία"
 
-#: linux/share/monet/store-app/Store.qml:212
+#: linux/share/monet/store-app/Store.qml:213
 msgctxt "a kind of app, a filter in the Store"
 msgid "Video & TV"
 msgstr "Βίντεο και τηλεόραση"
 
-#: linux/share/monet/store-app/Store.qml:213
+#: linux/share/monet/store-app/Store.qml:214
 msgctxt "a kind of app, a filter in the Store"
 msgid "Recording"
 msgstr "Εγγραφή"
 
-#: linux/share/monet/store-app/Store.qml:214
+#: linux/share/monet/store-app/Store.qml:215
 msgctxt "a kind of app, a filter in the Store"
 msgid "Writing"
 msgstr "Γράψιμο"
 
-#: linux/share/monet/store-app/Store.qml:215
+#: linux/share/monet/store-app/Store.qml:216
 msgctxt "a kind of app, a filter in the Store"
 msgid "Money"
 msgstr "Οικονομικά"
 
-#: linux/share/monet/store-app/Store.qml:216
+#: linux/share/monet/store-app/Store.qml:217
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calendars & planning"
 msgstr "Ημερολόγια και οργάνωση"
 
-#: linux/share/monet/store-app/Store.qml:217
+#: linux/share/monet/store-app/Store.qml:218
 msgctxt "a kind of app, a filter in the Store"
 msgid "Email"
 msgstr "Email"
 
-#: linux/share/monet/store-app/Store.qml:218
+#: linux/share/monet/store-app/Store.qml:219
 msgctxt "a kind of app, a filter in the Store"
 msgid "Chat"
 msgstr "Συνομιλία"
 
-#: linux/share/monet/store-app/Store.qml:219
+#: linux/share/monet/store-app/Store.qml:220
 msgctxt "a kind of app, a filter in the Store"
 msgid "Browsers"
 msgstr "Περιηγητές"
 
-#: linux/share/monet/store-app/Store.qml:220
+#: linux/share/monet/store-app/Store.qml:221
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calls"
 msgstr "Κλήσεις"
 
-#: linux/share/monet/store-app/Store.qml:221
+#: linux/share/monet/store-app/Store.qml:222
 msgctxt "a kind of app, a filter in the Store"
 msgid "Sharing & downloads"
 msgstr "Κοινή χρήση και λήψεις"
 
-#: linux/share/monet/store-app/Store.qml:222
+#: linux/share/monet/store-app/Store.qml:223
 msgctxt "a kind of app, a filter in the Store"
 msgid "News"
 msgstr "Ειδήσεις"
 
-#: linux/share/monet/store-app/Store.qml:223
+#: linux/share/monet/store-app/Store.qml:224
 msgctxt "a kind of app, a filter in the Store"
 msgid "Remote access"
 msgstr "Απομακρυσμένη πρόσβαση"
 
-#: linux/share/monet/store-app/Store.qml:224
+#: linux/share/monet/store-app/Store.qml:225
 msgctxt "a kind of app, a filter in the Store"
 msgid "Science"
 msgstr "Επιστήμη"
 
-#: linux/share/monet/store-app/Store.qml:225
+#: linux/share/monet/store-app/Store.qml:226
 msgctxt "a kind of app, a filter in the Store"
 msgid "Math"
 msgstr "Μαθηματικά"
 
-#: linux/share/monet/store-app/Store.qml:226
+#: linux/share/monet/store-app/Store.qml:227
 msgctxt "a kind of app, a filter in the Store"
 msgid "Languages"
 msgstr "Γλώσσες"
 
-#: linux/share/monet/store-app/Store.qml:227
+#: linux/share/monet/store-app/Store.qml:228
 msgctxt "a kind of app, a filter in the Store"
 msgid "Computing & data"
 msgstr "Πληροφορική και δεδομένα"
 
-#: linux/share/monet/store-app/Store.qml:228
+#: linux/share/monet/store-app/Store.qml:229
 msgctxt "a kind of app, a filter in the Store"
 msgid "Code editors"
 msgstr "Επεξεργαστές κώδικα"
 
-#: linux/share/monet/store-app/Store.qml:229
+#: linux/share/monet/store-app/Store.qml:230
 msgctxt "a kind of app, a filter in the Store"
 msgid "Version control"
 msgstr "Έλεγχος εκδόσεων"
 
-#: linux/share/monet/store-app/Store.qml:230
+#: linux/share/monet/store-app/Store.qml:231
 msgctxt "a kind of app, a filter in the Store"
 msgid "Web"
 msgstr "Web"
 
-#: linux/share/monet/store-app/Store.qml:231
+#: linux/share/monet/store-app/Store.qml:232
 msgctxt "a kind of app, a filter in the Store"
 msgid "Debugging"
 msgstr "Αποσφαλμάτωση"
 
-#: linux/share/monet/store-app/Store.qml:232
+#: linux/share/monet/store-app/Store.qml:233
 msgctxt "a kind of app, a filter in the Store"
 msgid "Electronics"
 msgstr "Ηλεκτρονικά"
 
-#: linux/share/monet/store-app/Store.qml:233
+#: linux/share/monet/store-app/Store.qml:234
 msgctxt "a kind of app, a filter in the Store"
 msgid "System"
 msgstr "Σύστημα"
 
-#: linux/share/monet/store-app/Store.qml:234
+#: linux/share/monet/store-app/Store.qml:235
 msgctxt "a kind of app, a filter in the Store"
 msgid "Files"
 msgstr "Αρχεία"
 
-#: linux/share/monet/store-app/Store.qml:235
+#: linux/share/monet/store-app/Store.qml:236
 msgctxt "a kind of app, a filter in the Store"
 msgid "Text"
 msgstr "Κείμενο"
 
-#: linux/share/monet/store-app/Store.qml:236
+#: linux/share/monet/store-app/Store.qml:237
 msgctxt "a kind of app, a filter in the Store"
 msgid "Security"
 msgstr "Ασφάλεια"
 
-#: linux/share/monet/store-app/Store.qml:237
+#: linux/share/monet/store-app/Store.qml:238
 msgctxt "a kind of app, a filter in the Store"
 msgid "Terminals"
 msgstr "Τερματικά"
 
-#: linux/share/monet/store-app/Store.qml:238
+#: linux/share/monet/store-app/Store.qml:239
 msgctxt "a kind of app, a filter in the Store"
 msgid "Clocks & calculators"
 msgstr "Ρολόγια και αριθμομηχανές"
 
-#: linux/share/monet/store-app/Store.qml:476
+#: linux/share/monet/store-app/Store.qml:477
 msgid "Waiting its turn"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:477
+#: linux/share/monet/store-app/Store.qml:478
 msgid "Installing… This part can't be cancelled."
 msgstr "Εγκατάσταση… Αυτό το μέρος δεν ακυρώνεται."
 
-#: linux/share/monet/store-app/Store.qml:478
+#: linux/share/monet/store-app/Store.qml:479
 msgid "Cancelling…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:479
+#: linux/share/monet/store-app/Store.qml:480
 msgid "Cancelled. You can try again whenever you're ready."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to finish removing this app."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to continue the download."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Store.qml:482
 msgid "Removed"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482 linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:483 linux/share/monet/store-app/Store.qml:494
 msgid "Removing…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/store-app/Store.qml:483
 msgid "Downloading & installing… %1%"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:483
+#: linux/share/monet/store-app/Store.qml:484
 msgid "There isn't enough free space. Free some space, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:484
+#: linux/share/monet/store-app/Store.qml:485
 msgid ""
 "The download stopped because Flathub couldn't be reached. Check your connection, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:485
+#: linux/share/monet/store-app/Store.qml:486
 msgid "Only an administrator of this PC can install and remove apps."
 msgstr ""
 "Μόνο ένας διαχειριστής αυτού του υπολογιστή μπορεί να εγκαθιστά και να αφαιρεί εφαρμογές."
 
-#: linux/share/monet/store-app/Store.qml:486
+#: linux/share/monet/store-app/Store.qml:487
 msgid "The download couldn't start. Try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:487
+#: linux/share/monet/store-app/Store.qml:488
 msgid "The download list couldn't be saved. Check free space and try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:488
+#: linux/share/monet/store-app/Store.qml:489
 msgid "That didn't work. Try again in a moment."
 msgstr "Δεν πέτυχε. Δοκιμάστε ξανά σε λίγο."
 
-#: linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:494
 msgid "Downloading…"
 msgstr "Λήψη…"
 
-#: linux/share/monet/store-app/Store.qml:511
+#: linux/share/monet/store-app/Store.qml:512
 msgctxt "an app, then how its download or removal is going"
 msgid "%1: %2"
 msgstr "%1: %2"
 
-#: linux/share/monet/store-app/Store.qml:546
+#: linux/share/monet/store-app/Store.qml:547
 msgid ""
 "The saved download list couldn't be read or saved. Check free space and folder access, then try again. Your existing list has been kept."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:790
+#: linux/share/monet/store-app/Store.qml:791
 msgid "Yours"
 msgstr "Δικές σας"
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid ""
 "The app catalog is unavailable. Check your connection and try again. Your downloads are still available."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid "Opening the Store…"
 msgstr "Άνοιγμα του Καταστήματος…"
 
-#: linux/share/monet/store-app/Store.qml:945
+#: linux/share/monet/store-app/Store.qml:946
 msgid ""
 "Apps in your Windows. Each opens there: your PC restarts in Windows, and Back to Monet brings you back."
 msgstr ""
 "Εφαρμογές στα Windows σας. Καθεμία ανοίγει εκεί: ο υπολογιστής σας επανεκκινεί στα Windows και το «Επιστροφή στο Monet» σας φέρνει πίσω."
 
-#: linux/share/monet/store-app/Store.qml:947
+#: linux/share/monet/store-app/Store.qml:948
 msgid "Apps you installed from the Store. They update by themselves."
 msgstr ""
 "Εφαρμογές που εγκαταστήσατε από το Κατάστημα. Ενημερώνονται μόνες τους."
 
-#: linux/share/monet/store-app/Store.qml:948
+#: linux/share/monet/store-app/Store.qml:949
 msgid "Apps you install from the Store show up here."
 msgstr "Οι εφαρμογές που εγκαθιστάτε από το Κατάστημα εμφανίζονται εδώ."
 
-#: linux/share/monet/store-app/Store.qml:977
+#: linux/share/monet/store-app/Store.qml:978
 msgid "Apps for “%1”"
 msgstr "Εφαρμογές για «%1»"
 
-#: linux/share/monet/store-app/Store.qml:1001
+#: linux/share/monet/store-app/Store.qml:1002
 msgid "Looking for %1?"
-msgstr ""
-
-#: linux/share/monet/store-app/Store.qml:1013
-msgid ""
-"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
 msgstr ""
 
 #: linux/share/monet/store-app/Store.qml:1014
 msgid ""
+"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:1015
+msgid ""
 "No suggestions are available in this catalog. Check the publisher's website for a web version or supported systems."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:1071
+#: linux/share/monet/store-app/Store.qml:1072
 msgid "For Monet"
 msgstr "Για το Monet"
 
-#: linux/share/monet/store-app/Store.qml:1099
+#: linux/share/monet/store-app/Store.qml:1100
 msgid ""
 "Nothing in the Store goes by “%1”. Try other words, or what it's for: “photo editor”, “music”."
 msgstr ""
@@ -7888,7 +7946,8 @@ msgstr "Εφαρμογή Windows"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:67
 msgid "Couldn't start the Windows app launcher. Try again from Files."
-msgstr "Δεν ήταν δυνατή η εκκίνηση του εκκινητή εφαρμογών Windows. Δοκιμάστε ξανά από τα Αρχεία."
+msgstr ""
+"Δεν ήταν δυνατή η εκκίνηση του εκκινητή εφαρμογών Windows. Δοκιμάστε ξανά από τα Αρχεία."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228
 msgid "A Windows installer"
@@ -7911,7 +7970,8 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:254
 msgid ""
 "Try opening this file with Proton. Compatibility depends on the program."
-msgstr "Δοκιμάστε να ανοίξετε αυτό το αρχείο με το Proton. Η συμβατότητα εξαρτάται από το πρόγραμμα."
+msgstr ""
+"Δοκιμάστε να ανοίξετε αυτό το αρχείο με το Proton. Η συμβατότητα εξαρτάται από το πρόγραμμα."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:255
 msgid ""
@@ -8249,6 +8309,10 @@ msgstr "%1 λεπ."
 msgid "Scroll to change the minutes"
 msgstr "Κάντε κύλιση για να αλλάξετε τα λεπτά"
 
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+msgid "Start"
+msgstr "Έναρξη"
+
 #: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:328 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:337
 msgctxt "a timer: quiet notifications, a day on the painting"
 msgid "Focus"
@@ -8340,7 +8404,8 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:460
 msgid "You can close this panel. Transfers continue in the background."
-msgstr "Μπορείτε να κλείσετε αυτό το πλαίσιο. Οι μεταφορές συνεχίζονται στο παρασκήνιο."
+msgstr ""
+"Μπορείτε να κλείσετε αυτό το πλαίσιο. Οι μεταφορές συνεχίζονται στο παρασκήνιο."
 
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/config/config.qml:6
 msgid "Place"
@@ -9550,17 +9615,20 @@ msgstr "Ειρηνικός"
 #: setup/monet_setup/trust.py:69
 msgid ""
 "This version of Monet isn’t on the download server. Try again later, or make a new installer."
-msgstr "Αυτή η έκδοση του Monet δεν βρίσκεται στον διακομιστή λήψης. Δοκιμάστε ξανά αργότερα ή δημιουργήστε νέο πρόγραμμα εγκατάστασης."
+msgstr ""
+"Αυτή η έκδοση του Monet δεν βρίσκεται στον διακομιστή λήψης. Δοκιμάστε ξανά αργότερα ή δημιουργήστε νέο πρόγραμμα εγκατάστασης."
 
 #: setup/monet_setup/trust.py:71
 msgid ""
 "The download server refused to send Monet. Try again later, or make a new installer."
-msgstr "Ο διακομιστής λήψης αρνήθηκε να στείλει το Monet. Δοκιμάστε ξανά αργότερα ή δημιουργήστε νέο πρόγραμμα εγκατάστασης."
+msgstr ""
+"Ο διακομιστής λήψης αρνήθηκε να στείλει το Monet. Δοκιμάστε ξανά αργότερα ή δημιουργήστε νέο πρόγραμμα εγκατάστασης."
 
 #: setup/monet_setup/trust.py:73
 msgid ""
 "Setup couldn’t verify the download server’s certificate. Check the PC’s date and time, or try another network."
-msgstr "Η Εγκατάσταση δεν μπόρεσε να επαληθεύσει το πιστοποιητικό του διακομιστή λήψης. Ελέγξτε την ημερομηνία και την ώρα του υπολογιστή ή δοκιμάστε άλλο δίκτυο."
+msgstr ""
+"Η Εγκατάσταση δεν μπόρεσε να επαληθεύσει το πιστοποιητικό του διακομιστή λήψης. Ελέγξτε την ημερομηνία και την ώρα του υπολογιστή ή δοκιμάστε άλλο δίκτυο."
 
 #: linux/libexec/monet-quick:789
 msgid "Input %1"
@@ -9672,7 +9740,8 @@ msgstr "Ο δίσκος άλλαξε. Ανανεώστε τη λίστα και 
 
 #: linux/libexec/monet-quick:3320
 msgid "This drive is in use by the system or is read-only."
-msgstr "Αυτός ο δίσκος χρησιμοποιείται από το σύστημα ή είναι μόνο για ανάγνωση."
+msgstr ""
+"Αυτός ο δίσκος χρησιμοποιείται από το σύστημα ή είναι μόνο για ανάγνωση."
 
 #: linux/libexec/monet-quick:3324
 msgid "Unmount the volumes on this drive first."
@@ -9724,7 +9793,8 @@ msgstr "Στα Βίντεο."
 
 #: linux/libexec/monet-quick:5895
 msgid "The Windows app launcher couldn't start. Try again from Files."
-msgstr "Ο εκκινητής εφαρμογών Windows δεν μπόρεσε να ξεκινήσει. Δοκιμάστε ξανά από τα Αρχεία."
+msgstr ""
+"Ο εκκινητής εφαρμογών Windows δεν μπόρεσε να ξεκινήσει. Δοκιμάστε ξανά από τα Αρχεία."
 
 #: linux/libexec/monet-quick:5918
 msgid "The program or installer is missing."
@@ -9733,7 +9803,8 @@ msgstr "Το πρόγραμμα ή το πρόγραμμα εγκατάστασ�
 #: linux/libexec/monet-quick:5921
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
-msgstr "Η υποστήριξη εφαρμογών Windows λείπει. Μπορείτε να ανοίξετε το αρχείο στα Windows αντί γι' αυτό."
+msgstr ""
+"Η υποστήριξη εφαρμογών Windows λείπει. Μπορείτε να ανοίξετε το αρχείο στα Windows αντί γι' αυτό."
 
 #: linux/libexec/monet-quick:5929
 msgid "Starting %1"
@@ -9741,16 +9812,19 @@ msgstr "Εκκίνηση του %1"
 
 #: linux/libexec/monet-quick:5930
 msgid "Preparing Windows app support can take a few minutes the first time."
-msgstr "Η προετοιμασία της υποστήριξης εφαρμογών Windows μπορεί να διαρκέσει λίγα λεπτά την πρώτη φορά."
+msgstr ""
+"Η προετοιμασία της υποστήριξης εφαρμογών Windows μπορεί να διαρκέσει λίγα λεπτά την πρώτη φορά."
 
 #: linux/libexec/monet-quick:5939
 msgid "Windows app support couldn't start. Try opening the file in Windows."
-msgstr "Η υποστήριξη εφαρμογών Windows δεν μπόρεσε να ξεκινήσει. Δοκιμάστε να ανοίξετε το αρχείο στα Windows."
+msgstr ""
+"Η υποστήριξη εφαρμογών Windows δεν μπόρεσε να ξεκινήσει. Δοκιμάστε να ανοίξετε το αρχείο στα Windows."
 
 #: linux/libexec/monet-quick:5946
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
-msgstr "Το Proton τερματίστηκε με κωδικό %1. Ελέγξτε το αρχείο και τη σύνδεσή σας ή δοκιμάστε να το ανοίξετε στα Windows."
+msgstr ""
+"Το Proton τερματίστηκε με κωδικό %1. Ελέγξτε το αρχείο και τη σύνδεσή σας ή δοκιμάστε να το ανοίξετε στα Windows."
 
 #: linux/libexec/monet-quick:6773
 msgid "Open it again"
@@ -9807,7 +9881,8 @@ msgstr "Αποθηκευτικός χώρος · Διαχείριση φυσικ
 #: linux/libexec/monet-quick:7915
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
-msgstr "δίσκοι; διαχείριση δίσκων; διαμόρφωση δίσκου; διαγραφή δίσκου; δημιουργία διαμερίσματος; διαμερίσματα; εξωτερικός δίσκος"
+msgstr ""
+"δίσκοι; διαχείριση δίσκων; διαμόρφωση δίσκου; διαγραφή δίσκου; δημιουργία διαμερίσματος; διαμερίσματα; εξωτερικός δίσκος"
 
 #: linux/libexec/monet-quick:7917
 msgid "Battery charge limit"
@@ -9857,7 +9932,8 @@ msgstr "Οθόνη · Προφίλ χρωμάτων και μοτίβα δοκι
 #: linux/libexec/monet-quick:7926
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
-msgstr "προφίλ χρωμάτων; ICC; OLED; βαθμονόμηση χρωμάτων; δοκιμή οθόνης; τεστ οθόνης; λάθος χρώματα"
+msgstr ""
+"προφίλ χρωμάτων; ICC; OLED; βαθμονόμηση χρωμάτων; δοκιμή οθόνης; τεστ οθόνης; λάθος χρώματα"
 
 #: linux/libexec/monet-quick:7928
 msgid "Make the pointer easier to see"
@@ -9928,7 +10004,8 @@ msgstr "Διαδίκτυο · Ρυθμίσεις Ethernet και IP"
 
 #: linux/libexec/monet-quick:7941
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
-msgstr "lan; ethernet; ενσύρματο δίκτυο; καλώδιο δικτύου; διεύθυνση ip; πύλη; dns"
+msgstr ""
+"lan; ethernet; ενσύρματο δίκτυο; καλώδιο δικτύου; διεύθυνση ip; πύλη; dns"
 
 #: linux/libexec/monet-quick:7942
 msgid "Birthdays and repeating notes"
@@ -10016,7 +10093,8 @@ msgstr "Ενέργεια & ύπνος · Οι εφαρμογές σας επισ
 #: linux/libexec/monet-quick:7957
 msgid ""
 "reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"
-msgstr "άνοιγμα εφαρμογών μετά από επανεκκίνηση; επαναφορά εφαρμογών; απομνημόνευση ανοιχτών εφαρμογών; παράθυρα εκεί που ήταν"
+msgstr ""
+"άνοιγμα εφαρμογών μετά από επανεκκίνηση; επαναφορά εφαρμογών; απομνημόνευση ανοιχτών εφαρμογών; παράθυρα εκεί που ήταν"
 
 #: linux/libexec/monet-quick:7959
 msgid "Choose default apps"
@@ -10179,7 +10257,8 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8661
 msgid "Files reopened. Its previous folders and tabs could not be saved."
-msgstr "Τα Αρχεία άνοιξαν ξανά. Οι προηγούμενοι φάκελοι και οι καρτέλες τους δεν μπόρεσαν να αποθηκευτούν."
+msgstr ""
+"Τα Αρχεία άνοιξαν ξανά. Οι προηγούμενοι φάκελοι και οι καρτέλες τους δεν μπόρεσαν να αποθηκευτούν."
 
 #: linux/libexec/monet-quick:8662
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
@@ -10225,7 +10304,8 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8674
 msgid "Private browsing stays closed. You can open the browser normally."
-msgstr "Η ιδιωτική περιήγηση μένει κλειστή. Μπορείτε να ανοίξετε κανονικά το πρόγραμμα περιήγησης."
+msgstr ""
+"Η ιδιωτική περιήγηση μένει κλειστή. Μπορείτε να ανοίξετε κανονικά το πρόγραμμα περιήγησης."
 
 #: linux/libexec/monet-quick:8730
 msgid "Some apps didn't reopen"
@@ -10234,7 +10314,8 @@ msgstr "Ορισμένες εφαρμογές δεν άνοιξαν ξανά"
 #: linux/libexec/monet-quick:8731
 msgid ""
 "Everything else is back where it was. Review what's missing and try again."
-msgstr "Όλα τα άλλα είναι πίσω εκεί που ήταν. Δείτε τι λείπει και δοκιμάστε ξανά."
+msgstr ""
+"Όλα τα άλλα είναι πίσω εκεί που ήταν. Δείτε τι λείπει και δοκιμάστε ξανά."
 
 #: linux/libexec/monet-quick:8735
 msgid "Back in Monet"
@@ -10307,7 +10388,8 @@ msgstr ""
 
 #: linux/libexec/monet-quick:9641
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
-msgstr "Επιλέξτε ένα πλήρες αρχείο ISO των Windows 11 σε αυτόν τον υπολογιστή ή σε συνδεδεμένο δίσκο."
+msgstr ""
+"Επιλέξτε ένα πλήρες αρχείο ISO των Windows 11 σε αυτόν τον υπολογιστή ή σε συνδεδεμένο δίσκο."
 
 #: linux/libexec/monet-quick:9768
 msgid "Couldn't check phones. Try again."
@@ -10489,7 +10571,8 @@ msgstr "Εμφάνιση προόδου μεταφοράς"
 #: linux/libexec/monet-files-tools:395
 msgid ""
 "Extraction continues in the background. Files opens the folder when it is ready."
-msgstr "Η αποσυμπίεση συνεχίζεται στο παρασκήνιο. Τα Αρχεία ανοίγουν τον φάκελο όταν είναι έτοιμος."
+msgstr ""
+"Η αποσυμπίεση συνεχίζεται στο παρασκήνιο. Τα Αρχεία ανοίγουν τον φάκελο όταν είναι έτοιμος."
 
 #: linux/libexec/monet-files-tools:398
 msgid "Preparing extraction"
@@ -10705,7 +10788,8 @@ msgstr "Η αποσυμπίεση δεν ολοκληρώθηκε"
 #: linux/libexec/monet-file-jobs:33
 msgid ""
 "Open Transfers in Files to see the problem or try again. Partial files were kept."
-msgstr "Ανοίξτε τις Μεταφορές στα Αρχεία για να δείτε το πρόβλημα ή να δοκιμάσετε ξανά. Τα μερικώς αποσυμπιεσμένα αρχεία διατηρήθηκαν."
+msgstr ""
+"Ανοίξτε τις Μεταφορές στα Αρχεία για να δείτε το πρόβλημα ή να δοκιμάσετε ξανά. Τα μερικώς αποσυμπιεσμένα αρχεία διατηρήθηκαν."
 
 #: linux/libexec/monet-rest:387
 msgid "Open Task Manager"
@@ -10718,7 +10802,8 @@ msgstr "Η μνήμη είναι σχεδόν γεμάτη"
 #: linux/libexec/monet-rest:406
 msgid ""
 "Closing an app you don't need keeps your PC responsive. Using the most now: %1."
-msgstr "Αν κλείσετε μια εφαρμογή που δεν χρειάζεστε, ο υπολογιστής σας μένει γρήγορος. Χρησιμοποιούν τα περισσότερα τώρα: %1."
+msgstr ""
+"Αν κλείσετε μια εφαρμογή που δεν χρειάζεστε, ο υπολογιστής σας μένει γρήγορος. Χρησιμοποιούν τα περισσότερα τώρα: %1."
 
 #: linux/share/monet/passwords/app.py:91 linux/share/monet/passwords/app_fill.py:32
 msgid "This action is not available."
@@ -12175,22 +12260,23 @@ msgctxt "an app's name in the menu"
 msgid "Apps"
 msgstr "Εφαρμογές"
 
-#: linux/share/applications/monet-apps.desktop:4
+#: linux/share/applications/monet-apps.desktop:33
 msgctxt "what an app is, under its name in the menu"
 msgid "App Library"
 msgstr "Βιβλιοθήκη εφαρμογών"
 
-#: linux/share/applications/monet-apps.desktop:5
+#: linux/share/applications/monet-apps.desktop:63
 msgctxt "an app's description in the menu"
 msgid "Every app you have, by where it came from and what it does"
 msgstr "Κάθε εφαρμογή σας, ανά προέλευση και λειτουργία"
 
-#: linux/share/applications/monet-apps.desktop:9
+#: linux/share/applications/monet-apps.desktop:96
 msgctxt ""
 "words the menu's search finds an app by; keep the semicolons between them"
 msgid ""
 "apps;applications;programs;library;installed;manage;uninstall;remove;store;"
-msgstr "εφαρμογές;προγράμματα;βιβλιοθήκη;εγκατεστημένες;διαχείριση;απεγκατάσταση;αφαίρεση;κατάστημα;apps;applications;"
+msgstr ""
+"εφαρμογές;προγράμματα;βιβλιοθήκη;εγκατεστημένες;διαχείριση;απεγκατάσταση;αφαίρεση;κατάστημα;apps;applications;"
 
 #: linux/share/applications/monet-archive.desktop:3
 msgctxt "an app's name in the menu"
@@ -12562,7 +12648,8 @@ msgstr "Γραμμές τίτλου του Monet"
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Windows without title bars until you point at the top of one: then its title bar slides down over it, with its buttons"
-msgstr "Παράθυρα χωρίς γραμμές τίτλου μέχρι να δείξετε στο πάνω μέρος ενός από αυτά: τότε η γραμμή τίτλου του γλιστρά από πάνω του, μαζί με τα κουμπιά του"
+msgstr ""
+"Παράθυρα χωρίς γραμμές τίτλου μέχρι να δείξετε στο πάνω μέρος ενός από αυτά: τότε η γραμμή τίτλου του γλιστρά από πάνω του, μαζί με τα κουμπιά του"
 
 #: linux/share/kwin/scripts/monet-work/metadata.json
 msgctxt ""
@@ -12574,7 +12661,8 @@ msgstr "Επαναφορά εργασίας του Monet"
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Tells Monet when windows open, close or move, so your apps come back where they were after a restart"
-msgstr "Ενημερώνει το Monet όταν ανοίγουν, κλείνουν ή μετακινούνται παράθυρα, ώστε οι εφαρμογές σας να επιστρέφουν εκεί που ήταν μετά από επανεκκίνηση"
+msgstr ""
+"Ενημερώνει το Monet όταν ανοίγουν, κλείνουν ή μετακινούνται παράθυρα, ώστε οι εφαρμογές σας να επιστρέφουν εκεί που ήταν μετά από επανεκκίνηση"
 
 #: linux/share/kwin/tabbox/monet-windows/metadata.json
 msgctxt ""
@@ -12973,7 +13061,8 @@ msgstr ""
 #: crates/monet/src/main.rs:367
 msgid ""
 "Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
-msgstr "Ο υπολογιστής σας θα κάνει επανεκκίνηση στα Windows και θα ανοίξει το FACEIT και μετά το παιχνίδι. Όταν βγείτε, θα επιστρέψει στο Monet."
+msgstr ""
+"Ο υπολογιστής σας θα κάνει επανεκκίνηση στα Windows και θα ανοίξει το FACEIT και μετά το παιχνίδι. Όταν βγείτε, θα επιστρέψει στο Monet."
 
 #: crates/monet/src/main.rs:368
 msgid ""
@@ -12990,7 +13079,8 @@ msgstr ""
 #: crates/monet/src/main.rs:370
 msgid ""
 "Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
-msgstr "Ο υπολογιστής σας θα κάνει επανεκκίνηση στα Windows, όπου θα ανοίξουν για εσάς τα δικά του προγράμματα εγκατάστασης του FACEIT. Αποδεχτείτε τους όρους τους μόνο αν συμφωνείτε και μετά συνδεθείτε. Οι ανοιχτές εφαρμογές θα κλείσουν."
+msgstr ""
+"Ο υπολογιστής σας θα κάνει επανεκκίνηση στα Windows, όπου θα ανοίξουν για εσάς τα δικά του προγράμματα εγκατάστασης του FACEIT. Αποδεχτείτε τους όρους τους μόνο αν συμφωνείτε και μετά συνδεθείτε. Οι ανοιχτές εφαρμογές θα κλείσουν."
 
 #: crates/monet/src/main.rs:371
 msgid ""
@@ -13078,15 +13168,18 @@ msgstr ""
 #: crates/monet/src/main.rs:939
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
-msgstr "Η επανεκκίνηση εμποδίστηκε. Αποθηκεύστε την εργασία σας και μετά επιλέξτε «Επανεκκίνηση και εγκατάσταση» στο «Παιχνίδι στα Windows»."
+msgstr ""
+"Η επανεκκίνηση εμποδίστηκε. Αποθηκεύστε την εργασία σας και μετά επιλέξτε «Επανεκκίνηση και εγκατάσταση» στο «Παιχνίδι στα Windows»."
 
 #: crates/monet/src/main.rs:945
 msgid "Windows setup stopped before it could use the installation media"
-msgstr "Η εγκατάσταση των Windows σταμάτησε πριν μπορέσει να χρησιμοποιήσει το μέσο εγκατάστασης"
+msgstr ""
+"Η εγκατάσταση των Windows σταμάτησε πριν μπορέσει να χρησιμοποιήσει το μέσο εγκατάστασης"
 
 #: crates/monet/src/main.rs:947
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
-msgstr "Ανοίξτε το «Παιχνίδι στα Windows» για να δοκιμάσετε ξανά τη λήψη ή να επιλέξετε ένα ISO των Windows 11."
+msgstr ""
+"Ανοίξτε το «Παιχνίδι στα Windows» για να δοκιμάσετε ξανά τη λήψη ή να επιλέξετε ένα ISO των Windows 11."
 
 #: crates/monet/src/main.rs:948
 msgid "Open Settings"
@@ -13330,21 +13423,25 @@ msgstr "Το πρόγραμμα εγκατάστασης του %1 είναι α
 #: crates/monet-bridge/src/bridge.rs:1760
 msgid ""
 "%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet."
-msgstr "Δεν ήταν δυνατή η λήψη του %1. Ελέγξτε τη σύνδεση στο διαδίκτυο και δοκιμάστε ξανά από τα Παιχνίδια στο Monet."
+msgstr ""
+"Δεν ήταν δυνατή η λήψη του %1. Ελέγξτε τη σύνδεση στο διαδίκτυο και δοκιμάστε ξανά από τα Παιχνίδια στο Monet."
 
 #: crates/monet-bridge/src/bridge.rs:1761
 msgid ""
 "Windows couldn't confirm that %1 made its installer, so Monet didn't run it."
-msgstr "Τα Windows δεν μπόρεσαν να επιβεβαιώσουν ότι το πρόγραμμα εγκατάστασης προέρχεται από το %1, οπότε το Monet δεν το εκτέλεσε."
+msgstr ""
+"Τα Windows δεν μπόρεσαν να επιβεβαιώσουν ότι το πρόγραμμα εγκατάστασης προέρχεται από το %1, οπότε το Monet δεν το εκτέλεσε."
 
 #: crates/monet-bridge/src/bridge.rs:1762
 msgid ""
 "%1 wasn't installed. You can try again from Games in Monet whenever you like."
-msgstr "Το %1 δεν εγκαταστάθηκε. Μπορείτε να δοκιμάσετε ξανά από τα Παιχνίδια στο Monet όποτε θέλετε."
+msgstr ""
+"Το %1 δεν εγκαταστάθηκε. Μπορείτε να δοκιμάσετε ξανά από τα Παιχνίδια στο Monet όποτε θέλετε."
 
 #: crates/monet-bridge/src/bridge.rs:1827
 msgid "%1 isn't set up in Windows. Set it up from Games in Monet."
-msgstr "Το %1 δεν έχει ρυθμιστεί στα Windows. Ρυθμίστε το από τα Παιχνίδια στο Monet."
+msgstr ""
+"Το %1 δεν έχει ρυθμιστεί στα Windows. Ρυθμίστε το από τα Παιχνίδια στο Monet."
 
 #: crates/monet-bridge/src/bridge.rs:1905
 msgid "Windows Update: downloading"
@@ -13478,4 +13575,5 @@ msgstr "Ρύθμιση του %1"
 #: crates/monet-bridge/src/cover.rs:341
 msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
-msgstr "Τα δικά του προγράμματα εγκατάστασης ανοίγουν εδώ, το ένα μετά το άλλο. Διαβάστε τους όρους τους και αποδεχτείτε τους μόνο αν συμφωνείτε: το Monet δεν το κάνει ποτέ για εσάς και δεν απενεργοποιεί τίποτα."
+msgstr ""
+"Τα δικά του προγράμματα εγκατάστασης ανοίγουν εδώ, το ένα μετά το άλλο. Διαβάστε τους όρους τους και αποδεχτείτε τους μόνο αν συμφωνείτε: το Monet δεν το κάνει ποτέ για εσάς και δεν απενεργοποιεί τίποτα."

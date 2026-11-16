@@ -69,8 +69,8 @@ msgid "Allow"
 msgstr "İzin ver"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.hardware/contents/ui/HardwareReadings.qml:43 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:26 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:91
-#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/games/Apps.qml:139 linux/share/monet/settings-app/MonetSettings.qml:9319
-#: image/graphics/monetgraphics.cpp:26 image/graphics/monetgraphics.cpp:28
+#: linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21 linux/share/monet/settings-app/MonetSettings.qml:9319 image/graphics/monetgraphics.cpp:26
+#: image/graphics/monetgraphics.cpp:28
 msgid "Graphics"
 msgstr "Ekran kartı"
 
@@ -239,7 +239,7 @@ msgstr ""
 #: linux/share/monet/settings-app/MonetSettings.qml:3836 linux/share/monet/settings-app/MonetSettings.qml:4217 linux/share/monet/settings-app/MonetSettings.qml:4624
 #: linux/share/monet/settings-app/MonetSettings.qml:4661 linux/share/monet/settings-app/MonetSettings.qml:4762 linux/share/monet/settings-app/MonetSettings.qml:8195
 #: linux/share/monet/settings-app/MonetSettings.qml:8919 linux/share/monet/settings-app/MonetSettings.qml:9239 linux/share/monet/store-app/Downloads.qml:97
-#: linux/share/monet/store-app/Store.qml:904 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
+#: linux/share/monet/store-app/Store.qml:905 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:708
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:462 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:573 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:472
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:475 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:678 setup/qml/Main.qml:986
 msgid "Try again"
@@ -247,19 +247,19 @@ msgstr "Yeniden dene"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:51
 msgid "Windows and effects"
-msgstr ""
+msgstr "Pencereler ve efektler"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:52
 msgid "Desktop, wallpaper and Home Bar"
-msgstr ""
+msgstr "Masaüstü, duvar kağıdı ve Ana çubuk"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:53
 msgid "Windows of older apps"
-msgstr ""
+msgstr "Eski uygulamaların pencereleri"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:58
 msgid "Apps using graphics"
-msgstr ""
+msgstr "Ekran kartını kullanan uygulamalar"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:93 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:442
 msgid "%1%"
@@ -267,11 +267,12 @@ msgstr "%%1"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:101
 msgid "No app is using the graphics card right now."
-msgstr ""
+msgstr "Şu anda ekran kartını kullanan bir uygulama yok."
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/GraphicsApps.qml:108
 msgid "This graphics driver does not report how much each app uses."
 msgstr ""
+"Bu ekran kartı sürücüsü her uygulamanın ne kadar kullandığını bildirmiyor."
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/HistoryChart.qml:121
 msgid "Waiting for sensor readings…"
@@ -411,7 +412,7 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:116
 msgid "%1 (built into the processor)"
-msgstr ""
+msgstr "%1 (işlemciye yerleşik)"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:173
 msgid "Resource"
@@ -704,7 +705,7 @@ msgid "Maximize"
 msgstr ""
 
 #: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:235 linux/share/monet/games/Games.qml:1040 linux/share/monet/games/Games.qml:1090
-#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1172
+#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1173
 #: linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282 linux/share/monet/passwords/app_support_ui.py:42
 #: crates/monet-usb/src/gui.rs:157
 msgid "Close"
@@ -818,23 +819,23 @@ msgstr "Uygulamalar"
 
 #: linux/share/monet/games/Apps.qml:103
 msgid "%1 didn't open. Try again, or open it from the menu."
-msgstr ""
+msgstr "%1 açılmadı. Yeniden deneyin ya da menüden açın."
 
 #: linux/share/monet/games/Apps.qml:116
 msgid "The shortcut couldn't be removed."
-msgstr ""
+msgstr "Kısayol kaldırılamadı."
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:171
 msgid "From the Store"
-msgstr ""
+msgstr "Mağaza'dan"
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:172
 msgid "Came with Monet"
-msgstr ""
+msgstr "Monet ile gelen"
 
 #: linux/share/monet/games/Apps.qml:135 linux/share/monet/games/Apps.qml:173
 msgid "Added by you"
-msgstr ""
+msgstr "Sizin eklediğiniz"
 
 #: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8192
 #: linux/libexec/monet-files-tools:712
@@ -843,29 +844,34 @@ msgstr "Windows programı"
 
 #: linux/share/monet/games/Apps.qml:139 linux/share/monet/settings-app/MonetSettings.qml:221 linux/share/monet/settings-app/MonetSettings.qml:3864
 msgid "Internet"
-msgstr ""
+msgstr "İnternet"
 
 #: linux/share/monet/games/Apps.qml:139 setup/monet_setup/app.py:45
 msgid "Office"
 msgstr "Ofis"
 
+#: linux/share/monet/games/Apps.qml:139
+msgctxt "a kind of app: drawing, photos and design"
+msgid "Graphics"
+msgstr "Grafik"
+
 #: linux/share/monet/games/Apps.qml:140
 msgid "Sound and video"
-msgstr ""
+msgstr "Ses ve video"
 
 #: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
 #: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5344 linux/share/monet/settings-app/MonetSettings.qml:6281
-#: linux/share/monet/store-app/Store.qml:178 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
+#: linux/share/monet/store-app/Store.qml:179 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "Oyunlar"
 
 #: linux/share/monet/games/Apps.qml:140
 msgid "Development"
-msgstr ""
+msgstr "Geliştirme"
 
 #: linux/share/monet/games/Apps.qml:141
 msgid "Utilities"
-msgstr ""
+msgstr "Yardımcı araçlar"
 
 #: linux/share/monet/games/Apps.qml:141 linux/share/monet/games/Apps.qml:141 setup/monet_setup/system.py:107
 msgid "Other"
@@ -873,7 +879,7 @@ msgstr "Diğer"
 
 #: linux/share/monet/games/Apps.qml:145
 msgid "Not opened yet"
-msgstr ""
+msgstr "Henüz açılmadı"
 
 #: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:350 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
@@ -898,26 +904,26 @@ msgstr "Tüm uygulamalar"
 
 #: linux/share/monet/games/Apps.qml:170
 msgid "Recently used"
-msgstr ""
+msgstr "Son kullanılanlar"
 
 #: linux/share/monet/games/Apps.qml:174
 msgid "Windows programs"
-msgstr ""
+msgstr "Windows programları"
 
-#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:701
-#: linux/share/monet/store-app/Store.qml:713
+#: linux/share/monet/games/Apps.qml:316 linux/share/monet/games/Apps.qml:336 linux/share/monet/store-app/Store.qml:702
+#: linux/share/monet/store-app/Store.qml:714
 msgid "Find an app"
 msgstr "Uygulama ara"
 
 #: linux/share/monet/games/Apps.qml:413
 msgid "Kinds"
-msgstr ""
+msgstr "Türler"
 
 #: linux/share/monet/games/Apps.qml:515
 msgid "Apps called “%1”"
-msgstr ""
+msgstr "“%1” adlı uygulamalar"
 
-#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:949
+#: linux/share/monet/games/Apps.qml:525 linux/share/monet/store-app/Store.qml:950
 msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "%1 uygulama"
@@ -930,19 +936,19 @@ msgstr "Ad"
 
 #: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Apps.qml:839
 msgid "Last opened"
-msgstr ""
+msgstr "Son açılma"
 
 #: linux/share/monet/games/Apps.qml:685
 msgid "No app is called “%1”."
-msgstr ""
+msgstr "“%1” adlı bir uygulama yok."
 
 #: linux/share/monet/games/Apps.qml:686
 msgid "The apps you open will be here."
-msgstr ""
+msgstr "Açtığınız uygulamalar burada olacak."
 
 #: linux/share/monet/games/Apps.qml:687
 msgid "No apps here."
-msgstr ""
+msgstr "Burada uygulama yok."
 
 #: linux/share/monet/games/Apps.qml:762 linux/share/monet/settings-app/MonetSettings.qml:4016 linux/share/monet/settings-app/MonetSettings.qml:7016
 #: linux/share/monet/store-app/AppPage.qml:232 linux/share/monet/store-app/Downloads.qml:196 linux/share/monet/store-app/Home.qml:224
@@ -951,31 +957,32 @@ msgstr "Parolasız"
 
 #: linux/share/monet/games/Apps.qml:769
 msgid "Update or remove in the Store"
-msgstr ""
+msgstr "Mağaza'da güncelleyin veya kaldırın"
 
 #: linux/share/monet/games/Apps.qml:776
 msgid "Remove…"
-msgstr ""
+msgstr "Kaldır…"
 
 #: linux/share/monet/games/Apps.qml:798
 msgid "Remove %1 from your apps? The program itself stays where it is."
 msgstr ""
+"%1 uygulamalarınızdan kaldırılsın mı? Programın kendisi olduğu yerde kalır."
 
 #: linux/share/monet/games/Apps.qml:835
 msgid "Came from"
-msgstr ""
+msgstr "Kaynak"
 
 #: linux/share/monet/games/Apps.qml:837
 msgid "Kind"
-msgstr ""
+msgstr "Tür"
 
 #: linux/share/monet/games/GamePage.qml:25
 msgid "Its download is paused in %1."
-msgstr ""
+msgstr "İndirmesi %1 içinde duraklatıldı."
 
 #: linux/share/monet/games/GamePage.qml:26
 msgid "It's waiting its turn in %1's downloads."
-msgstr ""
+msgstr "%1 indirmelerinde sırasını bekliyor."
 
 #: linux/share/monet/games/GamePage.qml:27
 msgid "Steam is downloading it: %1%."
@@ -983,12 +990,13 @@ msgstr "Steam indiriyor: %%1."
 
 #: linux/share/monet/games/GamePage.qml:28
 msgid "%1 is downloading it."
-msgstr ""
+msgstr "%1 onu indiriyor."
 
 #: linux/share/monet/games/GamePage.qml:29
 msgid ""
 "You own it, and it isn't installed yet. Install opens %1, which downloads it."
 msgstr ""
+"Bu oyuna sahipsiniz ama henüz yüklü değil. Yükle, oyunu indirecek olan %1 uygulamasını açar."
 
 #: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1699
 msgid ""
@@ -1056,7 +1064,7 @@ msgstr "Oynama süresi"
 
 #: linux/share/monet/games/GamePage.qml:50
 msgid "Size once installed"
-msgstr ""
+msgstr "Yüklendikten sonraki boyut"
 
 #: linux/share/monet/games/GamePage.qml:50
 msgid "Size on disk"
@@ -1066,39 +1074,45 @@ msgstr "Diskteki boyut"
 msgid ""
 "Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
 msgstr ""
+"Geçen sefer FACEIT, Windows'ta indirilemedi. İnternet bağlantısını kontrol edip yeniden deneyin."
 
 #: linux/share/monet/games/GamePage.qml:59
 msgid ""
 "Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
 msgstr ""
+"Geçen sefer Windows, yükleyicinin FACEIT'ten geldiğini doğrulayamadı, bu yüzden Monet onu çalıştırmadı. Daha sonra yeniden deneyin."
 
 #: linux/share/monet/games/GamePage.qml:60
 msgid ""
 "Last time, FACEIT's installer closed before it finished. Try again whenever you like."
 msgstr ""
+"Geçen sefer FACEIT'in yükleyicisi bitmeden kapandı. İstediğiniz zaman yeniden deneyin."
 
 #: linux/share/monet/games/GamePage.qml:61
 msgid "Last time, you came back before FACEIT was set up."
-msgstr ""
+msgstr "Geçen sefer FACEIT kurulmadan önce geri döndünüz."
 
 #: linux/share/monet/games/GamePage.qml:64
 msgid ""
 "Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
 msgstr ""
+"FACEIT'te oyna, bilgisayarınızı Windows'ta yeniden başlatıp önce FACEIT'i, ardından %1 oyununu açar. Oyna ise her zamanki gibi burada oynatır."
 
 #: linux/share/monet/games/GamePage.qml:65
 msgid "Steam in Windows installs it the first time."
-msgstr ""
+msgstr "İlk seferde Windows'taki Steam onu yükler."
 
 #: linux/share/monet/games/GamePage.qml:66
 msgid ""
 "%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
 msgstr ""
+"%1 burada oynanıyor ama FACEIT maçları ve hile önleyicisi yalnızca Windows'ta çalışır. Monet, FACEIT'in kendi yükleyicileriyle FACEIT'i orada bir kez kurabilir."
 
 #: linux/share/monet/games/GamePage.qml:68
 msgid ""
 "Monet couldn't look in Windows at this start, so setting up checks what's there first."
 msgstr ""
+"Monet bu açılışta Windows'un içine bakamadı, bu yüzden kurulum önce orada neler olduğunu kontrol eder."
 
 #: linux/share/monet/games/GamePage.qml:75 linux/share/monet/settings-app/MonetSettings.qml:7844
 msgid "Secure Boot"
@@ -1107,12 +1121,13 @@ msgstr "Güvenli Önyükleme"
 #: linux/share/monet/games/GamePage.qml:76 linux/share/monet/games/GamePage.qml:82
 msgctxt "a protection is"
 msgid "On"
-msgstr ""
+msgstr "Açık"
 
 #: linux/share/monet/games/GamePage.qml:77
 msgid ""
 "Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
 msgstr ""
+"Kapalı. FACEIT açık olmasını istiyor: Ayarlar'daki Güvenlik bölümü, Monet'nin yine de başlayabilmesi için bunun nasıl yapılacağını gösterir."
 
 #: linux/share/monet/games/GamePage.qml:78 linux/share/monet/settings-app/MonetSettings.qml:7849
 msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
@@ -1121,29 +1136,31 @@ msgstr ""
 
 #: linux/share/monet/games/GamePage.qml:79
 msgid "Couldn't check."
-msgstr ""
+msgstr "Kontrol edilemedi."
 
 #: linux/share/monet/games/GamePage.qml:82
 msgid "TPM 2.0"
-msgstr ""
+msgstr "TPM 2.0"
 
 #: linux/share/monet/games/GamePage.qml:83
 msgid ""
 "Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
 msgstr ""
+"Bulunamadı. FACEIT bir TPM istiyor: çoğu bilgisayarda işlemcinin içindedir ve donanım yazılımı ayarlarından açılır (Intel PTT veya AMD fTPM)."
 
 #: linux/share/monet/games/GamePage.qml:85
 msgid "Virtualization-based security"
-msgstr ""
+msgstr "Sanallaştırma tabanlı güvenlik"
 
 #: linux/share/monet/games/GamePage.qml:85
 msgid "On in Windows"
-msgstr ""
+msgstr "Windows'ta açık"
 
 #: linux/share/monet/games/GamePage.qml:86
 msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
 msgstr ""
+"Windows'ta kapalı. FACEIT bazı oyunculardan bunu istiyor: donanım yazılımı ayarlarından sanallaştırmayı ve IOMMU'yu, ardından Windows Güvenliği'nde Bellek bütünlüğü'nü açın."
 
 #: linux/share/monet/games/GamePage.qml:243 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
 #: setup/qml/Main.qml:223
@@ -1152,11 +1169,11 @@ msgstr "Geri"
 
 #: linux/share/monet/games/GamePage.qml:262 linux/share/monet/games/Games.qml:498
 msgid "Install with %1"
-msgstr ""
+msgstr "%1 ile yükle"
 
 #: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:499
 msgid "Show downloads"
-msgstr ""
+msgstr "İndirilenleri göster"
 
 #: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:504
 #: linux/share/monet/settings-app/MonetSettings.qml:288 linux/share/monet/settings-app/MonetSettings.qml:3427 linux/share/monet/settings-app/MonetSettings.qml:8388
@@ -1177,23 +1194,23 @@ msgstr "Favorilere ekle"
 
 #: linux/share/monet/games/GamePage.qml:370
 msgid "Ready in Windows"
-msgstr ""
+msgstr "Windows'ta hazır"
 
 #: linux/share/monet/games/GamePage.qml:370
 msgid "Not set up in Windows yet"
-msgstr ""
+msgstr "Windows'ta henüz kurulmadı"
 
 #: linux/share/monet/games/GamePage.qml:427
 msgid "Play on FACEIT"
-msgstr ""
+msgstr "FACEIT'te oyna"
 
 #: linux/share/monet/games/GamePage.qml:427
 msgid "Set up FACEIT"
-msgstr ""
+msgstr "FACEIT'i kur"
 
 #: linux/share/monet/games/GamePage.qml:435
 msgid "Security settings"
-msgstr ""
+msgstr "Güvenlik ayarları"
 
 #: linux/share/monet/games/Games.qml:255 linux/share/monet/settings-app/MonetSettings.qml:1150 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
 #: linux/libexec/monet-quick:9981
@@ -1204,25 +1221,29 @@ msgstr "Monet, Windows'a geçemedi."
 msgid ""
 "That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page."
 msgstr ""
+"Bu bir Steam anahtarına benzemiyor. Anahtar, Steam'in anahtar sayfasından alınan 32 harf ve rakamdan oluşur."
 
 #: linux/share/monet/games/Games.qml:308
 msgid "Monet couldn't keep the key. Try again."
-msgstr ""
+msgstr "Monet anahtarı saklayamadı. Yeniden deneyin."
 
 #: linux/share/monet/games/Games.qml:314
 msgid ""
 "Steam didn't accept this key. Check that it's copied whole, or make a new one."
 msgstr ""
+"Steam bu anahtarı kabul etmedi. Tamamen kopyalandığını kontrol edin ya da yeni bir anahtar oluşturun."
 
 #: linux/share/monet/games/Games.qml:315 linux/share/monet/games/Games.qml:1005
 msgid ""
 "Steam didn't share the games of %1. Add a key made while signed in to that account."
 msgstr ""
+"Steam, %1 hesabının oyunlarını paylaşmadı. O hesapta oturum açıkken oluşturulmuş bir anahtar ekleyin."
 
 #: linux/share/monet/games/Games.qml:316
 msgid ""
 "Steam couldn't be reached. The key is kept, and Games tries again when it opens."
 msgstr ""
+"Steam'e ulaşılamadı. Anahtar saklandı; Oyunlar açıldığında yeniden dener."
 
 #: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8426
 #: linux/share/monet/settings-app/MonetSettings.qml:9323 linux/libexec/monet-quick:8882 linux/libexec/monet-quick:8882
@@ -1259,7 +1280,7 @@ msgstr "%1 MB"
 
 #: linux/share/monet/games/Games.qml:367
 msgid "%1 · Download paused"
-msgstr ""
+msgstr "%1 · İndirme duraklatıldı"
 
 #: linux/share/monet/games/Games.qml:368
 msgid "%1 · Downloading, %2%"
@@ -1267,19 +1288,19 @@ msgstr "%1 · İndiriliyor, yüzde %2"
 
 #: linux/share/monet/games/Games.qml:369
 msgid "%1 · Downloading"
-msgstr ""
+msgstr "%1 · İndiriliyor"
 
 #: linux/share/monet/games/Games.qml:370
 msgid "%1 · Waiting to download"
-msgstr ""
+msgstr "%1 · İndirmeyi bekliyor"
 
 #: linux/share/monet/games/Games.qml:371
 msgid "%1 · Not installed, %2"
-msgstr ""
+msgstr "%1 · Yüklü değil, %2"
 
 #: linux/share/monet/games/Games.qml:372
 msgid "%1 · Not installed"
-msgstr ""
+msgstr "%1 · Yüklü değil"
 
 #: linux/share/monet/games/Games.qml:404
 msgid "All games"
@@ -1307,7 +1328,7 @@ msgstr "Sayfasını aç"
 
 #: linux/share/monet/games/Games.qml:507
 msgid "Install in Monet"
-msgstr ""
+msgstr "Monet'ye yükle"
 
 #: linux/share/monet/games/Games.qml:511
 msgid "Remove from favorites"
@@ -1365,38 +1386,40 @@ msgstr "Göster"
 
 #: linux/share/monet/games/Games.qml:942
 msgid "All"
-msgstr ""
+msgstr "Tümü"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
-#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:187 linux/share/monet/store-app/Store.qml:482
 msgid "Installed"
 msgstr "Yüklü"
 
 #: linux/share/monet/games/Games.qml:942 linux/share/monet/games/Games.qml:1366
 msgid "Not installed"
-msgstr ""
+msgstr "Yüklü değil"
 
 #: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1861
 msgid "Steam key"
-msgstr ""
+msgstr "Steam anahtarı"
 
 #: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1032
 msgid "Add Steam key"
-msgstr ""
+msgstr "Steam anahtarı ekle"
 
 #: linux/share/monet/games/Games.qml:1004
 msgid ""
 "Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again."
 msgstr ""
+"Steam anahtarınızı kabul etmedi, bu yüzden yalnızca burada yüklü Steam oyunları gösteriliyor. Yeni bir anahtar oluşturup yeniden ekleyin."
 
 #: linux/share/monet/games/Games.qml:1027
 msgid ""
 "Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once."
 msgstr ""
+"Oyunlar, burada yüklü Steam oyunlarını gösterir. Steam'de sahip olduğunuz her oyunu görmek için Steam anahtarınızı bir kez ekleyin."
 
 #: linux/share/monet/games/Games.qml:1032
 msgid "Change key"
-msgstr ""
+msgstr "Anahtarı değiştir"
 
 #: linux/share/monet/games/Games.qml:1077
 msgid ""
@@ -1422,7 +1445,7 @@ msgstr "Oynamaya devam et"
 msgid "Install"
 msgstr "Yükle"
 
-#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:171
 msgid "Play"
 msgstr "Oyna"
 
@@ -1440,11 +1463,11 @@ msgstr "Henüz bir şey oynanmadı"
 
 #: linux/share/monet/games/Games.qml:1478
 msgid "All installed"
-msgstr ""
+msgstr "Hepsi yüklü"
 
 #: linux/share/monet/games/Games.qml:1479
 msgid "Nothing installed here yet"
-msgstr ""
+msgstr "Burada henüz yüklü bir şey yok"
 
 #: linux/share/monet/games/Games.qml:1480 linux/share/monet/settings-app/MonetSettings.qml:7709
 msgid "No games yet"
@@ -1460,11 +1483,11 @@ msgstr "Oynadığınız oyunlar burada görünür, en yenisi önce."
 
 #: linux/share/monet/games/Games.qml:1491
 msgid "Every game you own here is installed."
-msgstr ""
+msgstr "Burada sahip olduğunuz her oyun yüklü."
 
 #: linux/share/monet/games/Games.qml:1492
 msgid "Choose a game you own and Install, and it shows up here."
-msgstr ""
+msgstr "Sahip olduğunuz bir oyunu seçip Yükle'ye basın, burada görünsün."
 
 #: linux/share/monet/games/Games.qml:1493
 msgid ""
@@ -1482,11 +1505,11 @@ msgstr "Windows açılamadı"
 
 #: linux/share/monet/games/Games.qml:1679 crates/monet/src/main.rs:361
 msgid "Set up FACEIT in Windows?"
-msgstr ""
+msgstr "FACEIT, Windows'ta kurulsun mu?"
 
 #: linux/share/monet/games/Games.qml:1680 crates/monet/src/main.rs:356
 msgid "Play %1 on FACEIT?"
-msgstr ""
+msgstr "%1, FACEIT'te oynansın mı?"
 
 #: linux/share/monet/games/Games.qml:1681
 msgid "%1 needs Windows"
@@ -1504,11 +1527,13 @@ msgstr "Windows'ta yeniden başlatılsın mı?"
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
 msgstr ""
+"Bilgisayarınız Windows'ta yeniden başlar ve FACEIT'in kendi yükleyicilerini FACEIT'ten indirir: önce hile önleyiciyi, ardından FACEIT uygulamasını. Her biri sizin için açılır; koşullarını okur, yalnızca kabul ediyorsanız onaylarsınız. Ardından FACEIT ve Steam'de oturum açın ve Monet'ye dönüş düğmesini seçin."
 
 #: linux/share/monet/games/Games.qml:1697
 msgid ""
 "Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
 msgstr ""
+"Bilgisayarınız Windows'ta yeniden başlar ve önce FACEIT'i, ardından %1 oyununu açar. Oyundan çıkınca buraya dönersiniz. Önce çalışmalarınızı kaydedin."
 
 #: linux/share/monet/games/Games.qml:1707
 msgid ""
@@ -1540,7 +1565,7 @@ msgstr ""
 
 #: linux/share/monet/games/Games.qml:1741
 msgid "Restart & Set up"
-msgstr ""
+msgstr "Yeniden başlat & kur"
 
 #: linux/share/monet/games/Games.qml:1742 linux/share/monet/settings-app/MonetSettings.qml:8482
 msgid "Restart & Play"
@@ -1556,48 +1581,51 @@ msgstr "Yeniden başlat"
 
 #: linux/share/monet/games/Games.qml:1808
 msgid "See every game you own on Steam"
-msgstr ""
+msgstr "Steam'de sahip olduğunuz her oyunu görün"
 
 #: linux/share/monet/games/Games.qml:1817
 msgid ""
 "Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
 msgstr ""
+"Steam, sahip olduğunuz oyunların listesini yalnızca sizin oluşturabileceğiniz bir anahtarla paylaşır. Monet anahtarı bu bilgisayarda saklar ve onu yalnızca Steam'den bu listeyi istemek için kullanır. Parolanıza asla ihtiyaç duymaz."
 
 #: linux/share/monet/games/Games.qml:1828
 msgid ""
 "Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
 msgstr ""
+"Steam'in anahtar sayfasını açın ve %1 olarak oturum açın. Alan adı olarak monet yazın, kabul edin ve telefonunuzdaki Steam uygulamasında onaylayın. Ardından anahtarı kopyalayıp buraya yapıştırın."
 
 #: linux/share/monet/games/Games.qml:1829
 msgid ""
 "Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
 msgstr ""
+"Steam'in anahtar sayfasını açın ve oturum açın. Alan adı olarak monet yazın, kabul edin ve telefonunuzdaki Steam uygulamasında onaylayın. Ardından anahtarı kopyalayıp buraya yapıştırın."
 
 #: linux/share/monet/games/Games.qml:1834
 msgid "Open Steam's key page"
-msgstr ""
+msgstr "Steam'in anahtar sayfasını aç"
 
 #: linux/share/monet/games/Games.qml:1869
 msgid "A key is kept. Paste a new one to change it."
-msgstr ""
+msgstr "Bir anahtar saklanıyor. Değiştirmek için yenisini yapıştırın."
 
 #: linux/share/monet/games/Games.qml:1869
 msgid "Paste your Steam key"
-msgstr ""
+msgstr "Steam anahtarınızı yapıştırın"
 
 #: linux/share/monet/games/Games.qml:1884
 msgid "Asking Steam…"
-msgstr ""
+msgstr "Steam'e soruluyor…"
 
 #: linux/share/monet/games/Games.qml:1887
 msgid "Steam lists %1 game you own."
 msgid_plural "Steam lists %1 games you own."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Steam, sahip olduğunuz %1 oyunu listeliyor."
+msgstr[1] "Steam, sahip olduğunuz %1 oyunu listeliyor."
 
 #: linux/share/monet/games/Games.qml:1897
 msgid "Forget key"
-msgstr ""
+msgstr "Anahtarı unut"
 
 #: linux/share/monet/games/Games.qml:1910 linux/share/monet/settings-app/MonetSettings.qml:5029 linux/share/monet/settings-app/MonetSettings.qml:9374
 msgid "Save"
@@ -1790,23 +1818,24 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:170
 msgid "This screen has extra bars. Use Advanced to arrange them first."
-msgstr ""
+msgstr "Bu ekranda ek çubuklar var. Önce Gelişmiş ile onları düzenleyin."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:174
 msgid "Could not change the bar layout. Close this editor and try again."
 msgstr ""
+"Çubuk düzeni değiştirilemedi. Bu düzenleyiciyi kapatıp yeniden deneyin."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:190
 msgid "Could not read the app layout. Close this editor and try again."
-msgstr ""
+msgstr "Uygulama düzeni okunamadı. Bu düzenleyiciyi kapatıp yeniden deneyin."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:257
 msgid "Home Bar"
-msgstr ""
+msgstr "Ana çubuk"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273
 msgid "Layout"
-msgstr ""
+msgstr "Düzen"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273 linux/share/monet/settings-app/MonetSettings.qml:1226
 msgid "Appearance"
@@ -1814,100 +1843,103 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:273
 msgid "Behavior"
-msgstr ""
+msgstr "Davranış"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:304
 msgid "Drag items on the bar to reorder them."
-msgstr ""
+msgstr "Sıralarını değiştirmek için çubuktaki öğeleri sürükleyin."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:305
 msgid "Bar layout"
-msgstr ""
+msgstr "Çubuk düzeni"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:309
 msgid "One bar"
-msgstr ""
+msgstr "Tek çubuk"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:315
 msgid "Three bars"
-msgstr ""
+msgstr "Üç çubuk"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:321
 msgid ""
 "Includes the menu, apps, quick settings, sound and clock. Your pins and widgets stay with you."
 msgstr ""
+"Menüyü, uygulamaları, hızlı ayarları, sesi ve saati içerir. Sabitledikleriniz ve widget'larınız sizinle kalır."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:322
 msgid "Bar shape"
-msgstr ""
+msgstr "Çubuk şekli"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:326
 msgid "Full-width bar"
-msgstr ""
+msgstr "Tam genişlikte çubuk"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:326
 msgid "Compact dock"
-msgstr ""
+msgstr "Kompakt dock"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:357
 msgid "Screen edge"
-msgstr ""
+msgstr "Ekran kenarı"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:363 linux/share/monet/panel/MonetPanelConfiguration.qml:387
 msgid "Bottom"
-msgstr ""
+msgstr "Alt"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:364 linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403
 msgid "Top"
-msgstr ""
+msgstr "Üst"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:365
 msgid "Left"
-msgstr ""
+msgstr "Sol"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:366
 msgid "Right"
-msgstr ""
+msgstr "Sağ"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:375
 msgid "Bar position along edge"
-msgstr ""
+msgstr "Çubuğun kenardaki konumu"
 
-#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:385 linux/share/monet/panel/MonetPanelConfiguration.qml:403
+msgctxt "where on the bar: at its start, not the verb"
 msgid "Start"
-msgstr "Başlat"
+msgstr "Baş"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:386 linux/share/monet/panel/MonetPanelConfiguration.qml:410
 msgid "Center"
-msgstr ""
+msgstr "Orta"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:387
 msgid "End"
-msgstr ""
+msgstr "Son"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:397
 msgid "App icon position"
-msgstr ""
+msgstr "Uygulama simgelerinin konumu"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:416
 msgid "Places app icons within the space between the other items on this bar."
 msgstr ""
+"Uygulama simgelerini bu çubuktaki diğer öğelerin arasındaki alana yerleştirir."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:424 linux/share/monet/panel/MonetPanelConfiguration.qml:444
 msgid "Bar width"
-msgstr ""
+msgstr "Çubuk genişliği"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:424 linux/share/monet/panel/MonetPanelConfiguration.qml:444
 msgid "Bar height"
-msgstr ""
+msgstr "Çubuk yüksekliği"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:429
 msgid "Small"
-msgstr ""
+msgstr "Küçük"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:430
 msgid "Medium"
-msgstr ""
+msgstr "Orta"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:431 linux/share/monet/settings-app/MonetSettings.qml:6224
 msgid "Large"
@@ -1915,116 +1947,117 @@ msgstr "Büyük"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:457
 msgid "Decrease bar size"
-msgstr ""
+msgstr "Çubuğu küçült"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:466
 msgid "Bar size in pixels"
-msgstr ""
+msgstr "Piksel olarak çubuk boyutu"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:478
 msgid "Increase bar size"
-msgstr ""
+msgstr "Çubuğu büyüt"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:485
 msgid "Apply size"
-msgstr ""
+msgstr "Boyutu uygula"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:492
 msgid "Floating bar"
-msgstr ""
+msgstr "Yüzen çubuk"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:496
 msgid "Flush with edge"
-msgstr ""
+msgstr "Kenara bitişik"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:501
 msgid "Floating"
-msgstr ""
+msgstr "Yüzen"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:506
 msgid "Background opacity"
-msgstr ""
+msgstr "Arka plan opaklığı"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:513
 msgid "Adaptive"
-msgstr ""
+msgstr "Uyarlanır"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:514
 msgid "Opaque"
-msgstr ""
+msgstr "Opak"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:515
 msgid "Translucent"
-msgstr ""
+msgstr "Yarı saydam"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:530
 msgid "Bar visibility"
-msgstr ""
+msgstr "Çubuğun görünürlüğü"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:533
 msgid "Reserve space"
-msgstr ""
+msgstr "Yer ayır"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:534
 msgid "Maximized windows stop at the bar."
-msgstr ""
+msgstr "Ekranı kaplayan pencereler çubukta durur."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:535
 msgid "Keep visible"
-msgstr ""
+msgstr "Görünür tut"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:536
 msgid "The bar stays above windows."
-msgstr ""
+msgstr "Çubuk pencerelerin üstünde kalır."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:537
 msgid "Dodge windows"
-msgstr ""
+msgstr "Pencerelerden kaç"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:538
 msgid "Hide the bar when a window overlaps it."
-msgstr ""
+msgstr "Bir pencere çubuğun üstüne gelince çubuğu gizler."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:539
 msgid "Auto-hide"
-msgstr ""
+msgstr "Otomatik gizle"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:540
 msgid "Move the pointer to the screen edge to show the bar."
-msgstr ""
+msgstr "Çubuğu göstermek için işaretçiyi ekran kenarına götürün."
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:568
 msgid "Add widgets…"
-msgstr ""
+msgstr "Widget ekle…"
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:573
 msgid "Advanced…"
-msgstr ""
+msgstr "Gelişmiş…"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:9 linux/share/monet/settings-app/MonetSettings.qml:4476
 msgid "Test display colors"
-msgstr ""
+msgstr "Ekran renklerini test et"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:41
 msgid "Close test"
-msgstr ""
+msgstr "Testi kapat"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:63
 msgid ""
 "Look for steps that blend together near black or white. Turn off Night Light before checking the grays for a tint."
 msgstr ""
+"Siyaha veya beyaza yakın yerlerde birbirine karışan basamaklara bakın. Grilerde renk tonu olup olmadığına bakmadan önce Gece ışığı'nı kapatın."
 
 #: linux/share/monet/settings-app/DisplayTest.qml:70
 msgid "Shadow detail"
-msgstr ""
+msgstr "Gölge ayrıntısı"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:71
 msgid "Highlight detail"
-msgstr ""
+msgstr "Parlak alan ayrıntısı"
 
 #: linux/share/monet/settings-app/DisplayTest.qml:72
 msgid "Neutral grays"
-msgstr ""
+msgstr "Nötr griler"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:133
 msgid "Search couldn't finish. Try again."
@@ -2063,7 +2096,7 @@ msgstr "yerleştirme düzenler yardım pencereler yan yana yarılar döşeme"
 #: linux/share/monet/settings-app/MonetSettings.qml:220
 msgctxt "Settings search words, space-separated"
 msgid "title bar titlebar borderless window frame buttons"
-msgstr ""
+msgstr "başlık çubuğu başlık kenarlıksız pencere çerçevesi düğmeler titlebar"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:222
 msgctxt "Settings search words, space-separated"
@@ -2168,6 +2201,7 @@ msgstr ""
 msgctxt "Settings search words, space-separated"
 msgid "restart reboot reopen apps again windows remember session"
 msgstr ""
+"yeniden başlat yeniden başlatma yeniden aç uygulamalar tekrar pencereler hatırla oturum restart reboot"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:255 linux/share/monet/settings-app/MonetSettings.qml:7272
 msgid "Privacy"
@@ -2388,6 +2422,7 @@ msgstr ""
 msgid ""
 "Windows setup couldn't start. Wait for any current setup to finish, then try again."
 msgstr ""
+"Windows kurulumu başlatılamadı. Süren bir kurulum varsa bitmesini bekleyip yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:607
 msgid "The return summary couldn't load. Try again."
@@ -2405,21 +2440,21 @@ msgstr "Ayarlar"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:927
 msgid "Couldn't change the notification volume."
-msgstr ""
+msgstr "Bildirim ses düzeyi değiştirilemedi."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1116 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:217
 #: linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:121 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:138
 msgid "%1 isn't connected now. Connect it and try again."
-msgstr ""
+msgstr "%1 şu anda bağlı değil. Bağlayıp yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1117 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:139
 msgid "The microphone didn't switch to %1. Try again."
-msgstr ""
+msgstr "Mikrofon %1 cihazına geçmedi. Yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1135 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:218 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:122
 msgctxt "%1 is speakers, headphones or a screen"
 msgid "Sound didn't switch to %1. Try again."
-msgstr ""
+msgstr "Ses %1 cihazına geçmedi. Yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1191
 msgid "An automatic update is in progress."
@@ -2745,7 +2780,7 @@ msgstr "Yeni Monet, bir sonraki yeniden başlatmanızda açılır."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1440
 msgid "Monet couldn't finish the update. Try again."
-msgstr ""
+msgstr "Monet güncellemeyi tamamlayamadı. Yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1441
 msgid "Monet only updates when you ask it to."
@@ -2823,7 +2858,7 @@ msgstr ""
 msgid "Until turned off or you sign out"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/settings-app/MonetSettings.qml:1652 linux/share/monet/store-app/Store.qml:483
 msgid "Finishing…"
 msgstr ""
 
@@ -2888,11 +2923,11 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1796
 msgid "Couldn't read the drives. Try refreshing."
-msgstr ""
+msgstr "Sürücüler okunamadı. Yenilemeyi deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1807
 msgid "The disk operation couldn't finish."
-msgstr ""
+msgstr "Disk işlemi tamamlanamadı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:1825
 msgid "Password settings couldn't finish. Try again."
@@ -3203,12 +3238,13 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3701
 msgid "Title bars appear when you point at the top"
-msgstr ""
+msgstr "İşaretçiyi üste götürünce başlık çubukları görünür"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3701
 msgid ""
 "Windows go without a title bar until you move the pointer to the top of one. Then it slides down, with the buttons. Off, every window keeps its glass title bar"
 msgstr ""
+"İşaretçiyi bir pencerenin üstüne götürene kadar pencerelerde başlık çubuğu olmaz. Sonra başlık çubuğu düğmeleriyle birlikte aşağı kayar. Kapalıyken her pencere kendi cam başlık çubuğunu korur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3720
 msgctxt "how see-through Monet's glass is"
@@ -3302,11 +3338,11 @@ msgstr "Bağlanıyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3855
 msgid "Unmanaged"
-msgstr ""
+msgstr "Yönetilmiyor"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3856
 msgid "Cable unplugged"
-msgstr ""
+msgstr "Kablo takılı değil"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3857 linux/share/monet/settings-app/MonetSettings.qml:3868 linux/share/monet/settings-app/MonetSettings.qml:4157
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:509
@@ -3315,7 +3351,7 @@ msgstr "Bağlı değil"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3866 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:504
 msgid "Connected to LAN"
-msgstr ""
+msgstr "LAN'a bağlı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3867
 msgid "Connected to %1"
@@ -3323,19 +3359,19 @@ msgstr "%1 ağına bağlı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3871
 msgid "LAN (Ethernet)"
-msgstr ""
+msgstr "LAN (Ethernet)"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3878
 msgid "Checking wired connections…"
-msgstr ""
+msgstr "Kablolu bağlantılar kontrol ediliyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3879
 msgid "No Ethernet adapter detected"
-msgstr ""
+msgstr "Ethernet bağdaştırıcısı bulunamadı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3880
 msgid "Wired connection details unavailable"
-msgstr ""
+msgstr "Kablolu bağlantı ayrıntıları kullanılamıyor"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3894 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:508 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:526
 msgid "Unavailable"
@@ -3343,24 +3379,25 @@ msgstr "Kullanılamıyor"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3898
 msgid "Network adapter"
-msgstr ""
+msgstr "Ağ bağdaştırıcısı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3901
 msgid "Default gateway"
-msgstr ""
+msgstr "Varsayılan ağ geçidi"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3902
 msgid "DNS servers"
-msgstr ""
+msgstr "DNS sunucuları"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3917
 msgid "Manage wired connections…"
-msgstr ""
+msgstr "Kablolu bağlantıları yönet…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3918
 msgid ""
 "Edit Ethernet profiles, IP addresses and DNS in system network settings."
 msgstr ""
+"Ethernet profillerini, IP adreslerini ve DNS'i sistemin ağ ayarlarından düzenleyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:3928 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:499
 msgid "Wi-Fi"
@@ -3605,19 +3642,20 @@ msgstr "Gün batımından gün doğumuna daha sıcak renkler, gözleri daha az y
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4450 linux/share/monet/settings-app/MonetSettings.qml:4456 linux/libexec/monet-quick:7925
 msgid "Display colors"
-msgstr ""
+msgstr "Ekran renkleri"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4462
 msgid "Color profiles…"
-msgstr ""
+msgstr "Renk profilleri…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4463
 msgid "Choose your display to apply an ICC profile."
-msgstr ""
+msgstr "ICC profili uygulamak için ekranınızı seçin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4477
 msgid "Check shadow detail, highlights and neutral grays on this display."
 msgstr ""
+"Bu ekranda gölge ayrıntısını, parlak alanları ve nötr grileri kontrol edin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4500
 msgid "Games and films"
@@ -3676,39 +3714,39 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4633
 msgid "Show selected output"
-msgstr ""
+msgstr "Seçili çıkışı göster"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4633
 msgid "Show all %1 outputs"
-msgstr ""
+msgstr "%1 çıkışın tümünü göster"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4643
 msgid "Notification volume"
-msgstr ""
+msgstr "Bildirim ses düzeyi"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4653
 msgid "Preview notification sound"
-msgstr ""
+msgstr "Bildirim sesini dinle"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4655
 msgid "Notification audio is unavailable."
-msgstr ""
+msgstr "Bildirim sesi kullanılamıyor."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4657
 msgid "Plays the current notification tone at the selected volume."
-msgstr ""
+msgstr "Geçerli bildirim tonunu seçili ses düzeyinde çalar."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4658
 msgid "Checking notification audio…"
-msgstr ""
+msgstr "Bildirim sesi kontrol ediliyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4661
 msgid "Play test"
-msgstr ""
+msgstr "Test sesi çal"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4669
 msgid "Couldn't play the test sound."
-msgstr ""
+msgstr "Test sesi çalınamadı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4692 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:586
 msgid "Apps playing sound"
@@ -3716,11 +3754,11 @@ msgstr "Ses çalan uygulamalar"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4724
 msgid "Record from"
-msgstr ""
+msgstr "Kayıt kaynağı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4732
 msgid "Microphones"
-msgstr ""
+msgstr "Mikrofonlar"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4772 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7934
 msgid "Microphone"
@@ -3734,23 +3772,25 @@ msgstr ""
 msgid ""
 "Connect a microphone or headset. If it still isn't found, its channels can be set up in Advanced sound settings below."
 msgstr ""
+"Bir mikrofon veya mikrofonlu kulaklık bağlayın. Yine de bulunamazsa kanalları aşağıdaki Gelişmiş ses ayarları'ndan ayarlanabilir."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4784
 msgid "Microphone volume"
-msgstr ""
+msgstr "Mikrofon ses düzeyi"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4792
 msgid "Advanced sound settings…"
-msgstr ""
+msgstr "Gelişmiş ses ayarları…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4793
 msgid "Each sound device's profile and channels"
-msgstr ""
+msgstr "Her ses cihazının profili ve kanalları"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4798
 msgid ""
 "Only needed for a device's profile or channels, such as surround sound or an interface's direct monitoring."
 msgstr ""
+"Yalnızca bir cihazın profili veya kanalları için gerekir; örneğin surround ses ya da bir ses arabiriminin doğrudan izleme özelliği."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:4821
 msgid "Your clock, and where in the world it keeps time."
@@ -4087,11 +4127,11 @@ msgstr "Güç tasarrufu"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5464
 msgid "Uses less power to extend battery life"
-msgstr ""
+msgstr "Pil ömrünü uzatmak için daha az güç kullanır"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5464
 msgid "Favors lower power use and less heat"
-msgstr ""
+msgstr "Daha düşük güç kullanımını ve daha az ısıyı öne çıkarır"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5466
 msgid "Balanced"
@@ -4107,7 +4147,7 @@ msgstr "Performans"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5468
 msgid "Favors faster response, with potentially more heat and fan noise"
-msgstr ""
+msgstr "Daha hızlı tepkiyi öne çıkarır; ısı ve fan sesi artabilir"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5538
 msgid "Plugged in"
@@ -4217,16 +4257,17 @@ msgstr "Ekranı kapat"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5683
 msgid "When you restart"
-msgstr ""
+msgstr "Yeniden başlattığınızda"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5696 linux/share/monet/settings-app/MonetSettings.qml:8694 linux/libexec/monet-quick:7956
 msgid "Reopen your work"
-msgstr ""
+msgstr "Çalışmalarınızı yeniden açın"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5697
 msgid ""
 "After a restart, a sign-out or a trip to Windows, your apps come back on the same screens and desktops, where they were, with saved documents and Files tabs. Unsaved changes and private tabs aren't kept."
 msgstr ""
+"Yeniden başlatma, oturumu kapatma ya da Windows'a bir gidişten sonra uygulamalarınız aynı ekranlarda ve masaüstlerinde, bıraktığınız yerde, kaydedilmiş belgeleri ve Dosyalar sekmeleriyle geri gelir. Kaydedilmemiş değişiklikler ve gizli sekmeler saklanmaz."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5716
 msgid "More power settings…"
@@ -4666,31 +4707,31 @@ msgstr "Bu bilgisayarda neyin yer kapladığı ve nasıl yer açılacağı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6304 linux/libexec/monet-quick:7914
 msgid "Disks and partitions"
-msgstr ""
+msgstr "Diskler ve bölümler"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6305
 msgid "Working on the disk…"
-msgstr ""
+msgstr "Disk üzerinde çalışılıyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6306
 msgid "Checking connected drives…"
-msgstr ""
+msgstr "Bağlı sürücüler kontrol ediliyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6308
 msgid "No drives found."
-msgstr ""
+msgstr "Sürücü bulunamadı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6333
 msgid "System drive"
-msgstr ""
+msgstr "Sistem sürücüsü"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6334
 msgid "Read-only or in use"
-msgstr ""
+msgstr "Salt okunur veya kullanımda"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6335
 msgid "Removable drive"
-msgstr ""
+msgstr "Çıkarılabilir sürücü"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6339 setup/qml/Main.qml:913 setup/qml/Main.qml:987
 msgid "Hide details"
@@ -4698,131 +4739,131 @@ msgstr "Ayrıntıları gizle"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6339
 msgid "Show details"
-msgstr ""
+msgstr "Ayrıntıları göster"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6357
 msgid "Unnamed volume"
-msgstr ""
+msgstr "Adsız birim"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6367
 msgid "Unmount…"
-msgstr ""
+msgstr "Bağlantıyı kes…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6367
 msgid "Volume actions…"
-msgstr ""
+msgstr "Birim işlemleri…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6385
 msgid "Unallocated space"
-msgstr ""
+msgstr "Ayrılmamış alan"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6386
 msgid "Starts at %1"
-msgstr ""
+msgstr "%1 konumunda başlar"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6392
 msgid "Create partition…"
-msgstr ""
+msgstr "Bölüm oluştur…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6400
 msgid "Partition table"
-msgstr ""
+msgstr "Bölüm tablosu"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6401
 msgid "No partition table"
-msgstr ""
+msgstr "Bölüm tablosu yok"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6406
 msgid "Erase disk…"
-msgstr ""
+msgstr "Diski sil…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6406
 msgid "Initialize disk…"
-msgstr ""
+msgstr "Diski başlat…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6426
 msgid "Create GPT"
-msgstr ""
+msgstr "GPT oluştur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6426
 msgid "Create"
-msgstr ""
+msgstr "Oluştur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Unmount"
-msgstr ""
+msgstr "Bağlantıyı kes"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Delete"
-msgstr ""
+msgstr "Sil"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6427
 msgid "Format"
-msgstr ""
+msgstr "Biçimlendir"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6437
 msgid "Create a new GPT partition table"
-msgstr ""
+msgstr "Yeni bir GPT bölüm tablosu oluştur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6438
 msgid "Create partition"
-msgstr ""
+msgstr "Bölüm oluştur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6439
 msgid "Unmount volume"
-msgstr ""
+msgstr "Birimin bağlantısını kes"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6440 linux/share/monet/settings-app/MonetSettings.qml:6465
 msgid "Delete partition"
-msgstr ""
+msgstr "Bölümü sil"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6440 linux/share/monet/settings-app/MonetSettings.qml:6465
 msgid "Format volume"
-msgstr ""
+msgstr "Birimi biçimlendir"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6454
 msgid "This removes every partition and its files from the selected drive."
-msgstr ""
+msgstr "Bu işlem seçili sürücüdeki tüm bölümleri ve dosyalarını kaldırır."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6456
 msgid "This deletes all files on the selected volume."
-msgstr ""
+msgstr "Bu işlem seçili birimdeki tüm dosyaları siler."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6457
 msgid "Close any files on this volume before unmounting it."
-msgstr ""
+msgstr "Bağlantısını kesmeden önce bu birimdeki açık dosyaları kapatın."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6463
 msgid "Volume action"
-msgstr ""
+msgstr "Birim işlemi"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6473
 msgid "File system"
-msgstr ""
+msgstr "Dosya sistemi"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6476
 msgid "Ext4 · Monet"
-msgstr ""
+msgstr "Ext4 · Monet"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6477
 msgid "NTFS · Windows"
-msgstr ""
+msgstr "NTFS · Windows"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6478
 msgid "exFAT · Shared storage"
-msgstr ""
+msgstr "exFAT · Paylaşılan depolama"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6486
 msgid "Volume name (optional)"
-msgstr ""
+msgstr "Birim adı (isteğe bağlı)"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6493
 msgid "Size in MiB"
-msgstr ""
+msgstr "MiB cinsinden boyut"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6506
 msgid "%1 selected · %2 available"
-msgstr ""
+msgstr "%1 seçili · %2 kullanılabilir"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6518 linux/libexec/monet-quick:7944
 msgid "Windows files"
@@ -4870,7 +4911,7 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6555
 msgid "Free space couldn't be read."
-msgstr ""
+msgstr "Boş alan okunamadı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6555 linux/share/monet/settings-app/MonetSettings.qml:6634
 msgid "Measuring…"
@@ -4888,6 +4929,7 @@ msgstr ""
 msgid ""
 "Some files are shared between folders, so the folders add up to more than the space in use. The bar shows only what is in use."
 msgstr ""
+"Bazı dosyalar klasörler arasında paylaşıldığından klasörlerin toplamı kullanılan alandan fazla görünür. Çubuk yalnızca kullanılan alanı gösterir."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6625
 msgid ""
@@ -5003,7 +5045,7 @@ msgstr "Kalıcı olarak boşalt"
 msgid "Empty Trash"
 msgstr "Çöpü boşalt"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:187
+#: linux/share/monet/settings-app/MonetSettings.qml:6773 linux/share/monet/store-app/Downloads.qml:74 linux/share/monet/store-app/Store.qml:188
 msgid "Downloads"
 msgstr "İndirilenler"
 
@@ -6122,7 +6164,7 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8271
 msgid "After your last restart"
-msgstr ""
+msgstr "Son yeniden başlatmadan sonra"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8271
 msgid "After your last return"
@@ -6174,11 +6216,11 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8377
 msgid "Choose a Windows 11 ISO"
-msgstr ""
+msgstr "Bir Windows 11 ISO dosyası seçin"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8378
 msgid "Disk images"
-msgstr ""
+msgstr "Disk görüntüleri"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8389
 msgid "Games that need Windows, a restart away."
@@ -6206,31 +6248,31 @@ msgstr "Windows hazırlanıyor"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8416 linux/libexec/monet-quick:7651
 msgid "Windows setup did not finish"
-msgstr ""
+msgstr "Windows kurulumu tamamlanmadı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8417 crates/monet/src/main.rs:948
 msgid "Windows setup stopped"
-msgstr ""
+msgstr "Windows kurulumu durdu"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8418
 msgid "Windows needs more disk space"
-msgstr ""
+msgstr "Windows için daha fazla disk alanı gerekiyor"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8419
 msgid "Windows ISO ready to use"
-msgstr ""
+msgstr "Windows ISO dosyası kullanıma hazır"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8421
 msgid "Windows couldn't read that ISO"
-msgstr ""
+msgstr "Windows bu ISO dosyasını okuyamadı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8421
 msgid "Windows download didn't finish"
-msgstr ""
+msgstr "Windows indirmesi tamamlanmadı"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8422
 msgid "Set up Windows"
-msgstr ""
+msgstr "Windows'u kur"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8423
 msgid "The last trip didn't reach Windows"
@@ -6266,35 +6308,41 @@ msgstr "Önce şarj cihazını takın."
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
 msgstr ""
+"Windows hazırlanırken Monet'yi kullanmaya devam edebilirsiniz. Monet yeniden başlatmadan önce sorar."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8442
 msgid ""
 "This PC returned to Monet before Windows setup finished. Try again to resume the prepared installation."
 msgstr ""
+"Bu bilgisayar, Windows kurulumu bitmeden Monet'ye döndü. Hazırlanan kuruluma devam etmek için yeniden deneyin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8444
 msgid "Open Check Monet below for details about the failure."
-msgstr ""
+msgstr "Hatanın ayrıntıları için aşağıdaki Monet'yi kontrol et bölümünü açın."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8445
 msgid ""
 "Check that your disk has room reserved for Windows and enough free space in Monet to download it."
 msgstr ""
+"Diskinizde Windows için ayrılmış yer ve Monet'te onu indirmeye yetecek kadar boş alan olduğunu kontrol edin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8446
 msgid ""
 "Monet will prepare Windows in the reserved space and ask before restarting."
 msgstr ""
+"Monet, Windows'u ayrılmış alanda hazırlayacak ve yeniden başlatmadan önce soracak."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8448
 msgid ""
 "Try the download again or choose a Windows 11 x64 ISO from any folder or connected drive."
 msgstr ""
+"İndirmeyi yeniden deneyin ya da herhangi bir klasörden veya bağlı sürücüden bir Windows 11 x64 ISO dosyası seçin."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8449
 msgid ""
 "Download Windows 11 from Microsoft for games that need it. Monet asks before restarting."
 msgstr ""
+"Windows gerektiren oyunlar için Windows 11'i Microsoft'tan indirin. Monet yeniden başlatmadan önce sorar."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8452
 msgid ""
@@ -6334,59 +6382,59 @@ msgstr "Windows'ta yeniden başlat"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8506
 msgid "Windows setup"
-msgstr ""
+msgstr "Windows kurulumu"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8509
 msgid "Setup progress: %1%"
-msgstr ""
+msgstr "Kurulum ilerlemesi: %%1"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8517
 msgid "Setting up…"
-msgstr ""
+msgstr "Kuruluyor…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8518
 msgid "Try setup again"
-msgstr ""
+msgstr "Kurulumu yeniden dene"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8519
 msgid "Retry download"
-msgstr ""
+msgstr "İndirmeyi yeniden dene"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8520 linux/share/monet/settings-app/MonetSettings.qml:8546
 msgid "Set up Windows…"
-msgstr ""
+msgstr "Windows'u kur…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8527
 msgid "Windows 11 ISO"
-msgstr ""
+msgstr "Windows 11 ISO dosyası"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8533
 msgid "Choose ISO…"
-msgstr ""
+msgstr "ISO seç…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8533
 msgid "Change ISO…"
-msgstr ""
+msgstr "ISO'yu değiştir…"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8540
 msgid "Prepare Windows"
-msgstr ""
+msgstr "Windows'u hazırla"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8541
 msgid "Administrator access is required to prepare the reserved space."
-msgstr ""
+msgstr "Ayrılmış alanı hazırlamak için yönetici erişimi gerekir."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8554
 msgid "Need an ISO?"
-msgstr ""
+msgstr "ISO dosyası mı gerekiyor?"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8558
 msgid "Open Microsoft’s download page"
-msgstr ""
+msgstr "Microsoft'un indirme sayfasını aç"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8560
 msgid "Monet couldn't open Microsoft’s download page."
-msgstr ""
+msgstr "Monet, Microsoft'un indirme sayfasını açamadı."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8593
 msgid ""
@@ -6452,6 +6500,7 @@ msgstr ""
 msgid ""
 "After Windows or a restart, your apps come back where they were, with saved documents and Files tabs. Zen follows its tab-restore preference. Unsaved changes and private tabs aren't kept."
 msgstr ""
+"Windows'tan dönünce veya yeniden başlatmadan sonra uygulamalarınız kaydedilmiş belgeleri ve Dosyalar sekmeleriyle bıraktığınız yerde geri gelir. Zen kendi sekme geri yükleme tercihine uyar. Kaydedilmemiş değişiklikler ve gizli sekmeler saklanmaz."
 
 #: linux/share/monet/settings-app/MonetSettings.qml:8713
 msgid ""
@@ -6853,11 +6902,11 @@ msgstr "Flathub onaylı"
 
 #: linux/share/monet/store-app/AppPage.qml:332 linux/share/monet/store-app/Downloads.qml:211
 msgid "Cancel removing %1"
-msgstr ""
+msgstr "%1 kaldırılmasını iptal et"
 
 #: linux/share/monet/store-app/AppPage.qml:333 linux/share/monet/store-app/Downloads.qml:212
 msgid "Cancel downloading %1"
-msgstr ""
+msgstr "%1 indirilmesini iptal et"
 
 #: linux/share/monet/store-app/AppPage.qml:345 linux/share/monet/store-app/Downloads.qml:224
 msgid "Retry %1"
@@ -6869,11 +6918,11 @@ msgstr ""
 
 #: linux/share/monet/store-app/AppPage.qml:469
 msgid "Previous screenshot"
-msgstr ""
+msgstr "Önceki ekran görüntüsü"
 
 #: linux/share/monet/store-app/AppPage.qml:485
 msgid "Next screenshot"
-msgstr ""
+msgstr "Sonraki ekran görüntüsü"
 
 #: linux/share/monet/store-app/AppPage.qml:572
 msgid "What it can reach"
@@ -6973,433 +7022,433 @@ msgstr "Tümü"
 msgid "No apps here yet."
 msgstr "Burada henüz uygulama yok."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7978
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:7978
 msgid "Store"
 msgstr "Mağaza"
 
-#: linux/share/monet/store-app/Store.qml:170
+#: linux/share/monet/store-app/Store.qml:171
 msgid "Launchers, old consoles and new games. Steam is already here."
 msgstr "Başlatıcılar, eski konsollar ve yeni oyunlar. Steam zaten burada."
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Talk & stream"
 msgstr "Sohbet ve yayın"
 
-#: linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/store-app/Store.qml:172
 msgid "Friends, calls, and going live."
 msgstr "Arkadaşlar, aramalar ve canlı yayınlar."
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Music & film"
 msgstr "Müzik ve film"
 
-#: linux/share/monet/store-app/Store.qml:172
+#: linux/share/monet/store-app/Store.qml:173
 msgid "Something to listen to, and something to watch."
 msgstr "Dinleyecek bir şey, izleyecek bir şey."
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Work & make"
 msgstr "İş ve üretim"
 
-#: linux/share/monet/store-app/Store.qml:173
+#: linux/share/monet/store-app/Store.qml:174
 msgid "Writing, drawing, editing, sending, and tools for the command line."
 msgstr "Yazma, çizim, düzenleme, gönderme ve komut satırı araçları."
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Everyday"
 msgstr "Gündelik"
 
-#: linux/share/monet/store-app/Store.qml:174
+#: linux/share/monet/store-app/Store.qml:175
 msgid "Passwords, sharing, and the small things that help."
 msgstr "Parolalar, paylaşım ve işe yarayan küçük şeyler."
 
-#: linux/share/monet/store-app/Store.qml:177
+#: linux/share/monet/store-app/Store.qml:178
 msgid "Monet's picks"
 msgstr "Monet'nin seçtikleri"
 
-#: linux/share/monet/store-app/Store.qml:179
+#: linux/share/monet/store-app/Store.qml:180
 msgid "Photos & drawing"
 msgstr "Fotoğraf ve çizim"
 
-#: linux/share/monet/store-app/Store.qml:180
+#: linux/share/monet/store-app/Store.qml:181
 msgid "Music & video"
 msgstr "Müzik ve video"
 
-#: linux/share/monet/store-app/Store.qml:181
+#: linux/share/monet/store-app/Store.qml:182
 msgid "Writing & office"
 msgstr "Yazı ve ofis"
 
-#: linux/share/monet/store-app/Store.qml:182
+#: linux/share/monet/store-app/Store.qml:183
 msgid "Internet & chat"
 msgstr "İnternet ve sohbet"
 
-#: linux/share/monet/store-app/Store.qml:183
+#: linux/share/monet/store-app/Store.qml:184
 msgid "Learning"
 msgstr "Eğitim"
 
-#: linux/share/monet/store-app/Store.qml:184
+#: linux/share/monet/store-app/Store.qml:185
 msgid "Developer tools"
 msgstr "Geliştirici araçları"
 
-#: linux/share/monet/store-app/Store.qml:185
+#: linux/share/monet/store-app/Store.qml:186
 msgid "Tools"
 msgstr "Araçlar"
 
-#: linux/share/monet/store-app/Store.qml:188 linux/share/monet/store-app/Store.qml:1042
+#: linux/share/monet/store-app/Store.qml:189 linux/share/monet/store-app/Store.qml:1043
 msgid "On your Windows"
 msgstr "Windows'unuzda"
 
-#: linux/share/monet/store-app/Store.qml:194
+#: linux/share/monet/store-app/Store.qml:195
 msgctxt "a kind of app, a filter in the Store"
 msgid "Action"
 msgstr "Aksiyon"
 
-#: linux/share/monet/store-app/Store.qml:195
+#: linux/share/monet/store-app/Store.qml:196
 msgctxt "a kind of app, a filter in the Store"
 msgid "Arcade"
 msgstr "Arcade"
 
-#: linux/share/monet/store-app/Store.qml:196
+#: linux/share/monet/store-app/Store.qml:197
 msgctxt "a kind of app, a filter in the Store"
 msgid "Strategy"
 msgstr "Strateji"
 
-#: linux/share/monet/store-app/Store.qml:197
+#: linux/share/monet/store-app/Store.qml:198
 msgctxt "a kind of app, a filter in the Store"
 msgid "Puzzles"
 msgstr "Bulmaca"
 
-#: linux/share/monet/store-app/Store.qml:198
+#: linux/share/monet/store-app/Store.qml:199
 msgctxt "a kind of app, a filter in the Store"
 msgid "Adventure & role-playing"
 msgstr "Macera ve rol yapma"
 
-#: linux/share/monet/store-app/Store.qml:199
+#: linux/share/monet/store-app/Store.qml:200
 msgctxt "a kind of app, a filter in the Store"
 msgid "Simulation & sports"
 msgstr "Simülasyon ve spor"
 
-#: linux/share/monet/store-app/Store.qml:200
+#: linux/share/monet/store-app/Store.qml:201
 msgctxt "a kind of app, a filter in the Store"
 msgid "Board & cards"
 msgstr "Masa ve kart oyunları"
 
-#: linux/share/monet/store-app/Store.qml:201
+#: linux/share/monet/store-app/Store.qml:202
 msgctxt "a kind of app, a filter in the Store"
 msgid "For kids"
 msgstr "Çocuklar için"
 
-#: linux/share/monet/store-app/Store.qml:202
+#: linux/share/monet/store-app/Store.qml:203
 msgctxt "a kind of app, a filter in the Store"
 msgid "Emulators"
 msgstr "Emülatörler"
 
-#: linux/share/monet/store-app/Store.qml:203
+#: linux/share/monet/store-app/Store.qml:204
 msgctxt "a kind of app, a filter in the Store"
 msgid "Drawing & painting"
 msgstr "Çizim ve boyama"
 
-#: linux/share/monet/store-app/Store.qml:204
+#: linux/share/monet/store-app/Store.qml:205
 msgctxt "a kind of app, a filter in the Store"
 msgid "Photos"
 msgstr "Fotoğraflar"
 
-#: linux/share/monet/store-app/Store.qml:205
+#: linux/share/monet/store-app/Store.qml:206
 msgctxt "a kind of app, a filter in the Store"
 msgid "Vector"
 msgstr "Vektör"
 
-#: linux/share/monet/store-app/Store.qml:206
+#: linux/share/monet/store-app/Store.qml:207
 msgctxt "a kind of app, a filter in the Store"
 msgid "3D"
 msgstr "3D"
 
-#: linux/share/monet/store-app/Store.qml:207
+#: linux/share/monet/store-app/Store.qml:208
 msgctxt "a kind of app, a filter in the Store"
 msgid "Viewers"
 msgstr "Görüntüleyiciler"
 
-#: linux/share/monet/store-app/Store.qml:208
+#: linux/share/monet/store-app/Store.qml:209
 msgctxt "a kind of app, a filter in the Store"
 msgid "Scanning"
 msgstr "Tarama"
 
-#: linux/share/monet/store-app/Store.qml:209
+#: linux/share/monet/store-app/Store.qml:210
 msgctxt "a kind of app, a filter in the Store"
 msgid "Players"
 msgstr "Oynatıcılar"
 
-#: linux/share/monet/store-app/Store.qml:210
+#: linux/share/monet/store-app/Store.qml:211
 msgctxt "a kind of app, a filter in the Store"
 msgid "Making music"
 msgstr "Müzik yapımı"
 
-#: linux/share/monet/store-app/Store.qml:211
+#: linux/share/monet/store-app/Store.qml:212
 msgctxt "a kind of app, a filter in the Store"
 msgid "Editing"
 msgstr "Düzenleme"
 
-#: linux/share/monet/store-app/Store.qml:212
+#: linux/share/monet/store-app/Store.qml:213
 msgctxt "a kind of app, a filter in the Store"
 msgid "Video & TV"
 msgstr "Video ve TV"
 
-#: linux/share/monet/store-app/Store.qml:213
+#: linux/share/monet/store-app/Store.qml:214
 msgctxt "a kind of app, a filter in the Store"
 msgid "Recording"
 msgstr "Kayıt"
 
-#: linux/share/monet/store-app/Store.qml:214
+#: linux/share/monet/store-app/Store.qml:215
 msgctxt "a kind of app, a filter in the Store"
 msgid "Writing"
 msgstr "Yazı"
 
-#: linux/share/monet/store-app/Store.qml:215
+#: linux/share/monet/store-app/Store.qml:216
 msgctxt "a kind of app, a filter in the Store"
 msgid "Money"
 msgstr "Finans"
 
-#: linux/share/monet/store-app/Store.qml:216
+#: linux/share/monet/store-app/Store.qml:217
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calendars & planning"
 msgstr "Takvim ve planlama"
 
-#: linux/share/monet/store-app/Store.qml:217
+#: linux/share/monet/store-app/Store.qml:218
 msgctxt "a kind of app, a filter in the Store"
 msgid "Email"
 msgstr "E-posta"
 
-#: linux/share/monet/store-app/Store.qml:218
+#: linux/share/monet/store-app/Store.qml:219
 msgctxt "a kind of app, a filter in the Store"
 msgid "Chat"
 msgstr "Sohbet"
 
-#: linux/share/monet/store-app/Store.qml:219
+#: linux/share/monet/store-app/Store.qml:220
 msgctxt "a kind of app, a filter in the Store"
 msgid "Browsers"
 msgstr "Tarayıcılar"
 
-#: linux/share/monet/store-app/Store.qml:220
+#: linux/share/monet/store-app/Store.qml:221
 msgctxt "a kind of app, a filter in the Store"
 msgid "Calls"
 msgstr "Aramalar"
 
-#: linux/share/monet/store-app/Store.qml:221
+#: linux/share/monet/store-app/Store.qml:222
 msgctxt "a kind of app, a filter in the Store"
 msgid "Sharing & downloads"
 msgstr "Paylaşım ve indirme"
 
-#: linux/share/monet/store-app/Store.qml:222
+#: linux/share/monet/store-app/Store.qml:223
 msgctxt "a kind of app, a filter in the Store"
 msgid "News"
 msgstr "Haberler"
 
-#: linux/share/monet/store-app/Store.qml:223
+#: linux/share/monet/store-app/Store.qml:224
 msgctxt "a kind of app, a filter in the Store"
 msgid "Remote access"
 msgstr "Uzaktan erişim"
 
-#: linux/share/monet/store-app/Store.qml:224
+#: linux/share/monet/store-app/Store.qml:225
 msgctxt "a kind of app, a filter in the Store"
 msgid "Science"
 msgstr "Bilim"
 
-#: linux/share/monet/store-app/Store.qml:225
+#: linux/share/monet/store-app/Store.qml:226
 msgctxt "a kind of app, a filter in the Store"
 msgid "Math"
 msgstr "Matematik"
 
-#: linux/share/monet/store-app/Store.qml:226
+#: linux/share/monet/store-app/Store.qml:227
 msgctxt "a kind of app, a filter in the Store"
 msgid "Languages"
 msgstr "Diller"
 
-#: linux/share/monet/store-app/Store.qml:227
+#: linux/share/monet/store-app/Store.qml:228
 msgctxt "a kind of app, a filter in the Store"
 msgid "Computing & data"
 msgstr "Bilgisayar ve veri"
 
-#: linux/share/monet/store-app/Store.qml:228
+#: linux/share/monet/store-app/Store.qml:229
 msgctxt "a kind of app, a filter in the Store"
 msgid "Code editors"
 msgstr "Kod düzenleyiciler"
 
-#: linux/share/monet/store-app/Store.qml:229
+#: linux/share/monet/store-app/Store.qml:230
 msgctxt "a kind of app, a filter in the Store"
 msgid "Version control"
 msgstr "Sürüm denetimi"
 
-#: linux/share/monet/store-app/Store.qml:230
+#: linux/share/monet/store-app/Store.qml:231
 msgctxt "a kind of app, a filter in the Store"
 msgid "Web"
 msgstr "Web"
 
-#: linux/share/monet/store-app/Store.qml:231
+#: linux/share/monet/store-app/Store.qml:232
 msgctxt "a kind of app, a filter in the Store"
 msgid "Debugging"
 msgstr "Hata ayıklama"
 
-#: linux/share/monet/store-app/Store.qml:232
+#: linux/share/monet/store-app/Store.qml:233
 msgctxt "a kind of app, a filter in the Store"
 msgid "Electronics"
 msgstr "Elektronik"
 
-#: linux/share/monet/store-app/Store.qml:233
+#: linux/share/monet/store-app/Store.qml:234
 msgctxt "a kind of app, a filter in the Store"
 msgid "System"
 msgstr "Sistem"
 
-#: linux/share/monet/store-app/Store.qml:234
+#: linux/share/monet/store-app/Store.qml:235
 msgctxt "a kind of app, a filter in the Store"
 msgid "Files"
 msgstr "Dosyalar"
 
-#: linux/share/monet/store-app/Store.qml:235
+#: linux/share/monet/store-app/Store.qml:236
 msgctxt "a kind of app, a filter in the Store"
 msgid "Text"
 msgstr "Metin"
 
-#: linux/share/monet/store-app/Store.qml:236
+#: linux/share/monet/store-app/Store.qml:237
 msgctxt "a kind of app, a filter in the Store"
 msgid "Security"
 msgstr "Güvenlik"
 
-#: linux/share/monet/store-app/Store.qml:237
+#: linux/share/monet/store-app/Store.qml:238
 msgctxt "a kind of app, a filter in the Store"
 msgid "Terminals"
 msgstr "Terminaller"
 
-#: linux/share/monet/store-app/Store.qml:238
+#: linux/share/monet/store-app/Store.qml:239
 msgctxt "a kind of app, a filter in the Store"
 msgid "Clocks & calculators"
 msgstr "Saat ve hesap makinesi"
 
-#: linux/share/monet/store-app/Store.qml:476
+#: linux/share/monet/store-app/Store.qml:477
 msgid "Waiting its turn"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:477
-msgid "Installing… This part can't be cancelled."
-msgstr ""
-
 #: linux/share/monet/store-app/Store.qml:478
+msgid "Installing… This part can't be cancelled."
+msgstr "Yükleniyor… Bu kısım iptal edilemez."
+
+#: linux/share/monet/store-app/Store.qml:479
 msgid "Cancelling…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:479
+#: linux/share/monet/store-app/Store.qml:480
 msgid "Cancelled. You can try again whenever you're ready."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to finish removing this app."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:480
+#: linux/share/monet/store-app/Store.qml:481
 msgid "Interrupted. Retry to continue the download."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:481
+#: linux/share/monet/store-app/Store.qml:482
 msgid "Removed"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482 linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:483 linux/share/monet/store-app/Store.qml:494
 msgid "Removing…"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:482
+#: linux/share/monet/store-app/Store.qml:483
 msgid "Downloading & installing… %1%"
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:483
+#: linux/share/monet/store-app/Store.qml:484
 msgid "There isn't enough free space. Free some space, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:484
+#: linux/share/monet/store-app/Store.qml:485
 msgid ""
 "The download stopped because Flathub couldn't be reached. Check your connection, then retry."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:485
+#: linux/share/monet/store-app/Store.qml:486
 msgid "Only an administrator of this PC can install and remove apps."
 msgstr ""
 "Uygulamaları yalnızca bu bilgisayarın bir yöneticisi yükleyip kaldırabilir."
 
-#: linux/share/monet/store-app/Store.qml:486
+#: linux/share/monet/store-app/Store.qml:487
 msgid "The download couldn't start. Try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:487
+#: linux/share/monet/store-app/Store.qml:488
 msgid "The download list couldn't be saved. Check free space and try again."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:488
+#: linux/share/monet/store-app/Store.qml:489
 msgid "That didn't work. Try again in a moment."
 msgstr "İşe yaramadı. Birazdan yeniden deneyin."
 
-#: linux/share/monet/store-app/Store.qml:493
+#: linux/share/monet/store-app/Store.qml:494
 msgid "Downloading…"
-msgstr ""
+msgstr "İndiriliyor…"
 
-#: linux/share/monet/store-app/Store.qml:511
+#: linux/share/monet/store-app/Store.qml:512
 msgctxt "an app, then how its download or removal is going"
 msgid "%1: %2"
-msgstr ""
+msgstr "%1: %2"
 
-#: linux/share/monet/store-app/Store.qml:546
+#: linux/share/monet/store-app/Store.qml:547
 msgid ""
 "The saved download list couldn't be read or saved. Check free space and folder access, then try again. Your existing list has been kept."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:790
+#: linux/share/monet/store-app/Store.qml:791
 msgid "Yours"
 msgstr "Sizinkiler"
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid ""
 "The app catalog is unavailable. Check your connection and try again. Your downloads are still available."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:896
+#: linux/share/monet/store-app/Store.qml:897
 msgid "Opening the Store…"
 msgstr "Mağaza açılıyor…"
 
-#: linux/share/monet/store-app/Store.qml:945
+#: linux/share/monet/store-app/Store.qml:946
 msgid ""
 "Apps in your Windows. Each opens there: your PC restarts in Windows, and Back to Monet brings you back."
 msgstr ""
 "Windows'unuzdaki uygulamalar. Her biri orada açılır: bilgisayarınız Windows'ta yeniden başlar, Monet'ye dönüş de sizi geri getirir."
 
-#: linux/share/monet/store-app/Store.qml:947
+#: linux/share/monet/store-app/Store.qml:948
 msgid "Apps you installed from the Store. They update by themselves."
 msgstr "Mağaza'dan yüklediğiniz uygulamalar. Kendi kendilerine güncellenirler."
 
-#: linux/share/monet/store-app/Store.qml:948
+#: linux/share/monet/store-app/Store.qml:949
 msgid "Apps you install from the Store show up here."
 msgstr "Mağaza'dan yüklediğiniz uygulamalar burada görünür."
 
-#: linux/share/monet/store-app/Store.qml:977
+#: linux/share/monet/store-app/Store.qml:978
 msgid "Apps for “%1”"
 msgstr "“%1” için uygulamalar"
 
-#: linux/share/monet/store-app/Store.qml:1001
+#: linux/share/monet/store-app/Store.qml:1002
 msgid "Looking for %1?"
-msgstr ""
-
-#: linux/share/monet/store-app/Store.qml:1013
-msgid ""
-"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
 msgstr ""
 
 #: linux/share/monet/store-app/Store.qml:1014
 msgid ""
+"These apps cover similar tasks on Monet. Features and file formats differ; try a copy of your work first."
+msgstr ""
+
+#: linux/share/monet/store-app/Store.qml:1015
+msgid ""
 "No suggestions are available in this catalog. Check the publisher's website for a web version or supported systems."
 msgstr ""
 
-#: linux/share/monet/store-app/Store.qml:1071
+#: linux/share/monet/store-app/Store.qml:1072
 msgid "For Monet"
 msgstr "Monet için"
 
-#: linux/share/monet/store-app/Store.qml:1099
+#: linux/share/monet/store-app/Store.qml:1100
 msgid ""
 "Nothing in the Store goes by “%1”. Try other words, or what it's for: “photo editor”, “music”."
 msgstr ""
@@ -7696,7 +7745,7 @@ msgstr "Sabitlenenler"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
 msgid "Manage apps"
-msgstr ""
+msgstr "Uygulamaları yönet"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
@@ -7705,7 +7754,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
-msgstr ""
+msgstr "Son indirilenler"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
@@ -7721,7 +7770,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
-msgstr ""
+msgstr "Uygulamalar, indirilenler ve kısayollar"
 
 #: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
@@ -7865,6 +7914,7 @@ msgstr "Windows uygulaması"
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:67
 msgid "Couldn't start the Windows app launcher. Try again from Files."
 msgstr ""
+"Windows uygulama başlatıcısı başlatılamadı. Dosyalar'dan yeniden deneyin."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228
 msgid "A Windows installer"
@@ -7887,7 +7937,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:254
 msgid ""
 "Try opening this file with Proton. Compatibility depends on the program."
-msgstr ""
+msgstr "Bu dosyayı Proton ile açmayı deneyin. Uyumluluk programa bağlıdır."
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:255
 msgid ""
@@ -7944,7 +7994,7 @@ msgstr "%1 ayarları"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:499
 msgid "LAN"
-msgstr ""
+msgstr "LAN"
 
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:537
 msgid "Warm after sunset"
@@ -8223,6 +8273,10 @@ msgstr "%1 dk"
 msgid "Scroll to change the minutes"
 msgstr "Dakikaları değiştirmek için kaydırın"
 
+#: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:276
+msgid "Start"
+msgstr "Başlat"
+
 #: linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:328 linux/share/plasma/plasmoids/org.monet.timer/contents/ui/main.qml:337
 msgctxt "a timer: quiet notifications, a day on the painting"
 msgid "Focus"
@@ -8294,7 +8348,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:395 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:396 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:434
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:435
 msgid "Hide from Transfers"
-msgstr ""
+msgstr "Aktarımlar'dan gizle"
 
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:439
 msgid "Extracting"
@@ -8314,7 +8368,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:460
 msgid "You can close this panel. Transfers continue in the background."
-msgstr ""
+msgstr "Bu paneli kapatabilirsiniz. Aktarımlar arka planda sürer."
 
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/config/config.qml:6
 msgid "Place"
@@ -8634,11 +8688,11 @@ msgstr ""
 
 #: image/dock/patch.py:281
 msgid "App behavior…"
-msgstr ""
+msgstr "Uygulama davranışı…"
 
 #: image/dock/patch.py:353
 msgid "Customize Home Bar…"
-msgstr ""
+msgstr "Ana çubuğu özelleştir…"
 
 #: image/launcher/coordinator.cpp:198
 msgid "This app is no longer available. Install it again, then retry."
@@ -9524,36 +9578,39 @@ msgstr "Pasifik"
 msgid ""
 "This version of Monet isn’t on the download server. Try again later, or make a new installer."
 msgstr ""
+"Monet'nin bu sürümü indirme sunucusunda yok. Daha sonra yeniden deneyin ya da yeni bir yükleyici oluşturun."
 
 #: setup/monet_setup/trust.py:71
 msgid ""
 "The download server refused to send Monet. Try again later, or make a new installer."
 msgstr ""
+"İndirme sunucusu Monet'yi göndermeyi reddetti. Daha sonra yeniden deneyin ya da yeni bir yükleyici oluşturun."
 
 #: setup/monet_setup/trust.py:73
 msgid ""
 "Setup couldn’t verify the download server’s certificate. Check the PC’s date and time, or try another network."
 msgstr ""
+"Monet Kurulumu, indirme sunucusunun sertifikasını doğrulayamadı. Bilgisayarın tarih ve saatini kontrol edin ya da başka bir ağ deneyin."
 
 #: linux/libexec/monet-quick:789
 msgid "Input %1"
-msgstr ""
+msgstr "Giriş %1"
 
 #: linux/libexec/monet-quick:789
 msgid "Inputs %1–%2"
-msgstr ""
+msgstr "Girişler %1–%2"
 
 #: linux/libexec/monet-quick:1137
 msgid "Monet couldn't check for updates. Try again."
-msgstr ""
+msgstr "Monet güncellemeleri denetleyemedi. Yeniden deneyin."
 
 #: linux/libexec/monet-quick:1141
 msgid "Checking for updates took too long. Try again."
-msgstr ""
+msgstr "Güncellemeleri denetlemek çok uzun sürdü. Yeniden deneyin."
 
 #: linux/libexec/monet-quick:1172
 msgid "Installing updates"
-msgstr ""
+msgstr "Güncellemeler yükleniyor"
 
 #: linux/libexec/monet-quick:1589
 msgid "Keep blocked"
@@ -9641,35 +9698,35 @@ msgstr ""
 
 #: linux/libexec/monet-quick:3318
 msgid "The disk changed. Refresh the list and choose it again."
-msgstr ""
+msgstr "Disk değişti. Listeyi yenileyip yeniden seçin."
 
 #: linux/libexec/monet-quick:3320
 msgid "This drive is in use by the system or is read-only."
-msgstr ""
+msgstr "Bu sürücü sistem tarafından kullanılıyor ya da salt okunur."
 
 #: linux/libexec/monet-quick:3324
 msgid "Unmount the volumes on this drive first."
-msgstr ""
+msgstr "Önce bu sürücüdeki birimlerin bağlantısını kesin."
 
 #: linux/libexec/monet-quick:3331
 msgid "Choose a size that fits the free space."
-msgstr ""
+msgstr "Boş alana sığan bir boyut seçin."
 
 #: linux/libexec/monet-quick:3342
 msgid "This volume changed, is in use, or is read-only."
-msgstr ""
+msgstr "Bu birim değişti, kullanımda ya da salt okunur."
 
 #: linux/libexec/monet-quick:3348
 msgid "Unmount this volume before making changes."
-msgstr ""
+msgstr "Değişiklik yapmadan önce bu birimin bağlantısını kesin."
 
 #: linux/libexec/monet-quick:3361
 msgid "The disk service did not respond."
-msgstr ""
+msgstr "Disk hizmeti yanıt vermedi."
 
 #: linux/libexec/monet-quick:3363
 msgid "Check the selected disk, format, size and volume name."
-msgstr ""
+msgstr "Seçili diski, biçimi, boyutu ve birim adını kontrol edin."
 
 #: linux/libexec/monet-quick:3531
 msgid "Recovered installations"
@@ -9698,32 +9755,37 @@ msgstr "Videolar'da."
 #: linux/libexec/monet-quick:5895
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr ""
+"Windows uygulama başlatıcısı başlayamadı. Dosyalar'dan yeniden deneyin."
 
 #: linux/libexec/monet-quick:5918
 msgid "The program or installer is missing."
-msgstr ""
+msgstr "Program veya yükleyici eksik."
 
 #: linux/libexec/monet-quick:5921
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr ""
+"Windows uygulama desteği eksik. Bunun yerine dosyayı Windows'ta açabilirsiniz."
 
 #: linux/libexec/monet-quick:5929
 msgid "Starting %1"
-msgstr ""
+msgstr "%1 başlatılıyor"
 
 #: linux/libexec/monet-quick:5930
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
+"Windows uygulama desteğini hazırlamak ilk seferde birkaç dakika sürebilir."
 
 #: linux/libexec/monet-quick:5939
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
+"Windows uygulama desteği başlatılamadı. Dosyayı Windows'ta açmayı deneyin."
 
 #: linux/libexec/monet-quick:5946
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
+"Proton %1 koduyla çıktı. Dosyayı ve bağlantınızı kontrol edin ya da Windows'ta açmayı deneyin."
 
 #: linux/libexec/monet-quick:6773
 msgid "Open it again"
@@ -9775,12 +9837,13 @@ msgstr "indirme klasörü; indirme konumu; indirme yolu"
 
 #: linux/libexec/monet-quick:7914
 msgid "Storage · Manage physical drives"
-msgstr ""
+msgstr "Depolama · Fiziksel sürücüleri yönet"
 
 #: linux/libexec/monet-quick:7915
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
+"diskler; disk yönetimi; diski biçimlendir; diski sil; bölüm oluştur; bölüm yöneticisi; harici sürücü"
 
 #: linux/libexec/monet-quick:7917
 msgid "Battery charge limit"
@@ -9824,12 +9887,13 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7925
 msgid "Display · Color profiles and test patterns"
-msgstr ""
+msgstr "Ekran · Renk profilleri ve test desenleri"
 
 #: linux/libexec/monet-quick:7926
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
+"renk profili; renk kalibrasyonu; ekran testi; monitör testi; renkler yanlış görünüyor"
 
 #: linux/libexec/monet-quick:7928
 msgid "Make the pointer easier to see"
@@ -9883,7 +9947,7 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7938
 msgid "Internet · Wireless networks"
-msgstr ""
+msgstr "İnternet · Kablosuz ağlar"
 
 #: linux/libexec/monet-quick:7939
 msgid ""
@@ -9892,15 +9956,15 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7940
 msgid "LAN settings"
-msgstr ""
+msgstr "LAN ayarları"
 
 #: linux/libexec/monet-quick:7940
 msgid "Internet · Ethernet and IP settings"
-msgstr ""
+msgstr "İnternet · Ethernet ve IP ayarları"
 
 #: linux/libexec/monet-quick:7941
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
-msgstr ""
+msgstr "kablolu ağ; ağ kablosu; ip adresi; ağ geçidi; ethernet"
 
 #: linux/libexec/monet-quick:7942
 msgid "Birthdays and repeating notes"
@@ -9983,12 +10047,13 @@ msgstr ""
 
 #: linux/libexec/monet-quick:7956
 msgid "Power & Sleep · Your apps come back after a restart"
-msgstr ""
+msgstr "Güç & uyku · Uygulamalarınız yeniden başlatmadan sonra geri gelir"
 
 #: linux/libexec/monet-quick:7957
 msgid ""
 "reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"
 msgstr ""
+"yeniden başlatınca uygulamaları aç; açık uygulamaları hatırla; kapatınca uygulamaları geri yükle; pencereler kaldığı yerde"
 
 #: linux/libexec/monet-quick:7959
 msgid "Choose default apps"
@@ -10084,11 +10149,11 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8192
 msgid "Windows installer"
-msgstr ""
+msgstr "Windows yükleyicisi"
 
 #: linux/libexec/monet-quick:8193
 msgid "Linux package"
-msgstr ""
+msgstr "Linux paketi"
 
 #: linux/libexec/monet-quick:8194 linux/libexec/monet-files-tools:712
 msgid "Linux application"
@@ -10096,19 +10161,19 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8194
 msgid "Downloaded app"
-msgstr ""
+msgstr "İndirilen uygulama"
 
 #: linux/libexec/monet-quick:8202
 msgid "Home"
-msgstr ""
+msgstr "Ev klasörü"
 
 #: linux/libexec/monet-quick:8238
 msgid "Open application?"
-msgstr ""
+msgstr "Uygulama açılsın mı?"
 
 #: linux/libexec/monet-quick:8239
 msgid "Open this downloaded application?"
-msgstr ""
+msgstr "İndirilen bu uygulama açılsın mı?"
 
 #: linux/libexec/monet-quick:8652
 msgid "Waiting to reopen."
@@ -10151,7 +10216,7 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8661
 msgid "Files reopened. Its previous folders and tabs could not be saved."
-msgstr ""
+msgstr "Dosyalar yeniden açıldı. Önceki klasörleri ve sekmeleri kaydedilemedi."
 
 #: linux/libexec/monet-quick:8662
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
@@ -10197,16 +10262,16 @@ msgstr ""
 
 #: linux/libexec/monet-quick:8674
 msgid "Private browsing stays closed. You can open the browser normally."
-msgstr ""
+msgstr "Gizli gezinme kapalı kalır. Tarayıcıyı normal şekilde açabilirsiniz."
 
 #: linux/libexec/monet-quick:8730
 msgid "Some apps didn't reopen"
-msgstr ""
+msgstr "Bazı uygulamalar yeniden açılmadı"
 
 #: linux/libexec/monet-quick:8731
 msgid ""
 "Everything else is back where it was. Review what's missing and try again."
-msgstr ""
+msgstr "Geri kalan her şey yerinde. Eksik olanlara göz atıp yeniden deneyin."
 
 #: linux/libexec/monet-quick:8735
 msgid "Back in Monet"
@@ -10278,6 +10343,7 @@ msgstr ""
 #: linux/libexec/monet-quick:9641
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
+"Bu bilgisayarda veya bağlı bir sürücüde eksiksiz bir Windows 11 ISO dosyası seçin."
 
 #: linux/libexec/monet-quick:9768
 msgid "Couldn't check phones. Try again."
@@ -10454,12 +10520,12 @@ msgstr ""
 
 #: linux/libexec/monet-files-tools:391
 msgid "Show transfer progress"
-msgstr ""
+msgstr "Aktarım ilerlemesini göster"
 
 #: linux/libexec/monet-files-tools:395
 msgid ""
 "Extraction continues in the background. Files opens the folder when it is ready."
-msgstr ""
+msgstr "Ayıklama arka planda sürer. Hazır olduğunda Dosyalar klasörü açar."
 
 #: linux/libexec/monet-files-tools:398
 msgid "Preparing extraction"
@@ -10670,25 +10736,27 @@ msgstr ""
 
 #: linux/libexec/monet-file-jobs:32
 msgid "Extraction did not finish"
-msgstr ""
+msgstr "Ayıklama tamamlanmadı"
 
 #: linux/libexec/monet-file-jobs:33
 msgid ""
 "Open Transfers in Files to see the problem or try again. Partial files were kept."
 msgstr ""
+"Sorunu görmek ya da yeniden denemek için Dosyalar'da Aktarımlar'ı açın. Yarım kalan dosyalar saklandı."
 
 #: linux/libexec/monet-rest:387
 msgid "Open Task Manager"
-msgstr ""
+msgstr "Görev yöneticisini aç"
 
 #: linux/libexec/monet-rest:405
 msgid "Memory is almost full"
-msgstr ""
+msgstr "Bellek neredeyse dolu"
 
 #: linux/libexec/monet-rest:406
 msgid ""
 "Closing an app you don't need keeps your PC responsive. Using the most now: %1."
 msgstr ""
+"İhtiyacınız olmayan bir uygulamayı kapatmak bilgisayarınızı hızlı tutar. Şu anda en çok kullananlar: %1."
 
 #: linux/share/monet/passwords/app.py:91 linux/share/monet/passwords/app_fill.py:32
 msgid "This action is not available."
@@ -12142,24 +12210,25 @@ msgstr "Monet için uygulamalar ve oyunlar"
 #: linux/share/applications/monet-apps.desktop:3
 msgctxt "an app's name in the menu"
 msgid "Apps"
-msgstr ""
+msgstr "Uygulamalar"
 
-#: linux/share/applications/monet-apps.desktop:4
+#: linux/share/applications/monet-apps.desktop:33
 msgctxt "what an app is, under its name in the menu"
 msgid "App Library"
-msgstr ""
+msgstr "Uygulama kitaplığı"
 
-#: linux/share/applications/monet-apps.desktop:5
+#: linux/share/applications/monet-apps.desktop:63
 msgctxt "an app's description in the menu"
 msgid "Every app you have, by where it came from and what it does"
 msgstr ""
+"Sahip olduğunuz tüm uygulamalar, nereden geldiklerine ve ne yaptıklarına göre"
 
-#: linux/share/applications/monet-apps.desktop:9
+#: linux/share/applications/monet-apps.desktop:96
 msgctxt ""
 "words the menu's search finds an app by; keep the semicolons between them"
 msgid ""
 "apps;applications;programs;library;installed;manage;uninstall;remove;store;"
-msgstr ""
+msgstr "uygulamalar;programlar;kitaplık;yüklü;yönet;kaldır;sil;mağaza;"
 
 #: linux/share/applications/monet-archive.desktop:3
 msgctxt "an app's name in the menu"
@@ -12524,36 +12593,38 @@ msgstr ""
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Title Bars"
-msgstr ""
+msgstr "Monet başlık çubukları"
 
 #: linux/share/kwin/scripts/monet-titles/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Windows without title bars until you point at the top of one: then its title bar slides down over it, with its buttons"
 msgstr ""
+"İşaretçiyi üstüne götürene kadar başlık çubuğu olmayan pencereler: o zaman başlık çubuğu düğmeleriyle birlikte üstüne kayar"
 
 #: linux/share/kwin/scripts/monet-work/metadata.json
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Work"
-msgstr ""
+msgstr "Monet pencere hafızası"
 
 #: linux/share/kwin/scripts/monet-work/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid ""
 "Tells Monet when windows open, close or move, so your apps come back where they were after a restart"
 msgstr ""
+"Pencereler açıldığında, kapandığında veya taşındığında Monet'ye bildirir, böylece uygulamalarınız yeniden başlatmadan sonra bıraktığınız yerde geri gelir"
 
 #: linux/share/kwin/tabbox/monet-windows/metadata.json
 msgctxt ""
 "the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
 msgid "Monet Window Grid"
-msgstr ""
+msgstr "Monet pencere ızgarası"
 
 #: linux/share/kwin/tabbox/monet-windows/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid "A window preview grid that fits the screen"
-msgstr ""
+msgstr "Ekrana sığan bir pencere önizleme ızgarası"
 
 #: linux/share/plasma/desktoptheme/monet/metadata.json
 msgctxt ""
@@ -12941,6 +13012,7 @@ msgstr ""
 msgid ""
 "Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
 msgstr ""
+"Bilgisayarınız Windows'ta yeniden başlayıp önce FACEIT'i, ardından oyunu açacak. Oyundan çıkınca Monet'ye geri döner."
 
 #: crates/monet/src/main.rs:368
 msgid ""
@@ -12958,6 +13030,7 @@ msgstr ""
 msgid ""
 "Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
 msgstr ""
+"Bilgisayarınız Windows'ta yeniden başlayacak ve orada FACEIT'in kendi yükleyicileri sizin için açılacak. Koşullarını yalnızca kabul ediyorsanız onaylayın, ardından oturum açın. Açık uygulamalar kapanacak."
 
 #: crates/monet/src/main.rs:371
 msgid ""
@@ -13045,18 +13118,20 @@ msgstr ""
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
 msgstr ""
+"Yeniden başlatma engellendi. Çalışmalarınızı kaydedin, ardından Windows'ta oyna içinde Yeniden başlat ve yükle'yi seçin."
 
 #: crates/monet/src/main.rs:945
 msgid "Windows setup stopped before it could use the installation media"
-msgstr ""
+msgstr "Windows kurulumu, yükleme medyasını kullanamadan durdu"
 
 #: crates/monet/src/main.rs:947
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
 msgstr ""
+"İndirmeyi yeniden denemek veya bir Windows 11 ISO dosyası seçmek için Windows'ta oyna'yı açın."
 
 #: crates/monet/src/main.rs:948
 msgid "Open Settings"
-msgstr ""
+msgstr "Ayarlar'ı aç"
 
 #: crates/monet/src/main.rs:957
 msgid "there isn't enough free space for Windows"
@@ -13282,34 +13357,37 @@ msgstr "Windows'ta kalmak için İptal'e tıklayın."
 
 #: crates/monet-bridge/src/bridge.rs:1723
 msgid "Downloading %1 from %2"
-msgstr ""
+msgstr "%1, %2 kaynağından indiriliyor"
 
 #: crates/monet-bridge/src/bridge.rs:1724
 msgid "Checking that %1 made it"
-msgstr ""
+msgstr "Gerçekten %1 tarafından yapıldığı kontrol ediliyor"
 
 #: crates/monet-bridge/src/bridge.rs:1725
 msgid "%1's installer is open"
-msgstr ""
+msgstr "%1 yükleyicisi açık"
 
 #: crates/monet-bridge/src/bridge.rs:1760
 msgid ""
 "%1 couldn't be downloaded. Check the internet connection, then try again from Games in Monet."
 msgstr ""
+"%1 indirilemedi. İnternet bağlantısını kontrol edin, ardından Monet'teki Oyunlar'dan yeniden deneyin."
 
 #: crates/monet-bridge/src/bridge.rs:1761
 msgid ""
 "Windows couldn't confirm that %1 made its installer, so Monet didn't run it."
 msgstr ""
+"Windows, yükleyicinin %1 tarafından yapıldığını doğrulayamadı, bu yüzden Monet onu çalıştırmadı."
 
 #: crates/monet-bridge/src/bridge.rs:1762
 msgid ""
 "%1 wasn't installed. You can try again from Games in Monet whenever you like."
 msgstr ""
+"%1 yüklenmedi. İstediğiniz zaman Monet'teki Oyunlar'dan yeniden deneyebilirsiniz."
 
 #: crates/monet-bridge/src/bridge.rs:1827
 msgid "%1 isn't set up in Windows. Set it up from Games in Monet."
-msgstr ""
+msgstr "%1 Windows'ta kurulu değil. Monet'teki Oyunlar'dan kurun."
 
 #: crates/monet-bridge/src/bridge.rs:1905
 msgid "Windows Update: downloading"
@@ -13438,9 +13516,10 @@ msgstr ""
 
 #: crates/monet-bridge/src/cover.rs:339 crates/monet-bridge/src/cover.rs:359
 msgid "Setting up %1"
-msgstr ""
+msgstr "%1 kuruluyor"
 
 #: crates/monet-bridge/src/cover.rs:341
 msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
+"Kendi yükleyicileri burada birbiri ardına açılır. Koşullarını okuyun ve yalnızca kabul ediyorsanız onaylayın: Monet bunu asla sizin yerinize yapmaz ve hiçbir şeyi kapatmaz."
