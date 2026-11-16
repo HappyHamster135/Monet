@@ -68,6 +68,10 @@ Shared.MonetWindow {
     property var windowsFiles: ({})
     property bool outputBusy: false
     property string outputProblem: ""
+    // Microphones to choose from (an interface's inputs each by name), and a change underway.
+    property var microphones: []
+    property bool microphoneBusy: false
+    property string microphoneProblem: ""
     property bool statusBusy: false
     readonly property bool pollingActive: visible && visibility !== Window.Minimized
         && (typeof windowActivity === "undefined" || windowActivity.active)
@@ -772,6 +776,7 @@ Shared.MonetWindow {
             ask("bt-list", out => sheet.devices = sheet.json(out, []))
         } else if (page === "sound") {
             ask("outputs", out => sheet.outputs = sheet.json(out, []))
+            loadMicrophones()
             loadAppsSound()
         } else if (page === "about") {
             ask("startup", out => sheet.startup = sheet.json(out, {}))
@@ -1039,6 +1044,24 @@ Shared.MonetWindow {
         ask((device.connected ? "bt-disconnect " : "bt-connect ") + device.address, () => {
             sheet.busyDevice = ""
             sheet.ask("bt-list", out => sheet.devices = sheet.json(out, sheet.devices))
+        })
+    }
+
+    function loadMicrophones() {
+        if (microphoneBusy) return
+        ask("microphones", out => { if (!sheet.microphoneBusy) sheet.microphones = sheet.json(out, sheet.microphones) })
+    }
+    function pickMicrophone(input) {
+        if (!Number.isInteger(input.id) || microphoneBusy || input.default === true) return
+        microphoneBusy = true
+        microphoneProblem = ""
+        ask("input " + input.id, (out, code) => {
+            const result = sheet.json(out, {})
+            if (result.sound && Array.isArray(result.sound.inputs)) sheet.microphones = result.sound.inputs
+            sheet.microphoneBusy = false
+            sheet.microphoneProblem = code === 0 && result.ok === true ? ""
+                : i18n("The microphone could not be changed. Check its connection and try again.")
+            sheet.refresh()  // the volume slider is the chosen microphone's
         })
     }
 
@@ -4523,7 +4546,7 @@ Shared.MonetWindow {
                             title: modelData.name
                             value: modelData.volume
                             onHeld: down => sheet.dragging = down
-                            onMoved: value => sheet.queue("app-volume " + modelData.id, value)
+                            onMoved: value => sheet.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)
                         }
                     }
                 }
@@ -4532,7 +4555,44 @@ Shared.MonetWindow {
                     repeat: true
                     triggeredOnStart: true
                     running: sheet.page === "sound" && sheet.pollingActive
-                    onTriggered: sheet.loadAppsSound()
+                    onTriggered: {
+                        sheet.loadAppsSound()
+                        sheet.loadMicrophones()
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: sheet.microphones.length > 1
+                    text: i18n("Record from")
+                }
+                Card {
+                    tone: look
+                    objectName: "search-microphone-choice"
+                    visible: sheet.microphones.length > 1
+                    Accessible.role: Accessible.Grouping
+                    Accessible.name: i18n("Microphones")
+                    Repeater {
+                        model: sheet.microphones
+                        SettingRow {
+                            required property var modelData
+                            required property int index
+                            tone: look
+                            divider: index > 0
+                            tappable: !sheet.microphoneBusy
+                            strong: false
+                            title: modelData.name
+                            onTapped: sheet.pickMicrophone(modelData)
+                            Check {
+                                tone: look
+                                active: modelData.default === true
+                            }
+                        }
+                    }
+                }
+                Caption {
+                    tone: look
+                    visible: sheet.microphoneBusy || sheet.microphoneProblem !== ""
+                    text: sheet.microphoneBusy ? i18n("Changing microphone…") : sheet.microphoneProblem
                 }
                 Card {
                     tone: look
@@ -4544,13 +4604,13 @@ Shared.MonetWindow {
                         divider: false
                         visible: typeof sheet.info.mic !== "number"
                         title: i18n("No microphone found")
-                        detail: i18n("Connect a microphone or headset, then check More sound settings below.")
+                        detail: i18n("Connect a microphone or headset. If it still isn't found, its channels can be set up in Advanced sound settings below.")
                     }
                     SliderRow {
                         tone: look
                         visible: typeof sheet.info.mic === "number"
                         divider: false
-                        title: i18n("Microphone")
+                        title: i18n("Microphone volume")
                         value: sheet.info.mic || 0
                         onHeld: down => sheet.dragging = down
                         onMoved: value => sheet.queue("mic", value)
@@ -4558,8 +4618,13 @@ Shared.MonetWindow {
                 }
                 Pill {
                     tone: look
-                    text: i18n("More sound settings…")
+                    text: i18n("Advanced sound settings…")
+                    Accessible.description: i18n("Each sound device's profile and channels")
                     onClicked: sheet.ask("kde sound")
+                }
+                Caption {
+                    tone: look
+                    text: i18n("Only needed for a device's profile or channels, such as surround sound or an interface's direct monitoring.")
                 }
             }
         }

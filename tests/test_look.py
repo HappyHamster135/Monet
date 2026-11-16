@@ -1570,7 +1570,7 @@ class SoundInTheBar(unittest.TestCase):
         self.assertIn("plasmoids/org.monet.sound", (ROOT / "linux/uninstall.sh").read_text())
         qml = (self.WIDGET / "contents/ui/main.qml").read_text(encoding="utf-8")
         for line in ('AudioLevel {',
-                     'run("mute " + (muted ? "on" : "off"))', 'root.queue("app-volume " + modelData.id, value)',
+                     'run("mute " + (muted ? "on" : "off"))', 'root.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)',
                      "acceptedButtons: Qt.LeftButton | Qt.MiddleButton", 'run("open sound")',
                      'i18n("No speakers or headphones")'):
             self.assertIn(line, qml)
@@ -3412,7 +3412,7 @@ class WhatOtherSystemsHave(unittest.TestCase):
         self.assertEqual(quick.app_streams(status), [(81, "Firefox")])
         self.assertEqual(quick.sinks(status)[0]["id"], 52)
         settings = self.SETTINGS.read_text(encoding="utf-8")
-        self.assertIn('onMoved: value => sheet.queue("app-volume " + modelData.id, value)', settings)
+        self.assertIn('onMoved: value => sheet.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)', settings)
         panel = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("onTapped: root.playThrough(place.modelData)", panel)
 
@@ -3426,7 +3426,22 @@ class WhatOtherSystemsHave(unittest.TestCase):
         with mock.patch.object(quick, "run"), mock.patch.object(quick, "pulse_nodes", return_value=metadata), \
                 mock.patch.object(quick, "app_streams", return_value=[(12, "WEBRTC VoiceEngine"), (15, "Notification")]), \
                 mock.patch.object(quick, "volume", return_value=60):
-            self.assertEqual(quick.apps_sound(), [{"id": 12, "name": "Discord", "volume": 60}])
+            self.assertEqual(quick.apps_sound(), [{"id": 12, "name": "Discord", "volume": 60, "ids": [12]}])
+
+    def test_an_app_playing_several_streams_is_one_row(self):
+        from unittest import mock
+        quick = quick_helper()
+        metadata = {ident: {"properties": {"application.name": "Zen"}} for ident in (40, 41, 42, 43)}
+        metadata[50] = {"properties": {"application.name": "Godot Engine"}}
+        levels = {"40": 30, "41": 80, "42": 55, "43": 80, "50": 100}
+        with mock.patch.object(quick, "run"), mock.patch.object(quick, "pulse_nodes", return_value=metadata), \
+                mock.patch.object(quick, "app_streams", return_value=[(i, "Zen") for i in (40, 41, 42, 43)] + [(50, "Godot")]), \
+                mock.patch.object(quick, "volume", side_effect=lambda ident: levels[ident]):
+            self.assertEqual(quick.apps_sound(), [{"id": 40, "name": "Zen", "volume": 80, "ids": [40, 41, 42, 43]},
+                                                  {"id": 50, "name": "Godot Engine", "volume": 100, "ids": [50]}])
+        with mock.patch.object(quick, "run") as run:
+            quick.main(["app-volume", "40,41,42", "35"])
+        self.assertEqual([c.args for c in run.call_args_list], [("wpctl", "set-volume", i, "35%") for i in ("40", "41", "42")])
 
     def test_battery_care_stops_at_80(self):
         import tempfile

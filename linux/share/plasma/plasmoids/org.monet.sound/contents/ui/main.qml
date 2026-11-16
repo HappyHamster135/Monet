@@ -538,7 +538,7 @@ PlasmoidItem {
                             value: modelData.volume
                             Accessible.name: modelData.name
                             onPressedChanged: root.dragging = pressed
-                            onMoved: root.queue("app-volume " + modelData.id, value)
+                            onMoved: root.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)
                         }
                     }
                 }

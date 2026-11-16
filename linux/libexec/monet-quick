@@ -42,7 +42,8 @@ monet-quick input ID                 select an available microphone, with verifi
     monet-quick keep-awake off|30|60|on  pause idle screen/lock/sleep timers temporarily
     monet-quick keep-awake-status        connection-owned inhibition and remaining seconds
     monet-quick apps-sound               the apps playing sound and each one's volume, as JSON
-    monet-quick app-volume ID 0-100
+    monet-quick app-volume ID[,ID...] 0-100  an app's streams (a browser has one for each tab)
+    monet-quick microphones              the microphones to record from, each input of an interface by name
     monet-quick brightness 0-100
     monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
     monet-quick light hours|mist|smoke
@@ -535,6 +536,8 @@ def outputs():
         playable.append(sink)
     # Two devices can share a port name ("Headphones", "Analog Output"); then
     # also say which device each one is.
+    for sink in playable:
+        sink["name"] = tidy_name(sink["name"])
     names = [sink["name"] for sink in playable]
     for sink in playable:
         device = sink.pop("device", None)
@@ -593,7 +596,16 @@ def apps_sound():
         level = volume(str(ident))
         if level is not None:
             out.append({"id": ident, "name": name[:1].upper() + name[1:], "volume": level})
-    return out
+    # A browser plays a stream for each tab: one row for the app, set all at once.
+    grouped = {}
+    for app in out:
+        same = grouped.get(app["name"].casefold())
+        if same:
+            same["ids"].append(app["id"])
+            same["volume"] = max(same["volume"], app["volume"])
+        else:
+            grouped[app["name"].casefold()] = dict(app, ids=[app["id"]])
+    return list(grouped.values())
 
 
 def bar_sound():
@@ -628,10 +640,82 @@ def microphones(status):
     return found
 
 
+# wpctl lists some sources by their internal name (alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.
+# HiFi__Mic1__source): those PipeWire makes for each input of an interface that has several.
+RAW_NODE = re.compile(r"^(?:alsa|bluez|v4l2)_(?:input|output)\.|__")
+
+
+def node_details(ident, metadata):
+    """A node's description and PipeWire properties: Pulse's view of it, else wpctl's own."""
+    item = metadata.get(ident)
+    if isinstance(item, dict):
+        props = item.get("properties") if isinstance(item.get("properties"), dict) else {}
+        return str(item.get("description") or ""), props
+    props = {}
+    for line in (run("wpctl", "inspect", str(ident), timeout=3) or "").splitlines():
+        match = re.match(r'\s*\*?\s*([\w.-]+) = "?(.*?)"?\s*$', line)
+        if match:
+            props[match[1]] = match[2]
+    return props.get("node.description", ""), props
+
+
+def node_label(name):
+    """A readable name from a node's internal one: alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.HiFi__Mic1__source
+    is the Focusrite Scarlett 2i2 USB."""
+    parts = name.split(".")
+    device = parts[1] if len(parts) > 2 else parts[-1]
+    device = re.sub(r"^(?:usb|pci|platform)-", "", device)
+    device = re.sub(r"-\d+$", "", device)
+    return re.sub(r"\s+", " ", device.replace("_", " ")).strip() or name
+
+
+def tidy_name(name):
+    """Without the device's name said twice, as a game controller's is (UCM's "Direct" is the device
+    itself): "DualSense wireless controller (PS5) Direct DualSense Wireless Controller" is the first part."""
+    words = name.split()
+    for size in range(len(words) // 2, 1, -1):
+        tail = [w.casefold() for w in words[-size:]]
+        head = [w.casefold() for w in words[:-size]]
+        if any(head[i:i + size] == tail for i in range(len(head) - size + 1)):
+            words = words[:-size]
+            if words and words[-1].casefold() == "direct":
+                words = words[:-1]
+            return " ".join(words)
+    return name
+
+
+def source_name(listed, description, props):
+    """What to call a microphone: its description, or else a name made from its internal one; and
+    for one of an interface's inputs (Scarlett's Input 1 and Input 2), which input it is."""
+    name = tidy_name(next((n for n in (description, listed) if n and not RAW_NODE.search(n)), "")
+                     or node_label(props.get("node.name") or listed))
+    inputs = [int(n) + 1 for n in re.findall(r"AUX(\d+)", str(props.get("api.alsa.split.position") or ""))]
+    if inputs:
+        which = tr("Input %1", inputs[0]) if len(inputs) == 1 else tr("Inputs %1–%2", inputs[0], inputs[-1])
+        if which.casefold() not in name.casefold():
+            name = f"{name} · {which}"
+    return name
+
+
 def available_microphones():
     found = microphones(run("wpctl", "status") or "")
-    metadata = pulse_nodes("sources") if found else {}
-    return [source for source in found if not disconnected_port(metadata.get(source["id"], {}))]
+    if not found:
+        return []
+    metadata = pulse_nodes("sources")
+    details = {source["id"]: node_details(source["id"], metadata) for source in found}
+    # An interface whose inputs PipeWire splits into a source each also has the source behind
+    # them, with every input at once ("Focusrite Scarlett 2i2 2nd Gen 0"); it's meant to be hidden.
+    behind = {props.get("api.alsa.split.name") for _, props in details.values() if props.get("api.alsa.split.position")}
+    shown = []
+    for source in found:
+        description, props = details[source["id"]]
+        if (disconnected_port(metadata.get(source["id"], {}))
+                or str(props.get("media.class") or "").endswith("/Internal")
+                or str(props.get("api.alsa.split.parent") or "").lower() == "true"
+                or (props.get("node.name") and props.get("node.name") in behind)):
+            continue
+        shown.append(dict(source, name=source_name(source.get("name", ""), description, props)))
+    return shown
 
 
 def microphone_action(action, value, source_id=None):
@@ -8216,6 +8300,8 @@ def main(argv):
         run("pkexec", f"{LIBEXECDIR}/monet-charge", args[0], timeout=60)
     elif cmd == "outputs":
         emit(outputs())
+    elif cmd == "microphones":
+        emit(available_microphones())
     elif cmd == "apps-sound":
         emit(apps_sound())
     elif cmd == "notification-audio":
@@ -8231,8 +8317,9 @@ def main(argv):
         emit(microphone_action("input", args[0]))
     elif cmd == "mute" and args and args[0] in ("on", "off"):
         run("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if args[0] == "on" else "0")
-    elif cmd == "app-volume" and len(args) == 2 and args[0].isdigit() and args[1].isdigit():
-        run("wpctl", "set-volume", args[0], f"{min(int(args[1]), 100)}%")
+    elif cmd == "app-volume" and len(args) == 2 and re.fullmatch(r"\d+(?:,\d+){0,63}", args[0]) and args[1].isdigit():
+        for ident in args[0].split(","):
+            run("wpctl", "set-volume", ident, f"{min(int(args[1]), 100)}%")
     elif cmd == "output" and args and args[0].isdigit():
         emit(output_action(int(args[0])))
     elif cmd == "brightness" and args and args[0].isdigit():

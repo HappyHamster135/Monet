@@ -1,7 +1,10 @@
 """Capture controls never claim a mute/unmute succeeded without reading it back."""
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 from tests.test_look import quick_helper
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class BarMicrophone(unittest.TestCase):
@@ -68,6 +71,61 @@ Settings
             self.assertEqual(self.quick.available_microphones(), nodes[1:])
             self.assertFalse(self.quick.microphone_action("input", "64")["ok"])
             change.assert_not_called()
+
+
+    # A Scarlett 2i2 as WirePlumber lists it: each input a source of its own (shown under Filters,
+    # by its internal name) and the hidden source of both inputs, which WirePlumber names after the card.
+    SCARLETT = """Audio
+ ├─ Sources:
+ │  *   71. Focusrite Scarlett 2i2 2nd Gen 0    [vol: 1.00]
+ │      80. DualSense wireless controller (PS5) Direct DualSense Wireless Controller [vol: 1.00]
+ │
+ ├─ Filters:
+ │  *   74. alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.HiFi__Mic1__source [Audio/Source]
+ │      76. alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.HiFi__Mic2__source [Audio/Source]
+ │
+ └─ Streams:
+"""
+    HW = "alsa_input.hw_USB_0"
+
+    def split(self, ident, number, description=""):
+        return {"description": description, "properties": {
+            "node.name": "alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.HiFi__Mic%d__source" % number,
+            "media.class": "Audio/Source", "api.alsa.split.position": "[AUX%d]" % (number - 1),
+            "api.alsa.split.name": self.HW}}
+
+    def test_an_interface_is_listed_once_for_each_input_by_name(self):
+        metadata = {74: self.split(74, 1), 76: self.split(76, 2),
+                    71: {"description": "Focusrite Scarlett 2i2 2nd Gen 0", "properties": {
+                        "node.name": self.HW, "media.class": "Audio/Source/Internal", "api.alsa.split.parent": "true"}},
+                    80: {"description": "DualSense wireless controller (PS5) Direct DualSense Wireless Controller",
+                         "properties": {"node.name": "alsa_input.usb-Sony_DualSense-00.direct"}}}
+        with patch.object(self.quick, "run", return_value=self.SCARLETT), patch.object(self.quick, "pulse_nodes", return_value=metadata):
+            found = self.quick.available_microphones()
+        self.assertEqual([(m["id"], m["name"], m["default"]) for m in found], [
+            (80, "DualSense wireless controller (PS5)", False),  # not its name twice
+            (74, "Focusrite Scarlett 2i2 USB · Input 1", True),
+            (76, "Focusrite Scarlett 2i2 USB · Input 2", False)])
+
+    def test_an_input_keeps_its_own_description_and_says_which_input(self):
+        metadata = {74: self.split(74, 1, "Scarlett 2i2 USB Mic1"), 76: self.split(76, 2, "Scarlett 2i2 USB Input 2"),
+                    80: {"description": "DualSense", "properties": {}}}
+        # The hidden source isn't in Pulse's list: wpctl says what it is, and it's left out by name.
+        def run(*args, **kwargs):
+            return self.SCARLETT if args[1] == "status" else '  * node.name = "%s"\n    media.class = "Audio/Source"\n' % self.HW
+        with patch.object(self.quick, "run", side_effect=run), patch.object(self.quick, "pulse_nodes", return_value=metadata):
+            found = self.quick.available_microphones()
+        self.assertEqual([m["name"] for m in found], ["DualSense", "Scarlett 2i2 USB Mic1 · Input 1", "Scarlett 2i2 USB Input 2"])
+
+    def test_the_settings_page_chooses_the_microphone(self):
+        settings = (ROOT / "linux/share/monet/settings-app/MonetSettings.qml").read_text(encoding="utf-8")
+        self.assertIn('ask("input " + input.id, (out, code) => {', settings)
+        self.assertIn('onTapped: sheet.pickMicrophone(modelData)', settings)
+        self.assertIn('ask("microphones", out =>', settings)
+        with patch.object(self.quick, "available_microphones", return_value=[{"id": 1, "name": "Mic", "default": True}]), \
+                patch("builtins.print") as said:
+            self.quick.main(["microphones"])
+        self.assertEqual(said.call_args.args[0], '[{"id": 1, "name": "Mic", "default": true}]')
 
 
 if __name__ == "__main__":
