@@ -14,9 +14,12 @@ import os
 from pathlib import Path
 import re
 import secrets
+import shutil
 import ssl
+import subprocess
 import sys
 import tempfile
+from threading import Thread
 import time
 from urllib.parse import urlsplit
 
@@ -179,7 +182,7 @@ def set_delivery_status(path, pair, identifier, status):
             save(path, state)
 
 
-def sync(path, state):
+def sync(path, state, on_note):
     config = state["config"]
     pair = config["pair"]
     for identifier, item in state["outbox"].items():
@@ -250,6 +253,8 @@ def sync(path, state):
                 save(path, current)
                 if message["type"] == "hello":
                     continue
+            if on_note is not None:
+                on_note(pair)
         code, _ = request(config, "PUT", route + "/receipt", decode(item["receipt"]))
         require_status(code, 200)
 
@@ -293,7 +298,7 @@ def provisioning(path, state, operator):
     config["expires"] = expiry
 
 
-def advance(path, state, operator):
+def advance(path, state, operator, on_note):
     config = state["config"]
     if state.get("revoking"):
         code, _ = request(config, "DELETE", "/v1/pair/" + config["pair"])
@@ -304,10 +309,10 @@ def advance(path, state, operator):
     if not config.get("expires"):
         provisioning(path, state, operator)
     if state["paired"] or config["expires"] > time.time():
-        sync(path, state)
+        sync(path, state, on_note)
 
 
-def watch_once(path, operator):
+def watch_once(path, operator, on_note=None):
     with edit(path) as state:
         if state is None:
             return False
@@ -316,7 +321,7 @@ def watch_once(path, operator):
     problem = None
     expired = False
     try:
-        advance(path, state, operator)
+        advance(path, state, operator, on_note)
     except PairingChanged:
         return True
     except RelayRejected as error:
@@ -347,11 +352,56 @@ def watch_once(path, operator):
     return path.exists()
 
 
+def show_handoff_notice(path, pair):
+    notifier = shutil.which("notify-send")
+    if notifier is None:
+        return
+    try:
+        command = [
+            notifier, "--app-name=Monet Link", "--icon=monet-settings", "--transient", "--expire-time=15000",
+            "--hint=string:desktop-entry:monet-settings", "--action=default=Open Phone settings",
+            "New handoff from your phone",
+        ]
+        help_text = subprocess.run([notifier, "--help"], capture_output=True, text=True, timeout=3).stdout
+        with tempfile.TemporaryFile() as activation:
+            descriptors = ()
+            if "--activation-token-fd" in help_text:
+                descriptors = (activation.fileno(),)
+                command.insert(1, f"--activation-token-fd={activation.fileno()}")
+            result = subprocess.run(command, pass_fds=descriptors, capture_output=True, text=True, timeout=45)
+            activation.seek(0)
+            token = activation.read(4097).decode("utf-8", "replace").strip()
+        if result.returncode or result.stdout.strip() != "default":
+            return
+        with edit_pair(path, pair) as current:
+            if not current["paired"] or current.get("problem") == "revoked":
+                return
+        settings = Path(__file__).resolve().with_name("monet-settings")
+        environment = dict(os.environ)
+        environment.pop("XDG_ACTIVATION_TOKEN", None)
+        if 0 < len(token) <= 4096 and token.isprintable():
+            environment["XDG_ACTIVATION_TOKEN"] = token
+        subprocess.Popen([settings, "phone"], env=environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired, PairingChanged):
+        pass
+
+
 def watch(path, operator):
+    notice = None
+
+    def notify(pair):
+        nonlocal notice
+        if notice is None or not notice.is_alive():
+            notice = Thread(target=show_handoff_notice, args=(path, pair), daemon=True)
+            try:
+                notice.start()
+            except RuntimeError:
+                notice = None
+
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with path.with_suffix(".watch.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        while watch_once(path, operator):
+        while watch_once(path, operator, notify):
             time.sleep(POLL_INTERVAL)
 
 

@@ -8,6 +8,10 @@ notes locally even while a relay request is in progress and shows **Received**
 after verifying the phone's receipt. A user service handles retries while
 Settings is closed.
 
+A new phone handoff can show a generic desktop notification. **Open Phone
+settings** opens the list of received handoffs. The notification contains no
+handoff text or addresses. Retrying a receipt keeps the same local entry.
+
 During this development phase, the phone needs the Monet Link debug APK from
 the Monet Phone repository. The PC needs access to a Monet Link development
 relay. The existing local KDE Connect controls remain under the Link panel.
@@ -34,8 +38,8 @@ by default) with permissions `0600`:
 For a test relay with a private certificate, add `"certificate": "relay.pem"`
 and place the relay's public PEM file beside the configuration. The URL's host
 must match the certificate. The Monet system image includes the required
-`python3-cryptography` and `python3-qrcode+pil` packages. On a development
-overlay, install those packages separately and sign in again after installing
+`python3-cryptography`, `python3-qrcode+pil` and `libnotify` packages. On a
+development overlay, install those packages separately and sign in again after installing
 the units, or run `systemctl --user daemon-reload` and
 `systemctl --user start monet-link.path`.
 
