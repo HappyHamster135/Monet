@@ -37,6 +37,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Calendar are set out to suit your screen, small or large, wide or turned on
   its side, with their tops lined up and none of them cut off at an edge. Once
   you arrange them yourself, they stay just where you put them.
+- **The fallback installer asks before it writes.** Fedora's fallback installer
+  now waits on its summary page, so you can check the drive, and writes
+  nothing until you click Begin Installation. It also asks for an
+  administrator with a password first, so you can always sign in and look
+  after the PC afterwards.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

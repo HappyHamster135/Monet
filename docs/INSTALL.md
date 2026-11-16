@@ -156,6 +156,8 @@ disk encryption does not protect against someone with physical access to this ke
 The 0.9.8 fallback offers erase only when it can identify the boot media and
 one eligible internal drive. If either check fails, use Monet Setup to choose
 the drive. The older 0.9.7 fallback preselects the largest eligible drive.
+This fallback waits at its summary until you click **Begin Installation**, and
+writes nothing to the drive before that.
 
 1. Open the boot menu and choose the USB stick, as above.
 2. Monet's start menu opens (over the harbor at dawn, unless Secure Boot is
@@ -163,12 +165,13 @@ the drive. The older 0.9.7 fallback preselects the largest eligible drive.
    selected. Press **Enter** (or wait ten seconds).
 3. Choose your language.
 4. Click **Network & Host Name** and connect to Wi-Fi.
-5. Click **User Creation** and enter your name and a password.
+5. Click **User Creation**, enter your name and a password, and leave
+   **Add administrative privileges to this user account** selected.
 6. Open **Installation Destination** and check the selected drive and partition
    changes before clicking **Begin Installation**. If the summary says
    **Kickstart insufficient**, select only the drive you intend to use and
    confirm its layout there. Monet shows download progress while it installs.
-7. Click **Reboot** and take out the USB stick.
+7. Click **Reboot System**. Remove the USB stick once the PC starts restarting.
 
 </details>
 
@@ -181,21 +184,14 @@ yet). With the arrow keys and Enter:
 **Enroll MOK** → **Continue** → **Yes** → type **`monetsetup`** → **Reboot**
 
 Monet Setup's last page shows these steps in pictures: take a photo of them.
+Fedora's fallback installer asks the firmware to trust the key too, and shows
+the same steps before **Reboot System**.
 
 It opens on **Continue boot**: don't choose that. It skips this, and then
 Secure Boot won't let Monet start. If it happens anyway, the PC says
 "bad shim signature" for ten seconds, then Monet asks the firmware again,
 says so, and restarts: the blue screen is back. (Starting from the USB stick
 works too: Monet Setup notices and offers **Ask again and restart**.)
-
-With Fedora's installer instead:
-
-1. Turn Secure Boot off in the PC's firmware settings, and start Monet.
-2. In Terminal, run `sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der`
-   and type `monetsetup` twice. Then run `sudo mokutil --timeout -1`, so
-   the blue screen waits for you.
-3. Restart, turn Secure Boot back on, and this time choose **Enroll MOK** on
-   the blue screen.
 
 Sign in to Monet. It greets you by name.
 
@@ -439,4 +435,5 @@ The first time Windows starts from Monet, click **Yes** once to finish.
 
 Download **Monet-0.9.8-7-Linux.tar.gz** and run `./monet-0.9.8-7-linux/install.sh`,
 or switch the whole system: `sudo bootc switch ghcr.io/happyhamster135/monet:latest`
-(`monet-amd:latest` with AMD or Intel graphics, or an NVIDIA card older than the RTX 20 series).
+with an NVIDIA GTX 16 or RTX 20 series card or newer, or `monet-amd:latest` with
+AMD or Intel graphics or an older NVIDIA card.
