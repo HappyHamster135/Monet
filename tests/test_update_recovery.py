@@ -200,5 +200,53 @@ class SoundRepair(unittest.TestCase):
             self.assertIn('org.kde.plasma.volume', panel['config']['extraItems'])
 
 
+class TrayDuplicates(unittest.TestCase):
+    def test_kde_items_that_monet_replaces_leave_the_tray_once(self):
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtQml import QJSEngine
+        except ImportError:
+            self.skipTest('Qt JavaScript runtime')
+        app = QCoreApplication.instance() or QCoreApplication([])
+        engine = QJSEngine()
+        engine.evaluate('''
+            var kde = ["org.kde.plasma.volume", "org.kde.plasma.bluetooth", "org.kde.plasma.brightness"];
+            function panel(quick, sound) {
+                var config = {extraItems:kde.concat(["org.kde.plasma.networkmanagement", "custom"]).join(","),
+                              shownItems:"org.kde.plasma.bluetooth,org.kde.plasma.networkmanagement",
+                              hiddenItems:"org.kde.plasma.volume,org.kde.plasma.clipboard", knownItems:"custom"};
+                var list = ["org.kde.plasma.systemtray"];
+                if (quick) list.push("org.monet.quick");
+                if (sound) list.push("org.monet.sound");
+                var widgets = list.map(type => ({type:type, readConfig:key=>config[key]||"",
+                    writeConfig:(key,value)=>config[key]=value.join(","), reloadConfig:()=>{}}));
+                return {widgets:type=>widgets.filter(w=>w.type===type), config:config};
+            }
+            var monet=panel(true,true), noSound=panel(true,false), plain=panel(false,false);
+            function panels(){return [monet,noSound,plain]}
+        ''')
+        source = (ROOT / 'linux/share/monet/tray-duplicates.js').read_text()
+        for _ in range(2):
+            result = engine.evaluate(source)
+            self.assertFalse(result.isError(), result.toString())
+        monet, no_sound, plain = json.loads(engine.evaluate('JSON.stringify(panels().map(p=>p.config))').toString())
+        self.assertEqual(monet['extraItems'], 'org.kde.plasma.networkmanagement,custom')
+        self.assertEqual(monet['shownItems'], 'org.kde.plasma.networkmanagement')
+        self.assertEqual(monet['hiddenItems'], 'org.kde.plasma.clipboard')
+        # Known, or Plasma adds them back as new; each once, however often it runs.
+        self.assertEqual(monet['knownItems'].split(','),
+                         ['custom', 'org.kde.plasma.bluetooth', 'org.kde.plasma.brightness', 'org.kde.plasma.volume'])
+        # Without Monet's sound control beside it, KDE's volume item stays.
+        self.assertIn('org.kde.plasma.volume', no_sound['extraItems'])
+        self.assertNotIn('org.kde.plasma.bluetooth', no_sound['extraItems'])
+        # A panel that isn't Monet's is left as it is.
+        self.assertIn('org.kde.plasma.bluetooth', plain['extraItems'])
+        self.assertEqual(plain['knownItems'], 'custom')
+        look = (ROOT / 'linux/libexec/monet-look').read_text()
+        self.assertIn('tray_repair="$CONFIG/monet/tray-deduplicated-v1"', look)
+        self.assertIn('"$(cat "$DATADIR/monet/tray-duplicates.js")"', look)
+        self.assertIn('"$SRC/share/monet/tray-duplicates.js"', (ROOT / 'linux/install.sh').read_text())
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -665,6 +665,18 @@ if [ ! -e "$sound_repair" ] && [ -r "$DATADIR/monet/repair-sound.js" ]; then
     fi
 fi
 
+# KDE's sound, Bluetooth and brightness items duplicate Monet's own controls: out of the
+# tray once (0.9.8-7), on --keep upgrades too. Bringing one back afterwards sticks.
+tray_repair="$CONFIG/monet/tray-deduplicated-v1"
+if [ ! -e "$tray_repair" ] && [ -r "$DATADIR/monet/tray-duplicates.js" ]; then
+    if busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s \
+        "$(cat "$DATADIR/monet/tray-duplicates.js")" >/dev/null 2>&1; then
+        mkdir -p "$CONFIG/monet" && touch "$tray_repair"
+    else
+        failed=1
+    fi
+fi
+
 # Monet's clock in the panel instead of KDE's (once when adopting the look).
 # Existing layouts belong to the person: automatic upgrades only repair target IDs.
 if [ "${1:-}" != --keep ]; then

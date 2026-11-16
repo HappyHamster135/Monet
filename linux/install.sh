@@ -221,6 +221,7 @@ done
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
 put 644 "$SRC/share/monet/panel-layout.js" "$DATADIR/monet/panel-layout.js"
 put 644 "$SRC/share/monet/repair-sound.js" "$DATADIR/monet/repair-sound.js"
+put 644 "$SRC/share/monet/tray-duplicates.js" "$DATADIR/monet/tray-duplicates.js"
 for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.system \
     org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.stacks; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"

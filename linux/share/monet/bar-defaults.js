@@ -4,12 +4,13 @@ function monetTray(tray) {
     tray.currentConfigGroup = ["General"];
     function list(key) { return String(tray.readConfig(key, "")).split(",").filter(Boolean); }
     function union(a, b) { return a.concat(b.filter(function (id) { return a.indexOf(id) < 0; })); }
-    var removed = ["org.kde.plasma.brightness", "org.kde.plasma.volume", "org.kde.plasma.weather",
-        "org.kde.kscreen", "org.kde.plasma.manage-inputmethod", "org.kde.plasma.keyboardindicator",
-        "org.kde.plasma.vault"];
+    // Sound, Bluetooth and brightness are Monet's own, in Quick Settings and beside it.
+    var removed = ["org.kde.plasma.brightness", "org.kde.plasma.volume", "org.kde.plasma.bluetooth",
+        "org.kde.plasma.weather", "org.kde.kscreen", "org.kde.plasma.manage-inputmethod",
+        "org.kde.plasma.keyboardindicator", "org.kde.plasma.vault"];
     // Keyboard layout switching stays available for multilingual users. Camera/privacy
     // indicators, print jobs and other apps retain their normal active/passive behavior.
-    var visible = ["org.kde.plasma.networkmanagement", "org.kde.plasma.bluetooth"];
+    var visible = ["org.kde.plasma.networkmanagement"];
     var enabled = visible.concat(["org.kde.plasma.notifications", "org.kde.plasma.battery",
         "org.kde.plasma.devicenotifier", "org.kde.plasma.clipboard"]);
     tray.writeConfig("knownItems", union(list("knownItems"), removed.concat(enabled)));

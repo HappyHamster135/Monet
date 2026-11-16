@@ -64,6 +64,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   after another sometimes began at full volume because its player set its own
   level a moment after the Home Bar had restored the app's. The Home Bar now
   puts the app's level back then too.
+- **A tidier tray.** KDE's own sound, Bluetooth and brightness icons are no
+  longer in the tray beside Monet's, where they were the same controls twice.
+  Bluetooth and brightness are in Quick Settings, and Monet's sound control
+  sits right next to it. If you bring one back in the tray's settings, it
+  stays.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

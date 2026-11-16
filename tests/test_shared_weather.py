@@ -169,8 +169,12 @@ class EverydayBar(unittest.TestCase):
         result = self.policy({"extraItems": "example.user-app,org.kde.plasma.keyboardlayout,org.kde.plasma.cameraindicator,org.kde.kscreen,org.kde.plasma.manage-inputmethod",
                               "disabledStatusNotifiers": "My deliberately disabled app"})
         enabled = result["config"]["extraItems"].split(",")
-        for item in ("example.user-app", "org.kde.plasma.keyboardlayout", "org.kde.plasma.cameraindicator", "org.kde.plasma.networkmanagement", "org.kde.plasma.bluetooth"):
+        for item in ("example.user-app", "org.kde.plasma.keyboardlayout", "org.kde.plasma.cameraindicator", "org.kde.plasma.networkmanagement"):
             self.assertIn(item, enabled)
+        # Quick Settings has Bluetooth and brightness, and Monet's sound control sits beside the tray.
+        for item in ("org.kde.plasma.bluetooth", "org.kde.plasma.brightness", "org.kde.plasma.volume"):
+            self.assertNotIn(item, enabled)
+            self.assertIn(item, result["config"]["knownItems"])
         self.assertNotIn("org.kde.kscreen", enabled)
         self.assertNotIn("org.kde.plasma.manage-inputmethod", enabled)
         self.assertEqual(result["config"]["disabledStatusNotifiers"], "My deliberately disabled app,Xwayland Video Bridge")
