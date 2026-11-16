@@ -3261,18 +3261,24 @@ def disk_volume_label(token, fmt):
 def storage_capacity():
     """Show free space immediately; folder breakdowns are a separate explicit scan."""
     disk = shutil.disk_usage(HOME)
-    return dict(total=disk.total, free=disk.free, used=disk.used, measured=False, downloadsPath=str(downloads_dir()))
+    return dict(total=disk.total, free=disk.free, used=disk.used, occupied=disk.total - disk.free,
+                measured=False, downloadsPath=str(downloads_dir()))
 
 
 def storage():
     """One bounded walk per tree; never repeatedly scan the same home folders."""
-    disk = shutil.disk_usage(HOME)
     measured = storage_scan()
-    parts = storage_parts(disk.total, disk.free, measured['home'], measured['games'],
-                          measured['apps'], measured['userApps'], measured['trash'])
-    return dict(parts, total=disk.total, trash=measured['trash'], downloads=measured['downloads'],
-                downloadsPath=str(downloads_dir()), measured=True, limited=measured['limited'],
-                unreadable=measured['unreadable'], visited=measured['visited'])
+    capacity = storage_capacity()
+    parts = storage_parts(capacity['total'], capacity['free'], measured['home'], measured['games'],
+                          measured['apps'], measured['userApps'], measured['trash'] or 0)
+    used = capacity['total'] - capacity['free']
+    classified = parts['games'] + parts['apps'] + parts['files']
+    overcounted = classified > used
+    return dict(capacity, **{key: parts[key] for key in ('games', 'apps', 'files', 'system')},
+                breakdown=not overcounted and measured['scopes'][0]['state'] == 'measured',
+                overcounted=overcounted, trash=measured['trash'],
+                downloads=measured['downloads'], measured=True, limited=measured['limited'],
+                unreadable=measured['unreadable'], visited=measured['visited'], scopes=measured['scopes'])
 
 
 def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')):
@@ -3282,24 +3288,43 @@ def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')
     to Python. NUL records preserve unusual names. Hard links are counted once;
     shared Btrfs extents still make these approximate referenced sizes.
     """
-    home = HOME.absolute()
+    home = HOME.resolve()
     categories = {
         'games': [DATA_HOME / 'Steam/steamapps', HOME / 'Games'],
         'userApps': [DATA_HOME / 'flatpak', HOME / '.var/app'],
         'trash': [DATA_HOME / 'Trash'], 'downloads': [downloads_dir()]}
-    result = dict(home=0, games=0, userApps=0, trash=0, downloads=0, apps=0,
-                  visited=0, limited=False, unreadable=False)
+    categories = {key: [home / path.relative_to(HOME) if path.is_relative_to(HOME) else path
+                        for path in paths] for key, paths in categories.items()}
+    scopes = [dict(path=str(home), state='partial')]
+    result = dict(home=0, games=0, userApps=0, trash=None, downloads=0, apps=0,
+                  visited=0, limited=False, unreadable=False, scopes=scopes)
     if seconds <= 0 or limit <= 0:
         result['limited'] = True
         return result
     depth = 1
+    outside = set()
     for paths in categories.values():
         for path in paths:
             if path.is_relative_to(home):
                 depth = max(depth, len(path.relative_to(home).parts))
-            else:
-                result['limited'] = True
-    targets = [str(home)] + ([str(system_apps)] if system_apps.exists() else [])
+            elif path.exists():
+                outside.add(str(path))
+    targets = [str(home)]
+    if system_apps.exists():
+        same_fs = home.stat().st_dev == system_apps.stat().st_dev
+        if not same_fs:
+            # Btrfs subvolumes can have different device numbers but share space.
+            def btrfs_uuid(path):
+                return (run('findmnt', '--noheadings', '--raw', '--types', 'btrfs',
+                            '--output', 'UUID', '--target', str(path), timeout=2) or '').strip()
+            uuid = btrfs_uuid(home)
+            same_fs = bool(uuid and uuid == btrfs_uuid(system_apps))
+        if same_fs and not system_apps.is_relative_to(home):
+            targets.append(str(system_apps))
+            scopes.append(dict(path=str(system_apps), state='partial'))
+        elif not same_fs:
+            outside.add(str(system_apps))
+    scopes.extend(dict(path=path, state='outside') for path in sorted(outside))
     command = ['du', '--null', '-x', '-B1', '--max-depth=' + str(min(depth, 16)), '--', *targets]
     deadline, buffer, received, totals = time.monotonic() + seconds, b'', 0, {}
     process = None
@@ -3339,9 +3364,21 @@ def storage_scan(seconds=8.0, limit=250000, system_apps=Path('/var/lib/flatpak')
                 process.kill(); process.wait()
             process.stdout.close()
     result['home'] = totals.get(str(home), 0)
-    result['apps'] = totals.get(str(system_apps), 0)
-    for key, paths in categories.items():
-        result[key] = sum(totals.get(str(path), 0) for path in set(paths))
+    result['apps'] = totals.get(str(system_apps), 0) if str(system_apps) in targets else 0
+    for scope in scopes:
+        if scope['path'] in totals and not result['unreadable']:
+            scope['state'] = 'measured'
+    assigned = set()
+    for path, key in sorted(((path, key) for key in ('games', 'userApps') for path in categories[key]),
+                            key=lambda entry: len(entry[0].parts)):
+        if str(path) in totals and not any(path.is_relative_to(ancestor) for ancestor in assigned):
+            result[key] += totals[str(path)]
+            assigned.add(path)
+    result['downloads'] = totals.get(str(categories['downloads'][0]), 0)
+    trash = categories['trash'][0]
+    result['trash'] = totals.get(str(trash))
+    if result['trash'] is None and not trash.exists() and scopes[0]['state'] == 'measured':
+        result['trash'] = 0
     return result
 
 

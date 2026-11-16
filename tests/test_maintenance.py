@@ -274,3 +274,51 @@ class StorageScan(unittest.TestCase):
                 limited = q.storage_scan(limit=2, system_apps=Path(folder)/'absent')
                 self.assertTrue(limited['limited']); self.assertLessEqual(limited['visited'], 2)
                 self.assertTrue(q.storage_scan(seconds=0)['limited'])
+
+    def test_a_folder_inside_another_counts_once_and_unmeasured_trash_is_unknown(self):
+        # With the data folder inside ~/Games, Steam's library was counted in Games twice.
+        q = quick_helper()
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)/'home'; games = home/'Games'; data = games/'data'
+            library = data/'Steam/steamapps'; library.mkdir(parents=True)
+            (library/'game').write_bytes(b'g'*65536)
+            with patch.object(q, 'HOME', home), patch.object(q, 'DATA_HOME', data), \
+                    patch.object(q, 'downloads_dir', return_value=home/'Downloads'):
+                result = q.storage_scan(system_apps=Path(folder)/'absent')
+                stopped = q.storage_scan(seconds=0)
+            whole = subprocess.run(['du', '-s', '-B1', str(games)], capture_output=True, text=True, check=True)
+        self.assertEqual(result['scopes'], [dict(path=str(home.resolve()), state='measured')])
+        self.assertEqual(result['games'], int(whole.stdout.split()[0]))
+        self.assertEqual(result['trash'], 0)  # there's no Trash folder: it's empty
+        self.assertIsNone(stopped['trash'])  # not measured, so not "Empty"
+
+    def test_shared_extents_cannot_overfill_the_capacity_chart(self):
+        q = quick_helper()
+        with patch.object(q, 'storage_capacity', return_value=dict(total=100, free=50, occupied=50)), \
+                patch.object(q, 'storage_scan', return_value=dict(home=70, games=40, apps=20, userApps=0, trash=None,
+                    downloads=0, limited=True, unreadable=False, visited=2, scopes=[dict(state='measured')])):
+            result = q.storage()
+        self.assertFalse(result['breakdown'])
+        self.assertTrue(result['overcounted'])
+        self.assertEqual(result['occupied'], 50)
+        self.assertIsNone(result['trash'])
+
+    def test_a_whole_measurement_that_fits_is_split_up(self):
+        q = quick_helper()
+        with patch.object(q, 'storage_capacity', return_value=dict(total=100, free=50, occupied=50)), \
+                patch.object(q, 'storage_scan', return_value=dict(home=20, games=10, apps=5, userApps=2, trash=1,
+                    downloads=3, limited=False, unreadable=False, visited=9, scopes=[dict(state='measured')])):
+            result = q.storage()
+        self.assertTrue(result['breakdown'])
+        self.assertFalse(result['overcounted'])
+        self.assertEqual(sum(result[key] for key in ('games', 'apps', 'files', 'system')), 50)
+
+    def test_settings_splits_the_bar_only_when_the_measurement_fits(self):
+        qml = (ROOT / 'linux/share/monet/settings-app/MonetSettings.qml').read_text(encoding='utf-8')
+        self.assertIn('readonly property var parts: sheet.storageInfo.breakdown ? [', qml)
+        self.assertIn('] : [["occupied", i18n("Used"), "#357F72"]]', qml)
+        self.assertIn(': sheet.storageInfo.overcounted ? i18n("Some files are shared between folders', qml)
+        self.assertIn('!sheet.storageInfo.measured || sheet.storageInfo.trash === null ? i18n("Not measured")', qml)
+        # A late answer from an earlier request can't replace a newer one.
+        self.assertIn('if (request !== sheet.storageRequest) return', qml)
+        self.assertNotIn('ask("storage-capacity", out => sheet.storageInfo', qml)

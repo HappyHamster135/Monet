@@ -369,6 +369,9 @@ Shared.MonetWindow {
     // Default Apps' From Windows: the bookmarks kept from Windows' browsers (monet-quick windows-browsers).
     property var browserInfo: ({})
     property var storageInfo: ({})
+    // Each storage answer carries its request's number: an older one coming back late is ignored.
+    property int storageRequest: 0
+    property bool storageLoaded: false
     property bool storageBusy: false
     property var disks: []
     property bool disksLoading: false
@@ -421,7 +424,7 @@ Shared.MonetWindow {
                 sheet.retained = sheet.retained.filter(entry => entry.id !== item.id)
                 sheet.retainedReview = null
                 sheet.retainedMessage = i18n("Saved installation removed. Freed space may take a moment to appear.")
-                sheet.ask("storage-capacity", data => sheet.storageInfo = sheet.json(data, sheet.storageInfo))
+                sheet.loadStorage()
             }
         })
     }
@@ -825,7 +828,7 @@ Shared.MonetWindow {
             loadDisplay()
         } else if (page === "storage") {
             loadDisks()
-            if (!storageBusy) ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo))
+            if (!storageBusy) loadStorage()
             ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))
             ask("shared-files", out => sheet.windowsFiles = sheet.json(out, {}))
         } else if (page === "backups") {
@@ -1699,17 +1702,32 @@ Shared.MonetWindow {
 
     function emptyTrash() {
         storageInfo = changed(storageInfo, ["trash"], 0)
-        ask("empty-trash", () => ask("storage-capacity", out => sheet.storageInfo = sheet.json(out, sheet.storageInfo)))
+        ask("empty-trash", () => loadStorage())
+    }
+    function loadStorage() {
+        const request = ++storageRequest
+        ask("storage-capacity", (out, code) => {
+            if (request !== sheet.storageRequest) return
+            sheet.storageLoaded = true
+            if (code === 0) sheet.storageInfo = sheet.json(out, sheet.storageInfo)
+        })
     }
     function measureStorage() {
         if (storageBusy) return
+        const request = ++storageRequest
         storageBusy = true
         storageProblem = ""
         ask("storage", (out, code) => {
             sheet.storageBusy = false
+            if (request !== sheet.storageRequest) return
             const result = sheet.json(out, {})
-            if (code === 0 && result.measured === true) sheet.storageInfo = result
-            else sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+            if (code === 0 && result.measured === true) {
+                sheet.storageInfo = result
+                sheet.storageLoaded = true
+            } else {
+                sheet.storageProblem = i18n("Folder sizes couldn't be measured. Try again.")
+                if (!sheet.storageLoaded) sheet.loadStorage()
+            }
         })
     }
     function loadDisks() {
@@ -6071,11 +6089,12 @@ Shared.MonetWindow {
             id: storagePage
             ColumnLayout {
                 id: storageColumn
-                // What fills the disk, each in a color of The Hours.
-                readonly property var parts: sheet.storageInfo.measured ? [
+                // What fills the disk, each in a color of The Hours. Only a whole measurement
+                // that fits in the space in use is split up; otherwise the bar shows what's in use.
+                readonly property var parts: sheet.storageInfo.breakdown ? [
                     ["games", i18n("Games"), "#F2552C"], ["apps", i18n("Apps"), "#5C88D0"],
                     ["files", i18n("Your files"), "#357F72"], ["system", i18n("Other or unmeasured"), "#9C7BC0"]
-                ] : [["used", i18n("Used"), "#357F72"]]
+                ] : [["occupied", i18n("Used"), "#357F72"]]
                 readonly property real total: sheet.storageInfo.total || 0
                 // Emptying the Trash asks once more.
                 property bool askingTrash: false
@@ -6346,7 +6365,8 @@ Shared.MonetWindow {
                             spacing: 10
                             Text {
                                 horizontalAlignment: Text.AlignLeft
-                                text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free)) : i18n("Measuring…")
+                                text: storageColumn.total > 0 ? i18n("%1 free", sheet.bytes(sheet.storageInfo.free))
+                                    : sheet.storageLoaded ? i18n("Free space couldn't be read.") : i18n("Measuring…")
                                 color: look.ink
                                 font.family: "Fraunces 72pt SuperSoft"
                                 font.weight: Font.Light
@@ -6415,6 +6435,7 @@ Shared.MonetWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: sheet.storageProblem || (sheet.storageBusy ? i18n("Measuring folder sizes…")
+                                    : sheet.storageInfo.overcounted ? i18n("Some files are shared between folders, so the folders add up to more than the space in use. The bar shows only what is in use.")
                                     : sheet.storageInfo.limited || sheet.storageInfo.unreadable ? i18n("Partial measurement. Some folders could not be measured within this scan. Other or unmeasured space includes them.")
                                     : i18n("Folder sizes are measured only when you ask, to keep disk activity low."))
                                 color: look.dim
@@ -6535,7 +6556,7 @@ Shared.MonetWindow {
                         divider: false
                         title: i18n("Trash")
                         detail: storageColumn.askingTrash ? i18n("Everything in it is gone for good. Sure?")
-                            : !sheet.storageInfo.measured ? i18n("Not measured")
+                            : !sheet.storageInfo.measured || sheet.storageInfo.trash === null ? i18n("Not measured")
                             : (sheet.storageInfo.trash || 0) > 0 ? sheet.bytes(sheet.storageInfo.trash) : i18n("Empty")
                         Row {
                             spacing: 8

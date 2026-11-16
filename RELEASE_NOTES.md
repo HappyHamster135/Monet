@@ -27,6 +27,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the list or the search again, not to the app page that just closed.
 - **Wi-Fi in every language.** Quick Settings shows the Wi-Fi tile again when
   Monet is set to a language other than English.
+- **Storage that adds up.** When files are shared between folders, Settings
+  no longer splits the storage bar into more than the space in use, and the
+  Trash says "Not measured" until it has been.
 - **A quicker start with NVIDIA graphics.** The check that keeps Flatpak apps'
   NVIDIA drivers matched now runs half a minute after the PC starts, instead
   of holding up the start by several seconds.
