@@ -52,6 +52,10 @@ if grep -q '"state": "open"' /run/monet/windows-drive.json 2>/dev/null; then
     ("$LIBEXECDIR/monet-quick" epic-share; "$LIBEXECDIR/monet-quick" windows-files; "$LIBEXECDIR/monet-quick" windows-apps
      "$LIBEXECDIR/monet-quick" wine-share; "$LIBEXECDIR/monet-quick" launchers) >/dev/null 2>&1 &
 fi
+# Steam's libraries on the PC's other drives, found again where the drives are mounted now,
+# while Steam is still closed (Steam's own autostart does this too, just before it starts). In
+# the background: it waits for the PC to finish mounting its drives first.
+"$LIBEXECDIR/monet-quick" steam-drives wait >/dev/null 2>&1 &
 # Files' place for the folder shared with Windows: there while the folder is.
 [ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" files-place >/dev/null 2>&1
 

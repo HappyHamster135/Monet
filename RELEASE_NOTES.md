@@ -120,6 +120,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   nothing to do first. Apps you closed stay closed, nothing opens twice, and
   if something can't come back, a note says so with Retry. Turn it off in
   Settings, Power & Sleep, Reopen your work.
+- **Your games on other drives stay in Steam.** When a drive inside your PC
+  turns up in a new place after an update, Monet finds the Steam libraries on
+  it again and tells Steam where they are before it starts. When Steam starts
+  with your PC, it waits a moment for your drives to be ready, so you don't
+  have to add them again.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

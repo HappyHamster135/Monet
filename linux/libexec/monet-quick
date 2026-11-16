@@ -87,6 +87,8 @@
     monet-quick favorite GAME on|off     a game among the favorites in Games, or not
     monet-quick protondb-refresh APPID…  (in the background) ask ProtonDB how those Steam games run here, once a week each
     monet-quick steam-share [now]        Windows' Games folder as a library of Steam here (now: closes Steam first)
+    monet-quick steam-drives [wait]      Steam's libraries on other drives found again where the drives are now
+                                         (Steam closed; wait: until the PC has mounted its drives first)
     monet-quick epic-share               Epic games Heroic put there, made ready for Epic's launcher in Windows
     monet-quick shared                   Windows' Games folder: whether it's here, in Steam, and its room, as JSON
     monet-quick shared-hint-off          the Games gallery's note about it put away
@@ -4768,6 +4770,167 @@ def steam_share(now=False):
         subprocess.Popen(["steam", "-silent"], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return done
+
+
+# Steam's libraries on the PC's other drives -------------------------------------------------
+# Bazzite mounts each labelled ext4 or btrfs drive inside the PC at /run/media/system/LABEL
+# (ublue-os-media-automount, as root, at every start). A drive can have been somewhere else
+# before: in /run/media/PERSON/LABEL when Files mounted it because that service missed it at the
+# start, or /run/media/media-automount/UUID in its first versions. Since November 2026 the
+# service also waits for the start-up screen to go, so a drive can still be on its way when
+# Steam starts with the desktop. Either way Steam finds no library at the path it noted, calls
+# it not mounted and leaves its games out. So before Steam starts (steam-drives wait): first the
+# drives being mounted, then each library Steam lists that isn't at its path is looked for on the
+# drives mounted now and its path set to where it is. Never a library made up, never a path
+# changed while that library is still there, and only while Steam is closed.
+
+DRIVE_PLACES = ("/run/media/", "/media/", "/mnt/", "/var/mnt/")
+
+
+def drive_mounts(mountinfo=Path("/proc/self/mountinfo"), by_uuid=Path("/dev/disk/by-uuid")):
+    """The drives mounted where drives go (under /run/media, /media, /mnt), but not Windows'
+    folders Monet shares: [(mount point, the drive's UUID or "")], in the order they were mounted."""
+    uuids = {}
+    try:
+        for link in by_uuid.iterdir():
+            uuids[os.path.realpath(link)] = link.name
+    except OSError:
+        pass
+    try:
+        lines = mountinfo.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    unescape = lambda text: re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), text)
+    found = {}
+    for line in lines:
+        mine, _, theirs = line.partition(" - ")
+        mine, theirs = mine.split(), theirs.split()
+        if len(mine) < 5 or len(theirs) < 2:
+            continue
+        target, source = unescape(mine[4]), unescape(theirs[1])
+        if (not source.startswith("/dev/") or not target.startswith(DRIVE_PLACES)
+                or any(target == str(f) or under(target, f) for f in (SHARED, FILES))):
+            continue
+        found.pop(target, None)  # mounted again over the same place: the later one shows
+        found[target] = uuids.get(os.path.realpath(source), "")
+    return [(Path(target), uuid) for target, uuid in found.items()]
+
+
+def library_mark(folder):
+    """The contentid in a Steam library folder's own libraryfolder.vdf ("" without one)."""
+    try:
+        mark = pick(vdf((folder / "libraryfolder.vdf").read_text(encoding="utf-8", errors="replace")), "libraryfolder")
+    except OSError:
+        return ""
+    found = str(mark.get("contentid") or "") if isinstance(mark, dict) else ""
+    return "" if found == "0" else found
+
+
+def library_now(path, contentid, mounts):
+    """Where the Steam library Steam noted at path is on the drives mounted now: the folder whose
+    libraryfolder.vdf has its contentid, or, when Steam noted none, the same folder on the drive
+    of the same label or UUID. None unless that's exactly one folder (the first place it's
+    mounted, should a drive be mounted twice)."""
+    parts = Path(path).parts[1:]
+    contentid = "" if str(contentid) == "0" else str(contentid)
+    found = {}
+    for mount, uuid in mounts:
+        if contentid:
+            places = [mount.joinpath(*parts[k:]) for k in range(len(parts) + 1)]
+            places = [p for p in places if library_mark(p) == contentid]
+        else:
+            # Only the drive's own folder where drives go (/run/media/ann/HDD/Games: HDD).
+            places = [mount.joinpath(*parts[i + 1:]) for i, part in enumerate(parts[:4])
+                      if part in {mount.name, uuid} - {""} and ("/" + "/".join(parts[:i]) + "/").startswith(DRIVE_PLACES)]
+        for place in places:
+            try:
+                if (place / "steamapps").is_dir():
+                    seen = place.stat()
+                    found.setdefault((seen.st_dev, seen.st_ino), place)
+            except OSError:
+                continue
+    return next(iter(found.values())) if len(found) == 1 else None
+
+
+def vdf_set(text, keys, name, value):
+    """text with the value of name in the block at keys (in any case) set to value, or None."""
+    span = vdf_block(text, keys)
+    if span is None:
+        return None
+    key, depth = None, 0
+    for token in VDF_TOKEN.finditer(text, span[0], span[1]):
+        quoted, brace = token.groups()
+        if brace:
+            depth, key = depth + (1 if brace == "{" else -1), None
+        elif depth == 0 and key is None:
+            key = quoted
+        elif depth == 0:
+            if key.lower() == name.lower():
+                return text[:token.start()] + vdf_quote(value) + text[token.end():]
+            key = None
+    return None
+
+
+def steam_drives(steam=OWN_STEAM, mounts=None):
+    """Steam's libraries on the PC's other drives, found again where the drives are mounted now
+    (above), in both of Steam's lists. Steam must be closed. Each list is kept as it was before
+    as libraryfolders.vdf.before-drives. "moved", "ok", "steam-running" or "no-steam"."""
+    lists = [steam / "steamapps/libraryfolders.vdf", steam / "config/libraryfolders.vdf"]
+    if not lists[0].is_file():
+        return "no-steam"
+    if steam_running():
+        return "steam-running"
+    mounts = drive_mounts() if mounts is None else mounts
+    moved = False
+    for path in lists:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        listed = pick(vdf(text), "libraryfolders")
+        if not isinstance(listed, dict) or vdf_block(text, ["libraryfolders"]) is None:
+            continue  # not a list Monet can read through: Steam's to mend
+        entries = {k: e for k, e in listed.items() if isinstance(e, dict) and e.get("path")}
+        here = {os.path.realpath(e["path"]) for e in entries.values()}
+        changed = text
+        for key, entry in entries.items():
+            old = Path(entry["path"])
+            # Windows' Games folder comes and goes with Windows' drive (steam-share above).
+            if not old.is_absolute() or old == SHARED or under(old, SHARED) or (old / "steamapps").is_dir():
+                continue
+            now = library_now(old, entry.get("contentid") or "", mounts)
+            if now is None or os.path.realpath(now) in here:
+                continue  # not found, or Steam lists it there already (added again)
+            changed = vdf_set(changed, ["libraryfolders", key], "path", str(now)) or changed
+            here.add(os.path.realpath(now))
+        if changed != text:
+            shutil.copy2(path, path.with_name(path.name + ".before-drives"))
+            write_steam_file(path, changed)
+            moved = True
+    return "moved" if moved else "ok"
+
+
+def drives_settling(jobs=None):
+    """Whether the PC is still mounting its drives: Bazzite's automount, or a drive's check or
+    mount under /run/media, still in systemd's queue."""
+    if jobs is None:
+        jobs = run("systemctl", "list-jobs", "--no-legend", timeout=5) or ""
+    for line in jobs.splitlines():
+        unit = (line.split()[1:2] or [""])[0]
+        if (unit == "ublue-os-media-automount.service" or unit.startswith("systemd-fsck@")
+                or (unit.startswith("run-media-") and unit.endswith(".mount"))):
+            return True
+    return False
+
+
+def wait_for_drives(seconds=30, settling=drives_settling, sleep=time.sleep, clock=time.monotonic):
+    """Waits (up to seconds) until the PC's drives are mounted. Whether they are."""
+    end = clock() + seconds
+    while settling():
+        if clock() >= end:
+            return False
+        sleep(0.5)
+    return True
 
 
 def epic_share(roots=None, folder=SHARED):
@@ -9746,6 +9909,16 @@ def main(argv):
         protondb_refresh([a for a in args if a.isdigit()])
     elif cmd == "steam-share":
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
+    elif cmd == "steam-drives":
+        import fcntl
+        lock_dir = RUNTIME / "monet"
+        lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        # Sign-in runs it twice at once (monet-session, and before Steam's own autostart).
+        with (lock_dir / "steam-drives.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if args[:1] == ["wait"]:
+                wait_for_drives()
+            emit({"done": steam_drives()})
     elif cmd == "shared":
         emit(shared_info())
     elif cmd == "faceit":

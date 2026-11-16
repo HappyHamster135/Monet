@@ -75,7 +75,8 @@ systemctl --global disable monet-backup.timer monet-rest.timer >/dev/null 2>&1 |
 [ -x "$PREFIX/libexec/monet-keep" ] && "$PREFIX/libexec/monet-keep" off >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-keep-prepare.service /etc/systemd/system/monet-keep.service \
     /etc/systemd/system/monet-keep.timer /etc/systemd/user/monet-backup.service /etc/systemd/user/monet-backup.timer \
-    /etc/systemd/user/monet-rest.service /etc/systemd/user/monet-rest.timer /etc/tmpfiles.d/monet-memory.conf
+    /etc/systemd/user/monet-rest.service /etc/systemd/user/monet-rest.timer /etc/tmpfiles.d/monet-memory.conf \
+    /etc/tmpfiles.d/monet-steam.conf
 # No more trials for new Monets, resets or re-learning the security chip. An encrypted disk
 # stays encrypted, and still unlocks by itself: that's systemd's part.
 systemctl disable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
