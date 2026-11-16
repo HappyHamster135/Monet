@@ -1548,7 +1548,12 @@ didn't look like Monet. It's built from what's on the PC already:
   remote-info`, said plainly: programs outside, all files, the home folder,
   devices, the internet), download and disk sizes, version and website.
 - **Install and remove** run `monet-store --do` in a process of its own, which
-  uses libflatpak (PyGObject) and prints its progress as lines of JSON.
+  uses libflatpak (PyGObject) and prints its progress as lines of JSON. An
+  install downloads first, in one more process (`--install-worker`), and only
+  installs once the download is whole. A download with no progress for 45
+  seconds has lost Flathub and is stopped, as is one cancelled; the install
+  that follows runs to its end. While a fully downloaded part is copied into
+  the system's store, which reports no progress, the 45 seconds wait.
   Flatpak's polkit rule lets an administrator in without a password; anyone
   else is told only an administrator can.
 - **Everywhere:** the bar's and the menu's Store, `appstream://` links

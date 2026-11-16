@@ -674,7 +674,9 @@ def install_command(ref, scope):
 def install_app(ref, scope, progress, cancelled, command=None, idle=DOWNLOAD_IDLE_SECONDS, clock=time.monotonic):
     """Download in a process of its own, then let it install only what it downloaded.
 
-    A pull with no progress for `idle` seconds has lost Flathub ("offline"), and
+    A pull with no progress for `idle` seconds has lost Flathub ("offline"). Once a part
+    is fully downloaded the clock waits for the next one: a system-wide install then
+    copies it into the system's store, which says nothing however long it takes. And
     Cancel stops the download at once: either way that process is stopped, since
     some libostree versions stay blocked in a stalled request even after a
     cancellation. Installing uses only what is already on the PC, so once it has
@@ -707,11 +709,12 @@ def install_app(ref, scope, progress, cancelled, command=None, idle=DOWNLOAD_IDL
         reader.start()
         last_activity = clock()
         deploying = False
+        copying = False
         try:
             while True:
                 if not deploying and cancelled():
                     return {"cancelled": True}
-                if not deploying and clock() - last_activity >= idle:
+                if not deploying and not copying and clock() - last_activity >= idle:
                     return {"error": "offline"}
                 try:
                     message = messages.get(timeout=0.2)
@@ -734,6 +737,10 @@ def install_app(ref, scope, progress, cancelled, command=None, idle=DOWNLOAD_IDL
                     if type(message["done"]) in (int, float):
                         last_activity = clock()
                         progress(message["done"])
+                elif "downloaded" in message:
+                    # True: this part is all here and only copied now. False: the next one starts.
+                    copying = message["downloaded"] is True
+                    last_activity = clock()
                 elif message.get("ok"):
                     return {"ok": True}
                 elif message.get("cancelled"):
@@ -764,7 +771,8 @@ def install_worker(ref, scope, commands=None, said=None):
         said.write(json.dumps(message) + "\n")
         said.flush()
 
-    result = flatpak_transaction("install", ref, scope, lambda value: say({"done": value}), lambda: False, phase="fetch")
+    result = flatpak_transaction("install", ref, scope, lambda value: say({"done": value}), lambda: False, phase="fetch",
+                                 downloaded=lambda done: say({"downloaded": done}))
     if result.get("ok") and not result.get("installed"):
         say({"fetched": True})
         if commands.readline() != "deploy\n":
@@ -775,7 +783,7 @@ def install_worker(ref, scope, commands=None, said=None):
     return 0
 
 
-def flatpak_transaction(action, ref, scope, progress, cancelled, phase=""):
+def flatpak_transaction(action, ref, scope, progress, cancelled, phase="", downloaded=lambda done: None):
     """Cooperative cancellation through Gio; Flatpak owns partial downloads/deployments.
     phase "fetch" only downloads ({"ok": true, "installed": true} when the app is already
     in), "deploy" only installs what is already downloaded."""
@@ -809,6 +817,7 @@ def flatpak_transaction(action, ref, scope, progress, cancelled, phase=""):
 
     def new_operation(t, operation, meter):
         meter.set_update_frequency(250)
+        downloaded(False)
         index = state["started"]
         state["started"] += 1
         transferred = 0
@@ -821,6 +830,8 @@ def flatpak_transaction(action, ref, scope, progress, cancelled, phase=""):
             if count > transferred or percent > fraction:
                 transferred, fraction = count, percent
                 progress(round((index + fraction / 100) / state["ops"], 3))
+                if percent >= 100:
+                    downloaded(True)
 
         meter.connect("changed", changed)
 

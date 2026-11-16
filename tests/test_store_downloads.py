@@ -202,11 +202,12 @@ fixture = module("store_install_fixture", WORKER.name, WORKER.parent)
 class FlatpakTransaction(unittest.TestCase):
     """What each phase asks of Flatpak (a pretend one), and the name of what went wrong in it."""
 
-    def transaction(self, phase, failures=None, installed=False, action="install"):
+    def transaction(self, phase, failures=None, installed=False, action="install", downloaded=lambda done: None):
         modules, seen = fixture.fake_flatpak(failures, installed)
         progress = []
         with patch.dict(sys.modules, modules):
-            result = store.flatpak_transaction(action, APP["ref"], "system", progress.append, lambda: False, phase=phase)
+            result = store.flatpak_transaction(action, APP["ref"], "system", progress.append, lambda: False, phase=phase,
+                                               downloaded=downloaded)
         return result, seen, progress
 
     def test_the_download_only_downloads_and_the_install_only_installs(self):
@@ -215,6 +216,10 @@ class FlatpakTransaction(unittest.TestCase):
                          ({"ok": True}, [("fetch", ("install", "flathub", APP["ref"]))], False))
         # Only real progress is said: a meter ticking in place is a stalled pull.
         self.assertEqual(progress, [0.0, 0.4, 1.0])
+        # And when a part starts downloading, and when it's all here.
+        said = []
+        self.transaction("fetch", downloaded=said.append)
+        self.assertEqual(said, [False, True])
         result, seen, progress = self.transaction("deploy")
         self.assertEqual((result, seen["runs"], seen["installed"], progress),
                          ({"ok": True}, [("deploy", ("install", "flathub", APP["ref"]))], True, []))
@@ -305,6 +310,19 @@ class InstallSupervision(unittest.TestCase):
         self.assertEqual(self.progress, [0.1])
         self.assertEqual(self.steps(), [["fetch", "start"]])
         self.assertStopped(self.events()[0][0])  # Even though it ignored SIGTERM.
+
+    def test_copying_a_whole_download_is_not_a_stall_but_the_next_part_can_be(self):
+        # A system-wide install copies what it downloaded into the system's store without
+        # progress: on a slow disk that took longer than the idle limit, and wasn't offline.
+        clock, _ = self.clock(15)  # Each look at the clock while it waited would be 15 s more.
+        self.assertEqual(self.install("copying", clock=clock), {"ok": True})
+        self.assertEqual(self.steps(), [["fetch", "start"], ["fetch", "end"], ["deploy", "start"], ["deploy", "end"]])
+        # Once the next part starts, a pull that goes quiet has lost Flathub again.
+        self.log.unlink()
+        clock, _ = self.clock(15)
+        self.assertEqual(self.install("next-stalls", clock=clock), {"error": "offline"})
+        self.assertEqual(self.steps(), [["fetch", "start"]])
+        self.assertStopped(self.events()[0][0])
 
     def test_slow_but_steady_progress_is_not_a_stall(self):
         clock, now = self.clock(5)

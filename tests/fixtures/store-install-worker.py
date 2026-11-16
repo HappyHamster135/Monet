@@ -153,10 +153,24 @@ def main(store_path, scenario, log):
     def logged(step):
         return any(json.loads(line)[1:] == step for line in log.read_text().splitlines())
 
-    def scripted(action, ref, scope, progress, cancelled, phase=""):
+    def scripted(action, ref, scope, progress, cancelled, phase="", downloaded=lambda done: None):
         record(phase, "start")
         if phase == "fetch":
-            if scenario == "stall":
+            if scenario == "copying":
+                # A big app all downloaded, then copied into the system's store without a word.
+                downloaded(False)
+                progress(1)
+                downloaded(True)
+                time.sleep(1.5)
+            elif scenario == "next-stalls":
+                downloaded(False)
+                progress(0.5)
+                downloaded(True)
+                time.sleep(0.5)
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                downloaded(False)
+                time.sleep(60)
+            elif scenario == "stall":
                 signal.signal(signal.SIGTERM, signal.SIG_IGN)
                 progress(0.1)
                 time.sleep(60)
@@ -189,9 +203,9 @@ def main(store_path, scenario, log):
         sys.modules.update(modules)
         real = store.flatpak_transaction
 
-        def transaction(*args, phase=""):
+        def transaction(*args, phase="", **options):
             record(phase, "start")
-            result = real(*args, phase=phase)
+            result = real(*args, phase=phase, **options)
             if result.get("ok"):
                 record(phase, "end")
             return result
