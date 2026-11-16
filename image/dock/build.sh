@@ -27,7 +27,10 @@ source="$work/plasma-desktop-v$version"
 python3 "$here/patch.py" "$source"
 # Exercise the exact patched audio bridge against a private sound server in CI.
 mkdir -p "$out/tests/audio"
-cp "$source/applets/taskmanager/qml/PulseAudio.qml" "$here/MonetAppVolume.qml" "$out/tests/audio/"
+for name in PulseAudio.qml ToolTipInstance.qml ToolTipDelegate.qml; do
+    cp "$source/applets/taskmanager/qml/$name" "$out/tests/audio/"
+done
+cp "$here/MonetAppVolume.qml" "$out/tests/audio/"
 cmake -S "$here" -B "$work/build" \
     -DUPSTREAM_SOURCE="$source" -DUPSTREAM_VERSION="$version" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_RPATH=ON

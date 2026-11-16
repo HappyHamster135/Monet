@@ -71,6 +71,10 @@ class NativeAudio(unittest.TestCase):
     def test_dock_volume_survives_track_and_player_replacement(self):
         self.fixture('dock-volume')
 
+    @unittest.skipUnless(os.environ.get('MONET_DOCK_AUDIO_QML'), 'candidate dock audio bridge')
+    def test_dock_volume_memory_keeps_track_and_window_levels(self):
+        self.fixture('dock-volume-memory')
+
     @unittest.skipUnless(shutil.which('plasmawindowed'), 'native Plasma widget host')
     def test_full_sound_widget_tracks_native_level_and_renders(self):
         self.fixture('widget')

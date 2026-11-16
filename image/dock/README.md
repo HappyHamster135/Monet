@@ -18,6 +18,20 @@ untransformed task bounds and follows the native task-reordering transform.
 The native Trash applet uses the same motion on the bottom dock, with its full
 painted icon and a stable click area during dragging and reduced-motion changes.
 
+The tooltip's volume slider remembers an app's level for its next streams
+(`MonetAppVolume.qml`, `~/.config/monet/app-volume.ini`). A player's own level
+is put back to the remembered one when it lands on a new stream within a second,
+or, on a stream the player keeps between tracks (Spotify), when it returns to a
+level the stream had before right after an MPRIS track change or a resume.
+Other mixers' changes are kept. When each of a group's streams belongs to one
+window, each window that plays sound gets its own slider, and that window's
+level holds for its next streams while it is open. A stream belongs to a window
+when it comes from that window's own process (or its child) and no other window
+shares the process, or, when windows share a process, from the one window whose
+title starts with the stream's name (Firefox names a tab's stream after the
+page). Chromium-based browsers name every stream "Playback", so they keep one
+slider.
+
 `image/Containerfile` builds the applet from the exact installed plasma-desktop
 version. The patch fails if a source hook moves. The image bundle verifies runtime
 packages, the original plugin and delivered binary/source hashes, unresolved
@@ -44,3 +58,7 @@ Plasma tooltip areas and native click/drag controls in a disposable session.
 `tests/native/dock-hover/` is a small CMake test host for the compiled task and
 Trash plugins. Run that executable only in a disposable home and private D-Bus
 session, with `QT_PLUGIN_PATH` pointing to the tested bundle's plugin tree.
+With `MONET_DOCK_AUDIO_QML` set to a folder holding the patched `PulseAudio.qml`,
+`ToolTipInstance.qml`, `ToolTipDelegate.qml` and `MonetAppVolume.qml` (`build.sh`
+leaves them in `tests/audio`), `tests.test_audio_native` checks the volume
+memory against a private PipeWire server and against made-up streams and windows.

@@ -16,47 +16,250 @@ def prepend(path, anchor, addition):
     replace(path, anchor, addition + anchor)
 
 def patch_audio(applet):
-    prepend(applet/'qml/PulseAudio.qml', '    signal streamsChanged()', '''    readonly property MonetAppVolume monetVolume: MonetAppVolume {
+    pulse = applet/'qml/PulseAudio.qml'
+    prepend(pulse, '    signal streamsChanged()', '''    readonly property MonetAppVolume monetVolume: MonetAppVolume {
         normalVolume: pulseAudio.normalVolume
+        // The Home Bar's open windows, for a window's own level.
+        windows: () => typeof tasks !== "undefined" && tasks.monetWindows ? tasks.monetWindows() : []
+        parentOf: pid => typeof backend !== "undefined" ? backend.parentPid(pid) : -1
+    }
+
+    // A group tooltip's windows with the streams each plays ({window id:
+    // [streams]}), or null when the app's sound can't be told apart by window.
+    function monetByWindow(streams: var, ids: var): var {
+        const all = monetVolume.openWindows();
+        const pids = all.filter(window => ids.includes(window.id)).map(window => window.pid);
+        // Plasma looks for a group's streams by its first window's process.
+        // The other windows' own processes play too.
+        const more = findStreamsFn(stream => !stream.portalAppId && stream.pid > 0
+            && pids.includes(stream.pid) && !streams.includes(stream));
+        return monetVolume.byWindow(streams.concat(more), ids, all);
     }
 
 ''')
-    prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Browser players replace streams between tracks, often with an
+    prepend(pulse, '            function mute(): void {', '''            // Browser players replace streams between tracks, often with an
             // explicit initial volume. Restore once, when the stream starts
             // playing, so pausing never undoes a change made in another mixer.
             property bool monetRestored: false
             property double monetRestoredAt: 0
+            // The window whose own level the stream has ("": the app's).
+            property string monetWindow: ""
             function monetRestore(again: bool): void {
-                if ((monetRestored && !again) || !pulseAudio.monetVolume.restore(delegate)) return;
+                if (monetRestored && !again) return;
+                const before = volume;
+                const level = pulseAudio.monetVolume.level(delegate);
+                if (!pulseAudio.monetVolume.restore(delegate, level)) return;
+                if (level >= 0 && Math.abs(Math.round(level * pulseAudio.normalVolume) - before) >= 2)
+                    monetSeen(before);
                 monetRestored = true;
                 monetRestoredAt = Date.now();
+                monetWindow = pulseAudio.monetVolume.windowOf(delegate)?.id ?? "";
+                monetRetries = 0;
             }
-            onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestore(false))
+            onCorkedChanged: if (!corked) Qt.callLater(() => delegate.monetRestored ? delegate.monetTrackChanged() : delegate.monetRestore(false))
             Component.onCompleted: Qt.callLater(() => delegate.monetRestore(false))
-            // Later changes from any mixer become the app's level. A change in
-            // the first second is the player setting its own level as it
-            // starts. The sound server applies that level only once the stream
-            // is set up, which can be after the restore above, so put the
-            // app's level back then (a few times at most).
+            // Later changes from any mixer become the level the Home Bar
+            // keeps; the player's own changes don't. As it starts, a player
+            // sets its own level, which the sound server applies only once
+            // the stream is set up, sometimes after the restore above. And
+            // players that keep one stream for every track (Spotify) put
+            // their own level back on it when the next track starts. Both
+            // times, put the kept level back (a few times at most). Another
+            // mixer's change waits a moment first, in case the player says
+            // only afterwards that a new track started.
             property int monetRetries: 0
+            property double monetTrackAt: 0
+            // Levels the stream had besides the Home Bar's: the player's own
+            // and other mixers'. A player only goes back to one of those. A
+            // new stream can show 0 until the sound server says its level.
+            property var monetSeenLevels: []
+            function monetSeen(level: int): void {
+                if (level > 0 && !monetSeenLevels.some(seen => Math.abs(seen - level) < 2))
+                    monetSeenLevels = monetSeenLevels.concat([level]).slice(-6);
+            }
+            // The player started another track, or played again after a pause.
+            function monetTrackChanged(): void {
+                if (!monetRestored) return;
+                monetTrackAt = Date.now();
+                monetRetries = 0;
+                if (monetFollowLater.running) {
+                    monetFollowLater.stop();
+                    monetJudge();
+                }
+            }
+            function monetPutBack(): void {
+                if (monetRetries >= 5) return;
+                monetRetries++;
+                monetSeen(volume);
+                Qt.callLater(() => pulseAudio.monetVolume.restore(delegate));
+            }
+            function monetJudge(): void {
+                if (!pulseAudio.monetVolume.moved(delegate)) return;
+                if (Date.now() - monetTrackAt <= 3000
+                        && (!monetSeenLevels.length || monetSeenLevels.some(seen => Math.abs(seen - volume) < 2))) {
+                    monetPutBack();
+                } else {
+                    monetSeen(volume);
+                    pulseAudio.monetVolume.follow(delegate, pulseAudio.findStreamsFn(other => other.monetRestored));
+                }
+            }
+            readonly property Timer monetFollowLater: Timer {
+                interval: 1500
+                onTriggered: delegate.monetJudge()
+            }
             onVolumeChanged: {
                 if (!monetRestored) return;
-                if (Date.now() - monetRestoredAt > 1000)
-                    pulseAudio.monetVolume.follow(delegate, pulseAudio.findStreamsFn(other => other.monetRestored));
-                else if (monetRetries < 5 && pulseAudio.monetVolume.moved(delegate)) {
-                    monetRetries++;
-                    Qt.callLater(() => pulseAudio.monetVolume.restore(delegate));
+                if (!pulseAudio.monetVolume.moved(delegate)) {
+                    monetFollowLater.stop();
+                } else if (Date.now() - monetRestoredAt <= 1000) {
+                    monetPutBack();
+                } else if (Date.now() - monetTrackAt <= 3000) {
+                    monetJudge();
+                } else {
+                    monetFollowLater.restart();
                 }
             }
 
 ''')
-    prepend(applet/'qml/PulseAudio.qml', '            function mute(): void {', '''            // Client metadata can arrive after the stream was created or uncorked.
+    prepend(pulse, '            function mute(): void {', '''            // Client metadata can arrive after the stream was created or uncorked.
             readonly property string monetIdentity: pulseAudio.monetVolume.key(delegate)
             onMonetIdentityChanged: Qt.callLater(() => delegate.monetRestore(true))
+            // A browser names a tab's stream after the page, which can tell
+            // only then which window it plays for.
+            readonly property string monetName: model.Name ?? ""
+            onMonetNameChanged: if (monetRestored) Qt.callLater(() => {
+                if ((pulseAudio.monetVolume.windowOf(delegate)?.id ?? "") !== delegate.monetWindow) delegate.monetRestore(true);
+            })
 
 ''')
-    replace(applet/'qml/ToolTipInstance.qml', '                    stream.model.Volume = v',
-            '''                    pulseAudio.item.monetVolume.remember(stream, Math.max(from, value))
+    # The open windows, for a window's own level.
+    prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    // Every open window, for a window's own Home Bar volume: [{id, pid, appId, title}].
+    function monetWindows(): var {
+        const found = [];
+        const add = index => {
+            if (!tasksModel.data(index, TaskManager.AbstractTasksModel.IsWindow)) return;
+            const ids = tasksModel.data(index, TaskManager.AbstractTasksModel.WinIdList) ?? [];
+            found.push({
+                id: String(ids[0] ?? ""),
+                pid: Number(tasksModel.data(index, TaskManager.AbstractTasksModel.AppPid) ?? 0),
+                appId: String(tasksModel.data(index, TaskManager.AbstractTasksModel.AppId) ?? "").replace(/\\.desktop$/, ""),
+                title: String(tasksModel.data(index, Qt.DisplayRole) ?? ""),
+            });
+        };
+        for (let row = 0; row < tasksModel.count; ++row) {
+            const index = tasksModel.makeModelIndex(row);
+            const children = tasksModel.rowCount(index);
+            if (children > 0) {
+                for (let child = 0; child < children; ++child) add(tasksModel.makeModelIndex(row, child));
+            } else {
+                add(index);
+            }
+        }
+        return found;
+    }
+
+''')
+    # A new track on a player that keeps its stream.
+    prepend(applet/'qml/Task.qml', '    function toggleMuted(): void {', '''    // Players that keep one stream for every track (Spotify) put their own
+    // level back on it when the next track starts. Tell the app's streams,
+    // so the Home Bar keeps its level.
+    property int monetPlayers: 0
+    readonly property var monetPlayer: {
+        task.monetPlayers;
+        return task.isWindow ? mpris2Source.playerForLauncherUrl(model.LauncherUrlWithoutIcon, model.AppPid) : null;
+    }
+    Connections {
+        target: mpris2Source
+        function onRowsInserted(): void { task.monetPlayers++; }
+        function onRowsRemoved(): void { task.monetPlayers++; }
+    }
+    Connections {
+        target: task.monetPlayer
+        ignoreUnknownSignals: true
+        function onTrackChanged(): void { task.monetTrackChanged(); }
+        function onArtistChanged(): void { task.monetTrackChanged(); }
+    }
+    function monetTrackChanged(): void {
+        task.audioStreams.forEach(stream => stream.monetTrackChanged?.());
+    }
+
+''')
+    # A slider for each window that plays sound, when that can be told.
+    delegate = applet/'qml/ToolTipDelegate.qml'
+    prepend(delegate, '                // Required to know whether to display the media player buttons on the first window or not',
+            '''                // Monet: each window with the streams it plays, when every
+                // one of the app's streams can be told apart by window.
+                readonly property var monetWindowStreams: {
+                    const pa = pulseAudio.item;
+                    const task = toolTipDelegate.parentTask;
+                    if (!pa?.monetByWindow || !task?.tooltipControlsEnabled) return null;
+                    const ids = [];
+                    for (let i = 0; i < model.items.count; ++i) {
+                        const item = model.items.get(i).model;
+                        void item.display; // A new title can name another window.
+                        ids.push(String(item.WinIdList?.[0] ?? ""));
+                    }
+                    return pa.monetByWindow(task.audioStreams, ids);
+                }
+
+''')
+    replace(delegate, '                    hasTrackInATitle: groupToolTipListView.hasTrackInATitle\n',
+            '''                    hasTrackInATitle: groupToolTipListView.hasTrackInATitle
+                    monetWindowStreams: groupToolTipListView.monetWindowStreams
+''')
+    tooltip = applet/'qml/ToolTipInstance.qml'
+    prepend(tooltip, '    property bool hasTrackInATitle: false', '''    // Monet: when each of the app's streams plays for one window, every
+    // window that plays sound has its own slider. Otherwise the app has one.
+    property var monetWindowStreams: null
+    readonly property var monetStreams: monetWindowStreams
+        ? (monetWindowStreams[String(thumbnailSourceItem.winId)] ?? []) : null
+    readonly property var monetAudioStreams: monetStreams ?? (toolTipDelegate.parentTask?.audioStreams ?? [])
+    readonly property bool monetMuted: monetStreams
+        ? monetStreams.length > 0 && monetStreams.every(stream => stream.muted)
+        : (toolTipDelegate.parentTask?.muted ?? false)
+    readonly property string monetName: monetStreams ? root.title : (toolTipDelegate.parentTask?.appName ?? "")
+    function monetToggleMuted(): void {
+        if (!monetStreams) {
+            toolTipDelegate.parentTask.toggleMuted();
+        } else if (monetMuted) {
+            monetStreams.forEach(stream => stream.unmute());
+        } else {
+            monetStreams.forEach(stream => stream.mute());
+        }
+    }
+    function monetRemember(stream: var, value: real): void {
+        if (monetStreams) {
+            pulseAudio.item.monetVolume.rememberWindow(String(thumbnailSourceItem.winId), stream, value);
+        } else {
+            pulseAudio.item.monetVolume.remember(stream, value);
+        }
+    }
+
+''')
+    replace(tooltip, '''             && toolTipDelegate.parentTask.hasAudioStream
+             // Only load for one entry, as the controls only apply to one window.
+             // If this is changed in the future, test for index != -1 to avoid loading
+             // when the instance is going to be destroyed
+             && ((hasTrackInATitle && albumArtImage.available) || (!hasTrackInATitle && root.index == 0))
+''', '''             && (root.monetStreams ? root.monetStreams.length > 0 && root.index !== -1
+             : toolTipDelegate.parentTask.hasAudioStream
+             // Only load for one entry, as the controls only apply to one window.
+             // If this is changed in the future, test for index != -1 to avoid loading
+             // when the instance is going to be destroyed
+             && ((hasTrackInATitle && albumArtImage.available) || (!hasTrackInATitle && root.index == 0)))
+''')
+    replace(tooltip, 'onClicked: toolTipDelegate.parentTask.toggleMuted()', 'onClicked: root.monetToggleMuted()')
+    replace(tooltip, 'checked: toolTipDelegate.parentTask.muted', 'checked: root.monetMuted')
+    replace(tooltip, '"Unmute %1", toolTipDelegate.parentTask.appName)', '"Unmute %1", root.monetName)')
+    replace(tooltip, '"Mute %1", toolTipDelegate.parentTask.appName)', '"Mute %1", root.monetName)')
+    replace(tooltip, '"Adjust volume for %1", toolTipDelegate.parentTask.appName)', '"Adjust volume for %1", root.monetName)')
+    replace(tooltip, 'readonly property int loudestVolume: toolTipDelegate.parentTask.audioStreams',
+            'readonly property int loudestVolume: root.monetAudioStreams')
+    replace(tooltip, 'opacity: toolTipDelegate.parentTask.muted ? 0.5 : 1', 'opacity: root.monetMuted ? 0.5 : 1')
+    replace(tooltip, 'onMoved: toolTipDelegate.parentTask.audioStreams.forEach((stream) => {',
+            'onMoved: root.monetAudioStreams.forEach((stream) => {')
+    replace(tooltip, '                    stream.model.Volume = v',
+            '''                    root.monetRemember(stream, Math.max(from, value))
                     stream.model.Volume = v''')
     (applet/'qml/MonetAppVolume.qml').write_bytes(Path(__file__).with_name('MonetAppVolume.qml').read_bytes())
 
