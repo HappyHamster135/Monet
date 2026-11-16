@@ -259,16 +259,17 @@ def guest_setup(public, key_only=False):
     return key + ("" if key_only else services) + " && ip -4 -br addr"
 
 
-def checkout():
-    """This checkout as a tar for the VM: no build output, Git's insides or caches, and text
-    with Linux's line ends (Git for Windows gives it Windows' ones)."""
-    root = Path(__file__).resolve().parent.parent
+def checkout(root=None):
+    """This checkout (or root) as a tar for the VM: no build output, Git's insides or caches,
+    and text with Linux's line ends (Git for Windows gives it Windows' ones)."""
+    root = Path(root) if root else Path(__file__).resolve().parent.parent
     skip = {".git", "target", ".claude", "__pycache__"}
     out = io.BytesIO()
     with tarfile.open(fileobj=out, mode="w") as tar:
         for folder, dirs, files in os.walk(root):
             dirs[:] = sorted(d for d in dirs if d not in skip)
-            for name in sorted(files):
+            # In a worktree (or a submodule) .git is a file pointing at the main repository.
+            for name in sorted(f for f in files if f not in skip):
                 path = Path(folder) / name
                 data = path.read_bytes()
                 if b"\0" not in data[:8192]:
