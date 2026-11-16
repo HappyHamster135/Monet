@@ -65,7 +65,8 @@ MonetWindow {
     // What this start was asked for, until the catalog's read.
     property string pending: firstPage
     readonly property string texture: brush
-    readonly property real speed: Kirigami.Units.longDuration / 200
+    // Follows KDE's animation speed (0 with animations off); a test can set it directly.
+    property real speed: Kirigami.Units.longDuration / 200
     function fitAvailableScreen() {
         if (availableWidth <= 0 || availableHeight <= 0
                 || visibility === Window.Maximized || visibility === Window.FullScreen || visibility === Window.Minimized) return
