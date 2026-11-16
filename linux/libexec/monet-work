@@ -15,6 +15,14 @@ shutdown or a sign-out begins, Plasma's logout (org.kde.Shutdown, started for ea
 system's (logind's PrepareForShutdown), windows closed since the last picture are taken out and
 nothing more is written: the apps the logout itself closes still come back. A cancelled one
 starts pictures again half a minute later.
+
+While a game runs, pictures wait. Taking one loads a script into KWin, which runs it on the
+same thread that draws the screen, and the game can drop a frame: with a picture after every
+Alt+Tab, every trip out of the game and back would hitch a few seconds later. Changes still make
+a picture due, and it's taken once the game has quit, or every five minutes at most, so a crash
+in a long session still finds a recent one. Windows closed meanwhile are taken out of the last
+picture straight away (only a file is written, KWin isn't asked), so they stay closed whatever
+happens next. Whether a game runs is monet-rest's test, the one that keeps games from resting.
 """
 import getpass
 import importlib.machinery
@@ -26,6 +34,8 @@ import time
 QUIET = 3        # seconds without changes before a picture
 LONGEST = 30     # at most this long while changes keep coming
 REFRESH = 300    # documents and tabs change inside apps: a fresh picture this often while one is open
+GAMING = 300     # while a game runs: a picture at most this often
+GAME_LOOK = 15   # and whether it has quit, this often
 THAW = 30        # after a cancelled restart or sign-out
 SETTLE = 180     # at most this long waiting for the last sign-in's work to reopen
 DOCUMENT_APPS = {"org.kde.kate.desktop", "org.kde.kwrite.desktop", "org.kde.dolphin.desktop", "org.kde.okular.desktop"}
@@ -46,12 +56,14 @@ class Watch:
         self.trim_due = False
         self.locked = False
         self.held = None          # "departing" or "settling": waiting on something without news
+        self.gaming = False       # a picture due, waiting for a game to quit
         self.last_picture = None
         self.documents = False
         self.failures = 0
 
     def changed(self, now):
         self.held = None  # Ask again soon: this may be the news a hold waits for.
+        self.gaming = False  # The game's window closing, say.
         self.generation += 1
         if self.dirty_since is None:
             self.dirty_since = now
@@ -77,8 +89,9 @@ class Watch:
     def lock(self, locked):
         self.locked = bool(locked)
 
-    def due(self, now, settled=True, departing=False):
-        """'trim', 'picture' or None."""
+    def due(self, now, settled=True, departing=False, game=lambda: False):
+        """'trim', 'picture' or None. game() says whether one is running, asked only when a
+        picture would be taken."""
         for reason, when in list(self.thaw.items()):
             if now >= when:
                 del self.thaw[reason]
@@ -92,12 +105,15 @@ class Watch:
         if self.leaving or self.locked or self.held:
             return None
         if self.dirty_since is not None:
-            if now - self.last_change >= QUIET or now - self.dirty_since >= LONGEST:
-                return "picture"
+            if now - self.last_change < QUIET and now - self.dirty_since < LONGEST:
+                return None
+        elif self.last_picture is not None and not (self.documents and now - self.last_picture >= REFRESH):
             return None
-        if self.last_picture is None or (self.documents and now - self.last_picture >= REFRESH):
-            return "picture"
-        return None
+        if self.last_picture is not None and now - self.last_picture < GAMING and game():
+            self.gaming = True
+            return "trim" if self.closed else None  # Closed windows stay closed meanwhile.
+        self.gaming = False
+        return "picture"
 
     def wait(self, now):
         """Seconds until it's worth asking again, or None to wait for news."""
@@ -111,7 +127,9 @@ class Watch:
         elif self.held == "settling":
             waits.append(SETTLE - (now - self.started))  # Or sooner: reopening says when it's done.
         else:
-            if self.dirty_since is not None:
+            if self.gaming:
+                waits.append(min(GAME_LOOK, GAMING - (now - self.last_picture)))  # Or a change says it.
+            elif self.dirty_since is not None:
                 waits.append(min(QUIET - (now - self.last_change), LONGEST - (now - self.dirty_since)))
             elif self.last_picture is None:
                 waits.append(0)
@@ -143,12 +161,24 @@ class Watch:
         self.closed -= closed
 
 
+def load(name):
+    path = Path(__file__).with_name(name).resolve(strict=True)
+    loader = importlib.machinery.SourceFileLoader(name.replace("-", "_"), str(path))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
 def load_quick():
-    path = Path(__file__).with_name("monet-quick").resolve(strict=True)
-    loader = importlib.machinery.SourceFileLoader("monet_quick", str(path))
-    quick = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
-    loader.exec_module(quick)
-    return quick
+    return load("monet-quick")
+
+
+def game_test():
+    """monet-rest's test of whether a game is running, so both agree on what a game is."""
+    try:
+        return load("monet-rest").game_running
+    except OSError:
+        return lambda: False  # Not installed beside this one: pictures as before.
 
 
 def picture(quick, watch, session, now):
@@ -178,12 +208,13 @@ def trim(quick, watch, session, tries=5):
             return
 
 
-def serve(quick, bus=None, system=None):
+def serve(quick, bus=None, system=None, game=None):
     """Listen on the session bus (and logind's on the system bus); None if already listening.
     Returns what must stay alive while the event loop runs."""
     from PySide6.QtCore import ClassInfo, QObject, QTimer, Slot, SLOT
     from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusServiceWatcher
     session = quick.session_key()
+    game = game or game_test()
     watch = Watch(time.monotonic())
     bus = bus or QDBusConnection.sessionBus()
     system = system or QDBusConnection.systemBus()
@@ -204,7 +235,7 @@ def serve(quick, bus=None, system=None):
         busy.append(True)
         try:
             now = time.monotonic()
-            action = watch.due(now, quick.work_settled(session), quick.departing())
+            action = watch.due(now, quick.work_settled(session), quick.departing(), game)
             if action == "trim":
                 trim(quick, watch, session)
             elif action == "picture":

@@ -139,6 +139,110 @@ class WhenToLook(unittest.TestCase):
         self.assertEqual(self.due(2 + w.QUIET), "picture")
 
 
+class WhileAGameRuns(unittest.TestCase):
+    """A picture loads a script into KWin, on the thread that draws the game: none after every
+    Alt+Tab, only once the game has quit, or now and then in a long session."""
+
+    def setUp(self):
+        self.watch = w.Watch(0)
+        self.watch.pictured(0, self.watch.taken(), [])
+        self.playing = True
+        self.asked = 0
+
+    def game(self):
+        self.asked += 1
+        return self.playing
+
+    def due(self, now):
+        return self.watch.due(now, True, False, self.game)
+
+    def test_alt_tab_in_and_out_waits_for_the_game_to_quit(self):
+        self.watch.changed(10)  # Out of the game,
+        self.assertIsNone(self.due(10 + w.QUIET))
+        self.assertEqual(self.watch.wait(10 + w.QUIET), w.GAME_LOOK)  # Not a busy poll.
+        self.watch.changed(20)  # and back in.
+        self.assertAlmostEqual(self.watch.wait(20), w.QUIET)
+        self.assertIsNone(self.due(20 + w.QUIET))
+        self.assertIsNone(self.due(20 + w.QUIET + w.GAME_LOOK))
+        self.playing = False  # Quit (its window closing would also say so).
+        self.assertEqual(self.due(20 + w.QUIET + 2 * w.GAME_LOOK), "picture")
+        self.watch.pictured(60, self.watch.taken(), [])
+        self.assertIsNone(self.watch.wait(60))
+        self.assertFalse(self.watch.gaming)
+
+    def test_the_game_is_asked_only_when_a_picture_would_be_taken(self):
+        self.watch.changed(10)
+        self.assertIsNone(self.due(11))  # Not quiet yet.
+        self.watch.lock(True)
+        self.assertIsNone(self.due(10 + w.QUIET))
+        self.watch.lock(False)
+        self.assertIsNone(self.watch.due(10 + w.QUIET, True, True, self.game))  # A switch to Windows.
+        self.assertIsNone(self.watch.due(10 + w.QUIET, False, False, self.game))  # Still reopening.
+        self.assertEqual(self.asked, 0)
+        self.assertIsNone(self.due(10 + w.QUIET))
+        self.assertEqual(self.asked, 1)
+        # Nothing changed and no documents open: not asked at all.
+        quiet = w.Watch(0)
+        quiet.pictured(0, quiet.taken(), [])
+        self.assertIsNone(quiet.due(10000, True, False, lambda: self.fail("asked")))
+
+    def test_a_long_session_still_gets_a_picture_every_few_minutes(self):
+        self.watch.changed(10)
+        now = 10 + w.QUIET
+        while self.due(now) is None:
+            self.assertLessEqual(self.watch.wait(now), w.GAME_LOOK)
+            now += self.watch.wait(now)
+        self.assertEqual(now, w.GAMING)  # Exactly then, not a moment before.
+        self.watch.pictured(now, self.watch.taken(), [])
+        self.watch.changed(now + 1)
+        self.assertIsNone(self.due(now + 1 + w.QUIET))  # The next one waits as long again.
+        # Documents and tabs in Kate or Files change unseen: their five minutes stand.
+        kate = w.Watch(0)
+        kate.pictured(0, kate.taken(), [KATE])
+        self.assertIsNone(kate.due(w.REFRESH - 1, True, False, self.game))
+        self.assertEqual(kate.due(w.REFRESH, True, False, self.game), "picture")
+
+    def test_a_window_closed_during_a_game_stays_closed(self):
+        self.watch.window_closed("{kate}", 10)
+        self.assertIsNone(self.due(11))
+        # Taken out of the last picture (a file, not KWin) as soon as things settle,
+        self.assertEqual(self.due(10 + w.QUIET), "trim")
+        self.watch.trimmed({"{kate}"})
+        self.assertIsNone(self.due(10 + w.QUIET + w.GAME_LOOK))
+        self.assertEqual(self.watch.wait(10 + w.QUIET + w.GAME_LOOK), w.GAME_LOOK)
+        # and still a picture once the game quits.
+        self.playing = False
+        self.assertEqual(self.due(10 + w.QUIET + 2 * w.GAME_LOOK), "picture")
+
+    def test_a_close_right_before_a_restart_is_still_taken_out_at_once(self):
+        self.watch.changed(10)
+        self.assertIsNone(self.due(10 + w.QUIET))  # Holding for the game.
+        self.watch.window_closed("{closed-by-you}", 20)
+        self.watch.leave("logout")
+        self.watch.window_closed("{closed-by-the-logout}", 20.5)
+        self.assertEqual(self.watch.wait(20.5), 0.2)
+        self.assertEqual(self.due(20.5), "trim")
+        self.assertEqual(self.watch.closed, {"{closed-by-you}"})
+        self.watch.trimmed({"{closed-by-you}"})
+        self.playing = False
+        for later in (21, 100, 10000):
+            self.assertIsNone(self.due(later))  # Nothing more is written.
+
+    def test_the_test_is_monet_rests(self):
+        test = w.game_test()
+        self.assertEqual((test.__module__, test.__name__), ("monet_rest", "game_running"))
+        with tempfile.TemporaryDirectory() as folder:
+            proc = Path(folder)
+            (proc / "4242").mkdir()
+            (proc / "4242/comm").write_text("wineserver\n")
+            self.assertTrue(w.game_test()(proc=proc))
+            (proc / "4242/comm").write_text("kate\n")
+            (proc / "4242/environ").write_bytes(b"HOME=/home/me\0")
+            self.assertFalse(w.game_test()(proc=proc))
+        with patch.object(w, "load", side_effect=FileNotFoundError):
+            self.assertFalse(w.game_test()())  # Not installed beside it: pictures as before.
+
+
 def frame(app, ident, pid=7, **extra):
     return dict({"app": app, "id": ident, "pid": pid, "rect": {"x": 10, "y": 20, "width": 800, "height": 600},
                  "area": {"x": 0, "y": 0, "width": 1920, "height": 1080}, "screen": "DP-1"}, **extra)
@@ -691,27 +795,35 @@ class OnTheBus(unittest.TestCase):
             time.sleep(0.01)
         return condition()
 
-    def test_kwins_words_become_pictures_until_a_sign_out_begins(self):
-        from PySide6.QtDBus import QDBusMessage
+    def quick(self, session):
         quick = Mock()
-        quick.session_key.return_value = "boot:1"
+        quick.session_key.return_value = session
         quick.work_settled.return_value = True
         quick.departing.return_value = False
         quick.capture_work.side_effect = lambda session: {"version": 4, "session": session, "apps": ["a.desktop"]}
-        bus = self.Bus.connectToBus(os.environ["DBUS_SESSION_BUS_ADDRESS"], "monet-work-under-test")
-        kwin = self.Bus.connectToBus(os.environ["DBUS_SESSION_BUS_ADDRESS"], "pretend-kwin")
-        self.addCleanup(lambda: (self.Bus.disconnectFromBus("monet-work-under-test"), self.Bus.disconnectFromBus("pretend-kwin")))
+        return quick
+
+    def connect(self, *names):
+        buses = [self.Bus.connectToBus(os.environ["DBUS_SESSION_BUS_ADDRESS"], name) for name in names]
+        self.addCleanup(lambda: [self.Bus.disconnectFromBus(name) for name in names])
+        return buses
+
+    def tell(self, kwin, method, *args):
+        from PySide6.QtDBus import QDBusMessage
+        message = QDBusMessage.createMethodCall(w.NAME, w.PATH, w.NAME, method)
+        message.setArguments(list(args))
+        pending = kwin.asyncCall(message, 2000)  # Answered by this same process's loop.
+        self.assertTrue(self.wait(pending.isFinished))
+        self.assertFalse(pending.isError(), pending.error().message())
+
+    def test_kwins_words_become_pictures_until_a_sign_out_begins(self):
+        quick = self.quick("boot:1")
+        bus, kwin = self.connect("monet-work-under-test", "pretend-kwin")
         with patch.object(w, "QUIET", 0.5), patch.object(w, "THAW", 0.5):
-            alive = w.serve(quick, bus=bus, system=bus)
+            alive = w.serve(quick, bus=bus, system=bus, game=lambda: False)
             self.assertIsNotNone(alive)
             self.assertTrue(self.wait(lambda: quick.save_work.call_count == 1))  # The sign-in's first look.
-
-            def say(method, *args):
-                message = QDBusMessage.createMethodCall(w.NAME, w.PATH, w.NAME, method)
-                message.setArguments(list(args))
-                pending = kwin.asyncCall(message, 2000)  # Answered by this same process's loop.
-                self.assertTrue(self.wait(pending.isFinished))
-                self.assertFalse(pending.isError(), pending.error().message())
+            say = lambda *words: self.tell(kwin, *words)
             say("Changed")
             self.assertTrue(self.wait(lambda: quick.save_work.call_count == 2))
             say("Closed", "{closed-by-you}")
@@ -725,9 +837,30 @@ class OnTheBus(unittest.TestCase):
             self.assertEqual(quick.trim_work.call_count, 1)
             kwin.unregisterService("org.kde.Shutdown")  # Cancelled after all.
             self.assertTrue(self.wait(lambda: quick.save_work.call_count == 3))
-            again = self.Bus.connectToBus(os.environ["DBUS_SESSION_BUS_ADDRESS"], "second-monet-work")
-            self.addCleanup(lambda: self.Bus.disconnectFromBus("second-monet-work"))
+            again, = self.connect("second-monet-work")
             self.assertIsNone(w.serve(quick, bus=again, system=again))  # One per sign-in.
+
+    def test_a_game_holds_pictures_until_it_quits(self):
+        quick = self.quick("boot:2")
+        game = Mock(return_value=False)
+        bus, kwin = self.connect("monet-work-gaming", "pretend-kwin-gaming")
+        with patch.object(w, "QUIET", 0.3), patch.object(w, "GAME_LOOK", 0.5):
+            alive = w.serve(quick, bus=bus, system=bus, game=game)
+            self.assertIsNotNone(alive)
+            self.assertTrue(self.wait(lambda: quick.save_work.call_count == 1))
+            game.return_value = True
+            self.tell(kwin, "Changed")  # Alt+Tab, in and out of the game.
+            self.tell(kwin, "Changed")
+            self.assertTrue(self.wait(lambda: game.called))
+            self.tell(kwin, "Closed", "{kate}")
+            self.assertTrue(self.wait(lambda: quick.trim_work.called))  # Stays closed meanwhile.
+            self.assertEqual(quick.trim_work.call_args.args, ({"{kate}"}, "boot:2"))
+            self.wait(lambda: False, 1.2)  # Two looks for the game.
+            self.assertEqual(quick.save_work.call_count, 1)
+            self.assertEqual(quick.capture_work.call_count, 1)  # KWin never asked.
+            game.return_value = False  # Quit.
+            self.assertTrue(self.wait(lambda: quick.save_work.call_count == 2, 2))
+            self.assertEqual(quick.trim_work.call_count, 1)
 
 
 if __name__ == "__main__":
