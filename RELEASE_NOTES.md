@@ -76,6 +76,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   An app playing several streams, like a browser with a tab for each, has one
   volume slider. Advanced sound settings say what they're for: a device's
   profile and channels.
+- **Apps, a library of every app.** Like Games, but for apps: open Apps from
+  the menu to see every app you have, by where it came from (the Store, Monet,
+  added by you, Windows) and what it does, sorted by name or by when you last
+  opened it. An app's page opens it, takes a Store app to its Store page to
+  update or remove it, and removes a shortcut you added yourself.
 - **Games stay in Games.** The menu's All apps no longer lists the games
   Steam, Heroic and Lutris add there, like Counter-Strike 2. They're in Games,
   and searching the menu still finds them.
