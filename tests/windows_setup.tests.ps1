@@ -44,6 +44,12 @@ Assert ((ReleaseOrder '0.9.9') -gt (ReleaseOrder '0.9.8-12')) 'A later base rele
 Assert ($null -eq (ReleaseOrder '0.9.8-test')) 'Unrecognized suffixes must be skipped'
 $latest = Newest
 Assert ($latest.Version -eq '0.9.8-12' -and $latest.Package.name -eq 'Monet-0.9.8-12-Windows.zip') 'Select the newest published numeric update and its exact asset'
+function Invoke-RestMethod {
+    [pscustomobject]@{tag_name='v0.9.8-13'; draft=$false; assets=@([pscustomobject]@{name='SHA256SUMS.txt'})}
+    [pscustomobject]@{tag_name='v0.9.8-12'; draft=$false; assets=@(
+        [pscustomobject]@{name='Monet-0.9.8-12-Windows.zip'}, [pscustomobject]@{name='SHA256SUMS.txt'})}
+}
+Assert ((Newest).Version -eq '0.9.8-12') 'A release still missing its Windows package must wait'
 Remove-Item Function:Invoke-RestMethod
 $update = [pscustomobject]@{Type=2;DriverClass='Display';DriverHardwareID='PCI\VEN_10DE&DEV_25BB';InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false}}
 Assert (Test-MonetMissingDriver $update @('PCI\VEN_10DE&DEV_25BB')) 'Matching missing graphics driver must be eligible'
@@ -57,6 +63,151 @@ Assert (-not (Test-MonetMissingDriver $update @($update.DriverHardwareID))) 'Int
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('monet-setup-tests-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp | Out-Null
 try {
+    # Monet Bridge's updater, run the way its tasks run it: after sign-in (-Stage) and on the
+    # way back to Monet. GitHub, the installer and the restart are stand-ins.
+    $programFiles, $programData = $env:ProgramFiles, $env:ProgramData
+    $updateRoot = (New-Item -ItemType Directory (Join-Path $temp 'bridge-update')).FullName
+    try {
+        $env:ProgramFiles = $updateRoot
+        $env:ProgramData = $updateRoot
+        & {
+            $bridgeUpdate = Join-Path $root 'windows/Update-Monet.ps1'
+            $bridgeData = Join-Path $updateRoot 'Monet'
+            New-Item -ItemType Directory $bridgeData | Out-Null
+            $waiting = Join-Path $bridgeData 'update-ready'
+            $waitingZip = Join-Path $waiting 'Monet-0.9.8-5-Windows.zip'
+            $lastLook = Join-Path $bridgeData 'update-checked'
+            $handOver = Join-Path $bridgeData 'update-then-restart'
+            $receipt = Join-Path $bridgeData 'update-claimed'
+            $leftovers = (Join-Path $bridgeData 'Update'), (Join-Path $bridgeData 'update-applying')
+            # Laid out as the release's Monet-X-Windows.zip is (Compress-Archive of "Monet for Windows").
+            Add-Type -AssemblyName System.IO.Compression
+            $packageZip = Join-Path $updateRoot 'package.zip'
+            $stream = [IO.File]::Create($packageZip)
+            $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create)
+            $writer = [IO.StreamWriter]::new($archive.CreateEntry('Monet for Windows/Install-Monet.ps1').Open())
+            $writer.Write('# stand-in installer')
+            $writer.Dispose(); $archive.Dispose(); $stream.Dispose()
+            $calls = @{ Looks = 0; Downloads = 0; Installs = 0; Restarts = 0; Cut = $false; Package = $null; Installer = $null }
+            $installedLabel = '0.9.8'
+            function Release([string]$label, [switch]$NoSums) {
+                $assets = @([pscustomobject]@{ name = "Monet-$label-Windows.zip"; browser_download_url = "https://example.invalid/$label.zip" })
+                if (-not $NoSums) { $assets += [pscustomobject]@{ name = 'SHA256SUMS.txt'; browser_download_url = "https://example.invalid/$label.txt" } }
+                [pscustomobject]@{ tag_name = "v$label"; draft = $false; assets = $assets }
+            }
+            $fixtureReleases = @((Release '0.9.8'), (Release '0.9.8-5'), (Release '0.9.9' -NoSums))
+            function Get-ItemProperty { [pscustomobject]@{ DisplayVersion = $installedLabel } }
+            function Invoke-RestMethod { $calls.Looks++; $fixtureReleases }
+            function Invoke-WebRequest {
+                param([switch]$UseBasicParsing, $TimeoutSec, $Uri, $OutFile)
+                $calls.Downloads++
+                if ($OutFile -like '*.zip') {
+                    $calls.Package = Split-Path -Leaf $OutFile
+                    Copy-Item -LiteralPath $packageZip -Destination $OutFile
+                } elseif ($calls.Cut) {
+                    throw 'The connection dropped before the checksums arrived'
+                } else {
+                    Set-Content -LiteralPath $OutFile -Value "$((Get-FileHash -LiteralPath $packageZip).Hash.ToLower())  $($calls.Package)"
+                }
+            }
+            function powershell.exe { $calls.Installs++; $calls.Installer = $args -join ' '; $global:LASTEXITCODE = 0 }
+            function shutdown.exe { $calls.Restarts++ }
+            function Snapshot { @{ Looks = $calls.Looks; Downloads = $calls.Downloads; Installs = $calls.Installs; Restarts = $calls.Restarts } }
+            function Changed($before, [int]$looks, [int]$downloads, [int]$installs, [int]$restarts) {
+                return (($calls.Looks - $before.Looks) -eq $looks -and ($calls.Downloads - $before.Downloads) -eq $downloads -and
+                    ($calls.Installs - $before.Installs) -eq $installs -and ($calls.Restarts - $before.Restarts) -eq $restarts)
+            }
+            function UpdateLog { (Get-Content -LiteralPath (Join-Path $bridgeData 'update.log') -ErrorAction SilentlyContinue) -join ' | ' }
+
+            Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.8-5 is out (this is 0.9.8).') 'A numbered update is newer than its release'
+            $installedLabel = '0.9.8-5'
+            Assert ((& $bridgeUpdate -CheckOnly) -eq 'Monet Bridge 0.9.8-5 is the newest.') 'A release without its checksums is not offered'
+            $installedLabel = '0.9.8'
+            Assert (-not (Test-Path $lastLook) -and -not (Test-Path $waiting)) 'Checking only changes nothing'
+
+            # After sign-in: download and check, nothing more.
+            $before = Snapshot
+            & $bridgeUpdate -Stage
+            Assert (Test-Path -LiteralPath $waitingZip) "The download after sign-in leaves a checked update waiting. $(UpdateLog)"
+            Assert (Changed $before 1 2 0 0) 'The download after sign-in never installs or restarts'
+            Assert (-not ($leftovers | Where-Object { Test-Path $_ })) 'Nothing is left half-done'
+            $before = Snapshot
+            & $bridgeUpdate -Stage
+            Assert (Changed $before 0 0 0 0) 'No second look while an update waits, and at most one a day'
+
+            # A task that starts after Bridge restarted by itself does nothing.
+            & $bridgeUpdate
+            Assert (Changed $before 0 0 0 0) 'A task Bridge gave up on leaves Windows alone'
+
+            # The way back installs what's waiting, from disk.
+            Set-Content $handOver 'fixture'
+            & $bridgeUpdate
+            Assert (Changed $before 0 0 1 1) "The way back installs the waiting update offline, then restarts. $(UpdateLog)"
+            Assert ($calls.Installer -like '*-File *Monet for Windows*Install-Monet.ps1 -Quiet') "The update runs its own installer, quietly: $($calls.Installer)"
+            Assert (-not (Test-Path $waiting) -and -not ($leftovers | Where-Object { Test-Path $_ })) 'An installed update is used once and cleared away'
+            Assert (-not (Test-Path $handOver) -and (Test-Path $receipt)) 'The receipt stays for Bridge, even after a quick restart'
+            $before = Snapshot
+            & $bridgeUpdate
+            Assert (Changed $before 0 0 0 0) 'A receipt alone never restarts Windows again'
+
+            # A Bridge from before 0.9.8-7 hands every way back over to this script.
+            Set-Content $handOver 'fixture'
+            & $bridgeUpdate
+            Assert (Changed $before 0 0 0 1) 'With nothing waiting and a look today, the way back only restarts'
+            Remove-Item -LiteralPath $lastLook
+            $before = Snapshot
+            Set-Content $handOver 'fixture'
+            & $bridgeUpdate
+            Assert (Changed $before 1 2 1 1) "Without a download after sign-in, the way back still looks, downloads and installs. $(UpdateLog)"
+            Assert ((Test-Path $lastLook) -and -not (Test-Path $waiting)) 'That look counts for the day'
+
+            # Downloads that go wrong never leave anything to install.
+            Remove-Item -LiteralPath $lastLook
+            $calls.Cut = $true
+            $before = Snapshot
+            & $bridgeUpdate -Stage
+            $calls.Cut = $false
+            Assert (Changed $before 1 2 0 0) 'A download cut short leaves Windows running'
+            Assert (-not (Test-Path $waiting) -and -not ($leftovers | Where-Object { Test-Path $_ })) 'A download cut short leaves nothing waiting, and nothing half-done'
+            Remove-Item -LiteralPath $lastLook
+            & $bridgeUpdate -Stage
+            Assert (Test-Path -LiteralPath $waitingZip) 'The next look downloads it again'
+            Set-Content -LiteralPath $waitingZip -Value 'damaged on disk'
+            $before = Snapshot
+            Set-Content $handOver 'fixture'
+            & $bridgeUpdate
+            Assert (Changed $before 0 0 0 1) 'A damaged update is not installed, and Windows still restarts'
+            Assert (-not (Test-Path $waiting) -and -not ($leftovers | Where-Object { Test-Path $_ })) 'A damaged update is thrown away'
+
+            # An update no newer than this Bridge (installed some other way meanwhile).
+            Remove-Item -LiteralPath $lastLook
+            & $bridgeUpdate -Stage
+            Assert (Test-Path -LiteralPath $waitingZip) 'Downloaded again'
+            $installedLabel = '0.9.8-5'
+            $before = Snapshot
+            Set-Content $handOver 'fixture'
+            & $bridgeUpdate
+            $installedLabel = '0.9.8'
+            Assert ((Changed $before 0 0 0 1) -and -not (Test-Path $waiting)) 'An update no newer than this Bridge is cleared away, not installed'
+
+            # One download at a time.
+            Remove-Item -LiteralPath $lastLook
+            $busy = [IO.File]::Open((Join-Path $bridgeData 'update.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+            try {
+                $before = Snapshot
+                & $bridgeUpdate -Stage
+                Set-Content $handOver 'fixture'
+                & $bridgeUpdate
+                Assert ((Changed $before 0 0 0 1) -and -not (Test-Path $waiting)) 'While one download is going, no other starts, and the way back still restarts'
+            } finally {
+                $busy.Dispose()
+            }
+        }
+    } finally {
+        $env:ProgramFiles = $programFiles
+        $env:ProgramData = $programData
+    }
+
     $windowsRoot = New-Item -ItemType Directory (Join-Path $temp 'windows-disk')
     $setupRoot = New-Item -ItemType Directory (Join-Path $temp 'setup-disk')
     New-Item -ItemType Directory (Join-Path $setupRoot.FullName 'monet') | Out-Null

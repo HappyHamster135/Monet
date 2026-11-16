@@ -5883,7 +5883,8 @@ class TextFromAPicture(unittest.TestCase):
 
 
 class BridgeKeepsItselfUpToDate(unittest.TestCase):
-    """On the way back to Monet, Monet Bridge updates itself from the newest release, then restarts."""
+    """A newer Monet Bridge downloads in Windows after sign-in and installs on the way back to
+    Monet, which then restarts. (tests/windows_setup.tests.ps1 runs the updater itself.)"""
 
     def test_the_way_out_hands_the_restart_to_the_update(self):
         bridge = (ROOT / "crates/monet-bridge/src/bridge.rs").read_text(encoding="utf-8")
@@ -5893,19 +5894,39 @@ class BridgeKeepsItselfUpToDate(unittest.TestCase):
         self.assertIn('win::run_hidden("schtasks", &["/run", "/tn", "\\\\Monet\\\\Update"])', bridge)
         self.assertIn("while started.elapsed() < Duration::from_secs(30)", bridge)
         self.assertIn("fs::remove_file(&marker).is_err() && claimed.exists()", bridge)
+        # Only with an update waiting, or no look lately; otherwise straight back to Monet.
+        hand_over = bridge[bridge.index("fn update_then_restart()"):bridge.index("fn back()")]
+        self.assertLess(hand_over.index('parse::update_on_the_way_out(data.join("update-ready").is_dir(), checked, SystemTime::now())'),
+                        hand_over.index("fs::write(&marker"))
 
     def test_the_update_always_restarts_and_checks_what_it_installs(self):
         update = (ROOT / "windows/Update-Monet.ps1").read_text(encoding="utf-8")
         self.assertIn("Move-Item -Force $marker $claimed", update)
-        finally_block = update[update.index("} finally {"):]
+        finally_block = update[update.rindex("} finally {"):]
         self.assertIn("& shutdown.exe /r /t 0", finally_block)
-        self.assertIn("(Get-FileHash -Algorithm SHA256 $zip).Hash", update)
+        self.assertNotIn("$claimed", finally_block)   # the receipt stays for Bridge
+        self.assertIn("(Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash", update)
         self.assertIn("releases?per_page=10", update)     # every Monet is a pre-release for now
         self.assertIn("[timespan]::FromHours(20)", update)
-        self.assertIn("if (-not $CheckOnly -and -not $restart) { return }", update)   # too late: not while Windows goes down
+        self.assertIn("if (-not $restart) { return }", update)   # too late: not while Windows goes down
         self.assertIn("$ProgressPreference = 'SilentlyContinue'", update)
-        self.assertIn("elseif ((Get-Date) -gt $deadline)", update)
+        self.assertIn("if ((Get-Date) -gt $deadline) {", update)
+        # update-ready only ever holds a whole download that matched its checksum.
+        download = update[update.index("function Download {"):update.index("function InstallWaiting {")]
+        self.assertLess(download.index("if (-not (Verified $zip $sums))"), download.index("[IO.Directory]::Move($work, $ready)"))
+        # Monet hands this updater to a Windows set up with 0.9.8 only when it has this
+        # (crates/monet/src/windows_setup.rs, understands_numbered_updates).
+        self.assertIn("function ReleaseOrder", update)
+        self.assertIn('script.contains("function ReleaseOrder")', (ROOT / "crates/monet/src/windows_setup.rs").read_text())
         install = (ROOT / "windows/Install-Monet.ps1").read_text(encoding="utf-8")
+        # The download after sign-in: as SYSTEM, so no window flashes over a game, and never
+        # in the way of installing Bridge.
+        stage = install[install.index("try {\n        $afterSignIn"):install.index("# 5. \"Back to Monet\" shortcuts")]
+        self.assertIn("-TaskName 'StageUpdate'", stage)
+        self.assertIn("$afterSignIn.Delay = 'PT2M'", stage)
+        self.assertIn('-File `"$updater`" -Stage', stage)
+        self.assertIn("New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest", stage)
+        self.assertIn("} catch {\n        Write-Warning", stage)
         self.assertIn("Where-Object { $_.TaskName -ne 'Update' }", install)   # never stops what's running it
         self.assertIn("'Uninstall-Monet.ps1', 'GameProfile.ps1', 'Update-Monet.ps1'", install)
         self.assertIn("if ($Quiet) { return }", install)

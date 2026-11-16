@@ -1463,7 +1463,10 @@ checksum stayed unchanged, and the clock-only user overrides were then reapplied
 - [ ] On a laptop with a fingerprint reader: Lock & Privacy shows Fingerprint; after Set upâ€¦ (Accounts â†’ Configure Fingerprint) the lock screen unlocks with a finger and an administrator question (Reset this PC) accepts one; without a reader the row isn't there
 - [ ] Screenshot (Print Screen) â†’ Extract Text on a picture with text in your language (Swedish, say) reads it; Screenshot's settings list your language and English
 - [ ] A Windows that Monet installed shows The Hours as its desktop; "Monet next to my Windows" keeps Windows' own wallpaper
-- [ ] Monet Bridge updates itself: with an older Bridge in Windows and a newer release out, quit a game: the PC restarts into Monet a few seconds later than usual, and next time in Windows `monet-bridge status` (admin terminal) shows the new version; `C:\ProgramData\Monet\update.log` says so
+- [ ] Monet Bridge updates itself: with an older Bridge in Windows and a newer release out, stay signed in to Windows for three minutes: `C:\ProgramData\Monet\update.log` says the update downloaded and `update-ready` holds it; quit a game: the PC restarts into Monet a few seconds later than usual, and next time in Windows `monet-bridge status` (admin terminal) shows the new version; `update.log` says so
+- [ ] Task Scheduler shows `\Monet\StageUpdate` running as SYSTEM two minutes after sign-in, and no window flashes up over a game while it runs
+- [ ] With Bridge up to date, quitting a game restarts into Monet straight away (no Update task in Task Scheduler's history for that trip)
+- [ ] From 0.9.8, 0.9.8-5 and 0.9.8-6: with Monet updated to 0.9.8-7 and Windows still on the older Bridge, quit a game: the PC takes a little longer to restart into Monet, and the next time in Windows Bridge is 0.9.8-7 and `\Monet\StageUpdate` exists
 - [ ] With no internet in Windows, quitting a game still restarts into Monet (at most about 20 seconds later)
 - [ ] `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Monet\Update-Monet.ps1" -CheckOnly` says whether a newer Bridge is out, and changes nothing
 

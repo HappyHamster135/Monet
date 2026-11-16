@@ -6,8 +6,9 @@
     - Copies monet-bridge.exe to C:\Program Files\Monet
     - Turns off Fast Startup, so Windows always shuts down fully and Monet
       can safely read its drive, and reads the PC's clock as UTC, as Monet does
-    - Creates four scheduled tasks under \Monet\ (agent, launcher, back, and
-      update: on the way back to Monet, Bridge brings itself up to date)
+    - Creates scheduled tasks under \Monet\ (agent, launcher, back, and two
+      that keep Bridge up to date: a newer Bridge downloads a couple of
+      minutes after sign-in and installs on the way back to Monet)
     - Adds "Back to Monet" to the Start menu and the desktop
 
     Nothing is removed from Windows. For the optional performance settings,
@@ -182,13 +183,29 @@ try {
         -Action (New-ScheduledTaskAction -Execute $exe -Argument 'back') `
         -Principal $admin -Settings $settings | Out-Null
 
+    $updater = Join-Path $installDir 'Update-Monet.ps1'
     # Left as it is when it's what's running this (Update-Monet.ps1 -> -Quiet).
     if (-not $Quiet -or -not (Get-ScheduledTask -TaskPath '\Monet\' -TaskName 'Update' -ErrorAction SilentlyContinue)) {
-        $updater = Join-Path $installDir 'Update-Monet.ps1'
         Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'Update' `
-            -Description 'On the way back to Monet: brings Monet Bridge up to date (once a day at most), then restarts in Monet.' `
+            -Description 'On the way back to Monet: installs a newer Monet Bridge that has downloaded (or looks for one, once a day at most), then restarts in Monet.' `
             -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$updater`"") `
             -Principal $admin -Settings $settings | Out-Null
+    }
+
+    # A couple of minutes after sign-in, a newer Bridge downloads in the background, so the
+    # way back only has to install it. As SYSTEM, so no window ever flashes up over a game.
+    # Without this task, Bridge looks for its updates on the way back instead, as it always did.
+    try {
+        $afterSignIn = New-ScheduledTaskTrigger -AtLogOn -User $user
+        $afterSignIn.Delay = 'PT2M'
+        Register-ScheduledTask -Force -TaskPath '\Monet\' -TaskName 'StageUpdate' `
+            -Description 'A couple of minutes after sign-in: downloads and checks a newer Monet Bridge, which installs on the way back to Monet.' `
+            -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$updater`" -Stage") `
+            -Trigger $afterSignIn `
+            -Principal (New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest) `
+            -Settings $settings | Out-Null
+    } catch {
+        Write-Warning "Monet Bridge looks for its updates on the way back to Monet instead. $($_.Exception.Message)"
     }
 
     # 5. "Back to Monet" shortcuts

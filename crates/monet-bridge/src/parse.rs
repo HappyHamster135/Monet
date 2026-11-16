@@ -1,5 +1,7 @@
 //! Readers for launcher files (pure functions, so they're testable anywhere).
 
+use std::time::{Duration, SystemTime};
+
 use monet_core::games;
 
 enum Token {
@@ -497,6 +499,21 @@ pub fn updates_settled(elapsed: u64, quiet_for: u64, windows_done: bool, steam_b
     elapsed >= UPDATE_LIMIT || (windows_done && !steam_busy && quiet_for >= UPDATE_QUIET && elapsed >= UPDATE_AT_LEAST)
 }
 
+/// How long Bridge leaves the look for a newer Bridge to the download after sign-in
+/// (Update-Monet.ps1 -Stage, which looks once a day) before it looks on the way out itself.
+pub const LOOK_ON_THE_WAY_OUT_AFTER: Duration = Duration::from_secs(3 * 24 * 60 * 60);
+
+/// Whether the way back to Monet goes through Bridge's update task: a newer Bridge, already
+/// downloaded and checked, is waiting to be installed (`ready`), or there's been no look for
+/// one lately (`checked`: when the last look was), so the task looks on the way out, as it
+/// always did. A Windows whose download after sign-in never runs still updates that way.
+/// Otherwise Windows restarts straight away.
+pub fn update_on_the_way_out(ready: bool, checked: Option<SystemTime>, now: SystemTime) -> bool {
+    let looked_lately = checked
+        .is_some_and(|at| now.duration_since(at).is_ok_and(|age| age <= LOOK_ON_THE_WAY_OUT_AFTER));
+    ready || !looked_lately
+}
+
 /// Monet's lock for the BitLocker recovery key, as Monet leaves it (`<RSAKeyValue><Modulus>…
 /// </Modulus><Exponent>…</Exponent></RSAKeyValue>`, base64 inside and nothing else, so it can go
 /// into a PowerShell string as it is). At least 2048 bits.
@@ -770,6 +787,18 @@ mod tests {
         assert!(!updates_settled(12 * min, 5 * min, true, true));     // Steam mid-update
         assert!(!updates_settled(12 * min, 2 * min, true, false));    // still downloading
         assert!(updates_settled(UPDATE_LIMIT, 0, false, true));       // time's up whatever happens
+    }
+
+    #[test]
+    fn the_way_back_waits_for_an_update_only_when_there_is_one() {
+        let now = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000);
+        let hour = Duration::from_secs(60 * 60);
+        assert!(!update_on_the_way_out(false, Some(now - hour), now));         // looked after sign-in: straight back
+        assert!(update_on_the_way_out(true, Some(now - hour), now));           // a downloaded update installs
+        assert!(update_on_the_way_out(false, None, now));                      // never looked (a new Windows)
+        assert!(!update_on_the_way_out(false, Some(now - 72 * hour), now));
+        assert!(update_on_the_way_out(false, Some(now - 73 * hour), now));     // the download hasn't managed for days
+        assert!(update_on_the_way_out(false, Some(now + hour), now));          // the clock went back
     }
 
     #[test]

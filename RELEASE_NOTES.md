@@ -69,6 +69,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Bluetooth and brightness are in Quick Settings, and Monet's sound control
   sits right next to it. If you bring one back in the tray's settings, it
   stays.
+- **Straight back from Windows.** Monet Bridge now downloads its own updates
+  quietly in Windows a couple of minutes after you sign in, and checks them,
+  so going back to Monet only installs one that's ready. Most of the time the
+  PC restarts into Monet straight away, even on a slow connection.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

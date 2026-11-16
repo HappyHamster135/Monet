@@ -1314,22 +1314,40 @@ Windows package, set by `Install-Monet.ps1 -FromMonet`); a Windows kept from
 before keeps its own, as its setup (`windows_setup.rs`' payload) carries no
 painting.
 
-Monet Bridge keeps itself up to date on the way out. `go_back` sets BootNext,
-leaves `update-then-restart` in `C:\ProgramData\Monet` and starts the
-`\Monet\Update` task (`Update-Monet.ps1`), which renames it `update-claimed`
-as it starts; if that hasn't happened within 30 seconds, Bridge restarts by
-itself. The task asks GitHub for Monet's releases at most once a day (every
-Monet is a pre-release while it's a preview, so not `releases/latest`), and
-when the newest is newer than Bridge it downloads `Monet-X-Windows.zip`,
-checks it against the release's `SHA256SUMS.txt` and runs its
-`Install-Monet.ps1 -Quiet`, which leaves the running Update task alone and
-swaps Bridge's program in one step (a copy cut short never leaves half of
-it). An update that isn't downloaded within 75 seconds of taking over waits
-for the next trip, and a task that starts after Bridge has given up on it
-does nothing, as Windows is already going down. Its
-`finally` restarts the PC whatever happened, so an update never keeps
-anyone in Windows, and a game is never interrupted: it runs only after
-you've chosen to go back.
+Monet Bridge keeps itself up to date: a newer Bridge downloads while Windows
+is in use and installs on the way out. Two minutes after sign-in the
+`\Monet\StageUpdate` task (`Update-Monet.ps1 -Stage`, as SYSTEM, so no
+window ever flashes over a game) asks GitHub for Monet's releases at most
+once a day (every Monet is a pre-release while it's a preview, so not
+`releases/latest`; a release still missing its Windows package or
+`SHA256SUMS.txt` is passed over), and when the newest is newer than Bridge it
+downloads `Monet-X-Windows.zip`, checks it against the release's
+`SHA256SUMS.txt` (listed there exactly once) and only then moves it, in one
+step, to `update-ready`. `update-checked` records the last look, and
+`update.lock` keeps two downloads from overlapping.
+
+`go_back` sets BootNext and, when an update is waiting in `update-ready` or
+there has been no look for three days (`parse::update_on_the_way_out`: a
+Windows where the download after sign-in never ran, a trip too short for it,
+or a task that couldn't be registered), leaves `update-then-restart` in
+`C:\ProgramData\Monet` and starts the `\Monet\Update` task, which renames it
+`update-claimed` as it starts; if that hasn't happened within 30 seconds,
+Bridge restarts by itself. Otherwise Bridge restarts straight away. The task
+moves the waiting update to `update-applying`, checks it again and that it's
+newer than Bridge, and runs its `Install-Monet.ps1 -Quiet`, which leaves the
+running Update task alone and swaps Bridge's program in one step (a copy cut
+short never leaves half of it). With nothing waiting and no look in the last
+20 hours, it looks and downloads on the way out, as Bridge always did; an
+update that isn't downloaded within 75 seconds of taking over installs on the
+next trip. A Bridge from before 0.9.8-7 hands over every trip and has no
+StageUpdate task, so that way is how it reaches 0.9.8-7, whose installer adds
+the task. A task that starts after Bridge has given up on it does nothing, as
+Windows is already going down. Its `finally` clears `update-applying` and
+restarts the PC whatever happened, so an update never keeps anyone in
+Windows and a damaged one is never tried twice; `update-claimed` stays until
+Bridge's next hand-over, so even a quick restart reads as taken over. A game
+is never interrupted: the download happens beside it, and the install only
+after you've chosen to go back.
 
 ## A trip to Windows
 
