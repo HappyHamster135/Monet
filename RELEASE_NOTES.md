@@ -157,6 +157,28 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Updates to see betas, new versions that aren't fully tested yet, with their
   release notes. One installs only when you choose Install beta, never by
   itself, and once that version is released your PC moves to it on its own.
+- **Shaders without the stutter.** When Steam processes a game's shaders,
+  before it starts or in the background, it now only uses what the rest of
+  your PC leaves, so the desktop, your browser and other apps stay smooth.
+  With nothing else to do, as while Steam shows its progress before a game,
+  it still goes at full speed.
+- **Games stay smooth when you switch away.** While a game runs, Monet's own
+  work in the background keeps out of its way. A game you Alt+Tab away from is
+  never compressed to make room in memory, so it doesn't stutter when you come
+  back. And Monet's note of your work, for Reopen your work, waits until the
+  game has quit, or a few minutes in a long session, instead of following each
+  switch, which could make the game hitch for a moment. Windows you close
+  meanwhile still stay closed.
+- **Your game comes first.** While you play, apps in the background, like a
+  browser with lots of tabs, get a smaller share of the processor and the
+  disk, so they can't slow the game down. They only notice when the two want
+  the same thing at once, and they're back to normal as soon as you switch
+  to them or quit the game. Apps playing sound, like a call or your music,
+  are never held back.
+- **Games on your graphics card.** On a desktop with a graphics card and the
+  processor's own graphics turned on too, Steam and its games could start on
+  the weaker built-in graphics. They now stay on the card. Laptops still use
+  the stronger graphics for games and the built-in ones for everything else.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

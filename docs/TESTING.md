@@ -2301,6 +2301,17 @@ still a release step. Local evidence is in `target/098-security-vm/`.
 - [ ] Uninstall an app that was open, restart: a notice says some apps didn't reopen; Settings, Power & Sleep shows it with Retry
 - [ ] Settings, Power & Sleep, Reopen your work off: after the next restart nothing reopens; on again, it does. A trip to Windows still reopens its apps exactly once
 
+### Games and Monet's background work (after 0.9.8-7)
+
+- [ ] `systemctl --user status monet-priority` is active. Install a game, or start one after a graphics driver update, so Steam processes its shaders (Steam's Settings, Downloads, Shader Pre-Caching on): while `ps -eLo pid,cls,comm | grep fossil` lists them, every line says `IDL`, and `journalctl --user -u monet-priority` says "runs at idle priority". Moving windows and scrolling a web page stay smooth meanwhile; with nothing else running, all processors stay busy (`top`)
+- [ ] Steam quit: `monet-priority` uses no processor time between its half-minute looks (`top -p $(pgrep -f monet-priority)`)
+- [ ] Play a fullscreen game (Proton and native), Alt+Tab out to Zen and back a dozen times: no hitch a few seconds after each; `~/.local/state/monet/work.json`'s time stays as it was until the game quits (or five minutes pass), then updates within twenty seconds
+- [ ] Close Kate while the game runs, then hold the power button within a minute: Kate stays closed at the next start
+- [ ] With memory near full (a big game and many Zen tabs), minimize the game for over ten minutes: `~/.local/state/monet/rest.json` never gives Steam's unit an `idle_since`, and the game comes back without stutter
+- [ ] Games first: with Chromium or Zen busy (a heavy page in many tabs), start a game from Steam and play: two seconds later `journalctl --user -u monet-priority` says the other apps give way, `systemctl --user show -p CPUWeight,IOWeight <the browser's app-*.scope>` says 20, and Steam's own unit and a Discord call's are untouched. Alt+Tab to the browser: back to what they were at once (`[not set]`, or your own). Quit the game, or `systemctl --user stop monet-priority` while it runs: back again, and `$XDG_RUNTIME_DIR/monet/priority.json` is gone
+- [ ] A desktop with a graphics card and the processor's graphics on (BIOS: integrated graphics enabled): after sign-in `~/.local/share/applications/steam.desktop` is Monet's copy (`X-Monet-GPU=default`) without `PrefersNonDefaultGPU`; Steam started from the menu, and a game from it, show on the card in `nvidia-smi` (or MangoHud). Turn the processor's graphics off in the BIOS: the copy is gone after the next sign-in
+- [ ] A hybrid laptop: Steam's entry has no Monet copy; Prism Launcher's has `X-Monet-GPU=prefer`, and a game started from it runs on the NVIDIA chip
+
 ### A guest (after 0.9.3)
 
 - [ ] Settings â†’ Accounts â†’ Guest asks for an administrator's password, then the sign-in screen lists Guest with Monet's parasol painting; Guest signs in with no password and gets Monet's look

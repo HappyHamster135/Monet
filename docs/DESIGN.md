@@ -284,14 +284,68 @@ The answer is kept in `~/.cache/monet/older-pc` with the Monet version and
 change.
 
 Every PC's sign-in leaves what can wait until the desktop is up: framing the
-apps Monet hasn't painted, games on a laptop's NVIDIA chip and Zen's look run
+apps Monet hasn't painted, games on the right graphics and Zen's look run
 as `monet-session --later`, a minute after sign-in at nice 19 and idle I/O
 (a transient `monet-after-sign-in` timer), and only when this Monet, the
-menu's app folders or Zen's profiles changed since they last ran
-(`~/.cache/monet/apps-seen`); while signed in, their `.path` units keep them
-current. Before the sign-in screen, `monet-ready-boot` only starts after a
+menu's app folders, Zen's profiles or the graphics the PC starts on changed
+since they last ran (`~/.cache/monet/apps-seen`); while signed in, their
+`.path` units keep them current.
+
+Games on the right graphics (`monet-look --games-gpu`): a menu entry's
+`PrefersNonDefaultGPU` starts an app on the graphics the PC doesn't start on
+(`boot_vga`), the strong one on a hybrid laptop but the weak one on a desktop
+that starts on its card with the processor's graphics on too, and Steam's
+entry has it (its games inherit it). Which graphics are the processor's:
+Intel's on the root bus (`00:02.0`), a Ryzen's behind AMD's internal bridge
+(`00:08.x`), never NVIDIA's; anything else is a card (or a laptop's chip)
+behind a port of its own. On a laptop (a battery that isn't a device's, or
+the firmware's chassis type) with NVIDIA's driver, starting on its built-in
+graphics, games and emulators get copies of their entries that ask for the
+NVIDIA chip (`X-Monet-GPU=prefer`). On a PC that starts on a card with the
+processor's graphics present, every entry that asks for the other graphics
+(`PrefersNonDefaultGPU` or KDE's `X-KDE-RunOnDiscreteGpu`) gets a copy
+without it (`X-Monet-GPU=default`). The copies are marked `X-Monet=true`,
+made again when the original changes, and taken back (`monet-profile
+remove`, only while they're as Monet made them) when the PC no longer needs
+them; a person's own copy is left alone. Steam starting with the PC needs
+none: systemd's autostart doesn't read the key. Before the sign-in screen, `monet-ready-boot` only starts after a
 trip to Windows, and `monet-keep-prepare` stops starting once
 `/var/lib/monet/home-subvolume` says the homes need nothing more.
+
+While you use the desktop, two of Monet's services keep it responsive.
+`monet-rest` (`monet-rest.timer`, every two minutes, a look at
+`/proc/meminfo` while there's room) rests the apps you've left when memory
+runs low: their least used memory goes to zram (the unit's cgroup
+`memory.reclaim`), never an app with a window on screen, playing sound, at
+work, or with a game in it. A game is a process whose environment names one
+(Steam's `SteamAppId`, `SteamGameId`, Proton's `STEAM_COMPAT_APP_ID`, not 0;
+Lutris's `LUTRIS_GAME_UUID`), Wine's server (any Windows game or app) or
+gamescope; read only of the units otherwise left, since a paused game
+brought back from zram stutters for minutes. While one runs anywhere in the
+account, KWin is asked which windows are on screen every ten minutes at most.
+`monet-priority.service` decides who gets the PC first. Steam's shader
+processing (`fossilize_replay`, which "Processing Vulkan shaders" and the
+background pre-caching run on every processor) goes to idle priority: each of
+the account's own such processes, every thread, `SCHED_IDLE` and the idle
+I/O class, which their helpers and threads inherit. It reads only
+`/proc/PID/stat` of each process (the tool's own `exe` and `status` too),
+remembers what it has done by process number and start time, and looks
+every two seconds while `~/.steam/steam.pid` names a running Steam,
+otherwise every half minute for Steam alone. And games come first, as in
+Windows' Game Mode: the Monet Work KWin script tells it (`org.monet.Priority`
+`Front`, a quarter second after a change, only when it differs) the process
+of the active window and of any window full screen on another screen. When
+one of their units has a game in it (`monet-rest`'s test) for two seconds,
+every other unit in `app.slice` gets `CPUWeight=20` and `IOWeight=20`
+(`systemctl --user set-property --runtime`, only weights above that, what
+they were noted in `$XDG_RUNTIME_DIR/monet/priority.json`), and every ten
+seconds after, apps that started or began to play sound are seen to. Never
+the game's unit, one in front beside it, an app playing or recording sound,
+the desktop's own services (Plasma, KWin, PipeWire, portals, polkit, input
+methods, Monet's) or anything outside `app.slice`. Weights only count under
+contention. They're put back exactly when nothing in front is a game any
+more, when the service stops (SIGTERM), and after a crash at its next start
+from the note; being `--runtime`, signing out ends them anyway.
 
 Monet comes in two images from one Containerfile (`ARG BASE`): `monet`, on
 Bazzite's NVIDIA image (NVIDIA's open driver, Turing and newer: GTX 16 / RTX
@@ -1496,6 +1550,8 @@ desktop is used:
   session bus as `org.monet.Work`) when windows open, move or change desktop,
   screen, size or state (at most once a second), and the KWin id of each
   window that closes, at once. Never a title or anything a window shows.
+  (The same script tells `monet-priority` which windows are in front, by
+  process, for games first.)
 - *Pictures.* `monet-work` takes one (`monet-quick capture_work`: the KWin
   snapshot, the apps that reopen and their documents and tabs, nothing
   private) three quiet seconds after a change, half a minute at most while
@@ -1504,6 +1560,13 @@ desktop is used:
   to `~/.local/state/monet/work.json` only when it differs. Nothing while the
   screen is locked, while a switch to Windows is closing the apps (the trip
   has its own), or while the last sign-in's work is still reopening.
+- *While a game runs* (`monet-rest`'s test, asked only when a picture is
+  due): the KWin snapshot is a script KWin loads and runs on the thread that
+  draws the screen, so a picture after every Alt+Tab would make the game hitch
+  a few seconds later. A picture that's due waits until the game has quit
+  (looked at every fifteen seconds, or at the next change) or five minutes
+  have passed since the last one. Windows closed meanwhile are taken out of
+  the last picture as soon as things settle (`trim_work`: a file, not KWin).
 - *A restart begins.* Plasma starts `org.kde.Shutdown` (plasma-shutdown, a
   D-Bus-activated service) for each restart, shutdown and sign-out, before
   ksmserver and KWin ask a single app to close, and ends it when one is
