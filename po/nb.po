@@ -870,8 +870,8 @@ msgid_plural "%1 days ago"
 msgstr[0] "for %1 dag siden"
 msgstr[1] "for %1 dager siden"
 
-#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "All apps"
 msgstr "Alle apper"
 
@@ -1146,7 +1146,7 @@ msgstr[1] "%1 spill"
 msgid "Sort by"
 msgstr "Sorter etter"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "Nylige"
 
@@ -1809,7 +1809,7 @@ msgid "date time clock time zone 24-hour format automatic"
 msgstr "dato tid klokke tidssone 24-timers format automatisk"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:237 linux/share/monet/settings-app/MonetSettings.qml:4777 linux/share/monet/settings-app/MonetSettings.qml:7044
-#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1121
+#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1160
 msgid "Accounts"
 msgstr "Kontoer"
 
@@ -3787,7 +3787,7 @@ msgid "Or press the Windows key and L"
 msgstr "Eller trykk på Windows-tasten og L"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5474 linux/share/monet/settings-app/MonetSettings.qml:5504 linux/share/monet/settings-app/MonetSettings.qml:7021
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1206
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1245
 msgid "Lock"
 msgstr "Lås"
 
@@ -7277,44 +7277,48 @@ msgstr "Fest til menyen"
 msgid "Search apps, files and settings"
 msgstr "Søk i apper, filer og innstillinger"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "Pinned"
 msgstr "Festet"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:768
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
+msgid "Manage apps"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
 msgstr ""
 "Ingenting festet ennå. Høyreklikk på en app i Alle apper for å feste den her."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:849
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
 msgstr "Filer du åpner, dukker opp her."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:972 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1011 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:987 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1015
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1053
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1095
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1134
 msgid "Nothing here by that name."
 msgstr "Ingenting her med det navnet."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1219
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1258
 msgid "Sleep, restart or shut down"
 msgstr "Hvilemodus, start på nytt eller slå av"
 

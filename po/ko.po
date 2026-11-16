@@ -866,8 +866,8 @@ msgid "%1 day ago"
 msgid_plural "%1 days ago"
 msgstr[0] "%1일 전"
 
-#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "All apps"
 msgstr "모든 앱"
 
@@ -1135,7 +1135,7 @@ msgstr[0] "게임 %1개"
 msgid "Sort by"
 msgstr "정렬"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "최근 항목"
 
@@ -1784,7 +1784,7 @@ msgid "date time clock time zone 24-hour format automatic"
 msgstr "날짜 시간 시계 시간대 24시간 형식 자동"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:237 linux/share/monet/settings-app/MonetSettings.qml:4777 linux/share/monet/settings-app/MonetSettings.qml:7044
-#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1121
+#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1160
 msgid "Accounts"
 msgstr "계정"
 
@@ -3744,7 +3744,7 @@ msgid "Or press the Windows key and L"
 msgstr "또는 Windows 키와 L 키를 누르세요"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5474 linux/share/monet/settings-app/MonetSettings.qml:5504 linux/share/monet/settings-app/MonetSettings.qml:7021
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1206
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1245
 msgid "Lock"
 msgstr "잠금"
 
@@ -7188,43 +7188,47 @@ msgstr "메뉴에 고정"
 msgid "Search apps, files and settings"
 msgstr "앱, 파일, 설정 검색"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "Pinned"
 msgstr "고정됨"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:768
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
+msgid "Manage apps"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
 msgstr "아직 고정된 앱이 없어요. 모든 앱 목록에서 앱을 오른쪽 클릭해 여기에 고정하세요."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:849
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
 msgstr "연 파일이 여기에 표시돼요."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:972 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1011 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:987 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1015
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1053
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1095
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1134
 msgid "Nothing here by that name."
 msgstr "그런 이름의 항목이 없어요."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1219
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1258
 msgid "Sleep, restart or shut down"
 msgstr "절전, 다시 시작 또는 종료"
 

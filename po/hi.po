@@ -870,8 +870,8 @@ msgid_plural "%1 days ago"
 msgstr[0] "%1 दिन पहले"
 msgstr[1] "%1 दिन पहले"
 
-#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "All apps"
 msgstr "सभी ऐप"
 
@@ -1146,7 +1146,7 @@ msgstr[1] "%1 गेम"
 msgid "Sort by"
 msgstr "क्रम"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "हाल ही में"
 
@@ -1806,7 +1806,7 @@ msgid "date time clock time zone 24-hour format automatic"
 msgstr "तारीख दिनांक समय घड़ी समय क्षेत्र 24 घंटे फ़ॉर्मैट स्वचालित"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:237 linux/share/monet/settings-app/MonetSettings.qml:4777 linux/share/monet/settings-app/MonetSettings.qml:7044
-#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1121
+#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1160
 msgid "Accounts"
 msgstr "खाते"
 
@@ -3787,7 +3787,7 @@ msgid "Or press the Windows key and L"
 msgstr "या Windows कुंजी और L दबाएं"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5474 linux/share/monet/settings-app/MonetSettings.qml:5504 linux/share/monet/settings-app/MonetSettings.qml:7021
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1206
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1245
 msgid "Lock"
 msgstr "लॉक करें"
 
@@ -7274,44 +7274,48 @@ msgstr "मेन्यू में पिन करें"
 msgid "Search apps, files and settings"
 msgstr "ऐप, फ़ाइलें और सेटिंग खोजें"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "Pinned"
 msgstr "पिन किए गए"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:768
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
+msgid "Manage apps"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
 msgstr ""
 "अभी कुछ भी पिन नहीं है। किसी ऐप को यहां पिन करने के लिए, सभी ऐप में उस पर राइट-क्लिक करें।"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:849
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
 msgstr "आप जो फ़ाइलें खोलेंगे, वे यहां दिखेंगी।"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:972 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1011 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:987 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1015
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1053
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1095
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1134
 msgid "Nothing here by that name."
 msgstr "इस नाम का यहां कुछ नहीं है।"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1219
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1258
 msgid "Sleep, restart or shut down"
 msgstr "स्लीप, रीस्टार्ट या बंद करें"
 

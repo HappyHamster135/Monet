@@ -869,8 +869,8 @@ msgid_plural "%1 days ago"
 msgstr[0] "%1 giorno fa"
 msgstr[1] "%1 giorni fa"
 
-#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/monet/games/Apps.qml:169 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "All apps"
 msgstr "Tutte le app"
 
@@ -1145,7 +1145,7 @@ msgstr[1] "%1 giochi"
 msgid "Sort by"
 msgstr "Ordina per"
 
-#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/monet/games/Games.qml:711 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "Recenti"
 
@@ -1808,7 +1808,7 @@ msgid "date time clock time zone 24-hour format automatic"
 msgstr "data ora orologio fuso orario 24 ore formato automatico"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:237 linux/share/monet/settings-app/MonetSettings.qml:4777 linux/share/monet/settings-app/MonetSettings.qml:7044
-#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1121
+#: linux/share/monet/settings-app/MonetSettings.qml:7915 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1160
 msgid "Accounts"
 msgstr "Account"
 
@@ -3795,7 +3795,7 @@ msgid "Or press the Windows key and L"
 msgstr "Oppure premi il tasto Windows e L"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5474 linux/share/monet/settings-app/MonetSettings.qml:5504 linux/share/monet/settings-app/MonetSettings.qml:7021
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1206
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1245
 msgid "Lock"
 msgstr "Blocca"
 
@@ -7285,44 +7285,48 @@ msgstr "Aggiungi al menu"
 msgid "Search apps, files and settings"
 msgstr "Cerca app, file e impostazioni"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:679 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:694
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:644 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:718 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:733
 msgid "Pinned"
 msgstr "Aggiunte"
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:768
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:676 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:685
+msgid "Manage apps"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:807
 msgid "Nothing pinned yet. Right-click an app in All apps to pin it here."
 msgstr ""
 "Non hai ancora aggiunto niente. Fai clic con il tasto destro su un'app in Tutte le app per aggiungerla qui."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:789
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent downloads"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:849
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:888
 msgid "Files you open show up here."
 msgstr "I file che apri compaiono qui."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:972 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1011 linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:33
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:987 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7187 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1015
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1054
 msgid "Apps, downloads and shortcuts"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1053
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1092
 msgid "Files, settings and more"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1095
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1134
 msgid "Nothing here by that name."
 msgstr "Niente con questo nome."
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1219
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1258
 msgid "Sleep, restart or shut down"
 msgstr "Sospendi, riavvia o spegni"
 
