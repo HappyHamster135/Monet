@@ -52,8 +52,18 @@ def pinned_reference(image, digest):
     return f"{repo}@{digest}"
 
 
+# A beta's own tag (tools/beta-release.py): a PC installed from a beta's stick stays on that
+# beta, as one that chose Install beta does, until the release of its version is out.
+BETA_TAG = re.compile(r"\d+\.\d+\.\d+(?:-\d+)?-beta\.[1-9][0-9]{0,5}")
+
+
+def update_tag(image):
+    tag = image.rpartition(":")[2]
+    return tag if BETA_TAG.fullmatch(tag) else "latest"
+
+
 def update_reference(image):
-    return f"{image_repository(image)}:latest"
+    return f"{image_repository(image)}:{update_tag(image)}"
 
 
 def registry_manifest(image, timeout=120):
@@ -102,7 +112,7 @@ def write_pins(image, destination, source=None):
 def render_kickstart(template, image, pins):
     amd = pc.image_for(image, {"newNvidia": False})
     return template.replace("@IMAGE@", pinned_reference(image, pins[image])).replace(
-        "@AMD_IMAGE@", pinned_reference(amd, pins[amd]))
+        "@AMD_IMAGE@", pinned_reference(amd, pins[amd])).replace("@UPDATE_TAG@", update_tag(image))
 
 
 if __name__ == "__main__":

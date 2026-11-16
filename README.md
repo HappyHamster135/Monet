@@ -95,6 +95,14 @@ Released image version tags stay fixed; scheduled base updates move only
 can instead publish its exact verified artifacts before advancing the default
 branch; its existing version tag prevents an automatic replacement build.
 
+Pushing to the branch named `beta` (`git push origin HEAD:beta`) publishes the
+version in `VERSION` as its next beta instead (`tools/beta-release.py`): the same
+signed images under their own tag (`0.9.8-7-beta.1`, then `beta`), never
+`latest` or the version's tag, and a pre-release called "Monet 0.9.8-7 beta 1"
+with the same downloads. Each push makes the next beta. When that same source
+reaches the default branch, its release ships the beta's tested images instead
+of building them again.
+
 ## Principles
 
 - **Simple by default.** Good defaults instead of settings.

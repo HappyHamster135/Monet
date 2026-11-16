@@ -325,6 +325,37 @@ class DiskPlan(unittest.TestCase):
                 other.get_origin.return_value.set_string.assert_not_called()
                 sysroot.unlock.assert_called_once_with()
 
+    def test_a_betas_fallback_installer_keeps_the_pc_on_that_beta(self):
+        ks = (ROOT / "image/monet.ks").read_text()
+        code = re.search(r"%post[^\n]*monet-update-origin\.log\n(.*?)\n%end", ks, re.S).group(1)
+        self.assertEqual(code.count('"@UPDATE_TAG@"'), 1)
+        for rendered, tag in (("@UPDATE_TAG@", "latest"), ("latest", "latest"), ("0.9.8-7-beta.2", "0.9.8-7-beta.2"),
+                              ("0.9.8-7-beta.0", "latest"), ("beta", "latest"), ("x\nimport os", "latest")):
+            with self.subTest(rendered=rendered):
+                ns = {"__name__": "fixture"}
+                exec(compile(code.replace('"@UPDATE_TAG@"', repr(rendered)), "post-install", "exec"), ns)
+                self.assertEqual(ns["update_tag"](), tag)
+        # The beta's own tag is what the installed system's updates follow.
+        ns = {"__name__": "fixture"}
+        exec(compile(code.replace('"@UPDATE_TAG@"', '"0.9.8-7-beta.2"'), "post-install", "exec"), ns)
+        digest = "a" * 64
+        pinned, channel = f"ghcr.io/happyhamster135/monet@sha256:{digest}", "ghcr.io/happyhamster135/monet:0.9.8-7-beta.2"
+        current = Mock()
+        current.get_csum.return_value = "b" * 64
+        origin = current.get_origin.return_value
+        origin.has_group.return_value = True
+        origin.get_keys.return_value = (["container-image-reference"], 1)
+        origin.get_string.return_value = "ostree-unverified-image:docker://" + pinned
+        sysroot = Mock()
+        sysroot.get_deployments.return_value = [current]
+        repo = Mock()
+        sysroot.get_repo.return_value = (True, repo)
+        refs = {ns["container_ref"](pinned): "b" * 64, ns["container_ref"](channel): None}
+        repo.resolve_rev.side_effect = lambda ref, allow_noent: (True, refs[ref])
+        self.assertEqual(ns["set_update_origin"](sysroot, pinned), channel)
+        origin.set_string.assert_called_once_with("origin", "container-image-reference",
+                                                  "ostree-image-signed:docker://" + channel)
+
     def test_monet_is_downloaded_with_retries(self):
         ks = (ROOT / "image/monet.ks").read_text()
         code = re.search(r"%pre-install[^\n]*\n(.*?)\n%end", ks, re.S).group(1)

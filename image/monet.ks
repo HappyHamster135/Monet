@@ -344,11 +344,18 @@ def container_ref(image):
         return "__" if char == "_" else f"_{ord(char):02X}_"
     return "ostree/container/image/" + re.sub(r"(?<![A-Za-z0-9])/|[^A-Za-z0-9/-]", escape, f"docker://{image}")
 
+# A beta's installer (monet_setup.trust fills it in) keeps the PC on that beta, until the
+# release of its version is out; a release's, and this file as it is, follow latest.
+UPDATE_TAG = "@UPDATE_TAG@"
+
+def update_tag():
+    return UPDATE_TAG if re.fullmatch(r"\d+\.\d+\.\d+(?:-\d+)?-beta\.[1-9][0-9]{0,5}", UPDATE_TAG) else "latest"
+
 def set_update_origin(sysroot, pinned):
     if not re.fullmatch(r"[^\s@]+@sha256:[0-9a-f]{64}", pinned):
         raise ValueError("Monet: the installer has no verified image digest.")
     repository = pinned.split("@", 1)[0]
-    channel = repository + ":latest"
+    channel = repository + ":" + update_tag()
     prefixes = ("ostree-unverified-registry:", "ostree-unverified-image:docker://",
                 "ostree-unverified-image:registry:", "ostree-image-signed:docker://",
                 "ostree-image-signed:registry:")

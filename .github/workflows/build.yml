@@ -2,7 +2,9 @@ name: Build
 
 # Every push is built and tested. On the default branch, a new version in
 # VERSION is published as a GitHub release automatically, together with the
-# Monet OS image and its installer ISO.
+# Monet OS image and its installer ISO. A push to the branch named beta
+# (git push origin HEAD:beta) publishes that version as its next beta instead
+# (tools/beta-release.py): its own image and release tags only, never :latest.
 on:
   push:
   pull_request:
@@ -145,6 +147,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       new: ${{ steps.version.outputs.new }}
+      promote: ${{ steps.beta.outputs.promote }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check for a new version
@@ -158,11 +161,21 @@ jobs:
           else
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
+      # A published beta of this same source is released as it was tested: its signed
+      # images, not a new build. Without one, the images are built as always.
+      - name: A beta of this same source
+        id: beta
+        if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/beta-release.py promotion
 
   os:
     needs: [test, desktop, check]
     if: needs.check.outputs.new == 'true'
     uses: ./.github/workflows/image.yml
+    with:
+      promote: ${{ needs.check.outputs.promote }}
     secrets: inherit
     permissions:
       contents: read
@@ -200,3 +213,79 @@ jobs:
             --notes-file this-release.md \
             --prerelease \
             --target "$GITHUB_SHA"
+
+  # A beta: the version in VERSION, pushed to the beta branch, once its general and desktop
+  # checks pass. Its number is kept as its git tag first (v0.9.8-7-beta.1), so a push
+  # after it, or one that stopped halfway, makes the next one.
+  beta:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/beta'
+    needs: [test, desktop]
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.number.outputs.version }}
+      number: ${{ steps.number.outputs.number }}
+      tag: ${{ steps.number.outputs.tag }}
+      release: ${{ steps.number.outputs.release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The next beta number
+        id: number
+        run: python3 tools/beta-release.py reserve
+
+  # The same images, signed the same way, under the beta's own tag only; the same
+  # installers (which keep a PC on the beta) and the same install test in a VM.
+  beta-os:
+    needs: [beta]
+    uses: ./.github/workflows/image.yml
+    with:
+      beta: ${{ needs.beta.outputs.tag }}
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+
+  beta-release:
+    needs: [beta, linux, windows, beta-os]
+    runs-on: ubuntu-24.04
+    # One at a time, so the newest beta is always the one published last.
+    concurrency:
+      group: monet-beta-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          pattern: release-*
+          merge-multiple: true
+      - name: Publish the beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.beta.outputs.version }}
+          NUMBER: ${{ needs.beta.outputs.number }}
+          RELEASE: ${{ needs.beta.outputs.release }}
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/monet-registry-auth.json
+        run: |
+          # A newer beta, or this version's release, came out while this one was building.
+          status=0
+          python3 tools/beta-release.py newest "$VERSION" "$NUMBER" || status=$?
+          if [ "$status" = 3 ]; then exit 0; elif [ "$status" != 0 ]; then exit "$status"; fi
+          if ! gh release view "$RELEASE" >/dev/null 2>&1; then
+            cd dist && sha256sum * > SHA256SUMS.txt && cd ..
+            python3 tools/beta-release.py notes "$VERSION" "$NUMBER" RELEASE_NOTES.md > this-release.md
+            gh release create "$RELEASE" dist/* \
+              --title "Monet $VERSION beta $NUMBER" \
+              --notes-file this-release.md \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+          # Then :beta, which installed Monets offer from: only a whole beta, with its release.
+          sudo apt-get install -y -q skopeo
+          trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"
+          python3 tools/beta-release.py publish "$VERSION" "$NUMBER" "$IMAGE" "$IMAGE-amd"

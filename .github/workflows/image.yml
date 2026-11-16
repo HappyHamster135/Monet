@@ -5,8 +5,22 @@ name: Monet OS
 #
 # Runs as part of every release, weekly to rebuild the released version with
 # Bazzite's updates, and by hand from the Actions tab (that builds main).
+# For a beta (build.yml's beta jobs) it publishes the images under the beta's
+# own tag only; for a release of a published beta's source, it releases that
+# beta's signed images as they were tested instead of building them again.
 on:
   workflow_call:
+    inputs:
+      beta:
+        description: "A beta's image tag (VERSION-beta.N): publish only that tag, never latest or VERSION"
+        type: string
+        required: false
+        default: ""
+      promote:
+        description: "A published beta's image tag of this same source: release its images, not a new build"
+        type: string
+        required: false
+        default: ""
     secrets:
       MONET_SIGNING_KEY:
         required: false
@@ -25,9 +39,9 @@ jobs:
   image:
     runs-on: ubuntu-24.04
     outputs:
-      image: ${{ steps.build.outputs.image }}
-      fedora: ${{ steps.build.outputs.fedora }}
-      digest: ${{ steps.push.outputs.digest }}
+      image: ${{ steps.build.outputs.image || steps.tested.outputs.image }}
+      fedora: ${{ steps.build.outputs.fedora || steps.tested.outputs.fedora }}
+      digest: ${{ steps.push.outputs.digest || steps.beta.outputs.digest || steps.promote.outputs.digest }}
     steps:
       - name: Make room (the base image is large)
         run: |
@@ -40,6 +54,7 @@ jobs:
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Build
         id: build
+        if: inputs.promote == ''
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"
           VERSION=$(cat VERSION)
@@ -48,13 +63,30 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
           echo "Built $IMAGE $VERSION on Fedora $FEDORA"
+      # Only to read what the build would: its Fedora and bootc's install settings.
+      # What's released is copied in the registry, by digest (Promote, below).
+      - name: The tested beta
+        id: tested
+        if: inputs.promote != ''
+        env:
+          PROMOTE: ${{ inputs.promote }}
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"
+          VERSION=$(cat VERSION)
+          echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sudo podman pull "$IMAGE:$PROMOTE"
+          sudo podman tag "$IMAGE:$PROMOTE" "$IMAGE:latest" "$IMAGE:$VERSION"
+          FEDORA=$(sudo podman run --rm --entrypoint rpm "$IMAGE:latest" -E %fedora)
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
+          echo "Releasing $IMAGE:$PROMOTE as $VERSION, on Fedora $FEDORA"
       # bootc reads its install settings (prepare-root.conf, install/*.toml) from the
       # system it runs on, not from the image it installs: Monet Setup's USB stick
       # carries this image's own (image/setup/build.sh).
       - name: bootc's install settings, for Monet Setup
         continue-on-error: true
         env:
-          IMAGE: ${{ steps.build.outputs.image }}
+          IMAGE: ${{ steps.build.outputs.image || steps.tested.outputs.image }}
         run: |
           sudo podman run --rm --entrypoint sh "$IMAGE:latest" -c 'cd / && tar -cf - $(ls -d usr/lib/ostree/prepare-root.conf etc/ostree/prepare-root.conf usr/lib/bootc/install usr/lib/bootc/bound-images.d 2>/dev/null)' > bootc-settings.tar
           tar -tvf bootc-settings.tar
@@ -71,6 +103,7 @@ jobs:
         run: sudo apt-get install -y -q skopeo
       - name: Push
         id: push
+        if: inputs.beta == '' && inputs.promote == ''
         env:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ${{ steps.build.outputs.image }}
@@ -80,13 +113,39 @@ jobs:
           python3 tools/require-release-checks.py
           echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
           bash tools/push-image.sh "$IMAGE" "$(cat VERSION)" "$GITHUB_OUTPUT"
+      - name: Push the beta (its own tag only)
+        id: beta
+        if: inputs.beta != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.build.outputs.image }}
+          BETA: ${{ inputs.beta }}
+          MONET_SIGNING_KEY: ${{ secrets.MONET_SIGNING_KEY }}
+          MONET_SIGNING_PASSPHRASE: ${{ secrets.MONET_SIGNING_PASSPHRASE }}
+        run: |
+          python3 tools/require-release-checks.py
+          echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          bash tools/push-image.sh "$IMAGE" "$(cat VERSION)" "$GITHUB_OUTPUT" "$BETA"
+      - name: Promote the tested beta
+        id: promote
+        if: inputs.promote != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.tested.outputs.image }}
+          PROMOTE: ${{ inputs.promote }}
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/monet-registry-auth.json
+        run: |
+          python3 tools/require-release-checks.py
+          trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          python3 tools/beta-release.py promote "$IMAGE" "$(cat VERSION)" "$PROMOTE"
 
   # The same Monet on Bazzite's AMD and Intel desktop (Mesa, no NVIDIA driver):
   # for Radeon and Intel graphics, and older GeForce cards. Built beside the other.
   image-amd:
     runs-on: ubuntu-24.04
     outputs:
-      digest: ${{ steps.push.outputs.digest }}
+      digest: ${{ steps.push.outputs.digest || steps.beta.outputs.digest || steps.promote.outputs.digest }}
     steps:
       - name: Make room (the base image is large)
         run: |
@@ -98,12 +157,16 @@ jobs:
         if: github.event_name == 'schedule'
         run: git fetch --depth=1 origin "refs/tags/v$(cat VERSION)" && git checkout FETCH_HEAD
       - name: Build
+        if: inputs.promote == ''
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet-amd"
           VERSION=$(cat VERSION)
           sudo podman build -f image/Containerfile --build-arg BASE=ghcr.io/ublue-os/bazzite:stable --build-arg VERSION="$VERSION" \
             -t "$IMAGE:latest" -t "$IMAGE:$VERSION" .
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: The tested beta
+        if: inputs.promote != ''
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet-amd" >> "$GITHUB_ENV"
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
         if: ${{ hashFiles('image/monet-update.pub') != '' }}
       - name: Install the image signing transport
@@ -111,6 +174,7 @@ jobs:
         run: sudo apt-get install -y -q skopeo
       - name: Push
         id: push
+        if: inputs.beta == '' && inputs.promote == ''
         env:
           GH_TOKEN: ${{ github.token }}
           MONET_SIGNING_KEY: ${{ secrets.MONET_SIGNING_KEY }}
@@ -119,6 +183,30 @@ jobs:
           python3 tools/require-release-checks.py
           echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
           bash tools/push-image.sh "$IMAGE" "$(cat VERSION)" "$GITHUB_OUTPUT"
+      - name: Push the beta (its own tag only)
+        id: beta
+        if: inputs.beta != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BETA: ${{ inputs.beta }}
+          MONET_SIGNING_KEY: ${{ secrets.MONET_SIGNING_KEY }}
+          MONET_SIGNING_PASSPHRASE: ${{ secrets.MONET_SIGNING_PASSPHRASE }}
+        run: |
+          python3 tools/require-release-checks.py
+          echo "${{ github.token }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          bash tools/push-image.sh "$IMAGE" "$(cat VERSION)" "$GITHUB_OUTPUT" "$BETA"
+      - name: Promote the tested beta
+        id: promote
+        if: inputs.promote != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTE: ${{ inputs.promote }}
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/monet-registry-auth.json
+        run: |
+          python3 tools/require-release-checks.py
+          trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          python3 tools/beta-release.py promote "$IMAGE" "$(cat VERSION)" "$PROMOTE"
 
   iso:
     needs: [image, image-amd]
@@ -150,10 +238,13 @@ jobs:
           IMAGE: ${{ needs.image.outputs.image }}
           NVIDIA_DIGEST: ${{ needs.image.outputs.digest }}
           AMD_DIGEST: ${{ needs.image-amd.outputs.digest }}
+          BETA: ${{ inputs.beta }}
         run: |
           VERSION=$(cat VERSION)
+          # A beta's installer keeps the PC it installs on that beta, not on :latest.
+          TAG=${BETA:-$VERSION}
           printf '{"%s:%s":"%s","%s-amd:%s":"%s"}\n' \
-            "$IMAGE" "$VERSION" "$NVIDIA_DIGEST" "$IMAGE" "$VERSION" "$AMD_DIGEST" > image-digests.json
+            "$IMAGE" "$TAG" "$NVIDIA_DIGEST" "$IMAGE" "$TAG" "$AMD_DIGEST" > image-digests.json
 
           # Monet's look for the installer, loaded automatically from /images/product.img.
           rm -rf product && cp -r image/installer/product product
@@ -163,7 +254,7 @@ jobs:
           # last: it rebuilds the EFI boot image from the edited menu and
           # /EFI/BOOT (that copy is what PCs actually boot), renames the stick
           # and adds the media checksum.
-          docker run --rm --privileged -v "$PWD:/work" -w /work -e VERSION="$VERSION" -e MONET_FALLBACK_IMAGE="$IMAGE:$VERSION" "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
+          docker run --rm --privileged -v "$PWD:/work" -w /work -e VERSION="$VERSION" -e MONET_FALLBACK_IMAGE="$IMAGE:$TAG" "registry.fedoraproject.org/fedora:$FEDORA_ISO" bash -ec "
             dnf -y -q install lorax xorriso isomd5sum mtools python3 cpio diffutils
             PYTHONPATH=setup python3 -m monet_setup.trust \"\$MONET_FALLBACK_IMAGE\" monet.ks image-digests.json --kickstart image/monet.ks
             OLD=\$(xorriso -indev netinst.iso -pvd_info 2>/dev/null | sed -n 's/^Volume Id *: *//p' | tr -d \"'\" | xargs)
@@ -259,12 +350,15 @@ jobs:
           FEDORA: ${{ needs.image.outputs.fedora }}
           NVIDIA_DIGEST: ${{ needs.image.outputs.digest }}
           AMD_DIGEST: ${{ needs.image-amd.outputs.digest }}
+          BETA: ${{ inputs.beta }}
         run: |
           VERSION=$(cat VERSION)
+          # A beta's installer keeps the PC it installs on that beta, not on :latest.
+          TAG=${BETA:-$VERSION}
           printf '{"%s:%s":"%s","%s-amd:%s":"%s"}\n' \
-            "$IMAGE" "$VERSION" "$NVIDIA_DIGEST" "$IMAGE" "$VERSION" "$AMD_DIGEST" > image-digests.json
+            "$IMAGE" "$TAG" "$NVIDIA_DIGEST" "$IMAGE" "$TAG" "$AMD_DIGEST" > image-digests.json
           docker run --rm --privileged -v "$PWD:/work" -w /work "registry.fedoraproject.org/fedora:$FEDORA" \
-            image/setup/build.sh "$VERSION" "$IMAGE:$VERSION" "/work/Monet-$VERSION-Setup.iso" \
+            image/setup/build.sh "$VERSION" "$IMAGE:$TAG" "/work/Monet-$VERSION-Setup.iso" \
             /work/bootc-settings.tar /work/image-digests.json
           sudo chown "$(id -u)" Monet-*-Setup.iso
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

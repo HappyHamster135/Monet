@@ -39,13 +39,18 @@ class ReleaseChecks(unittest.TestCase):
 
 
 class ImagePublication(unittest.TestCase):
-    def publish(self, git_status, push_status=0, *, record_digest=False, digest="sha256:" + "a" * 64, rolling_status=0):
+    def publish(self, git_status, push_status=0, *, record_digest=False, digest="sha256:" + "a" * 64, rolling_status=0,
+                beta=None, inspect_status=1, inspect_error="reading manifest: manifest unknown"):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for name, script in {
                 "git": '#!/bin/sh\nexit "$GIT_STATUS"\n',
                 "sudo": r'''#!/bin/sh
 printf '%s\n' "$*" >> "$CALLS"
+if [ "$1" = skopeo ]; then
+    printf '%s\n' "$INSPECT_ERROR" >&2
+    exit "$INSPECT_STATUS"
+fi
 for arg do
     case "$arg" in --digestfile=*) printf '%s\n' "$PUSH_DIGEST" > "${arg#--digestfile=}" ;; esac
 done
@@ -60,9 +65,13 @@ exit "$PUSH_STATUS"
             output = root / "output"
             env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
                        GIT_STATUS=str(git_status), PUSH_STATUS=str(push_status), CALLS=str(calls),
-                       PUSH_DIGEST=digest, ROLLING_STATUS=str(rolling_status), TMPDIR=folder)
+                       PUSH_DIGEST=digest, ROLLING_STATUS=str(rolling_status), TMPDIR=folder,
+                       INSPECT_STATUS=str(inspect_status), INSPECT_ERROR=inspect_error)
+            arguments = [str(output)] if record_digest or beta is not None else []
+            if beta is not None:
+                arguments.append(beta)
             result = subprocess.run(["bash", str(ROOT / "tools/push-image.sh"),
-                                     "ghcr.io/example/monet", "0.9.6", *([str(output)] if record_digest else [])],
+                                     "ghcr.io/example/monet", "0.9.6", *arguments],
                                     env=env, capture_output=True, text=True, timeout=10)
             commands = calls.read_text().splitlines() if calls.exists() else []
             return result.returncode, commands, output.read_text() if output.exists() else ""
@@ -101,6 +110,58 @@ exit "$PUSH_STATUS"
                 status, _, output = self.publish(2, record_digest=True, **options)
                 self.assertNotEqual(status, 0)
                 self.assertEqual(output, "")
+
+
+class BetaPublication(unittest.TestCase):
+    """A beta (tools/beta-release.py) publishes its own tag only: never latest or the version."""
+    publish = ImagePublication.publish
+    BETA = "0.9.6-beta.2"
+    INSPECT = "skopeo inspect --raw docker://ghcr.io/example/monet:0.9.6-beta.2"
+
+    def test_only_the_betas_own_tag_is_published_with_its_digest(self):
+        digest = "sha256:" + "c" * 64
+        status, calls, output = self.publish(2, beta=self.BETA, digest=digest)
+        self.assertEqual(status, 0)
+        self.assertEqual(calls[:2], [self.INSPECT, "podman tag ghcr.io/example/monet:0.9.6 ghcr.io/example/monet:0.9.6-beta.2"])
+        self.assertRegex(calls[2], r"^podman push --format oci --digestfile=.+ ghcr\.io/example/monet:0\.9\.6-beta\.2$")
+        self.assertEqual(len(calls), 3)
+        self.assertFalse(any(call.endswith((":latest", ":0.9.6")) for call in calls if call.startswith("podman push")))
+        self.assertEqual(output, f"digest={digest}\n")
+
+    def test_a_released_version_gets_no_beta(self):
+        status, calls, output = self.publish(0, beta=self.BETA)
+        self.assertNotEqual(status, 0)
+        self.assertEqual((calls, output), ([], ""))
+
+    def test_an_unknown_release_state_publishes_nothing(self):
+        self.assertEqual(self.publish(128, beta=self.BETA), (128, [], ""))
+
+    def test_a_published_beta_is_never_replaced(self):
+        status, calls, output = self.publish(2, beta=self.BETA, inspect_status=0, inspect_error="")
+        self.assertNotEqual(status, 0)
+        self.assertEqual((calls, output), ([self.INSPECT], ""))
+
+    def test_a_registry_that_cant_be_asked_publishes_nothing(self):
+        status, calls, output = self.publish(2, beta=self.BETA, inspect_error="pinging container registry: connection refused")
+        self.assertNotEqual(status, 0)
+        self.assertEqual((calls, output), ([self.INSPECT], ""))
+
+    def test_only_a_numbered_beta_of_this_version(self):
+        for beta in ("latest", "0.9.6", "0.9.5-beta.1", "0.9.6-beta.0", "0.9.6-beta.x", "0.9.6-beta.1/x", ""):
+            with self.subTest(beta=beta):
+                status, calls, output = self.publish(2, beta=beta)
+                if beta == "":
+                    continue   # no beta: the release path, tested above
+                self.assertNotEqual(status, 0)
+                self.assertEqual((calls, output), ([], ""))
+
+    def test_a_failed_push_records_no_digest(self):
+        for options in ({"push_status": 1}, {"digest": "sha256:broken"}):
+            with self.subTest(options=options):
+                status, calls, output = self.publish(2, beta=self.BETA, **options)
+                self.assertNotEqual(status, 0)
+                self.assertEqual(output, "")
+                self.assertFalse(any(call.endswith(":latest") for call in calls))
 
 
 class QualifiedPublication(unittest.TestCase):

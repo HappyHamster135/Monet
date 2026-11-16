@@ -403,6 +403,26 @@ class DownloadCache(unittest.TestCase):
                 self.assertEqual('--enforce-container-sigpolicy' in command, signed)
                 self.assertIn('--skip-fetch-check', command)
 
+    def test_a_betas_stick_keeps_the_pc_on_that_beta(self):
+        """A release's stick follows latest; a beta's follows the beta's own tag, so the daily
+        update never takes it back to an older release (tools/beta-release.py)."""
+        for image, expected in (
+            ('ghcr.io/happyhamster135/monet:0.9.8-7', 'ghcr.io/happyhamster135/monet:latest'),
+            ('ghcr.io/happyhamster135/monet:0.9.8-7-beta.2', 'ghcr.io/happyhamster135/monet:0.9.8-7-beta.2'),
+            ('ghcr.io/happyhamster135/monet-amd:0.9.9-beta.10', 'ghcr.io/happyhamster135/monet-amd:0.9.9-beta.10'),
+            ('ghcr.io/happyhamster135/monet:beta', 'ghcr.io/happyhamster135/monet:latest'),
+            ('ghcr.io/happyhamster135/monet:0.9.8-7-beta.0', 'ghcr.io/happyhamster135/monet:latest'),
+            ('example.invalid:8443/monet:0.9.8-7-beta.1', 'example.invalid:8443/monet:0.9.8-7-beta.1'),
+        ):
+            with self.subTest(image=image):
+                self.assertEqual(trust.update_reference(image), expected)
+        image = 'ghcr.io/happyhamster135/monet:0.9.8-7-beta.2'
+        pins = {image: 'sha256:' + 'a' * 64, 'ghcr.io/happyhamster135/monet-amd:0.9.8-7-beta.2': 'sha256:' + 'b' * 64}
+        self.assertEqual(trust.render_kickstart('tag=@UPDATE_TAG@', image, pins), 'tag=0.9.8-7-beta.2')
+        release = {key.replace('-beta.2', ''): value for key, value in pins.items()}
+        self.assertEqual(trust.render_kickstart('tag=@UPDATE_TAG@', 'ghcr.io/happyhamster135/monet:0.9.8-7', release),
+                         'tag=latest')
+
     def test_built_media_requires_a_valid_digest_for_the_selected_variant(self):
         image = 'example.invalid/monet:fixture'
         amd = 'example.invalid/monet-amd:fixture'
