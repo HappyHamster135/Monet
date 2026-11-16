@@ -278,6 +278,23 @@ class StoreNavigation(unittest.TestCase):
         self.assertAlmostEqual(page.property("contentY"), where, delta=1)
         self.assert_visible_in(self.window.activeFocusItem(), page)
 
+    def test_keys_moved_on_right_after_forward_are_followed(self):
+        self.shop.apps[0]["similar"] = [self.shop.apps[1]]
+        QMetaObject.invokeMethod(self.window, "chooseSection", Q_ARG("QVariant", "home")); QTest.qWait(50)
+        card = self.item("storeRanked-" + self.shop.apps[0]["id"])
+        card.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(80)
+        page, gallery = self.item("storeAppPage"), self.item("storeScreenshotGallery")
+        QTest.keyClick(self.window, Qt.Key_Tab); QTest.qWait(80)
+        QTest.keyClick(self.window, Qt.Key_Left, Qt.AltModifier); QTest.qWait(100)
+        self.wait_for(card.hasActiveFocus)
+        QTest.keyClick(self.window, Qt.Key_Right, Qt.AltModifier)
+        self.wait_for(gallery.hasActiveFocus)
+        # Tab at once, while the page is still being kept where it was: the page follows the keys.
+        QTest.keyClick(self.window, Qt.Key_Tab); QTest.qWait(400)
+        similar = self.item("storeSimilar-" + self.shop.apps[1]["id"])
+        self.assertTrue(similar.hasActiveFocus())
+        self.assert_visible_in(similar, page)
+
     def test_only_the_way_back_is_called_back_and_the_screenshot_arrows_keep_the_keys(self):
         shot = self.shop.apps[0]["screenshots"][0]
         self.shop.apps[0]["screenshots"] = [dict(shot, caption=name) for name in ("First", "Second", "Third")]

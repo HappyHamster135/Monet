@@ -121,6 +121,11 @@ MonetWindow {
     onActiveFocusItemChanged: {
         // Not when the window gives back the same focus as it's activated again.
         if (active && activeFocusItem && activeFocusItem !== leftBehind) leftBehind = null
+        // The keys moved on from where Back or Forward put them: the list follows them now.
+        if (settling.place && activeFocusItem !== settling.place.focus) {
+            settling.place = null
+            settling.stop()
+        }
         scheduleFocusReveal()
     }
     // Wayland can deliver a configure for the old size after a screen change.
