@@ -137,6 +137,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   like a code block or a chat, reaches the box's end, the page itself scrolls
   on. Before, the next turns of the wheel went to the box for a second and a
   half and seemed not to register.
+- **A volume for each window, kept from song to song.** When two windows of an
+  app play sound, like a video in each of two Zen or Firefox windows or two
+  video players, the Home Bar's preview now has a volume slider under each of
+  them, and the next video in that window keeps its level. Where the sound
+  can't be told apart by window, as in Chrome or a tab that isn't showing, the
+  app keeps one slider. And a level you set for Spotify in the Home Bar now
+  stays when the next song starts, instead of going back to Spotify's own.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
