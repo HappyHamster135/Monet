@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -46,6 +47,14 @@ class Fixture(unittest.TestCase):
             (self.proc / str(pid) / 'cgroup').write_text(
                 f'0::/user.slice/user-1000.slice/user@1000.service/app.slice/{name}\n')
         return folder
+
+    def process(self, pid, name, **environment):
+        """What /proc says of a process: its name and the environment it started with."""
+        folder = self.proc / str(pid)
+        folder.mkdir(exist_ok=True)
+        (folder / 'comm').write_text(name + '\n')
+        (folder / 'environ').write_bytes(b''.join(f'{k}={v}\0'.encode() for k, v in
+                                                  {'HOME': '/home/me', **environment}.items()))
 
     def look(self, state, now, mem, shown, playing=(set(), set()), asker=None):
         def record(folder, amount):
@@ -152,6 +161,104 @@ class Resting(Fixture):
         state, full = {}, memory(8, 1.0, swap_free_gib=0.01)
         self.look(state, 1000, full, [])
         self.assertEqual(self.look(state, 1000 + rest.IDLE, full, []), {})
+
+
+class Games(Fixture):
+    """A game minimized with Alt+Tab is never rested: once back, it would stutter for minutes."""
+
+    def test_steam_with_a_game_in_it_never_rests_and_starts_its_wait_when_the_game_quits(self):
+        steam = self.unit('app-steam@autostart.service', [40, 41, 42], 3000)
+        self.process(40, 'steam')
+        self.process(41, 'reaper', SteamAppId='1091500', SteamGameId='1091500')
+        self.process(42, 'Cyberpunk2077.e', SteamAppId='1091500', STEAM_COMPAT_APP_ID='1091500')
+        self.unit('app-a-1.scope', [10], 1000)
+        minimized = [{'pid': 42, 'minimized': True, 'active': False}]  # Alt+Tabbed out of a fullscreen game
+        state, low = {}, memory(8, 0.5)
+        self.look(state, 1000, low, minimized)
+        self.assertNotIn('idle_since', state['apps']['app-steam@autostart.service'])
+        result = self.look(state, 1000 + rest.IDLE * 2, low, minimized)
+        self.assertEqual(list(result), ['app-a-1.scope'])  # Another app left: rested as before.
+        self.assertNotIn('app-steam@autostart.service', [name for name, _ in self.asked])
+        # The game quits; Steam, alone in the tray, is left from now on, not from before.
+        (steam / 'cgroup.procs').write_text('40\n')
+        for pid in (41, 42):
+            shutil.rmtree(self.proc / str(pid))
+        self.assertEqual(self.look(state, 2400, low, []), {})
+        self.assertEqual(state['apps']['app-steam@autostart.service']['idle_since'], 2400)
+        self.assertEqual(list(self.look(state, 2400 + rest.IDLE, low, [])), ['app-steam@autostart.service'])
+
+    def test_what_counts_as_a_game(self):
+        self.process(1, 'wineserver')                                  # any Windows game, whoever started it
+        self.process(2, 'gamescope')
+        self.process(3, 'hl2_linux', SteamAppId='0', SteamGameId='15426519127218675712')  # a non-Steam game in Steam
+        self.process(4, 'Game.exe', STEAM_COMPAT_APP_ID='292030')     # Proton's own
+        self.process(5, 'game.x86_64', LUTRIS_GAME_UUID='6d1e8c4e-3e64-4a5c-9b7e-1f0b4ed7ac35')
+        self.process(6, 'steam', SteamAppId='0', SteamGameId='', STEAM_COMPAT_APP_ID='0')  # Steam itself
+        self.process(7, 'fossilize_repla', SteamAppId='1091500')      # Steam processing shaders: not playing
+        self.process(8, 'zen', MY_SteamAppId='5', NOT='SteamAppId=5')
+        for pid in (1, 2, 3, 4, 5):
+            self.assertTrue(rest.game(pid, self.proc), pid)
+        for pid in (6, 7, 8, 99):  # 99: gone
+            self.assertFalse(rest.game(pid, self.proc), pid)
+        # One that quits between its name and its environment, or isn't this account's to read.
+        self.process(9, 'Game.exe', SteamAppId='1091500')
+        reading = Path.read_bytes
+        for error in (FileNotFoundError, PermissionError, ProcessLookupError):
+            def refuse(path, error=error):
+                if path.parent.name == '9':
+                    raise error()
+                return reading(path)
+            with mock.patch.object(Path, 'read_bytes', refuse):
+                self.assertFalse(rest.game(9, self.proc))
+                self.assertFalse(rest.game_running([6, 9], self.proc))
+        self.assertTrue(rest.game_running([6, 9], self.proc))
+
+    def test_an_environment_is_read_only_for_apps_otherwise_left(self):
+        self.unit('app-on-screen-1.scope', [10], 1000)
+        self.unit('app-busy-2.scope', [20], 1000, cpu_usec=60 * 10 ** 6)  # a minute's work in two
+        self.unit('app-sounding-3.scope', [30], 1000)
+        self.unit('app-left-4.scope', [40, 41], 1000)
+        asked = []
+        state, low = {'apps': {'app-busy-2.scope': {'cpu': 0, 'at': 880}}}, memory(8, 0.5)
+        with mock.patch.object(rest, 'game', lambda pid, proc: asked.append(pid) or False):
+            self.look(state, 1000, low, [{'pid': 10, 'minimized': False, 'active': True}], ({30}, set()))
+        self.assertEqual(sorted(asked), [40, 41])
+        self.assertEqual(sorted(name for name, entry in state['apps'].items() if 'idle_since' in entry),
+                         ['app-left-4.scope'])
+
+    def test_kwin_is_asked_every_ten_minutes_at_most_while_a_game_runs(self):
+        self.unit('app-a-1.scope', [10], 1000)
+        self.process(50, 'wineserver')  # A game, wherever it was started.
+        asked = []
+        windows = lambda: asked.append(True) or []
+        state, low = {}, memory(8, 0.5)
+        look = lambda now: rest.rest(low, False, state, now, self.apps, list_windows=windows,
+                                     playing=lambda: (set(), set()), asker=lambda folder, amount: True, proc=self.proc)
+        self.assertEqual(look(1000), {})
+        for now in (1120, 1240, 1000 + rest.GAME_LOOK - 1):
+            self.assertEqual(look(now), {})
+        self.assertEqual(len(asked), 1)
+        # Ten minutes on: asked, and the app left all along rests, the game or not.
+        self.assertIn('app-a-1.scope', look(1000 + rest.GAME_LOOK))
+        self.assertEqual(len(asked), 2)
+        # The game over: every look again.
+        shutil.rmtree(self.proc / '50')
+        look(1000 + rest.GAME_LOOK + 120)
+        look(1000 + rest.GAME_LOOK + 240)
+        self.assertEqual(len(asked), 4)
+        # A clock set back doesn't keep KWin from being asked.
+        self.process(50, 'wineserver')
+        look(500)
+        self.assertEqual(len(asked), 5)
+
+    def test_every_process_of_this_account_and_only_its_own(self):
+        self.process(1, 'bash')
+        self.process(2, 'wineserver')
+        self.assertTrue(rest.game_running(proc=self.proc))  # These folders are this account's.
+        self.assertFalse(rest.game_running(proc=self.proc, uid=os.getuid() + 1))  # Someone else's game.
+        self.assertFalse(rest.game_running(proc=self.proc / 'missing'))
+        (self.proc / '2').rename(self.proc / 'self')  # Not a process number.
+        self.assertFalse(rest.game_running(proc=self.proc))
 
 
 class Kernel(Fixture):

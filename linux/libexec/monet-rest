@@ -6,20 +6,25 @@ keeps its room.
 Linux does this by itself once memory is nearly gone, but from every program alike: the
 desktop and the app in front of you too, which then stutter. Monet asks earlier, and only
 of apps you have left: never one with a window on screen, one playing or recording sound,
-or one still at work. An app takes its memory back from zram as it uses it again, in a
-fraction of a second. An older PC keeps more room free than a newer one.
+one still at work, or one with a game running in it. An app takes its memory back from zram
+as it uses it again, in a fraction of a second. An older PC keeps more room free than a
+newer one. Games are left alone because a game you Alt+Tab away from often pauses, and once
+rested would take its memory back a little at a time when you return, stuttering for minutes.
 
 Runs every two minutes (monet-rest.timer). With plenty of memory free it only reads
 /proc/meminfo and stops; nearer the line it starts watching which apps have been left, so
 they're ready to rest by the time it's crossed. Without zram, or where the system doesn't let
 an account ask this of its own apps (cgroup memory.reclaim), it does nothing, and looks again
-the next day.
+the next day. Which windows are on screen comes from a moment's script in KWin, which runs it on
+the thread that draws the screen: while a game runs, where that can cost a frame, KWin is asked
+every ten minutes at most, not at every look.
 
 If memory stays nearly full even so, it says which apps use the most, as macOS offers to quit
 apps when it runs out, with a button for Task Manager: at most every half hour.
 """
 import gettext
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -46,6 +51,7 @@ RETRY = 24 * 3600       # not allowed here: look again after a day
 FULL = 0.05             # this much of memory free, or 512 MB, or less: nearly full
 FULL_FOR = 4 * 60       # that long before it's said
 SAY_AGAIN = 30 * 60     # and then not again for this long
+GAME_LOOK = IDLE        # while a game runs, KWin is asked which windows are on screen this often at most
 
 
 def tr(text, *values):
@@ -146,6 +152,55 @@ def unit_of(pid, proc=Path("/proc")):
         return ""
     parts = path.split("/")
     return parts[parts.index("app.slice") + 1] if "app.slice" in parts[:-1] else ""
+
+
+# A game, as the launchers mark it: Steam names the game in the environment of everything it
+# starts for one (SteamAppId, SteamGameId; STEAM_COMPAT_APP_ID for Proton; 0 for no game), and
+# Lutris each game it starts (LUTRIS_GAME_UUID). Wine's server runs while any Windows game or
+# app does, whoever started it (Heroic, Bottles, umu); gamescope is a game's own compositor.
+GAME_MARKS = (b"SteamAppId", b"SteamGameId", b"STEAM_COMPAT_APP_ID", b"LUTRIS_GAME_UUID")
+GAME_PROGRAMS = {"wineserver", "gamescope", "gamescopereaper"}
+NOT_A_GAME = {"fossilize_repla"}  # Steam working through a game's shaders, not playing it
+
+
+def game(pid, proc=Path("/proc")):
+    """Whether a process is a game, or part of one."""
+    folder = proc / str(pid)
+    try:
+        name = (folder / "comm").read_text().strip()
+    except OSError:
+        return False  # gone
+    if name in GAME_PROGRAMS:
+        return True
+    if name in NOT_A_GAME:
+        return False
+    try:
+        environment = (folder / "environ").read_bytes()
+    except OSError:
+        return False  # gone, or not this account's to read
+    for item in environment.split(b"\0"):
+        key, sep, value = item.partition(b"=")
+        if sep and key in GAME_MARKS and value not in (b"", b"0"):
+            return True
+    return False
+
+
+def game_running(pids=None, proc=Path("/proc"), uid=None):
+    """Whether a game is running among these processes, or else among all of this account's."""
+    if pids is None:
+        uid = os.getuid() if uid is None else uid
+        pids = []
+        try:
+            with os.scandir(proc) as entries:
+                for entry in entries:
+                    try:
+                        if entry.name.isdigit() and entry.stat().st_uid == uid:
+                            pids.append(int(entry.name))
+                    except OSError:
+                        pass  # gone
+        except OSError:
+            return False
+    return any(game(pid, proc) for pid in pids)
 
 
 def sounding(pactl="pactl"):
@@ -286,7 +341,8 @@ def plan(now, state, found, shown, playing, proc=Path("/proc")):
             and (cpu - before) / 1e6 / (now - before_at) > BUSY
         left = all(w.get("minimized") and not w.get("active") for w in mine)
         heard = pids & pids_playing or any(app.replace("-", "\\x2d") in name or app in name for app in ids_playing)
-        if not pids or not left or busy or heard:
+        # A game is asked last: only its environment says so, read only of apps otherwise left.
+        if not pids or not left or busy or heard or game_running(pids, proc):
             entry.pop("idle_since", None)
             continue
         since = entry.setdefault("idle_since", now)
@@ -310,9 +366,12 @@ def rest(memory, older, state, now, apps, list_windows=windows, playing=sounding
         state.pop("apps", None)  # plenty free: nothing to watch
         return {}
     found = units(apps)
+    if found and 0 <= now - state.get("windows_at", -math.inf) < GAME_LOOK and game_running(proc=proc):
+        return {}  # A game runs: KWin was asked lately, and is asked again later.
     shown = list_windows() if found else None
     if shown is None:
         return {}  # which app is in front is unknown: rest nothing
+    state["windows_at"] = now
     ready = plan(now, state, found, shown, playing(), proc)
     if available >= want or memory.get("SwapFree", 0) < WORTH:
         return {}  # watching only: room enough yet, or the compressed swap is full
