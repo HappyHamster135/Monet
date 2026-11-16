@@ -4877,6 +4877,65 @@ def vdf_set(text, keys, name, value):
     return None
 
 
+# Task Manager --------------------------------------------------------------
+# KDE's Task Manager keeps its own copy of a page once it's changed in any way (a column's
+# width, the sort), and from then on Monet's page with new columns is never read again.
+
+TASK_MANAGER_PAGES = ("monet-applications.page", "monet-processes.page")
+
+
+def task_manager_graphics(folder=None):
+    """Monet's Graphics column, after Memory, in the Task Manager pages someone has their own
+    copy of. Their other columns, widths and order stay as they are. Returns the pages changed."""
+    folder = Path(folder or Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "plasma-systemmonitor")
+    changed = []
+    for name in TASK_MANAGER_PAGES:
+        page = folder / name
+        try:
+            lines = page.read_text(encoding="utf-8").split("\n")
+        except (OSError, UnicodeDecodeError):
+            continue
+        group_starts = [i for i, line in enumerate(lines) if line.startswith("[")] + [len(lines)]
+        edited = False
+        for start, end in zip(group_starts, group_starts[1:]):
+            keys = {line.split("=", 1)[0]: i for i, line in enumerate(lines[start:end], start) if "=" in line}
+            if "sortedColumns" not in keys:
+                continue
+            columns = lines[keys["sortedColumns"]].split("=", 1)[1].split(",")
+            if "monetGraphics" in columns or "vmPSS" not in columns:
+                continue
+            at = columns.index("vmPSS") + 1
+            columns.insert(at, "monetGraphics")
+            lines[keys["sortedColumns"]] = "sortedColumns=" + ",".join(columns)
+            if "columnWidths" in keys:
+                try:
+                    widths = [float(w) for w in lines[keys["columnWidths"]].split("=", 1)[1].split(",")]
+                except ValueError:
+                    widths = []
+                if len(widths) == len(columns) - 1:
+                    # Room for it the size of Memory's, taken evenly from every column.
+                    added = widths[at - 1]
+                    total = sum(widths)
+                    widths.insert(at, added)
+                    widths = [round(w * total / (total + added), 3) for w in widths]
+                    lines[keys["columnWidths"]] = "columnWidths=" + ",".join(f"{w:g}" for w in widths)
+            if "columnDisplay" in keys:
+                try:
+                    display = json.loads(lines[keys["columnDisplay"]].split("=", 1)[1])
+                except ValueError:
+                    display = None
+                if isinstance(display, dict):
+                    display["monetGraphics"] = "text"
+                    lines[keys["columnDisplay"]] = "columnDisplay=" + json.dumps(display, separators=(",", ":"))
+            edited = True
+        if edited:
+            temporary = page.with_name(page.name + ".monet-new")
+            temporary.write_text("\n".join(lines), encoding="utf-8")
+            os.replace(temporary, page)
+            changed.append(name)
+    return changed
+
+
 def steam_drives(steam=OWN_STEAM, mounts=None):
     """Steam's libraries on the PC's other drives, found again where the drives are mounted now
     (above), in both of Steam's lists. Steam must be closed. Each list is kept as it was before
@@ -9930,6 +9989,8 @@ def main(argv):
         protondb_refresh([a for a in args if a.isdigit()])
     elif cmd == "steam-share":
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
+    elif cmd == "task-manager-graphics":
+        emit({"changed": task_manager_graphics()})
     elif cmd == "steam-drives":
         import fcntl
         lock_dir = RUNTIME / "monet"

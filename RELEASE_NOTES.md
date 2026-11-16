@@ -149,6 +149,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   low strip across the screen. It opens the size it would on a regular screen,
   centered on the app that asked, so names, sizes and dates all fit. Make it
   bigger or smaller and it keeps your size from then on.
+- **Graphics in Task Manager for everyone.** If you'd used Task Manager before
+  0.9.8-6, it kept your own copy of its Applications and Processes pages, so
+  the Graphics column beside CPU and Memory never appeared. It's added there
+  now, after Memory, and your other columns stay as you had them.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
