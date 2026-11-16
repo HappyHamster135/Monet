@@ -3240,7 +3240,19 @@ Audio
         from unittest import mock
         quick = quick_helper()
         for devices, expected in (("ethernet\nloopback\n", None), ("wifi\nethernet\n", True)):
-            answers = {("nmcli", "-t", "-f", "TYPE", "device"): devices, ("nmcli", "radio", "wifi"): "enabled\n"}
+            answers = {("nmcli", "-t", "-f", "TYPE", "device"): devices,
+                       ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "radio", "wifi"): "enabled\n"}
+            with mock.patch.object(quick, "run", lambda *args, **kw: answers.get(args)):
+                self.assertIs(quick.wifi_state(), expected)
+
+    def test_the_wifi_tile_stays_in_another_language(self):
+        # In a Swedish session nmcli said "aktiverat", which wasn't "enabled", so the Wi-Fi tile disappeared.
+        from unittest import mock
+        quick = quick_helper()
+        for said, expected in (("enabled\n", True), ("disabled\n", False)):
+            answers = {("nmcli", "-t", "-f", "TYPE", "device"): "wifi\n",
+                       ("nmcli", "radio", "wifi"): "aktiverat\n",
+                       ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "radio", "wifi"): said}
             with mock.patch.object(quick, "run", lambda *args, **kw: answers.get(args)):
                 self.assertIs(quick.wifi_state(), expected)
 

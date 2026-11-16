@@ -322,7 +322,8 @@ def wifi_state():
     devices = run("nmcli", "-t", "-f", "TYPE", "device") or ""
     if "wifi" not in devices.split():
         return None
-    out = run("nmcli", "radio", "wifi")
+    # nmcli translates "enabled": in Swedish it says "aktiverat", and the tile went missing.
+    out = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "radio", "wifi")
     return {"enabled": True, "disabled": False}.get((out or "").strip())
 
 
