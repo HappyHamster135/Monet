@@ -55,6 +55,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   seconds without progress the Store says Flathub couldn't be reached, so you
   can try again. An app is only installed once all of it has downloaded, and
   the last step of installing it is never cut short.
+- **On a cable, Quick Settings says so.** When your PC is plugged into the
+  network with a cable, the Wi-Fi tile says LAN instead, and it shows even on
+  a PC without Wi-Fi. Click it to open Settings at LAN (Ethernet), on the page
+  now called Internet, where each network adapter shows its IP addresses,
+  gateway and DNS servers, with Wi-Fi just below as before.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

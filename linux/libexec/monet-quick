@@ -11,6 +11,7 @@
     monet-quick return-dismiss TOKEN     forget this return's recovery list, never its files
     monet-quick wifi on|off
     monet-quick wifi-list                networks nearby, as JSON
+    monet-quick lan                      Ethernet adapters and their current settings, as JSON
     monet-quick wifi-join NAME [KEY]     NAME and KEY as hex of their UTF-8 (they come from people)
     monet-quick bluetooth on|off
     monet-quick bt-list                  paired devices, as JSON
@@ -327,13 +328,45 @@ def wifi_state():
     return {"enabled": True, "disabled": False}.get((out or "").strip())
 
 
-def wifi_name():
-    out = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active") or ""
-    for line in out.splitlines():
-        fields = nmcli_fields(line)
-        if len(fields) >= 2 and fields[1] == "802-11-wireless":
-            return fields[0]
-    return ""
+def active_networks():
+    """The connected Wi-Fi profile and whether an Ethernet profile is up."""
+    out = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "-t", "-f", "NAME,TYPE,STATE",
+              "connection", "show", "--active") or ""
+    connected = [fields for fields in map(nmcli_fields, out.splitlines())
+                 if len(fields) == 3 and fields[2] == "activated"]
+    return {
+        "network": next((name for name, kind, _ in connected if kind == "802-11-wireless"), ""),
+        "lanConnected": any(kind == "802-3-ethernet" for _, kind, _ in connected),
+    }
+
+
+def wired_networks():
+    """Read wired links and addresses without changing or scanning the network."""
+    output = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "--terse", "--escape", "no",
+                 "--fields", "GENERAL.DEVICE,GENERAL.TYPE,GENERAL.STATE,GENERAL.CONNECTION,"
+                 "WIRED-PROPERTIES.CARRIER,IP4.ADDRESS,IP6.ADDRESS,IP4.GATEWAY,IP6.GATEWAY,IP4.DNS,IP6.DNS",
+                 "device", "show", timeout=3)
+    if output is None:
+        return {"available": False, "devices": []}
+    devices = []
+    for block in output.strip().split("\n\n"):
+        pairs = [line.split(":", 1) for line in block.splitlines() if ":" in line]
+        fields = dict(pairs)
+        if fields.get("GENERAL.TYPE") != "ethernet" or not fields.get("GENERAL.DEVICE"):
+            continue
+        state = fields.get("GENERAL.STATE", "").split(" ", 1)[0]
+        devices.append({
+            "device": fields["GENERAL.DEVICE"],
+            "profile": fields.get("GENERAL.CONNECTION", "") if state == "100" else "",
+            "state": ("connected" if state == "100" else "connecting" if state in {"40", "50", "60", "70", "80", "90"}
+                      else "unmanaged" if state == "10" else "unplugged" if fields.get("WIRED-PROPERTIES.CARRIER") == "off"
+                      else "disconnected"),
+            "ipv4": [value for key, value in pairs if key.startswith("IP4.ADDRESS[") and value],
+            "ipv6": [value for key, value in pairs if key.startswith("IP6.ADDRESS[") and value],
+            "gateways": [value for key, value in pairs if key in {"IP4.GATEWAY", "IP6.GATEWAY"} and value not in {"", "--"}],
+            "dns": [value for key, value in pairs if key.startswith(("IP4.DNS[", "IP6.DNS[")) and value],
+        })
+    return {"available": True, "devices": devices}
 
 
 def hotspot():
@@ -7078,7 +7111,7 @@ def open_settings(page):
         subprocess.Popen(command, start_new_session=True, stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
-    page = KDE_PAGES.get(page, KDE_PAGES["all"])
+    page = KDE_PAGES.get(page.partition("#")[0], KDE_PAGES["all"])
     command, env = kde_settings_command(page)
     os.execvpe(command[0], command, env)
 
@@ -7116,8 +7149,10 @@ def search_catalog():
          N_("microphone; mic; people cannot hear me; input volume; recording sound"), "sound#microphone", "audio-input-microphone"),
         ("bluetooth", tr("Connect a Bluetooth device"), tr("Bluetooth · Pair headphones, a mouse or a controller"),
          N_("bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"), "bluetooth", "preferences-system-bluetooth"),
-        ("wifi", tr("Connect to Wi-Fi"), tr("Wi-Fi · Networks and internet access"),
+        ("wifi", tr("Connect to Wi-Fi"), tr("Internet · Wireless networks"),
          N_("wifi; wi-fi; wireless internet; connect internet; no internet; network connection"), "wifi", "network-wireless"),
+        ("lan", tr("LAN settings"), tr("Internet · Ethernet and IP settings"),
+         N_("lan; ethernet; wired network; network cable; ip address; gateway; dns"), "wifi#lan", "network-wired"),
         ("calendar", tr("Birthdays and repeating notes"), tr("Calendar · Notes that repeat every year, month, week or day"),
          N_("birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"), "calendar", "x-office-calendar"),
         ("windows-files", tr("Windows files"), tr("Storage · Your shared folder and access to Windows files"),
@@ -8256,7 +8291,7 @@ def status(scope="all"):
         scope = "all"  # Plasma already shares a native UPower snapshot.
     result = {}
     if scope in ("all", "wifi"):
-        result.update(wifi=wifi_state(), network=wifi_name())
+        result.update(wifi=wifi_state(), **active_networks())
     if scope in ("all", "bluetooth"):
         result["bluetooth"] = bluetooth_state()
     if scope in ("all", "display"):
@@ -8301,6 +8336,8 @@ def main(argv):
         run("nmcli", "radio", "wifi", "on" if on else "off")
     elif cmd == "wifi-list":
         emit(wifi_list(run("nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list") or "", saved_wifi()))
+    elif cmd == "lan":
+        emit(wired_networks())
     elif cmd == "wifi-join" and args:
         command = ["nmcli", "device", "wifi", "connect", unhex(args[0])]
         if len(args) > 1 and args[1]:
@@ -9003,7 +9040,7 @@ def main(argv):
         subprocess.Popen(command, env=env, start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # And the welcome, which isn't in the list of pages (monet-session opens it for a new account).
-    elif cmd == "open" and (not args or args[0] in PAGES or args[0] == "welcome"):
+    elif cmd == "open" and (not args or args[0] in PAGES or args[0] in ("welcome", "wifi#lan")):
         open_settings(args[0] if args else "")
     elif cmd == "say" and args:
         print(tr(*args))

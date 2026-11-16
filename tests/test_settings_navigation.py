@@ -9,12 +9,13 @@ import time
 import unittest
 from unittest.mock import patch
 
+from tests.test_look import quick_helper
 from tests.test_settings_feedback import QT
 
 ROOT = Path(__file__).resolve().parents[1]
 
 if QT:
-    from PySide6.QtCore import QEvent, QPoint, QPointF, QLocale, QMetaObject, QUrl, Qt, Q_ARG
+    from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QLocale, QMetaObject, QUrl, Qt, Q_ARG
     from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QInputDevice, QKeyEvent, QPointingDevice, QWheelEvent, QWindow
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtTest import QSignalSpy, QTest
@@ -150,6 +151,25 @@ class SettingsNavigation(unittest.TestCase):
         QGuiApplication.sendEvent(test_window, escape)
         self.wait_for(lambda: not test_window.isVisible())
         self.assertEqual(self.window.size(), parent_size)
+
+    def test_lan_opens_from_quick_settings_and_search_at_its_section(self):
+        # Quick Settings' LAN tile and the search's "LAN settings" both open wifi#lan.
+        lan = next(entry for entry in quick_helper().search_catalog() if entry["id"] == "lan")
+        self.assertEqual(lan["target"], "wifi#lan")
+        self.helper.replies["lan"] = json.dumps(dict(available=True, devices=[
+            dict(device="enp1s0", profile="Wired connection 1", state="connected", ipv4=["192.0.2.2/24"],
+                 ipv6=[], gateways=["192.0.2.1"], dns=["192.0.2.53"])]))
+        self.open(lan["target"])
+        self.wait_for(lambda: self.window.property("pendingAnchor") == "")
+        self.assertEqual(self.window.property("page"), "wifi")
+        caption = self.item("search-lan")
+        self.assertTrue(caption.isVisible())
+        self.assertEqual(self.window.property("highlightedItem"), caption)
+        manage = next(item for item in self.window.findChildren(QObject)
+                      if item.property("title") == self.words.i18n("Manage wired connections…"))
+        manage.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: ["helper", "kde", "wifi"] in self.helper.commands)
 
     def test_windows_download_failure_uses_selected_iso(self):
         self.helper.replies["about"] = '{"windows":"Not found","setup":"download-failed"}'

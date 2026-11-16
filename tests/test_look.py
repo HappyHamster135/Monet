@@ -1414,8 +1414,13 @@ class MonetsOwn(unittest.TestCase):
         hidden = (SHARE / "monet/hidden-settings-pages").read_text()
         for page in quick.KDE_PAGES.values():
             self.assertNotIn(f"\n{page}\n", hidden, page)
-        source = (ROOT / "linux/libexec/monet-quick").read_text()
-        self.assertIn('page = KDE_PAGES.get(page, KDE_PAGES["all"])', source)
+        from unittest.mock import patch
+        for route, target in (("wifi#lan", quick.KDE_PAGES["wifi"]), ("", quick.KDE_PAGES["all"])):
+            with self.subTest(route=route), patch.object(quick.os, "access", return_value=False), \
+                    patch.object(quick, "kde_settings_command", return_value=(["systemsettings"], {})) as kde, \
+                    patch.object(quick.os, "execvpe"):
+                quick.open_settings(route)
+                kde.assert_called_once_with(target)
         settings = (SETTINGS_QML).read_text(encoding="utf-8")
         body = re.search(r"function kdePage\(\) \{\n(.*?)\n    \}\n", settings, re.S).group(1)
         pages = re.findall(r'(\w+): "(\w+)"', body)
@@ -2964,7 +2969,8 @@ class MonetSettings(unittest.TestCase):
         self.assertFalse((self.QUICK / "MonetSettings.qml").exists())
         self.assertIn('onTapped: root.openSettings("")', main)  # All Settings, a pebble of glass
         # Every tile's chevron opens its page (Night Light's is Display), apart from the switch.
-        for page in ("wifi", "bluetooth", "display", "notifications"):
+        self.assertIn('page: wired ? "wifi#lan" : "wifi"', main)
+        for page in ("bluetooth", "display", "notifications"):
             self.assertIn(f'page: "{page}"', main)
         self.assertEqual(main.count("onOpened: root.openSettings(page)"), 4)
         self.assertIn('" listen")', main)
@@ -3266,6 +3272,144 @@ Audio
             with mock.patch.object(quick, "run", lambda *args, **kw: answers.get(args)):
                 self.assertIs(quick.wifi_state(), expected)
 
+    def test_quick_reports_wired_and_wireless_connections_separately(self):
+        from unittest import mock
+        quick = quick_helper()
+        wired = "Wired:802-3-ethernet:activated\n"
+        wireless = "Café\\: upstairs:802-11-wireless:activated\n"
+        command = ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "-t", "-f", "NAME,TYPE,STATE",
+                   "connection", "show", "--active")
+        for listing, wifi, network, lan in (
+            (wired, True, "", True),
+            (wired, False, "", True),
+            (wired, None, "", True),
+            (wired + wireless, True, "Café: upstairs", True),
+            (wireless, True, "Café: upstairs", False),
+            ("Wired:802-3-ethernet:activating\nTunnel:vpn:activated\n", True, "", False),
+            (None, None, "", False),
+        ):
+            with self.subTest(listing=listing, wifi=wifi), mock.patch.object(quick, "run", return_value=listing) as run, \
+                    mock.patch.object(quick, "wifi_state", return_value=wifi):
+                self.assertEqual(quick.status("wifi"), {"wifi": wifi, "network": network, "lanConnected": lan})
+                run.assert_called_once_with(*command)
+
+    def test_wired_settings_show_each_adapter_and_preserve_ipv6_addresses(self):
+        from unittest import mock
+        quick = quick_helper()
+        listing = """GENERAL.DEVICE:enp1s0
+GENERAL.TYPE:ethernet
+GENERAL.STATE:100 (connected)
+GENERAL.CONNECTION:Office: desk
+WIRED-PROPERTIES.CARRIER:on
+IP4.ADDRESS[1]:192.0.2.2/24
+IP6.ADDRESS[1]:2001:db8::2/64
+IP6.GATEWAY:2001:db8::1
+IP4.GATEWAY:
+IP4.DNS[1]:192.0.2.53
+
+GENERAL.DEVICE:enp2s0
+GENERAL.TYPE:ethernet
+GENERAL.STATE:20 (unavailable)
+WIRED-PROPERTIES.CARRIER:off
+
+GENERAL.DEVICE:wlan0
+GENERAL.TYPE:wifi
+GENERAL.STATE:100 (connected)
+"""
+        with mock.patch.object(quick, "run", side_effect=[listing, None]):
+            state = quick.wired_networks()
+            self.assertTrue(state["available"])
+            first, second = state["devices"]
+            self.assertEqual(first, dict(device="enp1s0", profile="Office: desk", state="connected",
+                                        ipv4=["192.0.2.2/24"], ipv6=["2001:db8::2/64"],
+                                        gateways=["2001:db8::1"], dns=["192.0.2.53"]))
+            self.assertEqual(second["state"], "unplugged")
+            self.assertEqual(quick.wired_networks(), {"available": False, "devices": []})
+        self.assertEqual(quick.everyday_search("ethernet")[0]["target"], "wifi#lan")
+        with mock.patch.object(quick, "open_settings") as open_settings:
+            self.assertEqual(quick.main(["open", "wifi#lan"]), 0)
+            open_settings.assert_called_once_with("wifi#lan")
+
+    def test_wired_networks_reads_every_cable_state_and_skips_wifi(self):
+        # Connected, plugged in but not set up, unmanaged by NetworkManager, unplugged; a Wi-Fi card is
+        # never a LAN adapter, and only a connected one carries its profile's name.
+        from unittest import mock
+        quick = quick_helper()
+        listing = "\n\n".join((
+            "GENERAL.DEVICE:eno1\nGENERAL.TYPE:ethernet\nGENERAL.STATE:100 (connected)\n"
+            "GENERAL.CONNECTION:Wired connection 1\nWIRED-PROPERTIES.CARRIER:on\n"
+            "IP4.ADDRESS[1]:192.168.1.20/24\nIP4.ADDRESS[2]:10.0.0.5/8\nIP4.GATEWAY:192.168.1.1\nIP6.GATEWAY:--\n"
+            "IP4.DNS[1]:192.168.1.1\nIP6.DNS[1]:fd00::1",
+            "GENERAL.DEVICE:enp3s0\nGENERAL.TYPE:ethernet\nGENERAL.STATE:30 (disconnected)\n"
+            "GENERAL.CONNECTION:--\nWIRED-PROPERTIES.CARRIER:on",
+            "GENERAL.DEVICE:enp4s0\nGENERAL.TYPE:ethernet\nGENERAL.STATE:70 (connecting (getting IP configuration))\n"
+            "GENERAL.CONNECTION:Office\nWIRED-PROPERTIES.CARRIER:on",
+            "GENERAL.DEVICE:docker-eth\nGENERAL.TYPE:ethernet\nGENERAL.STATE:10 (unmanaged)\n"
+            "GENERAL.CONNECTION:--\nWIRED-PROPERTIES.CARRIER:on",
+            "GENERAL.DEVICE:enp5s0\nGENERAL.TYPE:ethernet\nGENERAL.STATE:20 (unavailable)\n"
+            "GENERAL.CONNECTION:--\nWIRED-PROPERTIES.CARRIER:off",
+            "GENERAL.DEVICE:wlp2s0\nGENERAL.TYPE:wifi\nGENERAL.STATE:100 (connected)\n"
+            "GENERAL.CONNECTION:Home\nIP4.ADDRESS[1]:192.168.1.30/24",
+            "GENERAL.DEVICE:lo\nGENERAL.TYPE:loopback\nGENERAL.STATE:100 (connected (externally))",
+        )) + "\n"
+        with mock.patch.object(quick, "run", return_value=listing) as run:
+            state = quick.wired_networks()
+        self.assertEqual(run.call_args.args[:7], ("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "--terse", "--escape", "no"))
+        self.assertEqual(run.call_args.args[-2:], ("device", "show"))
+        self.assertTrue(state["available"])
+        devices = {device["device"]: device for device in state["devices"]}
+        self.assertEqual(list(devices), ["eno1", "enp3s0", "enp4s0", "docker-eth", "enp5s0"])
+        self.assertEqual(devices["eno1"], dict(device="eno1", profile="Wired connection 1", state="connected",
+                                               ipv4=["192.168.1.20/24", "10.0.0.5/8"], ipv6=[],
+                                               gateways=["192.168.1.1"], dns=["192.168.1.1", "fd00::1"]))
+        for name, said in (("enp3s0", "disconnected"), ("enp4s0", "connecting"), ("docker-eth", "unmanaged"),
+                           ("enp5s0", "unplugged")):
+            self.assertEqual(devices[name]["state"], said, name)
+            self.assertEqual(devices[name]["profile"], "", name)
+            self.assertEqual(devices[name]["ipv4"] + devices[name]["gateways"] + devices[name]["dns"], [], name)
+        with mock.patch.object(quick, "run", return_value=""):
+            self.assertEqual(quick.wired_networks(), {"available": True, "devices": []})
+
+    def test_the_network_tile_says_lan_on_a_cable(self):
+        # On a cable the Wi-Fi tile becomes LAN: no switch to turn off, it opens Settings at LAN instead,
+        # and it shows even on a PC without Wi-Fi.
+        ui = PLASMA / "plasmoids/org.monet.quick/contents/ui"
+        main = (ui / "main.qml").read_text(encoding="utf-8")
+        tile = main[main.index("id: networkTile"):]
+        tile = tile[:tile.index("onOpened: root.openSettings(page)")]
+        for piece in ("readonly property bool wired: root.info.lanConnected === true",
+                      "visible: root.info.wifi !== null || wired",
+                      'title: wired ? i18n("LAN") : i18n("Wi-Fi")',
+                      'icon: wired ? "network-wired" : "network-wireless"',
+                      "active: wired || root.info.wifi === true",
+                      "checkable: !wired",
+                      'description: wired ? i18n("Connected to LAN") : detail',
+                      'if (wired) return i18n("Connected")',
+                      'page: wired ? "wifi#lan" : "wifi"',
+                      "if (wired) networkTile.opened()\n                        else root.flip(\"wifi\", \"wifi\")"):
+            self.assertIn(piece, tile)
+        # A tile that isn't a switch is a button to screen readers, and is never "checked".
+        for piece in ("property bool checkable: true",
+                      "Accessible.role: tile.checkable ? Accessible.CheckBox : Accessible.Button",
+                      "Accessible.checked: tile.checkable && tile.active",
+                      "Accessible.onToggleAction: if (tile.checkable && tile.available) tile.toggled()",
+                      "Accessible.onPressAction: if (!tile.checkable && tile.available) tile.toggled()"):
+            self.assertIn(piece, main)
+        # Plugging in or out shows while the popup is open: NetworkManager's signals, then only the network again.
+        events = (ui / "NetworkEvents.qml").read_text(encoding="utf-8")
+        for piece in ("import org.kde.plasma.networkmanagement as Network", "onActiveConnectionsChanged: events.changed()",
+                      "onConnectivityChanged: events.changed()", "onWifiSSIDChanged: events.changed()"):
+            self.assertIn(piece, events)
+        for piece in ('source: "NetworkEvents.qml"', "active: root.expanded && activity.active",
+                      "function onChanged() { root.networkChanged() }",
+                      'root.networkRequest = root.requestSource("status wifi")',
+                      'return helper + " " + command + " # monet-quick-" + (++requestSerial)',
+                      'statusRequest = requestSource(activity.nativeReady ? "status quick" : "status")',
+                      "next.lanConnected = root.info.lanConnected"):
+            self.assertIn(piece, main)
+        self.assertNotIn("statusBusy", main)
+        self.assertIn('tree "$SRC/share/plasma/plasmoids/$applet"', (ROOT / "linux/install.sh").read_text())
+
     def test_no_bluetooth_isnt_waited_for(self):
         # bluetoothctl waits forever for an adapter that isn't there: Quick Settings took 3 s a refresh.
         from unittest import mock
@@ -3280,8 +3424,10 @@ Audio
             self.assertTrue(quick.bluetooth_here(Path(tmp)))
         main = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn('visible: typeof root.info.volume === "number" || typeof root.info.brightness === "number"', main)
-        # And no Wi-Fi or Bluetooth tile on a PC without them, as in Windows (not "Unavailable").
-        self.assertIn("visible: root.info.wifi !== null", main)
+        # And no Wi-Fi or Bluetooth tile on a PC without them, as in Windows (not "Unavailable"),
+        # unless the PC is on a cable: then the tile says LAN.
+        self.assertIn("visible: root.info.wifi !== null || wired", main)
+        self.assertIn('title: wired ? i18n("LAN") : i18n("Wi-Fi")', main)
         self.assertIn("visible: root.info.bluetooth !== null", main)
 
     def test_play_on_windows_without_windows(self):
@@ -3574,7 +3720,11 @@ class WhatOtherSystemsHave(unittest.TestCase):
         session = (ROOT / "linux/libexec/monet-session").read_text()
         self.assertIn('touch "$looks/welcomed"', session)
         self.assertIn('"$LIBEXECDIR/monet-quick" open welcome', session)
-        self.assertIn('args[0] in PAGES or args[0] == "welcome"', (ROOT / "linux/libexec/monet-quick").read_text())
+        from unittest.mock import patch
+        quick = quick_helper()
+        with patch.object(quick, "open_settings") as opened:
+            self.assertEqual(quick.main(["open", "welcome"]), 0)
+            opened.assert_called_once_with("welcome")
         settings = self.SETTINGS.read_text(encoding="utf-8")
         self.assertIn("welcome: welcomePage", settings)
         self.assertIn('destination[0] === "welcome" || pages.some(p => p.id === destination[0])', settings)

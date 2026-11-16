@@ -213,7 +213,7 @@ Shared.MonetWindow {
               + " " + i18nc("Settings search words, space-separated", "photo picture own painted")
               + " " + i18nc("Settings search words, space-separated", "transparent transparency see-through frosted matte solid blur")
               + " " + i18nc("Settings search words, space-separated", "snap layouts assist windows side by side halves tiling") },
-        { id: "wifi", name: i18n("Wi-Fi"), glyph: "M4 10a12 12 0 0 1 16 0M7 13.5a7.5 7.5 0 0 1 10 0M10 17a3 3 0 0 1 4 0",
+        { id: "wifi", name: i18n("Internet"), glyph: "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20M2 12h20M12 2c-5 5-5 15 0 20M12 2c5 5 5 15 0 20",
           words: i18nc("Settings search words, space-separated",
                       "wifi wi-fi wireless network internet password") },
         { id: "bluetooth", name: i18n("Bluetooth"), glyph: "M7 7l10 10-5 5V2l5 5L7 17",
@@ -301,6 +301,9 @@ Shared.MonetWindow {
     property var photoInfo: ({ state: "" })
     property bool photoLoading: false
     property var nets: []
+    // The cables (monet-quick lan): {available, devices: [{device, profile, state, ipv4, ipv6, gateways, dns}]}.
+    property var wiredNetwork: null
+    property bool wiredNetworkLoading: false
     // Whether a look for networks has come back yet (until then: looking).
     property bool netsLoaded: false
     property var devices: []
@@ -773,6 +776,7 @@ Shared.MonetWindow {
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))
             loadPhotoState()
         } else if (page === "wifi") {
+            loadWiredNetwork()
             ask("wifi-list", out => { sheet.nets = sheet.json(out, []); sheet.netsLoaded = true })
             ask("hotspot", out => sheet.hotspot = sheet.json(out, sheet.hotspot))
         } else if (page === "bluetooth") {
@@ -864,6 +868,16 @@ Shared.MonetWindow {
         if (page === "windows" || page === "updates" || page === "about") {
             ask("about", out => sheet.pc = sheet.json(out, sheet.pc))
         }
+    }
+
+    function loadWiredNetwork() {
+        if (wiredNetworkLoading) return
+        wiredNetworkLoading = true
+        ask("lan", (out, code) => {
+            sheet.wiredNetworkLoading = false
+            const next = sheet.json(out, {})
+            sheet.wiredNetwork = code === 0 && Array.isArray(next.devices) ? next : { available: false, devices: [] }
+        })
     }
 
     function loadAppsSound() {
@@ -3290,9 +3304,11 @@ Shared.MonetWindow {
                 }
                 if (sheet.page === "notifications") sheet.loadNotifications()
                 // Networks come and go (and are slow to show after waking): look again, but never
-                // while a password is being typed, which a new list would wipe.
-                if (sheet.page === "wifi" && sheet.joining === "") {
-                    sheet.ask("wifi-list", out => { sheet.nets = sheet.json(out, sheet.nets); sheet.netsLoaded = true })
+                // while a password is being typed, which a new list would wipe. A cable, too.
+                if (sheet.page === "wifi") {
+                    sheet.loadWiredNetwork()
+                    if (sheet.joining === "")
+                        sheet.ask("wifi-list", out => { sheet.nets = sheet.json(out, sheet.nets); sheet.netsLoaded = true })
                 }
             }
         }
@@ -3788,15 +3804,78 @@ Shared.MonetWindow {
         Component {
             id: wifiPage
             ColumnLayout {
+                id: internetPage
+                readonly property var wiredDevices: sheet.wiredNetwork ? sheet.wiredNetwork.devices : []
+                readonly property bool lanConnected: sheet.wiredNetwork && sheet.wiredNetwork.available
+                    ? wiredDevices.some(device => device.state === "connected") : sheet.info.lanConnected === true
+                readonly property var wiredStates: ({
+                    connected: i18n("Connected"),
+                    connecting: i18n("Connecting…"),
+                    unmanaged: i18n("Unmanaged"),
+                    unplugged: i18n("Cable unplugged"),
+                    disconnected: i18n("Not connected")
+                })
                 spacing: 20
                 PageTitle {
                     tone: look
                     entry: sheet.entry("wifi")
                     art: sheet.art
-                    text: i18n("Wi-Fi")
-                    detail: sheet.info.wifi === true
-                        ? ((sheet.info.network || "") !== "" ? i18n("Connected to %1", sheet.info.network) : i18n("Not connected"))
-                        : sheet.info.wifi === false ? i18n("Off") : ""
+                    text: i18n("Internet")
+                    detail: internetPage.lanConnected
+                        ? i18n("Connected to LAN")
+                        : sheet.info.wifi === true && sheet.info.network ? i18n("Connected to %1", sheet.info.network)
+                        : sheet.wiredNetwork && sheet.wiredNetwork.available ? i18n("Not connected") : ""
+                }
+                // On a cable: each adapter, and its addresses while it's connected (monet-quick lan).
+                Caption { objectName: "search-lan"; tone: look; text: i18n("LAN (Ethernet)") }
+                Card {
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: internetPage.wiredDevices.length === 0
+                        title: !sheet.wiredNetwork ? i18n("Checking wired connections…")
+                            : sheet.wiredNetwork.available ? i18n("No Ethernet adapter detected")
+                            : i18n("Wired connection details unavailable")
+                    }
+                    Repeater {
+                        model: internetPage.wiredDevices
+                        ColumnLayout {
+                            id: wiredDevice
+                            required property var modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: 0
+                            SettingRow {
+                                tone: look
+                                divider: wiredDevice.index > 0
+                                title: wiredDevice.modelData.profile || wiredDevice.modelData.device
+                                detail: internetPage.wiredStates[wiredDevice.modelData.state] || i18n("Unavailable")
+                            }
+                            Repeater {
+                                model: wiredDevice.modelData.state === "connected" ? [
+                                    [i18n("Network adapter"), [wiredDevice.modelData.device]],
+                                    [i18n("IPv4 address"), wiredDevice.modelData.ipv4],
+                                    [i18n("IPv6 address"), wiredDevice.modelData.ipv6],
+                                    [i18n("Default gateway"), wiredDevice.modelData.gateways],
+                                    [i18n("DNS servers"), wiredDevice.modelData.dns]
+                                ].filter(row => row[1] && row[1].length) : []
+                                SettingRow {
+                                    required property var modelData
+                                    tone: look
+                                    title: modelData[0]
+                                    detail: modelData[1].join("\n")
+                                }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        tappable: true
+                        title: i18n("Manage wired connections…")
+                        detail: i18n("Edit Ethernet profiles, IP addresses and DNS in system network settings.")
+                        onTapped: sheet.ask("kde wifi")
+                    }
                 }
                 Card {
                     tone: look
