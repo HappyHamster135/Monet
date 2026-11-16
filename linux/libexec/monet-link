@@ -123,6 +123,18 @@ def new_state(config):
     return {"config": config, "paired": False, "outbox": {}, "inbox": {}}
 
 
+class PairingChanged(Exception):
+    pass
+
+
+@contextmanager
+def edit_pair(path, pair, *, revoking=False):
+    with edit(path) as state:
+        if state is None or state["config"]["pair"] != pair or bool(state.get("revoking")) != revoking:
+            raise PairingChanged
+        yield state
+
+
 def queue(state, body):
     state["outbox"] = {key: item for key, item in state["outbox"].items() if item["expires"] > time.time()}
     if len(state["outbox"]) >= MAX_ITEMS:
@@ -159,19 +171,33 @@ def require_status(code, *expected):
         raise RelayRejected(code)
 
 
+def set_delivery_status(path, pair, identifier, status):
+    with edit_pair(path, pair) as state:
+        item = state["outbox"].get(identifier)
+        if item is not None and item["status"] == "Queued":
+            item["status"] = status
+            save(path, state)
+
+
 def sync(path, state):
     config = state["config"]
-    for identifier, item in list(state["outbox"].items()):
+    pair = config["pair"]
+    for identifier, item in state["outbox"].items():
         if item["status"] != "Queued":
             continue
         if item["expires"] <= time.time():
-            item["status"] = "Expired"
-            save(path, state)
+            set_delivery_status(path, pair, identifier, "Expired")
             continue
         body = decode(item["envelope"])
         route = "/v1/outbox/" + identifier
+        with edit_pair(path, pair) as current:
+            if identifier not in current["outbox"]:
+                continue
         code, receipt = request(config, "GET", route)
         if code == 404:
+            with edit_pair(path, pair) as current:
+                if identifier not in current["outbox"]:
+                    continue
             code, _ = request(config, "PUT", route, body)
             if code == 429:
                 break
@@ -184,12 +210,7 @@ def sync(path, state):
             verified = hmac.compare_digest(seal(config, "phone", identifier, "receipt", receipt), hashlib.sha256(body).digest())
         except (InvalidTag, ValueError):
             verified = False
-        if not verified:
-            item["status"] = "Receipt could not be verified"
-            save(path, state)
-            continue
-        item["status"] = "Received"
-        save(path, state)
+        set_delivery_status(path, pair, identifier, "Received" if verified else "Receipt could not be verified")
 
     code, data = request(config, "GET", "/v1/inbox")
     require_status(code, 200)
@@ -199,8 +220,11 @@ def sync(path, state):
     for identifier in identifiers:
         if not isinstance(identifier, str) or not ID.fullmatch(identifier):
             raise ValueError("Unexpected handoff ID")
-        item = state["inbox"].get(identifier)
         route = "/v1/inbox/" + identifier
+        with edit_pair(path, pair) as current:
+            item = current["inbox"].get(identifier)
+            if item and item["message"]["type"] == "hello" and current.get("approved") != identifier:
+                continue
         if item is None:
             code, body = request(config, "GET", route)
             if code == 404:
@@ -211,22 +235,21 @@ def sync(path, state):
                 validate_message(message)
             except (InvalidTag, ValueError):
                 continue
-            if message["type"] == "hello":
-                if state["paired"] or message["expires"] != config["expires"]:
+            with edit_pair(path, pair) as current:
+                if message["type"] == "hello" and (current["paired"] or message["expires"] != config["expires"]):
                     continue
-            elif not state["paired"]:
-                continue
-            # Bound local history, preserving the records whose receipt may still be in flight.
-            state["inbox"] = {key: old for key, old in state["inbox"].items()
-                              if old["message"]["expires"] > time.time()}
-            if len(state["inbox"]) >= 1024:
-                raise ValueError("Inbox is full")
-            item = {"message": message, "receipt": encode(encrypt(config, "pc", identifier, "receipt",
-                                                                 hashlib.sha256(body).digest()))}
-            state["inbox"][identifier] = item
-            save(path, state)
-        if item["message"]["type"] == "hello" and state.get("approved") != identifier:
-            continue
+                if message["type"] == "note" and not current["paired"]:
+                    continue
+                current["inbox"] = {key: old for key, old in current["inbox"].items()
+                                    if old["message"]["expires"] > time.time()}
+                if len(current["inbox"]) >= 1024:
+                    raise ValueError("Inbox is full")
+                item = {"message": message, "receipt": encode(encrypt(config, "pc", identifier, "receipt",
+                                                                     hashlib.sha256(body).digest()))}
+                current["inbox"][identifier] = item
+                save(path, current)
+                if message["type"] == "hello":
+                    continue
         code, _ = request(config, "PUT", route + "/receipt", decode(item["receipt"]))
         require_status(code, 200)
 
@@ -264,8 +287,10 @@ def provisioning(path, state, operator):
     expiry = json.loads(data)["expires"]
     if type(expiry) is not int or expiry > int(time.time()) + 360:
         raise ValueError("Check the clocks on this PC and the relay.")
+    with edit_pair(path, config["pair"]) as current:
+        current["config"]["expires"] = expiry
+        save(path, current)
     config["expires"] = expiry
-    save(path, state)
 
 
 def advance(path, state, operator):
@@ -273,44 +298,61 @@ def advance(path, state, operator):
     if state.get("revoking"):
         code, _ = request(config, "DELETE", "/v1/pair/" + config["pair"])
         require_status(code, 204, 401)
-        path.unlink()
+        with edit_pair(path, config["pair"], revoking=True):
+            path.unlink()
         return
     if not config.get("expires"):
         provisioning(path, state, operator)
     if state["paired"] or config["expires"] > time.time():
         sync(path, state)
-    if state.pop("problem", None):
-        save(path, state)
+
+
+def watch_once(path, operator):
+    with edit(path) as state:
+        if state is None:
+            return False
+    config = state["config"]
+    revoking = bool(state.get("revoking"))
+    problem = None
+    expired = False
+    try:
+        advance(path, state, operator)
+    except PairingChanged:
+        return True
+    except RelayRejected as error:
+        if error.status == 401:
+            problem = "revoked" if config.get("expires") else "setup"
+        elif error.status == 410 and not config.get("expires"):
+            expired = True
+        elif error.status in (409, 429) and not config.get("expires"):
+            problem = "setup"
+        else:
+            problem = "offline"
+    except (OSError, http.client.HTTPException):
+        problem = "offline"
+    except (ValueError, KeyError, TypeError):
+        problem = "setup"
+    try:
+        with edit_pair(path, config["pair"], revoking=revoking) as current:
+            if expired:
+                current["config"]["expires"] = int(time.time())
+            if expired or current.get("problem") != problem:
+                if problem is None:
+                    current.pop("problem", None)
+                else:
+                    current["problem"] = problem
+                save(path, current)
+    except PairingChanged:
+        pass
+    return path.exists()
 
 
 def watch(path, operator):
-    while True:
-        with edit(path) as state:
-            if state is None:
-                return
-            problem = None
-            try:
-                advance(path, state, operator)
-            except RelayRejected as error:
-                if error.status == 401:
-                    problem = "revoked" if state["config"].get("expires") else "setup"
-                elif error.status == 410 and not state["config"].get("expires"):
-                    state["config"]["expires"] = int(time.time())
-                    save(path, state)
-                elif error.status in (409, 429) and not state["config"].get("expires"):
-                    problem = "setup"
-                else:
-                    problem = "offline"
-            except (OSError, http.client.HTTPException):
-                problem = "offline"
-            except (ValueError, KeyError, TypeError):
-                problem = "setup"
-            if problem and state.get("problem") != problem:
-                state["problem"] = problem
-                save(path, state)
-            if not path.exists():
-                return
-        time.sleep(POLL_INTERVAL)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with path.with_suffix(".watch.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        while watch_once(path, operator):
+            time.sleep(POLL_INTERVAL)
 
 
 def pending_phone(state):
@@ -372,6 +414,7 @@ def input_text():
 
 
 def change(path, operator, command):
+    text = input_text() if command in ("approve", "send") else None
     with edit(path) as state:
         if command == "invite":
             if state is not None:
@@ -390,7 +433,7 @@ def change(path, operator, command):
             state.pop("problem", None)
         elif command == "approve":
             identifier = pending_phone(state)
-            code = input_text()
+            code = text
             if not identifier or not re.fullmatch(r"[0-9]{6}", code) or not hmac.compare_digest(
                     code, comparison_code(state["config"], identifier)):
                 raise ValueError("Enter the six digits shown on the phone.")
@@ -400,7 +443,7 @@ def change(path, operator, command):
         elif command == "send":
             if not state["paired"] or state.get("problem") == "revoked":
                 raise ValueError("Pair a phone first.")
-            note = input_text()
+            note = text
             if not note.strip():
                 raise ValueError("Write a note first.")
             message = {"type": "note", "text": note, "expires": int(time.time()) + RETENTION}
