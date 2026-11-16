@@ -1,7 +1,8 @@
 # Monet Link
 
-Monet Link appears in **Settings → Phone** once this account has a relay
-configuration. Select **Pair a phone**, open **Together → Monet Link** on the
+Open **Settings → Phone → Set up relay…** and enter the relay's HTTPS address
+and provisioning key. Choose its public PEM certificate if the relay uses a
+private one. Select **Pair a phone**, open **Together → Monet Link** on the
 phone, and scan the PC's QR. Enter the six digits from the phone before the
 invitation expires. You can then send notes in both directions. The PC saves
 notes locally even while a relay request is in progress and shows **Received**
@@ -32,8 +33,12 @@ Give the relay an HTTPS address that both devices can reach and generate a
 and rotate the provisioning key. The key grants permission to create new pairs,
 so keep it in the operator's and PC account's private configuration.
 
-Create `$XDG_CONFIG_HOME/monet/link/relay.json` (`~/.config/monet/link/relay.json`
-by default) with permissions `0600`:
+Phone settings saves this information in the account's private configuration.
+It copies the selected certificate, so the original PEM file can move after
+setup. **Edit relay…** is available before pairing, and after the previous
+pairing has been removed. For scripted setup, create
+`$XDG_CONFIG_HOME/monet/link/relay.json` (`~/.config/monet/link/relay.json` by
+default) with permissions `0600`:
 
 ```json
 {

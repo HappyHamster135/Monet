@@ -50,6 +50,12 @@ if QT:
             self.ticket += 1
             ticket = self.ticket
             self.link_calls.append((command, payload))
+            if command == "configure":
+                setup = json.loads(payload)
+                if not setup["url"].startswith("https://"):
+                    QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, '{"error":"Use an HTTPS address."}', 1, ""))
+                    return ticket
+                self.link = {"phase": "ready", "relayUrl": setup["url"], "relayPinned": bool(setup["certificatePath"])}
             if command == "invite":
                 self.link = {"phase": "confirm", "code": "008125"}
             if command == "approve":
@@ -191,6 +197,40 @@ class PhoneWindow(unittest.TestCase):
         self.assertEqual(draft.property("text"), "")
         self.assertTrue(any(item.property("text") == "Last note queued" for item in self.items()))
         self.assertTrue(any(item.property("detail") == "<b>A plain text note</b>" for item in self.items()))
+
+    def test_monet_link_sets_up_the_relay_before_pairing(self):
+        self.assertFalse(self.buttons("Pair a phone"))
+        self.click(self.buttons("Set up relay…")[0])
+        dialog = self.window.findChild(QObject, "monetLinkRelayDialog")
+        self.assertTrue(dialog.property("visible"))
+        address = self.window.findChild(QObject, "monetLinkRelayAddress")
+        key = self.window.findChild(QObject, "monetLinkRelayKey")
+        save = self.window.findChild(QObject, "monetLinkSaveRelay")
+        self.assertFalse(save.property("enabledPill"))
+        address.setProperty("text", "http://relay.example.test")
+        key.setProperty("text", "z" * 43)
+        self.assertNotEqual(key.property("displayText"), key.property("text"))
+        self.assertEqual(len(key.property("displayText")), 43)
+        save.clicked.emit()
+        QTest.qWait(70)
+        self.assertTrue(dialog.property("visible"))
+        self.assertEqual(dialog.property("error"), "Use an HTTPS address.")
+
+        address.setProperty("text", "https://relay.example.test")
+        certificate = self.window.findChild(QObject, "monetLinkRelayCertificate")
+        path = self.artifacts / "relay.pem"
+        path.write_text("Synthetic certificate path for the Settings fixture\n")
+        self.assertTrue(certificate.setProperty("selectedFile", QUrl.fromLocalFile(str(path))))
+        certificate.accepted.emit()
+        save.clicked.emit()
+        QTest.qWait(180)
+        self.assertFalse(dialog.property("visible"))
+        self.assertEqual(key.property("text"), "")
+        command, payload = self.helper.link_calls[-1]
+        self.assertEqual(command, "configure")
+        self.assertEqual(json.loads(payload), {"url": "https://relay.example.test", "provisioningKey": "z" * 43,
+                                               "certificatePath": str(path), "keepCertificate": False})
+        self.assertTrue(self.buttons("Pair a phone"))
 
     def test_monet_link_opens_a_web_address_only_from_its_preview(self):
         script = ROOT / "linux/libexec/monet-settings"

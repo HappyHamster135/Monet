@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 import hashlib
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
@@ -13,8 +14,11 @@ import time
 import unittest
 from unittest.mock import patch
 
-
 if sys.platform == "linux":
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
     SCRIPT = Path(__file__).resolve().parents[1] / "linux/libexec/monet-link"
     LOADER = SourceFileLoader("monet_link", str(SCRIPT))
     SPEC = spec_from_loader(LOADER.name, LOADER)
@@ -39,6 +43,53 @@ class MonetLinkSync(unittest.TestCase):
 
     def read(self):
         return json.loads(self.path.read_text())
+
+    def test_relay_setup_saves_a_private_copy_of_a_selected_certificate(self):
+        source = self.path.with_name("relay.pem")
+        key = ec.generate_private_key(ec.SECP256R1())
+        name = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, "relay.example.test")])
+        now = datetime.now(timezone.utc)
+        certificate = (x509.CertificateBuilder().subject_name(name).issuer_name(name)
+                       .public_key(key.public_key()).serial_number(x509.random_serial_number())
+                       .not_valid_before(now - timedelta(minutes=1)).not_valid_after(now + timedelta(days=1))
+                       .sign(key, hashes.SHA256()))
+        source.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+        address = "https://relay.example.test:8443"
+        credential = "z" * 43
+        setup = {"url": address, "provisioningKey": credential, "certificatePath": str(source)}
+        link.configure_relay(self.path, self.operator, json.dumps(setup))
+        source.unlink()
+        self.assertEqual(self.operator.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(link.read_operator(self.operator), ({"url": address, "cert": link.encode(
+            certificate.public_bytes(serialization.Encoding.DER))}, credential))
+        self.assertEqual(link.view(self.path, self.operator),
+                         {"phase": "ready", "relayUrl": address, "relayPinned": True})
+        self.assertFalse(self.path.exists())
+
+        setup.pop("certificatePath")
+        setup.update(provisioningKey="r" * 43, keepCertificate=True)
+        link.configure_relay(self.path, self.operator, json.dumps(setup))
+        self.assertTrue(link.view(self.path, self.operator)["relayPinned"])
+        setup["keepCertificate"] = False
+        link.configure_relay(self.path, self.operator, json.dumps(setup))
+        self.assertEqual(link.read_operator(self.operator), ({"url": address}, "r" * 43))
+
+    def test_invalid_setup_and_active_pairing_preserve_existing_configuration(self):
+        setup = {"url": "https://relay.example.test", "provisioningKey": "z" * 43}
+        link.configure_relay(self.path, self.operator, json.dumps(setup))
+        original = self.operator.read_bytes()
+        for address in ("http://relay.example.test", "https://relay.example.test/mailbox", "https://relay.example.test:0"):
+            with self.subTest(address=address), self.assertRaisesRegex(ValueError, "HTTPS address"):
+                link.configure_relay(self.path, self.operator, json.dumps({**setup, "url": address}))
+        certificate = self.path.with_name("invalid.pem")
+        certificate.write_text("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n")
+        with self.assertRaisesRegex(ValueError, "one public relay certificate"):
+            link.configure_relay(self.path, self.operator, json.dumps({**setup, "certificatePath": str(certificate)}))
+        link.save(self.path, self.state)
+        with self.assertRaisesRegex(ValueError, "current pairing"):
+            link.configure_relay(self.path, self.operator, json.dumps({**setup, "provisioningKey": "r" * 43}))
+        self.assertEqual(self.operator.read_bytes(), original)
+        self.assertEqual(self.read(), self.state)
 
     def test_queued_note_survives_receipt_arriving_during_send(self):
         first = link.queue(self.state, self.note("Earlier note"))

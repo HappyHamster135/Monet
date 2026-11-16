@@ -1810,7 +1810,7 @@ Shared.MonetWindow {
         })
     }
 
-    function runMonetLink(command, text, finished) {
+    function runMonetLink(command, text, finished, failed) {
         if (monetLinkBusy) return
         monetLinkBusy = true
         if (command !== "status") {
@@ -1826,6 +1826,8 @@ Shared.MonetWindow {
                 sheet.monetLink = result
                 if (result.savedFile) sheet.monetLinkSaved = result.savedFile
                 if (finished) finished()
+            } else if (failed) {
+                failed(result.error || i18n("Monet Link couldn't finish. Try again."))
             } else if (command !== "status" || Object.keys(sheet.monetLink).length > 0) {
                 sheet.monetLinkProblem = result.error || i18n("Monet Link couldn't finish. Try again.")
             }
@@ -4124,12 +4126,15 @@ Shared.MonetWindow {
                     tone: look
                     readonly property var link: sheet.monetLink
                     readonly property string phase: link.phase || ""
-                    visible: phase !== "" && phase !== "disabled"
+                    visible: phase !== ""
                     SettingRow {
                         tone: look
                         divider: false
                         title: i18n("Monet Link")
                         detail: {
+                            if (linkCard.phase === "disabled") return linkCard.link.problem === "setup"
+                                ? i18n("Update the relay settings before pairing.")
+                                : i18n("Add your Monet Link relay to pair over the internet.")
                             if (linkCard.phase === "removing") return i18n("Removing this pairing when the relay is reachable.")
                             if (linkCard.phase === "ready") return i18n("Pair once and share with your phone over the internet.")
                             if (linkCard.phase === "starting" && linkCard.link.problem === "setup")
@@ -4151,6 +4156,128 @@ Shared.MonetWindow {
                             text: i18n("Pair a phone")
                             enabledPill: !sheet.monetLinkBusy
                             onClicked: sheet.runMonetLink("invite", "")
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: linkCard.phase === "disabled" || linkCard.phase === "ready"
+                        title: i18n("Relay")
+                        detail: linkCard.link.relayUrl || ""
+                        Pill {
+                            tone: look
+                            objectName: "monetLinkRelaySetup"
+                            text: linkCard.phase === "ready" ? i18n("Edit relay…") : i18n("Set up relay…")
+                            enabledPill: !sheet.monetLinkBusy
+                            onClicked: linkRelaySetup.open()
+                        }
+                    }
+                    QQC2.Dialog {
+                        id: linkRelaySetup
+                        objectName: "monetLinkRelayDialog"
+                        anchors.centerIn: QQC2.Overlay.overlay
+                        width: Math.min(460, sheet.width - 32)
+                        modal: true
+                        title: i18n("Monet Link relay")
+                        property string certificatePath: ""
+                        property bool keepCertificate: false
+                        property string error: ""
+                        onAboutToShow: {
+                            relayAddress.text = linkCard.link.relayUrl || ""
+                            keepCertificate = linkCard.link.relayPinned === true
+                        }
+                        onClosed: {
+                            relayKey.clear()
+                            certificatePath = ""
+                            error = ""
+                        }
+                        FileDialog {
+                            id: linkRelayCertificate
+                            objectName: "monetLinkRelayCertificate"
+                            title: i18n("Choose the public relay certificate")
+                            fileMode: FileDialog.OpenFile
+                            onAccepted: {
+                                linkRelaySetup.certificatePath = helper.monetLinkPath(selectedFile)
+                                if (linkRelaySetup.certificatePath) linkRelaySetup.keepCertificate = false
+                            }
+                        }
+                        contentItem: ColumnLayout {
+                            spacing: 10
+                            QQC2.TextField {
+                                id: relayAddress
+                                objectName: "monetLinkRelayAddress"
+                                Layout.fillWidth: true
+                                placeholderText: i18n("HTTPS relay address")
+                                Accessible.name: placeholderText
+                                inputMethodHints: Qt.ImhUrlCharactersOnly
+                                maximumLength: 1024
+                            }
+                            QQC2.TextField {
+                                id: relayKey
+                                objectName: "monetLinkRelayKey"
+                                Layout.fillWidth: true
+                                placeholderText: i18n("Provisioning key")
+                                Accessible.name: placeholderText
+                                echoMode: TextInput.Password
+                                inputMethodHints: Qt.ImhHiddenText | Qt.ImhNoPredictiveText
+                                maximumLength: 128
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Pill {
+                                    tone: look
+                                    text: i18n("Choose PEM certificate…")
+                                    visible: typeof helper.monetLinkPath === "function"
+                                    onClicked: linkRelayCertificate.open()
+                                }
+                                Pill {
+                                    tone: look
+                                    text: i18n("Clear")
+                                    visible: linkRelaySetup.keepCertificate || linkRelaySetup.certificatePath !== ""
+                                    onClicked: {
+                                        linkRelaySetup.keepCertificate = false
+                                        linkRelaySetup.certificatePath = ""
+                                    }
+                                }
+                            }
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                textFormat: Text.PlainText
+                                text: linkRelaySetup.certificatePath ? linkRelaySetup.certificatePath.split("/").pop()
+                                    : linkRelaySetup.keepCertificate ? i18n("Using the saved relay certificate.")
+                                    : i18n("Only needed if your relay uses a private certificate.")
+                            }
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                visible: text !== ""
+                                text: linkRelaySetup.error
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                                Accessible.role: Accessible.AlertMessage
+                            }
+                            RowLayout {
+                                Layout.alignment: Qt.AlignRight
+                                Pill {
+                                    tone: look
+                                    text: i18n("Cancel")
+                                    onClicked: linkRelaySetup.close()
+                                }
+                                Pill {
+                                    tone: look
+                                    objectName: "monetLinkSaveRelay"
+                                    text: i18n("Save relay")
+                                    enabledPill: !sheet.monetLinkBusy && relayAddress.text.trim() !== ""
+                                        && relayKey.text.trim() !== ""
+                                    onClicked: {
+                                        linkRelaySetup.error = ""
+                                        sheet.runMonetLink("configure", JSON.stringify({
+                                            url: relayAddress.text.trim(), provisioningKey: relayKey.text.trim(),
+                                            certificatePath: linkRelaySetup.certificatePath,
+                                            keepCertificate: linkRelaySetup.keepCertificate
+                                        }), () => linkRelaySetup.close(), message => linkRelaySetup.error = message)
+                                    }
+                                }
+                            }
                         }
                     }
                     Image {

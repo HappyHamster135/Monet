@@ -55,6 +55,7 @@ FILE_DOWNLOAD_COPIES = {"Downloading", FILE_READY}
 FILE_DISK_NAME = re.compile(r"(?:in|out)-[0-9a-f]{32}")
 FILE_DIGEST = re.compile(r"[0-9a-f]{64}")
 FILE_MIME = re.compile(r"[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,62}/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,62}")
+CERTIFICATE_LIMIT = 8192
 
 
 def encode(value):
@@ -719,20 +720,89 @@ def user_path(variable, default):
     return directory if directory.is_absolute() else Path.home() / default
 
 
+def relay_address(address):
+    message = "Enter the relay's HTTPS address without a path."
+    if not isinstance(address, str) or not address.isascii() or len(address) > 1024:
+        raise ValueError(message)
+    try:
+        parsed = origin(address)
+        if parsed.port == 0 or not re.fullmatch(r"[A-Za-z0-9.\-:\[\]]+", parsed.netloc):
+            raise ValueError(message)
+    except ValueError as error:
+        raise ValueError(message) from error
+    return address
+
+
+def read_relay_certificate(path):
+    message = "Choose a PEM file with one public relay certificate."
+    try:
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NONBLOCK), "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise ValueError(message)
+            pem = stream.read(CERTIFICATE_LIMIT + 1)
+        if len(pem) > CERTIFICATE_LIMIT or not re.fullmatch(
+                rb"-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+\s+-----END CERTIFICATE-----", pem.strip()):
+            raise ValueError(message)
+        certificate = ssl.PEM_cert_to_DER_cert(pem.strip().decode("ascii"))
+    except (OSError, ValueError) as error:
+        raise ValueError(message) from error
+    return encode(certificate)
+
+
 def read_operator(path):
-    if path.stat().st_mode & 0o077:
-        raise ValueError("Make relay.json private to your account.")
-    config = json.loads(path.read_text(encoding="utf-8"))
-    url = origin(config["url"])
-    if url.port == 0:
-        raise ValueError("Use a valid relay port.")
-    if not TOKEN.fullmatch(config["provisioningKey"]):
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NONBLOCK), "rb") as stream:
+        mode = os.fstat(stream.fileno()).st_mode
+        if not stat.S_ISREG(mode) or mode & 0o077:
+            raise ValueError("Make relay.json private to your account.")
+        data = stream.read(MAX_NOTE + 1)
+    if len(data) > MAX_NOTE:
+        raise ValueError("The relay configuration is too large.")
+    config = json.loads(data)
+    address = relay_address(config["url"])
+    key = config["provisioningKey"]
+    if not isinstance(key, str) or not TOKEN.fullmatch(key):
         raise ValueError("The relay provisioning key is invalid.")
-    tls = {"url": config["url"]}
-    if config.get("certificate"):
-        certificate = path.parent / config["certificate"]
-        tls["cert"] = encode(ssl.PEM_cert_to_DER_cert(certificate.read_text(encoding="ascii")))
-    return tls, config["provisioningKey"]
+    tls = {"url": address}
+    if config.get("certificateDer"):
+        certificate = config["certificateDer"]
+        if not isinstance(certificate, str) or not decode(certificate):
+            raise ValueError("Choose a PEM file with one public relay certificate.")
+        tls["cert"] = certificate
+    elif config.get("certificate"):
+        tls["cert"] = read_relay_certificate(path.parent / config["certificate"])
+    return tls, key
+
+
+def configure_relay(path, operator, text):
+    setup = json.loads(text)
+    if not isinstance(setup, dict):
+        raise ValueError("Enter the relay address and provisioning key.")
+    address = relay_address(setup.get("url"))
+    key = setup.get("provisioningKey")
+    if not isinstance(key, str) or not TOKEN.fullmatch(key):
+        raise ValueError("Enter the relay's provisioning key.")
+    new_file = setup.get("certificatePath")
+    certificate = read_relay_certificate(local_path(new_file)) if new_file else None
+    with edit(path) as state:
+        if state is not None:
+            raise ValueError("Remove the current pairing or invitation before changing the relay.")
+        if certificate is None and setup.get("keepCertificate") is True:
+            previous, _ = read_operator(operator)
+            certificate = previous.get("cert")
+            if not certificate:
+                raise ValueError("Choose the public certificate for this relay.")
+        tls = {"url": address}
+        configured = {**tls, "provisioningKey": key}
+        if certificate is not None:
+            try:
+                ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT).load_verify_locations(cadata=decode(certificate))
+            except (ValueError, ssl.SSLError) as error:
+                raise ValueError("Choose a PEM file with one public relay certificate.") from error
+            tls["cert"] = certificate
+            configured["certificateDer"] = certificate
+        new_invitation(tls)  # Check that the saved setup fits in a pairing QR.
+        operator.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        save(operator, configured)
 
 
 def provisioning(path, state, operator):
@@ -894,6 +964,14 @@ def invitation_image(config):
         return "data:image/png;base64," + base64.b64encode(data.getvalue()).decode("ascii")
 
 
+def new_invitation(tls):
+    config = {**tls, "v": 1, "pair": secrets.token_hex(16), "secret": encode(secrets.token_bytes(32)),
+              "token": secrets.token_urlsafe(32), "code": secrets.token_urlsafe(32)}
+    if len(invitation_payload({**config, "expires": int(time.time()) + 300})) > 2900:
+        raise ValueError("The relay address and certificate are too large for a pairing QR.")
+    return config
+
+
 def file_rows(state):
     active = []
     history = []
@@ -911,7 +989,13 @@ def view(path, operator):
     try:
         state = json.loads(path.read_text())
     except FileNotFoundError:
-        return {"phase": "ready" if operator.is_file() else "disabled"}
+        if not operator.is_file():
+            return {"phase": "disabled"}
+        try:
+            tls, _ = read_operator(operator)
+        except (OSError, KeyError, TypeError, ValueError):
+            return {"phase": "disabled", "problem": "setup"}
+        return {"phase": "ready", "relayUrl": tls["url"], "relayPinned": "cert" in tls}
     config = state["config"]
     if state.get("revoking"):
         return {"phase": "removing", "problem": state.get("problem")}
@@ -943,7 +1027,10 @@ def input_text():
 
 
 def change(path, operator, command):
-    text = input_text() if command in ("approve", "send", "send-file", "save-file", "remove-file") else None
+    text = input_text() if command in ("approve", "send", "send-file", "save-file", "remove-file", "configure") else None
+    if command == "configure":
+        configure_relay(path, operator, text)
+        return {}
     if command == "send-file":
         source = json.loads(text)
         if not isinstance(source, dict) or not isinstance(source.get("pair"), str) or not ID.fullmatch(source["pair"]):
@@ -961,11 +1048,7 @@ def change(path, operator, command):
                 raise ValueError("Remove the current pairing or invitation first.")
             tls, _ = read_operator(operator)
             import qrcode  # Check that the QR can be generated before creating state.
-            config = {**tls, "v": 1, "pair": secrets.token_hex(16), "secret": encode(secrets.token_bytes(32)),
-                      "token": secrets.token_urlsafe(32), "code": secrets.token_urlsafe(32)}
-            if len(invitation_payload({**config, "expires": int(time.time()) + 300})) > 2900:
-                raise ValueError("The relay address and certificate are too large for a pairing QR.")
-            state = new_state(config)
+            state = new_state(new_invitation(tls))
         elif state is None or state.get("revoking"):
             raise ValueError("No active phone or invitation.")
         elif command == "forget":
@@ -1002,7 +1085,7 @@ def change(path, operator, command):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("watch", "status", "invite", "forget", "approve", "send",
-                                            "send-file", "save-file", "remove-file"))
+                                            "send-file", "save-file", "remove-file", "configure"))
     args = parser.parse_args()
     os.umask(0o077)
     path = user_path("XDG_STATE_HOME", ".local/state") / "monet/link/state.json"
