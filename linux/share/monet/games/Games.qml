@@ -46,6 +46,9 @@ MonetWindow {
     readonly property var current: games.find(g => g.id === pageId) || null
     // The game the sheet asks about; null for "just open Windows".
     property var asking: null
+    // What the sheet's restart is for besides: "faceit-setup" (FACEIT set up in Windows),
+    // "faceit" (the game on FACEIT), or "".
+    property string task: ""
     property bool sheetOpen: false
     property string problem: ""
     // Whether this PC has a Windows to restart in (`monet` says Not found on a Monet-only PC).
@@ -54,6 +57,10 @@ MonetWindow {
     property bool keys: false
     property string keyed: ""
     property var waiting: ({})
+    // FACEIT, for Counter-Strike 2's page (monet-quick faceit): {looked, client, anticheat, ready,
+    // problem, secureBoot, tpm, windows}. Its matches and anti-cheat only run in Windows.
+    readonly property string faceitGame: "steam:730"
+    property var faceit: ({})
     readonly property string texture: brush
     readonly property real speed: Kirigami.Units.longDuration / 200
 
@@ -104,7 +111,19 @@ MonetWindow {
             } catch (e) {
             }
         })
+        loadFaceit()
     }
+    // Only for its page: nothing else needs it.
+    function loadFaceit() {
+        if (pageId === faceitGame)
+            run(["helper", "faceit"], out => {
+                try {
+                    faceit = JSON.parse(out)
+                } catch (e) {
+                }
+            })
+    }
+    onPageIdChanged: loadFaceit()
     Component.onCompleted: {
         refresh()
         run(["monet"], out => root.windowsHere = !/Windows\s+(Not found|Unavailable)/.test(out))
@@ -126,17 +145,35 @@ MonetWindow {
         else
             ask(game)
     }
-    function ask(game) {
+    function ask(game, why) {
         problem = ""
+        task = why || ""
         asking = game
         sheetOpen = true
     }
-    // To Windows: with the game when Windows has it, else just Windows, to install it there.
+    // FACEIT in Windows, once (the person goes through FACEIT's own installers there); then the
+    // game on FACEIT, which opens before it.
+    function setUpFaceit(game) {
+        ask(game, "faceit-setup")
+    }
+    function playOnFaceit(game) {
+        ask(game, "faceit")
+    }
+    // Settings, Security: Secure Boot goes on there without locking Monet out.
+    function openSecurity() {
+        run(["helper", "open", "security"])
+    }
+    // To Windows: with the game when Windows has it, else just Windows, to install it there;
+    // or for FACEIT (Steam there installs the game if it hasn't got it).
     function go() {
         const game = asking && asking.windows !== "" ? asking : null
         sheetOpen = false
-        sunset.begin(game ? game.name : "")
+        sunset.begin(task === "faceit" && asking ? asking.name : task === "" && game ? game.name : "")
         launch.command = game ? ["monet", "play", game.windows] : ["monet", "windows"]
+        if (task === "faceit-setup")
+            launch.command = ["monet", "windows", "--faceit"]
+        else if (task === "faceit")
+            launch.command = ["monet", "play", faceitGame, "--faceit"]
         launch.start()
     }
     // Let the sun start setting before the PC goes.
@@ -1366,6 +1403,8 @@ MonetWindow {
                     font.family: "Fraunces 72pt SuperSoft"
                     font.pixelSize: 24
                     text: root.problem !== "" ? i18n("Couldn't open Windows")
+                        : root.task === "faceit-setup" ? i18n("Set up FACEIT in Windows?")
+                        : root.task === "faceit" && root.asking ? i18n("Play %1 on FACEIT?", root.asking.name)
                         : root.asking && root.asking.windows === "" ? i18n("%1 needs Windows", root.asking.name)
                         : root.asking ? i18n("Play %1?", root.asking.name)
                         : i18n("Restart in Windows?")
@@ -1379,6 +1418,10 @@ MonetWindow {
                     opacity: root.problem !== "" ? 1 : 0.75
                     font.pixelSize: 14
                     text: root.problem !== "" ? root.problem
+                        : root.task === "faceit-setup"
+                            ? i18n("Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet.")
+                        : root.task === "faceit" && root.asking
+                            ? i18n("Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first.", root.asking.name)
                         : root.asking && root.asking.move && root.asking.why === "reports"
                             ? i18n("Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download.")
                         : root.asking && root.asking.move
@@ -1397,7 +1440,7 @@ MonetWindow {
 
                 Text {
                     Layout.fillWidth: true
-                    visible: root.problem === "" && !(root.asking && root.asking.move)
+                    visible: root.problem === "" && !(root.asking && root.asking.move && root.task === "")
                     text: i18n("Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return.")
                     color: look.dim
                     font.pixelSize: 13
@@ -1420,9 +1463,11 @@ MonetWindow {
                         speed: root.speed
                         size: 14
                         visible: root.problem === ""
-                        text: root.asking && root.asking.move ? i18n("Show in Steam")
-                            : root.asking && root.asking.windows !== "" ? i18n("Restart & Play") : i18n("Restart")
-                        onClicked: root.asking && root.asking.move ? root.showInSteam(root.asking) : root.go()
+                        readonly property bool moving: root.task === "" && root.asking !== null && root.asking.move === true
+                        text: moving ? i18n("Show in Steam")
+                            : root.task === "faceit-setup" ? i18n("Restart & Set up")
+                            : root.task === "faceit" || (root.asking && root.asking.windows !== "") ? i18n("Restart & Play") : i18n("Restart")
+                        onClicked: moving ? root.showInSteam(root.asking) : root.go()
                     }
                 }
             }

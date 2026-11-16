@@ -1,7 +1,9 @@
 /*
  * A game's own page in Games: its wide picture with its name on it, Play, where it plays,
  * when it was last played, how long it's been played and how much room it takes, and what
- * else there is to do with it (the star, and its menu).
+ * else there is to do with it (the star, and its menu). Counter-Strike 2's has FACEIT too,
+ * whose matches and anti-cheat only run in Windows: whether it's set up there, what it needs,
+ * and Set up FACEIT or Play on FACEIT.
  */
 import QtQuick
 import QtQuick.Effects
@@ -41,7 +43,52 @@ Flickable {
         [i18n("Size on disk"), app.sizeText(game.size)]
     ].filter(s => s[1] !== "")
 
+    // FACEIT, on Counter-Strike 2's page when there's a Windows to play it in (Games' faceit).
+    readonly property bool faceitHere: game.id === app.faceitGame && app.windowsHere
+    readonly property var faceit: app.faceit || ({})
+    readonly property bool faceitReady: faceit.ready === true
+    readonly property string faceitText: {
+        const last = faceit.problem === "no-download" ? i18n("Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again.")
+            : faceit.problem === "not-signed" ? i18n("Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later.")
+            : faceit.problem === "not-finished" ? i18n("Last time, FACEIT's installer closed before it finished. Try again whenever you like.")
+            : faceit.problem === "stopped" ? i18n("Last time, you came back before FACEIT was set up.")
+            : ""
+        const about = faceitReady
+            ? i18n("Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever.", game.name || "")
+              + (game.windows === "" ? " " + i18n("Steam in Windows installs it the first time.") : "")
+            : i18n("%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers.", game.name || "")
+        const unseen = faceit.looked === false && !faceitReady
+            ? " " + i18n("Monet couldn't look in Windows at this start, so setting up checks what's there first.") : ""
+        return (last !== "" ? last + " " : "") + about + unseen
+    }
+    // What FACEIT asks of the PC, as far as Monet can tell: [name, true/false/null, what to do].
+    readonly property var faceitNeeds: {
+        const needs = []
+        const boot = faceit.secureBoot
+        needs.push([i18n("Secure Boot"), boot === "on" ? true : boot === "off" ? false : null,
+                    boot === "on" ? i18nc("a protection is", "On")
+                    : boot === "off" ? i18n("Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts.")
+                    : boot === "unavailable" ? i18n("This PC didn't start in UEFI mode, so Secure Boot can't be on.")
+                    : i18n("Couldn't check.")])
+        const windows = faceit.windows || null
+        const tpm = faceit.tpm === true || (windows !== null && String(windows.tpm || "").startsWith("2"))
+        needs.push([i18n("TPM 2.0"), tpm, tpm ? i18nc("a protection is", "On")
+                    : i18n("Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM).")])
+        if (windows !== null && typeof windows.vbs === "boolean")
+            needs.push([i18n("Virtualization-based security"), windows.vbs, windows.vbs ? i18n("On in Windows")
+                        : i18n("Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security.")])
+        return needs
+    }
+
     signal back()
+    // What the keys reach below the fold (FACEIT's buttons) comes into view.
+    function reveal(item) {
+        const top = item.mapToItem(column, 0, 0).y
+        if (top < contentY)
+            contentY = Math.max(0, top - 24)
+        else if (top + item.height > contentY + height)
+            contentY = Math.max(0, Math.min(contentHeight - height, top + item.height + 24 - height))
+    }
     function focusPlay() {
         play.forceActiveFocus()
     }
@@ -276,6 +323,111 @@ Flickable {
                     wrapMode: Text.Wrap
                     font.pixelSize: 14
                     lineHeight: 1.15
+                }
+            }
+
+            // FACEIT: whether it's in Windows, what it needs, and the one thing to do.
+            Rectangle {
+                id: faceitCard
+                objectName: "faceit"
+                Layout.fillWidth: true
+                Layout.bottomMargin: 8
+                visible: page.faceitHere
+                implicitHeight: faceitColumn.implicitHeight + 36
+                radius: 14
+                color: page.tone.wash
+                border.width: 1
+                border.color: page.tone.line
+
+                ColumnLayout {
+                    id: faceitColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 18
+                    spacing: 10
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: "FACEIT"
+                        color: page.tone.dim
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.7
+                    }
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: page.faceitReady ? i18n("Ready in Windows") : i18n("Not set up in Windows yet")
+                        color: page.tone.ink
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 17
+                        font.weight: Font.Medium
+                    }
+                    Text {
+                        objectName: "faceitText"
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: page.faceitText
+                        color: page.tone.ink
+                        opacity: 0.85
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 14
+                        lineHeight: 1.15
+                    }
+                    Repeater {
+                        model: page.faceitNeeds
+                        RowLayout {
+                            id: need
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: 10
+                            // On, off, or couldn't tell.
+                            Glyph {
+                                Layout.alignment: Qt.AlignTop
+                                Layout.topMargin: 2
+                                Layout.preferredWidth: 16
+                                Layout.preferredHeight: 16
+                                stroke: 2.2
+                                path: need.modelData[1] === true ? "M5 12.5l4.5 4.5L19 7.5"
+                                    : need.modelData[1] === false ? "M12 7v6M12 17h.01" : "M8 12h8"
+                                color: need.modelData[1] === true ? page.tone.lily
+                                    : need.modelData[1] === false ? (page.tone.dark ? "#FF8A6B" : "#C2410C") : page.tone.dim
+                            }
+                            Text {
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
+                                textFormat: Text.PlainText
+                                text: need.modelData[0] + "  ·  " + need.modelData[2]
+                                color: page.tone.ink
+                                wrapMode: Text.Wrap
+                                font.pixelSize: 13
+                            }
+                            Accessible.role: Accessible.StaticText
+                            Accessible.name: need.modelData[0] + ": " + need.modelData[2]
+                        }
+                    }
+                    RowLayout {
+                        Layout.topMargin: 4
+                        spacing: 8
+                        Pill {
+                            id: faceitAction
+                            objectName: "faceitAction"
+                            tone: page.tone
+                            kind: "lily"
+                            text: page.faceitReady ? i18n("Play on FACEIT") : i18n("Set up FACEIT")
+                            onClicked: page.faceitReady ? page.app.playOnFaceit(page.game) : page.app.setUpFaceit(page.game)
+                            onActiveFocusChanged: if (activeFocus) page.reveal(this)
+                        }
+                        Pill {
+                            objectName: "faceitSecurity"
+                            tone: page.tone
+                            visible: page.faceit.secureBoot === "off"
+                            text: i18n("Security settings")
+                            onClicked: page.app.openSecurity()
+                            onActiveFocusChanged: if (activeFocus) page.reveal(this)
+                        }
+                    }
                 }
             }
         }

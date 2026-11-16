@@ -695,6 +695,84 @@ def windows_launchers(root, person_name=None):
     return sorted(have)
 
 
+# FACEIT, for Counter-Strike 2 on FACEIT (Games): whether Monet's Windows has it, by its programs
+# and Start menu shortcuts on the drive (where Monet Bridge looks too: crates/monet-bridge/src/
+# faceit.rs), and what Bridge noted there (ProgramData\Monet\faceit.json, which only Windows'
+# administrators can change): how setting it up went, and what Windows said of its protections.
+# Only read, never run or changed.
+FACEIT_PARTS = {
+    "anticheat": {"everyone": ("Program Files/FACEIT AC/faceitclient.exe",), "own": (),
+                  "shortcuts": ("FACEIT AC", "FACEIT Anti-Cheat")},
+    "client": {"everyone": ("Program Files/FACEIT/FACEIT.exe",),
+               "own": ("AppData/Local/FACEIT/FACEIT.exe", "AppData/Local/FACEITApp/FACEIT.exe"), "shortcuts": ("FACEIT",)},
+}
+FACEIT_NOTE = "ProgramData/Monet/faceit.json"
+FACEIT_STEPS = {"there", "installed", "not-finished", "no-download", "not-signed", "stopped", "skipped"}
+TPM_VERSION = re.compile(r"\d{1,2}(\.\d{1,2})?")
+
+
+def shortcut_in(menu, names, depth=2):
+    """Whether a Start menu folder (or one a folder or two in) has a shortcut called one of names."""
+    wanted = {name.lower() + ".lnk" for name in names}
+    todo = [(menu, 0)]
+    while todo:
+        folder, level = todo.pop()
+        try:
+            entries = sorted(folder.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if entry.is_symlink():
+                continue
+            if entry.is_dir() and level < depth:
+                todo.append((entry, level + 1))
+            elif entry.name.lower() in wanted and entry.is_file():
+                return True
+    return False
+
+
+def faceit_note(data):
+    """What Monet Bridge noted (faceit.json), checked: {"installed": {part: bool}, "setup":
+    {"when", "steps": {part: step}} or None, "security": {secureBoot, tpm, vbs, memoryIntegrity} or None}."""
+    nothing = {"installed": {}, "setup": None, "security": None}
+    try:
+        note = json.loads(data or b"null")
+    except ValueError:
+        return nothing
+    if not isinstance(note, dict) or note.get("v") != 1:
+        return nothing
+    installed = note.get("installed") if isinstance(note.get("installed"), dict) else {}
+    found = {"installed": {k: v for k, v in installed.items() if k in FACEIT_PARTS and isinstance(v, bool)},
+             "setup": None, "security": None}
+    setup = note.get("setup")
+    if isinstance(setup, dict) and isinstance(setup.get("when"), int) and isinstance(setup.get("steps"), dict):
+        steps = {k: v for k, v in setup["steps"].items() if k in FACEIT_PARTS and v in FACEIT_STEPS}
+        found["setup"] = {"when": setup["when"], "steps": steps}
+    security = note.get("security")
+    if isinstance(security, dict):
+        def flag(name):
+            return security[name] if isinstance(security.get(name), bool) else None
+        tpm = security.get("tpm") if isinstance(security.get("tpm"), str) and TPM_VERSION.fullmatch(security["tpm"]) else ""
+        found["security"] = {"secureBoot": flag("secureBoot"), "tpm": tpm, "vbs": flag("vbs"),
+                             "memoryIntegrity": flag("memoryIntegrity")}
+    return found
+
+
+def windows_faceit(root, person_name=None):
+    """{"anticheat": bool, "client": bool, "setup": ..., "security": ...}: FACEIT in Windows, by
+    its programs and shortcuts (everyone's, and the person's own Windows account's) or Bridge's note."""
+    accounts = own_windows(root, person_name) if person_name else []
+    menus = [walk(root, "ProgramData/" + START_MENU)] + [walk(account, "AppData/Roaming/" + START_MENU) for account in accounts]
+    note = faceit_note(read_plain(walk(root, FACEIT_NOTE), root))
+    found = {}
+    for key, part in FACEIT_PARTS.items():
+        found[key] = (any(walk(root, path).is_file() for path in part["everyone"])
+                      or any(walk(account, path).is_file() for account in accounts for path in part["own"])
+                      or any(shortcut_in(menu, part["shortcuts"]) for menu in menus)
+                      or note["installed"].get(key) is True)
+    return {**found, "setup": note["setup"], "security": note["security"]}
+
+
 def open_drive():
     person = owner()
     if person is None:
@@ -726,7 +804,7 @@ def open_drive():
         return 1
     files = share_files(DRIVE)
     write_state("open", path=str(SHARED), owner=person[0], files=str(FILES) if files else "",
-                launchers=windows_launchers(DRIVE, person[0]))
+                launchers=windows_launchers(DRIVE, person[0]), faceit=windows_faceit(DRIVE, person[0]))
     # Wi-Fi in both: what Monet joined for Windows, what Windows joined for Monet.
     try:
         give_wifi(DRIVE)

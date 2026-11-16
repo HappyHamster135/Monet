@@ -1394,6 +1394,33 @@ done, `games-updated` goes into the games list (`games_updated`) and Settings
 says when it was last done. Switch off now stops it there. A Monet Bridge
 from before tasks reads either request as opening Windows.
 
+**FACEIT, for Counter-Strike 2.** CS2 plays in Monet; FACEIT's matches and
+its anti-cheat only in Windows. Its page in Games has a FACEIT card
+(`monet-quick faceit`): whether Windows has FACEIT, how setting it up last went,
+Secure Boot and TPM 2.0 as Monet sees them (and virtualization-based security
+as Windows said it on the last trip), and one action. **Set up FACEIT** asks
+first, then restarts with `"task": "faceit-setup"` (`monet windows --faceit`):
+Bridge downloads FACEIT's own installers (`faceit.rs`: the anti-cheat, then the
+app, from `faceit-cdn.net` over HTTPS only, with Windows' curl) into
+`ProgramData\Monet\faceit`, which only administrators change, runs each only
+when `Get-AuthenticodeSignature` says it's valid and signed by FACEIT LTD, and
+opens it as the person (the `\Monet\Launch` task, which checks it again), in
+its own window: its terms are the person's to accept, and Windows asks for an
+administrator itself. The cover (Setting up FACEIT) says what's happening and
+keeps Back to Monet. Then FACEIT opens, and the cover lists it and Steam to
+sign in to, as on the trip to sign in to launchers. **Play on FACEIT**
+(`monet play steam:730 --faceit`, `"task": "faceit"` with the game) opens
+FACEIT's anti-cheat and app as the person, waits up to a minute for the
+anti-cheat to run, then starts the game as any trip does, and back. How it went,
+which parts are there (looked at each sign-in) and what Windows says of its
+protections go into `ProgramData\Monet\faceit.json`; at Monet's next start
+`monet-windows-drive` reads it, with FACEIT's programs and Start menu shortcuts
+on the drive, into the drive's note (`faceit`). Nothing is ever turned off:
+Secure Boot goes on through Settings → Security, the rest in the firmware.
+A Monet Bridge from before it only opens Windows (and brings itself up to date
+on the way back). Another platform's anti-cheat (Riot's Vanguard) would be
+another `Kit`.
+
 **Your apps again.** A trip restarts the PC, so open apps close. Just before
 it, `monet` (the person's side, before it asks the helper to switch) runs
 `monet-quick remember-apps`: the apps running now, from the systemd units
@@ -1598,7 +1625,7 @@ opens its game's page: its wide hero picture with the name, Play (Play on
 Windows for one that needs it), where it plays, when it was last played, the
 play time and the size on disk, the star and a menu, and a note about where it
 plays (installed once for both, its anti-cheat, players' reports) or its
-download. Hovering a cover shows the star (favorites keep it) and the sun,
+download; Counter-Strike 2's also has FACEIT (see A trip to Windows). Hovering a cover shows the star (favorites keep it) and the sun,
 which plays it without the page. Favorites are kept in
 `~/.config/monet/favorite-games.json` (`monet-quick favorite GAME on|off`).
 Play time comes from each launcher's own count (Steam's localconfig Playtime,

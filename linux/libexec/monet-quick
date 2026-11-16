@@ -4510,6 +4510,51 @@ def game_marks(marks=None, here=None, windows=None, shared=None):
                         for a, n in sorted(here.items(), key=lambda item: item[1].lower()) if marks.get(a) == "windows"]}
 
 
+# FACEIT, for Counter-Strike 2 (Games, on its page) ------------------------------------------
+# CS2 plays here; FACEIT's matches and its anti-cheat only in Windows. When asked, Monet sets FACEIT
+# up there with FACEIT's own installers (`monet windows --faceit`: Monet Bridge downloads them
+# from FACEIT, runs them only when Windows says FACEIT signed them, and the person goes through
+# them), then opens it before the game (`monet play steam:730 --faceit`). What FACEIT asks of the
+# PC (support.faceit.com/hc/en-us/articles/23117181142556): TPM 2.0 and Secure Boot on, which
+# Monet sees from here too, and for some players virtualization-based security, which Windows
+# says (Bridge notes it on a trip). Monet never turns a protection off; Settings, Security shows
+# how to turn Secure Boot on without locking Monet out.
+
+FACEIT_GAME = "steam:730"
+TPM = Path("/sys/class/tpm")
+FACEIT_FINE = ("there", "installed")
+
+
+def tpm2(chips=TPM):
+    """Whether the PC's TPM 2.0 is on (Monet Setup asks the same): the firmware hides one that's off."""
+    for chip in sorted(chips.glob("tpm[0-9]*")):
+        try:
+            if (chip / "tpm_version_major").read_text().strip() == "2":
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def faceit(state=None, efivars=EFIVARS, chips=TPM):
+    """FACEIT for its page in Games, all from what's here already: {"looked": Monet could look in
+    Windows at this start, "client" and "anticheat": each there, "ready": both, "problem": how the
+    last setting up stopped ("no-download", "not-signed", "not-finished", "stopped", or ""),
+    "secureBoot" ("on", "off", "unknown", "unavailable"), "tpm": a TPM 2.0 is on, "windows": what
+    Windows said of its protections on the last trip ({secureBoot, tpm, vbs, memoryIntegrity}, or None)}."""
+    state = shared_state() if state is None else state
+    found = state.get("faceit") if isinstance(state.get("faceit"), dict) else None
+    looked, found = found is not None, found or {}
+    client, anticheat = found.get("client") is True, found.get("anticheat") is True
+    setup = found.get("setup") if isinstance(found.get("setup"), dict) else {}
+    steps = setup.get("steps") if isinstance(setup.get("steps"), dict) else {}
+    stopped = next((steps[k] for k in ("anticheat", "client") if k in steps and steps[k] not in FACEIT_FINE), "")
+    problem = "" if client and anticheat else "not-finished" if stopped == "skipped" else stopped
+    windows = found.get("security") if isinstance(found.get("security"), dict) else None
+    return {"looked": looked, "client": client, "anticheat": anticheat, "ready": client and anticheat,
+            "problem": problem, "secureBoot": secure_boot(efivars), "tpm": tpm2(chips), "windows": windows}
+
+
 # Windows' Games folder ------------------------------------------------------------
 # Install a game once: Windows' drive keeps a Games folder that Steam uses on both sides,
 # shared here at /run/media/Windows games by monet-windows-drive whenever the drive is safe
@@ -8972,6 +9017,8 @@ def main(argv):
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
     elif cmd == "shared":
         emit(shared_info())
+    elif cmd == "faceit":
+        emit(faceit())
     elif cmd == "windows-program":
         if args and not windows_program(args[0]):
             return 1

@@ -88,6 +88,15 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   or one set to a large size, the middle bar of the Home Bar now sits between
   the other two instead of partly over the right one. Only on the very
   narrowest screens do the side bars give up some of their room.
+- **Counter-Strike 2 on FACEIT.** Counter-Strike 2 still plays right here,
+  and its page in Games now shows FACEIT too, whose matches and anti-cheat
+  only run in Windows. Set up FACEIT restarts in Windows, where FACEIT's own
+  installers download from FACEIT and open for you, so its terms are yours to
+  read and accept, and Monet runs them only once Windows confirms FACEIT made
+  them. After that, Play on FACEIT restarts in Windows with FACEIT open, then
+  the game, and brings you back when you quit. The page also says whether
+  Secure Boot and TPM 2.0 are on, as FACEIT needs, and how to turn them on;
+  Monet never turns a protection off.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
