@@ -88,6 +88,11 @@ MonetWindow {
         Qt.callLater(revealFocusedControl)
     }
     function cancelFocusReveal(view) {
+        // A scroll of your own: the list stays where you put it.
+        if (settling.place && settling.place.view === view) {
+            settling.place = null
+            settling.stop()
+        }
         for (let item = activeFocusItem; item; item = item.parent) {
             if (item === view) { leftBehind = activeFocusItem; break }
         }
@@ -269,9 +274,15 @@ MonetWindow {
             openApp(what)
     }
     function openApp(id) {
+        showApp(id, null)
+    }
+    // An app's page: a new visit (`at` null), where you were becoming the way back; or a place
+    // Back and Forward return to (`at`), as far down as it was.
+    function showApp(id, at) {
         const app = shop.app(id)
         if (!app)
             return
+        if (!at && id !== pageId) remember()
         navigationRevision++
         if (pageId === "" && !appReturnFocus) appReturnFocus = activeFocusItem
         pageApp = app
@@ -280,25 +291,139 @@ MonetWindow {
         appPage.contentY = 0
         appPage.shown = 0
         shop.learn(id)
+        if (at) {
+            const revision = navigationRevision
+            Qt.callLater(() => { if (revision === root.navigationRevision) appPage.contentY = root.beginning(appPage) + at.y })
+        }
         Qt.callLater(() => { if (root.picture === "" && root.pageId === id) appPage.focusFirst() })
     }
+    // The page's Back (its button, Escape, the Back key): one step back.
     function closePage() {
-        const revision = ++navigationRevision
-        pageId = ""
-        Qt.callLater(() => {
-            if (revision !== root.navigationRevision || root.pageId !== "" || !root.visible) return
-            const previous = root.appReturnFocus
-            root.appReturnFocus = null
-            if (previous && previous.visible && previous.enabled) previous.forceActiveFocus(Qt.BacktabFocusReason)
-            else search.forceActiveFocus(Qt.BacktabFocusReason)
-        })
+        goBack()
     }
     function chooseSection(which) {
+        if (which !== section || pageId !== "" || query !== "") remember()
         navigationRevision++
         appReturnFocus = null
         pageId = ""
         query = ""
         section = which
+    }
+
+    // Back and Forward, as in a browser (the page's Back, the mouse's back and forward buttons,
+    // Alt+Left and Alt+Right): each place is a section, a search or an app's page, with how far
+    // down it was and what had the keys, so going back is to exactly where you were.
+    property var history: []
+    property var future: []
+    readonly property Flickable listView: [home, shelfView, results, downloadsView].find(v => v.visible) || null
+    // How far down a list is from its beginning: a grid's beginning moves as it's filled again.
+    function beginning(view) { return view.originY - view.topMargin }
+    function place() {
+        const view = pageId !== "" ? appPage : listView
+        return { section: section, query: query, kind: kind, pageId: pageId,
+                 y: view ? view.contentY - beginning(view) : 0, focus: activeFocusItem }
+    }
+    function remember() {
+        history = history.concat([place()]).slice(-50)
+        future = []
+    }
+    function goBack() {
+        if (picture !== "") {
+            picture = ""
+        } else if (history.length > 0) {
+            future = future.concat([place()])
+            const to = history[history.length - 1]
+            history = history.slice(0, -1)
+            go(to)
+        } else if (pageId !== "") {
+            // Opened straight at an app (from a link): back to the Store's front.
+            future = future.concat([place()])
+            go({ section: section, query: query, kind: kind, pageId: "", y: -1, focus: null })
+        }
+    }
+    function goForward() {
+        if (picture !== "" || future.length === 0)
+            return
+        history = history.concat([place()])
+        const to = future[future.length - 1]
+        future = future.slice(0, -1)
+        go(to)
+    }
+    function go(to) {
+        // A new section starts over (no search, every kind): set it first, then what it had.
+        section = to.section
+        query = to.query
+        kind = to.kind || ""
+        if (to.pageId !== "") {
+            showApp(to.pageId, to)
+            return
+        }
+        const revision = ++navigationRevision
+        appReturnFocus = null
+        pageId = ""
+        // Once the list is in view again: its place, and the keys where they were. The control
+        // that had them isn't brought into view (leftBehind): that would move the list.
+        Qt.callLater(() => {
+            if (revision !== root.navigationRevision || root.pageId !== "" || !root.visible) return
+            const focus = to.focus
+            if (focus && focus !== root.contentItem && focus.visible && focus.enabled) {
+                root.leftBehind = focus
+                focus.forceActiveFocus(Qt.BacktabFocusReason)
+            } else {
+                search.forceActiveFocus(Qt.BacktabFocusReason)
+            }
+            settling.place = to.y >= 0 ? { view: root.listView, y: to.y, revision: revision, focus: focus } : null
+            settling.tries = 0
+            settling.settle()
+        })
+    }
+    // A list grows back to its length as it's shown again (the front page's rows, the pictures)
+    // and a section's grid is filled again, starting over at its top: its place is kept for a
+    // few frames, until it's all there (a scroll of your own ends that at once). Then the control
+    // with the keys, if it's nowhere in view (it was chosen by keys a moment before), comes into view.
+    Timer {
+        id: settling
+        property var place: null
+        property int tries: 0
+        interval: 16
+        repeat: true
+        function settle() {
+            const at = place
+            if (!at || !at.view || at.revision !== root.navigationRevision || !at.view.visible) {
+                place = null
+                stop()
+                return
+            }
+            const view = at.view
+            const first = beginning(view)
+            const last = Math.max(first, view.originY + view.contentHeight - view.height + view.bottomMargin)
+            const target = first + at.y
+            view.contentY = Math.max(first, Math.min(last, target))
+            ++tries
+            const focus = at.focus
+            const top = focus && focus === root.activeFocusItem && focus.visible ? focus.mapToItem(view.contentItem, 0, 0).y : NaN
+            const away = top + focus?.height <= view.contentY || top >= view.contentY + view.height
+            if (target <= last + 0.5 && away) {
+                place = null
+                stop()
+                root.leftBehind = null
+                root.scheduleFocusReveal()
+            } else if ((target <= last + 0.5 && tries > 8) || tries > 40) {
+                place = null
+                stop()
+            } else if (!running) {
+                start()
+            }
+        }
+        onTriggered: settle()
+    }
+    Shortcut {
+        sequences: [StandardKey.Back]
+        onActivated: root.goBack()
+    }
+    Shortcut {
+        sequences: [StandardKey.Forward]
+        onActivated: root.goForward()
     }
     function jobFor(id) { return downloads.find(j => j.id === id) || ({}) }
     function jobText(job) {
@@ -431,6 +556,12 @@ MonetWindow {
         anchors.fill: parent
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
+
+        // The mouse's back and forward buttons, anywhere in the Store (a card takes only the left one).
+        TapHandler {
+            acceptedButtons: Qt.BackButton | Qt.ForwardButton
+            onTapped: (point, button) => button === Qt.ForwardButton ? root.goForward() : root.goBack()
+        }
 
         // The side: the name, search, the sections -----------------------------------
         Item {

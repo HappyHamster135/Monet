@@ -221,6 +221,83 @@ class StoreScrolling(unittest.TestCase):
         self.assertEqual(self.window.property("pageId"), self.shop.apps[0]["id"])
         self.assertEqual(self.shop.actions, [])
 
+    def lists(self):
+        """Each list an app opens from: the front page, a section and a search's results."""
+        self.window.resize(self.window.minimumWidth(), 520); QTest.qWait(80)
+        self.choose("home"); yield self.item("storeHome")
+        self.choose("tools"); yield self.item("storeShelf")
+        self.window.setProperty("query", "fixture"); QTest.qWait(250)
+        yield self.item("storeResults")
+
+    def cut_card(self, view):
+        """An app's card cut by the bottom of the list, scrolled there: the card and its visible strip."""
+        cards = []
+        todo = [view.property("contentItem")]
+        while todo:
+            item = todo.pop(); todo.extend(item.childItems())
+            if item.isVisible() and item.metaObject().className().startswith("AppCard") or \
+                    item.objectName().startswith(("storeRanked-", "storeShelfCard-", "storePodium-")):
+                cards.append(item)
+        first, last = self.bounds(view)
+        for card in sorted(cards, key=lambda c: c.mapToItem(view.property("contentItem"), QPointF()).y()):
+            top = card.mapToItem(view.property("contentItem"), QPointF()).y()
+            position = top - view.height() + 30  # 30 pixels of it showing
+            if first + 40 < position < last - 40 and card.height() > 60:
+                view.setProperty("contentY", position); QTest.qWait(120)
+                strip = card.mapToItem(view, QPointF(card.width() / 2, 12))
+                if 0 < strip.y() < view.height():
+                    return card, view.mapToScene(strip).toPoint()
+        self.fail("No card to cut in " + view.objectName())
+
+    def test_back_returns_to_exactly_where_the_list_was(self):
+        for view in self.lists():
+            with self.subTest(view=view.objectName()):
+                card, point = self.cut_card(view)
+                position = view.property("contentY")
+                QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, point); QTest.qWait(150)
+                self.assertNotEqual(self.window.property("pageId"), "", view.objectName())
+                back = self.item("storeBack")
+                QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier,
+                                 back.mapToScene(QPointF(back.width() / 2, back.height() / 2)).toPoint())
+                QTest.qWait(400)
+                self.assertEqual(self.window.property("pageId"), "")
+                self.assertAlmostEqual(view.property("contentY"), position, delta=1)
+
+    def test_mouse_back_and_forward_buttons_and_alt_arrows_walk_the_history(self):
+        view = next(self.lists())
+        card, point = self.cut_card(view)
+        position = view.property("contentY")
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, point); QTest.qWait(150)
+        page = self.window.property("pageId")
+        self.assertNotEqual(page, "")
+        middle = QPoint(self.window.width() // 2, self.window.height() // 2)
+        QTest.mouseClick(self.window, Qt.BackButton, Qt.NoModifier, middle); QTest.qWait(400)
+        self.assertEqual(self.window.property("pageId"), "")
+        self.assertAlmostEqual(view.property("contentY"), position, delta=1)
+        QTest.mouseClick(self.window, Qt.ForwardButton, Qt.NoModifier, middle); QTest.qWait(200)
+        self.assertEqual(self.window.property("pageId"), page)
+        QTest.keyClick(self.window, Qt.Key_Left, Qt.AltModifier); QTest.qWait(400)
+        self.assertEqual(self.window.property("pageId"), "")
+        self.assertAlmostEqual(view.property("contentY"), position, delta=1)
+        QTest.keyClick(self.window, Qt.Key_Right, Qt.AltModifier); QTest.qWait(200)
+        self.assertEqual(self.window.property("pageId"), page)
+
+    def test_back_also_steps_back_through_sections(self):
+        self.choose("home"); self.choose("tools")
+        shelf = self.item("storeShelf")
+        first, last = self.bounds(shelf)
+        shelf.setProperty("contentY", (first + last) / 2); QTest.qWait(80)
+        position = shelf.property("contentY")
+        self.choose("home")
+        middle = QPoint(self.window.width() // 2, self.window.height() // 2)
+        QTest.mouseClick(self.window, Qt.BackButton, Qt.NoModifier, middle); QTest.qWait(400)
+        self.assertEqual(self.window.property("section"), "tools")
+        self.assertAlmostEqual(shelf.property("contentY"), position, delta=1)
+        QTest.mouseClick(self.window, Qt.BackButton, Qt.NoModifier, middle); QTest.qWait(200)
+        self.assertEqual(self.window.property("section"), "home")
+        QTest.mouseClick(self.window, Qt.ForwardButton, Qt.NoModifier, middle); QTest.qWait(200)
+        self.assertEqual(self.window.property("section"), "tools")
+
     def test_fully_clipped_filter_does_not_paint_outside_its_viewport(self):
         self.window.resize(self.window.minimumWidth(), 520); self.choose("tools")
         self.window.contentItem().forceActiveFocus()
