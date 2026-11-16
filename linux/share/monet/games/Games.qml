@@ -1,14 +1,17 @@
 /*
  * Games: every game you have in one library, Steam's, Heroic's and Lutris' in Monet and the
- * ones in Windows, each saying where it plays (`monet-quick library`). Down the side: the
+ * ones in Windows, each saying where it plays (`monet-quick library`), and every game you own
+ * in a launcher you're signed in to, installed or not, downloading or not. Down the side: the
  * library's sections (favorites, recently played, each side) and each store; the rest is the
- * covers, sorted by when they were played, by name, play time or size. A cover opens its
- * game's page (its picture, how long it's been played, Play). A game that plays on Monet
- * starts right away; one that plays on Windows asks once, then the sun sets and the PC
- * restarts in Windows with the game (the `monet` command).
+ * covers, all of them, the installed ones or the ones not installed, sorted by when they were
+ * played, by name, play time or size. A cover opens its game's page (its picture, how long
+ * it's been played, Play or Install). A game that plays on Monet starts right away; one not
+ * installed opens its launcher's installer; one that plays on Windows asks once, then the sun
+ * sets and the PC restarts in Windows with the game (the `monet` command).
  *
  * monet-games opens it, and gives it `helper` (which runs monet-quick and monet), its i18n
- * calls, and where Monet's pictures are (`art`, `texture`).
+ * calls, where Monet's pictures are (`art`, `texture`), and `windowActivity` (whether the
+ * window is on screen, so downloads are looked at only then).
  */
 import QtCore
 import QtQuick
@@ -30,8 +33,20 @@ MonetWindow {
     color: "transparent"
 
     // [{id, name, store, plays, why, here, windows, shared, move, progress, locate, art, last,
-    // minutes, size, favorite, tall, hero}] (monet-quick library).
+    // minutes, size, favorite, tall, hero, state, install, launcher}] (monet-quick library).
     property var games: []
+    // Steam's list of what the account owns (monet-quick owned-refresh): {steam, name, key,
+    // hint, state, fetched, count}.
+    property var owned: ({})
+    // Which covers: "all", "installed" (downloading too) or "notinstalled".
+    property string show: "all"
+    // The Steam key sheet: open, busy asking Steam, and what went wrong.
+    property bool keyOpen: false
+    property bool keyBusy: false
+    property string keyProblem: ""
+    // Looked at: on screen and not minimized (WindowActivity, monet-games), as Settings polls.
+    readonly property bool watching: visible && visibility !== Window.Minimized
+        && (typeof windowActivity === "undefined" || windowActivity.active)
     // Windows' Games folder (monet-quick shared): {state, steam, mine, hint, ...}.
     property var shared: ({})
     property bool sharing: false
@@ -77,6 +92,12 @@ MonetWindow {
         if (then)
             waiting[ticket] = then
     }
+    // The same, handing it `input` on stdin: what's private never goes on a command line.
+    function feed(command, input, then) {
+        const ticket = helper.feed(command, input)
+        if (then)
+            waiting[ticket] = then
+    }
     Connections {
         target: helper
         function onDone(ticket, out, code, err) {
@@ -94,10 +115,15 @@ MonetWindow {
         }
     }
 
+    // The library as it last came: the same again (a download's look while nothing moved) changes nothing.
+    property string libraryText: ""
     function refresh() {
         run(["helper", "library"], out => {
             try {
-                games = JSON.parse(out)
+                if (out !== libraryText) {
+                    games = JSON.parse(out)
+                    libraryText = out
+                }
             } catch (e) {
                 // Keep what's shown rather than an empty library.
             }
@@ -124,26 +150,66 @@ MonetWindow {
             })
     }
     onPageIdChanged: loadFaceit()
+    // Steam's list of what you own, asked again in the background when it's old (never waited
+    // on: the library shows what's kept meanwhile), and the library again when it changed.
+    function checkOwned() {
+        run(["helper", "owned-refresh"], out => {
+            try {
+                const said = JSON.parse(out)
+                owned = said
+                if (said.changed === true)
+                    refresh()
+            } catch (e) {
+            }
+        })
+    }
     Component.onCompleted: {
         refresh()
+        checkOwned()
         run(["monet"], out => root.windowsHere = !/Windows\s+(Not found|Unavailable)/.test(out))
     }
-    onActiveChanged: if (active && loaded) refresh()
-    // While Steam is downloading a game: how far it is, every few seconds.
+    onActiveChanged: if (active && loaded) { refresh(); checkOwned() }
+    // Back on screen (unminimized, say) while a download runs: how far it got.
+    onWatchingChanged: if (watching && loaded && games.some(g => busy(g))) refresh()
+    // On its way: downloading, paused or waiting in a launcher's downloads.
+    function busy(game) {
+        return game.state === "downloading" || game.state === "paused" || game.state === "waiting"
+    }
+    function notInstalled(game) {
+        return game.state === "owned"
+    }
+    // While a launcher is downloading a game: how far it is, every few seconds, only while Games
+    // is on screen.
     Timer {
         interval: 5000
         repeat: true
-        running: root.active && root.games.some(g => typeof g.progress === "number")
+        running: root.watching && root.games.some(g => typeof g.progress === "number" || root.busy(g))
         onTriggered: root.refresh()
     }
 
     // Playing ---------------------------------------------------------------
 
+    // Play, or what stands in for it: a game not installed goes to its launcher's installer, one
+    // on its way to the launcher's downloads.
     function play(game) {
-        if (game.plays === "monet")
+        if (notInstalled(game) && game.install)
+            install(game)
+        else if (busy(game) && game.launcher)
+            showDownloads(game)
+        else if (game.plays === "monet")
             run(["helper", "play", game.here])
         else
             ask(game)
+    }
+    // The launcher's own install dialog (Steam's, Heroic's or Lutris'), where you choose where it goes.
+    function install(game) {
+        run(["helper", "install", game.install])
+    }
+    function showDownloads(game) {
+        run(["helper", "downloads", game.launcher])
+    }
+    function launcherName(game) {
+        return { steam: "Steam", heroic: "Heroic", lutris: "Lutris" }[game.launcher] || storeName(game.store)
     }
     function ask(game, why) {
         problem = ""
@@ -217,6 +283,42 @@ MonetWindow {
             refresh()
         })
     }
+    // Steam's key, made once on Steam's own page: Monet keeps it (only you can read it) and asks
+    // Steam with it for the list of games you own. It goes to the helper on stdin.
+    function openKey() {
+        keyProblem = ""
+        keyOpen = true
+    }
+    function saveKey(text) {
+        const key = text.trim()
+        if (key !== "" && !/^[0-9A-Fa-f]{32}$/.test(key)) {
+            keyProblem = i18n("That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page.")
+            return
+        }
+        keyBusy = true
+        keyProblem = ""
+        feed(["helper", "steam-key"], key, out => {
+            keyBusy = false
+            let said = {}
+            try {
+                said = JSON.parse(out)
+            } catch (e) {
+            }
+            if (said.saved !== true) {
+                keyProblem = i18n("Monet couldn't keep the key. Try again.")
+                return
+            }
+            owned = said
+            refresh()
+            keyProblem = key === "" ? ""
+                : said.state === "key" ? i18n("Steam didn't accept this key. Check that it's copied whole, or make a new one.")
+                : said.state === "private" ? i18n("Steam didn't share the games of %1. Add a key made while signed in to that account.", said.name || "Steam")
+                : said.state === "offline" ? i18n("Steam couldn't be reached. The key is kept, and Games tries again when it opens.")
+                : ""
+            if (keyProblem === "")
+                keyOpen = false
+        })
+    }
     function setFavorite(game, on) {
         games = games.map(g => g.id === game.id ? Object.assign({}, g, { favorite: on }) : g)
         run(["helper", "favorite", game.id, on ? "on" : "off"])
@@ -260,9 +362,14 @@ MonetWindow {
             : bytes >= 1e9 ? i18n("%1 GB", (bytes / 1e9).toLocaleString(Qt.locale(), "f", 1))
             : i18n("%1 MB", Math.max(1, Math.round(bytes / 1e6)))
     }
-    // Under a cover: its store, and how long it's been played or its download.
+    // Under a cover: its store, and how long it's been played, its download, or that it isn't installed.
     function detail(game) {
-        return typeof game.progress === "number" ? i18n("%1 · Downloading, %2%", storeName(game.store), game.progress)
+        return game.state === "paused" ? i18n("%1 · Download paused", storeName(game.store))
+            : typeof game.progress === "number" && game.state !== "waiting" ? i18n("%1 · Downloading, %2%", storeName(game.store), game.progress)
+            : game.state === "downloading" ? i18n("%1 · Downloading", storeName(game.store))
+            : game.state === "waiting" ? i18n("%1 · Waiting to download", storeName(game.store))
+            : notInstalled(game) && game.size > 0 ? i18n("%1 · Not installed, %2", storeName(game.store), sizeText(game.size))
+            : notInstalled(game) ? i18n("%1 · Not installed", storeName(game.store))
             : game.minutes > 0 ? storeName(game.store) + " · " + timeText(game.minutes)
             : storeName(game.store)
     }
@@ -312,19 +419,30 @@ MonetWindow {
                              amazon: "com.heroicgameslauncher.hgl" }[s] || "" }))
     readonly property var entries: sections.filter(s => !s.side || bothSides).concat(stores)
     readonly property var sectionEntry: entries.find(e => e.id === section) || sections[0]
+    // Whether a game is among the covers asked for: all, the installed ones (and the ones on
+    // their way), or the ones not installed.
+    function inShow(g, which) {
+        return which === "all" || (which === "notinstalled") === notInstalled(g)
+    }
+    // Games you own but haven't installed: then all, installed or not installed can be chosen.
+    readonly property bool someNotInstalled: games.some(g => notInstalled(g))
     readonly property var shown: {
         const words = fold(query.trim())
         const by = section === "recent" ? "recent" : sort
         const named = (a, b) => a.name.localeCompare(b.name)
-        return games.filter(g => inSection(g, section) && (words === "" || fold(g.name).indexOf(words) !== -1))
+        // Recent: what's downloading, then what's installed, then the rest, each by when it was played.
+        const rank = g => busy(g) ? 0 : notInstalled(g) ? 2 : 1
+        return games.filter(g => inSection(g, section) && inShow(g, someNotInstalled ? show : "all")
+                            && (words === "" || fold(g.name).indexOf(words) !== -1))
             .sort(by === "name" ? named
                 : by === "playtime" ? (a, b) => (b.minutes || 0) - (a.minutes || 0) || named(a, b)
                 : by === "size" ? (a, b) => (b.size || 0) - (a.size || 0) || named(a, b)
-                : (a, b) => (b.last || 0) - (a.last || 0) || named(a, b))
+                : section === "recent" ? (a, b) => (b.last || 0) - (a.last || 0) || named(a, b)
+                : (a, b) => rank(a) - rank(b) || (b.last || 0) - (a.last || 0) || named(a, b))
     }
-    // Played lately, on top of every game: where you left off.
-    readonly property var lately: section === "all" && query === ""
-        ? games.filter(g => g.last > 0).sort((a, b) => b.last - a.last).slice(0, 4) : []
+    // Played lately, on top of every game: where you left off (installed, to play straight away).
+    readonly property var lately: section === "all" && query === "" && show !== "notinstalled"
+        ? games.filter(g => g.last > 0 && !notInstalled(g)).sort((a, b) => b.last - a.last).slice(0, 4) : []
     // A section gone (its store's last game uninstalled): back to every game.
     onEntriesChanged: if (loaded && !entries.some(e => e.id === section)) section = "all"
     // A new list starts at its top (the shelf above it too, which the view leaves above
@@ -339,6 +457,7 @@ MonetWindow {
         Qt.callLater(grid.positionViewAtBeginning)
     }
     onSortChanged: Qt.callLater(grid.positionViewAtBeginning)
+    onShowChanged: Qt.callLater(grid.positionViewAtBeginning)
 
     // Colors: Settings' own, mist or smoke as Monet's light chose ---------------
     QtObject {
@@ -376,20 +495,25 @@ MonetWindow {
 
     // Under the item it's for (a cover, or a page's "more"), or where the pointer is.
     function showMenu(game, item, below) {
-        const items = [["play", game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")]]
+        const items = [notInstalled(game) && game.install ? ["play", i18n("Install with %1", launcherName(game))]
+            : busy(game) && game.launcher ? ["play", i18n("Show downloads")]
+            : ["play", game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")]]
         if (current === null)
             items.push(["page", i18n("Open its page")])
         if (game.plays === "monet" && game.windows !== "")
             items.push(["windows", i18n("Play on Windows")])
+        // Installed in Windows, and it can play here too once installed.
+        if (!notInstalled(game) && game.here === "" && game.install)
+            items.push(["install", i18n("Install in Monet")])
         // Players' reports can be out of date: try it here all the same.
         if (game.plays === "windows" && game.why === "reports")
             items.push(["monet", i18n("Play in Monet")])
         items.push(["favorite", game.favorite ? i18n("Remove from favorites") : i18n("Add to favorites")])
-        if (game.store === "steam" && game.here !== "") {
+        if (game.store === "steam" && (game.here !== "" || game.launcher === "steam"))
             items.push(["steam", i18n("Show in Steam")])
+        if (game.store === "steam" && game.here !== "")
             // Steam asks itself, and says what goes.
             items.push(["uninstall", i18n("Uninstall…")])
-        }
         menu.game = game
         menu.items = items
         const point = below ? item.mapToItem(body, 0, item.height + 6)
@@ -407,6 +531,8 @@ MonetWindow {
             openPage(game)
         else if (what === "windows")
             ask(game)
+        else if (what === "install")
+            install(game)
         else if (what === "monet")
             run(["helper", "play", game.here])
         else if (what === "favorite")
@@ -787,12 +913,145 @@ MonetWindow {
                     }
                 }
 
+                // All, installed or not installed, once there are games you own but haven't
+                // installed; and Steam's key, once someone's signed in to Steam here.
+                RowLayout {
+                    id: filters
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: header.bottom
+                    anchors.leftMargin: 32
+                    anchors.rightMargin: 24
+                    anchors.topMargin: visible ? 12 : 0
+                    visible: root.loaded && (root.someNotInstalled || steamKey.visible)
+                    height: visible ? implicitHeight : 0
+                    spacing: 12
+                    Rectangle {
+                        visible: root.someNotInstalled
+                        implicitWidth: showRow.implicitWidth + 6
+                        implicitHeight: 36
+                        radius: 18
+                        color: look.wash2
+                        Accessible.role: Accessible.Grouping
+                        Accessible.name: i18n("Show")
+                        Row {
+                            id: showRow
+                            anchors.centerIn: parent
+                            spacing: 2
+                            Repeater {
+                                model: [["all", i18n("All")], ["installed", i18n("Installed")], ["notinstalled", i18n("Not installed")]]
+                                Rectangle {
+                                    id: showChoice
+                                    required property var modelData
+                                    readonly property bool chosen: root.show === modelData[0]
+                                    width: showLabel.implicitWidth + 24
+                                    height: 30
+                                    radius: 15
+                                    color: chosen ? (look.dark ? Qt.rgba(1, 1, 1, 0.16) : "#FFFFFF")
+                                        : showMouse.containsMouse ? look.wash2 : "transparent"
+                                    border.width: activeFocus ? 2 : 0
+                                    border.color: look.lily
+                                    activeFocusOnTab: true
+                                    Keys.onReturnPressed: root.show = modelData[0]
+                                    Keys.onSpacePressed: root.show = modelData[0]
+                                    Behavior on color { ColorAnimation { duration: Math.round(140 * root.speed) } }
+                                    Text {
+                                        id: showLabel
+                                        horizontalAlignment: Text.AlignLeft
+                                        anchors.centerIn: parent
+                                        text: showChoice.modelData[1]
+                                        color: look.ink
+                                        opacity: showChoice.chosen ? 1 : 0.7
+                                        font.pixelSize: 13
+                                        font.weight: showChoice.chosen ? Font.DemiBold : Font.Normal
+                                    }
+                                    MouseArea {
+                                        id: showMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.show = showChoice.modelData[0]
+                                    }
+                                    Accessible.role: Accessible.RadioButton
+                                    Accessible.name: modelData[1]
+                                    Accessible.checked: chosen
+                                }
+                            }
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                    // Steam's key, to see or change it, or to add it after the note was put away.
+                    Pill {
+                        id: steamKey
+                        visible: root.owned.steam === true && !steamNote.visible
+                        tone: look
+                        iconName: "steam"
+                        text: root.owned.key === true ? i18n("Steam key") : i18n("Add Steam key")
+                        onClicked: root.openKey()
+                    }
+                }
+
+                // Steam's games you own but haven't installed, once: a key you make, or what went wrong with it.
+                Rectangle {
+                    id: steamNote
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: filters.bottom
+                    anchors.leftMargin: 32
+                    anchors.rightMargin: 24
+                    anchors.topMargin: visible ? 16 : 0
+                    readonly property string problem: root.owned.key !== true ? ""
+                        : root.owned.state === "key" ? i18n("Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again.")
+                        : root.owned.state === "private" ? i18n("Steam didn't share the games of %1. Add a key made while signed in to that account.", root.owned.name || "Steam")
+                        : ""
+                    visible: root.loaded && root.query === "" && root.owned.steam === true
+                        && (problem !== "" || (root.owned.key !== true && root.owned.hint === true))
+                    height: visible ? steamRow.implicitHeight + 16 : 0
+                    radius: 14
+                    color: Qt.rgba(0.302, 0.706, 0.627, 0.12)
+                    border.width: 1
+                    border.color: Qt.rgba(0.302, 0.706, 0.627, 0.4)
+                    RowLayout {
+                        id: steamRow
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        anchors.leftMargin: 14
+                        spacing: 10
+                        Text {
+                            horizontalAlignment: Text.AlignLeft
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            color: look.ink
+                            font.pixelSize: 13
+                            text: steamNote.problem !== "" ? steamNote.problem
+                                : i18n("Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once.")
+                        }
+                        Pill {
+                            tone: look
+                            kind: "lily"
+                            text: steamNote.problem !== "" ? i18n("Change key") : i18n("Add Steam key")
+                            onClicked: root.openKey()
+                        }
+                        // Not now: put away for good (Add Steam key, above the covers, is there all the same).
+                        Pill {
+                            visible: steamNote.problem === ""
+                            tone: look
+                            glyph: "M7 7l10 10M17 7L7 17"
+                            Accessible.name: i18n("Close")
+                            onClicked: {
+                                root.owned = Object.assign({}, root.owned, { hint: false })
+                                root.run(["helper", "steam-key-hint-off"])
+                            }
+                        }
+                    }
+                }
+
                 // Windows games, not in Steam here yet: one tap, and a game installs once for both.
                 Rectangle {
                     id: hint
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.top: header.bottom
+                    anchors.top: steamNote.bottom
                     anchors.leftMargin: 32
                     anchors.rightMargin: 24
                     anchors.topMargin: visible ? 16 : 0
@@ -1045,6 +1304,8 @@ MonetWindow {
                         height: grid.cellHeight
                         readonly property bool lit: tileMouse.containsMouse || starMouse.containsMouse || playMouse.containsMouse
                         readonly property bool both: modelData.plays === "monet" && modelData.windows !== ""
+                        // Owned, not installed: Install instead of Play, its cover a little faded.
+                        readonly property bool toInstall: root.notInstalled(modelData) && modelData.install !== undefined && modelData.install !== ""
 
                         Cover {
                             id: tileCover
@@ -1059,6 +1320,8 @@ MonetWindow {
                             texture: root.texture
                             radius: 12
                             progress: typeof tile.modelData.progress === "number" ? tile.modelData.progress : -1
+                            opacity: root.notInstalled(tile.modelData) && !tile.lit ? 0.62 : 1
+                            Behavior on opacity { NumberAnimation { duration: Math.round(140 * root.speed) } }
                             scale: tileMouse.pressed ? 0.98 : tile.lit ? 1.03 : 1
                             Behavior on scale {
                                 NumberAnimation { duration: Math.round(180 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.2, 1, 1] }
@@ -1085,12 +1348,12 @@ MonetWindow {
                             onClicked: mouse => mouse.button === Qt.RightButton
                                 ? root.showMenu(tile.modelData, tile, false) : root.openPage(tile.modelData)
                         }
-                        // Windows' games say so on their cover.
+                        // Windows' games say so on their cover, and so do the ones not installed.
                         Rectangle {
                             anchors.left: tileCover.left
                             anchors.top: tileCover.top
                             anchors.margins: 8
-                            visible: tile.modelData.plays === "windows" || tile.both
+                            visible: tile.modelData.plays === "windows" || tile.both || root.notInstalled(tile.modelData)
                             width: sideText.implicitWidth + 16
                             height: 22
                             radius: 11
@@ -1099,8 +1362,8 @@ MonetWindow {
                                 id: sideText
                                 horizontalAlignment: Text.AlignLeft
                                 anchors.centerIn: parent
-                                // Names: the same in every language.
-                                text: tile.both ? "Monet · Windows" : "Windows"
+                                // Monet and Windows are names, the same in every language.
+                                text: root.notInstalled(tile.modelData) ? i18n("Not installed") : tile.both ? "Monet · Windows" : "Windows"
                                 color: "#FFFFFF"
                                 font.pixelSize: 11
                                 font.weight: Font.DemiBold
@@ -1137,7 +1400,7 @@ MonetWindow {
                             Accessible.name: i18n("Favorite")
                             Accessible.checked: tile.modelData.favorite === true
                         }
-                        // Play, without opening its page: the sun, on the cover the pointer's on.
+                        // Play (or Install), without opening its page: the sun, on the cover the pointer's on.
                         Rectangle {
                             anchors.right: tileCover.right
                             anchors.bottom: tileCover.bottom
@@ -1151,11 +1414,12 @@ MonetWindow {
                             Behavior on opacity { NumberAnimation { duration: Math.round(140 * root.speed) } }
                             Glyph {
                                 anchors.centerIn: parent
-                                anchors.horizontalCenterOffset: 1
+                                anchors.horizontalCenterOffset: tile.toInstall ? 0 : 1
                                 width: 17
                                 height: 17
-                                path: "M8 5.5L18 12 8 18.5z"
-                                filled: true
+                                // A download's arrow for one to install, else Play's triangle.
+                                path: tile.toInstall ? "M12 4v11M7 10.5l5 5 5-5M5 19.5h14" : "M8 5.5L18 12 8 18.5z"
+                                filled: !tile.toInstall
                             }
                             MouseArea {
                                 id: playMouse
@@ -1164,6 +1428,8 @@ MonetWindow {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.play(tile.modelData)
                             }
+                            Accessible.role: Accessible.Button
+                            Accessible.name: tile.toInstall ? i18n("Install") : i18n("Play")
                         }
 
                         Text {
@@ -1209,6 +1475,8 @@ MonetWindow {
                         text: root.query !== "" ? i18n("No game called that")
                             : root.section === "favorites" && root.games.length > 0 ? i18n("No favorites yet")
                             : root.section === "recent" && root.games.length > 0 ? i18n("Nothing played yet")
+                            : root.show === "notinstalled" && root.games.length > 0 ? i18n("All installed")
+                            : root.show === "installed" && root.games.length > 0 ? i18n("Nothing installed here yet")
                             : i18n("No games yet")
                     }
                     Text {
@@ -1220,6 +1488,8 @@ MonetWindow {
                         text: root.query !== "" ? ""
                             : root.section === "favorites" && root.games.length > 0 ? i18n("Tap the star on a game to keep it here.")
                             : root.section === "recent" && root.games.length > 0 ? i18n("The games you play show up here, the latest first.")
+                            : root.show === "notinstalled" && root.games.length > 0 ? i18n("Every game you own here is installed.")
+                            : root.show === "installed" && root.games.length > 0 ? i18n("Choose a game you own and Install, and it shows up here.")
                             : i18n("Install games with Steam, Heroic or Lutris here, or in Windows. They show up here by themselves.")
                     }
                     Pill {
@@ -1326,12 +1596,15 @@ MonetWindow {
             id: veil
             anchors.fill: parent
             color: "#000000"
-            opacity: root.sheetOpen ? 0.32 : 0
+            opacity: root.sheetOpen || root.keyOpen ? 0.32 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: Math.round(240 * root.speed) } }
             MouseArea {
                 anchors.fill: parent
-                onClicked: root.sheetOpen = false
+                onClicked: {
+                    root.sheetOpen = false
+                    root.keyOpen = false
+                }
             }
         }
 
@@ -1468,6 +1741,175 @@ MonetWindow {
                             : root.task === "faceit-setup" ? i18n("Restart & Set up")
                             : root.task === "faceit" || (root.asking && root.asking.windows !== "") ? i18n("Restart & Play") : i18n("Restart")
                         onClicked: moving ? root.showInSteam(root.asking) : root.go()
+                    }
+                }
+            }
+        }
+
+        // Steam's key: how to make it, where it goes, and what Steam said ---------------------------
+        Rectangle {
+            id: keySheet
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.keyOpen ? 0 : 16
+            width: Math.min(540, parent.width - 64)
+            height: keyColumn.implicitHeight + 44
+            radius: 22
+            color: look.paper
+            border.color: look.line
+            opacity: root.keyOpen ? 1 : 0
+            scale: root.keyOpen ? 1 : 0.96
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Math.round((root.keyOpen ? 380 : 200) * root.speed) } }
+            Behavior on scale {
+                NumberAnimation { duration: Math.round(380 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
+            }
+            Behavior on anchors.verticalCenterOffset {
+                NumberAnimation { duration: Math.round(380 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
+            }
+            layer.enabled: visible
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Qt.rgba(0, 0, 0, 0.3)
+                shadowBlur: 1
+                shadowVerticalOffset: 6
+            }
+            Keys.onEscapePressed: root.keyOpen = false
+            // The key's field takes the keys while it's up, and gives them back after.
+            Connections {
+                target: root
+                function onKeyOpenChanged() {
+                    if (root.keyOpen) {
+                        keyInput.clear()
+                        Qt.callLater(() => keyInput.forceActiveFocus())
+                    } else if (root.current !== null) {
+                        gamePage.focusPlay()
+                    } else {
+                        grid.forceActiveFocus()
+                    }
+                }
+            }
+
+            ColumnLayout {
+                id: keyColumn
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 22
+                spacing: 12
+
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: look.ink
+                    font.family: "Fraunces 72pt SuperSoft"
+                    font.pixelSize: 24
+                    text: i18n("See every game you own on Steam")
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: look.ink
+                    opacity: 0.75
+                    font.pixelSize: 14
+                    text: i18n("Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password.")
+                }
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: look.ink
+                    font.pixelSize: 14
+                    lineHeight: 1.15
+                    // The key must be the account's signed in to Steam here (another's sees only public lists).
+                    text: root.owned.name
+                        ? i18n("Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here.", root.owned.name)
+                        : i18n("Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here.")
+                }
+                Pill {
+                    tone: look
+                    iconName: "steam"
+                    text: i18n("Open Steam's key page")
+                    onClicked: Qt.openUrlExternally("https://steamcommunity.com/dev/apikey")
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    Layout.preferredHeight: 40
+                    radius: 12
+                    color: look.dark ? Qt.rgba(1, 1, 1, 0.08) : "#FFFFFF"
+                    border.width: keyInput.activeFocus ? 2 : 1
+                    border.color: keyInput.activeFocus ? look.lily : look.line
+                    TextInput {
+                        id: keyInput
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: look.ink
+                        font.pixelSize: 14
+                        font.family: "monospace"
+                        clip: true
+                        selectByMouse: true
+                        selectionColor: look.lily
+                        maximumLength: 64
+                        echoMode: TextInput.PasswordEchoOnEdit
+                        enabled: !root.keyBusy
+                        Accessible.role: Accessible.EditableText
+                        Accessible.name: i18n("Steam key")
+                        onAccepted: root.saveKey(text)
+                        Keys.onEscapePressed: root.keyOpen = false
+                        Text {
+                            anchors.fill: parent
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                            visible: keyInput.text === "" && keyInput.preeditText === ""
+                            text: root.owned.key === true ? i18n("A key is kept. Paste a new one to change it.") : i18n("Paste your Steam key")
+                            color: look.dim
+                            font.pixelSize: 14
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+                // What Steam said, or how the list is.
+                Text {
+                    horizontalAlignment: Text.AlignLeft
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    visible: text !== ""
+                    color: root.keyProblem !== "" ? (look.dark ? "#FF8A6B" : "#C2410C") : look.dim
+                    font.pixelSize: 13
+                    text: root.keyBusy ? i18n("Asking Steam…")
+                        : root.keyProblem !== "" ? root.keyProblem
+                        : root.owned.key === true && root.owned.state === "ok"
+                            ? i18np("Steam lists %1 game you own.", "Steam lists %1 games you own.", root.owned.count || 0)
+                        : ""
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    spacing: 8
+                    Pill {
+                        visible: root.owned.key === true
+                        tone: look
+                        text: i18n("Forget key")
+                        enabled: !root.keyBusy
+                        onClicked: root.saveKey("")
+                    }
+                    Item { Layout.fillWidth: true }
+                    Pill {
+                        tone: look
+                        text: i18n("Cancel")
+                        onClicked: root.keyOpen = false
+                    }
+                    Pill {
+                        tone: look
+                        kind: "lily"
+                        text: i18n("Save")
+                        enabled: !root.keyBusy && keyInput.text.trim() !== ""
+                        onClicked: root.saveKey(keyInput.text)
                     }
                 }
             }

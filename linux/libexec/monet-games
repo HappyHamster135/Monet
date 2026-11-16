@@ -228,16 +228,22 @@ class Helper(QObject):
 
     @Slot("QVariantList", result=int)
     def run(self, command):
+        return self.feed(command, None)
+
+    @Slot("QVariantList", str, result=int)
+    def feed(self, command, text):
+        """run, handing the program `text` on its stdin: a key or a password never goes on a
+        command line, which anyone on the PC can read."""
         self._next += 1
         ticket = self._next
         program = PROGRAMS.get(str(command[0]) if command else "")
         if program is None:
             self.done.emit(ticket, "", 1, f"not a program Games runs: {command[:1]}")
             return ticket
-        self.start(ticket, program, [str(a) for a in command[1:]])
+        self.start(ticket, program, [str(a) for a in command[1:]], text)
         return ticket
 
-    def start(self, ticket, program, args):
+    def start(self, ticket, program, args, text=None):
         process = QProcess(self)
 
         def finished(code, _status):
@@ -254,6 +260,9 @@ class Helper(QObject):
         process.finished.connect(finished)
         process.errorOccurred.connect(failed)
         process.start(program, args)
+        if text is not None:
+            process.write(str(text).encode("utf-8"))
+            process.closeWriteChannel()
 
 
 class KeptPictures(QQmlNetworkAccessManagerFactory):
@@ -378,12 +387,15 @@ def main():
     server.setSocketOptions(QLocalServer.UserAccessOption)
     server.listen(name)
     helper = Helper()
+    # Whether the window is on screen: Games looks at downloads again only then.
+    activity = WindowActivity()
     answer(server, helper)
     engine = QQmlApplicationEngine()
     pictures = KeptPictures()
     engine.setNetworkAccessManagerFactory(pictures)
     engine.rootContext().setContextObject(words)
     engine.rootContext().setContextProperty("helper", helper)
+    engine.rootContext().setContextProperty("windowActivity", activity)
     engine.rootContext().setContextProperty("art", QUrl.fromLocalFile(f"{DATADIR}/monet/settings/").toString())
     engine.rootContext().setContextProperty("brush", QUrl.fromLocalFile(f"{DATADIR}/monet/textures/brush.png").toString())
     engine.rootContext().setContextProperty("blurBehind", False)
@@ -392,6 +404,7 @@ def main():
     if not engine.rootObjects():
         return 1
     startup = StartupTiming(kind, engine.rootObjects()[0], STARTUP_STARTED)
+    activity.watch(engine.rootObjects()[0])
     glaze(engine.rootObjects()[0], engine.rootContext())
     return app.exec()
 

@@ -1666,7 +1666,7 @@ nothing to download. A right-click (or the Menu key) on a game offers Play on
 Windows for one that plays on both sides, and Show in Steam and Uninstall…
 (Steam's own question, `steam://uninstall/…`) for Steam's. A game
 Steam is downloading says how far it is, with a lily line along its cover,
-looked at again every few seconds while Games is in front; with none yet,
+looked at again every few seconds while Games is on screen; with none yet,
 Open Steam is there to get some. It works from the keys too: typing on the
 covers finds a game; the arrows move a ring between games, Enter or Space opens
 the page of the one it's on (where Enter plays), Esc goes back, the Menu key
@@ -1676,6 +1676,72 @@ The list itself puts the games played in the last 30 days first, newest first,
 then the rest by name (when each was played, as Recently played knows it).
 AreWeAntiCheatYet's list is fetched again in the background when it's three
 days old, so opening Games never waits on the internet but the first time.
+
+**Every game you own, installed or not.** Games is a launcher and a place to
+look through your games, so it lists what each launcher you're signed in to
+says you own, not only what's installed, each marked Installed, Downloading
+(with how far), or Not installed (with its size when the launcher has said).
+Above the covers, All, Installed and Not installed choose which; Recent puts
+what's downloading first, then what's installed, then the rest, each by when
+it was played, and Continue playing only has installed games. A game not
+installed shows its cover faded with Not installed on it, and its sun becomes
+an arrow: Install (or Install with Steam on its page) opens the launcher's own
+installer, where you choose where it goes (`monet-quick install`):
+`steam://install/APPID`; Heroic's `heroic://launch?appName=…&runner=…`, which
+for a game Heroic hasn't installed asks whether to install it and opens its
+install dialog (Heroic's `protocol.ts`); `lutris:install/SERVICE:ID`, which
+installs a game a Lutris service lists. One that's downloading opens the
+launcher's downloads instead (`steam://open/downloads`; Heroic and Lutris
+opened). A game owned in a launcher here and installed in Windows is one game,
+as before; its menu adds Install in Monet when it can play here. One whose
+anti-cheat wants Windows has nothing to install here, and Play asks to go to
+Windows to install it there.
+
+Where each list comes from. **Steam**'s own files only know what's installed:
+each library's `appmanifest_*.acf`, whose StateFlags say ready (4), an update
+waiting (2 with 4), updating or downloading (256, 1024, 262144 and up: adding
+files, preallocating, downloading, staging, committing), paused (512) or
+waiting to start (2 alone), and BytesDownloaded/BytesToDownload how far
+(the flags as Lutris' `docs/steam.rst` lists them). No file Steam documents
+lists what an account owns: Depressurizer reads the account's licenses from
+`localconfig.vdf` and Steam's binary `packageinfo.vdf`/`appinfo.vdf` caches
+(SteamDatabase's SteamAppInfo documents their formats, changed as recently as
+2024), but they cache every account that signed in, keep expired licenses,
+and aren't Valve's to rely on. So the list comes from Valve's documented Web
+API, `IPlayerService/GetOwnedGames` (include_appinfo, include_played_free_games,
+skip_unvetted_apps=false), as Lutris and Playnite do; Lutris ships a key of
+its own, which only sees public profiles, while Playnite asks for the
+person's own key, which Steam answers for its own account even with its game
+details private. Monet does the same: in Games, Add Steam key explains it once
+and opens steamcommunity.com/dev/apikey (Steam asks for a domain name, any will
+do, and for approval in the Steam app on the phone, Steam Guard's mobile
+authenticator being required since 2023). The key goes to `monet-quick
+steam-key` on stdin, never a command line, into `~/.config/monet/steam-key`
+(0600); Forget key removes it and every list it fetched. Never a password.
+The account is the one signed in last (`config/loginusers.vdf`: MostRecent,
+then Timestamp, of Valve's Steam and Flathub's); its list is kept in
+`~/.cache/monet/owned/steam-STEAMID.json` (0600) with when it was fetched,
+asked again in the background (`monet-quick owned-refresh`) when Games opens
+or comes forward, at most every quarter of an hour, and shown from there
+offline. A key Steam turns away (401, 403) or an account whose games it won't
+share (an empty answer: a key from another account, game details private) says
+so above the covers, with Change key; offline, the list kept is used. Play
+time and when it was last played come from the account's `localconfig.vdf`
+too. Covers come from Steam's picture cache, read once per look
+(`steam_pictures`), else its CDN. **Heroic** keeps each store's library in
+`store_cache/{legendary,gog,nile}_library.json`, what you own there, and
+empties it when you sign out of that store, so those are owned; installed is
+`installed.json` as before; the size once installed is in its install
+dialog's cache (`*_install_info.json`, `manifest.disk_size`) when that was
+opened; what's downloading is its download manager's queue
+(`store/download-manager.json`, the first one downloading while Heroic is open,
+the rest waiting); how far, Heroic tells only its own window. **Lutris** lists
+what each service connected to it says you own in `pga.db`'s `service_games`
+(Epic, GOG, Amazon, Humble, itch.io, EA, Ubisoft, Battle.net, ZOOM: not
+Steam's, which Steam's own list has, nor its website's or the desktop's),
+minus what it installed (`games.service`/`service_id`). Downloads are looked
+at again every five seconds only while Games is on screen (WindowActivity, as
+Settings), and a library that came back the same changes nothing on screen.
 
 Monet Bridge's list of Windows' games has Steam's, Epic's, Riot's, GOG's in the
 shared folder, and, found as Playnite finds them: Ubisoft Connect's (its own

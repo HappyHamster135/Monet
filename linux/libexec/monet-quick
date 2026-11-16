@@ -75,6 +75,13 @@
     monet-quick version-open|put-back FILE SNAPSHOT  show or restore the selected version (UTF-8 hex)
     monet-quick game-marks               which games play here and which need Windows (anti-cheat, players' reports), as JSON
     monet-quick library                  every game, Steam's, Heroic's and Lutris' here and Windows', each with where it plays, as JSON
+                                         (every game you own in them too, installed, downloading or not)
+    monet-quick owned-refresh            ask Steam again which games its account here owns, when it's a quarter hour old, as JSON
+    monet-quick steam-key                keep the Steam Web API key given on stdin and ask Steam with it (empty: forget it)
+    monet-quick steam-key-hint-off       Games stops offering to add a Steam key
+    monet-quick install GAME             open a launcher's installer for a game you own: steam:APPID, heroic:RUNNER:APP
+                                         or lutris:SERVICE:ID
+    monet-quick downloads LAUNCHER       open steam's, heroic's or lutris' downloads
     monet-quick favorite GAME on|off     a game among the favorites in Games, or not
     monet-quick protondb-refresh APPID…  (in the background) ask ProtonDB how those Steam games run here, once a week each
     monet-quick steam-share [now]        Windows' Games folder as a library of Steam here (now: closes Steam first)
@@ -4915,12 +4922,15 @@ def under(path, folder):
         return False
 
 
-def heroic_games(roots=HEROIC_ROOTS, shared=SHARED, covers=None):
+def heroic_games(roots=HEROIC_ROOTS, shared=SHARED, covers=None, owned=None):
     """[{runner, app, title, art, namespace, shared}] of each game Heroic installed here, from its
     own files: what's installed per store (and where: in Windows' Games folder, shared), and the
     titles and covers from its library caches. covers, when given, gets the cover of every game
-    in those caches, installed or not, by (store, app): the Epic games Windows has too."""
-    found = {}
+    in those caches, installed or not, by (store, app): the Epic games Windows has too. owned,
+    when given, gets the games those caches list that aren't installed (each store's library
+    cache is what you own there; Heroic empties it when you sign out), the same way, with the
+    size each takes once installed when Heroic's install dialog has said."""
+    found, others = {}, {}
     for root in roots:
         cache = {(runner, str(e.get("app_name", ""))): e
                  for runner, name, key in (("legendary", "legendary_library", "library"),
@@ -4959,6 +4969,19 @@ def heroic_games(roots=HEROIC_ROOTS, shared=SHARED, covers=None):
                                         "namespace": str(namespace or ""),
                                         # Epic's launcher and GOG's own files play these in Windows too.
                                         "shared": runner in ("legendary", "gog") and under(path, shared)}
+        if owned is not None:
+            sizes = heroic_sizes(root)
+            for (runner, app), info in cache.items():
+                title = " ".join(str(info.get("title") or "").split())
+                if runner == "sideload" or (runner, app) in found or info.get("is_dlc") or pick(info, "install").get("is_dlc"):
+                    continue
+                if re.fullmatch(APP, app) and title and title != "???":
+                    others.setdefault((runner, app), {"runner": runner, "app": app, "title": title, "art": web(info.get("art_cover")),
+                                                      "tall": web(info.get("art_square")), "hero": web(info.get("art_background")),
+                                                      "size": sizes.get((runner, app), 0), "namespace": str(info.get("namespace") or ""),
+                                                      "shared": False})
+    if owned is not None:
+        owned.extend(g for key, g in others.items() if key not in found)
     return list(found.values())
 
 
@@ -5016,6 +5039,377 @@ def steam_progress(state):
     return min(99, int(done) * 100 // int(total)) if done.isdigit() and total.isdigit() and int(total) else 0
 
 
+# Steam's StateFlags (as Lutris' docs/steam.rst lists them): 2 update required, 4 fully
+# installed, 256 update running, 512 update paused, 1024 update started, and from 262144 on
+# the steps of a download (adding files, preallocating, downloading, staging, committing).
+STEAM_BUSY = 256 | 1024 | 262144 | 524288 | 1048576 | 2097152 | 4194304
+
+
+def steam_state(state):
+    """What Steam is doing with a game it has a manifest for: "ready" to play, "update" (ready,
+    with an update Steam waits to do), "downloading", "paused" or "waiting" (to download)."""
+    flags = int(state.get("StateFlags", 4)) if str(state.get("StateFlags", 4)).isdigit() else 4
+    if steam_progress(state) is None:
+        return "update" if flags & 2 else "ready"
+    return "paused" if flags & 512 else "downloading" if flags & STEAM_BUSY else "waiting"
+
+
+def steam_pictures(steam):
+    """{appid: {picture's name: file URL}}: Steam's whole picture cache in one look (older Steam
+    keeps appid_name.jpg; newer, appid/name.jpg, sometimes a folder deeper), the older first."""
+    found, cache = {}, steam / "appcache/librarycache"
+    try:
+        with os.scandir(cache) as listing:
+            entries = sorted(listing, key=lambda e: e.name)
+    except OSError:
+        return found
+    for entry in entries:
+        appid, _, name = entry.name.partition("_")
+        if appid.isdigit() and name and entry.is_file():
+            found.setdefault(appid, {})[name] = Path(entry.path).as_uri()
+    for entry in entries:
+        if entry.name.isdigit() and entry.is_dir(follow_symlinks=False):
+            for folder, _, files in sorted(os.walk(entry.path)):
+                for name in sorted(files):
+                    found.setdefault(entry.name, {}).setdefault(name, Path(folder, name).as_uri())
+    return found
+
+
+def first_picture(pictures, appid, *names):
+    """The first of a game's pictures (by name) in steam_pictures' look, or ""."""
+    kept = pictures.get(appid, {})
+    return next((kept[name] for name in names if name in kept), "")
+
+
+# Every game you own ------------------------------------------------------------------
+# Games lists what each launcher you're signed in to says you own, installed or not. Steam's
+# own files know what's installed; what an account owns comes from Steam's Web API
+# (IPlayerService/GetOwnedGames), asked with a key the person makes once for their own account
+# (steamcommunity.com/dev/apikey: Steam then answers for that account even with its game details
+# private), kept in ~/.config/monet/steam-key (0600). Never a password. Steam's answer is kept
+# per account in ~/.cache/monet/owned and asked again in the background when Games opens, at
+# most every quarter of an hour, so Games works offline from it. Heroic's library caches are
+# what each store you're signed in to there says you own (Heroic empties them on signing out),
+# and Lutris' service_games what each service it's connected to says.
+
+STEAM_KEY = CONFIG / "monet/steam-key"
+STEAM_KEY_FORM = re.compile(r"[0-9A-Fa-f]{32}")
+STEAM_KEY_HINT_OFF = CONFIG / "monet/steam-key-hint-off"
+OWNED = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "monet" / "owned"
+OWNED_AGAIN = 15 * 60
+OWNED_URL = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
+STEAM_ID = re.compile(r"7656\d{13}")
+
+
+def value_of(tree, key):
+    """tree[key], the key in any case (Steam's files differ in theirs), or ""."""
+    return next((v for k, v in tree.items() if k.lower() == key.lower()), "") if isinstance(tree, dict) else ""
+
+
+def steam_accounts(steam):
+    """[{id, name, recent, stamp}] of the accounts signed in to Steam on this PC (its
+    config/loginusers.vdf), the one signed in last first: MostRecent, then the latest
+    Timestamp (some Steams stopped writing MostRecent, Lutris found)."""
+    try:
+        users = pick(vdf((steam / "config/loginusers.vdf").read_text(encoding="utf-8", errors="replace")), "users")
+    except OSError:
+        return []
+    found = []
+    for steamid, info in users.items():
+        if STEAM_ID.fullmatch(steamid) and isinstance(info, dict):
+            stamp = str(value_of(info, "Timestamp"))
+            found.append({"id": steamid, "name": " ".join(str(value_of(info, "PersonaName") or value_of(info, "AccountName")).split()),
+                          "recent": str(value_of(info, "MostRecent")) == "1", "stamp": int(stamp) if stamp.isdigit() else 0})
+    return sorted(found, key=lambda a: (a["recent"], a["stamp"]), reverse=True)
+
+
+def steam_account(roots=None):
+    """(Steam's folder, the account signed in to it last), of every Steam here (Valve's own and
+    Flathub's); (None, None) when nobody has signed in to Steam on this PC."""
+    best, seen = (None, None), set()
+    for steam in STEAM_ROOTS if roots is None else roots:
+        try:
+            real = steam.resolve()
+        except OSError:
+            continue
+        if real in seen:
+            continue
+        seen.add(real)
+        accounts = steam_accounts(steam)
+        if accounts and (best[1] is None or (accounts[0]["recent"], accounts[0]["stamp"]) > (best[1]["recent"], best[1]["stamp"])):
+            best = (steam, accounts[0])
+    return best
+
+
+def steam_key():
+    """The Steam Web API key saved in Games, or ""."""
+    try:
+        text = STEAM_KEY.read_text(encoding="ascii").strip()
+    except (OSError, UnicodeDecodeError):
+        return ""
+    return text.upper() if STEAM_KEY_FORM.fullmatch(text) else ""
+
+
+def owned_path(steamid):
+    return OWNED / f"steam-{steamid}.json"
+
+
+def write_private(path, text):
+    """Writes a file only you can read, whole or not at all."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f".{path.name}.{os.getpid()}")
+    temp.unlink(missing_ok=True)
+    with os.fdopen(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), "w", encoding="utf-8") as out:
+        out.write(text)
+    os.replace(temp, path)
+
+
+def save_steam_key(text):
+    """Keeps a Steam Web API key for Games (only you can read it); an empty one forgets the key
+    and the lists of games it fetched. Whether it looked like a key."""
+    text = text.strip()
+    if not text:
+        STEAM_KEY.unlink(missing_ok=True)
+        for kept in OWNED.glob("steam-*.json"):
+            kept.unlink(missing_ok=True)
+        return True
+    if not STEAM_KEY_FORM.fullmatch(text):
+        return False
+    write_private(STEAM_KEY, text.upper() + "\n")
+    return True
+
+
+def owned_kept(steamid):
+    """What Steam last said an account owns: {state, fetched, tried, games: [{appid, name, minutes, last}]}."""
+    kept = read_json(owned_path(steamid))
+    kept = kept if isinstance(kept, dict) else {}
+    games = [g for g in kept.get("games", []) if isinstance(g, dict) and str(g.get("appid", "")).isdigit()
+             and isinstance(g.get("name"), str) and g["name"]] if isinstance(kept.get("games"), list) else []
+    number = lambda key: kept.get(key) if isinstance(kept.get(key), int) else 0
+    return {"state": kept.get("state") if kept.get("state") in ("ok", "private", "key", "offline") else "",
+            "fetched": number("fetched"), "tried": number("tried"), "games": games}
+
+
+def steam_owned_answer(answer):
+    """("ok", games) from GetOwnedGames' answer; ("private", []) when Steam kept the account's
+    games to itself (an empty response); ("offline", None) when it isn't Steam's answer."""
+    response = answer.get("response") if isinstance(answer, dict) else None
+    if not isinstance(response, dict):
+        return "offline", None
+    listed = response.get("games")
+    if not isinstance(listed, list):
+        return ("ok", []) if response.get("game_count") == 0 else ("private", [])
+    games = {}
+    for g in listed:
+        appid = g.get("appid") if isinstance(g, dict) else None
+        name = " ".join(str(g.get("name") or "").split()) if isinstance(g, dict) else ""
+        if not isinstance(appid, int) or isinstance(appid, bool) or appid <= 0 or not name or NOT_GAMES.match(name):
+            continue
+        minutes, last = g.get("playtime_forever"), g.get("rtime_last_played")
+        games[str(appid)] = {"appid": str(appid), "name": name,
+                             "minutes": minutes if isinstance(minutes, int) and minutes > 0 else 0,
+                             "last": last if isinstance(last, int) and last > 0 else 0}
+    return "ok", sorted(games.values(), key=lambda g: int(g["appid"]))
+
+
+def steam_owned_fetch(key, steamid):
+    """Asks Steam's Web API what an account owns: steam_owned_answer's, or ("key", None) when
+    Steam turns the key away. Nothing it says, the key least of all, is printed."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    query = urllib.parse.urlencode({"key": key, "steamid": steamid, "include_appinfo": "true",
+                                    "include_played_free_games": "true", "skip_unvetted_apps": "false", "format": "json"})
+    request = urllib.request.Request(f"{OWNED_URL}?{query}", headers={"User-Agent": "Monet"})
+    try:
+        with urllib.request.urlopen(request, timeout=20) as answer:
+            return steam_owned_answer(json.loads(answer.read().decode("utf-8")))
+    except urllib.error.HTTPError as error:
+        return ("key", None) if error.code in (401, 403) else ("offline", None)
+    except (OSError, ValueError):
+        return "offline", None
+
+
+def steam_owned_status(account, kept, changed=False):
+    """What Games says about Steam's list: whether someone's signed in to Steam here, as whom,
+    whether there's a key, what Steam said last and when, how many games."""
+    return {"steam": account is not None, "name": account["name"] if account else "", "key": bool(steam_key()),
+            "hint": not STEAM_KEY_HINT_OFF.exists(), "state": kept["state"] if kept else "",
+            "fetched": kept["fetched"] if kept else 0, "count": len(kept["games"]) if kept else 0, "changed": changed}
+
+
+def steam_owned_refresh(force=False, fetch=None, now=None):
+    """Asks Steam which games the account signed in to it here owns, unless it was asked within
+    the last quarter of an hour (force: now), and keeps what it says. Its status (changed: the
+    list or what Steam said is new). Never waits on another one asking."""
+    import fcntl
+    _, account = steam_account()
+    if account is None:
+        return steam_owned_status(None, None)
+    kept, key = owned_kept(account["id"]), steam_key()
+    now = time.time() if now is None else now
+    if not key or (not force and 0 <= now - kept["tried"] < OWNED_AGAIN):
+        return steam_owned_status(account, kept)
+    OWNED.mkdir(parents=True, exist_ok=True)
+    with open(OWNED / "steam.lock", "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return steam_owned_status(account, kept)
+        state, games = (fetch or steam_owned_fetch)(key, account["id"])
+        new = dict(kept, state=state, tried=int(now))
+        if state == "ok":
+            new.update(games=games, fetched=int(now))
+        elif state == "private":
+            new.update(games=[])  # not this account's list: none kept
+        write_private(owned_path(account["id"]), json.dumps(new))
+    return steam_owned_status(account, new, changed=new["games"] != kept["games"] or state != kept["state"])
+
+
+def steam_owned(roots=None):
+    """{appid: {name, minutes, last}} of the games the account signed in to Steam here owns, as
+    Steam last said (offline too), with when each was played last and for how long from the
+    account's own files where they know more; {} without a list."""
+    steam, account = steam_account(roots)
+    if account is None:
+        return {}
+    games = {g["appid"]: {"name": g["name"], "minutes": g.get("minutes", 0) if isinstance(g.get("minutes"), int) else 0,
+                          "last": g.get("last", 0) if isinstance(g.get("last"), int) else 0}
+             for g in owned_kept(account["id"])["games"] if not NOT_GAMES.match(g["name"])}
+    if games:
+        last, minutes = steam_stats(steam)
+        for appid, g in games.items():
+            g.update(last=max(g["last"], last.get(appid, 0)), minutes=max(g["minutes"], minutes.get(appid, 0)))
+    return games
+
+
+# Heroic: what's downloading. Its download manager keeps its queue in store/download-manager.json
+# (the one it's on first); how far it is, it only tells its own window.
+
+def heroic_running():
+    """Whether Heroic is open (its own, or Flathub's)."""
+    for comm in Path("/proc").glob("[0-9]*/comm"):
+        try:
+            if comm.read_text().strip() == "heroic":
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def heroic_downloads(roots=None, running=None):
+    """{(runner, app): (state, bytes)} of the games in Heroic's downloads: "downloading" (the one
+    it's on, while Heroic is open), "paused", or "waiting" (its turn hasn't come, or Heroic is closed)."""
+    found = {}
+    for root in HEROIC_ROOTS if roots is None else roots:
+        queue = read_json(root / "store/download-manager.json")
+        queue = listed(queue, "queue") if isinstance(queue, dict) else []
+        if queue and running is None:
+            running = heroic_running()
+        for at, element in enumerate(queue):
+            params = element.get("params") if isinstance(element.get("params"), dict) else {}
+            runner, app = str(params.get("runner", "")), str(params.get("appName", ""))
+            if runner not in ("legendary", "gog", "nile") or not re.fullmatch(APP, app):
+                continue
+            state = ("paused" if element.get("status") == "paused" or element.get("pausedAt")
+                     else "downloading" if at == 0 and running and element.get("startTime") else "waiting")
+            found.setdefault((runner, app), (state, byte_size(params.get("size"))))
+    return found
+
+
+def heroic_sizes(root):
+    """{(runner, app): bytes} a game takes once installed, from Heroic's install dialog's cache
+    (only for the games that dialog was opened for)."""
+    found = {}
+    for runner, name in (("legendary", "legendary_install_info"), ("gog", "gog_install_info"), ("nile", "nile_install_info")):
+        kept = read_json(root / f"store_cache/{name}.json")
+        for key, info in kept.items() if isinstance(kept, dict) else []:
+            size = pick(info, "manifest").get("disk_size") if isinstance(info, dict) else None
+            if isinstance(size, int) and not isinstance(size, bool) and size > 0:
+                # GOG's are kept per platform: appName_windows.
+                found.setdefault((runner, key.rsplit("_", 1)[0] if runner == "gog" and "_" in key else key), size)
+    return found
+
+
+# Lutris: the games each service connected to it says you own (service_games), but Steam's, which
+# Steam's own list has, and its own website's and the desktop's, which aren't purchases.
+LUTRIS_SERVICES = {"egs": "epic", "gog": "gog", "amazon": "amazon", "humblebundle": "lutris", "itchio": "lutris",
+                   "ea_app": "lutris", "ubisoft": "lutris", "battlenet": "lutris", "zoom": "lutris"}
+
+
+def lutris_owned(roots=None):
+    """[{service, appid, title, store}] of the games Lutris' services list that Lutris hasn't installed."""
+    import sqlite3
+    found = {}
+    for root in LUTRIS_ROOTS if roots is None else roots:
+        db = root / "pga.db"
+        if not db.is_file():
+            continue
+        try:
+            conn = sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True, timeout=2)
+            try:
+                rows = conn.execute("SELECT service, appid, name FROM service_games").fetchall()
+                here = set(conn.execute("SELECT service, service_id FROM games WHERE installed = 1").fetchall())
+            finally:
+                conn.close()
+        except sqlite3.Error:
+            continue
+        for service, appid, name in rows:
+            appid, name = str(appid or ""), " ".join(str(name or "").split())
+            if service in LUTRIS_SERVICES and re.fullmatch(APP, appid) and name and (service, appid) not in here:
+                found.setdefault((service, appid), {"service": service, "appid": appid, "title": name,
+                                                    "store": LUTRIS_SERVICES[service]})
+    return list(found.values())
+
+
+# Installing: the launcher's own installer, where you choose where it goes. Steam's install
+# dialog (steam://install/ID); Heroic's (its heroic://launch of a game it hasn't installed asks
+# whether to install it, then opens its install dialog: protocol.ts); Lutris' (lutris:install/
+# SERVICE:ID installs the game that service lists).
+INSTALLABLE = re.compile(rf"steam:(\d+)|heroic:(legendary|gog|nile):({APP})|lutris:({'|'.join(LUTRIS_SERVICES)}):({APP})")
+
+
+def launcher_commands(launcher):
+    """How to open a launcher, its own first, then Flathub's, then whatever opens its links."""
+    if launcher == "steam":
+        commands = [["steam"], ["flatpak", "run", "com.valvesoftware.Steam"]]
+    elif launcher == "heroic":
+        flatpak = [["flatpak", "run", HEROIC_APP]] if shutil.which("flatpak") and run("flatpak", "info", HEROIC_APP) is not None else []
+        commands = [["heroic"], *flatpak]
+    else:
+        commands = [["lutris"], ["flatpak", "run", LUTRIS_APP]]
+    return [c for c in commands if shutil.which(c[0])] + [["xdg-open"]]
+
+
+def hand_to(launcher, url):
+    for command in launcher_commands(launcher):
+        if shutil.which(command[0]):
+            subprocess.Popen(command + [url], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+    return False
+
+
+def install(game):
+    """Opens the launcher's own installer for a game you own (INSTALLABLE)."""
+    appid, runner, app, service, key = INSTALLABLE.fullmatch(game).groups()
+    if appid:
+        return hand_to("steam", f"steam://install/{appid}")
+    if runner:
+        return hand_to("heroic", f"heroic://launch?appName={app}&runner={runner}")
+    return hand_to("lutris", f"lutris:install/{service}:{key}")
+
+
+def open_downloads(launcher):
+    """Where a launcher shows its downloads: Steam's Downloads page; Heroic and Lutris, opened."""
+    if launcher == "steam":
+        return hand_to("steam", "steam://open/downloads")
+    for command in launcher_commands(launcher):
+        if command[0] != "xdg-open":
+            subprocess.Popen(command, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+    return False
+
+
 RECENT = 30 * 86400  # played within it: first in the gallery
 FAVORITES = CONFIG / "monet/favorite-games.json"
 
@@ -5038,7 +5432,8 @@ def favorite(game, on):
 
 
 def library(marks=None, steam=None, heroic=None, windows=None, shared=None, movable=None, lutris=None, progress=None,
-            reports=None, lasts=None, now=None, minutes=None, liked=None, sizes=None, roots=None):
+            reports=None, lasts=None, now=None, minutes=None, liked=None, sizes=None, roots=None,
+            owned=None, heroic_owned=None, lutris_owned_games=None, states=None, downloads=None, pictures=None):
     """[{id, name, store, plays, why, here, windows, shared, move, progress, art}], by name:
     `plays` is "monet" or "windows", `why` what sends one installed here to Windows ("anticheat",
     or "reports": players report it doesn't run here), `here` starts it in Monet (`monet-quick
@@ -5048,54 +5443,112 @@ def library(marks=None, steam=None, heroic=None, windows=None, shared=None, mova
     far Steam is with downloading it (percent; null when it's ready). For the Games window: `last`
     (when it was last played, Unix time; lasts), `minutes` played (on both sides), `size` on disk
     in bytes (0 when unknown), `favorite`, and `tall` and `hero`, its tall cover and its wide
-    picture ("" when there's none). The games played lately (within RECENT) come first, newest
-    first; then the rest by name."""
+    picture ("" when there's none). Every game you own is there, installed or not: `state` is
+    "ready" (installed here or in Windows), "update" (ready, an update waiting), "downloading",
+    "paused", "waiting" (to download) or "owned" (not installed); `install` hands one not
+    installed here to its launcher's installer (`monet-quick install`; "" when it can't play
+    here), and `launcher` is the launcher that has it ("steam", "heroic" or "lutris"; "" for
+    Windows'). owned is Steam's {appid: {name, minutes, last}}, heroic_owned and
+    lutris_owned_games Heroic's and Lutris' games not installed, states Steam's state of each
+    game it has (steam_state), downloads Heroic's (heroic_downloads). The games played lately
+    (within RECENT) come first, newest first; then the rest by name, the installed ones first."""
     marks = anticheat() if marks is None else marks
+    looking = heroic is None  # what's on this PC, rather than what a caller gave
     if steam is None:
         found = list(steam_games())
         steam = {appid: name for _, appid, name, _ in found}
         progress = {appid: steam_progress(state) for _, appid, _, state in found}
-        sizes = {appid: int(state["SizeOnDisk"]) for _, appid, _, state in found if str(state.get("SizeOnDisk", "")).isdigit()}
+        states = {appid: steam_state(state) for _, appid, _, state in found}
+        sizes = {appid: int(state["SizeOnDisk"]) for _, appid, _, state in found if str(state.get("SizeOnDisk", "")).isdecimal()}
         roots = {appid: root for root, appid, _, _ in found}
         reports = proton_reports(found) if reports is None else reports
-    progress, reports, sizes, roots = progress or {}, reports or {}, sizes or {}, roots or {}
+        owned = steam_owned() if owned is None else owned
+        if pictures is None:
+            account_root = steam_account()[0]
+            pictures = {root: steam_pictures(root) for root in {*roots.values(), *([account_root] if account_root else [])}}
+            pictures[None] = pictures.get(account_root, {})
+    progress, reports, sizes, roots, owned = progress or {}, reports or {}, sizes or {}, roots or {}, owned or {}
+    states, pictures = states or {}, pictures or {}
     covers = {}
-    heroic = heroic_games(covers=covers) if heroic is None else heroic
+    if heroic is None:
+        mine = [] if heroic_owned is None else None
+        heroic = heroic_games(HEROIC_ROOTS, SHARED, covers=covers, owned=mine)
+        heroic_owned = mine if heroic_owned is None else heroic_owned
+    heroic_owned = heroic_owned or []
+    if downloads is None:
+        downloads = heroic_downloads() if looking else {}
     if windows is None:
-        windows = windows_games()
+        windows = windows_games(WINDOWS_GAMES)
         # Battle.net's and EA's games in the shared Games folder, before Windows lists them itself.
-        windows += [g for g in shared_battlenet() + shared_ea() if g["id"] not in {w["id"] for w in windows}]
-    lutris = lutris_games() if lutris is None else lutris
-    shared = shared_steam_ids() if shared is None else shared
-    movable = (shared_here() and SHARED in steam_libraries(OWN_STEAM)) if movable is None else movable
+        windows += [g for g in shared_battlenet(SHARED) + shared_ea(SHARED) if g["id"] not in {w["id"] for w in windows}]
+    if lutris is None:
+        lutris = lutris_games(LUTRIS_ROOTS)
+        lutris_owned_games = lutris_owned() if lutris_owned_games is None else lutris_owned_games
+    lutris_owned_games = lutris_owned_games or []
+    shared = shared_steam_ids(SHARED) if shared is None else shared
+    movable = (shared_here(SHARED) and SHARED in steam_libraries(OWN_STEAM)) if movable is None else movable
+
+    def picture(appid, *names):
+        return first_picture(pictures.get(roots.get(appid), pictures.get(None, {})), appid, *names)
+
+    def cached(appid, *names):
+        # From Steam's picture cache (one look at it when there's a list of it), else Steam's CDN.
+        root = roots.get(appid)
+        return picture(appid, *names) if pictures else (root and steam_cached(root, appid, *names)) or ""
+
     games = {}
     for appid, name in steam.items():
-        root = roots.get(appid)
-        games[f"steam:{appid}"] = {"name": name, "store": "steam", "here": f"steam:{appid}",
+        state = states.get(appid) or ("downloading" if isinstance(progress.get(appid), int) else "ready")
+        games[f"steam:{appid}"] = {"name": name, "store": "steam", "here": f"steam:{appid}", "launcher": "steam",
                                    "art": STEAM_ART.format(appid), "mark": marks.get(appid) or reports.get(appid),
                                    "why": "anticheat" if marks.get(appid) else "reports", "progress": progress.get(appid),
-                                   "size": sizes.get(appid, 0),
-                                   "tall": (root and steam_cached(root, appid, *STEAM_TALLS)) or STEAM_TALL.format(appid),
-                                   "hero": (root and steam_cached(root, appid, "library_hero.jpg")) or STEAM_HERO.format(appid)}
+                                   "size": sizes.get(appid, 0), "state": state,
+                                   "tall": cached(appid, *STEAM_TALLS) or STEAM_TALL.format(appid),
+                                   "hero": cached(appid, "library_hero.jpg") or STEAM_HERO.format(appid)}
         if appid in shared:
             # Windows' Steam plays it from the same folder (Monet Bridge adds it there).
             games[f"steam:{appid}"].update(windows=f"steam:{appid}", shared=True)
+    for appid, info in owned.items():
+        # What the account owns that isn't installed here: Steam's install dialog gets it. (One
+        # that is: when it was played and for how long, as Steam counts it on every PC.)
+        games.setdefault(f"steam:{appid}", {"name": info["name"], "store": "steam", "here": "", "install": f"steam:{appid}",
+                                            "launcher": "steam", "art": STEAM_ART.format(appid), "mark": marks.get(appid),
+                                            "state": "owned",
+                                            "tall": cached(appid, *STEAM_TALLS) or STEAM_TALL.format(appid),
+                                            "hero": cached(appid, "library_hero.jpg") or STEAM_HERO.format(appid)})
+        games[f"steam:{appid}"].update(last=info.get("last", 0), minutes=info.get("minutes", 0))
     for g in heroic:
         store = HEROIC_STORES[g["runner"]]
         games.setdefault(f"{store}:{g['app']}", {"name": g["title"], "store": store, "here": f"heroic:{g['runner']}:{g['app']}",
-                                                 "art": g["art"], "mark": marks.get("epic/" + g["namespace"]),
-                                                 "tall": g.get("tall", ""), "hero": g.get("hero", ""), "size": g.get("size", 0)})
+                                                 "launcher": "heroic", "art": g["art"], "mark": marks.get("epic/" + g["namespace"]),
+                                                 "tall": g.get("tall", ""), "hero": g.get("hero", ""), "size": g.get("size", 0),
+                                                 # Updating, it's in Heroic's downloads too.
+                                                 "state": downloads.get((g["runner"], g["app"]), ("ready",))[0]})
         if g.get("shared"):
             # Monet Bridge hands it to Windows from the same folder.
             games[f"{store}:{g['app']}"].update(windows=f"{store}:{g['app']}", shared=True)
+    for g in heroic_owned:
+        store = HEROIC_STORES[g["runner"]]
+        state, size = downloads.get((g["runner"], g["app"]), ("owned", 0))
+        games.setdefault(f"{store}:{g['app']}", {"name": g["title"], "store": store, "here": "", "launcher": "heroic",
+                                                 "install": f"heroic:{g['runner']}:{g['app']}", "art": g.get("art", ""),
+                                                 "mark": marks.get("epic/" + g.get("namespace", "")), "tall": g.get("tall", ""),
+                                                 "hero": g.get("hero", ""), "size": g.get("size", 0) or size, "state": state})
     for g in lutris:
-        games[f"lutris:{g['id']}"] = {"name": g["title"], "store": "lutris", "here": f"lutris:{g['id']}",
-                                      "art": g["art"], "mark": None, "tall": g.get("tall", "")}
+        games[f"lutris:{g['id']}"] = {"name": g["title"], "store": "lutris", "here": f"lutris:{g['id']}", "launcher": "lutris",
+                                      "art": g["art"], "mark": None, "tall": g.get("tall", ""), "state": "ready"}
+    for g in lutris_owned_games:
+        # Epic's, GOG's and Amazon's are the same games Heroic and Windows list.
+        key = f"{g['store']}:{g['appid']}" if g["store"] != "lutris" else f"lutris:{g['service']}.{g['appid']}"
+        art, tall = covers.get((g["store"], g["appid"]), ("", ""))
+        games.setdefault(key, {"name": g["title"], "store": g["store"], "here": "", "launcher": "lutris",
+                               "install": f"lutris:{g['service']}:{g['appid']}", "art": art, "tall": tall, "mark": None,
+                               "state": "owned"})
     for g in windows:
         store, _, key = g["id"].partition(":")
         steam_id = key if store == "steam" else None
         art, tall = covers.get((store, key), ("", ""))
-        games.setdefault(g["id"], {"name": g["name"], "store": store, "here": "",
+        games.setdefault(g["id"], {"name": g["name"], "store": store, "here": "", "launcher": "",
                                    "art": STEAM_ART.format(key) if steam_id else art,
                                    "tall": STEAM_TALL.format(key) if steam_id else tall,
                                    "hero": STEAM_HERO.format(key) if steam_id else "",
@@ -5103,26 +5556,37 @@ def library(marks=None, steam=None, heroic=None, windows=None, shared=None, mova
         games[g["id"]]["windows"] = g["id"]
         games[g["id"]]["locate"] = g.get("locate", "")
         games[g["id"]]["windows_minutes"] = g.get("minutes", 0)
+        if games[g["id"]].get("state", "owned") == "owned":
+            games[g["id"]]["state"] = "ready"  # installed in Windows
     lasts, now = lasts or {}, time.time() if now is None else now
     minutes, liked = minutes or {}, favorites() if liked is None else liked
 
     def played_for(key, g):
         # Steam counts an account's time on every PC, Windows' too; anything else, each side its own.
-        here, there = minutes.get(key, 0), g.get("windows_minutes", 0)
+        here, there = max(minutes.get(key, 0), g.get("minutes", 0)), g.get("windows_minutes", 0)
         return max(here, there) if g["store"] == "steam" else here + there
 
-    def order(game):
-        last = lasts.get(game["id"], 0)
-        return (0, -last, "") if now - last < RECENT else (1, 0, game["name"].lower())
+    def plays(g):
+        # Where it plays, or would once installed: Windows for one whose anti-cheat wants it.
+        if g["here"]:
+            return "windows" if g["mark"] == "windows" else "monet"
+        return "windows" if g.get("windows") or g["mark"] == "windows" or not g.get("install") else "monet"
 
-    return sorted(({"id": key, "name": g["name"], "store": g["store"],
-                    "plays": "monet" if g["here"] and g["mark"] != "windows" else "windows",
+    def order(game):
+        last = game["last"]
+        return ((0, -last, "") if now - last < RECENT and game["state"] != "owned"
+                else (2 if game["state"] == "owned" else 1, 0, game["name"].lower()))
+
+    return sorted(({"id": key, "name": g["name"], "store": g["store"], "plays": plays(g),
                     "why": g.get("why", "anticheat") if g["here"] and g["mark"] == "windows" else "",
                     "here": g["here"], "windows": g.get("windows", ""), "shared": g.get("shared", False),
-                    "move": movable and g["store"] == "steam" and g["mark"] == "windows" and not g.get("windows"),
+                    "move": movable and bool(g["here"]) and g["store"] == "steam" and g["mark"] == "windows" and not g.get("windows"),
                     "progress": g.get("progress"), "locate": g.get("locate", ""), "art": g["art"],
-                    "last": lasts.get(key, 0), "minutes": played_for(key, g), "size": g.get("size", 0),
-                    "favorite": key in liked, "tall": g.get("tall", ""), "hero": g.get("hero", "")}
+                    "last": max(lasts.get(key, 0), g.get("last", 0)), "minutes": played_for(key, g), "size": g.get("size", 0),
+                    "favorite": key in liked, "tall": g.get("tall", ""), "hero": g.get("hero", ""),
+                    "state": g.get("state", "ready"), "launcher": g.get("launcher", ""),
+                    # Installed here already, or it can't play here: nothing to install.
+                    "install": g.get("install", "") if not g["here"] and g["mark"] != "windows" else ""}
                    for key, g in games.items()), key=order)
 
 
@@ -9009,6 +9473,21 @@ def main(argv):
             subprocess.Popen(["sh", "-c", '"$0" epic-share; "$0" wine-share; "$0" launchers', quick],
                              start_new_session=True, stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "owned-refresh":
+        # (Games, when it opens) Steam's list of what the account owns, asked again when it's old.
+        emit(steam_owned_refresh())
+    elif cmd == "steam-key":
+        # The key comes on stdin, never the command line (which anyone on the PC can read):
+        # kept, then Steam asked with it straight away. Empty: forgotten.
+        saved = save_steam_key(sys.stdin.read(4096))
+        emit(dict(steam_owned_refresh(force=True) if saved else steam_owned_refresh(), saved=saved))
+    elif cmd == "steam-key-hint-off":
+        STEAM_KEY_HINT_OFF.parent.mkdir(parents=True, exist_ok=True)
+        STEAM_KEY_HINT_OFF.write_text("")
+    elif cmd == "install" and args and INSTALLABLE.fullmatch(args[0]):
+        install(args[0])
+    elif cmd == "downloads" and args and args[0] in ("steam", "heroic", "lutris"):
+        open_downloads(args[0])
     elif cmd == "anticheat-refresh":
         anticheat(fetch=True)
     elif cmd == "protondb-refresh":

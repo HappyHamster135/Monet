@@ -1,5 +1,6 @@
 /*
- * A game's own page in Games: its wide picture with its name on it, Play, where it plays,
+ * A game's own page in Games: its wide picture with its name on it, Play (Install for one you
+ * own but haven't installed, its downloads for one on its way), where it plays,
  * when it was last played, how long it's been played and how much room it takes, and what
  * else there is to do with it (the star, and its menu). Counter-Strike 2's has FACEIT too,
  * whose matches and anti-cheat only run in Windows: whether it's set up there, what it needs,
@@ -18,8 +19,14 @@ Flickable {
     property var tone
     property var game: ({})
     readonly property bool both: game.plays === "monet" && game.windows !== ""
-    // What's worth knowing about where it plays, or how its download is going.
-    readonly property string note: typeof game.progress === "number" ? i18n("Steam is downloading it: %1%.", game.progress)
+    // Owned, not installed: Install opens its launcher's installer.
+    readonly property bool toInstall: game.state === "owned" && !!game.install
+    // What's worth knowing about where it plays, how its download is going, or how to get it.
+    readonly property string note: game.state === "paused" ? i18n("Its download is paused in %1.", app.launcherName(game))
+        : game.state === "waiting" ? i18n("It's waiting its turn in %1's downloads.", app.launcherName(game))
+        : typeof game.progress === "number" ? i18n("Steam is downloading it: %1%.", game.progress)
+        : game.state === "downloading" ? i18n("%1 is downloading it.", app.launcherName(game))
+        : toInstall ? i18n("You own it, and it isn't installed yet. Install opens %1, which downloads it.", app.launcherName(game))
         : game.move && game.why === "reports"
             ? i18n("Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download.")
         : game.move
@@ -40,7 +47,7 @@ Flickable {
         [i18n("Plays on"), both ? i18n("Monet and Windows") : game.plays === "monet" ? "Monet" : "Windows"],
         [i18n("Last played"), app.lastText(game.last)],
         [i18n("Play time"), app.timeText(game.minutes)],
-        [i18n("Size on disk"), app.sizeText(game.size)]
+        [game.state === "owned" ? i18n("Size once installed") : i18n("Size on disk"), app.sizeText(game.size)]
     ].filter(s => s[1] !== "")
 
     // FACEIT, on Counter-Strike 2's page when there's a Windows to play it in (Games' faceit).
@@ -252,7 +259,9 @@ Flickable {
                     id: play
                     size: 17
                     speed: page.tone.speed
-                    text: page.game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")
+                    text: page.toInstall ? i18n("Install with %1", page.app.launcherName(page.game))
+                        : page.app.busy(page.game) && page.game.launcher ? i18n("Show downloads")
+                        : page.game.plays === "windows" ? i18n("Play on Windows") : i18n("Play in Monet")
                     onClicked: page.app.play(page.game)
                 }
                 Item { Layout.fillWidth: true }
