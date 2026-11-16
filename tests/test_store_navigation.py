@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QT = navigation.QT
 if QT:
     from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Qt, Q_ARG, Signal, Slot
-    from PySide6.QtGui import QFontDatabase, QImage
+    from PySide6.QtGui import QAccessible, QFontDatabase, QImage
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtTest import QTest
 
@@ -222,6 +222,85 @@ class StoreNavigation(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Escape); QTest.qWait(50)
         self.assertEqual(self.window.property("pageId"), "")
         self.assertTrue(self.item("storeSearch").hasActiveFocus())
+
+    def test_back_by_keys_lands_on_the_name_of_the_section_shown(self):
+        home, games = self.item("storeSection-home"), self.item("storeSection-games")
+        home.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(50)
+        games.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(50)
+        self.assertEqual(self.window.property("section"), "games")
+        QTest.keyClick(self.window, Qt.Key_Left, Qt.AltModifier); QTest.qWait(100)
+        self.assertEqual(self.window.property("section"), "home")
+        # The keys move to the section now shown, so a screen reader says where Back went.
+        self.wait_for(home.hasActiveFocus)
+        face = QAccessible.queryAccessibleInterface(home)
+        self.assertEqual((face.role(), face.text(QAccessible.Name)), (QAccessible.PageTab, "Monet's picks"))
+        self.assertTrue(face.state().focused and face.state().selected)
+        QTest.keyClick(self.window, Qt.Key_Right, Qt.AltModifier); QTest.qWait(100)
+        self.assertEqual(self.window.property("section"), "games")
+        self.wait_for(games.hasActiveFocus)
+        # In the search, Backspace (Back on some systems) and Shift+Backspace only edit the words.
+        search = self.item("storeSearch"); search.forceActiveFocus(Qt.TabFocusReason)
+        for key in (Qt.Key_Backspace, Qt.Key_F, Qt.Key_I, Qt.Key_X):
+            QTest.keyClick(self.window, key)
+        QTest.keyClick(self.window, Qt.Key_Backspace); QTest.qWait(50)
+        self.assertEqual(self.window.property("query"), "fi")
+        QTest.keyClick(self.window, Qt.Key_Backspace, Qt.ShiftModifier); QTest.qWait(50)
+        self.assertEqual((self.window.property("query"), self.window.property("section")), ("f", "games"))
+        self.assertTrue(search.hasActiveFocus())
+
+    def test_back_and_forward_keep_the_keys_where_they_were_on_an_app_page(self):
+        self.shop.apps[0]["similar"] = [self.shop.apps[1]]
+        QMetaObject.invokeMethod(self.window, "chooseSection", Q_ARG("QVariant", "home")); QTest.qWait(50)
+        card = self.item("storeRanked-" + self.shop.apps[0]["id"])
+        card.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(80)
+        page, gallery = self.item("storeAppPage"), self.item("storeScreenshotGallery")
+        QTest.keyClick(self.window, Qt.Key_Tab); QTest.qWait(80)
+        self.assertTrue(gallery.hasActiveFocus())
+        where = page.property("contentY")
+        QTest.keyClick(self.window, Qt.Key_Left, Qt.AltModifier); QTest.qWait(100)
+        self.wait_for(card.hasActiveFocus)
+        QTest.keyClick(self.window, Qt.Key_Right, Qt.AltModifier); QTest.qWait(100)
+        self.assertEqual(self.window.property("pageId"), self.shop.apps[0]["id"])
+        # Forward: the keys on the screenshots again, and the page just where it was.
+        self.wait_for(gallery.hasActiveFocus)
+        QTest.qWait(50)
+        self.assertAlmostEqual(page.property("contentY"), where, delta=1)
+        # Back from an app chosen under More like this: the keys on its card again, in view.
+        similar = self.item("storeSimilar-" + self.shop.apps[1]["id"])
+        similar.forceActiveFocus(Qt.TabFocusReason); QTest.qWait(80)
+        where = page.property("contentY")
+        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(80)
+        self.assertEqual(self.window.property("pageId"), self.shop.apps[1]["id"])
+        QTest.keyClick(self.window, Qt.Key_Escape); QTest.qWait(100)
+        self.assertEqual(self.window.property("pageId"), self.shop.apps[0]["id"])
+        self.wait_for(lambda: self.window.activeFocusItem().objectName() == "storeSimilar-" + self.shop.apps[1]["id"])
+        QTest.qWait(50)
+        self.assertAlmostEqual(page.property("contentY"), where, delta=1)
+        self.assert_visible_in(self.window.activeFocusItem(), page)
+
+    def test_only_the_way_back_is_called_back_and_the_screenshot_arrows_keep_the_keys(self):
+        shot = self.shop.apps[0]["screenshots"][0]
+        self.shop.apps[0]["screenshots"] = [dict(shot, caption=name) for name in ("First", "Second", "Third")]
+        self.open_app()
+        named = {}
+        todo = [self.item("storeAppPage")]
+        while todo:
+            item = todo.pop(); todo.extend(item.childItems())
+            face = QAccessible.queryAccessibleInterface(item) if item.isVisible() else None
+            if face and face.role() == QAccessible.Button:
+                named.setdefault(face.text(QAccessible.Name), []).append(item.objectName())
+        self.assertEqual(named.get("Back"), ["storeBack"])
+        self.assertEqual(named.get("Previous screenshot"), ["storeShotPrevious"])
+        self.assertEqual(named.get("Next screenshot"), ["storeShotNext"])
+        # Enter on Next to the last one: Next can't go on, and the keys go to Previous.
+        after = self.item("storeShotNext"); after.forceActiveFocus(Qt.TabFocusReason)
+        for _ in range(2):
+            QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(30)
+        gallery = QAccessible.queryAccessibleInterface(self.item("storeScreenshotGallery"))
+        self.assertEqual(gallery.text(QAccessible.Name), "Third")
+        self.wait_for(self.item("storeShotPrevious").hasActiveFocus)
+        QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(30)
+        self.assertEqual(gallery.text(QAccessible.Name), "Second")
 
     def test_featured_card_opens_details_by_keyboard_and_receives_back_focus(self):
         self.shop.featured = self.shop.apps[0]; self.shop.loaded.emit()

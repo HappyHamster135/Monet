@@ -61,7 +61,6 @@ MonetWindow {
     property var windowsApps: []
     // A screenshot shown big.
     property string picture: ""
-    property Item appReturnFocus: null
     property int navigationRevision: 0
     // What this start was asked for, until the catalog's read.
     property string pending: firstPage
@@ -283,19 +282,53 @@ MonetWindow {
         if (!app)
             return
         if (!at && id !== pageId) remember()
-        navigationRevision++
-        if (pageId === "" && !appReturnFocus) appReturnFocus = activeFocusItem
+        const revision = ++navigationRevision
         pageApp = app
         pageFacts = {}
         pageId = id
         appPage.contentY = 0
         appPage.shown = 0
         shop.learn(id)
-        if (at) {
-            const revision = navigationRevision
-            Qt.callLater(() => { if (revision === root.navigationRevision) appPage.contentY = root.beginning(appPage) + at.y })
+        Qt.callLater(() => {
+            if (root.pageId !== id || revision !== root.navigationRevision) return
+            // Back or Forward: the keys where they were on the page; and the page where it was,
+            // kept there until it's all laid out again, as a list's place is (`settling`).
+            const focus = at && root.picture === "" ? root.focusIn(appPage, at) : null
+            if (focus) {
+                root.leftBehind = focus
+                focus.forceActiveFocus(Qt.BacktabFocusReason)
+            } else if (root.picture === "") {
+                appPage.focusFirst()
+            }
+            if (at) {
+                // What had the keys was in view there, or left behind by a scroll: it stays put.
+                settling.place = { view: appPage, y: at.y, revision: revision, focus: null }
+                settling.tries = 0
+                settling.settle()
+            }
+        })
+    }
+    // What had the keys in a place, if it's still there and in `view`; or the control of the
+    // same name there now (an app's More like this is made again for each app).
+    function focusIn(view, at) {
+        let focus = at.focus && at.focus.visible && at.focus.enabled ? at.focus : null
+        if (!focus && at.focusName !== "")
+            focus = named(view, at.focusName)
+        for (let item = focus; item; item = item.parent)
+            if (item === view) return focus
+        return null
+    }
+    function named(item, name) {
+        if (item.objectName === name && item.visible && item.enabled) return item
+        for (const child of item.children) {
+            const found = child.visible ? named(child, name) : null
+            if (found) return found
         }
-        Qt.callLater(() => { if (root.picture === "" && root.pageId === id) appPage.focusFirst() })
+        return null
+    }
+    // A section's name in the side, to give the keys to.
+    function sectionEntry(which) {
+        return navRepeater.itemAt(entries.findIndex(e => e.id === which))
     }
     // The page's Back (its button, Escape, the Back key): one step back.
     function closePage() {
@@ -304,7 +337,6 @@ MonetWindow {
     function chooseSection(which) {
         if (which !== section || pageId !== "" || query !== "") remember()
         navigationRevision++
-        appReturnFocus = null
         pageId = ""
         query = ""
         section = which
@@ -321,7 +353,8 @@ MonetWindow {
     function place() {
         const view = pageId !== "" ? appPage : listView
         return { section: section, query: query, kind: kind, pageId: pageId,
-                 y: view ? view.contentY - beginning(view) : 0, focus: activeFocusItem }
+                 y: view ? view.contentY - beginning(view) : 0, focus: activeFocusItem,
+                 focusName: activeFocusItem ? activeFocusItem.objectName : "" }
     }
     function remember() {
         history = history.concat([place()]).slice(-50)
@@ -338,7 +371,7 @@ MonetWindow {
         } else if (pageId !== "") {
             // Opened straight at an app (from a link): back to the Store's front.
             future = future.concat([place()])
-            go({ section: section, query: query, kind: kind, pageId: "", y: -1, focus: null })
+            go({ section: section, query: query, kind: kind, pageId: "", y: -1, focus: null, focusName: "" })
         }
     }
     function goForward() {
@@ -359,13 +392,16 @@ MonetWindow {
             return
         }
         const revision = ++navigationRevision
-        appReturnFocus = null
         pageId = ""
         // Once the list is in view again: its place, and the keys where they were. The control
         // that had them isn't brought into view (leftBehind): that would move the list.
         Qt.callLater(() => {
             if (revision !== root.navigationRevision || root.pageId !== "" || !root.visible) return
-            const focus = to.focus
+            let focus = to.focus
+            // On a section's name in the side, the keys go to the name of the one shown now (to
+            // the search, for what it found), so a screen reader says where Back or Forward went.
+            if (focus && String(focus.objectName || "").startsWith("storeSection-"))
+                focus = to.query !== "" ? search : root.sectionEntry(to.section)
             if (focus && focus !== root.contentItem && focus.visible && focus.enabled) {
                 root.leftBehind = focus
                 focus.forceActiveFocus(Qt.BacktabFocusReason)
@@ -426,8 +462,14 @@ MonetWindow {
         onActivated: root.goForward()
     }
     function jobFor(id) { return downloads.find(j => j.id === id) || ({}) }
+    // An install's last step, which Cancel can't stop: what was downloaded goes in (monet-store
+    // says all of it, 1, only then).
+    function installing(job) {
+        return job.action === "install" && job.progress >= 1 && (job.state === "running" || job.state === "cancelling")
+    }
     function jobText(job) {
         if (job.state === "queued") return i18n("Waiting its turn")
+        if (installing(job)) return i18n("Installing… This part can't be cancelled.")
         if (job.state === "cancelling") return i18n("Cancelling…")
         if (job.state === "cancelled") return i18n("Cancelled. You can try again whenever you're ready.")
         if (job.state === "interrupted") return job.action === "remove" ? i18n("Interrupted. Retry to finish removing this app.") : i18n("Interrupted. Retry to continue the download.")
@@ -439,6 +481,33 @@ MonetWindow {
         if (job.error === "worker") return i18n("The download couldn't start. Try again.")
         if (job.error === "storage") return i18n("The download list couldn't be saved. Check free space and try again.")
         return i18n("That didn't work. Try again in a moment.")
+    }
+    // The same without the percentage (its progress bar has that): what a screen reader is told.
+    function jobWords(job) {
+        if (job.state === "running" && job.progress < 1)
+            return job.action === "remove" ? i18n("Removing…") : i18n("Downloading…")
+        return jobText(job)
+    }
+    // A screen reader is told when a download moves on (waiting, downloading, installing, done,
+    // failed or cancelled), without moving the keys; not while they're on its own buttons, whose
+    // focus and words say so already. What went wrong is said at once.
+    signal announced(string message, bool urgent)
+    // Not the list as the Store opens (the queue's first word, or a moment's silence when it's
+    // empty): only what changes while it's open.
+    property bool jobsHeard: false
+    Timer { interval: 2000; running: true; onTriggered: root.jobsHeard = true }
+    function tell(before, jobs) {
+        const step = job => installing(job) ? "installing" : job.state
+        for (const job of jobs) {
+            const old = before.find(j => j.id === job.id)
+            if ((old && step(old) === step(job)) || downloadsView.holdsKeys(job.id) || (pageId === job.id && appPage.holdsKeys()))
+                continue
+            const urgent = job.state === "failed" || job.state === "interrupted"
+            const message = i18nc("an app, then how its download or removal is going", "%1: %2", job.name, jobWords(job))
+            if (typeof pageArea.Accessible.announce === "function")
+                pageArea.Accessible.announce(message, urgent ? Accessible.Assertive : Accessible.Polite)
+            announced(message, urgent)
+        }
     }
     function choose(card, kind) {
         if (kind === "windows")
@@ -454,11 +523,14 @@ MonetWindow {
     Connections {
         target: shop
         function onJobsChanged(jobs) {
+            const before = root.downloads
             root.downloads = jobs
             const active = {}
             for (const job of jobs)
                 if (["queued", "running", "cancelling"].includes(job.state)) active[job.id] = job.progress
             root.working = active
+            if (root.jobsHeard) root.tell(before, jobs)
+            root.jobsHeard = true
             const states = jobs.map(j => j.id + ":" + j.state).join("|")
             if (states !== root.downloadStates) {
                 root.downloadStates = states
@@ -495,7 +567,6 @@ MonetWindow {
     }
     onSectionChanged: {
         navigationRevision++
-        appReturnFocus = null
         pageId = ""
         query = ""
         kind = ""
@@ -507,7 +578,6 @@ MonetWindow {
     onQueryChanged: {
         if (query !== "") {
             navigationRevision++
-            appReturnFocus = null
             pageId = ""
         }
         found = loaded && query.trim() !== "" ? shop.find(query) : { apps: [], windows: [], instead: null }
@@ -1050,6 +1120,8 @@ MonetWindow {
                 progress: root.working[root.pageId] !== undefined ? root.working[root.pageId] : -1
                 job: root.jobFor(root.pageId)
                 jobStatus: job.state ? root.jobText(job) : ""
+                jobWords: job.state ? root.jobWords(job) : ""
+                installing: root.installing(job)
                 problem: job.state === "failed" || job.state === "interrupted" || job.state === "cancelled" ? jobStatus : ""
                 onBack: root.closePage()
             }

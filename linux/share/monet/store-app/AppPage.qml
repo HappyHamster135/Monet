@@ -25,6 +25,10 @@ Flickable {
     property string problem: ""
     property var job: ({})
     property string jobStatus: ""
+    // The same without the percentage, for a screen reader (the progress bar has that).
+    property string jobWords: ""
+    // Its last step, which Cancel can't stop.
+    property bool installing: false
     readonly property bool retryable: ["failed", "cancelled", "interrupted"].includes(job.state)
     // The painting of the section it's in.
     property string painting: ""
@@ -34,8 +38,22 @@ Flickable {
     property int shown: 0
     signal back()
 
+    // The keys on what can be done now; with nothing (installing, cancelling), on how it's going.
     function focusFirst() {
-        (page.working ? cancelPill : page.retryable ? retryPill : action.visible ? action : openPill).forceActiveFocus()
+        const button = [cancelPill, retryPill, action, openPill, removePill, dismissPill].find(b => b.visible && b.enabled)
+        if (button) button.forceActiveFocus()
+        else if (status.visible) status.forceActiveFocus()
+        else backPill.forceActiveFocus()
+    }
+    // When the button with the keys goes (Install becomes Cancel, Cancel becomes Retry or Open),
+    // the one in its place has them.
+    function keepKeys() {
+        if (page.visible && [action, openPill, removePill, cancelPill, retryPill, dismissPill, status].some(b => b.activeFocus && !b.visible))
+            focusFirst()
+    }
+    // Whether the keys are on its download's buttons, or on how it's going.
+    function holdsKeys() {
+        return [action, openPill, removePill, cancelPill, retryPill, dismissPill, status].some(b => b.activeFocus)
     }
     onAppChanged: shown = 0
 
@@ -85,6 +103,7 @@ Flickable {
                 }
             }
             Pill {
+                id: backPill
                 objectName: "storeBack"
                 anchors.left: parent.left
                 anchors.leftMargin: 24
@@ -191,7 +210,9 @@ Flickable {
                         wrapMode: Text.Wrap
                     }
                     // Install, the one bright thing; or Open and Remove; or how far it's got.
+                    // A button with the keys that goes hands them on (keepKeys).
                     RowLayout {
+                        Layout.fillWidth: true
                         Layout.topMargin: 12
                         spacing: 10
                         SunButton {
@@ -199,20 +220,26 @@ Flickable {
                             visible: page.app.state === "get" && !page.working && !page.retryable
                             speed: page.tone.speed
                             text: i18n("Install")
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.install(page.app.id)
                         }
                         Pill {
                             id: openPill
+                            objectName: "appOpen"
                             visible: (page.app.state === "installed" || page.app.state === "built-in") && !page.working
                             tone: page.tone
                             kind: "lily"
                             text: i18n("Open")
+                            Accessible.description: page.jobWords
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.open(page.app.id)
                         }
                         Pill {
+                            id: removePill
                             visible: page.app.state === "installed" && !page.working && !page.retryable
                             tone: page.tone
                             text: i18n("Remove")
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.remove(page.app.id)
                         }
                         Text {
@@ -223,13 +250,37 @@ Flickable {
                             font.pixelSize: 13
                         }
                         ColumnLayout {
+                            Layout.fillWidth: true
                             visible: page.working
                             spacing: 6
+                            // How it's going; the keys stop here when there's no button
+                            // (installing, which can't be cancelled, or cancelling).
                             Text {
+                                id: status
+                                objectName: "appJobStatus"
+                                Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignLeft
                                 text: page.jobStatus || i18n("Working on it…")
                                 color: page.tone.ink
                                 font.pixelSize: 14
+                                wrapMode: Text.Wrap
+                                activeFocusOnTab: (page.working && !cancelPill.visible) || activeFocus
+                                onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
+                                Accessible.role: Accessible.StaticText
+                                Accessible.name: text
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: -6
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -4
+                                    width: status.contentWidth + 12
+                                    height: status.contentHeight + 8
+                                    radius: 6
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: page.tone.lily
+                                    visible: status.activeFocus
+                                }
                             }
                             T.ProgressBar {
                                 id: meter
@@ -242,22 +293,28 @@ Flickable {
                                 background: Rectangle { radius: 3; color: page.tone.wash2 }
                                 contentItem: Item {
                                     Rectangle {
-                                        // Sliding while it's not known how far it is; from the start once it is.
+                                        id: sweep
+                                        objectName: "appMeterBar"
+                                        // Sliding while it's not known how far it is (with reduced motion,
+                                        // all of it, faintly, and still); from the start once it is.
+                                        readonly property bool still: page.tone.speed < 0.05
                                         property real shift: 0
-                                        x: meter.indeterminate ? shift : 0
-                                        width: meter.indeterminate ? parent.width * 0.3 : parent.width * meter.visualPosition
+                                        x: meter.indeterminate && !still ? shift : 0
+                                        width: meter.indeterminate ? parent.width * (still ? 1 : 0.3) : parent.width * meter.visualPosition
                                         height: parent.height
                                         radius: 3
                                         color: page.tone.lily
+                                        opacity: meter.indeterminate && still ? 0.4 : 1
                                         Behavior on width { NumberAnimation { duration: Math.round(200 * page.tone.speed) } }
                                         SequentialAnimation on shift {
-                                            running: meter.indeterminate && meter.visible
+                                            running: meter.indeterminate && meter.visible && !sweep.still
                                             loops: Animation.Infinite
                                             NumberAnimation { from: 0; to: meter.width * 0.7; duration: 900; easing.type: Easing.InOutSine }
                                             NumberAnimation { from: meter.width * 0.7; to: 0; duration: 900; easing.type: Easing.InOutSine }
                                         }
                                     }
                                 }
+                                Accessible.name: page.app.name || ""
                             }
                         }
                     }
@@ -267,10 +324,14 @@ Flickable {
                         Pill {
                             id: cancelPill
                             objectName: "appCancel"
-                            visible: page.working
-                            enabled: page.job.state !== "cancelling"
+                            // Not once it's cancelling, nor while it installs, which Cancel can't stop.
+                            visible: page.working && !page.installing && page.job.state !== "cancelling"
                             tone: page.tone
-                            text: page.job.state === "cancelling" ? i18n("Cancelling…") : i18n("Cancel")
+                            text: i18n("Cancel")
+                            Accessible.name: page.job.action === "remove" ? i18n("Cancel removing %1", page.app.name || "")
+                                                                         : i18n("Cancel downloading %1", page.app.name || "")
+                            Accessible.description: page.jobWords
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.downloadAction(page.app.id, "cancel")
                         }
                         Pill {
@@ -280,12 +341,18 @@ Flickable {
                             tone: page.tone
                             kind: "lily"
                             text: i18n("Retry")
+                            Accessible.name: i18n("Retry %1", page.app.name || "")
+                            Accessible.description: page.problem
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.downloadAction(page.app.id, "retry")
                         }
                         Pill {
+                            id: dismissPill
                             visible: page.retryable
                             tone: page.tone
                             text: i18n("Dismiss")
+                            Accessible.name: i18n("Dismiss %1", page.app.name || "")
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(page.keepKeys)
                             onClicked: page.store.downloadAction(page.app.id, "dismiss")
                         }
                     }
@@ -384,8 +451,11 @@ Flickable {
                             onClicked: page.store.showPicture(page.shots[page.shown].image)
                         }
                     }
-                    // The one before and the one after.
+                    // The one before and the one after (not "Back": that's the way off the page).
+                    // At either end one can't go on, and the keys go to the other.
                     Pill {
+                        id: shotBefore
+                        objectName: "storeShotPrevious"
                         anchors.left: parent.left
                         anchors.leftMargin: 18
                         anchors.verticalCenter: parent.verticalCenter
@@ -395,10 +465,13 @@ Flickable {
                         glyph: "M14.5 6l-6 6 6 6"
                         text: ""
                         color: page.tone.dark ? Qt.rgba(0.15, 0.145, 0.137, 0.85) : Qt.rgba(1, 1, 1, 0.9)
-                        Accessible.name: i18n("Back")
+                        Accessible.name: i18n("Previous screenshot")
+                        onActiveFocusChanged: if (!activeFocus && !enabled && visible) shotAfter.forceActiveFocus()
                         onClicked: page.shown -= 1
                     }
                     Pill {
+                        id: shotAfter
+                        objectName: "storeShotNext"
                         anchors.right: parent.right
                         anchors.rightMargin: 18
                         anchors.verticalCenter: parent.verticalCenter
@@ -408,7 +481,8 @@ Flickable {
                         glyph: "M9.5 6l6 6-6 6"
                         text: ""
                         color: page.tone.dark ? Qt.rgba(0.15, 0.145, 0.137, 0.85) : Qt.rgba(1, 1, 1, 0.9)
-                        Accessible.name: i18n("Next")
+                        Accessible.name: i18n("Next screenshot")
+                        onActiveFocusChanged: if (!activeFocus && !enabled && visible) shotBefore.forceActiveFocus()
                         onClicked: page.shown += 1
                     }
                 }
@@ -602,6 +676,8 @@ Flickable {
                     model: page.app.similar || []
                     AppCard {
                         required property var modelData
+                        // By name, so Back can give the keys to the one chosen (made again for each app).
+                        objectName: "storeSimilar-" + modelData.id
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
                         tone: page.tone

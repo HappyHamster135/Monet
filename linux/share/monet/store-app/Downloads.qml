@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Templates as T
 import "../games"
 
 Flickable {
@@ -17,6 +18,9 @@ Flickable {
     ListModel { id: rows; dynamicRoles: true }
     function syncJobs() {
         const wanted = jobs.map(job => job.id)
+        // The row with the keys, if it goes (dismissed): the keys go to the one in its place.
+        const holder = rowWithKeys()
+        const leaving = holder && !wanted.includes(holder.key) ? holder.index : -1
         for (let i = rows.count - 1; i >= 0; --i)
             if (!wanted.includes(rows.get(i).key)) rows.remove(i)
         for (let i = 0; i < jobs.length; ++i) {
@@ -28,6 +32,28 @@ Flickable {
                 if (at !== i) rows.move(at, i, 1)
                 rows.setProperty(i, "value", jobs[i])
             }
+        }
+        if (leaving >= 0) Qt.callLater(giveKeys, leaving)
+    }
+    function rowWithKeys() {
+        for (let item = view.Window.activeFocusItem; item; item = item.parent)
+            for (let i = 0; i < downloadRows.count; ++i)
+                if (downloadRows.itemAt(i) === item) return item
+        return null
+    }
+    // Whether the keys are on this download's row: its buttons, or the row itself.
+    function holdsKeys(id) {
+        const row = rowWithKeys()
+        return row !== null && row.key === id
+    }
+    // To the row at `index` (or the last); with none left, to Downloads in the side.
+    function giveKeys(index) {
+        if (!view.visible) return
+        if (downloadRows.count > 0) {
+            downloadRows.itemAt(Math.min(index, downloadRows.count - 1)).takeKeys()
+        } else {
+            const entry = view.store.sectionEntry("downloads")
+            if (entry) entry.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
     onJobsChanged: syncJobs()
@@ -81,18 +107,40 @@ Flickable {
             font.pixelSize: 15
         }
         Repeater {
+            id: downloadRows
             model: rows
             Rectangle {
                 id: card
                 required property var value
+                required property string key
+                required property int index
                 readonly property var modelData: value
                 readonly property bool active: ["queued", "running", "cancelling"].includes(modelData.state)
+                readonly property bool installing: view.store.installing(modelData)
+                readonly property string words: view.store.jobWords(modelData)
+                readonly property bool hasButtons: openButton.visible || cancelButton.visible || retryButton.visible || dismissButton.visible
+                objectName: "download-" + key
                 Layout.fillWidth: true
                 implicitHeight: details.implicitHeight + 32
                 radius: 16
                 color: view.tone.wash
-                border.width: 1
-                border.color: view.tone.line
+                border.width: activeFocus ? 2 : 1
+                border.color: activeFocus ? view.tone.lily : view.tone.line
+                // With no button (installing, cancelling), the row itself is where the keys stop.
+                activeFocusOnTab: !hasButtons || activeFocus
+                Accessible.role: Accessible.Grouping
+                Accessible.name: modelData.name
+                Accessible.description: words
+                // The keys on its first button; with none, on the row.
+                function takeKeys() {
+                    if (!view.visible) return
+                    const button = [openButton, cancelButton, retryButton, dismissButton].find(b => b.visible)
+                    if (button) button.forceActiveFocus(Qt.OtherFocusReason)
+                    else card.forceActiveFocus(Qt.OtherFocusReason)
+                }
+                // A button with the keys that goes (Cancel becomes Retry or Open) hands them on,
+                // and a row with them gives them to its button when it has one again.
+                onHasButtonsChanged: if (hasButtons && activeFocus) Qt.callLater(takeKeys)
                 ColumnLayout {
                     id: details
                     x: 16; y: 16
@@ -116,55 +164,77 @@ Flickable {
                         Accessible.role: Accessible.StaticText
                         Accessible.name: text
                     }
-                    Rectangle {
+                    // How far it is, as a progress bar's value for a screen reader.
+                    T.ProgressBar {
+                        id: meter
+                        objectName: "progress-" + card.modelData.id
                         Layout.fillWidth: true
                         implicitHeight: 4
                         visible: card.active
-                        radius: 2
-                        color: view.tone.wash2
-                        Rectangle {
-                            width: parent.width * card.modelData.progress
-                            height: parent.height
-                            radius: 2
-                            color: view.tone.lily
+                        from: 0
+                        to: 1
+                        value: card.modelData.progress
+                        background: Rectangle { radius: 2; color: view.tone.wash2 }
+                        contentItem: Item {
+                            Rectangle {
+                                width: parent.width * meter.visualPosition
+                                height: parent.height
+                                radius: 2
+                                color: view.tone.lily
+                            }
                         }
-                        Accessible.role: Accessible.ProgressBar
-                        Accessible.name: card.modelData.name + ": " + Math.round(card.modelData.progress * 100) + "%"
+                        Accessible.name: card.modelData.name
                     }
+                    // Each says which app, and how it's going.
                     Flow {
                         Layout.fillWidth: true
                         spacing: 10
                         Pill {
+                            id: openButton
+                            objectName: "open-" + card.modelData.id
                             visible: card.modelData.state === "done" && card.modelData.action === "install"
                             text: i18n("Open")
                             kind: "lily"
                             tone: view.tone
                             Accessible.name: i18n("Open %1", card.modelData.name)
+                            Accessible.description: card.words
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(card.takeKeys)
                             onClicked: view.openApp(card.modelData.id)
                         }
                         Pill {
+                            id: cancelButton
                             objectName: "cancel-" + card.modelData.id
-                            visible: card.active
-                            enabled: card.modelData.state !== "cancelling"
-                            text: card.modelData.state === "cancelling" ? i18n("Cancelling…") : i18n("Cancel")
+                            // Not once it's cancelling, nor while it installs, which Cancel can't stop.
+                            visible: card.active && card.modelData.state !== "cancelling" && !card.installing
+                            text: i18n("Cancel")
                             tone: view.tone
-                            Accessible.name: i18n("Cancel %1", card.modelData.name)
+                            Accessible.name: card.modelData.action === "remove" ? i18n("Cancel removing %1", card.modelData.name)
+                                                                               : i18n("Cancel downloading %1", card.modelData.name)
+                            Accessible.description: card.words
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(card.takeKeys)
                             onClicked: view.action(card.modelData.id, "cancel")
                         }
                         Pill {
+                            id: retryButton
                             objectName: "retry-" + card.modelData.id
                             visible: ["failed", "cancelled", "interrupted"].includes(card.modelData.state)
                             text: i18n("Retry")
                             kind: "lily"
                             tone: view.tone
                             Accessible.name: i18n("Retry %1", card.modelData.name)
+                            Accessible.description: card.words
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(card.takeKeys)
                             onClicked: view.action(card.modelData.id, "retry")
                         }
                         Pill {
+                            id: dismissButton
+                            objectName: "dismiss-" + card.modelData.id
                             visible: !card.active
                             text: i18n("Dismiss")
                             tone: view.tone
                             Accessible.name: i18n("Dismiss %1", card.modelData.name)
+                            Accessible.description: card.words
+                            onVisibleChanged: if (!visible && activeFocus) Qt.callLater(card.takeKeys)
                             onClicked: view.action(card.modelData.id, "dismiss")
                         }
                     }

@@ -482,3 +482,175 @@ class DownloadUI(unittest.TestCase):
             self.assertEqual(shop.actions[-1], (APP["id"], "retry"))
         finally:
             window.close(); engine.deleteLater(); QTest.qWait(1)
+
+
+from tests import test_store_navigation as navigation  # noqa: E402
+
+if navigation.QT:
+    from PySide6.QtCore import QObject, QPointF, SIGNAL
+    from PySide6.QtGui import QAccessible
+    from PySide6.QtTest import QSignalSpy
+
+
+@unittest.skipUnless(navigation.QT, "requires PySide6 and Kirigami")
+class DownloadKeys(unittest.TestCase):
+    """Each download by the keys and to a screen reader: in Downloads and on an app's page."""
+    setUpClass = classmethod(navigation.StoreNavigation.setUpClass.__func__)
+    tearDownClass = classmethod(navigation.StoreNavigation.tearDownClass.__func__)
+    setUp = navigation.StoreNavigation.setUp
+    tearDown = navigation.StoreNavigation.tearDown
+    item = navigation.StoreNavigation.item
+    wait_for = navigation.StoreNavigation.wait_for
+    open_app = navigation.StoreNavigation.open_app
+
+    def job(self, index, **values):
+        app = self.shop.apps[index]
+        return dict(dict(id=app["id"], name=app["name"], action="install", state="queued", progress=0, error=""), **values)
+
+    def jobs(self, *jobs):
+        self.shop.jobsChanged.emit([dict(job) for job in jobs]); QTest.qWait(60)
+
+    def said(self, item):
+        face = QAccessible.queryAccessibleInterface(item)
+        return face.text(QAccessible.Name), face.text(QAccessible.Description)
+
+    def focused(self):
+        return self.window.activeFocusItem().objectName()
+
+    def wait_for_focus(self, name):
+        self.wait_for(lambda: self.focused() == name)
+        self.assertTrue(self.window.activeFocusItem().isVisible(), name)
+
+    def downloads(self):
+        QMetaObject.invokeMethod(self.window, "chooseSection", Q_ARG("QVariant", "downloads")); QTest.qWait(60)
+
+    def test_each_download_says_which_app_and_how_it_is_going(self):
+        offline = self.job(2, state="failed", progress=.2, error="offline")
+        self.jobs(self.job(0, state="running", progress=.4), self.job(1, action="remove"), offline)
+        self.downloads()
+        ids = [app["id"] for app in self.shop.apps[:3]]
+        self.assertEqual(self.said(self.item("cancel-" + ids[0])), ("Cancel downloading Fixture 0", "Downloading…"))
+        self.assertEqual(self.said(self.item("cancel-" + ids[1])), ("Cancel removing Fixture 1", "Waiting its turn"))
+        retry = self.said(self.item("retry-" + ids[2]))
+        self.assertEqual(retry, ("Retry Fixture 2", "The download stopped because Flathub couldn't be reached. "
+                                                     "Check your connection, then retry."))
+        # How far it is, as a progress bar's value.
+        meter = QAccessible.queryAccessibleInterface(self.item("progress-" + ids[0]))
+        self.assertEqual((meter.role(), meter.text(QAccessible.Name)), (QAccessible.ProgressBar, "Fixture 0"))
+        self.assertAlmostEqual(meter.valueInterface().currentValue(), .4)
+        self.assertEqual(meter.valueInterface().maximumValue(), 1)
+
+    def test_the_keys_stay_with_a_download_as_its_buttons_change(self):
+        ids = [app["id"] for app in self.shop.apps[:2]]
+        paint, other = self.job(0, state="running", progress=.3), self.job(1, state="running", progress=.1)
+        self.jobs(paint, other)
+        self.downloads()
+        self.item("cancel-" + ids[0]).forceActiveFocus(Qt.TabFocusReason)
+        # Cancel becomes Retry when the download fails: the keys go with it.
+        self.jobs(dict(paint, state="failed", error="offline"), other)
+        self.wait_for_focus("retry-" + ids[0])
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.shop.actions[-1], (ids[0], "retry"))
+        self.jobs(dict(paint, state="queued", progress=0), other)
+        self.wait_for_focus("cancel-" + ids[0])
+        # Installing can't be cancelled: no Cancel then, and the row itself says so.
+        self.jobs(dict(paint, state="running", progress=1), other)
+        self.wait_for_focus("download-" + ids[0])
+        self.assertFalse(self.item("cancel-" + ids[0]).isVisible())
+        self.assertEqual(self.said(self.window.activeFocusItem()),
+                         ("Fixture 0", "Installing… This part can't be cancelled."))
+        self.jobs(dict(paint, state="done", progress=1), other)
+        self.wait_for_focus("open-" + ids[0])
+        self.assertEqual(self.said(self.window.activeFocusItem()), ("Open Fixture 0", "Installed"))
+        QTest.keyClick(self.window, Qt.Key_Tab)
+        self.wait_for_focus("dismiss-" + ids[0])
+        QTest.keyClick(self.window, Qt.Key_Space)
+        self.assertEqual(self.shop.actions[-1], (ids[0], "dismiss"))
+        # A row that goes: the keys on the next one.
+        self.jobs(other)
+        self.wait_for_focus("cancel-" + ids[1])
+        QTest.keyClick(self.window, Qt.Key_Enter)
+        self.assertEqual(self.shop.actions[-1], (ids[1], "cancel"))
+        self.jobs(dict(other, state="cancelling"))
+        self.wait_for_focus("download-" + ids[1])
+        self.assertEqual(self.said(self.window.activeFocusItem()), ("Fixture 1", "Cancelling…"))
+        self.jobs(dict(other, state="cancelled"))
+        self.wait_for_focus("retry-" + ids[1])
+        # The last one gone: the keys on Downloads in the side.
+        self.jobs()
+        self.wait_for_focus("storeSection-downloads")
+
+    def test_download_changes_are_said_without_moving_the_keys(self):
+        spy = QSignalSpy(self.window, SIGNAL("announced(QString,bool)"))
+        self.jobs()
+        search = self.item("storeSearch"); search.forceActiveFocus(Qt.TabFocusReason)
+        paint = self.job(0)
+        for job in (paint, dict(paint, state="running", progress=.1), dict(paint, state="running", progress=.5),
+                    dict(paint, state="running", progress=1), dict(paint, state="done", progress=1)):
+            self.jobs(job)
+        self.jobs(dict(paint, state="done", progress=1), self.job(1, state="failed", error="no-space"))
+        said = [(spy.at(i)[0], spy.at(i)[1]) for i in range(spy.count())]
+        self.assertEqual(said, [("Fixture 0: Waiting its turn", False), ("Fixture 0: Downloading…", False),
+                                ("Fixture 0: Installing… This part can't be cancelled.", False),
+                                ("Fixture 0: Installed", False),
+                                ("Fixture 1: There isn't enough free space. Free some space, then retry.", True)])
+        self.assertTrue(search.hasActiveFocus())
+        # With the keys on its own buttons, their focus and words say it: not twice.
+        self.downloads()
+        retry = self.item("retry-" + self.shop.apps[1]["id"]); retry.forceActiveFocus(Qt.TabFocusReason)
+        self.jobs(dict(paint, state="done", progress=1), self.job(1))
+        self.wait_for_focus("cancel-" + self.shop.apps[1]["id"])
+        self.assertEqual(spy.count(), len(said))
+
+    def test_an_app_page_keeps_the_keys_while_it_installs(self):
+        ident = self.open_app()
+        self.wait_for(lambda: self.window.activeFocusItem().property("text") == "Install")
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.shop.actions, [(ident, "install")])
+        paint = self.job(0)
+        # Install becomes Cancel.
+        self.jobs(paint)
+        self.wait_for_focus("appCancel")
+        self.assertEqual(self.said(self.window.activeFocusItem()), ("Cancel downloading Fixture 0", "Waiting its turn"))
+        QTest.keyClick(self.window, Qt.Key_Space)
+        self.assertEqual(self.shop.actions[-1], (ident, "cancel"))
+        self.jobs(dict(paint, state="cancelling"))
+        self.wait_for_focus("appJobStatus")
+        self.assertEqual(self.said(self.window.activeFocusItem())[0], "Cancelling…")
+        self.jobs(dict(paint, state="cancelled"))
+        self.wait_for_focus("appRetry")
+        self.assertEqual(self.said(self.window.activeFocusItem()),
+                         ("Retry Fixture 0", "Cancelled. You can try again whenever you're ready."))
+        QTest.keyClick(self.window, Qt.Key_Enter)
+        self.assertEqual(self.shop.actions[-1], (ident, "retry"))
+        self.jobs(dict(paint, state="running", progress=.6))
+        self.wait_for_focus("appCancel")
+        # Once it's installing, Cancel couldn't stop it: it isn't offered, and the page says why.
+        self.jobs(dict(paint, state="running", progress=1))
+        self.wait_for_focus("appJobStatus")
+        self.assertFalse(self.item("appCancel").isVisible())
+        self.assertEqual(self.said(self.window.activeFocusItem())[0], "Installing… This part can't be cancelled.")
+        status = self.window.activeFocusItem()
+        self.assertLessEqual(status.mapToItem(self.item("storeAppPage"), QPointF(status.width(), 0)).x(),
+                             self.item("storeAppPage").width())
+        self.shop.apps[0]["state"] = "installed"
+        self.jobs(dict(paint, state="done", progress=1))
+        self.wait_for_focus("appOpen")
+        self.assertEqual(self.said(self.window.activeFocusItem()), ("Open", "Installed"))
+
+    def test_a_waiting_meter_stands_still_with_reduced_motion(self):
+        units = self.engine.singletonInstance("org.kde.kirigami", "Units") \
+            or self.engine.singletonInstance("org.kde.kirigami.platform", "Units")
+        self.assertIsNotNone(units)
+        units.setProperty("longDuration", 1)
+        self.assertLessEqual(self.window.property("speed"), 0.01)
+        self.open_app()
+        self.jobs(self.job(0))
+        bar = self.item("appMeterBar")
+        self.assertTrue(bar.isVisible())
+        # Not sliding to and fro: all of the bar, faint and still.
+        sweeps = [child for child in bar.findChildren(QObject) if "SequentialAnimation" in child.metaObject().className()]
+        self.assertEqual([sweep.property("running") for sweep in sweeps], [False])
+        self.assertEqual(round(bar.x()), 0)
+        self.assertAlmostEqual(bar.width(), bar.parentItem().width(), delta=1)
+        self.assertLess(bar.opacity(), 1)

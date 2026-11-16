@@ -97,6 +97,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the game, and brings you back when you quit. The page also says whether
   Secure Boot and TPM 2.0 are on, as FACEIT needs, and how to turn them on;
   Monet never turns a protection off.
+- **Store downloads by keyboard and screen reader.** Each download's buttons
+  say which app they're for, and a screen reader hears when an app starts,
+  installs, finishes or fails, without the keys moving. When Cancel turns
+  into Retry or Open, the keys go with it. Once an app is installing, the
+  Store says it can't be cancelled instead of showing a Cancel that wouldn't
+  work, and with animations turned off its waiting bar holds still. Back and
+  Forward also put the keys back where they were on an app's page.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
