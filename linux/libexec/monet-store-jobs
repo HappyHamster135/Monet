@@ -277,7 +277,9 @@ class Queue:
                         return True
 
                 def progress(value):
-                    if time.monotonic() - last[0] < 0.75:
+                    # All of it is saved at once, however soon it comes: for an install that's
+                    # the step Cancel can't stop, and the Store stops offering Cancel then.
+                    if value < 1 and time.monotonic() - last[0] < 0.75:
                         return
                     last[0] = time.monotonic()
                     try:

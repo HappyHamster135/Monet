@@ -282,7 +282,7 @@ class InstallSupervision(unittest.TestCase):
         workers = {event[0] for event in self.events()}
         self.assertEqual(len(workers), 1)
         self.assertNotIn(os.getpid(), workers)
-        self.assertEqual(self.progress, [0.5, 1, 1])
+        self.assertEqual(self.progress, [0.5, 0.99, 1])  # All of it only once it's installing.
         # A download that fails, or a process that ends without a word, installs nothing.
         for scenario, result in (("fetch:No space left on device", {"error": "no-space"}), ("crash", {"error": "failed"})):
             with self.subTest(scenario):
@@ -328,7 +328,7 @@ class InstallSupervision(unittest.TestCase):
         clock, now = self.clock(5)
         self.assertEqual(self.install("steady", clock=clock), {"ok": True})
         self.assertGreater(now[0], store.DOWNLOAD_IDLE_SECONDS)
-        self.assertEqual(self.progress, [step / 10 for step in range(1, 11)] + [1])
+        self.assertEqual(self.progress, [step / 10 for step in range(1, 10)] + [0.99, 1])
 
     def test_cancel_stops_the_download_but_never_the_install(self):
         queue = jobs.Queue(Path(self.temp.name) / "queue")
@@ -358,6 +358,36 @@ class InstallSupervision(unittest.TestCase):
                 self.assertEqual(queue.read()[0]["state"], state)
                 self.assertEqual(self.steps(), steps)
                 self.assertStopped(self.events()[0][0])
+
+    def test_the_window_knows_at_once_when_installing_starts(self):
+        # Cancel can't stop the install, so the Store stops offering it then: a whole download is
+        # said as just short of all of it, and the install, once it starts, as all of it at once.
+        queue = jobs.Queue(Path(self.temp.name) / "queue")
+        seen = []
+
+        def watch():
+            deadline = time.monotonic() + 10
+            while ["deploy", "start"] not in self.steps() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            deadline = time.monotonic() + 2
+            while queue.read()[0]["progress"] < 1 and time.monotonic() < deadline:
+                time.sleep(0.01)
+            seen.append((queue.read()[0]["state"], queue.read()[0]["progress"]))
+            with self.log.open("a") as stream:  # Lets the install finish.
+                stream.write(json.dumps([os.getpid(), "cancel", "pressed"]) + "\n")
+
+        queue.submit(APP, "install")
+        watcher = threading.Thread(target=watch)
+        watcher.start()
+        queue.run(lambda job, progress, cancelled: store.install_app(
+            job["ref"], job["installation"], progress, cancelled, command=self.command("wait-for-cancel")))
+        watcher.join(10)
+        self.assertEqual(seen, [("running", 1)])
+        self.assertEqual(queue.read()[0]["state"], "done")
+        self.log.unlink()
+        self.progress.clear()
+        self.assertEqual(self.install("copying", clock=self.clock(15)[0]), {"ok": True})
+        self.assertEqual(self.progress, [0.99, 1])
 
     def test_what_went_wrong_reaches_the_store_by_its_name(self):
         downloaded = [["fetch", "start"], ["fetch", "end"], ["deploy", "start"]]

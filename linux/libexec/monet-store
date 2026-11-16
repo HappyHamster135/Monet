@@ -736,7 +736,9 @@ def install_app(ref, scope, progress, cancelled, command=None, idle=DOWNLOAD_IDL
                 elif "done" in message:
                     if type(message["done"]) in (int, float):
                         last_activity = clock()
-                        progress(message["done"])
+                        # All of it (1) is the install, which Cancel can't stop: the Store
+                        # stops offering Cancel then. A whole download is just short of it.
+                        progress(message["done"] if deploying else min(message["done"], 0.99))
                 elif "downloaded" in message:
                     # True: this part is all here and only copied now. False: the next one starts.
                     copying = message["downloaded"] is True
