@@ -1,25 +1,46 @@
 #!/usr/bin/python3
-"""Steam's shader processing, out of your way: it only uses what the rest of the PC leaves.
+"""Who gets the PC first: a game you're playing ahead of the apps behind it, and Steam's shader
+processing behind everything.
 
-Before a game's first start ("Processing Vulkan shaders"), and in the background whenever Steam
-has a moment, Steam works through a game's shaders with fossilize_replay: a process and helpers
-of its own on every processor, at the same priority as everything else, so the whole PC stutters
-until it's done. This moves each of them, every thread, to idle priority, for the processors
-(SCHED_IDLE) and for the disk (the idle I/O class). With nothing else wanting the PC, as while
-Steam shows its progress before a game starts, they still run flat out; the moment anything
-else wants a processor or the disk, it has it. Helpers and threads they start later inherit it.
+Steam's shader processing. Before a game's first start ("Processing Vulkan shaders"), and in the
+background whenever Steam has a moment, Steam works through a game's shaders with
+fossilize_replay: a process and helpers of its own on every processor, at the same priority as
+everything else, so the whole PC stutters until it's done. This moves each of them, every
+thread, to idle priority, for the processors (SCHED_IDLE) and for the disk (the idle I/O class).
+With nothing else wanting the PC, as while Steam shows its progress before a game starts, they
+still run flat out; the moment anything else wants a processor or the disk, it has it. Helpers
+and threads they start later inherit it. Only this account's own processes, and only Steam's
+shader tool: Linux lets anyone lower their own programs' priority, so nothing needs an
+administrator. While Steam runs (the process ~/.steam/steam.pid names), it looks every two
+seconds; otherwise it only checks every half minute whether Steam has started.
 
-Only this account's own processes, and only Steam's shader tool: Linux lets anyone lower their
-own programs' priority, so nothing needs an administrator, and nothing else is touched. While
-Steam runs (the process ~/.steam/steam.pid names), it looks every two seconds; otherwise it only
-checks every half minute whether Steam has started.
+Games first, as Windows' Game Mode does it. A browser with dozens of tabs could take most of the
+processors while a game ran, and the game stuttered. While a game's window is in front (the
+active one, or full screen on a screen of its own), the other apps get a fifth of their usual
+share of the processors and the disk (their units' CPUWeight and IOWeight, which systemd keeps
+for each app Plasma starts). Shares only count when apps compete for them: with room to spare,
+nothing is slower. Never the game's own unit (Steam's, with the game in it), an app playing or
+recording sound (a call, music), or the desktop's own services, and nothing outside this
+account's apps. Everything is put back as it was as soon as another app comes to the front or
+the game quits, and when this stops; as each change is only for this sign-in (--runtime) and
+noted in the runtime folder, a crash puts it back at the next start, and signing out does too.
+Which window is in front comes from the Monet Work KWin script as it changes (Front), never by
+asking KWin over and over; whether it's a game is monet-rest's test, the one that keeps games
+from resting.
 """
 import ctypes
 from functools import lru_cache
+import importlib.machinery
+import importlib.util
+import json
 import os
 from pathlib import Path
 import platform
+import signal
+import socket
+import subprocess
 import sys
+import tempfile
 import time
 
 PROC = "/proc"
@@ -31,6 +52,16 @@ TOOL = "fossilize_replay"
 IOPRIO_SET = {"x86_64": 251, "aarch64": 30}.get(platform.machine())  # the system call's number
 IOPRIO_WHO_PROCESS = 1      # one thread, by its id
 IDLE_IO = 3 << 13           # IOPRIO_CLASS_IDLE
+
+SHARE = 20                  # the other apps' CPUWeight and IOWeight while a game is in front (100 usually)
+WEIGHTS = ("CPUWeight", "IOWeight")
+SETTLE = 2                  # seconds a game is in front before the others give way (Alt+Tab passes by)
+RECHECK = 10                # while they do: apps started or ended, sound, the game quitting, this often
+SAVED = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}") / "monet/priority.json"
+# The desktop's own services, some of which Plasma starts in app.slice too (from autostart).
+DESKTOP = ("plasma", "kwin", "kded", "ksmserver", "pipewire", "wireplumber", "pulseaudio", "xdg-", "dbus",
+           "polkit", "xembedsniproxy", "gmenudbusmenuproxy", "kaccess", "at-spi", "ibus", "fcitx", "monet")
+NAME_ON_BUS, PATH_ON_BUS = "org.monet.Priority", "/org/monet/Priority"
 
 
 def read(path):
@@ -170,10 +201,251 @@ def turn(shaders, steam=steam_running):
     return LOOK
 
 
+def say(text):
+    print(text, file=sys.stderr, flush=True)
+
+
+def systemctl(*args):
+    """What systemctl --user answers, or None when it fails."""
+    try:
+        done = subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def weight(text):
+    """A unit's weight as systemctl shows it, the way set-property takes it back: a number, idle,
+    or "" when it isn't set (systemd's default, 100)."""
+    text = text.strip() if isinstance(text, str) else ""
+    return text if text == "idle" or (text.isdigit() and 1 <= int(text) <= 10000) else ""
+
+
+def unit_name(name):
+    """Whether a name is an app's unit, safe to hand systemctl."""
+    return (isinstance(name, str) and 0 < len(name) < 256 and name.endswith((".scope", ".service"))
+            and not name.startswith("-") and all(c.isalnum() or c in "@._:-\\" for c in name))
+
+
+def desktop(name):
+    """Whether a unit is one of the desktop's own services."""
+    plain = name.replace("\\x2d", "-").lower()
+    return any(word in plain for word in DESKTOP)
+
+
+class GamesFirst:
+    """While a game's window is in front, the other apps' shares of the processors and the disk,
+    lowered; and put back as they were."""
+
+    def __init__(self, rest, apps=None, proc=Path("/proc"), run=systemctl, playing=None, saved=SAVED, say=say):
+        self.rest, self.proc, self.run, self.saved, self.say = rest, Path(proc), run, Path(saved), say
+        self.apps = Path(apps) if apps is not None else rest.apps_slice()
+        self.playing = playing or rest.sounding
+        self.front = []      # the processes whose windows are in front
+        self.since = None    # when a game came to the front
+        self.lowered = {}    # unit: {weight: as it was}; {} when it was as low already
+        self.kept = None
+
+    def report(self, text, now):
+        """KWin's word on what's in front, {"active": pid, "full": [pid, ...]}. Returns the
+        seconds until the next step, or None to wait for the next word."""
+        try:
+            said = json.loads(text)
+            pids = [said.get("active"), *said.get("full", [])]
+        except (ValueError, TypeError, AttributeError):
+            pids = []
+        self.front = [pid for pid in pids if type(pid) is int and pid > 0]
+        return self.step(now)
+
+    def units(self):
+        """Each unit of this account's apps, Monet's too: {name: folder}."""
+        found = {}
+        try:
+            for folder in self.apps.iterdir():
+                if folder.name.endswith((".scope", ".service")) and folder.is_dir():
+                    found[folder.name] = folder
+        except OSError:
+            pass
+        return found
+
+    def in_front(self):
+        """The units whose windows are in front."""
+        return {self.rest.unit_of(pid, self.proc) for pid in self.front} - {""}
+
+    def games(self):
+        """The units with a game in them whose window is in front."""
+        found = self.units()
+        return {name for name in self.in_front()
+                if name in found and self.rest.game_running(self.rest.pids_of(found[name]), self.proc)}
+
+    def step(self, now):
+        """Lowers or puts back, as what's in front says. Returns the seconds until the next step,
+        or None to wait for KWin's next word."""
+        games = self.games()
+        if not games:
+            self.since = None
+            self.restore()
+            return None
+        if self.since is None:
+            self.since = now
+        if now - self.since < SETTLE:
+            return SETTLE - (now - self.since)
+        self.lower(games)
+        return RECHECK
+
+    def lower(self, games):
+        found = self.rest.units(self.apps)  # Monet's own services left out
+        playing, front = self.playing(), games | self.in_front()
+        wanted = set()
+        for name, folder in found.items():
+            pids = self.rest.pids_of(folder)
+            if name in front or not pids or desktop(name) or not unit_name(name):
+                continue  # The game's, one you're using beside it, or the desktop's own.
+            if self.rest.heard(name, pids, playing):
+                continue  # A call, music: never cut up.
+            wanted.add(name)
+        for name in sorted(set(self.lowered) - wanted):
+            if name in found:
+                self.put_back(name)  # Playing sound now, or the game's.
+            else:
+                del self.lowered[name]  # Closed.
+        new = sorted(wanted - set(self.lowered))
+        if new:
+            now = self.weights(new)
+            for name in new:
+                if name not in now:
+                    continue  # Ended meanwhile.
+                # Only what's above the game's share: a weight set lower stays.
+                before = {key: value for key, value in now[name].items()
+                          if value == "" or (value.isdigit() and int(value) > SHARE)}
+                if not before:
+                    self.lowered[name] = {}
+                elif self.run("set-property", "--runtime", name, *(f"{key}={SHARE}" for key in before)) is not None:
+                    self.lowered[name] = before
+            self.say(f"Games first: {sum(bool(v) for v in self.lowered.values())} other apps give way to "
+                     + ", ".join(sorted(games)))
+        self.keep()
+
+    def weights(self, names):
+        """{unit: {weight: value}}, as systemd has them now (one systemctl for all)."""
+        out = self.run("show", "--property=Id," + ",".join(WEIGHTS), "--", *names) or ""
+        found = {}
+        for block in out.split("\n\n"):
+            fields = dict(line.partition("=")[::2] for line in block.splitlines() if "=" in line)
+            if fields.get("Id") in names:
+                found[fields["Id"]] = {key: weight(fields.get(key)) for key in WEIGHTS}
+        return found
+
+    def put_back(self, name):
+        before = self.lowered.pop(name)
+        if before and self.run("set-property", "--runtime", name, *(f"{key}={value}" for key, value in before.items())) is None:
+            self.say(f"Games first: {name} couldn't be put back (ended meanwhile, most likely)")
+
+    def restore(self):
+        """Every app as it was."""
+        if self.lowered:
+            for name in sorted(self.lowered):
+                self.put_back(name)
+            self.say("Games first: the other apps are back as they were")
+        self.keep()
+
+    def keep(self):
+        """What's lowered, noted in the runtime folder, so a crash can still put it back."""
+        text = json.dumps(self.lowered, sort_keys=True) if self.lowered else ""
+        if text == self.kept:
+            return
+        try:
+            if not text:
+                self.saved.unlink(missing_ok=True)
+            else:
+                self.saved.parent.mkdir(parents=True, exist_ok=True)
+                handle, name = tempfile.mkstemp(prefix=".priority-", dir=self.saved.parent)
+                with os.fdopen(handle, "w") as stream:
+                    stream.write(text)
+                os.replace(name, self.saved)
+            self.kept = text
+        except OSError:
+            pass
+
+    def recover(self):
+        """What an earlier run left lowered (it crashed, say), put back."""
+        try:
+            left = json.loads(self.saved.read_text())
+        except OSError:
+            return  # None: the last one stopped as it should.
+        except ValueError:
+            left = None
+        if isinstance(left, dict):
+            self.lowered = {name: {key: weight(before.get(key)) for key in WEIGHTS if key in before}
+                            for name, before in left.items() if unit_name(name) and isinstance(before, dict)}
+        self.kept = "?"
+        self.restore()
+
+
+def load(name):
+    """A helper beside this one, as a module."""
+    path = Path(__file__).with_name(name).resolve(strict=True)
+    loader = importlib.machinery.SourceFileLoader(name.replace("-", "_"), str(path))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+def serve(shaders, first, bus=None):
+    """Looks after Steam's shaders, and listens for KWin's word on the session bus; None when one
+    is listening already. Returns what must stay alive while the event loop runs."""
+    from PySide6.QtCore import ClassInfo, QObject, QTimer, Slot
+    from PySide6.QtDBus import QDBusConnection
+    bus = bus or QDBusConnection.sessionBus()
+    looks, steps = QTimer(), QTimer()
+    for timer in (looks, steps):
+        timer.setSingleShot(True)
+
+    def schedule(delay):
+        if delay is None:
+            steps.stop()
+        else:
+            steps.start(max(0, int(delay * 1000)))
+    looks.timeout.connect(lambda: looks.start(int(turn(shaders) * 1000)))
+    steps.timeout.connect(lambda: schedule(first.step(time.monotonic())))
+
+    @ClassInfo(**{"D-Bus Interface": NAME_ON_BUS})
+    class Service(QObject):
+        @Slot(str)
+        def Front(self, text):
+            schedule(first.report(text, time.monotonic()))
+
+    service = Service()
+    if not bus.registerService(NAME_ON_BUS):
+        return None
+    if not bus.registerObject(PATH_ON_BUS, service, QDBusConnection.ExportAllSlots):
+        bus.unregisterService(NAME_ON_BUS)
+        return None
+    looks.start(0)
+    return {"looks": looks, "steps": steps, "service": service}
+
+
 def main():
-    shaders = Shaders()
-    while True:
-        time.sleep(turn(shaders))
+    from PySide6.QtCore import QCoreApplication, QSocketNotifier
+    app = QCoreApplication(sys.argv[:1])
+    shaders, first = Shaders(), GamesFirst(load("monet-rest"))
+    alive = serve(shaders, first)
+    if alive is None:
+        return 0  # Already running in this sign-in.
+    first.recover()
+    # Stopped (the service, a sign-out): every app back as it was before going.
+    wake, woken = socket.socketpair()
+    for end in (wake, woken):
+        end.setblocking(False)
+    signal.set_wakeup_fd(wake.fileno())
+    for number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(number, lambda *_: None)
+    notifier = QSocketNotifier(woken.fileno(), QSocketNotifier.Type.Read)
+    notifier.activated.connect(app.quit)
+    try:
+        return app.exec()
+    finally:
+        first.restore()
 
 
 if __name__ == "__main__":

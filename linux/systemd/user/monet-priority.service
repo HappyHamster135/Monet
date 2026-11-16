@@ -1,6 +1,8 @@
 [Unit]
-Description=Monet: Steam's shader processing at idle priority, so it never slows the PC down
-# With the desktop, and gone with it. Looks for Steam's shader processes only while Steam runs.
+Description=Monet: a game in front ahead of the apps behind it, and Steam's shader processing behind everything
+# With the desktop, and gone with it: what it lowered is put back as it stops. The Monet Work
+# KWin script tells it which windows are in front; Steam's shader processes are looked for only
+# while Steam runs.
 PartOf=graphical-session.target
 After=graphical-session.target
 

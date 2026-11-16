@@ -501,6 +501,161 @@ class KWinScripts(unittest.TestCase):
         self.assertEqual(self.value("frames[0].desktops.map(d => d.id)"), ["play"])
 
 
+# A stand-in for the parts of KWin's scripting API the Monet Work script uses, as KWin 6.8 has them.
+FAKE_KWIN = {
+    "qmldir": "module org.kde.kwin\nsingleton Workspace 1.0 Workspace.qml\nDBusCall 1.0 DBusCall.qml\n",
+    "Workspace.qml": """pragma Singleton
+import QtQml
+QtObject {
+    property var stackingOrder: []
+    property var activeWindow: null
+    property var currentDesktop: "one"
+    property var calls: []
+    property bool listening: true
+    signal windowAdded(var window)
+    signal windowRemoved(var window)
+    signal windowActivated(var window)
+    signal screensChanged()
+}
+""",
+    "DBusCall.qml": """import QtQml
+QtObject {
+    id: dbus
+    property string service
+    property string path
+    property string dbusInterface
+    property string method
+    property var arguments: []
+    signal finished(var returnValue)
+    signal failed()
+    function call() {
+        if (!Workspace.listening && service === "org.monet.Priority") failed()
+        else Workspace.calls = Workspace.calls.concat([[service, method].concat(dbus.arguments)])
+    }
+}
+""",
+}
+
+SCENE = """import QtQuick
+import org.kde.kwin
+
+Item {
+    id: scene
+    property var work: workLoader.item
+    property var dp1: ({name: "DP-1"})
+    property var dp2: ({name: "DP-2"})
+    component FakeWindow: QtObject {
+        property int pid: 0
+        property string internalId: "{" + pid + "}"
+        property string desktopFileName: ""
+        property bool normalWindow: true
+        property bool skipTaskbar: false
+        property bool deleted: false
+        property bool minimized: false
+        property bool fullScreen: false
+        property bool keepAbove: false
+        property bool keepBelow: false
+        property bool onAllDesktops: true
+        property var desktops: []
+        property var output: scene.dp1
+        property rect frameGeometry: Qt.rect(0, 0, 800, 600)
+        signal maximizedChanged()
+    }
+    property var zen: FakeWindow { pid: 30; desktopFileName: "app.zen_browser.zen" }
+    property var game: FakeWindow { pid: 42; fullScreen: true }
+    property var panel: FakeWindow { pid: 7; normalWindow: false }
+    Loader {
+        id: workLoader
+        source: "WORK"
+    }
+}
+"""
+
+
+@unittest.skipUnless(os.name != "nt", "Qt Quick")
+class FrontInKWin(unittest.TestCase):
+    """The Monet Work script says which windows are in front (for games first, monet-priority),
+    as it changes and only when it has: run as it is, against a stand-in for KWin."""
+
+    def setUp(self):
+        try:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtQml import QQmlApplicationEngine
+        except ImportError:
+            self.skipTest("Qt Quick required")
+        qt_app()
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        folder = Path(self.temp.name)
+        kwin = folder / "imports/org/kde/kwin"
+        kwin.mkdir(parents=True)
+        for name, text in FAKE_KWIN.items():
+            (kwin / name).write_text(text, encoding="utf-8")
+        script = ROOT / "linux/share/kwin/scripts/monet-work/contents/ui/main.qml"
+        scene = folder / "scene.qml"
+        scene.write_text(SCENE.replace("WORK", QUrl.fromLocalFile(str(script)).toString()), encoding="utf-8")
+        self.engine = QQmlApplicationEngine()
+        self.addCleanup(self.engine.deleteLater)
+        self.engine.addImportPath(str(folder / "imports"))
+        errors = []
+        self.engine.warnings.connect(lambda warnings: errors.extend(w.toString() for w in warnings))
+        self.engine.load(QUrl.fromLocalFile(str(scene)))
+        self.assertTrue(self.engine.rootObjects(), "\n".join(errors))
+        self.scene = self.engine.rootObjects()[0]
+        self.assertIsNotNone(self.scene.property("work"), "\n".join(errors))
+        self.errors = errors
+
+    def js(self, expression):
+        from PySide6.QtQml import QJSValue, QQmlExpression
+        expr = QQmlExpression(self.engine.contextForObject(self.scene), self.scene, expression)
+        value, _ = expr.evaluate()
+        self.assertFalse(expr.hasError(), expr.error().toString())
+        return value.toVariant() if isinstance(value, QJSValue) else value
+
+    def said(self, wait=400):
+        from PySide6.QtTest import QTest
+        QTest.qWait(wait)
+        calls = self.js("Workspace.calls")
+        self.js("Workspace.calls = []")
+        return [json.loads(c[2]) for c in calls if c[:2] == ["org.monet.Priority", "Front"]]
+
+    def test_whats_in_front_as_it_changes(self):
+        self.assertEqual(self.said(), [{"active": 0, "full": []}])  # As it starts.
+        self.js("Workspace.windowAdded(scene.panel)")
+        self.assertEqual(self.said(), [])  # Nothing changed in front: not said again.
+        # The game, full screen, in front.
+        self.js("Workspace.stackingOrder = [scene.panel, scene.zen, scene.game]")
+        self.js("Workspace.activeWindow = scene.game; Workspace.windowActivated(scene.game)")
+        self.assertEqual(self.said(), [{"active": 42, "full": []}])
+        # Alt+Tab: the game minimizes itself, Zen in front.
+        self.js("Workspace.windowAdded(scene.game); Workspace.windowAdded(scene.zen)")
+        self.said()
+        self.js("scene.game.minimized = true; Workspace.activeWindow = scene.zen; Workspace.windowActivated(scene.zen)")
+        self.assertEqual(self.said(), [{"active": 30, "full": []}])
+        # Back, then the game on a screen of its own while Zen is used on the other one.
+        self.js("scene.game.minimized = false; scene.game.output = scene.dp2")
+        self.assertEqual(self.said(), [{"active": 30, "full": [42]}])
+        # Behind Zen on the same screen, it isn't in front.
+        self.js("scene.game.output = scene.dp1")
+        self.assertEqual(self.said(), [{"active": 30, "full": []}])
+        # On another desktop it isn't either; the panel never is.
+        self.js("scene.game.output = scene.dp2; scene.game.onAllDesktops = false; scene.game.desktops = ['two']")
+        self.assertEqual(self.said(), [])
+        self.js("Workspace.activeWindow = scene.panel; Workspace.windowActivated(scene.panel)")
+        self.assertEqual(self.said(), [{"active": 0, "full": []}])
+        self.assertEqual(self.errors, [])
+
+    def test_said_again_when_games_first_wasnt_listening(self):
+        self.said()
+        self.js("Workspace.listening = false")  # monet-priority not started yet: KWin's call fails.
+        self.js("Workspace.stackingOrder = [scene.game]; Workspace.activeWindow = scene.game; Workspace.windowActivated(scene.game)")
+        self.assertEqual(self.said(), [])
+        self.js("Workspace.listening = true; Workspace.windowActivated(scene.game)")
+        self.assertEqual(self.said(), [{"active": 42, "full": []}])
+        self.js("Workspace.windowActivated(scene.game)")
+        self.assertEqual(self.said(), [])
+
+
 @unittest.skipIf(os.name == "nt", "Linux restore lock")
 class SignIn(unittest.TestCase):
     """monet-quick trip-apps-again at every sign-in: the trip first, then the last session's work."""

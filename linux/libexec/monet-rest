@@ -230,6 +230,13 @@ def sounding(pactl="pactl"):
     return found, ids
 
 
+def heard(name, pids, playing):
+    """Whether a unit plays or records sound, by sounding()'s answer: one of its processes, or
+    its Flatpak's app id (in the unit's name, escaped as systemd does)."""
+    pids_playing, ids_playing = playing
+    return bool(pids & pids_playing) or any(app.replace("-", "\\x2d") in name or app in name for app in ids_playing)
+
+
 WINDOWS_JS = r"""
 const shown = workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.deleted);
 callDBus(%(name)s, "/Rest", "org.monet.Rest", "windows",
@@ -321,7 +328,6 @@ def plan(now, state, found, shown, playing, proc=Path("/proc")):
     """Which units have been left long enough to rest, longest left first, updating state.
 
     found: {unit: folder}; shown: KWin's windows; playing: (processes, app ids) with sound."""
-    pids_playing, ids_playing = playing
     seen = state.setdefault("apps", {})
     for name in list(seen):
         if name not in found:
@@ -340,9 +346,8 @@ def plan(now, state, found, shown, playing, proc=Path("/proc")):
         busy = cpu is not None and before is not None and before_at and now > before_at \
             and (cpu - before) / 1e6 / (now - before_at) > BUSY
         left = all(w.get("minimized") and not w.get("active") for w in mine)
-        heard = pids & pids_playing or any(app.replace("-", "\\x2d") in name or app in name for app in ids_playing)
         # A game is asked last: only its environment says so, read only of apps otherwise left.
-        if not pids or not left or busy or heard or game_running(pids, proc):
+        if not pids or not left or busy or heard(name, pids, playing) or game_running(pids, proc):
             entry.pop("idle_since", None)
             continue
         since = entry.setdefault("idle_since", now)

@@ -1,10 +1,18 @@
-"""Steam's shader processing at idle priority: every thread of it, nothing else, and nearly free
-while Steam isn't running. A pretend /proc, and nothing's priority really changed."""
+"""Who gets the PC first (monet-priority): Steam's shader processing at idle priority, every
+thread of it and nothing else, nearly free while Steam isn't running; and a game in front ahead
+of the apps behind it, put back exactly as they were. A pretend /proc, cgroup tree and systemd:
+nothing's priority really changes here."""
 import importlib.machinery
 import importlib.util
+import json
 import os
 from pathlib import Path
+import shutil
+import signal
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -12,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 loader = importlib.machinery.SourceFileLoader('monet_priority', str(ROOT / 'linux/libexec/monet-priority'))
 priority = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
 loader.exec_module(priority)
+rest = priority.load('monet-rest')
 
 ME, SOMEONE = 1000, 1001
 STEAM = '/home/me/.local/share/Steam'
@@ -193,13 +202,6 @@ class OnlyWhileSteamRuns(Fixture):
         self.assertEqual(self.done(), [500])
         self.assertEqual((priority.LOOK, priority.REST), (2, 30))
 
-    def test_main_sleeps_what_each_turn_says(self):
-        slept = []
-        with mock.patch.object(priority, 'turn', side_effect=[30, 30, 2]), \
-                mock.patch.object(priority.time, 'sleep', side_effect=lambda s: slept.append(s)):
-            with self.assertRaises(StopIteration):
-                priority.main()
-        self.assertEqual(slept, [30, 30, 2])
 
 
 class Kernel(unittest.TestCase):
@@ -222,6 +224,251 @@ class Kernel(unittest.TestCase):
             priority.idle_disk(4242)  # Elsewhere than x86-64 and Arm: the processors alone.
         if os.uname().machine == 'x86_64':
             self.assertEqual(priority.IOPRIO_SET, 251)
+
+
+STEAM_UNIT, CHROMIUM, ZEN = 'app-steam@autostart.service', 'app-flatpak-org.chromium.Chromium-4242.scope', 'app-zen-7.scope'
+
+
+class Systemd:
+    """systemctl --user, pretend: each unit's weights as `show` prints them."""
+
+    def __init__(self):
+        self.units, self.calls = {}, []
+
+    def __call__(self, *args):
+        self.calls.append(args)
+        if args[0] == 'show':
+            names = args[args.index('--') + 1:]
+            return '\n\n'.join(f'Id={n}\n' + '\n'.join(f'{k}={self.units.get(n, {}).get(k, "[not set]")}'
+                                                         for k in ('CPUWeight', 'IOWeight')) for n in names) + '\n'
+        if args[:2] == ('set-property', '--runtime') and args[2] in self.units:
+            for setting in args[3:]:
+                key, _, value = setting.partition('=')
+                self.units[args[2]][key] = value or '[not set]'
+            return ''
+        return None
+
+    def sets(self):
+        found = [c[2:] for c in self.calls if c[0] == 'set-property']
+        self.calls.clear()
+        return found
+
+
+class GamesFirstFixture(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        base = Path(self.temp.name)
+        self.apps, self.proc, self.saved = base / 'cgroup/app.slice', base / 'proc', base / 'run/monet/priority.json'
+        self.apps.mkdir(parents=True)
+        self.proc.mkdir()
+        self.systemd, self.said, self.playing = Systemd(), [], (set(), set())
+        self.first = self.games_first()
+        self.unit(STEAM_UNIT, {40: 'steam', 41: 'reaper', 42: 'REPO.exe'}, game=(41, 42))
+        self.unit(CHROMIUM, {10: 'chromium', 11: 'chromium'})
+        self.unit(ZEN, {30: 'zen'})
+
+    def games_first(self):
+        return priority.GamesFirst(rest, apps=self.apps, proc=self.proc, run=self.systemd, saved=self.saved,
+                                   playing=lambda: self.playing, say=self.said.append)
+
+    def unit(self, name, processes, game=(), weights=None):
+        folder = self.apps / name
+        folder.mkdir()
+        (folder / 'cgroup.procs').write_text(''.join(f'{p}\n' for p in processes))
+        for pid, comm in processes.items():
+            (self.proc / str(pid)).mkdir()
+            (self.proc / str(pid) / 'cgroup').write_text(f'0::/user.slice/user-1000.slice/user@1000.service/app.slice/{name}\n')
+            (self.proc / str(pid) / 'comm').write_text(comm + '\n')
+            (self.proc / str(pid) / 'environ').write_bytes(b'HOME=/home/me\0' + (b'SteamAppId=3241660\0' if pid in game else b''))
+        self.systemd.units[name] = dict(weights or {})
+
+    def front(self, now, active=0, full=()):
+        return self.first.report(json.dumps({'active': active, 'full': list(full)}), now)
+
+    def lowered(self, *names):
+        return [(n, f'CPUWeight={priority.SHARE}', f'IOWeight={priority.SHARE}') for n in names]
+
+
+class GamesFirst(GamesFirstFixture):
+    def test_a_game_in_front_has_the_others_give_way_after_a_moment_and_back_after(self):
+        self.assertEqual(self.front(0, active=42), priority.SETTLE)  # Alt+Tab may only pass by.
+        self.assertEqual(self.systemd.calls, [])
+        self.assertEqual(self.first.step(priority.SETTLE), priority.RECHECK)
+        self.assertEqual(self.systemd.sets(), self.lowered(CHROMIUM, ZEN))  # Never Steam's: the game is in it.
+        self.assertEqual(self.systemd.units[CHROMIUM], {'CPUWeight': '20', 'IOWeight': '20'})
+        self.assertTrue(self.saved.exists())
+        # Zen to the front: everything back at once, as it was.
+        self.assertIsNone(self.front(5, active=30))
+        self.assertEqual(sorted(self.systemd.sets()), [(CHROMIUM, 'CPUWeight=', 'IOWeight='), (ZEN, 'CPUWeight=', 'IOWeight=')])
+        self.assertEqual(self.systemd.units[ZEN], {'CPUWeight': '[not set]', 'IOWeight': '[not set]'})
+        self.assertFalse(self.saved.exists())
+        self.assertIsNone(self.front(6, active=30))
+        self.assertEqual(self.systemd.calls, [])  # Nothing to put back twice.
+        # And back in the game: another moment first.
+        self.assertEqual(self.front(10, active=42), priority.SETTLE)
+        self.assertEqual(self.systemd.calls, [])
+
+    def test_a_game_full_screen_on_another_screen_counts_until_it_quits(self):
+        self.front(0, active=30, full=[42])
+        self.first.step(priority.SETTLE)
+        self.assertEqual(self.systemd.sets(), self.lowered(CHROMIUM))  # Zen is the one in front.
+        self.assertEqual(self.first.step(priority.SETTLE + priority.RECHECK), priority.RECHECK)
+        self.assertEqual(self.systemd.calls, [])  # Looked at again: nothing new to do.
+        # The game quits; its window's process is gone before KWin says so.
+        (self.apps / STEAM_UNIT / 'cgroup.procs').write_text('40\n')
+        self.assertIsNone(self.first.step(30))
+        self.assertEqual(self.systemd.sets(), [(CHROMIUM, 'CPUWeight=', 'IOWeight=')])
+
+    def test_who_never_gives_way(self):
+        self.unit('app-com.discordapp.Discord-1.scope', {20: 'Discord'})                        # in a call
+        self.unit('app-flatpak-com.spotify.Client-2.scope', {50: 'spotify'})                     # playing music
+        self.unit('app-polkit\\x2dkde\\x2dauthentication\\x2dagent\\x2d1@autostart.service', {60: 'polkit-kde'})
+        self.unit('app-org.kde.plasma\\x2dbrowser\\x2dintegration\\x2dhost-3.scope', {61: 'host'})
+        self.unit('app-xdg\\x2duser\\x2ddirs@autostart.service', {62: 'xdg-user-dirs'})
+        self.unit('monet-backup.service', {63: 'monet-quick'})                                     # Monet's own
+        self.unit('app-gone-4.scope', {})                                                         # nothing left in it
+        self.unit('app-quiet-5.scope', {64: 'calm'}, weights={'CPUWeight': '10', 'IOWeight': 'idle'})  # lower already
+        self.unit('app-half-6.scope', {65: 'half'}, weights={'CPUWeight': '10', 'IOWeight': '80'})
+        self.playing = ({20}, {'com.spotify.Client'})
+        self.front(0, active=42)
+        self.first.step(priority.SETTLE)
+        self.assertEqual(sorted(self.systemd.sets()), sorted(self.lowered(CHROMIUM, ZEN) + [('app-half-6.scope', 'IOWeight=20')]))
+        self.first.restore()
+        self.assertEqual(sorted(self.systemd.sets()), sorted([('app-half-6.scope', 'IOWeight=80'),
+                                                              (CHROMIUM, 'CPUWeight=', 'IOWeight='), (ZEN, 'CPUWeight=', 'IOWeight=')]))
+        self.assertEqual(self.systemd.units['app-half-6.scope'], {'CPUWeight': '10', 'IOWeight': '80'})
+
+    def test_apps_that_start_end_or_make_a_sound_while_the_game_is_in_front(self):
+        self.front(0, active=42)
+        self.first.step(priority.SETTLE)
+        self.systemd.sets()
+        self.unit('app-discord-8.scope', {80: 'Discord'})  # started
+        shutil.rmtree(self.apps / ZEN)                     # closed
+        del self.systemd.units[ZEN]
+        self.first.step(12)
+        self.assertEqual(self.systemd.sets(), self.lowered('app-discord-8.scope'))
+        self.assertNotIn(ZEN, self.first.lowered)
+        self.playing = ({80}, set())  # a call begins: back at once
+        self.first.step(22)
+        self.assertEqual(self.systemd.sets(), [('app-discord-8.scope', 'CPUWeight=', 'IOWeight=')])
+        self.first.restore()
+        self.assertEqual(self.systemd.sets(), [(CHROMIUM, 'CPUWeight=', 'IOWeight=')])
+
+    def test_steam_gives_way_to_a_game_of_its_own_unit(self):
+        self.unit('app-net.lutris.Lutris-9.scope', {90: 'lutris', 91: 'wineserver', 92: 'Game.exe'})
+        self.front(0, active=92)
+        self.first.step(priority.SETTLE)
+        self.assertIn(self.lowered(STEAM_UNIT)[0], self.systemd.sets())  # Steam's, with no game in front in it.
+        # Steam's own window in front while its game runs: still the game's unit.
+        self.front(5, active=40, full=[])
+        self.assertEqual(self.first.games(), {STEAM_UNIT})
+
+    def test_a_stop_or_a_crash_puts_everything_back(self):
+        self.systemd.units[ZEN] = {'CPUWeight': '50'}
+        self.front(0, active=42)
+        self.first.step(priority.SETTLE)
+        self.systemd.sets()
+        self.assertEqual(json.loads(self.saved.read_text())[ZEN], {'CPUWeight': '50', 'IOWeight': ''})
+        # Crashed: the next start finds what was lowered and puts it back.
+        after = self.games_first()
+        after.recover()
+        self.assertEqual(sorted(self.systemd.sets()), [(CHROMIUM, 'CPUWeight=', 'IOWeight='), (ZEN, 'CPUWeight=50', 'IOWeight=')])
+        self.assertFalse(self.saved.exists())
+        self.assertEqual(self.systemd.units[ZEN], {'CPUWeight': '50', 'IOWeight': '[not set]'})
+        # Nothing to put back, or a note that isn't one: nothing asked.
+        for text in ('', 'not json', '[1, 2]', json.dumps({'-x.service': {'CPUWeight': '5'}, '../x': {}, ZEN: 'no'})):
+            self.saved.parent.mkdir(parents=True, exist_ok=True)
+            self.saved.write_text(text)
+            self.games_first().recover()
+            self.assertEqual(self.systemd.calls, [], text)
+            self.assertFalse(self.saved.exists(), text)
+
+    def test_kwins_word_and_systemds(self):
+        for text in ('', 'nonsense', '[]', '{"active": "42"}', '{"active": 42.0, "full": 7}', '{"full": ["x", -1, 0]}'):
+            self.first.report(text, 0)
+            self.assertEqual(self.first.front, [], text)
+        self.first.report('{"active": 30, "full": [42, 0]}', 0)
+        self.assertEqual(self.first.front, [30, 42])
+        self.assertEqual([priority.weight(t) for t in ('[not set]', '18446744073709551615', 'idle', '50', ' 100\n', '0', None)],
+                         ['', '', 'idle', '50', '100', '', ''])
+        self.assertTrue(priority.unit_name('app-polkit\\x2dkde@autostart.service'))
+        for bad in ('-.slice', '--runtime.service', 'a b.scope', 'x/../y.scope', 'app.slice', ''):
+            self.assertFalse(priority.unit_name(bad), bad)
+
+
+@unittest.skipIf(os.name == 'nt' or not os.environ.get('DBUS_SESSION_BUS_ADDRESS'), 'a private session bus')
+class OnTheBus(unittest.TestCase):
+    """KWin's word reaches games first through the session bus; and the service, stopped, puts
+    back what an earlier run left lowered, before and as it goes."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from PySide6.QtCore import QCoreApplication
+            from PySide6.QtDBus import QDBusConnection
+        except ImportError:
+            raise unittest.SkipTest('Qt D-Bus required')
+        cls.app = QCoreApplication.instance() or QCoreApplication([])
+        cls.Bus = QDBusConnection
+
+    def wait(self, condition, seconds=5):
+        from PySide6.QtCore import QCoreApplication, QEventLoop
+        deadline = time.monotonic() + seconds
+        while not condition() and time.monotonic() < deadline:
+            QCoreApplication.processEvents(QEventLoop.AllEvents, 50)
+            time.sleep(0.01)
+        return condition()
+
+    def test_front_on_the_bus(self):
+        from PySide6.QtDBus import QDBusMessage
+        address = os.environ['DBUS_SESSION_BUS_ADDRESS']
+        bus, kwin = (self.Bus.connectToBus(address, name) for name in ('priority-under-test', 'pretend-kwin-priority'))
+        self.addCleanup(lambda: [self.Bus.disconnectFromBus(n) for n in ('priority-under-test', 'pretend-kwin-priority')])
+        first = mock.Mock()
+        first.report.return_value = 0.1
+        first.step.return_value = None
+        shaders, turns = priority.Shaders('/nonexistent', processor=lambda tid: None, disk=lambda tid: None), []
+        with mock.patch.object(priority, 'turn', side_effect=lambda s: turns.append(s) or 0.05):
+            alive = priority.serve(shaders, first, bus=bus)
+            self.assertIsNotNone(alive)
+            self.assertTrue(self.wait(lambda: len(turns) >= 3))  # Each look after the time the last one said.
+        self.assertTrue(all(s is shaders for s in turns))
+        alive['looks'].stop()
+        message = QDBusMessage.createMethodCall(priority.NAME_ON_BUS, priority.PATH_ON_BUS, priority.NAME_ON_BUS, 'Front')
+        message.setArguments(['{"active": 42, "full": []}'])
+        pending = kwin.asyncCall(message, 2000)
+        self.assertTrue(self.wait(pending.isFinished))
+        self.assertFalse(pending.isError(), pending.error().message())
+        self.assertEqual(first.report.call_args.args[0], '{"active": 42, "full": []}')
+        self.assertTrue(self.wait(lambda: first.step.called))  # As report asked, a moment later.
+        again = self.Bus.connectToBus(address, 'second-priority')
+        self.addCleanup(lambda: self.Bus.disconnectFromBus('second-priority'))
+        self.assertIsNone(priority.serve(shaders, first, bus=again))  # One per sign-in.
+
+    def test_stopped_it_puts_back_what_was_left_lowered(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        (folder / 'bin').mkdir()
+        log = folder / 'systemctl.log'
+        fake = folder / 'bin/systemctl'
+        fake.write_text(f'#!/bin/sh\necho "$*" >> "{log}"\n')
+        fake.chmod(0o755)
+        saved = Path(os.environ['XDG_RUNTIME_DIR']) / 'monet/priority.json'
+        saved.parent.mkdir(parents=True, exist_ok=True)
+        saved.write_text(json.dumps({ZEN: {'CPUWeight': '50', 'IOWeight': ''}}))
+        self.addCleanup(saved.unlink, True)
+        env = dict(os.environ, PATH=f'{folder / "bin"}:{os.environ.get("PATH", "")}')
+        process = subprocess.Popen([sys.executable, str(ROOT / 'linux/libexec/monet-priority')], env=env,
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        self.addCleanup(lambda: process.poll() is None and process.kill())
+        self.assertTrue(self.wait(lambda: log.exists() and not saved.exists() or process.poll() is not None, 15),
+                        'the service never started')
+        self.assertIsNone(process.poll(), process.stdout.read() if process.poll() is not None else '')
+        self.assertEqual(log.read_text(), f'--user set-property --runtime {ZEN} CPUWeight=50 IOWeight=\n')
+        process.send_signal(signal.SIGTERM)
+        self.assertEqual(process.wait(5), 0)
+        self.assertIn('the other apps are back as they were', process.stdout.read())
 
 
 class Installed(unittest.TestCase):
