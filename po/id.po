@@ -53,17 +53,18 @@ msgstr "Sembunyikan detail"
 msgid "Details"
 msgstr "Detail"
 
-#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1458
-#: linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4043 linux/share/monet/settings-app/MonetSettings.qml:5006
-#: linux/share/monet/settings-app/MonetSettings.qml:5092 linux/share/monet/settings-app/MonetSettings.qml:6673 linux/share/monet/settings-app/MonetSettings.qml:6795
-#: linux/share/monet/settings-app/MonetSettings.qml:7821 linux/share/monet/settings-app/MonetSettings.qml:7999 linux/share/monet/settings-app/MonetSettings.qml:8326
-#: linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:330 linux/share/monet/store-app/Downloads.qml:209
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445
-#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1340
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1731
+#: linux/share/monet/games/Games.qml:1904 linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4043
+#: linux/share/monet/settings-app/MonetSettings.qml:5006 linux/share/monet/settings-app/MonetSettings.qml:5092 linux/share/monet/settings-app/MonetSettings.qml:6673
+#: linux/share/monet/settings-app/MonetSettings.qml:6795 linux/share/monet/settings-app/MonetSettings.qml:7821 linux/share/monet/settings-app/MonetSettings.qml:7999
+#: linux/share/monet/settings-app/MonetSettings.qml:8326 linux/share/monet/settings-app/MonetSettings.qml:8777 linux/share/monet/store-app/AppPage.qml:330
+#: linux/share/monet/store-app/Downloads.qml:209 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406
+#: linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59
+#: crates/monet/src/main.rs:1340
 msgid "Cancel"
 msgstr "Batal"
 
-#: image/password/QuickAuthDialog.qml:369 linux/libexec/monet-quick:1576
+#: image/password/QuickAuthDialog.qml:369 linux/libexec/monet-quick:1583
 msgid "Allow"
 msgstr "Izinkan"
 
@@ -695,7 +696,7 @@ msgid "Drag a widget to move it. Point at one to resize or remove it."
 msgstr ""
 "Seret widget untuk memindahkannya. Arahkan kursor ke widget untuk mengubah ukuran atau menghapusnya."
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:270
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:106 linux/share/monet/games/GamePage.qml:279
 msgid "More"
 msgstr "Lainnya"
 
@@ -815,7 +816,7 @@ msgstr ""
 msgid "Added by you"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:7541
+#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8005
 #: linux/libexec/monet-files-tools:712
 msgid "Windows program"
 msgstr "Program Windows"
@@ -832,8 +833,8 @@ msgstr "Office"
 msgid "Sound and video"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:23 linux/share/monet/games/Games.qml:447
-#: linux/share/monet/games/Games.qml:868 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
+#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
+#: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5327 linux/share/monet/settings-app/MonetSettings.qml:6231
 #: linux/share/monet/store-app/Store.qml:178 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "Game"
@@ -854,17 +855,17 @@ msgstr "Lainnya"
 msgid "Not opened yet"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:248 linux/share/monet/widgets/DayNotes.qml:117
+#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:350 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
 msgid "Today"
 msgstr "Hari ini"
 
-#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:249 linux/share/monet/settings-app/MonetSettings.qml:6922
+#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:351 linux/share/monet/settings-app/MonetSettings.qml:6922
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34
 msgid "Yesterday"
 msgstr "Kemarin"
 
-#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:250
+#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:352
 msgid "%1 day ago"
 msgid_plural "%1 days ago"
 msgstr[0] "%1 hari lalu"
@@ -900,7 +901,7 @@ msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "%1 aplikasi"
 
-#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:748 linux/share/monet/store-app/Shelf.qml:86
+#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:874 linux/share/monet/store-app/Shelf.qml:86
 #: setup/qml/Main.qml:549
 msgid "Name"
 msgstr "Nama"
@@ -946,447 +947,641 @@ msgstr ""
 msgid "Kind"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:22
+#: linux/share/monet/games/GamePage.qml:25
+msgid "Its download is paused in %1."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:26
+msgid "It's waiting its turn in %1's downloads."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:27
 msgid "Steam is downloading it: %1%."
 msgstr "Steam sedang mengunduhnya: %1%."
 
-#: linux/share/monet/games/GamePage.qml:24 linux/share/monet/games/Games.qml:1426
+#: linux/share/monet/games/GamePage.qml:28
+msgid "%1 is downloading it."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:29
+msgid ""
+"You own it, and it isn't installed yet. Install opens %1, which downloads it."
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1699
 msgid ""
 "Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "Para pemain melaporkan game ini tidak berjalan di Monet, jadi dimainkan di Windows. Di Steam, pindahkan ke \"Windows games\" (Properti, File Terpasang, Pindahkan folder instalasi), lalu Mainkan akan memulainya di sana, tanpa mengunduh apa pun."
 
-#: linux/share/monet/games/GamePage.qml:26 linux/share/monet/games/Games.qml:1428
+#: linux/share/monet/games/GamePage.qml:33 linux/share/monet/games/Games.qml:1701
 msgid ""
 "Its anti-cheat only lets it play in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "Anti-cheat-nya hanya mengizinkannya berjalan di Windows. Di Steam, pindahkan ke \"Windows games\" (Properti, File Terpasang, Pindahkan folder instalasi), lalu Mainkan akan memulainya di sana, tanpa mengunduh apa pun."
 
-#: linux/share/monet/games/GamePage.qml:28 linux/share/monet/games/Games.qml:1430
+#: linux/share/monet/games/GamePage.qml:35 linux/share/monet/games/Games.qml:1703
 msgid ""
 "Players report it doesn't run in Monet, and it isn't installed in Windows yet. Restart in Windows and install it with %1."
 msgstr ""
 "Para pemain melaporkan game ini tidak berjalan di Monet, dan belum terinstal di Windows. Mulai ulang ke Windows dan instal dengan %1."
 
-#: linux/share/monet/games/GamePage.qml:30 linux/share/monet/games/Games.qml:1432
+#: linux/share/monet/games/GamePage.qml:37 linux/share/monet/games/Games.qml:1705
 msgid ""
 "Its anti-cheat only lets it play in Windows, and it isn't installed there yet. Restart in Windows and install it with %1."
 msgstr ""
 "Anti-cheat-nya hanya mengizinkannya berjalan di Windows, dan game ini belum terinstal di sana. Mulai ulang ke Windows dan instal dengan %1."
 
-#: linux/share/monet/games/GamePage.qml:31
+#: linux/share/monet/games/GamePage.qml:38
 msgid ""
 "Installed once, in Windows' Games folder: it plays here and in Windows."
 msgstr ""
 "Dipasang sekali, di folder Games Windows: dimainkan di sini dan di Windows."
 
-#: linux/share/monet/games/GamePage.qml:33
+#: linux/share/monet/games/GamePage.qml:40
 msgid ""
 "Players report it doesn't run in Monet: Play restarts your PC in Windows and opens it."
 msgstr ""
 "Para pemain melaporkan game ini tidak jalan di Monet: Mainkan memulai ulang PC Anda ke Windows dan membukanya."
 
-#: linux/share/monet/games/GamePage.qml:35
+#: linux/share/monet/games/GamePage.qml:42
 msgid ""
 "Its anti-cheat only lets it play in Windows: Play restarts your PC in Windows and opens it."
 msgstr ""
 "Anti-cheat-nya hanya mengizinkannya di Windows: Mainkan memulai ulang PC Anda ke Windows dan membukanya."
 
-#: linux/share/monet/games/GamePage.qml:37
+#: linux/share/monet/games/GamePage.qml:44
 msgid ""
 "It's installed in Windows: Play restarts your PC in Windows and opens it, and when you quit, you're back here."
 msgstr ""
 "Game ini terpasang di Windows: Mainkan memulai ulang PC Anda ke Windows dan membukanya, dan saat Anda keluar, Anda kembali ke sini."
 
-#: linux/share/monet/games/GamePage.qml:40
+#: linux/share/monet/games/GamePage.qml:47
 msgid "Plays on"
 msgstr "Dimainkan di"
 
-#: linux/share/monet/games/GamePage.qml:40
+#: linux/share/monet/games/GamePage.qml:47
 msgid "Monet and Windows"
 msgstr "Monet dan Windows"
 
-#: linux/share/monet/games/GamePage.qml:41
+#: linux/share/monet/games/GamePage.qml:48
 msgid "Last played"
 msgstr "Terakhir dimainkan"
 
-#: linux/share/monet/games/GamePage.qml:42 linux/share/monet/games/Games.qml:748
+#: linux/share/monet/games/GamePage.qml:49 linux/share/monet/games/Games.qml:874
 msgid "Play time"
 msgstr "Waktu bermain"
 
-#: linux/share/monet/games/GamePage.qml:43
+#: linux/share/monet/games/GamePage.qml:50
+msgid "Size once installed"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:50
 msgid "Size on disk"
 msgstr "Ukuran di disk"
 
-#: linux/share/monet/games/GamePage.qml:51
+#: linux/share/monet/games/GamePage.qml:58
 msgid ""
 "Last time, FACEIT couldn't be downloaded in Windows. Check the internet connection, then try again."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:52
+#: linux/share/monet/games/GamePage.qml:59
 msgid ""
 "Last time, Windows couldn't confirm that FACEIT made its installer, so Monet didn't run it. Try again later."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:53
+#: linux/share/monet/games/GamePage.qml:60
 msgid ""
 "Last time, FACEIT's installer closed before it finished. Try again whenever you like."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:54
+#: linux/share/monet/games/GamePage.qml:61
 msgid "Last time, you came back before FACEIT was set up."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:57
+#: linux/share/monet/games/GamePage.qml:64
 msgid ""
 "Play on FACEIT restarts your PC in Windows and opens FACEIT, then %1. Play still plays it here, as ever."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:58
+#: linux/share/monet/games/GamePage.qml:65
 msgid "Steam in Windows installs it the first time."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:59
+#: linux/share/monet/games/GamePage.qml:66
 msgid ""
 "%1 plays here, but FACEIT's matches and anti-cheat only run in Windows. Monet can set FACEIT up there once, with FACEIT's own installers."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:61
+#: linux/share/monet/games/GamePage.qml:68
 msgid ""
 "Monet couldn't look in Windows at this start, so setting up checks what's there first."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:68 linux/share/monet/settings-app/MonetSettings.qml:7794
+#: linux/share/monet/games/GamePage.qml:75 linux/share/monet/settings-app/MonetSettings.qml:7794
 msgid "Secure Boot"
 msgstr "Secure Boot"
 
-#: linux/share/monet/games/GamePage.qml:69 linux/share/monet/games/GamePage.qml:75
+#: linux/share/monet/games/GamePage.qml:76 linux/share/monet/games/GamePage.qml:82
 msgctxt "a protection is"
 msgid "On"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:70
+#: linux/share/monet/games/GamePage.qml:77
 msgid ""
 "Off. FACEIT needs it on: Settings, Security shows how, so Monet still starts."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:71 linux/share/monet/settings-app/MonetSettings.qml:7799
+#: linux/share/monet/games/GamePage.qml:78 linux/share/monet/settings-app/MonetSettings.qml:7799
 msgid "This PC didn't start in UEFI mode, so Secure Boot can't be on."
 msgstr ""
 "PC ini tidak dimulai dalam mode UEFI, jadi Secure Boot tidak dapat diaktifkan."
 
-#: linux/share/monet/games/GamePage.qml:72
+#: linux/share/monet/games/GamePage.qml:79
 msgid "Couldn't check."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:75
+#: linux/share/monet/games/GamePage.qml:82
 msgid "TPM 2.0"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:76
+#: linux/share/monet/games/GamePage.qml:83
 msgid ""
 "Not found. FACEIT needs one: most PCs have it in the processor, turned on in the firmware settings (Intel PTT or AMD fTPM)."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:78
+#: linux/share/monet/games/GamePage.qml:85
 msgid "Virtualization-based security"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:78
+#: linux/share/monet/games/GamePage.qml:85
 msgid "On in Windows"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:79
+#: linux/share/monet/games/GamePage.qml:86
 msgid ""
 "Off in Windows. FACEIT asks some players for it: turn on virtualization and IOMMU in the firmware settings, then Memory integrity in Windows Security."
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:236 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
+#: linux/share/monet/games/GamePage.qml:243 linux/share/monet/panel/MonetPanelConfiguration.qml:573 linux/share/monet/store-app/AppPage.qml:114
 #: setup/qml/Main.qml:223
 msgid "Back"
 msgstr "Kembali"
 
-#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:383
+#: linux/share/monet/games/GamePage.qml:262 linux/share/monet/games/Games.qml:498
+msgid "Install with %1"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:499
+msgid "Show downloads"
+msgstr ""
+
+#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:504
 #: linux/share/monet/settings-app/MonetSettings.qml:286 linux/share/monet/settings-app/MonetSettings.qml:3411 linux/share/monet/settings-app/MonetSettings.qml:8239
 msgid "Play on Windows"
 msgstr "Main di Windows"
 
-#: linux/share/monet/games/GamePage.qml:255 linux/share/monet/games/Games.qml:379 linux/share/monet/games/Games.qml:386
+#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:510
 msgid "Play in Monet"
 msgstr "Main di Monet"
 
-#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:1137
+#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:1400
 msgid "Favorite"
 msgstr "Favorit"
 
-#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:387
+#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:511
 msgid "Add to favorites"
 msgstr "Tambahkan ke favorit"
 
-#: linux/share/monet/games/GamePage.qml:361
+#: linux/share/monet/games/GamePage.qml:370
 msgid "Ready in Windows"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:361
+#: linux/share/monet/games/GamePage.qml:370
 msgid "Not set up in Windows yet"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:418
+#: linux/share/monet/games/GamePage.qml:427
 msgid "Play on FACEIT"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:418
+#: linux/share/monet/games/GamePage.qml:427
 msgid "Set up FACEIT"
 msgstr ""
 
-#: linux/share/monet/games/GamePage.qml:426
+#: linux/share/monet/games/GamePage.qml:435
 msgid "Security settings"
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:189 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
-#: linux/libexec/monet-quick:9056
+#: linux/share/monet/games/Games.qml:255 linux/share/monet/settings-app/MonetSettings.qml:1134 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
+#: linux/libexec/monet-quick:9535
 msgid "Monet couldn't switch to Windows."
 msgstr "Monet tidak dapat beralih ke Windows."
 
-#: linux/share/monet/games/Games.qml:238 linux/share/monet/games/Games.qml:239 linux/share/monet/settings-app/MonetSettings.qml:8277
-#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:7993 linux/libexec/monet-quick:7993
+#: linux/share/monet/games/Games.qml:295
+msgid ""
+"That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:308
+msgid "Monet couldn't keep the key. Try again."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:314
+msgid ""
+"Steam didn't accept this key. Check that it's copied whole, or make a new one."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:315 linux/share/monet/games/Games.qml:1005
+msgid ""
+"Steam didn't share the games of %1. Add a key made while signed in to that account."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:316
+msgid ""
+"Steam couldn't be reached. The key is kept, and Games tries again when it opens."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8277
+#: linux/share/monet/settings-app/MonetSettings.qml:9262 linux/libexec/monet-quick:8457 linux/libexec/monet-quick:8457
 msgid "Windows"
 msgstr "Windows"
 
-#: linux/share/monet/games/Games.qml:243 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
+#: linux/share/monet/games/Games.qml:345 linux/share/monet/settings-app/MonetSettings.qml:1916 linux/share/monet/settings-app/MonetSettings.qml:5603
 msgid "Never"
 msgstr "Tidak pernah"
 
-#: linux/share/monet/games/Games.qml:254
+#: linux/share/monet/games/Games.qml:356
 msgid "Not played yet"
 msgstr "Belum dimainkan"
 
-#: linux/share/monet/games/Games.qml:255
+#: linux/share/monet/games/Games.qml:357
 msgid "%1 minute"
 msgid_plural "%1 minutes"
 msgstr[0] "%1 menit"
 
-#: linux/share/monet/games/Games.qml:256 linux/share/monet/settings-app/MonetSettings.qml:1917
+#: linux/share/monet/games/Games.qml:358 linux/share/monet/settings-app/MonetSettings.qml:1917
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1 jam"
 
-#: linux/share/monet/games/Games.qml:260 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:362 linux/share/monet/settings-app/MonetSettings.qml:1895 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/monet/games/Games.qml:261 linux/share/monet/settings-app/MonetSettings.qml:1896
+#: linux/share/monet/games/Games.qml:363 linux/share/monet/settings-app/MonetSettings.qml:1896
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/monet/games/Games.qml:265
+#: linux/share/monet/games/Games.qml:367
+msgid "%1 · Download paused"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:368
 msgid "%1 · Downloading, %2%"
 msgstr "%1 · Mengunduh, %2%"
 
-#: linux/share/monet/games/Games.qml:297
+#: linux/share/monet/games/Games.qml:369
+msgid "%1 · Downloading"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:370
+msgid "%1 · Waiting to download"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:371
+msgid "%1 · Not installed, %2"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:372
+msgid "%1 · Not installed"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:404
 msgid "All games"
 msgstr "Semua game"
 
-#: linux/share/monet/games/Games.qml:299
+#: linux/share/monet/games/Games.qml:406
 msgid "Favorites"
 msgstr "Favorit"
 
-#: linux/share/monet/games/Games.qml:301 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
+#: linux/share/monet/games/Games.qml:408 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
 msgid "Recently played"
 msgstr "Baru dimainkan"
 
-#: linux/share/monet/games/Games.qml:302
+#: linux/share/monet/games/Games.qml:409
 msgid "Plays on Monet"
 msgstr "Dimainkan di Monet"
 
-#: linux/share/monet/games/Games.qml:303
+#: linux/share/monet/games/Games.qml:410
 msgid "Plays on Windows"
 msgstr "Dimainkan di Windows"
 
-#: linux/share/monet/games/Games.qml:381
+#: linux/share/monet/games/Games.qml:502
 msgid "Open its page"
 msgstr "Buka halamannya"
 
-#: linux/share/monet/games/Games.qml:387
+#: linux/share/monet/games/Games.qml:507
+msgid "Install in Monet"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:511
 msgid "Remove from favorites"
 msgstr "Hapus dari favorit"
 
-#: linux/share/monet/games/Games.qml:389 linux/share/monet/games/Games.qml:1467
+#: linux/share/monet/games/Games.qml:513 linux/share/monet/games/Games.qml:1740
 msgid "Show in Steam"
 msgstr "Tampilkan di Steam"
 
-#: linux/share/monet/games/Games.qml:391
+#: linux/share/monet/games/Games.qml:516
 msgid "Uninstall…"
 msgstr "Copot…"
 
-#: linux/share/monet/games/Games.qml:485 linux/share/monet/games/Games.qml:505
+#: linux/share/monet/games/Games.qml:611 linux/share/monet/games/Games.qml:631
 msgid "Find a game"
 msgstr "Cari game"
 
-#: linux/share/monet/games/Games.qml:588
+#: linux/share/monet/games/Games.qml:714
 msgid "Stores"
 msgstr "Toko"
 
-#: linux/share/monet/games/Games.qml:677
+#: linux/share/monet/games/Games.qml:803
 msgid "Open Windows"
 msgstr "Buka Windows"
 
-#: linux/share/monet/games/Games.qml:718
+#: linux/share/monet/games/Games.qml:844
 msgid "Games called “%1”"
 msgstr "Game bernama “%1”"
 
-#: linux/share/monet/games/Games.qml:728 linux/share/monet/settings-app/MonetSettings.qml:1830
+#: linux/share/monet/games/Games.qml:854 linux/share/monet/settings-app/MonetSettings.qml:1830
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "%1 game"
 
-#: linux/share/monet/games/Games.qml:742 linux/share/monet/store-app/Shelf.qml:78
+#: linux/share/monet/games/Games.qml:868 linux/share/monet/store-app/Shelf.qml:78
 msgid "Sort by"
 msgstr "Urutkan menurut"
 
-#: linux/share/monet/games/Games.qml:748 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
+#: linux/share/monet/games/Games.qml:874 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "Terbaru"
 
-#: linux/share/monet/games/Games.qml:748
+#: linux/share/monet/games/Games.qml:874
 msgid "Size"
 msgstr "Ukuran"
 
-#: linux/share/monet/games/Games.qml:818
+#: linux/share/monet/games/Games.qml:936 linux/share/monet/settings-app/MonetSettings.qml:6728 linux/share/monet/settings-app/MonetSettings.qml:6768
+#: linux/share/monet/settings-app/MonetSettings.qml:6859 linux/share/monet/settings-app/MonetSettings.qml:7520 linux/share/monet/settings-app/MonetSettings.qml:7627
+#: linux/share/monet/settings-app/MonetSettings.qml:7650 setup/qml/Main.qml:1341 linux/libexec/monet-quick:4138
+#: linux/libexec/monet-quick:7656 linux/libexec/monet-quick:8526 linux/share/monet/passwords/app.py:183
+#: linux/share/monet/passwords/app.py:211
+msgid "Show"
+msgstr "Tampilkan"
+
+#: linux/share/monet/games/Games.qml:942
+msgid "All"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
+#: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
+msgid "Installed"
+msgstr "Terinstal"
+
+#: linux/share/monet/games/Games.qml:942 linux/share/monet/games/Games.qml:1366
+msgid "Not installed"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1861
+msgid "Steam key"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1032
+msgid "Add Steam key"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1004
+msgid ""
+"Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1027
+msgid ""
+"Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1032
+msgid "Change key"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1040 linux/share/monet/games/Games.qml:1090 linux/share/monet/games/Games.qml:1731
+#: linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1172 linux/share/monet/widgets/DayNotes.qml:188
+#: linux/libexec/monet-leave:282 linux/share/monet/passwords/app_support_ui.py:42 crates/monet-usb/src/gui.rs:157
+msgid "Close"
+msgstr "Tutup"
+
+#: linux/share/monet/games/Games.qml:1077
 msgid ""
 "Install each game once: add Windows games to Steam here, and a game you install there plays in Monet and in Windows."
 msgstr ""
 "Pasang setiap game sekali saja: tambahkan Game Windows ke Steam di sini, dan game yang Anda pasang di sana bisa dimainkan di Monet dan di Windows."
 
-#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:1082 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Adding…"
 msgstr "Menambahkan…"
 
-#: linux/share/monet/games/Games.qml:823 linux/share/monet/settings-app/MonetSettings.qml:7507
+#: linux/share/monet/games/Games.qml:1082 linux/share/monet/settings-app/MonetSettings.qml:7507
 msgid "Add to Steam"
 msgstr "Tambahkan ke Steam"
 
-#: linux/share/monet/games/Games.qml:831 linux/share/monet/games/Games.qml:1458 linux/share/monet/games/MonetWindow.qml:146
-#: linux/share/monet/store-app/Store.qml:1172 linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282
-#: linux/share/monet/passwords/app_support_ui.py:42 crates/monet-usb/src/gui.rs:157
-msgid "Close"
-msgstr "Tutup"
-
-#: linux/share/monet/games/Games.qml:938
+#: linux/share/monet/games/Games.qml:1197
 msgid "Continue playing"
 msgstr "Lanjutkan bermain"
 
-#: linux/share/monet/games/Games.qml:1209
+#: linux/share/monet/games/Games.qml:1432 linux/share/monet/settings-app/MonetSettings.qml:8146 linux/share/monet/settings-app/MonetSettings.qml:8856
+#: linux/share/monet/settings-app/MonetSettings.qml:9179 linux/share/monet/store-app/AppPage.qml:222 linux/share/monet/store-app/Home.qml:217
+#: setup/qml/Main.qml:232
+msgid "Install"
+msgstr "Instal"
+
+#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:170
+msgid "Play"
+msgstr "Mainkan"
+
+#: linux/share/monet/games/Games.qml:1475
 msgid "No game called that"
 msgstr "Tidak ada game bernama itu"
 
-#: linux/share/monet/games/Games.qml:1210
+#: linux/share/monet/games/Games.qml:1476
 msgid "No favorites yet"
 msgstr "Belum ada favorit"
 
-#: linux/share/monet/games/Games.qml:1211
+#: linux/share/monet/games/Games.qml:1477
 msgid "Nothing played yet"
 msgstr "Belum ada yang dimainkan"
 
-#: linux/share/monet/games/Games.qml:1212 linux/share/monet/settings-app/MonetSettings.qml:7659
+#: linux/share/monet/games/Games.qml:1478
+msgid "All installed"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1479
+msgid "Nothing installed here yet"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1480 linux/share/monet/settings-app/MonetSettings.qml:7659
 msgid "No games yet"
 msgstr "Belum ada game"
 
-#: linux/share/monet/games/Games.qml:1221
+#: linux/share/monet/games/Games.qml:1489
 msgid "Tap the star on a game to keep it here."
 msgstr "Ketuk bintang pada sebuah game agar tetap di sini."
 
-#: linux/share/monet/games/Games.qml:1222
+#: linux/share/monet/games/Games.qml:1490
 msgid "The games you play show up here, the latest first."
 msgstr "Game yang Anda mainkan muncul di sini, yang terbaru lebih dulu."
 
-#: linux/share/monet/games/Games.qml:1223
+#: linux/share/monet/games/Games.qml:1491
+msgid "Every game you own here is installed."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1492
+msgid "Choose a game you own and Install, and it shows up here."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1493
 msgid ""
 "Install games with Steam, Heroic or Lutris here, or in Windows. They show up here by themselves."
 msgstr ""
 "Pasang game dengan Steam, Heroic, atau Lutris di sini, atau di Windows. Game akan muncul di sini dengan sendirinya."
 
-#: linux/share/monet/games/Games.qml:1231 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
+#: linux/share/monet/games/Games.qml:1501 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
 msgid "Open Steam"
 msgstr "Buka Steam"
 
-#: linux/share/monet/games/Games.qml:1405 linux/share/monet/settings-app/MonetSettings.qml:8260
+#: linux/share/monet/games/Games.qml:1678 linux/share/monet/settings-app/MonetSettings.qml:8260
 msgid "Couldn't open Windows"
 msgstr "Tidak dapat membuka Windows"
 
-#: linux/share/monet/games/Games.qml:1406 crates/monet/src/main.rs:361
+#: linux/share/monet/games/Games.qml:1679 crates/monet/src/main.rs:361
 msgid "Set up FACEIT in Windows?"
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1407 crates/monet/src/main.rs:356
+#: linux/share/monet/games/Games.qml:1680 crates/monet/src/main.rs:356
 msgid "Play %1 on FACEIT?"
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1408
+#: linux/share/monet/games/Games.qml:1681
 msgid "%1 needs Windows"
 msgstr "%1 butuh Windows"
 
-#: linux/share/monet/games/Games.qml:1409 linux/share/monet/settings-app/MonetSettings.qml:8261
+#: linux/share/monet/games/Games.qml:1682 linux/share/monet/settings-app/MonetSettings.qml:8261
 msgid "Play %1?"
 msgstr "Mainkan %1?"
 
-#: linux/share/monet/games/Games.qml:1410 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:363
+#: linux/share/monet/games/Games.qml:1683 linux/share/monet/settings-app/MonetSettings.qml:8264 crates/monet/src/main.rs:363
 msgid "Restart in Windows?"
 msgstr "Mulai ulang ke Windows?"
 
-#: linux/share/monet/games/Games.qml:1422
+#: linux/share/monet/games/Games.qml:1695
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1424
+#: linux/share/monet/games/Games.qml:1697
 msgid ""
 "Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1434
+#: linux/share/monet/games/Games.qml:1707
 msgid ""
 "Your PC restarts in Windows and opens it in the EA app. Choose Download and pick %1 as where to install it: the game is there already, so the EA app only checks it."
 msgstr ""
 "PC Anda dimulai ulang ke Windows dan membukanya di aplikasi EA. Pilih Unduh lalu pilih %1 sebagai tempat memasangnya: game-nya sudah ada di sana, jadi aplikasi EA hanya memeriksanya."
 
-#: linux/share/monet/games/Games.qml:1436
+#: linux/share/monet/games/Games.qml:1709
 msgid ""
 "Your PC restarts in Windows and opens it. If %1 there asks to install it, choose its option to locate the game instead and pick %2: it's there already."
 msgstr ""
 "PC Anda dimulai ulang ke Windows dan membukanya. Jika %1 di sana meminta untuk memasangnya, pilih opsi untuk menemukan game itu dan pilih %2: game-nya sudah ada di sana."
 
-#: linux/share/monet/games/Games.qml:1437 linux/share/monet/settings-app/MonetSettings.qml:8302
+#: linux/share/monet/games/Games.qml:1710 linux/share/monet/settings-app/MonetSettings.qml:8302
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "PC Anda akan dimulai ulang ke Windows dan membuka game. Saat Anda keluar, Anda kembali ke sini. Simpan pekerjaan Anda dulu."
 
-#: linux/share/monet/games/Games.qml:1438 linux/share/monet/settings-app/MonetSettings.qml:8306
+#: linux/share/monet/games/Games.qml:1711 linux/share/monet/settings-app/MonetSettings.qml:8306
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "PC Anda akan dimulai ulang ke Windows. Aplikasi yang terbuka akan ditutup, jadi simpan pekerjaan Anda dulu."
 
-#: linux/share/monet/games/Games.qml:1444 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
+#: linux/share/monet/games/Games.qml:1717 linux/share/monet/settings-app/MonetSettings.qml:8317 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
 msgid ""
 "Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1468
+#: linux/share/monet/games/Games.qml:1741
 msgid "Restart & Set up"
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1469 linux/share/monet/settings-app/MonetSettings.qml:8333
+#: linux/share/monet/games/Games.qml:1742 linux/share/monet/settings-app/MonetSettings.qml:8333
 msgid "Restart & Play"
 msgstr "Mulai ulang & main"
 
-#: linux/share/monet/games/Games.qml:1469 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
+#: linux/share/monet/games/Games.qml:1742 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
 #: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1319
 #: linux/share/monet/settings-app/MonetSettings.qml:7832 linux/share/monet/settings-app/MonetSettings.qml:7852 linux/share/monet/settings-app/MonetSettings.qml:8112
 #: linux/share/monet/settings-app/MonetSettings.qml:8334 setup/qml/Main.qml:231 crates/monet/src/main.rs:375
 #: crates/monet/src/main.rs:930
 msgid "Restart"
 msgstr "Mulai ulang"
+
+#: linux/share/monet/games/Games.qml:1808
+msgid "See every game you own on Steam"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1817
+msgid ""
+"Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1828
+msgid ""
+"Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1829
+msgid ""
+"Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1834
+msgid "Open Steam's key page"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1869
+msgid "A key is kept. Paste a new one to change it."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1869
+msgid "Paste your Steam key"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1884
+msgid "Asking Steam…"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1887
+msgid "Steam lists %1 game you own."
+msgid_plural "Steam lists %1 games you own."
+msgstr[0] ""
+
+#: linux/share/monet/games/Games.qml:1897
+msgid "Forget key"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:1910 linux/share/monet/settings-app/MonetSettings.qml:5012 linux/share/monet/settings-app/MonetSettings.qml:9313
+msgid "Save"
+msgstr "Simpan"
 
 #: linux/share/monet/games/MonetWindow.qml:128
 msgid "Minimize"
@@ -1958,7 +2153,7 @@ msgid "privacy recent files history forget remember fingerprint finger"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:256 linux/share/monet/settings-app/MonetSettings.qml:6134 linux/share/monet/settings-app/MonetSettings.qml:7027
-#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7273 linux/share/monet/passwords/app.py:304
+#: linux/share/monet/settings-app/MonetSettings.qml:7251 linux/libexec/monet-quick:7737 linux/share/monet/passwords/app.py:304
 #: linux/share/monet/passwords/app.py:334 linux/share/monet/passwords/app.py:886
 msgid "Passwords"
 msgstr "Kata sandi"
@@ -2177,7 +2372,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:673 linux/share/monet/settings-app/MonetSettings.qml:2819 linux/share/monet/settings-app/MonetSettings.qml:5326
-#: linux/libexec/monet-quick:7310
+#: linux/libexec/monet-quick:7774
 msgid "Settings"
 msgstr "Pengaturan"
 
@@ -2238,7 +2433,7 @@ msgstr ""
 msgid "Keyboard and pointer"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7262
+#: linux/share/monet/settings-app/MonetSettings.qml:1211 linux/libexec/monet-quick:7726
 msgid "Screen locking"
 msgstr "Penguncian layar"
 
@@ -3282,7 +3477,7 @@ msgstr "Bunyikan"
 msgid "Send a file…"
 msgstr "Kirim file…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7315
+#: linux/share/monet/settings-app/MonetSettings.qml:4266 linux/share/monet/settings-app/MonetSettings.qml:5328 linux/libexec/monet-quick:7779
 #: linux/libexec/monet-files-tools:788
 msgid "Files"
 msgstr "File"
@@ -3369,7 +3564,7 @@ msgstr "Lampu Malam"
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "Warna lebih hangat dari senja hingga fajar, lebih nyaman di mata"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7277
+#: linux/share/monet/settings-app/MonetSettings.qml:4433 linux/share/monet/settings-app/MonetSettings.qml:4439 linux/libexec/monet-quick:7741
 msgid "Display colors"
 msgstr ""
 
@@ -3432,7 +3627,7 @@ msgstr "Volume"
 msgid "Play sound through"
 msgstr "Putar suara melalui"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7284
+#: linux/share/monet/settings-app/MonetSettings.qml:4560 linux/libexec/monet-quick:7748
 msgid "Headphones and speakers"
 msgstr ""
 
@@ -3488,7 +3683,7 @@ msgstr ""
 msgid "Microphones"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7286
+#: linux/share/monet/settings-app/MonetSettings.qml:4755 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:7750
 msgid "Microphone"
 msgstr "Mikrofon"
 
@@ -3590,10 +3785,6 @@ msgstr "Ubah nama"
 msgid "Your name"
 msgstr "Nama Anda"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5012 linux/share/monet/settings-app/MonetSettings.qml:9313
-msgid "Save"
-msgstr "Simpan"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:5033
 msgid "Changed. Use the new one from now on."
 msgstr "Sudah diubah. Gunakan yang baru mulai sekarang."
@@ -3642,7 +3833,7 @@ msgstr "Administrator"
 msgid "Standard account"
 msgstr "Akun standar"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:8714
+#: linux/share/monet/settings-app/MonetSettings.qml:5144 linux/libexec/monet-quick:9178
 msgid "Guest"
 msgstr "Tamu"
 
@@ -3796,7 +3987,7 @@ msgstr "Emoji"
 msgid "Next keyboard layout"
 msgstr "Tata letak keyboard berikutnya"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7321
+#: linux/share/monet/settings-app/MonetSettings.qml:5338 linux/libexec/monet-quick:7785
 msgid "Screenshot"
 msgstr "Tangkapan layar"
 
@@ -3895,7 +4086,7 @@ msgstr "Setelah tidak dipakai selama ini"
 msgid "It wakes where you left off"
 msgstr "Saat bangun, lanjut dari posisi terakhir"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7271
+#: linux/share/monet/settings-app/MonetSettings.qml:5567 linux/libexec/monet-quick:7735
 msgid "Keep awake"
 msgstr "Tetap terjaga"
 
@@ -4240,7 +4431,7 @@ msgstr "Markah dari Windows"
 msgid "Choose HTML file"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8063
+#: linux/share/monet/settings-app/MonetSettings.qml:6020 linux/share/monet/settings-app/MonetSettings.qml:6124 linux/libexec/monet-quick:8527
 msgid "From Windows"
 msgstr "Dari Windows"
 
@@ -4372,7 +4563,7 @@ msgstr "Normal"
 msgid "Larger"
 msgstr "Lebih besar"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7282
+#: linux/share/monet/settings-app/MonetSettings.qml:6182 linux/libexec/monet-quick:7746
 msgid "Reduce motion"
 msgstr "Kurangi gerakan"
 
@@ -4418,7 +4609,7 @@ msgstr ""
 msgid "What fills this PC, and room to make."
 msgstr "Apa yang memenuhi PC ini, dan ruang yang bisa dikosongkan."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7266
+#: linux/share/monet/settings-app/MonetSettings.qml:6254 linux/libexec/monet-quick:7730
 msgid "Disks and partitions"
 msgstr ""
 
@@ -4578,7 +4769,7 @@ msgstr ""
 msgid "%1 selected · %2 available"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7296
+#: linux/share/monet/settings-app/MonetSettings.qml:6468 linux/libexec/monet-quick:7760
 msgid "Windows files"
 msgstr ""
 
@@ -4765,13 +4956,6 @@ msgstr "Unduhan"
 msgid "Desktop"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6728 linux/share/monet/settings-app/MonetSettings.qml:6768 linux/share/monet/settings-app/MonetSettings.qml:6859
-#: linux/share/monet/settings-app/MonetSettings.qml:7520 linux/share/monet/settings-app/MonetSettings.qml:7627 linux/share/monet/settings-app/MonetSettings.qml:7650
-#: setup/qml/Main.qml:1341 linux/libexec/monet-quick:4131 linux/libexec/monet-quick:7192
-#: linux/libexec/monet-quick:8062 linux/share/monet/passwords/app.py:183 linux/share/monet/passwords/app.py:211
-msgid "Show"
-msgstr "Tampilkan"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:6736
 msgid ""
 "What apps leave behind when they update is cleared away with each update, by itself."
@@ -4944,7 +5128,7 @@ msgid ""
 msgstr ""
 "Game tidak disalin: Steam dan toko lain mengunduhnya lagi. Begitu juga Tempat Sampah."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7273
+#: linux/share/monet/settings-app/MonetSettings.qml:7028 linux/share/monet/settings-app/MonetSettings.qml:7252 linux/libexec/monet-quick:7737
 msgid "Saved logins, app access and vault unlocking"
 msgstr ""
 
@@ -5335,11 +5519,11 @@ msgid ""
 msgstr ""
 "Tombol Windows + Alt + G menyimpan 30 detik terakhir di layar ke Video. Pertama kali, pilih layar yang akan direkam."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5498
+#: linux/share/monet/settings-app/MonetSettings.qml:7480 linux/share/monet/settings-app/MonetSettings.qml:7623 linux/libexec/monet-quick:5962
 msgid "Shared with Windows"
 msgstr "Dibagi dengan Windows"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7492 linux/libexec/monet-quick:4054
+#: linux/share/monet/settings-app/MonetSettings.qml:7492 linux/libexec/monet-quick:4061
 msgid "Windows games"
 msgstr "Game Windows"
 
@@ -5831,11 +6015,6 @@ msgstr "Menginstal…"
 msgid "Restart now"
 msgstr "Mulai ulang sekarang"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8146 linux/share/monet/settings-app/MonetSettings.qml:8856 linux/share/monet/settings-app/MonetSettings.qml:9179
-#: linux/share/monet/store-app/AppPage.qml:222 linux/share/monet/store-app/Home.qml:217 setup/qml/Main.qml:232
-msgid "Install"
-msgstr "Instal"
-
 #: linux/share/monet/settings-app/MonetSettings.qml:8155
 msgid "Earlier versions of files are turned off."
 msgstr ""
@@ -5914,7 +6093,7 @@ msgstr "Windows siap diinstal"
 msgid "Getting Windows ready"
 msgstr "Menyiapkan Windows"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:7003
+#: linux/share/monet/settings-app/MonetSettings.qml:8267 linux/libexec/monet-quick:7467
 msgid "Windows setup did not finish"
 msgstr ""
 
@@ -6294,7 +6473,7 @@ msgstr ""
 msgid "Copy report"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7304
+#: linux/share/monet/settings-app/MonetSettings.qml:8703 linux/libexec/monet-quick:7768
 msgid "Undo desktop changes"
 msgstr ""
 
@@ -6360,7 +6539,7 @@ msgstr "Hanya saat Anda memintanya."
 msgid "Monet and your apps keep themselves up to date."
 msgstr "Monet dan aplikasi Anda selalu diperbarui otomatis."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7302
+#: linux/share/monet/settings-app/MonetSettings.qml:8859 linux/libexec/monet-quick:7766
 msgid "Check for updates"
 msgstr "Periksa pembaruan"
 
@@ -6537,7 +6716,7 @@ msgstr "%1 dtk"
 msgid "Save a report"
 msgstr "Simpan laporan"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7193
+#: linux/share/monet/settings-app/MonetSettings.qml:9309 linux/libexec/monet-quick:7657
 msgid "In Documents, as %1."
 msgstr "Di Dokumen, sebagai %1."
 
@@ -6569,14 +6748,9 @@ msgstr "Mengambil…"
 msgid "Get BoxBuddy"
 msgstr "Dapatkan BoxBuddy"
 
-#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5450
+#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:5914
 msgid "Opens in Windows"
 msgstr "Terbuka di Windows"
-
-#: linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191 linux/share/monet/store-app/Home.qml:394
-#: linux/share/monet/store-app/Store.qml:186 linux/share/monet/store-app/Store.qml:481
-msgid "Installed"
-msgstr "Terinstal"
 
 #: linux/share/monet/store-app/AppCard.qml:94 linux/share/monet/store-app/AppPage.qml:248 linux/share/monet/store-app/Framed.qml:192
 #: linux/share/monet/store-app/Home.qml:395
@@ -6738,13 +6912,9 @@ msgstr "Semua"
 msgid "No apps here yet."
 msgstr "Belum ada aplikasi di sini."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7327
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:661 linux/libexec/monet-quick:7791
 msgid "Store"
 msgstr "Toko"
-
-#: linux/share/monet/store-app/Store.qml:170
-msgid "Play"
-msgstr "Mainkan"
 
 #: linux/share/monet/store-app/Store.qml:170
 msgid "Launchers, old consoles and new games. Steam is already here."
@@ -7306,7 +7476,7 @@ msgid "The note could not be saved. Try again."
 msgstr ""
 
 #: linux/share/monet/widgets/TaskManagerAction.qml:9 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:52 image/dock/patch.py:80
-#: image/dock/patch.py:106 linux/libexec/monet-quick:7319
+#: image/dock/patch.py:106 linux/libexec/monet-quick:7783
 msgid "Task Manager"
 msgstr ""
 
@@ -7486,7 +7656,7 @@ msgstr "File yang Anda buka akan muncul di sini."
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7403 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:7867 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
@@ -7639,7 +7809,7 @@ msgstr ""
 msgid "A Windows installer"
 msgstr "Penginstal Windows"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5365
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:5829
 msgid "A Windows program"
 msgstr "Program Windows"
 
@@ -7835,11 +8005,11 @@ msgstr "Pengaturan suara…"
 msgid "Images"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7325
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:7789
 msgid "Documents"
 msgstr "Dokumen"
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7323
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:7787
 msgid "Archives"
 msgstr ""
 
@@ -7927,7 +8097,7 @@ msgstr ""
 msgid "Reading drive space…"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8328
+#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:8792
 msgid "Open Files"
 msgstr "Buka File"
 
@@ -8427,7 +8597,7 @@ msgstr ""
 msgid "Opening %1 wasn't confirmed"
 msgstr ""
 
-#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5259 linux/libexec/monet-quick:5281
+#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:5723 linux/libexec/monet-quick:5745
 msgid "Couldn't open %1"
 msgstr ""
 
@@ -8534,7 +8704,7 @@ msgstr "Minta lagi dan mulai ulang"
 msgid "You're online"
 msgstr "Anda sudah online"
 
-#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7290
+#: setup/qml/Main.qml:451 linux/libexec/monet-quick:7754
 msgid "Connect to Wi-Fi"
 msgstr "Hubungkan ke Wi-Fi"
 
@@ -9303,732 +9473,732 @@ msgid ""
 "Setup couldn’t verify the download server’s certificate. Check the PC’s date and time, or try another network."
 msgstr ""
 
-#: linux/libexec/monet-quick:778
+#: linux/libexec/monet-quick:785
 msgid "Input %1"
 msgstr ""
 
-#: linux/libexec/monet-quick:778
+#: linux/libexec/monet-quick:785
 msgid "Inputs %1–%2"
 msgstr ""
 
-#: linux/libexec/monet-quick:1125
+#: linux/libexec/monet-quick:1132
 msgid "Monet couldn't check for updates. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:1129
+#: linux/libexec/monet-quick:1136
 msgid "Checking for updates took too long. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:1160
+#: linux/libexec/monet-quick:1167
 msgid "Installing updates"
 msgstr ""
 
-#: linux/libexec/monet-quick:1577
+#: linux/libexec/monet-quick:1584
 msgid "Keep blocked"
 msgstr "Tetap blokir"
 
-#: linux/libexec/monet-quick:1577
+#: linux/libexec/monet-quick:1584
 msgid "%1 wants to accept connections"
 msgstr "%1 ingin menerima sambungan"
 
-#: linux/libexec/monet-quick:1578
+#: linux/libexec/monet-quick:1585
 msgid ""
 "Allow TCP port %1 on networks you share with? Other apps can also use this port."
 msgstr ""
 
-#: linux/libexec/monet-quick:1950
+#: linux/libexec/monet-quick:1957
 msgid "Choose an executable application file."
 msgstr ""
 
-#: linux/libexec/monet-quick:1954
+#: linux/libexec/monet-quick:1961
 msgid ""
 "Choose a Linux application or script. Windows programs use Run in Monet."
 msgstr ""
 
-#: linux/libexec/monet-quick:1961
+#: linux/libexec/monet-quick:1968
 msgid "Use a single line of launch options, up to 8,192 bytes."
 msgstr ""
 
-#: linux/libexec/monet-quick:1965
+#: linux/libexec/monet-quick:1972
 msgid "Close each quote in the launch options."
 msgstr ""
 
-#: linux/libexec/monet-quick:1967
+#: linux/libexec/monet-quick:1974
 msgid "Use no more than 64 launch options."
 msgstr ""
 
-#: linux/libexec/monet-quick:1976
+#: linux/libexec/monet-quick:1983
 msgid "Choose a short application name without line breaks."
 msgstr ""
 
-#: linux/libexec/monet-quick:1993
+#: linux/libexec/monet-quick:2000
 msgid ""
 "A shortcut for this application already exists. Edit it in the application menu."
 msgstr ""
 
-#: linux/libexec/monet-quick:2065 linux/libexec/monet-files-tools:543 linux/libexec/monet-files-tools:570
+#: linux/libexec/monet-quick:2072 linux/libexec/monet-files-tools:543 linux/libexec/monet-files-tools:570
 msgid "Add to apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:2069
+#: linux/libexec/monet-quick:2076
 msgid "Added to apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:2079
+#: linux/libexec/monet-quick:2086
 msgid "Launch options are too long."
 msgstr ""
 
-#: linux/libexec/monet-quick:2084
+#: linux/libexec/monet-quick:2091
 msgid "Launch options are invalid. Add the application again."
 msgstr ""
 
-#: linux/libexec/monet-quick:2088
+#: linux/libexec/monet-quick:2095
 msgid "Application couldn't open"
 msgstr ""
 
-#: linux/libexec/monet-quick:2089
+#: linux/libexec/monet-quick:2096
 msgid ""
 "Check that the application folder is still in place, then add it to apps again."
 msgstr ""
 
-#: linux/libexec/monet-quick:2587
+#: linux/libexec/monet-quick:2594
 msgid "Imported bookmarks"
 msgstr ""
 
-#: linux/libexec/monet-quick:3111
+#: linux/libexec/monet-quick:3118
 msgid "Choose a separate folder for downloads."
 msgstr ""
 
-#: linux/libexec/monet-quick:3113
+#: linux/libexec/monet-quick:3120
 msgid "Choose a writable folder for downloads."
 msgstr ""
 
-#: linux/libexec/monet-quick:3115
+#: linux/libexec/monet-quick:3122
 msgid "Choose a folder without line breaks in its name."
 msgstr ""
 
-#: linux/libexec/monet-quick:3301
+#: linux/libexec/monet-quick:3308
 msgid "The disk changed. Refresh the list and choose it again."
 msgstr ""
 
-#: linux/libexec/monet-quick:3303
+#: linux/libexec/monet-quick:3310
 msgid "This drive is in use by the system or is read-only."
 msgstr ""
 
-#: linux/libexec/monet-quick:3307
+#: linux/libexec/monet-quick:3314
 msgid "Unmount the volumes on this drive first."
 msgstr ""
 
-#: linux/libexec/monet-quick:3314
+#: linux/libexec/monet-quick:3321
 msgid "Choose a size that fits the free space."
 msgstr ""
 
-#: linux/libexec/monet-quick:3325
+#: linux/libexec/monet-quick:3332
 msgid "This volume changed, is in use, or is read-only."
 msgstr ""
 
-#: linux/libexec/monet-quick:3331
+#: linux/libexec/monet-quick:3338
 msgid "Unmount this volume before making changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:3344
+#: linux/libexec/monet-quick:3351
 msgid "The disk service did not respond."
 msgstr ""
 
-#: linux/libexec/monet-quick:3346
+#: linux/libexec/monet-quick:3353
 msgid "Check the selected disk, format, size and volume name."
 msgstr ""
 
-#: linux/libexec/monet-quick:3514
+#: linux/libexec/monet-quick:3521
 msgid "Recovered installations"
 msgstr ""
 
-#: linux/libexec/monet-quick:3854
+#: linux/libexec/monet-quick:3861
 msgid "Send to your phone"
 msgstr "Kirim ke ponsel Anda"
 
-#: linux/libexec/monet-quick:4054
+#: linux/libexec/monet-quick:4061
 msgid "Steam on %1"
 msgstr "Steam di %1"
 
-#: linux/libexec/monet-quick:4059
+#: linux/libexec/monet-quick:4066
 msgid "Games folder"
 msgstr "Folder game"
 
-#: linux/libexec/monet-quick:4132
+#: linux/libexec/monet-quick:4139
 msgid "Saved the last 30 seconds"
 msgstr "30 detik terakhir tersimpan"
 
-#: linux/libexec/monet-quick:4132
+#: linux/libexec/monet-quick:4139
 msgid "In Videos."
 msgstr "Di Video."
 
-#: linux/libexec/monet-quick:5260
+#: linux/libexec/monet-quick:5724
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr ""
 
-#: linux/libexec/monet-quick:5283
+#: linux/libexec/monet-quick:5747
 msgid "The program or installer is missing."
 msgstr ""
 
-#: linux/libexec/monet-quick:5286
+#: linux/libexec/monet-quick:5750
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr ""
 
-#: linux/libexec/monet-quick:5294
+#: linux/libexec/monet-quick:5758
 msgid "Starting %1"
 msgstr ""
 
-#: linux/libexec/monet-quick:5295
+#: linux/libexec/monet-quick:5759
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
 
-#: linux/libexec/monet-quick:5304
+#: linux/libexec/monet-quick:5768
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:5311
+#: linux/libexec/monet-quick:5775
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
 
-#: linux/libexec/monet-quick:6138
+#: linux/libexec/monet-quick:6602
 msgid "Open it again"
 msgstr "Buka lagi"
 
-#: linux/libexec/monet-quick:6138
+#: linux/libexec/monet-quick:6602
 msgid "%1 closed unexpectedly"
 msgstr "%1 tertutup tiba-tiba"
 
-#: linux/libexec/monet-quick:6556
+#: linux/libexec/monet-quick:7020
 msgid "Choose a connected screen and a supported size."
 msgstr ""
 
-#: linux/libexec/monet-quick:6561
+#: linux/libexec/monet-quick:7025
 msgid ""
 "The screen size couldn't be changed. Check the display connection and try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:7082
+#: linux/libexec/monet-quick:7546
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB tersedia dari %2 GB"
 
-#: linux/libexec/monet-quick:7193
+#: linux/libexec/monet-quick:7657
 msgid "Saved a report"
 msgstr "Laporan tersimpan"
 
-#: linux/libexec/monet-quick:7262
+#: linux/libexec/monet-quick:7726
 msgid "Power & Sleep · Automatic screen locking"
 msgstr "Daya & tidur · Penguncian layar otomatis"
 
-#: linux/libexec/monet-quick:7263
+#: linux/libexec/monet-quick:7727
 msgid ""
 "stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"
 msgstr "nonaktifkan kunci layar; kunci layar otomatis; layar terus terkunci"
 
-#: linux/libexec/monet-quick:7264
+#: linux/libexec/monet-quick:7728
 msgid "Download folder"
 msgstr "Folder unduhan"
 
-#: linux/libexec/monet-quick:7264
+#: linux/libexec/monet-quick:7728
 msgid "Storage · Where downloads are saved"
 msgstr "Penyimpanan · Tempat menyimpan unduhan"
 
-#: linux/libexec/monet-quick:7265
+#: linux/libexec/monet-quick:7729
 msgid ""
 "download folder; downloads folder; download path; download location; where downloads go; save downloads"
 msgstr "folder unduhan; lokasi unduhan; jalur unduhan"
 
-#: linux/libexec/monet-quick:7266
+#: linux/libexec/monet-quick:7730
 msgid "Storage · Manage physical drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7267
+#: linux/libexec/monet-quick:7731
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
 
-#: linux/libexec/monet-quick:7269
+#: linux/libexec/monet-quick:7733
 msgid "Battery charge limit"
 msgstr "Batas pengisian baterai"
 
-#: linux/libexec/monet-quick:7269
+#: linux/libexec/monet-quick:7733
 msgid "Power & Sleep · Protect the battery"
 msgstr "Daya & tidur · Lindungi baterai"
 
-#: linux/libexec/monet-quick:7270
+#: linux/libexec/monet-quick:7734
 msgid ""
 "battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"
 msgstr "batas pengisian baterai; lindungi baterai; hentikan pengisian pada 80"
 
-#: linux/libexec/monet-quick:7271
+#: linux/libexec/monet-quick:7735
 msgid "Power & Sleep · Temporarily prevent idle sleep and locking"
 msgstr ""
 "Daya & tidur · Cegah tidur dan penguncian sementara saat tidak digunakan"
 
-#: linux/libexec/monet-quick:7272
+#: linux/libexec/monet-quick:7736
 msgid ""
 "keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"
 msgstr "biarkan layar menyala; cegah tidur; mode presentasi"
 
-#: linux/libexec/monet-quick:7274
+#: linux/libexec/monet-quick:7738
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""
 
-#: linux/libexec/monet-quick:7275
+#: linux/libexec/monet-quick:7739
 msgid "Make text and windows bigger"
 msgstr ""
 
-#: linux/libexec/monet-quick:7275
+#: linux/libexec/monet-quick:7739
 msgid "Accessibility · Size of everything"
 msgstr ""
 
-#: linux/libexec/monet-quick:7276
+#: linux/libexec/monet-quick:7740
 msgid ""
 "make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"
 msgstr ""
 
-#: linux/libexec/monet-quick:7277
+#: linux/libexec/monet-quick:7741
 msgid "Display · Color profiles and test patterns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7278
+#: linux/libexec/monet-quick:7742
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
 
-#: linux/libexec/monet-quick:7280
+#: linux/libexec/monet-quick:7744
 msgid "Make the pointer easier to see"
 msgstr ""
 
-#: linux/libexec/monet-quick:7280
+#: linux/libexec/monet-quick:7744
 msgid "Accessibility · Pointer size"
 msgstr ""
 
-#: linux/libexec/monet-quick:7281
+#: linux/libexec/monet-quick:7745
 msgid "mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7282
+#: linux/libexec/monet-quick:7746
 msgid "Accessibility · Animation and movement"
 msgstr ""
 
-#: linux/libexec/monet-quick:7283
+#: linux/libexec/monet-quick:7747
 msgid "reduce motion; stop animations; less movement; disable animation"
 msgstr ""
 
-#: linux/libexec/monet-quick:7284
+#: linux/libexec/monet-quick:7748
 msgid "Sound · Choose where sound plays"
 msgstr ""
 
-#: linux/libexec/monet-quick:7285
+#: linux/libexec/monet-quick:7749
 msgid ""
 "headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"
 msgstr ""
 
-#: linux/libexec/monet-quick:7286
+#: linux/libexec/monet-quick:7750
 msgid "Sound · Microphone volume"
 msgstr ""
 
-#: linux/libexec/monet-quick:7287
+#: linux/libexec/monet-quick:7751
 msgid "microphone; mic; people cannot hear me; input volume; recording sound"
 msgstr ""
 
-#: linux/libexec/monet-quick:7288
+#: linux/libexec/monet-quick:7752
 msgid "Connect a Bluetooth device"
 msgstr ""
 
-#: linux/libexec/monet-quick:7288
+#: linux/libexec/monet-quick:7752
 msgid "Bluetooth · Pair headphones, a mouse or a controller"
 msgstr ""
 
-#: linux/libexec/monet-quick:7289
+#: linux/libexec/monet-quick:7753
 msgid ""
 "bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:7290
+#: linux/libexec/monet-quick:7754
 msgid "Internet · Wireless networks"
 msgstr ""
 
-#: linux/libexec/monet-quick:7291
+#: linux/libexec/monet-quick:7755
 msgid ""
 "wifi; wi-fi; wireless internet; connect internet; no internet; network connection"
 msgstr ""
 
-#: linux/libexec/monet-quick:7292
+#: linux/libexec/monet-quick:7756
 msgid "LAN settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7292
+#: linux/libexec/monet-quick:7756
 msgid "Internet · Ethernet and IP settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7293
+#: linux/libexec/monet-quick:7757
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
 msgstr ""
 
-#: linux/libexec/monet-quick:7294
+#: linux/libexec/monet-quick:7758
 msgid "Birthdays and repeating notes"
 msgstr ""
 
-#: linux/libexec/monet-quick:7294
+#: linux/libexec/monet-quick:7758
 msgid "Calendar · Notes that repeat every year, month, week or day"
 msgstr ""
 
-#: linux/libexec/monet-quick:7295
+#: linux/libexec/monet-quick:7759
 msgid ""
 "birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"
 msgstr ""
 
-#: linux/libexec/monet-quick:7296
+#: linux/libexec/monet-quick:7760
 msgid "Storage · Your shared folder and access to Windows files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7297
+#: linux/libexec/monet-quick:7761
 msgid ""
 "windows files; files from windows; shared with windows; shared folder; windows documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:7298
+#: linux/libexec/monet-quick:7762
 msgid "Quiet notifications"
 msgstr ""
 
-#: linux/libexec/monet-quick:7298
+#: linux/libexec/monet-quick:7762
 msgid "Notifications · Do Not Disturb and app popups"
 msgstr ""
 
-#: linux/libexec/monet-quick:7299
+#: linux/libexec/monet-quick:7763
 msgid ""
 "do not disturb; quiet notifications; stop notifications; mute app; popups; focus time"
 msgstr ""
 
-#: linux/libexec/monet-quick:7300
+#: linux/libexec/monet-quick:7764
 msgid "Back up or restore files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7300
+#: linux/libexec/monet-quick:7764
 msgid "Backups · Copies and earlier versions"
 msgstr ""
 
-#: linux/libexec/monet-quick:7301
+#: linux/libexec/monet-quick:7765
 msgid ""
 "backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"
 msgstr ""
 
-#: linux/libexec/monet-quick:7302
+#: linux/libexec/monet-quick:7766
 msgid "Updates · New versions and recovery"
 msgstr ""
 
-#: linux/libexec/monet-quick:7303
+#: linux/libexec/monet-quick:7767
 msgid ""
 "update; updates; upgrade; new version; system rollback; previous working version"
 msgstr ""
 
-#: linux/libexec/monet-quick:7304
+#: linux/libexec/monet-quick:7768
 msgid "Recovery · Review saved settings and shortcuts"
 msgstr ""
 
-#: linux/libexec/monet-quick:7305
+#: linux/libexec/monet-quick:7769
 msgid ""
 "recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"
 msgstr ""
 
-#: linux/libexec/monet-quick:7306
+#: linux/libexec/monet-quick:7770
 msgid "Restore work after Windows"
 msgstr ""
 
-#: linux/libexec/monet-quick:7306
+#: linux/libexec/monet-quick:7770
 msgid "Play on Windows · Reopen apps when you return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7307
+#: linux/libexec/monet-quick:7771
 msgid ""
 "restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"
 msgstr ""
 
-#: linux/libexec/monet-quick:7308
+#: linux/libexec/monet-quick:7772
 msgid "Choose default apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:7308
+#: linux/libexec/monet-quick:7772
 msgid "Default Apps · Browser, email and files"
 msgstr ""
 
-#: linux/libexec/monet-quick:7309
+#: linux/libexec/monet-quick:7773
 msgid "default apps; change default browser; open with; email app; pdf app"
 msgstr ""
 
-#: linux/libexec/monet-quick:7310
+#: linux/libexec/monet-quick:7774
 msgid "Personalize Monet and manage your devices"
 msgstr ""
 
-#: linux/libexec/monet-quick:7311
+#: linux/libexec/monet-quick:7775
 msgid ""
 "control panel; system preferences; system settings; gnome settings; kde settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:7315
+#: linux/libexec/monet-quick:7779
 msgid "Browse folders and connected drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:7316
+#: linux/libexec/monet-quick:7780
 msgid ""
 "file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"
 msgstr ""
 
-#: linux/libexec/monet-quick:7317
+#: linux/libexec/monet-quick:7781
 msgid "Text Editor"
 msgstr ""
 
-#: linux/libexec/monet-quick:7317
-msgid "Edit plain text and code"
-msgstr ""
-
-#: linux/libexec/monet-quick:7318
-msgid ""
-"notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
-msgstr ""
-
-#: linux/libexec/monet-quick:7319
-msgid "See running apps, CPU, graphics, memory, network and temperatures"
-msgstr ""
-
-#: linux/libexec/monet-quick:7320
-msgid ""
-"task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
-msgstr ""
-
-#: linux/libexec/monet-quick:7321
-msgid "Capture your screen or a selected area"
-msgstr ""
-
-#: linux/libexec/monet-quick:7322
-msgid ""
-"snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
-msgstr ""
-
-#: linux/libexec/monet-quick:7323
-msgid "Open and extract compressed files"
-msgstr ""
-
-#: linux/libexec/monet-quick:7324
-msgid ""
-"7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
-msgstr ""
-
-#: linux/libexec/monet-quick:7325
-msgid "Read PDFs and annotate documents"
-msgstr ""
-
-#: linux/libexec/monet-quick:7326
-msgid ""
-"preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
-msgstr ""
-
-#: linux/libexec/monet-quick:7327
-msgid "Find and install apps for Monet"
-msgstr ""
-
-#: linux/libexec/monet-quick:7328
-msgid ""
-"app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
-msgstr ""
-
-#: linux/libexec/monet-quick:7356
-msgid "how can i do please my the a an to where is are find open"
-msgstr ""
-
-#: linux/libexec/monet-quick:7541
-msgid "Windows installer"
-msgstr ""
-
-#: linux/libexec/monet-quick:7542
-msgid "Linux package"
-msgstr ""
-
-#: linux/libexec/monet-quick:7543 linux/libexec/monet-files-tools:712
-msgid "Linux application"
-msgstr ""
-
-#: linux/libexec/monet-quick:7543
-msgid "Downloaded app"
-msgstr ""
-
-#: linux/libexec/monet-quick:7551
-msgid "Home"
-msgstr ""
-
-#: linux/libexec/monet-quick:7587
-msgid "Open application?"
-msgstr ""
-
-#: linux/libexec/monet-quick:7588
-msgid "Open this downloaded application?"
-msgstr ""
-
-#: linux/libexec/monet-quick:7777
-msgid "Waiting to reopen."
-msgstr ""
-
-#: linux/libexec/monet-quick:7778
-msgid ""
-"The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
-msgstr ""
-
-#: linux/libexec/monet-quick:7779
-msgid "Opening and checking its window…"
-msgstr ""
-
-#: linux/libexec/monet-quick:7780
-msgid "Opened a window. The app controls its own tabs and documents."
-msgstr ""
-
 #: linux/libexec/monet-quick:7781
-msgid "Already running; left as it was. Its saved work was not opened again."
+msgid "Edit plain text and code"
 msgstr ""
 
 #: linux/libexec/monet-quick:7782
 msgid ""
-"Opening wasn't confirmed. Retry checks an existing launch before opening another."
+"notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
 msgstr ""
 
 #: linux/libexec/monet-quick:7783
-msgid "This app is no longer installed. Install it again, then retry."
+msgid "See running apps, CPU, graphics, memory, network and temperatures"
 msgstr ""
 
 #: linux/libexec/monet-quick:7784
-msgid "Saved folder tabs and split views reopened."
+msgid ""
+"task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
 msgstr ""
 
 #: linux/libexec/monet-quick:7785
-msgid ""
-"Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
+msgid "Capture your screen or a selected area"
 msgstr ""
 
 #: linux/libexec/monet-quick:7786
-msgid "Files reopened. Its previous folders and tabs could not be saved."
+msgid ""
+"snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
 msgstr ""
 
 #: linux/libexec/monet-quick:7787
-msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
+msgid "Open and extract compressed files"
 msgstr ""
 
 #: linux/libexec/monet-quick:7788
-msgid "Browser opened normally, following its own tab-restore preference."
+msgid ""
+"7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
 msgstr ""
 
 #: linux/libexec/monet-quick:7789
-msgid ""
-"The saved browser session is no longer available. You can open the browser normally."
+msgid "Read PDFs and annotate documents"
 msgstr ""
 
 #: linux/libexec/monet-quick:7790
 msgid ""
-"Private or unsupported browser session left closed. You can open the browser normally."
+"preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
 msgstr ""
 
 #: linux/libexec/monet-quick:7791
-msgid ""
-"Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
+msgid "Find and install apps for Monet"
 msgstr ""
 
 #: linux/libexec/monet-quick:7792
 msgid ""
+"app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
+msgstr ""
+
+#: linux/libexec/monet-quick:7820
+msgid "how can i do please my the a an to where is are find open"
+msgstr ""
+
+#: linux/libexec/monet-quick:8005
+msgid "Windows installer"
+msgstr ""
+
+#: linux/libexec/monet-quick:8006
+msgid "Linux package"
+msgstr ""
+
+#: linux/libexec/monet-quick:8007 linux/libexec/monet-files-tools:712
+msgid "Linux application"
+msgstr ""
+
+#: linux/libexec/monet-quick:8007
+msgid "Downloaded app"
+msgstr ""
+
+#: linux/libexec/monet-quick:8015
+msgid "Home"
+msgstr ""
+
+#: linux/libexec/monet-quick:8051
+msgid "Open application?"
+msgstr ""
+
+#: linux/libexec/monet-quick:8052
+msgid "Open this downloaded application?"
+msgstr ""
+
+#: linux/libexec/monet-quick:8241
+msgid "Waiting to reopen."
+msgstr ""
+
+#: linux/libexec/monet-quick:8242
+msgid ""
+"The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
+msgstr ""
+
+#: linux/libexec/monet-quick:8243
+msgid "Opening and checking its window…"
+msgstr ""
+
+#: linux/libexec/monet-quick:8244
+msgid "Opened a window. The app controls its own tabs and documents."
+msgstr ""
+
+#: linux/libexec/monet-quick:8245
+msgid "Already running; left as it was. Its saved work was not opened again."
+msgstr ""
+
+#: linux/libexec/monet-quick:8246
+msgid ""
+"Opening wasn't confirmed. Retry checks an existing launch before opening another."
+msgstr ""
+
+#: linux/libexec/monet-quick:8247
+msgid "This app is no longer installed. Install it again, then retry."
+msgstr ""
+
+#: linux/libexec/monet-quick:8248
+msgid "Saved folder tabs and split views reopened."
+msgstr ""
+
+#: linux/libexec/monet-quick:8249
+msgid ""
+"Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
+msgstr ""
+
+#: linux/libexec/monet-quick:8250
+msgid "Files reopened. Its previous folders and tabs could not be saved."
+msgstr ""
+
+#: linux/libexec/monet-quick:8251
+msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
+msgstr ""
+
+#: linux/libexec/monet-quick:8252
+msgid "Browser opened normally, following its own tab-restore preference."
+msgstr ""
+
+#: linux/libexec/monet-quick:8253
+msgid ""
+"The saved browser session is no longer available. You can open the browser normally."
+msgstr ""
+
+#: linux/libexec/monet-quick:8254
+msgid ""
+"Private or unsupported browser session left closed. You can open the browser normally."
+msgstr ""
+
+#: linux/libexec/monet-quick:8255
+msgid ""
+"Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
+msgstr ""
+
+#: linux/libexec/monet-quick:8256
+msgid ""
 "The app opened with requests for its saved documents. Check the app for any unsaved changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:7793
+#: linux/libexec/monet-quick:8257
 msgid ""
 "Some saved documents are unavailable. Reconnect their drive, then choose Retry documents, or check Backups."
 msgstr ""
 
-#: linux/libexec/monet-quick:7794
+#: linux/libexec/monet-quick:8258
 msgid ""
 "The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."
 msgstr ""
 
-#: linux/libexec/monet-quick:7795
+#: linux/libexec/monet-quick:8259
 msgid "This recovery checkpoint has expired. You can open the app normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:7847
+#: linux/libexec/monet-quick:8311
 msgid "Some work needs attention. Review what opened and what you can retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:7848
+#: linux/libexec/monet-quick:8312
 msgid "Review which apps reopened and how they handled your saved work."
 msgstr ""
 
-#: linux/libexec/monet-quick:7850
+#: linux/libexec/monet-quick:8314
 msgid "Review return"
 msgstr ""
 
-#: linux/libexec/monet-quick:7850
+#: linux/libexec/monet-quick:8314
 msgid "Back in Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8056
+#: linux/libexec/monet-quick:8520
 msgid "Your screenshots and clips from Windows are in Pictures and Videos."
 msgstr "Tangkapan layar dan klip Anda dari Windows ada di Gambar dan Video."
 
-#: linux/libexec/monet-quick:8058
+#: linux/libexec/monet-quick:8522
 msgid "Your screenshots from Windows are in Pictures › Screenshots."
 msgstr "Tangkapan layar Anda dari Windows ada di Gambar › Screenshots."
 
-#: linux/libexec/monet-quick:8060
+#: linux/libexec/monet-quick:8524
 msgid "Your clips from Windows are in Videos."
 msgstr "Klip Anda dari Windows ada di Video."
 
-#: linux/libexec/monet-quick:8257
+#: linux/libexec/monet-quick:8721
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "Drive tidak bisa dibuka. Coba colokkan lagi."
 
-#: linux/libexec/monet-quick:8261
+#: linux/libexec/monet-quick:8725
 msgid "earlier"
 msgstr "sebelumnya"
 
-#: linux/libexec/monet-quick:8265
+#: linux/libexec/monet-quick:8729
 msgid "Monet can't write on this drive."
 msgstr "Monet tidak bisa menulis ke drive ini."
 
-#: linux/libexec/monet-quick:8273 linux/libexec/monet-quick:8297
+#: linux/libexec/monet-quick:8737 linux/libexec/monet-quick:8761
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr ""
 "Penyalinan tidak selesai. Monet mencoba lagi saat drive dicolokkan berikutnya."
 
-#: linux/libexec/monet-quick:8312
+#: linux/libexec/monet-quick:8776
 msgid "Your files haven't been copied for a week"
 msgstr "File Anda belum disalin selama seminggu"
 
-#: linux/libexec/monet-quick:8313
+#: linux/libexec/monet-quick:8777
 msgid "Plug in %1 and Monet copies them."
 msgstr "Colokkan %1 dan Monet akan menyalinnya."
 
-#: linux/libexec/monet-quick:8313
+#: linux/libexec/monet-quick:8777
 msgid "your backup drive"
 msgstr "drive cadangan Anda"
 
-#: linux/libexec/monet-quick:8329
+#: linux/libexec/monet-quick:8793
 msgid "Your files from Windows are here"
 msgstr "File Anda dari Windows ada di sini"
 
-#: linux/libexec/monet-quick:8330
+#: linux/libexec/monet-quick:8794
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr "Di Dokumen, Gambar, Musik, Video, Unduhan, dan di desktop."
 
-#: linux/libexec/monet-quick:8741
+#: linux/libexec/monet-quick:9205
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
 
-#: linux/libexec/monet-quick:8868
+#: linux/libexec/monet-quick:9332
 msgid "Couldn't check phones. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:9052
+#: linux/libexec/monet-quick:9531
 msgid "Windows can't get this program this time."
 msgstr "Windows tidak bisa menerima program ini kali ini."
 
