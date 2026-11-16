@@ -36,6 +36,19 @@ class SettingsHelper(games.Helper):
         self.start(self._next, f"{LIBEXECDIR}/monet-link", [command], data=text.encode("utf-8", "replace"))
         return self._next
 
+    @Slot(str, result=QUrl)
+    def monetLinkUrl(self, text):
+        value = text.strip()
+        if len(value.encode("utf-8", "replace")) > 8192 or any(
+            char.isspace() or ord(char) < 32 or ord(char) == 127 for char in value
+        ):
+            return QUrl()
+        url = QUrl(value, QUrl.ParsingMode.StrictMode)
+        if (not url.isValid() or url.scheme() not in ("http", "https") or not url.host()
+                or "@" in url.authority() or url.port() == 0):
+            return QUrl()
+        return url
+
 
 def main():
     page = sys.argv[1] if len(sys.argv) > 1 else ""

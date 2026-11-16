@@ -9,7 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 try:
     from PySide6.QtCore import QObject, QCoreApplication, QEvent, QMetaObject, QPointF, QTimer, QUrl, Qt, Signal, Slot
-    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtGui import QDesktopServices, QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow
     from PySide6.QtTest import QTest
@@ -33,6 +33,7 @@ if QT:
             self.sharing = ('{"state":"dispatched"}', 0)
             self.link = {"phase": "disabled"}
             self.link_calls = []
+            self.link_url = lambda text: QUrl()
             self.delay = 30
 
         @Slot("QVariantList", result=int)
@@ -55,9 +56,15 @@ if QT:
                 self.link = {"phase": "paired", "notes": ["<b>A plain text note</b>"]}
             if command == "send":
                 self.link["sent"] = ["Queued"]
+            if command == "forget":
+                self.link = {"phase": "ready"}
             output = json.dumps(self.link)
             QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, output, 0, ""))
             return ticket
+
+        @Slot(str, result=QUrl)
+        def monetLinkUrl(self, text):
+            return self.link_url(text)
 
 
 @unittest.skipUnless(QT and os.environ.get("MONET_PHONE_WINDOW_ROOT"), "requires the isolated Qt Phone fixture")
@@ -177,6 +184,68 @@ class PhoneWindow(unittest.TestCase):
         self.assertEqual(draft.property("text"), "")
         self.assertTrue(any(item.property("text") == "Last note queued" for item in self.items()))
         self.assertTrue(any(item.property("detail") == "<b>A plain text note</b>" for item in self.items()))
+
+    def test_monet_link_opens_a_web_address_only_from_its_preview(self):
+        script = ROOT / "linux/libexec/monet-settings"
+        settings = {"__name__": "phone_fixture_settings"}
+        source = script.read_text().replace("@LIBEXECDIR@", str(script.parent))
+        exec(compile(source, str(script), "exec"), settings)
+        validate = settings["SettingsHelper"].monetLinkUrl
+        self.helper.link_url = lambda text: validate(self.helper, text)
+
+        opened = []
+
+        class CaptureUrl(QObject):
+            @Slot(QUrl)
+            def capture(self, url):
+                opened.append(url.toString())
+
+        capture = CaptureUrl()
+        QDesktopServices.setUrlHandler("https", capture, "capture")
+        self.addCleanup(QDesktopServices.unsetUrlHandler, "https")
+        url = "https://example.org/path?q=paint#details"
+        self.helper.link = {"phase": "paired", "notes": [url]}
+        self.window.setProperty("monetLink", self.helper.link)
+        QTest.qWait(60)
+        self.assertEqual(self.buttons("Open link"), [])
+        self.click(self.buttons("Read")[0])
+        self.assertEqual(opened, [])
+        self.click(self.buttons("Open link")[0])
+        self.assertEqual(opened, [url])
+        QTest.keyClick(self.window, Qt.Key_Escape)
+        QTest.qWait(150)
+
+        for value in ("file:///etc/hosts", "javascript:alert(1)", "https://@example.org", "https://example.org:0",
+                      "Read this first: https://example.org/"):
+            with self.subTest(value=value):
+                self.assertTrue(self.helper.link_url(value).isEmpty())
+        self.helper.link["notes"] = ["file:///etc/hosts"]
+        self.window.setProperty("monetLink", self.helper.link)
+        QTest.qWait(60)
+        self.click(self.buttons("Read")[0])
+        self.assertEqual(self.buttons("Open link"), [])
+        self.assertEqual(opened, [url])
+
+    def test_monet_link_forget_waits_for_a_status_read(self):
+        self.helper.link = {"phase": "paired"}
+        self.window.setProperty("monetLink", self.helper.link)
+        QTest.qWait(60)
+        self.click(self.buttons("Forget phone…")[0])
+        dialog = next(item for item in self.window.findChildren(QObject)
+                      if item.property("title") == "Forget this phone?")
+        self.assertTrue(dialog.property("visible"))
+        self.helper.delay = 800
+        for _ in range(120):
+            if self.window.property("monetLinkBusy"):
+                break
+            QTest.qWait(30)
+        self.assertTrue(self.window.property("monetLinkBusy"))
+        self.assertEqual(self.helper.link_calls[-1], ("status", ""))
+        dialog.accept()
+        self.assertNotIn(("forget", ""), self.helper.link_calls)
+        QTest.qWait(1750)
+        self.assertEqual(self.helper.link_calls.count(("forget", "")), 1)
+        self.assertEqual(self.window.property("monetLink").toVariant()["phase"], "ready")
 
     def test_cancellation_failure_and_invalid_results_allow_retry(self):
         for output, code, state in (("{\"state\":\"canceled\"}", 0, "canceled"),

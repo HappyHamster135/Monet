@@ -513,6 +513,7 @@ Shared.MonetWindow {
     property string phoneFileState: ""
     property var monetLink: ({})
     property bool monetLinkBusy: false
+    property bool monetLinkForgetPending: false
     property string monetLinkProblem: ""
     property string monetLinkDraft: ""
     // About → Save a report: being written, and the name of the one saved.
@@ -1820,7 +1821,19 @@ Shared.MonetWindow {
             } else if (command !== "status" || Object.keys(sheet.monetLink).length > 0) {
                 sheet.monetLinkProblem = result.error || i18n("Monet Link couldn't finish. Try again.")
             }
+            if (monetLinkForgetPending) {
+                monetLinkForgetPending = false
+                forgetMonetLink()
+            }
         }
+    }
+
+    function forgetMonetLink() {
+        if (monetLinkBusy) {
+            monetLinkForgetPending = true
+            return
+        }
+        runMonetLink("forget", "", () => sheet.monetLinkDraft = "")
     }
 
     function sendPhoneFile(ident) {
@@ -4243,7 +4256,7 @@ Shared.MonetWindow {
                         title: i18n("Forget this phone?")
                         modal: true
                         standardButtons: QQC2.Dialog.Ok | QQC2.Dialog.Cancel
-                        onAccepted: sheet.runMonetLink("forget", "", () => sheet.monetLinkDraft = "")
+                        onAccepted: sheet.forgetMonetLink()
                         QQC2.Label {
                             width: 330
                             wrapMode: Text.Wrap
@@ -4256,16 +4269,38 @@ Shared.MonetWindow {
                         title: i18n("Note from your phone")
                         modal: true
                         standardButtons: QQC2.Dialog.Close
-                        onClosed: receivedNote.clear()
-                        QQC2.ScrollView {
+                        readonly property url webLink: typeof helper.monetLinkUrl === "function"
+                            ? helper.monetLinkUrl(receivedNote.text) : ""
+                        property bool openFailed: false
+                        onClosed: {
+                            receivedNote.clear()
+                            openFailed = false
+                        }
+                        ColumnLayout {
                             width: Math.min(440, sheet.width - 80)
-                            height: Math.min(300, sheet.height - 160)
-                            QQC2.TextArea {
-                                id: receivedNote
-                                readOnly: true
-                                selectByMouse: true
-                                wrapMode: TextEdit.Wrap
-                                textFormat: TextEdit.PlainText
+                            QQC2.ScrollView {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.min(300, sheet.height - 200)
+                                QQC2.TextArea {
+                                    id: receivedNote
+                                    readOnly: true
+                                    selectByMouse: true
+                                    wrapMode: TextEdit.Wrap
+                                    textFormat: TextEdit.PlainText
+                                }
+                            }
+                            Pill {
+                                tone: look
+                                visible: notePreview.webLink.toString() !== ""
+                                text: i18n("Open link")
+                                onClicked: notePreview.openFailed = !Qt.openUrlExternally(notePreview.webLink)
+                            }
+                            QQC2.Label {
+                                visible: notePreview.openFailed
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: i18n("Couldn’t open the link.")
+                                Accessible.role: Accessible.AlertMessage
                             }
                         }
                     }
