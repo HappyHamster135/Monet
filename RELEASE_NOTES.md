@@ -73,6 +73,11 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   quietly in Windows a couple of minutes after you sign in, and checks them,
   so going back to Monet only installs one that's ready. Most of the time the
   PC restarts into Monet straight away, even on a slow connection.
+- **Sound goes where you pick.** Choosing speakers, headphones or a microphone
+  in Quick Settings, Sound or Settings now switches to exactly that device,
+  even if something was plugged in or out a moment before. It's shown as
+  chosen once the sound has really moved, and if it couldn't switch, Monet
+  says why, with Try again beside it.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 
