@@ -307,6 +307,7 @@ Flickable {
                                         opacity: meter.indeterminate && still ? 0.4 : 1
                                         Behavior on width { NumberAnimation { duration: Math.round(200 * page.tone.speed) } }
                                         SequentialAnimation on shift {
+                                            objectName: "appMeterSweep"
                                             running: meter.indeterminate && meter.visible && !sweep.still
                                             loops: Animation.Infinite
                                             NumberAnimation { from: 0; to: meter.width * 0.7; duration: 900; easing.type: Easing.InOutSine }

@@ -648,9 +648,11 @@ class DownloadKeys(unittest.TestCase):
         self.jobs(self.job(0))
         bar = self.item("appMeterBar")
         self.assertTrue(bar.isVisible())
-        # Not sliding to and fro: all of the bar, faint and still.
-        sweeps = [child for child in bar.findChildren(QObject) if "SequentialAnimation" in child.metaObject().className()]
-        self.assertEqual([sweep.property("running") for sweep in sweeps], [False])
+        # Not sliding to and fro: all of the bar, faint and still. Found by name: walking every
+        # object under the bar handed back wrongly typed animations in Fedora's PySide.
+        sweep = bar.findChild(QObject, "appMeterSweep")
+        self.assertIsNotNone(sweep)
+        self.assertFalse(sweep.property("running"))
         self.assertEqual(round(bar.x()), 0)
         self.assertAlmostEqual(bar.width(), bar.parentItem().width(), delta=1)
         self.assertLess(bar.opacity(), 1)
