@@ -84,6 +84,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   this version of Monet, or its certificate can't be checked, Setup now says
   so before it changes anything on the drive, instead of after minutes of
   trying.
+- **Three bars on a narrow screen.** On a small screen, one turned on its side
+  or one set to a large size, the middle bar of the Home Bar now sits between
+  the other two instead of partly over the right one. Only on the very
+  narrowest screens do the side bars give up some of their room.
 
 ### New in 0.9.8-6: Steadier trips to Windows
 

@@ -6452,27 +6452,53 @@ def fit_bars():
     # a snapshot left an empty task-sized hole whenever an app closed.
     select = """
 var groups={};
+function marker(p,key){p.currentConfigGroup=["MonetBar"]; return String(p.readConfig(key,""));}
 panels().forEach(function(p){
  if(p.location!=="bottom") return;
- var types=p.widgets().map(function(w){return w.type});
- var role=types.indexOf("org.monet.menu")>=0 ? "left" :
-          types.indexOf("org.monet.quick")>=0 ? "right" :
-          types.indexOf("org.kde.plasma.icontasks")>=0 ? "middle" : "";
- if(role) { if(!groups[p.screen]) groups[p.screen]={}; groups[p.screen][role]=p; }
+ var types=p.widgets().map(function(w){return w.type}), found=[];
+ if(types.indexOf("org.monet.menu")>=0) found.push("left");
+ if(types.indexOf("org.kde.plasma.icontasks")>=0 || types.indexOf("org.kde.plasma.taskmanager")>=0) found.push("middle");
+ if(types.indexOf("org.monet.quick")>=0) found.push("right");
+ // As panel-layout.js tells them apart: by their widgets, else by the role it wrote. One bar is left alone.
+ var role=found.length>1 ? "one" : found[0] || marker(p,"role");
+ if(["left","middle","right"].indexOf(role)>=0) { if(!groups[p.screen]) groups[p.screen]={}; groups[p.screen][role]=p; }
 });
 """
     def script(body):
         return run("busctl", "--user", "call", "org.kde.plasmashell", "/PlasmaShell",
                    "org.kde.PlasmaShell", "evaluateScript", "s", select + body, timeout=5)
-    script("""Object.keys(groups).forEach(function(id){
+    script("""(function(){
+var gap=16, dock=80;
+Object.keys(groups).forEach(function(id){
  var g=groups[id]; if(!g.left || !g.middle || !g.right) return;
- var width=screenGeometry(Number(id)).width, gap=16;
- var available=Math.max(80,width-2*Math.max(g.left.length,g.right.length)-4*gap);
+ var width=screenGeometry(Number(id)).width;
+ var available=width-2*Math.max(g.left.length,g.right.length)-4*gap;
  g.left.offset=gap; g.right.offset=gap;
- g.middle.alignment="center"; g.middle.offset=0;
- g.middle.minimumLength=80; g.middle.maximumLength=Math.floor(available);
+ if(available>=dock) {
+  [g.left,g.right].forEach(function(p){ if(marker(p,"narrowed")==="true") widen(p); });
+  g.middle.alignment="center"; g.middle.offset=0;
+  g.middle.minimumLength=dock; g.middle.maximumLength=Math.floor(available);
+  g.middle.lengthMode="custom";
+  return;
+ }
+ // Too narrow to centre the dock clear of the wider island (a portrait, small or highly
+ // scaled screen): it sits between the two instead. Only when even that leaves it less
+ // than its smallest are the side islands narrowed, each to at most half of what's left.
+ var room=width-dock-4*gap, left=side(g.left,Math.floor(room/2)), right=side(g.right,room-left);
+ g.middle.alignment="left"; g.middle.offset=left+2*gap;
+ g.middle.minimumLength=dock; g.middle.maximumLength=Math.max(dock,width-left-right-4*gap);
  g.middle.lengthMode="custom";
-});""")
+});
+function widen(p){ p.currentConfigGroup=["MonetBar"]; p.writeConfig("narrowed",""); p.lengthMode="fit"; }
+// A narrowed island measures as its limit, so it only widens again once there's a gap more room.
+function side(p,share){
+ var narrowed=marker(p,"narrowed")==="true";
+ if(p.length+(narrowed ? gap : 0)<=share) { if(narrowed) widen(p); return p.length; }
+ p.writeConfig("narrowed","true");
+ p.minimumLength=Math.min(dock,share); p.maximumLength=share; p.lengthMode="custom";
+ return share;
+}
+})();""")
 
 
 def set_scale(percent, name=None):
