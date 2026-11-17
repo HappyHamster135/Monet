@@ -14,6 +14,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-7: Find your way back in the Store
 
+- **Apps remember where they were.** After you close an app's last main window,
+  the app reopens at the same position and size, on the same monitor when it's
+  connected. If you closed it maximized, it reopens maximized.
 - **Back to exactly where you were.** In the Store, Back after an app's page
   takes you to the very spot you left in the list, whether the front page, a
   section or a search, instead of a little above or below it.
