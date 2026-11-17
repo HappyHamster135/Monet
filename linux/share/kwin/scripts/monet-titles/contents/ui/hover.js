@@ -5,7 +5,9 @@
 
 // The same at every scale: KWin draws the bar at its screen's.
 var BAR = 40     // the bar's height, as on Monet's own apps' title bars
-var DEPTH = 6    // how far into a window's top the pointer brings its bar
+var EDGE_DEPTH = 6   // the pointer stops at the screen edge
+var FLOATING_DEPTH = 18  // an easier target when the pointer can pass the top in either direction
+var ABOVE = 7   // let the pointer just overshoot a floating window's top
 var BARE = 4     // a frame whose top is no taller than this has no title bar of its own
 var SLACK = 4    // how far off the bar the pointer may stray before it goes
 
@@ -39,12 +41,14 @@ function barRect(client, screen) {
     return rect(x, y, width, height)
 }
 
-// The pointer at a window's top: over the window, no further than DEPTH into it. For a window
+// The pointer at a window's top: within its reveal band. For a window
 // that fills the screen, that's the screen's top edge, where the pointer stops by itself.
 function atTop(client, screen, p) {
     var top = visibleTop(client, screen)
+    var depth = top === screen.y ? EDGE_DEPTH : FLOATING_DEPTH
+    var start = Math.max(screen.y, top - ABOVE)
     return p.x >= client.x && p.x < client.x + client.width
-        && p.y >= top && p.y < top + Math.min(DEPTH, client.height)
+        && p.y >= start && p.y < top + Math.min(depth, (client.y + client.height - top) / 3)
 }
 
 // Still on the bar, or only just off it: the bar stays until the pointer is away.

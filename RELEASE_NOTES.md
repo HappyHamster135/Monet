@@ -18,8 +18,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   the app reopens at the same position and size, on the same monitor when it's
   connected. If you closed it maximized, it reopens maximized.
 - **Easier window controls.** The title bar fades into place with steady,
-  larger targets for minimize, maximize and close. It stays visible while
-  you press a button and clears as soon as you minimize or close the window.
+  larger targets for minimize, maximize and close. It appears briefly when
+  a window opens, then fades away. Point near the top to bring it back. The
+  hover area is taller on floating windows, so the top is easier to hit.
 - **Back to exactly where you were.** In the Store, Back after an app's page
   takes you to the very spot you left in the list, whether the front page, a
   section or a search, instead of a little above or below it.

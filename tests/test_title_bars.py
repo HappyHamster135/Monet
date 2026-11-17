@@ -89,13 +89,15 @@ class Arithmetic(unittest.TestCase):
         client = "rect(100, 100, 800, 600)"
         at = lambda x, y: self.run_js(f"atTop({client}, {screen}, {{x: {x}, y: {y}}})")
         self.assertTrue(at(500, 100))
-        self.assertTrue(at(500, 105))
-        self.assertFalse(at(500, 106))   # the app's own toolbar starts here
-        self.assertFalse(at(500, 99))    # above the window
+        self.assertTrue(at(500, 117))   # a wider band on a floating window
+        self.assertFalse(at(500, 118))
+        self.assertTrue(at(500, 93))     # just above the floating window
+        self.assertFalse(at(500, 92))
         self.assertFalse(at(99, 101))    # beside it
         self.assertFalse(at(900, 101))
         # Filling the screen: the screen's top edge, where the pointer stops by itself.
         self.assertTrue(self.run_js(f"atTop(rect(0, 0, 1920, 1040), {screen}, {{x: 960, y: 0}})"))
+        self.assertFalse(self.run_js(f"atTop(rect(0, 0, 1920, 1040), {screen}, {{x: 960, y: 6}})"))
         # Under a panel kept at the top, the window's top is the panel's bottom.
         self.assertTrue(self.run_js(f"atTop(rect(0, 44, 1920, 996), {screen}, {{x: 960, y: 44}})"))
         self.assertFalse(self.run_js(f"atTop(rect(0, 44, 1920, 996), {screen}, {{x: 960, y: 0}})"))
@@ -173,6 +175,8 @@ QtObject {
     property var currentDesktop: "one"
     property var effects: []
     property var calls: []
+    signal windowAdded(var window)
+    signal windowActivated(var window)
     // The topmost windows under a point, as KWin's windowAt: on this desktop, shown, hit.
     function windowAt(p, count) {
         const found = []
@@ -355,6 +359,36 @@ class Behaviour(unittest.TestCase):
         self.point(500, 102, 60)
         self.point(500, 300, 500)
         self.assertIsNone(self.shown_for())
+
+    def test_a_small_floating_window_previews_the_bar_then_can_reveal_it_again(self):
+        self.stack("app")
+        self.js("scene.app.frameGeometry = Qt.rect(280, 300, 320, 220)")
+        self.point(440, 400)
+        self.js("Workspace.activeWindow = scene.app; Workspace.windowAdded(scene.app)")
+        QTest.qWait(500)
+        self.assertEqual(self.shown_for(), "Files")
+        QTest.qWait(2100)
+        self.assertFalse(self.bar.isVisible())
+        # Below the old six-pixel band, still near the floating window's top.
+        self.point(440, 313, 400)
+        self.assertEqual(self.shown_for(), "Files")
+        self.point(440, 400, 550)
+        self.assertIsNone(self.shown_for())
+        # A slight overshoot onto the desktop also brings the controls back.
+        self.point(440, 295, 400)
+        self.assertEqual(self.shown_for(), "Files")
+
+    def test_launch_preview_respects_focus_and_stays_under_the_pointer(self):
+        self.stack("app", "gtk")
+        self.point(500, 300)
+        self.js("Workspace.activeWindow = scene.gtk; Workspace.windowAdded(scene.app)")
+        QTest.qWait(400)
+        self.assertIsNone(self.shown_for())
+        self.js("Workspace.activeWindow = scene.app; Workspace.windowAdded(scene.app)")
+        QTest.qWait(500)
+        self.assertEqual(self.shown_for(), "Files")
+        self.point(500, 132, 2200)
+        self.assertEqual(self.shown_for(), "Files")
 
     def test_only_windows_kwin_frames_without_a_title_bar(self):
         self.stack("app", "gtk", "titled", "full")

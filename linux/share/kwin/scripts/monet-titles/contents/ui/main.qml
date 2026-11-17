@@ -31,6 +31,8 @@ Item {
             root.hovering = KWin.readConfig("Hover", true)
             if (!root.hovering) {
                 root.pending = null
+                root.newWindow = null
+                introduce.stop()
                 reveal.stop()
                 away.stop()
                 bar.close(true)
@@ -47,6 +49,8 @@ Item {
 
     // The window the pointer waits at the top of, before its bar comes.
     property var pending: null
+    property var newWindow: null
+    property var preview: null
 
     // The bar's own window, which KWin lists with the rest.
     function ours(o) {
@@ -65,23 +69,31 @@ Item {
                              Workspace.currentDesktop, ours)
     }
 
+    function canShow(w) {
+        return Hover.titleless(w) && w.output
+            && (w.onAllDesktops || w.desktops.indexOf(Workspace.currentDesktop) >= 0) && !coveredNow(w)
+    }
+
+    function topWindow(p) {
+        return Workspace.windowAt(p, 2).find(w => !ours(w))
+    }
+
     // The window whose top the pointer is at, if its bar may come there now.
     function aimedAt(p) {
         if (busy()) {
             return null
         }
-        const under = Workspace.windowAt(p, 2)
-        let w = null
-        for (let i = 0; i < under.length && !w; i++) {
-            w = ours(under[i]) ? null : under[i]
-        }
-        if (!w || !Hover.titleless(w) || w.move || w.resize || !w.output) {
+        let w = topWindow(p)
+        // Allow a small overshoot from the bare desktop, keeping the pointer
+        // with the app or menu it is actually on when there's one underneath.
+        if (!w || w.desktopWindow) w = topWindow(Qt.point(p.x, p.y + Hover.ABOVE))
+        if (!w || w.move || w.resize || !canShow(w)) {
             return null
         }
         if (!Hover.atTop(w.clientGeometry, w.output.geometry, p)) {
             return null
         }
-        return coveredNow(w) ? null : w
+        return w
     }
 
     // As the pointer moves (once a frame at most): the bar stays while the pointer's on it or
@@ -112,7 +124,7 @@ Item {
                 reveal.stop()
             }
         }
-        if (bar.open && !away.running) {
+        if (bar.open && preview !== w && !away.running) {
             away.start()
         }
     }
@@ -129,6 +141,44 @@ Item {
         target: Workspace
         function onCursorPosChanged() {
             root.queueEvaluation()
+        }
+        function onWindowAdded(w) {
+            if (root.hovering && w && w.normalWindow && w.managed && !w.popupWindow && !w.transient) {
+                root.newWindow = w
+                introduce.restart()
+            }
+        }
+        function onWindowActivated(w) {
+            if (root.preview && root.preview !== w && !bar.held) bar.close()
+        }
+    }
+
+    // Give a new foreground window a brief introduction after its first map.
+    // Keep it open if the pointer is already on the controls when time is up.
+    Timer {
+        id: introduce
+        interval: 220
+        onTriggered: {
+            const w = root.newWindow
+            root.newWindow = null
+            if (!w || w !== Workspace.activeWindow || !root.hovering || bar.held
+                    || w.move || w.resize || root.busy() || !root.canShow(w)) return
+            root.pending = null
+            reveal.stop()
+            away.stop()
+            bar.openFor(w)
+            root.preview = w
+            previewTime.restart()
+        }
+    }
+    Timer {
+        id: previewTime
+        interval: 2200
+        onTriggered: {
+            const w = root.preview
+            root.preview = null
+            if (bar.open && w && bar.window === w && !bar.held && !w.move && !w.resize
+                    && !Hover.onBar(bar.area, Workspace.cursorPos)) bar.close()
         }
     }
     Timer {
@@ -165,8 +215,7 @@ Item {
             if (w && (bar.held || w.move || w.resize)) {
                 return
             }
-            if (!w || !root.hovering || root.busy() || !Hover.titleless(w) || !w.output
-                    || !(w.onAllDesktops || w.desktops.indexOf(Workspace.currentDesktop) >= 0) || root.coveredNow(w)) {
+            if (!root.hovering || root.busy() || !root.canShow(w)) {
                 bar.close(true)
             }
         }
@@ -234,9 +283,27 @@ Item {
         id: bar
         speed: root.speed
         smoke: root.smoke
-        onOpenChanged: if (!bar.open) look.stop()
+        onOpenChanged: {
+            if (!bar.open) {
+                look.stop()
+                previewTime.stop()
+                root.preview = null
+            }
+        }
+        onWindowChanged: {
+            if (root.preview && root.preview !== bar.window) {
+                previewTime.stop()
+                root.preview = null
+            }
+        }
         onAreaChanged: if (bar.open) root.queueEvaluation()
-        onHeldChanged: if (bar.open) root.queueEvaluation()
+        onHeldChanged: {
+            if (bar.held && root.preview) {
+                previewTime.stop()
+                root.preview = null
+            }
+            if (bar.open) root.queueEvaluation()
+        }
         onActivateAsked: {
             if (bar.window && Workspace.activeWindow !== bar.window) {
                 Workspace.activeWindow = bar.window
