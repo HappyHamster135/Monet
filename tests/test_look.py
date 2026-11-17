@@ -2509,6 +2509,15 @@ class StartAndSignIn(unittest.TestCase):
         for picture in re.findall(r'Image\("([^"]+)"\)', script):
             self.assertTrue((self.PLYMOUTH / picture).is_file(), picture)
 
+    def test_power_handoff_keeps_boot_art_in_boot_mode(self):
+        script = (self.PLYMOUTH / "monet.script").read_text()
+        boot_art = re.search(r'if \(Plymouth\.GetMode\(\) == "boot"\) \{\n(.*?)\n\}', script, re.S)
+        self.assertIsNotNone(boot_art)
+        self.assertIn("\nback = Sprite();\n", script[:boot_art.start()])
+        self.assertEqual(re.findall(r'Image\("([^"]+)"\)', boot_art[1]), ["painting.png", "mark.png"])
+        self.assertEqual(script.count('Image("painting.png")'), 1)
+        self.assertEqual(script.count('Image("mark.png")'), 1)
+
     def test_monet_boots_with_its_own_screen(self):
         containerfile = (ROOT / "image/Containerfile").read_text()
         self.assertIn("plymouth-set-default-theme monet", containerfile)

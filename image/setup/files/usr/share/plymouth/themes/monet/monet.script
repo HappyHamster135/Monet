@@ -1,14 +1,17 @@
 // The dawn painting, filling the screen, and Monet's sun breathing over it.
 // Used by Monet Setup and by Monet itself while it starts.
-// Plymouth also takes over after Plasma closes during shutdown/restart. Keep
-// that handoff black instead of flashing the bright dawn painting at full size.
+// Plymouth has separate reboot and shutdown modes. Only show the painting
+// during startup so both handoffs from Plasma stay black.
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
-if (Plymouth.GetMode() != "shutdown") {
+// Keep a sprite even when it has no image: Plymouth's script renderer needs
+// one to draw the background on Fedora.
+back = Sprite();
+if (Plymouth.GetMode() == "boot") {
     painting = Image("painting.png");
     scale = Math.Max(Window.GetWidth() / painting.GetWidth(), Window.GetHeight() / painting.GetHeight());
     filled = painting.Scale(painting.GetWidth() * scale, painting.GetHeight() * scale);
-    back = Sprite(filled);
+    back.SetImage(filled);
     back.SetX(Window.GetX() + (Window.GetWidth() - filled.GetWidth()) / 2);
     back.SetY(Window.GetY() + (Window.GetHeight() - filled.GetHeight()) / 2);
     back.SetZ(-10);
@@ -60,7 +63,8 @@ fun normal() {
 Plymouth.SetDisplayNormalFunction(normal);
 
 fun message(text) {
-    if (Plymouth.GetMode() == "shutdown") return;
+    mode = Plymouth.GetMode();
+    if (mode == "reboot" || mode == "shutdown") return;
     global.note = line(text, 0.9, "Sans 12", 0.85);
 }
 Plymouth.SetMessageFunction(message);
