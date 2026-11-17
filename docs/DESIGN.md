@@ -325,9 +325,10 @@ brought back from zram stutters for minutes. While one runs anywhere in the
 account, KWin is asked which windows are on screen every ten minutes at most.
 `monet-priority.service` decides who gets the PC first. Steam's shader
 processing (`fossilize_replay`, which "Processing Vulkan shaders" and the
-background pre-caching run on every processor) goes to idle priority: each of
-the account's own such processes, every thread, `SCHED_IDLE` and the idle
-I/O class, which their helpers and threads inherit. It reads only
+background pre-caching run on every processor) gets niceness 5, preserving an
+existing lower CPU priority, and best-effort I/O priority 7. This lets compilation
+make progress under load while interactive apps keep a larger CPU share.
+Its helpers and threads inherit the priority. It reads only
 `/proc/PID/stat` of each process (the tool's own `exe` and `status` too),
 remembers what it has done by process number and start time, and looks
 every two seconds while `~/.steam/steam.pid` names a running Steam,

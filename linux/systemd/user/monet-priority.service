@@ -1,5 +1,5 @@
 [Unit]
-Description=Monet: a game in front ahead of the apps behind it, and Steam's shader processing behind everything
+Description=Monet: games first and shader processing at background priority
 # With the desktop, and gone with it: what it lowered is put back as it stops. The Monet Work
 # KWin script tells it which windows are in front; Steam's shader processes are looked for only
 # while Steam runs.

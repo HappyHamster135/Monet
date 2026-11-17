@@ -1,5 +1,19 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 shader processing follow-up — 17 November 2026
+
+The owner reports long Steam shader processing on every game on the desktop PC,
+including repeated launches after processing has finished.
+The candidate gives compiler threads niceness 5 and best-effort I/O priority 7.
+Thirty-nine priority and memory-resting checks pass. In three controlled trials
+with a compiler workload and an ordinary busy process sharing one CPU, the
+compiler received a median 0.006 CPU seconds in a two-second window under the
+previous idle policy and 0.494 seconds under the candidate policy. These are
+scheduler measurements. Game launch timings and shader-cache reuse on the
+owner's desktop remain unverified.
+Save a report now includes bounded native/Flatpak Steam shader logs, compiler
+priorities and the NVIDIA driver version to investigate cache reuse on that PC.
+
 ## Monet 0.9.8 release verification
 
 The AMD/Intel and NVIDIA images built from Bazzite's stable images and passed
@@ -2303,7 +2317,7 @@ still a release step. Local evidence is in `target/098-security-vm/`.
 
 ### Games and Monet's background work (after 0.9.8-7)
 
-- [ ] `systemctl --user status monet-priority` is active. Install a game, or start one after a graphics driver update, so Steam processes its shaders (Steam's Settings, Downloads, Shader Pre-Caching on): while `ps -eLo pid,cls,comm | grep fossil` lists them, every line says `IDL`, and `journalctl --user -u monet-priority` says "runs at idle priority". Moving windows and scrolling a web page stay smooth meanwhile; with nothing else running, all processors stay busy (`top`)
+- [ ] `systemctl --user status monet-priority` is active. Install a game, or start one after a graphics driver update, so Steam processes its shaders. Check each compiler thread with `ps -eLo pid,tid,cls,ni,comm`. Niceness is at least 5 and I/O is best-effort priority 7. Moving windows and scrolling a web page stay smooth. Compilation keeps progressing while another app is busy, and can use every available processor when the PC is otherwise idle. Repeat a launch after processing finishes and record whether the cache is reused.
 - [ ] Steam quit: `monet-priority` uses no processor time between its half-minute looks (`top -p $(pgrep -f monet-priority)`)
 - [ ] Play a fullscreen game (Proton and native), Alt+Tab out to Zen and back a dozen times: no hitch a few seconds after each; `~/.local/state/monet/work.json`'s time stays as it was until the game quits (or five minutes pass), then updates within twenty seconds
 - [ ] Close Kate while the game runs, then hold the power button within a minute: Kate stays closed at the next start

@@ -1,4 +1,4 @@
-"""Who gets the PC first (monet-priority): Steam's shader processing at idle priority, every
+"""Who gets the PC first (monet-priority): Steam's shader processing at background priority, every
 thread of it and nothing else, nearly free while Steam isn't running; and a game in front ahead
 of the apps behind it, put back exactly as they were. A pretend /proc, cgroup tree and systemd:
 nothing's priority really changes here."""
@@ -58,7 +58,7 @@ class Fixture(unittest.TestCase):
         return cpu
 
 
-class Idle(Fixture):
+class Background(Fixture):
     def test_every_thread_of_steams_shader_processes_and_nothing_else(self):
         self.process(400, 'steam', [400, 401], exe=f'{STEAM}/ubuntu12_32/steam')
         self.process(500, 'fossilize_repla', [500, 501, 502], parent=400)
@@ -71,7 +71,7 @@ class Idle(Fixture):
         self.watch.look()
         self.assertEqual(self.done(), [500, 501, 502, 510, 511, 520])
         self.assertEqual(sorted(self.watch.known), [500, 510, 520])
-        self.assertEqual(self.said, ["Steam's shader processing (process 500) runs at idle priority"])
+        self.assertEqual(self.said, ["Steam's shader processing (process 500) runs at background priority"])
 
     def test_nothing_is_done_twice_and_threads_started_later_are_caught(self):
         self.process(500, 'fossilize_repla', [500, 501])
@@ -206,22 +206,23 @@ class OnlyWhileSteamRuns(Fixture):
 
 class Kernel(unittest.TestCase):
     def test_the_processor_and_the_disk_are_asked_for_one_thread_each(self):
-        with mock.patch.object(priority.os, 'sched_setscheduler') as setscheduler:
-            priority.idle_processor(4242)
-        tid, policy, param = setscheduler.call_args.args
-        self.assertEqual((tid, policy, param.sched_priority), (4242, os.SCHED_IDLE, 0))
+        for current, expected in ((0, 5), (5, 5), (12, 12)):
+            with self.subTest(current=current), mock.patch.object(priority.os, 'getpriority', return_value=current), \
+                    mock.patch.object(priority.os, 'setpriority') as setpriority:
+                priority.background_processor(4242)
+                setpriority.assert_called_once_with(os.PRIO_PROCESS, 4242, expected)
         libc = mock.Mock()
         libc.syscall.return_value = 0
         with mock.patch.object(priority, 'libc', return_value=libc), mock.patch.object(priority, 'IOPRIO_SET', 251):
-            priority.idle_disk(4242)
-            self.assertEqual([a.value for a in libc.syscall.call_args.args], [251, 1, 4242, 3 << 13])
+            priority.background_disk(4242)
+            self.assertEqual([a.value for a in libc.syscall.call_args.args], [251, 1, 4242, (2 << 13) | 7])
             libc.syscall.return_value = -1
             with mock.patch.object(priority.ctypes, 'get_errno', return_value=3), \
                     self.assertRaises(ProcessLookupError):
-                priority.idle_disk(4242)
+                priority.background_disk(4242)
         with mock.patch.object(priority, 'IOPRIO_SET', None), \
                 mock.patch.object(priority, 'libc', side_effect=AssertionError('asked')):
-            priority.idle_disk(4242)  # Elsewhere than x86-64 and Arm: the processors alone.
+            priority.background_disk(4242)  # Elsewhere than x86-64 and Arm: the processors alone.
         if os.uname().machine == 'x86_64':
             self.assertEqual(priority.IOPRIO_SET, 251)
 

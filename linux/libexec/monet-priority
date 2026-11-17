@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 """Who gets the PC first: a game you're playing ahead of the apps behind it, and Steam's shader
-processing behind everything.
+processing at a lower background priority.
 
 Steam's shader processing. Before a game's first start ("Processing Vulkan shaders"), and in the
 background whenever Steam has a moment, Steam works through a game's shaders with
-fossilize_replay: a process and helpers of its own on every processor, at the same priority as
-everything else, so the whole PC stutters until it's done. This moves each of them, every
-thread, to idle priority, for the processors (SCHED_IDLE) and for the disk (the idle I/O class).
-With nothing else wanting the PC, as while Steam shows its progress before a game starts, they
-still run flat out; the moment anything else wants a processor or the disk, it has it. Helpers
-and threads they start later inherit it. Only this account's own processes, and only Steam's
+fossilize_replay: a process and helpers of its own on every processor. Each thread gets
+niceness 5 or keeps its existing lower priority, and best-effort I/O priority 7. This leaves
+interactive work ahead while allowing compilation to make progress when other apps are busy.
+SCHED_IDLE and idle-class I/O can starve the compiler even when the person is waiting for a
+game to open. Helpers and threads they start later inherit the lower priority.
+Only this account's own processes, and only Steam's
 shader tool: Linux lets anyone lower their own programs' priority, so nothing needs an
 administrator. While Steam runs (the process ~/.steam/steam.pid names), it looks every two
 seconds; otherwise it only checks every half minute whether Steam has started.
@@ -51,7 +51,8 @@ NAME = "fossilize_repla"    # fossilize_replay as the kernel names a process (15
 TOOL = "fossilize_replay"
 IOPRIO_SET = {"x86_64": 251, "aarch64": 30}.get(platform.machine())  # the system call's number
 IOPRIO_WHO_PROCESS = 1      # one thread, by its id
-IDLE_IO = 3 << 13           # IOPRIO_CLASS_IDLE
+SHADER_NICE = 5
+SHADER_IO = (2 << 13) | 7   # IOPRIO_CLASS_BE, lowest best-effort priority
 
 SHARE = 20                  # the other apps' CPUWeight and IOWeight while a game is in front (100 usually)
 WEIGHTS = ("CPUWeight", "IOWeight")
@@ -111,8 +112,9 @@ def steam_running(pid_file=STEAM_PID, proc=PROC, uid=None):
     return owners(pid, proc) == {uid} and any(b"steam" in os.path.basename(w).lower() for w in words)
 
 
-def idle_processor(tid):
-    os.sched_setscheduler(tid, os.SCHED_IDLE, os.sched_param(0))
+def background_processor(tid):
+    current = os.getpriority(os.PRIO_PROCESS, tid)
+    os.setpriority(os.PRIO_PROCESS, tid, max(current, SHADER_NICE))
 
 
 @lru_cache(maxsize=1)
@@ -120,24 +122,24 @@ def libc():
     return ctypes.CDLL(None, use_errno=True)
 
 
-def idle_disk(tid):
+def background_disk(tid):
     if IOPRIO_SET is None:
         return  # Unknown here: the processors alone, then.
     if libc().syscall(ctypes.c_long(IOPRIO_SET), ctypes.c_long(IOPRIO_WHO_PROCESS), ctypes.c_long(tid),
-                      ctypes.c_long(IDLE_IO)) != 0:
+                      ctypes.c_long(SHADER_IO)) != 0:
         error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))
 
 
 class Shaders:
-    """Steam's shader processes, and which of their threads are idle already."""
+    """Steam's shader processes, and which threads already have background priority."""
 
-    def __init__(self, proc=PROC, uid=None, processor=idle_processor, disk=idle_disk, say=None):
+    def __init__(self, proc=PROC, uid=None, processor=background_processor, disk=background_disk, say=None):
         self.proc = str(proc)
         self.uid = os.getuid() if uid is None else uid
         self.processor, self.disk = processor, disk
         self.say = say or (lambda text: print(text, file=sys.stderr, flush=True))
-        self.known = {}  # pid: (start, ids of its threads made idle)
+        self.known = {}  # pid: (start, ids of its threads given background priority)
 
     def shader_tool(self, pid):
         """Whether a process named like it is Steam's shader tool, and this account's."""
@@ -149,7 +151,7 @@ class Shaders:
 
     def look(self):
         """One look through /proc: each shader process new since the last one, and each thread new
-        in one already known, to idle. Only a process's name is read, unless it's the tool's."""
+        in one already known, to background priority. Only a process's name is read, unless it's the tool's."""
         try:
             pids = sorted(int(name) for name in os.listdir(self.proc) if name.isdigit())  # parents first
         except OSError:
@@ -167,14 +169,14 @@ class Shaders:
                     continue
                 entry = self.known[pid] = (start, set())
                 if parent not in self.known:  # One line for each run, not for each helper.
-                    self.say(f"Steam's shader processing (process {pid}) runs at idle priority")
-            if self.idle(pid, entry[1]):
+                    self.say(f"Steam's shader processing (process {pid}) runs at background priority")
+            if self.lower(pid, entry[1]):
                 alive.add(pid)
         for pid in set(self.known) - alive:
             del self.known[pid]
 
-    def idle(self, pid, done):
-        """Each thread of a process not idle yet, to idle; False once the process is gone."""
+    def lower(self, pid, done):
+        """Lower each new thread's priority; False once the process is gone."""
         try:
             threads = {int(t) for t in os.listdir(f"{self.proc}/{pid}/task") if t.isdigit()}
         except OSError:

@@ -373,7 +373,7 @@ put 644 "$SRC/systemd/user/monet-backup.service" "$USERUNITDIR/monet-backup.serv
 put 644 "$SRC/systemd/user/monet-backup.timer" "$USERUNITDIR/monet-backup.timer"
 put 644 "$SRC/systemd/user/monet-rest.service" "$USERUNITDIR/monet-rest.service"
 put 644 "$SRC/systemd/user/monet-rest.timer" "$USERUNITDIR/monet-rest.timer"
-# A game in front comes first, and Steam's shader processing only uses what the rest of the PC leaves.
+# A game in front comes first; Steam's shader processing has lower background priority.
 put 644 "$SRC/systemd/user/monet-priority.service" "$USERUNITDIR/monet-priority.service"
 # Stay responsive when memory runs out (applied at every start; now too, outside an image build).
 put 644 "$SRC/tmpfiles/monet-memory.conf" "$TMPFILESDIR/monet-memory.conf"
