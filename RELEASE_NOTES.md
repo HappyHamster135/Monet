@@ -14,6 +14,19 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-7: Find your way back in the Store
 
+#### November 17 maintenance update
+
+Open **Settings → Updates**, choose **Check for updates** and **Install**, then
+restart. The version still reads **0.9.8-7**. If you install from the original
+USB images, use Settings after your first sign-in to get these fixes.
+
+- **Window placement and fullscreen survive a restart.** Monet saves window
+  size, position, and fullscreen or maximized state while you work. It can
+  also remember windows such as ChatGPT's that lack a desktop-file ID.
+- **Games finds standalone Windows games installed in Monet.** Games checks
+  Wine and Monet's Proton folder for game shortcuts and recognizable game files.
+  Use **Add game** and choose the playable `.exe` if a title doesn't appear.
+
 - **Apps remember where they were.** After you close an app's last main window,
   the app reopens at the same position and size, on the same monitor when it's
   connected. If you closed it maximized, it reopens maximized.
