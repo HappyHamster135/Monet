@@ -100,11 +100,12 @@ def comparison_code(config, identifier):
 
 def request(config, method, resource, body=None, token=None, *, response_limit=MAX_ENVELOPE):
     url = origin(config["url"])
-    tls = ssl.create_default_context()
     if config.get("cert"):
         # Narrow this connection's trust store to the certificate carried by the QR.
         tls = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         tls.load_verify_locations(cadata=decode(config["cert"]))
+    else:
+        tls = ssl.create_default_context()
     connection = http.client.HTTPSConnection(url.hostname, url.port, context=tls, timeout=4)
     try:
         connection.request(method, resource, body=body, headers={
@@ -842,6 +843,8 @@ def watch_once(path, operator, on_note=None, next_batch=None):
     with edit(path) as state:
         if state is None:
             return False
+        if state.get("problem") == "revoked" and not state.get("revoking"):
+            return True
     config = state["config"]
     revoking = bool(state.get("revoking"))
     problem = None

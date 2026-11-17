@@ -91,6 +91,22 @@ class MonetLinkSync(unittest.TestCase):
         self.assertEqual(self.operator.read_bytes(), original)
         self.assertEqual(self.read(), self.state)
 
+    def test_pinned_relay_loads_its_certificate_directly(self):
+        certificate = b"fixture DER certificate"
+        config = {**self.config, "url": "https://relay.example.test:8443",
+                  "cert": link.encode(certificate), "token": "b" * 43}
+        with patch.object(link.ssl, "SSLContext") as pinned, \
+                patch.object(link.ssl, "create_default_context") as system, \
+                patch.object(link.http.client, "HTTPSConnection") as https:
+            response = https.return_value.getresponse.return_value
+            response.status = 200
+            response.read.return_value = b"[]"
+            self.assertEqual(link.request(config, "GET", "/v1/inbox"), (200, b"[]"))
+            system.assert_not_called()
+            pinned.return_value.load_verify_locations.assert_called_once_with(cadata=certificate)
+            https.assert_called_once_with("relay.example.test", 8443, context=pinned.return_value, timeout=4)
+            https.return_value.close.assert_called_once()
+
     def test_queued_note_survives_receipt_arriving_during_send(self):
         first = link.queue(self.state, self.note("Earlier note"))
         original = link.decode(self.state["outbox"][first]["envelope"])
@@ -185,6 +201,31 @@ class MonetLinkSync(unittest.TestCase):
         self.assertEqual(notices, [self.config["pair"]])
         self.assertEqual(len(receipts), 2)
         self.assertEqual(receipts[0], receipts[1])
+
+    def test_offline_pair_retries_and_revoked_pair_waits_for_removal(self):
+        link.save(self.path, self.state)
+        with patch.object(link, "request", return_value=(503, b"")) as relay:
+            self.assertTrue(link.watch_once(self.path, self.operator))
+            self.assertEqual(link.view(self.path, self.operator)["problem"], "offline")
+            relay.assert_called_once()
+
+        with patch.object(link, "request", side_effect=[(200, b"[]"), (404, b"")]) as relay:
+            self.assertTrue(link.watch_once(self.path, self.operator))
+            self.assertIsNone(link.view(self.path, self.operator)["problem"])
+            self.assertEqual(relay.call_count, 2)
+
+        with patch.object(link, "request", return_value=(401, b"")) as relay:
+            self.assertTrue(link.watch_once(self.path, self.operator))
+            self.assertEqual(link.view(self.path, self.operator), {"phase": "revoked"})
+            self.assertTrue(link.watch_once(self.path, self.operator))
+            self.assertTrue(link.watch_once(self.path, self.operator))
+            relay.assert_called_once()
+
+        link.change(self.path, self.operator, "forget")
+        with patch.object(link, "request", return_value=(401, b"")) as relay:
+            self.assertFalse(link.watch_once(self.path, self.operator))
+            relay.assert_called_once_with(self.config, "DELETE", "/v1/pair/" + self.config["pair"])
+            self.assertFalse(self.path.exists())
 
     def test_notice_uses_local_action_and_honors_activation_and_revocation(self):
         private_text = "Text never shown in a notification"
