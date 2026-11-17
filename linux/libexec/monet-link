@@ -37,6 +37,7 @@ MAX_ITEMS = 64
 MAX_NOTE = 32768
 PREFIX = "monet-link:"
 POLL_INTERVAL = 5
+REVOCATION_RETRY_INTERVAL = 60
 FILE_BYTES = 64 * 1024 * 1024
 FILE_CHUNK = 256 * 1024
 FILE_OVERHEAD = 28
@@ -153,14 +154,18 @@ def new_state(config):
     return {"config": config, "paired": False, "outbox": {}, "inbox": {}}
 
 
+def active_pair(state):
+    return state if state and "config" in state else None
+
+
 class PairingChanged(Exception):
     pass
 
 
 @contextmanager
-def edit_pair(path, pair, *, revoking=False):
+def edit_pair(path, pair):
     with edit(path) as state:
-        if state is None or state["config"]["pair"] != pair or bool(state.get("revoking")) != revoking:
+        if active_pair(state) is None or state["config"]["pair"] != pair or state.get("revoking"):
             raise PairingChanged
         yield state
 
@@ -255,7 +260,8 @@ def queue_file(path, source, expected_pair):
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with path.with_suffix(".file-import.lock").open("a") as guard:
         fcntl.flock(guard, fcntl.LOCK_EX)
-        with edit(path) as state:
+        with edit(path) as stored:
+            state = active_pair(stored)
             if state and state["paired"] and not state.get("revoking") and prune_files(path, state):
                 save(path, state)
             require_file_slot(state)
@@ -333,7 +339,8 @@ def verify_file(stream, config, sender, identifier, record, output=None):
 def copy_to_folder(path, payload):
     identifier, incoming, pair, folder = file_action(payload, save_file=True)
     key = FILE_INBOX if incoming else FILE_OUTBOX
-    with edit(path) as state:
+    with edit(path) as stored:
+        state = active_pair(stored)
         if state is None or state.get("revoking") or state.get("problem") == "revoked":
             raise ValueError("The file is unavailable.")
         record = state.get(key, {}).get(identifier)
@@ -785,7 +792,7 @@ def configure_relay(path, operator, text):
     new_file = setup.get("certificatePath")
     certificate = read_relay_certificate(local_path(new_file)) if new_file else None
     with edit(path) as state:
-        if state is not None:
+        if active_pair(state) is not None:
             raise ValueError("Remove the current pairing or invitation before changing the relay.")
         if certificate is None and setup.get("keepCertificate") is True:
             previous, _ = read_operator(operator)
@@ -826,12 +833,6 @@ def provisioning(path, state, operator):
 
 def advance(path, state, operator, on_note):
     config = state["config"]
-    if state.get("revoking"):
-        code, _ = request(config, "DELETE", "/v1/pair/" + config["pair"])
-        require_status(code, 204, 401)
-        with edit_pair(path, config["pair"], revoking=True):
-            path.unlink()
-        return False
     if not config.get("expires"):
         provisioning(path, state, operator)
     if state["paired"] or config["expires"] > time.time():
@@ -839,21 +840,70 @@ def advance(path, state, operator, on_note):
     return FileSync(path, state, on_note).run() if state["paired"] else False
 
 
-def watch_once(path, operator, on_note=None, next_batch=None):
+def forget_pair(path, state):
+    config = state["config"]
+    pending = state.get("revocations", {})
+    pending[config["pair"]] = {field: config[field] for field in ("pair", "url", "token", "cert") if field in config}
+    remaining = {"revocations": pending}
+    save(path, remaining)
+    clear_file_payloads(path, state)
+    return remaining
+
+
+def retry_revocation(path, attempts):
+    with edit(path) as state:
+        pending = (state or {}).get("revocations", {})
+        now = time.monotonic()
+        for pair, config in pending.items():
+            if attempts.get(pair, 0) <= now:
+                attempts[pair] = now + REVOCATION_RETRY_INTERVAL
+                break
+        else:
+            return
+    try:
+        clear_file_payloads(path, {"config": config})
+        code, _ = request(config, "DELETE", "/v1/pair/" + pair)
+        require_status(code, 204, 401)
+    except (OSError, http.client.HTTPException, ValueError):
+        return
+    with edit(path) as state:
+        pending = (state or {}).get("revocations", {})
+        if pending.get(pair) != config:
+            return
+        del pending[pair]
+        attempts.pop(pair, None)
+        if not pending:
+            state.pop("revocations")
+        if state:
+            save(path, state)
+        else:
+            path.unlink()
+            sync_directory(path.parent)
+
+
+def watch_once(path, operator, on_note=None, next_batch=None, revocation_attempts=None):
     with edit(path) as state:
         if state is None:
             return False
-        if state.get("problem") == "revoked" and not state.get("revoking"):
-            return True
+        if state.get("revoking"):
+            state = forget_pair(path, state)
+    active = active_pair(state)
+    if active is not None and active.get("problem") != "revoked":
+        sync_pair_once(path, active, operator, on_note, next_batch)
+    if state.get("revocations"):
+        retry_revocation(path, {} if revocation_attempts is None else revocation_attempts)
+    return path.exists()
+
+
+def sync_pair_once(path, state, operator, on_note, next_batch):
     config = state["config"]
-    revoking = bool(state.get("revoking"))
     problem = None
     expired = False
     try:
         if advance(path, state, operator, on_note) and next_batch is not None:
             next_batch()
     except PairingChanged:
-        return True
+        return
     except RelayRejected as error:
         if error.status == 401:
             problem = "revoked" if config.get("expires") else "setup"
@@ -868,7 +918,7 @@ def watch_once(path, operator, on_note=None, next_batch=None):
     except (ValueError, KeyError, TypeError):
         problem = "setup"
     try:
-        with edit_pair(path, config["pair"], revoking=revoking) as current:
+        with edit_pair(path, config["pair"]) as current:
             if expired:
                 current["config"]["expires"] = int(time.time())
             if expired or current.get("problem") != problem:
@@ -881,7 +931,6 @@ def watch_once(path, operator, on_note=None, next_batch=None):
                 save(path, current)
     except PairingChanged:
         pass
-    return path.exists()
 
 
 def show_handoff_notice(path, pair):
@@ -921,6 +970,7 @@ def show_handoff_notice(path, pair):
 def watch(path, operator):
     notice = None
     file_work = False
+    revocation_attempts = {}
 
     def next_batch():
         nonlocal file_work
@@ -938,7 +988,7 @@ def watch(path, operator):
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with path.with_suffix(".watch.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        while watch_once(path, operator, notify, next_batch):
+        while watch_once(path, operator, notify, next_batch, revocation_attempts):
             time.sleep(1 if file_work else POLL_INTERVAL)
             file_work = False
 
@@ -992,6 +1042,15 @@ def view(path, operator):
     try:
         state = json.loads(path.read_text())
     except FileNotFoundError:
+        state = None
+    result = pairing_view(active_pair(state), operator)
+    if state and state.get("revocations"):
+        result["revocationPending"] = True
+    return result
+
+
+def pairing_view(state, operator):
+    if state is None:
         if not operator.is_file():
             return {"phase": "disabled"}
         try:
@@ -1045,19 +1104,21 @@ def change(path, operator, command):
         return {}
     if command == "save-file":
         return {"savedFile": copy_to_folder(path, text)}
-    with edit(path) as state:
+    with edit(path) as stored:
+        state = active_pair(stored)
         if command == "invite":
             if state is not None:
                 raise ValueError("Remove the current pairing or invitation first.")
             tls, _ = read_operator(operator)
             import qrcode  # Check that the QR can be generated before creating state.
             state = new_state(new_invitation(tls))
+            if stored and stored.get("revocations"):
+                state["revocations"] = stored["revocations"]
         elif state is None or state.get("revoking"):
             raise ValueError("No active phone or invitation.")
         elif command == "forget":
-            state["revoking"] = True
-            state.pop("problem", None)
-            clear_file_payloads(path, state)
+            forget_pair(path, state)
+            return {}
         elif command == "approve":
             identifier = pending_phone(state)
             code = text

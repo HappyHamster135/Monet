@@ -4489,6 +4489,14 @@ Shared.MonetWindow {
                     SettingRow {
                         tone: look
                         strong: false
+                        objectName: "monetLinkPendingRevocation"
+                        visible: linkCard.link.revocationPending === true
+                        title: i18n("Previous pairing")
+                        detail: i18n("The relay will remove the previous pairing when it is reachable.")
+                    }
+                    SettingRow {
+                        tone: look
+                        strong: false
                         visible: sheet.monetLinkProblem !== ""
                         title: i18n("Monet Link needs attention")
                         detail: sheet.monetLinkProblem
@@ -4518,7 +4526,7 @@ Shared.MonetWindow {
                         QQC2.Label {
                             width: 330
                             wrapMode: Text.Wrap
-                            text: i18n("This removes the pairing, queued notes and files, and Link history from this PC.")
+                            text: i18n("This clears the pairing, queues and Link history from this PC immediately.")
                         }
                     }
                     QQC2.Dialog {

@@ -34,6 +34,7 @@ class MonetLinkSync(unittest.TestCase):
         self.path = Path(self.temp.name) / "state.json"
         self.operator = self.path.with_name("relay.json")
         self.config = {"pair": "a" * 32, "secret": link.encode(bytes(range(32))),
+                       "token": "b" * 43, "url": "https://old.example.test",
                        "expires": int(time.time()) + 60}
         self.state = link.new_state(self.config)
         self.state["paired"] = True
@@ -161,14 +162,15 @@ class MonetLinkSync(unittest.TestCase):
             try:
                 self.assertTrue(waiting.wait(2))
                 workers.submit(link.change, self.path, self.operator, "forget").result(timeout=2)
-                self.assertEqual(link.view(self.path, self.operator)["phase"], "removing")
+                self.assertEqual(link.view(self.path, self.operator), {"phase": "disabled", "revocationPending": True})
             finally:
                 respond.set()
             self.assertTrue(sync.result(timeout=2))
-        self.assertFalse(self.read()["inbox"])
+        self.assertNotIn("inbox", self.read())
         with patch.object(link, "request", return_value=(204, b"")) as relay:
             self.assertFalse(link.watch_once(self.path, self.operator))
-        relay.assert_called_once_with(self.config, "DELETE", "/v1/pair/" + self.config["pair"])
+        expected = {key: self.config[key] for key in ("pair", "url", "token")}
+        relay.assert_called_once_with(expected, "DELETE", "/v1/pair/" + self.config["pair"])
         self.assertFalse(self.path.exists())
 
     def test_incoming_note_notifies_once_even_if_its_receipt_is_retried(self):
@@ -224,8 +226,90 @@ class MonetLinkSync(unittest.TestCase):
         link.change(self.path, self.operator, "forget")
         with patch.object(link, "request", return_value=(401, b"")) as relay:
             self.assertFalse(link.watch_once(self.path, self.operator))
-            relay.assert_called_once_with(self.config, "DELETE", "/v1/pair/" + self.config["pair"])
+            expected = {key: self.config[key] for key in ("pair", "url", "token")}
+            relay.assert_called_once_with(expected, "DELETE", "/v1/pair/" + self.config["pair"])
             self.assertFalse(self.path.exists())
+
+    def test_forget_offline_allows_a_new_relay_and_does_not_reuse_old_credentials(self):
+        pair = self.config["pair"]
+        link.queue(self.state, self.note("Old queued note"))
+        self.state["inbox"]["c" * 32] = {"message": self.note("Old received note")}
+        link.save(self.path, self.state)
+        link.change(self.path, self.operator, "forget")
+        expected = {key: self.config[key] for key in ("pair", "url", "token")}
+        self.assertEqual(self.read(), {"revocations": {pair: expected}})
+
+        link.configure_relay(self.path, self.operator, json.dumps({
+            "url": "https://new.example.test", "provisioningKey": "d" * 43,
+        }))
+        self.assertEqual(link.view(self.path, self.operator)["phase"], "ready")
+        with patch.dict(sys.modules, {"qrcode": object()}):
+            link.change(self.path, self.operator, "invite")
+        current = self.read()
+        active = current["config"]["pair"]
+        self.assertNotEqual(active, pair)
+        self.assertFalse(current["outbox"])
+        self.assertFalse(current["inbox"])
+        calls = []
+
+        def request(config, method, route, body=None, token=None):
+            calls.append((config["url"], method, route, token))
+            if config["pair"] == pair:
+                raise OSError("Old relay down")
+            if route.startswith("/v1/invitations/"):
+                return 200, link.pack({"expires": int(time.time()) + 240})
+            return 200, b"[]"
+
+        attempts = {}
+        with patch.object(link, "request", request), patch.object(link.time, "monotonic", return_value=100):
+            self.assertTrue(link.watch_once(self.path, self.operator, revocation_attempts=attempts))
+            self.assertTrue(link.watch_once(self.path, self.operator, revocation_attempts=attempts))
+        self.assertEqual(calls.count(("https://old.example.test", "DELETE", "/v1/pair/" + pair, None)), 1)
+        self.assertIn(("https://new.example.test", "PUT", "/v1/invitations/" + active, "d" * 43), calls)
+        self.assertTrue(self.read()["config"]["expires"])
+        with patch.object(link, "invitation_image", return_value="fixture QR"):
+            self.assertTrue(link.view(self.path, self.operator)["revocationPending"])
+
+        with patch.object(link, "request", side_effect=[(200, b"[]"), (204, b"")]) as restored:
+            with patch.object(link.time, "monotonic", return_value=100 + link.REVOCATION_RETRY_INTERVAL):
+                self.assertTrue(link.watch_once(self.path, self.operator, revocation_attempts=attempts))
+        restored.assert_called_with(expected, "DELETE", "/v1/pair/" + pair)
+        self.assertEqual(self.read()["config"]["pair"], active)
+        self.assertNotIn("revocations", self.read())
+
+    def test_legacy_pending_removal_migrates_during_watcher_start(self):
+        self.state["revoking"] = True
+        link.save(self.path, self.state)
+        with patch.object(link, "request", side_effect=OSError("Relay down")):
+            self.assertTrue(link.watch_once(self.path, self.operator))
+        minimal = {key: self.config[key] for key in ("pair", "url", "token")}
+        self.assertEqual(self.read(), {"revocations": {self.config["pair"]: minimal}})
+
+    def test_cleanup_acknowledgement_preserves_a_pair_created_during_the_request(self):
+        link.save(self.path, self.state)
+        link.change(self.path, self.operator, "forget")
+        waiting, released = Event(), Event()
+
+        def request(*arguments):
+            waiting.set()
+            self.assertTrue(released.wait(5))
+            return 204, b""
+
+        with patch.object(link, "request", request), ThreadPoolExecutor(max_workers=1) as workers:
+            old = workers.submit(link.watch_once, self.path, self.operator)
+            try:
+                self.assertTrue(waiting.wait(2))
+                link.configure_relay(self.path, self.operator, json.dumps({
+                    "url": "https://new.example.test", "provisioningKey": "d" * 43,
+                }))
+                with patch.dict(sys.modules, {"qrcode": object()}):
+                    link.change(self.path, self.operator, "invite")
+                replacement = self.read()["config"]
+            finally:
+                released.set()
+            self.assertTrue(old.result(timeout=2))
+        self.assertEqual(self.read()["config"], replacement)
+        self.assertNotIn("revocations", self.read())
 
     def test_notice_uses_local_action_and_honors_activation_and_revocation(self):
         private_text = "Text never shown in a notification"

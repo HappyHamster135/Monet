@@ -63,7 +63,7 @@ if QT:
             if command == "send":
                 self.link["sent"] = ["Queued"]
             if command == "forget":
-                self.link = {"phase": "ready"}
+                self.link = {"phase": "ready", "revocationPending": True}
             output = json.dumps({**self.link, **({"savedFile": "Saved file.bin"} if command == "save-file" else {})})
             QTimer.singleShot(self.delay, lambda: self.done.emit(ticket, output, 0, ""))
             return ticket
@@ -332,6 +332,9 @@ class PhoneWindow(unittest.TestCase):
         QTest.qWait(1750)
         self.assertEqual(self.helper.link_calls.count(("forget", "")), 1)
         self.assertEqual(self.window.property("monetLink").toVariant()["phase"], "ready")
+        cleanup = self.window.findChild(QObject, "monetLinkPendingRevocation")
+        self.assertTrue(cleanup.property("visible"))
+        self.assertTrue(self.buttons("Pair a phone")[0].property("enabledPill"))
 
     def test_cancellation_failure_and_invalid_results_allow_retry(self):
         for output, code, state in (("{\"state\":\"canceled\"}", 0, "canceled"),

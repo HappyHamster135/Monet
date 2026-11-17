@@ -57,10 +57,10 @@ the units, or run `systemctl --user daemon-reload` and
 
 ## Remove a phone
 
-Use **Forget phone** in Settings. The PC clears the encrypted file copies in
-Link. If the relay is offline, it pauses handoffs and retries revocation when
-the relay returns. Once revocation succeeds, the PC clears the pairing and
-the remaining Link history. On the phone, choose
+Use **Forget phone** in Settings to clear the local pairing, queued handoffs
+and history immediately. The PC keeps the credential needed to revoke
+the old pairing and retries when the relay returns. You can edit the
+relay or pair again while this runs. On the phone, choose
 **Forget computer** to clear local history and revoke the pairing after it
 can reach the relay.
 
