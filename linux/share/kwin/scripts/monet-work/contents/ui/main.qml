@@ -14,6 +14,7 @@ import org.kde.kwin
 
 Item {
     id: root
+    WindowPlacement { id: placement }
 
     // The windows Monet reopens: an app's own, in the taskbar, with a menu entry.
     function tracked(w) {
@@ -30,15 +31,18 @@ Item {
             signal.connect(root.changed)
     }
     function added(w) {
+        placement.add(w, true)
         root.watch(w)
         if (root.tracked(w)) root.changed()
     }
     // Right away, so a window closed just before a restart stays closed: monet-work stops
     // listening to closes the moment a restart, shutdown or sign-out begins.
     function removed(w) {
-        if (!root.tracked(w)) return
-        closed.arguments = [String(w.internalId)]
-        closed.call()
+        if (root.tracked(w)) {
+            closed.arguments = [String(w.internalId)]
+            closed.call()
+        }
+        placement.remove(w)
     }
 
     // What's in front, a moment after it changes, and only when it has: {active, full}, process ids.
@@ -71,6 +75,7 @@ Item {
     }
 
     Component.onCompleted: {
+        Workspace.stackingOrder.forEach(w => placement.add(w, false))
         Workspace.stackingOrder.forEach(root.watch)
         Workspace.windowAdded.connect(root.added)
         Workspace.windowRemoved.connect(root.removed)
