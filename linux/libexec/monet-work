@@ -245,6 +245,21 @@ def serve(quick, bus=None, system=None, game=None):
             schedule()
     timer.timeout.connect(check)
 
+    def leave(reason):
+        first = not watch.leaving
+        watch.leave(reason)
+        # The last full checkpoint may predate a resize or fullscreen toggle.
+        # Refresh just the geometry before Plasma starts closing the windows.
+        if first and not busy and not watch.locked and quick.work_settled(session) and not quick.departing():
+            busy.append(True)
+            try:
+                quick.refresh_work_frames(session)
+            except (OSError, RuntimeError, ValueError):
+                pass
+            finally:
+                busy.clear()
+        schedule()
+
     @ClassInfo(**{"D-Bus Interface": NAME})
     class Service(QObject):
         @Slot()
@@ -261,8 +276,11 @@ def serve(quick, bus=None, system=None, game=None):
         @Slot(QDBusMessage)
         def shutdown(self, message):
             starting = message.arguments()[:1] == [True]
-            watch.leave("shutdown") if starting else watch.stay("shutdown", time.monotonic())
-            schedule()
+            if starting:
+                leave("shutdown")
+            else:
+                watch.stay("shutdown", time.monotonic())
+                schedule()
 
         @Slot(QDBusMessage)
         def screen(self, message):
@@ -278,7 +296,7 @@ def serve(quick, bus=None, system=None, game=None):
     # Plasma starts org.kde.Shutdown for each restart, shutdown and sign-out and ends it when one
     # is cancelled. Watching its owner never starts it.
     logout = QDBusServiceWatcher("org.kde.Shutdown", bus, QDBusServiceWatcher.WatchForOwnerChange)
-    logout.serviceRegistered.connect(lambda _: (watch.leave("logout"), schedule()))
+    logout.serviceRegistered.connect(lambda _: leave("logout"))
     logout.serviceUnregistered.connect(lambda _: (watch.stay("logout", time.monotonic()), schedule()))
     if bus.interface().isServiceRegistered("org.kde.Shutdown").value():
         watch.leave("logout")

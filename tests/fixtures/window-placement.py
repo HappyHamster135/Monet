@@ -74,7 +74,7 @@ with private_session() as env:
 
     def state():
         return r.kwin_script('reply(windows().map(w => ({title:w.caption, rect:rect(w.frameGeometry), '
-                             'screen:w.output.name, mode:Number(w.maximizeMode)})))')
+                             'screen:w.output.name, mode:Number(w.maximizeMode), full:w.fullScreen})))')
 
     def window(title):
         return next((w for w in state() if w['title'] == title), {})
@@ -128,7 +128,25 @@ with private_session() as env:
         until(lambda: window('reopened').get('mode') == 3, 'Restored maximized state')
         action('reopened', 'w.setMaximize(false, false);')
         expect('reopened', 207, 121, 676, 467)
-        close_client(reopened, 'reopened')
+        action('reopened', 'w.fullScreen = true;')
+        until(lambda: window('reopened').get('full'), 'Enter fullscreen')
+        # The compositor can go away before any window closes during sign-out.
+        from PySide6.QtCore import QSettings
+        history = QSettings(str(config / 'monet/window-placements.conf'), QSettings.IniFormat)
+        def saved_fullscreen():
+            history.sync()
+            value = history.value('apps/org.example.Placement', '{}')
+            return json.loads(value).get('fullscreen') is True
+        until(saved_fullscreen, 'Persist fullscreen while the window is still open')
+        stop(compositor)
+        if reopened.poll() is None:
+            stop(reopened)
+        compositor = server()
+        resumed = open_client('fullscreen after restart')
+        until(lambda: window('fullscreen after restart').get('full'), 'Restore fullscreen after restart')
+        action('fullscreen after restart', 'w.fullScreen = false;')
+        expect('fullscreen after restart', 207, 121, 676, 467)
+        close_client(resumed, 'fullscreen after restart')
         stop(compositor)
         compositor = server(outputs=2)
         second = open_client('on external display')

@@ -293,6 +293,19 @@ class WorkCheckpoint(unittest.TestCase):
             self.assertFalse(r.save_work(live, back, {"version": 4, "session": "s", "apps": []}, off))
             self.assertFalse(live.exists())
 
+    def test_logout_updates_exact_windows_without_losing_missing_windows_or_documents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            live, off = Path(tmp) / "work.json", Path(tmp) / "off"
+            one, two = frame(KATE, "1"), frame(KATE, "2")
+            group = {"windows": [one, two], "editor": {"documents": ["/test.txt"]}}
+            r.atomic_write(live, {"version": 4, "session": "s", "windows": [one, two],
+                                  "groups": {KATE: [group]}})
+            moved = dict(one, fullscreen=True, rect={"x": 0, "y": 0, "width": 1920, "height": 1080})
+            r.refresh_work_frames(live, "s", [moved, frame(FILES, "3")], off)
+            saved = r.read_state(live)
+            self.assertEqual(saved["windows"], [moved, two])
+            self.assertEqual(saved["groups"][KATE], [dict(group, windows=[moved, two])])
+
 
 @unittest.skipIf(os.name == "nt", "Linux advisory lock")
 class OncePerSignIn(unittest.TestCase):
@@ -618,6 +631,11 @@ class FrontInKWin(unittest.TestCase):
         calls = self.js("Workspace.calls")
         self.js("Workspace.calls = []")
         return [json.loads(c[2]) for c in calls if c[:2] == ["org.monet.Priority", "Front"]]
+
+    def test_window_placement_can_use_chatgpts_class_without_a_desktop_id(self):
+        self.assertEqual(self.js('scene.work.children[0].key({normalWindow: true, managed: true,'
+                                 ' desktopFileName: "", resourceClass: "Chatgpt"})'),
+                         "classes/chatgpt")
 
     def test_whats_in_front_as_it_changes(self):
         self.assertEqual(self.said(), [{"active": 0, "full": []}])  # As it starts.
@@ -985,6 +1003,7 @@ class OnTheBus(unittest.TestCase):
             self.assertTrue(kwin.registerService("org.kde.Shutdown"))  # A restart begins.
             self.assertTrue(self.wait(lambda: quick.trim_work.called))
             self.assertEqual(quick.trim_work.call_args.args, ({"{closed-by-you}"}, "boot:1"))
+            quick.refresh_work_frames.assert_called_once_with("boot:1")
             say("Closed", "{closed-by-the-logout}")
             say("Changed")
             self.wait(lambda: False, 0.8)

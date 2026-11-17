@@ -15,6 +15,7 @@
  */
 import QtCore
 import QtQuick
+import QtQuick.Dialogs as Dialogs
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -197,9 +198,37 @@ MonetWindow {
         else if (busy(game) && game.launcher)
             showDownloads(game)
         else if (game.plays === "monet")
-            run(["helper", "play", game.here])
+            run(["helper", "play", game.here], (out, code) => {
+                if (code !== 0 && game.store === "local") {
+                    localGameMessage.text = i18n("Couldn't open %1. Check that its game file and Wine or Proton are still available.", game.name)
+                    localGameMessage.open()
+                }
+            })
         else
             ask(game)
+    }
+    function addLocalGame(file) {
+        run(["helper", "add-local-game", file.toString()], (out, code) => {
+            if (code !== 0) {
+                localGameMessage.text = i18n("Choose the .exe file that starts the installed game.")
+                localGameMessage.open()
+                return
+            }
+            root.section = "all"
+            root.show = "installed"
+            root.query = ""
+            root.refresh()
+        })
+    }
+    Dialogs.FileDialog {
+        id: localGamePicker
+        title: i18n("Choose the game's executable")
+        nameFilters: [i18n("Windows executables") + " (*.exe *.EXE)"]
+        onAccepted: root.addLocalGame(selectedFile)
+    }
+    Dialogs.MessageDialog {
+        id: localGameMessage
+        title: i18n("Games")
     }
     // The launcher's own install dialog (Steam's, Heroic's or Lutris'), where you choose where it goes.
     function install(game) {
@@ -338,7 +367,7 @@ MonetWindow {
     function storeName(store) {
         return { steam: "Steam", epic: "Epic", gog: "GOG", amazon: "Amazon", heroic: "Heroic", lutris: "Lutris",
                  riot: "Riot", battlenet: "Battle.net", ubisoft: "Ubisoft", rockstar: "Rockstar", ea: "EA", custom: i18n("Windows"),
-                 program: i18n("Windows") }[store] || store
+                 program: i18n("Windows"), local: i18n("Local games") }[store] || store
     }
     function lastText(last) {
         if (!last)
@@ -514,6 +543,8 @@ MonetWindow {
         if (game.store === "steam" && game.here !== "")
             // Steam asks itself, and says what goes.
             items.push(["uninstall", i18n("Uninstall…")])
+        if (game.manual === true)
+            items.push(["remove-local", i18n("Remove shortcut from Games")])
         menu.game = game
         menu.items = items
         const point = below ? item.mapToItem(body, 0, item.height + 6)
@@ -541,6 +572,13 @@ MonetWindow {
             run(["helper", "steam-page", game.id.slice(6)])
         else if (what === "uninstall")
             run(["helper", "steam-uninstall", game.id.slice(6)])
+        else if (what === "remove-local")
+            run(["helper", "remove-local-game", game.id], (out, code) => {
+                if (code === 0) {
+                    root.pageId = ""
+                    root.refresh()
+                }
+            })
     }
 
     // Everything drawn, mirrored for a right-to-left language (a Window itself can't be).
@@ -855,6 +893,12 @@ MonetWindow {
                             color: look.dim
                             font.pixelSize: 13
                         }
+                    }
+                    Pill {
+                        tone: look
+                        iconName: "list-add"
+                        text: i18n("Add game")
+                        onClicked: localGamePicker.open()
                     }
                     // Recent, name, play time or size: the chosen one on a pebble, as Settings' choices are.
                     Rectangle {

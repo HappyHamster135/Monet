@@ -665,6 +665,18 @@ class TheWindowItself(unittest.TestCase):
         self.assertIn("Install with Heroic", self.visible_texts())
         self.assertIn("Size once installed", self.visible_texts())
 
+    def test_add_game_registers_the_chosen_local_file(self):
+        self.open({"steam": False, "hint": False})
+        self.assertIn("Add game", self.visible_texts())
+        from PySide6.QtCore import Q_ARG, QMetaObject, Qt
+        chosen = "file:///home/test/Outer%20World.exe"
+        self.assertTrue(QMetaObject.invokeMethod(self.window, "addLocalGame", Qt.DirectConnection,
+                                                 Q_ARG("QVariant", chosen)))
+        QTest.qWait(100)
+        self.assertIn(["helper", "add-local-game", chosen], self.helper.calls)
+        self.assertEqual(self.window.property("show"), "installed")
+        self.assertEqual(self.errors, [])
+
     def test_the_steam_key_goes_on_stdin(self):
         self.open({"steam": True, "name": "Ben", "key": False, "hint": True, "state": "", "count": 0, "changed": False})
         self.assertIn("Add Steam key", self.visible_texts())

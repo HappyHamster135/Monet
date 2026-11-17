@@ -170,8 +170,7 @@ function capture(w) {
             rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "", display:display(w.output),
             outputs:workspace.screens.map(o => ({name:o.name, display:display(o),
                 area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
-            maximized:Math.abs(g.x-area.x)<2 && Math.abs(g.y-area.y)<2 &&
-                      Math.abs(g.width-area.width)<2 && Math.abs(g.height-area.height)<2,
+            maximized:Number(w.maximizeMode) === 3,
             minimized:w.minimized, fullscreen:w.fullScreen,
             desktops:w.desktops.map(d => ({id:d.id, name:d.name})), allDesktops:w.onAllDesktops,
             above:w.keepAbove, below:w.keepBelow, active:w.active, stack:w.stackingOrder};
@@ -2482,6 +2481,42 @@ def trim_work(live, closed, session):
             return False
         atomic_write(live, saved)  # Still the last look's picture, and time.
         return True
+
+
+def refresh_work_frames(live, session, windows, off):
+    """Update positions before logout without taking another document checkpoint.
+
+    Window identities stay valid within this sign-in. Windows that have already
+    vanished during logout and groups' document data keep the last checkpoint.
+    """
+    latest = {(w["id"], w["app"]): w for w in windows}
+    with restore_lock(live):
+        saved = read_state(live)
+        if off.exists() or saved.get("version") != 4 or saved.get("session") != session:
+            return
+        changed = False
+
+        def refresh(container):
+            nonlocal changed
+            frames = container.get("windows")
+            if not isinstance(frames, list):
+                return
+            for i, old in enumerate(frames):
+                if not isinstance(old, dict):
+                    continue
+                new = latest.get((old.get("id"), old.get("app")))
+                if new is not None and old != new:
+                    frames[i] = new
+                    changed = True
+
+        refresh(saved)
+        groups = saved.get("groups")
+        for entries in groups.values() if isinstance(groups, dict) else ():
+            for group in entries if isinstance(entries, list) else ():
+                if isinstance(group, dict):
+                    refresh(group)
+        if changed:
+            atomic_write(live, saved)
 
 
 def trip_owns_return(trip, work):

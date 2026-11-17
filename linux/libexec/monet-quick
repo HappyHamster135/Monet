@@ -5922,7 +5922,8 @@ def favorite(game, on):
 
 def library(marks=None, steam=None, heroic=None, windows=None, shared=None, movable=None, lutris=None, progress=None,
             reports=None, lasts=None, now=None, minutes=None, liked=None, sizes=None, roots=None,
-            owned=None, heroic_owned=None, lutris_owned_games=None, states=None, downloads=None, pictures=None):
+            owned=None, heroic_owned=None, lutris_owned_games=None, states=None, downloads=None, pictures=None,
+            local=None):
     """[{id, name, store, plays, why, here, windows, shared, move, progress, art}], by name:
     `plays` is "monet" or "windows", `why` what sends one installed here to Windows ("anticheat",
     or "reports": players report it doesn't run here), `here` starts it in Monet (`monet-quick
@@ -6033,6 +6034,9 @@ def library(marks=None, steam=None, heroic=None, windows=None, shared=None, mova
         games.setdefault(key, {"name": g["title"], "store": g["store"], "here": "", "launcher": "lutris",
                                "install": f"lutris:{g['service']}:{g['appid']}", "art": art, "tall": tall, "mark": None,
                                "state": "owned"})
+    for key, game in (local or {}).items():
+        games[key] = {"name": game["name"], "store": "local", "here": key, "art": "", "mark": None,
+                      "manual": game.get("manual", False), "state": "ready"}
     for g in windows:
         store, _, key = g["id"].partition(":")
         steam_id = key if store == "steam" else None
@@ -6074,6 +6078,7 @@ def library(marks=None, steam=None, heroic=None, windows=None, shared=None, mova
                     "last": max(lasts.get(key, 0), g.get("last", 0)), "minutes": played_for(key, g), "size": g.get("size", 0),
                     "favorite": key in liked, "tall": g.get("tall", ""), "hero": g.get("hero", ""),
                     "state": g.get("state", "ready"), "launcher": g.get("launcher", ""),
+                    **({"manual": True} if g.get("manual") else {}),
                     # Installed here already, or it can't play here: nothing to install.
                     "install": g.get("install", "") if not g["here"] and g["mark"] != "windows" else ""}
                    for key, g in games.items()), key=order)
@@ -6119,10 +6124,15 @@ def play(game):
 PROGRAM_TYPES = {".exe", ".msi"}
 PROGRAM_PENDING = RUNTIME / "monet-program.json"
 PROGRAMS_PREFIX = DATA_HOME / "monet/windows-programs"
-# Where Windows programs keep their Start menu (Proton's own user is steamuser).
-START_MENUS = ("drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs",
-               "drive_c/users/steamuser/AppData/Roaming/Microsoft/Windows/Start Menu/Programs")
+# Windows Start menus. Wine and Proton get the same layout with different usernames.
+SHARED_START_MENU = "drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs"
+USER_START_MENU = "AppData/Roaming/Microsoft/Windows/Start Menu/Programs"
 PROGRAM_ENTRY = "monet-program-{}.desktop"
+LOCAL_GAMES = CONFIG / "monet/local-games.json"
+LOCAL_GAME = re.compile(r"local:[a-f0-9]{24}")
+GAME_HELPER = re.compile(r"^(?:setup(?:[ ._-]|$)|install(?:er)?(?:[ ._-]|$)|uninstall|unins\d+|"
+                         r"updater|crash(?:report|handler)|unitycrashhandler|vc_?redist|dxsetup|ue4?prereq|"
+                         r"(?:config|settings|benchmark|patcher)(?:[ ._-]|$))", re.I)
 
 
 def program_slug(name):
@@ -6295,20 +6305,31 @@ def lnk_target(data):
         return ""
 
 
-def program_menu(prefix=PROGRAMS_PREFIX, apps=DATA_HOME / "applications"):
-    """Each program a Windows installer put in the Start menu, as an entry in Monet's app menu
-    (uninstallers and help files left out); entries whose program is gone, gone too. How many."""
-    wanted = {}
-    for menu in START_MENUS:
-        for link in sorted((prefix / menu).rglob("*.lnk")) if (prefix / menu).is_dir() else []:
-            target = lnk_target(link.read_bytes()).replace("\\", "/")
+def program_shortcuts(prefix):
+    """Read executable shortcuts left by installers, including an ordinary Wine user."""
+    menus = [prefix / SHARED_START_MENU, *(prefix / "drive_c/users").glob("*/" + USER_START_MENU)]
+    for menu in menus:
+        for link in sorted(menu.rglob("*.[lL][nN][kK]")) if menu.is_dir() else []:
+            if link.is_symlink():
+                continue
+            try:
+                with link.open("rb") as source:
+                    target = lnk_target(source.read(1 << 20)).replace("\\", "/")
+            except OSError:
+                continue
             if not re.match(r"^[A-Za-z]:/", target) or not target.lower().endswith(".exe"):
                 continue
             program = prefix / f"drive_{target[0].lower()}" / target[3:]
             name = " ".join(link.stem.split())
             if (program.is_file() and name and not re.search(r"uninstall|unins\d*\.exe$", f"{name} {target}", re.I)
                     and program_slug(name)):
-                wanted[PROGRAM_ENTRY.format(program_slug(name))] = (name, program)
+                yield name, program, link.relative_to(menu).parts[:-1]
+
+
+def program_menu(prefix=PROGRAMS_PREFIX, apps=DATA_HOME / "applications"):
+    """Each Start menu program gets a shortcut in Monet. Stale entries are removed."""
+    wanted = {PROGRAM_ENTRY.format(program_slug(name)): (name, program)
+              for name, program, _ in program_shortcuts(prefix)}
     apps.mkdir(parents=True, exist_ok=True)
     for entry in apps.glob(PROGRAM_ENTRY.format("*")):
         if entry.name not in wanted:
@@ -6321,6 +6342,155 @@ def program_menu(prefix=PROGRAMS_PREFIX, apps=DATA_HOME / "applications"):
         if not (apps / entry).is_file() or (apps / entry).read_text() != text:
             (apps / entry).write_text(text)
     return len(wanted)
+
+
+def game_file(path):
+    return (path.is_absolute() and path.suffix.lower() == ".exe" and path.is_file()
+            and not GAME_HELPER.match(path.stem))
+
+
+def game_evidence(path):
+    """Recognize installed game layouts without running or uploading executables."""
+    folder, stem = path.parent, path.stem
+    if (folder / (stem + "_Data") / "globalgamemanagers").is_file():  # Unity
+        return True
+    if (folder / (stem + ".pck")).is_file():  # Godot
+        return True
+    if (folder / "www/data/System.json").is_file() and (folder / "nw.dll").is_file():  # RPG Maker
+        return True
+    # The Unreal shipping executable, not the bootstrapper or its crash reporter.
+    return (stem.lower().endswith(("-win64-shipping", "-win32-shipping"))
+            and folder.parent.name.lower() == "binaries"
+            and (folder.parent.parent / "Content/Paks").is_dir())
+
+
+def game_prefixes():
+    wine = Path(os.environ.get("WINEPREFIX") or HOME / ".wine").expanduser().resolve()
+    proton = PROGRAMS_PREFIX.resolve()
+    return [(proton, "proton")] + ([(wine, "wine")] if wine != proton else [])
+
+
+def local_game_id(path):
+    return "local:" + hashlib.sha256(os.fsencode(path)).hexdigest()[:24]
+
+
+def manual_game_paths(registry):
+    raw = read_json(registry)
+    return [p for p in raw[:500] if isinstance(p, str) and 0 < len(p) <= 4096 and "\x00" not in p] \
+        if isinstance(raw, list) else []
+
+
+def local_windows_games(prefixes=None, registry=None):
+    """List games installed by a Windows installer or added through Games' picker."""
+    found = {}
+    prefixes = game_prefixes() if prefixes is None else prefixes
+    registry = LOCAL_GAMES if registry is None else registry
+
+    def include(path, name, prefix, runner, manual=False):
+        found[local_game_id(path)] = {"name": name or path.stem, "path": path, "prefix": prefix,
+                                     "runner": runner, "manual": manual}
+
+    for prefix, runner in prefixes:
+        drive = prefix / "drive_c"
+        if not drive.is_dir() or drive.is_symlink():
+            continue
+        real_drive = drive.resolve()
+        for name, path, folders in program_shortcuts(prefix):
+            if not game_file(path):
+                continue
+            path = path.resolve()
+            if not under(path, real_drive) or path.relative_to(real_drive).parts[0].casefold() == "windows":
+                continue
+            if any(part.casefold() in ("games", "my games") for part in folders) or game_evidence(path):
+                include(path, name, prefix, runner)
+        # Bound the search. Never scan the Windows system directory, an entire drive,
+        # or the Wine folders that symlink back to the person's Linux files.
+        budget = 5000
+        game_folders = (drive / "Games", drive / "GOG Games")
+        for root in (*game_folders, drive / "Program Files", drive / "Program Files (x86)"):
+            if root.is_symlink():
+                continue
+            for folder, dirs, files in os.walk(root):
+                here = Path(folder)
+                depth = len(here.relative_to(root).parts)
+                dirs[:] = [] if depth >= 5 else sorted(d for d in dirs
+                    if d.casefold() not in ("redist", "_commonredist", "support", "steamapps", "windows")
+                    and not (here / d).is_symlink())
+                budget -= len(dirs) + len(files) + 1
+                if budget < 0:
+                    break
+                executables = [here / file for file in sorted(files)
+                               if not (here / file).is_symlink() and game_file(here / file)]
+                for path in executables:
+                    if local_game_id(path) in found:
+                        continue
+                    dedicated_folder = root in game_folders and (
+                        depth == 0 or (depth == 1 and (len(executables) == 1
+                            or program_slug(path.stem) == program_slug(here.name))))
+                    if dedicated_folder or game_evidence(path):
+                        name = re.sub(r"-Win(?:32|64)-Shipping$", "", path.stem, flags=re.I)
+                        include(path.resolve(), name, prefix, runner)
+    for raw in manual_game_paths(registry):
+        path = Path(raw)
+        if not game_file(path):
+            continue
+        path = path.resolve()
+        prefix, runner = next(((p, r) for p, r in prefixes if under(path, p / "drive_c")),
+                              (PROGRAMS_PREFIX, "proton"))
+        old = found.get(local_game_id(path), {})
+        include(path, old.get("name", ""), prefix, runner, manual=True)
+    return found
+
+
+def edit_local_game(value, remove=False, registry=None):
+    """Keep an explicitly chosen local game. Removing it only edits this list."""
+    from urllib.parse import unquote, urlsplit
+    import fcntl
+    registry = LOCAL_GAMES if registry is None else registry
+    path = None
+    if not remove:
+        try:
+            url = urlsplit(value)
+        except ValueError:
+            return False
+        name = unquote(url.path)
+        if url.scheme != "file" or url.netloc or url.query or url.fragment or "\x00" in name or len(name) > 4096:
+            return False
+        if not game_file(Path(name)):
+            return False
+        path = str(Path(name).resolve())
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    with registry.with_suffix(".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        paths = manual_game_paths(registry)
+        if remove:
+            paths = [p for p in paths if local_game_id(Path(p)) != value]
+        elif path not in paths:
+            if len(paths) >= 500:
+                return False
+            paths.append(path)
+        temporary = registry.with_suffix(".new")
+        temporary.write_text(json.dumps(paths) + "\n", encoding="utf-8")
+        temporary.replace(registry)
+    return True
+
+
+def play_local_game(key):
+    game = local_windows_games().get(key)
+    if not game:
+        return False
+    if game["runner"] == "proton":
+        return program_here(str(game["path"]))
+    wine = shutil.which("wine")
+    if not wine:
+        return False
+    try:
+        subprocess.Popen([wine, str(game["path"])], cwd=game["path"].parent,
+                         env=dict(os.environ, WINEPREFIX=str(game["prefix"])), start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    return True
 
 
 def program_id(path, files):
@@ -8814,6 +8984,12 @@ def trim_work(closed, session):
     return resume_helper().trim_work(WORK, closed, session)
 
 
+def refresh_work_frames(session):
+    if not TRIP_APPS_OFF.exists() and WORK.exists():
+        resume = resume_helper()
+        resume.refresh_work_frames(WORK, session, resume.window_snapshot(), TRIP_APPS_OFF)
+
+
 def work_settled(session):
     """This sign-in's reopening is over: monet-work's pictures may begin."""
     marker = resume_helper().read_state(WORK_AGAIN)
@@ -10208,7 +10384,8 @@ def main(argv):
             pass
     elif cmd == "library":
         stats = played(limit=100000)
-        games = library(lasts={g["key"]: g["last"] for g in stats}, minutes={g["key"]: g.get("minutes", 0) for g in stats})
+        games = library(lasts={g["key"]: g["last"] for g in stats}, minutes={g["key"]: g.get("minutes", 0) for g in stats},
+                        local=local_windows_games())
         emit(games)
         # What players report about Steam's games here, asked in the background for next time.
         here = [g["id"][6:] for g in games if g["store"] == "steam" and g["here"]]
@@ -10352,6 +10529,12 @@ def main(argv):
         emit(played())
     elif cmd == "play" and args and PLAYABLE.fullmatch(args[0]):
         play(args[0])
+    elif cmd == "play" and len(args) == 1 and LOCAL_GAME.fullmatch(args[0]):
+        return 0 if play_local_game(args[0]) else 1
+    elif cmd == "add-local-game" and len(args) == 1:
+        return 0 if edit_local_game(args[0]) else 1
+    elif cmd == "remove-local-game" and len(args) == 1 and LOCAL_GAME.fullmatch(args[0]):
+        return 0 if edit_local_game(args[0], remove=True) else 1
     elif cmd == "steam-page" and args and args[0].isdigit():
         steam_page(args[0])
     elif cmd == "steam-uninstall" and args and args[0].isdigit():
