@@ -4045,8 +4045,6 @@ class WhichSideAGamePlaysOn(unittest.TestCase):
         names = [g["name"] for g in q.library({}, steam, [], [], set(), False, [], {}, {}, lasts, now)]
         # Played this month, newest first; then the rest (one played long ago too) by name.
         self.assertEqual(names, ["Zeta", "Mid", "Alpha", "Old Favourite"])
-        quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
-        self.assertIn('games = library(lasts={g["key"]: g["last"] for g in stats}, minutes={g["key"]: g.get("minutes", 0) for g in stats})', quick)
 
     def test_players_reports_from_protondb(self):
         q = quick_helper()

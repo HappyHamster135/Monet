@@ -53,8 +53,8 @@ msgstr "Kevesebb részlet"
 msgid "Details"
 msgstr "Részletek"
 
-#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1731
-#: linux/share/monet/games/Games.qml:1904 linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4109
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:805 linux/share/monet/games/Games.qml:1775
+#: linux/share/monet/games/Games.qml:1948 linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4109
 #: linux/share/monet/settings-app/MonetSettings.qml:5072 linux/share/monet/settings-app/MonetSettings.qml:5158 linux/share/monet/settings-app/MonetSettings.qml:6772
 #: linux/share/monet/settings-app/MonetSettings.qml:6894 linux/share/monet/settings-app/MonetSettings.qml:7920 linux/share/monet/settings-app/MonetSettings.qml:8098
 #: linux/share/monet/settings-app/MonetSettings.qml:8524 linux/share/monet/settings-app/MonetSettings.qml:8887 linux/share/monet/store-app/AppPage.qml:331
@@ -731,16 +731,16 @@ msgstr ""
 msgid "Minimize"
 msgstr ""
 
-#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:224 linux/share/monet/games/MonetWindow.qml:137
+#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:226 linux/share/monet/games/MonetWindow.qml:137
 msgid "Restore"
 msgstr ""
 
-#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:224 linux/share/monet/games/MonetWindow.qml:137
+#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:226 linux/share/monet/games/MonetWindow.qml:137
 msgid "Maximize"
 msgstr ""
 
-#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:235 linux/share/monet/games/Games.qml:1040 linux/share/monet/games/Games.qml:1090
-#: linux/share/monet/games/Games.qml:1731 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1173
+#: linux/share/kwin/scripts/monet-titles/contents/ui/TitleBar.qml:238 linux/share/monet/games/Games.qml:1084 linux/share/monet/games/Games.qml:1134
+#: linux/share/monet/games/Games.qml:1775 linux/share/monet/games/MonetWindow.qml:146 linux/share/monet/store-app/Store.qml:1173
 #: linux/share/monet/widgets/DayNotes.qml:188 linux/libexec/monet-leave:282 linux/share/monet/passwords/app_support_ui.py:42
 #: crates/monet-usb/src/gui.rs:157
 msgid "Close"
@@ -871,7 +871,7 @@ msgstr "A Monettel érkezett"
 msgid "Added by you"
 msgstr "Te adtad hozzá"
 
-#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8512
+#: linux/share/monet/games/Apps.qml:136 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:32 linux/libexec/monet-quick:8682
 #: linux/libexec/monet-files-tools:712
 msgid "Windows program"
 msgstr "Windows-program"
@@ -893,9 +893,10 @@ msgstr "Grafika"
 msgid "Sound and video"
 msgstr "Hang és videó"
 
-#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:26 linux/share/monet/games/Games.qml:573
-#: linux/share/monet/games/Games.qml:1127 linux/share/monet/settings-app/MonetSettings.qml:5393 linux/share/monet/settings-app/MonetSettings.qml:6330
-#: linux/share/monet/store-app/Store.qml:179 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
+#: linux/share/monet/games/Apps.qml:140 linux/share/monet/games/Games.qml:27 linux/share/monet/games/Games.qml:231
+#: linux/share/monet/games/Games.qml:611 linux/share/monet/games/Games.qml:1171 linux/share/monet/settings-app/MonetSettings.qml:5393
+#: linux/share/monet/settings-app/MonetSettings.qml:6330 linux/share/monet/store-app/Store.qml:179 linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:18
+#: linux/share/plasma/plasmoids/org.monet.games/contents/ui/main.qml:56
 msgid "Games"
 msgstr "Játékok"
 
@@ -915,17 +916,17 @@ msgstr "Egyéb"
 msgid "Not opened yet"
 msgstr "Még nem volt megnyitva"
 
-#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:350 linux/share/monet/widgets/DayNotes.qml:117
+#: linux/share/monet/games/Apps.qml:150 linux/share/monet/games/Games.qml:379 linux/share/monet/widgets/DayNotes.qml:117
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:277 linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:288
 msgid "Today"
 msgstr "Ma"
 
-#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:351 linux/share/monet/settings-app/MonetSettings.qml:7021
+#: linux/share/monet/games/Apps.qml:151 linux/share/monet/games/Games.qml:380 linux/share/monet/settings-app/MonetSettings.qml:7021
 #: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:34
 msgid "Yesterday"
 msgstr "Tegnap"
 
-#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:352
+#: linux/share/monet/games/Apps.qml:152 linux/share/monet/games/Games.qml:381
 msgid "%1 day ago"
 msgid_plural "%1 days ago"
 msgstr[0] "%1 napja"
@@ -963,7 +964,7 @@ msgid_plural "%1 apps"
 msgstr[0] "%1 alkalmazás"
 msgstr[1] "%1 alkalmazás"
 
-#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:874 linux/share/monet/store-app/Shelf.qml:86
+#: linux/share/monet/games/Apps.qml:542 linux/share/monet/games/Games.qml:918 linux/share/monet/store-app/Shelf.qml:86
 #: setup/qml/Main.qml:549
 msgid "Name"
 msgstr "Név"
@@ -1032,25 +1033,25 @@ msgid ""
 msgstr ""
 "A tiéd, de még nincs telepítve. A Telepítés megnyitja ezt: %1, és az letölti."
 
-#: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1699
+#: linux/share/monet/games/GamePage.qml:31 linux/share/monet/games/Games.qml:1743
 msgid ""
 "Players report it doesn't run in Monet, so it plays in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "A játékosok szerint nem fut a Monetben, ezért Windowsban játszható. A Steamben helyezd át a „Windows games” mappába (Tulajdonságok, Telepített fájlok, Telepítési mappa áthelyezése), és a Játék ott indítja el, letöltés nélkül."
 
-#: linux/share/monet/games/GamePage.qml:33 linux/share/monet/games/Games.qml:1701
+#: linux/share/monet/games/GamePage.qml:33 linux/share/monet/games/Games.qml:1745
 msgid ""
 "Its anti-cheat only lets it play in Windows. In Steam, move it to Windows games (Properties, Installed Files, Move install folder), and Play starts it there, with nothing to download."
 msgstr ""
 "A csalásvédelme miatt csak Windowsban fut. A Steamben helyezd át a „Windows games” mappába (Tulajdonságok, Telepített fájlok, Telepítési mappa áthelyezése), és a Játék ott indítja el, letöltés nélkül."
 
-#: linux/share/monet/games/GamePage.qml:35 linux/share/monet/games/Games.qml:1703
+#: linux/share/monet/games/GamePage.qml:35 linux/share/monet/games/Games.qml:1747
 msgid ""
 "Players report it doesn't run in Monet, and it isn't installed in Windows yet. Restart in Windows and install it with %1."
 msgstr ""
 "A játékosok szerint nem fut a Monetben, és Windowsban még nincs telepítve. Indítsd újra Windowsba, és telepítsd ezzel: %1."
 
-#: linux/share/monet/games/GamePage.qml:37 linux/share/monet/games/Games.qml:1705
+#: linux/share/monet/games/GamePage.qml:37 linux/share/monet/games/Games.qml:1749
 msgid ""
 "Its anti-cheat only lets it play in Windows, and it isn't installed there yet. Restart in Windows and install it with %1."
 msgstr ""
@@ -1092,7 +1093,7 @@ msgstr "Monet és Windows"
 msgid "Last played"
 msgstr "Utoljára játszva"
 
-#: linux/share/monet/games/GamePage.qml:49 linux/share/monet/games/Games.qml:874
+#: linux/share/monet/games/GamePage.qml:49 linux/share/monet/games/Games.qml:918
 msgid "Play time"
 msgstr "Játékidő"
 
@@ -1201,28 +1202,28 @@ msgstr ""
 msgid "Back"
 msgstr "Vissza"
 
-#: linux/share/monet/games/GamePage.qml:262 linux/share/monet/games/Games.qml:498
+#: linux/share/monet/games/GamePage.qml:262 linux/share/monet/games/Games.qml:527
 msgid "Install with %1"
 msgstr "Telepítés ezzel: %1"
 
-#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:499
+#: linux/share/monet/games/GamePage.qml:263 linux/share/monet/games/Games.qml:528
 msgid "Show downloads"
 msgstr "Letöltések megjelenítése"
 
-#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:504
+#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:529 linux/share/monet/games/Games.qml:533
 #: linux/share/monet/settings-app/MonetSettings.qml:293 linux/share/monet/settings-app/MonetSettings.qml:3476 linux/share/monet/settings-app/MonetSettings.qml:8437
 msgid "Play on Windows"
 msgstr "Játék Windowson"
 
-#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:500 linux/share/monet/games/Games.qml:510
+#: linux/share/monet/games/GamePage.qml:264 linux/share/monet/games/Games.qml:529 linux/share/monet/games/Games.qml:539
 msgid "Play in Monet"
 msgstr "Játék a Monetben"
 
-#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:1400
+#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:1444
 msgid "Favorite"
 msgstr "Kedvenc"
 
-#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:511
+#: linux/share/monet/games/GamePage.qml:272 linux/share/monet/games/Games.qml:540
 msgid "Add to favorites"
 msgstr "Hozzáadás a kedvencekhez"
 
@@ -1246,366 +1247,395 @@ msgstr "FACEIT beállítása"
 msgid "Security settings"
 msgstr "Biztonsági beállítások"
 
-#: linux/share/monet/games/Games.qml:255 linux/share/monet/settings-app/MonetSettings.qml:1164 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
-#: linux/libexec/monet-quick:10309
+#: linux/share/monet/games/Games.qml:203
+msgid ""
+"Couldn't open %1. Check that its game file and Wine or Proton are still available."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:213
+msgid "Choose the .exe file that starts the installed game."
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:225
+msgid "Choose the game's executable"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:226
+msgid "Windows executables"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:284 linux/share/monet/settings-app/MonetSettings.qml:1164 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:78
+#: linux/libexec/monet-quick:10486
 msgid "Monet couldn't switch to Windows."
 msgstr "A Monet nem tudott átváltani Windowsra."
 
-#: linux/share/monet/games/Games.qml:295
+#: linux/share/monet/games/Games.qml:324
 msgid ""
 "That doesn't look like a Steam key. It's 32 letters and numbers, from Steam's key page."
 msgstr ""
 "Ez nem tűnik Steam-kulcsnak. 32 betűből és számból áll, és a Steam kulcsoldaláról származik."
 
-#: linux/share/monet/games/Games.qml:308
+#: linux/share/monet/games/Games.qml:337
 msgid "Monet couldn't keep the key. Try again."
 msgstr "A Monet nem tudta megőrizni a kulcsot. Próbáld újra."
 
-#: linux/share/monet/games/Games.qml:314
+#: linux/share/monet/games/Games.qml:343
 msgid ""
 "Steam didn't accept this key. Check that it's copied whole, or make a new one."
 msgstr ""
 "A Steam nem fogadta el ezt a kulcsot. Ellenőrizd, hogy egészben másoltad-e, vagy készíts újat."
 
-#: linux/share/monet/games/Games.qml:315 linux/share/monet/games/Games.qml:1005
+#: linux/share/monet/games/Games.qml:344 linux/share/monet/games/Games.qml:1049
 msgid ""
 "Steam didn't share the games of %1. Add a key made while signed in to that account."
 msgstr ""
 "A Steam nem osztotta meg ennek a fióknak a játékait: %1. Adj hozzá egy olyan kulcsot, amelyet ebbe a fiókba bejelentkezve készítettél."
 
-#: linux/share/monet/games/Games.qml:316
+#: linux/share/monet/games/Games.qml:345
 msgid ""
 "Steam couldn't be reached. The key is kept, and Games tries again when it opens."
 msgstr ""
 "A Steam nem érhető el. A kulcs megmarad, és a Játékok megnyitáskor újra próbálkozik."
 
-#: linux/share/monet/games/Games.qml:340 linux/share/monet/games/Games.qml:341 linux/share/monet/settings-app/MonetSettings.qml:8475
-#: linux/share/monet/settings-app/MonetSettings.qml:9438 linux/libexec/monet-quick:9202 linux/libexec/monet-quick:9202
+#: linux/share/monet/games/Games.qml:369 linux/share/monet/games/Games.qml:370 linux/share/monet/settings-app/MonetSettings.qml:8475
+#: linux/share/monet/settings-app/MonetSettings.qml:9438 linux/libexec/monet-quick:9378 linux/libexec/monet-quick:9378
 msgid "Windows"
 msgstr "Windows"
 
-#: linux/share/monet/games/Games.qml:345 linux/share/monet/settings-app/MonetSettings.qml:1981 linux/share/monet/settings-app/MonetSettings.qml:5669
+#: linux/share/monet/games/Games.qml:370
+msgid "Local games"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:374 linux/share/monet/settings-app/MonetSettings.qml:1981 linux/share/monet/settings-app/MonetSettings.qml:5669
 msgid "Never"
 msgstr "Soha"
 
-#: linux/share/monet/games/Games.qml:356
+#: linux/share/monet/games/Games.qml:385
 msgid "Not played yet"
 msgstr "Még nem játszottál vele"
 
-#: linux/share/monet/games/Games.qml:357
+#: linux/share/monet/games/Games.qml:386
 msgid "%1 minute"
 msgid_plural "%1 minutes"
 msgstr[0] "%1 perc"
 msgstr[1] "%1 perc"
 
-#: linux/share/monet/games/Games.qml:358 linux/share/monet/settings-app/MonetSettings.qml:1982
+#: linux/share/monet/games/Games.qml:387 linux/share/monet/settings-app/MonetSettings.qml:1982
 msgid "%1 hour"
 msgid_plural "%1 hours"
 msgstr[0] "%1 óra"
 msgstr[1] "%1 óra"
 
-#: linux/share/monet/games/Games.qml:362 linux/share/monet/settings-app/MonetSettings.qml:1960 linux/share/monet/settings-app/MonetSettings.qml:1961
+#: linux/share/monet/games/Games.qml:391 linux/share/monet/settings-app/MonetSettings.qml:1960 linux/share/monet/settings-app/MonetSettings.qml:1961
 msgid "%1 GB"
 msgstr "%1 GB"
 
-#: linux/share/monet/games/Games.qml:363 linux/share/monet/settings-app/MonetSettings.qml:1961
+#: linux/share/monet/games/Games.qml:392 linux/share/monet/settings-app/MonetSettings.qml:1961
 msgid "%1 MB"
 msgstr "%1 MB"
 
-#: linux/share/monet/games/Games.qml:367
+#: linux/share/monet/games/Games.qml:396
 msgid "%1 · Download paused"
 msgstr "%1 · Letöltés szüneteltetve"
 
-#: linux/share/monet/games/Games.qml:368
+#: linux/share/monet/games/Games.qml:397
 msgid "%1 · Downloading, %2%"
 msgstr "%1 · Letöltés, %2%"
 
-#: linux/share/monet/games/Games.qml:369
+#: linux/share/monet/games/Games.qml:398
 msgid "%1 · Downloading"
 msgstr "%1 · Letöltés"
 
-#: linux/share/monet/games/Games.qml:370
+#: linux/share/monet/games/Games.qml:399
 msgid "%1 · Waiting to download"
 msgstr "%1 · Letöltésre vár"
 
-#: linux/share/monet/games/Games.qml:371
+#: linux/share/monet/games/Games.qml:400
 msgid "%1 · Not installed, %2"
 msgstr "%1 · Nincs telepítve, %2"
 
-#: linux/share/monet/games/Games.qml:372
+#: linux/share/monet/games/Games.qml:401
 msgid "%1 · Not installed"
 msgstr "%1 · Nincs telepítve"
 
-#: linux/share/monet/games/Games.qml:404
+#: linux/share/monet/games/Games.qml:433
 msgid "All games"
 msgstr "Összes játék"
 
-#: linux/share/monet/games/Games.qml:406
+#: linux/share/monet/games/Games.qml:435
 msgid "Favorites"
 msgstr "Kedvencek"
 
-#: linux/share/monet/games/Games.qml:408 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
+#: linux/share/monet/games/Games.qml:437 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:253
 msgid "Recently played"
 msgstr "Legutóbbi játékok"
 
-#: linux/share/monet/games/Games.qml:409
+#: linux/share/monet/games/Games.qml:438
 msgid "Plays on Monet"
 msgstr "Monetben futnak"
 
-#: linux/share/monet/games/Games.qml:410
+#: linux/share/monet/games/Games.qml:439
 msgid "Plays on Windows"
 msgstr "Windowsban futnak"
 
-#: linux/share/monet/games/Games.qml:502
+#: linux/share/monet/games/Games.qml:531
 msgid "Open its page"
 msgstr "Oldalának megnyitása"
 
-#: linux/share/monet/games/Games.qml:507
+#: linux/share/monet/games/Games.qml:536
 msgid "Install in Monet"
 msgstr "Telepítés a Monetbe"
 
-#: linux/share/monet/games/Games.qml:511
+#: linux/share/monet/games/Games.qml:540
 msgid "Remove from favorites"
 msgstr "Eltávolítás a kedvencekből"
 
-#: linux/share/monet/games/Games.qml:513 linux/share/monet/games/Games.qml:1740
+#: linux/share/monet/games/Games.qml:542 linux/share/monet/games/Games.qml:1784
 msgid "Show in Steam"
 msgstr "Megjelenítés a Steamben"
 
-#: linux/share/monet/games/Games.qml:516
+#: linux/share/monet/games/Games.qml:545
 msgid "Uninstall…"
 msgstr "Eltávolítás…"
 
-#: linux/share/monet/games/Games.qml:611 linux/share/monet/games/Games.qml:631
+#: linux/share/monet/games/Games.qml:547
+msgid "Remove shortcut from Games"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:649 linux/share/monet/games/Games.qml:669
 msgid "Find a game"
 msgstr "Játék keresése"
 
-#: linux/share/monet/games/Games.qml:714
+#: linux/share/monet/games/Games.qml:752
 msgid "Stores"
 msgstr "Áruházak"
 
-#: linux/share/monet/games/Games.qml:803
+#: linux/share/monet/games/Games.qml:841
 msgid "Open Windows"
 msgstr "Windows megnyitása"
 
-#: linux/share/monet/games/Games.qml:844
+#: linux/share/monet/games/Games.qml:882
 msgid "Games called “%1”"
 msgstr "„%1” nevű játékok"
 
-#: linux/share/monet/games/Games.qml:854 linux/share/monet/settings-app/MonetSettings.qml:1895
+#: linux/share/monet/games/Games.qml:892 linux/share/monet/settings-app/MonetSettings.qml:1895
 msgid "%1 game"
 msgid_plural "%1 games"
 msgstr[0] "%1 játék"
 msgstr[1] "%1 játék"
 
-#: linux/share/monet/games/Games.qml:868 linux/share/monet/store-app/Shelf.qml:78
+#: linux/share/monet/games/Games.qml:900
+msgid "Add game"
+msgstr ""
+
+#: linux/share/monet/games/Games.qml:912 linux/share/monet/store-app/Shelf.qml:78
 msgid "Sort by"
 msgstr "Rendezés"
 
-#: linux/share/monet/games/Games.qml:874 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
+#: linux/share/monet/games/Games.qml:918 linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:828
 msgid "Recent"
 msgstr "Legutóbbiak"
 
-#: linux/share/monet/games/Games.qml:874
+#: linux/share/monet/games/Games.qml:918
 msgid "Size"
 msgstr "Méret"
 
-#: linux/share/monet/games/Games.qml:936 linux/share/monet/settings-app/MonetSettings.qml:6827 linux/share/monet/settings-app/MonetSettings.qml:6867
+#: linux/share/monet/games/Games.qml:980 linux/share/monet/settings-app/MonetSettings.qml:6827 linux/share/monet/settings-app/MonetSettings.qml:6867
 #: linux/share/monet/settings-app/MonetSettings.qml:6958 linux/share/monet/settings-app/MonetSettings.qml:7619 linux/share/monet/settings-app/MonetSettings.qml:7726
 #: linux/share/monet/settings-app/MonetSettings.qml:7749 setup/qml/Main.qml:1341 linux/libexec/monet-quick:4219
-#: linux/libexec/monet-quick:8160 linux/libexec/monet-quick:9271 linux/share/monet/passwords/app.py:183
+#: linux/libexec/monet-quick:8330 linux/libexec/monet-quick:9447 linux/share/monet/passwords/app.py:183
 #: linux/share/monet/passwords/app.py:211
 msgid "Show"
 msgstr "Mutasd"
 
-#: linux/share/monet/games/Games.qml:942
+#: linux/share/monet/games/Games.qml:986
 msgid "All"
 msgstr "Összes"
 
-#: linux/share/monet/games/Games.qml:942 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
+#: linux/share/monet/games/Games.qml:986 linux/share/monet/store-app/AppCard.qml:93 linux/share/monet/store-app/Framed.qml:191
 #: linux/share/monet/store-app/Home.qml:394 linux/share/monet/store-app/Store.qml:187 linux/share/monet/store-app/Store.qml:482
 msgid "Installed"
 msgstr "Telepítve"
 
-#: linux/share/monet/games/Games.qml:942 linux/share/monet/games/Games.qml:1366
+#: linux/share/monet/games/Games.qml:986 linux/share/monet/games/Games.qml:1410
 msgid "Not installed"
 msgstr "Nincs telepítve"
 
-#: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1861
+#: linux/share/monet/games/Games.qml:1033 linux/share/monet/games/Games.qml:1905
 msgid "Steam key"
 msgstr "Steam-kulcs"
 
-#: linux/share/monet/games/Games.qml:989 linux/share/monet/games/Games.qml:1032
+#: linux/share/monet/games/Games.qml:1033 linux/share/monet/games/Games.qml:1076
 msgid "Add Steam key"
 msgstr "Steam-kulcs hozzáadása"
 
-#: linux/share/monet/games/Games.qml:1004
+#: linux/share/monet/games/Games.qml:1048
 msgid ""
 "Steam didn't accept your key, so only the Steam games installed here are shown. Make a new key and add it again."
 msgstr ""
 "A Steam nem fogadta el a kulcsodat, ezért csak az itt telepített Steam-játékok látszanak. Készíts új kulcsot, és add hozzá újra."
 
-#: linux/share/monet/games/Games.qml:1027
+#: linux/share/monet/games/Games.qml:1071
 msgid ""
 "Games shows the Steam games installed here. To see every game you own on Steam, add your Steam key once."
 msgstr ""
 "A Játékok az itt telepített Steam-játékokat mutatja. Ha minden Steamen birtokolt játékodat látni szeretnéd, add hozzá egyszer a Steam-kulcsodat."
 
-#: linux/share/monet/games/Games.qml:1032
+#: linux/share/monet/games/Games.qml:1076
 msgid "Change key"
 msgstr "Kulcs módosítása"
 
-#: linux/share/monet/games/Games.qml:1077
+#: linux/share/monet/games/Games.qml:1121
 msgid ""
 "Install each game once: add Windows games to Steam here, and a game you install there plays in Monet and in Windows."
 msgstr ""
 "Minden játékot csak egyszer telepíts: add hozzá itt a Windows-játékokat a Steamhez, és az oda telepített játék a Monetben és a Windowsban is fut."
 
-#: linux/share/monet/games/Games.qml:1082 linux/share/monet/settings-app/MonetSettings.qml:7606
+#: linux/share/monet/games/Games.qml:1126 linux/share/monet/settings-app/MonetSettings.qml:7606
 msgid "Adding…"
 msgstr "Hozzáadás…"
 
-#: linux/share/monet/games/Games.qml:1082 linux/share/monet/settings-app/MonetSettings.qml:7606
+#: linux/share/monet/games/Games.qml:1126 linux/share/monet/settings-app/MonetSettings.qml:7606
 msgid "Add to Steam"
 msgstr "Hozzáadás a Steamhez"
 
-#: linux/share/monet/games/Games.qml:1197
+#: linux/share/monet/games/Games.qml:1241
 msgid "Continue playing"
 msgstr "Folytatás"
 
-#: linux/share/monet/games/Games.qml:1432 linux/share/monet/settings-app/MonetSettings.qml:8245 linux/share/monet/settings-app/MonetSettings.qml:8967
+#: linux/share/monet/games/Games.qml:1476 linux/share/monet/settings-app/MonetSettings.qml:8245 linux/share/monet/settings-app/MonetSettings.qml:8967
 #: linux/share/monet/settings-app/MonetSettings.qml:9355 linux/share/monet/store-app/AppPage.qml:222 linux/share/monet/store-app/Home.qml:217
 #: setup/qml/Main.qml:232
 msgid "Install"
 msgstr "Telepítés"
 
-#: linux/share/monet/games/Games.qml:1432 linux/share/monet/store-app/Store.qml:171
+#: linux/share/monet/games/Games.qml:1476 linux/share/monet/store-app/Store.qml:171
 msgid "Play"
 msgstr "Indítás"
 
-#: linux/share/monet/games/Games.qml:1475
+#: linux/share/monet/games/Games.qml:1519
 msgid "No game called that"
 msgstr "Nincs ilyen nevű játék"
 
-#: linux/share/monet/games/Games.qml:1476
+#: linux/share/monet/games/Games.qml:1520
 msgid "No favorites yet"
 msgstr "Még nincsenek kedvencek"
 
-#: linux/share/monet/games/Games.qml:1477
+#: linux/share/monet/games/Games.qml:1521
 msgid "Nothing played yet"
 msgstr "Még semmivel sem játszottál"
 
-#: linux/share/monet/games/Games.qml:1478
+#: linux/share/monet/games/Games.qml:1522
 msgid "All installed"
 msgstr "Minden telepítve"
 
-#: linux/share/monet/games/Games.qml:1479
+#: linux/share/monet/games/Games.qml:1523
 msgid "Nothing installed here yet"
 msgstr "Itt még nincs semmi telepítve"
 
-#: linux/share/monet/games/Games.qml:1480 linux/share/monet/settings-app/MonetSettings.qml:7758
+#: linux/share/monet/games/Games.qml:1524 linux/share/monet/settings-app/MonetSettings.qml:7758
 msgid "No games yet"
 msgstr "Még nincsenek játékok"
 
-#: linux/share/monet/games/Games.qml:1489
+#: linux/share/monet/games/Games.qml:1533
 msgid "Tap the star on a game to keep it here."
 msgstr "Koppints egy játék csillagára, és itt marad."
 
-#: linux/share/monet/games/Games.qml:1490
+#: linux/share/monet/games/Games.qml:1534
 msgid "The games you play show up here, the latest first."
 msgstr "Itt jelennek meg a játékok, amelyekkel játszol, a legutóbbi elöl."
 
-#: linux/share/monet/games/Games.qml:1491
+#: linux/share/monet/games/Games.qml:1535
 msgid "Every game you own here is installed."
 msgstr "Minden itteni játékod telepítve van."
 
-#: linux/share/monet/games/Games.qml:1492
+#: linux/share/monet/games/Games.qml:1536
 msgid "Choose a game you own and Install, and it shows up here."
 msgstr "Válassz egy saját játékot, majd a Telepítést, és itt megjelenik."
 
-#: linux/share/monet/games/Games.qml:1493
+#: linux/share/monet/games/Games.qml:1537
 msgid ""
 "Install games with Steam, Heroic or Lutris here, or in Windows. They show up here by themselves."
 msgstr ""
 "Telepíts játékokat a Steammel, a Heroickal vagy a Lutrisszal itt, vagy Windowsban. Maguktól megjelennek itt."
 
-#: linux/share/monet/games/Games.qml:1501 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
+#: linux/share/monet/games/Games.qml:1545 linux/share/plasma/plasmoids/org.monet.played/contents/ui/main.qml:314
 msgid "Open Steam"
 msgstr "Steam megnyitása"
 
-#: linux/share/monet/games/Games.qml:1678 linux/share/monet/settings-app/MonetSettings.qml:8458
+#: linux/share/monet/games/Games.qml:1722 linux/share/monet/settings-app/MonetSettings.qml:8458
 msgid "Couldn't open Windows"
 msgstr "A Windows nem nyílt meg"
 
-#: linux/share/monet/games/Games.qml:1679 crates/monet/src/main.rs:384
+#: linux/share/monet/games/Games.qml:1723 crates/monet/src/main.rs:384
 msgid "Set up FACEIT in Windows?"
 msgstr "Beállítod a FACEIT-et Windowsban?"
 
-#: linux/share/monet/games/Games.qml:1680 crates/monet/src/main.rs:379
+#: linux/share/monet/games/Games.qml:1724 crates/monet/src/main.rs:379
 msgid "Play %1 on FACEIT?"
 msgstr "%1 indítása FACEIT-en?"
 
-#: linux/share/monet/games/Games.qml:1681
+#: linux/share/monet/games/Games.qml:1725
 msgid "%1 needs Windows"
 msgstr "%1 Windowst igényel"
 
-#: linux/share/monet/games/Games.qml:1682 linux/share/monet/settings-app/MonetSettings.qml:8459
+#: linux/share/monet/games/Games.qml:1726 linux/share/monet/settings-app/MonetSettings.qml:8459
 msgid "Play %1?"
 msgstr "%1 indítása?"
 
-#: linux/share/monet/games/Games.qml:1683 linux/share/monet/settings-app/MonetSettings.qml:8462 crates/monet/src/main.rs:386
+#: linux/share/monet/games/Games.qml:1727 linux/share/monet/settings-app/MonetSettings.qml:8462 crates/monet/src/main.rs:386
 msgid "Restart in Windows?"
 msgstr "Újraindítás Windowsba?"
 
-#: linux/share/monet/games/Games.qml:1695
+#: linux/share/monet/games/Games.qml:1739
 msgid ""
 "Your PC restarts in Windows and downloads FACEIT's own installers from FACEIT: its anti-cheat, then the FACEIT app. Each one opens for you, so you read its terms and accept them only if you agree. Then sign in to FACEIT and Steam, and choose Back to Monet."
 msgstr ""
 "A géped újraindul Windowsba, és letölti a FACEIT saját telepítőit a FACEIT-től: először a csalásvédelmet, aztán a FACEIT alkalmazást. Mindegyik megnyílik neked, hogy elolvasd a feltételeit, és csak akkor fogadd el őket, ha egyetértesz. Ezután jelentkezz be a FACEIT-be és a Steambe, és válaszd a Vissza a Monetbe gombot."
 
-#: linux/share/monet/games/Games.qml:1697
+#: linux/share/monet/games/Games.qml:1741
 msgid ""
 "Your PC restarts in Windows and opens FACEIT, then %1. When you quit the game, you're back here. Save your work first."
 msgstr ""
 "A géped újraindul Windowsba, megnyitja a FACEIT-et, majd ezt: %1. Ha kilépsz a játékból, visszakerülsz ide. Előbb mentsd el a munkádat."
 
-#: linux/share/monet/games/Games.qml:1707
+#: linux/share/monet/games/Games.qml:1751
 msgid ""
 "Your PC restarts in Windows and opens it in the EA app. Choose Download and pick %1 as where to install it: the game is there already, so the EA app only checks it."
 msgstr ""
 "A géped újraindul Windowsba, és megnyitja az EA alkalmazásban. Válaszd a Letöltést, és telepítési helynek a(z) %1 mappát: a játék már ott van, így az EA alkalmazás csak ellenőrzi."
 
-#: linux/share/monet/games/Games.qml:1709
+#: linux/share/monet/games/Games.qml:1753
 msgid ""
 "Your PC restarts in Windows and opens it. If %1 there asks to install it, choose its option to locate the game instead and pick %2: it's there already."
 msgstr ""
 "A géped újraindul Windowsba, és megnyitja. Ha ott a(z) %1 telepíteni akarja, válaszd inkább a játék megkeresését, és válaszd ezt: %2. Már ott van."
 
-#: linux/share/monet/games/Games.qml:1710 linux/share/monet/settings-app/MonetSettings.qml:8500
+#: linux/share/monet/games/Games.qml:1754 linux/share/monet/settings-app/MonetSettings.qml:8500
 msgid ""
 "Your PC restarts in Windows and opens the game. When you quit, you're back here. Save your work first."
 msgstr ""
 "A géped újraindul, elindul a Windows és a játék. Kilépés után visszakerülsz ide. Előbb mentsd el a munkádat."
 
-#: linux/share/monet/games/Games.qml:1711 linux/share/monet/settings-app/MonetSettings.qml:8504
+#: linux/share/monet/games/Games.qml:1755 linux/share/monet/settings-app/MonetSettings.qml:8504
 msgid "Your PC restarts in Windows. Open apps close, so save your work first."
 msgstr ""
 "A géped újraindul, és a Windows indul el. A megnyitott alkalmazások bezáródnak, ezért előbb mentsd el a munkádat."
 
-#: linux/share/monet/games/Games.qml:1717 linux/share/monet/settings-app/MonetSettings.qml:8515 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
+#: linux/share/monet/games/Games.qml:1761 linux/share/monet/settings-app/MonetSettings.qml:8515 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:264
 msgid ""
 "Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: linux/share/monet/games/Games.qml:1741
+#: linux/share/monet/games/Games.qml:1785
 msgid "Restart & Set up"
 msgstr "Újraindítás & beállítás"
 
-#: linux/share/monet/games/Games.qml:1742 linux/share/monet/settings-app/MonetSettings.qml:8531
+#: linux/share/monet/games/Games.qml:1786 linux/share/monet/settings-app/MonetSettings.qml:8531
 msgid "Restart & Play"
 msgstr "Újraindítás & játék"
 
-#: linux/share/monet/games/Games.qml:1742 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
+#: linux/share/monet/games/Games.qml:1786 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
 #: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1382
 #: linux/share/monet/settings-app/MonetSettings.qml:7931 linux/share/monet/settings-app/MonetSettings.qml:7951 linux/share/monet/settings-app/MonetSettings.qml:8211
 #: linux/share/monet/settings-app/MonetSettings.qml:8532 setup/qml/Main.qml:231 crates/monet/src/main.rs:398
@@ -1613,55 +1643,55 @@ msgstr "Újraindítás & játék"
 msgid "Restart"
 msgstr "Újraindítás"
 
-#: linux/share/monet/games/Games.qml:1808
+#: linux/share/monet/games/Games.qml:1852
 msgid "See every game you own on Steam"
 msgstr "Minden Steamen birtokolt játékod"
 
-#: linux/share/monet/games/Games.qml:1817
+#: linux/share/monet/games/Games.qml:1861
 msgid ""
 "Steam shares the list of games you own through a key that only you can make. Monet keeps the key on this PC and uses it only to ask Steam for that list. It never needs your password."
 msgstr ""
 "A Steam egy olyan kulccsal osztja meg a játékaid listáját, amelyet csak te készíthetsz. A Monet ezen a gépen tárolja a kulcsot, és csak arra használja, hogy elkérje a Steamtől ezt a listát. A jelszavadra soha nincs szüksége."
 
-#: linux/share/monet/games/Games.qml:1828
+#: linux/share/monet/games/Games.qml:1872
 msgid ""
 "Open Steam's key page and sign in as %1. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
 msgstr ""
 "Nyisd meg a Steam kulcsoldalát, és jelentkezz be ezzel a fiókkal: %1. Domainnévként írd be, hogy monet, fogadd el a feltételeket, és hagyd jóvá a telefonod Steam alkalmazásában. Ezután másold ki a kulcsot, és illeszd be ide."
 
-#: linux/share/monet/games/Games.qml:1829
+#: linux/share/monet/games/Games.qml:1873
 msgid ""
 "Open Steam's key page and sign in. Type monet as the domain name, agree, and approve it in the Steam app on your phone. Then copy the key and paste it here."
 msgstr ""
 "Nyisd meg a Steam kulcsoldalát, és jelentkezz be. Domainnévként írd be, hogy monet, fogadd el a feltételeket, és hagyd jóvá a telefonod Steam alkalmazásában. Ezután másold ki a kulcsot, és illeszd be ide."
 
-#: linux/share/monet/games/Games.qml:1834
+#: linux/share/monet/games/Games.qml:1878
 msgid "Open Steam's key page"
 msgstr "A Steam kulcsoldalának megnyitása"
 
-#: linux/share/monet/games/Games.qml:1869
+#: linux/share/monet/games/Games.qml:1913
 msgid "A key is kept. Paste a new one to change it."
 msgstr "Van megőrzött kulcs. A módosításhoz illessz be egy újat."
 
-#: linux/share/monet/games/Games.qml:1869
+#: linux/share/monet/games/Games.qml:1913
 msgid "Paste your Steam key"
 msgstr "Illeszd be a Steam-kulcsodat"
 
-#: linux/share/monet/games/Games.qml:1884
+#: linux/share/monet/games/Games.qml:1928
 msgid "Asking Steam…"
 msgstr "A Steam lekérdezése…"
 
-#: linux/share/monet/games/Games.qml:1887
+#: linux/share/monet/games/Games.qml:1931
 msgid "Steam lists %1 game you own."
 msgid_plural "Steam lists %1 games you own."
 msgstr[0] "A Steam szerint %1 játékod van."
 msgstr[1] "A Steam szerint %1 játékod van."
 
-#: linux/share/monet/games/Games.qml:1897
+#: linux/share/monet/games/Games.qml:1941
 msgid "Forget key"
 msgstr "Kulcs elfelejtése"
 
-#: linux/share/monet/games/Games.qml:1910 linux/share/monet/settings-app/MonetSettings.qml:5078 linux/share/monet/settings-app/MonetSettings.qml:9489
+#: linux/share/monet/games/Games.qml:1954 linux/share/monet/settings-app/MonetSettings.qml:5078 linux/share/monet/settings-app/MonetSettings.qml:9489
 msgid "Save"
 msgstr "Mentés"
 
@@ -2248,7 +2278,7 @@ msgid "privacy recent files history forget remember fingerprint finger"
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:263 linux/share/monet/settings-app/MonetSettings.qml:6233 linux/share/monet/settings-app/MonetSettings.qml:7126
-#: linux/share/monet/settings-app/MonetSettings.qml:7350 linux/libexec/monet-quick:8241 linux/share/monet/passwords/app.py:304
+#: linux/share/monet/settings-app/MonetSettings.qml:7350 linux/libexec/monet-quick:8411 linux/share/monet/passwords/app.py:304
 #: linux/share/monet/passwords/app.py:334 linux/share/monet/passwords/app.py:886
 msgid "Passwords"
 msgstr "Jelszavak"
@@ -2469,7 +2499,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:700 linux/share/monet/settings-app/MonetSettings.qml:2884 linux/share/monet/settings-app/MonetSettings.qml:5392
-#: linux/libexec/monet-quick:8281
+#: linux/libexec/monet-quick:8451
 msgid "Settings"
 msgstr "Beállítások"
 
@@ -2531,7 +2561,7 @@ msgstr ""
 msgid "Keyboard and pointer"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:1274 linux/libexec/monet-quick:8230
+#: linux/share/monet/settings-app/MonetSettings.qml:1274 linux/libexec/monet-quick:8400
 msgid "Screen locking"
 msgstr "Képernyőzár"
 
@@ -3595,7 +3625,7 @@ msgstr "Csörgetés"
 msgid "Send a file…"
 msgstr "Fájl küldése…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4332 linux/share/monet/settings-app/MonetSettings.qml:5394 linux/libexec/monet-quick:8286
+#: linux/share/monet/settings-app/MonetSettings.qml:4332 linux/share/monet/settings-app/MonetSettings.qml:5394 linux/libexec/monet-quick:8456
 #: linux/libexec/monet-files-tools:788
 msgid "Files"
 msgstr "Fájlok"
@@ -3682,7 +3712,7 @@ msgstr "Éjszakai fény"
 msgid "Warmer colors from sunset to sunrise, easier on the eyes"
 msgstr "Melegebb színek napnyugtától napkeltéig, kíméli a szemet"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4499 linux/share/monet/settings-app/MonetSettings.qml:4505 linux/libexec/monet-quick:8245
+#: linux/share/monet/settings-app/MonetSettings.qml:4499 linux/share/monet/settings-app/MonetSettings.qml:4505 linux/libexec/monet-quick:8415
 msgid "Display colors"
 msgstr "Kijelzőszínek"
 
@@ -3746,7 +3776,7 @@ msgstr "Hangerő"
 msgid "Play sound through"
 msgstr "Hang lejátszása ezen:"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4626 linux/libexec/monet-quick:8252
+#: linux/share/monet/settings-app/MonetSettings.qml:4626 linux/libexec/monet-quick:8422
 msgid "Headphones and speakers"
 msgstr ""
 
@@ -3802,7 +3832,7 @@ msgstr "Felvétel innen"
 msgid "Microphones"
 msgstr "Mikrofonok"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:4821 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:8254
+#: linux/share/monet/settings-app/MonetSettings.qml:4821 linux/share/plasma/plasmoids/org.monet.sound/contents/ui/main.qml:522 linux/libexec/monet-quick:8424
 msgid "Microphone"
 msgstr "Mikrofon"
 
@@ -3954,7 +3984,7 @@ msgstr "Rendszergazda"
 msgid "Standard account"
 msgstr "Normál fiók"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5210 linux/libexec/monet-quick:9934
+#: linux/share/monet/settings-app/MonetSettings.qml:5210 linux/libexec/monet-quick:10110
 msgid "Guest"
 msgstr "Vendég"
 
@@ -4108,7 +4138,7 @@ msgstr "Emodzsi"
 msgid "Next keyboard layout"
 msgstr "Következő billentyűzetkiosztás"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5404 linux/libexec/monet-quick:8292
+#: linux/share/monet/settings-app/MonetSettings.qml:5404 linux/libexec/monet-quick:8462
 msgid "Screenshot"
 msgstr "Képernyőkép"
 
@@ -4208,7 +4238,7 @@ msgstr "Ha ennyi ideig nem nyúlsz hozzá"
 msgid "It wakes where you left off"
 msgstr "Ott ébred fel, ahol abbahagytad"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5633 linux/libexec/monet-quick:8239
+#: linux/share/monet/settings-app/MonetSettings.qml:5633 linux/libexec/monet-quick:8409
 msgid "Keep awake"
 msgstr "Ébren tartás"
 
@@ -4302,7 +4332,7 @@ msgstr "Képernyő ki"
 msgid "When you restart"
 msgstr "Újraindításkor"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5745 linux/share/monet/settings-app/MonetSettings.qml:8743 linux/libexec/monet-quick:8276
+#: linux/share/monet/settings-app/MonetSettings.qml:5745 linux/share/monet/settings-app/MonetSettings.qml:8743 linux/libexec/monet-quick:8446
 msgid "Reopen your work"
 msgstr "A munkád újranyitása"
 
@@ -4568,7 +4598,7 @@ msgstr "Könyvjelzők a Windowsból"
 msgid "Choose HTML file"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6119 linux/share/monet/settings-app/MonetSettings.qml:6223 linux/libexec/monet-quick:9272
+#: linux/share/monet/settings-app/MonetSettings.qml:6119 linux/share/monet/settings-app/MonetSettings.qml:6223 linux/libexec/monet-quick:9448
 msgid "From Windows"
 msgstr "Windowsból"
 
@@ -4626,7 +4656,7 @@ msgid ""
 msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:6168 linux/share/monet/settings-app/MonetSettings.qml:7861 linux/share/monet/settings-app/MonetSettings.qml:8087
-#: linux/libexec/monet-quick:9052
+#: linux/libexec/monet-quick:9228
 msgid "Review"
 msgstr ""
 
@@ -4702,7 +4732,7 @@ msgstr "Normál"
 msgid "Larger"
 msgstr "Nagyobb"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6281 linux/libexec/monet-quick:8250
+#: linux/share/monet/settings-app/MonetSettings.qml:6281 linux/libexec/monet-quick:8420
 msgid "Reduce motion"
 msgstr "Mozgás csökkentése"
 
@@ -4748,7 +4778,7 @@ msgstr ""
 msgid "What fills this PC, and room to make."
 msgstr "Mi tölti meg a gépet, és hogyan szabadíthatsz fel helyet."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6353 linux/libexec/monet-quick:8234
+#: linux/share/monet/settings-app/MonetSettings.qml:6353 linux/libexec/monet-quick:8404
 msgid "Disks and partitions"
 msgstr "Lemezek és partíciók"
 
@@ -4909,7 +4939,7 @@ msgstr "Méret MiB-ban"
 msgid "%1 selected · %2 available"
 msgstr "Kiválasztva: %1 · elérhető: %2"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:6567 linux/libexec/monet-quick:8264
+#: linux/share/monet/settings-app/MonetSettings.qml:6567 linux/libexec/monet-quick:8434
 msgid "Windows files"
 msgstr ""
 
@@ -5270,7 +5300,7 @@ msgid ""
 msgstr ""
 "A játékok nem másolódnak: a Steam és a többi áruház újra letölti őket. A Kuka sem."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7127 linux/share/monet/settings-app/MonetSettings.qml:7351 linux/libexec/monet-quick:8241
+#: linux/share/monet/settings-app/MonetSettings.qml:7127 linux/share/monet/settings-app/MonetSettings.qml:7351 linux/libexec/monet-quick:8411
 msgid "Saved logins, app access and vault unlocking"
 msgstr ""
 
@@ -5665,7 +5695,7 @@ msgid ""
 msgstr ""
 "A Windows billentyű + Alt + G a képernyő utolsó 30 másodpercét a Videók mappába menti. Első alkalommal válaszd ki a rögzítendő képernyőt."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7579 linux/share/monet/settings-app/MonetSettings.qml:7722 linux/libexec/monet-quick:6451
+#: linux/share/monet/settings-app/MonetSettings.qml:7579 linux/share/monet/settings-app/MonetSettings.qml:7722 linux/libexec/monet-quick:6621
 msgid "Shared with Windows"
 msgstr "Közös a Windowszal"
 
@@ -6292,7 +6322,7 @@ msgstr "A Windows telepítésre kész"
 msgid "Getting Windows ready"
 msgstr "A Windows előkészítése"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8465 linux/libexec/monet-quick:7969
+#: linux/share/monet/settings-app/MonetSettings.qml:8465 linux/libexec/monet-quick:8139
 msgid "Windows setup did not finish"
 msgstr "A Windows telepítése nem fejeződött be"
 
@@ -6628,7 +6658,7 @@ msgstr ""
 msgid "Copy report"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8813 linux/libexec/monet-quick:8272
+#: linux/share/monet/settings-app/MonetSettings.qml:8813 linux/libexec/monet-quick:8442
 msgid "Undo desktop changes"
 msgstr ""
 
@@ -6697,7 +6727,7 @@ msgstr "Csak ha kéred."
 msgid "Monet and your apps keep themselves up to date."
 msgstr "A Monet és az alkalmazásaid maguktól naprakészek maradnak."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8970 linux/libexec/monet-quick:8270
+#: linux/share/monet/settings-app/MonetSettings.qml:8970 linux/libexec/monet-quick:8440
 msgid "Check for updates"
 msgstr "Frissítések keresése"
 
@@ -6909,7 +6939,7 @@ msgstr "%1 mp"
 msgid "Save a report"
 msgstr "Jelentés mentése"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:9485 linux/libexec/monet-quick:8161
+#: linux/share/monet/settings-app/MonetSettings.qml:9485 linux/libexec/monet-quick:8331
 msgid "In Documents, as %1."
 msgstr "A Dokumentumok mappában, %1 néven."
 
@@ -6941,7 +6971,7 @@ msgstr "Beszerzés…"
 msgid "Get BoxBuddy"
 msgstr "BoxBuddy beszerzése"
 
-#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:6403
+#: linux/share/monet/store-app/AppCard.qml:82 linux/libexec/monet-quick:6573
 msgid "Opens in Windows"
 msgstr "Windowsban nyílik meg"
 
@@ -7105,7 +7135,7 @@ msgstr "Mind"
 msgid "No apps here yet."
 msgstr "Itt még nincsenek alkalmazások."
 
-#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:8298
+#: linux/share/monet/store-app/Store.qml:22 linux/share/monet/store-app/Store.qml:662 linux/libexec/monet-quick:8468
 msgid "Store"
 msgstr "Áruház"
 
@@ -7666,7 +7696,7 @@ msgid "The note could not be saved. Try again."
 msgstr ""
 
 #: linux/share/monet/widgets/TaskManagerAction.qml:9 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:52 image/dock/patch.py:283
-#: image/dock/patch.py:309 linux/libexec/monet-quick:8290
+#: image/dock/patch.py:309 linux/libexec/monet-quick:8460
 msgid "Task Manager"
 msgstr ""
 
@@ -7846,7 +7876,7 @@ msgstr "A megnyitott fájljaid itt jelennek meg."
 msgid "Applications"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:8374 linux/libexec/monet-files-tools:653
+#: linux/share/plasma/plasmoids/org.monet.menu/contents/ui/main.qml:1026 linux/libexec/monet-quick:8544 linux/libexec/monet-files-tools:653
 msgid "Application"
 msgstr ""
 
@@ -8003,7 +8033,7 @@ msgstr ""
 msgid "A Windows installer"
 msgstr "Windows-telepítő"
 
-#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:6318
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:228 linux/libexec/monet-quick:6339
 msgid "A Windows program"
 msgstr "Windows-program"
 
@@ -8199,11 +8229,11 @@ msgstr "Hangbeállítások…"
 msgid "Images"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:8296
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 setup/monet_setup/app.py:60 linux/libexec/monet-quick:8466
 msgid "Documents"
 msgstr "Dokumentumok"
 
-#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:8294
+#: linux/share/plasma/plasmoids/org.monet.stacks/contents/ui/main.qml:32 linux/libexec/monet-quick:8464
 msgid "Archives"
 msgstr ""
 
@@ -8291,7 +8321,7 @@ msgstr ""
 msgid "Reading drive space…"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:9537
+#: linux/share/plasma/plasmoids/org.monet.storage/contents/ui/main.qml:77 linux/libexec/monet-quick:9713
 msgid "Open Files"
 msgstr "Fájlok megnyitása"
 
@@ -8796,7 +8826,7 @@ msgstr ""
 msgid "Opening %1 wasn't confirmed"
 msgstr ""
 
-#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:6212 linux/libexec/monet-quick:6234
+#: image/launcher/coordinator.cpp:360 linux/libexec/monet-quick:6222 linux/libexec/monet-quick:6244
 msgid "Couldn't open %1"
 msgstr ""
 
@@ -8903,7 +8933,7 @@ msgstr "Újrakérdezés és újraindítás"
 msgid "You're online"
 msgstr "Online vagy"
 
-#: setup/qml/Main.qml:451 linux/libexec/monet-quick:8258
+#: setup/qml/Main.qml:451 linux/libexec/monet-quick:8428
 msgid "Connect to Wi-Fi"
 msgstr "Csatlakozás Wi-Fi-hez"
 
@@ -9836,610 +9866,610 @@ msgstr "Az utolsó 30 másodperc elmentve"
 msgid "In Videos."
 msgstr "A Videók mappában."
 
-#: linux/libexec/monet-quick:6213
+#: linux/libexec/monet-quick:6223
 msgid "The Windows app launcher couldn't start. Try again from Files."
 msgstr "A Windows-alkalmazásindító nem indult el. Próbáld újra a Fájlokból."
 
-#: linux/libexec/monet-quick:6236
+#: linux/libexec/monet-quick:6246
 msgid "The program or installer is missing."
 msgstr "A program vagy a telepítő hiányzik."
 
-#: linux/libexec/monet-quick:6239
+#: linux/libexec/monet-quick:6249
 msgid ""
 "Windows app support is missing. You can open the file in Windows instead."
 msgstr ""
 "Hiányzik a Windows-alkalmazások támogatása. Helyette megnyithatod a fájlt Windowsban."
 
-#: linux/libexec/monet-quick:6247
+#: linux/libexec/monet-quick:6257
 msgid "Starting %1"
 msgstr "Indítás: %1"
 
-#: linux/libexec/monet-quick:6248
+#: linux/libexec/monet-quick:6258
 msgid "Preparing Windows app support can take a few minutes the first time."
 msgstr ""
 "A Windows-alkalmazások támogatásának előkészítése első alkalommal néhány percig tarthat."
 
-#: linux/libexec/monet-quick:6257
+#: linux/libexec/monet-quick:6267
 msgid "Windows app support couldn't start. Try opening the file in Windows."
 msgstr ""
 "A Windows-alkalmazások támogatása nem indult el. Próbáld megnyitni a fájlt Windowsban."
 
-#: linux/libexec/monet-quick:6264
+#: linux/libexec/monet-quick:6274
 msgid ""
 "Proton exited with code %1. Check the file and your connection, or try opening it in Windows."
 msgstr ""
 "A Proton %1 kóddal lépett ki. Ellenőrizd a fájlt és a kapcsolatot, vagy próbáld megnyitni Windowsban."
 
-#: linux/libexec/monet-quick:7091
+#: linux/libexec/monet-quick:7261
 msgid "Open it again"
 msgstr "Nyisd meg újra"
 
-#: linux/libexec/monet-quick:7091
+#: linux/libexec/monet-quick:7261
 msgid "%1 closed unexpectedly"
 msgstr "%1 váratlanul bezárult"
 
-#: linux/libexec/monet-quick:7509
+#: linux/libexec/monet-quick:7679
 msgid "Choose a connected screen and a supported size."
 msgstr ""
 
-#: linux/libexec/monet-quick:7514
+#: linux/libexec/monet-quick:7684
 msgid ""
 "The screen size couldn't be changed. Check the display connection and try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:8048
+#: linux/libexec/monet-quick:8218
 msgid "%1 GB free of %2 GB"
 msgstr "%1 GB szabad, összesen %2 GB"
 
-#: linux/libexec/monet-quick:8161
+#: linux/libexec/monet-quick:8331
 msgid "Saved a report"
 msgstr "Jelentés elmentve"
 
-#: linux/libexec/monet-quick:8230
+#: linux/libexec/monet-quick:8400
 msgid "Power & Sleep · Automatic screen locking"
 msgstr "Energia & alvás · Automatikus képernyőzár"
 
-#: linux/libexec/monet-quick:8231
+#: linux/libexec/monet-quick:8401
 msgid ""
 "stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"
 msgstr ""
 "képernyőzár kikapcsolása; automatikus képernyőzár; képernyőzár időzítője"
 
-#: linux/libexec/monet-quick:8232
+#: linux/libexec/monet-quick:8402
 msgid "Download folder"
 msgstr "Letöltési mappa"
 
-#: linux/libexec/monet-quick:8232
+#: linux/libexec/monet-quick:8402
 msgid "Storage · Where downloads are saved"
 msgstr "Tárhely · A letöltések mentési helye"
 
-#: linux/libexec/monet-quick:8233
+#: linux/libexec/monet-quick:8403
 msgid ""
 "download folder; downloads folder; download path; download location; where downloads go; save downloads"
 msgstr "letöltési mappa; letöltések helye; letöltési útvonal"
 
-#: linux/libexec/monet-quick:8234
+#: linux/libexec/monet-quick:8404
 msgid "Storage · Manage physical drives"
 msgstr "Tárhely · Fizikai meghajtók kezelése"
 
-#: linux/libexec/monet-quick:8235
+#: linux/libexec/monet-quick:8405
 msgid ""
 "disks; disk management; format disk; erase disk; create partition; partition manager; external drive"
 msgstr ""
 "lemezek; lemezkezelés; lemez formázása; lemez törlése; partíció létrehozása; partíciókezelő; külső meghajtó"
 
-#: linux/libexec/monet-quick:8237
+#: linux/libexec/monet-quick:8407
 msgid "Battery charge limit"
 msgstr "Akkumulátor töltési korlátja"
 
-#: linux/libexec/monet-quick:8237
+#: linux/libexec/monet-quick:8407
 msgid "Power & Sleep · Protect the battery"
 msgstr "Energia & alvás · Az akkumulátor védelme"
 
-#: linux/libexec/monet-quick:8238
+#: linux/libexec/monet-quick:8408
 msgid ""
 "battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"
 msgstr ""
 "akkumulátor töltési korlátja; akkumulátor védelme; töltés leállítása 80-nál"
 
-#: linux/libexec/monet-quick:8239
+#: linux/libexec/monet-quick:8409
 msgid "Power & Sleep · Temporarily prevent idle sleep and locking"
 msgstr ""
 "Energia & alvás · Az alvás és a zárolás átmeneti megakadályozása tétlenség esetén"
 
-#: linux/libexec/monet-quick:8240
+#: linux/libexec/monet-quick:8410
 msgid ""
 "keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"
 msgstr "képernyő bekapcsolva tartása; ébren tartás; bemutató mód"
 
-#: linux/libexec/monet-quick:8242
+#: linux/libexec/monet-quick:8412
 msgid ""
 "password; passwords; wallet; vault; autofill; save passwords; password manager"
 msgstr ""
 
-#: linux/libexec/monet-quick:8243
+#: linux/libexec/monet-quick:8413
 msgid "Make text and windows bigger"
 msgstr ""
 
-#: linux/libexec/monet-quick:8243
+#: linux/libexec/monet-quick:8413
 msgid "Accessibility · Size of everything"
 msgstr ""
 
-#: linux/libexec/monet-quick:8244
+#: linux/libexec/monet-quick:8414
 msgid ""
 "make text bigger; larger text; bigger fonts; text size; screen scaling; small writing; zoom display"
 msgstr ""
 
-#: linux/libexec/monet-quick:8245
+#: linux/libexec/monet-quick:8415
 msgid "Display · Color profiles and test patterns"
 msgstr "Kijelző · Színprofilok és tesztábrák"
 
-#: linux/libexec/monet-quick:8246
+#: linux/libexec/monet-quick:8416
 msgid ""
 "color profile; colour profile; ICC; OLED; color calibration; colour calibration; display test; monitor test; colors look wrong"
 msgstr ""
 "színprofil; ICC; OLED; színkalibrálás; kijelzőteszt; monitorteszt; rosszak a színek"
 
-#: linux/libexec/monet-quick:8248
+#: linux/libexec/monet-quick:8418
 msgid "Make the pointer easier to see"
 msgstr ""
 
-#: linux/libexec/monet-quick:8248
+#: linux/libexec/monet-quick:8418
 msgid "Accessibility · Pointer size"
 msgstr ""
 
-#: linux/libexec/monet-quick:8249
+#: linux/libexec/monet-quick:8419
 msgid "mouse pointer; cursor size; bigger cursor; larger pointer; find mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:8250
+#: linux/libexec/monet-quick:8420
 msgid "Accessibility · Animation and movement"
 msgstr ""
 
-#: linux/libexec/monet-quick:8251
+#: linux/libexec/monet-quick:8421
 msgid "reduce motion; stop animations; less movement; disable animation"
 msgstr ""
 
-#: linux/libexec/monet-quick:8252
+#: linux/libexec/monet-quick:8422
 msgid "Sound · Choose where sound plays"
 msgstr ""
 
-#: linux/libexec/monet-quick:8253
+#: linux/libexec/monet-quick:8423
 msgid ""
 "headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"
 msgstr ""
 
-#: linux/libexec/monet-quick:8254
+#: linux/libexec/monet-quick:8424
 msgid "Sound · Microphone volume"
 msgstr ""
 
-#: linux/libexec/monet-quick:8255
+#: linux/libexec/monet-quick:8425
 msgid "microphone; mic; people cannot hear me; input volume; recording sound"
 msgstr ""
 
-#: linux/libexec/monet-quick:8256
+#: linux/libexec/monet-quick:8426
 msgid "Connect a Bluetooth device"
 msgstr ""
 
-#: linux/libexec/monet-quick:8256
+#: linux/libexec/monet-quick:8426
 msgid "Bluetooth · Pair headphones, a mouse or a controller"
 msgstr ""
 
-#: linux/libexec/monet-quick:8257
+#: linux/libexec/monet-quick:8427
 msgid ""
 "bluetooth; pair headphones; connect wireless headphones; pair controller; wireless mouse"
 msgstr ""
 
-#: linux/libexec/monet-quick:8258
+#: linux/libexec/monet-quick:8428
 msgid "Internet · Wireless networks"
 msgstr "Internet · Vezeték nélküli hálózatok"
 
-#: linux/libexec/monet-quick:8259
+#: linux/libexec/monet-quick:8429
 msgid ""
 "wifi; wi-fi; wireless internet; connect internet; no internet; network connection"
 msgstr ""
 
-#: linux/libexec/monet-quick:8260
+#: linux/libexec/monet-quick:8430
 msgid "LAN settings"
 msgstr "LAN-beállítások"
 
-#: linux/libexec/monet-quick:8260
+#: linux/libexec/monet-quick:8430
 msgid "Internet · Ethernet and IP settings"
 msgstr "Internet · Ethernet- és IP-beállítások"
 
-#: linux/libexec/monet-quick:8261
+#: linux/libexec/monet-quick:8431
 msgid "lan; ethernet; wired network; network cable; ip address; gateway; dns"
 msgstr "lan; ethernet; vezetékes hálózat; hálózati kábel; ip-cím; átjáró; dns"
 
-#: linux/libexec/monet-quick:8262
+#: linux/libexec/monet-quick:8432
 msgid "Birthdays and repeating notes"
 msgstr ""
 
-#: linux/libexec/monet-quick:8262
+#: linux/libexec/monet-quick:8432
 msgid "Calendar · Notes that repeat every year, month, week or day"
 msgstr ""
 
-#: linux/libexec/monet-quick:8263
+#: linux/libexec/monet-quick:8433
 msgid ""
 "birthday; birthdays; anniversary; anniversaries; calendar; repeat a note; repeating notes; yearly reminder; monthly reminder; weekly reminder; daily reminder"
 msgstr ""
 
-#: linux/libexec/monet-quick:8264
+#: linux/libexec/monet-quick:8434
 msgid "Storage · Your shared folder and access to Windows files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8265
+#: linux/libexec/monet-quick:8435
 msgid ""
 "windows files; files from windows; shared with windows; shared folder; windows documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:8266
+#: linux/libexec/monet-quick:8436
 msgid "Quiet notifications"
 msgstr ""
 
-#: linux/libexec/monet-quick:8266
+#: linux/libexec/monet-quick:8436
 msgid "Notifications · Do Not Disturb and app popups"
 msgstr ""
 
-#: linux/libexec/monet-quick:8267
+#: linux/libexec/monet-quick:8437
 msgid ""
 "do not disturb; quiet notifications; stop notifications; mute app; popups; focus time"
 msgstr ""
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8438
 msgid "Back up or restore files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8268
+#: linux/libexec/monet-quick:8438
 msgid "Backups · Copies and earlier versions"
 msgstr ""
 
-#: linux/libexec/monet-quick:8269
+#: linux/libexec/monet-quick:8439
 msgid ""
 "backup; back up; restore files; lost file; deleted document; earlier version; undo file changes; file history; time machine; deja dup"
 msgstr ""
 
-#: linux/libexec/monet-quick:8270
+#: linux/libexec/monet-quick:8440
 msgid "Updates · New versions and recovery"
 msgstr ""
 
-#: linux/libexec/monet-quick:8271
+#: linux/libexec/monet-quick:8441
 msgid ""
 "update; updates; upgrade; new version; system rollback; previous working version"
 msgstr ""
 
-#: linux/libexec/monet-quick:8272
+#: linux/libexec/monet-quick:8442
 msgid "Recovery · Review saved settings and shortcuts"
 msgstr ""
 
-#: linux/libexec/monet-quick:8273
+#: linux/libexec/monet-quick:8443
 msgid ""
 "recovery; undo desktop changes; restore settings; undo settings update; repair desktop preferences"
 msgstr ""
 
-#: linux/libexec/monet-quick:8274
+#: linux/libexec/monet-quick:8444
 msgid "Restore work after Windows"
 msgstr ""
 
-#: linux/libexec/monet-quick:8274
+#: linux/libexec/monet-quick:8444
 msgid "Play on Windows · Reopen apps when you return"
 msgstr ""
 
-#: linux/libexec/monet-quick:8275
+#: linux/libexec/monet-quick:8445
 msgid ""
 "restore browser tabs; reopen documents; remember windows; restore session; return from windows; switching systems"
 msgstr ""
 
-#: linux/libexec/monet-quick:8276
+#: linux/libexec/monet-quick:8446
 msgid "Power & Sleep · Your apps come back after a restart"
 msgstr "Energia & alvás · Az alkalmazásaid újraindítás után visszatérnek"
 
-#: linux/libexec/monet-quick:8277
+#: linux/libexec/monet-quick:8447
 msgid ""
 "reopen apps after restart; apps after reboot; open apps again after restart; remember open apps; restore apps after shutdown; windows where they were"
 msgstr ""
 "alkalmazások újranyitása újraindítás után; alkalmazások visszaállítása; megnyitott alkalmazások megjegyzése; ablakok ott, ahol voltak"
 
-#: linux/libexec/monet-quick:8279
+#: linux/libexec/monet-quick:8449
 msgid "Choose default apps"
 msgstr ""
 
-#: linux/libexec/monet-quick:8279
+#: linux/libexec/monet-quick:8449
 msgid "Default Apps · Browser, email and files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8280
+#: linux/libexec/monet-quick:8450
 msgid "default apps; change default browser; open with; email app; pdf app"
 msgstr ""
 
-#: linux/libexec/monet-quick:8281
+#: linux/libexec/monet-quick:8451
 msgid "Personalize Monet and manage your devices"
 msgstr ""
 
-#: linux/libexec/monet-quick:8282
+#: linux/libexec/monet-quick:8452
 msgid ""
 "control panel; system preferences; system settings; gnome settings; kde settings"
 msgstr ""
 
-#: linux/libexec/monet-quick:8286
+#: linux/libexec/monet-quick:8456
 msgid "Browse folders and connected drives"
 msgstr ""
 
-#: linux/libexec/monet-quick:8287
+#: linux/libexec/monet-quick:8457
 msgid ""
 "file explorer; windows explorer; finder; file manager; dolphin; nautilus; nemo; thunar"
 msgstr ""
 
-#: linux/libexec/monet-quick:8288
+#: linux/libexec/monet-quick:8458
 msgid "Text Editor"
 msgstr ""
 
-#: linux/libexec/monet-quick:8288
+#: linux/libexec/monet-quick:8458
 msgid "Edit plain text and code"
 msgstr ""
 
-#: linux/libexec/monet-quick:8289
+#: linux/libexec/monet-quick:8459
 msgid ""
 "notepad; notepad++; textedit; text editor; kate; gedit; gnome text editor; mousepad"
 msgstr ""
 
-#: linux/libexec/monet-quick:8290
+#: linux/libexec/monet-quick:8460
 msgid "See running apps, CPU, graphics, memory, network and temperatures"
 msgstr ""
 
-#: linux/libexec/monet-quick:8291
+#: linux/libexec/monet-quick:8461
 msgid ""
 "task manager; activity monitor; system monitor; running apps; cpu usage; memory usage; processes; performance; graphics; gpu; temperature; fans; network; disk activity"
 msgstr ""
 
-#: linux/libexec/monet-quick:8292
+#: linux/libexec/monet-quick:8462
 msgid "Capture your screen or a selected area"
 msgstr ""
 
-#: linux/libexec/monet-quick:8293
+#: linux/libexec/monet-quick:8463
 msgid ""
 "snipping tool; snip and sketch; screenshot; screen capture; spectacle; gnome screenshot"
 msgstr ""
 
-#: linux/libexec/monet-quick:8294
+#: linux/libexec/monet-quick:8464
 msgid "Open and extract compressed files"
 msgstr ""
 
-#: linux/libexec/monet-quick:8295
+#: linux/libexec/monet-quick:8465
 msgid ""
 "7-zip; 7zip; winrar; archive utility; archive manager; file roller; extract zip; unzip"
 msgstr ""
 
-#: linux/libexec/monet-quick:8296
+#: linux/libexec/monet-quick:8466
 msgid "Read PDFs and annotate documents"
 msgstr ""
 
-#: linux/libexec/monet-quick:8297
+#: linux/libexec/monet-quick:8467
 msgid ""
 "preview; adobe reader; acrobat reader; pdf reader; document viewer; okular; evince"
 msgstr ""
 
-#: linux/libexec/monet-quick:8298
+#: linux/libexec/monet-quick:8468
 msgid "Find and install apps for Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:8299
+#: linux/libexec/monet-quick:8469
 msgid ""
 "app store; microsoft store; software center; software centre; gnome software; discover; bazaar"
 msgstr ""
 
-#: linux/libexec/monet-quick:8327
+#: linux/libexec/monet-quick:8497
 msgid "how can i do please my the a an to where is are find open"
 msgstr ""
 
-#: linux/libexec/monet-quick:8512
+#: linux/libexec/monet-quick:8682
 msgid "Windows installer"
 msgstr "Windows-telepítő"
 
-#: linux/libexec/monet-quick:8513
+#: linux/libexec/monet-quick:8683
 msgid "Linux package"
 msgstr "Linux-csomag"
 
-#: linux/libexec/monet-quick:8514 linux/libexec/monet-files-tools:712
+#: linux/libexec/monet-quick:8684 linux/libexec/monet-files-tools:712
 msgid "Linux application"
 msgstr ""
 
-#: linux/libexec/monet-quick:8514
+#: linux/libexec/monet-quick:8684
 msgid "Downloaded app"
 msgstr "Letöltött alkalmazás"
 
-#: linux/libexec/monet-quick:8522
+#: linux/libexec/monet-quick:8692
 msgid "Home"
 msgstr "Kezdőmappa"
 
-#: linux/libexec/monet-quick:8558
+#: linux/libexec/monet-quick:8728
 msgid "Open application?"
 msgstr "Megnyitod az alkalmazást?"
 
-#: linux/libexec/monet-quick:8559
+#: linux/libexec/monet-quick:8729
 msgid "Open this downloaded application?"
 msgstr "Megnyitod ezt a letöltött alkalmazást?"
 
-#: linux/libexec/monet-quick:8972
+#: linux/libexec/monet-quick:9148
 msgid "Waiting to reopen."
 msgstr ""
 
-#: linux/libexec/monet-quick:8973
+#: linux/libexec/monet-quick:9149
 msgid ""
 "The Windows trip hasn't been confirmed. Your saved recovery checkpoint is still available."
 msgstr ""
 
-#: linux/libexec/monet-quick:8974
+#: linux/libexec/monet-quick:9150
 msgid "Opening and checking its window…"
 msgstr ""
 
-#: linux/libexec/monet-quick:8975
+#: linux/libexec/monet-quick:9151
 msgid "Opened a window. The app controls its own tabs and documents."
 msgstr ""
 
-#: linux/libexec/monet-quick:8976
+#: linux/libexec/monet-quick:9152
 msgid "Already running; left as it was. Its saved work was not opened again."
 msgstr ""
 
-#: linux/libexec/monet-quick:8977
+#: linux/libexec/monet-quick:9153
 msgid ""
 "Opening wasn't confirmed. Retry checks an existing launch before opening another."
 msgstr ""
 
-#: linux/libexec/monet-quick:8978
+#: linux/libexec/monet-quick:9154
 msgid "This app is no longer installed. Install it again, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:8979
+#: linux/libexec/monet-quick:9155
 msgid "Saved folder tabs and split views reopened."
 msgstr ""
 
-#: linux/libexec/monet-quick:8980
+#: linux/libexec/monet-quick:9156
 msgid ""
 "Folder tabs could not be confirmed. Reconnect any missing drives, then retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:8981
+#: linux/libexec/monet-quick:9157
 msgid "Files reopened. Its previous folders and tabs could not be saved."
 msgstr ""
 "A Fájlok újra megnyílt. A korábbi mappáit és lapjait nem sikerült menteni."
 
-#: linux/libexec/monet-quick:8982
+#: linux/libexec/monet-quick:9158
 msgid "The browser reopened its saved normal tabs. Private tabs stay closed."
 msgstr ""
 
-#: linux/libexec/monet-quick:8983
+#: linux/libexec/monet-quick:9159
 msgid "Browser opened normally, following its own tab-restore preference."
 msgstr ""
 
-#: linux/libexec/monet-quick:8984
+#: linux/libexec/monet-quick:9160
 msgid ""
 "The saved browser session is no longer available. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8985
+#: linux/libexec/monet-quick:9161
 msgid ""
 "Private or unsupported browser session left closed. You can open the browser normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8986
+#: linux/libexec/monet-quick:9162
 msgid ""
 "Some windows or browser profiles reopened. Others are unavailable or still waiting to be confirmed."
 msgstr ""
 
-#: linux/libexec/monet-quick:8987
+#: linux/libexec/monet-quick:9163
 msgid ""
 "The app opened with requests for its saved documents. Check the app for any unsaved changes."
 msgstr ""
 
-#: linux/libexec/monet-quick:8988
+#: linux/libexec/monet-quick:9164
 msgid ""
 "Some saved documents are unavailable. Reconnect their drive, then choose Retry documents, or check Backups."
 msgstr ""
 
-#: linux/libexec/monet-quick:8989
+#: linux/libexec/monet-quick:9165
 msgid ""
 "The editor's final document list could not be confirmed. Files saved under new names during switching may need to be opened from the editor's recent files."
 msgstr ""
 
-#: linux/libexec/monet-quick:8990
+#: linux/libexec/monet-quick:9166
 msgid "This recovery checkpoint has expired. You can open the app normally."
 msgstr ""
 
-#: linux/libexec/monet-quick:8994
+#: linux/libexec/monet-quick:9170
 msgid "Private browsing stays closed. You can open the browser normally."
 msgstr ""
 "A privát böngészés zárva marad. A böngészőt megnyithatod a szokásos módon."
 
-#: linux/libexec/monet-quick:9050
+#: linux/libexec/monet-quick:9226
 msgid "Some apps didn't reopen"
 msgstr "Néhány alkalmazás nem nyílt meg újra"
 
-#: linux/libexec/monet-quick:9051
+#: linux/libexec/monet-quick:9227
 msgid ""
 "Everything else is back where it was. Review what's missing and try again."
 msgstr ""
 "Minden más visszakerült a helyére. Nézd meg, mi hiányzik, és próbáld újra."
 
-#: linux/libexec/monet-quick:9055
+#: linux/libexec/monet-quick:9231
 msgid "Back in Monet"
 msgstr ""
 
-#: linux/libexec/monet-quick:9055
+#: linux/libexec/monet-quick:9231
 msgid "Review return"
 msgstr ""
 
-#: linux/libexec/monet-quick:9056
+#: linux/libexec/monet-quick:9232
 msgid "Some work needs attention. Review what opened and what you can retry."
 msgstr ""
 
-#: linux/libexec/monet-quick:9057
+#: linux/libexec/monet-quick:9233
 msgid "Review which apps reopened and how they handled your saved work."
 msgstr ""
 
-#: linux/libexec/monet-quick:9265
+#: linux/libexec/monet-quick:9441
 msgid "Your screenshots and clips from Windows are in Pictures and Videos."
 msgstr ""
 "A Windowsból származó képernyőképeid és klipjeid a Képek és a Videók mappában vannak."
 
-#: linux/libexec/monet-quick:9267
+#: linux/libexec/monet-quick:9443
 msgid "Your screenshots from Windows are in Pictures › Screenshots."
 msgstr ""
 "A Windowsból származó képernyőképeid a Képek › Screenshots mappában vannak."
 
-#: linux/libexec/monet-quick:9269
+#: linux/libexec/monet-quick:9445
 msgid "Your clips from Windows are in Videos."
 msgstr "A Windowsból származó klipjeid a Videók mappában vannak."
 
-#: linux/libexec/monet-quick:9466
+#: linux/libexec/monet-quick:9642
 msgid "The drive couldn't be opened. Try plugging it in again."
 msgstr "A meghajtót nem sikerült megnyitni. Próbáld újra csatlakoztatni."
 
-#: linux/libexec/monet-quick:9470
+#: linux/libexec/monet-quick:9646
 msgid "earlier"
 msgstr "korábbi"
 
-#: linux/libexec/monet-quick:9474
+#: linux/libexec/monet-quick:9650
 msgid "Monet can't write on this drive."
 msgstr "A Monet nem tud írni erre a meghajtóra."
 
-#: linux/libexec/monet-quick:9482 linux/libexec/monet-quick:9506
+#: linux/libexec/monet-quick:9658 linux/libexec/monet-quick:9682
 msgid ""
 "The copy didn't finish. Monet tries again the next time the drive is plugged in."
 msgstr ""
 "A másolás nem fejeződött be. A Monet újra megpróbálja, amikor legközelebb csatlakoztatod a meghajtót."
 
-#: linux/libexec/monet-quick:9521
+#: linux/libexec/monet-quick:9697
 msgid "Your files haven't been copied for a week"
 msgstr "A fájljaid egy hete nem lettek átmásolva"
 
-#: linux/libexec/monet-quick:9522
+#: linux/libexec/monet-quick:9698
 msgid "Plug in %1 and Monet copies them."
 msgstr "Csatlakoztasd: %1, és a Monet átmásolja őket."
 
-#: linux/libexec/monet-quick:9522
+#: linux/libexec/monet-quick:9698
 msgid "your backup drive"
 msgstr "a mentési meghajtód"
 
-#: linux/libexec/monet-quick:9538
+#: linux/libexec/monet-quick:9714
 msgid "Your files from Windows are here"
 msgstr "Itt vannak a fájljaid a Windowsból"
 
-#: linux/libexec/monet-quick:9539
+#: linux/libexec/monet-quick:9715
 msgid "In Documents, Pictures, Music, Videos, Downloads and on the desktop."
 msgstr ""
 "A Dokumentumok, Képek, Zene, Videók és Letöltések mappában, valamint az asztalon."
 
-#: linux/libexec/monet-quick:9961
+#: linux/libexec/monet-quick:10137
 msgid "Choose a complete Windows 11 ISO file on this PC or a connected drive."
 msgstr ""
 "Válassz egy teljes Windows 11 ISO-fájlt ezen a gépen vagy egy csatlakoztatott meghajtón."
 
-#: linux/libexec/monet-quick:10090
+#: linux/libexec/monet-quick:10266
 msgid "Couldn't check phones. Try again."
 msgstr ""
 
-#: linux/libexec/monet-quick:10305
+#: linux/libexec/monet-quick:10482
 msgid "Windows can't get this program this time."
 msgstr "A Windows most nem kaphatja meg ezt a programot."
 

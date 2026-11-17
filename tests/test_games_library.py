@@ -431,13 +431,19 @@ class TheWholeLibrary(Fixture):
 
     def test_the_library_command(self):
         out = io.StringIO()
+        stand_alone = "local:0123456789abcdef01234567"
         with mock.patch.object(self.q.subprocess, "Popen", lambda *a, **k: None), contextlib.redirect_stdout(out), \
                 mock.patch.object(self.q, "RUNTIME", self.tmp), mock.patch.object(self.q, "PROTONDB_LOCK", self.tmp / "protondb.lock"), \
-                mock.patch.object(self.q, "HEROIC_ROOTS", (self.heroic,)), mock.patch.object(self.q, "LUTRIS_ROOTS", (self.lutris,)):
+                mock.patch.object(self.q, "HEROIC_ROOTS", (self.heroic,)), mock.patch.object(self.q, "LUTRIS_ROOTS", (self.lutris,)), \
+                mock.patch.object(self.q, "local_windows_games", return_value={stand_alone: {"name": "Aster"}}), \
+                mock.patch.object(self.q, "played", return_value=[{"key": stand_alone, "last": 12345, "minutes": 6}]):
             self.q.main(["library"])
         found = {g["id"]: g for g in json.loads(out.getvalue())}
         self.assertEqual(found["steam:1091500"]["state"], "owned")
         self.assertEqual(found["epic:Quail"]["install"], "heroic:legendary:Quail")
+        game = found[stand_alone]
+        self.assertEqual((game["here"], game["plays"], game["state"]), (stand_alone, "monet", "ready"))
+        self.assertEqual((game["last"], game["minutes"]), (12345, 6))
 
 
 class Installing(Fixture):
