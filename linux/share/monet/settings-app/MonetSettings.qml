@@ -657,6 +657,9 @@ Shared.MonetWindow {
     // "failed"; what the check found; and what Monet said.
     property string updateState: ""
     property bool updateStaged: false
+    property int updateInstallRevision: 0
+    readonly property bool updateRestartReady: updateStaged && ["done", "failed"].includes(updateState)
+        && betaState !== "installing" && !betaRestartReady
     property var updateFound: ({})
     property string updateMessage: ""
     property var updateHistory: ({ ok: false, items: [], state: "unknown" })
@@ -670,6 +673,7 @@ Shared.MonetWindow {
     property string betaMessage: ""
     property string betaState: ""
     property bool betaStaged: false
+    readonly property bool betaRestartReady: showBetas && betaState === "done" && betaStaged && updateStaged
     // Firmware for the PC's own parts (fwupd): the same states, and the updates.
     // Security: what keeps the PC safe (monet-quick security), the fix that's running, asking
     // before the restart into the firmware settings, and Monet's key asked for.
@@ -1187,9 +1191,14 @@ Shared.MonetWindow {
     function loadUpdateHistory() {
         if (updateHistoryBusy) return
         updateHistoryBusy = true
+        const revision = updateInstallRevision
         ask("update-history", (out, code) => {
-            const found = sheet.json(out, {})
+            const found = sheet.json(out, {}) || {}
             sheet.updateHistoryBusy = false
+            // A local status read can finish after an install has reported a newer state.
+            if (revision === sheet.updateInstallRevision && code === 0 && typeof found.staged === "boolean") {
+                sheet.updateStaged = found.staged
+            }
             sheet.updateHistory = code === 0 && typeof found.ok === "boolean" && Array.isArray(found.items)
                 && found.items.length <= 10 && found.items.every(item => item
                     && ["done", "failed", "skipped"].includes(item.result)
@@ -1252,6 +1261,8 @@ Shared.MonetWindow {
             const result = sheet.json(out, { ok: false, message: "" })
             const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
             sheet.betaMessage = result.ok ? "" : lines.length > 0 ? lines[lines.length - 1] : ""
+            sheet.updateInstallRevision++
+            if (typeof result.staged === "boolean") sheet.updateStaged = result.staged
             sheet.betaStaged = result.staged === true
             sheet.betaState = result.ok ? "done" : "failed"
         })
@@ -1447,7 +1458,8 @@ Shared.MonetWindow {
             const result = sheet.json(out, { ok: false, message: "" })
             const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
             sheet.updateMessage = lines.length > 0 ? lines[lines.length - 1] : ""
-            sheet.updateStaged = result.staged === true
+            sheet.updateInstallRevision++
+            if (typeof result.staged === "boolean") sheet.updateStaged = result.staged
             sheet.updateState = result.ok ? "done" : "failed"
             sheet.loadUpdateHistory()
         })
@@ -1468,24 +1480,24 @@ Shared.MonetWindow {
         if (updateState === "available") {
             return i18np("%1 app update is ready", "%1 app updates are ready", found.apps || 0)
         }
-        if (updateState === "done") {
-            return updateStaged ? i18n("Restart to finish") : i18n("Monet and your apps are up to date.")
-        }
+        if (updateRestartReady) return i18n("Restart to finish")
+        if (updateState === "done") return i18n("Monet and your apps are up to date.")
         if (pc.monet && pc.beta > 0) return i18n("Monet %1", i18n("%1 beta %2", pc.monet, pc.beta))
         return pc.monet ? i18n("Monet %1", pc.monet) : i18n("Monet")
     }
 
     function updateDetail() {
         const found = updateFound
+        if (updateRestartReady && updateState !== "failed") return i18n("The new Monet starts the next time you restart.")
         switch (updateState) {
         case "checking": return i18n("Looking for updates…")
-        case "none": return i18n("Monet and your apps are up to date.")
+        case "none": return updateStaged ? "" : i18n("Monet and your apps are up to date.")
         case "available":
             if (found.message) return found.message
             return found.system && found.apps > 0 ? i18np("And %1 app update. Install when you're ready.", "And %1 app updates. Install when you're ready.", found.apps || 0)
                 : i18n("Install when you're ready.")
         case "installing": return i18n("Downloading and installing. You can keep using your PC.")
-        case "done": return updateStaged ? i18n("The new Monet starts the next time you restart.") : ""
+        case "done": return ""
         case "failed": return updateMessage || i18n("Monet couldn't finish the update. Try again.")
         default: return pc.autoUpdates === false ? i18n("Monet only updates when you ask it to.")
             : i18n("Automatic updates are on. You can also check now.")
@@ -8959,7 +8971,7 @@ Shared.MonetWindow {
                         Pill {
                             tone: look
                             objectName: "updateAction"
-                            readonly property bool restartReady: sheet.updateStaged && ["done", "failed"].includes(sheet.updateState)
+                            readonly property bool restartReady: sheet.updateRestartReady
                             kind: sheet.updateState === "available" || restartReady ? "lily" : "plain"
                             visible: sheet.updateState !== "done" || restartReady
                             text: sheet.updateState === "checking" ? i18n("Checking…")
@@ -8979,6 +8991,24 @@ Shared.MonetWindow {
                                     sheet.checkUpdates()
                                 }
                             }
+                        }
+                    }
+                }
+                Card {
+                    visible: sheet.updateStaged && !sheet.updateRestartReady && !sheet.betaRestartReady
+                    tone: look
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        title: i18n("Restart to finish")
+                        detail: i18n("The new Monet starts the next time you restart.")
+                        Pill {
+                            tone: look
+                            objectName: "stagedUpdateRestart"
+                            kind: "lily"
+                            text: i18n("Restart now")
+                            enabledPill: sheet.updateState !== "installing" && sheet.betaState !== "installing"
+                            onClicked: sheet.ask("restart")
                         }
                     }
                 }
@@ -9055,7 +9085,7 @@ Shared.MonetWindow {
                             Pill {
                                 tone: look
                                 objectName: "betaRestart"
-                                visible: sheet.betaState === "done" && sheet.betaStaged
+                                visible: sheet.betaRestartReady
                                 kind: "lily"
                                 text: i18n("Restart now")
                                 onClicked: sheet.ask("restart")

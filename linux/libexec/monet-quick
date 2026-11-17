@@ -173,7 +173,7 @@
     monet-quick update-check [beta]      is there a newer Monet, or app updates? as JSON (and a beta
                                          to try, with beta)
     monet-quick install-beta TAG         install that beta, when someone chose it
-    monet-quick update-history           recent automatic results, read-only and on demand
+    monet-quick update-history           recent automatic results and pending restart, read-only
     monet-quick update                   install them now (by itself, it does once a day)
     monet-quick auto-updates on|off      update by itself, or only when asked
     monet-quick previous                 the Monet before the last update, to go back to, as JSON
@@ -10168,7 +10168,7 @@ def main(argv):
     elif cmd == "install-beta" and len(args) == 1:
         emit(install_beta(args[0]))
     elif cmd == "update-history":
-        emit(update_history())
+        emit(dict(update_history(), staged=update_waiting()))
     elif cmd == 'profile-recovery':
         emit(profile_recovery(args))
     elif cmd == "previous":

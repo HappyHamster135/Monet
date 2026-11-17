@@ -164,6 +164,42 @@ class LookFeedback(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "notification-audio-test"], self.helper.commands)
 
+    def test_reopening_updates_shows_restart_for_a_downloaded_update_without_a_network_check(self):
+        self.helper.replies["update-history"] = '{"ok":false,"items":[],"state":"idle","staged":true}'
+        self.window.setProperty("page", "updates")
+        action = self.window.findChild(QObject, "stagedUpdateRestart")
+        check = self.window.findChild(QObject, "updateAction")
+        self.assertIsNotNone(action)
+        self.assertIsNotNone(check)
+        self.wait_for(lambda: action.property("visible"))
+        self.assertEqual(action.property("text"), self.words.i18n("Restart now"))
+        self.assertEqual(check.property("text"), self.words.i18n("Check for updates"))
+        self.assertNotIn(["helper", "update-check"], self.helper.commands)
+        self.assertNotIn(["helper", "update"], self.helper.commands)
+
+        self.assertTrue(QMetaObject.invokeMethod(action, "clicked"))
+        self.assertIn(["helper", "restart"], self.helper.commands)
+
+        self.helper.replies["update-history"] = '{"ok":true,"items":[],"state":"idle","staged":false}'
+        self.assertTrue(QMetaObject.invokeMethod(self.window, "loadUpdateHistory"))
+        self.wait_for(lambda: not action.property("visible"))
+
+    def test_a_status_reply_started_before_install_cannot_hide_restart(self):
+        self.helper.hold_history = True
+        self.helper.replies["update-check"] = '{"ok":true,"system":true,"version":"0.9.8-8"}'
+        self.helper.replies["update"] = '{"ok":true,"staged":true}'
+        self.window.setProperty("page", "updates")
+        action = self.window.findChild(QObject, "updateAction")
+        self.assertIsNotNone(action)
+        self.wait_for(lambda: self.helper.pending_history)
+        self.assertTrue(QMetaObject.invokeMethod(action, "clicked"))
+        self.wait_for(lambda: self.window.property("updateState") == "available")
+        self.assertTrue(QMetaObject.invokeMethod(action, "clicked"))
+        self.wait_for(lambda: action.property("restartReady"))
+        self.helper.done.emit(self.helper.pending_history.pop(), '{"ok":true,"items":[],"state":"idle","staged":false}', 0, "")
+        self.wait_for(lambda: not self.window.property("updateHistoryBusy"))
+        self.assertTrue(action.property("restartReady"))
+
     def test_restart_follows_the_staged_update_even_if_an_app_update_fails(self):
         self.window.setProperty("page", "updates")
         action = self.window.findChild(QObject, "updateAction")
