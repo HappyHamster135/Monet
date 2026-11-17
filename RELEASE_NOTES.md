@@ -17,6 +17,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Apps remember where they were.** After you close an app's last main window,
   the app reopens at the same position and size, on the same monitor when it's
   connected. If you closed it maximized, it reopens maximized.
+- **Easier window controls.** The title bar fades into place with steady,
+  larger targets for minimize, maximize and close. It stays visible while
+  you press a button and clears as soon as you minimize or close the window.
 - **Back to exactly where you were.** In the Store, Back after an app's page
   takes you to the very spot you left in the list, whether the front page, a
   section or a search, instead of a little above or below it.
@@ -130,9 +133,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   have to add them again.
 - **Cleaner windows.** Apps now have the whole window to themselves, with no
   title bar across the top. Move the pointer to the top of a window, or to the
-  top of the screen when it fills it, and the title bar slides down with the
+  top of the screen when it fills it, and the title bar appears with the
   app's name and the minimize, maximize and close buttons. Drag it to move the
-  window, double-click it to fill the screen, and it slides away again when
+  window, double-click it to fill the screen, and it fades away again when
   you move on. Apps that draw their own title bar look just as they did. If
   you'd rather keep a title bar on every window, turn off Title bars appear
   when you point at the top in Settings → Light & Wallpaper.

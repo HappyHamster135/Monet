@@ -434,12 +434,37 @@ class Behaviour(unittest.TestCase):
         self.assertEqual(self.js("scene.app.log"), ["maximize true true"])
         self.click("titleMaximize")
         self.assertEqual(self.js("scene.app.log")[-1], "maximize false false")
-        self.click("titleClose")
-        self.assertEqual(self.js("scene.app.log")[-1], "close")
         self.click("titleMinimize")
         self.assertTrue(self.js("scene.app.minimized"))
-        QTest.qWait(400)
         self.assertIsNone(self.shown_for())
+        self.js("scene.app.minimized = false")
+        self.point(500, 300)
+        self.reveal()
+        # The top-right pixel is part of Close.
+        QTest.mouseClick(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(self.bar.width() - 1, 1))
+        self.assertEqual(self.js("scene.app.log")[-1], "close")
+        self.assertIsNone(self.shown_for())
+
+    def test_a_press_keeps_the_bar_until_release_and_can_be_cancelled(self):
+        self.reveal()
+        edge = QPoint(self.bar.width() - 1, 1)
+        QTest.mousePress(self.bar, Qt.LeftButton, Qt.NoModifier, edge)
+        self.assertTrue(self.bar.property("held"))
+        outside = QPoint(self.bar.width() - 1, self.bar.height() + 12)
+        QTest.mouseMove(self.bar, outside)
+        self.point(self.bar.x() + outside.x(), self.bar.y() + outside.y(), 500)
+        self.assertEqual(self.shown_for(), "Files")
+        QTest.mouseRelease(self.bar, Qt.LeftButton, Qt.NoModifier, outside)
+        QTest.qWait(500)
+        self.assertIsNone(self.shown_for())
+        self.assertEqual(self.js("scene.app.log"), [])
+
+    def test_a_window_moving_away_retracts_its_bar_without_pointer_movement(self):
+        self.reveal()
+        self.js("scene.app.frameGeometry = Qt.rect(100, 250, 800, 600)")
+        QTest.qWait(650)
+        self.assertIsNone(self.shown_for())
+        self.assertFalse(self.bar.isVisible())
 
     def test_the_bar_moves_fills_and_opens_the_menu(self):
         self.reveal()

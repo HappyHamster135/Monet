@@ -1,5 +1,5 @@
 /*
- * The title bar Monet Titles slides down over a window's top: the frames' matte glass (KWin's own
+ * The title bar Monet Titles shows over a window's top: the frames' matte glass (KWin's own
  * windows have no blur behind them), the app's icon and title, and the frames' buttons, signs
  * brushed in ink that swell into a dab of paint under the pointer. Drag it to move the window,
  * double-click it to fill the screen or give the window its size back, right-click it for the
@@ -22,7 +22,9 @@ Window {
     property string art: "file://@DATADIR@/monet/window-buttons/"
     readonly property var area: window && window.output ? Hover.barRect(window.clientGeometry, window.output.geometry)
                                                         : Hover.rect(0, 0, 1, 1)
-    readonly property bool held: grip.holding
+    readonly property bool dragHeld: grip.holding
+    readonly property bool held: dragHeld || (grip.pressedButtons & Qt.RightButton) !== 0
+        || minimize.held || maximize.held || dismiss.held
     readonly property bool lit: window !== null && window.active
     readonly property bool filling: window !== null && Hover.filling(window.maximizeMode)
     readonly property color ink: lit ? (smoke ? "#EFECE6" : "#1C1B19") : (smoke ? "#B4AEA5" : "#6B665E")
@@ -34,7 +36,7 @@ Window {
 
     title: "Monet title bar"
     // A tooltip to KWin: above everything, no focus taken, no frame of its own, no grab of the
-    // pointer, and no window-opening animation over its own slide.
+    // pointer, and no window-opening animation over its own fade.
     flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.BypassWindowManagerHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     visible: false
@@ -56,12 +58,16 @@ Window {
         open = true
     }
 
-    function close() {
-        if (!open) {
-            return
-        }
+    function close(immediate = false) {
+        if (!open && !immediate) return
         open = false
-        settle.restart()
+        if (immediate || speed <= 0) {
+            settle.stop()
+            hide()
+            window = null
+        } else {
+            settle.restart()
+        }
     }
 
     // Once KWin moves the window, the pointer is KWin's: the bar never hears the button let go.
@@ -79,7 +85,7 @@ Window {
     // Shown and hidden by hand: KWin doesn't show a script's window for a visible it's given.
     Timer {
         id: settle
-        interval: Math.round(160 * bar.speed) + 40
+        interval: Math.round(100 * bar.speed) + 16
         onTriggered: {
             if (!bar.open) {
                 bar.hide()
@@ -93,19 +99,11 @@ Window {
         objectName: "titleSheet"
         width: bar.width
         height: bar.height
-        // Down from the window's top edge as it comes, back up as it goes (quicker going).
-        y: bar.open ? 0 : -height
+        // Keep the hit targets in place through the animation.
         opacity: bar.open ? 1 : 0
-        Behavior on y {
-            NumberAnimation {
-                duration: Math.round((bar.open ? 220 : 160) * bar.speed)
-                easing.type: Easing.Bezier
-                easing.bezierCurve: bar.open ? [0.2, 0.9, 0.25, 1, 1, 1] : [0.4, 0, 1, 1, 1, 1]
-            }
-        }
         Behavior on opacity {
             NumberAnimation {
-                duration: Math.round((bar.open ? 140 : 160) * bar.speed)
+                duration: Math.round((bar.open ? 110 : 100) * bar.speed)
             }
         }
 
@@ -138,7 +136,10 @@ Window {
             // Held down by the person. Not MouseArea's pressed: that stays set when KWin takes the
             // pointer for a move, as no release ever comes.
             property bool holding: false
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: buttons.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             enabled: bar.open
             onPressed: mouse => {
@@ -201,10 +202,9 @@ Window {
         Row {
             id: buttons
             anchors.right: parent.right
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
+            anchors.top: parent.top
             BarButton {
+                id: minimize
                 objectName: "titleMinimize"
                 kind: "minimize"
                 name: i18nd("monet", "Minimize")
@@ -214,11 +214,13 @@ Window {
                 ink: bar.ink
                 enabled: bar.open && bar.window !== null && bar.window.minimizable
                 onActivated: {
-                    bar.window.minimized = true
-                    bar.close()
+                    const target = bar.window
+                    bar.close(true)
+                    target.minimized = true
                 }
             }
             BarButton {
+                id: maximize
                 objectName: "titleMaximize"
                 kind: bar.filling ? "restore" : "maximize"
                 name: bar.filling ? i18nd("monet", "Restore") : i18nd("monet", "Maximize")
@@ -230,6 +232,7 @@ Window {
                 onActivated: bar.toggleFilling()
             }
             BarButton {
+                id: dismiss
                 objectName: "titleClose"
                 kind: "close"
                 name: i18nd("monet", "Close")
@@ -238,7 +241,11 @@ Window {
                 lit: bar.lit
                 ink: bar.ink
                 enabled: bar.open && bar.window !== null && bar.window.closeable
-                onActivated: bar.window.closeWindow()
+                onActivated: {
+                    const target = bar.window
+                    bar.close(true)
+                    target.closeWindow()
+                }
             }
         }
     }
@@ -254,8 +261,9 @@ Window {
         required property bool lit
         required property color ink
         signal activated()
-        width: 40
-        height: 32
+        readonly property bool held: press.pressed
+        width: Math.min(44, bar.width / 3)
+        height: bar.height
         Accessible.role: Accessible.Button
         Accessible.name: name
         Accessible.onPressAction: if (enabled) activated()
@@ -263,8 +271,8 @@ Window {
             id: picture
             objectName: "titleArt-" + button.kind
             anchors.centerIn: parent
-            width: 26
-            height: 26
+            width: Math.min(26, button.width, button.height)
+            height: width
             sourceSize: Qt.size(78, 78)
             source: Hover.art(button.folder, button.smoke, button.kind, press.pressed, press.containsMouse, button.lit)
             opacity: button.enabled ? 1 : 0.35
@@ -272,7 +280,7 @@ Window {
         Text {
             anchors.centerIn: parent
             visible: picture.status !== Image.Ready
-            text: button.kind === "close" ? "×" : button.kind === "minimize" ? "−" : "□"
+            text: button.kind === "close" ? "×" : button.kind === "minimize" ? "−" : button.kind === "restore" ? "❐" : "□"
             color: button.ink
             font.pixelSize: 22
             Accessible.ignored: true
@@ -281,7 +289,8 @@ Window {
             id: press
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: button.activated()
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouse => mouse.button === Qt.RightButton ? bar.menuAsked() : button.activated()
         }
     }
 }

@@ -5,9 +5,9 @@
  * While it's on, the windows KWin frames get Monet's bare frame (monet-light picks MonetBare,
  * tools/make-decoration.py): its shadow alone, no title bar, so the app has the whole window.
  * Bring the pointer to the top of a window, or to the top of the screen over one that fills it,
- * and after a moment a title bar of Monet's glass slides down over the window's top: the app's
+ * and after a moment a title bar of Monet's glass appears over the window's top: the app's
  * icon and title, minimize, maximize and close. Drag it to move the window, double-click it to
- * fill the screen, right-click it for the window's menu. It slides away again a moment after
+ * fill the screen, right-click it for the window's menu. It fades away a moment after
  * the pointer leaves it. The window never moves or changes size for it: the bar lies over it.
  *
  * Never for a window that draws its own title bar (GTK, Chromium, Zen, Monet's own apps), one
@@ -32,7 +32,8 @@ Item {
             if (!root.hovering) {
                 root.pending = null
                 reveal.stop()
-                bar.close()
+                away.stop()
+                bar.close(true)
             }
         }
     }
@@ -121,20 +122,21 @@ Item {
         interval: 16
         onTriggered: root.evaluate()
     }
+    function queueEvaluation() {
+        if (root.hovering && !look.running) look.start()
+    }
     Connections {
         target: Workspace
         function onCursorPosChanged() {
-            if (root.hovering && !look.running) {
-                look.start()
-            }
+            root.queueEvaluation()
         }
     }
     Timer {
         id: reveal
-        interval: 150
+        interval: 125
         onTriggered: {
             const w = root.aimedAt(Workspace.cursorPos)
-            if (w && w === root.pending) {
+            if (w && w === root.pending && !bar.held) {
                 bar.openFor(w)
             }
             root.pending = null
@@ -142,7 +144,7 @@ Item {
     }
     Timer {
         id: away
-        interval: 400
+        interval: 320
         onTriggered: {
             const w = bar.window
             const p = Workspace.cursorPos
@@ -165,7 +167,7 @@ Item {
             }
             if (!w || !root.hovering || root.busy() || !Hover.titleless(w) || !w.output
                     || !(w.onAllDesktops || w.desktops.indexOf(Workspace.currentDesktop) >= 0) || root.coveredNow(w)) {
-                bar.close()
+                bar.close(true)
             }
         }
     }
@@ -173,7 +175,7 @@ Item {
         target: bar.window
         ignoreUnknownSignals: true
         function onClosed() {
-            bar.close()
+            bar.close(true)
         }
         // Let go where the bar is, it stays until the pointer leaves it, as after any press.
         function onInteractiveMoveResizeFinished() {
@@ -200,7 +202,7 @@ Item {
             return
         }
         // Let go already: a move now would stick to the pointer until the next click.
-        if (a.window.deleted || (a.what === "move" && !bar.held)) {
+        if (a.window.deleted || bar.window !== a.window || !bar.open || (a.what === "move" && !bar.dragHeld)) {
             asked = null
             return
         }
@@ -218,6 +220,7 @@ Item {
             Workspace.slotWindowMove()
             bar.letGo()
         } else {
+            bar.close(true)
             Workspace.slotWindowOperations()
         }
     }
@@ -231,6 +234,9 @@ Item {
         id: bar
         speed: root.speed
         smoke: root.smoke
+        onOpenChanged: if (!bar.open) look.stop()
+        onAreaChanged: if (bar.open) root.queueEvaluation()
+        onHeldChanged: if (bar.open) root.queueEvaluation()
         onActivateAsked: {
             if (bar.window && Workspace.activeWindow !== bar.window) {
                 Workspace.activeWindow = bar.window
