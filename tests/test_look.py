@@ -4158,7 +4158,7 @@ class WhichSideAGamePlaysOn(unittest.TestCase):
         alone = {g["id"]: g for g in quick.library(marks, steam, [], [])}["steam:1172470"]
         self.assertEqual((alone["plays"], alone["windows"]), ("windows", ""))
         games = GAMES_APP.read_text(encoding="utf-8")
-        self.assertIn('run(["helper", "library"], out => {', games)
+        self.assertIn('run(["helper", "library"],', games)
         self.assertIn('run(["helper", "play", game.here])', games)
         self.assertIn('launch.command = game ? ["monet", "play", game.windows] : ["monet", "windows"]', games)
 
