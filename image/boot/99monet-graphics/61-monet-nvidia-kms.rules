@@ -1,0 +1,5 @@
+# A matching PCI device loads nvidia via its modalias. Bring up its DRM/KMS
+# companion too, before leaving the initramfs. Other vendors do not load it.
+# Both an early-bound device and a later bind are handled. The kmod builtin
+# respects module blacklists; explicit rd.driver.pre remains available.
+ACTION=="add|bind", SUBSYSTEM=="pci", DRIVER=="nvidia", RUN{builtin}+="kmod load nvidia_drm"
