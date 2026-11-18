@@ -501,6 +501,36 @@ class Behaviour(unittest.TestCase):
         self.assertIsNone(self.shown_for())
         self.assertEqual(self.js("scene.app.log"), [])
 
+    def test_a_visible_fading_bar_accepts_the_first_close_click(self):
+        self.reveal()
+        self.js("close()", self.bar)
+        self.assertTrue(self.bar.isVisible())
+        self.assertFalse(self.bar.property("open"))
+        QTest.mouseClick(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(self.bar.width() - 1, 1))
+        self.assertEqual(self.js("scene.app.log"), ["close"])
+
+    def test_a_visible_fading_bar_accepts_the_first_drag(self):
+        self.reveal()
+        self.js("close()", self.bar)
+        self.assertFalse(self.bar.property("open"))
+        QTest.mousePress(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(250, 20))
+        self.assertTrue(self.bar.property("open"))
+        QTest.mouseMove(self.bar, QPoint(280, 22))
+        self.assertEqual(self.js("Workspace.calls"), ["move Files"])
+        QTest.mouseRelease(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(280, 22))
+
+    def test_finished_fade_leaves_no_invisible_input_window(self):
+        self.reveal()
+        sheet = self.bar.findChild(QObject, "titleSheet")
+        intercepted = []
+        def changed():
+            if sheet.property("opacity") == 0:
+                intercepted.append(self.bar.isVisible())
+        sheet.opacityChanged.connect(changed)
+        self.js("close()", self.bar)
+        QTest.qWait(300)
+        self.assertEqual(intercepted, [False])
+
     def test_a_window_moving_away_retracts_its_bar_without_pointer_movement(self):
         self.reveal()
         self.js("scene.app.frameGeometry = Qt.rect(100, 250, 800, 600)")

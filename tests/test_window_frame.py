@@ -234,6 +234,17 @@ class WindowFrame(unittest.TestCase):
         QMetaObject.invokeMethod(self.item("windowClose"), "clicked")
         self.assertFalse(self.window.isVisible())
 
+    def test_visible_close_target_is_not_stolen_by_resize_grips(self):
+        from PySide6.QtCore import QPointF
+        button = self.item("windowClose")
+        # The top and right of the drawn control overlap the old resize areas.
+        for x, y in ((1, 1), (button.width() - 1, 1), (button.width() - 1, 8)):
+            with self.subTest(x=x, y=y):
+                self.window.showNormal(); QTest.qWait(20)
+                at = button.mapToScene(QPointF(x, y)).toPoint()
+                QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, at)
+                self.assertFalse(self.window.isVisible(), "Resize stole a visible Close target")
+
     def test_maximized_close_reaches_the_top_right_corner(self):
         self.window.showMaximized()
         QTest.qWait(30)

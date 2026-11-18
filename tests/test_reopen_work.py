@@ -675,6 +675,29 @@ class FrontInKWin(unittest.TestCase):
 
 
 @unittest.skipIf(os.name == "nt", "Linux restore lock")
+class DesktopReady(unittest.TestCase):
+    def test_an_already_ready_desktop_has_no_extra_sleep(self):
+        q = quick_helper(); resume = Mock()
+        with patch.object(q, "run", return_value="b true\n"), patch.object(q.time, "sleep") as sleep:
+            self.assertTrue(q.wait_for_desktop(resume))
+        resume.window_snapshot.assert_called_once_with()
+        sleep.assert_not_called()
+
+    def test_shell_registration_and_compositor_readiness_both_matter(self):
+        q = quick_helper(); resume = Mock()
+        resume.window_snapshot.side_effect = [OSError("KWin is starting"), []]
+        with patch.object(q, "run", side_effect=["b false", "b true", "b true"]), patch.object(q.time, "sleep") as sleep:
+            self.assertTrue(q.wait_for_desktop(resume, tries=3))
+        self.assertEqual(resume.window_snapshot.call_count, 2)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_missing_shell_never_starts_compositor_queries_or_reports_ready(self):
+        q = quick_helper(); resume = Mock()
+        with patch.object(q, "run", return_value=None), patch.object(q.time, "sleep"):
+            self.assertFalse(q.wait_for_desktop(resume, tries=2))
+        resume.window_snapshot.assert_not_called()
+
+
 class SignIn(unittest.TestCase):
     """monet-quick trip-apps-again at every sign-in: the trip first, then the last session's work."""
 
@@ -715,6 +738,27 @@ class SignIn(unittest.TestCase):
         self.assertFalse(self.q.WORK_RETURN.exists())
         self.assertFalse(r.return_path(self.q.WORK_RETURN).exists())
         self.q.ok.assert_not_called()
+
+    def test_late_desktop_keeps_work_retryable_before_any_launch(self):
+        r.atomic_write(self.q.WORK, self.work)
+        self.q.wait_for_desktop.return_value = False
+        self.assertEqual(self.q.reopen_work(), [])
+        self.assertEqual(self.launched, [])
+        pending = r.read_state(self.q.WORK_RETURN)
+        self.assertEqual(pending["apps"], self.work["apps"])
+        self.assertFalse(pending.get("automatic", False))
+        self.q.wait_for_desktop.return_value = True
+        self.assertEqual(self.q.reopen_work(), ["a.desktop", "b.desktop"])
+
+    def test_trip_waits_for_the_desktop_before_launching(self):
+        trip = {"version": 2, "id": "b" * 32, "time": int(time.time()), "boot": "old", "apps": ["t.desktop"], "done": []}
+        r.atomic_write(self.q.TRIP_APPS, trip)
+        self.q.wait_for_desktop.return_value = False
+        self.assertEqual(self.q.reopen_work(), [])
+        self.assertEqual(self.launched, [])
+        self.assertTrue(self.q.TRIP_APPS.exists())
+        self.q.wait_for_desktop.return_value = True
+        self.assertEqual(self.q.reopen_work(), ["t.desktop"])
 
     def test_an_app_that_now_starts_by_itself_is_not_opened_twice(self):
         r.atomic_write(self.q.WORK, self.work)
@@ -850,7 +894,9 @@ class Packaging(unittest.TestCase):
         for line in ("PartOf=graphical-session.target", "ExecStart=@LIBEXECDIR@/monet-work", "WantedBy=graphical-session.target"):
             self.assertIn(line, unit)
         session = (ROOT / "linux/libexec/monet-session").read_text()
-        self.assertIn('[ -z "$GUEST" ] && (sleep 5; "$LIBEXECDIR/monet-quick" trip-apps-again)', session)
+        restore = '[ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" trip-apps-again'
+        self.assertIn(restore, session)
+        self.assertLess(session.index(restore), session.index('"$LIBEXECDIR/monet-quick" steam-share'))
 
     def test_settings_offers_one_switch_on_power_and_windows_and_a_restart_summary(self):
         qml = (ROOT / "linux/share/monet/settings-app/MonetSettings.qml").read_text()

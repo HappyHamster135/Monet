@@ -190,6 +190,7 @@ Window {
                     Qt.TopEdge | Qt.LeftEdge, Qt.TopEdge | Qt.RightEdge,
                     Qt.BottomEdge | Qt.LeftEdge, Qt.BottomEdge | Qt.RightEdge]
             delegate: MouseArea {
+                id: resizeGrip
                 required property int modelData
                 readonly property bool leftEdge: (modelData & Qt.LeftEdge) !== 0
                 readonly property bool rightEdge: (modelData & Qt.RightEdge) !== 0
@@ -208,6 +209,14 @@ Window {
                 cursorShape: corner ? (leftEdge === topEdge ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
                     : leftEdge || rightEdge ? Qt.SizeHorCursor : Qt.SizeVerCursor
                 acceptedButtons: Qt.LeftButton
+                // A visible window button owns its whole target, including
+                // the pixels also reached by a corner/edge resize handle.
+                containmentMask: QtObject {
+                    function contains(point: point): bool {
+                        const at = resizeGrip.mapToItem(controls, point.x, point.y)
+                        return at.x < 0 || at.y < 0 || at.x >= controls.width || at.y >= controls.height
+                    }
+                }
                 onPressed: window.startSystemResize(modelData)
             }
         }

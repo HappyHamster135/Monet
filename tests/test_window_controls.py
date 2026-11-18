@@ -52,6 +52,7 @@ class NativeTitleGrabs(unittest.TestCase):
             result = json.loads((output / "result.json").read_text())
             self.assertTrue(result["ok"])
             self.assertEqual(len(result["drags"]), 12)
+            self.assertEqual(len(result["closes"]), 12)
             self.assertEqual({record["platform"] for record in result["drags"]}, {"wayland", "xcb"})
             self.assertTrue(result["quick_release"])
             self.assertTrue(result["restored_and_snapped"])

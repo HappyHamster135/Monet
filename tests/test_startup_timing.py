@@ -15,6 +15,49 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@unittest.skipUnless(sys.platform == "linux" and shutil.which("dbus-daemon"), "requires private Linux session")
+class SessionStartup(unittest.TestCase):
+    def test_restore_starts_before_unrelated_sign_in_work_finishes(self):
+        from tools.test import private_session, stop
+        with tempfile.TemporaryDirectory() as folder, private_session() as env:
+            root = Path(folder); helpers = root / "helpers"; helpers.mkdir()
+            events = root / "events"
+            stub = helpers / "stub"
+            stub.write_text('''#!/usr/bin/python3
+import os,sys,time
+from pathlib import Path
+name=Path(sys.argv[0]).name
+command=sys.argv[1] if len(sys.argv)>1 else ""
+def record(event):
+    with open(os.environ["MONET_SESSION_EVENTS"],"a") as stream: stream.write(event+"\\n")
+if name=="monet-quick" and command=="trip-apps-again": record("restore")
+elif name=="monet-quick" and command=="files-place":
+    record("maintenance-start"); time.sleep(.8); record("maintenance-finish")
+elif name=="monet-quick" and command=="older-pc": print("no")
+elif name=="monet" and command in ("version","--version"): print("monet 0.9.8-7")
+''')
+            stub.chmod(0o755)
+            for name in ("monet", "monet-quick", "monet-files", "monet-look", "monet-light", "monet-profile", "notify-send", "systemd-run"):
+                (helpers / name).symlink_to(stub)
+            session = root / "monet-session"
+            source = (ROOT / "linux/libexec/monet-session").read_text()
+            session.write_text(source.replace("@LIBEXECDIR@", str(helpers)).replace("@BINDIR@", str(helpers)))
+            env.update(PATH=str(helpers) + os.pathsep + env["PATH"], MONET_SESSION_EVENTS=str(events))
+            process = subprocess.Popen(["bash", str(session)], env=env, start_new_session=True,
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                end = time.monotonic() + 5
+                while time.monotonic() < end:
+                    lines = events.read_text().splitlines() if events.exists() else []
+                    if "maintenance-finish" in lines and "restore" in lines: break
+                    time.sleep(.02)
+                self.assertIn("restore", lines)
+                self.assertIn("maintenance-finish", lines)
+                self.assertLess(lines.index("restore"), lines.index("maintenance-finish"))
+            finally:
+                stop(process)
+
+
 @unittest.skipUnless(sys.platform == 'linux' and importlib.util.find_spec('PySide6')
                      and shutil.which('dbus-daemon'), 'requires Linux Qt and private D-Bus')
 class NativeStartup(unittest.TestCase):

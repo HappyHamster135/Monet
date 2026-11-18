@@ -122,6 +122,9 @@ Item {
         }
         const p = Workspace.cursorPos
         const w = bar.window
+        if (bar.visible && !bar.open && w && !root.busy() && root.canShow(w) && Hover.onBar(bar.area, p)) {
+            bar.keepOpen()
+        }
         if (bar.open && w && (bar.held || w.move || w.resize || Hover.onBar(bar.area, p))) {
             pending = null
             reveal.stop()

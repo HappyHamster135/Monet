@@ -28,6 +28,8 @@ Window {
         || minimize.held || maximize.held || dismiss.held
     readonly property bool lit: window !== null && window.active
     readonly property bool filling: window !== null && Hover.filling(window.maximizeMode)
+    readonly property bool inputReady: visible && window !== null && !window.deleted
+        && !window.minimized && !window.fullScreen
     readonly property color ink: lit ? (smoke ? "#EFECE6" : "#1C1B19") : (smoke ? "#B4AEA5" : "#6B665E")
 
     // What KWin does only for the active window, the script asks of it (main.qml).
@@ -63,17 +65,30 @@ Window {
         if (!open && !immediate) return
         open = false
         if (immediate || speed <= 0) {
-            settle.stop()
-            hide()
-            window = null
+            finishClosing()
         } else {
             settle.restart()
         }
     }
 
+    function finishClosing() {
+        if (open) return
+        settle.stop()
+        bar.hide()
+        bar.window = null
+    }
+
     // KWin consumes the physical release; its native bridge finishes Qt's press at handoff.
     function letGo() {
         grip.holding = false
+    }
+
+    // A bar that is still painted must still accept a press. Re-entering or
+    // pressing it reverses the fade instead of losing the first gesture.
+    function keepOpen() {
+        if (!inputReady) return
+        settle.stop()
+        open = true
     }
 
     function toggleFilling() {
@@ -87,12 +102,7 @@ Window {
     Timer {
         id: settle
         interval: Math.round(100 * bar.speed) + 16
-        onTriggered: {
-            if (!bar.open) {
-                bar.hide()
-                bar.window = null
-            }
-        }
+        onTriggered: bar.finishClosing()
     }
 
     Item {
@@ -102,6 +112,8 @@ Window {
         height: bar.height
         // Keep the hit targets in place through the animation.
         opacity: bar.open ? 1 : 0
+        // Do not leave an invisible input window behind for another timer tick.
+        onOpacityChanged: if (bar.visible && !bar.open && opacity === 0) bar.finishClosing()
         Behavior on opacity {
             NumberAnimation {
                 duration: Math.round((bar.open ? 110 : 100) * bar.speed)
@@ -144,8 +156,11 @@ Window {
             anchors.bottom: parent.bottom
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             // KWin owns the pointer during a move; keep the grip idle until it finishes.
-            enabled: bar.open && !(bar.window && bar.window.move)
+            enabled: bar.inputReady && !bar.window.move && !bar.window.resize
+            hoverEnabled: true
+            onEntered: bar.keepOpen()
             onPressed: mouse => {
+                bar.keepOpen()
                 from = Qt.point(mouse.x, mouse.y)
                 origin = Qt.point(bar.x + mouse.x, bar.y + mouse.y)
                 asked = false
@@ -216,7 +231,7 @@ Window {
                 smoke: bar.smoke
                 lit: bar.lit
                 ink: bar.ink
-                enabled: bar.open && bar.window !== null && bar.window.minimizable
+                enabled: bar.inputReady && bar.window.minimizable
                 onActivated: {
                     const target = bar.window
                     bar.close(true)
@@ -232,7 +247,7 @@ Window {
                 smoke: bar.smoke
                 lit: bar.lit
                 ink: bar.ink
-                enabled: bar.open && bar.window !== null && bar.window.maximizable
+                enabled: bar.inputReady && bar.window.maximizable
                 onActivated: bar.toggleFilling()
             }
             BarButton {
@@ -244,7 +259,7 @@ Window {
                 smoke: bar.smoke
                 lit: bar.lit
                 ink: bar.ink
-                enabled: bar.open && bar.window !== null && bar.window.closeable
+                enabled: bar.inputReady && bar.window.closeable
                 onActivated: {
                     const target = bar.window
                     bar.close(true)
@@ -270,7 +285,7 @@ Window {
         height: bar.height
         Accessible.role: Accessible.Button
         Accessible.name: name
-        Accessible.onPressAction: if (enabled) activated()
+        Accessible.onPressAction: if (enabled) { bar.keepOpen(); activated() }
         Image {
             id: picture
             objectName: "titleArt-" + button.kind
@@ -294,6 +309,8 @@ Window {
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onEntered: bar.keepOpen()
+            onPressed: bar.keepOpen()
             onClicked: mouse => mouse.button === Qt.RightButton ? bar.menuAsked() : button.activated()
         }
     }

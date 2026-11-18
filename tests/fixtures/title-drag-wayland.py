@@ -33,6 +33,7 @@ def worker(output):
     env = dict(os.environ)
     processes = []
     records = []
+    closes = []
 
     def until(check, label, timeout=6):
         end = time.monotonic() + timeout
@@ -167,10 +168,26 @@ def worker(output):
             pointer.button(True); pointer.point(x+24,y+3); time.sleep(.04)
             pointer.point(640,0); time.sleep(.25); pointer.button(False)
             until(lambda: window(title)['mode'] == 3 and not window(title)['move'], 'Snap to top')
-            action(title, 'w.closeWindow();')
+            # Close must work immediately after dragging/maximizing, and on
+            # inactive windows too. Exercise the first/last pixels, not only centres.
+            for closing in range(6):
+                if closing:
+                    open_client(title, platform)
+                    action(title, 'w.frameGeometry={x:180,y:150,width:680,height:480};')
+                    time.sleep(.25)
+                inactive = bool(closing % 2)
+                action(other if inactive else title, 'workspace.activeWindow=w;')
+                reveal()
+                bounds = window('Monet title bar')['rect']
+                dx,dy = ((-1,1),(-22,20),(-43,39))[closing % 3]
+                pointer.point(bounds['x']+bounds['width']+dx,bounds['y']+dy)
+                pointer.click()
+                until(lambda: not window(title), 'First Close click did not register')
+                closes.append(dict(platform=platform,inactive=inactive,offset=[dx,dy]))
+                assert window(other), 'Close affected the wrong window'
             action(other, 'w.closeWindow();')
-            until(lambda: not window(title) and not window(other), 'Close clients')
-        result = dict(ok=True, drags=records, quick_release=True, restored_and_snapped=True,
+            until(lambda: not window(other), 'Close other client')
+        result = dict(ok=True, drags=records, closes=closes, quick_release=True, restored_and_snapped=True,
                       scope='Private virtual KWin, CPU rendering, Wayland and XWayland clients; no host session or input')
         (output/'result.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result),flush=True)

@@ -9025,12 +9025,17 @@ def mark_work_again(session, done):
 
 
 def wait_for_desktop(resume, tries=30):
-    """KWin answers before the first app is placed (it may still be starting at sign-in)."""
-    for _ in range(tries):
+    """Start saved apps when Plasma has registered and KWin can place windows."""
+    for attempt in range(tries):
         try:
-            resume.window_snapshot()
-            return True
+            shell = run("busctl", "--user", "--timeout=1", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                        "org.freedesktop.DBus", "NameHasOwner", "s", "org.kde.plasmashell", timeout=2)
+            if (shell or "").strip() == "b true":
+                resume.window_snapshot()
+                return True
         except OSError:
+            pass
+        if attempt + 1 < tries:
             time.sleep(1)
     return False
 
@@ -9080,6 +9085,12 @@ def reopen_work():
         trip = resume.read_state(TRIP_APPS)
         if first and not trip and not TRIP_APPS_OFF.exists() and not kde_restores():
             first_work(resume, session)
+        # Session startup no longer sleeps for a fixed five seconds. Check
+        # readiness before either kind of return, before committing automatic
+        # launch state, so a late compositor leaves the checkpoint retryable.
+        pending = resume.read_state(WORK_RETURN)
+        if (trip or pending.get("apps")) and not wait_for_desktop(resume):
+            return started
         if trip:
             started += trip_apps_again() or []
             queue_return_notice()
@@ -9112,7 +9123,6 @@ def reopen_work():
                 if resume.BROWSER in gone:
                     work.pop("browser", None)
             resume.atomic_write(WORK_RETURN, work)
-        wait_for_desktop(resume)
         started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH)
         # Everything back where it was needs no summary or word; what couldn't reopen has both.
         report = resume.read_return(WORK_RETURN)

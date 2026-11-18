@@ -14,6 +14,10 @@ GUEST=""
 [ "$(id -un)" = guest ] && GUEST=1
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
+# Reopen saved work as soon as the compositor can place it. The helper waits
+# for readiness itself; unrelated sharing/profile jobs must not add a delay.
+[ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" trip-apps-again >/dev/null 2>&1 &
+
 # Monet's words in your language (monet-quick says them), English if it can't.
 say() {
     "$LIBEXECDIR/monet-quick" say "$@" 2>/dev/null || printf '%s' "$1"
@@ -84,12 +88,6 @@ if [ -z "$GUEST" ] && [ "$(cat /var/lib/monet/windows-setup 2>/dev/null)" = wait
     systemd-run --user --quiet --collect --unit=monet-windows-first-run --on-active=30 \
         "$BINDIR/monet" windows --first-run >/dev/null 2>&1 || true
 fi
-
-# Your work again, once the desktop is up: after a trip to Windows, the apps that were open
-# before it (monet-quick remembered them just before), and after a restart, a sign-out, a crash
-# or a power cut, those of the last sign-in (monet-work kept them), on their screens and desktops.
-# At every sign-in, also with nothing to reopen: monet-work waits for it before its first look.
-[ -z "$GUEST" ] && (sleep 5; "$LIBEXECDIR/monet-quick" trip-apps-again) >/dev/null 2>&1 &
 
 # PipeWire may still be starting when the desktop signs in.
 if [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/monet/notification-volume-v1" ]; then

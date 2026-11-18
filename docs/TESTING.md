@@ -1,5 +1,38 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 reliable close clicks and saved-app startup — 18 November 2026
+
+New checks reproduced two missed-click paths: the resize overlay covered the
+top of a visible Close button in a normal Monet window, and an inactive window's
+dropdown bar remained painted during its fade while its controls were disabled.
+Resize grips now exclude the control row. A still-visible dropdown accepts the
+first press and reverses its fade; finishing the fade hides its input window
+immediately. Existing drag-out cancellation still works. The real private KWin
+fixture also closes twelve intended windows with their first clicks, including
+inactive windows, corner pixels and a close immediately after a native drag.
+
+Saved-app reopening starts independently of unrelated sign-in maintenance.
+It no longer sleeps for five seconds: it checks that Plasma has registered its
+bus name and that KWin can return window geometry. A compositor that is not ready
+leaves saved work retryable before automatic launch is committed. Tests cover
+an already-ready desktop without a sleep, late readiness, a missing shell,
+restart/trip checkpoints and execution of the actual session script with fake
+helpers. Focused runs cover 162 checks with no skips.
+
+Read-only measurements on the connected ThinkPad, still running 0.9.8-7, report
+45.4 seconds to the system boot target: 14.2 firmware, 8.7 loader, 1.8 kernel,
+9.9 initrd and 10.7 userspace. Plasma's session target is reached in 3.2 seconds
+after session startup. These are different milestones; the [systemd timing
+documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html)
+also explains the limits of critical-chain measurements. The eliminated delay
+concerns saved apps after sign-in. This work does not establish a new cold-boot
+time or a few-second power-on; that needs a candidate image and hardware reboot
+measurements. Firmware and loader initialization remain substantial.
+
+The controls run in isolated virtual desktops, with no user apps closed. Local
+builds/tests are capped at one CPU core with low priority. Changes remain on
+`monet-0.9.8-8`, with VERSION 0.9.8-7 until release preparation.
+
 ## 0.9.8-8 dropdown dragging and dock reordering — 18 November 2026
 
 The private compositor reproduced the dropdown title bar warping the pointer
