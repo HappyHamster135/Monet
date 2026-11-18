@@ -197,6 +197,9 @@ class LookFeedback(unittest.TestCase):
         self.assertTrue(QMetaObject.invokeMethod(action, "clicked"))
         self.wait_for(lambda: action.property("restartReady"))
         self.helper.done.emit(self.helper.pending_history.pop(), '{"ok":true,"items":[],"state":"idle","staged":false}', 0, "")
+        self.wait_for(lambda: self.helper.pending_history)
+        self.assertTrue(action.property("restartReady"))
+        self.helper.done.emit(self.helper.pending_history.pop(), '{"ok":true,"items":[],"state":"idle","staged":true}', 0, "")
         self.wait_for(lambda: not self.window.property("updateHistoryBusy"))
         self.assertTrue(action.property("restartReady"))
 
@@ -281,11 +284,14 @@ class LookFeedback(unittest.TestCase):
         self.window.setProperty("betaFound", beta)
         self.window.setProperty("betaChecked", True)
         install = self.window.findChild(QObject, "betaInstall")
+        self.wait_for(lambda: not self.window.property("updateHistoryBusy"))
+        self.helper.replies["update-history"] = '{"ok":true,"items":[],"state":"idle","staged":true}'
         QMetaObject.invokeMethod(install, "clicked")
         self.wait_for(lambda: self.helper.pending_commands)
         self.helper.done.emit(self.helper.pending_commands.pop(), "null", 0, "")
         self.wait_for(lambda: self.window.property("betaState") == "failed")
         self.assertTrue(install.property("enabled"))
+        self.wait_for(lambda: self.window.property("updateStaged"))
 
         action = self.window.findChild(QObject, "updateAction")
         QMetaObject.invokeMethod(action, "clicked")

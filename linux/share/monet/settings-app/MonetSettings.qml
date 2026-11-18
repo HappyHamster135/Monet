@@ -1206,6 +1206,7 @@ Shared.MonetWindow {
                     && item.time <= 8640000000000000)
                 && ["unknown", "idle", "running", "retry"].includes(found.state)
                 ? found : { ok: false, items: [], state: "unknown" }
+            if (revision !== sheet.updateInstallRevision) sheet.loadUpdateHistory()
         })
     }
 
@@ -1268,6 +1269,7 @@ Shared.MonetWindow {
             if (code === 0 && typeof result.staged === "boolean") sheet.updateStaged = result.staged
             sheet.betaStaged = code === 0 && result.staged === true
             sheet.betaState = success ? "done" : "failed"
+            sheet.loadUpdateHistory()
         })
     }
 
