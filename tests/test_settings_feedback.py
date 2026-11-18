@@ -787,6 +787,26 @@ class LookFeedback(unittest.TestCase):
         self.assertIn('Newer choices', self.window.property('profileMessage'))
         self.assertFalse(any(c[1] in ('restart', 'rollback', 'look-reset') for c in self.helper.commands))
 
+    def test_escape_dismisses_a_review_and_keeps_an_in_progress_undo_open(self):
+        item = self.profile_fixture()
+        review = self.item('reviewProfile-' + item['id'])
+        QMetaObject.invokeMethod(review, 'clicked')
+        QTest.qWait(20)
+        QTest.keyClick(self.window, Qt.Key_Escape)
+        self.assertTrue(self.window.isVisible())
+        self.assertIsNone(self.window.property('profileReview'))
+        self.assertTrue(review.hasActiveFocus())
+        QMetaObject.invokeMethod(review, 'clicked')
+        QTest.qWait(20)
+        self.helper.held_commands.add('profile-recovery')
+        QMetaObject.invokeMethod(self.item('confirmProfileUndo-' + item['id']), 'clicked')
+        self.assertTrue(self.window.property('profileRestoring'))
+        before = list(self.helper.commands)
+        QTest.keyClick(self.window, Qt.Key_Escape)
+        self.assertTrue(self.window.isVisible())
+        self.assertIsNotNone(self.window.property('profileReview'))
+        self.assertEqual(self.helper.commands, before)
+
     def test_profile_history_failure_is_distinct_from_empty_and_does_not_poll(self):
         self.helper.replies['profile-recovery'] = '{"ok":false,"state":"unavailable"}'
         self.window.setProperty('page', 'recovery'); QTest.qWait(80)

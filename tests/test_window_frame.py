@@ -234,6 +234,42 @@ class WindowFrame(unittest.TestCase):
         QMetaObject.invokeMethod(self.item("windowClose"), "clicked")
         self.assertFalse(self.window.isVisible())
 
+    def test_maximized_close_reaches_the_top_right_corner(self):
+        self.window.showMaximized()
+        QTest.qWait(30)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, QPoint(self.window.width() - 1, 0))
+        self.assertFalse(self.window.isVisible())
+
+    def test_maximized_minimize_and_restore_reach_the_top_edge(self):
+        from PySide6.QtCore import QPointF
+        self.window.showMaximized()
+        QTest.qWait(30)
+        restore = self.item("windowMaximize")
+        at = restore.mapToScene(QPointF(restore.width() / 2, 0)).toPoint()
+        at.setY(0)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, at)
+        QTest.qWait(30)
+        self.assertEqual(self.window.visibility(), QQuickWindow.Windowed)
+        self.window.showMaximized()
+        QTest.qWait(30)
+        minimize = self.item("windowMinimize")
+        at = minimize.mapToScene(QPointF(minimize.width() / 2, 0)).toPoint()
+        at.setY(0)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, at)
+        self.assertEqual(self.window.visibility(), QQuickWindow.Minimized)
+
+    def test_bringing_forward_restores_the_state_before_minimizing(self):
+        for show, expected in ((self.window.showNormal, QQuickWindow.Windowed),
+                               (self.window.showMaximized, QQuickWindow.Maximized),
+                               (self.window.showFullScreen, QQuickWindow.FullScreen)):
+            show()
+            QTest.qWait(20)
+            self.window.showMinimized()
+            QTest.qWait(20)
+            self.assertTrue(QMetaObject.invokeMethod(self.window, "bringForward"))
+            QTest.qWait(20)
+            self.assertEqual(self.window.visibility(), expected)
+
     def test_software_fallback_has_paper_and_transparent_outer_corners(self):
         self.assertEqual(self.item("windowGlass").property("wash"), 1)
         pixels = self.window.grabWindow()

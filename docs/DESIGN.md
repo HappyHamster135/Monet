@@ -691,6 +691,19 @@ button return from a detail page; an open confirmation is dismissed first.
 Games puts sorting below its heading on a narrow window. Its covers, pages and
 dialogs remain visible when Qt uses its software renderer.
 
+Monet's own windows return to their maximized or fullscreen state when opened
+again after minimizing. Maximized window controls reach the top and right screen
+edges. Settings and the Store preserve a normal window's chosen size when it
+fits the screen; only an oversized window is reduced to leave room around it.
+This also prevents Wayland's temporary Windowed state during minimization from
+shrinking a maximized window.
+
+Escape in Settings dismisses an open form or confirmation and returns focus to
+its opening control. An in-progress password change or recovery operation stays
+open. Without a question to dismiss, Escape clears search, then closes Settings.
+Unreadable helper replies keep the expected object or list shape, so search can
+report a failure and accept another attempt.
+
 **Files** (Dolphin with the Monet app style): glass title, toolbar and
 sidebar; the files on paper; folders big enough to see their paintings
 (80 px, previews on); a soft Lily wash for the selection instead of a solid

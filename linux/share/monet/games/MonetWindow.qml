@@ -17,6 +17,20 @@ Window {
     readonly property int frameRadius: frameMaximized ? 0 : 14
     readonly property int titleHeight: visibility === Window.FullScreen ? 0 : 40
     readonly property color frameInk: frameDark ? "#F1EEE8" : "#1C1B19"
+    property int restoreVisibility: Window.Windowed
+
+    // Opening an existing app brings back its previous state after minimizing.
+    function bringForward() {
+        if (visibility === Window.Minimized) {
+            if (restoreVisibility === Window.Maximized) showMaximized()
+            else if (restoreVisibility === Window.FullScreen) showFullScreen()
+            else showNormal()
+        } else {
+            visible = true
+        }
+        raise()
+        requestActivate()
+    }
 
     signal backgroundMoveRequested()
     onBackgroundMoveRequested: window.startSystemMove()
@@ -28,6 +42,13 @@ Window {
 
     // Explicit data keeps the frame outside the default property used by the app's children.
     data: [
+        Connections {
+            target: window
+            function onVisibilityChanged(state) {
+                if (state === Window.Windowed || state === Window.Maximized || state === Window.FullScreen)
+                    window.restoreVisibility = state
+            }
+        },
         Item {
             id: surface
             anchors.fill: parent
@@ -118,13 +139,14 @@ Window {
                 Row {
                     id: controls
                     anchors.right: parent.right
-                    anchors.rightMargin: 8
+                    anchors.rightMargin: window.frameMaximized ? 0 : 8
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: window.frameMaximized ? 0 : 2
                     FrameButton {
                         objectName: "windowMinimize"
                         dark: window.frameDark
                         windowActive: window.active
+                        reachesEdge: window.frameMaximized
                         text: i18n("Minimize")
                         paintAction: "minimize"
                         paint: "#3F9A89"
@@ -134,6 +156,7 @@ Window {
                         objectName: "windowMaximize"
                         dark: window.frameDark
                         windowActive: window.active
+                        reachesEdge: window.frameMaximized
                         text: window.frameMaximized ? i18n("Restore") : i18n("Maximize")
                         paintAction: window.frameMaximized ? "restore" : "maximize"
                         paint: "#E8AE48"
@@ -143,6 +166,7 @@ Window {
                         objectName: "windowClose"
                         dark: window.frameDark
                         windowActive: window.active
+                        reachesEdge: window.frameMaximized
                         text: i18n("Close")
                         paintAction: "close"
                         paint: "#F2552C"
@@ -195,8 +219,9 @@ Window {
         required property color paint
         required property bool dark
         required property bool windowActive
-        width: 40
-        height: 32
+        property bool reachesEdge: false
+        width: reachesEdge ? 44 : 40
+        height: reachesEdge ? 40 : 32
         hoverEnabled: true
         focusPolicy: Qt.TabFocus
         Accessible.name: text

@@ -72,10 +72,7 @@ MonetWindow {
         }
         // Apps opened again: this one, forward.
         function onWanted() {
-            if (root.visibility === Window.Minimized)
-                root.visibility = Window.Windowed
-            root.raise()
-            root.requestActivate()
+            root.bringForward()
         }
     }
     function refresh() {

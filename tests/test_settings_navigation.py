@@ -214,10 +214,11 @@ class SettingsNavigation(unittest.TestCase):
                                             "windows-setup-status": json.dumps(state)})
                 self.open("display")
                 self.open("windows")
-                self.wait_for(lambda: self.item("windowsSetupDetail").property("text") == detail)
+                expected_detail = detail if "message" in state else self.words.i18n(detail)
+                self.wait_for(lambda: self.item("windowsSetupDetail").property("text") == expected_detail)
                 setup = self.item("startWindowsSetup")
                 self.assertTrue(setup.isVisible())
-                self.assertEqual(setup.property("text"), title)
+                self.assertEqual(setup.property("text"), self.words.i18n(title))
                 self.assertEqual(self.item("chooseWindowsIso").isVisible(), not state.get("interrupted", False))
                 setup.forceActiveFocus()
                 count = self.helper.commands.count(["helper", "windows-setup-start", "--retry"])
@@ -368,6 +369,116 @@ class SettingsNavigation(unittest.TestCase):
         self.assertTrue(search.hasActiveFocus())
         QTest.keyClick(self.window, Qt.Key_Escape); QTest.qWait(20)
         self.assertFalse(self.window.isVisible())
+
+    def test_search_recovers_from_null_and_wrong_shaped_helper_replies(self):
+        search = self.item("settingsSearch")
+        for index, reply in enumerate(("null", "[]", "42", "broken")):
+            with self.subTest(reply=reply):
+                self.helper.replies["search"] = reply
+                search.setProperty("text", "battery " + str(index))
+                self.wait_for(lambda: not self.window.property("searchBusy"))
+                self.assertTrue(self.window.property("searchProblem"))
+        self.helper.replies["search"] = '{"results":[]}'
+        search.setProperty("text", "battery")
+        self.wait_for(lambda: self.window.property("searchReady") == "battery")
+        self.assertFalse(self.window.property("searchProblem"))
+
+    def test_reopening_settings_restores_its_maximized_state(self):
+        self.window.showMaximized()
+        QTest.qWait(30)
+        self.window.showMinimized()
+        QTest.qWait(30)
+        self.helper.wanted.emit("sound")
+        self.wait_for(lambda: self.window.property("page") == "sound")
+        self.assertEqual(self.window.visibility(), QWindow.Maximized)
+        self.wait_for(self.window.isActive)
+        close = self.item("windowClose")
+        self.wait_for(lambda: abs(close.mapToScene(QPointF(close.width(), 0)).x() - self.window.width()) < 0.5
+                      and abs(close.mapToScene(QPointF(0, 0)).y()) < 0.5)
+        QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, QPoint(self.window.width() - 1, 0))
+        self.wait_for(lambda: not self.window.isVisible())
+
+    def test_a_normal_window_that_fits_keeps_its_chosen_size(self):
+        width, height = self.window.property("availableWidth") - 8, self.window.property("availableHeight") - 8
+        self.window.resize(width, height)
+        QMetaObject.invokeMethod(self.window, "fitAvailableScreen")
+        QTest.qWait(50)
+        self.assertEqual((self.window.width(), self.window.height()), (width, height))
+
+    def test_escape_cancels_privacy_and_recovery_questions_before_closing(self):
+        for route, name in (("privacy", "forgetRecentApps"), ("updates", "resetPc"), ("updates", "rollbackPc")):
+            with self.subTest(route=route, name=name):
+                self.open(route)
+                if name == "rollbackPc":
+                    self.window.setProperty("previous", dict(date="2026-11-17", version="0.9.8-7"))
+                    QTest.qWait(20)
+                button = self.item(name)
+                self.assertTrue(button.isVisible())
+                before = button.property("text")
+                button.forceActiveFocus(Qt.TabFocusReason)
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.assertNotEqual(button.property("text"), before)
+                self.helper.commands.clear()
+                QTest.keyClick(self.window, Qt.Key_Escape)
+                QTest.qWait(20)
+                self.assertTrue(self.window.isVisible())
+                self.assertEqual(button.property("text"), before)
+                self.assertTrue(button.hasActiveFocus())
+                self.assertFalse(any(c[1] in ("forget", "reset", "rollback") for c in self.helper.commands))
+
+    def test_escape_cancels_account_forms_and_returns_focus(self):
+        self.helper.replies["users"] = json.dumps([dict(login="sample", name="Sample User", you=True, admin=True, guest=False)])
+        self.open("users")
+        for name, state in (("changeUserName", "renaming"), ("changeUserPassword", "passwordState")):
+            with self.subTest(name=name):
+                button = self.item(name)
+                button.forceActiveFocus(Qt.TabFocusReason)
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.wait_for(lambda: self.window.property(state))
+                self.helper.commands.clear()
+                QTest.keyClick(self.window, Qt.Key_Escape)
+                QTest.qWait(20)
+                self.assertTrue(self.window.isVisible())
+                self.assertFalse(self.window.property(state))
+                self.assertTrue(button.hasActiveFocus())
+                self.assertFalse(any(c[1] in ("rename", "password") for c in self.helper.commands))
+
+    def test_escape_cancels_a_wifi_password_without_joining(self):
+        ssid = "Example Wi-Fi"
+        self.helper.replies["status"] = '{"wifi":true}'
+        self.helper.replies["wifi-list"] = json.dumps([dict(name=ssid, active=False, secure=True, known=False, enterprise=False, signal=80)])
+        self.open("wifi")
+        row = self.item("wifiNetwork-" + ssid.encode().hex())
+        row.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: self.window.property("joining") == ssid)
+        self.helper.commands.clear()
+        QTest.keyClick(self.window, Qt.Key_Escape)
+        QTest.qWait(20)
+        self.assertTrue(self.window.isVisible())
+        self.assertEqual(self.window.property("joining"), "")
+        self.assertTrue(row.hasActiveFocus())
+        self.assertFalse(any(c[1] == "wifi-join" for c in self.helper.commands))
+
+    def test_escape_cancels_windows_restart_and_trash_questions(self):
+        self.helper.replies["about"] = '{"windows":"Ready"}'
+        for route, name in (("windows", "windowsSwitch"), ("storage", "emptyTrash")):
+            with self.subTest(route=route):
+                self.open(route)
+                if route == "storage":
+                    self.window.setProperty("storageInfo", dict(total=4096, used=2048, trash=1024, measured=True))
+                button = self.item(name)
+                self.assertTrue(button.isVisible())
+                before = button.property("text")
+                button.forceActiveFocus(Qt.TabFocusReason)
+                QTest.keyClick(self.window, Qt.Key_Return)
+                self.assertNotEqual(button.property("text"), before)
+                calls = list(self.helper.commands)
+                QTest.keyClick(self.window, Qt.Key_Escape)
+                self.assertTrue(self.window.isVisible())
+                self.assertEqual(button.property("text"), before)
+                self.assertTrue(button.hasActiveFocus())
+                self.assertEqual(self.helper.commands, calls)
 
     def test_tab_scrolls_power_controls_into_view_at_this_scale(self):
         self.open("power#keep-awake")

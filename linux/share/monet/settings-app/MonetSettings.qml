@@ -35,16 +35,20 @@ Shared.MonetWindow {
     function fitAvailableScreen() {
         if (availableWidth <= 0 || availableHeight <= 0
                 || visibility === Window.Maximized || visibility === Window.FullScreen || visibility === Window.Minimized) return
-        width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
-        height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
+        // Wayland can briefly report Windowed while minimizing a maximized
+        // window. Keep a fitting size instead of shrinking it to the margins.
+        if (width > availableWidth || width < minimumWidth)
+            width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
+        if (height > availableHeight || height < minimumHeight)
+            height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
     }
     onAvailableWidthChanged: Qt.callLater(fitAvailableScreen)
     onAvailableHeightChanged: Qt.callLater(fitAvailableScreen)
     // Wayland can deliver a configure for the old size after a screen change.
-    onWidthChanged: if (width > availableWidth - 32 || width < minimumWidth) Qt.callLater(fitAvailableScreen)
-    onHeightChanged: if (height > availableHeight - 48 || height < minimumHeight) Qt.callLater(fitAvailableScreen)
+    onWidthChanged: if (width > availableWidth || width < minimumWidth) Qt.callLater(fitAvailableScreen)
+    onHeightChanged: if (height > availableHeight || height < minimumHeight) Qt.callLater(fitAvailableScreen)
     onVisibleChanged: if (visible) Qt.callLater(fitAvailableScreen)
-    onVisibilityChanged: if (visibility === Window.Windowed) Qt.callLater(fitAvailableScreen)
+    onVisibilityChanged: state => { if (state === Window.Windowed) Qt.callLater(fitAvailableScreen) }
     // See-through: the glass column's glass is WindowGlass (Games' and the Store's too).
     color: "transparent"
     // The size people gave it, kept for next time (~/.config/monet/settings.conf).
@@ -160,14 +164,21 @@ Shared.MonetWindow {
             open(result.target)
         }
     }
-    function findSearchTarget(item, name) {
+    function findNamedItem(item, name) {
         if (!item) return null
-        if (item.objectName === "search-" + name) return item
+        if (item.objectName === name) return item
         for (let child of item.children || []) {
-            const found = findSearchTarget(child, name)
+            const found = findNamedItem(child, name)
             if (found) return found
         }
         return null
+    }
+    function findSearchTarget(item, name) {
+        return findNamedItem(item, "search-" + name)
+    }
+    function focusControl(name) {
+        const item = findNamedItem(pageLoader.item, name)
+        if (item && item.visible && item.enabled) item.forceActiveFocus(Qt.OtherFocusReason)
     }
     function revealSearchTarget() {
         const target = findSearchTarget(pageLoader.item, pendingAnchor)
@@ -714,13 +725,7 @@ Shared.MonetWindow {
             page = destination[0]
             currentAnchor = pendingAnchor
         }
-        if (visibility === Window.Minimized) {
-            showNormal()
-        } else {
-            show()
-        }
-        raise()
-        requestActivate()
+        bringForward()
         scheduleLoad()
     }
 
@@ -778,7 +783,11 @@ Shared.MonetWindow {
     }
     function json(text, fallback) {
         try {
-            return JSON.parse(text)
+            const found = JSON.parse(text)
+            if (Array.isArray(fallback)) return Array.isArray(found) ? found : fallback
+            if (fallback !== null && typeof fallback === "object")
+                return found !== null && typeof found === "object" && !Array.isArray(found) ? found : fallback
+            return found === null ? fallback : found
         } catch (e) {
             return fallback
         }
@@ -2869,8 +2878,9 @@ Shared.MonetWindow {
         Shortcut {
             sequences: ["Escape"]
             onActivated: {
+                if (typeof pageLoader.item?.cancelConfirmation === "function" && pageLoader.item.cancelConfirmation()) return
                 if (search.text !== "") { search.text = ""; search.forceActiveFocus() }
-                else if (sheet.page !== "security" || !pageLoader.item?.cancelConfirmation()) sheet.close()
+                else sheet.close()
             }
         }
         Shortcut {
@@ -3912,6 +3922,13 @@ Shared.MonetWindow {
             id: wifiPage
             ColumnLayout {
                 id: internetPage
+                function cancelConfirmation() {
+                    if (sheet.joining === "") return false
+                    const name = sheet.joining
+                    sheet.joining = ""
+                    sheet.focusControl("wifiNetwork-" + sheet.hex(name))
+                    return true
+                }
                 readonly property var wiredDevices: sheet.wiredNetwork ? sheet.wiredNetwork.devices : []
                 readonly property bool lanConnected: sheet.wiredNetwork && sheet.wiredNetwork.available
                     ? wiredDevices.some(device => device.state === "connected") : sheet.info.lanConnected === true
@@ -4041,6 +4058,7 @@ Shared.MonetWindow {
                                 tappable: true
                                 strong: false
                                 title: modelData.name
+                                objectName: "wifiNetwork-" + sheet.hex(modelData.name)
                                 detail: sheet.joining === modelData.name && sheet.joinState === "failed" && !modelData.secure
                                     ? i18n("Couldn't join") : ""
                                 lead: Bars {
@@ -5003,6 +5021,18 @@ Shared.MonetWindow {
             id: usersPage
             ColumnLayout {
                 id: usersColumn
+                function cancelConfirmation() {
+                    if (sheet.renaming) {
+                        sheet.renaming = false
+                        sheet.focusControl("changeUserName")
+                    } else if (passwordOpen) {
+                        if (sheet.passwordState !== "changing") {
+                            sheet.passwordState = ""
+                            sheet.focusControl("changeUserPassword")
+                        }
+                    } else return false
+                    return true
+                }
                 readonly property var you: sheet.people.find(p => p.you) || null
                 readonly property var others: sheet.people.filter(p => !p.you && !p.guest)
                 readonly property bool passwordOpen: ["open", "changing", "failed"].indexOf(sheet.passwordState) !== -1
@@ -5055,6 +5085,7 @@ Shared.MonetWindow {
                         Pill {
                             tone: look
                             visible: !sheet.renaming
+                            objectName: "changeUserName"
                             text: i18n("Change name")
                             onClicked: {
                                 sheet.nameProblem = ""
@@ -5118,6 +5149,7 @@ Shared.MonetWindow {
                         Pill {
                             tone: look
                             visible: !usersColumn.passwordOpen
+                            objectName: "changeUserPassword"
                             text: i18n("Change…")
                             onClicked: sheet.passwordState = "open"
                         }
@@ -6341,6 +6373,20 @@ Shared.MonetWindow {
             id: storagePage
             ColumnLayout {
                 id: storageColumn
+                function cancelConfirmation() {
+                    if (sheet.retainedReview !== null) {
+                        if (!sheet.retainedBusy) {
+                            const id = sheet.retainedReview.id
+                            sheet.retainedReview = null
+                            sheet.retainedConsent = false
+                            sheet.focusControl("reviewRetained-" + id)
+                        }
+                    } else if (askingTrash) {
+                        askingTrash = false
+                        sheet.focusControl("emptyTrash")
+                    } else return false
+                    return true
+                }
                 // What fills the disk, each in a color of The Hours. Only a whole measurement
                 // that fits in the space in use is split up; otherwise the bar shows what's in use.
                 readonly property var parts: sheet.storageInfo.breakdown ? [
@@ -6822,6 +6868,7 @@ Shared.MonetWindow {
                                 tone: look
                                 visible: (sheet.storageInfo.trash || 0) > 0
                                 text: storageColumn.askingTrash ? i18n("Empty for good") : i18n("Empty Trash")
+                                objectName: "emptyTrash"
                                 onClicked: {
                                     if (storageColumn.askingTrash) {
                                         storageColumn.askingTrash = false
@@ -7326,6 +7373,12 @@ Shared.MonetWindow {
             id: privacyPage
             ColumnLayout {
                 id: privacyColumn
+                function cancelConfirmation() {
+                    if (!askingForget) return false
+                    askingForget = false
+                    sheet.focusControl("forgetRecentApps")
+                    return true
+                }
                 // Forgetting recent files asks once more.
                 property bool askingForget: false
                 // Said once it's done, until the page is left.
@@ -7408,6 +7461,7 @@ Shared.MonetWindow {
                             Pill {
                                 tone: look
                                 text: privacyColumn.askingForget ? i18n("Forget") : i18n("Forget…")
+                                objectName: "forgetRecentApps"
                                 onClicked: {
                                     if (privacyColumn.askingForget) {
                                         privacyColumn.askingForget = false
@@ -8430,6 +8484,12 @@ Shared.MonetWindow {
             id: windowsPage
             ColumnLayout {
                 id: windowsColumn
+                function cancelConfirmation() {
+                    if (sheet.asking === null) return false
+                    sheet.asking = null
+                    sheet.focusControl("windowsSwitch")
+                    return true
+                }
                 readonly property string setupState: sheet.pc.windows === "Ready" ? ""
                     : sheet.windowsSetup.interrupted ? "interrupted" : (sheet.windowsSetup.status ?? sheet.pc.setup ?? "")
                 readonly property bool setupActive: sheet.windowsSetupStarting || sheet.windowsSetup.active === true || setupState === "preparing"
@@ -8544,6 +8604,7 @@ Shared.MonetWindow {
                         Pill {
                             tone: look
                             kind: "sun"
+                            objectName: "windowsSwitch"
                             visible: !sheet.switching && !windowsColumn.setupActive && !windowsColumn.needsSetup && !windowsColumn.noWindows
                             text: sheet.asking && sheet.asking.id ? i18n("Restart & Play")
                                 : sheet.asking ? i18n("Restart")
@@ -8772,6 +8833,16 @@ Shared.MonetWindow {
         Component {
             id: recoveryPage
             ColumnLayout {
+                function cancelConfirmation() {
+                    if (sheet.profileReview !== null) {
+                        if (!sheet.profileRestoring) {
+                            const id = sheet.profileReview.id
+                            sheet.profileReview = null
+                            sheet.focusControl("reviewProfile-" + id)
+                        }
+                    } else return false
+                    return true
+                }
                 spacing: 20
                 PageTitle {
                     tone: look; entry: sheet.entry("recovery"); art: sheet.art
@@ -8922,6 +8993,16 @@ Shared.MonetWindow {
         Component {
             id: updatesPage
             ColumnLayout {
+                function cancelConfirmation() {
+                    if (backRow.asking) {
+                        backRow.asking = false
+                        sheet.focusControl("rollbackPc")
+                    } else if (resetRow.asking) {
+                        resetRow.asking = false
+                        sheet.focusControl("resetPc")
+                    } else return false
+                    return true
+                }
                 spacing: 20
                 PageTitle {
                     tone: look
@@ -9255,6 +9336,7 @@ Shared.MonetWindow {
                                 tone: look
                                 visible: sheet.previous.pending !== true
                                 text: backRow.asking ? i18n("Go back at restart") : i18n("Go back")
+                                objectName: "rollbackPc"
                                 onClicked: {
                                     if (backRow.asking) {
                                         backRow.asking = false
@@ -9300,6 +9382,7 @@ Shared.MonetWindow {
                                 tone: look
                                 visible: !resetRow.pending
                                 text: resetRow.asking ? i18n("Reset at restart") : i18n("Reset")
+                                objectName: "resetPc"
                                 onClicked: {
                                     if (resetRow.asking) {
                                         resetRow.asking = false

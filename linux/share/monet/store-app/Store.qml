@@ -70,13 +70,16 @@ MonetWindow {
     function fitAvailableScreen() {
         if (availableWidth <= 0 || availableHeight <= 0
                 || visibility === Window.Maximized || visibility === Window.FullScreen || visibility === Window.Minimized) return
-        width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
-        height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
+        // Preserve a fitting size through Wayland's transient Windowed state.
+        if (width > availableWidth || width < minimumWidth)
+            width = Math.max(minimumWidth, Math.min(width, availableWidth - 32))
+        if (height > availableHeight || height < minimumHeight)
+            height = Math.max(minimumHeight, Math.min(height, availableHeight - 48))
     }
     onAvailableWidthChanged: Qt.callLater(fitAvailableScreen)
     onAvailableHeightChanged: Qt.callLater(fitAvailableScreen)
     onVisibleChanged: if (visible) Qt.callLater(fitAvailableScreen)
-    onVisibilityChanged: if (visibility === Window.Windowed) Qt.callLater(fitAvailableScreen)
+    onVisibilityChanged: state => { if (state === Window.Windowed) Qt.callLater(fitAvailableScreen) }
 
     property Item pendingFocusReveal: null
     // The control that had focus when its list was scrolled away from it: a list that grows
@@ -564,10 +567,7 @@ MonetWindow {
         }
         // The Store opened again (from a link, the menu): this one, forward, at what it was asked.
         function onWanted(what) {
-            if (root.visibility === Window.Minimized)
-                root.visibility = Window.Windowed
-            root.raise()
-            root.requestActivate()
+            root.bringForward()
             root.show(what)
         }
     }

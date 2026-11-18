@@ -722,6 +722,16 @@ class TheWindowItself(unittest.TestCase):
         self.assertNotIn("Add Steam key", texts)
         self.assertFalse(any(t.startswith("Games shows the Steam games installed here") for t in texts))
 
+    def test_opening_again_restores_a_maximized_window(self):
+        self.open({"steam": False, "hint": False})
+        self.window.showMaximized()
+        QTest.qWait(30)
+        self.window.showMinimized()
+        QTest.qWait(30)
+        self.helper.wanted.emit("")
+        QTest.qWait(30)
+        self.assertEqual(self.window.visibility(), QQuickWindow.Maximized)
+
 
 if __name__ == "__main__":
     unittest.main()

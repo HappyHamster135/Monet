@@ -1,5 +1,29 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 Settings and window controls — 18 November 2026
+
+Native fixtures reproduced an unclickable maximized screen corner, Settings
+returning at an ordinary size after minimizing, and a search left busy after a
+null helper reply. Shared controls now reach the screen edges when maximized;
+Settings, Apps, Games and the Store restore their previous window state.
+
+Escape dismisses Wi-Fi and account forms, privacy, Trash, Windows restart,
+rollback and reset questions, and recovery reviews before closing Settings.
+Focus returns to the opening control, and in-progress recovery stays open.
+The tests use a fake helper and never perform these system actions.
+
+The private KWin check in `tests/test_window_controls.py` observes actual
+compositor states. It reproduced a maximized Wayland window shrinking during
+minimization's temporary Windowed state. Fitting now preserves any size within
+the screen bounds. Windowed, maximized and fullscreen restores pass without
+the temporary shrink, and a click at the maximized screen corner closes Settings.
+
+The focused run covers 127 checks with no skips. Thirty Settings navigation
+checks also pass in Swedish at 150% with larger text and reduced motion, and
+in Arabic at 200%. Two additional checks cover Settings and Store moves between
+private X screens. These use disposable homes, buses and displays; physical
+GPU and input-device testing remains separate.
+
 ## 0.9.8-8 app-library polish — 18 November 2026
 
 Native Apps and Games fixtures reproduced broken lists after null helper

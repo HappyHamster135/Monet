@@ -226,6 +226,15 @@ class Window(unittest.TestCase):
         self.assertGreaterEqual(grid.property("columns"), 3)
         self.assertLessEqual(grid.property("cellWidth") * grid.property("columns"), grid.width() + 1)
 
+    def test_opening_again_restores_a_maximized_window(self):
+        self.window.showMaximized()
+        QTest.qWait(30)
+        self.window.showMinimized()
+        QTest.qWait(30)
+        self.helper.wanted.emit("")
+        QTest.qWait(30)
+        self.assertEqual(self.window.visibility(), QQuickWindow.Maximized)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -146,6 +146,24 @@ class StoreNavigation(unittest.TestCase):
         self.assertTrue(self.window.property("checkedOnly"))
         self.assertTrue(checked.hasActiveFocus())
 
+    def test_opening_again_restores_maximized_and_preserves_the_requested_page(self):
+        from PySide6.QtGui import QWindow
+        self.window.showMaximized()
+        QTest.qWait(30)
+        self.window.showMinimized()
+        QTest.qWait(30)
+        self.shop.wanted.emit("games")
+        QTest.qWait(30)
+        self.assertEqual(self.window.visibility(), QWindow.Maximized)
+        self.assertEqual(self.window.property("section"), "games")
+
+    def test_a_normal_window_that_fits_keeps_its_chosen_size(self):
+        width, height = self.window.property("availableWidth") - 8, self.window.property("availableHeight") - 8
+        self.window.resize(width, height)
+        QMetaObject.invokeMethod(self.window, "fitAvailableScreen")
+        QTest.qWait(50)
+        self.assertEqual((self.window.width(), self.window.height()), (width, height))
+
     def test_search_is_in_the_sidebar_tab_order(self):
         first_section = self.item("storeSection-home")
         first_section.forceActiveFocus(Qt.TabFocusReason)
