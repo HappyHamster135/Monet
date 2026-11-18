@@ -12,7 +12,8 @@ The scripting-only fallback also responds to activation without waiting for its
 retry timer.
 
 The compiled icons-only dock checks its first animated reorder, two immediate
-changes of destination while animation is running, and final settling. Internal
+changes of destination while animation is running, and final settling. Centered
+and mirrored task lists map drop coordinates into their own layout. Internal
 bottom-dock reorders use layout slots rather than translated hit targets and no
 longer wait for each animation to finish. Hover, Trash and edit-mode checks still
 run against the compiled applets. These checks are included in the desktop CI

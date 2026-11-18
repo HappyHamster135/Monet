@@ -25,7 +25,9 @@ jobs:
       - name: Rust (version from rust-toolchain.toml)
         run: rustup toolchain install
       - name: Native storage test tools
-        run: sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools >/dev/null
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools >/dev/null
       - name: Tests
         run: cargo test --workspace
       - name: Read-only boot cleanup in a private mount namespace
@@ -86,6 +88,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust (version from rust-toolchain.toml)
         run: |
+          sudo apt-get update -q
           sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev python3-pip >/dev/null
           rustup toolchain install && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu
       - name: Build

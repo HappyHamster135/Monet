@@ -18,8 +18,10 @@ except ImportError:
 @unittest.skipUnless(os.environ.get("MONET_DOCK_HOVER_FIXTURE"), "compiled candidate dock test image")
 class NativeDockMotion(unittest.TestCase):
     def test_hover_and_rapid_reorders_in_the_compiled_applet(self):
-        subprocess.run([os.environ["MONET_DOCK_HOVER_FIXTURE"]], check=True, timeout=30,
-                       env=dict(os.environ, QT_FORCE_STDERR_LOGGING="1"))
+        for arguments in ([], ["--rtl"]):
+            with self.subTest(arguments=arguments):
+                subprocess.run([os.environ["MONET_DOCK_HOVER_FIXTURE"], *arguments], check=True, timeout=30,
+                               env=dict(os.environ, QT_FORCE_STDERR_LOGGING="1"))
 
 @unittest.skipUnless(HAVE_QT, "Qt runtime")
 class DockMotion(unittest.TestCase):

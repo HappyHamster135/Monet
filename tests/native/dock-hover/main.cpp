@@ -52,6 +52,7 @@ static QQuickItem *motion(QQuickItem *task)
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--rtl"))) app.setLayoutDirection(Qt::RightToLeft);
     KLocalizedString::setApplicationDomain("monet");
     try {
         TestCorona corona;
@@ -69,6 +70,7 @@ int main(int argc, char **argv)
         config.writeEntry("showToolTips", true);
         config.writeEntry("maxStripes", 1);
         config.writeEntry("sortingStrategy", 1);
+        config.writeEntry("monetIconAlignment", QStringLiteral("center"));
         config.sync();
         auto dock = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
         require(dock, "Native task applet failed to instantiate");
@@ -79,6 +81,7 @@ int main(int argc, char **argv)
         dock->setSize(QSizeF(440, 64));
         window.show();
         for (int i = 0; i < 100 && tasks(dock).size() < 3; ++i) QTest::qWait(20);
+        QTest::qWait(350); // Initial mirrored/centered layout must settle before pointer targeting.
         auto buttons = tasks(dock);
         require(buttons.size() >= 3, "Native launcher delegates did not appear");
         require(dock->property("monetMotionEnabled").toBool(), "Dock motion unexpectedly disabled");
@@ -111,14 +114,21 @@ int main(int argc, char **argv)
         }
         require(handler, "Compiled reorder handler is unavailable");
         auto source = buttons.first();
+        const int original = source->property("index").toInt();
         dock->setProperty("dragSource", QVariant::fromValue(source));
         require(dock->property("monetReordering").toBool(), "Manual bottom-dock reorder is unavailable");
         auto reorder = [&](int slot) {
-            auto destination = tasks(dock).at(slot);
+            const auto ordered = tasks(dock);
+            auto destination = *std::find_if(ordered.begin(), ordered.end(), [slot](auto task) {
+                return task->property("index").toInt() == slot;
+            });
+            // Drop events are in the full applet's coordinates, including the
+            // space beside a centered or mirrored task list. Ignore translations.
+            const auto position = destination->parentItem()->mapToItem(handler,
+                QPointF(destination->x() + destination->width() / 2, destination->y() + destination->height() / 2));
             QVariant result;
             require(QMetaObject::invokeMethod(handler, "monetReorder", Q_RETURN_ARG(QVariant, result),
-                    Q_ARG(QVariant, QPointF(destination->x() + destination->width() / 2,
-                                           destination->y() + destination->height() / 2))), "Reorder call failed");
+                    Q_ARG(QVariant, position)), "Reorder call failed");
             require(result.toBool(), "Internal drag fell through to visual hit testing");
             QTest::qWait(20);
             require(source->property("index").toInt() == slot, "Reorder did not reach the requested slot");
@@ -128,8 +138,8 @@ int main(int argc, char **argv)
         const auto painted = source->mapToItem(source->parentItem(), QPointF(0, 0));
         require(qAbs(painted.x() - source->x()) > 1, "First reorder jumped without an animation");
         require(source->parentItem()->property("animating").toBool(), "Reorder did not animate");
-        reorder(2); // Must accept the next slot before the first animation finishes.
-        reorder(0); // Reversing direction must not wait for a timer either.
+        reorder(original == 0 ? 2 : 0); // Must accept the next slot before the first animation finishes.
+        reorder(original); // Reversing direction must not wait for a timer either.
         dock->setProperty("dragSource", QVariant::fromValue<QQuickItem *>(nullptr));
         QTest::qWait(400);
         require(!source->parentItem()->property("animating").toBool(), "Reorder animation never settled");

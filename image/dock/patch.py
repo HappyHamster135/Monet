@@ -451,11 +451,11 @@ def apply(source):
     prepend(applet/'qml/MouseHandler.qml', '    onPositionChanged: event => {', '''    function monetReorder(point) {
         if (isGroupDialog || !tasks.monetReordering
                 || tasksModel.sortMode !== TaskManager.TasksModel.SortManual) return false;
-        const rtlSpacerAdjustment = target.LayoutMirroring.enabled ? tasks.width - target.width : 0;
-        const x = point.x - rtlSpacerAdjustment;
+        // The list can be centered or mirrored inside the full-width drop area.
+        const local = target.mapFromItem(dropArea, point.x, point.y);
         const above = target.children.find(item => item.visible && item.index >= 0
-            && item.model && x >= item.x && x < item.x + item.width
-            && point.y >= item.y && point.y < item.y + item.height);
+            && item.model && local.x >= item.x && local.x < item.x + item.width
+            && local.y >= item.y && local.y < item.y + item.height);
         if (above && tasks.dragSource.parent === above.parent && tasks.dragSource !== above
                 && tasks.dragSource.index !== above.index) {
             tasksModel.move(tasks.dragSource.index, above.index);
